@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Progress Indicators | Knowlune Academic Atelier</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary-fixed-dim": "#bdc2ff",
+            "tertiary-container": "#a56500",
+            "on-secondary": "#ffffff",
+            "inverse-primary": "#bdc2ff",
+            "surface-container": "#f2ede6",
+            "on-surface": "#1d1c18",
+            "on-tertiary-container": "#fffaf8",
+            "on-tertiary-fixed-variant": "#673d00",
+            "on-primary-fixed": "#000965",
+            "surface-bright": "#fef9f2",
+            "tertiary-fixed-dim": "#ffb867",
+            "primary-fixed": "#dfe0ff",
+            "surface": "#fef9f2",
+            "primary": "#4450b7",
+            "secondary-container": "#cbcefe",
+            "on-secondary-fixed-variant": "#3f446b",
+            "on-primary-fixed-variant": "#2e3aa2",
+            "on-surface-variant": "#454652",
+            "outline-variant": "#c6c5d5",
+            "secondary": "#575b84",
+            "tertiary-fixed": "#ffddbb",
+            "surface-container-highest": "#e6e2db",
+            "inverse-surface": "#32302c",
+            "on-secondary-fixed": "#13183d",
+            "on-primary": "#ffffff",
+            "primary-container": "#5e6ad2",
+            "error-container": "#ffdad6",
+            "error": "#ba1a1a",
+            "surface-dim": "#ded9d3",
+            "on-tertiary-fixed": "#2b1700",
+            "on-background": "#1d1c18",
+            "surface-container-low": "#f8f3ec",
+            "on-error": "#ffffff",
+            "surface-container-lowest": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "secondary-fixed": "#dfe0ff",
+            "on-error-container": "#93000a",
+            "surface-tint": "#4854bb",
+            "surface-variant": "#e6e2db",
+            "outline": "#767684",
+            "background": "#fef9f2",
+            "inverse-on-surface": "#f5f0e9",
+            "on-primary-container": "#fdfaff",
+            "secondary-fixed-dim": "#c0c3f2",
+            "surface-container-high": "#ece7e1",
+            "on-secondary-container": "#52577f",
+            "tertiary": "#834f00"
+          },
+          fontFamily: {
+            "headline": ["Manrope"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          },
+          borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1.5rem", "full": "9999px"},
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .progress-ring__circle {
+      transition: stroke-dashoffset 0.35s;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+    }
+    .soft-indigo-gradient {
+      background: linear-gradient(135deg, #4450b7 0%, #5e6ad2 100%);
+    }
+  </style>
+</head>
+<body class="bg-surface font-body text-on-surface min-h-screen">
+<!-- Top Navigation Shell -->
+<header class="fixed top-0 w-full z-50 bg-[#fef9f2]/80 dark:bg-stone-900/80 backdrop-blur-md flex justify-between items-center px-8 h-20 w-full shadow-[0px_20px_40px_rgba(29,28,24,0.06)]">
+<div class="text-2xl font-black text-[#5e6ad2] tracking-tighter font-headline">Knowlune</div>
+<div class="flex items-center gap-6">
+<nav class="hidden md:flex gap-8">
+<a class="font-headline font-bold text-lg tracking-tight text-[#5e6ad2] border-b-2 border-[#5e6ad2]" href="#">Progress</a>
+<a class="font-headline font-bold text-lg tracking-tight text-stone-600 dark:text-stone-400 hover:bg-[#f8f3ec] transition-colors" href="#">Courses</a>
+<a class="font-headline font-bold text-lg tracking-tight text-stone-600 dark:text-stone-400 hover:bg-[#f8f3ec] transition-colors" href="#">Dashboard</a>
+</nav>
+<div class="flex items-center gap-4 text-[#5e6ad2]">
+<span class="material-symbols-outlined cursor-pointer hover:bg-[#f8f3ec] p-2 rounded-full transition-colors">notifications</span>
+<span class="material-symbols-outlined cursor-pointer hover:bg-[#f8f3ec] p-2 rounded-full transition-colors">account_circle</span>
+</div>
+</div>
+</header>
+<!-- Side Navigation Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 pt-24 bg-[#f8f3ec] dark:bg-stone-800 hidden lg:flex flex-col gap-2">
+<div class="px-8 py-4 mb-4">
+<h2 class="font-headline font-extrabold text-[#5e6ad2]">Academic Atelier</h2>
+<p class="text-xs text-stone-500 font-medium">Curated Learning</p>
+</div>
+<a class="text-stone-500 dark:text-stone-400 hover:text-[#5e6ad2] ml-4 pl-4 py-3 hover:translate-x-1 transition-transform duration-200 flex items-center gap-3 font-medium text-sm" href="#">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+    </a>
+<a class="text-stone-500 dark:text-stone-400 hover:text-[#5e6ad2] ml-4 pl-4 py-3 hover:translate-x-1 transition-transform duration-200 flex items-center gap-3 font-medium text-sm" href="#">
+<span class="material-symbols-outlined">auto_stories</span> Courses
+    </a>
+<a class="text-[#5e6ad2] font-bold bg-[#ffffff] dark:bg-stone-900 rounded-l-xl ml-4 pl-4 py-3 flex items-center gap-3 text-sm" href="#">
+<span class="material-symbols-outlined">bar_chart</span> Progress
+    </a>
+<a class="text-stone-500 dark:text-stone-400 hover:text-[#5e6ad2] ml-4 pl-4 py-3 hover:translate-x-1 transition-transform duration-200 flex items-center gap-3 font-medium text-sm" href="#">
+<span class="material-symbols-outlined">settings</span> Settings
+    </a>
+</aside>
+<!-- Main Canvas -->
+<main class="lg:ml-64 pt-32 pb-24 px-8 max-w-7xl mx-auto">
+<!-- Editorial Header -->
+<header class="mb-16 max-w-2xl">
+<h1 class="font-headline text-5xl font-extrabold tracking-tight text-on-surface mb-4">Visualizing Mastery</h1>
+<p class="text-lg text-on-surface-variant leading-relaxed">A specialized catalog of high-fidelity progress indicators designed for the Knowlune ecosystem, balancing data precision with academic elegance.</p>
+</header>
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-12 items-start">
+<!-- A) Ring-Centric Indicators -->
+<section class="space-y-8">
+<h2 class="font-headline text-2xl font-bold tracking-tight text-[#5e6ad2] mb-6">Ring-Centric</h2>
+<div class="bg-surface-container-lowest p-8 rounded-2xl shadow-[0px_20px_40px_rgba(29,28,24,0.06)] flex flex-col items-center">
+<div class="relative flex items-center justify-center">
+<svg class="w-[120px] h-[120px]">
+<circle class="text-surface-container-highest" cx="60" cy="60" fill="transparent" r="52" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-primary-container progress-ring__circle" cx="60" cy="60" fill="transparent" r="52" stroke="currentColor" stroke-dasharray="326.7" stroke-dashoffset="88.2" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<span class="absolute font-headline text-2xl font-bold">73%</span>
+</div>
+<p class="mt-4 text-sm font-semibold uppercase tracking-widest text-on-surface-variant">Global Mastery</p>
+</div>
+<div class="bg-surface-container-lowest p-8 rounded-2xl shadow-[0px_20px_40px_rgba(29,28,24,0.06)] space-y-8">
+<div class="flex items-center gap-6">
+<div class="relative flex items-center justify-center">
+<svg class="w-[80px] h-[80px]">
+<circle class="text-surface-container-highest" cx="40" cy="40" fill="transparent" r="34" stroke="currentColor" stroke-width="6"></circle>
+<circle class="text-primary progress-ring__circle" cx="40" cy="40" fill="transparent" r="34" stroke="currentColor" stroke-dasharray="213.6" stroke-dashoffset="106.8" stroke-linecap="round" stroke-width="6"></circle>
+</svg>
+<span class="absolute font-headline text-sm font-bold">50%</span>
+</div>
+<div>
+<h4 class="font-bold text-on-surface">Module A-2</h4>
+<p class="text-xs text-on-surface-variant">Cognitive Science</p>
+</div>
+</div>
+<div class="flex items-center gap-4 bg-surface-container-low p-3 rounded-xl">
+<div class="relative flex items-center justify-center">
+<svg class="w-[32px] h-[32px]">
+<circle class="text-surface-container-highest" cx="16" cy="16" fill="transparent" r="14" stroke="currentColor" stroke-width="3"></circle>
+<circle class="text-secondary progress-ring__circle" cx="16" cy="16" fill="transparent" r="14" stroke="currentColor" stroke-dasharray="87.9" stroke-dashoffset="17.6" stroke-linecap="round" stroke-width="3"></circle>
+</svg>
+</div>
+<span class="text-sm font-medium">80% Quiz Performance</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-8 rounded-2xl shadow-[0px_20px_40px_rgba(29,28,24,0.06)] grid grid-cols-3 gap-4">
+<div class="flex flex-col items-center gap-2">
+<svg class="w-14 h-14">
+<circle class="text-surface-container-highest" cx="28" cy="28" fill="transparent" r="24" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-primary-container progress-ring__circle" cx="28" cy="28" fill="transparent" r="24" stroke="currentColor" stroke-dasharray="150.8" stroke-dashoffset="30.1" stroke-linecap="round" stroke-width="4"></circle>
+</svg>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Math</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<svg class="w-14 h-14">
+<circle class="text-surface-container-highest" cx="28" cy="28" fill="transparent" r="24" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-tertiary progress-ring__circle" cx="28" cy="28" fill="transparent" r="24" stroke="currentColor" stroke-dasharray="150.8" stroke-dashoffset="82.9" stroke-linecap="round" stroke-width="4"></circle>
+</svg>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Science</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<svg class="w-14 h-14">
+<circle class="text-surface-container-highest" cx="28" cy="28" fill="transparent" r="24" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-secondary-container progress-ring__circle" cx="28" cy="28" fill="transparent" r="24" stroke="currentColor" stroke-dasharray="150.8" stroke-dashoffset="15.1" stroke-linecap="round" stroke-width="4"></circle>
+</svg>
+<span class="text-[10px] font-bold uppercase tracking-tighter">History</span>
+</div>
+</div>
+</section>
+<!-- B) Linear Bars -->
+<section class="space-y-8">
+<h2 class="font-headline text-2xl font-bold tracking-tight text-[#5e6ad2] mb-6">Linear Bars</h2>
+<div class="bg-surface-container-lowest p-8 rounded-2xl shadow-[0px_20px_40px_rgba(29,28,24,0.06)] space-y-6">
+<div>
+<div class="flex justify-between items-end mb-3">
+<label class="text-sm font-bold text-on-surface">Course Chapters</label>
+<span class="text-xs font-medium text-primary">4 of 6 Completed</span>
+</div>
+<div class="flex gap-1.5 h-3">
+<div class="flex-1 soft-indigo-gradient rounded-full"></div>
+<div class="flex-1 soft-indigo-gradient rounded-full"></div>
+<div class="flex-1 soft-indigo-gradient rounded-full"></div>
+<div class="flex-1 soft-indigo-gradient rounded-full"></div>
+<div class="flex-1 bg-surface-container-highest rounded-full"></div>
+<div class="flex-1 bg-surface-container-highest rounded-full"></div>
+</div>
+</div>
+<div>
+<label class="text-sm font-bold text-on-surface block mb-3">Fluid Momentum</label>
+<div class="w-full bg-surface-container-highest h-4 rounded-full overflow-hidden">
+<div class="h-full soft-indigo-gradient w-[68%]" style="box-shadow: 0 0 20px rgba(94, 106, 210, 0.3);"></div>
+</div>
+</div>
+<div class="pt-4">
+<label class="text-sm font-bold text-on-surface block mb-6">Learning Milestones</label>
+<div class="relative h-2 bg-surface-container-highest rounded-full">
+<div class="absolute h-full soft-indigo-gradient w-[75%] rounded-full"></div>
+<div class="absolute -top-1.5 left-0 w-5 h-5 bg-primary-container border-4 border-surface-container-lowest rounded-full shadow-sm"></div>
+<div class="absolute -top-1.5 left-[25%] w-5 h-5 bg-primary-container border-4 border-surface-container-lowest rounded-full shadow-sm"></div>
+<div class="absolute -top-1.5 left-[50%] w-5 h-5 bg-primary-container border-4 border-surface-container-lowest rounded-full shadow-sm"></div>
+<div class="absolute -top-1.5 left-[75%] w-5 h-5 bg-primary-container border-4 border-surface-container-lowest rounded-full shadow-sm"></div>
+<div class="absolute -top-1.5 left-[100%] w-5 h-5 bg-surface-container-highest border-4 border-surface-container-lowest rounded-full shadow-sm"></div>
+</div>
+<div class="flex justify-between mt-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
+<span>Intro</span>
+<span>Theory</span>
+<span>Labs</span>
+<span>Thesis</span>
+</div>
+</div>
+</div>
+</section>
+<!-- C) Step/Milestone Indicators -->
+<section class="space-y-8">
+<h2 class="font-headline text-2xl font-bold tracking-tight text-[#5e6ad2] mb-6">Pathways</h2>
+<div class="bg-surface-container-lowest p-8 rounded-2xl shadow-[0px_20px_40px_rgba(29,28,24,0.06)]">
+<div class="flex items-center justify-between relative mb-8">
+<div class="absolute top-1/2 left-0 w-full h-0.5 bg-surface-container-highest -z-10"></div>
+<div class="flex flex-col items-center">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'wght' 700;">check</span>
+</div>
+</div>
+<div class="flex flex-col items-center">
+<div class="w-8 h-8 rounded-full bg-surface-container-lowest border-4 border-primary-container flex items-center justify-center ring-4 ring-primary-fixed"></div>
+</div>
+<div class="flex flex-col items-center">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center"></div>
+</div>
+</div>
+<div class="flex justify-between bg-surface-container-low p-4 rounded-xl border border-outline-variant/15">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full soft-indigo-gradient text-on-primary flex items-center justify-center font-headline font-bold">1</div>
+<span class="text-sm font-bold">Concept</span>
+</div>
+<div class="flex items-center gap-3 opacity-30">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest text-on-surface flex items-center justify-center font-headline font-bold">2</div>
+<span class="text-sm font-bold">Application</span>
+</div>
+</div>
+</div>
+<!-- Vertical Learning Path -->
+<div class="bg-surface-container-lowest p-8 rounded-2xl shadow-[0px_20px_40px_rgba(29,28,24,0.06)] relative overflow-hidden">
+<div class="absolute left-12 top-0 bottom-0 w-1 bg-surface-container-low"></div>
+<div class="space-y-10 relative">
+<div class="flex items-start gap-8">
+<div class="w-8 h-8 rounded-full soft-indigo-gradient flex-shrink-0 z-10 border-4 border-surface-container-lowest flex items-center justify-center">
+<span class="material-symbols-outlined text-[12px] text-white">check</span>
+</div>
+<div class="pt-1">
+<h4 class="font-bold text-sm">Foundations of Ethics</h4>
+<p class="text-xs text-on-surface-variant">Completed Nov 12</p>
+</div>
+</div>
+<div class="flex items-start gap-8">
+<div class="w-8 h-8 rounded-full bg-primary-container flex-shrink-0 z-10 border-4 border-surface-container-lowest ring-4 ring-primary/10"></div>
+<div class="pt-1">
+<h4 class="font-bold text-sm">Applied Dialectics</h4>
+<p class="text-xs text-primary font-medium">In Progress • 3h left</p>
+</div>
+</div>
+<div class="flex items-start gap-8 opacity-40">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex-shrink-0 z-10 border-4 border-surface-container-lowest flex items-center justify-center">
+<span class="material-symbols-outlined text-[12px]">lock</span>
+</div>
+<div class="pt-1">
+<h4 class="font-bold text-sm">Advanced Rhetoric</h4>
+<p class="text-xs text-on-surface-variant">Unlocks at Level 4</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- D) Animated Counters & Large Metrics -->
+<section class="space-y-8">
+<h2 class="font-headline text-2xl font-bold tracking-tight text-[#5e6ad2] mb-6">Metrics</h2>
+<div class="bg-surface-container-lowest p-8 rounded-2xl shadow-[0px_20px_40px_rgba(29,28,24,0.06)] overflow-hidden relative group">
+<div class="absolute -right-8 -bottom-8 w-40 h-40 bg-primary-fixed/30 rounded-full blur-3xl transition-all group-hover:bg-primary-fixed/50"></div>
+<div class="flex items-baseline gap-2 relative z-10">
+<span class="font-headline text-7xl font-black text-on-surface tracking-tighter">73</span>
+<span class="text-2xl font-bold text-primary">%</span>
+</div>
+<p class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mt-2 relative z-10">Total Curriculum Completion</p>
+<div class="mt-8 h-1 w-full bg-surface-container-low rounded-full">
+<div class="h-full soft-indigo-gradient w-[73%] rounded-full"></div>
+</div>
+</div>
+<div class="bg-primary text-on-primary p-8 rounded-2xl shadow-[0px_20px_40px_rgba(68,80,183,0.15)] flex items-center justify-between">
+<div class="space-y-1">
+<p class="text-[10px] font-bold uppercase tracking-widest opacity-80">Remaining Focus</p>
+<h3 class="font-headline text-3xl font-extrabold">3h 20m</h3>
+</div>
+<div class="w-14 h-14 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'wght' 300;">schedule</span>
+</div>
+</div>
+</section>
+<!-- E) Combined Composites -->
+<section class="md:col-span-2 xl:col-span-2 space-y-8">
+<h2 class="font-headline text-2xl font-bold tracking-tight text-[#5e6ad2] mb-6">Composites</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- Course Overview Card -->
+<div class="bg-surface-container-lowest p-8 rounded-2xl shadow-[0px_20px_40px_rgba(29,28,24,0.06)] border border-outline-variant/10">
+<div class="flex justify-between items-start mb-8">
+<div>
+<span class="px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-bold uppercase tracking-wider rounded-full">In Progress</span>
+<h3 class="font-headline text-xl font-bold mt-2">Quantitative Aesthetics</h3>
+</div>
+<svg class="w-12 h-12">
+<circle class="text-surface-container-highest" cx="24" cy="24" fill="transparent" r="20" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-primary-container progress-ring__circle" cx="24" cy="24" fill="transparent" r="20" stroke="currentColor" stroke-dasharray="125.6" stroke-dashoffset="37.6" stroke-linecap="round" stroke-width="4"></circle>
+</svg>
+</div>
+<div class="grid grid-cols-2 gap-6 pt-6 border-t border-surface-container-low">
+<div class="space-y-1">
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Time Spent</p>
+<p class="font-headline font-extrabold text-lg">14.2 hrs</p>
+</div>
+<div class="space-y-1">
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Rank</p>
+<p class="font-headline font-extrabold text-lg">Top 5%</p>
+</div>
+</div>
+<button class="w-full mt-8 py-4 bg-surface-container-highest text-primary font-bold rounded-xl hover:bg-primary-container hover:text-white transition-all duration-200">Continue Learning</button>
+</div>
+<!-- Lesson Progress Widget (Sidebar style) -->
+<div class="bg-[#f8f3ec] dark:bg-stone-800 p-6 rounded-2xl flex flex-col justify-between">
+<div class="space-y-6">
+<div class="flex justify-between items-center">
+<h4 class="font-headline font-bold text-sm">Next Lesson</h4>
+<span class="material-symbols-outlined text-on-surface-variant">more_horiz</span>
+</div>
+<div class="flex items-center gap-4 bg-surface-container-lowest p-4 rounded-xl shadow-sm">
+<div class="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="Macro photography of vintage scientific book illustrations with ink drawings and handwritten notes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4jb7A18j-DwSOxtuz-HlvEo7g2cnmqXk5mYsF0tpXcyqRa2ENr17fcwyfMWgDl765UTdOfkSseElSqzEA2qO3YCIquxKUvp23DVIimNNbcz6Qrz3oeKMtY63eOF2dQImb-6Y-zduDGtzb5A1BdkT4mNkr2yE8XvTgSsso4W9tgPjhr7eLA_Eyc19HUy8oBBzSA5RnqQkrMe99d9SpqFfXOkR_4FDjoBPEiz4_bIX81mwkuoWEKs0f_1RfUe6Ne9Ye0VKcx2NhF0pI"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-[10px] font-bold text-primary uppercase tracking-tighter">Module 4</p>
+<p class="text-sm font-bold truncate">Entropy in Art</p>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-primary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="mt-8">
+<div class="flex justify-between text-[10px] font-bold text-on-surface-variant uppercase mb-2">
+<span>Weekly Streak</span>
+<span>5 / 7 Days</span>
+</div>
+<div class="flex gap-1">
+<div class="h-1.5 flex-1 soft-indigo-gradient rounded-full"></div>
+<div class="h-1.5 flex-1 soft-indigo-gradient rounded-full"></div>
+<div class="h-1.5 flex-1 soft-indigo-gradient rounded-full"></div>
+<div class="h-1.5 flex-1 soft-indigo-gradient rounded-full"></div>
+<div class="h-1.5 flex-1 soft-indigo-gradient rounded-full"></div>
+<div class="h-1.5 flex-1 bg-surface-container-highest rounded-full"></div>
+<div class="h-1.5 flex-1 bg-surface-container-highest rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Dashboard Metrics Strip -->
+<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-[0px_20px_40px_rgba(29,28,24,0.06)] flex flex-wrap gap-12 items-center">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">local_fire_department</span>
+</div>
+<div>
+<p class="text-xl font-headline font-extrabold">12 Days</p>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Learning Streak</p>
+</div>
+</div>
+<div class="flex items-center gap-4 border-l border-surface-container-low pl-12">
+<div class="w-12 h-12 rounded-full bg-secondary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary">military_tech</span>
+</div>
+<div>
+<p class="text-xl font-headline font-extrabold">24</p>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Badges Earned</p>
+</div>
+</div>
+<div class="flex items-center gap-4 border-l border-surface-container-low pl-12">
+<div class="w-12 h-12 rounded-full bg-tertiary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary">history_edu</span>
+</div>
+<div>
+<p class="text-xl font-headline font-extrabold">1.2k</p>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Notes Written</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Footer Shell -->
+<footer class="w-full py-12 mt-auto bg-[#f2ede4] dark:bg-stone-950 flex flex-col items-center gap-4 border-t border-stone-200/10">
+<div class="flex gap-8 text-stone-400 dark:text-stone-600 font-['Inter'] text-xs uppercase tracking-widest">
+<a class="hover:text-[#5e6ad2] transition-colors underline-offset-4" href="#">Privacy Policy</a>
+<a class="hover:text-[#5e6ad2] transition-colors underline-offset-4" href="#">Terms of Service</a>
+<a class="hover:text-[#5e6ad2] transition-colors underline-offset-4" href="#">Help Center</a>
+</div>
+<p class="text-stone-400 dark:text-stone-600 font-['Inter'] text-xs uppercase tracking-widest">© 2024 Knowlune Academic Atelier</p>
+</footer>
+</body></html>

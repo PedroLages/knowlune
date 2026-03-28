@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Knowlune | Vertical Learning Path Design</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-primary-container": "#fdfaff",
+                        "tertiary": "#834f00",
+                        "tertiary-container": "#a56500",
+                        "background": "#fef9f2",
+                        "surface-container-low": "#f8f3ec",
+                        "primary-fixed-dim": "#bdc2ff",
+                        "outline": "#767684",
+                        "primary-container": "#5e6ad2",
+                        "on-tertiary-container": "#fffaf8",
+                        "on-secondary-fixed": "#13183d",
+                        "secondary-container": "#cbcefe",
+                        "inverse-on-surface": "#f5f0e9",
+                        "on-error": "#ffffff",
+                        "primary": "#4450b7",
+                        "outline-variant": "#c6c5d5",
+                        "secondary": "#575b84",
+                        "surface-variant": "#e6e2db",
+                        "error": "#ba1a1a",
+                        "secondary-fixed-dim": "#c0c3f2",
+                        "on-background": "#1d1c18",
+                        "surface-container-high": "#ece7e1",
+                        "on-secondary-container": "#52577f",
+                        "primary-fixed": "#dfe0ff",
+                        "surface-bright": "#fef9f2",
+                        "surface-container": "#f2ede6",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#673d00",
+                        "on-surface-variant": "#454652",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed-variant": "#2e3aa2",
+                        "inverse-primary": "#bdc2ff",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed": "#dfe0ff",
+                        "tertiary-fixed-dim": "#ffb867",
+                        "on-primary-fixed": "#000965",
+                        "on-primary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed": "#2b1700",
+                        "tertiary-fixed": "#ffddbb",
+                        "surface-tint": "#4854bb",
+                        "surface": "#fef9f2",
+                        "surface-dim": "#ded9d3",
+                        "on-surface": "#1d1c18",
+                        "inverse-surface": "#32302c",
+                        "on-secondary-fixed-variant": "#3f446b",
+                        "surface-container-highest": "#e6e2db"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body { background-color: #fef9f2; color: #1d1c18; }
+        .pulse-ring {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .5; transform: scale(1.15); }
+        }
+    </style>
+</head>
+<body class="font-body selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- Top Navigation Bar -->
+<header class="bg-[#fef9f2]/80 dark:bg-stone-900/80 backdrop-blur-xl docked full-width top-0 z-40 shadow-[0_20px_40px_rgba(29,28,24,0.05)] flex items-center justify-between px-8 h-20 w-full fixed">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-extrabold tracking-tighter text-[#4450b7] dark:text-[#5e6ad2] font-headline">Knowlune</span>
+<nav class="hidden md:flex gap-6 items-center">
+<a class="text-[#4450b7] font-bold font-headline text-lg tracking-tight" href="#">Courses</a>
+<a class="text-[#1d1c18] dark:text-stone-400 font-headline text-lg tracking-tight hover:bg-[#f2ede6] dark:hover:bg-stone-800 transition-colors px-3 py-1 rounded-lg" href="#">Dashboard</a>
+<a class="text-[#1d1c18] dark:text-stone-400 font-headline text-lg tracking-tight hover:bg-[#f2ede6] dark:hover:bg-stone-800 transition-colors px-3 py-1 rounded-lg" href="#">Community</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-outline material-symbols-outlined" data-icon="search">search</span>
+<input class="bg-surface-container-lowest border-none rounded-lg pl-10 pr-4 py-2 w-64 focus:ring-2 focus:ring-primary/20 text-sm" placeholder="Search paths..." type="text"/>
+</div>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container transition-colors rounded-full">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-1 hover:ring-2 hover:ring-primary/20 rounded-full transition-all">
+<span class="material-symbols-outlined text-3xl" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<main class="pt-32 pb-24 px-6 md:px-12 max-w-7xl mx-auto space-y-24">
+<!-- Section 1: Current State -->
+<section>
+<div class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+<div>
+<span class="text-tertiary font-bold tracking-widest text-xs uppercase mb-2 block">Reference</span>
+<h2 class="font-headline text-4xl font-extrabold text-on-surface tracking-tight">Current TrailMap Implementation</h2>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-xl p-12 flex items-center justify-center overflow-hidden">
+<div class="relative w-full max-w-2xl h-64">
+<svg class="w-full h-full fill-none" viewbox="0 0 800 200">
+<path d="M50,100 C150,100 200,50 300,50 C400,50 450,150 550,150 C650,150 700,100 750,100" stroke="#c6c5d5" stroke-dasharray="8 8" stroke-width="4"></path>
+<!-- Waypoint 1 -->
+<circle cx="50" cy="100" fill="#4450b7" r="12"></circle>
+<!-- Waypoint 2 -->
+<circle cx="300" cy="50" fill="#4450b7" r="12"></circle>
+<!-- Waypoint 3 -->
+<circle cx="550" cy="150" fill="#4450b7" r="12"></circle>
+<!-- Waypoint 4 -->
+<circle cx="750" cy="100" fill="#c6c5d5" r="12"></circle>
+</svg>
+</div>
+</div>
+</section>
+<!-- Section 2: Variation A -->
+<section>
+<div class="mb-12">
+<span class="text-primary font-bold tracking-widest text-xs uppercase mb-2 block">Prototype A</span>
+<h2 class="font-headline text-4xl font-extrabold text-on-surface tracking-tight">Clean Vertical Timeline</h2>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-8 md:p-16 flex flex-col lg:flex-row gap-16 shadow-[0_20px_40px_rgba(29,28,24,0.05)]">
+<!-- Info Panel -->
+<div class="lg:w-1/3 space-y-8">
+<div class="space-y-4">
+<h3 class="font-headline text-3xl font-bold text-on-surface leading-tight">Full-Stack Development</h3>
+<p class="text-on-surface-variant leading-relaxed">Master the modern web from database architecture to refined frontend interactions. A comprehensive scholarly journey into digital craftsmanship.</p>
+</div>
+<div class="bg-surface-container-low p-6 rounded-lg space-y-4">
+<div class="flex justify-between items-end">
+<span class="font-bold text-on-surface">Overall Progress</span>
+<span class="text-primary font-bold">50%</span>
+</div>
+<div class="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full w-1/2"></div>
+</div>
+<p class="text-sm text-on-surface-variant">3 of 6 courses total completed</p>
+</div>
+<button class="w-full py-4 px-6 bg-gradient-to-r from-primary to-primary-container text-white font-bold rounded-lg hover:shadow-lg transition-all flex items-center justify-center gap-2 group">
+                        Continue Learning
+                        <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<!-- Vertical Timeline -->
+<div class="lg:w-2/3 relative pl-12 md:pl-20 py-4">
+<!-- Connector Line -->
+<div class="absolute left-[23px] md:left-[31px] top-0 bottom-0 w-1 bg-surface-variant rounded-full"></div>
+<!-- Nodes -->
+<div class="space-y-16">
+<!-- Completed Nodes -->
+<div class="relative group">
+<div class="absolute -left-12 md:-left-20 flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500 border-4 border-surface-container-lowest z-10">
+<span class="material-symbols-outlined text-white text-xl" data-icon="check" data-weight="fill">check</span>
+</div>
+<div class="space-y-1">
+<h4 class="font-headline text-xl font-bold text-on-surface group-hover:text-primary transition-colors">Internet Fundamentals</h4>
+<p class="text-sm text-emerald-600 font-medium">Completed April 12</p>
+</div>
+</div>
+<div class="relative group">
+<div class="absolute -left-12 md:-left-20 flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500 border-4 border-surface-container-lowest z-10">
+<span class="material-symbols-outlined text-white text-xl" data-icon="check" data-weight="fill">check</span>
+</div>
+<div class="space-y-1">
+<h4 class="font-headline text-xl font-bold text-on-surface group-hover:text-primary transition-colors">Advanced CSS &amp; Layouts</h4>
+<p class="text-sm text-emerald-600 font-medium">Completed April 28</p>
+</div>
+</div>
+<div class="relative group">
+<div class="absolute -left-12 md:-left-20 flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500 border-4 border-surface-container-lowest z-10">
+<span class="material-symbols-outlined text-white text-xl" data-icon="check" data-weight="fill">check</span>
+</div>
+<div class="space-y-1">
+<h4 class="font-headline text-xl font-bold text-on-surface group-hover:text-primary transition-colors">Modern JavaScript Patterns</h4>
+<p class="text-sm text-emerald-600 font-medium">Completed May 15</p>
+</div>
+</div>
+<!-- Current Node -->
+<div class="relative group">
+<div class="absolute -left-12 md:-left-20 flex items-center justify-center w-12 h-12 rounded-full bg-primary border-4 border-surface-container-lowest z-10 ring-4 ring-primary/20 pulse-ring">
+<span class="material-symbols-outlined text-white text-xl" data-icon="book" data-weight="fill">book</span>
+</div>
+<div class="space-y-1 bg-primary/5 p-4 -m-4 rounded-xl">
+<h4 class="font-headline text-xl font-bold text-primary">React &amp; Ecosystem Deep-Dive</h4>
+<span class="inline-block px-3 py-1 bg-primary-container text-white text-[10px] font-bold uppercase tracking-widest rounded-full">Currently Studying</span>
+</div>
+</div>
+<!-- Locked Nodes -->
+<div class="relative opacity-50">
+<div class="absolute -left-12 md:-left-20 flex items-center justify-center w-12 h-12 rounded-full bg-surface-variant border-4 border-surface-container-lowest z-10">
+<span class="material-symbols-outlined text-on-surface-variant text-xl" data-icon="lock" data-weight="fill">lock</span>
+</div>
+<div class="space-y-1">
+<h4 class="font-headline text-xl font-bold text-on-surface">Server-Side &amp; Node.js</h4>
+<p class="text-sm text-on-surface-variant italic">Prerequisite required</p>
+</div>
+</div>
+<div class="relative opacity-50">
+<div class="absolute -left-12 md:-left-20 flex items-center justify-center w-12 h-12 rounded-full bg-surface-variant border-4 border-surface-container-lowest z-10">
+<span class="material-symbols-outlined text-on-surface-variant text-xl" data-icon="lock" data-weight="fill">lock</span>
+</div>
+<div class="space-y-1">
+<h4 class="font-headline text-xl font-bold text-on-surface">Database Architectures</h4>
+<p class="text-sm text-on-surface-variant italic">Prerequisite required</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 3: Variation B -->
+<section>
+<div class="mb-12">
+<span class="text-tertiary font-bold tracking-widest text-xs uppercase mb-2 block">Prototype B</span>
+<h2 class="font-headline text-4xl font-extrabold text-on-surface tracking-tight">Timeline with Progress Rings</h2>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-8 md:p-16 flex flex-col lg:flex-row gap-16 shadow-[0_20px_40px_rgba(29,28,24,0.05)]">
+<!-- Progress Column -->
+<div class="lg:w-full max-w-3xl mx-auto relative pl-24 space-y-24 py-8">
+<!-- Straight Line Connector -->
+<div class="absolute left-[30px] top-0 bottom-0 w-0.5 bg-surface-container-highest"></div>
+<!-- Nodes -->
+<div class="relative group">
+<!-- Label on line -->
+<div class="absolute -top-12 left-0 -translate-x-1/2 bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold text-on-surface-variant">~1 week</div>
+<div class="absolute left-[-54px] top-0">
+<svg class="w-12 h-12 rotate-[-90deg]">
+<circle cx="24" cy="24" fill="none" r="18" stroke="#ece7e1" stroke-width="4"></circle>
+<circle cx="24" cy="24" fill="none" r="18" stroke="#10b981" stroke-dasharray="113" stroke-dashoffset="0" stroke-width="4"></circle>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-emerald-500 text-sm" data-icon="check">check</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<h4 class="font-headline text-2xl font-bold">Intro to Algorithms</h4>
+<p class="text-on-surface-variant">Foundational logic and complexity analysis</p>
+</div>
+</div>
+<div class="relative group">
+<div class="absolute -top-12 left-0 -translate-x-1/2 bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold text-on-surface-variant">~3 weeks</div>
+<div class="absolute left-[-54px] top-0">
+<svg class="w-12 h-12 rotate-[-90deg]">
+<circle cx="24" cy="24" fill="none" r="18" stroke="#ece7e1" stroke-width="4"></circle>
+<circle cx="24" cy="24" fill="none" r="18" stroke="#4450b7" stroke-dasharray="113" stroke-dashoffset="39.5" stroke-width="4"></circle>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="text-[10px] font-bold text-primary">65%</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<h4 class="font-headline text-2xl font-bold text-primary">Data Structures Masterclass</h4>
+<p class="text-on-surface-variant">Heaps, Tries, and complex Graph traversals</p>
+</div>
+</div>
+<div class="relative opacity-60">
+<div class="absolute -top-12 left-0 -translate-x-1/2 bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold text-on-surface-variant">~2 weeks</div>
+<div class="absolute left-[-54px] top-0">
+<svg class="w-12 h-12 rotate-[-90deg]">
+<circle cx="24" cy="24" fill="none" r="18" stroke="#ece7e1" stroke-width="4"></circle>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-outline text-sm" data-icon="lock">lock</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<h4 class="font-headline text-2xl font-bold">System Design Interviews</h4>
+<p class="text-on-surface-variant">Scaling from 1 to 10 million users</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 4: Close-ups -->
+<section>
+<div class="mb-12">
+<span class="text-secondary font-bold tracking-widest text-xs uppercase mb-2 block">Component Library</span>
+<h2 class="font-headline text-4xl font-extrabold text-on-surface tracking-tight">Micro-Interactions</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+<!-- Completed State -->
+<div class="bg-surface-container-low p-8 rounded-xl border-b-4 border-emerald-500/20">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-sm" data-icon="check" data-weight="fill">check</span>
+</div>
+<span class="text-xs font-bold text-emerald-600 uppercase tracking-widest">Completed</span>
+</div>
+<h5 class="font-headline font-bold text-lg mb-1">Module Title</h5>
+<p class="text-sm text-on-surface-variant">April 12, 2024</p>
+</div>
+<!-- Current State -->
+<div class="bg-surface-container-low p-8 rounded-xl border-b-4 border-primary/20">
+<div class="flex items-center gap-4 mb-4">
+<div class="relative">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center z-10 relative">
+<span class="material-symbols-outlined text-white text-sm" data-icon="book" data-weight="fill">book</span>
+</div>
+<div class="absolute inset-0 bg-primary/30 rounded-full pulse-ring scale-125"></div>
+</div>
+<span class="text-xs font-bold text-primary uppercase tracking-widest">In Progress</span>
+</div>
+<h5 class="font-headline font-bold text-lg mb-2">Learning Path</h5>
+<div class="flex items-center gap-2">
+<div class="flex-1 h-1 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[65%]"></div>
+</div>
+<span class="text-[10px] font-bold text-primary">65%</span>
+</div>
+</div>
+<!-- Locked State -->
+<div class="bg-surface-container-low p-8 rounded-xl border-b-4 border-outline-variant/20 opacity-60">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-outline text-sm" data-icon="lock" data-weight="fill">lock</span>
+</div>
+<span class="text-xs font-bold text-outline uppercase tracking-widest">Locked</span>
+</div>
+<h5 class="font-headline font-bold text-lg mb-1">Advanced Logic</h5>
+<p class="text-sm text-on-surface-variant italic">Prerequisite required</p>
+</div>
+<!-- Connecting Line Segment -->
+<div class="bg-surface-container-low p-8 rounded-xl flex flex-col items-center justify-center">
+<div class="h-16 w-0.5 bg-surface-variant relative flex items-center justify-center">
+<div class="absolute bg-surface-container-lowest px-3 py-1 rounded-full text-[10px] font-bold text-outline border border-surface-variant shadow-sm">~2 weeks</div>
+</div>
+<p class="mt-4 text-[10px] text-on-surface-variant uppercase font-bold tracking-tighter">Connector Segment</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer Area -->
+<footer class="bg-surface-container-low py-16 border-t border-surface-variant/30">
+<div class="max-w-7xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-8">
+<div class="space-y-2">
+<span class="text-2xl font-black tracking-tighter text-[#4450b7] font-headline">Knowlune</span>
+<p class="text-sm text-on-surface-variant">The Scholarly Atelier for Modern Minds.</p>
+</div>
+<div class="flex gap-8">
+<a class="text-sm font-medium text-on-surface-variant hover:text-primary transition-colors" href="#">Documentation</a>
+<a class="text-sm font-medium text-on-surface-variant hover:text-primary transition-colors" href="#">Course Catalog</a>
+<a class="text-sm font-medium text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+</div>
+</div>
+</footer>
+</body></html>

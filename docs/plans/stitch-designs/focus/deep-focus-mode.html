@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Deep Focus &amp; Today Focus Stats | Knowlune</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "error": "#ba1a1a",
+                        "surface-container": "#f2ede6",
+                        "primary-fixed-dim": "#bdc2ff",
+                        "background": "#fef9f2",
+                        "on-tertiary-container": "#fffaf8",
+                        "on-primary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-fixed": "#2b1700",
+                        "primary": "#4450b7",
+                        "surface-bright": "#fef9f2",
+                        "primary-fixed": "#dfe0ff",
+                        "on-error": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed": "#ffddbb",
+                        "surface-tint": "#4854bb",
+                        "surface": "#fef9f2",
+                        "tertiary-container": "#a56500",
+                        "surface-dim": "#ded9d3",
+                        "inverse-primary": "#bdc2ff",
+                        "tertiary": "#834f00",
+                        "on-surface": "#1d1c18",
+                        "on-secondary-container": "#52577f",
+                        "on-surface-variant": "#454652",
+                        "outline-variant": "#c6c5d5",
+                        "surface-container-low": "#f8f3ec",
+                        "surface-variant": "#e6e2db",
+                        "secondary": "#575b84",
+                        "inverse-surface": "#32302c",
+                        "tertiary-fixed-dim": "#ffb867",
+                        "on-primary-fixed": "#000965",
+                        "primary-container": "#5e6ad2",
+                        "surface-container-lowest": "#ffffff",
+                        "on-background": "#1d1c18",
+                        "secondary-container": "#cbcefe",
+                        "surface-container-high": "#ece7e1",
+                        "on-primary-fixed-variant": "#2e3aa2",
+                        "secondary-fixed-dim": "#c0c3f2",
+                        "on-secondary-fixed": "#13183d",
+                        "secondary-fixed": "#dfe0ff",
+                        "inverse-on-surface": "#f5f0e9",
+                        "surface-container-highest": "#e6e2db",
+                        "on-tertiary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "on-primary-container": "#fdfaff",
+                        "on-tertiary-fixed-variant": "#673d00",
+                        "outline": "#767684",
+                        "on-secondary-fixed-variant": "#3f446b"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                    boxShadow: {
+                        'ambient': '0 40px 40px -4px rgba(29, 28, 24, 0.06)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .text-ink-gradient {
+            background: linear-gradient(135deg, #4450b7 0%, #5e6ad2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .bg-ink-gradient {
+            background: linear-gradient(135deg, #4450b7 0%, #5e6ad2 100%);
+        }
+    </style>
+</head>
+<body class="bg-[#FAF5EE] font-body text-on-surface min-h-screen">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full z-50 bg-[#fef9f2]/80 dark:bg-[#1d1c18]/80 backdrop-blur-xl h-16 flex items-center">
+<div class="flex justify-between items-center px-8 h-16 w-full max-w-screen-2xl mx-auto">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-black text-[#1d1c18] dark:text-[#fef9f2] tracking-tighter font-headline">Knowlune</span>
+<div class="hidden md:flex gap-6 items-center">
+<a class="font-headline font-bold text-lg tracking-tight text-[#4450b7] border-b-2 border-[#4450b7] pb-1" href="#">Focus</a>
+<a class="font-headline font-bold text-lg tracking-tight text-[#454652] hover:text-[#4450b7] transition-colors duration-200" href="#">Library</a>
+<a class="font-headline font-bold text-lg tracking-tight text-[#454652] hover:text-[#4450b7] transition-colors duration-200" href="#">Community</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:bg-surface-container transition-all active:scale-95" data-icon="notifications">notifications</button>
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:bg-surface-container transition-all active:scale-95" data-icon="settings">settings</button>
+<div class="w-8 h-8 rounded-full bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close-up portrait of a thoughtful young professional woman in a bright studio with soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDW2DAjv13N_Vkj3katR2ZDcJ0tPJByJk2ry8zNQ1GulYRDND7IWGtmFf3gRocsf8vde_B2qcFGwCLEDRcVQmMtlhLXdm9OwYCz0_flcDVgqhM3tOGn3ORyJ63hB-cvufOL51piQJ2UQzg2FdK5GJ_EZOT86M0ZZXx09EQpMIVid4MsnZ44d-s5j0X_qyKyQ9SoK4zM3_M-utmsCE6CIEAOv2W-u6Ou_FCQtK5eX79hfZU47SqvYTMOhg-RDjf0L55OcbDPNMWJ3ses"/>
+</div>
+</div>
+</div>
+</nav>
+<!-- Side Navigation Bar (Hidden on Mobile) -->
+<aside class="h-screen w-64 fixed left-0 top-0 hidden lg:flex flex-col p-6 space-y-8 bg-[#f8f3ec] pt-24 z-40">
+<div class="space-y-1">
+<h2 class="font-headline font-extrabold text-[#1d1c18] text-xl">The Atelier</h2>
+<p class="text-xs text-on-surface-variant">Deep Work Space</p>
+</div>
+<nav class="space-y-2">
+<div class="flex items-center gap-3 p-3 text-[#454652] hover:bg-[#f2ede6] rounded-xl cursor-pointer transition-all hover:translate-x-1">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+<span class="text-sm font-medium">Dashboard</span>
+</div>
+<div class="flex items-center gap-3 p-3 bg-white text-[#4450b7] rounded-xl shadow-ambient cursor-pointer transition-all">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+<span class="text-sm font-medium">Courses</span>
+</div>
+<div class="flex items-center gap-3 p-3 text-[#454652] hover:bg-[#f2ede6] rounded-xl cursor-pointer transition-all hover:translate-x-1">
+<span class="material-symbols-outlined" data-icon="timer">timer</span>
+<span class="text-sm font-medium">Focus Mode</span>
+</div>
+<div class="flex items-center gap-3 p-3 text-[#454652] hover:bg-[#f2ede6] rounded-xl cursor-pointer transition-all hover:translate-x-1">
+<span class="material-symbols-outlined" data-icon="query_stats">query_stats</span>
+<span class="text-sm font-medium">Progress</span>
+</div>
+<div class="flex items-center gap-3 p-3 text-[#454652] hover:bg-[#f2ede6] rounded-xl cursor-pointer transition-all hover:translate-x-1">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="text-sm font-medium">Archive</span>
+</div>
+</nav>
+<button class="mt-auto w-full py-4 px-6 bg-ink-gradient text-white rounded-full font-bold shadow-lg hover:shadow-xl transition-all active:scale-95">
+            Start Focus Session
+        </button>
+</aside>
+<main class="lg:pl-72 pt-28 pb-20 px-8 max-w-7xl mx-auto">
+<!-- Header Section -->
+<header class="mb-12">
+<h1 class="font-headline text-4xl font-extrabold tracking-tight mb-2">Deep Focus &amp; Today Focus Stats</h1>
+<p class="text-on-surface-variant text-lg max-w-2xl">Visual exploration of the Knowlune focus environment, from minimal implementations to immersive dashboards.</p>
+</header>
+<!-- 1. Current Implementation Popover -->
+<section class="mb-20">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline font-bold text-xl text-on-surface-variant">01 — Current Implementation</h3>
+</div>
+<div class="p-8 bg-surface-container-low rounded-xl flex items-center justify-center">
+<div class="relative">
+<button class="flex items-center gap-3 px-5 py-3 bg-surface-container-lowest shadow-ambient rounded-xl font-medium hover:bg-white transition-all">
+<span class="material-symbols-outlined text-primary" data-icon="timer">timer</span>
+<span>Focus Timer</span>
+<span class="text-primary font-bold ml-2">18:42</span>
+</button>
+<!-- Simulated Popover -->
+<div class="absolute top-14 left-0 w-48 bg-surface-container-lowest rounded-xl shadow-ambient p-4 z-10">
+<div class="flex items-center justify-between gap-4">
+<button class="flex-1 py-2 bg-ink-gradient text-white text-xs font-bold rounded-lg">Start</button>
+<button class="flex-1 py-2 border border-outline-variant text-on-surface-variant text-xs font-bold rounded-lg">Pause</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 2. Variation A — Immersive Focus -->
+<section class="mb-20">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline font-bold text-xl text-on-surface-variant">02 — Variation A: Immersive Focus</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- Timer Panel -->
+<div class="bg-surface-container-lowest p-10 rounded-xl shadow-ambient flex flex-col items-center justify-center space-y-8">
+<div class="flex gap-2 p-1 bg-surface-container-low rounded-full">
+<button class="px-4 py-1.5 text-xs font-bold bg-white text-primary rounded-full shadow-sm">25m Work</button>
+<button class="px-4 py-1.5 text-xs font-bold text-on-surface-variant hover:text-primary transition-colors">5m Break</button>
+<button class="px-4 py-1.5 text-xs font-bold text-on-surface-variant hover:text-primary transition-colors">15m Break</button>
+</div>
+<div class="relative w-48 h-48 flex items-center justify-center">
+<svg class="w-full h-full -rotate-90">
+<circle class="text-surface-container-low" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" stroke-width="6"></circle>
+<circle class="text-primary" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" stroke-dasharray="553" stroke-dashoffset="138" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-headline text-4xl font-black tracking-tight">18:42</span>
+<span class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mt-1">Focusing</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors" data-icon="refresh">refresh</button>
+<button class="w-14 h-14 bg-ink-gradient text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-3xl" data-icon="play_arrow" data-weight="fill">play_arrow</span>
+</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors" data-icon="more_vert">more_vert</button>
+</div>
+<p class="text-sm font-medium text-on-surface-variant bg-surface-container-low px-4 py-1 rounded-full">3 of 4 sessions completed</p>
+</div>
+<!-- Stats Panel -->
+<div class="bg-surface-container-lowest p-10 rounded-xl shadow-ambient flex flex-col justify-between">
+<div>
+<h4 class="font-headline font-bold text-2xl mb-8">Today Focus Stats</h4>
+<div class="space-y-6">
+<div class="flex items-center justify-between pb-4 border-b border-surface-container-low">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary-container" data-icon="schedule">schedule</span>
+<span class="font-medium">Total Focus</span>
+</div>
+<span class="font-headline font-bold text-lg text-tertiary-container">2h 45m</span>
+</div>
+<div class="flex items-center justify-between pb-4 border-b border-surface-container-low">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" data-icon="psychology">psychology</span>
+<span class="font-medium">Deep Work</span>
+</div>
+<span class="font-headline font-bold text-lg text-primary">82%</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-teal-600" data-icon="coffee">coffee</span>
+<span class="font-medium">Break Efficiency</span>
+</div>
+<span class="font-headline font-bold text-lg text-teal-600">High</span>
+</div>
+</div>
+</div>
+<div class="mt-12 p-6 bg-primary/5 rounded-xl border-l-4 border-primary/20">
+<p class="text-on-surface-variant italic leading-relaxed text-sm">"Focus is a muscle. The more you use it, the stronger it becomes. Today's deep work is tomorrow's breakthrough."</p>
+</div>
+</div>
+</div>
+</section>
+<!-- 3. Variation B — Full-Width Strip -->
+<section class="mb-20">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline font-bold text-xl text-on-surface-variant">03 — Variation B: Full-Width Strip</h3>
+</div>
+<div class="bg-surface-container-lowest p-12 rounded-xl shadow-ambient">
+<div class="flex flex-col items-center">
+<div class="relative w-40 h-40 flex items-center justify-center mb-8">
+<svg class="w-full h-full -rotate-90">
+<defs>
+<lineargradient id="indigoPurple" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" style="stop-color:#4450b7"></stop>
+<stop offset="100%" style="stop-color:#9333ea"></stop>
+</lineargradient>
+</defs>
+<circle class="text-surface-container-low" cx="80" cy="80" fill="transparent" r="74" stroke="currentColor" stroke-width="4"></circle>
+<circle cx="80" cy="80" fill="transparent" r="74" stroke="url(#indigoPurple)" stroke-dasharray="465" stroke-dashoffset="100" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute flex flex-col items-center">
+<span class="font-headline text-3xl font-black">18:42</span>
+</div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 w-full gap-8 mt-4">
+<div class="text-center">
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Sessions</p>
+<p class="font-headline font-bold text-2xl">3 / 4</p>
+</div>
+<div class="text-center">
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Focus Time</p>
+<p class="font-headline font-bold text-2xl text-primary">2h 45m</p>
+</div>
+<div class="text-center">
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Streak</p>
+<p class="font-headline font-bold text-2xl">26 days</p>
+</div>
+<div class="text-center">
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Score</p>
+<p class="font-headline font-bold text-2xl text-teal-600">87%</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. Variation C — Compact Dashboard Widget -->
+<section class="mb-20">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline font-bold text-xl text-on-surface-variant">04 — Variation C: Compact Dashboard Widget</h3>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+<div class="w-full max-w-[320px] bg-surface-container-lowest p-6 rounded-xl shadow-ambient border border-outline-variant/10">
+<div class="flex items-center gap-4 mb-6">
+<div class="relative w-20 h-20 flex items-center justify-center shrink-0">
+<svg class="w-full h-full -rotate-90">
+<circle class="text-surface-container-low" cx="40" cy="40" fill="transparent" r="36" stroke="currentColor" stroke-width="3"></circle>
+<circle class="text-primary" cx="40" cy="40" fill="transparent" r="36" stroke="currentColor" stroke-dasharray="226" stroke-dashoffset="60" stroke-linecap="round" stroke-width="5"></circle>
+</svg>
+<span class="absolute font-headline font-extrabold text-sm">18:42</span>
+</div>
+<div class="flex-1">
+<p class="text-xs text-on-surface-variant font-bold mb-1">Currently Focus</p>
+<h5 class="font-headline font-bold leading-tight">Module 4: Cognitive Architecture</h5>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 pt-4 border-t border-surface-container-low">
+<div>
+<p class="text-[10px] uppercase font-bold text-on-surface-variant mb-0.5">Focus</p>
+<p class="font-headline font-bold text-lg">2.5h</p>
+</div>
+<div>
+<p class="text-[10px] uppercase font-bold text-on-surface-variant mb-0.5">Success</p>
+<p class="font-headline font-bold text-lg text-primary">82%</p>
+</div>
+</div>
+<div class="flex gap-2 mt-6">
+<button class="flex-1 py-2.5 bg-ink-gradient text-white text-xs font-bold rounded-full">Pause Session</button>
+<button class="w-10 h-10 bg-surface-container-high rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-sm" data-icon="stop">stop</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- 5. Close-Ups Section -->
+<section class="mb-20">
+<div class="flex items-center justify-between mb-8">
+<h3 class="font-headline font-bold text-xl text-on-surface-variant">05 — Close-Ups &amp; States</h3>
+</div>
+<div class="space-y-12">
+<!-- State Indicators -->
+<div>
+<h4 class="text-sm font-bold uppercase tracking-widest text-on-surface-variant mb-6">Timer State Variations</h4>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+<div class="bg-surface-container-lowest p-6 rounded-xl flex items-center gap-4">
+<div class="w-12 h-12 rounded-full border-4 border-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-xl" data-icon="play_arrow" data-weight="fill">play_arrow</span>
+</div>
+<div>
+<p class="text-xs font-bold text-primary">Running</p>
+<p class="font-headline font-bold">Flowing</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl flex items-center gap-4">
+<div class="w-12 h-12 rounded-full border-4 border-tertiary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary-container text-xl" data-icon="pause" data-weight="fill">pause</span>
+</div>
+<div>
+<p class="text-xs font-bold text-tertiary-container">Paused</p>
+<p class="font-headline font-bold">Stalled</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl flex items-center gap-4">
+<div class="w-12 h-12 rounded-full border-4 border-teal-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-teal-600 text-xl" data-icon="coffee" data-weight="fill">coffee</span>
+</div>
+<div>
+<p class="text-xs font-bold text-teal-600">Break</p>
+<p class="font-headline font-bold">Resting</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Active/Inactive States -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+<div>
+<h4 class="text-sm font-bold uppercase tracking-widest text-on-surface-variant mb-6">Tab Selectors</h4>
+<div class="space-y-4 max-w-xs">
+<div class="flex items-center justify-between p-3 bg-white shadow-sm rounded-xl border-l-4 border-primary">
+<span class="font-medium text-primary">Active Selection</span>
+<span class="material-symbols-outlined text-primary text-sm" data-icon="check_circle" data-weight="fill">check_circle</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface-container-low rounded-xl border-l-4 border-transparent hover:bg-surface-container-high transition-colors cursor-pointer">
+<span class="font-medium text-on-surface-variant">Inactive Option</span>
+</div>
+</div>
+</div>
+<div class="p-8 bg-surface-container rounded-xl">
+<h4 class="text-sm font-bold uppercase tracking-widest text-on-surface-variant mb-6">Stats Detail Rendering</h4>
+<div class="bg-white p-6 rounded-xl shadow-ambient">
+<div class="flex justify-between items-end">
+<div>
+<p class="text-xs font-bold text-primary mb-1">Performance</p>
+<h5 class="font-headline font-black text-3xl">92%</h5>
+</div>
+<div class="w-32 h-12 flex items-end gap-1">
+<div class="w-2 bg-primary/10 h-4 rounded-t-sm"></div>
+<div class="w-2 bg-primary/20 h-6 rounded-t-sm"></div>
+<div class="w-2 bg-primary/40 h-10 rounded-t-sm"></div>
+<div class="w-2 bg-primary/60 h-8 rounded-t-sm"></div>
+<div class="w-2 bg-primary h-12 rounded-t-sm"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full py-12 border-t border-[#c6c5d5]/15 bg-[#fef9f2]">
+<div class="flex flex-col md:flex-row justify-between items-center px-8 max-w-7xl mx-auto">
+<div class="flex items-center gap-6 mb-8 md:mb-0">
+<p class="font-body text-xs text-[#454652] dark:text-[#c6c5d5]">© 2024 Knowlune. Designed for Deep Work.</p>
+</div>
+<div class="flex gap-8">
+<a class="font-body text-xs text-[#454652] hover:text-[#1d1c18] transition-colors" href="#">Privacy</a>
+<a class="font-body text-xs text-[#454652] hover:text-[#1d1c18] transition-colors" href="#">Terms</a>
+<a class="font-body text-xs text-[#454652] hover:text-[#1d1c18] transition-colors" href="#">Research Methodology</a>
+</div>
+</div>
+</footer>
+</body></html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Knowlune Design Catalog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #FAF5EE;
+      color: #1b1c1a;
+      min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(135deg, #0a0b1a 0%, #1a1535 100%);
+      padding: 4rem 2rem 3rem;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 0.5rem;
+    }
+    .header .brand {
+      background: linear-gradient(135deg, #5e6ad2, #8b92ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header p {
+      color: rgba(255,255,255,0.6);
+      font-size: 1.1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .grid {
+      max-width: 1200px;
+      margin: -2rem auto 3rem;
+      padding: 0 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 1.5rem;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(94, 106, 210, 0.12);
+    }
+    .card .number {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #5e6ad2;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .card h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .card p {
+      color: #666;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    .card .alts {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: auto;
+      padding-top: 0.5rem;
+    }
+    .card .alt-badge {
+      background: #f0eef8;
+      color: #5e6ad2;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.625rem;
+      border-radius: 999px;
+    }
+    .card .size {
+      color: #999;
+      font-size: 0.8rem;
+    }
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      color: #999;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Knowlune <span class="brand">Design Catalog</span></h1>
+    <p>12 design pages with 4-5 alternatives each. Open any page to explore design options for your learning platform.</p>
+  </div>
+
+  <div class="grid">
+    <a href="01-charts-data-viz.html" class="card">
+      <span class="number">Page 01</span>
+      <h2>Charts & Data Visualization</h2>
+      <p>Area charts, line charts, bar charts, sparklines, and score trajectories for analytics dashboards.</p>
+      <div class="alts">
+        <span class="alt-badge">A: Clean Minimal</span>
+        <span class="alt-badge">B: Gradient</span>
+        <span class="alt-badge">C: Stacked</span>
+        <span class="alt-badge">D: Micro</span>
+        <span class="alt-badge">E: Dark</span>
+      </div>
+    </a>
+
+    <a href="02-radar-skill-maps.html" class="card">
+      <span class="number">Page 02</span>
+      <h2>Radar & Skill Maps</h2>
+      <p>Radar/spider charts, skill proficiency displays, and category breakdowns for learner assessment.</p>
+      <div class="alts">
+        <span class="alt-badge">A: Classic Radar</span>
+        <span class="alt-badge">B: Rings</span>
+        <span class="alt-badge">C: Hex Grid</span>
+        <span class="alt-badge">D: Radial Bar</span>
+      </div>
+    </a>
+
+    <a href="03-progress-indicators.html" class="card">
+      <span class="number">Page 03</span>
+      <h2>Progress Indicators</h2>
+      <p>Circular rings, linear bars, step milestones, animated counters, and combined composites.</p>
+      <div class="alts">
+        <span class="alt-badge">A: Rings</span>
+        <span class="alt-badge">B: Bars</span>
+        <span class="alt-badge">C: Steps</span>
+        <span class="alt-badge">D: Counters</span>
+        <span class="alt-badge">E: Combined</span>
+      </div>
+    </a>
+
+    <a href="04-activity-visualizations.html" class="card">
+      <span class="number">Page 04</span>
+      <h2>Activity Visualizations</h2>
+      <p>GitHub-style heatmaps, streak calendars, activity timelines, waffle charts, and circular calendars.</p>
+      <div class="alts">
+        <span class="alt-badge">A: Heatmap</span>
+        <span class="alt-badge">B: Streak</span>
+        <span class="alt-badge">C: Timeline</span>
+        <span class="alt-badge">D: Waffle</span>
+        <span class="alt-badge">E: Circular</span>
+      </div>
+    </a>
+
+    <a href="05-course-cards-grids.html" class="card">
+      <span class="number">Page 05</span>
+      <h2>Course Cards & Grids</h2>
+      <p>Course card layouts: thumbnail grids, list views, bento grids, text-only, and state variants.</p>
+      <div class="alts">
+        <span class="alt-badge">A: Thumbnail</span>
+        <span class="alt-badge">B: List</span>
+        <span class="alt-badge">C: Bento</span>
+        <span class="alt-badge">D: Minimal</span>
+        <span class="alt-badge">E: States</span>
+      </div>
+    </a>
+
+    <a href="06-dashboard-widgets.html" class="card">
+      <span class="number">Page 06</span>
+      <h2>Dashboard Widgets</h2>
+      <p>Stats cards, goal trackers, quick actions, recommendations, and study schedule widgets.</p>
+      <div class="alts">
+        <span class="alt-badge">A: KPI Strip</span>
+        <span class="alt-badge">B: Bento</span>
+        <span class="alt-badge">C: Sidebar</span>
+        <span class="alt-badge">D: Carousel</span>
+      </div>
+    </a>
+
+    <a href="07-learning-paths.html" class="card">
+      <span class="number">Page 07</span>
+      <h2>Learning Path Visualizations</h2>
+      <p>Trail maps, milestone timelines, node graphs, illustrated paths, and kanban boards.</p>
+      <div class="alts">
+        <span class="alt-badge">A: Timeline</span>
+        <span class="alt-badge">B: Roadmap</span>
+        <span class="alt-badge">C: Node Graph</span>
+        <span class="alt-badge">D: Trail</span>
+        <span class="alt-badge">E: Kanban</span>
+      </div>
+    </a>
+
+    <a href="08-quiz-flashcard.html" class="card">
+      <span class="number">Page 08</span>
+      <h2>Quiz & Flashcard UI</h2>
+      <p>Quiz cards, flashcard flip, score displays, rating buttons, and timed challenge modes.</p>
+      <div class="alts">
+        <span class="alt-badge">A: Clean Card</span>
+        <span class="alt-badge">B: Split View</span>
+        <span class="alt-badge">C: Flip Card</span>
+        <span class="alt-badge">D: Timed</span>
+      </div>
+    </a>
+
+    <a href="09-media-player.html" class="card">
+      <span class="number">Page 09</span>
+      <h2>Media Player Layouts</h2>
+      <p>Video player chrome, transcript panels, PDF viewer, and split-pane layout variations.</p>
+      <div class="alts">
+        <span class="alt-badge">A: Cinema</span>
+        <span class="alt-badge">B: Split Panel</span>
+        <span class="alt-badge">C: Stacked</span>
+        <span class="alt-badge">D: PiP</span>
+      </div>
+    </a>
+
+    <a href="10-dialogs-forms.html" class="card">
+      <span class="number">Page 10</span>
+      <h2>Dialogs & Forms</h2>
+      <p>Import wizards, settings panels, edit forms, tag editors, and inline editing patterns.</p>
+      <div class="alts">
+        <span class="alt-badge">A: Wizard</span>
+        <span class="alt-badge">B: Sheet</span>
+        <span class="alt-badge">C: Modal</span>
+        <span class="alt-badge">D: Inline</span>
+      </div>
+    </a>
+
+    <a href="11-gamification.html" class="card">
+      <span class="number">Page 11</span>
+      <h2>Gamification & Engagement</h2>
+      <p>Achievement badges, streak counters, XP/level systems, celebrations, and Pomodoro timers.</p>
+      <div class="alts">
+        <span class="alt-badge">A: Badges</span>
+        <span class="alt-badge">B: Streaks</span>
+        <span class="alt-badge">C: XP/Level</span>
+        <span class="alt-badge">D: Celebrate</span>
+        <span class="alt-badge">E: Pomodoro</span>
+      </div>
+    </a>
+
+    <a href="12-landing-page.html" class="card">
+      <span class="number">Page 12</span>
+      <h2>Landing Page Sections</h2>
+      <p>Hero variants, feature bento grids, comparison cards, social proof, and CTA sections.</p>
+      <div class="alts">
+        <span class="alt-badge">A: Dark Hero</span>
+        <span class="alt-badge">B: Warm Hero</span>
+        <span class="alt-badge">C: Bento</span>
+        <span class="alt-badge">D: Compare</span>
+        <span class="alt-badge">E: CTA</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="footer">
+    Knowlune Design Catalog &mdash; Generated with Stitch &mdash; 2026-03-28
+  </div>
+</body>
+</html>

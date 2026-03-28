@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Course Catalog Design Patterns | Knowlune</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "surface-variant": "#e6e2db",
+                "tertiary-fixed-dim": "#ffb867",
+                "tertiary": "#834f00",
+                "secondary-fixed": "#dfe0ff",
+                "surface": "#fef9f2",
+                "on-primary-fixed": "#000965",
+                "surface-container-highest": "#e6e2db",
+                "primary-fixed": "#dfe0ff",
+                "primary": "#4450b7",
+                "on-tertiary": "#ffffff",
+                "on-surface-variant": "#454652",
+                "on-secondary-fixed-variant": "#3f446b",
+                "error-container": "#ffdad6",
+                "surface-container-lowest": "#ffffff",
+                "outline-variant": "#c6c5d5",
+                "surface-tint": "#4854bb",
+                "primary-fixed-dim": "#bdc2ff",
+                "secondary": "#575b84",
+                "error": "#ba1a1a",
+                "on-tertiary-fixed-variant": "#673d00",
+                "background": "#fef9f2",
+                "on-primary-fixed-variant": "#2e3aa2",
+                "inverse-surface": "#32302c",
+                "on-secondary": "#ffffff",
+                "inverse-primary": "#bdc2ff",
+                "on-background": "#1d1c18",
+                "primary-container": "#5e6ad2",
+                "on-secondary-container": "#52577f",
+                "outline": "#767684",
+                "on-tertiary-fixed": "#2b1700",
+                "surface-container-high": "#ece7e1",
+                "tertiary-fixed": "#ffddbb",
+                "on-tertiary-container": "#fffaf8",
+                "surface-dim": "#ded9d3",
+                "surface-container-low": "#f8f3ec",
+                "inverse-on-surface": "#f5f0e9",
+                "tertiary-container": "#a56500",
+                "secondary-container": "#cbcefe",
+                "secondary-fixed-dim": "#c0c3f2",
+                "on-secondary-fixed": "#13183d",
+                "surface-bright": "#fef9f2",
+                "on-primary-container": "#fdfaff",
+                "on-error-container": "#93000a",
+                "on-error": "#ffffff",
+                "on-primary": "#ffffff",
+                "surface-container": "#f2ede6",
+                "on-surface": "#1d1c18"
+              },
+              fontFamily: {
+                "headline": ["Manrope"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+              },
+              borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: #fef9f2; }
+        h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+    </style>
+</head>
+<body class="text-on-surface antialiased">
+<!-- Top Navigation (Shell Implementation) -->
+<header class="bg-[#fef9f2] text-slate-600 font-['Manrope'] font-bold tracking-tight docked full-width top-0 sticky z-50 flex justify-between items-center w-full px-8 h-16">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-extrabold text-[#4450b7] tracking-tighter">Knowlune</span>
+<nav class="hidden md:flex gap-6 text-sm">
+<a class="text-slate-500 hover:bg-[#f2ede6] px-3 py-1 rounded-lg transition-colors" href="#">Dashboard</a>
+<a class="text-[#4450b7] font-bold px-3 py-1 rounded-lg" href="#">Courses</a>
+<a class="text-slate-500 hover:bg-[#f2ede6] px-3 py-1 rounded-lg transition-colors" href="#">Progress</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="material-symbols-outlined text-slate-400">notifications</span>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container hover:bg-surface-container-high transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-primary">account_circle</span>
+<span class="text-sm font-semibold">Scholar Profile</span>
+</div>
+</div>
+</header>
+<div class="flex">
+<!-- Sidebar (Shell Implementation) -->
+<aside class="hidden lg:flex flex-col py-8 gap-4 bg-[#f8f3ec] fixed left-0 top-16 h-[calc(100vh-64px)] w-64 border-r-0">
+<div class="px-6 mb-6">
+<p class="text-xl font-black text-[#4450b7]">Knowlune</p>
+<p class="text-xs text-slate-500 uppercase tracking-widest">Academic Atelier</p>
+</div>
+<nav class="flex flex-col space-y-1">
+<a class="flex items-center gap-3 px-6 py-3 text-slate-500 hover:bg-[#ece7e1] transition-all duration-300" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-semibold text-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-[#4450b7] font-bold border-r-4 border-[#4450b7] bg-[#f2ede6] transition-all duration-300" href="#">
+<span class="material-symbols-outlined">school</span>
+<span class="font-semibold text-sm">Courses</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-500 hover:bg-[#ece7e1] transition-all duration-300" href="#">
+<span class="material-symbols-outlined">trending_up</span>
+<span class="font-semibold text-sm">Progress</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-500 hover:bg-[#ece7e1] transition-all duration-300" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-semibold text-sm">Settings</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 lg:ml-64 p-8 max-w-7xl mx-auto space-y-16">
+<!-- Hero Header -->
+<header class="space-y-2 border-l-4 border-primary pl-6">
+<h1 class="text-4xl font-extrabold tracking-tight text-on-background leading-none">Course Catalog Design Patterns</h1>
+<p class="text-lg text-slate-600 font-medium">A comprehensive suite of layout and card variations for the Modern Scholar.</p>
+</header>
+<!-- A) Thumbnail Heavy (3-Column Grid) -->
+<section class="space-y-6">
+<div class="flex items-baseline justify-between">
+<h2 class="text-2xl font-bold text-on-background">Thumbnail Heavy Grid</h2>
+<span class="text-xs uppercase tracking-widest text-slate-400 font-bold">Standard Reference</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Card Loop 1-6 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/10 group hover:border-primary/20 transition-all">
+<div class="aspect-video w-full overflow-hidden bg-surface-container">
+<img alt="Space" class="w-full h-full object-cover" data-alt="Cinematic wide shot of a deep space nebula with vibrant purple and indigo gas clouds and twinkling stars" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDs3s0RwcMj0Mrh2UmVMeV6IOsPL8HL8sC4kPsRkXg6ZwsffG6fswQv_eoUgXWUAXkVMOIBjaCEb6Z4AJUWWPmXhIdtCkues4dPfCj-70Jxhhj35GerUBSKSXD2ro_tEBseyAimrmNWxE6F9zeNey7F-JEnryIUcmUsXHUE8OXbLWKSXieyizAmaUTiZG455KYjsVz39pUbYjSqQAhKGOuZCy-9294PwE0sSeEcNzYNOR9YshYARsIcsZTkGHxEYpeOKHhen24Cf-Qb"/>
+</div>
+<div class="p-6 space-y-4">
+<div class="flex justify-between items-start">
+<span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase rounded">Physics</span>
+<span class="text-xs text-slate-400 font-medium">12 lessons</span>
+</div>
+<div>
+<h3 class="font-bold text-lg text-on-surface group-hover:text-primary transition-colors">Quantum Mechanics: The Wave Function</h3>
+<p class="text-sm text-slate-500">Dr. Julian Vance</p>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-bold text-primary uppercase">
+<span>Progress</span>
+<span>45%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary-container" style="width: 45%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Repeat Card 2 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/10 group transition-all">
+<div class="aspect-video w-full overflow-hidden bg-surface-container">
+<img alt="Ethics" class="w-full h-full object-cover" data-alt="A vintage marble bust of a Greek philosopher in soft morning light within a quiet library setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeZCUa_hKSMFjRrWpDN3_MJ9URg0yhXvkl43j29Pvyp6BRfD6Q36TbfFyXoFv3crbNavOoXaBH2rXkr3PsVwVs-SU9uai4sAcb_Z7RPkC09vgDAUIHA1MfJzW4FOE5T3iPYBn-qQMMFksKHRJltt5EFkHhPqDvuBcnIBOJB0wiVuUGDenbuUVSRqVKPge4eilCuFsmjuzepgU1bqp5lnniO2FZXsJj9wjOv6ieYxY8tQ_gSkqXJviAyh7XgOcQWH1vs_DYQCJzv8up"/>
+</div>
+<div class="p-6 space-y-4">
+<div class="flex justify-between items-start">
+<span class="px-2 py-0.5 bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-bold uppercase rounded">Philosophy</span>
+<span class="text-xs text-slate-400 font-medium">8 lessons</span>
+</div>
+<h3 class="font-bold text-lg text-on-surface">Stoic Ethics in the Modern World</h3>
+<p class="text-sm text-slate-500">Prof. Elena Moretti</p>
+<div class="space-y-2">
+<div class="h-1.5 w-full bg-surface-container rounded-full"><div class="h-full bg-primary-container" style="width: 15%"></div></div>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/10 group transition-all">
+<div class="aspect-video w-full overflow-hidden bg-surface-container">
+<img alt="Data" class="w-full h-full object-cover" data-alt="Abstract digital visualization of global data streams flowing over a dark blue illuminated sphere" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB34QmGSjM2q_c57Cl_S08lncY6PseVCr8JhoCIvS35gDy-wcKPrLwx0k5vu7NIdKtGdaRCd44HGntSP2KesiQj2EprRDPGdltRuzrVyO6ceCzoMur-x5toJG4q5xfnWZqNDkUAD-iP0r9xpnG9VsOJbEYQKMAv39aGhUVV5yBQa_x4nzhQxl3BwPc-S1pW2Erfg9-OU54Gb70rqIi2hgE1b5hJ0Jk9osPn4zplXtonKjKo-192KHwp0DU0IwDe9DSBC_G-R7kQtdqd"/>
+</div>
+<div class="p-6 space-y-4">
+<div class="flex justify-between items-start">
+<span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase rounded">Data Science</span>
+<span class="text-xs text-slate-400 font-medium">24 lessons</span>
+</div>
+<h3 class="font-bold text-lg text-on-surface">Neural Networks and Deep Learning</h3>
+<p class="text-sm text-slate-500">Sarah Jenkins, PhD</p>
+<div class="space-y-2">
+<div class="h-1.5 w-full bg-surface-container rounded-full"><div class="h-full bg-primary-container" style="width: 82%"></div></div>
+</div>
+</div>
+</div>
+<!-- Additional Cards for 6-grid -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/10 p-6 flex flex-col items-center justify-center opacity-40 border-dashed">
+<span class="material-symbols-outlined text-4xl mb-2">auto_stories</span>
+<p class="text-sm font-semibold italic">Additional Course Slots (3/6)</p>
+</div>
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/10 p-6 flex flex-col items-center justify-center opacity-40 border-dashed"></div>
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/10 p-6 flex flex-col items-center justify-center opacity-40 border-dashed"></div>
+</div>
+</section>
+<!-- B) List/Row View -->
+<section class="space-y-6">
+<div class="flex items-center justify-between">
+<h2 class="text-2xl font-bold text-on-background">Active Course Stream</h2>
+<div class="flex items-center gap-3">
+<span class="text-xs font-bold text-slate-400 uppercase">Sort by:</span>
+<button class="flex items-center gap-2 bg-surface-container px-4 py-2 rounded-lg text-sm font-semibold hover:bg-surface-container-high transition-colors">
+                            Recently Accessed
+                            <span class="material-symbols-outlined text-sm">expand_more</span>
+</button>
+</div>
+</div>
+<div class="space-y-4">
+<!-- Row 1 -->
+<div class="bg-surface-container-lowest p-4 rounded-xl flex items-center gap-6 group hover:bg-surface-container transition-all">
+<img alt="Tech" class="w-16 h-16 rounded-lg object-cover" data-alt="Close up of a collection of vintage hardware and microchips with soft neon teal highlights" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBN_iBW9gTCf8OWudElt72wRyB6m_DpOUCgbw27o3W1uh__6Ot2ZVle4OmLBlCbWNpl_czxI_f74KP_OmZOgIsi0_WcEj9dV2nUOKqs4ryWCdI5WcnseBOYcrCVnTFGapoLBDWQZbX7sSyUtNW1nsLS8NY3zJvi9-N-jTPbNWpJYBBWl58vkFIRvwEWlR36Fk_3isPHXlkcaONatrPZu-ARXrQPtaPG4oxjU_vpb2qJ1gRRx6IhBb14IlvJCH5Qk3Qd9DBfKBjsa_k5"/>
+<div class="flex-1">
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors">Architectural History of Computation</h4>
+<p class="text-xs text-slate-500">Dr. Marcus Thorne • 18 Lessons</p>
+</div>
+<div class="relative flex items-center justify-center w-12 h-12">
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-surface-container" cx="24" cy="24" fill="transparent" r="20" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-primary-container" cx="24" cy="24" fill="transparent" r="20" stroke="currentColor" stroke-dasharray="125.6" stroke-dashoffset="31.4" stroke-width="4"></circle>
+</svg>
+<span class="absolute text-[10px] font-bold">75%</span>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="bg-surface-container-lowest p-4 rounded-xl flex items-center gap-6 group hover:bg-surface-container transition-all">
+<img alt="Lit" class="w-16 h-16 rounded-lg object-cover" data-alt="Stacks of old leather-bound books on a mahogany table with a warm candle glow" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9eRmkbrrgkJ557MlmAk3KksBQBJH__wugG1lhVOg4XVUm3Z2gziAFVm7cUU7OQ7ypFM2SUTRQPbIOG1mOuThEdQ9NBLusGDixl5ywWm0F980GJn4frqiU92JwJsD0GKCxVzGx9ZLlr__cD5obHdfkaQc5vaHhSDpDHJIsRQOUnSRBAymbM04Tfwbetu_wqzryPMzyB3diDwptScVRxdhbsRgE_ck-yVUa5hfMo6mpy6Un5f1B6TS3p7n-N67CE4NA-HI9y33zTfZ-"/>
+<div class="flex-1">
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors">Epic Poetry: From Homer to Milton</h4>
+<p class="text-xs text-slate-500">Prof. Claire Fontaine • 12 Lessons</p>
+</div>
+<div class="relative flex items-center justify-center w-12 h-12">
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-surface-container" cx="24" cy="24" fill="transparent" r="20" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-primary-container" cx="24" cy="24" fill="transparent" r="20" stroke="currentColor" stroke-dasharray="125.6" stroke-dashoffset="87.9" stroke-width="4"></circle>
+</svg>
+<span class="absolute text-[10px] font-bold">30%</span>
+</div>
+</div>
+</div>
+</section>
+<!-- C) Bento Grid -->
+<section class="space-y-6">
+<h2 class="text-2xl font-bold text-on-background">Learning Dashboard (Bento)</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Featured Large Card -->
+<div class="md:col-span-2 bg-primary-container text-on-primary-container p-8 rounded-xl flex flex-col justify-between relative overflow-hidden min-h-[400px]">
+<div class="relative z-10 space-y-4">
+<span class="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold uppercase tracking-wider">Featured Course</span>
+<h3 class="text-4xl font-extrabold font-headline leading-tight max-w-md">Cognitive Psychology &amp; Memory Retention</h3>
+<p class="text-white/80 max-w-sm leading-relaxed">Explore the neurological pathways of memory and discover advanced mnemonic techniques for academic mastery.</p>
+<div class="pt-4 flex items-center gap-4">
+<button class="bg-white text-primary px-8 py-3 rounded-full font-bold hover:bg-surface-container-lowest transition-all">Continue Lesson 04</button>
+<span class="text-xs font-semibold">14 lessons remaining</span>
+</div>
+</div>
+<!-- Abstract Deco -->
+<div class="absolute -right-20 -bottom-20 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
+</div>
+<!-- Right Grid 2x2 -->
+<div class="grid grid-cols-2 gap-6">
+<div class="bg-surface-container p-4 rounded-xl flex flex-col justify-between border border-transparent hover:border-outline-variant transition-all">
+<h4 class="text-sm font-bold leading-tight">Biochemistry Foundations</h4>
+<div class="space-y-1">
+<div class="h-1 w-full bg-white/50 rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 65%"></div>
+</div>
+<span class="text-[10px] font-bold text-primary">65%</span>
+</div>
+</div>
+<div class="bg-surface-container p-4 rounded-xl flex flex-col justify-between border border-transparent hover:border-outline-variant transition-all">
+<h4 class="text-sm font-bold leading-tight">Modern Art History</h4>
+<div class="space-y-1">
+<div class="h-1 w-full bg-white/50 rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 12%"></div>
+</div>
+<span class="text-[10px] font-bold text-primary">12%</span>
+</div>
+</div>
+<div class="bg-surface-container p-4 rounded-xl flex flex-col justify-between border border-transparent hover:border-outline-variant transition-all">
+<h4 class="text-sm font-bold leading-tight">Statistical Inference</h4>
+<div class="space-y-1">
+<div class="h-1 w-full bg-white/50 rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 90%"></div>
+</div>
+<span class="text-[10px] font-bold text-primary">90%</span>
+</div>
+</div>
+<div class="bg-surface-container p-4 rounded-xl flex flex-col justify-between border border-transparent hover:border-outline-variant transition-all">
+<h4 class="text-sm font-bold leading-tight">Linguistic Patterns</h4>
+<div class="space-y-1">
+<div class="h-1 w-full bg-white/50 rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 45%"></div>
+</div>
+<span class="text-[10px] font-bold text-primary">45%</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- D) Minimal Text (Typography Focused) -->
+<section class="space-y-6">
+<h2 class="text-2xl font-bold text-on-background">Topic Syllabus (Minimal)</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Minimal Card 1 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl relative overflow-hidden border border-outline-variant/10 shadow-sm">
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary"></div>
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<h3 class="font-bold text-on-surface">Political Philosophy</h3>
+<div class="flex items-center gap-1.5">
+<div class="w-2 h-2 rounded-full bg-tertiary"></div>
+<span class="text-[10px] font-bold uppercase text-slate-500">Active</span>
+</div>
+</div>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 70%"></div>
+</div>
+</div>
+</div>
+<!-- Minimal Card 2 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl relative overflow-hidden border border-outline-variant/10 shadow-sm">
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-tertiary"></div>
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<h3 class="font-bold text-on-surface">Economic Theory</h3>
+<div class="flex items-center gap-1.5">
+<div class="w-2 h-2 rounded-full bg-tertiary"></div>
+<span class="text-[10px] font-bold uppercase text-slate-500">Active</span>
+</div>
+</div>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-tertiary" style="width: 40%"></div>
+</div>
+</div>
+</div>
+<!-- Minimal Card 3 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl relative overflow-hidden border border-outline-variant/10 shadow-sm">
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-secondary"></div>
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<h3 class="font-bold text-on-surface">Molecular Biology</h3>
+<div class="flex items-center gap-1.5">
+<div class="w-2 h-2 rounded-full bg-slate-300"></div>
+<span class="text-[10px] font-bold uppercase text-slate-500">Paused</span>
+</div>
+</div>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-secondary" style="width: 15%"></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- E) Card State Variants -->
+<section class="space-y-6">
+<h2 class="text-2xl font-bold text-on-background">State Lifecycle Library</h2>
+<div class="flex flex-wrap lg:flex-nowrap gap-4">
+<!-- Not Started -->
+<div class="flex-1 min-w-[200px] bg-surface-container-low p-5 rounded-xl border border-outline-variant/30 grayscale opacity-80 flex flex-col justify-between h-56">
+<div>
+<span class="text-[10px] font-bold uppercase text-slate-500">New Offering</span>
+<h4 class="font-bold text-sm mt-1">Formal Logic</h4>
+</div>
+<button class="w-full py-2 bg-slate-200 text-slate-600 rounded-lg text-xs font-bold uppercase tracking-tight">Start</button>
+</div>
+<!-- In Progress -->
+<div class="flex-1 min-w-[200px] bg-surface-container-lowest p-5 rounded-xl border-2 border-primary/20 flex flex-col justify-between h-56">
+<div>
+<span class="text-[10px] font-bold uppercase text-primary">In Progress</span>
+<h4 class="font-bold text-sm mt-1">Abstract Algebra</h4>
+<div class="mt-4 h-1 w-full bg-surface-container rounded-full">
+<div class="h-full bg-primary" style="width: 45%"></div>
+</div>
+</div>
+<button class="w-full py-2 bg-primary text-white rounded-lg text-xs font-bold uppercase tracking-tight">Continue</button>
+</div>
+<!-- Completed -->
+<div class="flex-1 min-w-[200px] bg-[#f0f9f0] p-5 rounded-xl border border-green-100 flex flex-col justify-between h-56">
+<div>
+<div class="flex justify-between items-start">
+<span class="text-[10px] font-bold uppercase text-green-600">Completed</span>
+<span class="material-symbols-outlined text-green-600 text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<h4 class="font-bold text-sm mt-1">The Art of Rhetoric</h4>
+</div>
+<button class="w-full py-2 border border-green-200 text-green-700 rounded-lg text-xs font-bold uppercase tracking-tight">Review</button>
+</div>
+<!-- At Risk -->
+<div class="flex-1 min-w-[200px] bg-tertiary-fixed p-5 rounded-xl border border-tertiary/20 flex flex-col justify-between h-56">
+<div>
+<div class="flex justify-between items-start">
+<span class="text-[10px] font-bold uppercase text-tertiary">Attention Needed</span>
+<span class="material-symbols-outlined text-tertiary text-sm" style="font-variation-settings: 'FILL' 1;">error</span>
+</div>
+<h4 class="font-bold text-sm mt-1">Macroeconomics 101</h4>
+<p class="text-[10px] text-tertiary/70 mt-1 italic">Exam in 2 days</p>
+</div>
+<button class="w-full py-2 bg-tertiary text-white rounded-lg text-xs font-bold uppercase tracking-tight">Focus</button>
+</div>
+<!-- Imported -->
+<div class="flex-1 min-w-[200px] bg-transparent p-5 rounded-xl border-2 border-dashed border-outline-variant flex flex-col justify-between h-56">
+<div>
+<span class="text-[10px] font-bold uppercase text-slate-400">Syncing...</span>
+<h4 class="font-bold text-sm mt-1 text-slate-400">Global History</h4>
+</div>
+<div class="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase">
+<span class="material-symbols-outlined text-sm animate-spin">sync</span>
+                            Pending Status
+                        </div>
+</div>
+</div>
+</section>
+</main>
+</div>
+<!-- Footer (Shell Implementation) -->
+<footer class="bg-[#fef9f2] text-slate-400 font-['Inter'] text-xs uppercase tracking-widest w-full py-8 mt-16 border-t border-surface-container flex justify-center items-center gap-8 px-8">
+<span>© 2024 Knowlune Academic Atelier</span>
+<div class="flex gap-6">
+<a class="hover:text-[#4450b7] transition-opacity opacity-80 hover:opacity-100" href="#">Privacy</a>
+<a class="hover:text-[#4450b7] transition-opacity opacity-80 hover:opacity-100" href="#">Terms</a>
+<a class="hover:text-[#4450b7] transition-opacity opacity-80 hover:opacity-100" href="#">Support</a>
+</div>
+</footer>
+</body></html>

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Academic Atelier | Media Player Catalog</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary-fixed-dim": "#ffb867",
+              "primary": "#4450b7",
+              "on-secondary-fixed": "#13183d",
+              "surface-container-highest": "#e6e2db",
+              "on-background": "#1d1c18",
+              "on-primary-container": "#fdfaff",
+              "secondary-container": "#cbcefe",
+              "surface-bright": "#fef9f2",
+              "on-primary-fixed": "#000965",
+              "tertiary-fixed": "#ffddbb",
+              "tertiary": "#834f00",
+              "on-tertiary": "#ffffff",
+              "surface-variant": "#e6e2db",
+              "on-tertiary-fixed": "#2b1700",
+              "background": "#fef9f2",
+              "error-container": "#ffdad6",
+              "tertiary-container": "#a56500",
+              "primary-fixed": "#dfe0ff",
+              "on-secondary-container": "#52577f",
+              "on-error": "#ffffff",
+              "secondary-fixed": "#dfe0ff",
+              "inverse-on-surface": "#f5f0e9",
+              "on-secondary": "#ffffff",
+              "outline": "#767684",
+              "surface-container-high": "#ece7e1",
+              "surface": "#fef9f2",
+              "primary-fixed-dim": "#bdc2ff",
+              "inverse-primary": "#bdc2ff",
+              "surface-container-lowest": "#ffffff",
+              "secondary-fixed-dim": "#c0c3f2",
+              "on-secondary-fixed-variant": "#3f446b",
+              "surface-tint": "#4854bb",
+              "surface-dim": "#ded9d3",
+              "primary-container": "#5e6ad2",
+              "surface-container": "#f2ede6",
+              "outline-variant": "#c6c5d5",
+              "inverse-surface": "#32302c",
+              "on-tertiary-container": "#fffaf8",
+              "on-primary-fixed-variant": "#2e3aa2",
+              "on-surface-variant": "#454652",
+              "secondary": "#575b84",
+              "on-primary": "#ffffff",
+              "surface-container-low": "#f8f3ec",
+              "on-surface": "#1d1c18",
+              "error": "#ba1a1a",
+              "on-error-container": "#93000a",
+              "on-tertiary-fixed-variant": "#673d00"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Manrope"],
+              "label": ["Manrope"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-player {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .text-shadow-sm {
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #e6e2db;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- Top Navigation Anchor -->
+<nav class="w-full top-0 z-50 bg-[#f8f3ec] flex justify-between items-center px-8 py-4 max-w-full font-manrope antialiased tracking-tight">
+<div class="text-xl font-bold text-[#1d1c18] tracking-tighter">The Academic Atelier</div>
+<div class="hidden md:flex gap-x-8 items-center">
+<a class="text-[#4450b7] font-semibold border-b-2 border-[#4450b7] pb-1" href="#">Courses</a>
+<a class="text-[#1d1c18]/60 hover:text-[#4450b7] transition-colors duration-200" href="#">Library</a>
+<a class="text-[#1d1c18]/60 hover:text-[#4450b7] transition-colors duration-200" href="#">Insights</a>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-[#f8f3ec] p-2 rounded-full transition-colors">notifications</span>
+<div class="w-10 h-10 rounded-full overflow-hidden ring-2 ring-primary/10">
+<img alt="Scholar Profile" class="w-full h-full object-cover" data-alt="professional headshot of a scholar with a neutral expression and soft studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwIhzUTg3BladhDInPND0H-8ESSGFWOPdNf5cE9YXRKXfA8RwO2IBdMO9JTBOba9NtJLOz_QT9ef5NrFubPxRHKyfwq5yNdAk-3csRSKvpjcd4vgtt60ijE65ju8o4ql1nQST1-jAWYtH_LNfeMi_dWRtKgaNo_yLc9VcpfGMbX3JzXZpHhz9BZbeR-dFsHW4F-9rtclN_ZzA4qob6K0aYCMPwzDHtAmZwhMfMjtrKE_5YOLOrjBkbTDhSfJdGHEkZAwwtJzg1cp1_"/>
+</div>
+</div>
+</nav>
+<main class="max-w-7xl mx-auto px-8 py-12">
+<!-- Header Section -->
+<header class="mb-16">
+<div class="flex items-center gap-2 text-tertiary font-label text-sm mb-2 tracking-[0.2em] uppercase">
+<span class="material-symbols-outlined text-sm">architecture</span>
+                Design Standards
+            </div>
+<h1 class="text-5xl font-extrabold text-on-surface tracking-tighter mb-4">Media Player Design Catalog</h1>
+<p class="text-on-surface-variant max-w-2xl text-lg leading-relaxed">
+                A selection of high-fidelity media environments tailored for deep academic focus, featuring intentional asymmetry and tonal layering.
+            </p>
+</header>
+<!-- Catalog Grid -->
+<div class="grid grid-cols-1 gap-16">
+<!-- 1. Cinema Mode -->
+<section class="group">
+<div class="flex flex-col lg:flex-row gap-10 items-start">
+<div class="w-full lg:w-2/3">
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-[0px_12px_32px_rgba(68,80,183,0.04)] relative">
+<!-- Mockup Content -->
+<div class="aspect-video bg-stone-950 relative flex items-center justify-center">
+<img class="absolute inset-0 w-full h-full object-cover opacity-40" data-alt="ancient books and manuscripts in a dimly lit library with dust motes dancing in sunbeams" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAgOiT5KC21YQkiKAZfywFEX8Un-x0BX2TGBhPdD5ciCstnVroBplqbNR8GWdJZJkEtxA1O2jJzTTj8PfDGbTz1UBJS7BOxPsWW1XuokL3oA9S86dN06gVGoQq-_LufRWedOucvhe0ZyE3tbcxBlhhKcENvJkfFNCGQvJzfgDYESdYTKxCHGOrMjC1XUxRIEROQEa6DtVGRKJf7RGbUc5hm5TfWZj5RDwfLy4M4TNwlOT3z7mauYs85BWtakN3g3w7bzRS__5Lx9llJ"/>
+<div class="relative z-10 w-20 h-20 bg-primary/90 text-white rounded-full flex items-center justify-center cursor-pointer hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+<!-- Bottom Bar -->
+<div class="absolute bottom-0 left-0 right-0 glass-player px-6 py-4 flex items-center gap-4">
+<span class="material-symbols-outlined text-primary">pause</span>
+<div class="flex-1 h-1.5 bg-surface-variant rounded-full relative">
+<div class="absolute top-0 left-0 h-full w-1/3 bg-primary rounded-full"></div>
+</div>
+<span class="text-xs font-medium text-on-surface/70">12:45 / 42:00</span>
+<span class="material-symbols-outlined text-on-surface/70">settings</span>
+<span class="material-symbols-outlined text-on-surface/70">fullscreen</span>
+</div>
+</div>
+<div class="p-6 bg-surface-container-low flex justify-between items-center">
+<div>
+<h3 class="font-bold text-xl tracking-tight">Cinema Mode: Immersive Study</h3>
+<p class="text-sm text-on-surface-variant">Module 4: The Manuscript Heritage</p>
+</div>
+<button class="px-5 py-2.5 bg-gradient-to-br from-primary to-primary-container text-white rounded-xl font-semibold text-sm shadow-lg shadow-primary/20">Next Lesson</button>
+</div>
+</div>
+</div>
+<div class="lg:w-1/3 pt-4">
+<span class="inline-block px-3 py-1 bg-primary/10 text-primary text-[10px] font-bold tracking-widest uppercase rounded-full mb-4">Focus Driven</span>
+<h2 class="text-2xl font-bold mb-4">01. Cinema Mode</h2>
+<p class="text-on-surface-variant leading-relaxed mb-6">
+                            Optimized for full-screen narrative lessons. The interface recedes into a dark background to minimize cognitive load, featuring a glassmorphic floating control bar and a persistent title strip for context.
+                        </p>
+<ul class="space-y-3 text-sm font-medium">
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> 16:9 Cinema Aspect Ratio</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Reduced Interface Noise</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Glassmorphic Overlay Controls</li>
+</ul>
+</div>
+</div>
+</section>
+<!-- 2. Split Panel -->
+<section class="group">
+<div class="flex flex-col lg:flex-row-reverse gap-10 items-start">
+<div class="w-full lg:w-2/3">
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-[0px_12px_32px_rgba(68,80,183,0.04)] grid grid-cols-10 h-[400px]">
+<!-- Video Left -->
+<div class="col-span-6 bg-black relative">
+<img class="w-full h-full object-cover opacity-60" data-alt="over-the-shoulder view of a person studying a text with focused warm lighting on the page" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTSMqohbODLsc3rRRVjIx1pX1xxLRokR-sxJCVqxUCafIPBVd7ajRpahF2WTNQcpIGs4yL_C0PaUapagzLmNshr_ZrUmbutdr-BdYMYPDL4ERPM9ERjisqVICrbw8S4MzOv59sNCYLrc_sF0efwggTCLjy30qfTqQi2sBnRcVMqVMtLmydeGdwY6GtIsJaS7j0sMVVL8YymBlyR-0SzDJ372JDIL4uKWIZwXUCZQ-CMXWI1CE2EBZY6DxVX2Nqx5XUfv1kRhvtoYBF"/>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-white/50 text-6xl">play_circle</span>
+</div>
+</div>
+<!-- Transcript Right -->
+<div class="col-span-4 bg-surface-container-lowest border-l border-outline-variant/15 p-6 overflow-y-auto">
+<h4 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-6">Live Transcript</h4>
+<div class="space-y-6">
+<div class="flex gap-3">
+<span class="text-[10px] font-mono text-on-surface-variant pt-1">04:12</span>
+<p class="text-sm leading-relaxed text-on-surface-variant">The development of the Carolingian minuscule was a turning point...</p>
+</div>
+<div class="flex gap-3 bg-primary/5 -mx-2 p-2 rounded-lg">
+<span class="text-[10px] font-mono text-primary pt-1">04:28</span>
+<p class="text-sm leading-relaxed text-primary font-semibold">It prioritized legibility and standardized the structure of the Latin alphabet for centuries to come.</p>
+</div>
+<div class="flex gap-3">
+<span class="text-[10px] font-mono text-on-surface-variant pt-1">04:45</span>
+<p class="text-sm leading-relaxed text-on-surface-variant">This shift wasn't just aesthetic, it was deeply administrative and clerical.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="lg:w-1/3 pt-4">
+<span class="inline-block px-3 py-1 bg-tertiary/10 text-tertiary text-[10px] font-bold tracking-widest uppercase rounded-full mb-4">Transcription Mode</span>
+<h2 class="text-2xl font-bold mb-4">02. Split Panel</h2>
+<p class="text-on-surface-variant leading-relaxed mb-6">
+                            A 60/40 layout designed for philological study. Syncs the video playback with a live, scrollable transcript. Users can jump to specific timestamps by interacting with the text.
+                        </p>
+<ul class="space-y-3 text-sm font-medium">
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-tertiary text-lg">check_circle</span> Interactive Timestamps</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-tertiary text-lg">check_circle</span> High-Contrast Active State</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-tertiary text-lg">check_circle</span> Dual-Pane Navigation</li>
+</ul>
+</div>
+</div>
+</section>
+<!-- 3. Stacked -->
+<section class="group">
+<div class="flex flex-col lg:flex-row gap-10 items-start">
+<div class="w-full lg:w-2/3">
+<div class="bg-surface-container-low rounded-2xl overflow-hidden shadow-[0px_12px_32px_rgba(68,80,183,0.04)] flex h-[500px]">
+<!-- Main Content -->
+<div class="flex-1 flex flex-col">
+<div class="h-1/2 bg-stone-900 relative overflow-hidden">
+<img class="w-full h-full object-cover opacity-50" data-alt="architectural drawing of a classical greek building with fine ink lines and parchment texture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjWccW0-9Sz4yVkND9IH4S51rm0FNzJm_Yzs7YbYougojJOC3jMiHC2vfRecx7zVMeJJpHR5lzITXPSP3RW-yTrM4zvdjrBD2HiC5iccINqEPA1YCAlTN870gD62tcvH4Nbfmwvmi3K08H6pFQ_3YobHGoe-5q9RHALMCGOrzIlv24ZjKVVUrTx9qojAv-kLzPmWzLlwwo81BN25gpulCl9xnXJZoa9aq-MVmViXTKGAxZ0fMpXVuZAucLNoow62rPjn_2Fyg1Vo08"/>
+</div>
+<div class="flex-1 bg-surface-container-lowest p-6">
+<div class="flex gap-8 border-b border-outline-variant/10 mb-6">
+<button class="pb-3 border-b-2 border-primary text-primary font-bold text-sm uppercase tracking-wider">Transcript</button>
+<button class="pb-3 text-on-surface-variant font-medium text-sm uppercase tracking-wider opacity-60">Notes</button>
+<button class="pb-3 text-on-surface-variant font-medium text-sm uppercase tracking-wider opacity-60">AI Summary</button>
+</div>
+<div class="prose prose-sm text-on-surface-variant">
+<p>In this module, we explore the intricate relationship between architectural form and social hierarchy. Note how the central axis defines the movement of the user through the space...</p>
+</div>
+</div>
+</div>
+<!-- Sidebar -->
+<div class="w-64 bg-surface-container-high p-4 flex flex-col gap-4">
+<h5 class="text-[10px] font-bold tracking-[0.2em] text-on-surface/50 uppercase">Module Playlist</h5>
+<div class="space-y-2">
+<div class="p-3 bg-white rounded-xl shadow-sm border-l-4 border-primary">
+<p class="text-xs font-bold leading-tight">1. Origins of Form</p>
+<p class="text-[10px] text-primary mt-1">Playing • 14:02</p>
+</div>
+<div class="p-3 bg-white/40 rounded-xl hover:bg-white transition-colors cursor-pointer">
+<p class="text-xs font-bold leading-tight">2. Materials &amp; Ritual</p>
+<p class="text-[10px] text-on-surface-variant mt-1">Locked • 22:15</p>
+</div>
+<div class="p-3 bg-white/40 rounded-xl hover:bg-white transition-colors cursor-pointer">
+<p class="text-xs font-bold leading-tight">3. The Modern Vernacular</p>
+<p class="text-[10px] text-on-surface-variant mt-1">Locked • 18:40</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="lg:w-1/3 pt-4">
+<span class="inline-block px-3 py-1 bg-secondary/10 text-secondary text-[10px] font-bold tracking-widest uppercase rounded-full mb-4">Learning Path</span>
+<h2 class="text-2xl font-bold mb-4">03. Stacked Layout</h2>
+<p class="text-on-surface-variant leading-relaxed mb-6">
+                            A vertically integrated view that prioritizes supplemental material. Video occupies the top half, while the bottom half serves as a dynamic workspace for notes and AI-generated insights.
+                        </p>
+<ul class="space-y-3 text-sm font-medium">
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-secondary text-lg">check_circle</span> Tabbed Content Workspace</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-secondary text-lg">check_circle</span> Persistent Module Navigation</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-secondary text-lg">check_circle</span> Structured Learning Flow</li>
+</ul>
+</div>
+</div>
+</section>
+<!-- 4. Picture-in-Picture -->
+<section class="group">
+<div class="flex flex-col lg:flex-row-reverse gap-10 items-start">
+<div class="w-full lg:w-2/3">
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-[0px_12px_32px_rgba(68,80,183,0.04)] relative min-h-[500px] flex">
+<!-- Sidebar -->
+<div class="w-16 border-r border-outline-variant/10 flex flex-col items-center py-6 gap-6">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">edit_note</span>
+<span class="material-symbols-outlined text-on-surface/30">bookmark</span>
+<span class="material-symbols-outlined text-on-surface/30">share</span>
+<div class="mt-auto">
+<span class="material-symbols-outlined text-on-surface/30">help</span>
+</div>
+</div>
+<!-- Editor Area -->
+<div class="flex-1 p-10">
+<div class="max-w-xl">
+<div class="flex items-center gap-4 mb-8 text-on-surface/40">
+<span class="material-symbols-outlined">format_bold</span>
+<span class="material-symbols-outlined">format_italic</span>
+<span class="material-symbols-outlined">format_list_bulleted</span>
+<div class="h-4 w-[1px] bg-outline-variant/20 mx-2"></div>
+<span class="material-symbols-outlined">link</span>
+<span class="material-symbols-outlined">image</span>
+</div>
+<h2 class="text-3xl font-bold mb-6 tracking-tight">Personal Notes on Philology</h2>
+<p class="text-lg leading-relaxed text-on-surface-variant/80 mb-6 italic border-l-4 border-tertiary/20 pl-6">
+                                        The manuscript is not merely a vessel for text, but a physical witness to the movement of knowledge through time.
+                                    </p>
+<p class="text-lg leading-relaxed text-on-surface-variant">
+                                        During the lecture at 08:42, the professor mentioned the 'Silent Scribe' theory. I need to investigate the connection between this and the later Oxford school of thought. The visual evidence presented suggests...
+                                    </p>
+</div>
+</div>
+<!-- Floating PiP Video -->
+<div class="absolute top-6 right-6 w-64 aspect-video bg-black rounded-xl overflow-hidden shadow-2xl ring-4 ring-white/10 group-hover:scale-105 transition-transform">
+<img class="w-full h-full object-cover" data-alt="a scholar's hands carefully turning the pages of an antique leather-bound book" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAr4o7t8Lmx4F1w4AfCJ5wlPiLiEAsUijLHFYW_sahZ7qbny806z8KmxR9QN9fQfn3Q_zt7CSXx0AVDyqvYfYxuWUH2ny-YnC9O6UWawOXdb4sZeHd0dP4GT_apCJz_Cnq2R1ywSKmkC5rtJP-5GxYNv-weamqbTUZt3no9cw-_LzuwREqXSIMRdFsTnW0PQuiCnP7vkMYXn2Ca-qpPXhJE__hRrBU2R-aLfHpioAzMru4sGloEWUeh9Orp7c8qFGOGbKMee9spq9yq"/>
+<div class="absolute inset-0 glass-player opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+<span class="material-symbols-outlined text-white">play_arrow</span>
+<span class="material-symbols-outlined text-white">close</span>
+</div>
+</div>
+</div>
+</div>
+<div class="lg:w-1/3 pt-4">
+<span class="inline-block px-3 py-1 bg-on-surface/10 text-on-surface/60 text-[10px] font-bold tracking-widest uppercase rounded-full mb-4">Deep Research</span>
+<h2 class="text-2xl font-bold mb-4">04. Picture-in-Picture</h2>
+<p class="text-on-surface-variant leading-relaxed mb-6">
+                            A research-first layout where the video becomes secondary. The primary canvas is a rich text editor for extensive note-taking, while the media continues in a floating window.
+                        </p>
+<ul class="space-y-3 text-sm font-medium">
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Canvas-Centric Editing</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Floating Video Overlay</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Integrated Bibliographic Tools</li>
+</ul>
+</div>
+</div>
+</section>
+</div>
+<!-- Footer / Credits -->
+<footer class="mt-24 pt-12 border-t border-outline-variant/15 flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="flex items-center gap-6">
+<span class="text-[10px] font-bold tracking-[0.3em] uppercase opacity-40">System v2.4.0</span>
+<span class="text-[10px] font-bold tracking-[0.3em] uppercase opacity-40">Design Tokens: Atelier</span>
+</div>
+<p class="text-xs text-on-surface-variant/60 font-medium">Curated by the Knowlune Learning Design Team</p>
+</footer>
+</main>
+<!-- Side Nav Mirror (Mobile View Support) -->
+<div class="lg:hidden fixed bottom-0 left-0 right-0 bg-surface-container-low px-6 py-4 flex justify-around items-center border-t border-outline-variant/10 z-[100]">
+<span class="material-symbols-outlined text-primary">menu_book</span>
+<span class="material-symbols-outlined text-on-surface/40">folder_open</span>
+<span class="material-symbols-outlined text-on-surface/40">edit_note</span>
+<span class="material-symbols-outlined text-on-surface/40">forum</span>
+<span class="material-symbols-outlined text-on-surface/40">settings</span>
+</div>
+</body></html>

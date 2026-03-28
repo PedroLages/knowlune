@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Knowlune | Progress Composites &amp; Metrics</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "outline": "#767684",
+                        "surface-container": "#f2ede6",
+                        "surface-variant": "#e6e2db",
+                        "on-tertiary-fixed": "#2b1700",
+                        "inverse-primary": "#bdc2ff",
+                        "background": "#fef9f2",
+                        "primary-fixed-dim": "#bdc2ff",
+                        "on-primary": "#ffffff",
+                        "surface-bright": "#fef9f2",
+                        "secondary": "#575b84",
+                        "on-tertiary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-surface": "#1d1c18",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-dim": "#ded9d3",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed": "#ffddbb",
+                        "on-error-container": "#93000a",
+                        "error": "#ba1a1a",
+                        "on-background": "#1d1c18",
+                        "on-surface-variant": "#454652",
+                        "on-secondary-fixed-variant": "#3f446b",
+                        "secondary-fixed": "#dfe0ff",
+                        "primary-container": "#5e6ad2",
+                        "tertiary-container": "#a56500",
+                        "tertiary-fixed-dim": "#ffb867",
+                        "secondary-fixed-dim": "#c0c3f2",
+                        "surface-container-high": "#ece7e1",
+                        "inverse-on-surface": "#f5f0e9",
+                        "on-tertiary-container": "#fffaf8",
+                        "on-secondary-container": "#52577f",
+                        "surface": "#fef9f2",
+                        "on-primary-container": "#fdfaff",
+                        "secondary-container": "#cbcefe",
+                        "outline-variant": "#c6c5d5",
+                        "primary": "#4450b7",
+                        "surface-tint": "#4854bb",
+                        "inverse-surface": "#32302c",
+                        "on-primary-fixed-variant": "#2e3aa2",
+                        "on-secondary": "#ffffff",
+                        "tertiary": "#834f00",
+                        "primary-fixed": "#dfe0ff",
+                        "surface-container-highest": "#e6e2db",
+                        "on-secondary-fixed": "#13183d",
+                        "on-primary-fixed": "#000965",
+                        "on-tertiary-fixed-variant": "#673d00",
+                        "surface-container-low": "#f8f3ec"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { background-color: #FAF5EE; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-panel { backdrop-filter: blur(12px); background: rgba(254, 249, 242, 0.8); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="font-body text-on-surface antialiased">
+<!-- Top Navigation Anchor -->
+<nav class="fixed top-0 w-full z-50 bg-[#fef9f2]/80 backdrop-blur-xl shadow-[0px_12px_32px_rgba(29,28,24,0.06)] flex justify-between items-center px-8 py-4">
+<div class="text-2xl font-bold text-[#1d1c18] font-headline tracking-tight">Knowlune</div>
+<div class="hidden md:flex gap-8 items-center">
+<a class="text-[#4450b7] font-bold border-b-2 border-[#4450b7] font-body text-sm py-1" href="#">Dashboard</a>
+<a class="text-[#575b84] hover:scale-[1.02] transition-transform duration-200 font-body text-sm" href="#">Courses</a>
+<a class="text-[#575b84] hover:scale-[1.02] transition-transform duration-200 font-body text-sm" href="#">Progress</a>
+<a class="text-[#575b84] hover:scale-[1.02] transition-transform duration-200 font-body text-sm" href="#">Settings</a>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-secondary cursor-pointer">notifications</span>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close up portrait of a young professional student with a neutral scholarly expression" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFg96Igt51Z2NnAN2AfuFTDtfUOl_enHyexn9Vc3iQwkxuAFdMB40HATfo2FwL73KgXacHqzddNPOVyPT-R5PC-UC0VmA0i2oKbyP6087vYGLIpCQtZDLCGcO0uWVE1Tya2TRpfk_mJKD9O6cgR5ljOGsrXGY8EScRMGDhQCSEzGVjIMDoeXYKithcp0JuIvg8l0T4dIJT21hYG5F4Fz56s99_YoVORTsF0JcbKxRLSZgOz0gnLUuwlTjLnZUIMllvUsyc4fuZvdFM"/>
+</div>
+</div>
+</nav>
+<main class="pt-24 pb-20 max-w-[1200px] mx-auto px-6">
+<!-- SECTION 1: CURRENT STATE -->
+<section class="mb-20">
+<header class="mb-8">
+<span class="text-secondary font-label text-xs uppercase tracking-widest mb-2 block">Legacy View</span>
+<h2 class="text-3xl font-headline font-extrabold text-on-surface">Current Implementation</h2>
+</header>
+<div class="flex gap-6 items-start">
+<div class="bg-surface-container-lowest p-6 rounded-2xl flex items-center gap-6 shadow-sm border border-outline-variant/15">
+<div class="relative w-12 h-12">
+<svg class="w-12 h-12 transform -rotate-90">
+<circle class="text-surface-container-high" cx="24" cy="24" fill="transparent" r="20" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-primary" cx="24" cy="24" fill="transparent" r="20" stroke="currentColor" stroke-dasharray="125.6" stroke-dashoffset="33.9" stroke-width="4"></circle>
+</svg>
+<span class="absolute inset-0 flex items-center justify-center text-[10px] font-bold">73%</span>
+</div>
+<div>
+<div class="text-sm font-semibold text-on-surface">Course Progress</div>
+<div class="bg-surface-container-low px-2 py-0.5 rounded text-[10px] text-secondary mt-1 inline-block">Est. ~5 sessions</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm border border-outline-variant/15 w-48">
+<div class="text-2xl font-bold text-on-surface">12</div>
+<div class="text-xs text-secondary font-medium uppercase tracking-tighter">Day Streak</div>
+</div>
+</div>
+</section>
+<!-- SECTION 2: VARIATION A — Dashboard Metrics Strip -->
+<section class="mb-20">
+<header class="mb-8">
+<span class="text-secondary font-label text-xs uppercase tracking-widest mb-2 block">Variation A</span>
+<h2 class="text-4xl font-headline font-extrabold text-on-surface">Dashboard Metrics Strip</h2>
+</header>
+<div class="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(29,28,24,0.06)] overflow-hidden mb-12">
+<div class="flex flex-col md:flex-row items-center py-8 px-10">
+<!-- Item 1 -->
+<div class="flex-1 flex items-center gap-5 w-full md:w-auto py-4 md:py-0">
+<div class="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+</div>
+<div>
+<div class="text-2xl font-bold font-headline">12 Days</div>
+<div class="text-sm text-secondary">Learning Streak</div>
+</div>
+</div>
+<div class="hidden md:block w-px h-12 bg-outline-variant/20 mx-6"></div>
+<!-- Item 2 -->
+<div class="flex-1 flex items-center gap-5 w-full md:w-auto py-4 md:py-0">
+<div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">trophy</span>
+</div>
+<div>
+<div class="text-2xl font-bold font-headline">24</div>
+<div class="text-sm text-secondary">Badges Earned</div>
+</div>
+</div>
+<div class="hidden md:block w-px h-12 bg-outline-variant/20 mx-6"></div>
+<!-- Item 3 -->
+<div class="flex-1 flex items-center gap-5 w-full md:w-auto py-4 md:py-0">
+<div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-700">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">edit_note</span>
+</div>
+<div>
+<div class="text-2xl font-bold font-headline">1.2k</div>
+<div class="text-sm text-secondary">Notes Written</div>
+</div>
+</div>
+<div class="hidden md:block w-px h-12 bg-outline-variant/20 mx-6"></div>
+<!-- Item 4 -->
+<div class="flex-1 flex items-center gap-5 w-full md:w-auto py-4 md:py-0">
+<div class="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center text-teal-700">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">schedule</span>
+</div>
+<div>
+<div class="text-2xl font-bold font-headline">47.5h</div>
+<div class="text-sm text-secondary">Study Hours</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Course Grid with Segmented Progress -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Course Card 1 -->
+<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm border border-outline-variant/10 hover:translate-y-[-4px] transition-all duration-300">
+<div class="h-40 w-full bg-surface-container rounded-xl mb-5 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Macro photography of architectural lines and soft shadows with a minimalist scholarly aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCweXfFhUVqZZVZnBqp2rm71Xka_yfE65eLTRcsNDxttGbXswkcmG-b9f0s5zIajfweNbtiBXpM28ZaFb8onb2wlRcOx_qXq2U5csbiRRylnDrPlHyzPLh6OAwoUxoW-BL9_iADGhMLPcr5OsT57wy8_yaMR7VtsGmj7RIUutPLkA0Bu5PX0ZionfeIbXBan2Jx5FvxF4iOimjs-wWDI8Wv-hXr3NZmVdI5QiNqpnIeSmVpRnYgs7fCpFskVkfUiLliSAA9IiUq5X0u"/>
+</div>
+<h3 class="font-headline font-bold text-lg mb-4">Aesthetics of Logic</h3>
+<div class="flex gap-1.5 mb-2">
+<div class="h-1.5 flex-1 rounded-full bg-gradient-to-r from-primary to-primary-container"></div>
+<div class="h-1.5 flex-1 rounded-full bg-gradient-to-r from-primary to-primary-container"></div>
+<div class="h-1.5 flex-1 rounded-full bg-gradient-to-r from-primary to-primary-container"></div>
+<div class="h-1.5 flex-1 rounded-full bg-gradient-to-r from-primary to-primary-container"></div>
+<div class="h-1.5 flex-1 rounded-full bg-surface-container-high"></div>
+<div class="h-1.5 flex-1 rounded-full bg-surface-container-high"></div>
+</div>
+<div class="flex justify-between text-[11px] font-bold text-secondary uppercase tracking-wider">
+<span>Chapter 4 of 6</span>
+<span>66%</span>
+</div>
+</div>
+<!-- Course Card 2 -->
+<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm border border-outline-variant/10 hover:translate-y-[-4px] transition-all duration-300">
+<div class="h-40 w-full bg-surface-container rounded-xl mb-5 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Dimly lit academic library with rows of vintage books and soft atmospheric lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEiOl2IWJ4oopnqutd8Krqy6OuXMBDeoPhODFXtVtYkOTc96PB98bETpxICFLMgPhmnG4YbQjxmaV6yum3u2hRW82cqUlIGy_P3j2drXWY6XqvkaOHIbusC3Sx-rMu5x26AjnfaBNAKOZPImVKSMmAfEip6uLu5Uf62O4vQ0oQ-3Gnd9Vwea-N8jMIKFc3m7POmwErinuiXzMyY2MIQbDHaCT1af87Btm3xI5uGdajgbIAOB0tVodU5fNgUZN9KSReswjzR8Azsm4J"/>
+</div>
+<h3 class="font-headline font-bold text-lg mb-4">Epistemological Framing</h3>
+<div class="flex gap-1.5 mb-2">
+<div class="h-1.5 flex-1 rounded-full bg-gradient-to-r from-primary to-primary-container"></div>
+<div class="h-1.5 flex-1 rounded-full bg-surface-container-high"></div>
+<div class="h-1.5 flex-1 rounded-full bg-surface-container-high"></div>
+<div class="h-1.5 flex-1 rounded-full bg-surface-container-high"></div>
+<div class="h-1.5 flex-1 rounded-full bg-surface-container-high"></div>
+<div class="h-1.5 flex-1 rounded-full bg-surface-container-high"></div>
+</div>
+<div class="flex justify-between text-[11px] font-bold text-secondary uppercase tracking-wider">
+<span>Chapter 1 of 6</span>
+<span>16%</span>
+</div>
+</div>
+<!-- Course Card 3 -->
+<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm border border-outline-variant/10 hover:translate-y-[-4px] transition-all duration-300">
+<div class="h-40 w-full bg-surface-container rounded-xl mb-5 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Stack of linen-bound books next to a ceramic cup on a weathered wooden desk" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLtCPf0s4XI6QYVPur5wuUnmh9i5fEb1olIclDamjJ80wn2-HghtUDrTe8DmmAgMQt4csB7-p2pVLmLfC2Lt3jO_bYy5-M-udS3zVIPlsM0hmtuISQZnYEgfXyEcThcdPkFW8BJCdaJwAbQ6HfMh8Lson687pBBgDY5rqg5xR_V8LJahIdF1DNNNBTuv48iZUXiXWg0y4s3CGZGXVa_xqg2UNtP9NuitWkgFnERACBTs1LG0Z0s-H52u1E1D0xvX_S1HGoqQsTpgLr"/>
+</div>
+<h3 class="font-headline font-bold text-lg mb-4">The Semantic Web</h3>
+<div class="flex gap-1.5 mb-2">
+<div class="h-1.5 flex-1 rounded-full bg-gradient-to-r from-primary to-primary-container"></div>
+<div class="h-1.5 flex-1 rounded-full bg-gradient-to-r from-primary to-primary-container"></div>
+<div class="h-1.5 flex-1 rounded-full bg-gradient-to-r from-primary to-primary-container"></div>
+<div class="h-1.5 flex-1 rounded-full bg-gradient-to-r from-primary to-primary-container"></div>
+<div class="h-1.5 flex-1 rounded-full bg-gradient-to-r from-primary to-primary-container"></div>
+<div class="h-1.5 flex-1 rounded-full bg-surface-container-high"></div>
+</div>
+<div class="flex justify-between text-[11px] font-bold text-secondary uppercase tracking-wider">
+<span>Chapter 5 of 6</span>
+<span>83%</span>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 3: VARIATION B — Course Composite Card -->
+<section class="mb-20">
+<header class="mb-8">
+<span class="text-secondary font-label text-xs uppercase tracking-widest mb-2 block">Variation B</span>
+<h2 class="text-4xl font-headline font-extrabold text-on-surface">Course Composite Card</h2>
+</header>
+<div class="max-w-2xl bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(29,28,24,0.06)] overflow-hidden border border-outline-variant/10">
+<div class="p-8">
+<div class="flex justify-between items-start mb-6">
+<span class="bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">In Progress</span>
+<div class="relative w-12 h-12">
+<svg class="w-12 h-12 transform -rotate-90">
+<circle class="text-surface-container-high" cx="24" cy="24" fill="transparent" r="20" stroke="currentColor" stroke-width="3"></circle>
+<circle class="text-primary" cx="24" cy="24" fill="transparent" r="20" stroke="currentColor" stroke-dasharray="125.6" stroke-dashoffset="37.6" stroke-width="3"></circle>
+</svg>
+<span class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-primary">70%</span>
+</div>
+</div>
+<h3 class="text-3xl font-headline font-extrabold text-on-surface mb-8">Quantitative Aesthetics</h3>
+<div class="border-t border-outline-variant/10 py-6 grid grid-cols-2 gap-8">
+<div>
+<div class="text-[10px] font-bold text-secondary uppercase tracking-widest mb-1">Time Spent</div>
+<div class="text-xl font-bold font-headline">14.2 hrs</div>
+</div>
+<div>
+<div class="text-[10px] font-bold text-secondary uppercase tracking-widest mb-1">Rank</div>
+<div class="text-xl font-bold font-headline text-primary">Top 5%</div>
+</div>
+</div>
+<!-- Milestone Bar -->
+<div class="mb-8">
+<div class="relative h-1 bg-surface-container-high rounded-full mb-4">
+<div class="absolute left-0 top-0 h-full w-[75%] bg-primary rounded-full"></div>
+<!-- Checkpoint Dots -->
+<div class="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary border-2 border-white"></div>
+<div class="absolute left-[25%] top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary border-2 border-white"></div>
+<div class="absolute left-[50%] top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary border-2 border-white"></div>
+<div class="absolute left-[75%] top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary border-2 border-white ring-4 ring-primary/20"></div>
+<div class="absolute left-[100%] top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-surface-container-high border-2 border-white"></div>
+</div>
+<div class="flex justify-between text-[10px] font-bold text-secondary uppercase tracking-tighter">
+<span>Intro</span>
+<span>Theory</span>
+<span>Labs</span>
+<span class="text-primary">Thesis</span>
+</div>
+</div>
+<button class="w-full bg-gradient-to-r from-primary to-primary-container text-white font-bold py-4 rounded-full flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform duration-200">
+                        Continue Learning
+                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+</section>
+<!-- SECTION 4: VARIATION C — Hero Metrics -->
+<section class="mb-20">
+<header class="mb-8">
+<span class="text-secondary font-label text-xs uppercase tracking-widest mb-2 block">Variation C</span>
+<h2 class="text-4xl font-headline font-extrabold text-on-surface">Hero Metrics</h2>
+</header>
+<div class="relative overflow-hidden bg-surface-container-lowest rounded-2xl p-12 shadow-[0px_12px_32px_rgba(29,28,24,0.06)] border border-outline-variant/10">
+<!-- Blurred Gradient Orb -->
+<div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-primary/10 blur-[80px]"></div>
+<div class="relative z-10 flex flex-col md:flex-row gap-12 items-center">
+<div class="text-center md:text-left">
+<div class="flex items-baseline justify-center md:justify-start">
+<span class="text-8xl font-headline font-black text-primary tracking-tighter">73</span>
+<span class="text-4xl font-headline font-bold text-primary">%</span>
+</div>
+<p class="text-lg text-secondary font-medium mt-2">Total Curriculum Completion</p>
+</div>
+<div class="w-full md:w-64 bg-primary rounded-2xl p-6 text-white shadow-xl shadow-primary/20">
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined">schedule</span>
+<span class="text-sm font-bold opacity-80 uppercase tracking-widest">Efficiency</span>
+</div>
+<div class="text-4xl font-headline font-bold mb-1">3h 20m</div>
+<div class="text-xs opacity-70">Remaining Focus Time</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 5: CLOSE-UPS -->
+<section class="mb-20">
+<header class="mb-8">
+<span class="text-secondary font-label text-xs uppercase tracking-widest mb-2 block">Granular Detail</span>
+<h2 class="text-4xl font-headline font-extrabold text-on-surface">Close-ups</h2>
+</header>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- (1) 6-segment chapter bar -->
+<div class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/10">
+<div class="text-[10px] font-bold text-secondary uppercase mb-4">Segmented Progress</div>
+<div class="flex gap-1.5">
+<div class="h-2 flex-1 rounded-full bg-gradient-to-r from-primary to-primary-container"></div>
+<div class="h-2 flex-1 rounded-full bg-gradient-to-r from-primary to-primary-container"></div>
+<div class="h-2 flex-1 rounded-full bg-gradient-to-r from-primary to-primary-container"></div>
+<div class="h-2 flex-1 rounded-full bg-gradient-to-r from-primary to-primary-container"></div>
+<div class="h-2 flex-1 rounded-full bg-surface-container-high"></div>
+<div class="h-2 flex-1 rounded-full bg-surface-container-high"></div>
+</div>
+</div>
+<!-- (2) Milestone bar -->
+<div class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/10">
+<div class="text-[10px] font-bold text-secondary uppercase mb-4">Milestone Checkpoints</div>
+<div class="relative h-1.5 bg-surface-container-high rounded-full">
+<div class="absolute left-0 top-0 h-full w-[75%] bg-primary rounded-full"></div>
+<div class="absolute left-[25%] top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary border-2 border-white"></div>
+<div class="absolute left-[50%] top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary border-2 border-white"></div>
+<div class="absolute left-[75%] top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary border-2 border-white"></div>
+</div>
+</div>
+<!-- (3) Metrics strip item -->
+<div class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/10">
+<div class="text-[10px] font-bold text-secondary uppercase mb-4">Isolated KPI</div>
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<div>
+<div class="text-xl font-bold font-headline leading-none">4.9</div>
+<div class="text-[10px] text-secondary mt-1">Average Grade</div>
+</div>
+</div>
+</div>
+<!-- (4) Course composite card snippet -->
+<div class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/10">
+<div class="text-[10px] font-bold text-secondary uppercase mb-4">Status Indicator</div>
+<div class="flex items-center justify-between">
+<span class="bg-surface-container-high text-on-surface text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">Inactive</span>
+<div class="w-2 h-2 rounded-full bg-outline-variant/50"></div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full py-12 bg-[#fef9f2] dark:bg-slate-950 border-t border-[#c6c5d5]/15">
+<div class="max-w-[680px] mx-auto flex flex-col items-center gap-4 text-center">
+<div class="flex gap-6 text-[11px] font-body text-secondary tracking-wide uppercase font-semibold">
+<a class="hover:text-[#4450b7] transition-colors" href="#">Academic Integrity</a>
+<a class="hover:text-[#4450b7] transition-colors" href="#">Research Ethics</a>
+<a class="hover:text-[#4450b7] transition-colors" href="#">Library Archives</a>
+<a class="hover:text-[#4450b7] transition-colors" href="#">Privacy</a>
+</div>
+<p class="text-xs text-secondary opacity-60 font-body">© 2024 Knowlune Academic Atelier</p>
+</div>
+</footer>
+</body></html>

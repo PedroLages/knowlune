@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Import Course Wizard - Knowlune Catalog</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-primary-fixed-variant": "#2e3aa2",
+              "surface-container-high": "#ece7e1",
+              "on-surface-variant": "#454652",
+              "outline": "#767684",
+              "inverse-on-surface": "#f5f0e9",
+              "primary": "#4450b7",
+              "on-primary-fixed": "#000965",
+              "surface-container": "#f2ede6",
+              "on-background": "#1d1c18",
+              "secondary": "#575b84",
+              "background": "#fef9f2",
+              "on-tertiary-fixed-variant": "#673d00",
+              "inverse-surface": "#32302c",
+              "surface-container-lowest": "#ffffff",
+              "on-tertiary-container": "#fffaf8",
+              "on-surface": "#1d1c18",
+              "tertiary-container": "#a56500",
+              "on-tertiary": "#ffffff",
+              "surface": "#fef9f2",
+              "on-secondary-fixed-variant": "#3f446b",
+              "secondary-container": "#cbcefe",
+              "primary-fixed-dim": "#bdc2ff",
+              "surface-dim": "#ded9d3",
+              "on-error": "#ffffff",
+              "surface-tint": "#4854bb",
+              "on-secondary": "#ffffff",
+              "error-container": "#ffdad6",
+              "on-tertiary-fixed": "#2b1700",
+              "surface-variant": "#e6e2db",
+              "surface-container-highest": "#e6e2db",
+              "secondary-fixed-dim": "#c0c3f2",
+              "tertiary-fixed-dim": "#ffb867",
+              "primary-fixed": "#dfe0ff",
+              "primary-container": "#5e6ad2",
+              "surface-bright": "#fef9f2",
+              "on-secondary-fixed": "#13183d",
+              "on-primary-container": "#fdfaff",
+              "surface-container-low": "#f8f3ec",
+              "on-secondary-container": "#52577f",
+              "tertiary": "#834f00",
+              "tertiary-fixed": "#ffddbb",
+              "secondary-fixed": "#dfe0ff",
+              "on-primary": "#ffffff",
+              "error": "#ba1a1a",
+              "inverse-primary": "#bdc2ff",
+              "outline-variant": "#c6c5d5",
+              "on-error-container": "#93000a"
+            },
+            fontFamily: {
+              "headline": ["Newsreader", "serif"],
+              "body": ["Manrope", "sans-serif"],
+              "label": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Manrope', sans-serif; }
+        h1, h2, h3, .font-serif { font-family: 'Newsreader', serif; }
+    </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 w-full flex justify-between items-center px-8 h-20 border-b border-[#1d1c18]/10 bg-[#fef9f2] dark:bg-[#1d1c18] z-50">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-serif font-bold text-[#5e6ad2] dark:text-[#a5afff] tracking-tight">Knowlune Catalog</span>
+<nav class="hidden md:flex gap-6">
+<a class="text-[#1d1c18]/70 dark:text-[#fef9f2]/70 font-medium hover:text-[#5e6ad2] transition-colors" href="#">Documentation</a>
+<a class="text-[#5e6ad2] dark:text-[#a5afff] border-b-2 border-[#5e6ad2] pb-1 font-bold" href="#">Components</a>
+<a class="text-[#1d1c18]/70 dark:text-[#fef9f2]/70 font-medium hover:text-[#5e6ad2] transition-colors" href="#">Guidelines</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">settings</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden ml-2 ring-2 ring-primary/20">
+<img alt="User profile" data-alt="close-up portrait of a thoughtful academic professional in a bright studio setting with soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBT67lnbNtUGa555ZwqcZ_sCJNrL_szPq-4OAi25jJpO89JYQYoUQla-a3domkLQwnbTu38YanNak9_q4Wl-4b2kzpJ8GirqU8gdmBZP7cFAmbuoO8TTdOeaXZJiZmJH7-AlDcz-t43VPrVZZ-_UWxmgddCtHSvhD_uN9Bc_FHhl_AWiaVkcFuAwK4mPni5-7Gi7C3hImlD6V1sNXs8YSyetrpq8jXWY-U2ydZ65LINdJbWn7yjAi95hzrxsouxZ9eHleZ8s-KUmzh9"/>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- Side Navigation Bar -->
+<aside class="hidden lg:flex flex-col h-full w-72 border-r border-[#1d1c18]/5 bg-[#f8f3ec] dark:bg-[#262520] p-6 gap-2">
+<div class="mb-8 px-4">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined text-sm">auto_fix_high</span>
+</div>
+<span class="text-xl font-serif text-[#1d1c18] dark:text-[#fef9f2]">Pattern Library</span>
+</div>
+<p class="text-[11px] font-sans uppercase tracking-widest text-on-surface-variant/60">Design System v1.0</p>
+</div>
+<nav class="flex-1 flex flex-col gap-1">
+<a class="flex items-center gap-3 text-[#5e6ad2] dark:text-[#a5afff] font-bold bg-[#ffffff] dark:bg-[#1d1c18] rounded-xl px-4 py-3 shadow-sm hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">auto_fix_high</span>
+<span class="text-[11px] uppercase tracking-widest">Wizard Patterns</span>
+</a>
+<a class="flex items-center gap-3 text-[#1d1c18]/60 dark:text-[#fef9f2]/60 px-4 py-3 hover:bg-[#ffffff]/50 dark:hover:bg-[#1d1c18]/50 rounded-xl hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">side_navigation</span>
+<span class="text-[11px] uppercase tracking-widest">Slide-Overs</span>
+</a>
+<a class="flex items-center gap-3 text-[#1d1c18]/60 dark:text-[#fef9f2]/60 px-4 py-3 hover:bg-[#ffffff]/50 dark:hover:bg-[#1d1c18]/50 rounded-xl hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">wb_iridescent</span>
+<span class="text-[11px] uppercase tracking-widest">Modal Dialogs</span>
+</a>
+<a class="flex items-center gap-3 text-[#1d1c18]/60 dark:text-[#fef9f2]/60 px-4 py-3 hover:bg-[#ffffff]/50 dark:hover:bg-[#1d1c18]/50 rounded-xl hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">edit_note</span>
+<span class="text-[11px] uppercase tracking-widest">Inline Editors</span>
+</a>
+<a class="flex items-center gap-3 text-[#1d1c18]/60 dark:text-[#fef9f2]/60 px-4 py-3 hover:bg-[#ffffff]/50 dark:hover:bg-[#1d1c18]/50 rounded-xl hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">list_alt</span>
+<span class="text-[11px] uppercase tracking-widest">Forms</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-on-surface/5 flex flex-col gap-1">
+<a class="flex items-center gap-3 text-on-surface-variant/60 px-4 py-2 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-sm">help_outline</span>
+<span class="text-[11px] uppercase tracking-widest">Help</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant/60 px-4 py-2 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-sm">chat_bubble_outline</span>
+<span class="text-[11px] uppercase tracking-widest">Feedback</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area: Step Wizard -->
+<main class="flex-1 overflow-y-auto p-12 bg-surface">
+<div class="max-w-4xl mx-auto space-y-12">
+<!-- Header -->
+<div class="space-y-2">
+<h1 class="text-4xl md:text-5xl font-serif font-bold text-on-surface leading-tight">Import Course Wizard</h1>
+<p class="text-lg text-on-surface-variant font-body">Follow the curated steps to bring your scholarly content into the Knowlune ecosystem.</p>
+</div>
+<!-- Step Indicator -->
+<div class="relative pt-4 pb-8">
+<div class="absolute top-1/2 left-0 w-full h-0.5 bg-surface-container-high -translate-y-1/2"></div>
+<!-- Progress Fill -->
+<div class="absolute top-1/2 left-0 w-2/3 h-0.5 bg-primary -translate-y-1/2 transition-all duration-500"></div>
+<div class="relative flex justify-between items-center px-2">
+<!-- Step 1 Done -->
+<div class="flex flex-col items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center z-10 shadow-lg shadow-primary/20 ring-4 ring-surface">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="text-[11px] uppercase tracking-widest font-bold text-primary">Source</span>
+</div>
+<!-- Step 2 Active -->
+<div class="flex flex-col items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center z-10 shadow-lg shadow-primary/20 ring-4 ring-surface">
+<span class="text-sm font-bold">2</span>
+</div>
+<span class="text-[11px] uppercase tracking-widest font-bold text-primary">Configuration</span>
+</div>
+<!-- Step 3 Inactive -->
+<div class="flex flex-col items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center z-10 ring-4 ring-surface">
+<span class="text-sm font-bold">3</span>
+</div>
+<span class="text-[11px] uppercase tracking-widest font-medium text-on-surface-variant/60">Review</span>
+</div>
+</div>
+</div>
+<!-- Wizard Content: Step 1 Overlay (Conceptual mix for the prompt) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Left Column: URL & Drag-Drop -->
+<div class="lg:col-span-7 space-y-6">
+<section class="bg-surface-container-lowest p-8 rounded-xl shadow-sm border border-transparent">
+<h2 class="text-2xl font-serif font-bold mb-6">Source Material</h2>
+<div class="space-y-6">
+<!-- URL Input -->
+<div class="space-y-2">
+<label class="text-[11px] uppercase tracking-widest font-bold text-on-surface-variant">Course URL</label>
+<input class="w-full bg-surface-container-high border-0 border-b-2 border-surface-tint focus:ring-0 focus:bg-surface-container-lowest focus:border-primary transition-all p-4 rounded-t-lg font-body text-base" placeholder="https://university.edu/courses/quantum-theory" type="url"/>
+</div>
+<div class="py-4 flex items-center gap-4">
+<div class="h-px flex-1 bg-on-surface/10"></div>
+<span class="text-[11px] uppercase tracking-widest text-on-surface-variant/40 font-bold">or</span>
+<div class="h-px flex-1 bg-on-surface/10"></div>
+</div>
+<!-- Drag and Drop -->
+<div class="group relative cursor-pointer border-2 border-dashed border-outline-variant/50 hover:border-primary/50 transition-colors bg-surface-container-low rounded-xl p-12 text-center">
+<div class="flex flex-col items-center gap-4">
+<div class="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-3xl">cloud_upload</span>
+</div>
+<div class="space-y-1">
+<p class="text-lg font-serif font-bold">Drop your curriculum here</p>
+<p class="text-sm text-on-surface-variant font-body">Support for PDF, DOCX, and Scorm 1.2 files</p>
+</div>
+</div>
+<input class="absolute inset-0 opacity-0 cursor-pointer" type="file"/>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Summary/Confirmation Preview -->
+<div class="lg:col-span-5">
+<div class="sticky top-24 space-y-6">
+<!-- Insight Card -->
+<div class="bg-surface-container-highest p-8 rounded-xl relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-tertiary"></div>
+<h3 class="text-xl font-serif font-bold mb-4">Summary Preview</h3>
+<div class="space-y-6">
+<div class="flex items-start gap-4">
+<div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 grayscale">
+<img alt="Course Thumbnail" data-alt="vibrant conceptual illustration of an old book with light glowing from between the pages on a dark rustic table" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDj8FzFBG0ESSyKKL7b3OA-_Jnzc6DvbKh793J-cMjvMkI2SCP3XuRM0mnEIoiBNfhh13ZCG6xPfLHGAStTddeusAoNnL8BaTgIIbY44vlSjgx5zgIP3rvJUdmUk7qrtNvs4wggnO0OhHY_qwz0XJMJjLW-kh7RjLodo02rwP2_aZH9wWupXd1xbOc3Ym1grx33-9I2RpUj_MSsrVPrej-P6A0E4Z-nd-h8EkmSlMhnnQMOuFO479yEfAh9zlk1Ou9caw2ZxIIFG5IX"/>
+</div>
+<div>
+<p class="text-xs font-label uppercase tracking-widest text-on-surface-variant/60 font-bold mb-1">Detected Title</p>
+<p class="text-lg font-serif font-bold leading-tight">Introduction to Metaphysical Architecture</p>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-lowest/50 p-3 rounded-lg">
+<p class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant/60 font-bold">Modules</p>
+<p class="text-lg font-serif font-bold">12 Units</p>
+</div>
+<div class="bg-surface-container-lowest/50 p-3 rounded-lg">
+<p class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant/60 font-bold">Estimated Time</p>
+<p class="text-lg font-serif font-bold">4.5 Hours</p>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex items-center justify-between text-sm">
+<span class="text-on-surface-variant">Metadata extraction</span>
+<span class="text-primary font-bold">98% Complete</span>
+</div>
+<div class="w-full h-1 bg-surface-container-low rounded-full overflow-hidden">
+<div class="w-[98%] h-full bg-primary"></div>
+</div>
+</div>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant/70 italic px-4 text-center font-body">
+                                "Knowledge is not a vessel to be filled, but a fire to be kindled."
+                            </p>
+</div>
+</div>
+</div>
+<!-- Action Footer -->
+<div class="flex items-center justify-between pt-8 border-t border-on-surface/5">
+<button class="px-8 py-3 rounded-full text-on-surface-variant hover:text-error transition-colors font-label font-bold uppercase tracking-widest text-[11px]">
+                        Cancel
+                    </button>
+<div class="flex items-center gap-4">
+<button class="px-8 py-3 rounded-full border border-outline-variant/30 text-on-surface hover:bg-surface-container-low transition-colors font-label font-bold uppercase tracking-widest text-[11px]">
+                            Back
+                        </button>
+<button class="px-10 py-3 rounded-full bg-primary text-on-primary shadow-lg shadow-primary/20 hover:bg-primary/90 active:scale-95 transition-all font-label font-bold uppercase tracking-widest text-[11px] flex items-center gap-2">
+                            Confirm Import
+                            <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Mobile Navigation (Suppressed per "Destination Rule" logic but present if needed for responsive pivot) -->
+<nav class="md:hidden sticky bottom-0 w-full bg-[#f8f3ec] h-16 flex items-center justify-around border-t border-[#1d1c18]/5 z-50">
+<button class="flex flex-col items-center gap-1 text-[#5e6ad2]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_fix_high</span>
+<span class="text-[10px] font-label uppercase tracking-tighter">Wizard</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-[#1d1c18]/60">
+<span class="material-symbols-outlined">list_alt</span>
+<span class="text-[10px] font-label uppercase tracking-tighter">Forms</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-[#1d1c18]/60">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-label uppercase tracking-tighter">Account</span>
+</button>
+</nav>
+</body></html>

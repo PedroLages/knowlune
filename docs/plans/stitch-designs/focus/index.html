@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Knowlune — Implementation Design References</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: linear-gradient(180deg, #0a0b1a 0%, #1a1535 40%, #FAF5EE 40%);
+      color: #1b1c1a;
+      min-height: 100vh;
+    }
+    .header {
+      padding: 4rem 2rem 5rem;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 0.5rem;
+    }
+    .header .brand {
+      background: linear-gradient(135deg, #5e6ad2, #8b92ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header p {
+      color: rgba(255,255,255,0.5);
+      font-size: 1rem;
+      max-width: 640px;
+      margin: 0.5rem auto 0;
+      line-height: 1.6;
+    }
+    .header .badge {
+      display: inline-block;
+      background: rgba(94, 106, 210, 0.15);
+      color: #8b92ff;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.375rem 1rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .grid {
+      max-width: 900px;
+      margin: -2rem auto 3rem;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 1.75rem 2rem;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(94, 106, 210, 0.12);
+    }
+    .card .icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    .card .content { flex: 1; }
+    .card .number {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #5e6ad2;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .card h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin: 0.25rem 0;
+    }
+    .card p {
+      color: #666;
+      font-size: 0.875rem;
+      line-height: 1.4;
+    }
+    .card .tags {
+      display: flex;
+      gap: 0.375rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .card .tag {
+      background: #f0eef8;
+      color: #5e6ad2;
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+    }
+    .card .arrow {
+      color: #ccc;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      color: #999;
+      font-size: 0.8rem;
+    }
+    .back-link {
+      display: block;
+      text-align: center;
+      margin: 1rem auto 0;
+      color: #5e6ad2;
+      font-size: 0.85rem;
+      text-decoration: none;
+    }
+    .back-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="badge">Implementation References</div>
+    <h1>Knowlune <span class="brand">Widget Upgrades</span></h1>
+    <p>5 implementation-ready design pages. Each shows current state, 2-3 proposed variations, and component close-ups.</p>
+  </div>
+
+  <div class="grid">
+    <a href="deep-focus-mode.html" class="card">
+      <div class="icon" style="background: #fff3e0; color: #e65100;">&#9201;</div>
+      <div class="content">
+        <span class="number">Page 1</span>
+        <h2>Deep Focus Mode + Today's Focus Stats</h2>
+        <p>Pomodoro timer upgrade: large circular ring, session controls, companion stats card</p>
+        <div class="tags">
+          <span class="tag">Current vs Proposed</span>
+          <span class="tag">3 Variations</span>
+          <span class="tag">Close-ups</span>
+        </div>
+      </div>
+      <span class="arrow">&rarr;</span>
+    </a>
+
+    <a href="streak-calendar.html" class="card">
+      <div class="icon" style="background: #fce4ec; color: #c62828;">&#128293;</div>
+      <div class="content">
+        <span class="number">Page 2</span>
+        <h2>Enhanced Streak Calendar</h2>
+        <p>Month-view calendar with flame counter, freeze tokens, longest streak badge</p>
+        <div class="tags">
+          <span class="tag">Current vs Proposed</span>
+          <span class="tag">2 Variations</span>
+          <span class="tag">Close-ups</span>
+        </div>
+      </div>
+      <span class="arrow">&rarr;</span>
+    </a>
+
+    <a href="activity-timeline.html" class="card">
+      <div class="icon" style="background: #e8eaf6; color: #283593;">&#128340;</div>
+      <div class="content">
+        <span class="number">Page 3</span>
+        <h2>Activity Timeline Feed</h2>
+        <p>Vertical timeline with type icons, day grouping, expandable details, compact variant</p>
+        <div class="tags">
+          <span class="tag">Current vs Proposed</span>
+          <span class="tag">3 Variations</span>
+          <span class="tag">Close-ups</span>
+        </div>
+      </div>
+      <span class="arrow">&rarr;</span>
+    </a>
+
+    <a href="learning-path-timeline.html" class="card">
+      <div class="icon" style="background: #e0f2f1; color: #00695c;">&#128204;</div>
+      <div class="content">
+        <span class="number">Page 4</span>
+        <h2>Vertical Learning Path Timeline</h2>
+        <p>Clean vertical timeline replacing winding trail map, with progress rings and time estimates</p>
+        <div class="tags">
+          <span class="tag">Current vs Proposed</span>
+          <span class="tag">2 Variations</span>
+          <span class="tag">Close-ups</span>
+        </div>
+      </div>
+      <span class="arrow">&rarr;</span>
+    </a>
+
+    <a href="progress-composites.html" class="card">
+      <div class="icon" style="background: #ede7f6; color: #4527a0;">&#128200;</div>
+      <div class="content">
+        <span class="number">Page 5</span>
+        <h2>Progress Composites & Metrics Strip</h2>
+        <p>Dashboard KPI strip, segmented chapter bars, milestone bars, course composite cards, hero metrics</p>
+        <div class="tags">
+          <span class="tag">Current vs Proposed</span>
+          <span class="tag">3 Variations</span>
+          <span class="tag">Close-ups</span>
+        </div>
+      </div>
+      <span class="arrow">&rarr;</span>
+    </a>
+  </div>
+
+  <a href="../index.html" class="back-link">&larr; Back to full design catalog</a>
+
+  <div class="footer">
+    Knowlune Implementation References &mdash; Generated with Stitch &mdash; 2026-03-28
+  </div>
+</body>
+</html>

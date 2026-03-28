@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Knowlune | Personal Learning Tracker</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=DM+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-dim": "#ded9d3",
+                        "on-primary-container": "#fdfaff",
+                        "on-primary-fixed-variant": "#2e3aa2",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed-dim": "#c9c1eb",
+                        "secondary-fixed": "#e5deff",
+                        "outline": "#767684",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed": "#dfe0ff",
+                        "outline-variant": "#c6c5d5",
+                        "surface-tint": "#4854bb",
+                        "on-primary-fixed": "#000965",
+                        "on-surface-variant": "#454652",
+                        "on-surface": "#1d1c18",
+                        "inverse-surface": "#32302c",
+                        "on-tertiary-fixed-variant": "#673d00",
+                        "on-tertiary-fixed": "#2b1700",
+                        "on-secondary-fixed": "#1c1737",
+                        "surface-container-low": "#f8f3ec",
+                        "secondary": "#605a7e",
+                        "inverse-on-surface": "#f5f0e9",
+                        "secondary-container": "#ddd5ff",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed-variant": "#484265",
+                        "primary-fixed-dim": "#bdc2ff",
+                        "surface-container-high": "#ece7e1",
+                        "background": "#fef9f2",
+                        "surface-variant": "#e6e2db",
+                        "on-secondary-container": "#605b7f",
+                        "error-container": "#ffdad6",
+                        "tertiary-fixed-dim": "#ffb867",
+                        "inverse-primary": "#bdc2ff",
+                        "on-background": "#1d1c18",
+                        "surface-bright": "#fef9f2",
+                        "on-tertiary-container": "#fffaf8",
+                        "on-error-container": "#93000a",
+                        "surface-container": "#f2ede6",
+                        "surface": "#fef9f2",
+                        "primary": "#4450b7",
+                        "error": "#ba1a1a",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed": "#ffddbb",
+                        "surface-container-highest": "#e6e2db",
+                        "tertiary": "#834f00",
+                        "tertiary-container": "#a56500",
+                        "on-primary": "#ffffff",
+                        "primary-container": "#5e6ad2"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["DM Sans"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-nav {
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+        .hero-gradient {
+            background: linear-gradient(180deg, #0a0b1a 0%, #1a1535 100%);
+        }
+        .text-gradient-brand {
+            background: linear-gradient(90deg, #5e6ad2 0%, #8b92ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .dots-bg {
+            background-image: radial-gradient(#c6c5d5 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- Top Navigation Shell -->
+<nav class="fixed top-0 w-full z-50 glass-nav bg-[#ffffff]/70 dark:bg-[#1d1c18]/70 border-none">
+<div class="max-w-7xl mx-auto px-10 py-6 flex justify-between items-center">
+<div class="text-2xl font-bold tracking-tighter text-[#1d1c18] dark:text-[#fef9f2] font-['Space_Grotesk']">
+                Knowlune
+            </div>
+<div class="hidden md:flex items-center gap-10">
+<a class="font-['Space_Grotesk'] font-bold text-sm tracking-tight text-[#5e6ad2] border-b-2 border-[#5e6ad2] pb-1" href="#">Features</a>
+<a class="font-['Space_Grotesk'] font-bold text-sm tracking-tight text-[#1d1c18] dark:text-[#fef9f2] opacity-80 hover:opacity-100 hover:text-[#5e6ad2] transition-all duration-300" href="#">Open Source</a>
+<a class="font-['Space_Grotesk'] font-bold text-sm tracking-tight text-[#1d1c18] dark:text-[#fef9f2] opacity-80 hover:opacity-100 hover:text-[#5e6ad2] transition-all duration-300" href="#">Demo</a>
+<a class="font-['Space_Grotesk'] font-bold text-sm tracking-tight text-[#1d1c18] dark:text-[#fef9f2] opacity-80 hover:opacity-100 hover:text-[#5e6ad2] transition-all duration-300" href="#">Docs</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="hidden md:flex px-6 py-2 rounded-full font-['Space_Grotesk'] font-bold text-sm text-[#1d1c18] dark:text-[#fef9f2] border border-outline-variant/30 hover:bg-surface-container-high transition-all">GitHub</button>
+<button class="px-6 py-2 rounded-full font-['Space_Grotesk'] font-bold text-sm bg-[#5e6ad2] text-white scale-95 active:scale-90 transition-transform">Try Demo</button>
+</div>
+</div>
+</nav>
+<!-- Hero Section -->
+<section class="hero-gradient pt-40 pb-20 overflow-hidden">
+<div class="max-w-7xl mx-auto px-10 text-center relative">
+<div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full opacity-10 pointer-events-none dots-bg"></div>
+<h1 class="font-headline text-5xl md:text-8xl font-bold text-white mb-8 tracking-tighter leading-[1.05]">
+                You have courses everywhere.<br/>
+<span class="text-gradient-brand">You finish none of them.</span>
+</h1>
+<p class="text-xl text-white/70 max-w-2xl mx-auto mb-12 font-light leading-relaxed">
+                Knowlune is the kinetic curator for serious learners. Stop collecting browser tabs and start building a permanent knowledge archive on your own terms.
+            </p>
+<div class="flex flex-col md:flex-row items-center justify-center gap-6 mb-24">
+<button class="px-10 py-5 bg-primary text-white rounded-full font-headline font-bold text-lg hover:shadow-[0_0_40px_rgba(94,106,210,0.3)] transition-all">Try the Demo</button>
+<button class="px-10 py-5 bg-white/10 text-white rounded-full font-headline font-bold text-lg border border-white/10 hover:bg-white/20 transition-all flex items-center gap-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+                    Star on GitHub
+                </button>
+</div>
+<!-- Hero Mockup -->
+<div class="relative max-w-5xl mx-auto">
+<div class="absolute -inset-1 bg-gradient-to-r from-primary to-secondary blur-2xl opacity-20 rounded-xl"></div>
+<div class="relative bg-[#111127] rounded-xl border border-white/10 shadow-2xl overflow-hidden aspect-[16/10]">
+<img alt="Knowlune Dashboard" class="w-full h-full object-cover opacity-90" data-alt="Modern dark UI dashboard interface with data visualization charts, learning progress bars, and clean minimalist sidebar navigation" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5slJNe5LimtUvuDkXhDKK36-Pj7Ru20McgLy4h7ptVfXCOzcrOG1zO56O1PoEyABwUjzFNkRUZilFvEkw8HFcrpfCSECkVGEmgtw_ExvkwLoqEXO7kUm8zQmYQQ-VpsOFYsN44NfgeRGG9vKPB3VNWXtEDLNyVP06X97ed_JJjsx3Zt7WBB4fczqL3L2UrrCI4jbCmLIBFWIOI-UbhaProE_YsnDK3uYJZ4DlQdawGjNneXzJw91LmkTZqdcgQ4rmYfgeikTNJBs"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Trust Strip -->
+<section class="bg-[#111127] py-12 border-y border-white/5">
+<div class="max-w-7xl mx-auto px-10">
+<div class="flex flex-wrap justify-between items-center gap-8 opacity-50 grayscale hover:grayscale-0 transition-all">
+<div class="flex items-center gap-2 text-white font-headline font-medium">
+<span class="material-symbols-outlined text-primary">verified</span>
+                    Local-first
+                </div>
+<div class="flex items-center gap-2 text-white font-headline font-medium">
+<span class="material-symbols-outlined text-primary">code</span>
+                    Open Source
+                </div>
+<div class="flex items-center gap-2 text-white font-headline font-medium">
+<span class="material-symbols-outlined text-primary">lock</span>
+                    Zero tracking
+                </div>
+<div class="flex items-center gap-2 text-white font-headline font-medium">
+<span class="material-symbols-outlined text-primary">cloud_off</span>
+                    Works offline
+                </div>
+<div class="flex items-center gap-2 text-white font-headline font-medium">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
+                    4.2k Stars
+                </div>
+</div>
+</div>
+</section>
+<!-- How it Works -->
+<section class="bg-surface py-32">
+<div class="max-w-7xl mx-auto px-10">
+<h2 class="font-headline text-5xl font-bold text-primary mb-20">Three steps. Any content.</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+<!-- Step 1 -->
+<div class="relative group">
+<span class="absolute -top-12 left-0 text-[10rem] font-headline font-bold text-surface-container-high/50 -z-10 transition-transform group-hover:-translate-y-2">1</span>
+<h3 class="text-2xl font-headline font-bold mb-4 pt-12">Import everything</h3>
+<p class="text-on-surface-variant leading-relaxed">Paste a YouTube URL, upload a PDF, or sync your Notion database. Knowlune centralizes your scattered learning paths.</p>
+</div>
+<!-- Step 2 -->
+<div class="relative group">
+<span class="absolute -top-12 left-0 text-[10rem] font-headline font-bold text-surface-container-high/50 -z-10 transition-transform group-hover:-translate-y-2">2</span>
+<h3 class="text-2xl font-headline font-bold mb-4 pt-12">Track progress</h3>
+<p class="text-on-surface-variant leading-relaxed">Our kinetic engine calculates your velocity and retention. See exactly where you stopped and where to pick up.</p>
+</div>
+<!-- Step 3 -->
+<div class="relative group">
+<span class="absolute -top-12 left-0 text-[10rem] font-headline font-bold text-surface-container-high/50 -z-10 transition-transform group-hover:-translate-y-2">3</span>
+<h3 class="text-2xl font-headline font-bold mb-4 pt-12">Master the skill</h3>
+<p class="text-on-surface-variant leading-relaxed">Move from consumption to mastery with AI-generated curricula and spaced repetition anchors designed for depth.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Feature Bento Grid -->
+<section class="bg-surface-container-low py-32">
+<div class="max-w-7xl mx-auto px-10">
+<div class="text-center mb-20">
+<h2 class="font-headline text-5xl font-bold mb-6">Built for serious learners</h2>
+<p class="text-on-surface-variant text-lg">Infrastructure for the modern autodidact.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-6 grid-rows-2 gap-6 h-auto md:h-[800px]">
+<!-- Large Dashboard Tile -->
+<div class="md:col-span-3 md:row-span-2 bg-surface-container-lowest rounded-xl p-8 flex flex-col justify-between shadow-sm border border-outline-variant/10 overflow-hidden group">
+<div>
+<span class="material-symbols-outlined text-primary text-4xl mb-6">dashboard</span>
+<h3 class="text-3xl font-headline font-bold mb-4">Command Center</h3>
+<p class="text-on-surface-variant max-w-sm">A unified view of your intellectual capital. No distractions, just progress.</p>
+</div>
+<div class="mt-8 transform translate-y-4 group-hover:translate-y-0 transition-transform">
+<img alt="Dashboard view" class="rounded-lg shadow-xl" data-alt="Clean minimal data visualization interface showing learning streaks and course progress in a soft white UI" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoXQMD3oAQ4GK2I8lhuwSo5KWexsAdcOEL7Y9VHKL3jqI1vy3LH5JCagUBYwCXCPnOmrey9zCRA9tl5SFtzYI01uRvb4pFYkIt5QuTAPDupLtCBfqq66Oxh4v0W9oZj17OKC3acttd97rxNVo3TYePsST2Wt78Fz_4l4pMkRMqXaJemxk9FhdjV1IaAGVShBP6Likyh5NCwDC5M9vCjrxN2_PBIIN8_coGmxM6ykw6VDt4O-oBh0zqIM7ii65MWWF-mgcQFqLG7Ak"/>
+</div>
+</div>
+<!-- Streak Counter -->
+<div class="md:col-span-3 md:row-span-1 bg-primary text-white rounded-xl p-8 flex items-center justify-between overflow-hidden relative group">
+<div class="relative z-10">
+<h3 class="text-2xl font-headline font-bold mb-2">365 Day Streak</h3>
+<p class="text-white/80">Consistency is the only metric that matters.</p>
+</div>
+<div class="text-9xl font-headline font-bold opacity-20 absolute -right-4 -bottom-4 group-hover:scale-110 transition-transform">365</div>
+</div>
+<!-- AI Curriculum -->
+<div class="md:col-span-2 md:row-span-1 bg-surface-container-highest rounded-xl p-8 border border-outline-variant/10 group">
+<span class="material-symbols-outlined text-tertiary text-3xl mb-4">auto_awesome</span>
+<h3 class="text-xl font-headline font-bold mb-2">AI Curricula</h3>
+<p class="text-sm text-on-surface-variant">Turn any topic into a structured path in seconds.</p>
+</div>
+<!-- Radar Chart -->
+<div class="md:col-span-1 md:row-span-1 bg-[#1d1c18] text-white rounded-xl p-6 flex flex-col items-center justify-center text-center group">
+<span class="material-symbols-outlined text-secondary-fixed text-4xl mb-2 group-hover:rotate-12 transition-transform">insights</span>
+<span class="font-headline font-bold text-xs uppercase tracking-widest text-secondary-fixed">Skill Radar</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Differentiator -->
+<section class="bg-surface py-32">
+<div class="max-w-7xl mx-auto px-10">
+<h2 class="font-headline text-5xl font-bold mb-20 text-center">Not another course marketplace.</h2>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Course Platforms -->
+<div class="p-10 rounded-xl bg-surface-container-low border border-outline-variant/10 opacity-60">
+<h3 class="text-xl font-headline font-bold mb-6">Course Platforms</h3>
+<ul class="space-y-4 text-on-surface-variant">
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-error text-sm">close</span>
+                            Locked into their ecosystem
+                        </li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-error text-sm">close</span>
+                            Optimized for "Sales," not "Learning"
+                        </li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-error text-sm">close</span>
+                            Constant notification spam
+                        </li>
+</ul>
+</div>
+<!-- Knowlune -->
+<div class="p-10 rounded-xl bg-surface-container-lowest border-2 border-primary shadow-2xl relative transform -translate-y-4">
+<div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest">Recommended</div>
+<h3 class="text-2xl font-headline font-bold mb-6 text-primary">Knowlune</h3>
+<ul class="space-y-4">
+<li class="flex items-center gap-3 font-medium">
+<span class="material-symbols-outlined text-primary">check_circle</span>
+                            Import from any source
+                        </li>
+<li class="flex items-center gap-3 font-medium">
+<span class="material-symbols-outlined text-primary">check_circle</span>
+                            Local-first, private data
+                        </li>
+<li class="flex items-center gap-3 font-medium">
+<span class="material-symbols-outlined text-primary">check_circle</span>
+                            No marketplace distractions
+                        </li>
+<li class="flex items-center gap-3 font-medium">
+<span class="material-symbols-outlined text-primary">check_circle</span>
+                            Offline-first desktop app
+                        </li>
+</ul>
+</div>
+<!-- Notes Apps -->
+<div class="p-10 rounded-xl bg-surface-container-low border border-outline-variant/10 opacity-60">
+<h3 class="text-xl font-headline font-bold mb-6">Notes Apps</h3>
+<ul class="space-y-4 text-on-surface-variant">
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-error text-sm">close</span>
+                            Manual progress tracking
+                        </li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-error text-sm">close</span>
+                            Messy, unstructured lists
+                        </li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-error text-sm">close</span>
+                            No native video/PDF support
+                        </li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+<!-- Open Source Section -->
+<section class="bg-primary/5 py-32">
+<div class="max-w-7xl mx-auto px-10 grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+<div>
+<h2 class="font-headline text-5xl font-bold mb-8">Your data. Your device. Your rules.</h2>
+<p class="text-xl text-on-surface-variant mb-12">Knowlune is 100% open source and local-first. We believe learning data is too personal for the cloud.</p>
+<div class="grid grid-cols-2 gap-6">
+<div class="bg-surface-container-lowest p-6 rounded-lg">
+<span class="material-symbols-outlined text-primary mb-2">terminal</span>
+<h4 class="font-bold mb-1">Developer First</h4>
+<p class="text-sm text-on-surface-variant">Extensible plugin API using TypeScript.</p>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-lg">
+<span class="material-symbols-outlined text-primary mb-2">database</span>
+<h4 class="font-bold mb-1">SQLite Export</h4>
+<p class="text-sm text-on-surface-variant">Own your raw data in a standard format.</p>
+</div>
+</div>
+</div>
+<div class="bg-[#1d1c18] rounded-xl p-1 overflow-hidden shadow-2xl">
+<div class="bg-[#2d2c28] px-4 py-2 flex gap-2">
+<div class="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
+<div class="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
+<div class="w-3 h-3 rounded-full bg-[#27c93f]"></div>
+</div>
+<div class="p-8 font-mono text-sm">
+<p class="text-[#c9c1eb] mb-2"># Self-host with Docker</p>
+<code class="text-white block">
+                        docker run -d \<br/>
+                          --name knowlune \<br/>
+                          -p 3000:3000 \<br/>
+                          -v knowlune_data:/app/data \<br/>
+                          ghcr.io/knowlune/app:latest
+                    </code>
+</div>
+</div>
+</div>
+</section>
+<!-- CTA Footer -->
+<footer class="bg-[#0a0b1a] text-white pt-32 pb-20 rounded-t-[3rem]">
+<div class="max-w-7xl mx-auto px-10 text-center mb-32">
+<h2 class="font-headline text-6xl font-bold mb-8 tracking-tighter">Start finishing what you started.</h2>
+<div class="flex flex-col md:flex-row items-center justify-center gap-6">
+<button class="px-12 py-6 bg-primary text-white rounded-full font-headline font-bold text-xl hover:scale-105 transition-all">Launch Dashboard</button>
+<button class="px-12 py-6 bg-white/10 text-white rounded-full font-headline font-bold text-xl border border-white/10 hover:bg-white/20 transition-all">Documentation</button>
+</div>
+</div>
+<div class="max-w-7xl mx-auto px-10 flex flex-col md:flex-row justify-between items-center gap-10 border-t border-white/5 pt-12">
+<div class="text-2xl font-bold font-['Space_Grotesk']">Knowlune</div>
+<div class="flex gap-10 text-sm opacity-60">
+<a class="hover:opacity-100 hover:text-[#5e6ad2] transition-colors" href="#">Privacy</a>
+<a class="hover:opacity-100 hover:text-[#5e6ad2] transition-colors" href="#">Terms</a>
+<a class="hover:opacity-100 hover:text-[#5e6ad2] transition-colors" href="#">Twitter</a>
+<a class="hover:opacity-100 hover:text-[#5e6ad2] transition-colors" href="#">GitHub</a>
+</div>
+<p class="text-sm opacity-60 font-['DM_Sans']">
+                © 2024 Knowlune. Built for the Kinetic Curator.
+            </p>
+</div>
+</footer>
+</body></html>

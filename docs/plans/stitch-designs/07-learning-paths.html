@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Knowlune | Learning Journey Visualization Patterns</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "inverse-on-surface": "#f5f0e9",
+              "on-secondary-container": "#52577f",
+              "on-error-container": "#93000a",
+              "primary-fixed": "#dfe0ff",
+              "inverse-surface": "#32302c",
+              "surface-dim": "#ded9d3",
+              "surface-container-low": "#f8f3ec",
+              "on-tertiary": "#ffffff",
+              "error": "#ba1a1a",
+              "tertiary-fixed-dim": "#ffb867",
+              "secondary-fixed": "#dfe0ff",
+              "surface-variant": "#e6e2db",
+              "on-surface": "#1d1c18",
+              "inverse-primary": "#bdc2ff",
+              "primary": "#4450b7",
+              "surface-bright": "#fef9f2",
+              "tertiary-fixed": "#ffddbb",
+              "on-primary-fixed-variant": "#2e3aa2",
+              "outline-variant": "#c6c5d5",
+              "on-background": "#1d1c18",
+              "on-surface-variant": "#454652",
+              "background": "#fef9f2",
+              "primary-fixed-dim": "#bdc2ff",
+              "on-error": "#ffffff",
+              "tertiary-container": "#a56500",
+              "surface-container-highest": "#e6e2db",
+              "secondary": "#575b84",
+              "on-tertiary-fixed": "#2b1700",
+              "surface-container": "#f2ede6",
+              "surface-container-lowest": "#ffffff",
+              "on-secondary-fixed": "#13183d",
+              "on-secondary-fixed-variant": "#3f446b",
+              "secondary-container": "#cbcefe",
+              "surface-tint": "#4854bb",
+              "surface-container-high": "#ece7e1",
+              "on-tertiary-fixed-variant": "#673d00",
+              "on-secondary": "#ffffff",
+              "primary-container": "#5e6ad2",
+              "secondary-fixed-dim": "#c0c3f2",
+              "on-primary-container": "#fdfaff",
+              "on-primary": "#ffffff",
+              "on-tertiary-container": "#fffaf8",
+              "outline": "#767684",
+              "surface": "#fef9f2",
+              "on-primary-fixed": "#000965",
+              "tertiary": "#834f00",
+              "error-container": "#ffdad6"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Manrope"],
+              "label": ["Manrope"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .academic-gradient {
+        background: linear-gradient(135deg, #4450b7 0%, #5e6ad2 100%);
+      }
+    </style>
+</head>
+<body class="bg-[#FAF5EE] font-body text-on-surface selection:bg-primary/20">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-64 bg-[#f8f3ec] py-8 px-6 flex flex-col z-50 overflow-y-auto border-r-0">
+<div class="mb-12">
+<h1 class="text-2xl font-bold tracking-tighter text-[#4450b7]">Knowlune</h1>
+<p class="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-semibold mt-1">Academic Atelier</p>
+</div>
+<nav class="flex-1 space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-[#fef9f2] transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-medium text-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#4450b7] font-bold border-r-4 border-[#4450b7] bg-[#fef9f2] transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-medium text-sm">Courses</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-[#fef9f2] transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-medium text-sm">Progress</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-[#fef9f2] transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-medium text-sm">Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-8 flex items-center gap-3 border-t border-slate-200">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden">
+<img alt="User profile" data-alt="close-up portrait of a scholarly young man with glasses in a library setting with warm cinematic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAxo0FtmmN_bvB-JMCmnHIcmbEXpjXSh0kz9K3hOqP6urkkS9VJNRrpSxwU4uBmdptegxUBZUog5hfiwJSBtSWgKnQHUVS5jHZUhvskfrC4KhfmBUe6irZmLbFHAhY_su4RdbNjDvxxly2H0HZ-slhxXh7opKhIeQYyXsB4aGfPbR8hz0eQ0pyxlYFGBhebhAe31RMBzw17u9FPN_K9tK6_gdLUNNZahf3Oi_a3DUWyDIq_qUdcMgcysON0vQxMfrZ2X_oLmhaHPnyF"/>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-bold">Julian Vane</span>
+<span class="text-[10px] uppercase tracking-wider text-slate-500">Research Fellow</span>
+</div>
+</div>
+</aside>
+<!-- TopNavBar -->
+<header class="sticky top-0 z-40 w-full flex justify-between items-center h-16 px-8 ml-64 bg-[#fef9f2]/80 backdrop-blur-md shadow-[0_20px_40px_rgba(29,28,24,0.05)]">
+<div class="flex items-center gap-4 flex-1 max-w-xl">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="w-full bg-surface-container-lowest border-none rounded-md pl-10 pr-4 py-2 text-sm focus:ring-1 focus:ring-[#4450b7]/20" placeholder="Search curriculum..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<button class="text-slate-600 hover:text-[#4450b7] transition-all relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-tertiary rounded-full"></span>
+</button>
+<button class="text-slate-600 hover:text-[#4450b7] transition-all">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="ml-64 p-12 max-w-7xl">
+<header class="mb-16">
+<span class="label-md text-xs font-bold uppercase tracking-[0.2em] text-secondary mb-3 block">Pattern Library v1.0</span>
+<h2 class="text-4xl font-extrabold tracking-tight text-on-surface">Learning Journey Visualization Patterns</h2>
+<p class="text-slate-500 mt-4 max-w-2xl leading-relaxed">
+                A scholarly collection of pedagogical frameworks designed to visualize intellectual progression through the Academic Atelier curriculum.
+            </p>
+</header>
+<div class="grid grid-cols-1 gap-12">
+<!-- A) Vertical Timeline -->
+<section class="bg-surface-container-lowest rounded-xl p-10 shadow-[0_20px_40px_rgba(29,28,24,0.03)] border border-[#f2ede6]">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+<div class="col-span-1">
+<span class="label-md text-[10px] text-primary font-bold tracking-widest uppercase mb-2 block">Format A</span>
+<h3 class="text-xl font-bold mb-4">Vertical Timeline</h3>
+<p class="text-sm text-slate-500 leading-relaxed mb-6">A linear progression model focusing on sequential mastery. Ideal for foundational cohorts where prerequisites are strictly defined.</p>
+<div class="p-4 bg-surface-container-low rounded-lg">
+<span class="text-xs font-bold text-on-surface uppercase tracking-wide block mb-2">Completion status</span>
+<div class="flex items-center gap-2">
+<div class="h-2 flex-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-1/2"></div>
+</div>
+<span class="text-xs font-bold text-primary">50%</span>
+</div>
+</div>
+</div>
+<div class="col-span-2 flex justify-center py-8">
+<div class="relative space-y-12">
+<!-- Connecting Line -->
+<div class="absolute left-[19px] top-4 bottom-4 w-0.5 bg-slate-200"></div>
+<!-- Node 1: Completed -->
+<div class="flex items-center gap-6 relative z-10">
+<div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 border-4 border-surface-container-lowest">
+<span class="material-symbols-outlined text-xl">check</span>
+</div>
+<div>
+<h4 class="text-sm font-bold">Introduction to Hegemony</h4>
+<p class="text-[10px] text-slate-400">Completed April 12</p>
+</div>
+</div>
+<!-- Node 2: Completed -->
+<div class="flex items-center gap-6 relative z-10">
+<div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 border-4 border-surface-container-lowest">
+<span class="material-symbols-outlined text-xl">check</span>
+</div>
+<div>
+<h4 class="text-sm font-bold">Linguistic Semiotics</h4>
+<p class="text-[10px] text-slate-400">Completed April 15</p>
+</div>
+</div>
+<!-- Node 3: Completed -->
+<div class="flex items-center gap-6 relative z-10">
+<div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 border-4 border-surface-container-lowest">
+<span class="material-symbols-outlined text-xl">check</span>
+</div>
+<div>
+<h4 class="text-sm font-bold">Classical Rhetoric</h4>
+<p class="text-[10px] text-slate-400">Completed May 02</p>
+</div>
+</div>
+<!-- Node 4: Current -->
+<div class="flex items-center gap-6 relative z-10">
+<div class="w-10 h-10 rounded-full academic-gradient flex items-center justify-center text-white ring-4 ring-[#4450b7]/20 animate-pulse">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+</div>
+<div>
+<h4 class="text-sm font-bold text-primary">Dialectical Materialism</h4>
+<p class="text-[10px] text-primary/70 font-bold uppercase tracking-wide">Currently Studying</p>
+</div>
+</div>
+<!-- Node 5: Locked -->
+<div class="flex items-center gap-6 relative z-10 opacity-50">
+<div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border-4 border-surface-container-lowest">
+<span class="material-symbols-outlined text-xl">lock</span>
+</div>
+<div>
+<h4 class="text-sm font-bold">Neoclassical Economics</h4>
+<p class="text-[10px] text-slate-400">Prerequisite required</p>
+</div>
+</div>
+<!-- Node 6: Locked -->
+<div class="flex items-center gap-6 relative z-10 opacity-50">
+<div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border-4 border-surface-container-lowest">
+<span class="material-symbols-outlined text-xl">lock</span>
+</div>
+<div>
+<h4 class="text-sm font-bold">Thesis Defense</h4>
+<p class="text-[10px] text-slate-400">Final Milestone</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- B) Horizontal Roadmap -->
+<section class="bg-surface-container-lowest rounded-xl p-10 shadow-[0_20px_40px_rgba(29,28,24,0.03)] border border-[#f2ede6]">
+<div class="mb-12">
+<span class="label-md text-[10px] text-primary font-bold tracking-widest uppercase mb-2 block">Format B</span>
+<h3 class="text-xl font-bold">Horizontal Roadmap</h3>
+</div>
+<div class="relative pt-12 pb-8">
+<!-- Progress Background Line -->
+<div class="absolute left-0 top-[60px] w-full h-1 bg-surface-container-high rounded-full"></div>
+<!-- Active Progress Line -->
+<div class="absolute left-0 top-[60px] w-[50%] h-1 academic-gradient rounded-full"></div>
+<div class="flex justify-between items-start">
+<!-- Step 1 -->
+<div class="flex flex-col items-center gap-4 w-1/5 text-center">
+<div class="w-4 h-4 rounded-full bg-primary ring-4 ring-primary/20 relative z-10"></div>
+<div>
+<h4 class="text-xs font-bold">Introduction</h4>
+<span class="text-[10px] text-green-600 font-bold">Done</span>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="flex flex-col items-center gap-4 w-1/5 text-center">
+<div class="w-4 h-4 rounded-full bg-primary ring-4 ring-primary/20 relative z-10"></div>
+<div>
+<h4 class="text-xs font-bold">Fundamentals</h4>
+<span class="text-[10px] text-green-600 font-bold">Done</span>
+</div>
+</div>
+<!-- Step 3: Current -->
+<div class="flex flex-col items-center gap-4 w-1/5 text-center relative">
+<div class="absolute -top-14 bg-primary text-white text-[10px] py-1 px-3 rounded-md shadow-lg animate-bounce whitespace-nowrap">
+                                2 hours remaining
+                            </div>
+<div class="w-6 h-6 rounded-full academic-gradient ring-8 ring-primary/10 relative z-10 border-4 border-surface-container-lowest"></div>
+<div>
+<h4 class="text-xs font-extrabold text-primary">Intermediate</h4>
+<span class="text-[10px] text-primary/70 font-bold uppercase">Current Phase</span>
+</div>
+</div>
+<!-- Step 4 -->
+<div class="flex flex-col items-center gap-4 w-1/5 text-center opacity-40">
+<div class="w-4 h-4 rounded-full bg-slate-300 relative z-10"></div>
+<div>
+<h4 class="text-xs font-bold">Advanced</h4>
+<span class="text-[10px] text-slate-500">Locked</span>
+</div>
+</div>
+<!-- Step 5 -->
+<div class="flex flex-col items-center gap-4 w-1/5 text-center opacity-40">
+<div class="w-4 h-4 rounded-full bg-slate-300 relative z-10"></div>
+<div>
+<h4 class="text-xs font-bold">Mastery</h4>
+<span class="text-[10px] text-slate-500">Locked</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- C) Node Graph & D) Trail Map (Asymmetric Grid) -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+<!-- C) Node Graph -->
+<section class="bg-surface-container-lowest rounded-xl p-10 shadow-[0_20px_40px_rgba(29,28,24,0.03)] border border-[#f2ede6] flex flex-col">
+<div class="mb-8">
+<span class="label-md text-[10px] text-primary font-bold tracking-widest uppercase mb-2 block">Format C</span>
+<h3 class="text-xl font-bold">Relational Node Graph</h3>
+<p class="text-sm text-slate-500 mt-2">Exploration of multi-dimensional dependencies between subjects.</p>
+</div>
+<div class="flex-1 relative min-h-[400px] flex items-center justify-center">
+<svg class="absolute inset-0 w-full h-full pointer-events-none" viewbox="0 0 400 400">
+<defs>
+<marker id="arrowhead" markerheight="7" markerwidth="10" orientation="auto" refx="10" refy="3.5">
+<polygon fill="#cbd5e1" points="0 0, 10 3.5, 0 7"></polygon>
+</marker>
+</defs>
+<!-- Dependency Arrows -->
+<line marker-end="url(#arrowhead)" stroke="#cbd5e1" stroke-width="2" x1="200" x2="100" y1="200" y2="120"></line>
+<line marker-end="url(#arrowhead)" stroke="#cbd5e1" stroke-width="2" x1="200" x2="300" y1="200" y2="120"></line>
+<line marker-end="url(#arrowhead)" stroke="#cbd5e1" stroke-width="2" x1="100" x2="100" y1="120" y2="280"></line>
+<line marker-end="url(#arrowhead)" stroke="#cbd5e1" stroke-width="2" x1="300" x2="300" y1="120" y2="280"></line>
+<line marker-end="url(#arrowhead)" stroke="#cbd5e1" stroke-width="2" x1="200" x2="200" y1="200" y2="340"></line>
+</svg>
+<!-- Central Core -->
+<div class="absolute w-28 h-28 rounded-full academic-gradient flex items-center justify-center text-white text-center p-4 shadow-xl z-20">
+<span class="text-xs font-bold leading-tight">Logic &amp; Epistemology</span>
+</div>
+<!-- Orbitals -->
+<div class="absolute top-[80px] left-[60px] w-20 h-20 rounded-full bg-surface-container-high border-2 border-primary/20 flex items-center justify-center text-center p-2 z-20">
+<span class="text-[10px] font-bold text-slate-700">Formal Systems</span>
+</div>
+<div class="absolute top-[80px] right-[60px] w-24 h-24 rounded-full bg-surface-container-high border-2 border-primary/20 flex items-center justify-center text-center p-2 z-20">
+<span class="text-[10px] font-bold text-slate-700">Analytic Philosophy</span>
+</div>
+<div class="absolute bottom-[80px] left-[60px] w-16 h-16 rounded-full bg-surface-container-high border-2 border-slate-200 flex items-center justify-center text-center p-2 z-20 opacity-60">
+<span class="text-[9px] font-bold text-slate-400">Modal Logic</span>
+</div>
+<div class="absolute bottom-[80px] right-[60px] w-16 h-16 rounded-full bg-surface-container-high border-2 border-slate-200 flex items-center justify-center text-center p-2 z-20 opacity-60">
+<span class="text-[9px] font-bold text-slate-400">Pragmatism</span>
+</div>
+<div class="absolute bottom-[20px] left-1/2 -translate-x-1/2 w-20 h-20 rounded-full bg-surface-container-high border-2 border-slate-200 flex items-center justify-center text-center p-2 z-20 opacity-60">
+<span class="text-[10px] font-bold text-slate-400">Ethics of Knowledge</span>
+</div>
+</div>
+</section>
+<!-- D) Trail Map -->
+<section class="bg-surface-container-lowest rounded-xl p-10 shadow-[0_20px_40px_rgba(29,28,24,0.03)] border border-[#f2ede6] relative overflow-hidden flex flex-col">
+<div class="mb-4 relative z-10">
+<span class="label-md text-[10px] text-primary font-bold tracking-widest uppercase mb-2 block">Format D</span>
+<h3 class="text-xl font-bold">Illustrated Trail Map</h3>
+</div>
+<div class="flex-1 relative bg-surface-container-low rounded-lg border border-slate-100 mt-4 overflow-hidden">
+<img alt="Landscape" class="absolute inset-0 w-full h-full object-cover opacity-10 grayscale mix-blend-multiply" data-alt="minimalist topographic illustration of stylized mountains and valleys with clean line art aesthetic and soft watercolor washes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCeF2EVVp7jAWMro-QpP7tTjvoCsSC39LU68axS5UQsLwpjAUpslNdZcujF941FInzz7bNOOvhhUGwzfegt05uiGzdfCvFtUU7AZNkguy2OLIyZ4QQXPfkj-7IkUgPZNCryB_DZuvqgkZyCTwBp1Qrebv-LySMZBxpXA0GpiZnCQRMxRPMmvYTtgs_HcllPGqKk9b1aWomGpUFk1EIhjzf0-6p9wpF5VG4V5O9ZcboH__KO7_qXPbn9RWV3rBrodHzIJKeGcePv0mqB"/>
+<svg class="absolute inset-0 w-full h-full p-8" preserveaspectratio="none" viewbox="0 0 300 400">
+<!-- Winding Trail -->
+<path d="M 50 350 Q 150 350 150 250 T 250 150 T 150 50" fill="none" stroke="#4450b7" stroke-dasharray="8 6" stroke-width="3"></path>
+<!-- Current Position Marker -->
+<circle class="animate-pulse" cx="215" cy="185" fill="#4450b7" r="8"></circle>
+</svg>
+<!-- Milestones -->
+<div class="absolute bottom-10 left-10 text-center">
+<div class="w-8 h-8 rounded-full bg-white shadow-sm border border-slate-100 flex items-center justify-center text-primary mb-1">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">landscape</span>
+</div>
+<span class="text-[9px] font-bold uppercase tracking-tighter">Base Camp</span>
+</div>
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+<div class="w-12 h-12 rounded-full bg-primary text-white shadow-xl flex items-center justify-center mb-1 ring-8 ring-primary/10">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">directions_walk</span>
+</div>
+<span class="text-[10px] font-extrabold text-primary uppercase tracking-tight">The Ascent</span>
+</div>
+<div class="absolute top-10 right-10 text-center opacity-40">
+<div class="w-8 h-8 rounded-full bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-400 mb-1">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">filter_hdr</span>
+</div>
+<span class="text-[9px] font-bold uppercase tracking-tighter">The Summit</span>
+</div>
+</div>
+<div class="mt-6 flex items-center justify-between">
+<span class="text-xs text-slate-500 italic">"The long climb toward enlightenment..."</span>
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-white bg-slate-200"></div>
+<div class="w-6 h-6 rounded-full border-2 border-white bg-slate-300"></div>
+<div class="w-6 h-6 rounded-full border-2 border-white bg-slate-400 flex items-center justify-center text-[8px] text-white font-bold">+14</div>
+</div>
+</div>
+</section>
+</div>
+<!-- E) Kanban Layout -->
+<section class="bg-surface-container-lowest rounded-xl p-10 shadow-[0_20px_40px_rgba(29,28,24,0.03)] border border-[#f2ede6]">
+<div class="mb-10">
+<span class="label-md text-[10px] text-primary font-bold tracking-widest uppercase mb-2 block">Format E</span>
+<h3 class="text-xl font-bold">Academic Kanban</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Column 1 -->
+<div class="space-y-4">
+<div class="flex items-center justify-between px-2 mb-4">
+<h4 class="text-xs font-bold uppercase tracking-widest text-slate-500">Not Started</h4>
+<span class="text-[10px] font-bold bg-surface-container-high px-2 py-0.5 rounded-full">4</span>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl border border-transparent hover:border-primary/20 transition-all cursor-pointer">
+<h5 class="text-sm font-bold mb-2">Advanced Econometrics</h5>
+<span class="text-[10px] px-2 py-1 bg-white rounded-md text-slate-500 font-medium">8 Units</span>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl border border-transparent hover:border-primary/20 transition-all cursor-pointer">
+<h5 class="text-sm font-bold mb-2">Micro-Theoretical Models</h5>
+<span class="text-[10px] px-2 py-1 bg-white rounded-md text-slate-500 font-medium">12 Units</span>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl border border-transparent hover:border-primary/20 transition-all cursor-pointer">
+<h5 class="text-sm font-bold mb-2">Game Theory Basics</h5>
+<span class="text-[10px] px-2 py-1 bg-white rounded-md text-slate-500 font-medium">4 Units</span>
+</div>
+</div>
+<!-- Column 2 -->
+<div class="space-y-4">
+<div class="flex items-center justify-between px-2 mb-4">
+<h4 class="text-xs font-bold uppercase tracking-widest text-primary">In Progress</h4>
+<span class="text-[10px] font-bold bg-primary-fixed text-primary px-2 py-0.5 rounded-full">2</span>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl border-l-4 border-primary shadow-sm">
+<h5 class="text-sm font-bold mb-3">Post-Keynesian Logic</h5>
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-bold">
+<span>Progress</span>
+<span>75%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-3/4"></div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl border-l-4 border-primary shadow-sm">
+<h5 class="text-sm font-bold mb-3">Behavioral Heuristics</h5>
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-bold">
+<span>Progress</span>
+<span>40%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-2/5"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 3 -->
+<div class="space-y-4">
+<div class="flex items-center justify-between px-2 mb-4">
+<h4 class="text-xs font-bold uppercase tracking-widest text-green-600">Completed</h4>
+<span class="text-[10px] font-bold bg-green-50 text-green-700 px-2 py-0.5 rounded-full">3</span>
+</div>
+<div class="bg-green-50/50 p-4 rounded-xl border border-green-100 relative group">
+<span class="material-symbols-outlined absolute top-4 right-4 text-green-600 text-lg opacity-40 group-hover:opacity-100 transition-opacity">verified</span>
+<h5 class="text-sm font-bold mb-1 text-green-900">Foundational Ethics</h5>
+<p class="text-[10px] text-green-700 font-medium">Completed May 1</p>
+</div>
+<div class="bg-green-50/50 p-4 rounded-xl border border-green-100 relative group">
+<span class="material-symbols-outlined absolute top-4 right-4 text-green-600 text-lg opacity-40 group-hover:opacity-100 transition-opacity">verified</span>
+<h5 class="text-sm font-bold mb-1 text-green-900">Logic Principles I</h5>
+<p class="text-[10px] text-green-700 font-medium">Completed April 24</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Marginalia -->
+<aside class="mt-24 border-t border-slate-200 pt-8 max-w-lg">
+<h5 class="text-xs font-bold text-tertiary uppercase tracking-widest mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">auto_awesome</span>
+                The Atelier Philosophy
+            </h5>
+<p class="text-xs text-slate-500 leading-relaxed italic">
+                Visualizing knowledge is the first step toward internalizing it. These patterns are designed not just to track progress, but to inspire the student by making the invisible architecture of learning visible and tactile.
+            </p>
+</aside>
+<!-- Footer -->
+<footer class="w-full py-20 flex flex-col items-center justify-center gap-6 border-t border-slate-200 mt-20">
+<div class="flex flex-col items-center gap-2">
+<span class="font-bold text-[#4450b7] text-lg">Knowlune</span>
+<p class="font-manrope text-[10px] uppercase tracking-[0.3em] text-slate-400">© 2024 Knowlune Academic Atelier</p>
+</div>
+<div class="flex gap-8">
+<a class="font-manrope text-[10px] uppercase tracking-widest text-slate-500 hover:text-[#4450b7] transition-all opacity-70 hover:opacity-100" href="#">Terms of Service</a>
+<a class="font-manrope text-[10px] uppercase tracking-widest text-slate-500 hover:text-[#4450b7] transition-all opacity-70 hover:opacity-100" href="#">Privacy Policy</a>
+<a class="font-manrope text-[10px] uppercase tracking-widest text-slate-500 hover:text-[#4450b7] transition-all opacity-70 hover:opacity-100" href="#">Institutional Access</a>
+</div>
+</footer>
+</main>
+</body></html>

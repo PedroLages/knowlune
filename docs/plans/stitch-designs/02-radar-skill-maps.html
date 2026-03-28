@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Manrope:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-primary-container": "#fdfaff",
+              "on-tertiary": "#ffffff",
+              "primary": "#4450b7",
+              "surface-container": "#f2ede6",
+              "primary-fixed-dim": "#bdc2ff",
+              "on-secondary-fixed-variant": "#3f446b",
+              "outline-variant": "#c6c5d5",
+              "surface-variant": "#e6e2db",
+              "on-primary-fixed": "#000965",
+              "primary-fixed": "#dfe0ff",
+              "tertiary-container": "#a56500",
+              "on-secondary-container": "#52577f",
+              "error": "#ba1a1a",
+              "tertiary": "#834f00",
+              "on-surface-variant": "#454652",
+              "on-primary-fixed-variant": "#2e3aa2",
+              "on-tertiary-fixed-variant": "#673d00",
+              "background": "#fef9f2",
+              "error-container": "#ffdad6",
+              "primary-container": "#5e6ad2",
+              "inverse-on-surface": "#f5f0e9",
+              "on-secondary": "#ffffff",
+              "surface-dim": "#ded9d3",
+              "on-error-container": "#93000a",
+              "secondary-container": "#cbcefe",
+              "secondary": "#575b84",
+              "surface-bright": "#fef9f2",
+              "on-tertiary-fixed": "#2b1700",
+              "surface-container-high": "#ece7e1",
+              "on-secondary-fixed": "#13183d",
+              "inverse-primary": "#bdc2ff",
+              "on-primary": "#ffffff",
+              "on-error": "#ffffff",
+              "surface-container-highest": "#e6e2db",
+              "surface-container-low": "#f8f3ec",
+              "outline": "#767684",
+              "surface-tint": "#4854bb",
+              "secondary-fixed": "#dfe0ff",
+              "tertiary-fixed-dim": "#ffb867",
+              "on-surface": "#1d1c18",
+              "on-tertiary-container": "#fffaf8",
+              "surface": "#fef9f2",
+              "secondary-fixed-dim": "#c0c3f2",
+              "tertiary-fixed": "#ffddbb",
+              "on-background": "#1d1c18",
+              "surface-container-lowest": "#ffffff",
+              "inverse-surface": "#32302c"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Manrope"],
+              "label": ["Manrope"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Manrope', sans-serif; }
+        h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex">
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-full w-64 fixed left-0 top-0 border-r-0 bg-[#fef9f2] dark:bg-[#1d1c18] flex flex-col p-6 z-50">
+<div class="mb-10">
+<h1 class="text-[#4450b7] dark:text-[#5e6ad2] font-['Space_Grotesk'] font-bold text-2xl">Knowlune</h1>
+<p class="text-on-surface-variant text-xs mt-1">Intellectual Atrium</p>
+</div>
+<nav class="flex-1 space-y-2">
+<!-- Active Navigation: My Skills -->
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] dark:text-[#a0a0a0] hover:text-[#4450b7] hover:bg-[#ffffff]/50 dark:hover:bg-[#33322e]/50 transition-all duration-300 rounded-xl scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#4450b7] dark:text-[#5e6ad2] font-bold bg-[#ffffff] dark:bg-[#33322e] rounded-xl shadow-sm scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+<span class="font-medium">My Skills</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] dark:text-[#a0a0a0] hover:text-[#4450b7] hover:bg-[#ffffff]/50 dark:hover:bg-[#33322e]/50 transition-all duration-300 rounded-xl scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="school">school</span>
+<span class="font-medium">Courses</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] dark:text-[#a0a0a0] hover:text-[#4450b7] hover:bg-[#ffffff]/50 dark:hover:bg-[#33322e]/50 transition-all duration-300 rounded-xl scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+<span class="font-medium">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] dark:text-[#a0a0a0] hover:text-[#4450b7] hover:bg-[#ffffff]/50 dark:hover:bg-[#33322e]/50 transition-all duration-300 rounded-xl scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-medium">Profile</span>
+</a>
+</nav>
+<button class="mt-auto bg-gradient-to-br from-primary to-primary-container text-white py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20 scale-95 active:scale-90 transition-all">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+            New Study Session
+        </button>
+</aside>
+<!-- Main Content Shell -->
+<div class="flex-1 ml-64 flex flex-col">
+<!-- TopNavBar (Shared Component) -->
+<header class="flex justify-between items-center w-full px-8 py-4 sticky top-0 z-40 bg-[#fef9f2]/80 dark:bg-[#1d1c18]/80 backdrop-blur-xl tonal-transition">
+<div class="flex items-center gap-4 bg-surface-container-lowest px-4 py-2 rounded-full shadow-sm focus-within:shadow-lg transition-shadow duration-300 w-96">
+<span class="material-symbols-outlined text-outline" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm font-['Manrope'] w-full" placeholder="Search Skill Maps..." type="text"/>
+</div>
+<div class="flex items-center gap-6">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="h-10 w-10 rounded-full overflow-hidden border-2 border-primary-container">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="Close-up portrait of a professional woman with a warm expression in a brightly lit modern academic setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9d-VumL1aXtmIe-HBvDNbC_ObwUpg_mlwZwwQYyI_B0ai2l4BwBhydF37DTxCqt3on-zzk-ZwZSBnu9jqXioQFBLg1WYGyUBANSe1hicZSoy3QpySmF3ttN6l4NDQJQ8azSdBubpg34VCfc_veCWcKtWBsU3wKSOIoHzXbwXH4tEBKTeZXLMgcVP1YvHLMbZ3K3GMSITKNnV0RevYhAqZKPY7OoUDSdXREJW9YDnSYtQmJ-IbS8GZUwaiZemA79U_0olTI2R7pBrj"/>
+</div>
+</div>
+</header>
+<main class="p-10 space-y-12">
+<!-- Header Section -->
+<section class="max-w-5xl mx-auto">
+<div class="mb-2">
+<span class="text-primary font-bold tracking-widest uppercase text-xs">Scholarly Visualization</span>
+</div>
+<h2 class="text-5xl font-headline font-bold text-on-background tracking-tight">Skill Maps &amp; <span class="text-primary">Radars</span></h2>
+<p class="text-on-surface-variant max-w-2xl mt-4 text-lg font-body leading-relaxed">
+                    Explore the multifaceted dimensions of your intellectual growth through our advanced data visualization suite. Each pattern offers a unique perspective on proficiency.
+                </p>
+</section>
+<!-- Pattern Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
+<!-- A: Classic Radar -->
+<article class="bg-surface-container-lowest rounded-xl p-8 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1">
+<div class="flex justify-between items-start mb-8">
+<div>
+<h3 class="text-xl font-headline font-bold">Pattern A: Classic Radar</h3>
+<p class="text-on-surface-variant text-sm font-body">Multi-axis proficiency mapping</p>
+</div>
+<span class="bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-full">Primary</span>
+</div>
+<div class="flex flex-wrap gap-8 justify-center items-center py-6">
+<!-- 5-axis Radar -->
+<div class="relative w-48 h-48">
+<svg class="w-full h-full overflow-visible" viewbox="0 0 100 100">
+<circle class="stroke-outline-variant/30" cx="50" cy="50" fill="none" r="45" stroke-width="0.5"></circle>
+<circle class="stroke-outline-variant/30" cx="50" cy="50" fill="none" r="30" stroke-width="0.5"></circle>
+<circle class="stroke-outline-variant/30" cx="50" cy="50" fill="none" r="15" stroke-width="0.5"></circle>
+<path class="stroke-outline-variant/20" d="M50 5 L50 95 M5 50 L95 50 M20 20 L80 80 M80 20 L20 80" stroke-width="0.5"></path>
+<!-- 5 Axis Filled Area -->
+<polygon fill="rgba(68, 80, 183, 0.4)" points="50,15 80,40 70,80 30,80 20,40" stroke="#4450b7" stroke-width="1.5"></polygon>
+<text class="fill-on-surface-variant font-bold" font-size="5" text-anchor="middle" x="50" y="2">Logic</text>
+<text class="fill-on-surface-variant font-bold" font-size="5" text-anchor="start" x="95" y="45">Code</text>
+<text class="fill-on-surface-variant font-bold" font-size="5" text-anchor="middle" x="75" y="90">Design</text>
+<text class="fill-on-surface-variant font-bold" font-size="5" text-anchor="middle" x="25" y="90">Theory</text>
+<text class="fill-on-surface-variant font-bold" font-size="5" text-anchor="end" x="5" y="45">Math</text>
+</svg>
+</div>
+<!-- Comparison Radar -->
+<div class="relative w-48 h-48">
+<svg class="w-full h-full overflow-visible" viewbox="0 0 100 100">
+<path class="stroke-outline-variant/30" d="M50 10 L85 25 L85 75 L50 90 L15 75 L15 25 Z" fill="none" stroke-width="0.5"></path>
+<path class="stroke-outline-variant/30" d="M50 30 L67.5 37.5 L67.5 62.5 L50 70 L32.5 62.5 L32.5 37.5 Z" fill="none" stroke-width="0.5"></path>
+<!-- User 1 -->
+<polygon fill="rgba(68, 80, 183, 0.2)" points="50,15 75,30 80,65 50,85 25,60 20,35" stroke="#4450b7" stroke-width="1"></polygon>
+<!-- User 2 (Comparison) -->
+<polygon fill="rgba(131, 79, 0, 0.2)" points="50,25 65,40 55,75 40,70 30,45 45,30" stroke="#834f00" stroke-dasharray="2" stroke-width="1"></polygon>
+</svg>
+<div class="absolute bottom-[-20px] left-0 w-full flex justify-center gap-4 text-[10px]">
+<div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-primary"></span> You</div>
+<div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-tertiary"></span> Peer</div>
+</div>
+</div>
+</div>
+</article>
+<!-- B: Concentric Rings -->
+<article class="bg-surface-container-lowest rounded-xl p-8 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 border-l-4 border-tertiary/20">
+<div class="flex justify-between items-start mb-8">
+<div>
+<h3 class="text-xl font-headline font-bold">Pattern B: Concentric Rings</h3>
+<p class="text-on-surface-variant text-sm font-body">Nested proficiency levels</p>
+</div>
+<span class="bg-tertiary/10 text-tertiary text-xs font-bold px-3 py-1 rounded-full">Insights</span>
+</div>
+<div class="flex flex-col items-center gap-6 py-4">
+<div class="relative flex items-center justify-center">
+<!-- Gauge Rings -->
+<svg class="w-48 h-48 rotate-[-90deg]">
+<circle cx="96" cy="96" fill="none" r="80" stroke="#f2ede6" stroke-width="12"></circle>
+<circle cx="96" cy="96" fill="none" r="80" stroke="#4450b7" stroke-dasharray="502" stroke-dashoffset="150" stroke-linecap="round" stroke-width="12"></circle>
+<circle cx="96" cy="96" fill="none" r="60" stroke="#f2ede6" stroke-width="12"></circle>
+<circle cx="96" cy="96" fill="none" r="60" stroke="#5e6ad2" stroke-dasharray="377" stroke-dashoffset="100" stroke-linecap="round" stroke-width="12"></circle>
+<circle cx="96" cy="96" fill="none" r="40" stroke="#f2ede6" stroke-width="12"></circle>
+<circle cx="96" cy="96" fill="none" r="40" stroke="#834f00" stroke-dasharray="251" stroke-dashoffset="50" stroke-linecap="round" stroke-width="12"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="auto_awesome">auto_awesome</span>
+<span class="text-xs font-bold text-on-surface-variant">MASTERY</span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-6 w-full mt-4">
+<div class="text-center">
+<div class="text-lg font-bold text-primary">82%</div>
+<div class="text-[10px] uppercase tracking-tighter text-outline">Synthesis</div>
+</div>
+<div class="text-center">
+<div class="text-lg font-bold text-primary-container">74%</div>
+<div class="text-[10px] uppercase tracking-tighter text-outline">Analysis</div>
+</div>
+<div class="text-center">
+<div class="text-lg font-bold text-tertiary">91%</div>
+<div class="text-[10px] uppercase tracking-tighter text-outline">Recall</div>
+</div>
+</div>
+</div>
+</article>
+<!-- C: Hexagonal Grid -->
+<article class="bg-surface-container-lowest rounded-xl p-8 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1">
+<div class="flex justify-between items-start mb-8">
+<div>
+<h3 class="text-xl font-headline font-bold">Pattern C: Hexagonal Grid</h3>
+<p class="text-on-surface-variant text-sm font-body">Tonal proficiency heat map</p>
+</div>
+<span class="bg-primary-container/10 text-primary-container text-xs font-bold px-3 py-1 rounded-full">New</span>
+</div>
+<div class="flex justify-center items-center py-6">
+<svg class="w-full max-w-sm overflow-visible" viewbox="0 0 300 180">
+<!-- Hexagonal cells with varying fills from amber to indigo -->
+<g transform="translate(50, 40)">
+<!-- Row 1 -->
+<path d="M20,0 L40,11.5 L40,34.5 L20,46 L0,34.5 L0,11.5 Z" fill="#4450b7"></path>
+<path d="M62,0 L82,11.5 L82,34.5 L62,46 L42,34.5 L42,11.5 Z" fill="#5e6ad2" transform="translate(0, 0)"></path>
+<path d="M104,0 L124,11.5 L124,34.5 L104,46 L84,34.5 L84,11.5 Z" fill="#bdc2ff"></path>
+<!-- Row 2 -->
+<path d="M41,36 L61,47.5 L61,70.5 L41,82 L21,70.5 L21,47.5 Z" fill="#834f00"></path>
+<path d="M83,36 L103,47.5 L103,70.5 L83,82 L63,70.5 L63,47.5 Z" fill="#ffb867"></path>
+<path d="M125,36 L145,47.5 L145,70.5 L125,82 L105,70.5 L105,47.5 Z" fill="#f2ede6"></path>
+<!-- Labels (Example) -->
+<text fill="white" font-size="6" font-weight="bold" text-anchor="middle" x="20" y="27">AI</text>
+<text fill="white" font-size="6" font-weight="bold" text-anchor="middle" x="62" y="27">WEB</text>
+<text fill="white" font-size="6" font-weight="bold" text-anchor="middle" x="41" y="63">UX</text>
+</g>
+</svg>
+</div>
+<div class="mt-4 flex justify-between items-center text-xs">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 bg-tertiary rounded-sm"></span>
+<span>Exploration</span>
+</div>
+<div class="flex-1 mx-4 h-1 bg-gradient-to-r from-tertiary via-primary-fixed-dim to-primary rounded-full"></div>
+<div class="flex items-center gap-2">
+<span>Expertise</span>
+<span class="w-3 h-3 bg-primary rounded-sm"></span>
+</div>
+</div>
+</article>
+<!-- D: Radial Bar -->
+<article class="bg-surface-container-lowest rounded-xl p-8 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1">
+<div class="flex justify-between items-start mb-8">
+<div>
+<h3 class="text-xl font-headline font-bold">Pattern D: Radial Bar</h3>
+<p class="text-on-surface-variant text-sm font-body">Segmented circular analytics</p>
+</div>
+<span class="bg-surface-container-high text-on-surface-variant text-xs font-bold px-3 py-1 rounded-full">Standard</span>
+</div>
+<div class="grid grid-cols-2 gap-8 items-center py-4">
+<!-- Half-circle gauge -->
+<div class="relative flex flex-col items-center">
+<svg class="w-full" viewbox="0 0 100 60">
+<path d="M10,50 A40,40 0 0,1 90,50" fill="none" stroke="#f2ede6" stroke-linecap="round" stroke-width="12"></path>
+<path d="M10,50 A40,40 0 0,1 70,16" fill="none" stroke="#4450b7" stroke-linecap="round" stroke-width="12"></path>
+</svg>
+<div class="mt-[-10px] text-center">
+<div class="text-2xl font-bold">75%</div>
+<div class="text-[10px] uppercase font-bold text-outline">Course Progress</div>
+</div>
+</div>
+<!-- Donut Variant -->
+<div class="relative w-32 h-32 mx-auto">
+<svg class="w-full h-full rotate-[-90deg]" viewbox="0 0 100 100">
+<circle cx="50" cy="50" fill="none" r="40" stroke="#f2ede6" stroke-width="8"></circle>
+<!-- 4 Segments -->
+<circle cx="50" cy="50" fill="none" r="40" stroke="#4450b7" stroke-dasharray="62.8" stroke-dashoffset="0" stroke-width="8"></circle>
+<circle cx="50" cy="50" fill="none" r="40" stroke="#5e6ad2" stroke-dasharray="40.8" stroke-dashoffset="-62.8" stroke-width="8"></circle>
+<circle cx="50" cy="50" fill="none" r="40" stroke="#834f00" stroke-dasharray="30.8" stroke-dashoffset="-103.6" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-outline text-2xl" data-icon="pie_chart">pie_chart</span>
+</div>
+</div>
+</div>
+</article>
+</div>
+<!-- Detailed Analysis Section -->
+<section class="max-w-7xl mx-auto bg-surface-container-low rounded-xl p-10 mt-12">
+<div class="flex flex-col md:flex-row gap-12 items-center">
+<div class="flex-1 space-y-6">
+<h3 class="text-3xl font-headline font-bold">The Science of Assessment</h3>
+<p class="text-on-surface-variant font-body leading-relaxed">
+                            Our Skill Radar algorithms synthesize over 200 data points from your study sessions, including recall speed, accuracy variance, and cross-topic application. This creates a high-fidelity map of your intellectual topography.
+                        </p>
+<div class="flex gap-4">
+<button class="px-6 py-3 bg-white border border-outline-variant/50 text-primary font-bold rounded-xl hover:bg-white/80 transition-all shadow-sm">
+                                Export Skill Map (PDF)
+                            </button>
+<button class="px-6 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-105 transition-all">
+                                Update Assessments
+                            </button>
+</div>
+</div>
+<div class="flex-1 grid grid-cols-2 gap-4">
+<div class="bg-surface-container-lowest p-6 rounded-xl text-center border-t-4 border-primary">
+<div class="text-4xl font-headline font-bold text-primary">12</div>
+<div class="text-xs font-bold text-outline mt-1">CORE DOMAINS</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl text-center border-t-4 border-tertiary">
+<div class="text-4xl font-headline font-bold text-tertiary">94th</div>
+<div class="text-xs font-bold text-outline mt-1">GLOBAL PERCENTILE</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl text-center col-span-2 flex items-center justify-between px-10">
+<div class="text-left">
+<div class="text-lg font-bold">Ready to Level Up?</div>
+<div class="text-xs text-on-surface-variant">Your logic skills are in the top 5%</div>
+</div>
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="trending_up">trending_up</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer (Shared Component) -->
+<footer class="w-full mt-auto py-8 ml-64 max-w-[calc(100%-16rem)] bg-[#f8f3ec] dark:bg-[#151411] flex flex-col items-center gap-4 pb-12 tonal-shift">
+<div class="flex gap-8">
+<a class="font-['Manrope'] text-xs text-[#454652] opacity-70 hover:opacity-100 hover:text-[#4450b7] transition-opacity" href="#">Help Center</a>
+<a class="font-['Manrope'] text-xs text-[#454652] opacity-70 hover:opacity-100 hover:text-[#4450b7] transition-opacity" href="#">Privacy Policy</a>
+<a class="font-['Manrope'] text-xs text-[#454652] opacity-70 hover:opacity-100 hover:text-[#4450b7] transition-opacity" href="#">Terms of Service</a>
+<a class="font-['Manrope'] text-xs text-[#454652] opacity-70 hover:opacity-100 hover:text-[#4450b7] transition-opacity" href="#">Scholarly Resources</a>
+</div>
+<div class="font-['Space_Grotesk'] font-semibold text-[#4450b7]">Knowlune</div>
+<p class="font-['Manrope'] text-xs text-[#454652]">© 2024 Knowlune Intellectual Atrium</p>
+</footer>
+</div>
+</body></html>

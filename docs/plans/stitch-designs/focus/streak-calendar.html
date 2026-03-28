@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Knowlune | Enhanced Streak Calendar</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "secondary-container": "#cbcefe",
+              "primary-fixed-dim": "#bdc2ff",
+              "secondary-fixed": "#dfe0ff",
+              "on-tertiary-fixed": "#2b1700",
+              "error": "#ba1a1a",
+              "surface-container": "#f2ede6",
+              "surface-dim": "#ded9d3",
+              "surface-tint": "#4854bb",
+              "tertiary": "#834f00",
+              "tertiary-container": "#a56500",
+              "on-surface-variant": "#454652",
+              "secondary-fixed-dim": "#c0c3f2",
+              "tertiary-fixed-dim": "#ffb867",
+              "on-secondary-fixed-variant": "#3f446b",
+              "inverse-on-surface": "#f5f0e9",
+              "secondary": "#575b84",
+              "on-error": "#ffffff",
+              "surface": "#fef9f2",
+              "on-secondary-container": "#52577f",
+              "primary-fixed": "#dfe0ff",
+              "on-primary": "#ffffff",
+              "on-primary-fixed": "#000965",
+              "outline": "#767684",
+              "inverse-primary": "#bdc2ff",
+              "on-tertiary-fixed-variant": "#673d00",
+              "on-error-container": "#93000a",
+              "background": "#fef9f2",
+              "tertiary-fixed": "#ffddbb",
+              "on-surface": "#1d1c18",
+              "on-tertiary": "#ffffff",
+              "on-background": "#1d1c18",
+              "surface-variant": "#e6e2db",
+              "primary": "#4450b7",
+              "surface-container-low": "#f8f3ec",
+              "surface-container-lowest": "#ffffff",
+              "on-primary-container": "#fdfaff",
+              "on-secondary-fixed": "#13183d",
+              "primary-container": "#5e6ad2",
+              "on-primary-fixed-variant": "#2e3aa2",
+              "outline-variant": "#c6c5d5",
+              "on-secondary": "#ffffff",
+              "surface-bright": "#fef9f2",
+              "on-tertiary-container": "#fffaf8",
+              "inverse-surface": "#32302c",
+              "error-container": "#ffdad6",
+              "surface-container-highest": "#e6e2db",
+              "surface-container-high": "#ece7e1"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "3xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .filled-icon { font-variation-settings: 'FILL' 1; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .streak-path {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- TopNavBar -->
+<header class="sticky top-0 w-full z-40 bg-[#fef9f2]/80 dark:bg-slate-950/80 backdrop-blur-xl">
+<div class="flex justify-between items-center px-8 h-20 w-full">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-black text-[#1d1c18] dark:text-slate-100 font-headline tracking-tight">Knowlune</span>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-[#4450b7] dark:text-[#5e6ad2] font-bold font-headline transition-colors" href="#">Atelier</a>
+<a class="text-[#1d1c18]/60 dark:text-slate-400 hover:bg-[#ece7e1] dark:hover:bg-slate-800 px-3 py-1 rounded-full transition-colors font-headline" href="#">Curriculum</a>
+<a class="text-[#1d1c18]/60 dark:text-slate-400 hover:bg-[#ece7e1] dark:hover:bg-slate-800 px-3 py-1 rounded-full transition-colors font-headline" href="#">Insights</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden sm:flex items-center bg-surface-container-high px-4 py-2 rounded-full">
+<span class="material-symbols-outlined text-outline mr-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-48 font-body" placeholder="Search archive..." type="text"/>
+</div>
+<button class="p-2 rounded-full hover:bg-[#ece7e1] transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<img alt="Scholar Profile" class="w-10 h-10 rounded-full object-cover ring-2 ring-primary/20" data-alt="Close-up portrait of a thoughtful academic professional with glasses in a library setting, warm natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCa_UeW2wJ2VlnzuS4ID2KiHRuSP8cGLbROs8E52PxEp07AMwjiA8Qc7fmrUJVHYvAl47LspiNfIrnuMkwES6lu0GhVAEQxwlMZ36YwIUxlwyiqkpVCbiuc03HLfOzOb9_75C6y_P_jankUREWEffWxIVy8o0XXu8E0U1BDNS6Ox186EPOBpBMoaw6QRp2WhjLl7RycRRsnrzAdla9Y_VRtt35cDZlt0cAgkFXeaW1acBPP2VAD-io5V9BaKqwXY_X_P4o0YuqPWdzm"/>
+</div>
+</div>
+</header>
+<div class="flex min-h-screen">
+<!-- SideNavBar -->
+<aside class="hidden lg:flex flex-col py-8 h-screen w-72 sticky top-20 bg-[#f8f3ec] dark:bg-slate-900 border-none shrink-0">
+<div class="px-8 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined filled-icon">heart_check</span>
+</div>
+<div>
+<h2 class="font-headline font-bold text-[#1d1c18] dark:text-slate-100 leading-tight">The Atelier</h2>
+<p class="text-xs text-[#1d1c18]/60 uppercase tracking-widest">Scholar's Workspace</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-4 bg-white dark:bg-slate-800 text-[#4450b7] dark:text-[#5e6ad2] rounded-l-full ml-4 shadow-sm font-bold px-6 py-3 transition-all" href="#">
+<span class="material-symbols-outlined filled-icon">heart_check</span>
+<span class="font-body text-sm">Atelier</span>
+</a>
+<a class="flex items-center gap-4 text-[#1d1c18]/70 dark:text-slate-400 px-6 py-3 ml-4 hover:text-[#4450b7] transition-all" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-body text-sm">Curriculum</span>
+</a>
+<a class="flex items-center gap-4 text-[#1d1c18]/70 dark:text-slate-400 px-6 py-3 ml-4 hover:text-[#4450b7] transition-all" href="#">
+<span class="material-symbols-outlined">calendar_month</span>
+<span class="font-body text-sm">Chronicle</span>
+</a>
+<a class="flex items-center gap-4 text-[#1d1c18]/70 dark:text-slate-400 px-6 py-3 ml-4 hover:text-[#4450b7] transition-all" href="#">
+<span class="material-symbols-outlined">auto_stories</span>
+<span class="font-body text-sm">Archive</span>
+</a>
+<a class="flex items-center gap-4 text-[#1d1c18]/70 dark:text-slate-400 px-6 py-3 ml-4 hover:text-[#4450b7] transition-all" href="#">
+<span class="material-symbols-outlined">timeline</span>
+<span class="font-body text-sm">Insights</span>
+</a>
+</nav>
+<div class="px-8 mt-auto pt-8 border-t border-outline-variant/10 space-y-4">
+<button class="w-full py-3 px-4 bg-gradient-to-br from-primary to-primary-container text-white rounded-full font-bold shadow-lg shadow-primary/20 scale-100 active:scale-95 transition-transform">
+                    New Entry
+                </button>
+<div class="flex flex-col gap-2">
+<a class="flex items-center gap-3 text-xs text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-sm">help_outline</span> Help
+                    </a>
+<a class="flex items-center gap-3 text-xs text-on-surface-variant hover:text-error transition-colors" href="#">
+<span class="material-symbols-outlined text-sm">logout</span> Sign Out
+                    </a>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 px-4 py-8 md:px-12 lg:px-16 space-y-16 max-w-7xl mx-auto">
+<!-- SECTION 1: CURRENT STATE -->
+<section class="space-y-6">
+<div class="flex items-baseline gap-4">
+<h2 class="font-headline text-3xl font-extrabold tracking-tight">Current Implementation</h2>
+<span class="text-on-surface-variant text-sm font-medium tracking-wide">LEGACY VIEW</span>
+</div>
+<div class="bg-surface-container-low rounded-3xl p-8 shadow-sm">
+<div class="flex items-center gap-4 mb-6">
+<div class="flex items-center gap-2 bg-orange-100 px-3 py-1 rounded-full text-orange-700 font-bold text-sm">
+<span class="material-symbols-outlined filled-icon text-orange-500 scale-75">local_fire_department</span>
+                            12 day streak
+                        </div>
+</div>
+<div class="overflow-x-auto no-scrollbar">
+<div class="grid grid-flow-col grid-rows-7 gap-1.5 min-w-[800px]">
+<!-- Mock Heatmap Generation -->
+<!-- Column 1-52 (Years worth of days) -->
+<!-- We render a sample subset for visual clarity -->
+<script>
+                                for(let i=0; i<364; i++) {
+                                    const intensities = ['bg-surface-variant', 'bg-primary/20', 'bg-primary/40', 'bg-primary/70', 'bg-primary'];
+                                    const randomInt = Math.floor(Math.random() * 5);
+                                    document.write(`<div class="w-3 h-3 rounded-sm ${intensities[randomInt]}"></div>`);
+                                }
+                            </script>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 2: VARIATION A — Month-View Calendar -->
+<section class="space-y-6">
+<div class="flex items-baseline justify-between">
+<h2 class="font-headline text-3xl font-extrabold tracking-tight">Variation A</h2>
+<span class="text-primary font-bold text-sm">MONTH FOCUS</span>
+</div>
+<div class="bg-surface-container-lowest rounded-3xl p-10 shadow-xl shadow-on-surface/5 border border-outline-variant/10">
+<header class="flex justify-between items-start mb-12">
+<div class="flex items-center gap-6">
+<div class="w-16 h-16 bg-gradient-to-br from-orange-400 to-red-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-red-500/20">
+<span class="material-symbols-outlined text-4xl filled-icon">local_fire_department</span>
+</div>
+<div>
+<h3 class="text-4xl font-headline font-black leading-none mb-1">26 Day Streak</h3>
+<p class="text-primary font-semibold text-lg">You are in the top 2%!</p>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="bg-surface-container-low rounded-2xl p-4 flex flex-col items-center min-w-[100px]">
+<span class="material-symbols-outlined text-blue-400 filled-icon mb-1">ac_unit</span>
+<span class="text-xs font-bold text-on-surface-variant">FREEZE TOKENS</span>
+<span class="text-xl font-black">2</span>
+</div>
+</div>
+</header>
+<div class="grid grid-cols-7 gap-4 mb-10">
+<!-- Days Header -->
+<div class="text-center text-on-surface-variant font-bold text-sm tracking-widest pb-4">M</div>
+<div class="text-center text-on-surface-variant font-bold text-sm tracking-widest pb-4">T</div>
+<div class="text-center text-on-surface-variant font-bold text-sm tracking-widest pb-4">W</div>
+<div class="text-center text-on-surface-variant font-bold text-sm tracking-widest pb-4">T</div>
+<div class="text-center text-on-surface-variant font-bold text-sm tracking-widest pb-4">F</div>
+<div class="text-center text-on-surface-variant font-bold text-sm tracking-widest pb-4">S</div>
+<div class="text-center text-on-surface-variant font-bold text-sm tracking-widest pb-4">S</div>
+<!-- March 2026 starts on Sunday (day 7) for this mock -->
+<div class="aspect-square flex items-center justify-center text-on-surface/20 font-medium">23</div>
+<div class="aspect-square flex items-center justify-center text-on-surface/20 font-medium">24</div>
+<div class="aspect-square flex items-center justify-center text-on-surface/20 font-medium">25</div>
+<div class="aspect-square flex items-center justify-center text-on-surface/20 font-medium">26</div>
+<div class="aspect-square flex items-center justify-center text-on-surface/20 font-medium">27</div>
+<div class="aspect-square flex items-center justify-center text-on-surface/20 font-medium">28</div>
+<!-- Day 1 (Sunday) -->
+<div class="aspect-square flex items-center justify-center bg-primary text-white rounded-2xl font-bold shadow-md shadow-primary/20">1</div>
+<!-- Rows 2-4 (Days 2-26 filled) -->
+<script>
+                            for(let i=2; i<=26; i++) {
+                                document.write(`<div class="aspect-square flex items-center justify-center bg-primary text-white rounded-2xl font-bold shadow-sm">${i}</div>`);
+                            }
+                            for(let i=27; i<=31; i++) {
+                                document.write(`<div class="aspect-square flex items-center justify-center hover:bg-surface-container-high rounded-2xl transition-colors font-medium">${i}</div>`);
+                            }
+                        </script>
+<div class="aspect-square flex items-center justify-center text-on-surface/20 font-medium">1</div>
+<div class="aspect-square flex items-center justify-center text-on-surface/20 font-medium">2</div>
+<div class="aspect-square flex items-center justify-center text-on-surface/20 font-medium">3</div>
+</div>
+<footer class="flex items-center justify-between pt-8 border-t border-outline-variant/20">
+<div class="flex items-center gap-3 bg-tertiary-fixed text-on-tertiary-fixed px-5 py-2.5 rounded-full font-bold shadow-sm">
+<span class="material-symbols-outlined filled-icon">emoji_events</span>
+<span>Longest Streak: 42 Days</span>
+</div>
+<div class="flex gap-2">
+<div class="w-10 h-10 rounded-full border-2 border-dashed border-blue-400/30 flex items-center justify-center text-blue-400">
+<span class="material-symbols-outlined text-xl">ac_unit</span>
+</div>
+<div class="w-10 h-10 rounded-full border-2 border-dashed border-blue-400/30 flex items-center justify-center text-blue-400">
+<span class="material-symbols-outlined text-xl">ac_unit</span>
+</div>
+</div>
+</footer>
+</div>
+</section>
+<!-- SECTION 3: VARIATION B — Combined View -->
+<section class="space-y-6">
+<div class="flex items-baseline justify-between">
+<h2 class="font-headline text-3xl font-extrabold tracking-tight">Variation B</h2>
+<span class="text-primary font-bold text-sm">ANALYTICS HYBRID</span>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Left: Mini Calendar -->
+<div class="lg:col-span-7 bg-surface-container-lowest rounded-3xl p-8 shadow-sm">
+<div class="flex items-center justify-between mb-8">
+<h4 class="font-headline font-bold text-xl">March 2026</h4>
+<div class="flex gap-2">
+<button class="w-8 h-8 rounded-full border border-outline-variant/30 flex items-center justify-center"><span class="material-symbols-outlined text-sm">chevron_left</span></button>
+<button class="w-8 h-8 rounded-full border border-outline-variant/30 flex items-center justify-center"><span class="material-symbols-outlined text-sm">chevron_right</span></button>
+</div>
+</div>
+<div class="grid grid-cols-7 gap-2">
+<script>
+                                const days = ['M','T','W','T','F','S','S'];
+                                days.forEach(d => document.write(`<div class="text-center text-[10px] font-black text-on-surface-variant/40 mb-2">${d}</div>`));
+                                
+                                for(let i=0; i<6; i++) document.write(`<div class="aspect-square"></div>`);
+                                for(let i=1; i<=26; i++) {
+                                    document.write(`<div class="aspect-square flex items-center justify-center bg-primary/10 text-primary rounded-xl text-xs font-bold">${i}</div>`);
+                                }
+                                for(let i=27; i<=31; i++) {
+                                    document.write(`<div class="aspect-square flex items-center justify-center text-xs font-medium">${i}</div>`);
+                                }
+                            </script>
+</div>
+</div>
+<!-- Right: Stats Panel -->
+<div class="lg:col-span-5 flex flex-col gap-6">
+<!-- Fire Counter Card -->
+<div class="bg-gradient-to-br from-primary to-primary-container p-8 rounded-3xl text-white shadow-xl shadow-primary/20 relative overflow-hidden">
+<div class="relative z-10 flex items-center justify-between">
+<div>
+<p class="text-primary-fixed-dim text-xs font-black uppercase tracking-widest mb-1">Active Streak</p>
+<h5 class="text-5xl font-headline font-black">26</h5>
+<p class="text-primary-fixed-dim font-medium">Days non-stop</p>
+</div>
+<span class="material-symbols-outlined text-7xl opacity-40 filled-icon">local_fire_department</span>
+</div>
+<div class="absolute -right-4 -bottom-4 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
+</div>
+<!-- Weekly Trends -->
+<div class="bg-surface-container-high p-8 rounded-3xl space-y-6">
+<h6 class="font-headline font-bold">Snapshot</h6>
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1">
+<p class="text-[10px] font-bold text-on-surface-variant uppercase">Total Study Days</p>
+<p class="text-2xl font-black">156</p>
+</div>
+<div class="space-y-1">
+<p class="text-[10px] font-bold text-on-surface-variant uppercase">Average/Week</p>
+<p class="text-2xl font-black">5.2</p>
+</div>
+</div>
+<div class="pt-4 border-t border-outline-variant/30">
+<div class="flex justify-between items-center text-sm font-medium">
+<span class="text-on-surface-variant">Most Active</span>
+<span class="text-primary font-bold">Tuesday</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 4: CLOSE-UPS -->
+<section class="space-y-10">
+<div class="flex items-baseline gap-4">
+<h2 class="font-headline text-3xl font-extrabold tracking-tight">Interface Anatomy</h2>
+<span class="text-tertiary font-bold text-sm tracking-wide">DESIGN TOKENS</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+<!-- 1. Calendar Day States -->
+<div class="flex flex-col gap-6">
+<span class="text-[11px] font-black uppercase tracking-tighter text-on-surface-variant">1. Calendar States</span>
+<div class="space-y-4">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center font-bold">12</div>
+<span class="text-sm font-medium">Studied</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 border-2 border-outline-variant/20 rounded-2xl flex items-center justify-center font-bold text-on-surface/20">13</div>
+<span class="text-sm font-medium text-on-surface-variant">Missed</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 ring-4 ring-primary ring-offset-4 ring-offset-surface-container-lowest bg-surface-container-lowest rounded-2xl flex items-center justify-center font-bold">14</div>
+<span class="text-sm font-medium">Today</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center font-bold relative">
+                                    15
+                                    <span class="material-symbols-outlined text-[10px] absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">ac_unit</span>
+</div>
+<span class="text-sm font-medium">Freeze Day</span>
+</div>
+</div>
+</div>
+<!-- 2. Fire Icon Animated Concept -->
+<div class="flex flex-col gap-6">
+<span class="text-[11px] font-black uppercase tracking-tighter text-on-surface-variant">2. Heat Counter</span>
+<div class="bg-surface-container-low p-6 rounded-3xl flex flex-col items-center justify-center aspect-square gap-4">
+<div class="relative">
+<div class="absolute inset-0 bg-orange-500 blur-xl opacity-20 scale-150"></div>
+<div class="w-20 h-20 bg-gradient-to-t from-red-600 via-orange-500 to-yellow-400 rounded-full flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-4xl text-white filled-icon">local_fire_department</span>
+</div>
+</div>
+<div class="text-center">
+<p class="text-4xl font-headline font-black">26</p>
+<p class="text-xs font-bold text-on-surface-variant uppercase">Current Heat</p>
+</div>
+</div>
+</div>
+<!-- 3. Longest Streak Badge -->
+<div class="flex flex-col gap-6">
+<span class="text-[11px] font-black uppercase tracking-tighter text-on-surface-variant">3. Milestone Badge</span>
+<div class="bg-surface-container-lowest p-6 rounded-3xl border border-tertiary/10 shadow-sm aspect-square flex flex-col items-center justify-center gap-4">
+<div class="w-24 h-24 rounded-full border-4 border-double border-tertiary flex items-center justify-center bg-tertiary-fixed">
+<span class="material-symbols-outlined text-5xl text-tertiary filled-icon">emoji_events</span>
+</div>
+<div class="text-center">
+<p class="text-xs font-bold text-tertiary uppercase mb-1">Hall of Fame</p>
+<p class="text-lg font-headline font-black leading-tight">42 Day Peak</p>
+</div>
+</div>
+</div>
+<!-- 4. Weekly Streak Dots -->
+<div class="flex flex-col gap-6">
+<span class="text-[11px] font-black uppercase tracking-tighter text-on-surface-variant">4. Weekly Velocity</span>
+<div class="bg-surface-container-high p-8 rounded-3xl flex flex-col justify-between h-full">
+<h5 class="text-xs font-black uppercase text-on-surface-variant">This Week</h5>
+<div class="flex justify-between items-end gap-1">
+<!-- 5 of 7 filled -->
+<div class="flex-1 h-12 bg-primary rounded-lg shadow-sm"></div>
+<div class="flex-1 h-16 bg-primary rounded-lg shadow-sm"></div>
+<div class="flex-1 h-20 bg-primary rounded-lg shadow-sm"></div>
+<div class="flex-1 h-10 bg-primary rounded-lg shadow-sm"></div>
+<div class="flex-1 h-24 bg-primary rounded-lg shadow-sm"></div>
+<div class="flex-1 h-4 bg-outline-variant/30 rounded-lg"></div>
+<div class="flex-1 h-4 bg-outline-variant/30 rounded-lg"></div>
+</div>
+<div class="flex justify-between items-center text-[10px] font-bold text-primary pt-4">
+<span>5/7 TARGET</span>
+<span>71% REACHED</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+</div>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-[#fef9f2]/90 backdrop-blur-xl border-t border-outline-variant/10 z-50 flex justify-around items-center h-20 px-4">
+<a class="flex flex-col items-center text-primary" href="#">
+<span class="material-symbols-outlined filled-icon">heart_check</span>
+<span class="text-[10px] font-bold mt-1">Atelier</span>
+</a>
+<a class="flex flex-col items-center text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="text-[10px] font-bold mt-1">Curriculum</span>
+</a>
+<a class="flex flex-col items-center text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">timeline</span>
+<span class="text-[10px] font-bold mt-1">Insights</span>
+</a>
+<a class="flex flex-col items-center text-on-surface-variant" href="#">
+<img alt="Scholar Profile" class="w-6 h-6 rounded-full object-cover" data-alt="Small circular profile avatar of an academic professional" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBClHj1S64t7Nl1r1u3bsq4Z9UGs82fmun6E2undbK3l3ri_H84eqpWVcRkp9Ve6H4pumOxPU0jxNQRKU3z-Sry6arntZQ6Dk4PthwfoLNb74a6NKbjm7gK1j-bUF7H7xp-lZTV0gZj1ZId6zDkMayJ65K0P6ZSMRNaJa3VjbcPLT4p-tLz2UUOUjM9PDd8Ky5kiiuf7rekA7NuMRNSPTwsZClSSsB6I1nnDH9ZXmqcSc9PAWA6GyL6tDSur7-M3wPDFZYL1T4Afd2b"/>
+<span class="text-[10px] font-bold mt-1">Profile</span>
+</a>
+</nav>
+<!-- FAB (Suppressed on analytics view but shown for context of adding a new entry) -->
+<button class="fixed bottom-24 right-8 lg:hidden w-14 h-14 bg-primary text-white rounded-full flex items-center justify-center shadow-xl shadow-primary/40 active:scale-95 transition-transform z-50">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+</body></html>

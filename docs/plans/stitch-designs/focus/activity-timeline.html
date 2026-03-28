@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Knowlune Learning Platform - Activity Timeline Feed</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-error": "#ffffff",
+              "outline": "#767684",
+              "on-primary-fixed-variant": "#2e3aa2",
+              "inverse-primary": "#bdc2ff",
+              "on-tertiary": "#ffffff",
+              "surface-container-low": "#f8f3ec",
+              "primary-fixed": "#dfe0ff",
+              "secondary-fixed": "#dfe0ff",
+              "on-secondary": "#ffffff",
+              "surface-container-highest": "#e6e2db",
+              "surface-container": "#f2ede6",
+              "tertiary-fixed-dim": "#ffb867",
+              "surface-container-lowest": "#ffffff",
+              "secondary-fixed-dim": "#c0c3f2",
+              "outline-variant": "#c6c5d5",
+              "secondary": "#575b84",
+              "on-tertiary-fixed": "#2b1700",
+              "background": "#fef9f2",
+              "on-primary-fixed": "#000965",
+              "tertiary-container": "#a56500",
+              "on-tertiary-fixed-variant": "#673d00",
+              "tertiary": "#834f00",
+              "on-surface": "#1d1c18",
+              "primary": "#4450b7",
+              "on-secondary-container": "#52577f",
+              "inverse-on-surface": "#f5f0e9",
+              "on-secondary-fixed-variant": "#3f446b",
+              "on-secondary-fixed": "#13183d",
+              "on-background": "#1d1c18",
+              "on-error-container": "#93000a",
+              "error-container": "#ffdad6",
+              "surface-dim": "#ded9d3",
+              "primary-fixed-dim": "#bdc2ff",
+              "on-primary": "#ffffff",
+              "surface-tint": "#4854bb",
+              "inverse-surface": "#32302c",
+              "on-surface-variant": "#454652",
+              "surface-variant": "#e6e2db",
+              "surface-bright": "#fef9f2",
+              "tertiary-fixed": "#ffddbb",
+              "secondary-container": "#cbcefe",
+              "primary-container": "#5e6ad2",
+              "on-primary-container": "#fdfaff",
+              "on-tertiary-container": "#fffaf8",
+              "error": "#ba1a1a",
+              "surface": "#fef9f2",
+              "surface-container-high": "#ece7e1"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #fef9f2; }
+        h1, h2, h3, h4 { font-family: 'Manrope', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .timeline-line::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #e6e2db;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body class="text-on-surface antialiased">
+<!-- Top Navigation Shell -->
+<nav class="fixed top-0 w-full z-50 bg-[#fef9f2]/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_20px_40px_rgba(29,28,24,0.05)] flex justify-between items-center px-8 py-4 w-full font-['Manrope'] tracking-tight antialiased">
+<div class="text-2xl font-bold text-[#4450b7] dark:text-[#5e6ad2]">Knowlune</div>
+<div class="hidden md:flex items-center space-x-8">
+<a class="text-[#4450b7] dark:text-[#5e6ad2] font-semibold transition-all" href="#">Dashboard</a>
+<a class="text-[#454652] dark:text-slate-400 hover:bg-[#f8f3ec] dark:hover:bg-slate-800 transition-colors px-3 py-1 rounded-lg" href="#">Courses</a>
+<a class="text-[#454652] dark:text-slate-400 hover:bg-[#f8f3ec] dark:hover:bg-slate-800 transition-colors px-3 py-1 rounded-lg" href="#">Community</a>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant p-2 rounded-full hover:bg-[#f8f3ec] cursor-pointer" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant p-2 rounded-full hover:bg-[#f8f3ec] cursor-pointer" data-icon="account_circle">account_circle</span>
+</div>
+</nav>
+<main class="pt-32 pb-24 px-6 md:px-12 max-w-7xl mx-auto space-y-24">
+<!-- Header Section -->
+<header class="max-w-3xl">
+<h1 class="text-5xl font-extrabold tracking-tight text-on-surface mb-4">Design Evolution: Activity Timeline</h1>
+<p class="text-xl text-on-surface-variant font-body leading-relaxed">A showcase of the Knowlune activity tracking interface, evolving from a flat text list to a high-fidelity, interactive timeline experience.</p>
+</header>
+<!-- SECTION 1: CURRENT STATE -->
+<section class="space-y-8">
+<div class="flex items-center gap-3">
+<div class="h-8 w-1 bg-primary rounded-full"></div>
+<h2 class="text-2xl font-bold tracking-tight">Current Implementation</h2>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-8 border-outline-variant/15 outline outline-1 outline-outline-variant/10 shadow-sm">
+<div class="space-y-4 font-body text-on-surface-variant">
+<div class="py-3 border-b border-surface-container-high last:border-0">Introduction to Philology | Module 1 | 2 hours ago</div>
+<div class="py-3 border-b border-surface-container-high last:border-0">Quiz: Latin Grammar | Module 1 | 5 hours ago</div>
+<div class="py-3 border-b border-surface-container-high last:border-0">Video: Historical Linguistics | Module 2 | Yesterday</div>
+<div class="py-3 border-b border-surface-container-high last:border-0">Note: Vowel Shift | Module 2 | 2 days ago</div>
+</div>
+</div>
+</section>
+<!-- SECTION 2: VARIATION A — Full Timeline -->
+<section class="space-y-8">
+<div class="flex items-center gap-3">
+<div class="h-8 w-1 bg-primary rounded-full"></div>
+<h2 class="text-2xl font-bold tracking-tight">Variation A: Full Timeline</h2>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-10 shadow-[0_20px_40px_rgba(29,28,24,0.05)] relative">
+<div class="relative timeline-line space-y-10">
+<!-- Day Group -->
+<div class="relative z-10 -ml-2 mb-6">
+<span class="bg-surface px-4 py-1 text-xs font-black tracking-widest text-on-surface-variant rounded-full">TODAY</span>
+</div>
+<!-- Item 1: Lesson -->
+<div class="relative z-10 flex items-start gap-6">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white shrink-0">
+<span class="material-symbols-outlined text-sm" data-icon="book" style="font-variation-settings: 'FILL' 1;">book</span>
+</div>
+<div class="flex flex-col">
+<h4 class="font-bold text-on-surface">Morphology &amp; Syntax Review</h4>
+<p class="text-sm text-on-surface-variant">Introduction to Philology • <span class="text-outline">2 hours ago</span></p>
+</div>
+</div>
+<!-- Item 2: Quiz -->
+<div class="relative z-10 flex items-start gap-6">
+<div class="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0">
+<span class="material-symbols-outlined text-sm" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-3">
+<h4 class="font-bold text-on-surface">Quiz: Latin Grammar</h4>
+<span class="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full">98% SCORE</span>
+</div>
+<p class="text-sm text-on-surface-variant">Classical Foundations • <span class="text-outline">5 hours ago</span></p>
+</div>
+</div>
+<!-- Item 3: Video -->
+<div class="relative z-10 flex items-start gap-6">
+<div class="w-8 h-8 rounded-full bg-indigo-400 flex items-center justify-center text-white shrink-0">
+<span class="material-symbols-outlined text-sm" data-icon="play_circle" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+</div>
+<div class="flex flex-col">
+<h4 class="font-bold text-on-surface">Phonetic Evolution Patterns</h4>
+<p class="text-sm text-on-surface-variant">Historical Linguistics • <span class="text-outline">8 hours ago</span></p>
+</div>
+</div>
+<!-- Day Group -->
+<div class="relative z-10 -ml-2 py-4">
+<span class="bg-surface px-4 py-1 text-xs font-black tracking-widest text-on-surface-variant rounded-full">YESTERDAY</span>
+</div>
+<!-- Item 4: Note -->
+<div class="relative z-10 flex items-start gap-6">
+<div class="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-white shrink-0">
+<span class="material-symbols-outlined text-sm" data-icon="edit_note" style="font-variation-settings: 'FILL' 1;">edit_note</span>
+</div>
+<div class="flex flex-col">
+<h4 class="font-bold text-on-surface">Syntactic Branching Theory Notes</h4>
+<p class="text-sm text-on-surface-variant">Theoretical Frameworks • <span class="text-outline">Yesterday</span></p>
+</div>
+</div>
+<!-- Item 5: Community -->
+<div class="relative z-10 flex items-start gap-6">
+<div class="w-8 h-8 rounded-full bg-rose-400 flex items-center justify-center text-white shrink-0">
+<span class="material-symbols-outlined text-sm" data-icon="forum" style="font-variation-settings: 'FILL' 1;">forum</span>
+</div>
+<div class="flex flex-col">
+<h4 class="font-bold text-on-surface">Posted in "The Great Vowel Shift" Thread</h4>
+<p class="text-sm text-on-surface-variant">Language History Hub • <span class="text-outline">Yesterday</span></p>
+</div>
+</div>
+<!-- Additional entries to reach 8 -->
+<div class="relative z-10 flex items-start gap-6">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white shrink-0">
+<span class="material-symbols-outlined text-sm" data-icon="book" style="font-variation-settings: 'FILL' 1;">book</span>
+</div>
+<div class="flex flex-col">
+<h4 class="font-bold text-on-surface">Lexicography Basics</h4>
+<p class="text-sm text-on-surface-variant">Applied Linguistics • <span class="text-outline">Yesterday</span></p>
+</div>
+</div>
+<div class="relative z-10 flex items-start gap-6">
+<div class="w-8 h-8 rounded-full bg-indigo-400 flex items-center justify-center text-white shrink-0">
+<span class="material-symbols-outlined text-sm" data-icon="play_circle" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+</div>
+<div class="flex flex-col">
+<h4 class="font-bold text-on-surface">Indo-European Roots (Part 1)</h4>
+<p class="text-sm text-on-surface-variant">Classical Foundations • <span class="text-outline">Yesterday</span></p>
+</div>
+</div>
+<div class="relative z-10 flex items-start gap-6">
+<div class="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0">
+<span class="material-symbols-outlined text-sm" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="flex flex-col">
+<h4 class="font-bold text-on-surface">Module 2 Checkpoint</h4>
+<p class="text-sm text-on-surface-variant">Philology 101 • <span class="text-outline">Yesterday</span></p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 3: VARIATION B — Expandable Details -->
+<section class="space-y-8">
+<div class="flex items-center gap-3">
+<div class="h-8 w-1 bg-primary rounded-full"></div>
+<h2 class="text-2xl font-bold tracking-tight">Variation B: Expandable Details</h2>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-10 shadow-[0_20px_40px_rgba(29,28,24,0.05)]">
+<div class="relative timeline-line space-y-8">
+<!-- Expanded Item -->
+<div class="relative z-10">
+<div class="flex items-start gap-6">
+<div class="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0 ring-4 ring-white">
+<span class="material-symbols-outlined text-sm" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center justify-between">
+<div>
+<h4 class="font-bold text-on-surface">Quiz: Semantic Fields</h4>
+<p class="text-sm text-on-surface-variant">Course: Cognitive Linguistics • <span class="text-outline">12m ago</span></p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer transition-transform rotate-180" data-icon="expand_more">expand_more</span>
+</div>
+<!-- Detailed Card (Expanded State) -->
+<div class="mt-6 bg-surface-container-low rounded-xl p-6 border border-outline-variant/20">
+<div class="grid grid-cols-2 md:grid-cols-3 gap-6 mb-6">
+<div>
+<p class="text-[10px] font-black text-on-surface-variant tracking-widest mb-1">ACCURACY</p>
+<p class="text-2xl font-bold text-primary">94%</p>
+<p class="text-xs text-on-surface-variant mt-1">17/18 Correct</p>
+</div>
+<div>
+<p class="text-[10px] font-black text-on-surface-variant tracking-widest mb-1">TIME SPENT</p>
+<p class="text-2xl font-bold text-on-surface">42m</p>
+<p class="text-xs text-on-surface-variant mt-1">Average: 35m</p>
+</div>
+<div class="hidden md:block">
+<p class="text-[10px] font-black text-on-surface-variant tracking-widest mb-1">DIFFICULTY</p>
+<p class="text-2xl font-bold text-on-surface">Hard</p>
+<p class="text-xs text-on-surface-variant mt-1">Mastery Gained</p>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="bg-primary hover:bg-primary-container text-white px-5 py-2 rounded-full text-xs font-bold tracking-wide transition-all uppercase">Retake Quiz</button>
+<button class="bg-surface-container-high hover:bg-surface-container-highest text-on-surface px-5 py-2 rounded-full text-xs font-bold tracking-wide transition-all uppercase">Go to Course</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Collapsed Items -->
+<div class="relative z-10 flex items-start gap-6">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white shrink-0 ring-4 ring-white">
+<span class="material-symbols-outlined text-sm" data-icon="book" style="font-variation-settings: 'FILL' 1;">book</span>
+</div>
+<div class="flex-1 flex items-center justify-between">
+<div>
+<h4 class="font-bold text-on-surface">Reading: The Saussurean Sign</h4>
+<p class="text-sm text-on-surface-variant">General Linguistics • <span class="text-outline">1 hour ago</span></p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+<div class="relative z-10 flex items-start gap-6 opacity-60">
+<div class="w-8 h-8 rounded-full bg-indigo-400 flex items-center justify-center text-white shrink-0 ring-4 ring-white">
+<span class="material-symbols-outlined text-sm" data-icon="play_circle" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+</div>
+<div class="flex-1 flex items-center justify-between">
+<div>
+<h4 class="font-bold text-on-surface">Video: Language Families</h4>
+<p class="text-sm text-on-surface-variant">Historical Context • <span class="text-outline">Yesterday</span></p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 4: VARIATION C — Compact Sidebar Version -->
+<section class="space-y-8">
+<div class="flex items-center gap-3">
+<div class="h-8 w-1 bg-primary rounded-full"></div>
+<h2 class="text-2xl font-bold tracking-tight">Variation C: Compact Sidebar</h2>
+</div>
+<div class="flex flex-col md:flex-row gap-12 items-start">
+<div class="w-full md:w-[280px] bg-surface-container-lowest rounded-xl shadow-[0_10px_20px_rgba(29,28,24,0.03)] flex flex-col overflow-hidden border border-outline-variant/10">
+<div class="p-5 border-b border-surface-container-high flex justify-between items-center">
+<h3 class="font-bold text-sm tracking-tight">Recent Activity</h3>
+<span class="material-symbols-outlined text-xs text-on-surface-variant" data-icon="more_vert">more_vert</span>
+</div>
+<div class="p-5 space-y-6">
+<div class="flex gap-4 items-start">
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white shrink-0">
+<span class="material-symbols-outlined text-[12px]" data-icon="book" style="font-variation-settings: 'FILL' 1;">book</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="text-xs font-bold text-on-surface truncate">Morphology Review</span>
+<span class="text-[10px] text-on-surface-variant">2h ago</span>
+</div>
+</div>
+<div class="flex gap-4 items-start">
+<div class="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0">
+<span class="material-symbols-outlined text-[12px]" data-icon="check" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="text-xs font-bold text-on-surface truncate">Latin Quiz Passed</span>
+<span class="text-[10px] text-on-surface-variant">5h ago</span>
+</div>
+</div>
+<div class="flex gap-4 items-start">
+<div class="w-6 h-6 rounded-full bg-indigo-400 flex items-center justify-center text-white shrink-0">
+<span class="material-symbols-outlined text-[12px]" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="text-xs font-bold text-on-surface truncate">Phonetic Patterns</span>
+<span class="text-[10px] text-on-surface-variant">8h ago</span>
+</div>
+</div>
+<div class="flex gap-4 items-start">
+<div class="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center text-white shrink-0">
+<span class="material-symbols-outlined text-[12px]" data-icon="edit" style="font-variation-settings: 'FILL' 1;">edit</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="text-xs font-bold text-on-surface truncate">New Note Created</span>
+<span class="text-[10px] text-on-surface-variant">1d ago</span>
+</div>
+</div>
+</div>
+<a class="block text-center p-4 bg-surface-container-low text-primary text-[10px] font-black tracking-widest uppercase hover:bg-surface-container-high transition-colors" href="#">View All Activities</a>
+</div>
+<div class="flex-1 text-on-surface-variant leading-relaxed">
+<p class="mb-6">The sidebar variation is designed for dashboard contexts where vertical space is at a premium. It prioritizes the action over the metadata, using a high-density layout and micro-icons.</p>
+<ul class="space-y-4 list-disc list-inside marker:text-primary">
+<li>24px minimal iconography</li>
+<li>Single-line text truncating for tight widths</li>
+<li>Footer action link for drill-down</li>
+</ul>
+</div>
+</div>
+</section>
+<!-- SECTION 5: CLOSE-UPS -->
+<section class="space-y-8">
+<div class="flex items-center gap-3">
+<div class="h-8 w-1 bg-primary rounded-full"></div>
+<h2 class="text-2xl font-bold tracking-tight">Iconography &amp; Elements</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Component 1: Entry Isolation -->
+<div class="bg-surface-container-lowest rounded-xl p-8 border border-outline-variant/10">
+<p class="text-[10px] font-black text-outline tracking-widest mb-6">01. TIMELINE ENTRY</p>
+<div class="flex items-start gap-6 border-l-2 border-surface-container-high pl-6 ml-4">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white shrink-0 -ml-[45px] ring-8 ring-white">
+<span class="material-symbols-outlined text-lg" data-icon="book" style="font-variation-settings: 'FILL' 1;">book</span>
+</div>
+<div>
+<h4 class="font-bold text-on-surface text-lg">Entry Title</h4>
+<p class="text-sm text-on-surface-variant">Course Category • Timestamp</p>
+</div>
+</div>
+</div>
+<!-- Component 2: Grouping Header -->
+<div class="bg-surface-container-lowest rounded-xl p-8 border border-outline-variant/10 flex flex-col justify-center">
+<p class="text-[10px] font-black text-outline tracking-widest mb-6">02. DAY GROUPING</p>
+<div class="flex items-center gap-4">
+<div class="h-px bg-surface-container-high flex-1"></div>
+<span class="bg-surface px-6 py-2 text-xs font-black tracking-[0.2em] text-on-surface-variant rounded-full border border-outline-variant/10">TODAY</span>
+<div class="h-px bg-surface-container-high flex-1"></div>
+</div>
+</div>
+<!-- Component 3: Icon Set -->
+<div class="bg-surface-container-lowest rounded-xl p-8 border border-outline-variant/10">
+<p class="text-[10px] font-black text-outline tracking-widest mb-6">03. ACTIVITY SYSTEM</p>
+<div class="flex justify-between items-center bg-surface-container-low p-4 rounded-full">
+<div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center" title="Lesson"><span class="material-symbols-outlined" data-icon="book" style="font-variation-settings: 'FILL' 1;">book</span></div>
+<div class="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center" title="Quiz"><span class="material-symbols-outlined" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span></div>
+<div class="w-10 h-10 rounded-full bg-indigo-400 text-white flex items-center justify-center" title="Video"><span class="material-symbols-outlined" data-icon="play_circle" style="font-variation-settings: 'FILL' 1;">play_circle</span></div>
+<div class="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center" title="Note"><span class="material-symbols-outlined" data-icon="edit_note" style="font-variation-settings: 'FILL' 1;">edit_note</span></div>
+<div class="w-10 h-10 rounded-full bg-rose-400 text-white flex items-center justify-center" title="Community"><span class="material-symbols-outlined" data-icon="forum" style="font-variation-settings: 'FILL' 1;">forum</span></div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Visual Accent Footer -->
+<footer class="bg-surface-container-low pt-24 pb-12 px-8">
+<div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+<div class="space-y-4">
+<div class="text-xl font-bold text-primary">Knowlune</div>
+<p class="text-sm text-on-surface-variant max-w-xs">Curating intellectual growth through precision-engineered learning experiences.</p>
+</div>
+<div class="flex gap-12 text-sm font-bold tracking-widest uppercase text-on-surface-variant">
+<a class="hover:text-primary transition-colors" href="#">Documentation</a>
+<a class="hover:text-primary transition-colors" href="#">Components</a>
+<a class="hover:text-primary transition-colors" href="#">Support</a>
+</div>
+</div>
+<div class="max-w-7xl mx-auto mt-16 pt-8 border-t border-outline-variant/10 text-center text-xs text-outline font-medium">
+            © 2024 Knowlune Learning Systems. Part of the Digital Atelier Design Framework.
+        </div>
+</footer>
+</body></html>
