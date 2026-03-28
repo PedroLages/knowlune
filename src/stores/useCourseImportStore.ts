@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { db } from '@/db'
 import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
+import { appEventBus } from '@/lib/eventBus'
 import {
   saveCourseThumbnail,
   loadCourseThumbnailUrl,
@@ -68,6 +69,15 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
     try {
       await persistWithRetry(async () => {
         await db.importedCourses.add(course)
+      })
+
+      // E43-S07: Emit import-finished event for notification
+      const lessonCount = (course.videoCount ?? 0) + (course.pdfCount ?? 0)
+      appEventBus.emit({
+        type: 'import:finished',
+        courseId: course.id,
+        courseName: course.name,
+        lessonCount,
       })
     } catch (error) {
       // Rollback on failure

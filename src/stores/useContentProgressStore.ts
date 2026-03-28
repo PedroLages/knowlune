@@ -3,6 +3,7 @@ import { db } from '@/db'
 import type { CompletionStatus, ContentProgress, Module } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { markLessonComplete, markLessonIncomplete } from '@/lib/progress'
+import { appEventBus } from '@/lib/eventBus'
 
 interface ContentProgressState {
   /** Map of `courseId:itemId` → status for fast lookups */
@@ -124,6 +125,23 @@ export const useContentProgressStore = create<ContentProgressState>((set, get) =
           }
         })
       })
+
+      // E43-S07: Check if all modules are now completed (course finished)
+      if (status === 'completed' && modules.length > 0) {
+        const allModulesComplete = modules.every(
+          mod => newMap[key(courseId, mod.id)] === 'completed'
+        )
+        if (allModulesComplete) {
+          // Resolve course name from Dexie (imported courses)
+          const course = await db.importedCourses.get(courseId)
+          const courseName = course?.name ?? 'Unknown Course'
+          appEventBus.emit({
+            type: 'course:completed',
+            courseId,
+            courseName,
+          })
+        }
+      }
     } catch (error) {
       // Rollback on failure (both Zustand and localStorage)
       set({ statusMap: previousMap, error: 'Failed to save progress' })

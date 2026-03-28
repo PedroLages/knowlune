@@ -1,8 +1,8 @@
 ---
 story_id: E43-S07
 story_name: "Notifications Data Layer — Triggers and Wiring"
-status: draft
-started:
+status: in-progress
+started: 2026-03-28
 completed:
 reviewed: false
 review_started:

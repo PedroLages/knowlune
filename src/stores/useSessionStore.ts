@@ -3,6 +3,8 @@ import { db } from '@/db'
 import type { StudySession } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { calculateQualityScore } from '@/lib/qualityScore'
+import { appEventBus } from '@/lib/eventBus'
+import { getCurrentStreak } from '@/lib/studyLog'
 
 interface SessionState {
   activeSession: StudySession | null
@@ -214,6 +216,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
             detail: qualityResult,
           })
         )
+
+        // E43-S07: Check if streak hit a milestone threshold
+        const currentStreak = getCurrentStreak()
+        if (currentStreak > 0) {
+          appEventBus.emit({ type: 'streak:milestone', days: currentStreak })
+        }
       })
       .catch(error => {
         console.error('[SessionStore] Failed to end session:', error)

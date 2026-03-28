@@ -5,6 +5,7 @@ import type { ReviewRating, ReviewRecord, Note } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { calculateNextReview, predictRetention, isDue } from '@/lib/spacedRepetition'
 import { interleaveReviews } from '@/lib/interleave'
+import { appEventBus } from '@/lib/eventBus'
 
 interface PendingRating {
   noteId: string
@@ -70,6 +71,13 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
     try {
       const allReviews = await db.reviewRecords.toArray()
       set({ allReviews, isLoading: false })
+
+      // E43-S07: Check for due reviews and emit event (dedup handled by NotificationService)
+      const now = new Date()
+      const dueCount = allReviews.filter(r => isDue(r, now)).length
+      if (dueCount > 0) {
+        appEventBus.emit({ type: 'review:due', dueCount })
+      }
     } catch (error) {
       set({ isLoading: false, error: 'Failed to load reviews' })
       console.error('[ReviewStore] Failed to load reviews:', error)
