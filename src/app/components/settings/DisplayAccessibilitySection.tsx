@@ -1,6 +1,6 @@
 import { Eye, RotateCcw } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
-import { Button } from '@/app/components/ui/button'
+import { Button, buttonVariants } from '@/app/components/ui/button'
 import { Switch } from '@/app/components/ui/switch'
 import { Separator } from '@/app/components/ui/separator'
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
@@ -121,7 +121,7 @@ export function DisplayAccessibilitySection({
               <Label
                 key={option.value}
                 htmlFor={`motion-${option.value}`}
-                className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border-2 p-4 transition-colors ${
+                className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border-2 p-4 transition-colors focus-within:ring-2 focus-within:ring-ring ${
                   settings.reduceMotion === option.value
                     ? 'border-brand bg-brand-soft'
                     : 'border-border'
@@ -163,7 +163,7 @@ export function DisplayAccessibilitySection({
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleReset}
-                className="bg-brand text-brand-foreground hover:bg-brand-hover"
+                className={buttonVariants({ variant: 'brand' })}
               >
                 Reset
               </AlertDialogAction>

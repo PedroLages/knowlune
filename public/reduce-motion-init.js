@@ -5,6 +5,11 @@ try {
   var s = JSON.parse(localStorage.getItem('app-settings'));
   if (s && s.reduceMotion === 'on') {
     document.documentElement.classList.add('reduce-motion');
+  } else if (
+    (!s || !s.reduceMotion || s.reduceMotion === 'system') &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
+    document.documentElement.classList.add('reduce-motion');
   }
 } catch (e) {
   // Ignore parse errors — defaults to no class (follow system)

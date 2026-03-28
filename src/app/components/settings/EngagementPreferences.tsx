@@ -25,12 +25,13 @@ const toggles = [
   },
   {
     key: 'animations' as const,
-    label: 'Animations',
+    label: 'Celebratory Effects',
     // E51-S02: This toggle controls celebratory effects (confetti, banners).
     // CSS/Framer Motion suppression is handled by the "Motion Preference" setting
     // in Display & Accessibility. Both are checked: confetti fires only when
     // animations=true AND shouldReduceMotion()=false.
-    description: 'Enable celebratory effects like confetti and achievement banners',
+    description:
+      'Show confetti, visual energy boosts, and achievement celebrations. Page transitions and UI animations are controlled separately in Display & Accessibility.',
   },
 ]
 
