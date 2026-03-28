@@ -11,17 +11,21 @@
  * - AC5: Mobile layout — touch targets and responsive reset button
  */
 import { test, expect } from '../support/fixtures'
+import { navigateAndWait } from '../support/helpers/navigation'
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Navigate to settings page with sidebar closed */
+/** Navigate to settings page with sidebar + onboarding + welcome wizard dismissed */
 async function goToSettings(page: import('@playwright/test').Page) {
   await page.addInitScript(() => {
-    localStorage.setItem('knowlune-sidebar-v1', 'false')
+    localStorage.setItem(
+      'knowlune-welcome-wizard-v1',
+      JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+    )
   })
-  await page.goto('/settings', { waitUntil: 'domcontentloaded' })
+  await navigateAndWait(page, '/settings')
 }
 
 // ---------------------------------------------------------------------------
@@ -76,7 +80,7 @@ test.describe('E51-S01: Display & Accessibility section', () => {
   test('AC3 — confirming reset reverts all settings and shows toast', async ({
     page,
   }) => {
-    // Pre-set non-default values
+    // Pre-set non-default values + dismiss onboarding/wizard
     await page.addInitScript(() => {
       const stored = localStorage.getItem('app-settings')
       const settings = stored ? JSON.parse(stored) : {}
@@ -85,6 +89,14 @@ test.describe('E51-S01: Display & Accessibility section', () => {
       settings.reduceMotion = 'on'
       localStorage.setItem('app-settings', JSON.stringify(settings))
       localStorage.setItem('knowlune-sidebar-v1', 'false')
+      localStorage.setItem(
+        'knowlune-onboarding-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
+      )
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+      )
     })
     await page.goto('/settings', { waitUntil: 'domcontentloaded' })
 
@@ -122,6 +134,14 @@ test.describe('E51-S01: Display & Accessibility section', () => {
     await page.addInitScript(() => {
       localStorage.removeItem('app-settings')
       localStorage.setItem('knowlune-sidebar-v1', 'false')
+      localStorage.setItem(
+        'knowlune-onboarding-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
+      )
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+      )
     })
     await page.goto('/settings', { waitUntil: 'domcontentloaded' })
 
