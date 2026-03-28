@@ -4,9 +4,10 @@ story_name: "Reduced Motion Toggle with Global MotionConfig"
 status: in-progress
 started: 2026-03-28
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-28
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa]
+review_scope: full
 burn_in_validated: false
 ---
 
@@ -170,11 +171,22 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story -- Playwright MCP findings]
+**2026-03-28 Review:**
+- MEDIUM: No focus-visible styling on radio card labels — consider `focus-within:ring-2 focus-within:ring-brand`
+- MEDIUM: "Follow system" description could hint at how to change OS setting
+- PASS: Design tokens used throughout, ARIA labels correct, touch targets 44px+, keyboard nav via Radix
+- Report: `docs/reviews/design/design-review-2026-03-28-E51-S02.md`
 
 ## Code Review Feedback
 
-[Populated by /review-story -- adversarial code review findings]
+**2026-03-28 Review:**
+- HIGH: `useCourseCardPreview.ts:11` uses `shouldReduceMotion()` (non-reactive) instead of `useReducedMotion()` hook — won't update when setting changes
+- HIGH (Testing): No E2E spec file (`tests/e51-s02-reduced-motion.spec.ts`) — story testing notes specified one
+- HIGH (Testing): No unit tests for `useReducedMotion` hook
+- MEDIUM: `reduce-motion-init.js` doesn't handle `system` + OS reduced motion — brief flash for system-preference users
+- MEDIUM: AlertDialogAction uses raw `bg-brand` classes instead of `variant="brand"`
+- MEDIUM: "animations" toggle vs "Motion Preference" RadioGroup may confuse users
+- Reports: `docs/reviews/code/code-review-2026-03-28-E51-S02.md`, `docs/reviews/code/code-review-testing-2026-03-28-E51-S02.md`
 
 ## Challenges and Lessons Learned
 
