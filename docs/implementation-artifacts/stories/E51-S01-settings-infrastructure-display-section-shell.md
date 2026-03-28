@@ -6,7 +6,7 @@ started: 2026-03-28
 completed:
 reviewed: in-progress
 review_started: 2026-03-28
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
 burn_in_validated: false
 ---
 
@@ -136,4 +136,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Unit test brittleness with `toEqual`:** Extending `AppSettings` with 3 new required fields (`accessibilityFont`, `contentDensity`, `reduceMotion`) broke 3 unit tests that used `toEqual` with exact object shapes. Tests asserting individual properties were unaffected. Lesson: prefer `toHaveProperty` or field-level assertions for objects likely to grow.
+- **Zod validation for localStorage resilience:** Added `VALID_CONTENT_DENSITY` and `VALID_REDUCE_MOTION` arrays with fallback-to-default validation in `getSettings()`. This prevents crashes from corrupted/manually-edited localStorage values — a defensive pattern worth replicating for any enum-like persisted settings.
+- **Existing AgeRangeSection as component pattern:** Following the established Card + CardHeader + CardContent pattern from AgeRangeSection made the new DisplayAccessibilitySection consistent. The `rounded-full bg-brand-soft p-2` icon badge, `border-b border-border/50 bg-surface-sunken/30` header background, and `p-6` content padding are reusable patterns for any new Settings section.
+- **AlertDialog for destructive reset actions:** Used shadcn/ui AlertDialog (not Dialog) for the reset confirmation since it's a destructive action. AlertDialog focuses the cancel button by default, reducing accidental data loss — matches the existing pattern used elsewhere in Settings.
+- **Placeholder subsections for future stories:** Rendering disabled Switch/RadioGroup controls as placeholders allows E51-S02 through S04 to wire them up incrementally without restructuring the component. Each placeholder has its label and description ready, minimizing future story scope.
