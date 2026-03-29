@@ -36,7 +36,8 @@ import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/app/components/ui/resizable'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
-import { PanelRight } from 'lucide-react'
+import { PanelRight, ClipboardCheck } from 'lucide-react'
+import { useHasQuiz } from '@/hooks/useHasQuiz'
 import { PlayerSidePanel } from '@/app/components/course/PlayerSidePanel'
 import type { LessonItem } from '@/lib/courseAdapter'
 
@@ -60,6 +61,9 @@ export function UnifiedLessonPlayer() {
     adapter,
     lessonId
   )
+
+  // Quiz availability: check if a quiz exists for this lesson
+  const { hasQuiz } = useHasQuiz(lessonId)
 
   // Auto-advance state: shown when video ends and a next lesson exists
   const [showAutoAdvance, setShowAutoAdvance] = useState(false)
@@ -184,6 +188,23 @@ export function UnifiedLessonPlayer() {
     <LocalVideoContent courseId={courseId!} lessonId={lessonId!} onEnded={handleVideoEnded} />
   )
 
+  // "Take Quiz" button — visible when quiz exists and adapter supports it
+  const showQuizButton = capabilities.supportsQuiz && hasQuiz
+  const quizButton = showQuizButton ? (
+    <div className="mt-4">
+      <Button
+        variant="brand-outline"
+        className="rounded-xl min-h-[44px]"
+        onClick={() => navigate(`/courses/${courseId}/lessons/${lessonId}/quiz`)}
+        aria-label={`Take quiz for ${lessonTitle}`}
+        data-testid="take-quiz-button"
+      >
+        <ClipboardCheck className="size-4 mr-2" aria-hidden="true" />
+        Take Quiz
+      </Button>
+    </div>
+  ) : null
+
   // Side panel with tabbed content: Notes, Transcript, AI Summary, Bookmarks
   const sidePanelContent = (
     <PlayerSidePanel courseId={courseId!} lessonId={lessonId!} adapter={adapter} />
@@ -215,6 +236,7 @@ export function UnifiedLessonPlayer() {
             <ResizablePanel defaultSize={75} minSize={50}>
               <div className="h-full overflow-auto p-4">
                 {mainContent}
+                {quizButton}
                 {/* Auto-advance countdown after video ends */}
                 {showAutoAdvance && nextLesson && (
                   <div className="mt-4">
@@ -237,6 +259,7 @@ export function UnifiedLessonPlayer() {
           <div className="h-full">
             <div className="h-full overflow-auto p-4">
               {mainContent}
+              {quizButton}
               {/* Auto-advance countdown after video ends */}
               {showAutoAdvance && nextLesson && (
                 <div className="mt-4">
