@@ -36,7 +36,7 @@ _(none)_
 | Mark Epic Done | pending | — | — |
 | Testarch Trace | pending | — | — |
 | Testarch NFR | pending | — | — |
-| Adversarial Review | pending | — | — |
+| Adversarial Review | done | 15 findings (2C/4H/6M/3L) | Conditional PASS |
 | Retrospective | pending | — | — |
 
 ## Non-Issues (False Positives)
