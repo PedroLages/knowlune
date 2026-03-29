@@ -1062,7 +1062,7 @@ development_status:
   89-1-remove-dead-regular-course-infrastructure: done
   89-2-create-unified-course-adapter-layer: done
   89-3-consolidate-routes-with-redirects: done
-  89-4-build-unified-coursedetail-page: backlog
+  89-4-build-unified-coursedetail-page: in-progress
   89-5-build-unified-lessonplayer-page-video-playback: backlog
   89-6-add-pdf-inline-viewer-to-unified-player: backlog
   89-7-add-notes-panel-to-unified-video-player: backlog

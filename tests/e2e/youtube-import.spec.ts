@@ -355,7 +355,7 @@ test.describe('YouTube Import — YouTube Player Embed', () => {
     // Check for the youtube course detail testid or loading state
     const courseDetail = page.getByTestId('youtube-course-detail')
     const isLoaded = await courseDetail.isVisible({ timeout: 5000 }).catch(() => false)
-     
+
     console.log(`YouTube course detail loaded: ${isLoaded}`)
   })
 
@@ -397,7 +397,7 @@ test.describe('YouTube Import — YouTube Player Embed', () => {
 
     const courseDetail = page.getByTestId('youtube-course-detail')
     const isLoaded = await courseDetail.isVisible({ timeout: 5000 }).catch(() => false)
-     
+
     console.log(`Seeded YouTube course visible: ${isLoaded}`)
   })
 })
