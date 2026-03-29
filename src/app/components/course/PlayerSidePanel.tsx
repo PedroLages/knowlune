@@ -1,7 +1,7 @@
 /**
  * PlayerSidePanel — Tabbed side panel for the unified lesson player.
  *
- * Tabs: Notes (default), Transcript, AI Summary, Bookmarks
+ * Tabs: Lessons (default), Notes, Transcript, AI Summary, Bookmarks
  *
  * Renders inside:
  * - Desktop: ResizablePanelGroup right panel
@@ -11,11 +11,13 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
-import { Trash2, BookmarkIcon, AlertTriangle, FileText } from 'lucide-react'
+import { Trash2, BookmarkIcon, AlertTriangle, FileText, Video, PlayCircle } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
 import { NoteEditor } from '@/app/components/notes/NoteEditor'
 import { TranscriptPanel } from '@/app/components/youtube/TranscriptPanel'
@@ -29,7 +31,7 @@ import {
   formatBookmarkTimestamp,
 } from '@/lib/bookmarks'
 import { toastWithUndo, toastError } from '@/lib/toastHelpers'
-import type { CourseAdapter } from '@/lib/courseAdapter'
+import type { CourseAdapter, LessonItem } from '@/lib/courseAdapter'
 import type { Note, VideoBookmark, TranscriptCue, CourseSource } from '@/data/types'
 import { db } from '@/db/schema'
 
@@ -383,6 +385,131 @@ function parseTranscriptText(text: string): TranscriptCue[] {
 }
 
 // ---------------------------------------------------------------------------
+// Lessons tab — course structure with active lesson highlight
+// ---------------------------------------------------------------------------
+
+function formatLessonDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = Math.floor(seconds % 60)
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+interface LessonsTabProps {
+  courseId: string
+  lessonId: string
+  adapter: CourseAdapter
+}
+
+function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
+  const [lessons, setLessons] = useState<LessonItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const activeRef = useRef<HTMLAnchorElement>(null)
+
+  useEffect(() => {
+    let ignore = false
+    setIsLoading(true)
+
+    adapter
+      .getLessons()
+      .then(items => {
+        if (!ignore) {
+          setLessons(items)
+          setIsLoading(false)
+        }
+      })
+      .catch(() => {
+        // silent-catch-ok — error state handled by empty list
+        if (!ignore) setIsLoading(false)
+      })
+
+    return () => {
+      ignore = true
+    }
+  }, [adapter])
+
+  // Scroll active lesson into view on mount
+  useEffect(() => {
+    if (!isLoading && activeRef.current) {
+      activeRef.current.scrollIntoView({ block: 'center', behavior: 'instant' })
+    }
+  }, [isLoading, lessonId])
+
+  if (isLoading) {
+    return (
+      <div className="p-3 space-y-2">
+        {Array.from({ length: 6 }, (_, i) => (
+          <Skeleton key={i} className="h-12 w-full rounded-xl" />
+        ))}
+      </div>
+    )
+  }
+
+  if (lessons.length === 0) {
+    return (
+      <EmptyState
+        icon={Video}
+        title="No lessons"
+        description="This course has no lessons yet"
+      />
+    )
+  }
+
+  const currentIndex = lessons.findIndex(l => l.id === lessonId)
+
+  return (
+    <div className="p-2 space-y-0.5" data-testid="lessons-tab-list">
+      <div className="px-2 pb-2 text-xs text-muted-foreground">
+        {currentIndex >= 0 ? `Lesson ${currentIndex + 1} of ${lessons.length}` : `${lessons.length} lessons`}
+      </div>
+      {lessons.map((lesson, index) => {
+        const isActive = lesson.id === lessonId
+        return (
+          <Link
+            key={lesson.id}
+            ref={isActive ? activeRef : undefined}
+            to={`/courses/${courseId}/lessons/${lesson.id}`}
+            className={cn(
+              'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
+              isActive
+                ? 'bg-brand-soft text-brand-soft-foreground font-medium'
+                : 'hover:bg-accent'
+            )}
+            aria-current={isActive ? 'page' : undefined}
+          >
+            <span className="flex-shrink-0 size-7 rounded-lg bg-brand-soft/50 flex items-center justify-center">
+              {isActive ? (
+                <PlayCircle className="size-3.5 text-brand" aria-hidden="true" />
+              ) : (
+                <span className="text-xs font-semibold text-brand-soft-foreground">
+                  {index + 1}
+                </span>
+              )}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm truncate">{lesson.title}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                {lesson.type === 'pdf' ? (
+                  <FileText className="size-3 text-muted-foreground" aria-hidden="true" />
+                ) : (
+                  <Video className="size-3 text-muted-foreground" aria-hidden="true" />
+                )}
+                {lesson.duration != null && lesson.duration > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    {formatLessonDuration(lesson.duration)}
+                  </span>
+                )}
+              </div>
+            </div>
+          </Link>
+        )
+      })}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
@@ -450,7 +577,7 @@ export function PlayerSidePanel({
   }, [adapter, lessonId])
 
   // Controlled tab state to allow programmatic switching (e.g. N key → Notes tab)
-  const [activeTab, setActiveTab] = useState('notes')
+  const [activeTab, setActiveTab] = useState('lessons')
 
   useEffect(() => {
     if (focusTab) {
@@ -462,6 +589,9 @@ export function PlayerSidePanel({
     <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full" data-testid="player-side-panel">
       {/* Radix Tabs provides arrow-key navigation between triggers by default — no custom keyboard shortcuts needed. */}
       <TabsList className="w-full shrink-0 px-1">
+        <TabsTrigger value="lessons" className="text-xs">
+          Lessons
+        </TabsTrigger>
         <TabsTrigger value="notes" className="text-xs">
           Notes
         </TabsTrigger>
@@ -477,6 +607,10 @@ export function PlayerSidePanel({
           Bookmarks
         </TabsTrigger>
       </TabsList>
+
+      <TabsContent value="lessons" className="flex-1 overflow-auto">
+        <LessonsTab courseId={courseId} lessonId={lessonId} adapter={adapter} />
+      </TabsContent>
 
       <TabsContent value="notes" className="flex-1 overflow-hidden">
         <NotesTab courseId={courseId} lessonId={lessonId} />

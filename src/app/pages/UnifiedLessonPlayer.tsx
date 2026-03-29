@@ -306,7 +306,7 @@ export function UnifiedLessonPlayer() {
             </ResizablePanel>
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
-              <div className="h-full overflow-auto border-l">{sidePanelContent}</div>
+              <div className="h-full overflow-auto border-l border-border/50 bg-card">{sidePanelContent}</div>
             </ResizablePanel>
           </ResizablePanelGroup>
         ) : (

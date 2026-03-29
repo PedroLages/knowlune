@@ -79,25 +79,26 @@ export function PlayerHeader({
   )
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 border-b shrink-0">
+    <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-card shrink-0">
       <Link
         to={`/courses/${courseId}`}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
         aria-label="Back to course"
       >
-        <ArrowLeft className="size-4" />
+        <ArrowLeft className="size-4 group-hover:-translate-x-0.5 transition-transform" />
       </Link>
       <div className="flex flex-col min-w-0 flex-1">
         <span data-testid="lesson-header-title" className="font-semibold text-sm truncate">
           {lessonTitle}
         </span>
         {courseName && (
-          <span
+          <Link
+            to={`/courses/${courseId}`}
             data-testid="lesson-header-course"
-            className="text-xs text-muted-foreground truncate"
+            className="text-xs text-muted-foreground hover:text-brand transition-colors truncate"
           >
             {courseName}
-          </span>
+          </Link>
         )}
       </div>
 
