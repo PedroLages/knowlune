@@ -119,11 +119,11 @@ export function Flashcards() {
       await loadImportedCourses()
     } catch (err) {
       console.error('[Flashcards] Failed to load flashcards:', err)
-      setLoadError(
-        isOnline
-          ? 'Failed to load flashcards. Please try again.'
-          : "You're offline. Please check your connection and try again."
-      )
+      const message = isOnline
+        ? 'Failed to load flashcards. Please try again.'
+        : "You're offline. Please check your connection and try again."
+      setLoadError(message)
+      toast.error(message)
     }
   }, [loadFlashcards, loadImportedCourses, isOnline])
 
