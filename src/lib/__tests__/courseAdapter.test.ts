@@ -549,7 +549,7 @@ describe('YouTubeCourseAdapter.getTranscript()', () => {
       courseId: 'yt-course-1',
       videoId: 'dQw4w9WgXcQ',
       language: 'en',
-      cues: [{ start: 0, end: 5, text: 'Hello world' }],
+      cues: [{ startTime: 0, endTime: 5, text: 'Hello world' }],
       fullText: 'Hello world',
       source: 'youtube-transcript',
       status: 'done',
