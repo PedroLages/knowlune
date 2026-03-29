@@ -7,7 +7,7 @@ import { calculateNextReview, predictRetention, isDue } from '@/lib/spacedRepeti
 
 export interface FlashcardSessionSummary {
   totalReviewed: number
-  ratings: { hard: number; good: number; easy: number }
+  ratings: { again: number; hard: number; good: number; easy: number }
   nextReviewDate: string | null
 }
 
