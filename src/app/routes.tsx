@@ -11,18 +11,6 @@ import { MessageSquare, Sparkles, Brain, RotateCcw, Shuffle, BarChart3, Layers }
 // Named exports need .then(m => ({ default: m.ExportName }))
 const Overview = React.lazy(() => import('./pages/Overview').then(m => ({ default: m.Overview })))
 const Courses = React.lazy(() => import('./pages/Courses').then(m => ({ default: m.Courses })))
-const ImportedCourseDetail = React.lazy(() =>
-  import('./pages/ImportedCourseDetail').then(m => ({ default: m.ImportedCourseDetail }))
-)
-const ImportedLessonPlayer = React.lazy(() =>
-  import('./pages/ImportedLessonPlayer').then(m => ({ default: m.ImportedLessonPlayer }))
-)
-const YouTubeCourseDetail = React.lazy(() =>
-  import('./pages/YouTubeCourseDetail').then(m => ({ default: m.YouTubeCourseDetail }))
-)
-const YouTubeLessonPlayer = React.lazy(() =>
-  import('./pages/YouTubeLessonPlayer').then(m => ({ default: m.YouTubeLessonPlayer }))
-)
 const UnifiedCourseDetail = React.lazy(() =>
   import('./pages/UnifiedCourseDetail').then(m => ({ default: m.UnifiedCourseDetail }))
 )
