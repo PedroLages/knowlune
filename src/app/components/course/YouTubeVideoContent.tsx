@@ -28,9 +28,11 @@ import type { ImportedVideo } from '@/data/types'
 interface YouTubeVideoContentProps {
   courseId: string
   lessonId: string
+  /** Called when the YouTube video reaches the end (state 0) */
+  onEnded?: () => void
 }
 
-export function YouTubeVideoContent({ courseId, lessonId }: YouTubeVideoContentProps) {
+export function YouTubeVideoContent({ courseId, lessonId, onEnded }: YouTubeVideoContentProps) {
   const isOnline = useOnlineStatus()
 
   // NOTE: Video loading from Dexie is duplicated between YouTubeVideoContent and
@@ -197,6 +199,7 @@ export function YouTubeVideoContent({ courseId, lessonId }: YouTubeVideoContentP
           lessonId={lessonId}
           onAutoComplete={handleAutoComplete}
           onTimeUpdate={handleTimeUpdate}
+          onEnded={onEnded}
           ref={playerRef}
         />
 

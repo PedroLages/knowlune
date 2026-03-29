@@ -7,21 +7,28 @@
  *
  * Sub-components:
  * - PlayerHeader: back link, lesson title, course name, completion toggle
+ * - CourseBreadcrumb: breadcrumb trail (Courses > Course > Lesson)
+ * - LessonNavigation: prev/next buttons with lesson title preview
+ * - AutoAdvanceCountdown: auto-advance to next lesson after video ends
  * - LocalVideoContent: local video playback with permission handling
  * - YouTubeVideoContent: YouTube iframe player with transcript
  * - PdfContent: PDF viewing with permission handling (E89-S06)
  * - PlayerSidePanel: tabbed panel with Notes, Transcript, AI Summary, Bookmarks (E89-S07)
  *
- * @see E89-S05, E89-S06, E89-S07
+ * @see E89-S05, E89-S06, E89-S07, E89-S08
  */
 
-import { lazy, Suspense, useState, useEffect } from 'react'
-import { useParams } from 'react-router'
+import { lazy, Suspense, useState, useEffect, useCallback } from 'react'
+import { useParams, useNavigate } from 'react-router'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useSessionTracking } from '@/app/hooks/useSessionTracking'
+import { useLessonNavigation } from '@/app/hooks/useLessonNavigation'
 import { useIsDesktop } from '@/app/hooks/useMediaQuery'
 import { PlayerHeader } from '@/app/components/course/PlayerHeader'
+import { CourseBreadcrumb } from '@/app/components/course/CourseBreadcrumb'
+import { LessonNavigation } from '@/app/components/course/LessonNavigation'
+import { AutoAdvanceCountdown } from '@/app/components/figma/AutoAdvanceCountdown'
 import { LocalVideoContent } from '@/app/components/course/LocalVideoContent'
 import { YouTubeVideoContent } from '@/app/components/course/YouTubeVideoContent'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -40,12 +47,24 @@ const PdfContent = lazy(() =>
 
 export function UnifiedLessonPlayer() {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>()
+  const navigate = useNavigate()
   const { adapter, loading, error } = useCourseAdapter(courseId)
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const course = importedCourses.find(c => c.id === courseId)
 
   const isDesktop = useIsDesktop()
+
+  // Lesson navigation: prev/next lesson via adapter
+  const { prevLesson, nextLesson, currentIndex, totalLessons } = useLessonNavigation(adapter, lessonId)
+
+  // Auto-advance state: shown when video ends and a next lesson exists
+  const [showAutoAdvance, setShowAutoAdvance] = useState(false)
+
+  // Reset auto-advance when lesson changes
+  useEffect(() => {
+    setShowAutoAdvance(false)
+  }, [lessonId])
 
   // Resolve lesson metadata (title + type) from adapter's lesson list
   const [lessonTitle, setLessonTitle] = useState('Lesson')
@@ -70,6 +89,23 @@ export function UnifiedLessonPlayer() {
   // Session tracking: start on mount, pause/resume on idle, end on leave.
   // Pass resolved type (or null) — hook defers session start until type is known.
   useSessionTracking(courseId, lessonId, lessonTypeResolved ? (isPdf ? 'pdf' : 'video') : null)
+
+  // Handle video ended — trigger auto-advance countdown if next lesson exists
+  const handleVideoEnded = useCallback(() => {
+    if (nextLesson) {
+      setShowAutoAdvance(true)
+    }
+  }, [nextLesson])
+
+  const handleAutoAdvance = useCallback(() => {
+    if (nextLesson && courseId) {
+      navigate(`/courses/${courseId}/lessons/${nextLesson.id}`)
+    }
+  }, [nextLesson, courseId, navigate])
+
+  const handleCancelAutoAdvance = useCallback(() => {
+    setShowAutoAdvance(false)
+  }, [])
 
   // Loading state
   if (loading) {
@@ -135,9 +171,9 @@ export function UnifiedLessonPlayer() {
       <PdfContent courseId={courseId!} lessonId={lessonId!} />
     </Suspense>
   ) : isYouTube ? (
-    <YouTubeVideoContent courseId={courseId!} lessonId={lessonId!} />
+    <YouTubeVideoContent courseId={courseId!} lessonId={lessonId!} onEnded={handleVideoEnded} />
   ) : (
-    <LocalVideoContent courseId={courseId!} lessonId={lessonId!} />
+    <LocalVideoContent courseId={courseId!} lessonId={lessonId!} onEnded={handleVideoEnded} />
   )
 
   // Side panel with tabbed content: Notes, Transcript, AI Summary, Bookmarks
@@ -147,6 +183,15 @@ export function UnifiedLessonPlayer() {
 
   return (
     <div data-testid="lesson-player-content" className="flex flex-col h-full">
+      {/* Breadcrumb: Courses > Course Name > Lesson Title */}
+      <div className="px-4 pt-3">
+        <CourseBreadcrumb
+          courseId={courseId!}
+          courseName={course?.name ?? 'Course'}
+          lessonTitle={lessonTitle}
+        />
+      </div>
+
       <PlayerHeader
         courseId={courseId!}
         lessonId={lessonId!}
@@ -160,7 +205,20 @@ export function UnifiedLessonPlayer() {
         {isDesktop ? (
           <ResizablePanelGroup orientation="horizontal" className="h-full">
             <ResizablePanel defaultSize={75} minSize={50}>
-              <div className="h-full overflow-auto p-4">{mainContent}</div>
+              <div className="h-full overflow-auto p-4">
+                {mainContent}
+                {/* Auto-advance countdown after video ends */}
+                {showAutoAdvance && nextLesson && (
+                  <div className="mt-4">
+                    <AutoAdvanceCountdown
+                      seconds={5}
+                      nextLessonTitle={nextLesson.title}
+                      onAdvance={handleAutoAdvance}
+                      onCancel={handleCancelAutoAdvance}
+                    />
+                  </div>
+                )}
+              </div>
             </ResizablePanel>
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
@@ -169,7 +227,20 @@ export function UnifiedLessonPlayer() {
           </ResizablePanelGroup>
         ) : (
           <div className="h-full">
-            <div className="h-full overflow-auto p-4">{mainContent}</div>
+            <div className="h-full overflow-auto p-4">
+              {mainContent}
+              {/* Auto-advance countdown after video ends */}
+              {showAutoAdvance && nextLesson && (
+                <div className="mt-4">
+                  <AutoAdvanceCountdown
+                    seconds={5}
+                    nextLessonTitle={nextLesson.title}
+                    onAdvance={handleAutoAdvance}
+                    onCancel={handleCancelAutoAdvance}
+                  />
+                </div>
+              )}
+            </div>
 
             {/* Mobile sheet trigger */}
             <Sheet>
@@ -191,6 +262,17 @@ export function UnifiedLessonPlayer() {
           </div>
         )}
       </div>
+
+      {/* Prev/Next lesson navigation bar */}
+      {capabilities.supportsPrevNext && (
+        <LessonNavigation
+          courseId={courseId!}
+          prevLesson={prevLesson}
+          nextLesson={nextLesson}
+          currentIndex={currentIndex}
+          totalLessons={totalLessons}
+        />
+      )}
     </div>
   )
 }

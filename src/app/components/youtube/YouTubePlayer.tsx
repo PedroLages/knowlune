@@ -24,6 +24,8 @@ export interface YouTubePlayerProps {
   onAutoComplete?: () => void
   /** Called when player state changes (playing/paused) */
   onPlayStateChange?: (isPlaying: boolean) => void
+  /** Called when the video reaches the end (YT state 0) */
+  onEnded?: () => void
 }
 
 /** Imperative handle exposed via ref for external seek control */
@@ -36,7 +38,7 @@ const AUTO_COMPLETE_THRESHOLD = 0.9
 
 export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>(
   function YouTubePlayer(
-    { videoId, courseId, lessonId, onTimeUpdate, onAutoComplete, onPlayStateChange },
+    { videoId, courseId, lessonId, onTimeUpdate, onAutoComplete, onPlayStateChange, onEnded },
     ref
   ) {
     const playerRef = useRef<YTPlayer | null>(null)
@@ -198,9 +200,10 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
             hasAutoCompletedRef.current = true
             onAutoComplete?.()
           }
+          onEnded?.()
         }
       },
-      [onPlayStateChange, startPolling, stopPolling, onAutoComplete, persistProgress]
+      [onPlayStateChange, startPolling, stopPolling, onAutoComplete, onEnded, persistProgress]
     )
 
     // Don't render until we know the initial position
