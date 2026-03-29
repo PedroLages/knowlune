@@ -1,131 +1,170 @@
 /**
- * Spaced Repetition Algorithm — SM-2 variant with 3-grade system.
+ * Spaced Repetition Algorithm — FSRS (Free Spaced Repetition Scheduler) wrapper.
+ *
+ * Thin wrapper around ts-fsrs. This is the ONLY file that imports from ts-fsrs
+ * (single gateway pattern). All other modules use the exported functions here.
  *
  * Pure functions for interval calculation and retention prediction.
  * No side effects — all persistence is handled by the store layer.
  */
-import type { ReviewRating } from '@/data/types'
-import { addDays } from 'date-fns'
+import type { ReviewRating, CardState } from '@/data/types'
+import {
+  FSRS,
+  Rating,
+  createEmptyCard,
+  forgetting_curve,
+  type Card as FSRSCard,
+  type Grade,
+} from 'ts-fsrs'
+
+// ─── FSRS Configuration ──────────────────────────────────────────────
+
+/** Production FSRS instance — enable_fuzz provides natural interval variation */
+const fsrs = new FSRS({
+  request_retention: 0.9,
+  maximum_interval: 365,
+  enable_fuzz: true,
+  enable_short_term: true,
+})
+
+/** Test FSRS instance — deterministic (no fuzz) for assertions */
+export const fsrsTest = new FSRS({
+  request_retention: 0.9,
+  maximum_interval: 365,
+  enable_fuzz: false,
+  enable_short_term: true,
+})
+
+// ─── Rating Conversion ───────────────────────────────────────────────
+
+/** Map app-level string ratings to ts-fsrs Rating enum values */
+const RATING_MAP: Record<ReviewRating, Grade> = {
+  again: Rating.Again,
+  hard: Rating.Hard,
+  good: Rating.Good,
+  easy: Rating.Easy,
+}
+
+// ─── Type Definitions ────────────────────────────────────────────────
+
+/** FSRS scheduling result returned by calculateNextReview */
+export interface FSRSSchedulingResult {
+  stability: number
+  difficulty: number
+  reps: number
+  lapses: number
+  state: CardState
+  elapsed_days: number
+  scheduled_days: number
+  due: string // ISO 8601
+  last_review: string // ISO 8601
+}
+
+/** Minimal card state required for scheduling calculations */
+export interface FSRSCardState {
+  stability: number
+  difficulty: number
+  reps: number
+  lapses: number
+  state: CardState
+  elapsed_days: number
+  scheduled_days: number
+  due: string // ISO 8601
+  last_review?: string // ISO 8601 — undefined for new/never-reviewed cards
+}
+
+// ─── Core Functions ──────────────────────────────────────────────────
 
 /**
- * Minimal SM-2 state required for scheduling calculations.
- * Both ReviewRecord and Flashcard satisfy this interface via structural typing.
- */
-export interface SpacedRepetitionState {
-  reviewCount: number
-  easeFactor: number
-  interval: number
-}
-
-/** Quality mapping: rating → SM-2 quality value (0-5 scale) */
-const QUALITY_MAP: Record<ReviewRating, number> = {
-  hard: 1,
-  good: 3,
-  easy: 5,
-}
-
-/** Default intervals (days) for first review by rating */
-const FIRST_REVIEW_INTERVALS: Record<ReviewRating, number> = {
-  hard: 1,
-  good: 3,
-  easy: 7,
-}
-
-/** Minimum ease factor to prevent intervals from shrinking too aggressively */
-const MIN_EASE_FACTOR = 1.3
-
-/** Default ease factor for new items */
-const DEFAULT_EASE_FACTOR = 2.5
-
-/** Minimum interval (days) */
-const MIN_INTERVAL = 1
-
-/**
- * Calculate the next review schedule after a rating.
+ * Calculate the next review schedule after a rating using FSRS.
  *
- * For first reviews (no existing record), uses fixed intervals per rating.
- * For subsequent reviews, applies SM-2 formula to adjust interval and ease factor.
+ * Converts app-level types to ts-fsrs types, calls fsrs.next(),
+ * then converts the result back to app-level types (ISO strings, CardState).
  *
- * Accepts any object satisfying SpacedRepetitionState — compatible with both
- * ReviewRecord (note reviews) and Flashcard (flashcard reviews).
+ * @param card - Current card state, or null for a brand-new card
+ * @param rating - App-level string rating ('again' | 'hard' | 'good' | 'easy')
+ * @param now - Current timestamp (defaults to new Date())
+ * @param fsrsInstance - FSRS instance to use (defaults to production; pass fsrsTest for tests)
  */
 export function calculateNextReview(
-  record: SpacedRepetitionState | null,
+  card: FSRSCardState | null,
   rating: ReviewRating,
-  now: Date = new Date()
-): { interval: number; easeFactor: number; nextReviewAt: string } {
-  const quality = QUALITY_MAP[rating]
+  now: Date = new Date(),
+  fsrsInstance: FSRS = fsrs,
+): FSRSSchedulingResult {
+  const grade = RATING_MAP[rating]
 
-  if (!record || record.reviewCount === 0) {
-    // First review — use fixed intervals
-    const interval = FIRST_REVIEW_INTERVALS[rating]
-    return {
-      interval,
-      easeFactor: calculateNewEaseFactor(DEFAULT_EASE_FACTOR, quality),
-      nextReviewAt: addDays(now, interval).toISOString(),
-    }
-  }
+  // Build ts-fsrs Card from app state
+  const fsrsCard: FSRSCard = card
+    ? {
+        due: new Date(card.due),
+        stability: card.stability,
+        difficulty: card.difficulty,
+        elapsed_days: card.elapsed_days,
+        scheduled_days: card.scheduled_days,
+        reps: card.reps,
+        lapses: card.lapses,
+        state: card.state,
+        last_review: card.last_review ? new Date(card.last_review) : undefined,
+      }
+    : createEmptyCard(now)
 
-  // Subsequent reviews — SM-2 formula
-  const newEaseFactor = calculateNewEaseFactor(record.easeFactor, quality)
-
-  let newInterval: number
-  if (quality < 2) {
-    // Hard rating — reset to short interval (but not below minimum)
-    newInterval = MIN_INTERVAL
-  } else {
-    newInterval = Math.max(MIN_INTERVAL, Math.round(record.interval * newEaseFactor))
-  }
+  const result = fsrsInstance.next(fsrsCard, now, grade)
+  const nextCard = result.card
 
   return {
-    interval: newInterval,
-    easeFactor: newEaseFactor,
-    nextReviewAt: addDays(now, newInterval).toISOString(),
+    stability: nextCard.stability,
+    difficulty: nextCard.difficulty,
+    reps: nextCard.reps,
+    lapses: nextCard.lapses,
+    state: nextCard.state as CardState,
+    elapsed_days: nextCard.elapsed_days,
+    scheduled_days: nextCard.scheduled_days,
+    due: nextCard.due.toISOString(),
+    last_review: nextCard.last_review
+      ? nextCard.last_review.toISOString()
+      : now.toISOString(),
   }
 }
 
 /**
- * Predict current retention percentage (0-100) for a review record.
+ * Predict current retention percentage (0-100) for a card.
  *
- * Uses exponential forgetting curve: R = e^(-t/S)
- * where t = elapsed time since last review (days)
- * and S = stability (proportional to scheduled interval).
+ * Uses FSRS power-law forgetting curve:
+ *   R(t,S) = (1 + FACTOR * t / (9 * S))^DECAY
+ * where t = elapsed days since last review, S = stability.
  *
- * Accepts any object with reviewedAt and interval — compatible with both
- * ReviewRecord and Flashcard.
+ * @param record - Object with last_review (ISO string) and stability
+ * @param now - Current timestamp (defaults to new Date())
+ * @returns Retention percentage (0-100), rounded to nearest integer
  */
 export function predictRetention(
-  record: SpacedRepetitionState & { reviewedAt: string },
-  now: Date = new Date()
+  record: { last_review?: string; stability: number },
+  now: Date = new Date(),
 ): number {
-  const elapsedMs = now.getTime() - new Date(record.reviewedAt).getTime()
+  if (!record.last_review) return 0
+
+  const lastReviewDate = new Date(record.last_review)
+  if (isNaN(lastReviewDate.getTime())) return 0
+
+  const elapsedMs = now.getTime() - lastReviewDate.getTime()
   const elapsedDays = elapsedMs / (1000 * 60 * 60 * 24)
 
   if (elapsedDays <= 0) return 100
+  if (record.stability <= 0) return 0
 
-  // Stability is proportional to the scheduled interval
-  // Higher interval = slower decay (learner demonstrated stronger memory)
-  const stability = record.interval
-
-  if (stability <= 0) return 0
-
-  const retention = Math.exp(-elapsedDays / stability) * 100
-  return Math.max(0, Math.min(100, Math.round(retention)))
+  // Use ts-fsrs forgetting_curve: returns 0-1 probability
+  const retention = forgetting_curve(elapsedDays, record.stability)
+  return Math.max(0, Math.min(100, Math.round(retention * 100)))
 }
 
 /**
- * Check if a review record is due for review.
- * Accepts any object with nextReviewAt — compatible with ReviewRecord and Flashcard.
+ * Check if a card is due for review.
+ *
+ * @param card - Object with `due` field (ISO 8601 string)
+ * @param now - Current timestamp (defaults to new Date())
+ * @returns true if the card is due (due <= now)
  */
-export function isDue(record: { nextReviewAt: string }, now: Date = new Date()): boolean {
-  return new Date(record.nextReviewAt) <= now
-}
-
-/**
- * SM-2 ease factor adjustment formula.
- * EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
- */
-function calculateNewEaseFactor(currentEF: number, quality: number): number {
-  const delta = 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)
-  return Math.max(MIN_EASE_FACTOR, currentEF + delta)
+export function isDue(card: { due: string }, now: Date = new Date()): boolean {
+  return new Date(card.due) <= now
 }
