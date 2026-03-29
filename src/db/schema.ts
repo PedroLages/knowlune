@@ -1104,7 +1104,10 @@ function _declareLegacyMigrations(database: Dexie): void {
         if (!reviewedAt) return 0
         const lastDate = new Date(reviewedAt)
         if (isNaN(lastDate.getTime())) return 0
-        return Math.max(0, Math.round((migrationNow.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)))
+        return Math.max(
+          0,
+          Math.round((migrationNow.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
+        )
       }
 
       const flashcardsMigration = tx
