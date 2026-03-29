@@ -28,13 +28,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import {
-  GripVertical,
-  Video,
-  ChevronDown,
-  ChevronRight,
-  FolderOpen,
-} from 'lucide-react'
+import { GripVertical, Video, ChevronDown, ChevronRight, FolderOpen } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/db'
 import { persistWithRetry } from '@/lib/persistWithRetry'
@@ -108,10 +102,7 @@ function groupByFolder(videos: ImportedVideo[]): VideoGroup[] {
   }))
 }
 
-function groupByChapter(
-  videos: ImportedVideo[],
-  chapters: YouTubeCourseChapter[]
-): VideoGroup[] {
+function groupByChapter(videos: ImportedVideo[], chapters: YouTubeCourseChapter[]): VideoGroup[] {
   if (chapters.length === 0) {
     return [{ key: '__root__', title: '', videos }]
   }
@@ -242,10 +233,7 @@ function SortableVideoRow({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {otherGroups.map(g => (
-              <DropdownMenuItem
-                key={g.key}
-                onClick={() => onMoveToGroup(video.id, g.key)}
-              >
+              <DropdownMenuItem key={g.key} onClick={() => onMoveToGroup(video.id, g.key)}>
                 Move to {g.title || 'General'}
               </DropdownMenuItem>
             ))}
@@ -273,9 +261,7 @@ function DragOverlayContent({ video, position }: { video: ImportedVideo; positio
 
       <Video className="size-4 shrink-0 text-brand" aria-hidden="true" />
 
-      <span className="flex-1 truncate text-sm font-medium">
-        {stripExtension(video.filename)}
-      </span>
+      <span className="flex-1 truncate text-sm font-medium">{stripExtension(video.filename)}</span>
 
       {video.duration > 0 && (
         <span className="text-xs text-muted-foreground tabular-nums">
@@ -319,19 +305,12 @@ function CollapsibleGroup({
         onClick={onToggle}
         aria-expanded={isExpanded}
         aria-label={
-          isExpanded
-            ? `Collapse ${group.title || 'General'}`
-            : `Expand ${group.title || 'General'}`
+          isExpanded ? `Collapse ${group.title || 'General'}` : `Expand ${group.title || 'General'}`
         }
         data-testid={`reorder-group-toggle-${group.key}`}
       >
-        <FolderOpen
-          className="size-4 text-muted-foreground shrink-0"
-          aria-hidden="true"
-        />
-        <span className="flex-1 text-left truncate">
-          {group.title || 'General'}
-        </span>
+        <FolderOpen className="size-4 text-muted-foreground shrink-0" aria-hidden="true" />
+        <span className="flex-1 text-left truncate">{group.title || 'General'}</span>
         <span
           className="text-xs text-muted-foreground tabular-nums shrink-0"
           data-testid={`reorder-group-count-${group.key}`}
@@ -404,8 +383,7 @@ export function VideoReorderDialog({
     return groupByFolder(videos)
   }, [videos, chapters, isYouTube])
 
-  const hasMultipleGroups =
-    groups.length > 1 || (groups.length === 1 && groups[0].title !== '')
+  const hasMultipleGroups = groups.length > 1 || (groups.length === 1 && groups[0].title !== '')
 
   // Initialize expanded state when groups become available
   if (!initialized && groups.length > 0) {
@@ -442,20 +420,17 @@ export function VideoReorderDialog({
   }, [groups])
 
   // Flatten groups back to a single ordered list
-  const flattenGroups = useCallback(
-    (gs: VideoGroup[]): ImportedVideo[] => {
-      const result: ImportedVideo[] = []
-      let order = 0
-      for (const group of gs) {
-        for (const video of group.videos) {
-          result.push({ ...video, order })
-          order++
-        }
+  const flattenGroups = useCallback((gs: VideoGroup[]): ImportedVideo[] => {
+    const result: ImportedVideo[] = []
+    let order = 0
+    for (const group of gs) {
+      for (const video of group.videos) {
+        result.push({ ...video, order })
+        order++
       }
-      return result
-    },
-    []
-  )
+    }
+    return result
+  }, [])
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(event.active.id as string)
@@ -570,9 +545,7 @@ export function VideoReorderDialog({
   )
 
   const activeVideo = activeId ? videoMap.get(activeId) : null
-  const activePosition = activeVideo
-    ? videos.findIndex(v => v.id === activeVideo.id) + 1
-    : 0
+  const activePosition = activeVideo ? videos.findIndex(v => v.id === activeVideo.id) + 1 : 0
 
   if (videos.length === 0) {
     return (
