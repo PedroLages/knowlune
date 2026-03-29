@@ -640,7 +640,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-59: in-progress
   59-1-fsrs-type-definitions-and-dependency-setup: done
-  59-2-fsrs-algorithm-wrapper: backlog
+  59-2-fsrs-algorithm-wrapper: in-progress
   59-3-dexie-v29-schema-migration-with-data-transformation: backlog
   59-4-zustand-store-updates-flashcard-and-review-stores: backlog
   59-5-retention-metrics-and-consumer-updates: backlog
