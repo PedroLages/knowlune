@@ -1,8 +1,8 @@
 /**
- * Dexie Migration Checkpoint — v30
+ * Dexie Migration Checkpoint — v31
  *
- * This file provides a frozen snapshot of the complete IndexedDB schema at version 30.
- * Fresh installs skip the 30 incremental version declarations and create the full
+ * This file provides a frozen snapshot of the complete IndexedDB schema at version 31.
+ * Fresh installs skip the 31 incremental version declarations and create the full
  * schema in a single step. Existing users at lower versions still run incremental
  * migrations through the legacy version chain in schema.ts.
  *
@@ -20,17 +20,18 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 30
+export const CHECKPOINT_VERSION = 31
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
- * This is the result of applying all migrations v1–v30 on a fresh database.
+ * This is the result of applying all migrations v1–v31 on a fresh database.
  *
  * IMPORTANT: This must exactly match the schema produced by running all
- * 30 incremental migrations. The unit test `schema-checkpoint.test.ts`
+ * 31 incremental migrations. The unit test `schema-checkpoint.test.ts`
  * enforces this invariant.
  *
  * Note: `courses` table was dropped in v30 (E89-S01) — dead regular course system removed.
+ * v31 (E59-S03): flashcards and reviewRecords indexes updated for FSRS migration.
  */
 export const CHECKPOINT_SCHEMA: Record<string, string> = {
   importedCourses: 'id, name, importedAt, status, *tags, source',
@@ -46,7 +47,7 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   embeddings: 'noteId, createdAt',
   courseThumbnails: 'courseId',
   aiUsageEvents: 'id, featureType, timestamp, courseId',
-  reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+  reviewRecords: 'id, noteId, due, last_review',
   courseReminders: 'id, courseId',
   quizzes: 'id, lessonId, createdAt',
   quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
@@ -54,7 +55,7 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   authors: 'id, name, createdAt',
   careerPaths: 'id',
   pathEnrollments: 'id, pathId, status',
-  flashcards: 'id, courseId, noteId, nextReviewAt, createdAt',
+  flashcards: 'id, courseId, noteId, due, createdAt',
   entitlements: 'userId',
   learningPaths: 'id, createdAt',
   learningPathEntries: 'id, [pathId+courseId], pathId',

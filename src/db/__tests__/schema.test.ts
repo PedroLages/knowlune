@@ -82,8 +82,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 30', () => {
-    expect(db.verno).toBe(30)
+  it('should be at version 31', () => {
+    expect(db.verno).toBe(31)
   })
 
   it('should have entitlements table with userId as primary key', () => {
@@ -720,30 +720,37 @@ describe('quizAttempts table', () => {
   })
 })
 
-describe('flashcards table (v20)', () => {
+describe('flashcards table (v31 — FSRS fields)', () => {
   function makeFlashcard(overrides: Record<string, unknown> = {}) {
     return {
       id: crypto.randomUUID(),
       courseId: 'course-1',
       front: 'What is spaced repetition?',
       back: 'A learning technique that spaces reviews at increasing intervals.',
-      interval: 0,
-      easeFactor: 2.5,
-      reviewCount: 0,
+      stability: 0,
+      difficulty: 0,
+      reps: 0,
+      lapses: 0,
+      state: 0, // New
+      elapsed_days: 0,
+      scheduled_days: 0,
+      due: '2026-03-23T10:00:00.000Z',
       createdAt: '2026-03-23T10:00:00.000Z',
       updatedAt: '2026-03-23T10:00:00.000Z',
       ...overrides,
     }
   }
 
-  it('should add and retrieve a flashcard', async () => {
-    const card = makeFlashcard({ front: 'What is SM-2?' })
+  it('should add and retrieve a flashcard with FSRS fields', async () => {
+    const card = makeFlashcard({ front: 'What is FSRS?' })
     await db.flashcards.add(card)
     const retrieved = await db.flashcards.get(card.id)
     expect(retrieved).toBeDefined()
-    expect(retrieved!.front).toBe('What is SM-2?')
-    expect(retrieved!.easeFactor).toBe(2.5)
-    expect(retrieved!.reviewCount).toBe(0)
+    expect(retrieved!.front).toBe('What is FSRS?')
+    expect(retrieved!.stability).toBe(0)
+    expect(retrieved!.difficulty).toBe(0)
+    expect(retrieved!.reps).toBe(0)
+    expect(retrieved!.state).toBe(0)
   })
 
   it('should query flashcards by courseId index', async () => {
@@ -757,17 +764,17 @@ describe('flashcards table (v20)', () => {
     expect(results).toHaveLength(2)
   })
 
-  it('should query flashcards due for review by nextReviewAt index', async () => {
+  it('should query flashcards due for review by due index', async () => {
     const past = '2026-01-01T00:00:00.000Z'
     const future = '2030-01-01T00:00:00.000Z'
     await db.flashcards.bulkAdd([
-      makeFlashcard({ nextReviewAt: past }),
-      makeFlashcard({ nextReviewAt: future }),
+      makeFlashcard({ due: past }),
+      makeFlashcard({ due: future }),
     ])
     const now = '2026-03-23T10:00:00.000Z'
-    const due = await db.flashcards.where('nextReviewAt').belowOrEqual(now).toArray()
-    expect(due).toHaveLength(1)
-    expect(due[0].nextReviewAt).toBe(past)
+    const dueCards = await db.flashcards.where('due').belowOrEqual(now).toArray()
+    expect(dueCards).toHaveLength(1)
+    expect(dueCards[0].due).toBe(past)
   })
 
   it('should query flashcards by optional noteId index', async () => {
