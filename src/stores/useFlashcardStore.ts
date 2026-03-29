@@ -144,11 +144,7 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
     if (!currentCard) return
 
     // Pass full FSRS card state (or null for never-reviewed cards)
-    const fsrsResult = calculateNextReview(
-      currentCard.reps > 0 ? currentCard : null,
-      rating,
-      now
-    )
+    const fsrsResult = calculateNextReview(currentCard.reps > 0 ? currentCard : null, rating, now)
 
     const updatedCard: Flashcard = {
       ...currentCard,

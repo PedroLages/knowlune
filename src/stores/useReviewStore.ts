@@ -87,11 +87,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
   rateNote: async (noteId: string, rating: ReviewRating, now: Date = new Date()) => {
     const { allReviews } = get()
     const existing = allReviews.find(r => r.noteId === noteId)
-    const fsrsResult = calculateNextReview(
-      existing ?? null,
-      rating,
-      now
-    )
+    const fsrsResult = calculateNextReview(existing ?? null, rating, now)
 
     const updatedRecord: ReviewRecord = {
       id: existing?.id ?? crypto.randomUUID(),

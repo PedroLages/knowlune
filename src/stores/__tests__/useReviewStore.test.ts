@@ -81,9 +81,7 @@ describe('rateNote (happy path)', () => {
     expect(state.allReviews[0].noteId).toBe('note-new')
     expect(state.allReviews[0].rating).toBe('easy')
     expect(state.allReviews[0].reps).toBe(1)
-    expect(new Date(state.allReviews[0].due).getTime()).toBeGreaterThan(
-      FIXED_DATE.getTime()
-    )
+    expect(new Date(state.allReviews[0].due).getTime()).toBeGreaterThan(FIXED_DATE.getTime())
   })
 })
 
