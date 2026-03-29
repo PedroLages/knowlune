@@ -85,6 +85,9 @@ const CareerPathDetail = React.lazy(() =>
   import('./pages/CareerPathDetail').then(m => ({ default: m.CareerPathDetail }))
 )
 const Login = React.lazy(() => import('./pages/Login').then(m => ({ default: m.Login })))
+const Notifications = React.lazy(() =>
+  import('./pages/Notifications').then(m => ({ default: m.Notifications }))
+)
 const NotFound = React.lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })))
 const LegalLayout = React.lazy(() =>
   import('./pages/legal/LegalLayout').then(m => ({ default: m.LegalLayout }))
@@ -375,6 +378,14 @@ export const router = createBrowserRouter([
       {
         path: 'reports/ai',
         element: <Navigate to="/reports?tab=ai" replace />,
+      },
+      {
+        path: 'notifications',
+        element: (
+          <SuspensePage>
+            <Notifications />
+          </SuspensePage>
+        ),
       },
       {
         path: 'settings',
