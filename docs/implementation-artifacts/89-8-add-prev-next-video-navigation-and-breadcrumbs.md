@@ -1,12 +1,12 @@
 ---
 story_id: E89-S08
 story_name: "Add Prev/Next Video Navigation and Breadcrumbs"
-status: in-progress
+status: done
 started: 2026-03-29
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-29
+reviewed: true
+review_started: 2026-03-29
+review_gates_passed: [build, lint, type-check, format-check, unit-tests-skipped, e2e-tests-skipped, design-review-skipped, code-review, code-review-testing, performance-benchmark-skipped, security-review, exploratory-qa-skipped]
 burn_in_validated: false
 ---
 
@@ -31,12 +31,12 @@ so that I can easily move through course content and know where I am in the cour
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `useLessonNavigation` hook (AC: 1)
-- [ ] Task 2: Create `LessonNavigation` component (AC: 2, 3, 8)
-- [ ] Task 3: Create `CourseBreadcrumb` component (AC: 5, 6, 7)
-- [ ] Task 4: Integrate into `UnifiedLessonPlayer` (AC: 2, 3, 4)
-- [ ] Task 5: Integrate breadcrumb into `UnifiedCourseDetail` (AC: 7)
-- [ ] Task 6: Wire auto-advance countdown (AC: 4)
+- [x] Task 1: Create `useLessonNavigation` hook (AC: 1)
+- [x] Task 2: Create `LessonNavigation` component (AC: 2, 3, 8)
+- [x] Task 3: Create `CourseBreadcrumb` component (AC: 5, 6, 7)
+- [x] Task 4: Integrate into `UnifiedLessonPlayer` (AC: 2, 3, 4)
+- [x] Task 5: Integrate breadcrumb into `UnifiedCourseDetail` (AC: 7)
+- [x] Task 6: Wire auto-advance countdown (AC: 4)
 
 ## Implementation Notes
 
