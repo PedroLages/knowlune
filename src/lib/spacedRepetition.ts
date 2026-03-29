@@ -90,7 +90,7 @@ export function calculateNextReview(
   card: FSRSCardState | null,
   rating: ReviewRating,
   now: Date = new Date(),
-  fsrsInstance: FSRS = fsrs,
+  fsrsInstance: FSRS = fsrs
 ): FSRSSchedulingResult {
   const grade = RATING_MAP[rating]
 
@@ -121,9 +121,7 @@ export function calculateNextReview(
     elapsed_days: nextCard.elapsed_days,
     scheduled_days: nextCard.scheduled_days,
     due: nextCard.due.toISOString(),
-    last_review: nextCard.last_review
-      ? nextCard.last_review.toISOString()
-      : now.toISOString(),
+    last_review: nextCard.last_review ? nextCard.last_review.toISOString() : now.toISOString(),
   }
 }
 
@@ -140,7 +138,7 @@ export function calculateNextReview(
  */
 export function predictRetention(
   record: { last_review?: string; stability: number },
-  now: Date = new Date(),
+  now: Date = new Date()
 ): number {
   if (!record.last_review) return 0
 
