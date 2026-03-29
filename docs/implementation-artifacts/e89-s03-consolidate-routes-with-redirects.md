@@ -4,9 +4,9 @@ story_name: "Consolidate Routes with Redirects"
 status: in-progress
 started: 2026-03-29
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-29
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review-skipped, code-review, code-review-testing, performance-benchmark-skipped, security-review, exploratory-qa-skipped]
 burn_in_validated: false
 ---
 
@@ -75,11 +75,18 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Skipped — no visual UI changes. This story only changes route wiring and internal link targets. The rendered components (ImportedCourseDetail, YouTubeCourseDetail, etc.) are unchanged.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Reviewed 2026-03-29** — 37 files changed, 366 insertions, 237 deletions.
+
+**Architecture**: Clean delegation pattern. UnifiedCourseDetail/UnifiedLessonPlayer are thin wrappers using useCourseAdapter to detect source and delegate to existing components. This is the correct transitional approach for S03 before S04/S05 build real unified pages.
+
+**Findings:**
+- [MEDIUM] Redirect components do not preserve query strings or hash fragments. If a user bookmarks `/imported-courses/abc?tab=notes`, the redirect loses `?tab=notes`. Matches existing InstructorProfileRedirect pattern, but worth noting for E91+ cleanup.
+- [LOW] UnifiedCourseDetail performs a Dexie lookup via useCourseAdapter just to determine source, then delegates to ImportedCourseDetail/YouTubeCourseDetail which perform their own lookups. Double database hit per page load. Acceptable for transitional component — S04 will eliminate this.
+- [NIT] Four redirect components share identical structure and could be a single generic `CourseRedirect` component with a path mapping. Not worth refactoring since these are temporary (E91+ removal).
 
 ## Challenges and Lessons Learned
 
