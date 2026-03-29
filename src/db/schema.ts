@@ -1050,6 +1050,126 @@ function _declareLegacyMigrations(database: Dexie): void {
   database.version(30).stores({
     courses: null, // DROP TABLE — dead regular course data
   })
+
+  // v31: FSRS migration — transform SM-2 fields to FSRS fields (E59-S03)
+  // Updates indexes: flashcards.nextReviewAt → due, reviewRecords.nextReviewAt/reviewedAt → due/last_review
+  // Upgrade callback transforms existing records from SM-2 to FSRS field structure
+  database
+    .version(31)
+    .stores({
+      // Only declare tables whose indexes change (Dexie preserves undeclared tables)
+      flashcards: 'id, courseId, noteId, due, createdAt',
+      reviewRecords: 'id, noteId, due, last_review',
+    })
+    .upgrade(tx => {
+      // --- SM-2 to FSRS field mapping ---
+      // easeFactor (2.5 default, 1.3-2.5 range) → difficulty (0-10 scale, inverted)
+      // interval (days) → stability (days)
+      // reviewCount → reps
+      // nextReviewAt (ISO string) → due (ISO string)
+      // reviewedAt (ISO string) → last_review (ISO string)
+      // New fields: lapses=0, state (derived), elapsed_days (derived), scheduled_days (derived)
+
+      // Capture migration timestamp once for deterministic output
+      const migrationNow = new Date()
+      const migrationNowIso = migrationNow.toISOString()
+
+      /**
+       * Convert SM-2 easeFactor (1.3-2.5, higher=easier) to FSRS difficulty (0-10, higher=harder).
+       * SM-2 default easeFactor is 2.5 (easiest) → FSRS difficulty ~0
+       * SM-2 minimum easeFactor is 1.3 (hardest) → FSRS difficulty ~10
+       */
+      function easeFactorToDifficulty(ef: number): number {
+        // Clamp to valid SM-2 range
+        const clamped = Math.max(1.3, Math.min(2.5, ef || 2.5))
+        // Linear map: 2.5 → 0, 1.3 → 10
+        const difficulty = ((2.5 - clamped) / (2.5 - 1.3)) * 10
+        return Math.round(difficulty * 100) / 100 // 2 decimal places
+      }
+
+      /**
+       * Derive FSRS card state from SM-2 review count and interval.
+       * 0=New, 1=Learning, 2=Review, 3=Relearning
+       */
+      function deriveCardState(reviewCount: number, interval: number): number {
+        if (!reviewCount) return 0 // New
+        if (interval < 1) return 1 // Learning (sub-day intervals)
+        return 2 // Review (established cards)
+      }
+
+      /**
+       * Calculate elapsed days between last review and now.
+       */
+      function calcElapsedDays(reviewedAt: string | undefined): number {
+        if (!reviewedAt) return 0
+        const lastDate = new Date(reviewedAt)
+        if (isNaN(lastDate.getTime())) return 0
+        return Math.max(
+          0,
+          Math.round((migrationNow.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
+        )
+      }
+
+      const flashcardsMigration = tx
+        .table('flashcards')
+        .toCollection()
+        .modify((card: Record<string, unknown>) => {
+          const ef = (card.easeFactor as number) || 2.5
+          const interval = (card.interval as number) || 0
+          const reviewCount = (card.reviewCount as number) || 0
+          const nextReviewAt = card.nextReviewAt as string | undefined
+          const reviewedAt = card.reviewedAt as string | undefined
+
+          // Map SM-2 → FSRS fields
+          card.stability = Math.max(0, interval) // interval in days ≈ stability
+          card.difficulty = easeFactorToDifficulty(ef)
+          card.reps = reviewCount
+          card.lapses = 0 // SM-2 doesn't track lapses
+          card.state = deriveCardState(reviewCount, interval)
+          card.elapsed_days = calcElapsedDays(reviewedAt)
+          card.scheduled_days = Math.max(0, interval)
+          card.due = nextReviewAt || card.createdAt || migrationNowIso
+          card.last_review = reviewedAt // undefined if never reviewed
+
+          // Remove SM-2 fields
+          delete card.easeFactor
+          delete card.interval
+          delete card.reviewCount
+          delete card.nextReviewAt
+          delete card.reviewedAt
+        })
+
+      const reviewRecordsMigration = tx
+        .table('reviewRecords')
+        .toCollection()
+        .modify((record: Record<string, unknown>) => {
+          const ef = (record.easeFactor as number) || 2.5
+          const interval = (record.interval as number) || 0
+          const reviewCount = (record.reviewCount as number) || 0
+          const nextReviewAt = record.nextReviewAt as string | undefined
+          const reviewedAt = record.reviewedAt as string | undefined
+
+          // Map SM-2 → FSRS fields
+          record.stability = Math.max(0, interval)
+          record.difficulty = easeFactorToDifficulty(ef)
+          record.reps = reviewCount
+          record.lapses = 0
+          record.state = deriveCardState(reviewCount, interval)
+          record.elapsed_days = calcElapsedDays(reviewedAt)
+          record.scheduled_days = Math.max(0, interval)
+          record.due = nextReviewAt || migrationNowIso
+          record.last_review = reviewedAt
+
+          // Remove SM-2 fields
+          delete record.easeFactor
+          delete record.interval
+          delete record.reviewCount
+          delete record.nextReviewAt
+          delete record.reviewedAt
+        })
+
+      return Promise.all([flashcardsMigration, reviewRecordsMigration])
+    })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }
