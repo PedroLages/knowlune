@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react'
-import { createBrowserRouter, Navigate, useParams } from 'react-router'
+import { createBrowserRouter, Navigate, useParams, useLocation } from 'react-router'
 import { Layout } from './components/Layout'
 import { DelayedFallback } from './components/DelayedFallback'
 import { Skeleton } from './components/ui/skeleton'
@@ -111,35 +111,40 @@ function SuspensePage({ children }: { children: React.ReactNode }) {
 /** Preserves :authorId param when redirecting /instructors/:authorId → /authors/:authorId */
 function InstructorProfileRedirect() {
   const { authorId } = useParams()
-  return <Navigate to={`/authors/${authorId}`} replace />
+  const { search, hash } = useLocation()
+  return <Navigate to={`/authors/${authorId}${search}${hash}`} replace />
 }
 
 // TODO: Remove redirect after Epic E91+ — old imported-courses paths
 /** Redirects /imported-courses/:courseId → /courses/:courseId */
 function ImportedCourseRedirect() {
   const { courseId } = useParams()
-  return <Navigate to={`/courses/${courseId}`} replace />
+  const { search, hash } = useLocation()
+  return <Navigate to={`/courses/${courseId}${search}${hash}`} replace />
 }
 
 // TODO: Remove redirect after Epic E91+ — old imported-courses lesson paths
 /** Redirects /imported-courses/:courseId/lessons/:lessonId → /courses/:courseId/lessons/:lessonId */
 function ImportedLessonRedirect() {
   const { courseId, lessonId } = useParams()
-  return <Navigate to={`/courses/${courseId}/lessons/${lessonId}`} replace />
+  const { search, hash } = useLocation()
+  return <Navigate to={`/courses/${courseId}/lessons/${lessonId}${search}${hash}`} replace />
 }
 
 // TODO: Remove redirect after Epic E91+ — old youtube-courses paths
 /** Redirects /youtube-courses/:courseId → /courses/:courseId */
 function YouTubeCourseRedirect() {
   const { courseId } = useParams()
-  return <Navigate to={`/courses/${courseId}`} replace />
+  const { search, hash } = useLocation()
+  return <Navigate to={`/courses/${courseId}${search}${hash}`} replace />
 }
 
 // TODO: Remove redirect after Epic E91+ — old youtube-courses lesson paths
 /** Redirects /youtube-courses/:courseId/lessons/:lessonId → /courses/:courseId/lessons/:lessonId */
 function YouTubeLessonRedirect() {
   const { courseId, lessonId } = useParams()
-  return <Navigate to={`/courses/${courseId}/lessons/${lessonId}`} replace />
+  const { search, hash } = useLocation()
+  return <Navigate to={`/courses/${courseId}/lessons/${lessonId}${search}${hash}`} replace />
 }
 
 export const router = createBrowserRouter([

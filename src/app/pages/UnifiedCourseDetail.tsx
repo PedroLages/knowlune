@@ -4,6 +4,10 @@
  *
  * This is a transitional component for E89-S03 (route consolidation).
  * S04 will replace this with a real unified page using the adapter layer.
+ *
+ * NOTE: The double Dexie lookup (once here via useCourseAdapter to determine source,
+ * then again inside the delegated detail component) is intentional for this transitional
+ * phase. S04 eliminates this by unifying into a single component.
  */
 
 import { useParams } from 'react-router'
