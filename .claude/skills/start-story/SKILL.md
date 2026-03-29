@@ -49,6 +49,7 @@ When invoked with a story ID (e.g., `E01-S03`):
 [ ] Research: code patterns (Agent)
 [ ] Research: test + UX patterns (Agent)
 [ ] Complexity estimate
+[ ] Web research (if external deps detected)
 [ ] Enter plan mode
 [ ] Link plan, commit, and output
 ```
@@ -320,7 +321,79 @@ Mark the first todo as `in_progress` and proceed:
 
    This is informational only — no gates. Purpose is to calibrate expectations and help the workflow recommendation in Step 13.
 
-   Mark "Enter plan mode" → `in_progress`.
+   **TodoWrite**: Mark "Web research (if external deps detected)" → `in_progress`.
+
+9c. **Selective web research** (conditional — skipped if no external signals detected):
+
+   **Detection**: Scan the story's acceptance criteria, task descriptions, and implementation notes (from Steps 1 and 9) for signals that web research would add value. This is pure text matching — no network calls.
+
+   **Signal categories:**
+
+   | Category | Patterns |
+   |----------|----------|
+   | New packages | Library/package names not already in `package.json` dependencies |
+   | External APIs | "REST", "GraphQL", "OAuth", "webhook", "endpoint", "API key" |
+   | Named technologies | "Supabase", "Stripe", "Playwright", "Firebase", "Auth0", "Prisma", "Drizzle", or any proper-noun technology name not part of the existing stack |
+   | Integration keywords | "integrate", "migrate", "upgrade", "third-party", "SDK", "authentication" |
+   | Security concerns | "CVE", "vulnerability", "encryption", "CORS", "CSP", "OWASP" |
+   | Version-specific | "v2", "v3", "latest version", "breaking changes", "deprecat" |
+
+   **Decision logic:**
+   - Count signal matches across all story text (ACs + tasks + implementation notes + agent research summaries)
+   - If 0 signals detected: skip silently, inform user "No external dependencies detected — skipping web research.", mark todo `completed`, proceed to step 10
+   - If 1+ signals detected: proceed to user prompt
+
+   **User prompt** (via AskUserQuestion):
+   ```
+   Detected external dependencies/technologies in this story:
+   - {signal 1: e.g., "Supabase" (named technology)}
+   - {signal 2: e.g., "OAuth" (external API)}
+   - {signal 3: e.g., "migrate" (integration keyword)}
+
+   Want me to research latest versions, breaking changes, and best practices?
+
+   Options:
+   - Yes — run web research before planning
+   - No — skip and proceed to plan mode
+   ```
+
+   **If user declines (or no signals):** Mark todo `completed`. Proceed to step 10.
+
+   **If user accepts:** Dispatch a single `general-purpose` agent via Task tool with WebSearch and WebFetch access:
+
+   ```
+   Task(general-purpose):
+   "Research the following external dependencies/technologies for story E##-S##:
+   - {detected signals list}
+
+   For each, find:
+   1. Latest stable version (as of today)
+   2. Breaking changes from commonly-used previous versions
+   3. Security advisories or known vulnerabilities
+   4. Best practices and common pitfalls
+   5. API documentation specifics relevant to: {brief AC summary}
+
+   Search queries to try:
+   - '{technology} latest version {current year}'
+   - '{technology} migration guide breaking changes'
+   - '{technology} security advisory'
+   - '{technology} best practices {use case from ACs}'
+
+   Return: Structured markdown summary with source links. Group by technology.
+   Keep findings concise — focus on actionable information for implementation."
+   ```
+
+   **Output integration:** When the agent returns:
+   1. Read the current story file at `docs/implementation-artifacts/{story-key}.md`
+   2. Insert a `## Web Research` section AFTER `## Design Guidance` (or after `## Tasks / Subtasks` if no design guidance) and BEFORE `## Implementation Notes`
+   3. Content: the agent's structured findings
+   4. If story file write fails: display findings in chat output and inform user to add manually
+
+   **Error handling:**
+   - If agent fails or times out: log warning "Web research agent failed: {error}. Continuing without web research." Mark todo `completed`. Do not block workflow.
+   - If WebSearch/WebFetch tools are unavailable: inform user "Web tools not available in this session. Skipping web research." Mark todo `completed`. Continue.
+
+   **TodoWrite**: Mark "Web research (if external deps detected)" → `completed`. Mark "Enter plan mode" → `in_progress`.
 
 10. **Enter plan mode** with gathered context. Combine research from all 3 agents into a plan. Include:
     - Story overview and ACs
@@ -328,6 +401,7 @@ Mark the first todo as `in_progress` and proceed:
     - Relevant existing patterns to follow
     - Suggested implementation approach
     - UX design references (if applicable)
+    - Web research findings (if Step 9c produced results): version constraints, breaking changes, security notes
     - Note: during implementation, make granular commits after each small task as save points
 
    **TodoWrite**: Mark "Enter plan mode" → `completed`. Mark "Link plan, commit, and output" → `in_progress`.
@@ -390,6 +464,7 @@ Mark the first todo as `in_progress` and proceed:
     | Story file       | `docs/implementation-artifacts/{key}.md`  |
     | Sprint status    | Updated to `in-progress`                  |
     | ATDD tests       | [Created N tests / Skipped]               |
+    | Web research     | [Researched: {technologies} / Skipped (no signals) / Declined] |
     | Initial commit   | `chore: start story E##-S##`              |
 
     ### Next Steps
@@ -480,6 +555,7 @@ All steps are idempotent — re-running `/start-story` after an interruption saf
 - **Step 6** (story file): If file exists, keeps it instead of overwriting.
 - **Step 7** (sprint status): If already in-progress, skips update.
 - **Step 8** (ATDD tests): If test file exists, skips suggestion.
+- **Step 9c** (web research): If agent failed, re-run `/start-story` — detection re-runs, user can accept again.
 - **Step 11** (plan link): If `## Implementation Plan` section exists, skips.
 - **Step 13** (initial commit): If commit exists, skips.
 - **General cleanup** (if needed):
