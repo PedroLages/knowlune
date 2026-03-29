@@ -190,7 +190,7 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
 
   getSessionSummary: (): FlashcardSessionSummary => {
     const { sessionRatings, flashcards } = get()
-    const ratings = { hard: 0, good: 0, easy: 0 }
+    const ratings = { again: 0, hard: 0, good: 0, easy: 0 }
     for (const r of sessionRatings) {
       ratings[r]++
     }
