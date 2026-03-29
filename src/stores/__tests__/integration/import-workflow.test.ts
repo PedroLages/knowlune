@@ -12,7 +12,7 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from 'react'
 import Dexie from 'dexie'
-import type { Course, Module, ImportedCourse } from '@/data/types'
+import type { Module, ImportedCourse } from '@/data/types'
 
 // Mock persistWithRetry to pass-through (retry logic tested elsewhere)
 vi.mock('@/lib/persistWithRetry', () => ({
@@ -92,23 +92,7 @@ const testModules: Module[] = [
   },
 ]
 
-const testCourse: Course = {
-  id: COURSE_ID,
-  title: 'Integration Test Course',
-  shortTitle: 'ITC',
-  description: 'A course for integration testing',
-  category: 'research-library',
-  difficulty: 'beginner',
-  totalLessons: 1,
-  totalVideos: 1,
-  totalPDFs: 0,
-  estimatedHours: 1,
-  tags: ['test'],
-  modules: testModules,
-  isSequential: false,
-  basePath: '/courses/test',
-  authorId: AUTHOR_ID,
-}
+// testCourse removed (E89-S01) — courses table dropped
 
 const testImportedCourse: ImportedCourse = {
   id: COURSE_ID,
@@ -148,20 +132,15 @@ beforeEach(async () => {
 })
 
 describe('Import Workflow: Cross-Store Integration', () => {
-  it('imported course appears in useCourseStore after DB write and load', async () => {
-    // Seed: write course directly to DB (simulating import pipeline output)
-    await db.courses.put(testCourse)
-
-    // Load into store
+  it('useCourseStore is a no-op stub after E89-S01 (courses table dropped)', async () => {
+    // useCourseStore is now a no-op stub — always returns empty
     await act(async () => {
       await useCourseStore.getState().loadCourses()
     })
 
     const courses = useCourseStore.getState().courses
-    expect(courses).toHaveLength(1)
-    expect(courses[0].id).toBe(COURSE_ID)
-    expect(courses[0].title).toBe('Integration Test Course')
-    expect(courses[0].authorId).toBe(AUTHOR_ID)
+    expect(courses).toHaveLength(0)
+    expect(useCourseStore.getState().isLoaded).toBe(true)
   })
 
   it('imported course and linked author both appear in their respective stores', async () => {
@@ -204,8 +183,7 @@ describe('Import Workflow: Cross-Store Integration', () => {
   })
 
   it('content progress can be set for imported course lessons', async () => {
-    // Seed: write course to DB
-    await db.courses.put(testCourse)
+    // Courses table dropped (E89-S01) — modules passed directly instead of from DB
 
     // Set progress for the lesson
     await act(async () => {
@@ -230,8 +208,7 @@ describe('Import Workflow: Cross-Store Integration', () => {
   })
 
   it('loading course progress after import reflects previously set progress', async () => {
-    // Seed: write course + progress to DB
-    await db.courses.put(testCourse)
+    // Courses table dropped (E89-S01) — seed only contentProgress
     await db.contentProgress.put({
       courseId: COURSE_ID,
       itemId: LESSON_ID,

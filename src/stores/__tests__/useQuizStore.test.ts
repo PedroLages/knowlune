@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from 'react'
 import Dexie from 'dexie'
-import type { Module, Course } from '@/data/types'
+// Module type import removed (E89-S01)
 import { makeQuiz, makeQuestion } from '../../../tests/support/fixtures/factories/quiz-factory'
 
 // Mock persistWithRetry to run operation once (no retries).
@@ -24,18 +24,7 @@ vi.mock('sonner', () => {
 let useQuizStore: (typeof import('@/stores/useQuizStore'))['useQuizStore']
 let db: (typeof import('@/db'))['db']
 
-// Minimal modules array for cross-store calls
-const mockModules: Module[] = [
-  {
-    id: 'mod-1',
-    title: 'Module 1',
-    description: '',
-    order: 1,
-    lessons: [
-      { id: 'les-1', title: 'Lesson 1', description: '', order: 1, resources: [], keyTopics: [] },
-    ],
-  },
-]
+// mockModules removed (E89-S01) — courses table dropped, empty modules passed
 
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
@@ -270,24 +259,8 @@ describe('submitQuiz', () => {
     // Answer correctly (100% >= 70% passing)
     useQuizStore.getState().submitAnswer('q1', 'A')
 
-    // Seed course so submitQuiz can fetch modules from Dexie
-    await db.courses.add({
-      id: 'course-1',
-      title: 'Test Course',
-      shortTitle: 'TC',
-      description: '',
-      category: 'operative-training',
-      difficulty: 'beginner',
-      totalLessons: 1,
-      totalVideos: 0,
-      totalPDFs: 0,
-      estimatedHours: 1,
-      tags: [],
-      modules: mockModules,
-      isSequential: false,
-      basePath: '/courses/course-1',
-      authorId: 'author-1',
-    } as Course)
+    // Courses table dropped (E89-S01) — no course seeding needed
+    // submitQuiz now passes empty modules to setItemStatus
 
     // Mock useContentProgressStore
     const mockSetItemStatus = vi.fn().mockResolvedValue(undefined)
@@ -299,7 +272,8 @@ describe('submitQuiz', () => {
     })
 
     expect(mockSetItemStatus).toHaveBeenCalledOnce()
-    expect(mockSetItemStatus).toHaveBeenCalledWith('course-1', 'les-5', 'completed', mockModules)
+    // Courses table dropped (E89-S01) — modules now passed as empty array
+    expect(mockSetItemStatus).toHaveBeenCalledWith('course-1', 'les-5', 'completed', [])
   })
 
   it('does NOT call setItemStatus when score < passingScore', async () => {

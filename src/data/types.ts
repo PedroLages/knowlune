@@ -89,6 +89,13 @@ export interface Author {
   featuredQuote?: string
 }
 
+/**
+ * @deprecated Dead regular course type — DB table dropped in Dexie v30 (E89-S01).
+ * All page components, routes, and store logic for this type have been removed.
+ * Remaining references exist only in legacy helper code (progress, suggestions, etc.)
+ * that will be cleaned up when those modules migrate to ImportedCourse.
+ * Use ImportedCourse for all new course data going forward.
+ */
 export interface Course {
   id: string
   title: string

@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from 'react'
 import Dexie from 'dexie'
 import { makeQuiz, makeQuestion } from '../../../tests/support/fixtures/factories/quiz-factory'
-import type { Module } from '@/data/types'
+// Module type import removed (E89-S01)
 
 // Module-level spy — referenced by the vi.mock factory below so every
 // dynamic re-import of the quiz store still sees the same function object.
@@ -43,25 +43,7 @@ const COURSE_ID = 'course-streak-test'
 const LESSON_ID = 'les-streak-1'
 const QUIZ_ID = 'quiz-streak-1'
 
-const testModules: Module[] = [
-  {
-    id: 'mod-1',
-    title: 'Module 1',
-    description: 'Test module',
-    order: 0,
-    lessons: [
-      {
-        id: LESSON_ID,
-        title: 'Lesson 1',
-        description: 'Test lesson',
-        order: 0,
-        resources: [],
-        keyTopics: [],
-        duration: '10:00',
-      },
-    ],
-  },
-]
+// testModules removed (E89-S01) — courses table dropped
 
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
@@ -81,23 +63,7 @@ async function seedAndStartQuiz(passingScore = 70) {
   const q1 = makeQuestion({ id: 'q1', correctAnswer: 'Paris' })
   const quiz = makeQuiz({ id: QUIZ_ID, lessonId: LESSON_ID, passingScore, questions: [q1] })
   await db.quizzes.put(quiz)
-  await db.courses.put({
-    id: COURSE_ID,
-    title: 'Test Course',
-    shortTitle: 'TC',
-    description: 'A test course',
-    category: 'research-library',
-    difficulty: 'beginner',
-    totalLessons: 1,
-    totalVideos: 1,
-    totalPDFs: 0,
-    estimatedHours: 1,
-    tags: [],
-    modules: testModules,
-    isSequential: false,
-    basePath: '/courses/test',
-    authorId: 'author-1',
-  } as import('@/data/types').Course)
+  // Courses table dropped (E89-S01) — no course seeding needed
 
   await act(async () => {
     await useQuizStore.getState().startQuiz(LESSON_ID)

@@ -18,7 +18,6 @@ import type {
   AIUsageEvent,
   ReviewRecord,
   CourseReminder,
-  Course,
   VideoCaptionRecord,
   Flashcard,
   ImportedAuthor,
@@ -54,7 +53,7 @@ export type ElearningDatabase = Dexie & {
   aiUsageEvents: EntityTable<AIUsageEvent, 'id'>
   reviewRecords: EntityTable<ReviewRecord, 'id'>
   courseReminders: EntityTable<CourseReminder, 'id'>
-  courses: EntityTable<Course, 'id'>
+  // courses table dropped in v30 (E89-S01) — dead regular course system removed
   quizzes: EntityTable<Quiz, 'id'>
   quizAttempts: EntityTable<QuizAttempt, 'id'>
   videoCaptions: Table<VideoCaptionRecord> // compound PK: [courseId+videoId]
@@ -1043,6 +1042,13 @@ function _declareLegacyMigrations(database: Dexie): void {
     youtubeChapters: 'id, courseId, order',
     notifications: 'id, type, createdAt, readAt, dismissedAt',
     notificationPreferences: 'id',
+  })
+
+  // v30: Drop dead `courses` table — regular course system removed (E89-S01)
+  // Setting a table to null tells Dexie to delete it.
+  // All other tables survive intact (importedCourses, importedVideos, etc.)
+  database.version(30).stores({
+    courses: null, // DROP TABLE — dead regular course data
   })
 } // end _declareLegacyMigrations
 

@@ -11,7 +11,7 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from 'react'
 import Dexie from 'dexie'
-import type { Course, Module } from '@/data/types'
+import type { Module } from '@/data/types'
 
 // Mock persistWithRetry to pass-through (retry logic tested elsewhere)
 vi.mock('@/lib/persistWithRetry', () => ({
@@ -89,23 +89,7 @@ const testModules: Module[] = [
   },
 ]
 
-const testCourse: Course = {
-  id: COURSE_ID,
-  title: 'Session Test Course',
-  shortTitle: 'STC',
-  description: 'A course for session integration testing',
-  category: 'research-library',
-  difficulty: 'beginner',
-  totalLessons: 1,
-  totalVideos: 1,
-  totalPDFs: 0,
-  estimatedHours: 1,
-  tags: [],
-  modules: testModules,
-  isSequential: false,
-  basePath: '/courses/session-test',
-  authorId: 'author-1',
-}
+// testCourse removed (E89-S01) — courses table dropped
 
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
@@ -127,7 +111,7 @@ beforeEach(async () => {
 
 describe('Session Workflow: Cross-Store Integration', () => {
   it('starting a session creates an active session in the store and DB', async () => {
-    await db.courses.put(testCourse)
+    // Courses table dropped (E89-S01) — no course seeding needed
 
     await act(async () => {
       await useSessionStore.getState().startSession(COURSE_ID, LESSON_ID, 'video')
@@ -148,7 +132,7 @@ describe('Session Workflow: Cross-Store Integration', () => {
   })
 
   it('ending a session calculates duration and persists', async () => {
-    await db.courses.put(testCourse)
+    // Courses table dropped (E89-S01) — no course seeding needed
 
     // Start session
     await act(async () => {
@@ -187,7 +171,7 @@ describe('Session Workflow: Cross-Store Integration', () => {
   })
 
   it('session stats reflect completed sessions after load', async () => {
-    await db.courses.put(testCourse)
+    // Courses table dropped (E89-S01) — no course seeding needed
 
     // Seed a completed session directly in DB
     const completedSession = {
@@ -216,7 +200,7 @@ describe('Session Workflow: Cross-Store Integration', () => {
   })
 
   it('starting a new session ends the previous active session', async () => {
-    await db.courses.put(testCourse)
+    // Courses table dropped (E89-S01) — no course seeding needed
 
     // Start first session
     await act(async () => {
@@ -251,7 +235,7 @@ describe('Session Workflow: Cross-Store Integration', () => {
   })
 
   it('session and content progress work together across stores', async () => {
-    await db.courses.put(testCourse)
+    // Courses table dropped (E89-S01) — no course seeding needed
 
     // Start and end a session
     await act(async () => {
@@ -295,7 +279,7 @@ describe('Session Workflow: Cross-Store Integration', () => {
   })
 
   it('orphaned sessions are recovered on next load', async () => {
-    await db.courses.put(testCourse)
+    // Courses table dropped (E89-S01) — no course seeding needed
 
     // Seed an orphaned session (no endTime) directly in DB
     const orphanedSession = {
@@ -326,7 +310,7 @@ describe('Session Workflow: Cross-Store Integration', () => {
   })
 
   it('recordInteraction increments interaction count on active session', async () => {
-    await db.courses.put(testCourse)
+    // Courses table dropped (E89-S01) — no course seeding needed
 
     await act(async () => {
       await useSessionStore.getState().startSession(COURSE_ID, LESSON_ID, 'video')

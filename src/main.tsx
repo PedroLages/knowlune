@@ -33,30 +33,20 @@ deferInit(async () => {
     { db },
     { migrateBookmarksFromLocalStorage },
     { buildCourseLookup, initializeSearchIndex },
-    { useCourseStore },
   ] = await Promise.all([
     import('@/db'),
     import('@/lib/bookmarks'),
     import('@/lib/noteSearch'),
-    import('@/stores/useCourseStore'),
   ])
 
   // Fire-and-forget: migrate any legacy localStorage bookmarks to IndexedDB
   migrateBookmarksFromLocalStorage()
 
-  // Initialize Dexie, then load courses + build search index
+  // Initialize Dexie, then build search index
   db.open()
     .then(async () => {
-      // One-time cleanup: remove pre-seeded sample courses (removed in favor of user-imported courses)
-      const sampleCourseCount = await db.courses.count()
-      if (sampleCourseCount > 0) {
-        await db.courses.clear()
-        console.log(`[Cleanup] Cleared ${sampleCourseCount} pre-seeded sample courses`)
-      }
-      // Load courses into Zustand store (will be empty — sample courses removed)
-      await useCourseStore.getState().loadCourses()
-      // Build course/lesson lookup maps for search enrichment
-      buildCourseLookup(useCourseStore.getState().courses)
+      // Build course/lesson lookup maps for search enrichment (empty — regular courses removed in E89-S01)
+      buildCourseLookup([])
 
       const notes = await db.notes.toArray()
       initializeSearchIndex(notes)
