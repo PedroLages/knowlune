@@ -23,17 +23,8 @@ import { LocalVideoContent } from '@/app/components/course/LocalVideoContent'
 import { YouTubeVideoContent } from '@/app/components/course/YouTubeVideoContent'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from '@/app/components/ui/resizable'
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-  SheetTitle,
-} from '@/app/components/ui/sheet'
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/app/components/ui/resizable'
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import { PanelRight } from 'lucide-react'
 
@@ -126,7 +117,7 @@ export function UnifiedLessonPlayer() {
       {/* Content area: resizable panels on desktop, sheet on mobile */}
       <div className="flex-1 overflow-auto">
         {isDesktop ? (
-          <ResizablePanelGroup direction="horizontal" className="h-full">
+          <ResizablePanelGroup orientation="horizontal" className="h-full">
             <ResizablePanel defaultSize={75} minSize={50}>
               <div className="h-full overflow-auto p-4">{videoContent}</div>
             </ResizablePanel>
