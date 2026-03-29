@@ -236,7 +236,7 @@ test('AC3 — gaps sorted by severity with direct video links', async ({ page })
   const firstLink = gapItems.nth(0).getByTestId('gap-video-link')
   await expect(firstLink).toBeVisible()
   const href = await firstLink.getAttribute('href')
-  expect(href).toMatch(/imported-courses\/course-1\/lessons\/video-/)
+  expect(href).toMatch(/courses\/course-1\/lessons\/video-/)
 })
 
 // ─── AC4: Note link suggestion toast ──────────────────────────────────────────

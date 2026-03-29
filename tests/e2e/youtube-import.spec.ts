@@ -349,13 +349,13 @@ test.describe('YouTube Import — YouTube Player Embed', () => {
     // Navigate to a YouTube course detail page with a mock course ID
     // This will likely show 404 or empty state without seeded data,
     // but we verify the route and component load
-    await navigateAndWait(page, '/youtube-courses/test-course-001')
+    await navigateAndWait(page, '/courses/test-course-001')
 
     // The page should load (either course detail or not-found state)
     // Check for the youtube course detail testid or loading state
     const courseDetail = page.getByTestId('youtube-course-detail')
     const isLoaded = await courseDetail.isVisible({ timeout: 5000 }).catch(() => false)
-    // eslint-disable-next-line no-console -- diagnostic
+     
     console.log(`YouTube course detail loaded: ${isLoaded}`)
   })
 
@@ -390,14 +390,14 @@ test.describe('YouTube Import — YouTube Player Embed', () => {
     ])
 
     // Navigate to the YouTube course detail
-    await navigateAndWait(page, `/youtube-courses/${courseId}`)
+    await navigateAndWait(page, `/courses/${courseId}`)
 
     // Wait for the page to render
     await page.waitForLoadState('networkidle')
 
     const courseDetail = page.getByTestId('youtube-course-detail')
     const isLoaded = await courseDetail.isVisible({ timeout: 5000 }).catch(() => false)
-    // eslint-disable-next-line no-console -- diagnostic
+     
     console.log(`Seeded YouTube course visible: ${isLoaded}`)
   })
 })

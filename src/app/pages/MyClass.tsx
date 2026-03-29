@@ -35,7 +35,10 @@ export default function MyClass() {
   const notStarted = useMemo(() => getNotStartedCourses(allCourses), [allCourses])
 
   const hasAnyCourses =
-    inProgress.length > 0 || completed.length > 0 || notStarted.length > 0 || importedCourses.length > 0
+    inProgress.length > 0 ||
+    completed.length > 0 ||
+    notStarted.length > 0 ||
+    importedCourses.length > 0
 
   // Get all courses with their status
   const allCoursesWithStatus = useMemo(

@@ -438,7 +438,9 @@ export async function persistScannedCourse(
   // Post-persist verification — ensure data actually landed in IndexedDB
   const persisted = await db.importedCourses.get(course.id)
   if (!persisted) {
-    console.error('[Import] Post-persist verification failed: course not found in DB after transaction')
+    console.error(
+      '[Import] Post-persist verification failed: course not found in DB after transaction'
+    )
     toast.error(`Import of "${course.name}" failed silently. Please try again.`)
     throw new Error('Post-persist verification failed')
   }
@@ -530,7 +532,7 @@ export async function persistScannedCourse(
     type: 'import-finished',
     title: `Course imported: ${course.name}`,
     message: `${videos.length} ${videos.length === 1 ? 'video' : 'videos'}, ${pdfs.length} ${pdfs.length === 1 ? 'PDF' : 'PDFs'} imported successfully`,
-    actionUrl: `/imported-courses/${course.id}`,
+    actionUrl: `/courses/${course.id}`,
   })
 
   // Unlock sidebar items via progressive disclosure

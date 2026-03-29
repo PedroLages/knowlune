@@ -36,7 +36,7 @@ const GAP_TYPE_LABEL: Record<GapItem['gapType'], string> = {
 }
 
 function GapCard({ gap }: { gap: GapItem }) {
-  const videoPath = `/imported-courses/${gap.courseId}/lessons/${gap.videoId}`
+  const videoPath = `/courses/${gap.courseId}/lessons/${gap.videoId}`
 
   return (
     <article

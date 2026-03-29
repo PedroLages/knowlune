@@ -123,7 +123,7 @@ async function seedCourseAndReload(
 
 /** Navigate to imported lesson player. */
 async function goToLessonPlayer(page: Page, courseId: string, lessonId: string): Promise<void> {
-  await navigateAndWait(page, `/imported-courses/${courseId}/lessons/${lessonId}`)
+  await navigateAndWait(page, `/courses/${courseId}/lessons/${lessonId}`)
 }
 
 // ===========================================================================

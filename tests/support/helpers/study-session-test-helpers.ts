@@ -125,7 +125,7 @@ export async function goToLessonPlayer(
   courseId: string,
   lessonId: string
 ): Promise<void> {
-  await navigateAndWait(page, `/imported-courses/${courseId}/lessons/${lessonId}`)
+  await navigateAndWait(page, `/courses/${courseId}/lessons/${lessonId}`)
 }
 
 // ---------------------------------------------------------------------------

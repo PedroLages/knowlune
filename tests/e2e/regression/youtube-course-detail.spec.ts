@@ -173,7 +173,7 @@ async function seedYouTubeCourseData(page: Page): Promise<void> {
 }
 
 async function goToYouTubeCourseDetail(page: Page, courseId: string): Promise<void> {
-  await navigateAndWait(page, `/youtube-courses/${courseId}`)
+  await navigateAndWait(page, `/courses/${courseId}`)
 }
 
 // ===========================================================================
@@ -393,7 +393,7 @@ test.describe('YouTubeCourseDetail — Navigation', () => {
     await page.getByText('Introduction to Patterns').click()
 
     // THEN: Navigated to YouTube lesson player route
-    await page.waitForURL(/\/youtube-courses\/yt-course-react-patterns\/lessons\/yt-vid-01/)
+    await page.waitForURL(/\/courses\/yt-course-react-patterns\/lessons\/yt-vid-01/)
   })
 
   test('should navigate back to courses when back link is clicked', async ({ page }) => {
@@ -419,7 +419,7 @@ test.describe('YouTubeCourseDetail — Navigation', () => {
     await page.keyboard.press('Enter')
 
     // THEN: Navigated to lesson player
-    await page.waitForURL(/\/youtube-courses\/yt-course-react-patterns\/lessons\/yt-vid-01/)
+    await page.waitForURL(/\/courses\/yt-course-react-patterns\/lessons\/yt-vid-01/)
   })
 })
 
@@ -433,7 +433,7 @@ test.describe('YouTubeCourseDetail — Edge Cases', () => {
     await navigateAndWait(page, '/')
 
     // WHEN: User navigates to a non-existent YouTube course
-    await navigateAndWait(page, '/youtube-courses/non-existent-course')
+    await navigateAndWait(page, '/courses/non-existent-course')
 
     // THEN: Course not found message is displayed
     await expect(page.getByText('Course not found.')).toBeVisible()

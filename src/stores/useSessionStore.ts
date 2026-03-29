@@ -222,7 +222,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         // unnecessary event traffic for every positive streak.
         const STREAK_THRESHOLDS = [7, 14, 30, 60, 100, 365] as const
         const currentStreak = getCurrentStreak()
-        if (currentStreak > 0 && STREAK_THRESHOLDS.includes(currentStreak as (typeof STREAK_THRESHOLDS)[number])) {
+        if (
+          currentStreak > 0 &&
+          STREAK_THRESHOLDS.includes(currentStreak as (typeof STREAK_THRESHOLDS)[number])
+        ) {
           appEventBus.emit({ type: 'streak:milestone', days: currentStreak })
         }
       })

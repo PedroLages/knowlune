@@ -108,7 +108,7 @@ async function seedCourseAndReload(
 
 /** Navigate to imported course detail page. */
 async function goToImportedCourseDetail(page: Page, courseId: string): Promise<void> {
-  await navigateAndWait(page, `/imported-courses/${courseId}`)
+  await navigateAndWait(page, `/courses/${courseId}`)
 }
 
 // ===========================================================================
@@ -189,7 +189,7 @@ test.describe('AC-4: Course Detail Page - Navigation', () => {
     await page.getByText('01-Introduction.mp4').click()
 
     // THEN: Navigated to lesson player
-    await page.waitForURL(/\/imported-courses\/course-react-101\/lessons\/video-intro/)
+    await page.waitForURL(/\/courses\/course-react-101\/lessons\/video-intro/)
   })
 
   test('should display back to courses link', async ({ page, indexedDB }) => {
@@ -262,14 +262,14 @@ test.describe('Navigation: Full Flow', () => {
     await card.click()
 
     // THEN: Navigated to course detail page
-    await page.waitForURL(/\/imported-courses\/course-react-101/)
+    await page.waitForURL(/\/courses\/course-react-101/)
     await expect(page.getByTestId('imported-course-detail')).toBeVisible()
 
     // WHEN: User clicks first video
     await page.getByText('01-Introduction.mp4').click()
 
     // THEN: Navigated to lesson player
-    await page.waitForURL(/\/imported-courses\/course-react-101\/lessons\/video-intro/)
+    await page.waitForURL(/\/courses\/course-react-101\/lessons\/video-intro/)
   })
 
   test('should have keyboard accessible navigation through course items', async ({
@@ -286,6 +286,6 @@ test.describe('Navigation: Full Flow', () => {
     await page.keyboard.press('Enter')
 
     // THEN: Navigated to lesson player
-    await page.waitForURL(/\/imported-courses\/course-react-101\/lessons\//)
+    await page.waitForURL(/\/courses\/course-react-101\/lessons\//)
   })
 })

@@ -11,10 +11,7 @@
 
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
-import {
-  createCourseAdapter,
-  type CourseAdapter,
-} from '@/lib/courseAdapter'
+import { createCourseAdapter, type CourseAdapter } from '@/lib/courseAdapter'
 
 export interface UseCourseAdapterResult {
   adapter: CourseAdapter | null
@@ -22,31 +19,20 @@ export interface UseCourseAdapterResult {
   error: string | null
 }
 
-export function useCourseAdapter(
-  courseId: string | undefined,
-): UseCourseAdapterResult {
-  const result = useLiveQuery(
-    async () => {
-      if (!courseId) return null
+export function useCourseAdapter(courseId: string | undefined): UseCourseAdapterResult {
+  const result = useLiveQuery(async () => {
+    if (!courseId) return null
 
-      const course = await db.importedCourses.get(courseId)
-      if (!course) return { adapter: null, error: 'course-not-found' }
+    const course = await db.importedCourses.get(courseId)
+    if (!course) return { adapter: null, error: 'course-not-found' }
 
-      const videos = await db.importedVideos
-        .where('courseId')
-        .equals(courseId)
-        .toArray()
+    const videos = await db.importedVideos.where('courseId').equals(courseId).toArray()
 
-      const pdfs = await db.importedPdfs
-        .where('courseId')
-        .equals(courseId)
-        .toArray()
+    const pdfs = await db.importedPdfs.where('courseId').equals(courseId).toArray()
 
-      const adapter = createCourseAdapter(course, videos, pdfs)
-      return { adapter, error: null }
-    },
-    [courseId],
-  )
+    const adapter = createCourseAdapter(course, videos, pdfs)
+    return { adapter, error: null }
+  }, [courseId])
 
   // useLiveQuery returns undefined while loading
   if (result === undefined) {

@@ -58,7 +58,7 @@ async function seedNotifications(page: Page) {
         createdAt: hoursMs(-5),
         readAt: null,
         dismissedAt: null,
-        actionUrl: '/imported-courses/react-patterns',
+        actionUrl: '/courses/react-patterns',
         metadata: {},
       },
       {

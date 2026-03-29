@@ -1,11 +1,7 @@
 import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Dexie from 'dexie'
-import type {
-  ImportedCourse,
-  ImportedVideo,
-  ImportedPdf,
-} from '@/data/types'
+import type { ImportedCourse, ImportedVideo, ImportedPdf } from '@/data/types'
 
 // Dynamic import pattern — reset Dexie between tests to avoid stale state
 type AdapterModule = typeof import('@/lib/courseAdapter')
@@ -119,11 +115,7 @@ describe('revokeObjectUrl()', () => {
 
 describe('CourseAdapter interface', () => {
   it('LocalCourseAdapter exposes all required methods', () => {
-    const adapter = new adapterLib.LocalCourseAdapter(
-      makeLocalCourse(),
-      [makeVideo()],
-      [makePdf()],
-    )
+    const adapter = new adapterLib.LocalCourseAdapter(makeLocalCourse(), [makeVideo()], [makePdf()])
 
     expect(typeof adapter.getCourse).toBe('function')
     expect(typeof adapter.getSource).toBe('function')
@@ -135,10 +127,7 @@ describe('CourseAdapter interface', () => {
   })
 
   it('YouTubeCourseAdapter exposes all required methods', () => {
-    const adapter = new adapterLib.YouTubeCourseAdapter(
-      makeYouTubeCourse(),
-      [makeYouTubeVideo()],
-    )
+    const adapter = new adapterLib.YouTubeCourseAdapter(makeYouTubeCourse(), [makeYouTubeVideo()])
 
     expect(typeof adapter.getCourse).toBe('function')
     expect(typeof adapter.getSource).toBe('function')
@@ -156,11 +145,7 @@ describe('CourseAdapter interface', () => {
 
 describe('LessonItem normalization', () => {
   it('includes id, title, type, duration, order, and sourceMetadata for videos', async () => {
-    const adapter = new adapterLib.LocalCourseAdapter(
-      makeLocalCourse(),
-      [makeVideo()],
-      [],
-    )
+    const adapter = new adapterLib.LocalCourseAdapter(makeLocalCourse(), [makeVideo()], [])
     const lessons = await adapter.getLessons()
 
     expect(lessons).toHaveLength(1)
@@ -175,11 +160,7 @@ describe('LessonItem normalization', () => {
   })
 
   it('includes id, title, type, order, and sourceMetadata for PDFs', async () => {
-    const adapter = new adapterLib.LocalCourseAdapter(
-      makeLocalCourse(),
-      [],
-      [makePdf()],
-    )
+    const adapter = new adapterLib.LocalCourseAdapter(makeLocalCourse(), [], [makePdf()])
     const lessons = await adapter.getLessons()
 
     expect(lessons).toHaveLength(1)
@@ -199,11 +180,7 @@ describe('LessonItem normalization', () => {
 
 describe('ContentCapabilities', () => {
   it('LocalCourseAdapter declares correct capabilities with videos and PDFs', () => {
-    const adapter = new adapterLib.LocalCourseAdapter(
-      makeLocalCourse(),
-      [makeVideo()],
-      [makePdf()],
-    )
+    const adapter = new adapterLib.LocalCourseAdapter(makeLocalCourse(), [makeVideo()], [makePdf()])
     const caps = adapter.getCapabilities()
 
     expect(caps).toEqual({
@@ -218,11 +195,7 @@ describe('ContentCapabilities', () => {
   })
 
   it('LocalCourseAdapter with no videos reports hasVideo: false', () => {
-    const adapter = new adapterLib.LocalCourseAdapter(
-      makeLocalCourse(),
-      [],
-      [makePdf()],
-    )
+    const adapter = new adapterLib.LocalCourseAdapter(makeLocalCourse(), [], [makePdf()])
     const caps = adapter.getCapabilities()
 
     expect(caps.hasVideo).toBe(false)
@@ -230,10 +203,7 @@ describe('ContentCapabilities', () => {
   })
 
   it('YouTubeCourseAdapter declares hasPdf: false', () => {
-    const adapter = new adapterLib.YouTubeCourseAdapter(
-      makeYouTubeCourse(),
-      [makeYouTubeVideo()],
-    )
+    const adapter = new adapterLib.YouTubeCourseAdapter(makeYouTubeCourse(), [makeYouTubeVideo()])
     const caps = adapter.getCapabilities()
 
     expect(caps).toEqual({
@@ -248,10 +218,7 @@ describe('ContentCapabilities', () => {
   })
 
   it('YouTubeCourseAdapter with no videos reports hasVideo: false', () => {
-    const adapter = new adapterLib.YouTubeCourseAdapter(
-      makeYouTubeCourse(),
-      [],
-    )
+    const adapter = new adapterLib.YouTubeCourseAdapter(makeYouTubeCourse(), [])
     expect(adapter.getCapabilities().hasVideo).toBe(false)
   })
 })
@@ -268,11 +235,7 @@ describe('LocalCourseAdapter.getLessons()', () => {
     ]
     const pdfs = [makePdf({ id: 'p1', pageCount: 2 })] // pageCount used as order for PDFs
 
-    const adapter = new adapterLib.LocalCourseAdapter(
-      makeLocalCourse(),
-      videos,
-      pdfs,
-    )
+    const adapter = new adapterLib.LocalCourseAdapter(makeLocalCourse(), videos, pdfs)
     const lessons = await adapter.getLessons()
 
     expect(lessons).toHaveLength(3)
@@ -282,11 +245,7 @@ describe('LocalCourseAdapter.getLessons()', () => {
   })
 
   it('returns empty array when no content exists', async () => {
-    const adapter = new adapterLib.LocalCourseAdapter(
-      makeLocalCourse(),
-      [],
-      [],
-    )
+    const adapter = new adapterLib.LocalCourseAdapter(makeLocalCourse(), [], [])
     const lessons = await adapter.getLessons()
     expect(lessons).toEqual([])
   })
@@ -298,30 +257,25 @@ describe('LocalCourseAdapter.getLessons()', () => {
 
 describe('YouTubeCourseAdapter.getMediaUrl()', () => {
   it('returns YouTube embed URL for a known video', async () => {
-    const adapter = new adapterLib.YouTubeCourseAdapter(
-      makeYouTubeCourse(),
-      [makeYouTubeVideo({ id: 'yt-vid-1', youtubeVideoId: 'abc123' })],
-    )
+    const adapter = new adapterLib.YouTubeCourseAdapter(makeYouTubeCourse(), [
+      makeYouTubeVideo({ id: 'yt-vid-1', youtubeVideoId: 'abc123' }),
+    ])
 
     const url = await adapter.getMediaUrl('yt-vid-1')
     expect(url).toBe('https://www.youtube.com/embed/abc123')
   })
 
   it('returns null for unknown lesson ID', async () => {
-    const adapter = new adapterLib.YouTubeCourseAdapter(
-      makeYouTubeCourse(),
-      [makeYouTubeVideo()],
-    )
+    const adapter = new adapterLib.YouTubeCourseAdapter(makeYouTubeCourse(), [makeYouTubeVideo()])
 
     const url = await adapter.getMediaUrl('nonexistent')
     expect(url).toBeNull()
   })
 
   it('returns null when video has no youtubeVideoId', async () => {
-    const adapter = new adapterLib.YouTubeCourseAdapter(
-      makeYouTubeCourse(),
-      [makeYouTubeVideo({ id: 'yt-vid-1', youtubeVideoId: undefined })],
-    )
+    const adapter = new adapterLib.YouTubeCourseAdapter(makeYouTubeCourse(), [
+      makeYouTubeVideo({ id: 'yt-vid-1', youtubeVideoId: undefined }),
+    ])
 
     const url = await adapter.getMediaUrl('yt-vid-1')
     expect(url).toBeNull()
@@ -334,11 +288,7 @@ describe('YouTubeCourseAdapter.getMediaUrl()', () => {
 
 describe('createCourseAdapter()', () => {
   it('returns YouTubeCourseAdapter for source: youtube', () => {
-    const adapter = adapterLib.createCourseAdapter(
-      makeYouTubeCourse(),
-      [makeYouTubeVideo()],
-      [],
-    )
+    const adapter = adapterLib.createCourseAdapter(makeYouTubeCourse(), [makeYouTubeVideo()], [])
     expect(adapter).toBeInstanceOf(adapterLib.YouTubeCourseAdapter)
     expect(adapter.getSource()).toBe('youtube')
   })
@@ -347,7 +297,7 @@ describe('createCourseAdapter()', () => {
     const adapter = adapterLib.createCourseAdapter(
       makeLocalCourse({ source: 'local' }),
       [makeVideo()],
-      [makePdf()],
+      [makePdf()]
     )
     expect(adapter).toBeInstanceOf(adapterLib.LocalCourseAdapter)
     expect(adapter.getSource()).toBe('local')
@@ -357,7 +307,7 @@ describe('createCourseAdapter()', () => {
     const adapter = adapterLib.createCourseAdapter(
       makeLocalCourse({ source: undefined }),
       [makeVideo()],
-      [],
+      []
     )
     expect(adapter).toBeInstanceOf(adapterLib.LocalCourseAdapter)
     expect(adapter.getSource()).toBe('local')
@@ -392,11 +342,7 @@ describe('getCourse() and getSource()', () => {
 
 describe('LocalCourseAdapter.getMediaUrl()', () => {
   it('returns null for unknown lesson ID', async () => {
-    const adapter = new adapterLib.LocalCourseAdapter(
-      makeLocalCourse(),
-      [makeVideo()],
-      [],
-    )
+    const adapter = new adapterLib.LocalCourseAdapter(makeLocalCourse(), [makeVideo()], [])
 
     const url = await adapter.getMediaUrl('nonexistent')
     expect(url).toBeNull()
@@ -406,7 +352,7 @@ describe('LocalCourseAdapter.getMediaUrl()', () => {
     const adapter = new adapterLib.LocalCourseAdapter(
       makeLocalCourse(),
       [makeVideo({ fileHandle: null })],
-      [],
+      []
     )
 
     const url = await adapter.getMediaUrl('vid-1')
@@ -425,20 +371,16 @@ describe('YouTubeCourseAdapter.getLessons()', () => {
       makeYouTubeVideo({ id: 'v1', order: 1, filename: 'Part 1' }),
       makeYouTubeVideo({ id: 'v2', order: 2, filename: 'Part 2' }),
     ]
-    const adapter = new adapterLib.YouTubeCourseAdapter(
-      makeYouTubeCourse(),
-      videos,
-    )
+    const adapter = new adapterLib.YouTubeCourseAdapter(makeYouTubeCourse(), videos)
 
     const lessons = await adapter.getLessons()
-    expect(lessons.map((l) => l.id)).toEqual(['v1', 'v2', 'v3'])
+    expect(lessons.map(l => l.id)).toEqual(['v1', 'v2', 'v3'])
   })
 
   it('includes YouTube-specific sourceMetadata', async () => {
-    const adapter = new adapterLib.YouTubeCourseAdapter(
-      makeYouTubeCourse(),
-      [makeYouTubeVideo({ youtubeVideoId: 'xyz789' })],
-    )
+    const adapter = new adapterLib.YouTubeCourseAdapter(makeYouTubeCourse(), [
+      makeYouTubeVideo({ youtubeVideoId: 'xyz789' }),
+    ])
 
     const lessons = await adapter.getLessons()
     expect(lessons[0].sourceMetadata).toMatchObject({
@@ -455,7 +397,7 @@ describe('YouTubeCourseAdapter.getThumbnailUrl()', () => {
   it('returns youtubeThumbnailUrl when present', async () => {
     const adapter = new adapterLib.YouTubeCourseAdapter(
       makeYouTubeCourse({ youtubeThumbnailUrl: 'https://example.com/thumb.jpg' }),
-      [],
+      []
     )
 
     const url = await adapter.getThumbnailUrl()
@@ -465,7 +407,7 @@ describe('YouTubeCourseAdapter.getThumbnailUrl()', () => {
   it('returns null when no thumbnail URL and no stored thumbnail', async () => {
     const adapter = new adapterLib.YouTubeCourseAdapter(
       makeYouTubeCourse({ youtubeThumbnailUrl: undefined }),
-      [],
+      []
     )
 
     const url = await adapter.getThumbnailUrl()
@@ -478,7 +420,7 @@ describe('LocalCourseAdapter.getThumbnailUrl()', () => {
     const adapter = new adapterLib.LocalCourseAdapter(
       makeLocalCourse({ coverImageHandle: undefined }),
       [],
-      [],
+      []
     )
 
     const url = await adapter.getThumbnailUrl()
