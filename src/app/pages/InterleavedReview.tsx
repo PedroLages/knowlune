@@ -205,7 +205,12 @@ export function InterleavedReview() {
       }
 
       if (isFlipped) {
-        const ratingKeys: Record<string, ReviewRating> = { '1': 'again', '2': 'hard', '3': 'good', '4': 'easy' }
+        const ratingKeys: Record<string, ReviewRating> = {
+          '1': 'again',
+          '2': 'hard',
+          '3': 'good',
+          '4': 'easy',
+        }
         const rating = ratingKeys[e.key]
         if (rating) {
           e.preventDefault()

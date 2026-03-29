@@ -19,7 +19,8 @@ export function InterleavedSummary({
   onReturnToQueue,
 }: InterleavedSummaryProps) {
   const retentionDelta = summary.averageRetentionAfter - summary.averageRetentionBefore
-  const totalRatings = summary.ratings.again + summary.ratings.hard + summary.ratings.good + summary.ratings.easy
+  const totalRatings =
+    summary.ratings.again + summary.ratings.hard + summary.ratings.good + summary.ratings.easy
 
   return (
     <motion.div
