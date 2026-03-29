@@ -20,37 +20,43 @@ const DB_NAME = 'ElearningDB'
 
 const FIXED_NOW = new Date(FIXED_DATE)
 
-/** Create a review record with specific retention characteristics */
+/** Create a review record with specific retention characteristics (FSRS schema) */
 function createReviewRecord(
   noteId: string,
   overrides: {
     reviewedDaysAgo?: number
     intervalDays?: number
-    easeFactor?: number
-    reviewCount?: number
-    rating?: 'hard' | 'good' | 'easy'
+    stability?: number
+    difficulty?: number
+    reps?: number
+    rating?: 'again' | 'hard' | 'good' | 'easy'
   } = {}
 ) {
   const {
     reviewedDaysAgo = 1,
     intervalDays = 3,
-    easeFactor = 2.5,
-    reviewCount = 1,
+    stability,
+    difficulty = 5.0,
+    reps = 1,
     rating = 'good',
   } = overrides
 
-  const reviewedAt = new Date(FIXED_NOW.getTime() - reviewedDaysAgo * 86_400_000)
-  const nextReviewAt = new Date(reviewedAt.getTime() + intervalDays * 86_400_000)
+  const lastReview = new Date(FIXED_NOW.getTime() - reviewedDaysAgo * 86_400_000)
+  const due = new Date(lastReview.getTime() + intervalDays * 86_400_000)
 
   return {
     id: crypto.randomUUID(),
     noteId,
     rating,
-    reviewedAt: reviewedAt.toISOString(),
-    nextReviewAt: nextReviewAt.toISOString(),
-    interval: intervalDays,
-    easeFactor,
-    reviewCount,
+    stability: stability ?? intervalDays, // Approximate: stability ~ interval
+    difficulty,
+    reps,
+    lapses: 0,
+    state: 2 as const, // Review
+    elapsed_days: reviewedDaysAgo,
+    scheduled_days: intervalDays,
+    due: due.toISOString(),
+    last_review: lastReview.toISOString(),
   }
 }
 

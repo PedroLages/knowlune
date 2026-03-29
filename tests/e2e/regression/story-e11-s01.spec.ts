@@ -14,7 +14,7 @@ const DB_NAME = 'ElearningDB'
 /** Fixed date for deterministic test data */
 const FIXED_NOW = new Date('2026-03-15T12:00:00.000Z')
 
-/** Create a review record that is due now (nextReviewAt in the past) */
+/** Create a review record that is due now (FSRS schema — due in the past). */
 function createDueReview(
   noteId: string,
   retention: number,
@@ -22,33 +22,41 @@ function createDueReview(
 ) {
   // Lower retention → reviewed longer ago → more overdue
   const daysAgo = Math.max(1, Math.round((1 - retention / 100) * 10))
-  const reviewedAt = new Date(FIXED_NOW.getTime() - daysAgo * 86400000)
-  const nextReviewAt = new Date(FIXED_NOW.getTime() - 86400000) // 1 day ago = due
+  const lastReview = new Date(FIXED_NOW.getTime() - daysAgo * 86400000)
+  const due = new Date(FIXED_NOW.getTime() - 86400000) // 1 day ago = due
 
   return {
     id: crypto.randomUUID(),
     noteId,
     rating: 'good',
-    reviewedAt: reviewedAt.toISOString(),
-    nextReviewAt: nextReviewAt.toISOString(),
-    interval: 3,
-    easeFactor: 2.5,
-    reviewCount: 1,
+    stability: 5.0,
+    difficulty: 5.0,
+    reps: 1,
+    lapses: 0,
+    state: 2, // Review
+    elapsed_days: daysAgo,
+    scheduled_days: 5,
+    due: due.toISOString(),
+    last_review: lastReview.toISOString(),
     ...overrides,
   }
 }
 
-/** Create a review record that is NOT due (nextReviewAt in the future relative to FIXED_NOW). */
+/** Create a review record that is NOT due (FSRS schema — due in the future). */
 function createFutureReview(noteId: string, daysUntilDue = 5) {
   return {
     id: crypto.randomUUID(),
     noteId,
     rating: 'easy',
-    reviewedAt: FIXED_NOW.toISOString(),
-    nextReviewAt: new Date(FIXED_NOW.getTime() + daysUntilDue * 86400000).toISOString(),
-    interval: daysUntilDue,
-    easeFactor: 2.5,
-    reviewCount: 1,
+    stability: 10.0,
+    difficulty: 4.0,
+    reps: 3,
+    lapses: 0,
+    state: 2, // Review
+    elapsed_days: 0,
+    scheduled_days: daysUntilDue,
+    due: new Date(FIXED_NOW.getTime() + daysUntilDue * 86400000).toISOString(),
+    last_review: FIXED_NOW.toISOString(),
   }
 }
 
@@ -140,12 +148,14 @@ test.describe('Spaced Review System (E11-S01)', () => {
 
       // Low retention = reviewed long ago, high retention = reviewed recently
       const reviewLow = createDueReview('note-low', 20, {
-        reviewedAt: new Date(FIXED_NOW.getTime() - 8 * 86400000).toISOString(),
-        interval: 3,
+        last_review: new Date(FIXED_NOW.getTime() - 8 * 86400000).toISOString(),
+        stability: 3.0,
+        elapsed_days: 8,
       })
       const reviewHigh = createDueReview('note-high', 70, {
-        reviewedAt: new Date(FIXED_NOW.getTime() - 1 * 86400000).toISOString(),
-        interval: 3,
+        last_review: new Date(FIXED_NOW.getTime() - 1 * 86400000).toISOString(),
+        stability: 5.0,
+        elapsed_days: 1,
       })
 
       await seedReviewData(page, [note1, note2], [reviewLow, reviewHigh])
@@ -190,12 +200,14 @@ test.describe('Spaced Review System (E11-S01)', () => {
       const noteB = createDexieNote({ id: 'note-b', content: 'Note B (higher retention)' })
 
       const reviewA = createDueReview('note-a', 20, {
-        reviewedAt: new Date(FIXED_NOW.getTime() - 8 * 86400000).toISOString(),
-        interval: 3,
+        last_review: new Date(FIXED_NOW.getTime() - 8 * 86400000).toISOString(),
+        stability: 3.0,
+        elapsed_days: 8,
       })
       const reviewB = createDueReview('note-b', 70, {
-        reviewedAt: new Date(FIXED_NOW.getTime() - 1 * 86400000).toISOString(),
-        interval: 3,
+        last_review: new Date(FIXED_NOW.getTime() - 1 * 86400000).toISOString(),
+        stability: 5.0,
+        elapsed_days: 1,
       })
 
       await seedReviewData(page, [noteA, noteB], [reviewA, reviewB])
