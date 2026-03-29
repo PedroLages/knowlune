@@ -9,11 +9,12 @@
  * - PlayerHeader: back link, lesson title, course name, completion toggle
  * - LocalVideoContent: local video playback with permission handling
  * - YouTubeVideoContent: YouTube iframe player with transcript
+ * - PdfContent: PDF viewing with permission handling (E89-S06)
  *
- * @see E89-S05
+ * @see E89-S05, E89-S06
  */
 
-import { useState, useEffect } from 'react'
+import { lazy, Suspense, useState, useEffect } from 'react'
 import { useParams } from 'react-router'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -28,6 +29,12 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/app/comp
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import { PanelRight } from 'lucide-react'
+import type { LessonItem } from '@/lib/courseAdapter'
+
+// Lazy-load PdfContent to avoid pdfjs-dist bundle impact for video-only users
+const PdfContent = lazy(() =>
+  import('@/app/components/course/PdfContent').then(m => ({ default: m.PdfContent }))
+)
 
 export function UnifiedLessonPlayer() {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>()
@@ -38,8 +45,9 @@ export function UnifiedLessonPlayer() {
 
   const isDesktop = useIsDesktop()
 
-  // Resolve lesson title from adapter's lesson list (not raw UUID)
+  // Resolve lesson metadata (title + type) from adapter's lesson list
   const [lessonTitle, setLessonTitle] = useState('Lesson')
+  const [lessonType, setLessonType] = useState<LessonItem['type'] | null>(null)
   useEffect(() => {
     if (!adapter || !lessonId) return
     let ignore = false
@@ -47,12 +55,15 @@ export function UnifiedLessonPlayer() {
       if (ignore) return
       const match = lessons.find(l => l.id === lessonId)
       setLessonTitle(match?.title ?? 'Lesson')
+      setLessonType(match?.type ?? null)
     })
     return () => { ignore = true }
   }, [adapter, lessonId])
 
-  // Session tracking (AC5): start on mount, pause/resume on idle, end on leave
-  useSessionTracking(courseId, lessonId, 'video')
+  const isPdf = lessonType === 'pdf'
+
+  // Session tracking: start on mount, pause/resume on idle, end on leave
+  useSessionTracking(courseId, lessonId, isPdf ? 'pdf' : 'video')
 
   // Loading state
   if (loading) {
@@ -97,7 +108,20 @@ export function UnifiedLessonPlayer() {
   const capabilities = adapter.getCapabilities()
   const isYouTube = source === 'youtube'
 
-  const videoContent = isYouTube ? (
+  // Determine main content based on lesson type
+  const mainContent = isPdf ? (
+    <Suspense
+      fallback={
+        <DelayedFallback>
+          <div aria-busy="true" aria-label="Loading PDF viewer">
+            <Skeleton className="w-full aspect-[3/4] rounded-xl" />
+          </div>
+        </DelayedFallback>
+      }
+    >
+      <PdfContent courseId={courseId!} lessonId={lessonId!} />
+    </Suspense>
+  ) : isYouTube ? (
     <YouTubeVideoContent courseId={courseId!} lessonId={lessonId!} />
   ) : (
     <LocalVideoContent courseId={courseId!} lessonId={lessonId!} />
@@ -117,7 +141,7 @@ export function UnifiedLessonPlayer() {
         lessonId={lessonId!}
         lessonTitle={lessonTitle}
         courseName={course?.name}
-        showCompletionToggle={isYouTube || capabilities.hasVideo}
+        showCompletionToggle={isPdf || isYouTube || capabilities.hasVideo}
       />
 
       {/* Content area: resizable panels on desktop, sheet on mobile */}
@@ -125,7 +149,7 @@ export function UnifiedLessonPlayer() {
         {isDesktop ? (
           <ResizablePanelGroup orientation="horizontal" className="h-full">
             <ResizablePanel defaultSize={75} minSize={50}>
-              <div className="h-full overflow-auto p-4">{videoContent}</div>
+              <div className="h-full overflow-auto p-4">{mainContent}</div>
             </ResizablePanel>
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
@@ -134,7 +158,7 @@ export function UnifiedLessonPlayer() {
           </ResizablePanelGroup>
         ) : (
           <div className="h-full">
-            <div className="h-full overflow-auto p-4">{videoContent}</div>
+            <div className="h-full overflow-auto p-4">{mainContent}</div>
 
             {/* Mobile sheet trigger */}
             <Sheet>
