@@ -81,15 +81,18 @@ export function UnifiedLessonPlayer() {
   useEffect(() => {
     if (!adapter || !lessonId) return
     let ignore = false
-    adapter.getLessons().then(lessons => {
-      if (ignore) return
-      const match = lessons.find(l => l.id === lessonId)
-      setLessonTitle(match?.title ?? 'Lesson')
-      setLessonType(match?.type ?? null)
-    }).catch(err => {
-      console.error('Failed to load lesson metadata:', err)
-      // Leave defaults (title='Lesson', type=null) — UI degrades gracefully
-    })
+    adapter
+      .getLessons()
+      .then(lessons => {
+        if (ignore) return
+        const match = lessons.find(l => l.id === lessonId)
+        setLessonTitle(match?.title ?? 'Lesson')
+        setLessonType(match?.type ?? null)
+      })
+      .catch(err => {
+        console.error('Failed to load lesson metadata:', err)
+        // Leave defaults (title='Lesson', type=null) — UI degrades gracefully
+      })
     return () => {
       ignore = true
     }

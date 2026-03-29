@@ -4,9 +4,9 @@ story_name: "Wire Quiz System to Unified Course IDs"
 status: in-progress
 started: 2026-03-29
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-03-29
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, code-review, code-review-testing, design-review-skipped, performance-benchmark-skipped, security-review, exploratory-qa-skipped]
 burn_in_validated: false
 ---
 
