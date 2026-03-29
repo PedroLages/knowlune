@@ -17,6 +17,19 @@ import type {
 import { db } from '@/db'
 
 // ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
+
+/**
+ * Revoke a blob URL previously created by `getMediaUrl()` or `getThumbnailUrl()`.
+ * Callers MUST call this when they no longer need the URL (e.g., on component
+ * unmount) to avoid memory leaks from unreleased object URLs.
+ */
+export function revokeObjectUrl(url: string): void {
+  URL.revokeObjectURL(url)
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -89,7 +102,11 @@ export class LocalCourseAdapter implements CourseAdapter {
       title: p.filename,
       type: 'pdf' as const,
       duration: undefined,
-      order: p.pageCount, // PDFs don't have an explicit order field — use a high number
+      // Known limitation: ImportedPdf has no `order` field, so we use pageCount
+      // as a rough proxy. This is adequate for MVP but may produce unexpected
+      // ordering for multi-PDF courses. Deferred to S04/S06 where explicit PDF
+      // ordering will be added via a Dexie migration.
+      order: p.pageCount,
       sourceMetadata: {
         path: p.path,
         pageCount: p.pageCount,
@@ -103,6 +120,11 @@ export class LocalCourseAdapter implements CourseAdapter {
     })
   }
 
+  /**
+   * Returns a blob URL for the lesson's media file.
+   * **Callers must call `revokeObjectUrl()` when the URL is no longer needed**
+   * to prevent memory leaks from unreleased blob URLs.
+   */
   async getMediaUrl(lessonId: string): Promise<string | null> {
     // Check videos first
     const video = this.videos.find((v) => v.id === lessonId)
@@ -158,6 +180,11 @@ export class LocalCourseAdapter implements CourseAdapter {
     return caption?.content ?? null
   }
 
+  /**
+   * Returns a blob URL for the course thumbnail.
+   * **Callers must call `revokeObjectUrl()` when the URL is no longer needed**
+   * to prevent memory leaks from unreleased blob URLs.
+   */
   async getThumbnailUrl(): Promise<string | null> {
     // Local courses may have a cover image file handle
     if (this.course.coverImageHandle) {
@@ -253,6 +280,12 @@ export class YouTubeCourseAdapter implements CourseAdapter {
     return null
   }
 
+  /**
+   * Returns a thumbnail URL for the course. Prefers the YouTube-hosted URL;
+   * falls back to a blob URL from stored thumbnail data.
+   * **If a blob URL is returned (no `youtubeThumbnailUrl`), callers must call
+   * `revokeObjectUrl()` when done to prevent memory leaks.**
+   */
   async getThumbnailUrl(): Promise<string | null> {
     // YouTube courses have a thumbnail URL directly on the course record
     if (this.course.youtubeThumbnailUrl) {

@@ -1,10 +1,10 @@
 ---
 story_id: E89-S02
 story_name: "Create Unified Course Adapter Layer"
-status: in-progress
+status: complete
 started: 2026-03-29
-completed:
-reviewed: false
+completed: 2026-03-29
+reviewed: true
 review_started:
 review_gates_passed: []
 burn_in_validated: false

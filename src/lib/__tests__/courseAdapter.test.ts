@@ -101,6 +101,19 @@ function makePdf(overrides: Partial<ImportedPdf> = {}): ImportedPdf {
 }
 
 // ---------------------------------------------------------------------------
+// revokeObjectUrl utility
+// ---------------------------------------------------------------------------
+
+describe('revokeObjectUrl()', () => {
+  it('calls URL.revokeObjectURL with the given url', () => {
+    const spy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    adapterLib.revokeObjectUrl('blob:http://localhost/fake-id')
+    expect(spy).toHaveBeenCalledWith('blob:http://localhost/fake-id')
+    spy.mockRestore()
+  })
+})
+
+// ---------------------------------------------------------------------------
 // CourseAdapter Interface (AC1)
 // ---------------------------------------------------------------------------
 
@@ -470,6 +483,123 @@ describe('LocalCourseAdapter.getThumbnailUrl()', () => {
 
     const url = await adapter.getThumbnailUrl()
     expect(url).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// LocalCourseAdapter.getTranscript() — reads from videoCaptions table
+// ---------------------------------------------------------------------------
+
+describe('LocalCourseAdapter.getTranscript()', () => {
+  it('returns caption content when a matching videoCaptions record exists', async () => {
+    const { db: freshDb } = await import('@/db')
+    const course = makeLocalCourse()
+    const video = makeVideo()
+
+    await freshDb.importedCourses.add(course)
+    await freshDb.importedVideos.add(video)
+    await freshDb.videoCaptions.add({
+      courseId: 'local-course-1',
+      videoId: 'vid-1',
+      filename: '01-intro.srt',
+      content: '1\n00:00:00,000 --> 00:00:05,000\nHello world',
+      format: 'srt',
+      createdAt: '2026-03-01T10:00:00.000Z',
+    })
+
+    const adapter = new adapterLib.LocalCourseAdapter(course, [video], [])
+    const transcript = await adapter.getTranscript('vid-1')
+    expect(transcript).toBe('1\n00:00:00,000 --> 00:00:05,000\nHello world')
+  })
+
+  it('returns null when no caption record exists for the lesson', async () => {
+    const { db: freshDb } = await import('@/db')
+    const course = makeLocalCourse()
+    const video = makeVideo()
+
+    await freshDb.importedCourses.add(course)
+    await freshDb.importedVideos.add(video)
+
+    const adapter = new adapterLib.LocalCourseAdapter(course, [video], [])
+    const transcript = await adapter.getTranscript('vid-1')
+    expect(transcript).toBeNull()
+  })
+
+  it('returns null for a non-existent lessonId', async () => {
+    const course = makeLocalCourse()
+    const adapter = new adapterLib.LocalCourseAdapter(course, [], [])
+    const transcript = await adapter.getTranscript('nonexistent')
+    expect(transcript).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// YouTubeCourseAdapter.getTranscript() — reads from youtubeTranscripts table
+// ---------------------------------------------------------------------------
+
+describe('YouTubeCourseAdapter.getTranscript()', () => {
+  it('returns fullText when a done transcript record exists', async () => {
+    const { db: freshDb } = await import('@/db')
+    const course = makeYouTubeCourse()
+    const video = makeYouTubeVideo({ id: 'yt-vid-1', youtubeVideoId: 'dQw4w9WgXcQ' })
+
+    await freshDb.importedCourses.add(course)
+    await freshDb.importedVideos.add(video)
+    await freshDb.youtubeTranscripts.add({
+      courseId: 'yt-course-1',
+      videoId: 'dQw4w9WgXcQ',
+      language: 'en',
+      cues: [{ start: 0, end: 5, text: 'Hello world' }],
+      fullText: 'Hello world',
+      source: 'youtube-transcript',
+      status: 'done',
+      fetchedAt: '2026-03-05T12:00:00.000Z',
+    })
+
+    const adapter = new adapterLib.YouTubeCourseAdapter(course, [video])
+    const transcript = await adapter.getTranscript('yt-vid-1')
+    expect(transcript).toBe('Hello world')
+  })
+
+  it('returns null when transcript status is not done', async () => {
+    const { db: freshDb } = await import('@/db')
+    const course = makeYouTubeCourse()
+    const video = makeYouTubeVideo({ id: 'yt-vid-1', youtubeVideoId: 'dQw4w9WgXcQ' })
+
+    await freshDb.importedCourses.add(course)
+    await freshDb.importedVideos.add(video)
+    await freshDb.youtubeTranscripts.add({
+      courseId: 'yt-course-1',
+      videoId: 'dQw4w9WgXcQ',
+      language: 'en',
+      cues: [],
+      fullText: '',
+      source: 'youtube-transcript',
+      status: 'pending',
+      fetchedAt: '2026-03-05T12:00:00.000Z',
+    })
+
+    const adapter = new adapterLib.YouTubeCourseAdapter(course, [video])
+    const transcript = await adapter.getTranscript('yt-vid-1')
+    expect(transcript).toBeNull()
+  })
+
+  it('returns null when no transcript record exists', async () => {
+    const course = makeYouTubeCourse()
+    const video = makeYouTubeVideo({ id: 'yt-vid-1', youtubeVideoId: 'dQw4w9WgXcQ' })
+
+    const adapter = new adapterLib.YouTubeCourseAdapter(course, [video])
+    const transcript = await adapter.getTranscript('yt-vid-1')
+    expect(transcript).toBeNull()
+  })
+
+  it('returns null when video has no youtubeVideoId', async () => {
+    const course = makeYouTubeCourse()
+    const video = makeYouTubeVideo({ id: 'yt-vid-1', youtubeVideoId: undefined })
+
+    const adapter = new adapterLib.YouTubeCourseAdapter(course, [video])
+    const transcript = await adapter.getTranscript('yt-vid-1')
+    expect(transcript).toBeNull()
   })
 })
 
