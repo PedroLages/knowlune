@@ -1060,7 +1060,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-89: in-progress
   89-1-remove-dead-regular-course-infrastructure: done
-  89-2-create-unified-course-adapter-layer: backlog
+  89-2-create-unified-course-adapter-layer: done
   89-3-consolidate-routes-with-redirects: backlog
   89-4-build-unified-coursedetail-page: backlog
   89-5-build-unified-lessonplayer-page-video-playback: backlog
