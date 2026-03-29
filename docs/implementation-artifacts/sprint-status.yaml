@@ -41,9 +41,21 @@
 #   Numbered as Epic 28 to avoid collision with Epic 23 (Platform Identity).
 #   Defined as "Epic 23" in epics.md but renumbered here for sprint tracking clarity.
 # - E18-S03 detected story file → ready-for-dev
+#
+# REFRESH NOTES (2026-03-29):
+# ===========================
+# - 29 new epics added: E60-E88 (created 2026-03-29)
+# - E60 redefined: was "Research-Driven Enhancements" (6 stories), now "Smart Notification Triggers" (5 stories)
+#   Original E60 stories moved/superseded by new planning artifacts
+# - E62 preserved with retrospective entry added
+# - Epic areas: Notifications (E60-E61), AI/ML (E62-E63, E68, E71-E73), Performance (E64),
+#   Accessibility (E65-E66), UX (E67, E69), Scheduling (E70), Export/Integration (E74-E77),
+#   API/Plugin (E78-E82), Books/Audiobooks (E83-E88)
+# - Total new stories: ~195 across 29 epics
+# - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-03-29  # E58 retrospective completed
+last_updated: 2026-03-29  # Sprint planning refresh: E60-E88 (29 epics, ~200 stories)
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -637,6 +649,35 @@ development_status:
   59-8-e2e-tests-and-test-factory-updates: backlog
 
   # ──────────────────────────────────────────────────
+  # Epic 60: Smart Notification Triggers
+  # Source: epics-smart-notification-triggers.md
+  # Proactive notifications: knowledge decay, recommendations, milestones
+  # ──────────────────────────────────────────────────
+  epic-60: backlog
+  60-1-knowledge-decay-alert-trigger: backlog
+  60-2-content-recommendation-notification-handler: backlog
+  60-3-milestone-approaching-trigger: backlog
+  60-4-smart-triggers-preferences-panel: backlog
+  60-5-smart-trigger-unit-and-e2e-tests: backlog
+  epic-60-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 61: PWA Push Notifications
+  # Source: epics-e61-pwa-push-notifications.md
+  # Browser push via Service Worker + Supabase Edge Functions
+  # Depends on: E58 (notifications), E60 (smart triggers), E44-E49 (Supabase sync)
+  # ──────────────────────────────────────────────────
+  epic-61: in-progress
+  61-1-vapid-key-setup-and-service-worker-registration: ready-for-dev
+  61-2-service-worker-push-and-click-handlers: ready-for-dev
+  61-3-push-subscription-management-and-supabase-persistence: ready-for-dev
+  61-4-opt-in-flow-with-session-counting-and-pre-permission-dialog: ready-for-dev
+  61-5-supabase-edge-function-for-push-dispatch: ready-for-dev
+  61-6-push-settings-section-in-settings-page: ready-for-dev
+  61-7-eventbus-integration-and-e60-bridge: ready-for-dev
+  epic-61-retrospective: optional
+
+  # ──────────────────────────────────────────────────
   # Epic 62: FSRS Knowledge Scoring Integration
   # Source: epics-fsrs-knowledge-scoring.md
   # Connects FSRS stability estimates to Knowledge Map scoring
@@ -647,17 +688,366 @@ development_status:
   62-2-retention-gradient-treemap-and-decay-predictions-ui: backlog
   62-3-unit-tests-fsrs-retention-scoring: backlog
   62-4-e2e-tests-knowledge-map-fsrs-integration: backlog
+  epic-62-retrospective: optional
 
   # ──────────────────────────────────────────────────
-  # Epic 60: Research-Driven Enhancements
-  # Source: epics-research-driven-enhancements.md
-  # Competitive research (2026-03-29): Anki, Duolingo, RemNote, Coursera, Brilliant, Readwise
-  # S04 depends on: E59 (FSRS Migration)
+  # Epic 63: AI Tutor Learner Profile Context Injection
+  # Source: epics-ai-tutor-learner-profile.md
+  # Enriches AI tutor prompt with quiz/knowledge/flashcard/study data
+  # Depends on: E57 (AI Tutoring), soft deps on E52/E56/E59
   # ──────────────────────────────────────────────────
-  epic-60: backlog
-  60-1-streak-freeze-shield-mechanic: backlog
-  60-2-inline-flashcard-creation-from-tiptap-notes: backlog
-  60-3-daily-review-digest-screen: backlog
-  60-4-forgetting-curve-preview-widget: backlog
-  60-5-smart-notification-timing: backlog
-  60-6-weekly-learning-goals: backlog
+  epic-63: in-progress
+  63-1-learner-profile-data-aggregation-layer: ready-for-dev
+  63-2-token-aware-profile-formatter-and-orchestrator: ready-for-dev
+  63-3-prompt-builder-slot-5-integration: ready-for-dev
+  63-4-learner-profile-builder-unit-tests: ready-for-dev
+  epic-63-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 64: Performance Optimization
+  # Source: epics-performance-optimization.md
+  # Bundle size, lazy loading, IndexedDB compound indexes, pagination
+  # Target: LCP < 2.5s, FCP < 1.8s, initial load < 435 KB gz
+  # ──────────────────────────────────────────────────
+  epic-64: backlog
+  64-1-remove-ai-sdk-modulepreload-and-verify-lazy-loading-boundaries: backlog
+  64-2-conditional-seed-data-loading: backlog
+  64-3-bundle-size-baseline-and-regression-detection: backlog
+  64-4-indexeddb-compound-indexes-for-high-volume-tables: backlog
+  64-5-settings-page-lazy-loaded-tab-splitting: backlog
+  64-6-overview-dashboard-progressive-loading-and-data-batching: backlog
+  64-7-cursor-based-pagination-for-high-volume-tables: backlog
+  64-8-web-worker-minisearch-indexing: backlog
+  64-9-service-worker-precache-optimization: backlog
+  epic-64-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 65: Reading & Focus Modes
+  # Source: epics-accessibility-phase4-5.md
+  # Distraction-free reading and focused interaction modes
+  # Builds on: E30 (Accessibility), E51 (Display Settings)
+  # ──────────────────────────────────────────────────
+  epic-65: in-progress
+  65-1-core-reading-mode-chrome-hiding-and-content-layout: ready-for-dev
+  65-2-reading-mode-floating-toolbar-and-progress-bar: ready-for-dev
+  65-3-focus-mode-overlay-focus-trap-and-exit: ready-for-dev
+  65-4-focus-mode-auto-activation-and-notification-piercing: ready-for-dev
+  65-5-settings-integration-and-first-time-discovery: ready-for-dev
+  epic-65-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 66: WCAG 2.2 Compliance
+  # Source: epics-accessibility-phase4-5.md
+  # Upgrade from WCAG 2.1 AA to WCAG 2.2 AA + select AAA
+  # ──────────────────────────────────────────────────
+  epic-66: backlog
+  66-1-dragging-movement-alternatives: backlog
+  66-2-target-size-audit-and-fixes: backlog
+  66-3-focus-not-obscured: backlog
+  66-4-authentication-and-redundant-entry-audit: backlog
+  66-5-focus-indicator-enhancement-and-compliance-audit: backlog
+  66-6-wcag-2-2-compliance-report-and-automated-testing: backlog
+  epic-66-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 67: Bulk Selection and Batch Operations
+  # Source: epics-bulk-operations.md
+  # Multi-select, floating toolbar, batch delete/archive/export
+  # ──────────────────────────────────────────────────
+  epic-67: backlog
+  67-1-create-usebulkselection-hook: backlog
+  67-2-create-selectableitem-wrapper-component: backlog
+  67-3-create-floatingactiontoolbar-and-selectionmodeheader: backlog
+  67-4-bulk-delete-and-archive-with-confirmation-dialog: backlog
+  67-5-export-service-with-json-and-markdown-zip-bundling: backlog
+  67-6-integrate-bulk-operations-with-courses-page: backlog
+  67-7-integrate-bulk-operations-with-notes-tab: backlog
+  67-8-integrate-bulk-operations-with-bookmarks-list: backlog
+  epic-67-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 68: On-Device Embedding Optimization & Provider Abstraction
+  # Source: epics-on-device-embeddings.md
+  # Download progress UI, cache management, warm-up, provider abstraction
+  # ──────────────────────────────────────────────────
+  epic-68: in-progress
+  68-1-model-download-progress-ui: ready-for-dev
+  68-2-cache-api-validation-and-storage-management: ready-for-dev
+  68-3-embedding-worker-warm-up-strategy: ready-for-dev
+  68-4-embeddingprovider-abstraction-and-transformersjs-provider: ready-for-dev
+  68-5-openai-embedding-provider: ready-for-dev
+  68-6-fallback-chain-and-graceful-degradation: ready-for-dev
+  68-7-edge-case-hardening-and-cross-browser-resilience: ready-for-dev
+  epic-68-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 69: Storage Management Dashboard
+  # Source: epics-storage-management.md
+  # Storage visibility, per-course breakdown, cleanup actions
+  # ──────────────────────────────────────────────────
+  epic-69: in-progress
+  69-1-storage-estimation-service-and-overview-card: ready-for-dev
+  69-2-per-course-storage-table-with-sorting: ready-for-dev
+  69-3-cleanup-actions-with-confirmation-dialogs: ready-for-dev
+  epic-69-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 70: Smart Scheduling
+  # Source: epics-smart-scheduling.md
+  # Calendar-aware study time suggestions (3 tiers: ambient/on-demand/planner)
+  # Depends on: E50-S01, E59-S02, E58, E52
+  # ──────────────────────────────────────────────────
+  epic-70: in-progress
+  70-1-scheduling-types-and-free-busy-slot-merger: ready-for-dev
+  70-2-multi-signal-scoring-algorithm-and-productivity-heatmap: ready-for-dev
+  70-3-scheduling-store-and-suggestion-api: ready-for-dev
+  70-4-ambient-scheduling-nudges: ready-for-dev
+  70-5-find-study-time-button-and-slot-list: ready-for-dev
+  70-6-auto-schedule-greedy-allocation-engine: ready-for-dev
+  70-7-weekly-planner-view-with-auto-fill: ready-for-dev
+  epic-70-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 71: Knowledge Map Action Suggestions
+  # Source: epics-knowledge-map-action-suggestions.md
+  # Contextual action cards for declining topics
+  # Depends on: E56 (Knowledge Map)
+  # ──────────────────────────────────────────────────
+  epic-71: backlog
+  71-1-action-suggestion-data-layer: backlog
+  71-2-actioncard-and-suggestedactionspanel-ui-components: backlog
+  71-3-knowledge-map-integration-and-tests: backlog
+  epic-71-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 72: Conversation Memory (Learner Model)
+  # Source: epics-tutor-memory-modes.md
+  # Cross-session memory for AI tutor — misconceptions, strengths, mastery
+  # Depends on: E57 (AI Tutoring)
+  # ──────────────────────────────────────────────────
+  epic-72: backlog
+  72-1-learner-model-schema-and-crud-service: backlog
+  72-2-mode-tagged-messages-and-memory-transparency-ui: backlog
+  72-3-session-boundary-learner-model-update-pipeline: backlog
+  epic-72-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 73: Tutoring Modes (ELI5, Quiz Me, Debug)
+  # Source: epics-tutor-memory-modes.md
+  # Three new interactive tutoring modes + mode registry
+  # Depends on: E57 (AI Tutoring), E72 (Learner Model)
+  # ──────────────────────────────────────────────────
+  epic-73: backlog
+  73-1-mode-architecture-registry-budget-allocator-and-mode-switching: backlog
+  73-2-eli5-mode-simple-explanations-with-analogies: backlog
+  73-3-quiz-me-mode-adaptive-questioning-with-score-tracking: backlog
+  73-4-debug-my-understanding-mode-gap-analysis-with-traffic-light-feedback: backlog
+  73-5-conversation-history-and-session-continuity: backlog
+  epic-73-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 74: Notion Cloud Export
+  # Source: epics-notion-readwise-integration.md
+  # OAuth integration, notes/flashcards sync to Notion
+  # Depends on: E19 (Supabase Auth), E53 (PKM Export Phase 1)
+  # ──────────────────────────────────────────────────
+  epic-74: backlog
+  74-1-integration-foundation-and-sync-queue-infrastructure: backlog
+  74-2-notion-oauth-connection-and-token-management: backlog
+  74-3-export-mapping-configuration-ui: backlog
+  74-4-notion-notes-and-flashcards-data-mapping-and-sync: backlog
+  74-5-notion-sync-progress-ui-and-error-recovery: backlog
+  epic-74-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 75: Readwise Cloud Export
+  # Source: epics-notion-readwise-integration.md
+  # Token-based auth, highlights/bookmarks sync to Readwise
+  # Depends on: E74-S01 (shared integration foundation)
+  # ──────────────────────────────────────────────────
+  epic-75: backlog
+  75-1-readwise-token-authentication-and-connection: backlog
+  75-2-readwise-export-mapping-configuration: backlog
+  75-3-readwise-highlights-and-bookmarks-sync: backlog
+  75-4-readwise-sync-progress-ui-and-error-recovery: backlog
+  epic-75-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 76: Email Digest Notifications
+  # Source: epics-email-digest.md
+  # Weekly learning progress emails via Supabase Edge Functions + Resend
+  # Depends on: E44-E49 (Supabase sync)
+  # ──────────────────────────────────────────────────
+  epic-76: backlog
+  76-1-email-digest-schema-migration: backlog
+  76-2-weekly-digest-data-aggregation-function: backlog
+  76-3-react-email-weekly-digest-template: backlog
+  76-4-send-weekly-digest-edge-function: backlog
+  76-5-unsubscribe-edge-function-and-pg-cron-schedule: backlog
+  76-6-email-digest-preferences-ui: backlog
+  76-7-send-test-email-integration: backlog
+  epic-76-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 77: Google Drive Backup & Restore
+  # Source: epics-google-drive-backup.md
+  # Premium feature: backup IndexedDB to Google Drive, restore from backup
+  # Depends on: E35 (Premium Entitlement), E19 (Supabase Auth)
+  # ──────────────────────────────────────────────────
+  epic-77: backlog
+  77-1-google-oauth-connection-and-premium-gate: backlog
+  77-2-google-drive-service-layer: backlog
+  77-3-manual-backup-to-google-drive: backlog
+  77-4-import-service-with-schema-migration: backlog
+  77-5-restore-flow-with-backup-history: backlog
+  77-6-scheduled-automatic-backups: backlog
+  77-7-storage-management-and-backup-cleanup: backlog
+  epic-77-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 78: Plugin Foundation (MVP)
+  # Source: epics-api-plugin-system.md
+  # Plugin manifest, lifecycle manager, settings UI, data hooks, sample plugin
+  # ──────────────────────────────────────────────────
+  epic-78: backlog
+  78-1-plugin-manifest-schema-and-validation: backlog
+  78-2-plugin-manager-and-lifecycle-state-machine: backlog
+  78-3-plugin-settings-ui-and-management-panel: backlog
+  78-4-pluginslot-component-with-error-boundary-and-health-monitoring: backlog
+  78-5-plugin-data-access-hooks-and-eventbus-extension: backlog
+  78-6-sample-plugin-daily-learning-quote-widget: backlog
+  78-7-knowlune-plugin-types-package: backlog
+  epic-78-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 79: Plugin Ecosystem Expansion
+  # Source: epics-api-plugin-system.md
+  # Custom routes, sidebar injection, lazy loading, scaffold CLI, hot reload, test utils
+  # Depends on: E78 (Plugin Foundation)
+  # ──────────────────────────────────────────────────
+  epic-79: backlog
+  79-1-custom-page-route-injection: backlog
+  79-2-sidebar-navigation-injection: backlog
+  79-3-lazy-load-plugins-on-activation-events: backlog
+  79-4-plugin-scaffold-cli: backlog
+  79-5-plugin-hot-reload-in-dev-mode: backlog
+  79-6-plugin-test-utilities-package: backlog
+  epic-79-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 80: Personal API & Token Management
+  # Source: epics-api-plugin-system.md
+  # API token generation, REST endpoints, rate limiting
+  # Depends on: E19 (Supabase Auth)
+  # ──────────────────────────────────────────────────
+  epic-80: backlog
+  80-1-api-token-generation-and-management-ui: backlog
+  80-2-rest-api-endpoints-with-bearer-auth: backlog
+  80-3-api-rate-limiting: backlog
+  epic-80-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 81: Webhook Event System
+  # Source: epics-api-plugin-system.md
+  # Webhook registration, retry with exponential backoff
+  # Depends on: E80 (API & Tokens)
+  # ──────────────────────────────────────────────────
+  epic-81: backlog
+  81-1-webhook-registration-and-management: backlog
+  81-2-webhook-retry-with-exponential-backoff: backlog
+  epic-81-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 82: Plugin Discovery & Ecosystem Maturity
+  # Source: epics-api-plugin-system.md
+  # In-app plugin browser, community registry, xAPI events
+  # Depends on: E78-E79 (Plugin Foundation + Expansion)
+  # ──────────────────────────────────────────────────
+  epic-82: backlog
+  82-1-in-app-plugin-browser: backlog
+  82-2-plugin-registry-and-community-submission: backlog
+  82-3-xapi-event-emission: backlog
+  epic-82-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 83: Book Library and Import
+  # Source: epics-books-audiobooks-library.md
+  # EPUB import, OPFS storage, library grid/list, search/filter, metadata
+  # ──────────────────────────────────────────────────
+  epic-83: in-progress
+  83-1-opfs-storage-service-and-book-data-model: ready-for-dev
+  83-2-epub-import-with-metadata-extraction: ready-for-dev
+  83-3-library-grid-and-list-views: ready-for-dev
+  83-4-library-search-filter-and-status-management: ready-for-dev
+  83-5-book-metadata-editor: ready-for-dev
+  83-6-book-deletion-with-opfs-cleanup: ready-for-dev
+  83-7-storage-indicator: ready-for-dev
+  epic-83-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 84: EPUB Reader and Navigation
+  # Source: epics-books-audiobooks-library.md
+  # epub.js reader, page/chapter navigation, themes, position persistence
+  # Depends on: E83 (Book Library)
+  # ──────────────────────────────────────────────────
+  epic-84: backlog
+  84-1-epub-reader-with-epubjs-integration: backlog
+  84-2-page-navigation-and-table-of-contents: backlog
+  84-3-reading-themes-and-font-controls: backlog
+  84-4-reading-position-persistence-and-progress: backlog
+  epic-84-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 85: Highlights, Flashcards, and Reading Sessions
+  # Source: epics-books-audiobooks-library.md
+  # Text highlights, annotations, cloze flashcards, reading sessions
+  # Depends on: E84 (EPUB Reader)
+  # ──────────────────────────────────────────────────
+  epic-85: backlog
+  85-1-text-selection-and-highlight-creation: backlog
+  85-2-highlight-annotations-and-management: backlog
+  85-3-highlight-list-panel: backlog
+  85-4-cloze-deletion-flashcard-creator: backlog
+  85-5-flashcard-to-book-back-navigation: backlog
+  85-6-reading-session-tracking-and-streak-integration: backlog
+  epic-85-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 86: Reading Statistics and Highlight Review
+  # Source: epics-books-audiobooks-library.md
+  # Reading stats in reports, daily highlight review, cross-highlight search, PKM export
+  # Depends on: E85 (Highlights & Sessions)
+  # ──────────────────────────────────────────────────
+  epic-86: backlog
+  86-1-reading-statistics-in-reports-dashboard: backlog
+  86-2-daily-highlight-review-notifications: backlog
+  86-3-cross-highlight-search: backlog
+  86-4-pkm-export-for-book-highlights: backlog
+  epic-86-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 87: Audiobook Player
+  # Source: epics-books-audiobooks-library.md
+  # MP3 folder import, playback controls, speed/sleep, chapters, mini-player
+  # ──────────────────────────────────────────────────
+  epic-87: backlog
+  87-1-audiobook-import-and-data-model: backlog
+  87-2-audiobook-player-controls-and-playback: backlog
+  87-3-speed-control-and-sleep-timer: backlog
+  87-4-chapter-navigation-and-bookmarks: backlog
+  87-5-mini-player-and-media-session-integration: backlog
+  87-6-audiobook-session-tracking-and-streak: backlog
+  epic-87-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 88: OPDS Catalogs and Advanced Sources
+  # Source: epics-books-audiobooks-library.md
+  # OPDS catalog browsing, remote EPUB streaming, M4B import
+  # Depends on: E83 (Book Library), E87 (Audiobook Player)
+  # ──────────────────────────────────────────────────
+  epic-88: backlog
+  88-1-opds-catalog-connection: backlog
+  88-2-opds-catalog-browsing-and-import: backlog
+  88-3-remote-epub-streaming: backlog
+  88-4-m4b-audiobook-import: backlog
+  epic-88-retrospective: optional
