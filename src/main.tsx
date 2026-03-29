@@ -33,11 +33,7 @@ deferInit(async () => {
     { db },
     { migrateBookmarksFromLocalStorage },
     { buildCourseLookup, initializeSearchIndex },
-  ] = await Promise.all([
-    import('@/db'),
-    import('@/lib/bookmarks'),
-    import('@/lib/noteSearch'),
-  ])
+  ] = await Promise.all([import('@/db'), import('@/lib/bookmarks'), import('@/lib/noteSearch')])
 
   // Fire-and-forget: migrate any legacy localStorage bookmarks to IndexedDB
   migrateBookmarksFromLocalStorage()
