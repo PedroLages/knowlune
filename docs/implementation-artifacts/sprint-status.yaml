@@ -635,3 +635,29 @@ development_status:
   59-6-review-ui-again-button-and-keyboard-shortcuts: backlog
   59-7-unit-test-rewrite-for-fsrs-algorithm: backlog
   59-8-e2e-tests-and-test-factory-updates: backlog
+
+  # ──────────────────────────────────────────────────
+  # Epic 62: FSRS Knowledge Scoring Integration
+  # Source: epics-fsrs-knowledge-scoring.md
+  # Connects FSRS stability estimates to Knowledge Map scoring
+  # Depends on: E56 (Knowledge Map), E59 (FSRS Migration)
+  # ──────────────────────────────────────────────────
+  epic-62: backlog
+  62-1-fsrs-retention-aggregation-and-score-integration: backlog
+  62-2-retention-gradient-treemap-and-decay-predictions-ui: backlog
+  62-3-unit-tests-fsrs-retention-scoring: backlog
+  62-4-e2e-tests-knowledge-map-fsrs-integration: backlog
+
+  # ──────────────────────────────────────────────────
+  # Epic 60: Research-Driven Enhancements
+  # Source: epics-research-driven-enhancements.md
+  # Competitive research (2026-03-29): Anki, Duolingo, RemNote, Coursera, Brilliant, Readwise
+  # S04 depends on: E59 (FSRS Migration)
+  # ──────────────────────────────────────────────────
+  epic-60: backlog
+  60-1-streak-freeze-shield-mechanic: backlog
+  60-2-inline-flashcard-creation-from-tiptap-notes: backlog
+  60-3-daily-review-digest-screen: backlog
+  60-4-forgetting-curve-preview-widget: backlog
+  60-5-smart-notification-timing: backlog
+  60-6-weekly-learning-goals: backlog
