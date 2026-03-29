@@ -7,7 +7,7 @@ import { calculateNextReview, predictRetention, isDue } from '@/lib/spacedRepeti
 
 export interface FlashcardSessionSummary {
   totalReviewed: number
-  ratings: { hard: number; good: number; easy: number }
+  ratings: { again: number; hard: number; good: number; easy: number }
   nextReviewDate: string | null
 }
 
@@ -190,7 +190,7 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
 
   getSessionSummary: (): FlashcardSessionSummary => {
     const { sessionRatings, flashcards } = get()
-    const ratings = { hard: 0, good: 0, easy: 0 }
+    const ratings = { again: 0, hard: 0, good: 0, easy: 0 }
     for (const r of sessionRatings) {
       ratings[r]++
     }

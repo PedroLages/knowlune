@@ -468,17 +468,28 @@ export interface NotificationPreferences {
   updatedAt: string // ISO 8601
 }
 
-export type ReviewRating = 'hard' | 'good' | 'easy'
+export type ReviewRating = 'again' | 'hard' | 'good' | 'easy'
+
+/**
+ * FSRS card state machine:
+ * 0 = New, 1 = Learning, 2 = Review, 3 = Relearning
+ */
+export type CardState = 0 | 1 | 2 | 3
 
 export interface ReviewRecord {
   id: string // UUID
   noteId: string // FK to Note.id
   rating: ReviewRating // Last rating given
-  reviewedAt: string // ISO 8601 — when last reviewed
-  nextReviewAt: string // ISO 8601 — when next review is due
-  interval: number // Days until next review
-  easeFactor: number // SM-2 ease factor (starts at 2.5, min 1.3)
-  reviewCount: number // Cumulative number of reviews
+  // FSRS scheduling fields (replaces SM-2 easeFactor/interval/reviewCount)
+  stability: number // FSRS memory stability (days) — higher = slower forgetting
+  difficulty: number // FSRS difficulty (0-10) — higher = harder card
+  reps: number // Cumulative successful reviews
+  lapses: number // Times card was forgotten (rated "Again" from Review state)
+  state: CardState // FSRS state machine: 0=New, 1=Learning, 2=Review, 3=Relearning
+  elapsed_days: number // Days since last review
+  scheduled_days: number // Days until next review (as scheduled)
+  due: string // ISO 8601 — when next review is due
+  last_review?: string // ISO 8601 — when last reviewed (undefined = never reviewed)
 }
 
 export interface Flashcard {
@@ -487,13 +498,17 @@ export interface Flashcard {
   noteId?: string // Optional: provenance from note (for traceability)
   front: string // Question / prompt text
   back: string // Answer text
-  // Embedded SM-2 fields — self-contained, no join needed
-  interval: number // Days until next review (default 0)
-  easeFactor: number // SM-2 ease factor (default 2.5, min 1.3)
-  reviewCount: number // Cumulative reviews (default 0)
+  // Embedded FSRS fields — self-contained, no join needed
+  stability: number // FSRS memory stability (days) — default 0
+  difficulty: number // FSRS difficulty (0-10) — default 0
+  reps: number // Cumulative successful reviews — default 0
+  lapses: number // Times card was forgotten — default 0
+  state: CardState // FSRS state machine: 0=New, 1=Learning, 2=Review, 3=Relearning — default 0
+  elapsed_days: number // Days since last review — default 0
+  scheduled_days: number // Days until next review (as scheduled) — default 0
+  due: string // ISO 8601 — when next review is due
+  last_review?: string // ISO 8601 — when last reviewed (undefined = never)
   lastRating?: ReviewRating // Most recent rating
-  reviewedAt?: string // ISO 8601 — when last reviewed (undefined = never)
-  nextReviewAt?: string // ISO 8601 — when next review is due (undefined = immediately due)
   createdAt: string // ISO 8601
   updatedAt: string // ISO 8601
 }
