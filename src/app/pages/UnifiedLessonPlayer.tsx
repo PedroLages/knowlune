@@ -13,6 +13,7 @@
  * @see E89-S05
  */
 
+import { useState, useEffect } from 'react'
 import { useParams } from 'react-router'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -36,6 +37,19 @@ export function UnifiedLessonPlayer() {
   const course = importedCourses.find(c => c.id === courseId)
 
   const isDesktop = useIsDesktop()
+
+  // Resolve lesson title from adapter's lesson list (not raw UUID)
+  const [lessonTitle, setLessonTitle] = useState('Lesson')
+  useEffect(() => {
+    if (!adapter || !lessonId) return
+    let ignore = false
+    adapter.getLessons().then(lessons => {
+      if (ignore) return
+      const match = lessons.find(l => l.id === lessonId)
+      setLessonTitle(match?.title ?? 'Lesson')
+    })
+    return () => { ignore = true }
+  }, [adapter, lessonId])
 
   // Session tracking (AC5): start on mount, pause/resume on idle, end on leave
   useSessionTracking(courseId, lessonId, 'video')
@@ -82,14 +96,6 @@ export function UnifiedLessonPlayer() {
   const source = adapter.getSource()
   const capabilities = adapter.getCapabilities()
   const isYouTube = source === 'youtube'
-
-  // Determine lesson title from course videos (available from store)
-  const lessonTitle = course
-    ? (() => {
-        // Find in imported courses store to get video filename
-        return lessonId || 'Lesson'
-      })()
-    : 'Lesson'
 
   const videoContent = isYouTube ? (
     <YouTubeVideoContent courseId={courseId!} lessonId={lessonId!} />

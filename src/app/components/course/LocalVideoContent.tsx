@@ -26,6 +26,9 @@ interface LocalVideoContentProps {
 }
 
 export function LocalVideoContent({ courseId, lessonId }: LocalVideoContentProps) {
+  // NOTE: Video loading from Dexie is duplicated between LocalVideoContent and
+  // YouTubeVideoContent. This is intentional for now — will be extracted into a
+  // shared hook in S07 when both components are consolidated.
   const [video, setVideo] = useState<ImportedVideo | null | undefined>(undefined)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [dexieLoading, setDexieLoading] = useState(false)

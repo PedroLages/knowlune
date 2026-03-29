@@ -33,6 +33,9 @@ interface YouTubeVideoContentProps {
 export function YouTubeVideoContent({ courseId, lessonId }: YouTubeVideoContentProps) {
   const isOnline = useOnlineStatus()
 
+  // NOTE: Video loading from Dexie is duplicated between YouTubeVideoContent and
+  // LocalVideoContent. This is intentional for now — will be extracted into a
+  // shared hook in S07 when both components are consolidated.
   const [video, setVideo] = useState<ImportedVideo | null | undefined>(undefined)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [dexieLoading, setDexieLoading] = useState(false)
@@ -78,10 +81,14 @@ export function YouTubeVideoContent({ courseId, lessonId }: YouTubeVideoContentP
 
   const currentStatus = getItemStatus(courseId, lessonId)
 
-  const handleAutoComplete = useCallback(() => {
+  const handleAutoComplete = useCallback(async () => {
     if (currentStatus !== 'completed') {
-      setItemStatus(courseId, lessonId, 'completed', [])
-      toast.success('Lesson auto-completed (>90% watched)')
+      try {
+        await setItemStatus(courseId, lessonId, 'completed', [])
+        toast.success('Lesson auto-completed (>90% watched)')
+      } catch {
+        toast.error('Failed to update completion status')
+      }
     }
   }, [courseId, lessonId, currentStatus, setItemStatus])
 
@@ -212,7 +219,8 @@ export function YouTubeVideoContent({ courseId, lessonId }: YouTubeVideoContentP
         </div>
       </div>
 
-      {/* Transcript panel */}
+      {/* Transcript panel — nested inside YouTubeVideoContent for now.
+          Will be lifted to the UnifiedLessonPlayer side panel in S07. */}
       <aside
         className="lg:w-80 xl:w-96 shrink-0 lg:max-h-[calc(100vh-10rem)] max-h-80"
         aria-label="Video transcript"
