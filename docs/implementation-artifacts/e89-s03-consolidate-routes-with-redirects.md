@@ -48,11 +48,16 @@ so that I have consistent, predictable URLs regardless of course source.
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- Created `UnifiedCourseDetail` and `UnifiedLessonPlayer` as thin delegation wrappers using `useCourseAdapter` to detect course source and render the appropriate existing component
+- Added 4 redirect components (`ImportedCourseRedirect`, `ImportedLessonRedirect`, `YouTubeCourseRedirect`, `YouTubeLessonRedirect`) following the existing `InstructorProfileRedirect` pattern with `<Navigate replace />`
+- All redirect components include `// TODO: Remove redirect after Epic E91+` comments (AC5)
+- Quiz sub-routes at `courses/:courseId/lessons/:lessonId/quiz/*` placed before the unified routes to ensure more specific paths match first
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- Updated 14 E2E spec files to use new `/courses/` URL patterns
+- Unit tests for ImportedCourseDetail and ImportedLessonPlayer updated with new route paths
+- Verified zero occurrences of `/imported-courses/` or `/youtube-courses/` in non-redirect `.tsx` files (AC3)
 
 ## Pre-Review Checklist
 
@@ -78,4 +83,6 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Unused lazy imports after route refactoring**: When replacing direct route components with redirect components, the original `React.lazy()` imports for `ImportedCourseDetail`, `ImportedLessonPlayer`, `YouTubeCourseDetail`, and `YouTubeLessonPlayer` were left in routes.tsx but no longer referenced in JSX. TypeScript caught these as TS6133 errors during pre-review. Pattern: when replacing route components with redirects, always remove the corresponding lazy imports.
+- **Formatter-driven diffs in adapter layer**: Prettier reformatted the `courseAdapter.ts` and `useCourseAdapter.ts` files significantly (trailing commas, arrow function parens, line wrapping) despite minimal functional changes. This inflated the diff from ~10 functional lines to ~50 lines. Worth noting for future reviews that large diffs in these files may be formatting-only.
+- **Pre-existing unit test failures**: 5 test files (settings, isPremium, Authors, AtRiskBadge, VideoReorderList) have pre-existing failures unrelated to this branch. The 2 failures in ImportedCourseDetail.test.tsx (testid content assertions) are also pre-existing -- the branch actually fixed 2 additional URL-related failures in that file.
