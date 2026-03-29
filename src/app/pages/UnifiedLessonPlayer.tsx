@@ -56,7 +56,10 @@ export function UnifiedLessonPlayer() {
   const isDesktop = useIsDesktop()
 
   // Lesson navigation: prev/next lesson via adapter
-  const { prevLesson, nextLesson, currentIndex, totalLessons } = useLessonNavigation(adapter, lessonId)
+  const { prevLesson, nextLesson, currentIndex, totalLessons } = useLessonNavigation(
+    adapter,
+    lessonId
+  )
 
   // Auto-advance state: shown when video ends and a next lesson exists
   const [showAutoAdvance, setShowAutoAdvance] = useState(false)

@@ -51,7 +51,8 @@ export function useLessonNavigation(
 
   const currentIndex = lessonId ? lessons.findIndex(l => l.id === lessonId) : -1
   const prevLesson = currentIndex > 0 ? lessons[currentIndex - 1] : null
-  const nextLesson = currentIndex >= 0 && currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null
+  const nextLesson =
+    currentIndex >= 0 && currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null
 
   return {
     prevLesson,

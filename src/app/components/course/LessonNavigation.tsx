@@ -54,16 +54,10 @@ export function LessonNavigation({
         onClick={handlePrev}
         disabled={!prevLesson}
         className="gap-1.5 max-w-[45%]"
-        aria-label={
-          prevLesson
-            ? `Previous: ${prevLesson.title}`
-            : 'No previous lesson'
-        }
+        aria-label={prevLesson ? `Previous: ${prevLesson.title}` : 'No previous lesson'}
       >
         <ChevronLeft className="size-4 shrink-0" aria-hidden="true" />
-        <span className="truncate text-xs">
-          {prevLesson ? prevLesson.title : 'Previous'}
-        </span>
+        <span className="truncate text-xs">{prevLesson ? prevLesson.title : 'Previous'}</span>
       </Button>
 
       <span className="text-xs text-muted-foreground tabular-nums shrink-0">
@@ -76,15 +70,9 @@ export function LessonNavigation({
         onClick={handleNext}
         disabled={!nextLesson}
         className="gap-1.5 max-w-[45%]"
-        aria-label={
-          nextLesson
-            ? `Next: ${nextLesson.title}`
-            : 'No next lesson'
-        }
+        aria-label={nextLesson ? `Next: ${nextLesson.title}` : 'No next lesson'}
       >
-        <span className="truncate text-xs">
-          {nextLesson ? nextLesson.title : 'Next'}
-        </span>
+        <span className="truncate text-xs">{nextLesson ? nextLesson.title : 'Next'}</span>
         <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
       </Button>
     </nav>
