@@ -438,7 +438,9 @@ export async function persistScannedCourse(
   // Post-persist verification — ensure data actually landed in IndexedDB
   const persisted = await db.importedCourses.get(course.id)
   if (!persisted) {
-    console.error('[Import] Post-persist verification failed: course not found in DB after transaction')
+    console.error(
+      '[Import] Post-persist verification failed: course not found in DB after transaction'
+    )
     toast.error(`Import of "${course.name}" failed silently. Please try again.`)
     throw new Error('Post-persist verification failed')
   }

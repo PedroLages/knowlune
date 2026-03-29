@@ -422,7 +422,11 @@ export function Layout() {
             className={`${sidebarCollapsed ? 'w-[72px] px-0 py-6' : 'w-[220px] p-6'} bg-card flex flex-col overflow-hidden transition-[width] duration-200 ease-out h-full`}
             aria-label="Sidebar"
           >
-            <SidebarContent iconOnly={sidebarCollapsed} visibleGroups={visibleGroups} hiddenItemCount={hiddenItemCount} />
+            <SidebarContent
+              iconOnly={sidebarCollapsed}
+              visibleGroups={visibleGroups}
+              hiddenItemCount={hiddenItemCount}
+            />
           </aside>
 
           {/* Edge notch toggle */}

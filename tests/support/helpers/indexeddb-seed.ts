@@ -265,4 +265,3 @@ export async function seedQuizAttempts(
 ): Promise<void> {
   await seedIndexedDBStore(page, 'ElearningDB', 'quizAttempts', attempts)
 }
-

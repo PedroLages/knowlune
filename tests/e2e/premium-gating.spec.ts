@@ -148,7 +148,7 @@ test.describe('Premium Gating — Trial User', () => {
       .or(preview)
       .isVisible()
       .catch(() => false)
-    // eslint-disable-next-line no-console -- diagnostic assertion
+     
     console.log(`Trial user gate visible: ${isGated}`)
   })
 
@@ -186,7 +186,7 @@ test.describe('Premium Gating — Trial User', () => {
     const trialBadge = page.getByLabel(/free trial/i)
     // Allow for the badge to not appear if Supabase validation overrides cache
     const badgeVisible = await trialBadge.isVisible({ timeout: 3000 }).catch(() => false)
-    // eslint-disable-next-line no-console -- diagnostic
+     
     console.log(`Trial badge visible: ${badgeVisible}`)
   })
 })
@@ -230,7 +230,7 @@ test.describe('Premium Gating — Premium User', () => {
       .or(preview)
       .isVisible({ timeout: 3000 })
       .catch(() => false)
-    // eslint-disable-next-line no-console -- diagnostic
+     
     console.log(`Premium user gate visible: ${isGated}`)
   })
 })
@@ -294,7 +294,7 @@ test.describe('Premium Gating — Stale Entitlement Cache', () => {
     // (depends on whether server validation overrides)
     const gate = page.getByTestId('premium-gate-cta')
     const isGated = await gate.isVisible({ timeout: 5000 }).catch(() => false)
-    // eslint-disable-next-line no-console -- diagnostic
+     
     console.log(`Stale cache gate visible: ${isGated}`)
   })
 })

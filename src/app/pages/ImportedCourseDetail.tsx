@@ -432,13 +432,19 @@ export function ImportedCourseDetail() {
             <li key={folder || 'root'}>
               <Collapsible defaultOpen>
                 <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm font-medium text-foreground group/folder">
-                  <FolderOpen className="size-4 text-muted-foreground shrink-0" aria-hidden="true" />
+                  <FolderOpen
+                    className="size-4 text-muted-foreground shrink-0"
+                    aria-hidden="true"
+                  />
                   <span className="flex-1 text-left">{folder || 'General'}</span>
                   <span className="text-xs text-muted-foreground">
                     {folderVideos.length} {folderVideos.length === 1 ? 'video' : 'videos'}
                     {totalDuration > 0 && ` · ${formatDuration(totalDuration)}`}
                   </span>
-                  <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-[state=open]/folder:rotate-180" aria-hidden="true" />
+                  <ChevronDown
+                    className="size-4 text-muted-foreground transition-transform group-data-[state=open]/folder:rotate-180"
+                    aria-hidden="true"
+                  />
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <ul className="flex flex-col gap-2 mt-1 ml-2 pl-4 border-l border-border/50">

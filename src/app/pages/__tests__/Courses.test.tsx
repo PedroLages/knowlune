@@ -391,5 +391,4 @@ describe('Courses page', () => {
       expect(screen.getByLabelText('Sort courses')).toBeInTheDocument()
     })
   })
-
 })

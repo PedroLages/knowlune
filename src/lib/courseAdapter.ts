@@ -8,12 +8,7 @@
  * Architecture: docs/planning-artifacts/bmad-architecture-course-unification-ai-models.md § A1
  */
 
-import type {
-  ImportedCourse,
-  ImportedVideo,
-  ImportedPdf,
-  CourseSource,
-} from '@/data/types'
+import type { ImportedCourse, ImportedVideo, ImportedPdf, CourseSource } from '@/data/types'
 import { db } from '@/db'
 
 // ---------------------------------------------------------------------------
@@ -70,7 +65,7 @@ export class LocalCourseAdapter implements CourseAdapter {
   constructor(
     private course: ImportedCourse,
     private videos: ImportedVideo[],
-    private pdfs: ImportedPdf[],
+    private pdfs: ImportedPdf[]
   ) {}
 
   getCourse(): ImportedCourse {
@@ -82,7 +77,7 @@ export class LocalCourseAdapter implements CourseAdapter {
   }
 
   async getLessons(): Promise<LessonItem[]> {
-    const videoLessons: LessonItem[] = this.videos.map((v) => ({
+    const videoLessons: LessonItem[] = this.videos.map(v => ({
       id: v.id,
       title: v.filename,
       type: 'video' as const,
@@ -97,7 +92,7 @@ export class LocalCourseAdapter implements CourseAdapter {
       },
     }))
 
-    const pdfLessons: LessonItem[] = this.pdfs.map((p) => ({
+    const pdfLessons: LessonItem[] = this.pdfs.map(p => ({
       id: p.id,
       title: p.filename,
       type: 'pdf' as const,
@@ -127,7 +122,7 @@ export class LocalCourseAdapter implements CourseAdapter {
    */
   async getMediaUrl(lessonId: string): Promise<string | null> {
     // Check videos first
-    const video = this.videos.find((v) => v.id === lessonId)
+    const video = this.videos.find(v => v.id === lessonId)
     if (video?.fileHandle) {
       try {
         const permission = await video.fileHandle.queryPermission({
@@ -148,7 +143,7 @@ export class LocalCourseAdapter implements CourseAdapter {
     }
 
     // Check PDFs
-    const pdf = this.pdfs.find((p) => p.id === lessonId)
+    const pdf = this.pdfs.find(p => p.id === lessonId)
     if (pdf?.fileHandle) {
       try {
         const permission = await pdf.fileHandle.queryPermission({
@@ -226,7 +221,7 @@ export class LocalCourseAdapter implements CourseAdapter {
 export class YouTubeCourseAdapter implements CourseAdapter {
   constructor(
     private course: ImportedCourse,
-    private videos: ImportedVideo[],
+    private videos: ImportedVideo[]
   ) {}
 
   getCourse(): ImportedCourse {
@@ -239,7 +234,7 @@ export class YouTubeCourseAdapter implements CourseAdapter {
 
   async getLessons(): Promise<LessonItem[]> {
     return this.videos
-      .map((v) => ({
+      .map(v => ({
         id: v.id,
         title: v.filename,
         type: 'video' as const,
@@ -258,13 +253,13 @@ export class YouTubeCourseAdapter implements CourseAdapter {
   }
 
   async getMediaUrl(lessonId: string): Promise<string | null> {
-    const video = this.videos.find((v) => v.id === lessonId)
+    const video = this.videos.find(v => v.id === lessonId)
     if (!video?.youtubeVideoId) return null
     return `https://www.youtube.com/embed/${video.youtubeVideoId}`
   }
 
   async getTranscript(lessonId: string): Promise<string | null> {
-    const video = this.videos.find((v) => v.id === lessonId)
+    const video = this.videos.find(v => v.id === lessonId)
     if (!video?.youtubeVideoId) return null
 
     // YouTube transcripts stored in youtubeTranscripts table
@@ -325,7 +320,7 @@ export class YouTubeCourseAdapter implements CourseAdapter {
 export function createCourseAdapter(
   course: ImportedCourse,
   videos: ImportedVideo[],
-  pdfs: ImportedPdf[],
+  pdfs: ImportedPdf[]
 ): CourseAdapter {
   if (course.source === 'youtube') {
     return new YouTubeCourseAdapter(course, videos)
@@ -338,21 +333,13 @@ export function createCourseAdapter(
  * Load course data from Dexie and create the appropriate adapter.
  * Convenience function for non-hook contexts.
  */
-export async function loadCourseAdapter(
-  courseId: string,
-): Promise<CourseAdapter | null> {
+export async function loadCourseAdapter(courseId: string): Promise<CourseAdapter | null> {
   const course = await db.importedCourses.get(courseId)
   if (!course) return null
 
-  const videos = await db.importedVideos
-    .where('courseId')
-    .equals(courseId)
-    .toArray()
+  const videos = await db.importedVideos.where('courseId').equals(courseId).toArray()
 
-  const pdfs = await db.importedPdfs
-    .where('courseId')
-    .equals(courseId)
-    .toArray()
+  const pdfs = await db.importedPdfs.where('courseId').equals(courseId).toArray()
 
   return createCourseAdapter(course, videos, pdfs)
 }

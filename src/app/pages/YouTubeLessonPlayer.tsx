@@ -393,10 +393,7 @@ export function YouTubeLessonPlayer() {
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
             <p>No YouTube video ID found for this lesson.</p>
-            <Link
-              to={`/courses/${courseId}`}
-              className="text-sm text-brand hover:underline"
-            >
+            <Link to={`/courses/${courseId}`} className="text-sm text-brand hover:underline">
               Back to Course
             </Link>
           </div>

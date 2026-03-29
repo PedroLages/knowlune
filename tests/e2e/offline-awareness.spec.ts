@@ -73,5 +73,4 @@ test.describe('Offline Awareness', () => {
       timeout: TIMEOUTS.NETWORK,
     })
   })
-
 })

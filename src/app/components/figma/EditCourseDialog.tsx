@@ -174,7 +174,11 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
           <DialogDescription>Update course details or reorder videos.</DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex-1 flex flex-col min-h-0"
+        >
           <TabsList className="w-full" data-testid="edit-course-tabs">
             <TabsTrigger value="details" data-testid="tab-details" className="flex-1">
               Details

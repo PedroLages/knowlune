@@ -75,10 +75,7 @@ function renderPlayer(courseId = 'course-1', lessonId = 'v1') {
   return render(
     <MemoryRouter initialEntries={[`/courses/${courseId}/lessons/${lessonId}`]}>
       <Routes>
-        <Route
-          path="/courses/:courseId/lessons/:lessonId"
-          element={<ImportedLessonPlayer />}
-        />
+        <Route path="/courses/:courseId/lessons/:lessonId" element={<ImportedLessonPlayer />} />
         <Route path="/courses/:courseId" element={<div>Course Detail</div>} />
       </Routes>
     </MemoryRouter>
