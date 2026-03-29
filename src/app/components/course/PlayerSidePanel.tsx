@@ -30,8 +30,11 @@ import {
 } from '@/lib/bookmarks'
 import { toastWithUndo, toastError } from '@/lib/toastHelpers'
 import type { CourseAdapter } from '@/lib/courseAdapter'
-import type { Note, VideoBookmark, TranscriptCue } from '@/data/types'
+import type { Note, VideoBookmark, TranscriptCue, CourseSource } from '@/data/types'
 import { db } from '@/db/schema'
+
+/** Source type constant to avoid magic strings when checking adapter source. */
+const YOUTUBE_SOURCE: CourseSource = 'youtube'
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -114,23 +117,55 @@ interface TranscriptTabProps {
 function TranscriptTab({ courseId, lessonId, adapter }: TranscriptTabProps) {
   const [cues, setCues] = useState<TranscriptCue[]>([])
   const [loadingState, setLoadingState] = useState<TranscriptLoadingState>('loading')
+
+  // currentTime is intentionally 0 — transcript highlighting will be wired
+  // when the video ref is lifted to a shared parent component (future work).
   const [currentTime] = useState(0)
 
+  // Single effect for transcript loading. For YouTube sources, prefer Dexie
+  // (richer cue data with timing) and fall back to adapter.getTranscript().
+  // For local sources, use adapter.getTranscript() only.
+  // Merging into one effect eliminates the race condition between two
+  // independent effects that both call setCues/setLoadingState.
   useEffect(() => {
     let cancelled = false
     setLoadingState('loading')
     setCues([])
 
-    adapter
-      .getTranscript(lessonId)
-      .then(transcriptText => {
+    const isYouTube = adapter.getSource() === YOUTUBE_SOURCE
+
+    const loadTranscript = async () => {
+      // YouTube: try Dexie first for richer cue data
+      if (isYouTube) {
+        try {
+          const video = await db.importedVideos.get(lessonId)
+          if (!cancelled && video?.youtubeVideoId) {
+            const transcript = await db.youtubeTranscripts
+              .where('[courseId+videoId]')
+              .equals([courseId, video.youtubeVideoId])
+              .first()
+
+            if (!cancelled && transcript?.status === 'done' && transcript.cues?.length) {
+              setCues(transcript.cues)
+              setLoadingState('ready')
+              return // Dexie had data — done
+            }
+          }
+        } catch {
+          // silent-catch-ok — fall through to adapter.getTranscript()
+        }
+      }
+
+      // Fallback (all sources): use adapter.getTranscript()
+      try {
+        const transcriptText = await adapter.getTranscript(lessonId)
         if (cancelled) return
+
         if (!transcriptText) {
           setLoadingState('empty')
           return
         }
 
-        // Parse VTT-style text into cues
         const parsed = parseTranscriptText(transcriptText)
         if (parsed.length === 0) {
           setLoadingState('empty')
@@ -139,43 +174,13 @@ function TranscriptTab({ courseId, lessonId, adapter }: TranscriptTabProps) {
 
         setCues(parsed)
         setLoadingState('ready')
-      })
-      .catch(() => {
+      } catch {
         // silent-catch-ok — error state handled by component
         if (!cancelled) setLoadingState('error')
-      })
-
-    return () => {
-      cancelled = true
+      }
     }
-  }, [adapter, lessonId])
 
-  // For YouTube transcripts stored as cue-formatted text, check Dexie directly
-  useEffect(() => {
-    if (adapter.getSource() !== 'youtube') return
-    let cancelled = false
-
-    // Load YouTube transcript cues from Dexie
-    db.importedVideos
-      .get(lessonId)
-      .then(async video => {
-        if (cancelled || !video?.youtubeVideoId) return
-
-        const transcript = await db.youtubeTranscripts
-          .where('[courseId+videoId]')
-          .equals([courseId, video.youtubeVideoId])
-          .first()
-
-        if (cancelled) return
-
-        if (transcript?.status === 'done' && transcript.cues?.length) {
-          setCues(transcript.cues)
-          setLoadingState('ready')
-        }
-      })
-      .catch(() => {
-        // silent-catch-ok — fallback to adapter text
-      })
+    loadTranscript()
 
     return () => {
       cancelled = true
@@ -399,39 +404,37 @@ export function PlayerSidePanel({ courseId, lessonId, adapter }: PlayerSidePanel
         return
       }
 
-      // If it's already VTT-formatted, create a blob URL
-      if (text.includes('-->')) {
-        // Revoke previous blob URL
-        if (transcriptBlobUrlRef.current) URL.revokeObjectURL(transcriptBlobUrlRef.current)
-        const blob = new Blob([text], { type: 'text/vtt' })
-        const url = URL.createObjectURL(blob)
-        transcriptBlobUrlRef.current = url
-        if (!cancelled) setTranscriptSrc(url)
-      } else {
-        // Plain text — wrap in VTT format for compatibility
-        if (transcriptBlobUrlRef.current) URL.revokeObjectURL(transcriptBlobUrlRef.current)
-        const vtt = `WEBVTT\n\n00:00:00.000 --> 99:59:59.999\n${text}`
-        const blob = new Blob([vtt], { type: 'text/vtt' })
-        const url = URL.createObjectURL(blob)
-        transcriptBlobUrlRef.current = url
-        if (!cancelled) setTranscriptSrc(url)
+      // Revoke previous blob URL before creating a new one
+      if (transcriptBlobUrlRef.current) {
+        URL.revokeObjectURL(transcriptBlobUrlRef.current)
+        transcriptBlobUrlRef.current = null
       }
+
+      // If it's already VTT-formatted, create a blob URL
+      const vttText = text.includes('-->')
+        ? text
+        : `WEBVTT\n\n00:00:00.000 --> 99:59:59.999\n${text}`
+
+      const blob = new Blob([vttText], { type: 'text/vtt' })
+      const url = URL.createObjectURL(blob)
+      transcriptBlobUrlRef.current = url
+      if (!cancelled) setTranscriptSrc(url)
     })
 
     return () => {
       cancelled = true
+      // Revoke blob URL on rapid lessonId changes to prevent memory leaks.
+      // The ref tracks the current URL so cleanup always revokes the correct one.
+      if (transcriptBlobUrlRef.current) {
+        URL.revokeObjectURL(transcriptBlobUrlRef.current)
+        transcriptBlobUrlRef.current = null
+      }
     }
   }, [adapter, lessonId])
 
-  // Cleanup blob URL on unmount
-  useEffect(() => {
-    return () => {
-      if (transcriptBlobUrlRef.current) URL.revokeObjectURL(transcriptBlobUrlRef.current)
-    }
-  }, [])
-
   return (
     <Tabs defaultValue="notes" className="flex flex-col h-full" data-testid="player-side-panel">
+      {/* Radix Tabs provides arrow-key navigation between triggers by default — no custom keyboard shortcuts needed. */}
       <TabsList className="w-full shrink-0 px-1">
         <TabsTrigger value="notes" className="text-xs">
           Notes
