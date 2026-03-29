@@ -218,7 +218,12 @@ export function Flashcards() {
       }
 
       if (isFlipped && !isRating) {
-        const ratingKeys: Record<string, ReviewRating> = { '1': 'hard', '2': 'good', '3': 'easy' }
+        const ratingKeys: Record<string, ReviewRating> = {
+          '1': 'again',
+          '2': 'hard',
+          '3': 'good',
+          '4': 'easy',
+        }
         const rating = ratingKeys[e.key]
         if (rating) {
           e.preventDefault()
@@ -438,7 +443,8 @@ export function Flashcards() {
 
   // ── Summary phase ──
   if (phase === 'summary' && summary) {
-    const totalRatings = summary.ratings.hard + summary.ratings.good + summary.ratings.easy
+    const totalRatings =
+      summary.ratings.again + summary.ratings.hard + summary.ratings.good + summary.ratings.easy
 
     return (
       <div className="mx-auto max-w-lg p-6">
@@ -484,6 +490,13 @@ export function Flashcards() {
                     Rating Distribution
                   </p>
                   <div className="space-y-1.5">
+                    <RatingBar
+                      label="Again"
+                      count={summary.ratings.again}
+                      total={totalRatings}
+                      className="bg-warning"
+                      testId="rating-again-count"
+                    />
                     <RatingBar
                       label="Hard"
                       count={summary.ratings.hard}

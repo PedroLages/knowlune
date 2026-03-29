@@ -205,7 +205,12 @@ export function InterleavedReview() {
       }
 
       if (isFlipped) {
-        const ratingKeys: Record<string, ReviewRating> = { '1': 'hard', '2': 'good', '3': 'easy' }
+        const ratingKeys: Record<string, ReviewRating> = {
+          '1': 'again',
+          '2': 'hard',
+          '3': 'good',
+          '4': 'easy',
+        }
         const rating = ratingKeys[e.key]
         if (rating) {
           e.preventDefault()
@@ -381,6 +386,9 @@ export function InterleavedReview() {
                 </kbd>
                 <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px]">
                   3
+                </kbd>
+                <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px]">
+                  4
                 </kbd>{' '}
                 to rate
               </>
