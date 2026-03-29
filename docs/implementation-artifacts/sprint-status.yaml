@@ -1067,7 +1067,7 @@ development_status:
   89-6-add-pdf-inline-viewer-to-unified-player: done
   89-7-add-notes-panel-to-unified-video-player: done
   89-8-add-prev-next-video-navigation-and-breadcrumbs: done
-  89-9-wire-quiz-system-to-unified-course-ids: backlog
+  89-9-wire-quiz-system-to-unified-course-ids: done
   89-10-fix-video-reorder-dialog-folder-grouping: backlog
   89-11-delete-old-page-components: backlog
   epic-89-retrospective: optional

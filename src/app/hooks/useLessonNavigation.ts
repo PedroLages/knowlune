@@ -37,18 +37,21 @@ export function useLessonNavigation(
     let ignore = false
     setLoading(true)
 
-    adapter.getLessons().then(items => {
-      if (!ignore) {
-        setLessons(items)
-        setLoading(false)
-      }
-    }).catch(err => {
-      console.error('Failed to load lessons for navigation:', err)
-      if (!ignore) {
-        setLessons([])
-        setLoading(false)
-      }
-    })
+    adapter
+      .getLessons()
+      .then(items => {
+        if (!ignore) {
+          setLessons(items)
+          setLoading(false)
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load lessons for navigation:', err)
+        if (!ignore) {
+          setLessons([])
+          setLoading(false)
+        }
+      })
 
     return () => {
       ignore = true
