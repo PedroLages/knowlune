@@ -22,6 +22,7 @@ import { useContentDensity } from '@/hooks/useContentDensity'
 import { MotionConfig } from 'motion/react'
 import { useAuthLifecycle } from '@/app/hooks/useAuthLifecycle'
 import { initNotificationService, destroyNotificationService } from '@/services/NotificationService'
+import { useNotificationPrefsStore } from '@/stores/useNotificationPrefsStore'
 
 // Register global error handlers (window.onerror, unhandledrejection)
 initErrorTracking()
@@ -64,6 +65,11 @@ export default function App() {
 
   // E43-S04: Auth lifecycle hook — session expiry detection, token refresh, settings hydration
   useAuthLifecycle()
+
+  // Load notification preferences before subscribing to domain events
+  useEffect(() => {
+    useNotificationPrefsStore.getState().init()
+  }, [])
 
   // E43-S07: Initialize notification service (subscribe to domain events)
   useEffect(() => {

@@ -25,6 +25,7 @@ export type AppEvent =
       achievementName: string
     }
   | { type: 'review:due'; dueCount: number }
+  | { type: 'srs:due'; dueCount: number }
 
 export type AppEventType = AppEvent['type']
 

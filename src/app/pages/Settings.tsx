@@ -64,6 +64,7 @@ import { QuizPreferencesForm } from '@/app/components/settings/QuizPreferencesFo
 import { AvatarCropDialog } from '@/app/components/ui/avatar-crop-dialog'
 import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
 import { EngagementPreferences } from '@/app/components/settings/EngagementPreferences'
+import { NotificationPreferencesPanel } from '@/app/components/settings/NotificationPreferencesPanel'
 import { DisplayAccessibilitySection } from '@/app/components/settings/DisplayAccessibilitySection'
 import { SubscriptionCard } from '@/app/components/settings/SubscriptionCard'
 import { AccountDeletion } from '@/app/components/settings/AccountDeletion'
@@ -931,6 +932,9 @@ export default function Settings() {
 
         {/* Reminders */}
         <ReminderSettings />
+
+        {/* Notification Preferences */}
+        <NotificationPreferencesPanel />
 
         {/* Per-Course Reminders */}
         <CourseReminderSettings />

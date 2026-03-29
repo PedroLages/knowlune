@@ -23,6 +23,7 @@ const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   'import-finished': 'Import Finished',
   'achievement-unlocked': 'Achievement',
   'review-due': 'Review Due',
+  'srs-due': 'SRS Due',
 }
 
 const ALL_TYPES: NotificationType[] = [
@@ -31,6 +32,7 @@ const ALL_TYPES: NotificationType[] = [
   'import-finished',
   'achievement-unlocked',
   'review-due',
+  'srs-due',
 ]
 
 type ReadFilter = 'all' | 'unread' | 'read'

@@ -429,6 +429,7 @@ export type NotificationType =
   | 'import-finished'
   | 'achievement-unlocked'
   | 'review-due'
+  | 'srs-due'
 
 export interface Notification {
   id: string // ULID (time-sortable, unique)
@@ -440,6 +441,24 @@ export interface Notification {
   dismissedAt: string | null
   actionUrl?: string // Deep link (e.g., '/courses/react-101')
   metadata?: Record<string, unknown>
+}
+
+// --- Notification Preferences ---
+
+export interface NotificationPreferences {
+  id: 'singleton' // Fixed PK — single-row config
+  // Per-type toggles (all default true)
+  courseComplete: boolean
+  streakMilestone: boolean
+  importFinished: boolean
+  achievementUnlocked: boolean
+  reviewDue: boolean
+  srsDue: boolean
+  // Quiet hours
+  quietHoursEnabled: boolean
+  quietHoursStart: string // "HH:MM" (24h format)
+  quietHoursEnd: string // "HH:MM" (24h format)
+  updatedAt: string // ISO 8601
 }
 
 export type ReviewRating = 'hard' | 'good' | 'easy'

@@ -29,6 +29,7 @@ import type {
   YouTubeTranscriptRecord,
   YouTubeCourseChapter,
   Notification,
+  NotificationPreferences,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA } from './checkpoint'
@@ -66,6 +67,7 @@ export type ElearningDatabase = Dexie & {
   youtubeTranscripts: Table<YouTubeTranscriptRecord> // compound PK: [courseId+videoId]
   youtubeChapters: EntityTable<YouTubeCourseChapter, 'id'>
   notifications: EntityTable<Notification, 'id'>
+  notificationPreferences: EntityTable<NotificationPreferences, 'id'>
 }
 
 /**
@@ -1003,6 +1005,44 @@ function _declareLegacyMigrations(database: Dexie): void {
     youtubeChapters: 'id, courseId, order',
     // NEW: Notifications table (local-only, sync skip-list)
     notifications: 'id, type, createdAt, readAt, dismissedAt',
+  })
+
+  // v29: Notification preferences (per-type toggles + quiet hours)
+  // - Single-row config table with fixed PK 'singleton'
+  // - No upgrade callback — fresh table with no existing data
+  database.version(29).stores({
+    // All existing v28 tables (must redeclare or Dexie deletes them)
+    importedCourses: 'id, name, importedAt, status, *tags, source',
+    importedVideos: 'id, courseId, filename, youtubeVideoId',
+    importedPdfs: 'id, courseId, filename',
+    progress: '[courseId+videoId], courseId, videoId',
+    bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+    screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+    contentProgress: '[courseId+itemId], courseId, itemId, status',
+    challenges: 'id, type, deadline, createdAt',
+    embeddings: 'noteId, createdAt',
+    courseThumbnails: 'courseId',
+    aiUsageEvents: 'id, featureType, timestamp, courseId',
+    reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+    courseReminders: 'id, courseId',
+    courses: 'id, category, difficulty, authorId',
+    quizzes: 'id, lessonId, createdAt',
+    quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+    videoCaptions: '[courseId+videoId], courseId, videoId',
+    authors: 'id, name, createdAt',
+    careerPaths: 'id',
+    pathEnrollments: 'id, pathId, status',
+    flashcards: 'id, courseId, noteId, nextReviewAt, createdAt',
+    entitlements: 'userId',
+    learningPaths: 'id, createdAt',
+    learningPathEntries: 'id, [pathId+courseId], pathId',
+    youtubeVideoCache: 'videoId, expiresAt',
+    youtubeTranscripts: '[courseId+videoId], courseId, videoId, status',
+    youtubeChapters: 'id, courseId, order',
+    notifications: 'id, type, createdAt, readAt, dismissedAt',
+    notificationPreferences: 'id',
   })
 } // end _declareLegacyMigrations
 
