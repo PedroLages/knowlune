@@ -20,7 +20,7 @@ export function SwissCourseCard({ course, completionPercent }: SwissCourseCardPr
   const firstLesson = course.modules[0]?.lessons[0]?.id
   const resumeLesson = progress.lastWatchedLesson ?? firstLesson
   const lessonLink = resumeLesson
-    ? `/courses/${course.id}/${resumeLesson}`
+    ? `/courses/${course.id}/lessons/${resumeLesson}`
     : `/courses/${course.id}`
 
   const imageSrc = course.coverImage ? `${course.coverImage}-640w.webp` : undefined

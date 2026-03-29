@@ -336,7 +336,7 @@ export function Notes() {
     if (note.timestamp != null) {
       params.set('t', String(note.timestamp))
     }
-    navigate(`/courses/${note.courseId}/${note.videoId}?${params.toString()}`)
+    navigate(`/courses/${note.courseId}/lessons/${note.videoId}?${params.toString()}`)
   }
 
   const renderNoteCard = (item: EnrichedNote) => {

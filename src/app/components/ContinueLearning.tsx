@@ -60,7 +60,7 @@ function resolveSessionData(
       course.totalLessons > 0
         ? Math.round((progress.completedLessons.length / course.totalLessons) * 100)
         : 0
-    const resumeLink = `/courses/${course.id}/${progress.lastWatchedLesson}?t=${progress.lastVideoPosition ?? 0}`
+    const resumeLink = `/courses/${course.id}/lessons/${progress.lastWatchedLesson}?t=${progress.lastVideoPosition ?? 0}`
 
     resolved.push({
       course,
