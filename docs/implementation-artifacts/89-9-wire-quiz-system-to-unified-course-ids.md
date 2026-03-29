@@ -1,9 +1,9 @@
 ---
 story_id: E89-S09
 story_name: "Wire Quiz System to Unified Course IDs"
-status: in-progress
+status: done
 started: 2026-03-29
-completed:
+completed: 2026-03-29
 reviewed: true
 review_started: 2026-03-29
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, code-review, code-review-testing, design-review-skipped, performance-benchmark-skipped, security-review, exploratory-qa-skipped]
