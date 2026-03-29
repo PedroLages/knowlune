@@ -39,6 +39,7 @@ import {
   AlertDialogTitle,
 } from '@/app/components/ui/alert-dialog'
 import { EditCourseDialog } from '@/app/components/figma/EditCourseDialog'
+import { CourseBreadcrumb } from '@/app/components/course/CourseBreadcrumb'
 import { CourseHeader } from '@/app/components/course/CourseHeader'
 import { CourseProgress } from '@/app/components/course/CourseProgress'
 import { AISummaryPanel } from '@/app/components/course/AISummaryPanel'
@@ -249,6 +250,8 @@ export function UnifiedCourseDetail() {
 
   return (
     <div data-testid="unified-course-detail" className="max-w-3xl mx-auto px-4 py-8">
+      <CourseBreadcrumb courseId={courseId!} courseName={course.name} />
+
       <CourseHeader
         course={course}
         isYouTube={isYouTube ?? false}

@@ -23,9 +23,11 @@ import type { ImportedVideo } from '@/data/types'
 interface LocalVideoContentProps {
   courseId: string
   lessonId: string
+  /** Called when the video playback ends (HTML5 ended event) */
+  onEnded?: () => void
 }
 
-export function LocalVideoContent({ courseId, lessonId }: LocalVideoContentProps) {
+export function LocalVideoContent({ courseId, lessonId, onEnded }: LocalVideoContentProps) {
   // NOTE: Video loading from Dexie is duplicated between LocalVideoContent and
   // YouTubeVideoContent. This is intentional for now — will be extracted into a
   // shared hook in S07 when both components are consolidated.
@@ -212,6 +214,7 @@ export function LocalVideoContent({ courseId, lessonId }: LocalVideoContentProps
       lessonId={lessonId}
       captions={userCaptions ? [userCaptions] : undefined}
       onLoadCaptions={handleLoadCaptions}
+      onEnded={onEnded}
     />
   )
 }
