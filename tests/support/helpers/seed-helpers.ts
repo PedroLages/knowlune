@@ -183,6 +183,14 @@ export async function seedVectorEmbeddings(
   await seedIndexedDBStore(page, DB_NAME, 'embeddings', embeddings)
 }
 
+/** Seed notifications into the notifications store. */
+export async function seedNotifications(
+  page: Page,
+  notifications: Record<string, unknown>[]
+): Promise<void> {
+  await seedIndexedDBStore(page, DB_NAME, 'notifications', notifications)
+}
+
 /** Seed authors into the authors store. */
 export async function seedAuthors(page: Page, authors: Record<string, unknown>[]): Promise<void> {
   await seedIndexedDBStore(page, DB_NAME, 'authors', authors)

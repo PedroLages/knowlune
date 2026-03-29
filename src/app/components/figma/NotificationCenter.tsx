@@ -217,7 +217,10 @@ export function NotificationCenter() {
             variant="ghost"
             size="sm"
             className="h-auto w-full px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground"
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              setOpen(false)
+              navigate('/notifications')
+            }}
           >
             View all notifications
           </Button>
