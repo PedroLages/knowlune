@@ -617,5 +617,5 @@ development_status:
   # Epic 58: Notifications Page
   # Source: E43 adversarial review C-03 (dead-end "View all" button)
   # ──────────────────────────────────────────────────
-  epic-58: in-progress
+  epic-58: done
   58-1-notifications-page: done

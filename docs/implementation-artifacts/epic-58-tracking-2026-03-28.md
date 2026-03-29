@@ -7,20 +7,24 @@ Last Updated: 2026-03-28
 
 | Story | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|--------|--------|---------------|--------------|
-| E58-S01 | queued | — | — | — |
+| E58-S01 | done | [#148](https://github.com/PedroLages/knowlune/pull/148) | 2 | 1 |
 
 ## Story Details
 
 ### E58-S01: Notifications Page
-**Status:** queued
+**Status:** done
 #### Errors
-_(none yet)_
+_(none)_
 #### Review Findings
-_(none yet)_
+- Round 1: 1 MEDIUM (duplicated icon mapping + relativeTime helper between Notifications.tsx and NotificationCenter.tsx)
+- Round 2: 0 issues — PASS
 #### Fixes Applied
-_(none yet)_
+- Extracted shared `notificationIcons`, `notificationIconColors`, `relativeTime()` to `src/lib/notifications.ts`
+- Fixed E2E test issues: wizard blocking, TTL deleting seeded data, ambiguous selectors
+- Fixed eslint-disable comment placement in test file
 #### Notes
-_(none yet)_
+- Design review skipped (no Playwright MCP browser available)
+- 3 pre-existing issues noted (unit test failures in isPremium.test.ts, Courses.test.tsx; ESLint warnings)
 
 ---
 
@@ -36,11 +40,12 @@ _(none yet)_
 | Retrospective | pending | — | — |
 
 ## Non-Issues (False Positives)
-_(none yet)_
+- [LOW] seedNotifications helper unused — intentionally kept as reusable convenience helper
+- [LOW] Notifications page doesn't call init() — NotificationCenter in Layout handles initialization
 
 ## Epic Summary
 - Started: 2026-03-28
 - Completed: --
 - Total Stories: 1
-- Total Review Rounds: --
-- Total Issues Fixed: --
+- Total Review Rounds: 2
+- Total Issues Fixed: 1
