@@ -15,8 +15,8 @@ import {
 } from '@/ai/learningPath/suggestPlacement'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
-import { db } from '@/db'
-import type { Course } from '@/data/types'
+// db import removed (E89-S01) — catalog courses table dropped
+// Course type import removed (E89-S01) — catalog courses table dropped
 
 /** State returned by the hook */
 export interface PathPlacementState {
@@ -92,15 +92,7 @@ export function usePathPlacementSuggestion(
           courseNames.set(ic.id, ic.name)
         }
 
-        // Also load catalog course names
-        try {
-          const catalogCourses: Course[] = await db.courses.toArray()
-          for (const cc of catalogCourses) {
-            courseNames.set(cc.id, cc.title)
-          }
-        } catch {
-          // silent-catch-ok: catalog may not be available
-        }
+        // Catalog courses table dropped (E89-S01) — no catalog course names to load
 
         // Build path contexts
         const pathContexts = paths.map(path => ({

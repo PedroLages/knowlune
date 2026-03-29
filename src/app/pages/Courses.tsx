@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card } from '@/app/components/ui/card'
 import { VirtualizedGrid } from '@/app/components/VirtualizedGrid'
 import { Input } from '@/app/components/ui/input'
@@ -10,22 +10,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/app/components/ui/select'
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from '@/app/components/ui/collapsible'
-import { CourseCard, categoryLabels } from '@/app/components/figma/CourseCard'
 import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { StatusFilter } from '@/app/components/figma/StatusFilter'
-import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
-import { Search, FolderOpen, BookOpen, ChevronDown, Youtube } from 'lucide-react'
-import { useCourseStore } from '@/stores/useCourseStore'
-import {
-  getCourseCompletionPercent,
-  getImportedCourseCompletionPercent,
-  getProgress,
-} from '@/lib/progress'
+import { Search, FolderOpen, BookOpen, Youtube } from 'lucide-react'
+import { getImportedCourseCompletionPercent } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
@@ -33,21 +21,13 @@ import { BulkImportDialog } from '@/app/components/figma/BulkImportDialog'
 import { YouTubeImportDialog } from '@/app/components/figma/YouTubeImportDialog'
 import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
-import { calculateAtRiskStatus } from '@/lib/atRisk'
 
-import { calculateCompletionEstimate } from '@/lib/completionEstimate'
 import type { LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
-import type { AtRiskStatus } from '@/lib/atRisk'
-import type { CompletionEstimate } from '@/lib/completionEstimate'
-
-const ESTIMATED_MINUTES_PER_LESSON = 15
-const COLLAPSE_KEY = 'knowlune:sample-courses-collapsed'
 
 type SortMode = 'recent' | 'momentum'
 
 export function Courses() {
-  const allCourses = useCourseStore(s => s.courses)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -56,27 +36,13 @@ export function Courses() {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 250)
     return () => clearTimeout(timer)
   }, [searchQuery])
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [selectedStatuses, setSelectedStatuses] = useState<LearnerCourseStatus[]>([])
   const [sortMode, setSortMode] = useState<SortMode>('recent')
   const [wizardOpen, setWizardOpen] = useState(false)
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
   const [youtubeImportOpen, setYoutubeImportOpen] = useState(false)
   const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
-  const [atRiskMap, setAtRiskMap] = useState<Map<string, AtRiskStatus>>(new Map())
-  const [estimateMap, setEstimateMap] = useState<Map<string, CompletionEstimate>>(new Map())
   const [importedCompletionMap, setImportedCompletionMap] = useState<Map<string, number>>(new Map())
-
-  // Collapse state for sample courses section — persisted to localStorage
-  const [sampleCollapsed, setSampleCollapsed] = useState(() => {
-    try {
-      const stored = localStorage.getItem(COLLAPSE_KEY)
-      if (stored !== null) return stored === 'true'
-    } catch {
-      // silent-catch-ok: localStorage unavailable in restricted contexts — silent fallback is correct
-    }
-    return false // Will be re-evaluated in useEffect when importedCourses loads
-  })
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
@@ -84,29 +50,6 @@ export function Courses() {
 
   // Lazy-load imported courses on mount (deferred — not critical for initial app load)
   useLazyStore(loadImportedCourses)
-
-  // Auto-collapse when imported courses first appear; auto-expand when all imports removed.
-  // useRef prevents re-triggering the initial collapse on subsequent imports during the session.
-  const hasAutoCollapsed = useRef(false)
-  useEffect(() => {
-    try {
-      if (importedCourses.length > 0 && !hasAutoCollapsed.current) {
-        const stored = localStorage.getItem(COLLAPSE_KEY)
-        if (stored === null) {
-          hasAutoCollapsed.current = true
-          setSampleCollapsed(true)
-          localStorage.setItem(COLLAPSE_KEY, 'true')
-        }
-      } else if (importedCourses.length === 0 && sampleCollapsed && hasAutoCollapsed.current) {
-        // All imports removed — restore sample courses visibility (only undo auto-collapse, not manual)
-        setSampleCollapsed(false)
-        localStorage.removeItem(COLLAPSE_KEY)
-        hasAutoCollapsed.current = false
-      }
-    } catch {
-      // silent-catch-ok: localStorage unavailable — session still works without persistence
-    }
-  }, [importedCourses.length, sampleCollapsed])
 
   useEffect(() => {
     let ignore = false
@@ -126,34 +69,6 @@ export function Courses() {
           sessionsByCourse.set(s.courseId, arr)
         }
         const momentumMap = new Map<string, MomentumScore>()
-        const atRiskMap = new Map<string, AtRiskStatus>()
-        const estimateMap = new Map<string, CompletionEstimate>()
-
-        for (const course of allCourses) {
-          const courseSessions = sessionsByCourse.get(course.id) ?? []
-          const completionPercent = getCourseCompletionPercent(course.id, course.totalLessons)
-
-          // Calculate momentum
-          const momentum = calculateMomentumScore({
-            courseId: course.id,
-            totalLessons: course.totalLessons,
-            completionPercent,
-            sessions: courseSessions,
-          })
-          momentumMap.set(course.id, momentum)
-
-          // Calculate at-risk status
-          const atRisk = calculateAtRiskStatus(courseSessions, momentum)
-          atRiskMap.set(course.id, atRisk)
-
-          // Calculate completion estimate
-          const progress = getProgress(course.id)
-          const remainingLessons = course.totalLessons - progress.completedLessons.length
-          const remainingMinutes = remainingLessons * ESTIMATED_MINUTES_PER_LESSON
-
-          const estimate = calculateCompletionEstimate(courseSessions, remainingMinutes)
-          estimateMap.set(course.id, estimate)
-        }
 
         // Calculate momentum + completion for imported courses (AC: E07-S01, E43-S05)
         const completionMap = new Map<string, number>()
@@ -178,8 +93,6 @@ export function Courses() {
 
         setImportedCompletionMap(completionMap)
         setMomentumMap(momentumMap)
-        setAtRiskMap(atRiskMap)
-        setEstimateMap(estimateMap)
       } catch (err) {
         // silent-catch-ok: metrics failure is non-fatal — courses still load without momentum/risk indicators
         console.warn('[Courses] Failed to load course metrics:', err)
@@ -194,40 +107,7 @@ export function Courses() {
       ignore = true
       window.removeEventListener('study-log-updated', handleStudyLogUpdated)
     }
-  }, [allCourses, importedCourses])
-
-  // Extract unique categories dynamically from actual course data
-  const availableCategories = useMemo(
-    () => [...new Set(allCourses.map(c => c.category))],
-    [allCourses]
-  )
-
-  const filtered = useMemo(() => {
-    let courses = allCourses
-
-    if (selectedCategory && selectedCategory !== 'all') {
-      courses = courses.filter(c => c.category === selectedCategory)
-    }
-
-    if (debouncedSearch.trim()) {
-      const q = debouncedSearch.toLowerCase()
-      courses = courses.filter(
-        c =>
-          c.title.toLowerCase().includes(q) ||
-          c.description.toLowerCase().includes(q) ||
-          c.tags.some(t => t.toLowerCase().includes(q))
-      )
-    }
-
-    return courses
-  }, [allCourses, selectedCategory, debouncedSearch])
-
-  const sortedCourses = useMemo(() => {
-    if (sortMode !== 'momentum') return filtered
-    return [...filtered].sort(
-      (a, b) => (momentumMap.get(b.id)?.score ?? 0) - (momentumMap.get(a.id)?.score ?? 0)
-    )
-  }, [filtered, sortMode, momentumMap])
+  }, [importedCourses])
 
   // Keep legacy allTags for ImportedCourseCard (imported-only tags)
   const allTags = useMemo(() => getAllTags(), [getAllTags])
@@ -248,22 +128,6 @@ export function Courses() {
 
     return courses
   })()
-
-  // AC6 (E23-S05): Auto-expand pre-seeded section when a filter/search matches
-  // pre-seeded courses while the section is collapsed, so users don't miss results.
-  useEffect(() => {
-    if (!sampleCollapsed) return
-    const hasActiveFilter =
-      debouncedSearch.trim() !== '' || (selectedCategory !== 'all' && selectedCategory !== '')
-    if (hasActiveFilter && filtered.length > 0) {
-      setSampleCollapsed(false)
-      try {
-        localStorage.removeItem(COLLAPSE_KEY)
-      } catch {
-        // silent-catch-ok: localStorage unavailable — auto-expand still works for the session
-      }
-    }
-  }, [sampleCollapsed, debouncedSearch, selectedCategory, filtered.length])
 
   // AC1-AC4 (E1C-S05): Sort imported courses by momentum or importedAt
   const sortedImportedCourses = useMemo(() => {
@@ -295,17 +159,7 @@ export function Courses() {
     setYoutubeImportOpen(true)
   }
 
-  function handleCollapseToggle(open: boolean) {
-    const collapsed = !open
-    setSampleCollapsed(collapsed)
-    try {
-      localStorage.setItem(COLLAPSE_KEY, String(collapsed))
-    } catch {
-      // silent-catch-ok: localStorage unavailable — collapse state still works for the session
-    }
-  }
-
-  const totalCourses = allCourses.length + importedCourses.length
+  const totalCourses = importedCourses.length
 
   return (
     <div>
@@ -402,7 +256,7 @@ export function Courses() {
             </div>
           </Card>
 
-          {/* AC5 (E1C-S05): Sort dropdown alongside filters — applies to both sections */}
+          {/* AC5 (E1C-S05): Sort dropdown alongside filters */}
           <div className="flex flex-wrap gap-x-6 gap-y-2 items-start">
             {importedCourses.length > 0 && (
               <StatusFilter
@@ -471,104 +325,6 @@ export function Courses() {
                 />
               )}
             </div>
-          )}
-
-          {/* Sample Courses Section */}
-          {allCourses.length > 0 && (
-            <Collapsible
-              open={!sampleCollapsed}
-              onOpenChange={handleCollapseToggle}
-              data-testid="sample-courses-section"
-              role="region"
-              aria-labelledby="sample-courses-heading"
-              className="mb-6 rounded-[24px] border border-border/50 p-4"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <h2
-                  id="sample-courses-heading"
-                  className="text-lg font-semibold text-muted-foreground"
-                >
-                  Sample Courses ({allCourses.length})
-                </h2>
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    data-testid="sample-courses-toggle"
-                    aria-label={
-                      sampleCollapsed ? 'Expand sample courses' : 'Collapse sample courses'
-                    }
-                    className="min-h-[44px] min-w-[44px] p-2"
-                  >
-                    <ChevronDown
-                      aria-hidden="true"
-                      className={`size-4 transition-transform duration-200 motion-reduce:transition-none ${
-                        !sampleCollapsed ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </Button>
-                </CollapsibleTrigger>
-              </div>
-
-              <CollapsibleContent
-                className={`transition-opacity duration-200 motion-reduce:transition-none ${
-                  importedCourses.length > 0 ? 'opacity-60 hover:opacity-100' : ''
-                }`}
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
-                  <div className="overflow-x-auto flex-1 min-w-0">
-                    <ToggleGroup
-                      type="single"
-                      value={selectedCategory}
-                      onValueChange={v => setSelectedCategory(v || 'all')}
-                      aria-label="Filter by category"
-                      className="flex flex-nowrap gap-1.5 sm:gap-2"
-                    >
-                      {[
-                        { value: 'all', label: 'All Courses' },
-                        ...availableCategories.map(cat => ({
-                          value: cat,
-                          label: categoryLabels[cat] ?? cat,
-                        })),
-                      ].map((chip, i) => (
-                        <ToggleGroupItem
-                          key={chip.value}
-                          value={chip.value}
-                          className={`min-h-[44px] rounded-full! border px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none${i === 0 ? ' mr-1' : ''}`}
-                        >
-                          {chip.label}
-                        </ToggleGroupItem>
-                      ))}
-                    </ToggleGroup>
-                  </div>
-                </div>
-
-                {sortedCourses.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    No courses match your search
-                  </div>
-                ) : (
-                  <VirtualizedGrid
-                    items={sortedCourses}
-                    getItemKey={course => course.id}
-                    renderItem={course => (
-                      <CourseCard
-                        course={course}
-                        completionPercent={getCourseCompletionPercent(
-                          course.id,
-                          course.totalLessons
-                        )}
-                        momentumScore={momentumMap.get(course.id)}
-                        atRiskStatus={atRiskMap.get(course.id)}
-                        completionEstimate={estimateMap.get(course.id)}
-                      />
-                    )}
-                    data-testid="sample-courses-grid"
-                    gridClassName="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)]"
-                  />
-                )}
-              </CollapsibleContent>
-            </Collapsible>
           )}
         </>
       )}

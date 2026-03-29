@@ -3,6 +3,7 @@ import { appEventBus } from '@/lib/eventBus'
 import {
   initNotificationService,
   destroyNotificationService,
+  checkSrsDueOnStartup,
 } from '@/services/NotificationService'
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -23,10 +24,19 @@ const mockFilter = vi.fn(() => ({ first: mockFirst }))
 const mockEquals = vi.fn(() => ({ filter: mockFilter }))
 const mockWhere = vi.fn(() => ({ equals: mockEquals }))
 
+const mockFlashcardsToArray = vi.fn().mockResolvedValue([])
+const mockReviewRecordsToArray = vi.fn().mockResolvedValue([])
+
 vi.mock('@/db', () => ({
   db: {
     notifications: {
       where: (...args: Parameters<typeof mockWhere>) => mockWhere(...args),
+    },
+    flashcards: {
+      toArray: () => mockFlashcardsToArray(),
+    },
+    reviewRecords: {
+      toArray: () => mockReviewRecordsToArray(),
     },
   },
 }))
@@ -44,8 +54,12 @@ describe('NotificationService', () => {
     mockFilter.mockClear()
     mockEquals.mockClear()
     mockWhere.mockClear()
-    // Default: no existing review-due notification
+    mockFlashcardsToArray.mockClear()
+    mockReviewRecordsToArray.mockClear()
+    // Default: no existing notification + no due cards
     mockFirst.mockResolvedValue(undefined)
+    mockFlashcardsToArray.mockResolvedValue([])
+    mockReviewRecordsToArray.mockResolvedValue([])
   })
 
   afterEach(() => {
@@ -258,6 +272,151 @@ describe('NotificationService', () => {
 
         destroyNotificationService()
       }
+    })
+  })
+
+  // ── srs:due event handling ────────────────────────────────
+
+  describe('srs:due event handling', () => {
+    it('creates srs-due notification on srs:due event', async () => {
+      initNotificationService()
+
+      appEventBus.emit({ type: 'srs:due', dueCount: 7 })
+
+      await vi.waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1))
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'srs-due',
+          title: 'Cards Ready for Review',
+          message: 'You have 7 cards due for spaced repetition review.',
+          actionUrl: '/flashcards',
+          metadata: { dueCount: 7 },
+        })
+      )
+    })
+
+    it('uses singular "card" for dueCount === 1', async () => {
+      initNotificationService()
+
+      appEventBus.emit({ type: 'srs:due', dueCount: 1 })
+
+      await vi.waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1))
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'You have 1 card due for spaced repetition review.',
+        })
+      )
+    })
+
+    it('does not create duplicate srs-due notification on the same day', async () => {
+      // Simulate an existing srs-due notification created today
+      mockFirst.mockResolvedValue({
+        id: 'existing-srs',
+        type: 'srs-due',
+        createdAt: FIXED_NOW.toISOString(),
+      })
+
+      initNotificationService()
+
+      appEventBus.emit({ type: 'srs:due', dueCount: 3 })
+
+      await vi.waitFor(() => expect(mockWhere).toHaveBeenCalled())
+
+      expect(mockCreate).not.toHaveBeenCalled()
+    })
+  })
+
+  // ── checkSrsDueOnStartup ────────────────────────────────
+
+  describe('checkSrsDueOnStartup', () => {
+    it('emits srs:due when flashcards are due', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockFlashcardsToArray.mockResolvedValue([
+        { id: '1', nextReviewAt: '2026-03-14T10:00:00' }, // Past FIXED_NOW → due
+        { id: '2', nextReviewAt: '2026-03-16T10:00:00' }, // Future → not due
+      ])
+      mockReviewRecordsToArray.mockResolvedValue([])
+
+      await checkSrsDueOnStartup()
+
+      expect(emitSpy).toHaveBeenCalledWith({ type: 'srs:due', dueCount: 1 })
+      emitSpy.mockRestore()
+    })
+
+    it('emits srs:due when note reviews are due', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockFlashcardsToArray.mockResolvedValue([])
+      mockReviewRecordsToArray.mockResolvedValue([
+        { id: 'r1', nextReviewAt: '2026-03-14T10:00:00' }, // Past → due
+      ])
+
+      await checkSrsDueOnStartup()
+
+      expect(emitSpy).toHaveBeenCalledWith({ type: 'srs:due', dueCount: 1 })
+      emitSpy.mockRestore()
+    })
+
+    it('counts both flashcards and note reviews in combined total', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockFlashcardsToArray.mockResolvedValue([
+        { id: '1', nextReviewAt: '2026-03-14T10:00:00' }, // due
+        { id: '2', nextReviewAt: '2026-03-10T10:00:00' }, // due
+      ])
+      mockReviewRecordsToArray.mockResolvedValue([
+        { id: 'r1', nextReviewAt: '2026-03-13T10:00:00' }, // due
+        { id: 'r2', nextReviewAt: '2026-03-12T10:00:00' }, // due
+        { id: 'r3', nextReviewAt: '2026-03-20T10:00:00' }, // not due
+      ])
+
+      await checkSrsDueOnStartup()
+
+      expect(emitSpy).toHaveBeenCalledWith({ type: 'srs:due', dueCount: 4 })
+      emitSpy.mockRestore()
+    })
+
+    it('treats flashcards with no nextReviewAt as due (never reviewed)', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockFlashcardsToArray.mockResolvedValue([
+        { id: '1' }, // No nextReviewAt → due
+        { id: '2', nextReviewAt: undefined }, // Explicit undefined → due
+      ])
+      mockReviewRecordsToArray.mockResolvedValue([])
+
+      await checkSrsDueOnStartup()
+
+      expect(emitSpy).toHaveBeenCalledWith({ type: 'srs:due', dueCount: 2 })
+      emitSpy.mockRestore()
+    })
+
+    it('does NOT emit when no cards are due', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockFlashcardsToArray.mockResolvedValue([
+        { id: '1', nextReviewAt: '2026-03-20T10:00:00' }, // Future → not due
+      ])
+      mockReviewRecordsToArray.mockResolvedValue([
+        { id: 'r1', nextReviewAt: '2026-03-20T10:00:00' }, // Future → not due
+      ])
+
+      await checkSrsDueOnStartup()
+
+      expect(emitSpy).not.toHaveBeenCalled()
+      emitSpy.mockRestore()
+    })
+
+    it('does NOT emit when both tables are empty', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      await checkSrsDueOnStartup()
+
+      expect(emitSpy).not.toHaveBeenCalled()
+      emitSpy.mockRestore()
     })
   })
 

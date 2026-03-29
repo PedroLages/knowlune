@@ -63,7 +63,7 @@ import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { usePathProgress } from '@/app/hooks/usePathProgress'
-import { db } from '@/db'
+// db import removed (E89-S01) — catalog courses table dropped
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
 import {
@@ -284,17 +284,12 @@ function CoursePickerDialog({
   const { authors } = useAuthorStore()
   const addCourseToPath = useLearningPathStore(s => s.addCourseToPath)
   const [search, setSearch] = useState('')
-  const [catalogCourses, setCatalogCourses] = useState<Course[]>([])
+  const catalogCourses: Course[] = [] // Catalog courses table dropped (E89-S01)
   const [isAdding, setIsAdding] = useState<string | null>(null)
 
-  // Load catalog courses when dialog opens
+  // Reset search when dialog opens
   useEffect(() => {
     if (open) {
-      // silent-catch-ok — fallback to empty array if catalog unavailable
-      db.courses
-        .toArray()
-        .then(setCatalogCourses)
-        .catch(() => setCatalogCourses([]))
       setSearch('')
     }
   }, [open])
@@ -465,7 +460,7 @@ export function LearningPathDetail() {
   const { authors, loadAuthors } = useAuthorStore()
 
   const [isLoaded, setIsLoaded] = useState(false)
-  const [catalogCourses, setCatalogCourses] = useState<Course[]>([])
+  const catalogCourses: Course[] = [] // Catalog courses table dropped (E89-S01)
   const [pickerOpen, setPickerOpen] = useState(false)
 
   // AI Suggest Order state (E26-S04)
@@ -480,11 +475,7 @@ export function LearningPathDetail() {
       loadPaths(),
       loadImportedCourses(),
       loadAuthors(),
-      // silent-catch-ok — fallback to empty array if catalog unavailable
-      db.courses
-        .toArray()
-        .then(setCatalogCourses)
-        .catch(() => []),
+      // Catalog courses table dropped (E89-S01) — no catalog load needed
     ])
       .then(() => {
         if (!ignore) setIsLoaded(true)

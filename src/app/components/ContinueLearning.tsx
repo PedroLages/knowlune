@@ -1,6 +1,6 @@
-import { useMemo, useRef, useCallback } from 'react'
+import { useMemo, useRef, useCallback, useState } from 'react'
 import { Link } from 'react-router'
-import { BookOpen, Play, ArrowRight, AlertCircle, Layers } from 'lucide-react'
+import { BookOpen, Play, ArrowRight, AlertCircle, Layers, X } from 'lucide-react'
 import { motion, useMotionValue, useTransform, useSpring } from 'motion/react'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Progress } from '@/app/components/ui/progress'
@@ -265,26 +265,54 @@ function RecentlyAccessedRow({ sessions }: { sessions: ResolvedSession[] }) {
   )
 }
 
+const BANNER_DISMISS_KEY = 'knowlune:deleted-content-banner-dismissed'
+
 function DeletedContentBanner({ count }: { count: number }) {
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(BANNER_DISMISS_KEY) === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  if (dismissed) return null
+
+  function handleDismiss() {
+    setDismissed(true)
+    try {
+      localStorage.setItem(BANNER_DISMISS_KEY, 'true')
+    } catch {
+      // silent-catch-ok: localStorage unavailable — dismiss still works for session
+    }
+  }
+
   return (
     <div
       data-testid="content-unavailable-message"
-      className="flex items-center gap-3 rounded-2xl border border-gold bg-gold-muted p-4 mb-4"
+      className="flex items-center gap-3 rounded-2xl border border-border bg-muted p-4 mb-4"
     >
-      <AlertCircle aria-hidden="true" className="size-5 text-warning flex-shrink-0" />
+      <AlertCircle aria-hidden="true" className="size-5 text-muted-foreground flex-shrink-0" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-warning">
+        <p className="text-sm font-medium text-foreground">
           {count === 1
             ? 'A course you were studying is no longer available.'
             : `${count} courses you were studying are no longer available.`}
         </p>
-        <p className="text-xs text-warning mt-0.5">
+        <p className="text-xs text-muted-foreground mt-0.5">
           <Link to="/courses" className="underline hover:no-underline">
             Explore other courses
           </Link>{' '}
           to continue your learning journey.
         </p>
       </div>
+      <button
+        onClick={handleDismiss}
+        className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+        aria-label="Dismiss notification"
+      >
+        <X className="size-4" aria-hidden="true" />
+      </button>
     </div>
   )
 }

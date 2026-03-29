@@ -28,11 +28,12 @@ function extractSchema(db: Dexie): Record<string, string> {
 }
 
 describe('Dexie migration checkpoint', () => {
-  it('CHECKPOINT_VERSION should be 28', () => {
-    expect(CHECKPOINT_VERSION).toBe(28)
+  it('CHECKPOINT_VERSION should be 30', () => {
+    expect(CHECKPOINT_VERSION).toBe(30)
   })
 
   it('CHECKPOINT_SCHEMA should define all expected tables', () => {
+    // courses table dropped in v30 (E89-S01)
     const expectedTables = [
       'aiUsageEvents',
       'authors',
@@ -42,7 +43,6 @@ describe('Dexie migration checkpoint', () => {
       'contentProgress',
       'courseReminders',
       'courseThumbnails',
-      'courses',
       'embeddings',
       'entitlements',
       'flashcards',
@@ -52,6 +52,7 @@ describe('Dexie migration checkpoint', () => {
       'learningPathEntries',
       'learningPaths',
       'notes',
+      'notificationPreferences',
       'notifications',
       'pathEnrollments',
       'progress',

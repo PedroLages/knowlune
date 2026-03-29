@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { Note } from '@/data/types'
+import type { Note, Course } from '@/data/types'
 import {
   initializeSearchIndex,
   addToIndex,
@@ -9,7 +9,43 @@ import {
   searchNotesWithContext,
   buildCourseLookup,
 } from '@/lib/noteSearch'
-import { allCourses } from '@/data/courses'
+
+/** Minimal mock course for enrichment tests */
+const mockCourse = {
+  id: 'test-course',
+  title: 'Test Course',
+  shortTitle: 'Test',
+  description: 'A test course',
+  category: 'behavioral-analysis',
+  difficulty: 'beginner',
+  totalLessons: 1,
+  totalVideos: 1,
+  totalPDFs: 0,
+  estimatedHours: 1,
+  tags: [],
+  modules: [
+    {
+      id: 'mod-1',
+      title: 'Module 1',
+      description: '',
+      order: 1,
+      lessons: [
+        {
+          id: 'lesson-1',
+          title: 'Lesson One',
+          description: '',
+          order: 1,
+          resources: [],
+          keyTopics: [],
+          duration: '10:00',
+        },
+      ],
+    },
+  ],
+  isSequential: false,
+  basePath: '/courses/test-course',
+  authorId: 'test-author',
+} as Course
 
 function makeNote(overrides: Partial<Note> = {}): Note {
   return {
@@ -25,7 +61,7 @@ function makeNote(overrides: Partial<Note> = {}): Note {
 }
 
 beforeEach(() => {
-  buildCourseLookup(allCourses)
+  buildCourseLookup([mockCourse])
   initializeSearchIndex([])
 })
 
@@ -163,8 +199,8 @@ describe('searchNotesWithContext', () => {
   })
 
   it('should return enriched results with course and video names', () => {
-    const courseId = allCourses[0].id
-    const lessonId = allCourses[0].modules[0].lessons[0].id
+    const courseId = mockCourse.id
+    const lessonId = mockCourse.modules[0].lessons[0].id
 
     initializeSearchIndex([
       makeNote({
@@ -179,15 +215,15 @@ describe('searchNotesWithContext', () => {
     const results = searchNotesWithContext('persuasion')
     expect(results.length).toBeGreaterThan(0)
     expect(results[0].id).toBe('enriched-1')
-    expect(results[0].courseName).toBe(allCourses[0].shortTitle || allCourses[0].title)
-    expect(results[0].videoTitle).toBe(allCourses[0].modules[0].lessons[0].title)
+    expect(results[0].courseName).toBe(mockCourse.shortTitle || mockCourse.title)
+    expect(results[0].videoTitle).toBe(mockCourse.modules[0].lessons[0].title)
     expect(results[0].tags).toEqual(['influence'])
     expect(results[0].content).toContain('persuasion')
   })
 
   it('should return courseId and videoId for navigation', () => {
-    const courseId = allCourses[0].id
-    const lessonId = allCourses[0].modules[0].lessons[0].id
+    const courseId = mockCourse.id
+    const lessonId = mockCourse.modules[0].lessons[0].id
 
     initializeSearchIndex([
       makeNote({
@@ -291,7 +327,7 @@ describe('searchNotesWithContext', () => {
 
 describe('search performance (AC1a)', () => {
   it('should complete search in under 1ms for 100 notes', () => {
-    buildCourseLookup(allCourses)
+    buildCourseLookup([mockCourse])
     const notes = Array.from({ length: 100 }, (_, i) =>
       makeNote({
         id: `perf-${i}`,

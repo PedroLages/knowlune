@@ -12,7 +12,7 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from 'react'
 import Dexie from 'dexie'
-import type { Course, Module, Challenge } from '@/data/types'
+import type { Challenge } from '@/data/types'
 
 // Mock persistWithRetry to pass-through (retry logic tested elsewhere)
 vi.mock('@/lib/persistWithRetry', () => ({
@@ -85,45 +85,9 @@ let db: (typeof import('@/db'))['db']
 const COURSE_ID = 'course-quiz-1'
 const LESSON_ID = 'lesson-quiz-1'
 const QUIZ_ID = 'quiz-1'
-const MODULE_ID = 'mod-quiz-1'
+// MODULE_ID, testModules, testCourse removed (E89-S01) — courses table dropped
 
-const testModules: Module[] = [
-  {
-    id: MODULE_ID,
-    title: 'Module 1',
-    description: 'Test module',
-    order: 0,
-    lessons: [
-      {
-        id: LESSON_ID,
-        title: 'Lesson 1',
-        description: 'Test lesson',
-        order: 0,
-        resources: [],
-        keyTopics: [],
-        duration: '10:00',
-      },
-    ],
-  },
-]
-
-const testCourse: Course = {
-  id: COURSE_ID,
-  title: 'Quiz Test Course',
-  shortTitle: 'QTC',
-  description: 'A course for quiz integration testing',
-  category: 'research-library',
-  difficulty: 'beginner',
-  totalLessons: 1,
-  totalVideos: 1,
-  totalPDFs: 0,
-  estimatedHours: 1,
-  tags: [],
-  modules: testModules,
-  isSequential: false,
-  basePath: '/courses/quiz-test',
-  authorId: 'author-1',
-}
+// testCourse removed (E89-S01) — courses table dropped
 
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
@@ -175,7 +139,7 @@ describe('Quiz Workflow: Cross-Store Integration', () => {
     }
 
     await db.quizzes.put(quiz)
-    await db.courses.put(testCourse)
+    // Courses table dropped (E89-S01) — no course seeding needed
 
     return quiz
   }

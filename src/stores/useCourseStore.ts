@@ -1,26 +1,22 @@
 import { create } from 'zustand'
-import { db } from '@/db'
 import type { Course } from '@/data/types'
 
+/**
+ * @deprecated Dead regular course store — courses table dropped in Dexie v30 (E89-S01).
+ * This store is kept as a no-op stub because ~30 legacy modules still import it.
+ * It always returns an empty array. Will be removed when consumers migrate to ImportedCourse.
+ */
 interface CourseStoreState {
   courses: Course[]
   isLoaded: boolean
   loadCourses: () => Promise<void>
 }
 
-export const useCourseStore = create<CourseStoreState>((set, get) => ({
+export const useCourseStore = create<CourseStoreState>(() => ({
   courses: [],
-  isLoaded: false,
+  isLoaded: true,
 
   loadCourses: async () => {
-    if (get().isLoaded && get().courses.length > 0) return
-    try {
-      const courses = await db.courses.toArray()
-      if (courses.length > 0 || !get().isLoaded) {
-        set({ courses, isLoaded: true })
-      }
-    } catch (error) {
-      console.error('[CourseStore] Failed to load courses:', error)
-    }
+    // No-op: regular courses table dropped (E89-S01)
   },
 }))

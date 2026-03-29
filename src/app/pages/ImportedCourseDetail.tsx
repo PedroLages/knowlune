@@ -11,6 +11,8 @@ import {
   Trash2,
   Search,
   X,
+  ChevronDown,
+  FolderOpen,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/db/schema'
@@ -32,6 +34,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/app/components/ui/alert-dialog'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/app/components/ui/collapsible'
 import { cn } from '@/app/components/ui/utils'
 import { getAvatarSrc, getInitials } from '@/lib/authors'
 import { EditableTitle } from '@/app/components/figma/EditableTitle'
@@ -40,8 +47,17 @@ import type { FileStatus } from '@/lib/fileVerification'
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60)
-  const s = String(seconds % 60).padStart(2, '0')
+  const s = String(Math.floor(seconds % 60)).padStart(2, '0')
   return `${m}:${s}`
+}
+
+function stripExtension(filename: string): string {
+  return filename.replace(/\.\w+$/, '')
+}
+
+function getFolderName(path: string): string {
+  const parts = path.split('/')
+  return parts.length > 1 ? parts[0] : ''
 }
 
 function FileStatusBadge({ status, itemId }: { status: FileStatus; itemId: string }) {
@@ -199,6 +215,19 @@ export function ImportedCourseDetail() {
     return pdfs.filter(p => p.filename.toLowerCase().includes(q))
   }, [pdfs, searchQuery])
 
+  // Group videos by folder for module-based display
+  const groupedVideos = useMemo(() => {
+    const groups = new Map<string, ImportedVideo[]>()
+    for (const video of filteredVideos) {
+      const folder = getFolderName(video.path)
+      if (!groups.has(folder)) groups.set(folder, [])
+      groups.get(folder)!.push(video)
+    }
+    return groups
+  }, [filteredVideos])
+
+  const hasMultipleFolders = groupedVideos.size > 1
+
   const hasResults = filteredVideos.length > 0 || filteredPdfs.length > 0
 
   const handleClearSearch = useCallback(() => {
@@ -337,56 +366,86 @@ export function ImportedCourseDetail() {
         aria-label="Course content"
         className="flex flex-col gap-2"
       >
-        {filteredVideos.map(video => {
-          const status = fileStatuses.get(video.id) ?? 'checking'
-          const isUnavailable = status === 'missing' || status === 'permission-denied'
+        {Array.from(groupedVideos.entries()).map(([folder, folderVideos]) => {
+          const videoItems = folderVideos.map(video => {
+            const status = fileStatuses.get(video.id) ?? 'checking'
+            const isUnavailable = status === 'missing' || status === 'permission-denied'
 
-          const content = (
-            <>
-              <Video
-                data-testid="content-type-icon"
-                className={cn(
-                  'size-5 shrink-0',
-                  isUnavailable ? 'text-muted-foreground' : 'text-brand'
-                )}
-                aria-hidden="true"
-              />
-              <span
-                data-testid={`file-status-${video.id}`}
-                data-status={status}
-                className={cn(
-                  'flex-1 font-medium text-sm',
-                  !isUnavailable && 'group-hover:text-brand transition-colors'
-                )}
-              >
-                <HighlightedText text={video.filename} query={searchQuery} />
-              </span>
-              <FileStatusBadge status={status} itemId={video.id} />
-              {video.duration > 0 && (
-                <span className="text-xs text-muted-foreground tabular-nums">
-                  {formatDuration(video.duration)}
+            const content = (
+              <>
+                <Video
+                  data-testid="content-type-icon"
+                  className={cn(
+                    'size-5 shrink-0',
+                    isUnavailable ? 'text-muted-foreground' : 'text-brand'
+                  )}
+                  aria-hidden="true"
+                />
+                <span
+                  data-testid={`file-status-${video.id}`}
+                  data-status={status}
+                  className={cn(
+                    'flex-1 font-medium text-sm',
+                    !isUnavailable && 'group-hover:text-brand transition-colors'
+                  )}
+                >
+                  <HighlightedText text={stripExtension(video.filename)} query={searchQuery} />
                 </span>
-              )}
-            </>
-          )
+                <FileStatusBadge status={status} itemId={video.id} />
+                {video.duration > 0 && (
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {formatDuration(video.duration)}
+                  </span>
+                )}
+              </>
+            )
+
+            return (
+              <li key={video.id} data-testid={`course-content-item-video-${video.id}`}>
+                {isUnavailable ? (
+                  <div
+                    className="flex flex-wrap items-center gap-3 p-4 rounded-xl border bg-card opacity-50 cursor-not-allowed"
+                    aria-disabled="true"
+                  >
+                    {content}
+                  </div>
+                ) : (
+                  <Link
+                    to={`/imported-courses/${courseId}/lessons/${video.id}`}
+                    className="flex flex-wrap items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent transition-colors group"
+                  >
+                    {content}
+                  </Link>
+                )}
+              </li>
+            )
+          })
+
+          // If only one folder (or root-level), render flat without grouping header
+          if (!hasMultipleFolders) {
+            return <>{videoItems}</>
+          }
+
+          const totalDuration = folderVideos.reduce((sum, v) => sum + v.duration, 0)
 
           return (
-            <li key={video.id} data-testid={`course-content-item-video-${video.id}`}>
-              {isUnavailable ? (
-                <div
-                  className="flex flex-wrap items-center gap-3 p-4 rounded-xl border bg-card opacity-50 cursor-not-allowed"
-                  aria-disabled="true"
-                >
-                  {content}
-                </div>
-              ) : (
-                <Link
-                  to={`/imported-courses/${courseId}/lessons/${video.id}`}
-                  className="flex flex-wrap items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent transition-colors group"
-                >
-                  {content}
-                </Link>
-              )}
+            <li key={folder || 'root'}>
+              <Collapsible defaultOpen>
+                <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm font-medium text-foreground group/folder">
+                  <FolderOpen className="size-4 text-muted-foreground shrink-0" aria-hidden="true" />
+                  <span className="flex-1 text-left">{folder || 'General'}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {folderVideos.length} {folderVideos.length === 1 ? 'video' : 'videos'}
+                    {totalDuration > 0 && ` · ${formatDuration(totalDuration)}`}
+                  </span>
+                  <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-[state=open]/folder:rotate-180" aria-hidden="true" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <ul className="flex flex-col gap-2 mt-1 ml-2 pl-4 border-l border-border/50">
+                    {videoItems}
+                  </ul>
+                </CollapsibleContent>
+              </Collapsible>
             </li>
           )
         })}
@@ -417,7 +476,7 @@ export function ImportedCourseDetail() {
                   data-status={status}
                   className="flex-1 font-medium text-sm"
                 >
-                  <HighlightedText text={pdf.filename} query={searchQuery} />
+                  <HighlightedText text={stripExtension(pdf.filename)} query={searchQuery} />
                 </span>
                 {isUnavailable ? (
                   <FileStatusBadge status={status} itemId={pdf.id} />

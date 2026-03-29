@@ -89,6 +89,13 @@ export interface Author {
   featuredQuote?: string
 }
 
+/**
+ * @deprecated Dead regular course type — DB table dropped in Dexie v30 (E89-S01).
+ * All page components, routes, and store logic for this type have been removed.
+ * Remaining references exist only in legacy helper code (progress, suggestions, etc.)
+ * that will be cleaned up when those modules migrate to ImportedCourse.
+ * Use ImportedCourse for all new course data going forward.
+ */
 export interface Course {
   id: string
   title: string
@@ -130,9 +137,9 @@ export type CourseStatus = 'importing' | 'ready' | 'error'
 
 export type LearnerCourseStatus = 'active' | 'completed' | 'paused'
 
-export type VideoFormat = 'mp4' | 'mkv' | 'avi' | 'webm'
+export type VideoFormat = 'mp4' | 'mkv' | 'avi' | 'webm' | 'ts'
 
-export type SupportedFileExtension = '.mp4' | '.mkv' | '.avi' | '.webm' | '.pdf'
+export type SupportedFileExtension = '.mp4' | '.mkv' | '.avi' | '.webm' | '.ts' | '.pdf'
 
 export interface VideoMetadata {
   duration: number
@@ -429,6 +436,7 @@ export type NotificationType =
   | 'import-finished'
   | 'achievement-unlocked'
   | 'review-due'
+  | 'srs-due'
 
 export interface Notification {
   id: string // ULID (time-sortable, unique)
@@ -440,6 +448,24 @@ export interface Notification {
   dismissedAt: string | null
   actionUrl?: string // Deep link (e.g., '/courses/react-101')
   metadata?: Record<string, unknown>
+}
+
+// --- Notification Preferences ---
+
+export interface NotificationPreferences {
+  id: 'singleton' // Fixed PK — single-row config
+  // Per-type toggles (all default true)
+  courseComplete: boolean
+  streakMilestone: boolean
+  importFinished: boolean
+  achievementUnlocked: boolean
+  reviewDue: boolean
+  srsDue: boolean
+  // Quiet hours
+  quietHoursEnabled: boolean
+  quietHoursStart: string // "HH:MM" (24h format)
+  quietHoursEnd: string // "HH:MM" (24h format)
+  updatedAt: string // ISO 8601
 }
 
 export type ReviewRating = 'hard' | 'good' | 'easy'

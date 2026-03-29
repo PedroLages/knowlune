@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from 'react'
 import Dexie from 'dexie'
 import { makeQuiz, makeQuestion } from '../../../tests/support/fixtures/factories/quiz-factory'
-import type { Module } from '@/data/types'
+// Module type import removed (E89-S01)
 
 // Mock persistWithRetry — retry logic tested in its own tests
 vi.mock('@/lib/persistWithRetry', () => ({
@@ -30,25 +30,7 @@ const COURSE_ID = 'course-1'
 const LESSON_ID = 'les-1'
 const QUIZ_ID = 'quiz-1'
 
-const testModules: Module[] = [
-  {
-    id: 'mod-1',
-    title: 'Module 1',
-    description: 'Test module',
-    order: 0,
-    lessons: [
-      {
-        id: LESSON_ID,
-        title: 'Lesson 1',
-        description: 'Test lesson',
-        order: 0,
-        resources: [],
-        keyTopics: [],
-        duration: '10:00',
-      },
-    ],
-  },
-]
+// testModules removed (E89-S01) — courses table dropped
 
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
@@ -77,23 +59,7 @@ describe('useQuizStore cross-store integration (E12-S03-AC5)', () => {
       questions: [q1],
     })
     await db.quizzes.put(quiz)
-    await db.courses.put({
-      id: COURSE_ID,
-      title: 'Test Course',
-      shortTitle: 'TC',
-      description: 'A test course',
-      category: 'research-library',
-      difficulty: 'beginner',
-      totalLessons: 1,
-      totalVideos: 1,
-      totalPDFs: 0,
-      estimatedHours: 1,
-      tags: [],
-      modules: testModules,
-      isSequential: false,
-      basePath: '/courses/test',
-      authorId: 'author-1',
-    } as import('@/data/types').Course)
+    // Courses table dropped (E89-S01) — no course seeding needed
 
     await act(async () => {
       await useQuizStore.getState().startQuiz(LESSON_ID)
@@ -119,7 +85,8 @@ describe('useQuizStore cross-store integration (E12-S03-AC5)', () => {
     })
 
     expect(setItemStatusSpy).toHaveBeenCalledOnce()
-    expect(setItemStatusSpy).toHaveBeenCalledWith(COURSE_ID, LESSON_ID, 'completed', testModules)
+    // Courses table dropped (E89-S01) — modules now passed as empty array
+    expect(setItemStatusSpy).toHaveBeenCalledWith(COURSE_ID, LESSON_ID, 'completed', [])
 
     setItemStatusSpy.mockRestore()
   })

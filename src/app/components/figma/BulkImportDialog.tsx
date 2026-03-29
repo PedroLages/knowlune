@@ -439,7 +439,7 @@ export function BulkImportDialog({
               <div>
                 <p className="font-medium text-foreground">Import Single Folder</p>
                 <p className="text-sm text-muted-foreground">
-                  Select one course folder with guided setup
+                  Select a folder to import as one course (includes all sub-folders)
                 </p>
               </div>
             </button>
@@ -464,7 +464,7 @@ export function BulkImportDialog({
               <div>
                 <p className="font-medium text-foreground">Import Multiple Folders</p>
                 <p className="text-sm text-muted-foreground">
-                  Select a parent folder and import multiple courses at once
+                  Select a parent folder — each sub-folder becomes a separate course
                 </p>
               </div>
             </button>

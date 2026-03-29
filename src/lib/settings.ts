@@ -51,7 +51,7 @@ export const DISPLAY_DEFAULTS = {
 }
 
 const defaults: AppSettings = {
-  displayName: 'Student',
+  displayName: 'Learner',
   bio: '',
   theme: 'system',
   profilePhotoUrl: undefined,
@@ -208,6 +208,12 @@ export function importAllData(json: string): boolean {
   }
 }
 
-export function resetAllData() {
+export async function resetAllData() {
   localStorage.clear()
+  sessionStorage.clear()
+  // Clear IndexedDB — delete the Dexie database entirely
+  const { db } = await import('@/db/schema')
+  await db.delete()
+  // Reload to re-initialize from scratch
+  window.location.reload()
 }

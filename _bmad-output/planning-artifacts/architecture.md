@@ -71,6 +71,25 @@ editHistory:
       - '_bmad-output/planning-artifacts/research/technical-socratic-tutoring-llm-research-2026-03-28.md'
       - '_bmad-output/brainstorming/brainstorming-session-2026-03-28-ai-tutoring-phase1-2.md'
       - 'docs/plans/2026-03-28-product-roadmap.md (Section 14)'
+  - date: '2026-03-29'
+    scope: 'Google Calendar Two-Way Sync architecture addendum (Phase 3)'
+    changes:
+      - 'Added Google Calendar Two-Way Sync Architecture section (10 decision areas)'
+      - 'Added OAuth 2.0 flow through Supabase Auth with redirect URI and PKCE'
+      - 'Added token lifecycle with Supabase Vault encryption and auto-refresh'
+      - 'Added event mapping between Knowlune StudySchedule and Google Calendar events'
+      - 'Added conflict resolution engine with last-write-wins + user notification'
+      - 'Added sync frequency architecture (webhook push + polling fallback via pg_cron)'
+      - 'Added timezone normalization (UTC storage, per-device IANA conversion)'
+      - 'Added offline graceful degradation with queue-and-replay pattern'
+      - 'Added CalendarProvider abstraction for future Apple CalDAV support'
+      - 'Added Supabase schema design (calendar_connections, calendar_event_map, sync_queue)'
+      - 'Added 8-story implementation sequence for Phase 3'
+    researchInput:
+      - '_bmad-output/planning-artifacts/research/technical-google-calendar-api-two-way-sync-research-2026-03-29.md'
+      - '_bmad-output/planning-artifacts/quick-spec-calendar-integration.md'
+      - '_bmad-output/planning-artifacts/epics-calendar.md'
+      - '_bmad-output/planning-artifacts/ux-design-calendar.md'
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/product-brief-Elearningplatformwireframes-2026-03-01.md'
@@ -4748,4 +4767,890 @@ E??-S05: Mode Selector + Socratic Prompts                    (depends: S04)
 - Topic noise → regex-based noise filter + canonical map; extensible without algorithm changes
 - Treemap readability on mobile → sorted list fallback below 640px breakpoint
 - Flashcard-to-topic mapping imprecision → course-level spread is acceptable for Phase 1; Phase 2 adds `topicTag` to Flashcard
+
+## Google Calendar Two-Way Sync Architecture (Phase 3)
+
+_Added 2026-03-29. This section extends the architecture for Google Calendar two-way synchronization, building on the E50 iCal subscription feed (Phase 1-2) as the read-only baseline. Phase 3 introduces OAuth 2.0 authentication, bidirectional event CRUD, conflict resolution, webhook-driven sync, and offline queue-and-replay -- all orchestrated through Supabase Edge Functions on Knowlune's self-hosted infrastructure._
+
+**Input Documents:**
+- Technical research: `_bmad-output/planning-artifacts/research/technical-google-calendar-api-two-way-sync-research-2026-03-29.md`
+- E50 Quick Spec: `_bmad-output/planning-artifacts/quick-spec-calendar-integration.md` (Phase 3 defined as "Out of Scope" in E50)
+- E50 Epics: `_bmad-output/planning-artifacts/epics-calendar.md` (Phase 1-2 story definitions)
+- E50 UX Design: `_bmad-output/planning-artifacts/ux-design-calendar.md`
+- E50 Implementation Readiness: `_bmad-output/planning-artifacts/implementation-readiness-report-2026-03-28-calendar.md`
+
+**Relationship to E50 (Phase 1-2):**
+E50 delivers a one-way iCal subscription feed: Knowlune generates `.ics` content, users subscribe in Google Calendar / Apple Calendar, and data flows read-only from Knowlune to the calendar app. Phase 3 adds the reverse direction: changes made in Google Calendar propagate back to Knowlune, and changes in Knowlune push to Google Calendar in near-real-time. The iCal feed remains available as a fallback for users who do not want to grant OAuth access.
+
+### Decision Summary
+
+| # | Decision Area | Choice | Rationale |
+|---|---|---|---|
+| 1 | OAuth flow | Supabase Auth with Google provider + incremental scope upgrade | Reuse existing auth infrastructure (E19); start read-only, upgrade to write scope on demand |
+| 2 | Token storage | Supabase Vault (AES-256) for refresh tokens | Built-in to self-hosted Supabase; no key management overhead; RLS protection |
+| 3 | Event mapping | Bidirectional mapping table (`calendar_event_map`) with etag-based optimistic concurrency | Industry standard; supports conflict detection without full event comparison |
+| 4 | Conflict resolution | Last-write-wins by `updated` timestamp with field-level merge + user notification | Balances simplicity with user awareness; avoids silent data loss |
+| 5 | Sync frequency | Webhook push (primary) + pg_cron polling every 15 min (fallback) | Near-real-time with guaranteed eventual consistency |
+| 6 | Timezone handling | Store UTC in Supabase; convert per-device using IANA timezone from `Intl.DateTimeFormat()` | Eliminates ambiguity; respects user's local timezone without server-side guessing |
+| 7 | Offline degradation | Queue mutations in IndexedDB; replay on reconnection with conflict check | Preserves offline-first philosophy; no data loss during disconnection |
+| 8 | Provider abstraction | `CalendarProvider` interface from day one | Enables Apple CalDAV (Phase 4) without refactoring sync engine |
+| 9 | Recurring events | `singleEvents=true` delegation to Google | Avoids client-side RRULE expansion complexity; Google handles instance generation |
+| 10 | Rate limiting | Exponential backoff with jitter; per-user sync queuing | Prevents quota exhaustion; fair distribution across users |
+
+### Decision 1: OAuth 2.0 Flow Through Supabase Auth
+
+Knowlune already uses Supabase Auth for user identity (Epic 19). Google Calendar sync leverages the same infrastructure by adding Google as an OAuth provider with calendar-specific scopes.
+
+**OAuth Flow Architecture:**
+
+```
+User clicks "Connect Google Calendar" in Settings
+  │
+  ├─ 1. Frontend calls supabase.auth.signInWithOAuth({
+  │      provider: 'google',
+  │      options: {
+  │        scopes: 'https://www.googleapis.com/auth/calendar.readonly',
+  │        redirectTo: `${window.location.origin}/settings?tab=calendar`,
+  │        queryParams: { access_type: 'offline', prompt: 'consent' }
+  │      }
+  │    })
+  │
+  ├─ 2. Supabase redirects to Google Consent Screen
+  │    → User grants calendar.readonly scope
+  │    → Google redirects to Supabase callback URL
+  │
+  ├─ 3. Supabase Auth exchanges code for tokens
+  │    → access_token (1 hour TTL)
+  │    → refresh_token (long-lived, requires offline access)
+  │    → Supabase stores provider_token and provider_refresh_token
+  │       in auth.identities (accessible via auth.getSession())
+  │
+  ├─ 4. Frontend receives session with provider tokens
+  │    → Calls Edge Function: store-calendar-tokens
+  │    → Edge Function encrypts refresh_token in Vault
+  │    → Creates calendar_connections row
+  │
+  └─ 5. Initial full sync triggered automatically
+       → Edge Function: sync-calendar-events (full sync mode)
+```
+
+**Redirect URI Configuration:**
+- Development: `http://localhost:54321/auth/v1/callback` (Supabase local)
+- Production: `https://<supabase-ref>.supabase.co/auth/v1/callback` (self-hosted)
+- Google Cloud Console: Add both URIs to "Authorized redirect URIs"
+- The `redirectTo` parameter controls where the user lands after auth completes (Settings > Calendar tab)
+
+**Incremental Scope Upgrade:**
+Phase 3 starts with `calendar.readonly` for read-only sync. When the user first creates or edits an event that needs to push to Google, the UI prompts: "To sync changes to Google Calendar, Knowlune needs write access." This triggers a new OAuth flow with `calendar.events` scope (read/write). The scope upgrade uses the same flow but with the broader scope string.
+
+```typescript
+// Scope upgrade when user initiates first write operation
+async function requestWriteAccess(): Promise<boolean> {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      scopes: 'https://www.googleapis.com/auth/calendar.events',
+      redirectTo: `${window.location.origin}/settings?tab=calendar&upgraded=true`,
+      queryParams: { access_type: 'offline', prompt: 'consent' }
+    }
+  })
+  return !error
+}
+```
+
+**Google Cloud Console Setup:**
+- Project: Knowlune (existing or new)
+- API: Google Calendar API v3 (enable in API Library)
+- OAuth Consent Screen: External, "Testing" mode (up to 100 test users during development)
+- Credentials: OAuth 2.0 Client ID (Web application type)
+- Scopes: `calendar.readonly` (initial), `calendar.events` (after upgrade)
+- Verification: Required before production launch with `calendar.events` scope (1-4 week review)
+
+### Decision 2: Token Lifecycle and Vault Storage
+
+Google OAuth tokens follow a strict lifecycle that must handle expiration, refresh, and revocation gracefully.
+
+**Token Architecture:**
+
+```
+┌─────────────────────────────────────────────────────┐
+│ Supabase Auth (auth.identities)                     │
+│  provider_token: Google access_token (1hr TTL)      │
+│  provider_refresh_token: encrypted ref to Vault     │
+└──────────────────────┬──────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────┐
+│ Supabase Vault (vault.secrets)                      │
+│  Name: gcal_refresh_{user_id}                       │
+│  Value: AES-256 encrypted refresh_token             │
+│  Decrypted via: vault.decrypted_secrets view        │
+└──────────────────────┬──────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────┐
+│ Edge Function: refresh-calendar-token               │
+│  1. Read refresh_token from Vault                   ���
+│  2. Call Google token endpoint                      │
+│  3. Receive new access_token (+ maybe new refresh)  │
+│  4. If new refresh_token issued, update Vault       │
+│  5. Return fresh access_token to caller             │
+└─────────────────────────────────────────────────────┘
+```
+
+**Token Refresh Strategy:**
+- Access tokens expire after ~1 hour. Every Edge Function that calls Google API checks token freshness first.
+- The `refresh-calendar-token` Edge Function is called before any Google API operation if the current access token is expired or within 5 minutes of expiry.
+- Google may issue a new refresh token during refresh -- always store the latest one (token rotation).
+- If refresh fails with `invalid_grant`, the token has been revoked by the user. Mark `calendar_connections.sync_enabled = false` and notify the user to re-authorize.
+
+**Vault Security:**
+- Row Level Security on `vault.secrets` is not directly applicable (system-level table), but the Edge Function that reads tokens validates `auth.uid() = user_id` from the `calendar_connections` table before decrypting.
+- Service role key is used by Edge Functions to read Vault secrets -- never exposed to the client.
+- Refresh tokens are never sent to the browser. All Google API calls happen server-side in Edge Functions.
+
+### Decision 3: Event Mapping (Knowlune Study Blocks <-> Google Calendar Events)
+
+The bidirectional sync requires a stable mapping between Knowlune's `StudySchedule` records (Dexie/Supabase) and Google Calendar events.
+
+**Mapping Architecture:**
+
+```
+Knowlune StudySchedule               Google Calendar Event
+┌─────────────────────┐              ┌─────────────────────────┐
+│ id: UUID            │◄────────────►│ id: string (Google)     │
+│ title: string       │              │ summary: string         │
+│ days: DayOfWeek[]   │              │ recurrence: RRULE[]     │
+│ startTime: "HH:MM"  │              │ start.dateTime: ISO     │
+│ durationMinutes: num│              │ end.dateTime: ISO       │
+│ reminderMinutes: num│              │ reminders.overrides[]   │
+│ courseId?: string    │              │ extendedProperties.     │
+│ timezone: IANA      │              │   private.knowluneId    │
+│ updatedAt: ISO      │              │ updated: ISO            │
+└─────────────────────┘              └─────────────────────────┘
+         │                                     │
+         └──────────┐          ┌───────────────┘
+                    ▼          ▼
+          ┌──────────────────────────┐
+          │ calendar_event_map       │
+          │ local_event_id: UUID     │
+          │ provider_event_id: TEXT  │
+          │ etag: TEXT               │
+          │ provider_updated_at: TS  │
+          │ local_updated_at: TS     │
+          │ sync_status: ENUM        │
+          └──────────────────────────┘
+```
+
+**Field Mapping Rules:**
+
+| Knowlune Field | Google Calendar Field | Transform |
+|---|---|---|
+| `title` | `summary` | Direct copy |
+| `days[]` + `startTime` | `recurrence` (RRULE) + `start.dateTime` | `['monday','wednesday']` + `"09:00"` → `RRULE:FREQ=WEEKLY;BYDAY=MO,WE` + `2026-03-31T09:00:00-04:00` |
+| `durationMinutes` | `end.dateTime` | `start + duration` |
+| `reminderMinutes` | `reminders.overrides[{method:'popup', minutes:N}]` | Direct map (Google respects popup reminders unlike email) |
+| `courseId` | `extendedProperties.private.knowluneId` | Store Knowlune metadata in private extended properties |
+| `timezone` | `start.timeZone` / `end.timeZone` | IANA timezone string (identical format) |
+| `enabled: false` | Event with `status: 'cancelled'` | Disabled schedules map to cancelled events |
+| `recurrence: 'daily'` | `RRULE:FREQ=DAILY` | Direct map |
+| `recurrence: 'once'` | No `recurrence` field (single event) | One-time events have no RRULE |
+
+**Extended Properties for Round-Trip Fidelity:**
+Google Calendar's `extendedProperties.private` allows storing up to 300 key-value pairs per event, invisible to users but readable by the API. Knowlune uses this to store:
+- `knowluneId`: The local `StudySchedule.id` for reverse lookup
+- `knowluneType`: `'study_block'` or `'srs_review'` to distinguish event types
+- `knowluneCourseId`: The associated course ID (if any)
+- `knowluneVersion`: Schema version for future migration
+
+**SRS Review Events:**
+SRS review events (`srs-{date}@knowlune.app` from Phase 1-2 iCal feed) are synced as read-only events in Google Calendar. They are never updated from the Google side -- any Google-side modifications are overwritten on next sync. This is clearly communicated in the event description: "Auto-generated by Knowlune. Changes made in Google Calendar will be overwritten."
+
+### Decision 4: Conflict Resolution Engine
+
+When both Knowlune and Google Calendar modify the same event between sync cycles, a conflict occurs. The resolution strategy must be deterministic, predictable, and transparent to the user.
+
+**Resolution Algorithm:**
+
+```
+For each changed event in incremental sync response:
+  │
+  ├─ 1. Look up local version via calendar_event_map
+  │
+  ├─ 2. Compare timestamps:
+  │    │
+  │    ├─ Google `updated` > local `local_updated_at`
+  │    │   AND local sync_status = 'synced'
+  │    │   → REMOTE WINS: Apply Google's changes locally
+  │    │
+  │    ├─ Google `updated` < local `local_updated_at`
+  │    │   AND local sync_status = 'local_pending'
+  │    │   → LOCAL WINS: Push local changes to Google
+  │    │
+  │    ├─ Both changed (Google `updated` > last_synced_at
+  │    │   AND local `local_updated_at` > last_synced_at)
+  │    │   → CONFLICT: Apply field-level merge, then last-write-wins
+  │    │
+  │    └─ No local record found
+  │        → NEW REMOTE EVENT: Create locally (user created in Google)
+  │
+  └─ 3. Update calendar_event_map with new etag, timestamps, sync_status
+```
+
+**Field-Level Merge (for true conflicts):**
+When both sides have changed, compare individual fields:
+- If only one side changed a field → use that side's value
+- If both sides changed the same field → last-write-wins by `updated` timestamp
+- Log the conflict with both versions in `sync_conflicts` table for user review
+
+**Conflict Notification:**
+When a field-level conflict is resolved by last-write-wins, the user sees a non-blocking toast: "A scheduling conflict was auto-resolved. [View details]". The details panel shows what changed on each side and which version was kept. This follows the pattern from research: users prefer automatic resolution with the ability to review, not blocking dialogs.
+
+**Optimistic Concurrency with etag:**
+Google Calendar returns an `etag` (entity tag) with every event. When pushing updates, include the `If-Match: {etag}` header. If the etag has changed (412 Precondition Failed), another client modified the event -- re-fetch, re-merge, retry. Maximum 3 retries before flagging as unresolvable conflict.
+
+**Deletion Handling:**
+
+| Scenario | Resolution |
+|---|---|
+| Deleted on Google, untouched locally | Soft-delete locally (mark `enabled: false`, set `deletedAt`) |
+| Deleted locally, untouched on Google | Delete on Google via `events.delete` |
+| Deleted on both | No-op (already in sync) |
+| Deleted on Google, modified locally | User prompt: "This event was deleted in Google Calendar but you modified it in Knowlune. Keep or discard?" |
+| Deleted locally, modified on Google | Re-create locally from Google version (Google wins for delete+modify conflicts) |
+
+### Decision 5: Sync Frequency Architecture
+
+The sync engine uses a dual-mode approach: real-time webhook push for immediacy, with periodic polling as a reliability backstop.
+
+**Webhook Push (Primary Path):**
+
+```
+Google Calendar event changes
+  │
+  ├─ Google POSTs to webhook Edge Function
+  │    Headers: X-Goog-Channel-ID, X-Goog-Resource-State,
+  │             X-Goog-Channel-Token
+  │    Body: empty (notification only, no event data)
+  │
+  ├─ webhook-google-calendar Edge Function:
+  │    1. Verify X-Goog-Channel-Token against stored token
+  │    2. Look up calendar_connections by channel_id
+  │    3. INSERT INTO sync_queue (connection_id, trigger, ...)
+  │    4. Return 200 OK immediately
+  │
+  └─ sync-worker Edge Function (triggered by sync_queue):
+       1. Dequeue oldest pending item
+       2. Read syncToken from calendar_connections
+       3. Call events.list with syncToken
+       4. Apply conflict resolution for each changed event
+       5. Store new syncToken
+       6. Push any local pending changes to Google
+       7. Update last_synced_at
+```
+
+**Polling Fallback (Reliability Backstop):**
+
+```sql
+-- pg_cron job: every 15 minutes
+SELECT cron.schedule(
+  'poll-calendar-sync',
+  '*/15 * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://<project-ref>.supabase.co/functions/v1/sync-calendar-poll',
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key')
+    ),
+    body := '{}'::jsonb
+  );
+  $$
+);
+```
+
+The polling Edge Function queries `calendar_connections` for rows where:
+- `sync_enabled = true`
+- `last_synced_at < now() - interval '15 minutes'`
+- No pending `sync_queue` entry exists (avoid duplicate work)
+
+**Channel Lifecycle Management:**
+
+```sql
+-- pg_cron job: every 6 hours, renew expiring webhook channels
+SELECT cron.schedule(
+  'renew-gcal-channels',
+  '0 */6 * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://<project-ref>.supabase.co/functions/v1/renew-calendar-channels',
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key')
+    ),
+    body := '{}'::jsonb
+  );
+  $$
+);
+```
+
+Channel renewal logic:
+1. Query `calendar_connections` for `channel_expiration < now() + interval '24 hours'`
+2. For each expiring channel: call `channels.stop()` to close old channel
+3. Call `events.watch()` with new unique channel ID (UUID)
+4. Update `channel_id`, `channel_resource_id`, `channel_expiration` in database
+
+**Webhook Edge Function Configuration:**
+```toml
+# supabase/config.toml
+[functions.webhook-google-calendar]
+verify_jwt = false  # Google webhooks don't carry Supabase JWT
+```
+
+The webhook function must be publicly accessible with a valid HTTPS certificate. Self-hosted Supabase on Unraid needs a reverse proxy (Nginx/Caddy) with TLS termination for the webhook endpoint.
+
+### Decision 6: Timezone Normalization
+
+Timezone handling is a notorious source of bugs in calendar sync. Knowlune adopts a strict "store UTC, display local" policy.
+
+**Storage Layer (Supabase):**
+- All `TIMESTAMPTZ` columns store UTC (Postgres default behavior)
+- `calendar_connections.timezone` stores the user's IANA timezone string (e.g., `"Europe/Lisbon"`)
+- Event timestamps in `calendar_event_map` are stored as UTC
+
+**Conversion Layer (Edge Functions):**
+- When receiving events from Google: timestamps are already in ISO 8601 with timezone offset -- convert to UTC before storing
+- When pushing events to Google: convert UTC to the user's IANA timezone for `start.timeZone` and `end.timeZone` fields
+
+**Client Layer (React Frontend):**
+- Detect user's timezone: `Intl.DateTimeFormat().resolvedOptions().timeZone`
+- Store in user preferences (already exists in `StudySchedule.timezone`)
+- Display all times in local timezone using `toLocaleTimeString()` with the stored timezone
+- Send timezone to Edge Functions so they can generate correct Google Calendar events
+
+**Per-Device Timezone Handling:**
+If a user accesses Knowlune from different devices in different timezones:
+- The `StudySchedule.timezone` is set at creation time and does not change automatically
+- The user can update their timezone in Settings > Calendar
+- Google Calendar handles per-event timezone conversion natively -- events created in one timezone display correctly in another
+- Knowlune's Overview widget ("Today's Study Plan") always uses the device's current timezone for "today" determination
+
+**DST (Daylight Saving Time) Handling:**
+- IANA timezone database handles DST transitions automatically
+- Google Calendar's RRULE engine handles DST for recurring events (events stay at the same wall-clock time)
+- Edge Functions use `luxon` or Node.js `Intl` API for timezone conversion -- never manual offset math
+
+### Decision 7: Offline Graceful Degradation
+
+Knowlune is an offline-first application. Calendar sync must degrade gracefully when the network is unavailable.
+
+**Queue-and-Replay Pattern:**
+
+```
+User creates/edits/deletes a study schedule while offline
+  │
+  ├─ 1. Dexie (IndexedDB) updated immediately (optimistic)
+  │
+  ├─ 2. Mutation queued in calendarSyncQueue (Dexie table):
+  │      { id, action: 'create'|'update'|'delete',
+  │        scheduleId, payload, createdAt, retryCount }
+  │
+  ├─ 3. Navigator.onLine check:
+  │    │
+  │    ├─ ONLINE: Process queue immediately
+  │    │    → Edge Function: sync-calendar-events (push mode)
+  │    │    → On success: dequeue item
+  │    │    → On failure: increment retryCount, exponential backoff
+  │    │
+  │    └─ OFFLINE: Queue remains in IndexedDB
+  │         → 'online' event listener triggers queue processing
+  │         → Service worker can also process queue in background
+  │
+  └─ 4. On reconnection:
+       → Process queue in order (FIFO)
+       → For each item, check for conflicts (Google may have changed)
+       → Apply conflict resolution (Decision 4)
+       ��� Clear processed items from queue
+```
+
+**Offline Sync State Indicators:**
+The UI shows sync status in the Calendar Settings section:
+- Green dot + "Synced just now" -- all clear
+- Yellow dot + "Syncing..." -- sync in progress
+- Orange dot + "3 changes pending" -- offline with queued mutations
+- Red dot + "Sync error" -- last sync failed (click for details)
+
+**Dexie Schema Addition (v30 or later, when Phase 3 is implemented):**
+
+```typescript
+database.version(30).stores({
+  calendarSyncQueue: 'id, scheduleId, action, createdAt',
+})
+```
+
+**What Works Offline:**
+- Viewing existing study schedules (from Dexie)
+- Creating/editing/deleting study schedules (queued for sync)
+- "Today's Study Plan" widget (reads from local data)
+- iCal feed download (client-side generation from Dexie)
+
+**What Requires Online:**
+- Initial Google Calendar connection (OAuth flow)
+- Viewing Google Calendar events that haven't been synced yet
+- Real-time conflict resolution
+- Feed URL subscription management (Supabase tokens)
+
+### Decision 8: CalendarProvider Abstraction
+
+The provider abstraction enables future Apple CalDAV support without refactoring the sync engine. Even though only Google is implemented in Phase 3, the interface is designed from day one.
+
+**Interface Design:**
+
+```typescript
+// src/services/calendar/CalendarProvider.ts
+interface CalendarProvider {
+  // Identity
+  readonly providerId: 'google' | 'apple'
+  readonly displayName: string
+
+  // Authentication
+  getAuthUrl(redirectTo: string): Promise<string>
+  handleAuthCallback(params: URLSearchParams): Promise<TokenSet>
+  refreshAccessToken(connectionId: string): Promise<string> // returns new access_token
+
+  // Event CRUD
+  listEvents(connectionId: string, options: ListEventsOptions): Promise<ProviderEvent[]>
+  createEvent(connectionId: string, event: KnowluneEvent): Promise<ProviderEvent>
+  updateEvent(connectionId: string, eventId: string, event: KnowluneEvent): Promise<ProviderEvent>
+  deleteEvent(connectionId: string, eventId: string): Promise<void>
+
+  // Sync
+  getChanges(connectionId: string): Promise<SyncResult>
+  setupWebhook(connectionId: string, webhookUrl: string): Promise<WebhookChannel | null>
+  teardownWebhook(connectionId: string): Promise<void>
+
+  // Capabilities (Apple CalDAV has no webhooks)
+  readonly supportsWebhooks: boolean
+  readonly supportsBatchOperations: boolean
+}
+
+interface SyncResult {
+  created: ProviderEvent[]
+  updated: ProviderEvent[]
+  deleted: string[] // provider event IDs
+  nextSyncToken: string
+  requiresFullSync: boolean // true if syncToken expired (410 GONE)
+}
+
+interface KnowluneEvent {
+  localId: string
+  title: string
+  startTime: string // ISO 8601 UTC
+  endTime: string   // ISO 8601 UTC
+  timezone: string  // IANA
+  recurrence?: string // RRULE string
+  reminderMinutes?: number
+  extendedProperties?: Record<string, string>
+}
+```
+
+**Google Implementation:**
+
+```typescript
+// supabase/functions/_shared/providers/GoogleCalendarProvider.ts
+class GoogleCalendarProvider implements CalendarProvider {
+  readonly providerId = 'google' as const
+  readonly displayName = 'Google Calendar'
+  readonly supportsWebhooks = true
+  readonly supportsBatchOperations = true
+
+  // Uses googleapis npm package
+  // All API calls go through exponential backoff wrapper
+  // Token refresh handled transparently before each call
+}
+```
+
+**Future Apple Implementation (Phase 4):**
+
+```typescript
+// supabase/functions/_shared/providers/AppleCalDAVProvider.ts
+class AppleCalDAVProvider implements CalendarProvider {
+  readonly providerId = 'apple' as const
+  readonly displayName = 'Apple Calendar'
+  readonly supportsWebhooks = false  // CalDAV has no webhooks
+  readonly supportsBatchOperations = false
+
+  // Uses tsdav npm package
+  // Authentication via app-specific password (not OAuth)
+  // setupWebhook returns null (polling-only)
+}
+```
+
+**Provider Registry:**
+
+```typescript
+// supabase/functions/_shared/providers/registry.ts
+const providers: Record<string, CalendarProvider> = {
+  google: new GoogleCalendarProvider(),
+  // apple: new AppleCalDAVProvider(), // Phase 4
+}
+
+export function getProvider(providerId: string): CalendarProvider {
+  const provider = providers[providerId]
+  if (!provider) throw new Error(`Unknown calendar provider: ${providerId}`)
+  return provider
+}
+```
+
+### Decision 9: Supabase Schema Design
+
+The schema extends the existing `calendar_tokens` table (from E50 Phase 1-2) with new tables for connection management, event mapping, and sync orchestration.
+
+**Complete Schema:**
+
+```sql
+-- ============================================================
+-- Table 1: calendar_connections (extends E50 calendar_tokens concept)
+-- One row per connected calendar per user
+-- ============================================================
+CREATE TABLE calendar_connections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL CHECK (provider IN ('google', 'apple')),
+  provider_calendar_id TEXT NOT NULL DEFAULT 'primary',
+  calendar_name TEXT DEFAULT 'Primary Calendar',
+  sync_enabled BOOLEAN DEFAULT true,
+  sync_scope TEXT DEFAULT 'readonly' CHECK (sync_scope IN ('readonly', 'readwrite')),
+
+  -- Sync state
+  sync_token TEXT,                      -- Google syncToken for incremental sync
+  last_synced_at TIMESTAMPTZ,
+  last_sync_error TEXT,
+
+  -- Webhook channel
+  channel_id TEXT,                      -- UUID for events.watch
+  channel_resource_id TEXT,             -- Google-assigned resource ID
+  channel_token TEXT,                   -- Verification token for webhook
+  channel_expiration TIMESTAMPTZ,
+
+  -- User preferences
+  timezone TEXT NOT NULL DEFAULT 'UTC',
+
+  -- Metadata
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+
+  UNIQUE(user_id, provider, provider_calendar_id)
+);
+
+-- ============================================================
+-- Table 2: calendar_event_map (bidirectional event mapping)
+-- ============================================================
+CREATE TABLE calendar_event_map (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  connection_id UUID NOT NULL REFERENCES calendar_connections(id) ON DELETE CASCADE,
+  local_event_id TEXT NOT NULL,             -- Knowlune StudySchedule.id
+  provider_event_id TEXT NOT NULL,          -- Google event ID
+  event_type TEXT NOT NULL DEFAULT 'study_block'
+    CHECK (event_type IN ('study_block', 'srs_review')),
+
+  -- Concurrency control
+  etag TEXT,                                -- Google's etag for optimistic concurrency
+  provider_updated_at TIMESTAMPTZ,          -- Google's `updated` field
+  local_updated_at TIMESTAMPTZ,             -- Knowlune's last modification time
+
+  -- Sync tracking
+  sync_status TEXT DEFAULT 'synced'
+    CHECK (sync_status IN ('synced', 'local_pending', 'remote_pending', 'conflict')),
+  last_synced_at TIMESTAMPTZ DEFAULT now(),
+
+  created_at TIMESTAMPTZ DEFAULT now(),
+
+  UNIQUE(connection_id, provider_event_id),
+  UNIQUE(connection_id, local_event_id)
+);
+
+-- ============================================================
+-- Table 3: sync_queue (async webhook processing)
+-- ============================================================
+CREATE TABLE sync_queue (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  connection_id UUID NOT NULL REFERENCES calendar_connections(id) ON DELETE CASCADE,
+  trigger_type TEXT NOT NULL CHECK (trigger_type IN ('webhook', 'poll', 'local_change', 'manual')),
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+  error_message TEXT,
+  retry_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  processed_at TIMESTAMPTZ
+);
+
+-- ============================================================
+-- Table 4: sync_conflicts (conflict audit log)
+-- ============================================================
+CREATE TABLE sync_conflicts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_map_id UUID REFERENCES calendar_event_map(id) ON DELETE SET NULL,
+  connection_id UUID NOT NULL REFERENCES calendar_connections(id) ON DELETE CASCADE,
+  local_version JSONB NOT NULL,
+  remote_version JSONB NOT NULL,
+  resolution TEXT NOT NULL CHECK (resolution IN ('local_wins', 'remote_wins', 'merged', 'user_resolved')),
+  resolved_version JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ============================================================
+-- Indexes
+-- ============================================================
+CREATE INDEX idx_calendar_connections_user ON calendar_connections(user_id);
+CREATE INDEX idx_calendar_connections_channel ON calendar_connections(channel_id);
+CREATE INDEX idx_calendar_event_map_local ON calendar_event_map(local_event_id);
+CREATE INDEX idx_calendar_event_map_provider ON calendar_event_map(provider_event_id);
+CREATE INDEX idx_calendar_event_map_sync_status ON calendar_event_map(sync_status) WHERE sync_status != 'synced';
+CREATE INDEX idx_sync_queue_pending ON sync_queue(status, created_at) WHERE status = 'pending';
+CREATE INDEX idx_sync_conflicts_connection ON sync_conflicts(connection_id, created_at DESC);
+
+-- ============================================================
+-- Row Level Security
+-- ============================================================
+ALTER TABLE calendar_connections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE calendar_event_map ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sync_queue ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sync_conflicts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users manage own connections"
+  ON calendar_connections FOR ALL
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users manage own event maps"
+  ON calendar_event_map FOR ALL
+  USING (connection_id IN (
+    SELECT id FROM calendar_connections WHERE user_id = auth.uid()
+  ));
+
+CREATE POLICY "Users view own sync queue"
+  ON sync_queue FOR SELECT
+  USING (connection_id IN (
+    SELECT id FROM calendar_connections WHERE user_id = auth.uid()
+  ));
+
+CREATE POLICY "Users view own conflicts"
+  ON sync_conflicts FOR SELECT
+  USING (connection_id IN (
+    SELECT id FROM calendar_connections WHERE user_id = auth.uid()
+  ));
+
+-- Service role policies for Edge Functions (bypass RLS with service_role key)
+-- Edge Functions use the service_role key which bypasses RLS automatically
+```
+
+**Relationship to E50 `calendar_tokens` Table:**
+The Phase 1-2 `calendar_tokens` table (opaque feed token for iCal subscription) remains unchanged. It serves a different purpose (anonymous feed access) and coexists with `calendar_connections` (authenticated Google sync). A user can have both: an iCal feed token AND a Google Calendar connection.
+
+### Decision 10: Rate Limiting and Error Handling
+
+Google Calendar API enforces per-minute sliding window quotas. The sync engine must handle rate limits, transient errors, and permanent failures gracefully.
+
+**Exponential Backoff with Jitter:**
+
+```typescript
+// supabase/functions/_shared/utils/backoff.ts
+async function withBackoff<T>(
+  fn: () => Promise<T>,
+  options: {
+    maxRetries?: number    // default: 5
+    baseDelay?: number     // default: 1000ms
+    maxDelay?: number      // default: 32000ms
+    retryOn?: number[]     // default: [403, 429, 500, 503]
+  } = {}
+): Promise<T> {
+  const { maxRetries = 5, baseDelay = 1000, maxDelay = 32000, retryOn = [403, 429, 500, 503] } = options
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      if (attempt === maxRetries) throw error
+      const status = error?.response?.status ?? error?.code
+      if (!retryOn.includes(status)) throw error // non-retryable
+
+      const delay = Math.min(
+        baseDelay * Math.pow(2, attempt) + Math.random() * 1000, // jitter
+        maxDelay
+      )
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+  throw new Error('Unreachable')
+}
+```
+
+**Per-User Sync Queuing:**
+To prevent one user's bulk sync from consuming all quota, the sync engine processes one user at a time with a configurable concurrency limit:
+
+```typescript
+// Maximum concurrent sync operations across all users
+const MAX_CONCURRENT_SYNCS = 3
+
+// Maximum events to process per sync cycle per user
+const MAX_EVENTS_PER_CYCLE = 100
+```
+
+**Error Classification:**
+
+| Error | Type | Action |
+|---|---|---|
+| 401 Unauthorized | Token expired | Refresh token, retry |
+| 403 Rate limit | Transient | Exponential backoff |
+| 404 Not Found | Event deleted externally | Remove from local mapping |
+| 409 Conflict | Concurrent modification | Re-fetch, apply conflict resolution |
+| 410 Gone | syncToken expired | Clear syncToken, full re-sync |
+| 412 Precondition Failed | etag mismatch | Re-fetch event, re-merge, retry |
+| 429 Too Many Requests | Rate limit | Exponential backoff (respect Retry-After header) |
+| 500/503 Server Error | Transient | Exponential backoff |
+
+**Circuit Breaker:**
+If a user's sync fails 5 consecutive times, the circuit breaker trips:
+- `calendar_connections.sync_enabled` set to `false`
+- `last_sync_error` stores the reason
+- User sees a banner: "Calendar sync paused due to repeated errors. [Retry] [Disconnect]"
+- Manual "Retry" resets the failure counter and re-enables sync
+
+### Supabase Edge Functions Architecture
+
+The Phase 3 sync engine runs entirely in Supabase Edge Functions (Deno runtime), deployed on the self-hosted Unraid instance.
+
+**Edge Functions Inventory:**
+
+| Function | Trigger | JWT Required | Purpose |
+|---|---|---|---|
+| `store-calendar-tokens` | Frontend call | Yes | After OAuth, encrypt refresh token in Vault, create connection |
+| `refresh-calendar-token` | Internal call | Service role | Refresh expired Google access token |
+| `sync-calendar-events` | sync_queue / manual | Service role | Core sync logic: fetch changes, resolve conflicts, push updates |
+| `sync-calendar-poll` | pg_cron (every 15 min) | Service role | Poll-based sync for connections without recent webhook activity |
+| `webhook-google-calendar` | Google POST | No (verify token) | Receive webhook notification, enqueue sync job |
+| `renew-calendar-channels` | pg_cron (every 6 hrs) | Service role | Renew expiring webhook channels |
+| `disconnect-calendar` | Frontend call | Yes | Revoke tokens, stop channels, delete connection |
+
+**Shared Code:**
+All Edge Functions import from `supabase/functions/_shared/`:
+- `providers/` -- CalendarProvider implementations
+- `utils/backoff.ts` -- Exponential backoff
+- `utils/conflict.ts` -- Conflict resolution engine
+- `utils/eventMapper.ts` -- Knowlune <-> Google event field mapping
+
+### Implementation Sequence
+
+The Phase 3 stories build on E50 (Phase 1-2) and are designed for sequential implementation:
+
+```
+E51-S01: OAuth Connection Flow                            (foundation)
+  ├── Google Cloud Console setup (consent screen, credentials)
+  ├── Supabase Auth Google provider configuration
+  ├── "Connect Google Calendar" button in Settings
+  ├── OAuth redirect flow with scope management
+  ├── store-calendar-tokens Edge Function
+  ├── Supabase migration: calendar_connections table
+  ├── E2E test: OAuth consent → callback → connection stored
+  └── Disconnect flow with token revocation
+
+E51-S02: Token Lifecycle + Vault Storage                  (depends: S01)
+  ├── refresh-calendar-token Edge Function
+  ├── Vault integration for refresh token storage
+  ├── Token rotation handling (new refresh token on refresh)
+  ├─�� Invalid_grant detection → mark connection as disconnected
+  ├── Token freshness check before every Google API call
+  └── Unit tests: refresh, rotation, revocation scenarios
+
+E51-S03: Initial Full Sync (Read-Only)                    (depends: S02)
+  ├── sync-calendar-events Edge Function (full sync mode)
+  ��── events.list with pagination (nextPageToken)
+  ├── Store syncToken from last page
+  ├── Supabase migration: calendar_event_map table
+  ├── Event field mapping (Google → Knowlune format)
+  ├── Display synced Google events in Knowlune UI
+  └── E2E test: connect → full sync → events appear in UI
+
+E51-S04: Incremental Sync + Webhooks                      (depends: S03)
+  ├── syncToken-based incremental sync
+  ├── webhook-google-calendar Edge Function (JWT-less)
+  ├── Supabase migration: sync_queue table
+  ├── events.watch channel setup on connection
+  ├── renew-calendar-channels pg_cron job
+  ├── sync-calendar-poll pg_cron job (15 min fallback)
+  ├── 410 GONE recovery (automatic full re-sync)
+  └── E2E test: change event in Google → webhook → local update
+
+E51-S05: Two-Way Write Operations                         (depends: S04)
+  ├── Scope upgrade flow (readonly → readwrite)
+  ├── events.insert for new Knowlune schedules
+  ├── events.update for modified schedules (prefer PUT, 1 quota unit)
+  ├── events.delete for removed schedules
+  ├── extendedProperties for round-trip metadata
+  ├── Recurring event handling with singleEvents=true
+  └── E2E test: create schedule in Knowlune → appears in Google
+
+E51-S06: Conflict Resolution Engine                       (depends: S05)
+  ├── Conflict detection via etag + timestamp comparison
+  ├── Field-level merge for non-conflicting changes
+  ├── Last-write-wins for conflicting fields
+  ├── Supabase migration: sync_conflicts audit table
+  ├── Conflict notification toast with details panel
+  ├── Deletion conflict handling (5 scenarios)
+  └── E2E test: modify same event on both sides → conflict resolved
+
+E51-S07: Offline Queue + Sync Status UI                   (depends: S06)
+  ├── calendarSyncQueue Dexie table (Dexie v30+)
+  ├── Queue-and-replay mutation pattern
+  ├── Navigator.onLine detection + 'online' event listener
+  ���── Sync status indicators (green/yellow/orange/red dot)
+  ├── Circuit breaker (5 failures → pause sync)
+  ├── "Retry" and "Disconnect" actions for error state
+  └── E2E test: queue changes offline → reconnect → sync completes
+
+E51-S08: Settings UI + Sync Management                    (depends: S07)
+  ├── "Connect Google Calendar" section in Settings
+  ├── Connected state: sync status, last synced, disconnect button
+  ├── Sync scope indicator (read-only vs read-write badge)
+  ├── "Force Sync" manual trigger button
+  ├���─ Conflict history viewer (from sync_conflicts table)
+  ├── Migration path: users with iCal feed can upgrade to two-way sync
+  └── E2E test: full Settings UI flow, connect → sync → disconnect
+```
+
+**Parallelization:** S01-S02 are strictly sequential (S02 needs tokens from S01). S03-S04 are sequential (S04 needs syncToken from S03). S05 depends on S04 for the sync infrastructure. S06-S07 can be partially parallelized (conflict resolution and offline queue are somewhat independent). S08 depends on all prior stories for the complete UI.
+
+### Google Calendar Two-Way Sync Validation
+
+**Coherence with Existing Architecture:**
+- Reuses Supabase Auth from E19 (no new auth system)
+- Extends `calendar_connections` concept from E50 `calendar_tokens` (coexistence, not replacement)
+- Follows Edge Function pattern from YouTube Tier 2/3 server architecture and Entitlement Enforcement
+- Follows Zustand + Dexie offline-first pattern from project context
+- Uses design tokens (sync status indicators use `text-success`, `text-warning`, `text-destructive`)
+- CalendarProvider abstraction mirrors the existing `getLLMClient()` factory pattern (provider registry)
+- pg_cron pattern mirrors existing scheduled jobs in Supabase infrastructure
+
+**Relationship to E50 (Phase 1-2) Decisions:**
+- iCal feed (`GET /api/calendar/:token.ics`) remains operational alongside two-way sync
+- `StudySchedule` Dexie table (v28) and `useStudyScheduleStore` are reused as the local data source
+- `calendar_tokens` table for feed authentication is not modified or replaced
+- Users can use iCal feed, Google Calendar sync, or both simultaneously
+- `ical-generator` and `icalFeedGenerator.ts` continue serving the subscription feed
+
+**What This Addendum Does NOT Cover:**
+- Apple CalDAV integration (Phase 4) -- abstraction is ready, implementation deferred
+- Smart scheduling / free-busy detection (Phase 5) -- requires Google FreeBusy API
+- Multi-calendar support (syncing to calendars other than 'primary')
+- Shared calendar handling (Google Calendar sharing/delegation)
+- Google Workspace (G Suite) admin-managed calendars
+- Mobile push notifications for sync events (separate concern from E43)
+- Google OAuth consent screen verification process (operational, not architectural)
+
+**Risk Mitigations:**
+- OAuth verification delay → "Testing" mode supports 100 users during development; start verification early
+- Webhook delivery failure → pg_cron polling every 15 min ensures eventual consistency
+- syncToken expiration (410 GONE) → automatic full re-sync with user notification
+- Refresh token revocation → detect `invalid_grant`, prompt re-authorization, mark connection disabled
+- Concurrent modification conflicts → etag-based optimistic concurrency + field-level merge + user notification
+- Rate limit exhaustion → exponential backoff with jitter + per-user sync queuing + prefer PUT over PATCH
+- Offline mutations → IndexedDB queue with FIFO replay and conflict check on reconnection
+- Self-hosted webhook accessibility → requires TLS-terminated reverse proxy on Unraid (documented in deployment guide)
 - Score staleness → computed on-demand (no cache), recency component ensures time-awareness

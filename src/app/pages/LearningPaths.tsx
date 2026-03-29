@@ -69,6 +69,7 @@ function CreatePathDialog({
   const [description, setDescription] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const createPath = useLearningPathStore(s => s.createPath)
+  const loadPaths = useLearningPathStore(s => s.loadPaths)
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -79,6 +80,7 @@ function CreatePathDialog({
       setIsSubmitting(true)
       try {
         await createPath(trimmedName, description.trim() || undefined)
+        await loadPaths()
         toast.success(`Created "${trimmedName}"`)
         setName('')
         setDescription('')
@@ -89,7 +91,7 @@ function CreatePathDialog({
         setIsSubmitting(false)
       }
     },
-    [name, description, createPath, onOpenChange]
+    [name, description, createPath, loadPaths, onOpenChange]
   )
 
   return (

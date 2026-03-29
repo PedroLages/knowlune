@@ -26,11 +26,11 @@ test.describe('Offline Awareness', () => {
     await context.setOffline(true)
 
     // Navigate to another page — should still render from cache/local data
-    await page.goto('/career-paths').catch(() => {
+    await page.goto('/courses').catch(() => {
       // Navigation may fail if page wasn't cached, that's expected
     })
 
-    // The page should still be functional (either showing career paths or previous page)
+    // The page should still be functional (either showing courses or previous page)
     // At minimum, the app shell should remain visible
     await expect(page.locator('nav')).toBeVisible()
   })
@@ -74,27 +74,4 @@ test.describe('Offline Awareness', () => {
     })
   })
 
-  test('should handle offline state on CareerPaths page gracefully', async ({ page, context }) => {
-    // Load page while online first (to cache assets)
-    await navigateAndWait(page, '/career-paths')
-    await expect(page.getByRole('heading', { name: 'Learning Paths', level: 1 })).toBeVisible({
-      timeout: TIMEOUTS.NETWORK,
-    })
-
-    // Go offline
-    await context.setOffline(true)
-
-    // Reload — SPA assets should be cached by browser
-    await page.reload().catch(() => {
-      // May throw if assets need refetch
-    })
-
-    // Go back online and verify recovery
-    await context.setOffline(false)
-    await navigateAndWait(page, '/career-paths')
-
-    await expect(page.getByRole('heading', { name: 'Learning Paths', level: 1 })).toBeVisible({
-      timeout: TIMEOUTS.NETWORK,
-    })
-  })
 })

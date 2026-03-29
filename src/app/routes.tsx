@@ -11,15 +11,6 @@ import { MessageSquare, Sparkles, Brain, RotateCcw, Shuffle, BarChart3, Layers }
 // Named exports need .then(m => ({ default: m.ExportName }))
 const Overview = React.lazy(() => import('./pages/Overview').then(m => ({ default: m.Overview })))
 const Courses = React.lazy(() => import('./pages/Courses').then(m => ({ default: m.Courses })))
-const CourseDetail = React.lazy(() =>
-  import('./pages/CourseDetail').then(m => ({ default: m.CourseDetail }))
-)
-const CourseOverview = React.lazy(() =>
-  import('./pages/CourseOverview').then(m => ({ default: m.CourseOverview }))
-)
-const LessonPlayer = React.lazy(() =>
-  import('./pages/LessonPlayer').then(m => ({ default: m.LessonPlayer }))
-)
 const ImportedCourseDetail = React.lazy(() =>
   import('./pages/ImportedCourseDetail').then(m => ({ default: m.ImportedCourseDetail }))
 )
@@ -77,12 +68,6 @@ const QuizResults = React.lazy(() =>
 )
 const QuizReview = React.lazy(() =>
   import('./pages/QuizReview').then(m => ({ default: m.QuizReview }))
-)
-const CareerPaths = React.lazy(() =>
-  import('./pages/CareerPaths').then(m => ({ default: m.CareerPaths }))
-)
-const CareerPathDetail = React.lazy(() =>
-  import('./pages/CareerPathDetail').then(m => ({ default: m.CareerPathDetail }))
 )
 const Login = React.lazy(() => import('./pages/Login').then(m => ({ default: m.Login })))
 const Notifications = React.lazy(() =>
@@ -199,30 +184,8 @@ export const router = createBrowserRouter([
           </SuspensePage>
         ),
       },
-      {
-        path: 'courses/:courseId/overview',
-        element: (
-          <SuspensePage>
-            <CourseOverview />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'courses/:courseId',
-        element: (
-          <SuspensePage>
-            <CourseDetail />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'courses/:courseId/:lessonId',
-        element: (
-          <SuspensePage>
-            <LessonPlayer />
-          </SuspensePage>
-        ),
-      },
+      // Dead regular course routes removed (E89-S01)
+      // Quiz sub-routes kept alive — re-wired in E89-S09
       {
         path: 'courses/:courseId/lessons/:lessonId/quiz',
         element: (
@@ -276,22 +239,6 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <YouTubeLessonPlayer />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'career-paths',
-        element: (
-          <SuspensePage>
-            <CareerPaths />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'career-paths/:pathId',
-        element: (
-          <SuspensePage>
-            <CareerPathDetail />
           </SuspensePage>
         ),
       },

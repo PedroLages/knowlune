@@ -160,11 +160,11 @@ export const useQuizStore = create<QuizState>()(
           // already-persisted quiz attempt.
           if (result.passed) {
             try {
-              const course = await db.courses.get(courseId)
-              const modules = course?.modules ?? []
+              // Regular courses table dropped (E89-S01) — no catalog course lookup needed.
+              // Pass empty modules array; imported courses use their own progress tracking.
               await useContentProgressStore
                 .getState()
-                .setItemStatus(courseId, currentQuiz.lessonId, 'completed', modules)
+                .setItemStatus(courseId, currentQuiz.lessonId, 'completed', [])
             } catch (err) {
               console.error('[useQuizStore] setItemStatus failed after quiz submit:', err)
             }

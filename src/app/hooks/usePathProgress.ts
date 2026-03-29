@@ -67,57 +67,16 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
     const catalogEntries = entries.filter(e => e.courseType === 'catalog')
     const importedEntries = entries.filter(e => e.courseType === 'imported')
 
-    // --- Catalog courses: use contentProgress + course metadata ---
+    // --- Catalog courses: table dropped in E89-S01 ---
+    // Catalog entries still tracked by courseId, but with 0 progress (no course metadata available)
     if (catalogEntries.length > 0) {
-      const catalogCourseIds = catalogEntries.map(e => e.courseId)
-
-      // Load catalog course metadata for totalLessons count
-      // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
-      const catalogCourses = await db.courses
-        .where('id')
-        .anyOf(catalogCourseIds)
-        .toArray()
-        .catch(() => [])
-
-      const courseMap = new Map(catalogCourses.map(c => [c.id, c]))
-
-      // Load contentProgress records for these courses
-      // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
-      const allContentProgress = await db.contentProgress
-        .where('courseId')
-        .anyOf(catalogCourseIds)
-        .toArray()
-        .catch(() => [])
-
-      // Group by courseId and count completed lessons (not modules)
       for (const entry of catalogEntries) {
-        const course = courseMap.get(entry.courseId)
-        const totalLessons = course
-          ? course.modules.reduce((sum, m) => sum + m.lessons.length, 0)
-          : 0
-
-        // Get all lesson IDs for this course to only count lesson-level progress
-        const lessonIds = new Set(course?.modules.flatMap(m => m.lessons.map(l => l.id)) ?? [])
-
-        const completedLessons = allContentProgress.filter(
-          cp =>
-            cp.courseId === entry.courseId && cp.status === 'completed' && lessonIds.has(cp.itemId)
-        ).length
-
-        const pct = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
-
         courseProgress.set(entry.courseId, {
           courseId: entry.courseId,
-          completedLessons,
-          totalLessons,
-          completionPct: pct,
+          completedLessons: 0,
+          totalLessons: 0,
+          completionPct: 0,
         })
-
-        totalCompletedLessons += completedLessons
-        totalLessonsCount += totalLessons
-        if (totalLessons > 0 && completedLessons >= totalLessons) {
-          completedCoursesCount++
-        }
       }
     }
 
@@ -247,23 +206,8 @@ export function useMultiPathProgress(
     const catalogCourseIds = [...new Set(catalogEntries.map(e => e.courseId))]
     const importedCourseIds = [...new Set(importedEntries.map(e => e.courseId))]
 
-    const [catalogCourses, allContentProgress, importedCourses, videoProgress] = await Promise.all([
-      catalogCourseIds.length > 0
-        ? // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
-          db.courses
-            .where('id')
-            .anyOf(catalogCourseIds)
-            .toArray()
-            .catch(() => [])
-        : Promise.resolve([]),
-      catalogCourseIds.length > 0
-        ? // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
-          db.contentProgress
-            .where('courseId')
-            .anyOf(catalogCourseIds)
-            .toArray()
-            .catch(() => [])
-        : Promise.resolve([]),
+    // Catalog courses table dropped (E89-S01) — skip catalog DB queries
+    const [importedCourses, videoProgress] = await Promise.all([
       importedCourseIds.length > 0
         ? // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
           db.importedCourses
@@ -282,28 +226,19 @@ export function useMultiPathProgress(
         : Promise.resolve([]),
     ])
 
-    const catalogCourseMap = new Map(catalogCourses.map(c => [c.id, c]))
     const importedCourseMap = new Map(importedCourses.map(c => [c.id, c]))
     const localProgress = importedCourseIds.length > 0 ? getAllProgress() : {}
 
     // Build per-course progress lookup
     const courseProgressLookup = new Map<string, CourseProgressInfo>()
 
-    // Catalog courses
+    // Catalog courses — table dropped (E89-S01), report 0 progress
     for (const courseId of catalogCourseIds) {
-      const course = catalogCourseMap.get(courseId)
-      const totalLessons = course ? course.modules.reduce((sum, m) => sum + m.lessons.length, 0) : 0
-      const lessonIds = new Set(course?.modules.flatMap(m => m.lessons.map(l => l.id)) ?? [])
-      const completedLessons = allContentProgress.filter(
-        cp => cp.courseId === courseId && cp.status === 'completed' && lessonIds.has(cp.itemId)
-      ).length
-      const pct = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
-
       courseProgressLookup.set(courseId, {
         courseId,
-        completedLessons,
-        totalLessons,
-        completionPct: pct,
+        completedLessons: 0,
+        totalLessons: 0,
+        completionPct: 0,
       })
     }
 

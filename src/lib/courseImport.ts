@@ -1,6 +1,7 @@
 import { db } from '@/db'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useImportProgressStore } from '@/stores/useImportProgressStore'
+import { useNotificationStore } from '@/stores/useNotificationStore'
 import { triggerAutoAnalysis } from '@/lib/autoAnalysis'
 import { unlockSidebarItem } from '@/app/hooks/useProgressiveDisclosure'
 import { triggerOllamaTagging } from '@/lib/ollamaTagging'
@@ -10,6 +11,7 @@ import {
   detectAuthorPhoto,
 } from '@/lib/authorDetection'
 import { autoGenerateThumbnail } from '@/lib/autoThumbnail'
+import { loadThumbnailFromFile, saveCourseThumbnail } from '@/lib/thumbnailService'
 import {
   showDirectoryPicker,
   scanDirectory,
@@ -234,7 +236,7 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
     const courseName = dirHandle.name
     const now = new Date().toISOString()
 
-    // Build video records from successful extractions
+    // Build video records from successful extractions (sorted by path for deterministic ordering)
     const videos: ScannedVideo[] = videoResults
       .filter(
         (
@@ -243,6 +245,9 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
           entry: { handle: FileSystemFileHandle; path: string }
           metadata: { duration: number; width: number; height: number; fileSize: number }
         }> => r.status === 'fulfilled'
+      )
+      .sort((a, b) =>
+        a.value.entry.path.localeCompare(b.value.entry.path, undefined, { numeric: true })
       )
       .map((r, index) => ({
         id: crypto.randomUUID(),
@@ -430,6 +435,14 @@ export async function persistScannedCourse(
     throw error
   }
 
+  // Post-persist verification — ensure data actually landed in IndexedDB
+  const persisted = await db.importedCourses.get(course.id)
+  if (!persisted) {
+    console.error('[Import] Post-persist verification failed: course not found in DB after transaction')
+    toast.error(`Import of "${course.name}" failed silently. Please try again.`)
+    throw new Error('Post-persist verification failed')
+  }
+
   // Link course to author if detected (AC2) + attach photo if found (E25-S05)
   if (authorId) {
     try {
@@ -482,11 +495,27 @@ export async function persistScannedCourse(
   triggerOllamaTagging(course, videos, pdfs)
 
   // Auto-generate thumbnail from first video at 10% mark (E1B-S04 AC1)
-  // Fire-and-forget: failure shows default placeholder, no error toast (AC3)
-  if (videos.length > 0 && videos[0].fileHandle) {
+  // Skip if user selected a cover image in the wizard — don't overwrite their choice
+  if (!overrides?.coverImageHandle && videos.length > 0 && videos[0].fileHandle) {
     autoGenerateThumbnail(course.id, videos[0].fileHandle).catch(() => {
       // silent-catch-ok: thumbnail generation failure is non-fatal — card shows placeholder icon (E1B-S04 AC3)
     })
+  }
+
+  // Persist user-selected cover image to courseThumbnails table so card renders it
+  if (overrides?.coverImageHandle) {
+    try {
+      const file = await overrides.coverImageHandle.getFile()
+      const resizedBlob = await loadThumbnailFromFile(file)
+      await saveCourseThumbnail(course.id, resizedBlob, 'local')
+      const url = URL.createObjectURL(resizedBlob)
+      useCourseImportStore.setState(state => ({
+        thumbnailUrls: { ...state.thumbnailUrls, [course.id]: url },
+      }))
+    } catch (error) {
+      // silent-catch-ok: thumbnail persistence failure is non-fatal — card shows placeholder icon
+      console.warn('[Import] Failed to save user-selected cover image:', error)
+    }
   }
 
   // E32-S03: Check storage quota after import (fire-and-forget)
@@ -494,6 +523,14 @@ export async function persistScannedCourse(
     checkStorageQuota().catch(() => {
       // silent-catch-ok: quota check is advisory
     })
+  })
+
+  // Create import-finished notification
+  useNotificationStore.getState().create({
+    type: 'import-finished',
+    title: `Course imported: ${course.name}`,
+    message: `${videos.length} ${videos.length === 1 ? 'video' : 'videos'}, ${pdfs.length} ${pdfs.length === 1 ? 'PDF' : 'PDFs'} imported successfully`,
+    actionUrl: `/imported-courses/${course.id}`,
   })
 
   // Unlock sidebar items via progressive disclosure
@@ -719,8 +756,13 @@ export async function scanFromDroppedFiles(
     }
 
     if (videoFiles.length === 0 && pdfFiles.length === 0) {
+      const unsupportedCount = files.length - imageFileList.length
+      const hint =
+        unsupportedCount > 0
+          ? ` Found ${files.length} file(s) but none matched supported formats.`
+          : ''
       throw new ImportError(
-        'No supported files found. Please drop video (MP4, MKV, AVI, WEBM) or PDF files.',
+        `No supported files found.${hint} Supported: MP4, MKV, AVI, WEBM, PDF. Try using "Select Folder" for course folders.`,
         'NO_FILES'
       )
     }

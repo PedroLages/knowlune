@@ -47,6 +47,7 @@ function makeVideo(overrides: Record<string, unknown> = {}) {
 describe('ElearningDB schema', () => {
   it('should create the database with correct tables including notes', async () => {
     expect(db.name).toBe('ElearningDB')
+    // courses table dropped in v30 (E89-S01)
     expect(db.tables.map(t => t.name).sort()).toEqual([
       'aiUsageEvents',
       'authors',
@@ -56,7 +57,6 @@ describe('ElearningDB schema', () => {
       'contentProgress',
       'courseReminders',
       'courseThumbnails',
-      'courses',
       'embeddings',
       'entitlements',
       'flashcards',
@@ -66,6 +66,7 @@ describe('ElearningDB schema', () => {
       'learningPathEntries',
       'learningPaths',
       'notes',
+      'notificationPreferences',
       'notifications',
       'pathEnrollments',
       'progress',
@@ -81,8 +82,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 28', () => {
-    expect(db.verno).toBe(28)
+  it('should be at version 30', () => {
+    expect(db.verno).toBe(30)
   })
 
   it('should have entitlements table with userId as primary key', () => {

@@ -165,7 +165,7 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         data-testid="edit-course-dialog"
-        className="max-w-lg rounded-[24px]"
+        className="max-w-lg max-h-[85vh] flex flex-col rounded-[24px]"
         onClick={e => e.stopPropagation()}
         onKeyDown={e => e.stopPropagation()}
       >
@@ -174,7 +174,7 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
           <DialogDescription>Update course details or reorder videos.</DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <TabsList className="w-full" data-testid="edit-course-tabs">
             <TabsTrigger value="details" data-testid="tab-details" className="flex-1">
               Details
@@ -184,7 +184,7 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="details" className="mt-4">
+          <TabsContent value="details" className="mt-4 overflow-y-auto flex-1 min-h-0">
             <div className="space-y-4">
               {/* Course Name */}
               <div className="space-y-2">
@@ -331,11 +331,11 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
             </div>
           </TabsContent>
 
-          <TabsContent value="videos" className="mt-4">
+          <TabsContent value="videos" className="mt-4 overflow-y-auto flex-1 min-h-0">
             <p className="mb-3 text-xs text-muted-foreground">
               Drag videos to change the lesson order. Changes are saved automatically.
             </p>
-            <div className="max-h-[360px] overflow-y-auto">
+            <div className="overflow-y-auto">
               <VideoReorderList videos={videos} onReorder={setVideos} />
             </div>
           </TabsContent>
