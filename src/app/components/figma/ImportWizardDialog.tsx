@@ -636,11 +636,12 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
                         <button
                           type="button"
                           onClick={() => handleSelectCoverImage(null)}
-                          className="absolute top-2 right-2 rounded-full bg-background/80 p-1 hover:bg-background transition-colors"
+                          className="absolute top-2 right-2 rounded-full bg-background/80 px-2 py-1 hover:bg-background transition-colors flex items-center gap-1 text-xs font-medium"
                           aria-label="Remove cover image"
                           data-testid="wizard-remove-cover"
                         >
-                          <X className="size-4" />
+                          <X className="size-3" />
+                          Change
                         </button>
                       </div>
                     )}

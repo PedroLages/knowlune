@@ -22,7 +22,7 @@ vi.mock('pdfjs-dist', () => ({
 
 describe('constants', () => {
   it('should define supported video extensions', () => {
-    expect(SUPPORTED_VIDEO_EXTENSIONS).toEqual(['.mp4', '.mkv', '.avi', '.webm'])
+    expect(SUPPORTED_VIDEO_EXTENSIONS).toEqual(['.mp4', '.mkv', '.avi', '.webm', '.ts'])
   })
 
   it('should define supported document extensions', () => {
@@ -30,7 +30,7 @@ describe('constants', () => {
   })
 
   it('should combine all supported extensions', () => {
-    expect(SUPPORTED_FILE_EXTENSIONS).toEqual(['.mp4', '.mkv', '.avi', '.webm', '.pdf'])
+    expect(SUPPORTED_FILE_EXTENSIONS).toEqual(['.mp4', '.mkv', '.avi', '.webm', '.ts', '.pdf'])
   })
 })
 
@@ -40,6 +40,7 @@ describe('isSupportedVideoFormat', () => {
     expect(isSupportedVideoFormat('video.mkv')).toBe(true)
     expect(isSupportedVideoFormat('video.avi')).toBe(true)
     expect(isSupportedVideoFormat('video.webm')).toBe(true)
+    expect(isSupportedVideoFormat('video.ts')).toBe(true)
   })
 
   it('should be case-insensitive', () => {

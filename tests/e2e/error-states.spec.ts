@@ -65,39 +65,6 @@ test.describe('SessionHistory Error States', () => {
 })
 
 // ---------------------------------------------------------------------------
-// CareerPaths — empty state handling
-// ---------------------------------------------------------------------------
-test.describe('CareerPaths States', () => {
-  test('should show career paths page with career paths heading', async ({ page }) => {
-    await navigateAndWait(page, '/career-paths')
-
-    // CareerPaths loads curated paths from CURATED_CAREER_PATHS constant
-    // so it should always render paths unless data is corrupted
-    await expect(page.getByRole('heading', { name: 'Career Paths', level: 1 })).toBeVisible({
-      timeout: TIMEOUTS.NETWORK,
-    })
-  })
-
-  test('should show search empty state when no paths match query', async ({ page }) => {
-    await navigateAndWait(page, '/career-paths')
-
-    // Wait for page to load
-    await expect(page.getByRole('heading', { name: 'Career Paths', level: 1 })).toBeVisible({
-      timeout: TIMEOUTS.NETWORK,
-    })
-
-    // Type a search query that won't match any career paths
-    const searchInput = page.getByPlaceholder('Search paths...')
-    await searchInput.fill('xyznonexistentpath12345')
-
-    // EmptyState for search should render
-    await expect(page.getByText('No paths match your search')).toBeVisible({
-      timeout: TIMEOUTS.MEDIUM,
-    })
-  })
-})
-
-// ---------------------------------------------------------------------------
 // Flashcards — empty state (no cards) and "all caught up" state
 // Note: Flashcards is behind PremiumGate. We seed entitlement to bypass.
 // ---------------------------------------------------------------------------

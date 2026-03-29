@@ -40,8 +40,12 @@ interface VideoReorderListProps {
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60)
-  const s = String(seconds % 60).padStart(2, '0')
+  const s = String(Math.floor(seconds % 60)).padStart(2, '0')
   return `${m}:${s}`
+}
+
+function stripExtension(filename: string): string {
+  return filename.replace(/\.\w+$/, '')
 }
 
 /** Single sortable video row */
@@ -87,7 +91,7 @@ function SortableVideoRow({ video, position }: { video: ImportedVideo; position:
       <Video className="size-4 shrink-0 text-brand" aria-hidden="true" />
 
       <span className="flex-1 truncate text-sm font-medium" title={video.filename}>
-        {video.filename}
+        {stripExtension(video.filename)}
       </span>
 
       {video.duration > 0 && (

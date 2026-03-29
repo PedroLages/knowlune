@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Clock, CheckCircle, PlayCircle } from 'lucide-react'
+import { Clock, CheckCircle, PlayCircle, FolderOpen } from 'lucide-react'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { EmptyState } from '@/app/components/EmptyState'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs'
@@ -12,13 +12,16 @@ import {
 } from '@/app/components/ui/select'
 import { ProgressStats } from '@/app/components/ProgressStats'
 import { CourseCard } from '@/app/components/figma/CourseCard'
+import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { useCourseStore } from '@/stores/useCourseStore'
+import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { getCoursesInProgress, getCompletedCourses, getNotStartedCourses } from '@/lib/progress'
 
 type SortOption = 'recent' | 'progress-high' | 'progress-low' | 'alpha' | 'time'
 
 export default function MyClass() {
   const allCourses = useCourseStore(s => s.courses)
+  const importedCourses = useCourseImportStore(s => s.importedCourses)
   const [sortBy, setSortBy] = useState<SortOption>('recent')
   const [isLoading, setIsLoading] = useState(true)
 
@@ -31,7 +34,8 @@ export default function MyClass() {
   const completed = useMemo(() => getCompletedCourses(allCourses), [allCourses])
   const notStarted = useMemo(() => getNotStartedCourses(allCourses), [allCourses])
 
-  const hasAnyCourses = inProgress.length > 0 || completed.length > 0 || notStarted.length > 0
+  const hasAnyCourses =
+    inProgress.length > 0 || completed.length > 0 || notStarted.length > 0 || importedCourses.length > 0
 
   // Get all courses with their status
   const allCoursesWithStatus = useMemo(
@@ -226,6 +230,22 @@ export default function MyClass() {
 
             {/* By Status View */}
             <TabsContent value="by-status">
+              {importedCourses.length > 0 && (
+                <section className="mb-8">
+                  <div className="bg-brand-soft p-4 rounded-xl mb-4">
+                    <h2 className="text-lg font-semibold flex items-center gap-2">
+                      <FolderOpen className="size-6 text-brand" />
+                      Imported Courses
+                    </h2>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)] stagger-children">
+                    {importedCourses.map(course => (
+                      <ImportedCourseCard key={course.id} course={course} allTags={[]} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
               {inProgress.length > 0 && (
                 <section className="mb-8">
                   <div className="bg-brand-soft p-4 rounded-xl mb-4">

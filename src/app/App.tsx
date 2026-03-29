@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { RouterProvider } from 'react-router'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@/app/components/ui/sonner'
@@ -104,7 +105,7 @@ export default function App() {
           <WelcomeWizard />
           {import.meta.env.PROD && <PWAUpdatePrompt />}
           <PWAInstallBanner />
-          {process.env.NODE_ENV === 'development' && <Agentation />}
+          {process.env.NODE_ENV === 'development' && createPortal(<Agentation />, document.body)}
         </MotionConfig>
       </ThemeProvider>
     </ErrorBoundary>

@@ -1,6 +1,6 @@
 import type { VideoMetadata, PdfMetadata, VideoFormat, SupportedFileExtension } from '@/data/types'
 
-export const SUPPORTED_VIDEO_EXTENSIONS = ['.mp4', '.mkv', '.avi', '.webm'] as const
+export const SUPPORTED_VIDEO_EXTENSIONS = ['.mp4', '.mkv', '.avi', '.webm', '.ts'] as const
 export const SUPPORTED_DOCUMENT_EXTENSIONS = ['.pdf'] as const
 export const SUPPORTED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'] as const
 export const SUPPORTED_FILE_EXTENSIONS: readonly SupportedFileExtension[] = [

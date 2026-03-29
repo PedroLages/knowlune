@@ -34,6 +34,12 @@ function getCurrentHHMM(): string {
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 }
 
+/** Validate HH:MM format (00:00–23:59) */
+const HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/
+function isValidHHMM(value: string): boolean {
+  return HHMM_RE.test(value)
+}
+
 interface NotificationPrefsState {
   prefs: NotificationPreferences
   isLoaded: boolean
@@ -99,6 +105,10 @@ export const useNotificationPrefsStore = create<NotificationPrefsState>((set, ge
   },
 
   setQuietHours: async patch => {
+    // Validate HH:MM format before persisting
+    if (patch.quietHoursStart && !isValidHHMM(patch.quietHoursStart)) return
+    if (patch.quietHoursEnd && !isValidHHMM(patch.quietHoursEnd)) return
+
     const next: NotificationPreferences = {
       ...get().prefs,
       ...patch,

@@ -78,12 +78,6 @@ const QuizResults = React.lazy(() =>
 const QuizReview = React.lazy(() =>
   import('./pages/QuizReview').then(m => ({ default: m.QuizReview }))
 )
-const CareerPaths = React.lazy(() =>
-  import('./pages/CareerPaths').then(m => ({ default: m.CareerPaths }))
-)
-const CareerPathDetail = React.lazy(() =>
-  import('./pages/CareerPathDetail').then(m => ({ default: m.CareerPathDetail }))
-)
 const Login = React.lazy(() => import('./pages/Login').then(m => ({ default: m.Login })))
 const Notifications = React.lazy(() =>
   import('./pages/Notifications').then(m => ({ default: m.Notifications }))
@@ -276,22 +270,6 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <YouTubeLessonPlayer />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'career-paths',
-        element: (
-          <SuspensePage>
-            <CareerPaths />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'career-paths/:pathId',
-        element: (
-          <SuspensePage>
-            <CareerPathDetail />
           </SuspensePage>
         ),
       },

@@ -118,7 +118,7 @@ export function ImportDropZone({ onFilesDropped, disabled = false }: ImportDropZ
         ref={fileInputRef}
         type="file"
         multiple
-        accept=".mp4,.mkv,.avi,.webm,.pdf"
+        accept=".mp4,.mkv,.avi,.webm,.ts,.pdf"
         className="hidden"
         data-testid="import-file-input"
         onChange={handleFileInputChange}

@@ -6,6 +6,7 @@ import { shouldReduceMotion } from '@/lib/settings'
 import { X } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { useOnboardingStore } from '@/stores/useOnboardingStore'
+import { useWelcomeWizardStore } from '@/stores/useWelcomeWizardStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useSessionStore } from '@/stores/useSessionStore'
 import { useChallengeStore } from '@/stores/useChallengeStore'
@@ -36,9 +37,23 @@ export function OnboardingOverlay() {
   } = useOnboardingStore()
   const navigate = useNavigate()
 
-  // Initialize on mount — checks localStorage for prior completion
+  // Initialize after WelcomeWizard completes — delay to avoid dialog overlap
   useEffect(() => {
-    initialize()
+    const wizardCompleted = useWelcomeWizardStore.getState().completedAt
+    if (!wizardCompleted) {
+      // Subscribe and wait for wizard to complete first
+      const unsub = useWelcomeWizardStore.subscribe(state => {
+        if (state.completedAt) {
+          unsub()
+          const timer = setTimeout(() => initialize(), 400)
+          return () => clearTimeout(timer)
+        }
+      })
+      return unsub
+    }
+    // Wizard already completed — initialize with delay for animation
+    const timer = setTimeout(() => initialize(), 400)
+    return () => clearTimeout(timer)
   }, [initialize])
 
   // Step 1 → 2: Detect course import

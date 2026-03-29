@@ -130,9 +130,9 @@ export type CourseStatus = 'importing' | 'ready' | 'error'
 
 export type LearnerCourseStatus = 'active' | 'completed' | 'paused'
 
-export type VideoFormat = 'mp4' | 'mkv' | 'avi' | 'webm'
+export type VideoFormat = 'mp4' | 'mkv' | 'avi' | 'webm' | 'ts'
 
-export type SupportedFileExtension = '.mp4' | '.mkv' | '.avi' | '.webm' | '.pdf'
+export type SupportedFileExtension = '.mp4' | '.mkv' | '.avi' | '.webm' | '.ts' | '.pdf'
 
 export interface VideoMetadata {
   duration: number

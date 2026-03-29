@@ -53,6 +53,12 @@ const NOTIFICATION_TOGGLES: ToggleDefinition[] = [
     description: 'Daily reminder when flashcards are due',
     icon: BookOpen,
   },
+  {
+    type: 'srs-due',
+    label: 'SRS Due Reminders',
+    description: 'When spaced repetition cards are ready for review',
+    icon: BookOpen,
+  },
 ]
 
 export function NotificationPreferencesPanel() {
