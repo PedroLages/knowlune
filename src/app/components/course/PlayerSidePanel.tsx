@@ -112,15 +112,17 @@ interface TranscriptTabProps {
   courseId: string
   lessonId: string
   adapter: CourseAdapter
+  /** Current video playback time in seconds (for active cue highlighting) */
+  currentTime?: number
+  /** Callback when user clicks a cue to seek the video */
+  onSeek?: (time: number) => void
 }
 
-function TranscriptTab({ courseId, lessonId, adapter }: TranscriptTabProps) {
+function TranscriptTab({ courseId, lessonId, adapter, currentTime: externalTime, onSeek: externalSeek }: TranscriptTabProps) {
   const [cues, setCues] = useState<TranscriptCue[]>([])
   const [loadingState, setLoadingState] = useState<TranscriptLoadingState>('loading')
 
-  // currentTime is intentionally 0 — transcript highlighting will be wired
-  // when the video ref is lifted to a shared parent component (future work).
-  const [currentTime] = useState(0)
+  const currentTime = externalTime ?? 0
 
   // Single effect for transcript loading. For YouTube sources, prefer Dexie
   // (richer cue data with timing) and fall back to adapter.getTranscript().
@@ -187,12 +189,14 @@ function TranscriptTab({ courseId, lessonId, adapter }: TranscriptTabProps) {
     }
   }, [adapter, courseId, lessonId])
 
-  const handleSeek = useCallback((_time: number) => {
-    // Transcript seek requires access to the video player ref.
-    // In the unified player, video and side panel are siblings,
-    // so seeking must be wired via parent state or event bus.
-    // For now, this is a no-op — seek wiring comes with video ref lifting.
-  }, [])
+  const handleSeek = useCallback(
+    (time: number) => {
+      if (externalSeek) {
+        externalSeek(time)
+      }
+    },
+    [externalSeek]
+  )
 
   return (
     <div className="h-full">
@@ -386,9 +390,22 @@ interface PlayerSidePanelProps {
   courseId: string
   lessonId: string
   adapter: CourseAdapter
+  /** Current video playback time in seconds (for transcript highlighting) */
+  currentTime?: number
+  /** Callback when user clicks a transcript cue to seek */
+  onSeek?: (time: number) => void
+  /** Programmatically switch to a tab (e.g. "notes" when user presses N) */
+  focusTab?: string | null
 }
 
-export function PlayerSidePanel({ courseId, lessonId, adapter }: PlayerSidePanelProps) {
+export function PlayerSidePanel({
+  courseId,
+  lessonId,
+  adapter,
+  currentTime: externalCurrentTime,
+  onSeek: externalOnSeek,
+  focusTab,
+}: PlayerSidePanelProps) {
   const capabilities = adapter.getCapabilities()
   const [transcriptSrc, setTranscriptSrc] = useState<string | null>(null)
 
@@ -432,8 +449,17 @@ export function PlayerSidePanel({ courseId, lessonId, adapter }: PlayerSidePanel
     }
   }, [adapter, lessonId])
 
+  // Controlled tab state to allow programmatic switching (e.g. N key → Notes tab)
+  const [activeTab, setActiveTab] = useState('notes')
+
+  useEffect(() => {
+    if (focusTab) {
+      setActiveTab(focusTab)
+    }
+  }, [focusTab])
+
   return (
-    <Tabs defaultValue="notes" className="flex flex-col h-full" data-testid="player-side-panel">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full" data-testid="player-side-panel">
       {/* Radix Tabs provides arrow-key navigation between triggers by default — no custom keyboard shortcuts needed. */}
       <TabsList className="w-full shrink-0 px-1">
         <TabsTrigger value="notes" className="text-xs">
@@ -458,7 +484,13 @@ export function PlayerSidePanel({ courseId, lessonId, adapter }: PlayerSidePanel
 
       {capabilities.hasTranscript && (
         <TabsContent value="transcript" className="flex-1 overflow-hidden">
-          <TranscriptTab courseId={courseId} lessonId={lessonId} adapter={adapter} />
+          <TranscriptTab
+            courseId={courseId}
+            lessonId={lessonId}
+            adapter={adapter}
+            currentTime={externalCurrentTime}
+            onSeek={externalOnSeek}
+          />
         </TabsContent>
       )}
 

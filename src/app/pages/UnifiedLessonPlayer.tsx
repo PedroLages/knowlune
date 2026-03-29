@@ -18,7 +18,7 @@
  * @see E89-S05, E89-S06, E89-S07, E89-S08
  */
 
-import { lazy, Suspense, useState, useEffect, useCallback } from 'react'
+import { lazy, Suspense, useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -68,9 +68,38 @@ export function UnifiedLessonPlayer() {
   // Auto-advance state: shown when video ends and a next lesson exists
   const [showAutoAdvance, setShowAutoAdvance] = useState(false)
 
-  // Reset auto-advance when lesson changes
+  // Lifted video state: currentTime for transcript highlighting, seekTo for click-to-seek
+  const [currentTime, setCurrentTime] = useState(0)
+  const [seekToTime, setSeekToTime] = useState<number | undefined>(undefined)
+
+  // Focus tab state: set to "notes" when user presses N in VideoPlayer
+  const [focusTab, setFocusTab] = useState<string | null>(null)
+  const focusTabCounter = useRef(0)
+
+  const handleTimeUpdate = useCallback((time: number) => {
+    setCurrentTime(time)
+  }, [])
+
+  const handleTranscriptSeek = useCallback((time: number) => {
+    setSeekToTime(time)
+  }, [])
+
+  const handleSeekComplete = useCallback(() => {
+    setSeekToTime(undefined)
+  }, [])
+
+  const handleFocusNotes = useCallback(() => {
+    // Increment counter to re-trigger the effect even if already on "notes" tab
+    focusTabCounter.current += 1
+    setFocusTab(`notes`)
+  }, [])
+
+  // Reset lifted video state when lesson changes
   useEffect(() => {
     setShowAutoAdvance(false)
+    setCurrentTime(0)
+    setSeekToTime(undefined)
+    setFocusTab(null)
   }, [lessonId])
 
   // NOTE: getLessons() is also called inside useLessonNavigation hook — known duplication.
@@ -186,9 +215,24 @@ export function UnifiedLessonPlayer() {
       <PdfContent courseId={courseId!} lessonId={lessonId!} />
     </Suspense>
   ) : isYouTube ? (
-    <YouTubeVideoContent courseId={courseId!} lessonId={lessonId!} onEnded={handleVideoEnded} />
+    <YouTubeVideoContent
+      courseId={courseId!}
+      lessonId={lessonId!}
+      onEnded={handleVideoEnded}
+      onTimeUpdate={handleTimeUpdate}
+      seekToTime={seekToTime}
+      onSeekComplete={handleSeekComplete}
+    />
   ) : (
-    <LocalVideoContent courseId={courseId!} lessonId={lessonId!} onEnded={handleVideoEnded} />
+    <LocalVideoContent
+      courseId={courseId!}
+      lessonId={lessonId!}
+      onEnded={handleVideoEnded}
+      onTimeUpdate={handleTimeUpdate}
+      seekToTime={seekToTime}
+      onSeekComplete={handleSeekComplete}
+      onFocusNotes={handleFocusNotes}
+    />
   )
 
   // "Take Quiz" button — visible when quiz exists and adapter supports it
@@ -210,7 +254,14 @@ export function UnifiedLessonPlayer() {
 
   // Side panel with tabbed content: Notes, Transcript, AI Summary, Bookmarks
   const sidePanelContent = (
-    <PlayerSidePanel courseId={courseId!} lessonId={lessonId!} adapter={adapter} />
+    <PlayerSidePanel
+      courseId={courseId!}
+      lessonId={lessonId!}
+      adapter={adapter}
+      currentTime={currentTime}
+      onSeek={handleTranscriptSeek}
+      focusTab={focusTab}
+    />
   )
 
   return (

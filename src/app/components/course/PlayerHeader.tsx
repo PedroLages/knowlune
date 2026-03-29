@@ -6,12 +6,18 @@
  * @see E89-S05
  */
 
-import { useCallback, useEffect } from 'react'
+import { lazy, Suspense, useCallback, useEffect } from 'react'
 import { Link } from 'react-router'
 import { ArrowLeft, CheckCircle2, Circle, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
+import { PomodoroTimer } from '@/app/components/figma/PomodoroTimer'
 import { Button } from '@/app/components/ui/button'
+
+// Lazy-load QAChatPanel to avoid pulling AI infra into the initial player bundle
+const QAChatPanel = lazy(() =>
+  import('@/app/components/figma/QAChatPanel').then(m => ({ default: m.QAChatPanel }))
+)
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -94,6 +100,12 @@ export function PlayerHeader({
           </span>
         )}
       </div>
+
+      <PomodoroTimer />
+
+      <Suspense fallback={null}>
+        <QAChatPanel />
+      </Suspense>
 
       {showCompletionToggle && (
         <DropdownMenu>
