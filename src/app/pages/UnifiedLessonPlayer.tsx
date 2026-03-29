@@ -69,6 +69,8 @@ export function UnifiedLessonPlayer() {
     setShowAutoAdvance(false)
   }, [lessonId])
 
+  // NOTE: getLessons() is also called inside useLessonNavigation hook — known duplication.
+  // Consolidation into a shared context is deferred to a future story.
   // Resolve lesson metadata (title + type) from adapter's lesson list
   const [lessonTitle, setLessonTitle] = useState('Lesson')
   const [lessonType, setLessonType] = useState<LessonItem['type'] | null>(null)
@@ -80,6 +82,9 @@ export function UnifiedLessonPlayer() {
       const match = lessons.find(l => l.id === lessonId)
       setLessonTitle(match?.title ?? 'Lesson')
       setLessonType(match?.type ?? null)
+    }).catch(err => {
+      console.error('Failed to load lesson metadata:', err)
+      // Leave defaults (title='Lesson', type=null) — UI degrades gracefully
     })
     return () => {
       ignore = true
@@ -224,7 +229,7 @@ export function UnifiedLessonPlayer() {
               </div>
             </ResizablePanel>
             <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
+            <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
               <div className="h-full overflow-auto border-l">{sidePanelContent}</div>
             </ResizablePanel>
           </ResizablePanelGroup>

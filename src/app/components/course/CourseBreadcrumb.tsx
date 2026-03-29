@@ -6,6 +6,9 @@
  *
  * Long names truncate with ellipsis and show full text in a tooltip.
  *
+ * NOTE: data-testid on <Breadcrumb> is spread correctly — shadcn Breadcrumb
+ * uses forwardRef and spreads rest props onto the underlying <nav> element.
+ *
  * @see E89-S08
  */
 
@@ -34,21 +37,21 @@ interface CourseBreadcrumbProps {
 
 export function CourseBreadcrumb({ courseId, courseName, lessonTitle }: CourseBreadcrumbProps) {
   return (
-    <Breadcrumb data-testid="course-breadcrumb" className="mb-4">
-      <BreadcrumbList>
-        {/* Courses root */}
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link to="/courses">Courses</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
+    <TooltipProvider>
+      <Breadcrumb data-testid="course-breadcrumb" className="mb-4">
+        <BreadcrumbList>
+          {/* Courses root */}
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/courses">Courses</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
 
-        <BreadcrumbSeparator />
+          <BreadcrumbSeparator />
 
-        {/* Course name — link if on lesson page, current page if on detail page */}
-        <BreadcrumbItem className="max-w-[200px] sm:max-w-[300px]">
-          {lessonTitle ? (
-            <TooltipProvider>
+          {/* Course name — link if on lesson page, current page if on detail page */}
+          <BreadcrumbItem className="max-w-[200px] sm:max-w-[300px]">
+            {lessonTitle ? (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <BreadcrumbLink asChild>
@@ -61,9 +64,7 @@ export function CourseBreadcrumb({ courseId, courseName, lessonTitle }: CourseBr
                   <p>{courseName}</p>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-          ) : (
-            <TooltipProvider>
+            ) : (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <BreadcrumbPage className="truncate block">{courseName}</BreadcrumbPage>
@@ -72,16 +73,14 @@ export function CourseBreadcrumb({ courseId, courseName, lessonTitle }: CourseBr
                   <p>{courseName}</p>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-          )}
-        </BreadcrumbItem>
+            )}
+          </BreadcrumbItem>
 
-        {/* Lesson title segment (only on player page) */}
-        {lessonTitle && (
-          <>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem className="max-w-[200px] sm:max-w-[300px]">
-              <TooltipProvider>
+          {/* Lesson title segment (only on player page) */}
+          {lessonTitle && (
+            <>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem className="max-w-[200px] sm:max-w-[300px]">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <BreadcrumbPage className="truncate block">{lessonTitle}</BreadcrumbPage>
@@ -90,11 +89,11 @@ export function CourseBreadcrumb({ courseId, courseName, lessonTitle }: CourseBr
                     <p>{lessonTitle}</p>
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
-            </BreadcrumbItem>
-          </>
-        )}
-      </BreadcrumbList>
-    </Breadcrumb>
+              </BreadcrumbItem>
+            </>
+          )}
+        </BreadcrumbList>
+      </Breadcrumb>
+    </TooltipProvider>
   )
 }

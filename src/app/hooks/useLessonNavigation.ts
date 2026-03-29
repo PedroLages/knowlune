@@ -42,6 +42,12 @@ export function useLessonNavigation(
         setLessons(items)
         setLoading(false)
       }
+    }).catch(err => {
+      console.error('Failed to load lessons for navigation:', err)
+      if (!ignore) {
+        setLessons([])
+        setLoading(false)
+      }
     })
 
     return () => {
