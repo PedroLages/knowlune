@@ -455,7 +455,7 @@ function renderYouTubeGroups(
   hasMultipleGroups: boolean,
   searchQuery: string
 ) {
-  return groups.map((group) => (
+  return groups.map(group => (
     <li key={group.title || group.videos[0]?.id || 'ungrouped'}>
       {hasMultipleGroups && group.title && (
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">

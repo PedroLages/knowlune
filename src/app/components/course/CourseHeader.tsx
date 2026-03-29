@@ -53,7 +53,6 @@ export function CourseHeader({
   onEdit,
   onRefreshMetadata,
 }: CourseHeaderProps) {
-
   return (
     <div>
       <Link
@@ -84,7 +83,11 @@ export function CourseHeader({
       <div className="flex flex-col sm:flex-row items-start gap-4 mb-1">
         {/* Thumbnail */}
         {thumbnailUrl ? (
-          <img src={thumbnailUrl} alt="" className="w-full sm:w-32 h-28 sm:h-20 object-cover rounded-lg shrink-0" />
+          <img
+            src={thumbnailUrl}
+            alt=""
+            className="w-full sm:w-32 h-28 sm:h-20 object-cover rounded-lg shrink-0"
+          />
         ) : isYouTube ? (
           <div className="w-full sm:w-32 h-28 sm:h-20 bg-muted rounded-lg flex items-center justify-center shrink-0">
             <Youtube className="size-8 text-muted-foreground" aria-hidden="true" />
