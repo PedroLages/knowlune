@@ -466,9 +466,7 @@ export function PlayerSidePanel({ courseId, lessonId, adapter }: PlayerSidePanel
           <div className="p-4 text-sm text-muted-foreground">
             <div className="flex flex-col items-center gap-3 py-8">
               <FileText className="size-10 text-muted-foreground/50" aria-hidden="true" />
-              <p className="text-center">
-                No transcript available for AI summary generation.
-              </p>
+              <p className="text-center">No transcript available for AI summary generation.</p>
             </div>
           </div>
         )}
