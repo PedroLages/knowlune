@@ -10,77 +10,107 @@
  * - Accessibility (AC7)
  */
 import { test, expect, type Page } from '@playwright/test'
-import { seedIndexedDBStore, clearIndexedDBStore } from '../support/helpers/seed-helpers'
+import { clearIndexedDBStore } from '../support/helpers/seed-helpers'
 import { TIMEOUTS } from '../utils/constants'
-import { addHours } from '../utils/test-time'
 
 const DB_NAME = 'ElearningDB'
 const STORE_NAME = 'notifications'
 
-// Test notification data using FIXED_DATE for deterministic timestamps
-function createTestNotifications() {
-  return [
-    {
-      id: 'notif-001',
-      type: 'course-complete',
-      title: 'Course Completed',
-      message: 'You finished "Introduction to TypeScript"',
-      createdAt: addHours(-1),
-      readAt: null,
-      dismissedAt: null,
-      actionUrl: '/courses/ts-101',
-      metadata: {},
-    },
-    {
-      id: 'notif-002',
-      type: 'streak-milestone',
-      title: '7-Day Streak',
-      message: 'Amazing! You studied for 7 days in a row.',
-      createdAt: addHours(-3),
-      readAt: addHours(-2),
-      dismissedAt: null,
-      actionUrl: undefined,
-      metadata: {},
-    },
-    {
-      id: 'notif-003',
-      type: 'import-finished',
-      title: 'Import Complete',
-      message: 'Your course "React Patterns" has been imported successfully.',
-      createdAt: addHours(-5),
-      readAt: null,
-      dismissedAt: null,
-      actionUrl: '/imported-courses/react-patterns',
-      metadata: {},
-    },
-    {
-      id: 'notif-004',
-      type: 'achievement-unlocked',
-      title: 'Achievement Unlocked',
-      message: 'You earned "First Steps" badge!',
-      createdAt: addHours(-8),
-      readAt: null,
-      dismissedAt: null,
-      actionUrl: undefined,
-      metadata: {},
-    },
-    {
-      id: 'notif-005',
-      type: 'review-due',
-      title: 'Review Due',
-      message: 'Time to review "Data Structures" — spaced repetition reminder.',
-      createdAt: addHours(-12),
-      readAt: addHours(-10),
-      dismissedAt: null,
-      actionUrl: '/review',
-      metadata: {},
-    },
-  ]
-}
-
+/**
+ * Seed notifications via browser-side evaluate so createdAt timestamps
+ * are relative to the browser's Date.now() — avoids TTL cleanup deleting
+ * old FIXED_DATE-based data.
+ */
 async function seedNotifications(page: Page) {
-  const notifications = createTestNotifications()
-  await seedIndexedDBStore(page, DB_NAME, STORE_NAME, notifications)
+  // eslint-disable-next-line test-patterns/deterministic-time -- timestamps must be relative to browser Date.now() to survive TTL cleanup
+  await page.evaluate(() => {
+    const now = Date.now()
+    const hoursMs = (h: number) => new Date(now + h * 3_600_000).toISOString()
+
+    const notifications = [
+      {
+        id: 'notif-001',
+        type: 'course-complete',
+        title: 'Course Completed',
+        message: 'You finished "Introduction to TypeScript"',
+        createdAt: hoursMs(-1),
+        readAt: null,
+        dismissedAt: null,
+        actionUrl: '/courses/ts-101',
+        metadata: {},
+      },
+      {
+        id: 'notif-002',
+        type: 'streak-milestone',
+        title: '7-Day Streak',
+        message: 'Amazing! You studied for 7 days in a row.',
+        createdAt: hoursMs(-3),
+        readAt: hoursMs(-2),
+        dismissedAt: null,
+        actionUrl: undefined,
+        metadata: {},
+      },
+      {
+        id: 'notif-003',
+        type: 'import-finished',
+        title: 'Import Complete',
+        message: 'Your course "React Patterns" has been imported successfully.',
+        createdAt: hoursMs(-5),
+        readAt: null,
+        dismissedAt: null,
+        actionUrl: '/imported-courses/react-patterns',
+        metadata: {},
+      },
+      {
+        id: 'notif-004',
+        type: 'achievement-unlocked',
+        title: 'Achievement Unlocked',
+        message: 'You earned "First Steps" badge!',
+        createdAt: hoursMs(-8),
+        readAt: null,
+        dismissedAt: null,
+        actionUrl: undefined,
+        metadata: {},
+      },
+      {
+        id: 'notif-005',
+        type: 'review-due',
+        title: 'Review Due',
+        message: 'Time to review "Data Structures" — spaced repetition reminder.',
+        createdAt: hoursMs(-12),
+        readAt: hoursMs(-10),
+        dismissedAt: null,
+        actionUrl: '/review',
+        metadata: {},
+      },
+    ]
+
+    return new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('ElearningDB')
+      request.onsuccess = () => {
+        const db = request.result
+        if (!db.objectStoreNames.contains('notifications')) {
+          db.close()
+          reject(new Error('notifications store not found'))
+          return
+        }
+        const tx = db.transaction('notifications', 'readwrite')
+        const store = tx.objectStore('notifications')
+        for (const item of notifications) {
+          store.put(item)
+        }
+        tx.oncomplete = () => {
+          db.close()
+          resolve()
+        }
+        tx.onerror = () => {
+          db.close()
+          reject(tx.error)
+        }
+      }
+      request.onerror = () => reject(request.error)
+    })
+  })
 }
 
 async function clearNotifications(page: Page) {
@@ -89,17 +119,34 @@ async function clearNotifications(page: Page) {
 
 async function navigateToNotifications(page: Page) {
   await page.goto('/notifications')
-  await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible({
+  await expect(
+    page.getByRole('heading', { name: 'Notifications', exact: true, level: 1 })
+  ).toBeVisible({
     timeout: TIMEOUTS.NETWORK,
   })
 }
 
 test.describe('Notifications Page', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to trigger Dexie DB creation, then seed
+    // Dismiss welcome wizard and onboarding overlay to prevent them from blocking interactions
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+      )
+      localStorage.setItem(
+        'knowlune-onboarding-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
+      )
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
+    })
+
+    // Navigate to trigger Dexie DB creation, then seed, then reload
+    // so the notification store re-initializes with the seeded data
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
     await seedNotifications(page)
+    await page.reload({ waitUntil: 'domcontentloaded' })
   })
 
   test.afterEach(async ({ page }) => {
@@ -139,7 +186,9 @@ test.describe('Notifications Page', () => {
 
     // Should navigate to /notifications
     await expect(page).toHaveURL(/\/notifications/)
-    await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible({
+    await expect(
+      page.getByRole('heading', { name: 'Notifications', exact: true, level: 1 })
+    ).toBeVisible({
       timeout: TIMEOUTS.NETWORK,
     })
   })
@@ -302,7 +351,7 @@ test.describe('Notifications Page', () => {
     // Mark all as read and verify live announcement
     await page.getByRole('button', { name: /mark all notifications as read/i }).click()
 
-    const liveRegion = page.locator('[aria-live="polite"]')
+    const liveRegion = page.getByTestId('notifications-page').locator('[aria-live="polite"]')
     await expect(liveRegion).toContainText('All notifications marked as read')
   })
 })
