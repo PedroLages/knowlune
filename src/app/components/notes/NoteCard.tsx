@@ -127,7 +127,7 @@ export function NoteCard({ note, courseId, courseName, lessonTitle, onDelete }: 
             ))}
             {note.timestamp != null && (
               <Link
-                to={`/courses/${courseId}/${note.videoId}?t=${note.timestamp}&panel=notes`}
+                to={`/courses/${courseId}/lessons/${note.videoId}?t=${note.timestamp}&panel=notes`}
                 className="relative z-10 inline-flex items-center gap-1 text-xs text-brand hover:underline"
               >
                 <Clock className="size-3" />

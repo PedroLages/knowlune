@@ -233,7 +233,7 @@ export function QAChatPanel() {
                       {msg.retrievedNotes.map((retrieved, idx) => (
                         <Link
                           key={retrieved.note.id}
-                          to={`/courses/${retrieved.note.courseId}/${retrieved.note.videoId}${retrieved.note.timestamp ? `?t=${Math.floor(retrieved.note.timestamp)}` : ''}`}
+                          to={`/courses/${retrieved.note.courseId}/lessons/${retrieved.note.videoId}${retrieved.note.timestamp ? `?t=${Math.floor(retrieved.note.timestamp)}` : ''}`}
                           className="block text-brand hover:underline"
                         >
                           [{idx + 1}] {retrieved.note.courseId}/{retrieved.note.videoId}

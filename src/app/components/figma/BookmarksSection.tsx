@@ -83,7 +83,7 @@ export function BookmarksSection() {
   }
 
   const handleBookmarkClick = (bookmark: VideoBookmark) => {
-    navigate(`/courses/${bookmark.courseId}/${bookmark.lessonId}?t=${bookmark.timestamp}`)
+    navigate(`/courses/${bookmark.courseId}/lessons/${bookmark.lessonId}?t=${bookmark.timestamp}`)
   }
 
   if (isLoading) {
