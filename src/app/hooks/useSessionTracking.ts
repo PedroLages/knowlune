@@ -16,7 +16,7 @@ const HEARTBEAT_INTERVAL_MS = 30000
 export function useSessionTracking(
   courseId: string | undefined,
   lessonId: string | undefined,
-  type: 'video' | 'pdf' = 'video'
+  type: 'video' | 'pdf' | null = 'video'
 ): void {
   const { startSession, updateLastActivity, pauseSession, resumeSession, endSession, heartbeat } =
     useSessionStore()
@@ -28,9 +28,10 @@ export function useSessionTracking(
     onActivity: () => updateLastActivity(),
   })
 
-  // Start session when lesson player mounts
+  // Start session when lesson player mounts.
+  // Defers until type is resolved (non-null) to avoid double-start on type change.
   useEffect(() => {
-    if (!courseId || !lessonId) return
+    if (!courseId || !lessonId || type === null) return
     startSession(courseId, lessonId, type)
   }, [courseId, lessonId, type, startSession])
 
