@@ -16,8 +16,8 @@
 | E89-S10 | done | #159 | 1 | 1 |
 | E89-S12a | done | #158 | — | 13 (URL fixes) |
 | E89-S12b | done | #160 | 1 | 0 |
-| E89-S12c | in-progress | — | — | — (Gemini design) |
-| E89-S11 | queued | — | — | — |
+| E89-S12c | done | — (on main) | — | 5 files, +312/-157 lines |
+| E89-S11 | deferred | — | — | — |
 | E90-S01 | queued | — | — | — |
 | E90-S02 | queued | — | — | — |
 | E90-S03 | queued | — | — | — |
@@ -52,4 +52,5 @@
 - E89-S03 had the widest blast radius (26 files) but review found only 3 issues
 - E89-S12a discovered 5 additional broken URLs in prototype pages (beyond the 7 identified in audit)
 - E89-S12b (feature wiring) passed with 0 issues — cleanest implementation
-- Context health: session approaching limits after 13 stories, may need fresh session for Gemini design pass
+- E89-S12c: ported old design language (card headers, progress sidebar, Lessons tab) without Gemini — used git history recovery instead
+- E89-S11 + E90 + post-E89 workflow deferred per user request
