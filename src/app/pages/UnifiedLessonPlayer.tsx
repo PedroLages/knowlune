@@ -57,7 +57,9 @@ export function UnifiedLessonPlayer() {
       setLessonTitle(match?.title ?? 'Lesson')
       setLessonType(match?.type ?? null)
     })
-    return () => { ignore = true }
+    return () => {
+      ignore = true
+    }
   }, [adapter, lessonId])
 
   const isPdf = lessonType === 'pdf'

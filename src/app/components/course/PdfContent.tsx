@@ -257,11 +257,5 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
   // PDF display
   if (!blobUrl) return null
 
-  return (
-    <PdfViewer
-      src={blobUrl}
-      title={pdf.filename}
-      className="h-full"
-    />
-  )
+  return <PdfViewer src={blobUrl} title={pdf.filename} className="h-full" />
 }
