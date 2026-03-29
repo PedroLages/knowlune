@@ -10,11 +10,15 @@ function makeRecord(overrides: Partial<ReviewRecord> = {}): ReviewRecord {
     id: crypto.randomUUID(),
     noteId: 'note-1',
     rating: 'good',
-    reviewedAt: new Date(FIXED_DATE.getTime() - 3 * DAY_MS).toISOString(),
-    nextReviewAt: new Date(FIXED_DATE.getTime() - 1 * DAY_MS).toISOString(),
-    interval: 3,
-    easeFactor: 2.5,
-    reviewCount: 1,
+    stability: 3,
+    difficulty: 5,
+    reps: 1,
+    lapses: 0,
+    state: 2 as const, // Review
+    elapsed_days: 3,
+    scheduled_days: 3,
+    due: new Date(FIXED_DATE.getTime() - 1 * DAY_MS).toISOString(),
+    last_review: new Date(FIXED_DATE.getTime() - 3 * DAY_MS).toISOString(),
     ...overrides,
   }
 }
@@ -85,9 +89,9 @@ describe('interleaveReviews', () => {
       makeRecord({
         id: `r${i}`,
         noteId: n.id,
-        reviewedAt: new Date(FIXED_DATE.getTime() - 3 * DAY_MS).toISOString(),
-        nextReviewAt: new Date(FIXED_DATE.getTime() - 1 * DAY_MS).toISOString(),
-        interval: 3,
+        last_review: new Date(FIXED_DATE.getTime() - 3 * DAY_MS).toISOString(),
+        due: new Date(FIXED_DATE.getTime() - 1 * DAY_MS).toISOString(),
+        stability: 3,
       })
     )
 
@@ -111,16 +115,16 @@ describe('interleaveReviews', () => {
       makeRecord({
         id: 'r-old',
         noteId: 'n-old',
-        reviewedAt: new Date(FIXED_DATE.getTime() - 8 * DAY_MS).toISOString(),
-        nextReviewAt: new Date(FIXED_DATE.getTime() - 5 * DAY_MS).toISOString(),
-        interval: 3,
+        last_review: new Date(FIXED_DATE.getTime() - 8 * DAY_MS).toISOString(),
+        due: new Date(FIXED_DATE.getTime() - 5 * DAY_MS).toISOString(),
+        stability: 3,
       }),
       makeRecord({
         id: 'r-new',
         noteId: 'n-new',
-        reviewedAt: new Date(FIXED_DATE.getTime() - 1 * DAY_MS).toISOString(),
-        nextReviewAt: new Date(FIXED_DATE.getTime() - 0.5 * DAY_MS).toISOString(),
-        interval: 3,
+        last_review: new Date(FIXED_DATE.getTime() - 1 * DAY_MS).toISOString(),
+        due: new Date(FIXED_DATE.getTime() - 0.5 * DAY_MS).toISOString(),
+        stability: 3,
       }),
     ]
 

@@ -408,8 +408,8 @@ describe('exportService', () => {
         { id: 'c1', name: 'Course' },
       ])
       ;(db.reviewRecords.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([
-        { id: 'r1', noteId: 'n1', reviewedAt: '2026-01-10T00:00:00Z' },
-        { id: 'r2', noteId: 'n1', reviewedAt: '2026-01-15T00:00:00Z' }, // more recent
+        { id: 'r1', noteId: 'n1', last_review: '2026-01-10T00:00:00Z' },
+        { id: 'r2', noteId: 'n1', last_review: '2026-01-15T00:00:00Z' }, // more recent
       ])
 
       const result = await exportNotesAsMarkdown()
