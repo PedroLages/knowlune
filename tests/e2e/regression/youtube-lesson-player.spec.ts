@@ -70,7 +70,7 @@ async function seedLessonData(page: Page): Promise<void> {
 }
 
 async function goToLesson(page: Page, courseId: string, lessonId: string): Promise<void> {
-  await navigateAndWait(page, `/youtube-courses/${courseId}/lessons/${lessonId}`)
+  await navigateAndWait(page, `/courses/${courseId}/lessons/${lessonId}`)
 }
 
 // ===========================================================================
@@ -205,7 +205,7 @@ test.describe('YouTubeLessonPlayer — Navigation', () => {
     await page.getByLabel('Back to course').click()
 
     // THEN: Navigated to course detail page
-    await page.waitForURL(/\/youtube-courses\/yt-lesson-course$/)
+    await page.waitForURL(/\/courses\/yt-lesson-course$/)
   })
 })
 
@@ -244,7 +244,7 @@ test.describe('YouTubeLessonPlayer — Error States', () => {
     await page.getByText('Back to Course').click()
 
     // THEN: Navigated back to course detail
-    await page.waitForURL(/\/youtube-courses\/yt-lesson-course$/)
+    await page.waitForURL(/\/courses\/yt-lesson-course$/)
   })
 })
 

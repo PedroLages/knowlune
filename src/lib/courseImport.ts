@@ -530,7 +530,7 @@ export async function persistScannedCourse(
     type: 'import-finished',
     title: `Course imported: ${course.name}`,
     message: `${videos.length} ${videos.length === 1 ? 'video' : 'videos'}, ${pdfs.length} ${pdfs.length === 1 ? 'PDF' : 'PDFs'} imported successfully`,
-    actionUrl: `/imported-courses/${course.id}`,
+    actionUrl: `/courses/${course.id}`,
   })
 
   // Unlock sidebar items via progressive disclosure

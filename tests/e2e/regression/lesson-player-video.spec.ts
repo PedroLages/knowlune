@@ -112,7 +112,7 @@ async function goToImportedLessonPlayer(
   courseId: string,
   lessonId: string
 ): Promise<void> {
-  await navigateAndWait(page, `/imported-courses/${courseId}/lessons/${lessonId}`)
+  await navigateAndWait(page, `/courses/${courseId}/lessons/${lessonId}`)
 }
 
 // ===========================================================================
@@ -245,7 +245,7 @@ test.describe('AC-6: Blob URL Cleanup', () => {
     await page.waitForLoadState('domcontentloaded')
 
     // Navigate back to course detail
-    await navigateAndWait(page, '/imported-courses/course-react-101')
+    await navigateAndWait(page, '/courses/course-react-101')
     await page.waitForLoadState('domcontentloaded')
 
     // THEN: Page should not have any errors (memory leak would eventually cause issues)

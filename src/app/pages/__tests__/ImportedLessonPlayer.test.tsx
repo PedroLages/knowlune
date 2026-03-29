@@ -73,13 +73,13 @@ vi.mock('@/app/components/figma/VideoPlayer', () => ({
 
 function renderPlayer(courseId = 'course-1', lessonId = 'v1') {
   return render(
-    <MemoryRouter initialEntries={[`/imported-courses/${courseId}/lessons/${lessonId}`]}>
+    <MemoryRouter initialEntries={[`/courses/${courseId}/lessons/${lessonId}`]}>
       <Routes>
         <Route
-          path="/imported-courses/:courseId/lessons/:lessonId"
+          path="/courses/:courseId/lessons/:lessonId"
           element={<ImportedLessonPlayer />}
         />
-        <Route path="/imported-courses/:courseId" element={<div>Course Detail</div>} />
+        <Route path="/courses/:courseId" element={<div>Course Detail</div>} />
       </Routes>
     </MemoryRouter>
   )
@@ -130,7 +130,7 @@ describe('ImportedLessonPlayer', () => {
   it('"Back to Course" link is visible in error state', async () => {
     renderPlayer()
     const errorState = await screen.findByTestId('lesson-error-state')
-    const backLink = errorState.querySelector('a[href*="imported-courses/course-1"]')
+    const backLink = errorState.querySelector('a[href*="courses/course-1"]')
     expect(backLink).toBeInTheDocument()
   })
 

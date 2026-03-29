@@ -260,7 +260,7 @@ export function YouTubeLessonPlayer() {
         className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground"
       >
         <p>Video not found.</p>
-        <Link to={`/youtube-courses/${courseId}`} className="text-sm text-brand hover:underline">
+        <Link to={`/courses/${courseId}`} className="text-sm text-brand hover:underline">
           Back to Course
         </Link>
       </div>
@@ -276,7 +276,7 @@ export function YouTubeLessonPlayer() {
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b shrink-0">
         <Link
-          to={`/youtube-courses/${courseId}`}
+          to={`/courses/${courseId}`}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Back to course"
         >
@@ -394,7 +394,7 @@ export function YouTubeLessonPlayer() {
           <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
             <p>No YouTube video ID found for this lesson.</p>
             <Link
-              to={`/youtube-courses/${courseId}`}
+              to={`/courses/${courseId}`}
               className="text-sm text-brand hover:underline"
             >
               Back to Course

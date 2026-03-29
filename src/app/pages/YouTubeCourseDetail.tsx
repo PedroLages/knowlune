@@ -378,7 +378,7 @@ export function YouTubeCourseDetail() {
                 return (
                   <li key={video.id}>
                     <Link
-                      to={`/youtube-courses/${courseId}/lessons/${video.id}`}
+                      to={`/courses/${courseId}/lessons/${video.id}`}
                       className={cn(
                         'flex items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent transition-colors group',
                         isRemoved && 'opacity-75'

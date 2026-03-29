@@ -105,9 +105,9 @@ vi.mock('@/db/schema', () => ({
 
 function renderDetail(courseId = 'course-1') {
   return render(
-    <MemoryRouter initialEntries={[`/imported-courses/${courseId}`]}>
+    <MemoryRouter initialEntries={[`/courses/${courseId}`]}>
       <Routes>
-        <Route path="/imported-courses/:courseId" element={<ImportedCourseDetail />} />
+        <Route path="/courses/:courseId" element={<ImportedCourseDetail />} />
       </Routes>
     </MemoryRouter>
   )
@@ -159,7 +159,7 @@ describe('ImportedCourseDetail', () => {
     renderDetail()
     const v1 = await screen.findByTestId('course-content-item-video-v1')
     const link = v1.querySelector('a')
-    expect(link).toHaveAttribute('href', '/imported-courses/course-1/lessons/v1')
+    expect(link).toHaveAttribute('href', '/courses/course-1/lessons/v1')
   })
 
   it('missing files show badge and are not clickable', async () => {
@@ -197,7 +197,7 @@ describe('ImportedCourseDetail', () => {
     renderDetail()
 
     const v1 = await screen.findByTestId('course-content-item-video-v1')
-    expect(v1.querySelector('a')).toHaveAttribute('href', '/imported-courses/course-1/lessons/v1')
+    expect(v1.querySelector('a')).toHaveAttribute('href', '/courses/course-1/lessons/v1')
 
     const v2 = screen.getByTestId('course-content-item-video-v2')
     expect(v2.querySelector('a')).toBeNull()

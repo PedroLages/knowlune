@@ -172,14 +172,14 @@ export function ImportedCourseCard({
 
   function handleCardClick(e: React.MouseEvent) {
     guardNavigation(e)
-    if (!e.defaultPrevented) navigate(`/imported-courses/${course.id}`)
+    if (!e.defaultPrevented) navigate(`/courses/${course.id}`)
   }
 
   function handleCardKeyDown(e: React.KeyboardEvent) {
     if (e.target !== e.currentTarget) return
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
-      navigate(`/imported-courses/${course.id}`)
+      navigate(`/courses/${course.id}`)
     }
   }
 

@@ -112,7 +112,7 @@ async function goToImportedLessonPlayer(
   courseId: string,
   lessonId: string
 ): Promise<void> {
-  await navigateAndWait(page, `/imported-courses/${courseId}/lessons/${lessonId}`)
+  await navigateAndWait(page, `/courses/${courseId}/lessons/${lessonId}`)
 }
 
 // ===========================================================================
@@ -163,7 +163,7 @@ test.describe('AC-2: File Access Error Recovery', () => {
     await page.getByRole('link', { name: /back to course/i }).click()
 
     // THEN: Navigated to course detail page
-    await page.waitForURL(/\/imported-courses\/course-react-101/)
+    await page.waitForURL(/\/courses\/course-react-101/)
     await expect(page.getByTestId('imported-course-detail')).toBeVisible()
   })
 

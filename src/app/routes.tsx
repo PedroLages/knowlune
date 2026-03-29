@@ -23,6 +23,12 @@ const YouTubeCourseDetail = React.lazy(() =>
 const YouTubeLessonPlayer = React.lazy(() =>
   import('./pages/YouTubeLessonPlayer').then(m => ({ default: m.YouTubeLessonPlayer }))
 )
+const UnifiedCourseDetail = React.lazy(() =>
+  import('./pages/UnifiedCourseDetail').then(m => ({ default: m.UnifiedCourseDetail }))
+)
+const UnifiedLessonPlayer = React.lazy(() =>
+  import('./pages/UnifiedLessonPlayer').then(m => ({ default: m.UnifiedLessonPlayer }))
+)
 const Notes = React.lazy(() => import('./pages/Notes').then(m => ({ default: m.Notes })))
 const ChatQA = React.lazy(() => import('./pages/ChatQA').then(m => ({ default: m.ChatQA })))
 const Authors = React.lazy(() => import('./pages/Authors').then(m => ({ default: m.Authors })))
@@ -120,6 +126,34 @@ function InstructorProfileRedirect() {
   return <Navigate to={`/authors/${authorId}`} replace />
 }
 
+// TODO: Remove redirect after Epic E91+ — old imported-courses paths
+/** Redirects /imported-courses/:courseId → /courses/:courseId */
+function ImportedCourseRedirect() {
+  const { courseId } = useParams()
+  return <Navigate to={`/courses/${courseId}`} replace />
+}
+
+// TODO: Remove redirect after Epic E91+ — old imported-courses lesson paths
+/** Redirects /imported-courses/:courseId/lessons/:lessonId → /courses/:courseId/lessons/:lessonId */
+function ImportedLessonRedirect() {
+  const { courseId, lessonId } = useParams()
+  return <Navigate to={`/courses/${courseId}/lessons/${lessonId}`} replace />
+}
+
+// TODO: Remove redirect after Epic E91+ — old youtube-courses paths
+/** Redirects /youtube-courses/:courseId → /courses/:courseId */
+function YouTubeCourseRedirect() {
+  const { courseId } = useParams()
+  return <Navigate to={`/courses/${courseId}`} replace />
+}
+
+// TODO: Remove redirect after Epic E91+ — old youtube-courses lesson paths
+/** Redirects /youtube-courses/:courseId/lessons/:lessonId → /courses/:courseId/lessons/:lessonId */
+function YouTubeLessonRedirect() {
+  const { courseId, lessonId } = useParams()
+  return <Navigate to={`/courses/${courseId}/lessons/${lessonId}`} replace />
+}
+
 export const router = createBrowserRouter([
   // Public legal pages — outside Layout (no auth required)
   {
@@ -210,37 +244,42 @@ export const router = createBrowserRouter([
           </SuspensePage>
         ),
       },
+      // Unified course routes (E89-S03)
+      {
+        path: 'courses/:courseId',
+        element: (
+          <SuspensePage>
+            <UnifiedCourseDetail />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'courses/:courseId/lessons/:lessonId',
+        element: (
+          <SuspensePage>
+            <UnifiedLessonPlayer />
+          </SuspensePage>
+        ),
+      },
+      // TODO: Remove redirect after Epic E91+ — old imported-courses paths
       {
         path: 'imported-courses/:courseId',
-        element: (
-          <SuspensePage>
-            <ImportedCourseDetail />
-          </SuspensePage>
-        ),
+        element: <ImportedCourseRedirect />,
       },
+      // TODO: Remove redirect after Epic E91+ — old imported-courses lesson paths
       {
         path: 'imported-courses/:courseId/lessons/:lessonId',
-        element: (
-          <SuspensePage>
-            <ImportedLessonPlayer />
-          </SuspensePage>
-        ),
+        element: <ImportedLessonRedirect />,
       },
+      // TODO: Remove redirect after Epic E91+ — old youtube-courses paths
       {
         path: 'youtube-courses/:courseId',
-        element: (
-          <SuspensePage>
-            <YouTubeCourseDetail />
-          </SuspensePage>
-        ),
+        element: <YouTubeCourseRedirect />,
       },
+      // TODO: Remove redirect after Epic E91+ — old youtube-courses lesson paths
       {
         path: 'youtube-courses/:courseId/lessons/:lessonId',
-        element: (
-          <SuspensePage>
-            <YouTubeLessonPlayer />
-          </SuspensePage>
-        ),
+        element: <YouTubeLessonRedirect />,
       },
       {
         path: 'library',

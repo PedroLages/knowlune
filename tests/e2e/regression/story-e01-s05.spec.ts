@@ -92,7 +92,7 @@ test.describe('E01-S05: Detect Missing or Relocated Files', () => {
 
       // WHEN the user opens the course
       await page.getByText('File Detection Test Course').click()
-      await page.waitForURL(/\/imported-courses\/course-file-detection/)
+      await page.waitForURL(/\/courses\/course-file-detection/)
 
       // THEN the course structure renders without blocking (non-blocking verification)
       await expect(page.getByTestId('course-content-list')).toBeVisible()
@@ -127,7 +127,7 @@ test.describe('E01-S05: Detect Missing or Relocated Files', () => {
 
       // WHEN the user opens the course and verification completes
       await page.getByText('File Detection Test Course').click()
-      await page.waitForURL(/\/imported-courses\/course-file-detection/)
+      await page.waitForURL(/\/courses\/course-file-detection/)
 
       // THEN missing videos display a "File not found" badge
       const videoBadge1 = page.getByTestId('file-not-found-badge-video-1')
@@ -155,7 +155,7 @@ test.describe('E01-S05: Detect Missing or Relocated Files', () => {
 
       // WHEN the user opens the course
       await page.getByText('File Detection Test Course').click()
-      await page.waitForURL(/\/imported-courses\/course-file-detection/)
+      await page.waitForURL(/\/courses\/course-file-detection/)
 
       // THEN a toast notification identifies the affected files within 2 seconds (NFR11)
       const toast = page.locator('[data-sonner-toast]')
@@ -178,7 +178,7 @@ test.describe('E01-S05: Detect Missing or Relocated Files', () => {
 
       // WHEN the user views the course structure
       await page.getByText('File Detection Test Course').click()
-      await page.waitForURL(/\/imported-courses\/course-file-detection/)
+      await page.waitForURL(/\/courses\/course-file-detection/)
 
       // THEN all content items are still visible in the list (not removed)
       await expect(page.getByTestId('course-content-item-video-video-1')).toBeVisible()
@@ -205,13 +205,13 @@ test.describe('E01-S05: Detect Missing or Relocated Files', () => {
       await page.reload()
 
       await page.getByText('File Detection Test Course').click()
-      await page.waitForURL(/\/imported-courses\/course-file-detection/)
+      await page.waitForURL(/\/courses\/course-file-detection/)
       await expect(page.getByTestId('file-not-found-badge-video-1')).toBeVisible()
 
       // WHEN the user navigates away and returns (triggering re-verification)
       await navigateAndWait(page, '/courses')
       await page.getByText('File Detection Test Course').click()
-      await page.waitForURL(/\/imported-courses\/course-file-detection/)
+      await page.waitForURL(/\/courses\/course-file-detection/)
 
       // THEN verification runs again (status indicators present)
       // In test context, handles are still null so badges persist.

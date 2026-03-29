@@ -92,7 +92,7 @@ async function seedCourseAndReload(
 
 /** Navigate to imported course detail page. */
 async function goToImportedCourseDetail(page: Page, courseId: string): Promise<void> {
-  await navigateAndWait(page, `/imported-courses/${courseId}`)
+  await navigateAndWait(page, `/courses/${courseId}`)
 }
 
 // ===========================================================================

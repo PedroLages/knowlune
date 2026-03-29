@@ -411,7 +411,7 @@ export function ImportedCourseDetail() {
                   </div>
                 ) : (
                   <Link
-                    to={`/imported-courses/${courseId}/lessons/${video.id}`}
+                    to={`/courses/${courseId}/lessons/${video.id}`}
                     className="flex flex-wrap items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent transition-colors group"
                   >
                     {content}

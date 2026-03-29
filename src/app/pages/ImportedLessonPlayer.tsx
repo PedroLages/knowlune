@@ -189,7 +189,7 @@ export function ImportedLessonPlayer() {
         className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground"
       >
         <p>Video not found.</p>
-        <Link to={`/imported-courses/${courseId}`} className="text-sm text-brand hover:underline">
+        <Link to={`/courses/${courseId}`} className="text-sm text-brand hover:underline">
           Back to Course
         </Link>
       </div>
@@ -201,7 +201,7 @@ export function ImportedLessonPlayer() {
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b shrink-0">
         <Link
-          to={`/imported-courses/${courseId}`}
+          to={`/courses/${courseId}`}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Back to course"
         >
@@ -244,7 +244,7 @@ export function ImportedLessonPlayer() {
                 Locate File
               </Button>
               <Button variant="outline" asChild>
-                <Link to={`/imported-courses/${courseId}`}>Back to Course</Link>
+                <Link to={`/courses/${courseId}`}>Back to Course</Link>
               </Button>
             </div>
           </div>
