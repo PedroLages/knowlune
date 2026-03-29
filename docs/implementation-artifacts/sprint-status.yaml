@@ -1064,7 +1064,7 @@ development_status:
   89-3-consolidate-routes-with-redirects: done
   89-4-build-unified-coursedetail-page: in-progress
   89-5-build-unified-lessonplayer-page-video-playback: done
-  89-6-add-pdf-inline-viewer-to-unified-player: in-progress
+  89-6-add-pdf-inline-viewer-to-unified-player: done
   89-7-add-notes-panel-to-unified-video-player: backlog
   89-8-add-prev-next-video-navigation-and-breadcrumbs: backlog
   89-9-wire-quiz-system-to-unified-course-ids: backlog
