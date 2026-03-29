@@ -286,7 +286,7 @@ export function UnifiedCourseDetail() {
         </div>
       )}
 
-      {isYouTube && <CourseProgress completedCount={completedCount} totalCount={videos.length} />}
+      <CourseProgress completedCount={completedCount} totalCount={videos.length} />
       {isYouTube && <AISummaryPanel />}
 
       <LessonList

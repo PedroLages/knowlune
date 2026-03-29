@@ -16,8 +16,6 @@ import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { YouTubePlayer } from '@/app/components/youtube/YouTubePlayer'
 import type { YouTubePlayerHandle } from '@/app/components/youtube/YouTubePlayer'
-import { TranscriptPanel } from '@/app/components/youtube/TranscriptPanel'
-import { useYouTubeTranscript } from '@/app/hooks/useYouTubeTranscript'
 import { useYouTubeTranscriptStore } from '@/stores/useYouTubeTranscriptStore'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
@@ -30,9 +28,22 @@ interface YouTubeVideoContentProps {
   lessonId: string
   /** Called when the YouTube video reaches the end (state 0) */
   onEnded?: () => void
+  /** Called on each timeupdate with the current playback time in seconds */
+  onTimeUpdate?: (currentTime: number) => void
+  /** External seek target — when changed, the YouTube player seeks to this time */
+  seekToTime?: number
+  /** Called when the seek completes so the parent can clear the target */
+  onSeekComplete?: () => void
 }
 
-export function YouTubeVideoContent({ courseId, lessonId, onEnded }: YouTubeVideoContentProps) {
+export function YouTubeVideoContent({
+  courseId,
+  lessonId,
+  onEnded,
+  onTimeUpdate: externalTimeUpdate,
+  seekToTime,
+  onSeekComplete,
+}: YouTubeVideoContentProps) {
   const isOnline = useOnlineStatus()
 
   // NOTE: Video loading from Dexie is duplicated between YouTubeVideoContent and
@@ -94,13 +105,8 @@ export function YouTubeVideoContent({ courseId, lessonId, onEnded }: YouTubeVide
     }
   }, [courseId, lessonId, currentStatus, setItemStatus])
 
-  // Transcript state
-  const [currentTime, setCurrentTime] = useState(0)
+  // Player ref for seek control
   const playerRef = useRef<YouTubePlayerHandle>(null)
-  const { cues: transcriptCues, loadingState: transcriptLoadingState } = useYouTubeTranscript(
-    courseId,
-    video?.youtubeVideoId
-  )
 
   const loadCourseStates = useYouTubeTranscriptStore(s => s.loadCourseStates)
   useEffect(() => {
@@ -110,14 +116,16 @@ export function YouTubeVideoContent({ courseId, lessonId, onEnded }: YouTubeVide
   }, [courseId, loadCourseStates])
 
   const handleTimeUpdate = useCallback((time: number) => {
-    setCurrentTime(time)
-  }, [])
+    externalTimeUpdate?.(time)
+  }, [externalTimeUpdate])
 
-  const handleTranscriptSeek = useCallback((time: number) => {
-    if (playerRef.current) {
-      playerRef.current.seekTo(time)
+  // Handle external seek requests from parent (e.g. transcript click in side panel)
+  useEffect(() => {
+    if (seekToTime !== undefined && playerRef.current) {
+      playerRef.current.seekTo(seekToTime)
+      onSeekComplete?.()
     }
-  }, [])
+  }, [seekToTime, onSeekComplete])
 
   // Dexie read failed
   if (loadError) {
@@ -190,7 +198,7 @@ export function YouTubeVideoContent({ courseId, lessonId, onEnded }: YouTubeVide
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 h-full">
+    <div className="flex flex-col h-full">
       {/* Video player */}
       <div className="flex-1 min-w-0">
         <YouTubePlayer
@@ -221,20 +229,6 @@ export function YouTubeVideoContent({ courseId, lessonId, onEnded }: YouTubeVide
           )}
         </div>
       </div>
-
-      {/* Transcript panel — nested inside YouTubeVideoContent for now.
-          Will be lifted to the UnifiedLessonPlayer side panel in S07. */}
-      <aside
-        className="lg:w-80 xl:w-96 shrink-0 lg:max-h-[calc(100vh-10rem)] max-h-80"
-        aria-label="Video transcript"
-      >
-        <TranscriptPanel
-          cues={transcriptCues}
-          currentTime={currentTime}
-          onSeek={handleTranscriptSeek}
-          loadingState={transcriptLoadingState}
-        />
-      </aside>
     </div>
   )
 }

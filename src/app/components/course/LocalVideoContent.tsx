@@ -18,16 +18,33 @@ import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
-import type { ImportedVideo } from '@/data/types'
+import { addBookmark, getLessonBookmarks } from '@/lib/bookmarks'
+import type { ImportedVideo, VideoBookmark } from '@/data/types'
 
 interface LocalVideoContentProps {
   courseId: string
   lessonId: string
   /** Called when the video playback ends (HTML5 ended event) */
   onEnded?: () => void
+  /** Called on each video timeupdate with the current playback time in seconds */
+  onTimeUpdate?: (currentTime: number) => void
+  /** External seek target — when changed, the video seeks to this time */
+  seekToTime?: number
+  /** Called when the seek completes so the parent can clear the target */
+  onSeekComplete?: () => void
+  /** Called when the user presses N to switch to the Notes tab */
+  onFocusNotes?: () => void
 }
 
-export function LocalVideoContent({ courseId, lessonId, onEnded }: LocalVideoContentProps) {
+export function LocalVideoContent({
+  courseId,
+  lessonId,
+  onEnded,
+  onTimeUpdate,
+  seekToTime,
+  onSeekComplete,
+  onFocusNotes,
+}: LocalVideoContentProps) {
   // NOTE: Video loading from Dexie is duplicated between LocalVideoContent and
   // YouTubeVideoContent. This is intentional for now — will be extracted into a
   // shared hook in S07 when both components are consolidated.
@@ -76,6 +93,35 @@ export function LocalVideoContent({ courseId, lessonId, onEnded }: LocalVideoCon
 
   // Caption loading and persistence
   const { userCaptions, handleLoadCaptions } = useCaptionLoader(courseId, lessonId)
+
+  // Bookmarks: load from Dexie and provide add callback for VideoPlayer's B key shortcut
+  const [bookmarks, setBookmarks] = useState<VideoBookmark[]>([])
+
+  useEffect(() => {
+    let ignore = false
+    getLessonBookmarks(courseId, lessonId)
+      .then(bm => {
+        if (!ignore) setBookmarks(bm)
+      })
+      .catch(() => {
+        // silent-catch-ok — bookmarks are non-critical
+      })
+    return () => { ignore = true }
+  }, [courseId, lessonId])
+
+  const handleBookmarkAdd = useCallback(
+    async (timestamp: number) => {
+      try {
+        await addBookmark(courseId, lessonId, timestamp)
+        const updated = await getLessonBookmarks(courseId, lessonId)
+        setBookmarks(updated)
+        toast.success('Bookmark added')
+      } catch {
+        toast.error('Failed to add bookmark')
+      }
+    },
+    [courseId, lessonId]
+  )
 
   // Re-grant permission flow (AC8)
   const handleReGrantPermission = useCallback(async () => {
@@ -206,6 +252,13 @@ export function LocalVideoContent({ courseId, lessonId, onEnded }: LocalVideoCon
   // Video playback
   if (!blobUrl) return null
 
+  // Map bookmarks to the shape VideoPlayer expects for timeline markers
+  const bookmarkMarkers = bookmarks.map(b => ({
+    id: b.id,
+    timestamp: b.timestamp,
+    label: b.label || '',
+  }))
+
   return (
     <VideoPlayer
       src={blobUrl}
@@ -215,6 +268,12 @@ export function LocalVideoContent({ courseId, lessonId, onEnded }: LocalVideoCon
       captions={userCaptions ? [userCaptions] : undefined}
       onLoadCaptions={handleLoadCaptions}
       onEnded={onEnded}
+      onTimeUpdate={onTimeUpdate}
+      seekToTime={seekToTime}
+      onSeekComplete={onSeekComplete}
+      onBookmarkAdd={handleBookmarkAdd}
+      bookmarks={bookmarkMarkers}
+      onFocusNotes={onFocusNotes}
     />
   )
 }
