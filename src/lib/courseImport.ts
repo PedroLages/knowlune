@@ -11,6 +11,7 @@ import {
   detectAuthorPhoto,
 } from '@/lib/authorDetection'
 import { autoGenerateThumbnail } from '@/lib/autoThumbnail'
+import { loadThumbnailFromFile, saveCourseThumbnail } from '@/lib/thumbnailService'
 import {
   showDirectoryPicker,
   scanDirectory,
@@ -501,6 +502,22 @@ export async function persistScannedCourse(
     })
   }
 
+  // Persist user-selected cover image to courseThumbnails table so card renders it
+  if (overrides?.coverImageHandle) {
+    try {
+      const file = await overrides.coverImageHandle.getFile()
+      const resizedBlob = await loadThumbnailFromFile(file)
+      await saveCourseThumbnail(course.id, resizedBlob, 'local')
+      const url = URL.createObjectURL(resizedBlob)
+      useCourseImportStore.setState(state => ({
+        thumbnailUrls: { ...state.thumbnailUrls, [course.id]: url },
+      }))
+    } catch (error) {
+      // silent-catch-ok: thumbnail persistence failure is non-fatal — card shows placeholder icon
+      console.warn('[Import] Failed to save user-selected cover image:', error)
+    }
+  }
+
   // E32-S03: Check storage quota after import (fire-and-forget)
   import('@/lib/storageQuotaMonitor').then(({ checkStorageQuota }) => {
     checkStorageQuota().catch(() => {
@@ -739,8 +756,13 @@ export async function scanFromDroppedFiles(
     }
 
     if (videoFiles.length === 0 && pdfFiles.length === 0) {
+      const unsupportedCount = files.length - imageFileList.length
+      const hint =
+        unsupportedCount > 0
+          ? ` Found ${files.length} file(s) but none matched supported formats.`
+          : ''
       throw new ImportError(
-        'No supported files found. Please drop video (MP4, MKV, AVI, WEBM) or PDF files.',
+        `No supported files found.${hint} Supported: MP4, MKV, AVI, WEBM, PDF. Try using "Select Folder" for course folders.`,
         'NO_FILES'
       )
     }

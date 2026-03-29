@@ -1,7 +1,6 @@
 import { useCourseStore } from '@/stores/useCourseStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
-import type { Course, Author, ImportedAuthor } from '@/data/types'
-import { allAuthors } from '@/data/authors'
+import type { Author, Course, ImportedAuthor } from '@/data/types'
 
 /**
  * Unified author view type for display purposes.
@@ -26,28 +25,6 @@ export interface AuthorView {
   importedAuthor?: ImportedAuthor
   /** Original pre-seeded Author if from static data */
   preseededAuthor?: Author
-}
-
-/** Convert a pre-seeded Author to AuthorView */
-function preseededToView(author: Author): AuthorView {
-  const stats = getAuthorStats(author)
-  return {
-    id: author.id,
-    name: author.name,
-    avatar: author.avatar,
-    title: author.title,
-    bio: author.bio,
-    shortBio: author.shortBio,
-    specialties: author.specialties,
-    yearsExperience: author.yearsExperience,
-    education: author.education,
-    socialLinks: author.socialLinks,
-    featuredQuote: author.featuredQuote,
-    courseCount: stats.courseCount,
-    isPreseeded: true,
-    createdAt: '2000-01-01T00:00:00.000Z', // static data has no timestamp
-    preseededAuthor: author,
-  }
 }
 
 /** Convert an ImportedAuthor to AuthorView */
@@ -82,22 +59,9 @@ function importedToView(author: ImportedAuthor): AuthorView {
  * Static-only authors (not in IndexedDB) are included as fallback.
  */
 export function getMergedAuthors(storeAuthors: ImportedAuthor[]): AuthorView[] {
-  const storeIds = new Set(storeAuthors.map(a => a.id))
-  const views: AuthorView[] = []
-
-  // Add all store authors
-  for (const author of storeAuthors) {
-    views.push(importedToView(author))
-  }
-
-  // Add pre-seeded authors not already in the store (fallback for migration failure)
-  for (const author of allAuthors) {
-    if (!storeIds.has(author.id)) {
-      views.push(preseededToView(author))
-    }
-  }
-
-  return views
+  // Only user-imported authors are shown. Pre-seeded static authors (src/data/authors/)
+  // were removed to avoid confusing fresh users with pre-populated data.
+  return storeAuthors.map(importedToView)
 }
 
 /** Extract initials from a full name (e.g., "Jane Smith" -> "JS") */

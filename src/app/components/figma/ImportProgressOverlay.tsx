@@ -7,7 +7,7 @@ import { useImportProgressStore } from '@/stores/useImportProgressStore'
 import type { CourseImportProgress } from '@/stores/useImportProgressStore'
 import { toast } from 'sonner'
 
-const AUTO_DISMISS_MS = 3000
+const AUTO_DISMISS_MS = 8000
 const ETA_THRESHOLD = 20 // Show ETA after this many files processed
 
 function formatTimeRemaining(seconds: number): string {
@@ -179,13 +179,13 @@ export function ImportProgressOverlay() {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-50 w-80 sm:w-96"
+      className="fixed bottom-4 right-4 z-50 w-96 sm:w-[28rem]"
       role="status"
       aria-live="polite"
       aria-label="Import progress"
       data-testid="import-progress-overlay"
     >
-      <Card className="bg-card rounded-[24px] border border-border shadow-lg overflow-hidden">
+      <Card className="bg-card rounded-[24px] border border-brand/30 shadow-xl shadow-brand/10 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <div className="flex items-center gap-2">
