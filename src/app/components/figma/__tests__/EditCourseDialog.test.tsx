@@ -15,11 +15,18 @@ vi.mock('@/db', () => ({
         }),
       }),
     },
+    youtubeChapters: {
+      where: () => ({
+        equals: () => ({
+          sortBy: () => Promise.resolve([]),
+        }),
+      }),
+    },
   },
 }))
 
-vi.mock('../VideoReorderList', () => ({
-  VideoReorderList: ({ videos }: { videos: unknown[] }) => (
+vi.mock('@/app/components/course/VideoReorderDialog', () => ({
+  VideoReorderDialog: ({ videos }: { videos: unknown[] }) => (
     <div data-testid="video-reorder-list">
       {videos.length === 0 ? 'No videos in this course.' : `${videos.length} videos`}
     </div>

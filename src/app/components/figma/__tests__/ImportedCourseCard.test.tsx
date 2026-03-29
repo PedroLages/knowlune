@@ -72,6 +72,13 @@ vi.mock('@/db/schema', () => ({
         }),
       }),
     },
+    youtubeChapters: {
+      where: () => ({
+        equals: () => ({
+          sortBy: () => Promise.resolve([]),
+        }),
+      }),
+    },
   },
 }))
 
