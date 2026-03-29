@@ -22,9 +22,9 @@ const STORE_NAME = 'notifications'
  * old FIXED_DATE-based data.
  */
 async function seedNotifications(page: Page) {
-  // eslint-disable-next-line test-patterns/deterministic-time -- timestamps must be relative to browser Date.now() to survive TTL cleanup
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- custom seeding with browser-relative timestamps for TTL survival
   await page.evaluate(() => {
-    const now = Date.now()
+    const now = Date.now() // eslint-disable-line test-patterns/deterministic-time -- must be relative to browser clock to survive TTL cleanup
     const hoursMs = (h: number) => new Date(now + h * 3_600_000).toISOString()
 
     const notifications = [
