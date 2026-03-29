@@ -463,12 +463,7 @@ describe('full review flow integration', () => {
       due: failed.due,
       last_review: failed.last_review,
     }
-    const recovered = calculateNextReview(
-      recoveredCard,
-      'good',
-      new Date(failed.due),
-      fsrsTest
-    )
+    const recovered = calculateNextReview(recoveredCard, 'good', new Date(failed.due), fsrsTest)
 
     // Should transition back to Review state
     expect(recovered.state).toBe(2)
