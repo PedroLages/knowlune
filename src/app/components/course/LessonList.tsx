@@ -173,8 +173,8 @@ export function LessonList({
     return groupByFolder(filteredVideos)
   }, [filteredVideos, chapters, isYouTube])
 
-  const hasMultipleGroups = groupedContent.length > 1 ||
-    (groupedContent.length === 1 && groupedContent[0].title !== '')
+  const hasMultipleGroups =
+    groupedContent.length > 1 || (groupedContent.length === 1 && groupedContent[0].title !== '')
 
   return (
     <div>
@@ -215,8 +215,20 @@ export function LessonList({
         className="flex flex-col gap-2"
       >
         {isYouTube
-          ? renderYouTubeGroups(groupedContent, courseId, progressMap, hasMultipleGroups, searchQuery)
-          : renderLocalGroups(groupedContent, courseId, fileStatuses, hasMultipleGroups, searchQuery)}
+          ? renderYouTubeGroups(
+              groupedContent,
+              courseId,
+              progressMap,
+              hasMultipleGroups,
+              searchQuery
+            )
+          : renderLocalGroups(
+              groupedContent,
+              courseId,
+              fileStatuses,
+              hasMultipleGroups,
+              searchQuery
+            )}
 
         {/* PDF items (local courses only) */}
         {!isYouTube &&
@@ -233,7 +245,10 @@ export function LessonList({
                     )}
                     aria-disabled="true"
                   >
-                    <FileText className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    <FileText
+                      className="size-5 shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />
                     <span className="flex-1 font-medium text-sm">
                       <HighlightedText text={stripExtension(pdf.filename)} query={searchQuery} />
                     </span>
@@ -303,10 +318,7 @@ function groupByFolder(videos: ImportedVideo[]): ChapterGroup[] {
   return Array.from(groups.entries()).map(([title, vids]) => ({ title, videos: vids }))
 }
 
-function groupByChapter(
-  videos: ImportedVideo[],
-  chapters: YouTubeCourseChapter[]
-): ChapterGroup[] {
+function groupByChapter(videos: ImportedVideo[], chapters: YouTubeCourseChapter[]): ChapterGroup[] {
   if (chapters.length === 0) {
     return [{ title: '', videos }]
   }
@@ -414,10 +426,7 @@ function renderLocalGroups(
       <li key={group.title || 'root'}>
         <Collapsible defaultOpen>
           <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm font-medium text-foreground group/folder">
-            <FolderOpen
-              className="size-4 text-muted-foreground shrink-0"
-              aria-hidden="true"
-            />
+            <FolderOpen className="size-4 text-muted-foreground shrink-0" aria-hidden="true" />
             <span className="flex-1 text-left">{group.title || 'General'}</span>
             <span className="text-xs text-muted-foreground">
               {group.videos.length} {group.videos.length === 1 ? 'video' : 'videos'}
@@ -474,9 +483,7 @@ function renderYouTubeGroups(
                 <div
                   className={cn(
                     'size-8 rounded-full flex items-center justify-center shrink-0 text-xs font-medium',
-                    isCompleted
-                      ? 'bg-success/10 text-success'
-                      : 'bg-muted text-muted-foreground'
+                    isCompleted ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'
                   )}
                 >
                   {isCompleted ? (

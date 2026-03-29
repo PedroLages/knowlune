@@ -7,15 +7,7 @@
  */
 
 import { Link } from 'react-router'
-import {
-  ArrowLeft,
-  Trash2,
-  User,
-  Youtube,
-  RefreshCw,
-  WifiOff,
-  Settings2,
-} from 'lucide-react'
+import { ArrowLeft, Trash2, User, Youtube, RefreshCw, WifiOff, Settings2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
@@ -94,11 +86,7 @@ export function CourseHeader({
       <div className="flex items-start gap-4 mb-1">
         {/* Thumbnail */}
         {thumbnailUrl ? (
-          <img
-            src={thumbnailUrl}
-            alt=""
-            className="w-32 h-20 object-cover rounded-lg shrink-0"
-          />
+          <img src={thumbnailUrl} alt="" className="w-32 h-20 object-cover rounded-lg shrink-0" />
         ) : isYouTube ? (
           <div className="w-32 h-20 bg-muted rounded-lg flex items-center justify-center shrink-0">
             <Youtube className="size-8 text-muted-foreground" aria-hidden="true" />

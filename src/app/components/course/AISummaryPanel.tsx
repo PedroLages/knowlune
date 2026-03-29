@@ -48,8 +48,8 @@ export function AISummaryPanel() {
         <CollapsibleContent>
           <div className="px-4 pb-4 text-sm text-muted-foreground">
             <p>
-              AI-generated summaries are created from transcript data. Import transcripts for
-              this course to enable AI summaries.
+              AI-generated summaries are created from transcript data. Import transcripts for this
+              course to enable AI summaries.
             </p>
           </div>
         </CollapsibleContent>

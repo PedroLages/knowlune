@@ -91,7 +91,11 @@ export function UnifiedCourseDetail() {
       db.importedVideos.where('courseId').equals(courseId).sortBy('order'),
       db.importedPdfs.where('courseId').equals(courseId).toArray(),
       // silent-catch-ok — youtubeChapters table may not exist for local courses
-      db.youtubeChapters.where('courseId').equals(courseId).sortBy('order').catch(() => []),
+      db.youtubeChapters
+        .where('courseId')
+        .equals(courseId)
+        .sortBy('order')
+        .catch(() => []),
       db.progress.where('courseId').equals(courseId).toArray(),
     ])
       .then(([v, p, ch, prog]) => {
@@ -107,10 +111,15 @@ export function UnifiedCourseDetail() {
       .catch(err => {
         // silent-catch-ok — error state handled by setLoadError UI
         console.error('[UnifiedCourseDetail] Failed to load:', err)
-        if (!ignore) { setLoadError(true); setContentLoading(false) }
+        if (!ignore) {
+          setLoadError(true)
+          setContentLoading(false)
+        }
       })
 
-    return () => { ignore = true }
+    return () => {
+      ignore = true
+    }
   }, [courseId])
 
   // Load thumbnail via adapter
@@ -118,7 +127,12 @@ export function UnifiedCourseDetail() {
     if (!adapter) return
     let ignore = false
     // silent-catch-ok — thumbnail is non-critical
-    adapter.getThumbnailUrl().then(url => { if (!ignore) setThumbnailUrl(url) }).catch(() => {})
+    adapter
+      .getThumbnailUrl()
+      .then(url => {
+        if (!ignore) setThumbnailUrl(url)
+      })
+      .catch(() => {})
     return () => {
       ignore = true
       if (thumbnailUrl?.startsWith('blob:')) revokeObjectUrl(thumbnailUrl)
@@ -135,15 +149,19 @@ export function UnifiedCourseDetail() {
 
   const allTags = useMemo(() => getAllTags(), [getAllTags])
 
-  const completedCount = useMemo(() =>
-    videos.filter(v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= 90).length
-  , [videos, progressMap])
+  const completedCount = useMemo(
+    () => videos.filter(v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= 90).length,
+    [videos, progressMap]
+  )
 
-  const handleTitleSave = useCallback(async (newTitle: string) => {
-    if (!courseId) return
-    const ok = await updateCourseDetails(courseId, { name: newTitle })
-    toast[ok ? 'success' : 'error'](ok ? 'Title updated' : 'Failed to update title')
-  }, [courseId, updateCourseDetails])
+  const handleTitleSave = useCallback(
+    async (newTitle: string) => {
+      if (!courseId) return
+      const ok = await updateCourseDetails(courseId, { name: newTitle })
+      toast[ok ? 'success' : 'error'](ok ? 'Title updated' : 'Failed to update title')
+    },
+    [courseId, updateCourseDetails]
+  )
 
   const handleDelete = useCallback(async () => {
     if (deleting || !courseId) return
@@ -151,11 +169,16 @@ export function UnifiedCourseDetail() {
     try {
       await removeImportedCourse(courseId)
       if (useCourseImportStore.getState().importError) {
-        toast.error('Failed to delete course'); setDeleting(false)
+        toast.error('Failed to delete course')
+        setDeleting(false)
       } else {
-        toast.success('Course deleted'); navigate('/courses')
+        toast.success('Course deleted')
+        navigate('/courses')
       }
-    } catch { toast.error('Failed to delete course'); setDeleting(false) }
+    } catch {
+      toast.error('Failed to delete course')
+      setDeleting(false)
+    }
   }, [deleting, courseId, removeImportedCourse, navigate])
 
   const handleRefresh = useCallback(async () => {
@@ -168,11 +191,15 @@ export function UnifiedCourseDetail() {
         if (courseId) {
           setVideos(await db.importedVideos.where('courseId').equals(courseId).sortBy('order'))
         }
-      } else { toast.info('Metadata is already up to date') }
+      } else {
+        toast.info('Metadata is already up to date')
+      }
     } catch (err) {
       console.error('[UnifiedCourseDetail] Refresh failed:', err)
       toast.error('Failed to refresh metadata')
-    } finally { setIsRefreshing(false) }
+    } finally {
+      setIsRefreshing(false)
+    }
   }, [course, isOnline, isRefreshing, courseId])
 
   const storeCourse = importedCourses.find(c => c.id === courseId)
@@ -180,10 +207,19 @@ export function UnifiedCourseDetail() {
   // Loading state
   if (adapterLoading || contentLoading) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6" role="status" aria-busy="true" aria-label="Loading course">
-        <Skeleton className="h-4 w-32" /><Skeleton className="h-8 w-64" />
-        <Skeleton className="h-4 w-48" /><Skeleton className="h-3 w-full" />
-        {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+      <div
+        className="max-w-3xl mx-auto px-4 py-8 space-y-6"
+        role="status"
+        aria-busy="true"
+        aria-label="Loading course"
+      >
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-3 w-full" />
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} className="h-16 w-full rounded-xl" />
+        ))}
       </div>
     )
   }
@@ -192,7 +228,9 @@ export function UnifiedCourseDetail() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-16">
         <h2 className="text-xl font-semibold text-foreground">Course not found</h2>
-        <p className="text-muted-foreground">The course you&apos;re looking for doesn&apos;t exist or has been removed.</p>
+        <p className="text-muted-foreground">
+          The course you&apos;re looking for doesn&apos;t exist or has been removed.
+        </p>
       </div>
     )
   }
@@ -200,22 +238,35 @@ export function UnifiedCourseDetail() {
   return (
     <div data-testid="unified-course-detail" className="max-w-3xl mx-auto px-4 py-8">
       <CourseHeader
-        course={course} capabilities={capabilities} thumbnailUrl={thumbnailUrl}
-        authorData={authorData} videoCount={videos.length} pdfCount={pdfs.length}
-        isOnline={isOnline} isRefreshing={isRefreshing}
-        onTitleSave={handleTitleSave} onDelete={() => setDeleteDialogOpen(true)}
+        course={course}
+        capabilities={capabilities}
+        thumbnailUrl={thumbnailUrl}
+        authorData={authorData}
+        videoCount={videos.length}
+        pdfCount={pdfs.length}
+        isOnline={isOnline}
+        isRefreshing={isRefreshing}
+        onTitleSave={handleTitleSave}
+        onDelete={() => setDeleteDialogOpen(true)}
         onEdit={() => setEditDialogOpen(true)}
         onRefreshMetadata={isYouTube ? handleRefresh : undefined}
       />
 
       {loadError && (
-        <div data-testid="course-load-error" role="alert"
-          className="flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive mb-4">
+        <div
+          data-testid="course-load-error"
+          role="alert"
+          className="flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive mb-4"
+        >
           <AlertTriangle className="size-5 shrink-0" aria-hidden="true" />
           <span>Failed to load course content.</span>
-          <button type="button" onClick={() => window.location.reload()}
-            className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium hover:underline">
-            <RefreshCw className="size-3" aria-hidden="true" />Reload
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium hover:underline"
+          >
+            <RefreshCw className="size-3" aria-hidden="true" />
+            Reload
           </button>
         </div>
       )}
@@ -223,31 +274,47 @@ export function UnifiedCourseDetail() {
       {isYouTube && <CourseProgress completedCount={completedCount} totalCount={videos.length} />}
       {isYouTube && <AISummaryPanel />}
 
-      <LessonList courseId={courseId!} videos={videos} pdfs={pdfs}
-        isYouTube={isYouTube ?? false} fileStatuses={fileStatuses}
-        progressMap={progressMap} chapters={chapters} />
+      <LessonList
+        courseId={courseId!}
+        videos={videos}
+        pdfs={pdfs}
+        isYouTube={isYouTube ?? false}
+        fileStatuses={fileStatuses}
+        progressMap={progressMap}
+        chapters={chapters}
+      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent data-testid="delete-confirm-dialog">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete &ldquo;{course.name}&rdquo;?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove the course and all its content from your library. This action cannot be undone.
+              This will permanently remove the course and all its content from your library. This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction data-testid="delete-confirm-button"
+            <AlertDialogAction
+              data-testid="delete-confirm-button"
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deleting} onClick={handleDelete}>
+              disabled={deleting}
+              onClick={handleDelete}
+            >
               {deleting ? 'Deleting\u2026' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {storeCourse && <EditCourseDialog open={editDialogOpen} onOpenChange={setEditDialogOpen}
-        course={storeCourse} allTags={allTags} />}
+      {storeCourse && (
+        <EditCourseDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          course={storeCourse}
+          allTags={allTags}
+        />
+      )}
     </div>
   )
 }
