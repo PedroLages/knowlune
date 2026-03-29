@@ -1,9 +1,9 @@
 ---
 story_id: E89-S03
 story_name: "Consolidate Routes with Redirects"
-status: in-progress
+status: done
 started: 2026-03-29
-completed:
+completed: 2026-03-29
 reviewed: true
 review_started: 2026-03-29
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review-skipped, code-review, code-review-testing, performance-benchmark-skipped, security-review, exploratory-qa-skipped]
