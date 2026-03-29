@@ -27,8 +27,8 @@ import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { getAvatarSrc, getInitials } from '@/lib/authors'
 import { db } from '@/db'
-import { VideoReorderList } from '@/app/components/figma/VideoReorderList'
-import type { ImportedCourse, ImportedVideo } from '@/data/types'
+import { VideoReorderDialog } from '@/app/components/course/VideoReorderDialog'
+import type { ImportedCourse, ImportedVideo, YouTubeCourseChapter } from '@/data/types'
 
 interface EditCourseDialogProps {
   open: boolean
@@ -53,6 +53,9 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('details')
   const [videos, setVideos] = useState<ImportedVideo[]>([])
+  const [chapters, setChapters] = useState<YouTubeCourseChapter[]>([])
+
+  const isYouTube = course.source === 'youtube'
 
   useEffect(() => {
     loadAuthors()
@@ -70,14 +73,23 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
       setSaving(false)
       setActiveTab('details')
 
-      // Load videos for reorder tab with cancellation guard
+      // Load videos and chapters for reorder tab with cancellation guard
       let cancelled = false
-      db.importedVideos
-        .where('courseId')
-        .equals(course.id)
-        .sortBy('order')
-        .then(result => {
-          if (!cancelled) setVideos(result)
+
+      Promise.all([
+        db.importedVideos.where('courseId').equals(course.id).sortBy('order'),
+        // silent-catch-ok — youtubeChapters table may not exist for local courses
+        db.youtubeChapters
+          .where('courseId')
+          .equals(course.id)
+          .sortBy('order')
+          .catch(() => [] as YouTubeCourseChapter[]),
+      ])
+        .then(([vids, chs]) => {
+          if (!cancelled) {
+            setVideos(vids)
+            setChapters(chs)
+          }
         })
         .catch(err => {
           // silent-catch-ok — non-critical: video tab will show empty state
@@ -340,7 +352,12 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
               Drag videos to change the lesson order. Changes are saved automatically.
             </p>
             <div className="overflow-y-auto">
-              <VideoReorderList videos={videos} onReorder={setVideos} />
+              <VideoReorderDialog
+                videos={videos}
+                chapters={chapters}
+                isYouTube={isYouTube}
+                onReorder={setVideos}
+              />
             </div>
           </TabsContent>
         </Tabs>
