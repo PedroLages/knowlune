@@ -10,8 +10,9 @@
  * - LocalVideoContent: local video playback with permission handling
  * - YouTubeVideoContent: YouTube iframe player with transcript
  * - PdfContent: PDF viewing with permission handling (E89-S06)
+ * - PlayerSidePanel: tabbed panel with Notes, Transcript, AI Summary, Bookmarks (E89-S07)
  *
- * @see E89-S05, E89-S06
+ * @see E89-S05, E89-S06, E89-S07
  */
 
 import { lazy, Suspense, useState, useEffect } from 'react'
@@ -29,6 +30,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/app/comp
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import { PanelRight } from 'lucide-react'
+import { PlayerSidePanel } from '@/app/components/course/PlayerSidePanel'
 import type { LessonItem } from '@/lib/courseAdapter'
 
 // Lazy-load PdfContent to avoid pdfjs-dist bundle impact for video-only users
@@ -138,11 +140,9 @@ export function UnifiedLessonPlayer() {
     <LocalVideoContent courseId={courseId!} lessonId={lessonId!} />
   )
 
-  // Side panel placeholder content (populated in S07)
+  // Side panel with tabbed content: Notes, Transcript, AI Summary, Bookmarks
   const sidePanelContent = (
-    <div className="flex flex-col items-center justify-center h-full p-4 text-muted-foreground">
-      <p className="text-sm">Side panel content coming in S07</p>
-    </div>
+    <PlayerSidePanel courseId={courseId!} lessonId={lessonId!} adapter={adapter} />
   )
 
   return (
