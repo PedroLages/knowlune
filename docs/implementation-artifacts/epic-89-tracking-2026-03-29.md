@@ -4,7 +4,7 @@
 
 | Story | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|--------|--------|---------------|--------------|
-| E89-S01 | queued | — | — | — |
+| E89-S01 | done | PR pending | 1 | 0 |
 | E89-S02 | queued | — | — | — |
 | E89-S03 | queued | — | — | — |
 | E89-S04 | queued | — | — | — |
