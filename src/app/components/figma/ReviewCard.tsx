@@ -47,7 +47,7 @@ function getNoteExcerpt(content: string, maxLength = 120): string {
 export function ReviewCard({ record, note, courseName, now, onRate, disabled }: ReviewCardProps) {
   const retention = predictRetention(record, now)
   const topicTag = note.tags[0] ?? 'General'
-  const dueDate = new Date(record.nextReviewAt)
+  const dueDate = new Date(record.due)
   const isDue = dueDate <= now
   const timeUntilDue = isDue
     ? 'Due now'

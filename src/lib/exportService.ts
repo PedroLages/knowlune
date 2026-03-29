@@ -249,12 +249,13 @@ export async function exportNotesAsMarkdown(
 
   onProgress?.(40, 'Loading review records...')
   const reviewRecords = await db.reviewRecords.toArray()
-  // Build map: noteId → most recent reviewedAt
+  // Build map: noteId → most recent last_review
   const lastReviewMap = new Map<string, string>()
   for (const record of reviewRecords) {
+    if (!record.last_review) continue
     const existing = lastReviewMap.get(record.noteId)
-    if (!existing || record.reviewedAt > existing) {
-      lastReviewMap.set(record.noteId, record.reviewedAt)
+    if (!existing || record.last_review > existing) {
+      lastReviewMap.set(record.noteId, record.last_review)
     }
   }
   await yieldToUI()

@@ -58,8 +58,8 @@ function getUpcomingSchedule(
   today.setHours(0, 0, 0, 0)
 
   for (const card of flashcards) {
-    if (!card.nextReviewAt) continue
-    const reviewDate = new Date(card.nextReviewAt)
+    if (!card.last_review) continue // Only show upcoming for cards that have been reviewed
+    const reviewDate = new Date(card.due)
     reviewDate.setHours(0, 0, 0, 0)
     const diffDays = Math.round((reviewDate.getTime() - today.getTime()) / 86400000)
     if (diffDays >= 1 && diffDays <= 7) {
@@ -119,11 +119,11 @@ export function Flashcards() {
       await loadImportedCourses()
     } catch (err) {
       console.error('[Flashcards] Failed to load flashcards:', err)
-      setLoadError(
-        isOnline
-          ? 'Failed to load flashcards. Please try again.'
-          : "You're offline. Please check your connection and try again."
-      )
+      const message = isOnline
+        ? 'Failed to load flashcards. Please try again.'
+        : "You're offline. Please check your connection and try again."
+      setLoadError(message)
+      toast.error(message)
     }
   }, [loadFlashcards, loadImportedCourses, isOnline])
 

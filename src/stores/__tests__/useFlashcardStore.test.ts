@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Dexie from 'dexie'
-import type { Flashcard } from '@/data/types'
+import type { Flashcard, CardState } from '@/data/types'
 
 let useFlashcardStore: (typeof import('@/stores/useFlashcardStore'))['useFlashcardStore']
 let db: (typeof import('@/db/schema'))['db']
@@ -14,9 +14,14 @@ function makeFlashcard(overrides: Partial<Flashcard> = {}): Flashcard {
     courseId: 'course-1',
     front: 'What is spaced repetition?',
     back: 'A technique that spaces reviews at increasing intervals.',
-    interval: 0,
-    easeFactor: 2.5,
-    reviewCount: 0,
+    stability: 0,
+    difficulty: 0,
+    reps: 0,
+    lapses: 0,
+    state: 0 as CardState,
+    elapsed_days: 0,
+    scheduled_days: 0,
+    due: FIXED_DATE.toISOString(), // New cards are due immediately
     createdAt: FIXED_DATE.toISOString(),
     updatedAt: FIXED_DATE.toISOString(),
     ...overrides,
@@ -25,10 +30,14 @@ function makeFlashcard(overrides: Partial<Flashcard> = {}): Flashcard {
 
 function makeDueFlashcard(overrides: Partial<Flashcard> = {}): Flashcard {
   return makeFlashcard({
-    reviewCount: 1,
-    reviewedAt: new Date(FIXED_DATE.getTime() - 4 * 86400000).toISOString(),
-    nextReviewAt: new Date(FIXED_DATE.getTime() - 86400000).toISOString(), // 1 day ago
-    interval: 3,
+    reps: 1,
+    stability: 3,
+    difficulty: 5,
+    state: 2 as CardState, // Review state
+    last_review: new Date(FIXED_DATE.getTime() - 4 * 86400000).toISOString(),
+    due: new Date(FIXED_DATE.getTime() - 86400000).toISOString(), // 1 day ago
+    scheduled_days: 3,
+    elapsed_days: 4,
     ...overrides,
   })
 }
@@ -68,7 +77,7 @@ describe('loadFlashcards', () => {
 })
 
 describe('createFlashcard', () => {
-  it('should create flashcard with default SM-2 values', async () => {
+  it('should create flashcard with default FSRS values', async () => {
     await useFlashcardStore.getState().createFlashcard('front', 'back', 'course-1')
 
     const state = useFlashcardStore.getState()
@@ -77,10 +86,15 @@ describe('createFlashcard', () => {
     expect(card.front).toBe('front')
     expect(card.back).toBe('back')
     expect(card.courseId).toBe('course-1')
-    expect(card.interval).toBe(0)
-    expect(card.easeFactor).toBe(2.5)
-    expect(card.reviewCount).toBe(0)
-    expect(card.nextReviewAt).toBeUndefined()
+    expect(card.stability).toBe(0)
+    expect(card.difficulty).toBe(0)
+    expect(card.reps).toBe(0)
+    expect(card.lapses).toBe(0)
+    expect(card.state).toBe(0)
+    expect(card.elapsed_days).toBe(0)
+    expect(card.scheduled_days).toBe(0)
+    expect(card.due).toBeTruthy()
+    expect(card.last_review).toBeUndefined()
   })
 
   it('should persist to IndexedDB', async () => {
@@ -116,11 +130,11 @@ describe('deleteFlashcard', () => {
 })
 
 describe('getDueFlashcards', () => {
-  it('should return never-reviewed cards (no nextReviewAt)', () => {
+  it('should return new cards (never reviewed, due <= now)', () => {
     const neverReviewed = makeFlashcard({ id: 'new-card' })
     const futureCard = makeFlashcard({
       id: 'future',
-      nextReviewAt: new Date(FIXED_DATE.getTime() + 86400000).toISOString(),
+      due: new Date(FIXED_DATE.getTime() + 86400000).toISOString(),
     })
 
     useFlashcardStore.setState({ flashcards: [neverReviewed, futureCard] })
@@ -130,11 +144,11 @@ describe('getDueFlashcards', () => {
     expect(due[0].id).toBe('new-card')
   })
 
-  it('should return cards with past nextReviewAt', () => {
+  it('should return cards with past due date', () => {
     const dueCard = makeDueFlashcard({ id: 'due' })
     const futureCard = makeFlashcard({
       id: 'future',
-      nextReviewAt: new Date(FIXED_DATE.getTime() + 7 * 86400000).toISOString(),
+      due: new Date(FIXED_DATE.getTime() + 7 * 86400000).toISOString(),
     })
 
     useFlashcardStore.setState({ flashcards: [dueCard, futureCard] })
@@ -147,15 +161,15 @@ describe('getDueFlashcards', () => {
   it('should sort by ascending retention (lowest retention first)', () => {
     const lowRetention = makeDueFlashcard({
       id: 'low',
-      interval: 1,
-      reviewedAt: new Date(FIXED_DATE.getTime() - 5 * 86400000).toISOString(),
-      nextReviewAt: new Date(FIXED_DATE.getTime() - 4 * 86400000).toISOString(),
+      stability: 1,
+      last_review: new Date(FIXED_DATE.getTime() - 5 * 86400000).toISOString(),
+      due: new Date(FIXED_DATE.getTime() - 4 * 86400000).toISOString(),
     })
     const highRetention = makeDueFlashcard({
       id: 'high',
-      interval: 30,
-      reviewedAt: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
-      nextReviewAt: new Date(FIXED_DATE.getTime() - 3600000).toISOString(),
+      stability: 30,
+      last_review: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
+      due: new Date(FIXED_DATE.getTime() - 3600000).toISOString(),
     })
 
     useFlashcardStore.setState({ flashcards: [highRetention, lowRetention] })
@@ -169,7 +183,7 @@ describe('review session', () => {
   it('startReviewSession populates reviewQueue with due cards', () => {
     const dueCard = makeDueFlashcard()
     const futureCard = makeFlashcard({
-      nextReviewAt: new Date(FIXED_DATE.getTime() + 86400000).toISOString(),
+      due: new Date(FIXED_DATE.getTime() + 86400000).toISOString(),
     })
     useFlashcardStore.setState({ flashcards: [dueCard, futureCard] })
 
@@ -181,7 +195,7 @@ describe('review session', () => {
     expect(reviewIndex).toBe(0)
   })
 
-  it('rateFlashcard advances reviewIndex and updates SM-2 fields', async () => {
+  it('rateFlashcard advances reviewIndex and updates FSRS fields', async () => {
     const card = makeFlashcard()
     await db.flashcards.put(card)
     useFlashcardStore.setState({ flashcards: [card], reviewQueue: [card], reviewIndex: 0 })
@@ -193,14 +207,16 @@ describe('review session', () => {
     expect(state.sessionRatings).toEqual(['good'])
 
     const updatedCard = state.flashcards.find(c => c.id === card.id)!
-    expect(updatedCard.reviewCount).toBe(1)
-    expect(updatedCard.interval).toBe(3) // first-review 'good' = 3 days
-    expect(updatedCard.nextReviewAt).toBeTruthy()
+    expect(updatedCard.reps).toBe(1)
+    expect(updatedCard.stability).toBeGreaterThan(0)
+    expect(updatedCard.difficulty).toBeGreaterThan(0)
+    expect(updatedCard.due).toBeTruthy()
+    expect(updatedCard.last_review).toBeTruthy()
     expect(updatedCard.lastRating).toBe('good')
   })
 
-  it('SM-2 interval ordering: Easy > Good > Hard', async () => {
-    async function getIntervalForRating(rating: 'hard' | 'good' | 'easy') {
+  it('FSRS due date ordering: Easy > Good > Hard (later due = longer interval)', async () => {
+    async function getDueDateForRating(rating: 'hard' | 'good' | 'easy') {
       await Dexie.delete('ElearningDB')
       vi.resetModules()
       const { useFlashcardStore: store } = await import('@/stores/useFlashcardStore')
@@ -210,15 +226,15 @@ describe('review session', () => {
       store.setState({ flashcards: [card], reviewQueue: [card], reviewIndex: 0 })
       await store.getState().rateFlashcard(rating, FIXED_DATE)
       const updated = store.getState().flashcards.find(c => c.id === card.id)!
-      return updated.interval
+      return new Date(updated.due).getTime()
     }
 
-    const hardInterval = await getIntervalForRating('hard')
-    const goodInterval = await getIntervalForRating('good')
-    const easyInterval = await getIntervalForRating('easy')
+    const hardDue = await getDueDateForRating('hard')
+    const goodDue = await getDueDateForRating('good')
+    const easyDue = await getDueDateForRating('easy')
 
-    expect(easyInterval).toBeGreaterThan(goodInterval)
-    expect(goodInterval).toBeGreaterThan(hardInterval)
+    expect(easyDue).toBeGreaterThan(goodDue)
+    expect(goodDue).toBeGreaterThan(hardDue)
   })
 
   it('getSessionSummary returns correct rating counts', () => {
@@ -256,8 +272,9 @@ describe('getStats', () => {
   it('returns total, dueToday, and nextReviewDate', () => {
     const dueCard = makeDueFlashcard()
     const futureCard = makeFlashcard({
-      nextReviewAt: new Date(FIXED_DATE.getTime() + 3 * 86400000).toISOString(),
-      reviewCount: 1,
+      due: new Date(FIXED_DATE.getTime() + 3 * 86400000).toISOString(),
+      last_review: FIXED_DATE.toISOString(),
+      reps: 1,
     })
     const neverReviewedCard = makeFlashcard()
 
@@ -266,7 +283,7 @@ describe('getStats', () => {
     const stats = useFlashcardStore.getState().getStats(FIXED_DATE)
     expect(stats.total).toBe(3)
     expect(stats.dueToday).toBe(2) // dueCard + neverReviewedCard
-    expect(stats.nextReviewDate).toBe(futureCard.nextReviewAt)
+    expect(stats.nextReviewDate).toBe(futureCard.due)
   })
 
   it('returns nextReviewDate null when no cards have future reviews', () => {

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { toast } from 'sonner'
 import { db } from '@/db'
-import type { ReviewRating, Flashcard } from '@/data/types'
+import type { ReviewRating, Flashcard, CardState } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { calculateNextReview, predictRetention, isDue } from '@/lib/spacedRepetition'
 
@@ -67,9 +67,15 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
       noteId,
       front,
       back,
-      interval: 0,
-      easeFactor: 2.5,
-      reviewCount: 0,
+      // FSRS defaults for a new card (state 0 = New)
+      stability: 0,
+      difficulty: 0,
+      reps: 0,
+      lapses: 0,
+      state: 0 as CardState,
+      elapsed_days: 0,
+      scheduled_days: 0,
+      due: now, // New cards are immediately due
       createdAt: now,
       updatedAt: now,
     }
@@ -113,15 +119,11 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
   getDueFlashcards: (now: Date = new Date()) => {
     const { flashcards } = get()
     return flashcards
-      .filter(
-        card =>
-          // Never reviewed (no nextReviewAt) = always due
-          !card.nextReviewAt || isDue({ nextReviewAt: card.nextReviewAt }, now)
-      )
+      .filter(card => isDue(card, now))
       .sort((a, b) => {
-        // Never-reviewed cards go first (retention = 0), then by ascending retention
-        const retA = a.reviewedAt ? predictRetention({ ...a, reviewedAt: a.reviewedAt }, now) : 0
-        const retB = b.reviewedAt ? predictRetention({ ...b, reviewedAt: b.reviewedAt }, now) : 0
+        // Cards with no last_review (never reviewed) go first (retention = 0)
+        const retA = a.last_review ? predictRetention(a, now) : 0
+        const retB = b.last_review ? predictRetention(b, now) : 0
         return retA - retB
       })
   },
@@ -141,19 +143,20 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
     const currentCard = reviewQueue[reviewIndex]
     if (!currentCard) return
 
-    const { interval, easeFactor, nextReviewAt } = calculateNextReview(
-      currentCard.reviewCount > 0 ? currentCard : null,
-      rating,
-      now
-    )
+    // Pass full FSRS card state (or null for never-reviewed cards)
+    const fsrsResult = calculateNextReview(currentCard.reps > 0 ? currentCard : null, rating, now)
 
     const updatedCard: Flashcard = {
       ...currentCard,
-      interval,
-      easeFactor,
-      nextReviewAt,
-      reviewedAt: now.toISOString(),
-      reviewCount: currentCard.reviewCount + 1,
+      stability: fsrsResult.stability,
+      difficulty: fsrsResult.difficulty,
+      reps: fsrsResult.reps,
+      lapses: fsrsResult.lapses,
+      state: fsrsResult.state,
+      elapsed_days: fsrsResult.elapsed_days,
+      scheduled_days: fsrsResult.scheduled_days,
+      due: fsrsResult.due,
+      last_review: fsrsResult.last_review,
       lastRating: rating,
       updatedAt: now.toISOString(),
     }
@@ -195,12 +198,12 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
       ratings[r]++
     }
 
-    // Find the next due date across all cards
-    const reviewed = flashcards.filter(c => c.nextReviewAt)
+    // Find the next due date across all cards that have been reviewed
+    const reviewed = flashcards.filter(c => c.last_review)
     const sorted = [...reviewed].sort(
-      (a, b) => new Date(a.nextReviewAt!).getTime() - new Date(b.nextReviewAt!).getTime()
+      (a, b) => new Date(a.due).getTime() - new Date(b.due).getTime()
     )
-    const nextReviewDate = sorted[0]?.nextReviewAt ?? null
+    const nextReviewDate = sorted[0]?.due ?? null
 
     return {
       totalReviewed: sessionRatings.length,
@@ -222,13 +225,13 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
     const { flashcards } = get()
     const dueFlashcards = get().getDueFlashcards(now)
 
-    const withNextReview = flashcards.filter(c => c.nextReviewAt)
-    const sorted = [...withNextReview].sort(
-      (a, b) => new Date(a.nextReviewAt!).getTime() - new Date(b.nextReviewAt!).getTime()
-    )
     // Find next future review date (cards not yet due)
-    const nextFuture = sorted.find(c => !isDue({ nextReviewAt: c.nextReviewAt! }, now))
-    const nextReviewDate = nextFuture?.nextReviewAt ?? null
+    const withReview = flashcards.filter(c => c.last_review)
+    const sorted = [...withReview].sort(
+      (a, b) => new Date(a.due).getTime() - new Date(b.due).getTime()
+    )
+    const nextFuture = sorted.find(c => !isDue(c, now))
+    const nextReviewDate = nextFuture?.due ?? null
 
     return {
       total: flashcards.length,

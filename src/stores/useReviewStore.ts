@@ -14,7 +14,7 @@ interface PendingRating {
 
 export interface InterleavedSessionSummary {
   totalReviewed: number
-  ratings: { hard: number; good: number; easy: number }
+  ratings: { again: number; hard: number; good: number; easy: number }
   coursesCount: number
   courseNames: string[]
   averageRetentionBefore: number
@@ -87,21 +87,21 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
   rateNote: async (noteId: string, rating: ReviewRating, now: Date = new Date()) => {
     const { allReviews } = get()
     const existing = allReviews.find(r => r.noteId === noteId)
-    const { interval, easeFactor, nextReviewAt } = calculateNextReview(
-      existing ?? null,
-      rating,
-      now
-    )
+    const fsrsResult = calculateNextReview(existing ?? null, rating, now)
 
     const updatedRecord: ReviewRecord = {
       id: existing?.id ?? crypto.randomUUID(),
       noteId,
       rating,
-      reviewedAt: now.toISOString(),
-      nextReviewAt,
-      interval,
-      easeFactor,
-      reviewCount: (existing?.reviewCount ?? 0) + 1,
+      stability: fsrsResult.stability,
+      difficulty: fsrsResult.difficulty,
+      reps: fsrsResult.reps,
+      lapses: fsrsResult.lapses,
+      state: fsrsResult.state,
+      elapsed_days: fsrsResult.elapsed_days,
+      scheduled_days: fsrsResult.scheduled_days,
+      due: fsrsResult.due,
+      last_review: fsrsResult.last_review,
     }
 
     // Optimistic update
@@ -156,9 +156,9 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
     if (allReviews.length === 0) return null
 
     const sorted = [...allReviews].sort(
-      (a, b) => new Date(a.nextReviewAt).getTime() - new Date(b.nextReviewAt).getTime()
+      (a, b) => new Date(a.due).getTime() - new Date(b.due).getTime()
     )
-    return sorted[0].nextReviewAt
+    return sorted[0].due
   },
 
   // --- Interleaved session actions ---
@@ -216,7 +216,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
   endInterleavedSession: (courseNameMap: Map<string, string>) => {
     const { interleavedRatings, interleavedCourseIds, interleavedRetentionsBefore } = get()
 
-    const ratings = { hard: 0, good: 0, easy: 0 }
+    const ratings = { again: 0, hard: 0, good: 0, easy: 0 }
     for (const r of interleavedRatings) {
       ratings[r]++
     }

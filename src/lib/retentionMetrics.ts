@@ -96,8 +96,9 @@ export function getTopicRetention(
     const avgRetention = Math.round(retentions.reduce((sum, r) => sum + r, 0) / retentions.length)
 
     const lastReviewedAt = data.reviews.reduce((latest, r) => {
-      return r.reviewedAt > latest ? r.reviewedAt : latest
-    }, data.reviews[0].reviewedAt)
+      const lr = r.last_review ?? ''
+      return lr > latest ? lr : latest
+    }, data.reviews[0].last_review ?? '')
 
     results.push({
       topic,

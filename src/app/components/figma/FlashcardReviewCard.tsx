@@ -74,7 +74,7 @@ export function FlashcardReviewCard({
                       {courseName}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {getReviewCountLabel(flashcard.reviewCount)}
+                      {getReviewCountLabel(flashcard.reps)}
                     </p>
                   </div>
                 </div>

@@ -112,9 +112,9 @@ export function ReviewQueue() {
   const nextReviewDate = useMemo(() => {
     if (allReviews.length === 0) return null
     const sorted = [...allReviews].sort(
-      (a, b) => new Date(a.nextReviewAt).getTime() - new Date(b.nextReviewAt).getTime()
+      (a, b) => new Date(a.due).getTime() - new Date(b.due).getTime()
     )
-    return sorted[0].nextReviewAt
+    return sorted[0].due
   }, [allReviews])
 
   if (isLoading) {

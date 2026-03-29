@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Dexie from 'dexie'
-import type { ReviewRecord } from '@/data/types'
+import type { ReviewRecord, CardState } from '@/data/types'
 
 let useReviewStore: (typeof import('@/stores/useReviewStore'))['useReviewStore']
 let db: (typeof import('@/db/schema'))['db']
@@ -13,11 +13,15 @@ function makeReview(overrides: Partial<ReviewRecord> = {}): ReviewRecord {
     id: crypto.randomUUID(),
     noteId: 'note-1',
     rating: 'good',
-    reviewedAt: new Date(FIXED_DATE.getTime() - 3 * 86400000).toISOString(),
-    nextReviewAt: new Date(FIXED_DATE.getTime() - 86400000).toISOString(), // 1 day ago = due
-    interval: 3,
-    easeFactor: 2.5,
-    reviewCount: 1,
+    stability: 3,
+    difficulty: 5,
+    reps: 1,
+    lapses: 0,
+    state: 2 as CardState, // Review state
+    elapsed_days: 3,
+    scheduled_days: 3,
+    due: new Date(FIXED_DATE.getTime() - 86400000).toISOString(), // 1 day ago = due
+    last_review: new Date(FIXED_DATE.getTime() - 3 * 86400000).toISOString(),
     ...overrides,
   }
 }
@@ -46,8 +50,8 @@ describe('loadReviews', () => {
 })
 
 describe('rateNote (happy path)', () => {
-  it('should update allReviews with new interval and increment reviewCount on success', async () => {
-    const review = makeReview({ id: 'review-hp', noteId: 'note-hp', reviewCount: 1 })
+  it('should update allReviews with FSRS fields and increment reps on success', async () => {
+    const review = makeReview({ id: 'review-hp', noteId: 'note-hp', reps: 1 })
     useReviewStore.setState({ allReviews: [review] })
 
     vi.spyOn(db.reviewRecords, 'put').mockResolvedValue(undefined as never)
@@ -57,8 +61,10 @@ describe('rateNote (happy path)', () => {
     const state = useReviewStore.getState()
     const updated = state.allReviews.find(r => r.noteId === 'note-hp')
     expect(updated).toBeDefined()
-    expect(updated!.reviewCount).toBe(2)
-    expect(new Date(updated!.nextReviewAt).getTime()).toBeGreaterThan(FIXED_DATE.getTime())
+    expect(updated!.reps).toBe(2)
+    expect(updated!.stability).toBeGreaterThan(0)
+    expect(updated!.difficulty).toBeGreaterThan(0)
+    expect(new Date(updated!.due).getTime()).toBeGreaterThan(FIXED_DATE.getTime())
     expect(state.pendingRating).toBeNull()
     expect(state.error).toBeNull()
   })
@@ -74,10 +80,8 @@ describe('rateNote (happy path)', () => {
     expect(state.allReviews).toHaveLength(1)
     expect(state.allReviews[0].noteId).toBe('note-new')
     expect(state.allReviews[0].rating).toBe('easy')
-    expect(state.allReviews[0].reviewCount).toBe(1)
-    expect(new Date(state.allReviews[0].nextReviewAt).getTime()).toBeGreaterThan(
-      FIXED_DATE.getTime()
-    )
+    expect(state.allReviews[0].reps).toBe(1)
+    expect(new Date(state.allReviews[0].due).getTime()).toBeGreaterThan(FIXED_DATE.getTime())
   })
 })
 
@@ -98,8 +102,8 @@ describe('rateNote (AC5 — error handling)', () => {
     // allReviews should be rolled back to the original state
     expect(state.allReviews).toHaveLength(1)
     expect(state.allReviews[0].id).toBe('review-1')
-    // Original nextReviewAt (in the past), not the new one
-    expect(state.allReviews[0].nextReviewAt).toBe(review.nextReviewAt)
+    // Original due (in the past), not the new one
+    expect(state.allReviews[0].due).toBe(review.due)
     expect(state.error).toBe('Failed to save rating')
   })
 
@@ -130,10 +134,10 @@ describe('rateNote (AC5 — error handling)', () => {
     const state = useReviewStore.getState()
     // After successful retry, pendingRating should be cleared
     expect(state.pendingRating).toBeNull()
-    // The review should be updated (new nextReviewAt in the future)
+    // The review should be updated (new due in the future)
     const updatedReview = state.allReviews.find(r => r.noteId === 'note-retry')
     expect(updatedReview).toBeDefined()
-    expect(new Date(updatedReview!.nextReviewAt).getTime()).toBeGreaterThan(FIXED_DATE.getTime())
+    expect(new Date(updatedReview!.due).getTime()).toBeGreaterThan(FIXED_DATE.getTime())
   })
 
   it('should do nothing when retryPendingRating called with no pending', async () => {
@@ -151,16 +155,16 @@ describe('getDueReviews', () => {
     const reviewOld = makeReview({
       id: 'old',
       noteId: 'note-old',
-      reviewedAt: new Date(FIXED_DATE.getTime() - 8 * 86400000).toISOString(),
-      nextReviewAt: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
-      interval: 3,
+      stability: 3,
+      last_review: new Date(FIXED_DATE.getTime() - 8 * 86400000).toISOString(),
+      due: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
     })
     const reviewRecent = makeReview({
       id: 'recent',
       noteId: 'note-recent',
-      reviewedAt: new Date(FIXED_DATE.getTime() - 1 * 86400000).toISOString(),
-      nextReviewAt: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
-      interval: 3,
+      stability: 3,
+      last_review: new Date(FIXED_DATE.getTime() - 1 * 86400000).toISOString(),
+      due: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
     })
 
     useReviewStore.setState({ allReviews: [reviewRecent, reviewOld] })
@@ -174,7 +178,7 @@ describe('getDueReviews', () => {
 
   it('should exclude reviews not yet due', () => {
     const futureReview = makeReview({
-      nextReviewAt: new Date(FIXED_DATE.getTime() + 5 * 86400000).toISOString(),
+      due: new Date(FIXED_DATE.getTime() + 5 * 86400000).toISOString(),
     })
 
     useReviewStore.setState({ allReviews: [futureReview] })
@@ -189,16 +193,16 @@ describe('AC3 — queue re-sorts after rating', () => {
     const reviewA = makeReview({
       id: 'a',
       noteId: 'note-a',
-      reviewedAt: new Date(FIXED_DATE.getTime() - 8 * 86400000).toISOString(),
-      nextReviewAt: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
-      interval: 3,
+      stability: 3,
+      last_review: new Date(FIXED_DATE.getTime() - 8 * 86400000).toISOString(),
+      due: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
     })
     const reviewB = makeReview({
       id: 'b',
       noteId: 'note-b',
-      reviewedAt: new Date(FIXED_DATE.getTime() - 2 * 86400000).toISOString(),
-      nextReviewAt: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
-      interval: 3,
+      stability: 3,
+      last_review: new Date(FIXED_DATE.getTime() - 2 * 86400000).toISOString(),
+      due: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
     })
 
     useReviewStore.setState({ allReviews: [reviewA, reviewB] })
@@ -234,14 +238,16 @@ describe('startInterleavedSession', () => {
     const review1 = makeReview({
       id: 'r1',
       noteId: 'note-1',
-      reviewedAt: new Date(FIXED_DATE.getTime() - 5 * 86400000).toISOString(),
-      nextReviewAt: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
+      stability: 3,
+      last_review: new Date(FIXED_DATE.getTime() - 5 * 86400000).toISOString(),
+      due: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
     })
     const review2 = makeReview({
       id: 'r2',
       noteId: 'note-2',
-      reviewedAt: new Date(FIXED_DATE.getTime() - 3 * 86400000).toISOString(),
-      nextReviewAt: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
+      stability: 3,
+      last_review: new Date(FIXED_DATE.getTime() - 3 * 86400000).toISOString(),
+      due: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
     })
 
     useReviewStore.setState({ allReviews: [review1, review2] })
@@ -488,9 +494,9 @@ describe('resetInterleavedSession', () => {
 })
 
 describe('getNextReviewDate', () => {
-  it('should return earliest nextReviewAt', () => {
-    const r1 = makeReview({ nextReviewAt: '2026-03-20T00:00:00Z' })
-    const r2 = makeReview({ noteId: 'note-2', nextReviewAt: '2026-03-18T00:00:00Z' })
+  it('should return earliest due date', () => {
+    const r1 = makeReview({ due: '2026-03-20T00:00:00Z' })
+    const r2 = makeReview({ noteId: 'note-2', due: '2026-03-18T00:00:00Z' })
 
     useReviewStore.setState({ allReviews: [r1, r2] })
 

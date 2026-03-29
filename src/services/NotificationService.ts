@@ -78,9 +78,7 @@ export async function checkSrsDueOnStartup(): Promise<void> {
     db.reviewRecords.toArray(),
   ])
 
-  const dueFlashcards = flashcards.filter(
-    card => !card.nextReviewAt || isDue({ nextReviewAt: card.nextReviewAt }, now)
-  ).length
+  const dueFlashcards = flashcards.filter(card => isDue(card, now)).length
 
   const dueReviews = reviewRecords.filter(r => isDue(r, now)).length
 
