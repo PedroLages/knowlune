@@ -130,7 +130,7 @@ export function FlashcardReviewCard({
                 {/* Rating */}
                 <div>
                   <p className="mb-2 text-xs text-muted-foreground">
-                    How well did you recall this? · 1/2/3
+                    How well did you recall this? · 1/2/3/4
                   </p>
                   <RatingButtons onRate={onRate} disabled={isRating} />
                 </div>
