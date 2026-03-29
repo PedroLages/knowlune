@@ -32,8 +32,7 @@ async function seedV30Database(
     bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
     notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
     screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
-    studySessions:
-      'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+    studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
     contentProgress: '[courseId+itemId], courseId, itemId, status',
     challenges: 'id, type, deadline, createdAt',
     embeddings: 'noteId, createdAt',
@@ -230,18 +229,21 @@ describe('v31 FSRS migration — flashcards', () => {
 describe('v31 FSRS migration — reviewRecords', () => {
   it('should transform SM-2 review record fields to FSRS fields', async () => {
     const recordId = crypto.randomUUID()
-    await seedV30Database([], [
-      {
-        id: recordId,
-        noteId: 'note-1',
-        rating: 'good',
-        interval: 14,
-        easeFactor: 2.0,
-        reviewCount: 8,
-        nextReviewAt: '2026-04-10T10:00:00.000Z',
-        reviewedAt: '2026-03-27T10:00:00.000Z',
-      },
-    ])
+    await seedV30Database(
+      [],
+      [
+        {
+          id: recordId,
+          noteId: 'note-1',
+          rating: 'good',
+          interval: 14,
+          easeFactor: 2.0,
+          reviewCount: 8,
+          nextReviewAt: '2026-04-10T10:00:00.000Z',
+          reviewedAt: '2026-03-27T10:00:00.000Z',
+        },
+      ]
+    )
 
     const newDb = await openWithV31Migrations()
     const record = await newDb.table('reviewRecords').get(recordId)
@@ -271,28 +273,31 @@ describe('v31 FSRS migration — reviewRecords', () => {
   })
 
   it('should use due and last_review indexes after migration', async () => {
-    await seedV30Database([], [
-      {
-        id: crypto.randomUUID(),
-        noteId: 'note-1',
-        rating: 'good',
-        interval: 3,
-        easeFactor: 2.5,
-        reviewCount: 2,
-        nextReviewAt: '2026-01-05T00:00:00.000Z',
-        reviewedAt: '2026-01-02T00:00:00.000Z',
-      },
-      {
-        id: crypto.randomUUID(),
-        noteId: 'note-2',
-        rating: 'easy',
-        interval: 30,
-        easeFactor: 2.7,
-        reviewCount: 10,
-        nextReviewAt: '2030-01-01T00:00:00.000Z',
-        reviewedAt: '2029-12-02T00:00:00.000Z',
-      },
-    ])
+    await seedV30Database(
+      [],
+      [
+        {
+          id: crypto.randomUUID(),
+          noteId: 'note-1',
+          rating: 'good',
+          interval: 3,
+          easeFactor: 2.5,
+          reviewCount: 2,
+          nextReviewAt: '2026-01-05T00:00:00.000Z',
+          reviewedAt: '2026-01-02T00:00:00.000Z',
+        },
+        {
+          id: crypto.randomUUID(),
+          noteId: 'note-2',
+          rating: 'easy',
+          interval: 30,
+          easeFactor: 2.7,
+          reviewCount: 10,
+          nextReviewAt: '2030-01-01T00:00:00.000Z',
+          reviewedAt: '2029-12-02T00:00:00.000Z',
+        },
+      ]
+    )
 
     const newDb = await openWithV31Migrations()
 
@@ -319,14 +324,17 @@ describe('v31 FSRS migration — reviewRecords', () => {
 
   it('should handle review records with missing optional fields', async () => {
     const recordId = crypto.randomUUID()
-    await seedV30Database([], [
-      {
-        id: recordId,
-        noteId: 'note-1',
-        rating: 'hard',
-        // Missing easeFactor, interval, reviewCount — should use defaults
-      },
-    ])
+    await seedV30Database(
+      [],
+      [
+        {
+          id: recordId,
+          noteId: 'note-1',
+          rating: 'hard',
+          // Missing easeFactor, interval, reviewCount — should use defaults
+        },
+      ]
+    )
 
     const newDb = await openWithV31Migrations()
     const record = await newDb.table('reviewRecords').get(recordId)

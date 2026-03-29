@@ -767,10 +767,7 @@ describe('flashcards table (v31 — FSRS fields)', () => {
   it('should query flashcards due for review by due index', async () => {
     const past = '2026-01-01T00:00:00.000Z'
     const future = '2030-01-01T00:00:00.000Z'
-    await db.flashcards.bulkAdd([
-      makeFlashcard({ due: past }),
-      makeFlashcard({ due: future }),
-    ])
+    await db.flashcards.bulkAdd([makeFlashcard({ due: past }), makeFlashcard({ due: future })])
     const now = '2026-03-23T10:00:00.000Z'
     const dueCards = await db.flashcards.where('due').belowOrEqual(now).toArray()
     expect(dueCards).toHaveLength(1)
