@@ -335,8 +335,8 @@ describe('NotificationService', () => {
       const emitSpy = vi.spyOn(appEventBus, 'emit')
 
       mockFlashcardsToArray.mockResolvedValue([
-        { id: '1', nextReviewAt: '2026-03-14T10:00:00' }, // Past FIXED_NOW → due
-        { id: '2', nextReviewAt: '2026-03-16T10:00:00' }, // Future → not due
+        { id: '1', due: '2026-03-14T10:00:00' }, // Past FIXED_NOW → due
+        { id: '2', due: '2026-03-16T10:00:00' }, // Future → not due
       ])
       mockReviewRecordsToArray.mockResolvedValue([])
 
@@ -351,7 +351,7 @@ describe('NotificationService', () => {
 
       mockFlashcardsToArray.mockResolvedValue([])
       mockReviewRecordsToArray.mockResolvedValue([
-        { id: 'r1', nextReviewAt: '2026-03-14T10:00:00' }, // Past → due
+        { id: 'r1', due: '2026-03-14T10:00:00' }, // Past → due
       ])
 
       await checkSrsDueOnStartup()
@@ -364,13 +364,13 @@ describe('NotificationService', () => {
       const emitSpy = vi.spyOn(appEventBus, 'emit')
 
       mockFlashcardsToArray.mockResolvedValue([
-        { id: '1', nextReviewAt: '2026-03-14T10:00:00' }, // due
-        { id: '2', nextReviewAt: '2026-03-10T10:00:00' }, // due
+        { id: '1', due: '2026-03-14T10:00:00' }, // due
+        { id: '2', due: '2026-03-10T10:00:00' }, // due
       ])
       mockReviewRecordsToArray.mockResolvedValue([
-        { id: 'r1', nextReviewAt: '2026-03-13T10:00:00' }, // due
-        { id: 'r2', nextReviewAt: '2026-03-12T10:00:00' }, // due
-        { id: 'r3', nextReviewAt: '2026-03-20T10:00:00' }, // not due
+        { id: 'r1', due: '2026-03-13T10:00:00' }, // due
+        { id: 'r2', due: '2026-03-12T10:00:00' }, // due
+        { id: 'r3', due: '2026-03-20T10:00:00' }, // not due
       ])
 
       await checkSrsDueOnStartup()
@@ -379,12 +379,13 @@ describe('NotificationService', () => {
       emitSpy.mockRestore()
     })
 
-    it('treats flashcards with no nextReviewAt as due (never reviewed)', async () => {
+    it('treats new flashcards with due set to creation time as due', async () => {
       const emitSpy = vi.spyOn(appEventBus, 'emit')
 
+      // FSRS sets due=now at creation, so new cards are immediately due
       mockFlashcardsToArray.mockResolvedValue([
-        { id: '1' }, // No nextReviewAt → due
-        { id: '2', nextReviewAt: undefined }, // Explicit undefined → due
+        { id: '1', due: '2026-03-15T10:00:00' }, // Created before FIXED_NOW → due
+        { id: '2', due: '2026-03-14T08:00:00' }, // Created before FIXED_NOW → due
       ])
       mockReviewRecordsToArray.mockResolvedValue([])
 
@@ -398,10 +399,10 @@ describe('NotificationService', () => {
       const emitSpy = vi.spyOn(appEventBus, 'emit')
 
       mockFlashcardsToArray.mockResolvedValue([
-        { id: '1', nextReviewAt: '2026-03-20T10:00:00' }, // Future → not due
+        { id: '1', due: '2026-03-20T10:00:00' }, // Future → not due
       ])
       mockReviewRecordsToArray.mockResolvedValue([
-        { id: 'r1', nextReviewAt: '2026-03-20T10:00:00' }, // Future → not due
+        { id: 'r1', due: '2026-03-20T10:00:00' }, // Future → not due
       ])
 
       await checkSrsDueOnStartup()

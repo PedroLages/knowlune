@@ -29,11 +29,15 @@ function makeReview(noteId: string, overrides: Partial<ReviewRecord> = {}): Revi
     id: crypto.randomUUID(),
     noteId,
     rating: 'good',
-    reviewedAt: new Date(FIXED_NOW.getTime() - MS_PER_DAY).toISOString(),
-    nextReviewAt: new Date(FIXED_NOW.getTime() + 2 * MS_PER_DAY).toISOString(),
-    interval: 3,
-    easeFactor: 2.5,
-    reviewCount: 1,
+    stability: 3,
+    difficulty: 5,
+    reps: 1,
+    lapses: 0,
+    state: 2 as const, // Review
+    elapsed_days: 1,
+    scheduled_days: 3,
+    due: new Date(FIXED_NOW.getTime() + 2 * MS_PER_DAY).toISOString(),
+    last_review: new Date(FIXED_NOW.getTime() - MS_PER_DAY).toISOString(),
     ...overrides,
   }
 }
@@ -84,12 +88,12 @@ describe('getTopicRetention', () => {
     const note1 = makeNote({ tags: ['Math'] })
     const note2 = makeNote({ tags: ['Math'] })
     const review1 = makeReview(note1.id, {
-      reviewedAt: FIXED_NOW.toISOString(), // just reviewed → high retention
-      interval: 7,
+      last_review: FIXED_NOW.toISOString(), // just reviewed → high retention
+      stability: 7,
     })
     const review2 = makeReview(note2.id, {
-      reviewedAt: FIXED_NOW.toISOString(),
-      interval: 7,
+      last_review: FIXED_NOW.toISOString(),
+      stability: 7,
     })
 
     const result = getTopicRetention([note1, note2], [review1, review2], FIXED_NOW)
@@ -115,7 +119,7 @@ describe('getTopicRetention', () => {
 
   it('uses "General" for notes without tags', () => {
     const note = makeNote({ tags: [] })
-    const review = makeReview(note.id, { reviewedAt: FIXED_NOW.toISOString(), interval: 7 })
+    const review = makeReview(note.id, { last_review: FIXED_NOW.toISOString(), stability: 7 })
     const result = getTopicRetention([note], [review], FIXED_NOW)
     expect(result[0].topic).toBe('General')
   })
@@ -124,12 +128,12 @@ describe('getTopicRetention', () => {
     const noteStrong = makeNote({ tags: ['Strong Topic'] })
     const noteWeak = makeNote({ tags: ['Weak Topic'] })
     const reviewStrong = makeReview(noteStrong.id, {
-      reviewedAt: FIXED_NOW.toISOString(),
-      interval: 7,
+      last_review: FIXED_NOW.toISOString(),
+      stability: 7,
     })
     const reviewWeak = makeReview(noteWeak.id, {
-      reviewedAt: new Date(FIXED_NOW.getTime() - 14 * MS_PER_DAY).toISOString(),
-      interval: 3,
+      last_review: new Date(FIXED_NOW.getTime() - 14 * MS_PER_DAY).toISOString(),
+      stability: 3,
     })
 
     const result = getTopicRetention([noteStrong, noteWeak], [reviewStrong, reviewWeak], FIXED_NOW)
@@ -141,10 +145,10 @@ describe('getTopicRetention', () => {
     const note1 = makeNote({ tags: ['History'] })
     const note2 = makeNote({ tags: ['History'] })
     const review1 = makeReview(note1.id, {
-      nextReviewAt: new Date(FIXED_NOW.getTime() - MS_PER_DAY).toISOString(), // due
+      due: new Date(FIXED_NOW.getTime() - MS_PER_DAY).toISOString(), // due
     })
     const review2 = makeReview(note2.id, {
-      nextReviewAt: new Date(FIXED_NOW.getTime() + MS_PER_DAY).toISOString(), // not due
+      due: new Date(FIXED_NOW.getTime() + MS_PER_DAY).toISOString(), // not due
     })
 
     const result = getTopicRetention([note1, note2], [review1, review2], FIXED_NOW)
@@ -164,9 +168,10 @@ describe('getRetentionStats', () => {
 
   it('calculates at-risk count for reviews with low retention', () => {
     const note = makeNote()
+    // stability=1, elapsed=14 days → FSRS forgetting curve gives ~48% (below 50% threshold)
     const review = makeReview(note.id, {
-      reviewedAt: new Date(FIXED_NOW.getTime() - 14 * MS_PER_DAY).toISOString(),
-      interval: 3,
+      last_review: new Date(FIXED_NOW.getTime() - 14 * MS_PER_DAY).toISOString(),
+      stability: 1,
     })
     const stats = getRetentionStats([review], FIXED_NOW)
     expect(stats.notesAtRisk).toBe(1)
@@ -175,12 +180,12 @@ describe('getRetentionStats', () => {
   it('counts due reviews', () => {
     const note = makeNote()
     const dueReview = makeReview(note.id, {
-      nextReviewAt: new Date(FIXED_NOW.getTime() - MS_PER_DAY).toISOString(),
+      due: new Date(FIXED_NOW.getTime() - MS_PER_DAY).toISOString(),
     })
     const futureReview = makeReview(makeNote().id, {
-      nextReviewAt: new Date(FIXED_NOW.getTime() + 7 * MS_PER_DAY).toISOString(),
-      reviewedAt: FIXED_NOW.toISOString(),
-      interval: 7,
+      due: new Date(FIXED_NOW.getTime() + 7 * MS_PER_DAY).toISOString(),
+      last_review: FIXED_NOW.toISOString(),
+      stability: 7,
     })
     const stats = getRetentionStats([dueReview, futureReview], FIXED_NOW)
     expect(stats.dueToday).toBe(1)
