@@ -1070,6 +1070,10 @@ function _declareLegacyMigrations(database: Dexie): void {
       // reviewedAt (ISO string) → last_review (ISO string)
       // New fields: lapses=0, state (derived), elapsed_days (derived), scheduled_days (derived)
 
+      // Capture migration timestamp once for deterministic output
+      const migrationNow = new Date()
+      const migrationNowIso = migrationNow.toISOString()
+
       /**
        * Convert SM-2 easeFactor (1.3-2.5, higher=easier) to FSRS difficulty (0-10, higher=harder).
        * SM-2 default easeFactor is 2.5 (easiest) → FSRS difficulty ~0
@@ -1088,7 +1092,7 @@ function _declareLegacyMigrations(database: Dexie): void {
        * 0=New, 1=Learning, 2=Review, 3=Relearning
        */
       function deriveCardState(reviewCount: number, interval: number): number {
-        if (!reviewCount || reviewCount === 0) return 0 // New
+        if (!reviewCount) return 0 // New
         if (interval < 1) return 1 // Learning (sub-day intervals)
         return 2 // Review (established cards)
       }
@@ -1100,8 +1104,7 @@ function _declareLegacyMigrations(database: Dexie): void {
         if (!reviewedAt) return 0
         const lastDate = new Date(reviewedAt)
         if (isNaN(lastDate.getTime())) return 0
-        const now = new Date()
-        return Math.max(0, Math.round((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)))
+        return Math.max(0, Math.round((migrationNow.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)))
       }
 
       const flashcardsMigration = tx
@@ -1122,7 +1125,7 @@ function _declareLegacyMigrations(database: Dexie): void {
           card.state = deriveCardState(reviewCount, interval)
           card.elapsed_days = calcElapsedDays(reviewedAt)
           card.scheduled_days = Math.max(0, interval)
-          card.due = nextReviewAt || card.createdAt || new Date().toISOString()
+          card.due = nextReviewAt || card.createdAt || migrationNowIso
           card.last_review = reviewedAt // undefined if never reviewed
 
           // Remove SM-2 fields
@@ -1151,7 +1154,7 @@ function _declareLegacyMigrations(database: Dexie): void {
           record.state = deriveCardState(reviewCount, interval)
           record.elapsed_days = calcElapsedDays(reviewedAt)
           record.scheduled_days = Math.max(0, interval)
-          record.due = nextReviewAt || new Date().toISOString()
+          record.due = nextReviewAt || migrationNowIso
           record.last_review = reviewedAt
 
           // Remove SM-2 fields
