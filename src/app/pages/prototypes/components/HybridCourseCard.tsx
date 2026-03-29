@@ -20,7 +20,7 @@ export function HybridCourseCard({ course, completionPercent }: HybridCourseCard
   const firstLesson = course.modules[0]?.lessons[0]?.id
   const resumeLesson = getProgress(course.id).lastWatchedLesson ?? firstLesson
   const lessonLink = resumeLesson
-    ? `/courses/${course.id}/${resumeLesson}`
+    ? `/courses/${course.id}/lessons/${resumeLesson}`
     : `/courses/${course.id}`
 
   return (

@@ -142,7 +142,7 @@ export function SwissOverview() {
           const firstLesson = course.modules[0]?.lessons[0]?.id
           const resumeLesson = course.progress.lastWatchedLesson ?? firstLesson
           const lessonLink = resumeLesson
-            ? `/courses/${course.id}/${resumeLesson}`
+            ? `/courses/${course.id}/lessons/${resumeLesson}`
             : `/courses/${course.id}`
 
           return (

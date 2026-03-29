@@ -134,7 +134,7 @@ function buildSearchIndex(allCourses: Course[]): SearchItem[] {
           id: `lesson-${course.id}-${lesson.id}`,
           label: lesson.title,
           sublabel: `${course.shortTitle} · ${mod.title}`,
-          path: `/courses/${course.id}/${lesson.id}`,
+          path: `/courses/${course.id}/lessons/${lesson.id}`,
           group: 'Lessons',
           icon: hasVideo ? PlayCircle : FileText,
           keywords: [
@@ -218,7 +218,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
 
   const handleNoteSelect = (result: NoteSearchResult) => {
     handleOpenChange(false)
-    let path = `/courses/${result.courseId}/${result.videoId}?panel=notes`
+    let path = `/courses/${result.courseId}/lessons/${result.videoId}?panel=notes`
     if (result.timestamp != null) {
       path += `&t=${result.timestamp}`
     }
