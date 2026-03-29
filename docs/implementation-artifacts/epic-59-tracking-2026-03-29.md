@@ -7,7 +7,7 @@ Last Updated: 2026-03-29
 
 | Story | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|--------|--------|---------------|--------------|
-| E59-S01 | queued | — | — | — |
+| E59-S01 | done | #161 | 2 | 1 |
 | E59-S02 | queued | — | — | — |
 | E59-S03 | queued | — | — | — |
 | E59-S04 | queued | — | — | — |
