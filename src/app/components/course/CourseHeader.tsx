@@ -3,7 +3,7 @@
  * thumbnail, author info, and action buttons.
  *
  * Used by UnifiedCourseDetail (E89-S04).
- * Never checks `course.source` directly — uses adapter capabilities.
+ * Never checks `course.source` directly — uses `isYouTube` prop from parent adapter.
  */
 
 import { Link } from 'react-router'
@@ -16,7 +16,6 @@ import { cn } from '@/app/components/ui/utils'
 import { EditableTitle } from '@/app/components/figma/EditableTitle'
 import { getAvatarSrc, getInitials } from '@/lib/authors'
 import type { ImportedCourse } from '@/data/types'
-import type { ContentCapabilities } from '@/lib/courseAdapter'
 
 interface AuthorInfo {
   id: string
@@ -27,7 +26,7 @@ interface AuthorInfo {
 
 export interface CourseHeaderProps {
   course: ImportedCourse
-  capabilities: ContentCapabilities // reserved for future capability-driven rendering
+  isYouTube: boolean
   thumbnailUrl: string | null
   authorData?: AuthorInfo
   videoCount: number
@@ -42,7 +41,7 @@ export interface CourseHeaderProps {
 
 export function CourseHeader({
   course,
-  capabilities: _capabilities,
+  isYouTube,
   thumbnailUrl,
   authorData,
   videoCount,
@@ -54,7 +53,6 @@ export function CourseHeader({
   onEdit,
   onRefreshMetadata,
 }: CourseHeaderProps) {
-  const isYouTube = course.source === 'youtube'
 
   return (
     <div>
@@ -83,18 +81,18 @@ export function CourseHeader({
       )}
 
       {/* Course header with thumbnail */}
-      <div className="flex items-start gap-4 mb-1">
+      <div className="flex flex-col sm:flex-row items-start gap-4 mb-1">
         {/* Thumbnail */}
         {thumbnailUrl ? (
-          <img src={thumbnailUrl} alt="" className="w-32 h-20 object-cover rounded-lg shrink-0" />
+          <img src={thumbnailUrl} alt="" className="w-full sm:w-32 h-28 sm:h-20 object-cover rounded-lg shrink-0" />
         ) : isYouTube ? (
-          <div className="w-32 h-20 bg-muted rounded-lg flex items-center justify-center shrink-0">
+          <div className="w-full sm:w-32 h-28 sm:h-20 bg-muted rounded-lg flex items-center justify-center shrink-0">
             <Youtube className="size-8 text-muted-foreground" aria-hidden="true" />
           </div>
         ) : null}
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1 w-full">
+          <div className="flex flex-col sm:flex-row items-start sm:justify-between gap-2 sm:gap-4">
             <EditableTitle
               value={course.name}
               onSave={onTitleSave}

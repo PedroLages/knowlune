@@ -6,7 +6,7 @@
  * Supports both local folder grouping and YouTube chapter grouping.
  */
 
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { Fragment, useState, useMemo, useCallback, useRef } from 'react'
 import { Link } from 'react-router'
 import {
   Video,
@@ -417,7 +417,7 @@ function renderLocalGroups(
     })
 
     if (!hasMultipleGroups) {
-      return <>{videoItems}</>
+      return <Fragment key={group.title || 'root'}>{videoItems}</Fragment>
     }
 
     const totalDuration = group.videos.reduce((sum, v) => sum + v.duration, 0)
@@ -455,8 +455,8 @@ function renderYouTubeGroups(
   hasMultipleGroups: boolean,
   searchQuery: string
 ) {
-  return groups.map((group, groupIndex) => (
-    <li key={`group-${groupIndex}`}>
+  return groups.map((group) => (
+    <li key={group.title || group.videos[0]?.id || 'ungrouped'}>
       {hasMultipleGroups && group.title && (
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
           {group.title}

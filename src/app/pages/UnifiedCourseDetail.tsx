@@ -14,9 +14,9 @@
  * @see E89-S04
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useParams, useNavigate, Link } from 'react-router'
+import { AlertTriangle, ArrowLeft, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/db'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
@@ -73,6 +73,7 @@ export function UnifiedCourseDetail() {
   const [chapters, setChapters] = useState<YouTubeCourseChapter[]>([])
   const [progressMap, setProgressMap] = useState<Map<string, VideoProgress>>(new Map())
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null)
+  const thumbnailUrlRef = useRef<string | null>(null)
   const [contentLoading, setContentLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
 
@@ -130,12 +131,16 @@ export function UnifiedCourseDetail() {
     adapter
       .getThumbnailUrl()
       .then(url => {
-        if (!ignore) setThumbnailUrl(url)
+        if (!ignore) {
+          setThumbnailUrl(url)
+          thumbnailUrlRef.current = url
+        }
       })
       .catch(() => {})
     return () => {
       ignore = true
-      if (thumbnailUrl?.startsWith('blob:')) revokeObjectUrl(thumbnailUrl)
+      const blobUrl = thumbnailUrlRef.current
+      if (blobUrl?.startsWith('blob:')) revokeObjectUrl(blobUrl)
     }
   }, [adapter])
 
@@ -231,6 +236,13 @@ export function UnifiedCourseDetail() {
         <p className="text-muted-foreground">
           The course you&apos;re looking for doesn&apos;t exist or has been removed.
         </p>
+        <Link
+          to="/courses"
+          className="inline-flex items-center gap-1.5 text-sm text-brand hover:text-brand-hover transition-colors font-medium"
+        >
+          <ArrowLeft className="size-4" />
+          Back to Courses
+        </Link>
       </div>
     )
   }
@@ -239,7 +251,7 @@ export function UnifiedCourseDetail() {
     <div data-testid="unified-course-detail" className="max-w-3xl mx-auto px-4 py-8">
       <CourseHeader
         course={course}
-        capabilities={capabilities}
+        isYouTube={isYouTube ?? false}
         thumbnailUrl={thumbnailUrl}
         authorData={authorData}
         videoCount={videos.length}
