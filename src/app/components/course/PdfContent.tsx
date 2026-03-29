@@ -148,7 +148,8 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
   }, [pdf, lessonId])
 
   // Locate file picker for moved/missing PDFs
-  async function handleLocateFile() {
+  const supportsFilePicker = 'showOpenFilePicker' in window
+  const handleLocateFile = useCallback(async () => {
     try {
       const [fileHandle] = await window.showOpenFilePicker({
         types: [
@@ -166,7 +167,7 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
     } catch {
       // silent-catch-ok: User cancelled the picker
     }
-  }
+  }, [lessonId])
 
   // Dexie read failed
   if (loadError) {
@@ -240,12 +241,12 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
               <ShieldAlert className="size-4" aria-hidden="true" />
               {permissionPending ? 'Requesting...' : 'Grant Permission'}
             </Button>
-          ) : (
+          ) : supportsFilePicker ? (
             <Button onClick={handleLocateFile} className="gap-2">
               <FolderSearch className="size-4" aria-hidden="true" />
               Locate File
             </Button>
-          )}
+          ) : null}
           <Button variant="outline" asChild>
             <Link to={`/courses/${courseId}`}>Back to Course</Link>
           </Button>

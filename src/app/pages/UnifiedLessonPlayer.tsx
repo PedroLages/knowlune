@@ -63,9 +63,11 @@ export function UnifiedLessonPlayer() {
   }, [adapter, lessonId])
 
   const isPdf = lessonType === 'pdf'
+  const lessonTypeResolved = lessonType !== null
 
-  // Session tracking: start on mount, pause/resume on idle, end on leave
-  useSessionTracking(courseId, lessonId, isPdf ? 'pdf' : 'video')
+  // Session tracking: start on mount, pause/resume on idle, end on leave.
+  // Pass resolved type (or null) — hook defers session start until type is known.
+  useSessionTracking(courseId, lessonId, lessonTypeResolved ? (isPdf ? 'pdf' : 'video') : null)
 
   // Loading state
   if (loading) {
@@ -110,8 +112,15 @@ export function UnifiedLessonPlayer() {
   const capabilities = adapter.getCapabilities()
   const isYouTube = source === 'youtube'
 
-  // Determine main content based on lesson type
-  const mainContent = isPdf ? (
+  // While lessonType is still resolving, show a skeleton instead of
+  // defaulting to video content (prevents PDF lessons from flashing video UI).
+  const mainContent = !lessonTypeResolved ? (
+    <DelayedFallback>
+      <div aria-busy="true" aria-label="Resolving lesson type">
+        <Skeleton className="w-full aspect-video rounded-xl" />
+      </div>
+    </DelayedFallback>
+  ) : isPdf ? (
     <Suspense
       fallback={
         <DelayedFallback>
