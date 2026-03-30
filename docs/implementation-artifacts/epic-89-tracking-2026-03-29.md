@@ -17,7 +17,7 @@
 | E89-S12a | done | #158 | — | 13 (URL fixes) |
 | E89-S12b | done | #160 | 1 | 0 |
 | E89-S12c | done | — (on main) | — | 5 files, +312/-157 lines |
-| E89-S11 | deferred | — | — | — |
+| E89-S11 | done | #176 | 1 | 0 |
 | E90-S01 | queued | — | — | — |
 | E90-S02 | queued | — | — | — |
 | E90-S03 | queued | — | — | — |
