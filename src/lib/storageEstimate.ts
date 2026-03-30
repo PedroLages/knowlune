@@ -69,6 +69,10 @@ export async function estimateTableSize(tableName: string, sampleSize = 5): Prom
     if (sample.length === 0) return 0
 
     const totalSampleBytes = sample.reduce((sum, row) => {
+      // For rows containing Blob fields (thumbnails, screenshots), use .size directly
+      for (const val of Object.values(row as Record<string, unknown>)) {
+        if (val instanceof Blob) return sum + val.size
+      }
       return sum + new Blob([JSON.stringify(row)]).size
     }, 0)
 

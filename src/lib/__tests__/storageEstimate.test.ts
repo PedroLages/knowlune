@@ -107,6 +107,19 @@ describe('estimateTableSize', () => {
     await estimateTableSize('notes', 3)
     expect(table.limit).toHaveBeenCalledWith(3)
   })
+
+  it('uses Blob.size for rows containing Blob fields', async () => {
+    const blob = new Blob(['x'.repeat(500)])
+    const rows = [{ id: '1', thumbnail: blob }]
+    const table = createMockTable(rows)
+    table.count.mockResolvedValue(10)
+    mockTable.mockReturnValue(table)
+
+    const size = await estimateTableSize('courseThumbnails')
+
+    // Should use blob.size (500) rather than JSON serialization size
+    expect(size).toBe(blob.size * 10)
+  })
 })
 
 describe('getStorageOverview', () => {
@@ -230,6 +243,54 @@ describe('getStorageOverview', () => {
       'Thumbnails',
       'Transcripts',
     ])
+  })
+})
+
+describe('getStorageOverview — edge cases', () => {
+  it('returns usagePercent at exactly 0.8 boundary', async () => {
+    mockGetStorageEstimate.mockResolvedValue({
+      usage: 800_000_000,
+      quota: 1_000_000_000,
+      usagePercent: 0.8,
+      usageMB: 800,
+      quotaMB: 1000,
+    })
+    mockTable.mockReturnValue(createEmptyMockTable())
+
+    const overview = await getStorageOverview()
+    expect(overview.usagePercent).toBe(0.8)
+    expect(overview.apiAvailable).toBe(true)
+  })
+
+  it('returns usagePercent at exactly 0.95 boundary', async () => {
+    mockGetStorageEstimate.mockResolvedValue({
+      usage: 950_000_000,
+      quota: 1_000_000_000,
+      usagePercent: 0.95,
+      usageMB: 950,
+      quotaMB: 1000,
+    })
+    mockTable.mockReturnValue(createEmptyMockTable())
+
+    const overview = await getStorageOverview()
+    expect(overview.usagePercent).toBe(0.95)
+  })
+
+  it('totalUsage and categorizedTotal can diverge', async () => {
+    mockGetStorageEstimate.mockResolvedValue({
+      usage: 500_000_000,
+      quota: 2_000_000_000,
+      usagePercent: 0.25,
+      usageMB: 500,
+      quotaMB: 2000,
+    })
+    // Small sampled rows will produce a categorizedTotal << totalUsage
+    mockTable.mockReturnValue(createMockTable([{ id: '1', data: 'tiny' }]))
+
+    const overview = await getStorageOverview()
+    expect(overview.totalUsage).toBe(500_000_000)
+    expect(overview.categorizedTotal).toBeLessThan(overview.totalUsage)
+    expect(overview.uncategorizedBytes).toBeGreaterThan(0)
   })
 })
 
