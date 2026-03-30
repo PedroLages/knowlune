@@ -13,8 +13,8 @@
  * - suggestNextCourse algorithm is unit-tested in courseSuggestion.test.ts; E2E focuses
  *   on the UI integration (card appears, dismiss works, navigation works).
  */
-import { test, expect } from '../support/fixtures'
-import { seedImportedCourses } from '../support/helpers/indexeddb-seed'
+import { test, expect } from '../../support/fixtures'
+import { seedImportedCourses } from '../../support/helpers/indexeddb-seed'
 
 test.describe('E91-S08: Next Course Suggestion', () => {
   test.beforeEach(async ({ page }) => {
