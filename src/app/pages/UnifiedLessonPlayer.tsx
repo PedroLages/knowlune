@@ -207,6 +207,15 @@ export function UnifiedLessonPlayer() {
     }
   }, [courseId, lessonId, setItemStatus, showCelebration, lessonTitle, nextLesson])
 
+  // Handle YouTube auto-complete (>90% watched) — status already persisted by YouTubeVideoContent,
+  // so we only need to show celebration and trigger auto-advance countdown.
+  const handleYouTubeAutoComplete = useCallback(() => {
+    showCelebration(lessonTitle)
+    if (nextLesson) {
+      setShowAutoAdvance(true)
+    }
+  }, [showCelebration, lessonTitle, nextLesson])
+
   const handleAutoAdvance = useCallback(() => {
     if (nextLesson && courseId) {
       navigate(`/courses/${courseId}/lessons/${nextLesson.id}`)
@@ -307,6 +316,7 @@ export function UnifiedLessonPlayer() {
       courseId={courseId!}
       lessonId={lessonId!}
       onEnded={handleVideoEnded}
+      onAutoComplete={handleYouTubeAutoComplete}
       onTimeUpdate={handleTimeUpdate}
       seekToTime={seekToTime}
       onSeekComplete={handleSeekComplete}

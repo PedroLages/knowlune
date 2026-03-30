@@ -28,6 +28,8 @@ interface YouTubeVideoContentProps {
   lessonId: string
   /** Called when the YouTube video reaches the end (state 0) */
   onEnded?: () => void
+  /** Called when auto-complete fires (>90% watched) — allows parent to trigger celebration/auto-advance */
+  onAutoComplete?: () => void
   /** Called on each timeupdate with the current playback time in seconds */
   onTimeUpdate?: (currentTime: number) => void
   /** External seek target — when changed, the YouTube player seeks to this time */
@@ -40,6 +42,7 @@ export function YouTubeVideoContent({
   courseId,
   lessonId,
   onEnded,
+  onAutoComplete: externalAutoComplete,
   onTimeUpdate: externalTimeUpdate,
   seekToTime,
   onSeekComplete,
@@ -99,11 +102,13 @@ export function YouTubeVideoContent({
       try {
         await setItemStatus(courseId, lessonId, 'completed', [])
         toast.success('Lesson auto-completed (>90% watched)')
+        // Notify parent so it can trigger celebration modal + auto-advance
+        externalAutoComplete?.()
       } catch {
         toast.error('Failed to update completion status')
       }
     }
-  }, [courseId, lessonId, currentStatus, setItemStatus])
+  }, [courseId, lessonId, currentStatus, setItemStatus, externalAutoComplete])
 
   // Player ref for seek control
   const playerRef = useRef<YouTubePlayerHandle>(null)
@@ -115,9 +120,12 @@ export function YouTubeVideoContent({
     }
   }, [courseId, loadCourseStates])
 
-  const handleTimeUpdate = useCallback((time: number) => {
-    externalTimeUpdate?.(time)
-  }, [externalTimeUpdate])
+  const handleTimeUpdate = useCallback(
+    (time: number) => {
+      externalTimeUpdate?.(time)
+    },
+    [externalTimeUpdate]
+  )
 
   // Handle external seek requests from parent (e.g. transcript click in side panel)
   useEffect(() => {
