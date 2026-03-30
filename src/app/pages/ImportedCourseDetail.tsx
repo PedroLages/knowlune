@@ -18,11 +18,13 @@ import { toast } from 'sonner'
 import { db } from '@/db/schema'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
+import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
 import { useFileStatusVerification } from '@/hooks/useFileStatusVerification'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
+import { Progress } from '@/app/components/ui/progress'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import {
   AlertDialog,
@@ -42,6 +44,7 @@ import {
 import { cn } from '@/app/components/ui/utils'
 import { getAvatarSrc, getInitials } from '@/lib/authors'
 import { EditableTitle } from '@/app/components/figma/EditableTitle'
+import { StatusIndicator } from '@/app/components/figma/StatusIndicator'
 import type { ImportedVideo, ImportedPdf } from '@/data/types'
 import type { FileStatus } from '@/lib/fileVerification'
 
@@ -125,6 +128,9 @@ export function ImportedCourseDetail() {
   const storeAuthors = useAuthorStore(state => state.authors)
   const loadAuthors = useAuthorStore(state => state.loadAuthors)
 
+  const statusMap = useContentProgressStore(state => state.statusMap)
+  const loadCourseProgress = useContentProgressStore(state => state.loadCourseProgress)
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -133,6 +139,13 @@ export function ImportedCourseDetail() {
   // Lazy-load imported courses + authors on mount (deferred — not critical for initial app load)
   useLazyStore(loadImportedCourses)
   useLazyStore(loadAuthors)
+
+  // Load completion progress for this course
+  useEffect(() => {
+    if (courseId) {
+      loadCourseProgress(courseId)
+    }
+  }, [courseId, loadCourseProgress])
 
   // E1C-S02: Inline title editing — optimistic update to IndexedDB + Zustand store
   const handleTitleSave = useCallback(
@@ -230,6 +243,13 @@ export function ImportedCourseDetail() {
 
   const hasResults = filteredVideos.length > 0 || filteredPdfs.length > 0
 
+  // Completion progress stats
+  const completedCount = useMemo(() => {
+    return videos.filter(v => statusMap[`${courseId}:${v.id}`] === 'completed').length
+  }, [videos, statusMap, courseId])
+
+  const overallPercent = videos.length > 0 ? Math.round((completedCount / videos.length) * 100) : 0
+
   const handleClearSearch = useCallback(() => {
     setSearchQuery('')
     contentListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -311,6 +331,20 @@ export function ImportedCourseDetail() {
         )}
       </div>
 
+      {/* Overall Progress — mirrors YouTubeCourseDetail's progress card */}
+      {videos.length > 0 && (
+        <div className="rounded-xl border bg-card p-4 mb-6" data-testid="course-progress-card">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Overall Progress</span>
+            <span className="text-sm text-muted-foreground">
+              {completedCount}/{videos.length} completed
+            </span>
+          </div>
+          <Progress value={overallPercent} className="h-2" aria-label="Course completion progress" />
+          <p className="text-xs text-muted-foreground mt-1">{overallPercent}% complete</p>
+        </div>
+      )}
+
       {loadError && (
         <div
           data-testid="course-load-error"
@@ -370,9 +404,15 @@ export function ImportedCourseDetail() {
           const videoItems = folderVideos.map(video => {
             const status = fileStatuses.get(video.id) ?? 'checking'
             const isUnavailable = status === 'missing' || status === 'permission-denied'
+            const completionStatus = statusMap[`${courseId}:${video.id}`] ?? 'not-started'
 
             const content = (
               <>
+                <StatusIndicator
+                  status={completionStatus}
+                  itemId={video.id}
+                  mode="display"
+                />
                 <Video
                   data-testid="content-type-icon"
                   className={cn(

@@ -1,8 +1,8 @@
 ---
 story_id: E54-S03
 story_name: "Completion Checkmarks in ImportedCourseDetail"
-status: draft
-started:
+status: in-progress
+started: 2026-03-30
 completed:
 reviewed: false
 review_started:
