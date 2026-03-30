@@ -13,7 +13,7 @@
  * - Fullscreen overlay open/close behavior
  * - ESC key closes overlay
  */
-import { test, expect } from '../support/fixtures'
+import { test, expect } from '../../support/fixtures'
 
 test.describe('E91-S06: Mobile Notes Overlay', () => {
   // Seed sidebar closed to avoid overlay blocking (see test-patterns.md)
