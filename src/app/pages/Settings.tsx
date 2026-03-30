@@ -72,6 +72,7 @@ import { ChangePassword } from '@/app/components/settings/ChangePassword'
 import { ChangeEmail } from '@/app/components/settings/ChangeEmail'
 import { MyDataSummary } from '@/app/components/settings/MyDataSummary'
 import { DataRetentionSettings } from '@/app/components/settings/DataRetentionSettings'
+import { StorageManagement } from '@/app/components/settings/StorageManagement'
 import { validateImageFile, compressAvatar, fileToDataUrl } from '@/lib/avatarUpload'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
 import { useAuthStore } from '@/stores/useAuthStore'
@@ -1196,6 +1197,9 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Storage Management (E69-S01) */}
+        <StorageManagement />
       </div>
 
       {/* Avatar Crop Dialog */}
