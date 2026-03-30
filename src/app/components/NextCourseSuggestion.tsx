@@ -57,11 +57,7 @@ export function NextCourseSuggestion({
         {/* Thumbnail or fallback */}
         <div className="shrink-0 w-24 h-16 rounded-xl overflow-hidden bg-muted flex items-center justify-center">
           {thumbnailUrl ? (
-            <img
-              src={thumbnailUrl}
-              alt=""
-              className="w-full h-full object-cover"
-            />
+            <img src={thumbnailUrl} alt="" className="w-full h-full object-cover" />
           ) : (
             <BookOpen className="size-6 text-muted-foreground" aria-hidden="true" />
           )}
