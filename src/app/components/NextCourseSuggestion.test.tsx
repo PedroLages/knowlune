@@ -44,11 +44,14 @@ const defaultProps = () => ({
 
 function renderComponent(propsOverrides: Partial<Parameters<typeof NextCourseSuggestion>[0]> = {}) {
   const props = { ...defaultProps(), ...propsOverrides }
-  return { ...render(
-    <MemoryRouter>
-      <NextCourseSuggestion {...props} />
-    </MemoryRouter>
-  ), props }
+  return {
+    ...render(
+      <MemoryRouter>
+        <NextCourseSuggestion {...props} />
+      </MemoryRouter>
+    ),
+    props,
+  }
 }
 
 // ---------------------------------------------------------------------------
