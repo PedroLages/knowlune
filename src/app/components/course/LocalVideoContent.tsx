@@ -9,7 +9,7 @@
 
 import { useState, useCallback, useEffect, useRef, forwardRef } from 'react'
 import { Link } from 'react-router'
-import { FileWarning, FolderSearch, RefreshCw, ShieldAlert } from 'lucide-react'
+import { Camera, FileWarning, FolderSearch, RefreshCw, ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/db/schema'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
@@ -287,6 +287,43 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     // Video playback
     if (!blobUrl) return null
 
+    // Capture current video frame as JPEG and trigger download
+    const handleCaptureFrame = useCallback(() => {
+      const videoEl = (ref as React.RefObject<VideoPlayerHandle>)?.current?.getVideoElement?.()
+      if (!videoEl) {
+        toast.error('Video not available for capture')
+        return
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = videoEl.videoWidth
+      canvas.height = videoEl.videoHeight
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        toast.error('Canvas not supported')
+        return
+      }
+      ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height)
+      canvas.toBlob(
+        blob => {
+          if (!blob) {
+            toast.error('Failed to capture frame')
+            return
+          }
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `frame-${Date.now()}.jpg`
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          URL.revokeObjectURL(url)
+          toast.success('Frame saved to downloads')
+        },
+        'image/jpeg',
+        0.92
+      )
+    }, [ref])
+
     // Map bookmarks to the shape VideoPlayer expects for timeline markers
     const bookmarkMarkers = bookmarks.map(b => ({
       id: b.id,
@@ -295,7 +332,17 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     }))
 
     return (
-      <div ref={videoWrapperRef} data-testid="local-video-wrapper">
+      <div ref={videoWrapperRef} data-testid="local-video-wrapper" className="relative group/video">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-3 right-3 z-10 bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover/video:opacity-100 focus-visible:opacity-100 transition-opacity"
+          onClick={handleCaptureFrame}
+          aria-label="Capture video frame"
+          data-testid="capture-frame-button"
+        >
+          <Camera className="size-4" aria-hidden="true" />
+        </Button>
         <VideoPlayer
           ref={ref}
           src={blobUrl}

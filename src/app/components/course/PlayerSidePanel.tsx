@@ -13,12 +13,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
-import { Trash2, BookmarkIcon, AlertTriangle, FileText, Video, PlayCircle } from 'lucide-react'
+import { Trash2, BookmarkIcon, AlertTriangle, FileText, Video, PlayCircle, Maximize2, X } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
+import { useIsMobile } from '@/app/hooks/useMediaQuery'
 import { NoteEditor } from '@/app/components/notes/NoteEditor'
 import { TranscriptPanel } from '@/app/components/youtube/TranscriptPanel'
 import type { TranscriptLoadingState } from '@/app/components/youtube/TranscriptPanel'
@@ -536,6 +537,10 @@ export function PlayerSidePanel({
   focusTab,
 }: PlayerSidePanelProps) {
   const capabilities = adapter.getCapabilities()
+  const isMobile = useIsMobile()
+  const [isNotesFullscreen, setIsNotesFullscreen] = useState(false)
+  const fullscreenTriggerRef = useRef<HTMLButtonElement>(null)
+  const fullscreenEditorRef = useRef<HTMLDivElement>(null)
   const [transcriptSrc, setTranscriptSrc] = useState<string | null>(null)
 
   // Build a blob URL for the transcript (for AISummaryPanel which expects a URL)
@@ -577,6 +582,35 @@ export function PlayerSidePanel({
       }
     }
   }, [adapter, lessonId])
+
+  // ESC handler for fullscreen notes overlay
+  useEffect(() => {
+    if (!isNotesFullscreen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsNotesFullscreen(false)
+        // Return focus to trigger button
+        requestAnimationFrame(() => fullscreenTriggerRef.current?.focus())
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isNotesFullscreen])
+
+  // Focus trap: focus editor on open
+  useEffect(() => {
+    if (isNotesFullscreen) {
+      requestAnimationFrame(() => {
+        const el = fullscreenEditorRef.current
+        if (el) {
+          const focusable = el.querySelector<HTMLElement>(
+            'textarea, [contenteditable], input, button'
+          )
+          focusable?.focus()
+        }
+      })
+    }
+  }, [isNotesFullscreen])
 
   // Controlled tab state to allow programmatic switching (e.g. N key → Notes tab)
   const [activeTab, setActiveTab] = useState('lessons')
@@ -620,8 +654,54 @@ export function PlayerSidePanel({
       </TabsContent>
 
       <TabsContent value="notes" className="flex-1 overflow-hidden">
+        {isMobile && (
+          <div className="flex items-center justify-between px-3 py-1.5 border-b lg:hidden">
+            <span className="text-xs font-medium text-muted-foreground">Notes</span>
+            <Button
+              ref={fullscreenTriggerRef}
+              variant="ghost"
+              size="icon"
+              className="size-8"
+              onClick={() => setIsNotesFullscreen(true)}
+              aria-label="Open notes in fullscreen"
+              data-testid="notes-fullscreen-button"
+            >
+              <Maximize2 className="size-3.5" aria-hidden="true" />
+            </Button>
+          </div>
+        )}
         <NotesTab courseId={courseId} lessonId={lessonId} />
       </TabsContent>
+
+      {/* Fullscreen notes overlay (mobile only) */}
+      {isNotesFullscreen && (
+        <div
+          className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-200"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Notes fullscreen editor"
+          data-testid="notes-fullscreen-overlay"
+        >
+          <div className="flex items-center justify-between p-4 border-b">
+            <h2 className="text-lg font-semibold">Notes</h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setIsNotesFullscreen(false)
+                requestAnimationFrame(() => fullscreenTriggerRef.current?.focus())
+              }}
+              aria-label="Close fullscreen notes"
+              data-testid="notes-fullscreen-close"
+            >
+              <X className="size-4" aria-hidden="true" />
+            </Button>
+          </div>
+          <div ref={fullscreenEditorRef} className="flex-1 overflow-auto p-4">
+            <NotesTab courseId={courseId} lessonId={lessonId} />
+          </div>
+        </div>
+      )}
 
       {capabilities.hasTranscript && (
         <TabsContent value="transcript" className="flex-1 overflow-hidden">
