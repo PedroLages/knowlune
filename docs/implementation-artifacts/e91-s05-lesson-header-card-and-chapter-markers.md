@@ -1,12 +1,12 @@
 ---
 story_id: E91-S05
 story_name: "Lesson Header Card + Chapter Markers"
-status: backlog
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-03-30
+completed: 2026-03-31
+reviewed: true
+review_started: 2026-03-31
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, performance-benchmark-skipped, security-review, exploratory-qa-skipped]
 burn_in_validated: false
 ---
 

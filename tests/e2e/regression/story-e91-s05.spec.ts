@@ -21,11 +21,11 @@
  * unit tests on the ChapterMarkers component. YouTube embeds (AC3) similarly
  * lack a controllable progress bar in the iframe context.
  */
-import { test, expect } from '../support/fixtures'
-import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
-import { navigateAndWait } from '../support/helpers/navigation'
-import { seedImportedCourses, seedImportedVideos } from '../support/helpers/seed-helpers'
-import { TIMEOUTS } from '../utils/constants'
+import { test, expect } from '../../support/fixtures'
+import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
+import { navigateAndWait } from '../../support/helpers/navigation'
+import { seedImportedCourses, seedImportedVideos } from '../../support/helpers/seed-helpers'
+import { TIMEOUTS } from '../../utils/constants'
 import type { Page } from '@playwright/test'
 
 // ---------------------------------------------------------------------------
