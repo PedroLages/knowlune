@@ -10,7 +10,7 @@ Auto-answer: Used for /start-story and /finish-story interactive prompts
 |-------|--------|--------|---------------|--------------|
 | E91-S01 | done | #177 | 2 | 6 |
 | E91-S02 | done | #178 | 1 | 1 |
-| E91-S03 | queued | — | — | — |
+| E91-S03 | done | #179 | 1 | 3 |
 | E91-S04 | queued | — | — | — |
 | E91-S05 | queued | — | — | — |
 | E91-S06 | queued | — | — | — |
