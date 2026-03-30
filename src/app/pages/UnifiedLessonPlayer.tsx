@@ -73,6 +73,15 @@ export function UnifiedLessonPlayer() {
   // Progress store for marking lessons complete on video end
   const setItemStatus = useContentProgressStore(s => s.setItemStatus)
   const getItemStatus = useContentProgressStore(s => s.getItemStatus)
+  const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
+
+  // Ensure course progress is loaded so getItemStatus has data for checkCourseCompletion.
+  // PlayerHeader also loads it, but we don't rely on render order for correctness.
+  useEffect(() => {
+    if (courseId) {
+      loadCourseProgress(courseId)
+    }
+  }, [courseId, loadCourseProgress])
 
   // Auto-advance state: shown when video ends and a next lesson exists
   const [showAutoAdvance, setShowAutoAdvance] = useState(false)
@@ -132,8 +141,8 @@ export function UnifiedLessonPlayer() {
         setLessonType(match?.type ?? null)
       })
       .catch(err => {
+        // silent-catch-ok — leave defaults (title='Lesson', type=null); UI degrades gracefully
         console.error('Failed to load lesson metadata:', err)
-        // Leave defaults (title='Lesson', type=null) — UI degrades gracefully
       })
     return () => {
       ignore = true
@@ -213,9 +222,13 @@ export function UnifiedLessonPlayer() {
     (status: CompletionStatus) => {
       if (status === 'completed') {
         showCelebration(lessonTitle)
+        // Trigger auto-advance countdown if next lesson exists (same as video end)
+        if (nextLesson) {
+          setShowAutoAdvance(true)
+        }
       }
     },
-    [showCelebration, lessonTitle]
+    [showCelebration, lessonTitle, nextLesson]
   )
 
   // Handle "Continue Learning" from celebration modal
