@@ -984,6 +984,7 @@ development_status:
   83-5-book-metadata-editor: ready-for-dev
   83-6-book-deletion-with-opfs-cleanup: ready-for-dev
   83-7-storage-indicator: ready-for-dev
+  83-8-pwa-offline-shell-for-library: backlog
   epic-83-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -997,6 +998,7 @@ development_status:
   84-2-page-navigation-and-table-of-contents: backlog
   84-3-reading-themes-and-font-controls: backlog
   84-4-reading-position-persistence-and-progress: backlog
+  84-5-read-aloud-tts-for-epub-reader: backlog
   epic-84-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -1094,3 +1096,19 @@ development_status:
   90-10-multi-provider-api-key-management-ui: backlog
   90-11-e2e-tests-for-model-selection-flows: backlog
   epic-90-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 91: Imported Course Parity
+  # Source: plan wiggly-sniffing-shamir.md (2026-03-30)
+  # Restores rich showcase course features to imported courses
+  # CTA button, theater mode, mini-player, chapter markers, frame capture, PDF page tracking
+  # Depends on: E89 (UnifiedCourseDetail + UnifiedLessonPlayer must exist)
+  # ──────────────────────────────────────────────────
+  epic-91: backlog
+  91-1-start-continue-cta-and-last-position-resume: backlog
+  91-2-local-course-visual-parity: backlog
+  91-3-theater-mode: backlog
+  91-4-mini-player-picture-in-picture: backlog
+  91-5-lesson-header-card-and-chapter-markers: backlog
+  91-6-frame-capture-pdf-page-tracking-mobile-notes-overlay: backlog
+  epic-91-retrospective: optional
