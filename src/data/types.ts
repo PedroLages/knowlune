@@ -229,6 +229,8 @@ export interface VideoProgress {
   currentTime: number
   completionPercentage: number
   completedAt?: string // ISO 8601
+  /** Last-viewed PDF page (1-based). Used by PdfContent to restore position. */
+  currentPage?: number
 }
 
 export interface VideoBookmark {
