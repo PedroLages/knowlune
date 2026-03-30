@@ -33,6 +33,10 @@ const DB_NAME = 'ElearningDB'
 
 test.describe('E59-S08: FSRS Scheduling E2E Validation', () => {
   test.beforeEach(async ({ page }) => {
+    // Freeze browser clock to FIXED_DATE so FSRS due-date filtering is deterministic.
+    // Without this, test data dates (relative to FIXED_DATE = 2025-01-15) are all
+    // in the past relative to real time, making "future" reviews appear due.
+    await page.clock.install({ time: new Date(FIXED_DATE) })
     // Navigate to initialise the app and database
     await page.goto('/')
     // Prevent sidebar overlay in tablet viewports
@@ -45,9 +49,7 @@ test.describe('E59-S08: FSRS Scheduling E2E Validation', () => {
       console.warn('[cleanup]', e)
     )
     await clearIndexedDBStore(page, DB_NAME, 'notes').catch(e => console.warn('[cleanup]', e))
-    await clearIndexedDBStore(page, DB_NAME, 'flashcards').catch(e =>
-      console.warn('[cleanup]', e)
-    )
+    await clearIndexedDBStore(page, DB_NAME, 'flashcards').catch(e => console.warn('[cleanup]', e))
     await clearIndexedDBStore(page, DB_NAME, 'importedCourses').catch(e =>
       console.warn('[cleanup]', e)
     )

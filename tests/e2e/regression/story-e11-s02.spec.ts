@@ -125,20 +125,22 @@ test.describe('AC1: Topic retention levels', () => {
     const noteFading = createDexieNote({ tags: ['Physics'] })
     const noteWeak = createDexieNote({ tags: ['Chemistry'] })
 
-    // Strong: reviewed recently (1 day ago, 7-day interval → high retention)
+    // Strong: reviewed recently (1 day ago, stability 7 → FSRS retention ~98%)
     const reviewStrong = createReviewRecord(noteStrong.id, {
       reviewedDaysAgo: 1,
       intervalDays: 7,
     })
-    // Fading: e^(-3/7) = 65% → fading range (50-79%)
+    // Fading: FSRS forgetting_curve(15, 3) ≈ 68% → fading range (50-79%)
     const reviewFading = createReviewRecord(noteFading.id, {
-      reviewedDaysAgo: 3,
-      intervalDays: 7,
-    })
-    // Weak: reviewed long ago (14 days ago, 3-day interval → low retention)
-    const reviewWeak = createReviewRecord(noteWeak.id, {
-      reviewedDaysAgo: 14,
+      reviewedDaysAgo: 15,
       intervalDays: 3,
+      stability: 3,
+    })
+    // Weak: FSRS forgetting_curve(45, 3) ≈ 47% → weak range (<50%)
+    const reviewWeak = createReviewRecord(noteWeak.id, {
+      reviewedDaysAgo: 45,
+      intervalDays: 3,
+      stability: 3,
     })
 
     await seedRetentionData(page, {
@@ -205,10 +207,11 @@ test.describe('AC2: Retention degradation', () => {
       reviewedDaysAgo: 0,
       intervalDays: 7,
     })
-    // Long overdue → weak (reviewed 20 days ago with 3-day interval)
+    // Long overdue → weak: FSRS forgetting_curve(45, 3) ≈ 47% → weak (<50%)
     const reviewOld = createReviewRecord(noteOld.id, {
-      reviewedDaysAgo: 20,
+      reviewedDaysAgo: 45,
       intervalDays: 3,
+      stability: 3,
     })
 
     await seedRetentionData(page, {

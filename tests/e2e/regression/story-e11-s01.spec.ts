@@ -237,6 +237,10 @@ test.describe('Spaced Review System (E11-S01)', () => {
     test('empty state shows the date of next upcoming review when future reviews exist', async ({
       page,
     }) => {
+      // Freeze clock at FIXED_NOW so "future" review dates (FIXED_NOW + 5d)
+      // are actually in the future relative to the app's Date.now().
+      await page.clock.install({ time: FIXED_NOW })
+
       const note = createDexieNote({ id: 'note-future', content: 'Future review' })
       const review = createFutureReview('note-future', 5)
 

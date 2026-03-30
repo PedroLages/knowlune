@@ -35,9 +35,7 @@ let counter = 0
 /**
  * Create a flashcard with FSRS defaults (new card, never reviewed).
  */
-export function createFlashcard(
-  overrides: Partial<FlashcardTestData> = {}
-): FlashcardTestData {
+export function createFlashcard(overrides: Partial<FlashcardTestData> = {}): FlashcardTestData {
   counter++
   return {
     id: overrides.id ?? `flashcard-${counter}`,
@@ -62,9 +60,7 @@ export function createFlashcard(
 /**
  * Create a flashcard that is due for review (overdue by 1 day).
  */
-export function createDueFlashcard(
-  overrides: Partial<FlashcardTestData> = {}
-): FlashcardTestData {
+export function createDueFlashcard(overrides: Partial<FlashcardTestData> = {}): FlashcardTestData {
   return createFlashcard({
     stability: 5.0,
     difficulty: 5.0,

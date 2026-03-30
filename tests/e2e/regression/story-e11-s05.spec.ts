@@ -98,10 +98,22 @@ async function seedMultiCourseData(page: import('@playwright/test').Page) {
 
 test.describe('E11-S05: Interleaved Review Mode', () => {
   test.beforeEach(async ({ page }) => {
+    // Set localStorage BEFORE navigation so the welcome wizard and
+    // onboarding overlay read the completed state during initialization
+    // and stay closed — prevents them from intercepting click events.
+    await page.addInitScript(() => {
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+      )
+      localStorage.setItem(
+        'knowlune-onboarding-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
+      )
+    })
     // Navigate to initialise the app and database
     await page.goto('/')
-    // Prevent sidebar overlay in tablet viewports
-    await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
   })
 
   test.afterEach(async ({ page }) => {
@@ -188,7 +200,9 @@ test.describe('E11-S05: Interleaved Review Mode', () => {
     // Front face of next card should be visible again (not flipped)
     await expect(page.getByTestId('interleaved-card-front')).toBeVisible()
 
-    // Verify rating was persisted to IndexedDB (not just UI advancement)
+    // Verify rating was persisted to IndexedDB (not just UI advancement).
+    // The interleaving algorithm may reorder cards, so find the record that
+    // was actually rated (reps increased from the seeded value of 2).
     // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const persisted = await page.evaluate(async () => {
       const dbReq = indexedDB.open('ElearningDB')
@@ -205,15 +219,17 @@ test.describe('E11-S05: Interleaved Review Mode', () => {
           req.onerror = () => reject(req.error)
         })
       db.close()
-      const record = all.find(r => r.noteId === 'note-1')
-      return record ? { stability: record.stability, due: record.due, reps: record.reps } : null
+      // Find the record whose reps increased (was rated) — seeded reps are all 2
+      const rated = all.find(r => r.reps > 2)
+      return rated ? { stability: rated.stability, due: rated.due, reps: rated.reps } : null
     })
 
     // After a "Good" rating, FSRS should update stability and schedule future due date
     expect(persisted).not.toBeNull()
     expect(persisted!.stability).toBeGreaterThan(0)
-    expect(persisted!.reps).toBeGreaterThanOrEqual(1)
-    expect(new Date(persisted!.due).getTime()).toBeGreaterThan(new Date(FIXED_DATE).getTime())
+    expect(persisted!.reps).toBeGreaterThanOrEqual(3)
+    // Due date should be in the future (after the current browser time)
+    expect(new Date(persisted!.due).getTime()).toBeGreaterThan(Date.now())
   })
 
   test('AC4: Single-course fallback shows informational message', async ({ page }) => {
