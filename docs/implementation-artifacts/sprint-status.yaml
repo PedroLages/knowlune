@@ -1117,7 +1117,7 @@ development_status:
   91-6-frame-capture-pdf-page-tracking-mobile-notes-overlay: done
   91-7-bookmark-seek-and-add-in-side-panel: done
   91-8-next-course-suggestion: done
-  91-9-tablet-layout-enhancement: backlog
+  91-9-tablet-layout-enhancement: done
   91-10-course-hero-overview-page: backlog        # now includes total duration (absorbed S11)
   91-11-lesson-search-in-side-panel: backlog       # NEW — replaced total duration story
   91-12-single-note-export-and-transcript-download: backlog  # NEW
