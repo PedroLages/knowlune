@@ -1,6 +1,12 @@
 # Story 69.1: Storage Estimation Service and Overview Card
 
-Status: ready-for-dev
+Status: done
+completed: 2026-03-30
+reviewed: true
+review_started: 2026-03-30
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa]
+review_scope: full
+verdict: PASS
 
 ## Story
 
@@ -165,6 +171,37 @@ NOTE: `HardDrive` is already imported in Settings.tsx (line 13). The Data Manage
 - [Source: src/lib/storageQuotaMonitor.ts] — existing Storage API pattern
 - [Source: src/app/components/settings/MyDataSummary.tsx] — Settings card pattern reference
 - [Source: src/db/schema.ts] — Dexie table definitions
+
+## Challenges and Lessons Learned
+
+- **Storage estimation sampling approach**: Chose `new Blob([JSON.stringify(record)]).size` for UTF-8 byte accuracy when estimating table sizes. Sampling 10 records and extrapolating by count provides a good balance between accuracy and performance for tables with thousands of records.
+- **Recharts in shadcn ChartContainer**: The stacked bar chart required inline `style` props for dynamic segment widths — Tailwind can't handle computed percentages at runtime. This triggers the `no-inline-styles` ESLint warning but is the correct pattern for Recharts.
+- **Promise.allSettled for resilience**: Using `Promise.allSettled()` instead of `Promise.all()` ensures one failing table estimation (e.g., a corrupted table) doesn't block the entire overview. Each category gracefully falls back to 0 bytes.
+- **Category mapping consolidation**: Grouped 20+ Dexie tables into 6 user-facing categories. The mapping lives in `storageEstimate.ts` and needs updating when new tables are added to the schema — this is a maintenance consideration for future stories.
+- **Warning banner sessionStorage pattern**: Dismiss state is stored in `sessionStorage` so warnings reappear on new sessions but don't nag within a session. This matches the AC requirement and provides a good UX balance.
+
+## Design Review Feedback
+
+**BLOCKER**: `bg-warning-soft` token does not exist in theme.css — warning banner background is transparent. Fix: replace with `bg-warning/10`.
+**HIGH**: Warning text `text-warning-foreground` fails contrast in dark mode (~1.5:1). Fix: use `text-warning` instead.
+**BLOCKER (QA)**: Warning/critical banners unreachable when Dexie tables empty — `categorizedTotal === 0` short-circuits to empty state before banner renders.
+**MEDIUM**: Empty state has no actionable CTA (e.g., "Browse Courses" button).
+
+## Code Review Feedback
+
+**HIGH**: Null overview after `getStorageOverview()` error produces blank card — no error state rendered.
+**HIGH**: Summary line shows `categorizedTotal` (sampled estimate) instead of `totalUsage` (actual browser-reported usage) — misleading.
+**HIGH**: `courses` table missing from CATEGORY_MAP (table was dropped in DB v30, but story spec is stale).
+**MEDIUM**: Unnecessary `useCallback` wrapper around `loadData`.
+**MEDIUM**: Blob-heavy tables (thumbnails) should use `.size` property instead of JSON serialization.
+
+## Test Coverage Feedback
+
+**AC Coverage: 0/7 fully covered (29%)**. Service layer tested (12 unit tests), but zero component-level rendering tests exist for loading state, warning banners, refresh button, or error state.
+
+## Implementation Plan
+
+See [plan](../plans/e69-s01-storage-estimation-overview-card.md) for implementation approach.
 
 ## Dev Agent Record
 

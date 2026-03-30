@@ -340,3 +340,26 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M3: setSearchParams({ tab }) replaces all URL params instead of preserving existing
 - M4: totalQuizzesCompleted label ambiguity (unique quizzes vs total submissions)
 - Positive: Proper ignore flag pattern, .catch() on async, design token compliance, clean working tree
+
+## E69-S01: Storage Estimation Service and Overview Card (Round 2 - Re-Review)
+**Round 1 fixes verified:** All 5 findings addressed in commit 53602d0b (error state, totalUsage in summary, courses table removal, useCallback removal, Blob .size). No uncommitted changes.
+**Round 2 findings:**
+- H1: Blob estimation returns only FIRST Blob's .size per row, ignores additional Blobs and non-Blob metadata
+- H2: ChartContainer missing aria-label="Storage usage breakdown chart" (AC1 Task 6.6)
+- H3: Refresh failure after successful initial load shows no error feedback (error && !overview condition)
+- M1: getStorageOverview never throws in practice -- component error state is dead code
+- M2: Critical banner scrolls to #data-management but AC4 specifies #cleanup-actions (no such element)
+- M3: Category legend percentages relative to categorizedTotal (sampled), not totalUsage (browser-reported)
+- Positive: Clean working tree (uncommitted-fix pattern broken), good architecture separation, defensive Promise.allSettled, proper cancelled flag
+
+## E69-S01: Storage Estimation Service and Overview Card (Round 3)
+**Round 2 fixes verified:** Multi-blob estimation fixed, aria-label added, refresh error toast added.
+**Round 3 findings:**
+- H1: Category mapping covers only 11 of 30+ Dexie tables -- uncategorizedBytes gap not surfaced to user
+- H2: ArrayBuffer/typed-array fields not handled in estimateTableSize (only Blob instanceof check)
+- H3: handleRefresh has React-state-based concurrency guard (setRefreshing) vulnerable to double-click race
+- M1: "Free Up Space" scrolls to #data-management which has no cleanup actions until S03
+- M2: sampleSize=5 deviates from story spec sampleSize=10 without documentation
+- M3: sessionStorage key 'storage-warning-dismissed' missing knowlune- namespace prefix
+- M4: No test for refresh failure toast (sonner mock missing)
+- Positive: All R2 blockers addressed, clean committed code, thorough state machine (5 states), excellent a11y
