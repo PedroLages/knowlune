@@ -14,7 +14,7 @@ Last Updated: 2026-03-29
 | E59-S05 | done | #165 | 1 | 2 |
 | E59-S06 | done | #166 | 1 | 0 |
 | E59-S07 | done | #167 | 1 | 2 |
-| E59-S08 | queued | — | — | — |
+| E59-S08 | done | #168 | 2 | 5 |
 
 ## Story Details
 
