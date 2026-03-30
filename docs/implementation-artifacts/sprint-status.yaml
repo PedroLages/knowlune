@@ -568,9 +568,9 @@ development_status:
   # Epic 53: PKM Export Phase 1
   # Source: epics.md
   # ──────────────────────────────────────────────────
-  epic-53: backlog
+  epic-53: in-progress
   53-1-flashcard-bookmark-markdown-export: done
-  53-2-anki-apkg-export: backlog
+  53-2-anki-apkg-export: in-progress
   53-3-pkm-batch-export-settings-ui: backlog
 
   # ──────────────────────────────────────────────────
