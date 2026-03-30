@@ -451,6 +451,7 @@ export function UnifiedLessonPlayer() {
       currentTime={currentTime}
       onSeek={handleTranscriptSeek}
       focusTab={focusTab}
+      isPdf={isPdf}
     />
   )
 
