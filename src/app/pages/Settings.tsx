@@ -21,6 +21,8 @@ import {
   Users,
   RotateCcw,
   LogOut,
+  FolderOpen,
+  BrainCircuit,
 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
@@ -52,8 +54,10 @@ import {
 import { FontSizePicker } from '@/app/components/settings/FontSizePicker'
 import { exportAllAsJson, exportAllAsCsv, exportNotesAsMarkdown } from '@/lib/exportService'
 import { importFullData } from '@/lib/importService'
-import { downloadJson, downloadZip } from '@/lib/fileDownload'
+import { downloadJson, downloadZip, downloadBlob } from '@/lib/fileDownload'
 import { exportAchievementsAsBadges } from '@/lib/openBadges'
+import { exportPkmBundle } from '@/lib/pkmExport'
+import { exportFlashcardsAsAnki } from '@/lib/ankiExport'
 import { Switch } from '@/app/components/ui/switch'
 import { useProgressiveDisclosure } from '@/app/hooks/useProgressiveDisclosure'
 import { ReminderSettings } from '@/app/components/figma/ReminderSettings'
@@ -343,6 +347,56 @@ export default function Settings() {
       toastSuccess.exported(`${badges.length} badges (Open Badges v3.0)`)
     } catch (error) {
       console.error('Badges export error:', error)
+      toastError.saveFailed('Export failed — try freeing disk space')
+    } finally {
+      setIsExporting(false)
+      setExportProgress(0)
+      setExportPhase('')
+    }
+  }
+
+  async function handleExportPkm() {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      const files = await exportPkmBundle((percent, phase) => {
+        setExportProgress(percent)
+        setExportPhase(phase)
+      })
+      if (files.length === 0) {
+        toastSuccess.exported('No learning data to export')
+        return
+      }
+      const dateStr = new Date().toLocaleDateString('sv-SE')
+      await downloadZip(files, `knowlune-pkm-export-${dateStr}.zip`)
+      toastSuccess.exported(`PKM bundle (${files.length} files)`)
+    } catch (error) {
+      console.error('PKM export error:', error)
+      toastError.saveFailed('Export failed — try freeing disk space')
+    } finally {
+      setIsExporting(false)
+      setExportProgress(0)
+      setExportPhase('')
+    }
+  }
+
+  async function handleExportAnki() {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      const blob = await exportFlashcardsAsAnki((percent, phase) => {
+        setExportProgress(percent)
+        setExportPhase(phase)
+      })
+      if (blob === null) {
+        toastSuccess.exported('No flashcards to export — create flashcards first')
+        return
+      }
+      const dateStr = new Date().toLocaleDateString('sv-SE')
+      downloadBlob(blob, `knowlune-flashcards-${dateStr}.apkg`)
+      toastSuccess.exported('Flashcards (Anki)')
+    } catch (error) {
+      console.error('Anki export error:', error)
       toastError.saveFailed('Export failed — try freeing disk space')
     } finally {
       setIsExporting(false)
@@ -1061,6 +1115,64 @@ export default function Settings() {
                   >
                     <Award className="size-4" />
                     Badges
+                  </Button>
+                </div>
+              </div>
+
+              {/* PKM Export (Obsidian) */}
+              <div className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-brand-soft p-2 mt-0.5">
+                      <FolderOpen className="size-4 text-brand" aria-hidden="true" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium">PKM Export (Obsidian)</h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Notes, flashcards, and bookmarks as Markdown with YAML frontmatter
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportPkm}
+                    disabled={isExporting}
+                    className="gap-2 min-h-[44px]"
+                    aria-label="Export learning data as Obsidian-compatible Markdown"
+                    data-testid="export-pkm-button"
+                  >
+                    <Download className="size-4" />
+                    Obsidian
+                  </Button>
+                </div>
+              </div>
+
+              {/* Flashcard Export (Anki) */}
+              <div className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-success-soft p-2 mt-0.5">
+                      <BrainCircuit className="size-4 text-success" aria-hidden="true" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium">Flashcard Export (Anki)</h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Anki-compatible .apkg deck with spaced repetition data
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportAnki}
+                    disabled={isExporting}
+                    className="gap-2 min-h-[44px]"
+                    aria-label="Export flashcards as Anki deck"
+                    data-testid="export-anki-button"
+                  >
+                    <Download className="size-4" />
+                    Anki
                   </Button>
                 </div>
               </div>
