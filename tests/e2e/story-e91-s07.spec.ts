@@ -33,12 +33,14 @@ const TEST_VIDEOS = [
     order: 0,
     duration: 600,
   },
+]
+
+const TEST_PDFS = [
   {
     id: 'pdf-lesson-1',
     courseId: 'course-bookmark-test',
     filename: '02-Notes.pdf',
-    order: 1,
-    type: 'pdf',
+    pageCount: 1,
   },
 ]
 
@@ -103,19 +105,25 @@ async function seedStore(
 }
 
 async function seedTestData(page: Page): Promise<void> {
+  // Seed localStorage via addInitScript so it runs before Zustand rehydrates
+  await page.addInitScript(() => {
+    localStorage.setItem('knowlune-sidebar-v1', 'false')
+    localStorage.setItem(
+      'knowlune-onboarding-v1',
+      JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
+    )
+    localStorage.setItem(
+      'knowlune-welcome-wizard-v1',
+      JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+    )
+  })
   // Navigate first to avoid about:blank restrictions
   await page.goto('/')
-  await page.evaluate(() => {
-    localStorage.setItem('knowlune-sidebar-v1', 'false')
-  })
 
-  // Seed course and videos
+  // Seed course, videos, and PDFs
   await seedStore(page, 'importedCourses', [TEST_COURSE])
-  await seedStore(
-    page,
-    'importedVideos',
-    TEST_VIDEOS.map(v => v)
-  )
+  await seedStore(page, 'importedVideos', TEST_VIDEOS)
+  await seedStore(page, 'importedPdfs', TEST_PDFS)
 }
 
 // ---------------------------------------------------------------------------
