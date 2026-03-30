@@ -577,10 +577,10 @@ development_status:
   # Epic 54: Lesson Flow Improvements
   # Source: epics.md
   # ──────────────────────────────────────────────────
-  epic-54: in-progress
+  epic-54: done
   54-1-wire-lesson-flow-imported-player: done
   54-2-wire-lesson-flow-youtube-player: done
-  54-3-completion-checkmarks-imported-course-detail: in-progress
+  54-3-completion-checkmarks-imported-course-detail: done
 
   # ──────────────────────────────────────────────────
   # Epic 55: Stitch UI Phase 1
