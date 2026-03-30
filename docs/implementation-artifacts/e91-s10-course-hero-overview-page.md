@@ -1,8 +1,8 @@
 ---
 story_id: E91-S10
 story_name: "Course Hero Overview Page"
-status: backlog
-started:
+status: in-progress
+started: 2026-03-30
 completed:
 reviewed: false
 review_started:

@@ -14,6 +14,9 @@ const Courses = React.lazy(() => import('./pages/Courses').then(m => ({ default:
 const UnifiedCourseDetail = React.lazy(() =>
   import('./pages/UnifiedCourseDetail').then(m => ({ default: m.UnifiedCourseDetail }))
 )
+const CourseOverview = React.lazy(() =>
+  import('./pages/CourseOverview').then(m => ({ default: m.CourseOverview }))
+)
 const UnifiedLessonPlayer = React.lazy(() =>
   import('./pages/UnifiedLessonPlayer').then(m => ({ default: m.UnifiedLessonPlayer }))
 )
@@ -234,6 +237,15 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <QuizReview />
+          </SuspensePage>
+        ),
+      },
+      // Course overview page (E91-S10)
+      {
+        path: 'courses/:courseId/overview',
+        element: (
+          <SuspensePage>
+            <CourseOverview />
           </SuspensePage>
         ),
       },
