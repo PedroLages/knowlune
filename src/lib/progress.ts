@@ -99,6 +99,49 @@ function extractTagsFromContent(content: string): string[] {
   return Array.from(tags)
 }
 
+/**
+ * Get the last-watched lesson for a course by querying the Dexie `progress` table.
+ * Returns the lesson with the most recent activity (highest completionPercentage
+ * as tiebreaker), or null if no progress exists.
+ */
+export async function getLastWatchedLesson(
+  courseId: string
+): Promise<{ lessonId: string; lessonTitle: string } | null> {
+  const rows = await db.progress.where('courseId').equals(courseId).toArray()
+  if (rows.length === 0) return null
+
+  // Pick the most recently active lesson — use currentTime > 0 as a signal,
+  // then highest completionPercentage as tiebreaker
+  const sorted = [...rows].sort((a, b) => {
+    // Prefer lessons with actual watch time
+    if (a.currentTime > 0 && b.currentTime <= 0) return -1
+    if (b.currentTime > 0 && a.currentTime <= 0) return 1
+    // Then by completion percentage (higher = more recent activity)
+    return b.completionPercentage - a.completionPercentage
+  })
+
+  const best = sorted[0]
+
+  // Look up the video title from Dexie
+  const video = await db.importedVideos.get(best.videoId)
+  const title = video?.filename ?? 'Unknown Lesson'
+
+  return { lessonId: best.videoId, lessonTitle: title }
+}
+
+/**
+ * Get the first non-PDF lesson from a course adapter.
+ * Returns null if the course has no video lessons.
+ */
+export async function getFirstLesson(
+  adapter: { getLessons: () => Promise<Array<{ id: string; title: string; type: string }>> }
+): Promise<{ lessonId: string; lessonTitle: string } | null> {
+  const lessons = await adapter.getLessons()
+  const first = lessons.find(l => l.type === 'video') ?? lessons[0]
+  if (!first) return null
+  return { lessonId: first.id, lessonTitle: first.title }
+}
+
 export function getAllProgress(): Record<string, CourseProgress> {
   if (_progressCache) return { ..._progressCache }
 

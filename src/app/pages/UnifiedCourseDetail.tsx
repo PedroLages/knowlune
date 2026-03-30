@@ -27,6 +27,7 @@ import { useFileStatusVerification } from '@/hooks/useFileStatusVerification'
 import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 import { refreshCourseMetadata } from '@/lib/youtubeMetadataRefresh'
 import { revokeObjectUrl } from '@/lib/courseAdapter'
+import { getLastWatchedLesson, getFirstLesson } from '@/lib/progress'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import {
   AlertDialog,
@@ -40,7 +41,7 @@ import {
 } from '@/app/components/ui/alert-dialog'
 import { EditCourseDialog } from '@/app/components/figma/EditCourseDialog'
 import { CourseBreadcrumb } from '@/app/components/course/CourseBreadcrumb'
-import { CourseHeader } from '@/app/components/course/CourseHeader'
+import { CourseHeader, type CtaVariant } from '@/app/components/course/CourseHeader'
 import { CourseProgress } from '@/app/components/course/CourseProgress'
 import { AISummaryPanel } from '@/app/components/course/AISummaryPanel'
 import { LessonList } from '@/app/components/course/LessonList'
@@ -77,6 +78,11 @@ export function UnifiedCourseDetail() {
   const thumbnailUrlRef = useRef<string | null>(null)
   const [contentLoading, setContentLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
+
+  // CTA state
+  const [ctaVariant, setCtaVariant] = useState<CtaVariant | undefined>()
+  const [ctaLessonId, setCtaLessonId] = useState<string | undefined>()
+  const [ctaLessonTitle, setCtaLessonTitle] = useState<string | undefined>()
 
   // UI state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -123,6 +129,40 @@ export function UnifiedCourseDetail() {
       ignore = true
     }
   }, [courseId])
+
+  // Determine CTA button state
+  useEffect(() => {
+    if (!courseId || !adapter || contentLoading) return
+    let ignore = false
+
+    async function resolveCta() {
+      const lastWatched = await getLastWatchedLesson(courseId!)
+      if (ignore) return
+
+      if (lastWatched) {
+        // Check if ALL videos are completed (completionPercentage >= 90)
+        const allCompleted =
+          videos.length > 0 && videos.every(v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= 90)
+        setCtaVariant(allCompleted ? 'review' : 'continue')
+        setCtaLessonId(lastWatched.lessonId)
+        setCtaLessonTitle(lastWatched.lessonTitle)
+      } else {
+        // No progress — start course
+        const first = await getFirstLesson(adapter!)
+        if (ignore) return
+        if (first) {
+          setCtaVariant('start')
+          setCtaLessonId(first.lessonId)
+          setCtaLessonTitle(first.lessonTitle)
+        }
+      }
+    }
+
+    resolveCta()
+    return () => {
+      ignore = true
+    }
+  }, [courseId, adapter, contentLoading, videos, progressMap])
 
   // Load thumbnail via adapter
   useEffect(() => {
@@ -265,6 +305,9 @@ export function UnifiedCourseDetail() {
         onDelete={() => setDeleteDialogOpen(true)}
         onEdit={() => setEditDialogOpen(true)}
         onRefreshMetadata={isYouTube ? handleRefresh : undefined}
+        ctaVariant={ctaVariant}
+        ctaLessonId={ctaLessonId}
+        ctaLessonTitle={ctaLessonTitle}
       />
 
       {loadError && (

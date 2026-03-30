@@ -1,8 +1,8 @@
 ---
 story_id: E91-S01
 story_name: "Start/Continue CTA + Last Position Resume"
-status: backlog
-started:
+status: in-progress
+started: 2026-03-30
 completed:
 reviewed: false
 review_started:

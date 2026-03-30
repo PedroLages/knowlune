@@ -21,6 +21,9 @@ import {
   Video,
   FileText,
   BookOpen,
+  Play,
+  PlayCircle,
+  RotateCcw,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
@@ -38,6 +41,8 @@ interface AuthorInfo {
   photoUrl?: string
 }
 
+export type CtaVariant = 'start' | 'continue' | 'review'
+
 export interface CourseHeaderProps {
   course: ImportedCourse
   isYouTube: boolean
@@ -51,6 +56,10 @@ export interface CourseHeaderProps {
   onDelete: () => void
   onEdit: () => void
   onRefreshMetadata?: () => void
+  /** CTA button configuration — omit to hide the CTA */
+  ctaVariant?: CtaVariant
+  ctaLessonId?: string
+  ctaLessonTitle?: string
 }
 
 export function CourseHeader({
@@ -66,7 +75,28 @@ export function CourseHeader({
   onDelete,
   onEdit,
   onRefreshMetadata,
+  ctaVariant,
+  ctaLessonId,
+  ctaLessonTitle,
 }: CourseHeaderProps) {
+  const ctaConfig = ctaVariant
+    ? {
+        start: {
+          label: 'Start Course',
+          icon: Play,
+        },
+        continue: {
+          label: 'Continue Learning',
+          icon: PlayCircle,
+        },
+        review: {
+          label: 'Review Course',
+          icon: RotateCcw,
+        },
+      }[ctaVariant]
+    : null
+
+  const CtaIcon = ctaConfig?.icon
   return (
     <div>
       <Link
@@ -190,6 +220,30 @@ export function CourseHeader({
                     {tag}
                   </Badge>
                 ))}
+              </div>
+            )}
+
+            {/* CTA Button */}
+            {ctaConfig && ctaLessonId && (
+              <div className="mb-4">
+                <Link to={`/courses/${course.id}/lessons/${ctaLessonId}`}>
+                  <Button
+                    variant="brand"
+                    size="lg"
+                    className="w-full sm:w-auto gap-2"
+                    data-testid="course-cta-button"
+                  >
+                    {CtaIcon && <CtaIcon className="size-5" aria-hidden="true" />}
+                    <span className="flex flex-col items-start leading-tight">
+                      <span>{ctaConfig.label}</span>
+                      {ctaVariant === 'continue' && ctaLessonTitle && (
+                        <span className="text-xs opacity-80 font-normal truncate max-w-[16rem]">
+                          {ctaLessonTitle}
+                        </span>
+                      )}
+                    </span>
+                  </Button>
+                </Link>
               </div>
             )}
 
