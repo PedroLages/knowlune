@@ -59,6 +59,8 @@ import type { LessonItem } from '@/lib/courseAdapter'
 import { useTheaterMode } from '@/app/hooks/useTheaterMode'
 import { MiniPlayer } from '@/app/components/course/MiniPlayer'
 import type { CompletionStatus } from '@/data/types'
+import { NextCourseSuggestion } from '@/app/components/NextCourseSuggestion'
+import { suggestNextCourse } from '@/lib/courseSuggestion'
 
 // Lazy-load PdfContent to avoid pdfjs-dist bundle impact for video-only users
 const PdfContent = lazy(() =>
@@ -117,6 +119,9 @@ export function UnifiedLessonPlayer() {
   const [isVideoPlaying, setIsVideoPlaying] = useState(false)
   const [isMiniPlayerDismissed, setIsMiniPlayerDismissed] = useState(false)
   const [localVideoBlobUrl, setLocalVideoBlobUrl] = useState<string | null>(null)
+
+  // Next course suggestion state (E91-S08)
+  const [showCourseSuggestion, setShowCourseSuggestion] = useState(false)
 
   // Focus tab state: set to "notes" when user presses N in VideoPlayer
   const [focusTab, setFocusTab] = useState<string | null>(null)
@@ -204,6 +209,7 @@ export function UnifiedLessonPlayer() {
     setIsVideoVisible(true)
     setIsVideoPlaying(false)
     setLocalVideoBlobUrl(null)
+    setShowCourseSuggestion(false)
   }, [lessonId])
 
   // Resolve lesson metadata (title + type) from adapter's lesson list
@@ -604,10 +610,32 @@ export function UnifiedLessonPlayer() {
         />
       )}
 
+      {/* Next course suggestion card (E91-S08) */}
+      {showCourseSuggestion && courseId && (() => {
+        const suggestion = suggestNextCourse(courseId, importedCourses)
+        if (!suggestion) return null
+        return (
+          <div className="mt-4">
+            <NextCourseSuggestion
+              suggestedCourse={suggestion.course}
+              sharedTags={suggestion.sharedTags}
+              thumbnailUrl={suggestion.course.youtubeThumbnailUrl ?? null}
+              onDismiss={() => setShowCourseSuggestion(false)}
+            />
+          </div>
+        )
+      })()}
+
       {/* Completion celebration modal (lesson or course level) */}
       <CompletionModal
         open={celebrationOpen}
-        onOpenChange={setCelebrationOpen}
+        onOpenChange={(open) => {
+          setCelebrationOpen(open)
+          // When course-level celebration closes, show next course suggestion (AC1)
+          if (!open && celebrationType === 'course') {
+            setShowCourseSuggestion(true)
+          }
+        }}
         type={celebrationType}
         title={celebrationTitle}
         stats={

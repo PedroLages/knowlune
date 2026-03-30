@@ -1,8 +1,8 @@
 ---
 story_id: E91-S08
 story_name: "Next Course Suggestion After Completion"
-status: backlog
-started:
+status: in-progress
+started: 2026-03-30
 completed:
 reviewed: false
 review_started:
