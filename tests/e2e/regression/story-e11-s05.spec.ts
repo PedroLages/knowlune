@@ -229,6 +229,7 @@ test.describe('E11-S05: Interleaved Review Mode', () => {
     expect(persisted!.stability).toBeGreaterThan(0)
     expect(persisted!.reps).toBeGreaterThanOrEqual(3)
     // Due date should be in the future (after the current browser time)
+    // eslint-disable-next-line test-patterns/deterministic-time -- comparing against browser clock for future-due assertion
     expect(new Date(persisted!.due).getTime()).toBeGreaterThan(Date.now())
   })
 
