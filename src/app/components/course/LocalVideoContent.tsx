@@ -42,273 +42,278 @@ interface LocalVideoContentProps {
   onBlobUrlReady?: (url: string | null) => void
 }
 
-export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContentProps>(function LocalVideoContent({
-  courseId,
-  lessonId,
-  onEnded,
-  onTimeUpdate,
-  seekToTime,
-  onSeekComplete,
-  onFocusNotes,
-  onVisibilityChange,
-  onPlayStateChange,
-  onBlobUrlReady,
-}, ref) {
-  // NOTE: Video loading from Dexie is duplicated between LocalVideoContent and
-  // YouTubeVideoContent. This is intentional for now — will be extracted into a
-  // shared hook in S07 when both components are consolidated.
-  const [video, setVideo] = useState<ImportedVideo | null | undefined>(undefined)
-  const [loadError, setLoadError] = useState<string | null>(null)
-  const [dexieLoading, setDexieLoading] = useState(false)
-  const [permissionPending, setPermissionPending] = useState(false)
-
-  const loadVideo = useCallback(() => {
-    if (!lessonId) {
-      setVideo(null)
-      return
-    }
-    setLoadError(null)
-    setVideo(undefined)
-    setDexieLoading(true)
-    let ignore = false
-
-    db.importedVideos
-      .get(lessonId)
-      .then(v => {
-        if (!ignore) {
-          setVideo(v ?? null)
-          setDexieLoading(false)
-        }
-      })
-      .catch((err: unknown) => {
-        if (!ignore) {
-          const message = err instanceof Error ? err.message : 'Failed to load lesson data'
-          setLoadError(message)
-          setDexieLoading(false)
-          toast.error('Failed to load lesson data')
-        }
-      })
-
-    return () => {
-      ignore = true
-    }
-  }, [lessonId])
-
-  useEffect(() => {
-    return loadVideo()
-  }, [loadVideo])
-
-  const { blobUrl, error, loading } = useVideoFromHandle(video?.fileHandle)
-
-  // Caption loading and persistence
-  const { userCaptions, handleLoadCaptions } = useCaptionLoader(courseId, lessonId)
-
-  // Bookmarks: load from Dexie and provide add callback for VideoPlayer's B key shortcut
-  const [bookmarks, setBookmarks] = useState<VideoBookmark[]>([])
-
-  useEffect(() => {
-    let ignore = false
-    getLessonBookmarks(courseId, lessonId)
-      .then(bm => {
-        if (!ignore) setBookmarks(bm)
-      })
-      .catch(() => {
-        // silent-catch-ok — bookmarks are non-critical
-      })
-    return () => {
-      ignore = true
-    }
-  }, [courseId, lessonId])
-
-  const handleBookmarkAdd = useCallback(
-    async (timestamp: number) => {
-      try {
-        await addBookmark(courseId, lessonId, timestamp)
-        const updated = await getLessonBookmarks(courseId, lessonId)
-        setBookmarks(updated)
-        toast.success('Bookmark added')
-      } catch {
-        toast.error('Failed to add bookmark')
-      }
+export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContentProps>(
+  function LocalVideoContent(
+    {
+      courseId,
+      lessonId,
+      onEnded,
+      onTimeUpdate,
+      seekToTime,
+      onSeekComplete,
+      onFocusNotes,
+      onVisibilityChange,
+      onPlayStateChange,
+      onBlobUrlReady,
     },
-    [courseId, lessonId]
-  )
+    ref
+  ) {
+    // NOTE: Video loading from Dexie is duplicated between LocalVideoContent and
+    // YouTubeVideoContent. This is intentional for now — will be extracted into a
+    // shared hook in S07 when both components are consolidated.
+    const [video, setVideo] = useState<ImportedVideo | null | undefined>(undefined)
+    const [loadError, setLoadError] = useState<string | null>(null)
+    const [dexieLoading, setDexieLoading] = useState(false)
+    const [permissionPending, setPermissionPending] = useState(false)
 
-  // Notify parent when blob URL is ready (E91-S04 mini-player)
-  useEffect(() => {
-    onBlobUrlReady?.(blobUrl ?? null)
-  }, [blobUrl, onBlobUrlReady])
+    const loadVideo = useCallback(() => {
+      if (!lessonId) {
+        setVideo(null)
+        return
+      }
+      setLoadError(null)
+      setVideo(undefined)
+      setDexieLoading(true)
+      let ignore = false
 
-  // IntersectionObserver: track whether the video is visible in the viewport (E91-S04)
-  const videoWrapperRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = videoWrapperRef.current
-    if (!el || !onVisibilityChange) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        onVisibilityChange(entry.isIntersecting)
+      db.importedVideos
+        .get(lessonId)
+        .then(v => {
+          if (!ignore) {
+            setVideo(v ?? null)
+            setDexieLoading(false)
+          }
+        })
+        .catch((err: unknown) => {
+          if (!ignore) {
+            const message = err instanceof Error ? err.message : 'Failed to load lesson data'
+            setLoadError(message)
+            setDexieLoading(false)
+            toast.error('Failed to load lesson data')
+          }
+        })
+
+      return () => {
+        ignore = true
+      }
+    }, [lessonId])
+
+    useEffect(() => {
+      return loadVideo()
+    }, [loadVideo])
+
+    const { blobUrl, error, loading } = useVideoFromHandle(video?.fileHandle)
+
+    // Caption loading and persistence
+    const { userCaptions, handleLoadCaptions } = useCaptionLoader(courseId, lessonId)
+
+    // Bookmarks: load from Dexie and provide add callback for VideoPlayer's B key shortcut
+    const [bookmarks, setBookmarks] = useState<VideoBookmark[]>([])
+
+    useEffect(() => {
+      let ignore = false
+      getLessonBookmarks(courseId, lessonId)
+        .then(bm => {
+          if (!ignore) setBookmarks(bm)
+        })
+        .catch(() => {
+          // silent-catch-ok — bookmarks are non-critical
+        })
+      return () => {
+        ignore = true
+      }
+    }, [courseId, lessonId])
+
+    const handleBookmarkAdd = useCallback(
+      async (timestamp: number) => {
+        try {
+          await addBookmark(courseId, lessonId, timestamp)
+          const updated = await getLessonBookmarks(courseId, lessonId)
+          setBookmarks(updated)
+          toast.success('Bookmark added')
+        } catch {
+          toast.error('Failed to add bookmark')
+        }
       },
-      { threshold: 0.1 }
+      [courseId, lessonId]
     )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [onVisibilityChange])
 
-  // Re-grant permission flow (AC8)
-  const handleReGrantPermission = useCallback(async () => {
-    if (!video?.fileHandle) return
-    setPermissionPending(true)
-    try {
-      const result = await video.fileHandle.requestPermission({ mode: 'read' })
-      if (result === 'granted') {
-        // Re-load video to trigger useVideoFromHandle
+    // Notify parent when blob URL is ready (E91-S04 mini-player)
+    useEffect(() => {
+      onBlobUrlReady?.(blobUrl ?? null)
+    }, [blobUrl, onBlobUrlReady])
+
+    // IntersectionObserver: track whether the video is visible in the viewport (E91-S04)
+    const videoWrapperRef = useRef<HTMLDivElement>(null)
+    useEffect(() => {
+      const el = videoWrapperRef.current
+      if (!el || !onVisibilityChange) return
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          onVisibilityChange(entry.isIntersecting)
+        },
+        { threshold: 0.1 }
+      )
+      observer.observe(el)
+      return () => observer.disconnect()
+    }, [onVisibilityChange])
+
+    // Re-grant permission flow (AC8)
+    const handleReGrantPermission = useCallback(async () => {
+      if (!video?.fileHandle) return
+      setPermissionPending(true)
+      try {
+        const result = await video.fileHandle.requestPermission({ mode: 'read' })
+        if (result === 'granted') {
+          // Re-load video to trigger useVideoFromHandle
+          const updated = await db.importedVideos.get(lessonId)
+          setVideo(updated ?? null)
+          toast.success('Permission granted')
+        } else {
+          toast.error('Permission was denied')
+        }
+      } catch {
+        toast.error('Failed to request permission')
+      } finally {
+        setPermissionPending(false)
+      }
+    }, [video, lessonId])
+
+    async function handleLocateFile() {
+      try {
+        const [fileHandle] = await window.showOpenFilePicker({
+          types: [
+            {
+              description: 'Video files',
+              accept: { 'video/*': ['.mp4', '.mkv', '.avi', '.webm'] },
+            },
+          ],
+          multiple: false,
+        })
+        await db.importedVideos.update(lessonId, { fileHandle })
         const updated = await db.importedVideos.get(lessonId)
         setVideo(updated ?? null)
-        toast.success('Permission granted')
-      } else {
-        toast.error('Permission was denied')
+      } catch {
+        // silent-catch-ok: User cancelled the picker
       }
-    } catch {
-      toast.error('Failed to request permission')
-    } finally {
-      setPermissionPending(false)
     }
-  }, [video, lessonId])
 
-  async function handleLocateFile() {
-    try {
-      const [fileHandle] = await window.showOpenFilePicker({
-        types: [
-          {
-            description: 'Video files',
-            accept: { 'video/*': ['.mp4', '.mkv', '.avi', '.webm'] },
-          },
-        ],
-        multiple: false,
-      })
-      await db.importedVideos.update(lessonId, { fileHandle })
-      const updated = await db.importedVideos.get(lessonId)
-      setVideo(updated ?? null)
-    } catch {
-      // silent-catch-ok: User cancelled the picker
-    }
-  }
-
-  // Dexie read failed
-  if (loadError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
-        <FileWarning className="size-12 text-destructive" aria-hidden="true" />
-        <p className="text-sm">{loadError}</p>
-        <Button onClick={loadVideo} variant="outline" className="gap-2" disabled={dexieLoading}>
-          <RefreshCw className="size-4" aria-hidden="true" />
-          Retry
-        </Button>
-      </div>
-    )
-  }
-
-  // Loading state
-  if (video === undefined || loading) {
-    return (
-      <DelayedFallback>
-        <div aria-busy="true" aria-label="Loading video">
-          <Skeleton className="w-full aspect-video rounded-xl" />
-        </div>
-      </DelayedFallback>
-    )
-  }
-
-  // Video record not found
-  if (video === null) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
-        <p>Video not found.</p>
-        <Link to={`/courses/${courseId}`} className="text-sm text-brand hover:underline">
-          Back to Course
-        </Link>
-      </div>
-    )
-  }
-
-  // Error state: permission denied or file not found
-  if (error) {
-    return (
-      <div
-        data-testid="lesson-error-state"
-        className="flex flex-col items-center justify-center h-full gap-6 px-4"
-      >
-        <div className="flex flex-col items-center gap-3 text-center max-w-sm">
-          {error === 'permission-denied' ? (
-            <>
-              <ShieldAlert className="size-12 text-warning" aria-hidden="true" />
-              <h2 className="font-semibold text-lg">Permission required</h2>
-              <p className="text-sm text-muted-foreground">
-                File access was revoked. Grant permission to play this video.
-              </p>
-            </>
-          ) : (
-            <>
-              <FileWarning className="size-12 text-muted-foreground" aria-hidden="true" />
-              <h2 className="font-semibold text-lg">Video file not found</h2>
-              <p className="text-sm text-muted-foreground">Would you like to locate it?</p>
-            </>
-          )}
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          {error === 'permission-denied' ? (
-            <Button
-              onClick={handleReGrantPermission}
-              variant="brand"
-              className="gap-2"
-              disabled={permissionPending}
-            >
-              <ShieldAlert className="size-4" aria-hidden="true" />
-              {permissionPending ? 'Requesting...' : 'Grant Permission'}
-            </Button>
-          ) : (
-            <Button onClick={handleLocateFile} className="gap-2">
-              <FolderSearch className="size-4" aria-hidden="true" />
-              Locate File
-            </Button>
-          )}
-          <Button variant="outline" asChild>
-            <Link to={`/courses/${courseId}`}>Back to Course</Link>
+    // Dexie read failed
+    if (loadError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
+          <FileWarning className="size-12 text-destructive" aria-hidden="true" />
+          <p className="text-sm">{loadError}</p>
+          <Button onClick={loadVideo} variant="outline" className="gap-2" disabled={dexieLoading}>
+            <RefreshCw className="size-4" aria-hidden="true" />
+            Retry
           </Button>
         </div>
+      )
+    }
+
+    // Loading state
+    if (video === undefined || loading) {
+      return (
+        <DelayedFallback>
+          <div aria-busy="true" aria-label="Loading video">
+            <Skeleton className="w-full aspect-video rounded-xl" />
+          </div>
+        </DelayedFallback>
+      )
+    }
+
+    // Video record not found
+    if (video === null) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
+          <p>Video not found.</p>
+          <Link to={`/courses/${courseId}`} className="text-sm text-brand hover:underline">
+            Back to Course
+          </Link>
+        </div>
+      )
+    }
+
+    // Error state: permission denied or file not found
+    if (error) {
+      return (
+        <div
+          data-testid="lesson-error-state"
+          className="flex flex-col items-center justify-center h-full gap-6 px-4"
+        >
+          <div className="flex flex-col items-center gap-3 text-center max-w-sm">
+            {error === 'permission-denied' ? (
+              <>
+                <ShieldAlert className="size-12 text-warning" aria-hidden="true" />
+                <h2 className="font-semibold text-lg">Permission required</h2>
+                <p className="text-sm text-muted-foreground">
+                  File access was revoked. Grant permission to play this video.
+                </p>
+              </>
+            ) : (
+              <>
+                <FileWarning className="size-12 text-muted-foreground" aria-hidden="true" />
+                <h2 className="font-semibold text-lg">Video file not found</h2>
+                <p className="text-sm text-muted-foreground">Would you like to locate it?</p>
+              </>
+            )}
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
+            {error === 'permission-denied' ? (
+              <Button
+                onClick={handleReGrantPermission}
+                variant="brand"
+                className="gap-2"
+                disabled={permissionPending}
+              >
+                <ShieldAlert className="size-4" aria-hidden="true" />
+                {permissionPending ? 'Requesting...' : 'Grant Permission'}
+              </Button>
+            ) : (
+              <Button onClick={handleLocateFile} className="gap-2">
+                <FolderSearch className="size-4" aria-hidden="true" />
+                Locate File
+              </Button>
+            )}
+            <Button variant="outline" asChild>
+              <Link to={`/courses/${courseId}`}>Back to Course</Link>
+            </Button>
+          </div>
+        </div>
+      )
+    }
+
+    // Video playback
+    if (!blobUrl) return null
+
+    // Map bookmarks to the shape VideoPlayer expects for timeline markers
+    const bookmarkMarkers = bookmarks.map(b => ({
+      id: b.id,
+      timestamp: b.timestamp,
+      label: b.label || '',
+    }))
+
+    return (
+      <div ref={videoWrapperRef} data-testid="local-video-wrapper">
+        <VideoPlayer
+          ref={ref}
+          src={blobUrl}
+          title={video.filename}
+          courseId={courseId}
+          lessonId={lessonId}
+          captions={userCaptions ? [userCaptions] : undefined}
+          onLoadCaptions={handleLoadCaptions}
+          onEnded={onEnded}
+          onTimeUpdate={onTimeUpdate}
+          seekToTime={seekToTime}
+          onSeekComplete={onSeekComplete}
+          onBookmarkAdd={handleBookmarkAdd}
+          bookmarks={bookmarkMarkers}
+          onFocusNotes={onFocusNotes}
+          onPlayStateChange={onPlayStateChange}
+        />
       </div>
     )
   }
-
-  // Video playback
-  if (!blobUrl) return null
-
-  // Map bookmarks to the shape VideoPlayer expects for timeline markers
-  const bookmarkMarkers = bookmarks.map(b => ({
-    id: b.id,
-    timestamp: b.timestamp,
-    label: b.label || '',
-  }))
-
-  return (
-    <div ref={videoWrapperRef} data-testid="local-video-wrapper">
-      <VideoPlayer
-        ref={ref}
-        src={blobUrl}
-        title={video.filename}
-        courseId={courseId}
-        lessonId={lessonId}
-        captions={userCaptions ? [userCaptions] : undefined}
-        onLoadCaptions={handleLoadCaptions}
-        onEnded={onEnded}
-        onTimeUpdate={onTimeUpdate}
-        seekToTime={seekToTime}
-        onSeekComplete={onSeekComplete}
-        onBookmarkAdd={handleBookmarkAdd}
-        bookmarks={bookmarkMarkers}
-        onFocusNotes={onFocusNotes}
-        onPlayStateChange={onPlayStateChange}
-      />
-    </div>
-  )
-})
+)

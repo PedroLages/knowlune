@@ -1,9 +1,9 @@
 ---
 story_id: E91-S04
 story_name: "Mini-Player (Picture-in-Picture)"
-status: backlog
-started:
-completed:
+status: done
+started: 2026-03-30
+completed: 2026-03-30
 reviewed: false
 review_started:
 review_gates_passed: []
