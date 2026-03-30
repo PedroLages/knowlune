@@ -1,9 +1,9 @@
 ---
 story_id: E91-S07
 story_name: "Bookmark Seek + Add Button in Side Panel"
-status: in-progress
+status: done
 started: 2026-03-30
-completed:
+completed: 2026-03-30
 reviewed: true
 review_started: 2026-03-30
 review_scope: full
