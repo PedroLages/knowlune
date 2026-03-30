@@ -1,8 +1,8 @@
 ---
 story_id: E54-S02
 story_name: "Wire Lesson Flow to YouTubeLessonPlayer"
-status: draft
-started:
+status: in-progress
+started: 2026-03-30
 completed:
 reviewed: false
 review_started:
