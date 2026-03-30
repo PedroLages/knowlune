@@ -14,8 +14,8 @@ import {
   seedImportedCourses,
   seedImportedVideos,
   seedIndexedDBStore,
-} from '../support/helpers/seed-helpers'
-import { FIXED_DATE } from '../utils/test-time'
+} from '../../support/helpers/seed-helpers'
+import { FIXED_DATE } from '../../utils/test-time'
 
 const DB_NAME = 'ElearningDB'
 
