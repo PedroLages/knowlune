@@ -1,6 +1,6 @@
 # Story 69.1: Storage Estimation Service and Overview Card
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -165,6 +165,10 @@ NOTE: `HardDrive` is already imported in Settings.tsx (line 13). The Data Manage
 - [Source: src/lib/storageQuotaMonitor.ts] — existing Storage API pattern
 - [Source: src/app/components/settings/MyDataSummary.tsx] — Settings card pattern reference
 - [Source: src/db/schema.ts] — Dexie table definitions
+
+## Implementation Plan
+
+See [plan](../plans/e69-s01-storage-estimation-overview-card.md) for implementation approach.
 
 ## Dev Agent Record
 
