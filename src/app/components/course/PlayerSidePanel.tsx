@@ -13,7 +13,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
-import { Trash2, BookmarkIcon, AlertTriangle, FileText, Video, PlayCircle, Maximize2, X } from 'lucide-react'
+import {
+  Trash2,
+  BookmarkIcon,
+  AlertTriangle,
+  FileText,
+  Video,
+  PlayCircle,
+  Maximize2,
+  X,
+} from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'

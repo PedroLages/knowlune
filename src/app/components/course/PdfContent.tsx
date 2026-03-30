@@ -206,10 +206,9 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
           .first()
           .then(async existing => {
             if (existing) {
-              await db.progress.update(
-                [courseId, lessonId] as unknown as string,
-                { currentPage: page }
-              )
+              await db.progress.update([courseId, lessonId] as unknown as string, {
+                currentPage: page,
+              })
             } else {
               await db.progress.put({
                 courseId,
