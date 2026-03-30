@@ -1,8 +1,8 @@
 ---
 story_id: E91-S03
 story_name: "Theater Mode"
-status: backlog
-started:
+status: in-progress
+started: 2026-03-30
 completed:
 reviewed: false
 review_started:

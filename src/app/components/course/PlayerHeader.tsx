@@ -8,7 +8,7 @@
 
 import { lazy, Suspense, useCallback, useEffect } from 'react'
 import { Link } from 'react-router'
-import { ArrowLeft, CheckCircle2, Circle, Clock } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Circle, Clock, Maximize2, Minimize2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { PomodoroTimer } from '@/app/components/figma/PomodoroTimer'
@@ -46,6 +46,9 @@ interface PlayerHeaderProps {
   showCompletionToggle?: boolean
   /** Called after completion status is successfully persisted */
   onStatusChange?: (status: CompletionStatus) => void
+  /** Theater mode state and toggle (desktop only) */
+  isTheater?: boolean
+  onToggleTheater?: () => void
 }
 
 export function PlayerHeader({
@@ -55,6 +58,8 @@ export function PlayerHeader({
   courseName,
   showCompletionToggle = false,
   onStatusChange,
+  isTheater = false,
+  onToggleTheater,
 }: PlayerHeaderProps) {
   const getItemStatus = useContentProgressStore(s => s.getItemStatus)
   const setItemStatus = useContentProgressStore(s => s.setItemStatus)
@@ -111,6 +116,23 @@ export function PlayerHeader({
       <Suspense fallback={null}>
         <QAChatPanel />
       </Suspense>
+
+      {onToggleTheater && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hidden lg:flex"
+          onClick={onToggleTheater}
+          aria-label={isTheater ? 'Exit theater mode' : 'Enter theater mode'}
+          data-testid="theater-mode-toggle"
+        >
+          {isTheater ? (
+            <Minimize2 className="size-4" aria-hidden="true" />
+          ) : (
+            <Maximize2 className="size-4" aria-hidden="true" />
+          )}
+        </Button>
+      )}
 
       {showCompletionToggle && (
         <DropdownMenu>
