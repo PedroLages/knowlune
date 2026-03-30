@@ -23,7 +23,9 @@ const LESSON_URL = `/courses/${TEST_COURSE.id}/lessons/${TEST_COURSE.id}-video-0
 
 async function seedAndNavigate(
   page: Parameters<typeof navigateAndWait>[0],
-  indexedDB: { seedImportedCourses: (c: ReturnType<typeof createImportedCourse>[]) => Promise<void> },
+  indexedDB: {
+    seedImportedCourses: (c: ReturnType<typeof createImportedCourse>[]) => Promise<void>
+  },
   viewportWidth: number
 ) {
   await page.setViewportSize({ width: viewportWidth, height: 1024 })

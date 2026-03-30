@@ -559,13 +559,12 @@ export function UnifiedLessonPlayer() {
           <div className="h-full">
             <div className="h-full overflow-auto p-4">
               {/* Tablet toggle bar: Video | Notes (E91-S09) */}
-              {isTablet && (
-                <div
-                  className="hidden md:flex lg:hidden gap-1 bg-muted rounded-lg p-1 mb-4"
-                  role="tablist"
-                  aria-label="Content view"
-                  data-testid="tablet-toggle-bar"
-                >
+              <div
+                className="hidden md:flex lg:hidden gap-1 bg-muted rounded-lg p-1 mb-4"
+                role="tablist"
+                aria-label="Content view"
+                data-testid="tablet-toggle-bar"
+              >
                   <Button
                     variant={!tabletNotesOpen ? 'default' : 'ghost'}
                     size="sm"
@@ -593,10 +592,12 @@ export function UnifiedLessonPlayer() {
                     Notes
                   </Button>
                 </div>
-              )}
 
               {/* Tablet: show either video or notes based on toggle */}
-              <div id="tablet-content-panel" role="tabpanel">
+              <div
+                id="tablet-content-panel"
+                {...(isTablet ? { role: 'tabpanel' } : {})}
+              >
                 {isTablet && tabletNotesOpen ? (
                   <NotesTab courseId={courseId!} lessonId={lessonId!} />
                 ) : (
