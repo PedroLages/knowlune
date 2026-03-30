@@ -1108,8 +1108,8 @@ development_status:
   # + lesson search, single-note export, caption customization, clickable timestamps
   # Depends on: E89 (UnifiedCourseDetail + UnifiedLessonPlayer must exist)
   # ──────────────────────────────────────────────────
-  epic-91: backlog
-  91-1-start-continue-cta-and-last-position-resume: backlog
+  epic-91: in-progress
+  91-1-start-continue-cta-and-last-position-resume: done
   91-2-local-course-visual-parity: backlog
   91-3-theater-mode: backlog
   91-4-mini-player-picture-in-picture: backlog
