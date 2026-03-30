@@ -58,25 +58,48 @@ You are a Performance Engineer for Knowlune, a React learning platform. You coll
 
 ### Phase 2: Performance Data Collection
 
+**Important**: Dev server metrics detect REGRESSIONS, not absolute production performance. Vite HMR serves uncompressed JS (14MB+) which is not production-representative. Never fail a story based on absolute dev-server values — only on regressions vs baseline.
+
+**Measurement protocol**: Take **3 measurements per route**, report the **median**. Single measurements vary 10-30% due to GC pauses, JIT compilation, and background processes.
+
 For each route to test:
 
-1. Navigate to the route:
+1. **Warm-up run** (discard): Navigate to route, wait 2s, discard all metrics.
+
+2. **Measurement runs (3x)**: For each run:
+   a. Navigate to the route:
    ```
    browser_navigate to http://localhost:5173{route}
    ```
 
-2. Wait for page to stabilize (network idle):
+   b. Resize to consistent viewport (1440x900) before measurement.
+
+   c. Wait for page to stabilize (network idle):
    ```
    browser_wait for 2 seconds
    ```
 
-3. Collect Navigation Timing:
+   d. Collect all metrics including Core Web Vitals:
    ```javascript
    browser_evaluate:
    (() => {
      const nav = performance.getEntriesByType('navigation')[0];
      const fcp = performance.getEntriesByName('first-contentful-paint')[0];
      const resources = performance.getEntriesByType('resource');
+
+     // LCP (Largest Contentful Paint)
+     const lcpEntries = performance.getEntriesByType('largest-contentful-paint');
+     const lcp = lcpEntries.length > 0 ? Math.round(lcpEntries[lcpEntries.length - 1].startTime) : null;
+
+     // CLS (Cumulative Layout Shift)
+     const layoutShifts = performance.getEntriesByType('layout-shift');
+     const cls = layoutShifts
+       .filter(entry => !entry.hadRecentInput)
+       .reduce((sum, entry) => sum + entry.value, 0);
+
+     // TBT (Total Blocking Time) — sum of long tasks beyond 50ms threshold
+     const longTasks = performance.getEntriesByType('longtask');
+     const tbt = longTasks.reduce((sum, task) => sum + Math.max(0, task.duration - 50), 0);
 
      const totalTransfer = resources.reduce((sum, r) => sum + (r.transferSize || 0), 0);
      const jsResources = resources.filter(r => r.name.endsWith('.js') || r.initiatorType === 'script');
@@ -88,6 +111,9 @@ For each route to test:
        dom_complete: Math.round(nav.domComplete - nav.startTime),
        load_complete: Math.round(nav.loadEventEnd - nav.startTime),
        fcp: fcp ? Math.round(fcp.startTime) : null,
+       lcp: lcp,
+       cls: Math.round(cls * 1000) / 1000,
+       tbt: Math.round(tbt),
        resource_count: resources.length,
        js_resource_count: jsResources.length,
        css_resource_count: cssResources.length,
@@ -104,7 +130,9 @@ For each route to test:
    })()
    ```
 
-4. Take a screenshot for evidence.
+3. **Compute medians**: For each metric, take the median of the 3 runs.
+
+4. Take a screenshot for evidence (once per route, not per run).
 
 ### Phase 3: Baseline Comparison
 
@@ -116,14 +144,31 @@ Compare each metric against baseline `page_metrics` (if available for that route
 - >25% timing increase → **MEDIUM** severity
 - New route (no baseline) → record metrics, no comparison
 
-**Performance budgets** (industry standards):
+**Performance budgets** (industry standards — apply to regression detection, not absolute dev values):
 - FCP < 1800ms → PASS, 1800-3000ms → WARNING, >3000ms → HIGH
+- LCP < 2500ms → PASS, 2500-4000ms → WARNING, >4000ms → HIGH
+- CLS < 0.1 → PASS, 0.1-0.25 → WARNING, >0.25 → HIGH
+- TBT < 200ms → PASS, 200-600ms → WARNING, >600ms → HIGH
 - DOM Complete < 3000ms → PASS, 3000-5000ms → WARNING, >5000ms → HIGH
 - Total JS transfer < 500KB → PASS, 500KB-1MB → WARNING, >1MB → HIGH
 
 ### Phase 4: Update Baseline
 
 After collecting metrics, update the `page_metrics` section of `docs/reviews/performance/baseline.json` with new measurements for tested routes. Only update — never delete existing routes.
+
+### Phase 4.5: Bundle Size Delta
+
+Compare production build output against baseline:
+```bash
+npm run build 2>&1 | grep -E '(dist/|\.js|\.css)' | head -20
+```
+
+If `docs/reviews/performance/baseline.json` has a `bundle_sizes` section, compare:
+- >10% increase in any chunk → MEDIUM
+- >25% increase in any chunk → HIGH
+- New chunks >100KB → flag for review (is this code-split correctly?)
+
+Update `bundle_sizes` in baseline.json with new values.
 
 ### Phase 5: Generate Report
 
@@ -143,6 +188,9 @@ Write the report to the path provided in the prompt (format: `docs/reviews/perfo
 | Route | Metric | Baseline | Current | Delta | Status |
 |-------|--------|----------|---------|-------|--------|
 | / | FCP | {N}ms | {N}ms | +{N}% | OK/WARNING/HIGH |
+| / | LCP | {N}ms | {N}ms | +{N}% | OK/WARNING/HIGH |
+| / | CLS | {N} | {N} | +{N} | OK/WARNING/HIGH |
+| / | TBT | {N}ms | {N}ms | +{N}% | OK/WARNING/HIGH |
 | / | DOM Complete | {N}ms | {N}ms | +{N}% | OK/WARNING/HIGH |
 | /courses | FCP | — | {N}ms | new | RECORDED |
 ...
@@ -162,6 +210,9 @@ For each tested route, list top 5 largest resources:
 | Metric | Budget | Worst Value | Status |
 |--------|--------|-------------|--------|
 | FCP | < 1800ms | {N}ms ({route}) | PASS/WARNING/HIGH |
+| LCP | < 2500ms | {N}ms ({route}) | PASS/WARNING/HIGH |
+| CLS | < 0.1 | {N} ({route}) | PASS/WARNING/HIGH |
+| TBT | < 200ms | {N}ms ({route}) | PASS/WARNING/HIGH |
 | DOM Complete | < 3000ms | {N}ms ({route}) | PASS/WARNING/HIGH |
 | JS Transfer | < 500KB | {N}KB ({route}) | PASS/WARNING/HIGH |
 
@@ -177,7 +228,8 @@ For each tested route, list top 5 largest resources:
 [Specific, actionable suggestions based on findings]
 
 ---
-Routes: {N} tested | Regressions: {N} | Warnings: {N} | Budget violations: {N}
+Routes: {N} tested | Samples: 3 per route (median) | Regressions: {N} | Warnings: {N} | Budget violations: {N}
+Note: Metrics collected on Vite dev server — detect regressions only, not absolute production performance.
 ```
 
 ## Rules

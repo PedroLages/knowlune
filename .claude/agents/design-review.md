@@ -82,16 +82,53 @@ Use **Bash** and **Read** tools:
 4. Map changed files → affected routes (see route map above)
 5. Create a TodoWrite checklist of routes/components to test
 
+### Phase 0.5: Automated Accessibility Scan (axe-core)
+
+Before interactive testing, run an automated WCAG scan on each affected route. This catches ~57% of accessibility violations automatically:
+
+```javascript
+browser_evaluate:
+// Inject axe-core and run WCAG 2.1 AA scan
+(async () => {
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js';
+  document.head.appendChild(script);
+  await new Promise(r => script.onload = r);
+  const results = await axe.run(document, {
+    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] }
+  });
+  return {
+    violations: results.violations.map(v => ({
+      id: v.id,
+      impact: v.impact,
+      description: v.description,
+      nodes: v.nodes.length,
+      targets: v.nodes.slice(0, 3).map(n => n.target[0])
+    })),
+    passes: results.passes.length,
+    incomplete: results.incomplete.length
+  };
+})()
+```
+
+- Report **critical** and **serious** axe violations as Blockers
+- Report **moderate** violations as High
+- Report **minor** violations as Medium
+- Phases 1-5 then focus on the remaining ~43% that requires manual verification (visual layout, keyboard flows, screen reader semantics)
+
 ### Phase 1: Interactive Browser Testing
 
-Use **Playwright MCP** tools to test the live application:
+Use **Playwright MCP** tools to test the live application.
+
+**Tool priority**: Use `browser_snapshot` (accessibility tree) as your PRIMARY interaction tool — it's 10-100x more token-efficient than screenshots and returns structured data. Reserve `browser_screenshot` for **evidence collection only** (documenting bugs, capturing visual state for the report).
 
 1. **Navigate** to `http://localhost:5173` + each affected route
-2. **Screenshot** the initial state at desktop (1440px) viewport
-3. **Click** interactive elements: buttons, links, cards, tabs
-4. **Hover** over elements to verify hover states exist and look correct
-5. **Type** in search bars and form inputs to test input behavior
-6. **Evaluate** JavaScript to check computed styles match design tokens:
+2. **Snapshot** the accessibility tree to understand page structure and verify ARIA
+3. **Screenshot** the initial state at desktop (1440px) viewport — for report evidence only
+4. **Click** interactive elements: buttons, links, cards, tabs
+5. **Hover** over elements to verify hover states exist and look correct
+6. **Type** in search bars and form inputs to test input behavior
+7. **Evaluate** JavaScript to check computed styles match design tokens:
    ```javascript
    // Example: verify background color
    getComputedStyle(document.body).backgroundColor
@@ -114,7 +151,13 @@ Use **browser_resize** + **browser_screenshot** at each breakpoint:
    - Sidebar should be collapsible or hidden
    - Check no horizontal overflow
 
-3. **Mobile (375px wide)**:
+3. **Sidebar Collapse (1024px wide)**:
+   - Resize viewport: `browser_resize` to width=1024
+   - Screenshot full page
+   - Verify sidebar collapse behavior (this is the actual sidebar breakpoint)
+   - Check layout reflow is correct
+
+4. **Mobile (375px wide)**:
    - Resize viewport: `browser_resize` to width=375
    - Screenshot full page
    - Verify single-column stack layout
@@ -164,7 +207,20 @@ Use **Playwright MCP** for live accessibility testing:
    const style = getComputedStyle(el);
    [style.color, style.backgroundColor]
    ```
-   - Verify text contrast ≥4.5:1 for normal text, ≥3:1 for large text (test BOTH light and dark mode — dark mode contrast failures are a recurring issue)
+   - Verify text contrast ≥4.5:1 for normal text, ≥3:1 for large text
+
+4. **Dark Mode Toggle Testing** (mandatory — dark mode contrast failures are a recurring issue):
+   ```javascript
+   browser_evaluate:
+   // Toggle to dark mode
+   document.documentElement.classList.add('dark');
+   // OR if using matchMedia:
+   // window.matchMedia('(prefers-color-scheme: dark)').matches
+   ```
+   - After toggling, re-check contrast on all text elements
+   - Screenshot dark mode state for evidence
+   - Toggle back to light mode and verify no artifacts remain
+   - Test BOTH modes on every affected route
 
 4. **Code-Level Checks** (via `Grep`):
    - Find `<div.*onClick` patterns (should be `<button>`)
@@ -197,25 +253,7 @@ Use **Playwright MCP** to test edge cases:
    - Navigate and observe if loading indicators appear
    - Check that content doesn't flash or shift (CLS)
 
-### Phase 6: Code Health Analysis
-
-Use **Grep** and **Read** for static analysis:
-
-1. **TypeScript Quality**:
-   - Search for `any` type usage: `:\s*any` in changed files
-   - Verify props interfaces are defined
-   - Check for proper type imports
-
-2. **Import Conventions**:
-   - Verify `@/` alias usage (not relative `../` paths)
-   - Check imports from correct directories
-
-3. **Tailwind Usage**:
-   - No inline `style=` attributes (use Tailwind utilities)
-   - Responsive modifiers for layout changes
-   - Consistent class ordering
-
-### Phase 7: Report Generation
+### Phase 6: Report Generation
 
 Compile all findings into a structured report:
 
@@ -275,6 +313,7 @@ Compile all findings into a structured report:
 
 - **Mobile (375px)**: Pass/Fail [Notes + screenshot reference]
 - **Tablet (768px)**: Pass/Fail [Notes + screenshot reference]
+- **Sidebar Collapse (1024px)**: Pass/Fail [Notes + screenshot reference]
 - **Desktop (1440px)**: Pass/Fail [Notes + screenshot reference]
 
 ### Recommendations

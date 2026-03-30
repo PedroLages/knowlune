@@ -86,12 +86,15 @@ You test **FUNCTIONALITY** — does the feature work?
 
 ### Phase 2: Happy Path Testing
 
+**Tool priority**: Use `browser_snapshot` (accessibility tree) as your PRIMARY interaction tool — it's more token-efficient than screenshots and returns structured data. Reserve `browser_screenshot` for **bug evidence only**.
+
 For each affected route and acceptance criterion:
 
 1. **Navigate** to the route via `browser_navigate http://localhost:5173{route}`
-2. **Screenshot** the initial state
-3. **Check console** for errors: `browser_console_messages`
-4. **Exercise the AC**:
+2. **Snapshot** the accessibility tree to understand page structure
+3. **Screenshot** the initial state — for report evidence
+4. **Check console** for errors: `browser_console_messages`
+5. **Exercise the AC**:
    - Click relevant buttons (`browser_click`)
    - Fill forms (`browser_type`, `browser_select_option`)
    - Navigate between related pages
@@ -107,8 +110,13 @@ For each interactive element found during happy path:
 2. **Invalid data**: Enter wrong types, very long strings (500+ chars), special characters (`<script>`, `'; DROP TABLE`, unicode)
 3. **Rapid interaction**: Double-click buttons, rapid form submissions
 4. **State preservation**: Navigate away and back — does state persist?
-5. **Empty state**: What happens with no data? (New user experience)
-6. **Boundary values**: Test with 0, 1, max values where applicable
+5. **Hard-refresh persistence**: Perform an action, then hard refresh (F5 / navigate to same URL):
+   ```javascript
+   browser_evaluate: location.reload()
+   ```
+   Verify data survived the refresh. Critical for a learning platform where progress must persist.
+6. **Empty state**: What happens with no data? (New user experience)
+7. **Boundary values**: Test with 0, 1, max values where applicable
 
 ### Phase 4: Error Path Testing
 
@@ -120,7 +128,19 @@ For each interactive element found during happy path:
 3. **Verify error messages**: Are they user-friendly? Do they suggest next steps?
 4. **Recovery**: After an error, can the user get back to a working state?
 
-### Phase 5: Console Health Audit
+### Phase 5: Persona-Based Testing
+
+After systematic testing, adopt these personas for more realistic exploration:
+
+1. **New User** — Navigate with empty IndexedDB. Are empty states helpful? Is onboarding clear? Can you figure out what to do without prior context?
+
+2. **Impatient User** — Click buttons during loading states. Hit the back button mid-navigation. Double-click submit buttons. Try to navigate away during async operations. Does the app handle interruption gracefully?
+
+3. **Keyboard-Only User** — Complete one full workflow using only keyboard (Tab, Enter, Escape, Arrow keys). Can you reach every interactive element? Are focus indicators visible? Is tab order logical?
+
+Report any persona-specific bugs with the persona tag in the title (e.g., "BUG-005: [Impatient] Double-click enrollment creates duplicate entries").
+
+### Phase 6: Console Health Audit
 
 After completing all route testing:
 
@@ -141,14 +161,15 @@ Calculate a weighted health score (0-100):
 
 | Category | Weight | 100 | 80 | 60 | 40 | 0 |
 |----------|--------|-----|----|----|----|----|
-| Functional (20%) | ACs work | All pass | Minor issue | 1 AC fails | Multiple fail | Core broken |
+| Functional (30%) | ACs work | All pass | Minor issue | 1 AC fails | Multiple fail | Core broken |
+| Edge Cases (15%) | Robustness | All handled | Minor gaps | 1 unhandled | Multiple | Crashes on edge input |
 | Console (15%) | Clean console | No errors | Warnings only | 1-2 errors | Many errors | Crash |
 | UX (15%) | Interactions | Smooth | Minor friction | Confusing | Broken flow | Unusable |
-| Accessibility (15%) | Basic a11y | Tab works, focus visible | Minor gaps | Some broken | Major gaps | No keyboard |
-| Visual (10%) | No broken UI | Clean | Minor glitch | Overlap/break | Major break | Unusable |
 | Links (10%) | Navigation | All work | 1 dead link | Multiple dead | Most broken | All broken |
 | Performance (10%) | Responsiveness | < 1s | 1-2s | 2-3s | 3-5s | > 5s |
 | Content (5%) | No placeholders | Clean | Minor typo | Lorem ipsum | Much placeholder | All placeholder |
+
+**Note**: Visual styling and accessibility contrast/ARIA are tested by the design-review agent. This agent tests functional keyboard navigation only (via Persona-Based Testing Phase 5).
 
 **Score calculation**: Sum of (category_score × weight) across all categories.
 
@@ -196,11 +217,10 @@ Write the report to the path specified in the dispatch prompt.
 
 | Category | Score | Weight | Weighted |
 |----------|-------|--------|----------|
-| Functional | {N} | 20% | {N} |
+| Functional | {N} | 30% | {N} |
+| Edge Cases | {N} | 15% | {N} |
 | Console | {N} | 15% | {N} |
 | UX | {N} | 15% | {N} |
-| Accessibility | {N} | 15% | {N} |
-| Visual | {N} | 10% | {N} |
 | Links | {N} | 10% | {N} |
 | Performance | {N} | 10% | {N} |
 | Content | {N} | 5% | {N} |

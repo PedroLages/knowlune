@@ -77,6 +77,18 @@ You are the Test Coverage Specialist reviewing tests for Knowlune, a personal le
 - No snapshot tests for dynamic content
 - Negative assertions where appropriate (element should NOT be visible)
 - Async assertions use proper waitFor/expect patterns (no arbitrary timeouts)
+- **Weak assertion detection**: Flag assertions that would pass even if behavior changed:
+  - `toBeVisible()` without checking content (would pass for any visible element)
+  - `toBeTruthy()` / `toBeDefined()` on complex return values (doesn't verify shape)
+  - `toHaveLength(N)` without verifying item content
+  - Suggest: "This test would pass even if [specific behavior] broke — add content/value assertion"
+
+### 7. Test Type Appropriateness (Medium)
+
+- ACs involving **user interaction** or **navigation flows** MUST have E2E coverage, not just unit tests
+- ACs involving **data transformations** or **calculations** are fine with unit tests only
+- ACs involving **visual state changes** (loading → loaded → error) should have E2E coverage
+- Flag when an AC has only unit tests but the behavior requires browser interaction to verify
 
 ## Confidence Scoring
 
