@@ -109,6 +109,7 @@ export function UnifiedLessonPlayer() {
   const [localVideoBlobUrl, setLocalVideoBlobUrl] = useState<string | null>(null)
 
   // Focus tab state: set to "notes" when user presses N in VideoPlayer
+  const [focusTab, setFocusTab] = useState<string | null>(null)
   const focusTabCounter = useRef(0)
 
   const handleTimeUpdate = useCallback((time: number) => {
