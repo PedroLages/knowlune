@@ -23,17 +23,28 @@ export function CourseProgress({ completedCount, totalCount }: CourseProgressPro
   const isComplete = overallPercent >= 100
 
   return (
-    <div className="rounded-[24px] bg-muted/50 p-5 mb-6 border border-border/50" data-testid="course-progress-card">
+    <div
+      className="rounded-[24px] bg-muted/50 p-5 mb-6 border border-border/50"
+      data-testid="course-progress-card"
+    >
       <h2 className="font-semibold text-sm mb-3">Your Progress</h2>
       {isComplete ? (
         <div className="flex items-center gap-2 mb-3">
-          <CheckCircle className="size-6 text-success" data-testid="completion-badge" aria-hidden="true" />
+          <CheckCircle
+            className="size-6 text-success"
+            data-testid="completion-badge"
+            aria-hidden="true"
+          />
           <div className="text-2xl font-bold text-success">Complete!</div>
         </div>
       ) : (
         <div className="text-3xl font-bold text-brand mb-1">{overallPercent}%</div>
       )}
-      <Progress value={overallPercent} className="h-2 mb-3" aria-label="Course completion progress" />
+      <Progress
+        value={overallPercent}
+        className="h-2 mb-3"
+        aria-label="Course completion progress"
+      />
       <p className="text-xs text-muted-foreground">
         {completedCount} of {totalCount} lessons completed
       </p>
