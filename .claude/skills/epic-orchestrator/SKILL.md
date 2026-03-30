@@ -153,20 +153,20 @@ digraph epic_flow {
 
 ## Agent Types
 
-| Agent | Purpose | Fresh Per | Returns |
-|-------|---------|-----------|---------|
-| **Story** | `/start-story` + implement | Story | Summary, files changed |
-| **Review** | `/review-story` | Round | Verdict, issue list by severity |
-| **Fix** | Fix all review findings | Round | Fix count, unfixed items |
-| **Finish** | `/finish-story` + PR | Story | PR URL, branch |
-| **Sprint Status** | `/sprint-status` | Epic | Status summary |
-| **Trace** | `/testarch-trace` | Epic (+revalidation) | Coverage, gate decision |
-| **Trace Fix** | Write missing tests | When trace finds gaps | Tests added, remaining gaps |
-| **NFR** | `/testarch-nfr` | Epic (+revalidation) | NFR assessment |
-| **NFR Fix** | Fix code-level NFR issues | When NFR finds fixable issues | Issues fixed |
-| **Adversarial** | `/review-adversarial` | Epic | Findings list |
-| **Retro** | `/retrospective` (as Pedro) | Epic | Retro doc, lessons |
-| **Report** | Final completion report | Epic | Report file path |
+| Agent | Purpose | Model | Fresh Per | Returns |
+|-------|---------|-------|-----------|---------|
+| **Story** | `/start-story` + implement | **opus** | Story | Summary, files changed |
+| **Review** | `/review-story` | sonnet | Round | Verdict, issue list by severity |
+| **Fix** | Fix all review findings | sonnet | Round | Fix count, unfixed items |
+| **Finish** | `/finish-story` + PR | sonnet | Story | PR URL, branch |
+| **Sprint Status** | `/sprint-status` | sonnet | Epic | Status summary |
+| **Trace** | `/testarch-trace` | sonnet | Epic (+revalidation) | Coverage, gate decision |
+| **Trace Fix** | Write missing tests | sonnet | When trace finds gaps | Tests added, remaining gaps |
+| **NFR** | `/testarch-nfr` | sonnet | Epic (+revalidation) | NFR assessment |
+| **NFR Fix** | Fix code-level NFR issues | sonnet | When NFR finds fixable issues | Issues fixed |
+| **Adversarial** | `/review-adversarial` | sonnet | Epic | Findings list |
+| **Retro** | `/retrospective` (as Pedro) | sonnet | Epic | Retro doc, lessons |
+| **Report** | Final completion report | sonnet | Epic | Report file path |
 
 ## Coordinator Data Tracking
 

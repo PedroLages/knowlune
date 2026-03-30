@@ -12,7 +12,7 @@ Run in this exact order (each depends on prior context):
 
 ### 1. Sprint Status Check (Sub-Agent)
 
-**Prompt**: Use Sprint Status Agent template from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**.
+**Prompt**: Use Sprint Status Agent template from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**. **Use `model: "sonnet"`**.
 
 **Purpose**: Verify all stories are `done`, no orphaned work remains.
 
@@ -33,7 +33,7 @@ git push
 
 ### 3. Testarch Trace — with Fix-Revalidate Cycle (Sub-Agent)
 
-**Prompt**: Use Testarch Trace Agent template from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`** for all agents in this cycle (trace, fix, revalidation).
+**Prompt**: Use Testarch Trace Agent template from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`** for all agents in this cycle (trace, fix, revalidation). **Use `model: "sonnet"`** for all agents in this cycle.
 
 **Purpose**: Generate requirements-to-tests traceability matrix. Identifies coverage gaps.
 
@@ -71,7 +71,7 @@ digraph trace_cycle {
 
 ### 4. Testarch NFR — with Fix-Revalidate Cycle (Sub-Agent)
 
-**Prompt**: Use Testarch NFR Agent template from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`** for all agents in this cycle.
+**Prompt**: Use Testarch NFR Agent template from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`** for all agents in this cycle. **Use `model: "sonnet"`** for all agents in this cycle.
 
 **Purpose**: Assess non-functional requirements (performance, security, reliability, maintainability).
 
@@ -90,7 +90,7 @@ digraph trace_cycle {
 
 ### 5. Adversarial Review (Sub-Agent) — Report Only
 
-**Prompt**: Use Adversarial Review Agent template from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**.
+**Prompt**: Use Adversarial Review Agent template from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**. **Use `model: "sonnet"`**.
 
 **Purpose**: Cynical critique of epic scope and implementation. Identifies at least 10 issues.
 
@@ -100,7 +100,7 @@ digraph trace_cycle {
 
 ### 6. Retrospective (Sub-Agent) — Report Only
 
-**Prompt**: Use Retrospective Agent template from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**.
+**Prompt**: Use Retrospective Agent template from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**. **Use `model: "sonnet"`**.
 
 **Purpose**: Post-epic review with lessons learned and action items for next epic.
 

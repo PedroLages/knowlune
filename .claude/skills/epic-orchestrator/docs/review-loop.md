@@ -42,7 +42,7 @@ digraph review_loop {
 
 ## Round N: Review Agent
 
-Spawn a **new general-purpose sub-agent** with the Review Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`** to keep review output (build, lint, test, agent reports) out of the main conversation.
+Spawn a **new general-purpose sub-agent** with the Review Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`** to keep review output (build, lint, test, agent reports) out of the main conversation. **Use `model: "sonnet"`** — orchestrates review agents that have their own model settings.
 
 Before dispatch, output the status banner:
 ```
@@ -122,7 +122,7 @@ After each review/fix round, update the persistent tracking file (`docs/implemen
 
 ## If Story-Related Issues Found: Fix Agent
 
-Spawn a **new general-purpose sub-agent** with the Fix Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**.
+Spawn a **new general-purpose sub-agent** with the Fix Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**. **Use `model: "sonnet"`** — targeted fixes, not creative work.
 
 Before dispatch, output the status banner:
 ```

@@ -14,7 +14,7 @@ Process each story sequentially through the full lifecycle: start → implement 
 
 ### Step 1: Start + Implement (Story Agent)
 
-Spawn a **general-purpose sub-agent** with the Story Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`** to keep intermediate tool calls out of the main conversation.
+Spawn a **general-purpose sub-agent** with the Story Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`** to keep intermediate tool calls out of the main conversation. **Use `model: "opus"`** — planning and implementation quality is the highest-leverage investment per story.
 
 Before dispatch, output the status banner:
 ```
@@ -62,7 +62,7 @@ The Review Agent still runs ALL pre-checks (build, lint, type-check, tests) rega
 
 ### Step 3: Finish + PR (Finish Agent)
 
-Spawn a **general-purpose sub-agent** with the Finish Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**.
+Spawn a **general-purpose sub-agent** with the Finish Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**. **Use `model: "sonnet"`** — procedural validation and PR creation.
 
 Before dispatch, output the status banner:
 ```
