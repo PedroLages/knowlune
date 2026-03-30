@@ -1,12 +1,12 @@
 ---
 story_id: E53-S02
 story_name: "Anki .apkg Export"
-status: in-progress
+status: done
 started: 2026-03-30
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-30
+reviewed: true
+review_started: 2026-03-30
+review_gates_passed: [build, lint, typecheck, unit-tests, code-review, test-coverage-review]
 burn_in_validated: false
 ---
 
