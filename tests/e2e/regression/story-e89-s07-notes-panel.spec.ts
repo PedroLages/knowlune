@@ -81,9 +81,7 @@ async function goToLesson(page: Page) {
     .getByTestId('lesson-player-content')
     .waitFor({ state: 'visible', timeout: TIMEOUTS.NETWORK })
   // Wait for side panel to render (visible on desktop viewport)
-  await page
-    .getByTestId('player-side-panel')
-    .waitFor({ state: 'visible', timeout: TIMEOUTS.LONG })
+  await page.getByTestId('player-side-panel').waitFor({ state: 'visible', timeout: TIMEOUTS.LONG })
 }
 
 /**
@@ -91,8 +89,10 @@ async function goToLesson(page: Page) {
  * interception. Native .click() triggers React synthetic event handlers.
  */
 async function clickTab(page: Page, tabName: string) {
-  await page.evaluate((name) => {
-    const tabs = document.querySelectorAll<HTMLElement>('[data-testid="player-side-panel"] [role="tab"]')
+  await page.evaluate(name => {
+    const tabs = document.querySelectorAll<HTMLElement>(
+      '[data-testid="player-side-panel"] [role="tab"]'
+    )
     for (const tab of tabs) {
       if (tab.textContent?.trim() === name) {
         // Radix Tabs uses onPointerDown — dispatch full pointer sequence

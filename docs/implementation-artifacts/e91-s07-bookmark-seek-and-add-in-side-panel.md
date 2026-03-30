@@ -1,12 +1,13 @@
 ---
 story_id: E91-S07
 story_name: "Bookmark Seek + Add Button in Side Panel"
-status: backlog
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-03-30
+completed: 2026-03-30
+reviewed: true
+review_started: 2026-03-30
+review_scope: full
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, code-review, code-review-testing, design-review-skipped, performance-benchmark-skipped, security-review-skipped, exploratory-qa-skipped]
 burn_in_validated: false
 ---
 
@@ -73,3 +74,21 @@ so that I can quickly revisit and create important moments without relying solel
 - Verify seek by checking `video.currentTime` after bookmark click
 - For YouTube: verify `YouTubePlayer.seekTo()` was called (mock or check player state)
 - Test optimistic UI: bookmark should appear before DB write completes
+
+## Challenges and Lessons Learned
+
+- **Welcome Wizard vs Onboarding Overlay**: Knowlune has two separate modal overlays at startup (OnboardingOverlay and WelcomeWizard), each with its own localStorage key. E2E tests must seed both `knowlune-onboarding-v1` and `knowlune-welcome-wizard-v1` to prevent dialogs from blocking interactions. The navigation helper in `tests/support/helpers/navigation.ts` handles this, but tests with custom seed functions must replicate it.
+- **PDF lessons need `importedPdfs` table**: The `courseAdapter.getLessons()` reads PDFs from a separate `importedPdfs` IDB object store, not from `importedVideos`. Setting `type: 'pdf'` on a record in `importedVideos` does not work — the adapter hardcodes `type: 'video'` for all entries in that table. Test data must be seeded into the correct table.
+- **`addInitScript` vs `evaluate` for localStorage**: Use `page.addInitScript()` (not `page.evaluate()`) to seed localStorage state that Zustand stores rehydrate from. `addInitScript` runs before any page JavaScript, ensuring the store reads the seeded value during initialization. `evaluate` may run after Zustand has already hydrated from an empty localStorage.
+- **Optimistic UI with rollback**: The bookmark add flow creates a client-side bookmark with `crypto.randomUUID()`, inserts it sorted, then refreshes from IDB on success or reverts on failure. This pattern provides instant feedback while staying consistent with the DB.
+
+## Code Review Feedback
+
+- Implementation follows existing patterns well (prop threading, useCallback, optimistic UI)
+- Proper accessibility: `aria-label` on seek buttons, semantic `<button>` elements
+- Error handling includes user-visible toast feedback (no silent catches)
+- `isPdf` conditional rendering correctly hides Add Bookmark for PDF lessons
+
+## Design Review Feedback
+
+- Skipped (review performed inline during code review — no Playwright MCP agent dispatched for this review session)

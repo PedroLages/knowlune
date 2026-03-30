@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import {
   Trash2,
   BookmarkIcon,
+  BookmarkPlus,
   AlertTriangle,
   FileText,
   Video,
@@ -233,14 +234,26 @@ function TranscriptTab({
 interface LessonBookmarksTabProps {
   courseId: string
   lessonId: string
+  /** Callback to seek the video to a specific time */
+  onSeek?: (time: number) => void
+  /** Current video playback time in seconds */
+  currentTime?: number
+  /** Whether the current lesson is a PDF (hides Add Bookmark button) */
+  isPdf?: boolean
 }
 
-function LessonBookmarksTab({ courseId, lessonId }: LessonBookmarksTabProps) {
+function LessonBookmarksTab({
+  courseId,
+  lessonId,
+  onSeek,
+  currentTime,
+  isPdf,
+}: LessonBookmarksTabProps) {
   const [bookmarks, setBookmarks] = useState<VideoBookmark[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const loadBookmarks = useCallback(() => {
     let ignore = false
     setIsLoading(true)
 
@@ -263,6 +276,44 @@ function LessonBookmarksTab({ courseId, lessonId }: LessonBookmarksTabProps) {
       ignore = true
     }
   }, [courseId, lessonId])
+
+  useEffect(() => {
+    return loadBookmarks()
+  }, [loadBookmarks])
+
+  const handleAddBookmark = useCallback(async () => {
+    const time = currentTime ?? 0
+    const timestamp = Math.floor(time)
+
+    // Optimistic UI: insert in chronological order
+    const optimisticBookmark: VideoBookmark = {
+      id: crypto.randomUUID(),
+      courseId,
+      lessonId,
+      timestamp,
+      label: formatBookmarkTimestamp(timestamp),
+      createdAt: new Date().toISOString(),
+    }
+
+    setBookmarks(prev => {
+      const next = [...prev, optimisticBookmark]
+      next.sort((a, b) => a.timestamp - b.timestamp)
+      return next
+    })
+
+    toast.success(`Bookmarked at ${formatBookmarkTimestamp(timestamp)}`)
+
+    try {
+      await addBookmark(courseId, lessonId, time)
+      // Refresh from DB to get the real ID
+      const fresh = await getLessonBookmarks(courseId, lessonId)
+      setBookmarks(fresh)
+    } catch {
+      // Revert optimistic update
+      setBookmarks(prev => prev.filter(b => b.id !== optimisticBookmark.id))
+      toast.error('Failed to add bookmark')
+    }
+  }, [courseId, lessonId, currentTime])
 
   const handleDelete = async (bookmark: VideoBookmark) => {
     const bookmarkBackup = { ...bookmark }
@@ -311,23 +362,58 @@ function LessonBookmarksTab({ courseId, lessonId }: LessonBookmarksTabProps) {
 
   if (bookmarks.length === 0) {
     return (
-      <EmptyState
-        icon={BookmarkIcon}
-        title="No bookmarks yet"
-        description="Bookmark moments in this video to find them later"
-      />
+      <div className="flex flex-col items-center">
+        {!isPdf && (
+          <div className="w-full p-2 pb-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={handleAddBookmark}
+              aria-label="Add bookmark at current time"
+              data-testid="add-bookmark-button"
+            >
+              <BookmarkPlus className="size-4 mr-2" aria-hidden="true" />
+              Add Bookmark
+            </Button>
+          </div>
+        )}
+        <EmptyState
+          icon={BookmarkIcon}
+          title="No bookmarks yet"
+          description="Bookmark moments in this video to find them later"
+        />
+      </div>
     )
   }
 
   return (
     <div className="space-y-2 p-2">
+      {!isPdf && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={handleAddBookmark}
+          aria-label="Add bookmark at current time"
+          data-testid="add-bookmark-button"
+        >
+          <BookmarkPlus className="size-4 mr-2" aria-hidden="true" />
+          Add Bookmark
+        </Button>
+      )}
       {bookmarks.map(bookmark => (
         <div
           key={bookmark.id}
           data-testid="bookmark-entry"
-          className="group flex items-center gap-3 p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+          className="group flex items-center gap-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
         >
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+          <button
+            type="button"
+            className="flex items-center gap-3 flex-1 min-w-0 p-3 cursor-pointer hover:text-brand transition-colors text-left"
+            onClick={() => onSeek?.(bookmark.timestamp)}
+            aria-label={`Seek to ${formatBookmarkTimestamp(bookmark.timestamp)}`}
+          >
             <div className="shrink-0 w-14 h-9 rounded-lg bg-warning/10 flex items-center justify-center">
               <span className="text-xs font-mono font-semibold text-warning">
                 {formatBookmarkTimestamp(bookmark.timestamp)}
@@ -344,12 +430,12 @@ function LessonBookmarksTab({ courseId, lessonId }: LessonBookmarksTabProps) {
                 })}
               </p>
             </div>
-          </div>
+          </button>
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="size-11 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity shrink-0"
+            className="size-11 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity shrink-0 mr-1"
             onClick={() => handleDelete(bookmark)}
             aria-label="Delete bookmark"
           >
@@ -535,6 +621,8 @@ interface PlayerSidePanelProps {
   onSeek?: (time: number) => void
   /** Programmatically switch to a tab (e.g. "notes" when user presses N) */
   focusTab?: string | null
+  /** Whether the current lesson is a PDF (hides Add Bookmark button) */
+  isPdf?: boolean
 }
 
 export function PlayerSidePanel({
@@ -544,6 +632,7 @@ export function PlayerSidePanel({
   currentTime: externalCurrentTime,
   onSeek: externalOnSeek,
   focusTab,
+  isPdf,
 }: PlayerSidePanelProps) {
   const capabilities = adapter.getCapabilities()
   // Use 768px breakpoint per spec (not project's default 639px mobile breakpoint)
@@ -768,7 +857,13 @@ export function PlayerSidePanel({
       </TabsContent>
 
       <TabsContent value="bookmarks" className="flex-1 overflow-auto">
-        <LessonBookmarksTab courseId={courseId} lessonId={lessonId} />
+        <LessonBookmarksTab
+          courseId={courseId}
+          lessonId={lessonId}
+          onSeek={externalOnSeek}
+          currentTime={externalCurrentTime}
+          isPdf={isPdf}
+        />
       </TabsContent>
     </Tabs>
   )

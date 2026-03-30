@@ -15,16 +15,14 @@ vi.mock('@/db/schema', () => ({
 }))
 
 vi.mock('../noteExport', () => ({
-  sanitizeFilename: vi
-    .fn()
-    .mockImplementation((s: string) =>
-      s
-        .replace(/[/\\:*?"<>|]/g, '-')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-        .trim()
-    ),
+  sanitizeFilename: vi.fn().mockImplementation((s: string) =>
+    s
+      .replace(/[/\\:*?"<>|]/g, '-')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .trim()
+  ),
 }))
 
 const { deriveFlashcardTags, exportFlashcardsAsMarkdown } = await import('../flashcardExport')
@@ -162,9 +160,7 @@ describe('flashcardExport', () => {
       const fc = makeFlashcard({ noteId: 'note-1' })
       mockFlashcardsToArray.mockResolvedValue([fc])
       mockCoursesToArray.mockResolvedValue([{ id: 'course-1', name: 'React Mastery' }])
-      mockNotesToArray.mockResolvedValue([
-        { id: 'note-1', tags: ['react', 'hooks'] } as Note,
-      ])
+      mockNotesToArray.mockResolvedValue([{ id: 'note-1', tags: ['react', 'hooks'] } as Note])
 
       const result = await exportFlashcardsAsMarkdown()
       expect(result[0].content).toContain('tags: ["react-mastery", "react", "hooks"]')
@@ -227,9 +223,7 @@ describe('flashcardExport', () => {
       const fc = makeFlashcard({ noteId: 'note-1' })
       mockFlashcardsToArray.mockResolvedValue([fc])
       mockCoursesToArray.mockResolvedValue([{ id: 'course-1', name: 'React "Hooks"' }])
-      mockNotesToArray.mockResolvedValue([
-        { id: 'note-1', tags: ['say "hello"'] } as Note,
-      ])
+      mockNotesToArray.mockResolvedValue([{ id: 'note-1', tags: ['say "hello"'] } as Note])
 
       const result = await exportFlashcardsAsMarkdown()
       const content = result[0].content

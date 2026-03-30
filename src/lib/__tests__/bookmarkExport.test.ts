@@ -15,16 +15,14 @@ vi.mock('@/db/schema', () => ({
 }))
 
 vi.mock('../noteExport', () => ({
-  sanitizeFilename: vi
-    .fn()
-    .mockImplementation((s: string) =>
-      s
-        .replace(/[/\\:*?"<>|]/g, '-')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-        .trim()
-    ),
+  sanitizeFilename: vi.fn().mockImplementation((s: string) =>
+    s
+      .replace(/[/\\:*?"<>|]/g, '-')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .trim()
+  ),
 }))
 
 const { formatTimestamp, exportBookmarksAsMarkdown } = await import('../bookmarkExport')
@@ -146,9 +144,7 @@ describe('bookmarkExport', () => {
     })
 
     it('formats timestamps correctly in bookmark entries (AC6)', async () => {
-      const bookmarks = [
-        makeBookmark({ timestamp: 3725, label: 'Long timestamp' }),
-      ]
+      const bookmarks = [makeBookmark({ timestamp: 3725, label: 'Long timestamp' })]
 
       mockBookmarksToArray.mockResolvedValue(bookmarks)
       mockCoursesToArray.mockResolvedValue([{ id: 'course-1', name: 'Course' }])

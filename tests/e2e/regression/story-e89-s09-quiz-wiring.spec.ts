@@ -77,7 +77,13 @@ const previousAttempt = makeAttempt({
   completedAt: FIXED_DATE,
   startedAt: FIXED_DATE,
   answers: [
-    { questionId: q1.id, userAnswer: 'Dual adapter', isCorrect: true, pointsEarned: 1, pointsPossible: 1 },
+    {
+      questionId: q1.id,
+      userAnswer: 'Dual adapter',
+      isCorrect: true,
+      pointsEarned: 1,
+      pointsPossible: 1,
+    },
   ],
 })
 
@@ -110,9 +116,7 @@ test.describe('E89-S09: Quiz Wiring', () => {
     await clearIndexedDBStore(page, 'ElearningDB', 'quizAttempts')
   })
 
-  test('AC1: Quiz accessible from unified lesson player via Take Quiz button', async ({
-    page,
-  }) => {
+  test('AC1: Quiz accessible from unified lesson player via Take Quiz button', async ({ page }) => {
     // Navigate to unified lesson player
     await navigateAndWait(page, `/courses/${COURSE_ID}/lessons/${LESSON_ID}`)
     await page

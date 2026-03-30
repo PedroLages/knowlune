@@ -65,9 +65,7 @@ async function seedAndNavigate(page: Page, lessonId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 test.describe('E91-S03: Theater Mode', () => {
-  test('AC1+AC2: toggle theater mode expands video and collapses side panel', async ({
-    page,
-  }) => {
+  test('AC1+AC2: toggle theater mode expands video and collapses side panel', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await seedAndNavigate(page, 'e91-vid-01')
 
