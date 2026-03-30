@@ -303,6 +303,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
           courseId={courseId}
           lessonId={lessonId}
           captions={userCaptions ? [userCaptions] : undefined}
+          chapters={video.chapters}
           onLoadCaptions={handleLoadCaptions}
           onEnded={onEnded}
           onTimeUpdate={onTimeUpdate}

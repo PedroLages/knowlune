@@ -29,6 +29,7 @@ import { useIsDesktop } from '@/app/hooks/useMediaQuery'
 import { PlayerHeader } from '@/app/components/course/PlayerHeader'
 import { CourseBreadcrumb } from '@/app/components/course/CourseBreadcrumb'
 import { LessonNavigation } from '@/app/components/course/LessonNavigation'
+import { LessonHeaderCard } from '@/app/components/course/LessonHeaderCard'
 import { AutoAdvanceCountdown } from '@/app/components/figma/AutoAdvanceCountdown'
 import { CompletionModal } from '@/app/components/celebrations/CompletionModal'
 import type { CelebrationType } from '@/app/components/celebrations/CompletionModal'
@@ -199,6 +200,8 @@ export function UnifiedLessonPlayer() {
   // Resolve lesson metadata (title + type) from adapter's lesson list
   const [lessonTitle, setLessonTitle] = useState('Lesson')
   const [lessonType, setLessonType] = useState<LessonItem['type'] | null>(null)
+  const [lessonDescription, setLessonDescription] = useState<string | undefined>(undefined)
+  const [lessonTags, setLessonTags] = useState<string[] | undefined>(undefined)
   useEffect(() => {
     if (!adapter || !lessonId) return
     let ignore = false
@@ -209,6 +212,13 @@ export function UnifiedLessonPlayer() {
         const match = lessons.find(l => l.id === lessonId)
         setLessonTitle(match?.title ?? 'Lesson')
         setLessonType(match?.type ?? null)
+        // Extract description from sourceMetadata (YouTube videos have it)
+        const meta = match?.sourceMetadata
+        setLessonDescription(typeof meta?.description === 'string' ? meta.description : undefined)
+        // Extract tags if present in sourceMetadata
+        setLessonTags(
+          Array.isArray(meta?.tags) ? (meta.tags as string[]) : undefined
+        )
       })
       .catch(err => {
         // silent-catch-ok — leave defaults (title='Lesson', type=null); UI degrades gracefully
@@ -361,6 +371,18 @@ export function UnifiedLessonPlayer() {
   const capabilities = adapter.getCapabilities()
   const isYouTube = source === 'youtube'
 
+  // Derive resource type label for LessonHeaderCard (E91-S05)
+  const resourceTypes: string[] = []
+  if (lessonTypeResolved) {
+    if (isPdf) {
+      resourceTypes.push('PDF')
+    } else if (isYouTube) {
+      resourceTypes.push('YouTube')
+    } else {
+      resourceTypes.push('Video')
+    }
+  }
+
   // While lessonType is still resolving, show a skeleton instead of
   // defaulting to video content (prevents PDF lessons from flashing video UI).
   const mainContent = !lessonTypeResolved ? (
@@ -472,6 +494,14 @@ export function UnifiedLessonPlayer() {
             <ResizablePanel defaultSize={isTheater ? 100 : 75} minSize={50}>
               <div className="h-full overflow-auto p-4">
                 {mainContent}
+                {lessonTypeResolved && (
+                  <LessonHeaderCard
+                    title={lessonTitle}
+                    description={lessonDescription}
+                    resourceTypes={resourceTypes}
+                    tags={lessonTags}
+                  />
+                )}
                 {quizButton}
                 {/* Auto-advance countdown after video ends */}
                 {showAutoAdvance && nextLesson && (
@@ -504,6 +534,14 @@ export function UnifiedLessonPlayer() {
           <div className="h-full">
             <div className="h-full overflow-auto p-4">
               {mainContent}
+              {lessonTypeResolved && (
+                <LessonHeaderCard
+                  title={lessonTitle}
+                  description={lessonDescription}
+                  resourceTypes={resourceTypes}
+                  tags={lessonTags}
+                />
+              )}
               {quizButton}
               {/* Auto-advance countdown after video ends */}
               {showAutoAdvance && nextLesson && (

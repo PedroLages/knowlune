@@ -89,6 +89,8 @@ export class LocalCourseAdapter implements CourseAdapter {
         fileSize: v.fileSize,
         width: v.width,
         height: v.height,
+        description: v.description,
+        chapters: v.chapters,
       },
     }))
 
