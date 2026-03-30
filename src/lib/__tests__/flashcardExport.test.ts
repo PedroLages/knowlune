@@ -186,6 +186,28 @@ describe('flashcardExport', () => {
       expect(content).not.toContain('undefined')
     })
 
+    it('strips HTML tags from front and back content (C1 hotfix)', async () => {
+      const fc = makeFlashcard({
+        front: '<p>What is <strong>React</strong>?</p>',
+        back: '<p>A <em>JavaScript</em> library for building <a href="#">user interfaces</a>.</p>',
+      })
+      mockFlashcardsToArray.mockResolvedValue([fc])
+      mockCoursesToArray.mockResolvedValue([{ id: 'course-1', name: 'React' }])
+      mockNotesToArray.mockResolvedValue([])
+
+      const result = await exportFlashcardsAsMarkdown()
+      const content = result[0].content
+
+      // Body should have plain text, no HTML tags
+      expect(content).toContain('# Q: What is React?')
+      expect(content).toContain('A JavaScript library for building user interfaces.')
+      expect(content).not.toContain('<p>')
+      expect(content).not.toContain('</p>')
+      expect(content).not.toContain('<strong>')
+      expect(content).not.toContain('<em>')
+      expect(content).not.toContain('<a href=')
+    })
+
     it('handles filename collisions with counter suffix', async () => {
       const fc1 = makeFlashcard({ id: 'fc-1', front: 'What is React?' })
       const fc2 = makeFlashcard({ id: 'fc-2', front: 'What is React?' })

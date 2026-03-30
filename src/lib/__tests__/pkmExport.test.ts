@@ -145,6 +145,83 @@ describe('pkmExport', () => {
     expect(result).toHaveLength(3)
   })
 
+  describe('partial export resilience (C4 hotfix)', () => {
+    it('continues exporting when notes sub-exporter fails', async () => {
+      mockExportNotesAsMarkdown.mockRejectedValue(new Error('Notes DB corrupted'))
+      mockExportFlashcardsAsMarkdown.mockResolvedValue([
+        { name: 'flashcards/C/fc.md', content: '# FC' },
+      ])
+      mockExportBookmarksAsMarkdown.mockResolvedValue([
+        { name: 'bookmarks/C/bm.md', content: '# BM' },
+      ])
+
+      const result = await exportPkmBundle()
+
+      // Should still have flashcard and bookmark files + README
+      expect(result.find(f => f.name === 'flashcards/C/fc.md')).toBeDefined()
+      expect(result.find(f => f.name === 'bookmarks/C/bm.md')).toBeDefined()
+      expect(result.find(f => f.name === 'README.md')).toBeDefined()
+      // No note files
+      expect(result.find(f => f.name.startsWith('notes/'))).toBeUndefined()
+    })
+
+    it('continues exporting when flashcards sub-exporter fails', async () => {
+      mockExportNotesAsMarkdown.mockResolvedValue([
+        { name: 'note.md', content: '# Note' },
+      ])
+      mockExportFlashcardsAsMarkdown.mockRejectedValue(new Error('Flashcard error'))
+      mockExportBookmarksAsMarkdown.mockResolvedValue([
+        { name: 'bookmarks/C/bm.md', content: '# BM' },
+      ])
+
+      const result = await exportPkmBundle()
+
+      expect(result.find(f => f.name === 'notes/note.md')).toBeDefined()
+      expect(result.find(f => f.name === 'bookmarks/C/bm.md')).toBeDefined()
+      expect(result.find(f => f.name.startsWith('flashcards/'))).toBeUndefined()
+    })
+
+    it('continues exporting when bookmarks sub-exporter fails', async () => {
+      mockExportNotesAsMarkdown.mockResolvedValue([
+        { name: 'note.md', content: '# Note' },
+      ])
+      mockExportFlashcardsAsMarkdown.mockResolvedValue([
+        { name: 'flashcards/C/fc.md', content: '# FC' },
+      ])
+      mockExportBookmarksAsMarkdown.mockRejectedValue(new Error('Bookmark error'))
+
+      const result = await exportPkmBundle()
+
+      expect(result.find(f => f.name === 'notes/note.md')).toBeDefined()
+      expect(result.find(f => f.name === 'flashcards/C/fc.md')).toBeDefined()
+      expect(result.find(f => f.name.startsWith('bookmarks/'))).toBeUndefined()
+    })
+
+    it('includes error warnings in README when sub-exporter fails', async () => {
+      mockExportNotesAsMarkdown.mockRejectedValue(new Error('Notes DB corrupted'))
+      mockExportFlashcardsAsMarkdown.mockResolvedValue([
+        { name: 'flashcards/C/fc.md', content: '# FC' },
+      ])
+      mockExportBookmarksAsMarkdown.mockResolvedValue([])
+
+      const result = await exportPkmBundle()
+      const readme = result.find(f => f.name === 'README.md')
+
+      expect(readme).toBeDefined()
+      expect(readme!.content).toContain('Export Warnings')
+      expect(readme!.content).toContain('Notes export failed')
+    })
+
+    it('returns empty array when all sub-exporters fail', async () => {
+      mockExportNotesAsMarkdown.mockRejectedValue(new Error('fail'))
+      mockExportFlashcardsAsMarkdown.mockRejectedValue(new Error('fail'))
+      mockExportBookmarksAsMarkdown.mockRejectedValue(new Error('fail'))
+
+      const result = await exportPkmBundle()
+      expect(result).toEqual([])
+    })
+  })
+
   describe('progress callback', () => {
     it('fires progress callback with weighted values', async () => {
       mockExportNotesAsMarkdown.mockResolvedValue([])

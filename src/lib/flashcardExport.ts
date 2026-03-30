@@ -14,6 +14,14 @@ import { sanitizeFilename } from './noteExport'
 import { yieldToUI } from './uiUtils'
 
 /**
+ * Strips HTML tags from a string, returning plain text.
+ * Used to convert Tiptap HTML content to readable Markdown text.
+ */
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '').trim()
+}
+
+/**
  * Converts a course name to kebab-case tag.
  * e.g., "React Mastery" → "react-mastery"
  */
@@ -152,12 +160,14 @@ export async function exportFlashcardsAsMarkdown(
       const tags = deriveFlashcardTags(fc, courseMap, noteTagMap)
       const frontmatter = generateFlashcardFrontmatter(fc, tags, courseName)
 
-      // Build Q/A body
-      const body = `# Q: ${fc.front}\n\n${fc.back}\n`
+      // Build Q/A body — strip HTML tags from Tiptap content
+      const plainFront = stripHtml(fc.front)
+      const plainBack = stripHtml(fc.back)
+      const body = `# Q: ${plainFront}\n\n${plainBack}\n`
       const fullContent = frontmatter + body
 
       // Generate unique filename
-      let baseName = sanitizeFilename(fc.front.slice(0, 50))
+      let baseName = sanitizeFilename(plainFront.slice(0, 50))
       if (!baseName) baseName = `flashcard-${fc.id.slice(0, 8)}`
 
       const folderPath = `flashcards/${sanitizedCourseName}`
