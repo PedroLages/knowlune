@@ -101,4 +101,5 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **AC2/AC3/AC6 E2E coverage gap**: Seeded ImportedVideo records lack a `fileHandle` (File System Access API cannot be faked in Playwright), so `<video>` never mounts and no progress bar renders. Chapter marker visibility and click-to-seek behavior cannot be asserted in E2E tests. These ACs are verified manually and via unit tests on the ChapterMarkers component. This is documented as a comment in `tests/e2e/story-e91-s05.spec.ts`.
+- **`resourceTypes` memo**: The derived `resourceTypes` array was rebuilt every render; wrapped in `useMemo` keyed on `[lessonTypeResolved, isPdf, isYouTube]`.

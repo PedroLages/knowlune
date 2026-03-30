@@ -18,7 +18,7 @@
  * @see E89-S05, E89-S06, E89-S07, E89-S08
  */
 
-import { lazy, Suspense, useState, useEffect, useCallback, useRef, type RefObject } from 'react'
+import { lazy, Suspense, useState, useEffect, useCallback, useMemo, useRef, type RefObject } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -372,16 +372,12 @@ export function UnifiedLessonPlayer() {
   const isYouTube = source === 'youtube'
 
   // Derive resource type label for LessonHeaderCard (E91-S05)
-  const resourceTypes: string[] = []
-  if (lessonTypeResolved) {
-    if (isPdf) {
-      resourceTypes.push('PDF')
-    } else if (isYouTube) {
-      resourceTypes.push('YouTube')
-    } else {
-      resourceTypes.push('Video')
-    }
-  }
+  const resourceTypes = useMemo<string[]>(() => {
+    if (!lessonTypeResolved) return []
+    if (isPdf) return ['PDF']
+    if (isYouTube) return ['YouTube']
+    return ['Video']
+  }, [lessonTypeResolved, isPdf, isYouTube])
 
   // While lessonType is still resolving, show a skeleton instead of
   // defaulting to video content (prevents PDF lessons from flashing video UI).

@@ -41,7 +41,7 @@ export function LessonHeaderCard({
       {resourceTypes.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1" data-testid="resource-type-badges">
           {resourceTypes.map(type => (
-            <Badge key={type} variant="secondary" className="mr-1">
+            <Badge key={type} variant="secondary">
               {type}
             </Badge>
           ))}
@@ -51,7 +51,7 @@ export function LessonHeaderCard({
       {tags && tags.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1" data-testid="lesson-tags">
           {tags.map(tag => (
-            <Badge key={tag} variant="outline" className="mr-1 text-xs">
+            <Badge key={tag} variant="outline" className="text-xs">
               {tag}
             </Badge>
           ))}

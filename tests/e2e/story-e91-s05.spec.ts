@@ -12,6 +12,14 @@
  * renders. Tests verify the LessonHeaderCard rendering which does not depend
  * on video playback. Chapter marker tests verify the component exists when
  * chapter data is provided via YouTube sourceMetadata.
+ *
+ * COVERAGE GAP — AC2, AC3, AC6 cannot be E2E tested:
+ * Seeded videos have no fileHandle (File System Access API cannot be faked in
+ * Playwright), so the <video> element never mounts and no progress bar renders.
+ * Without a progress bar, chapter marker visibility (AC2/AC3) and click-to-seek
+ * behavior (AC6) cannot be asserted. These ACs are verified manually and via
+ * unit tests on the ChapterMarkers component. YouTube embeds (AC3) similarly
+ * lack a controllable progress bar in the iframe context.
  */
 import { test, expect } from '../support/fixtures'
 import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
