@@ -569,7 +569,7 @@ development_status:
   # Source: epics.md
   # ──────────────────────────────────────────────────
   epic-53: backlog
-  53-1-flashcard-bookmark-markdown-export: backlog
+  53-1-flashcard-bookmark-markdown-export: done
   53-2-anki-apkg-export: backlog
   53-3-pkm-batch-export-settings-ui: backlog
 
