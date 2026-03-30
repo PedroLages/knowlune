@@ -1,9 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { NextCourseSuggestion } from './NextCourseSuggestion'
-import type { Course } from '@/data/types'
-import { useCourseStore } from '@/stores/useCourseStore'
+import type { ImportedCourse } from '@/data/types'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -18,55 +17,38 @@ vi.mock('react-router', async () => {
   }
 })
 
-const mockComputeNextCourseSuggestion = vi.fn()
-vi.mock('@/lib/suggestions', () => ({
-  computeNextCourseSuggestion: (...args: unknown[]) => mockComputeNextCourseSuggestion(...args),
-}))
-
-vi.mock('@/lib/progress', () => ({
-  getAllProgress: () => ({}),
-}))
-
-const mockIsDismissed = vi.fn().mockReturnValue(false)
-const mockDismiss = vi.fn()
-vi.mock('@/stores/useSuggestionStore', () => ({
-  useSuggestionStore: () => ({
-    isDismissed: mockIsDismissed,
-    dismiss: mockDismiss,
-  }),
-}))
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeCourse(overrides: Partial<Course> = {}): Course {
+function makeCourse(overrides: Partial<ImportedCourse> = {}): ImportedCourse {
   return {
     id: 'course-2',
-    title: 'Advanced Influence',
-    shortTitle: 'Advanced Influence',
-    description: 'Learn advanced influence techniques.',
-    category: 'influence-authority' as const,
-    difficulty: 'intermediate' as const,
-    totalLessons: 10,
-    totalVideos: 8,
-    totalPDFs: 2,
-    estimatedHours: 20,
+    name: 'Advanced Influence',
+    importedAt: '2025-06-01T00:00:00.000Z',
+    category: 'influence-authority',
     tags: ['influence', 'authority'],
-    modules: [],
-    isSequential: false,
-    basePath: 'advanced-influence',
-    authorId: 'author-1',
+    status: 'active',
+    videoCount: 8,
+    pdfCount: 2,
+    directoryHandle: null,
     ...overrides,
   }
 }
 
-function renderComponent(completedCourseId = 'course-1', onDismiss?: () => void) {
-  return render(
+const defaultProps = () => ({
+  suggestedCourse: makeCourse(),
+  sharedTags: ['influence', 'authority'],
+  onDismiss: vi.fn(),
+})
+
+function renderComponent(propsOverrides: Partial<Parameters<typeof NextCourseSuggestion>[0]> = {}) {
+  const props = { ...defaultProps(), ...propsOverrides }
+  return { ...render(
     <MemoryRouter>
-      <NextCourseSuggestion completedCourseId={completedCourseId} onDismiss={onDismiss} />
+      <NextCourseSuggestion {...props} />
     </MemoryRouter>
-  )
+  ), props }
 }
 
 // ---------------------------------------------------------------------------
@@ -75,89 +57,67 @@ function renderComponent(completedCourseId = 'course-1', onDismiss?: () => void)
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockIsDismissed.mockReturnValue(false)
-  useCourseStore.setState({ courses: [], isLoaded: true })
-})
-
-afterEach(() => {
-  useCourseStore.setState({ courses: [], isLoaded: false })
 })
 
 describe('NextCourseSuggestion', () => {
-  it('renders suggestion card with course title when algorithm returns a candidate', () => {
-    const course = makeCourse()
-    mockComputeNextCourseSuggestion.mockReturnValue({ course, score: 0.8, tagOverlapCount: 2 })
-
+  it('renders suggestion card with course name', () => {
     renderComponent()
 
     expect(screen.getByText('Advanced Influence')).toBeDefined()
-    expect(screen.getByText('Start Course')).toBeDefined()
+    expect(screen.getByText('Start Learning')).toBeDefined()
   })
 
-  it('navigates to the suggested course when "Start Course" is clicked', () => {
-    const course = makeCourse({ id: 'adv-influence' })
-    mockComputeNextCourseSuggestion.mockReturnValue({ course, score: 0.8, tagOverlapCount: 1 })
+  it('navigates to the suggested course when "Start Learning" is clicked', () => {
+    const onDismiss = vi.fn()
+    renderComponent({
+      suggestedCourse: makeCourse({ id: 'adv-influence' }),
+      onDismiss,
+    })
 
-    renderComponent()
-
-    fireEvent.click(screen.getByText('Start Course'))
+    fireEvent.click(screen.getByText('Start Learning'))
 
     expect(mockNavigate).toHaveBeenCalledWith('/courses/adv-influence')
-  })
-
-  it('calls dismiss and onDismiss when dismiss button is clicked', () => {
-    const course = makeCourse()
-    mockComputeNextCourseSuggestion.mockReturnValue({ course, score: 0.8, tagOverlapCount: 2 })
-    const onDismiss = vi.fn()
-
-    renderComponent('course-1', onDismiss)
-
-    const dismissBtn = screen.getByLabelText('Dismiss course suggestion')
-    fireEvent.click(dismissBtn)
-
-    expect(mockDismiss).toHaveBeenCalledWith('course-1')
     expect(onDismiss).toHaveBeenCalled()
   })
 
-  it('renders congratulatory message when algorithm returns null', () => {
-    mockComputeNextCourseSuggestion.mockReturnValue(null)
+  it('calls onDismiss when dismiss button is clicked', () => {
+    const onDismiss = vi.fn()
+    renderComponent({ onDismiss })
 
-    renderComponent()
+    const dismissBtn = screen.getByLabelText('Dismiss suggestion')
+    fireEvent.click(dismissBtn)
 
-    expect(screen.getByTestId('next-course-congratulations')).toBeDefined()
-    expect(screen.getByText("You've completed all active courses!")).toBeDefined()
-  })
-
-  it('renders nothing when course is already dismissed', () => {
-    mockIsDismissed.mockReturnValue(true)
-    mockComputeNextCourseSuggestion.mockReturnValue(makeCourse())
-
-    const { container } = renderComponent()
-
-    expect(container.firstChild).toBeNull()
+    expect(onDismiss).toHaveBeenCalled()
   })
 
   it('shows shared tags on the suggestion card', () => {
-    const course = makeCourse({ tags: ['influence', 'authority', 'body language'] })
-    mockComputeNextCourseSuggestion.mockReturnValue({ course, score: 0.8, tagOverlapCount: 2 })
+    renderComponent({ sharedTags: ['influence', 'authority'] })
 
-    renderComponent()
-
-    // Tags shown — they come from course.tags filtered to overlap with completed course
-    // Since allCourses is mocked as [] the completed course has no tags, sharedTags = []
-    // This test verifies no crash when sharedTags is empty
-    expect(screen.getByTestId('next-course-suggestion')).toBeDefined()
+    expect(screen.getByText('influence')).toBeDefined()
+    expect(screen.getByText('authority')).toBeDefined()
   })
 
-  it('dismisses and calls onDismiss when congratulations Close button clicked', () => {
-    mockComputeNextCourseSuggestion.mockReturnValue(null)
-    const onDismiss = vi.fn()
+  it('renders with no tags when sharedTags is empty', () => {
+    renderComponent({ sharedTags: [] })
 
-    renderComponent('course-1', onDismiss)
+    expect(screen.getByTestId('next-course-suggestion')).toBeDefined()
+    expect(screen.queryByLabelText('Shared topics')).toBeNull()
+  })
 
-    fireEvent.click(screen.getByText('Close'))
+  it('renders thumbnail when thumbnailUrl is provided', () => {
+    renderComponent({ thumbnailUrl: 'https://example.com/thumb.jpg' })
 
-    expect(mockDismiss).toHaveBeenCalledWith('course-1')
-    expect(onDismiss).toHaveBeenCalled()
+    const card = screen.getByTestId('next-course-suggestion')
+    const img = card.querySelector('img')
+    expect(img).not.toBeNull()
+    expect(img!.getAttribute('src')).toBe('https://example.com/thumb.jpg')
+  })
+
+  it('renders fallback icon when thumbnailUrl is not provided', () => {
+    renderComponent({ thumbnailUrl: undefined })
+
+    // No <img> should exist — fallback BookOpen icon is shown
+    const card = screen.getByTestId('next-course-suggestion')
+    expect(card.querySelector('img')).toBeNull()
   })
 })

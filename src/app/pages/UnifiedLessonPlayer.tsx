@@ -50,7 +50,7 @@ import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/app/components/ui/resizable'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
-import type { ImperativePanelHandle } from 'react-resizable-panels'
+import type { PanelImperativeHandle } from 'react-resizable-panels'
 import { PanelRight, ClipboardCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { useHasQuiz } from '@/hooks/useHasQuiz'
@@ -77,7 +77,7 @@ export function UnifiedLessonPlayer() {
 
   const isDesktop = useIsDesktop()
   const { isTheater, toggleTheater } = useTheaterMode()
-  const sidePanelRef = useRef<ImperativePanelHandle>(null)
+  const sidePanelRef = useRef<PanelImperativeHandle>(null)
   const videoPlayerRef = useRef<VideoPlayerHandle>(null)
 
   // Lesson navigation: prev/next lesson via adapter
@@ -341,6 +341,16 @@ export function UnifiedLessonPlayer() {
     }
   }, [nextLesson, courseId, navigate])
 
+  // Next course suggestion (E91-S08) — computed via useMemo instead of IIFE in JSX
+  const courseSuggestion = useMemo(() => {
+    if (!showCourseSuggestion || !courseId) return null
+    const suggestion = suggestNextCourse(courseId, importedCourses)
+    if (!suggestion) return null
+    // Thumbnail: prefer YouTube thumbnail, fall back to null (BookOpen icon shown)
+    const thumbnailUrl = suggestion.course.youtubeThumbnailUrl ?? null
+    return { ...suggestion, thumbnailUrl }
+  }, [showCourseSuggestion, courseId, importedCourses])
+
   // Loading state
   if (loading) {
     return (
@@ -528,7 +538,7 @@ export function UnifiedLessonPlayer() {
             </ResizablePanel>
             {!isTheater && <ResizableHandle withHandle />}
             <ResizablePanel
-              ref={sidePanelRef as RefObject<ImperativePanelHandle>}
+              ref={sidePanelRef as RefObject<PanelImperativeHandle>}
               defaultSize={isTheater ? 0 : 25}
               minSize={0}
               maxSize={40}
@@ -611,25 +621,21 @@ export function UnifiedLessonPlayer() {
       )}
 
       {/* Next course suggestion card (E91-S08) */}
-      {showCourseSuggestion && courseId && (() => {
-        const suggestion = suggestNextCourse(courseId, importedCourses)
-        if (!suggestion) return null
-        return (
-          <div className="mt-4">
-            <NextCourseSuggestion
-              suggestedCourse={suggestion.course}
-              sharedTags={suggestion.sharedTags}
-              thumbnailUrl={suggestion.course.youtubeThumbnailUrl ?? null}
-              onDismiss={() => setShowCourseSuggestion(false)}
-            />
-          </div>
-        )
-      })()}
+      {courseSuggestion && (
+        <div className="mt-4">
+          <NextCourseSuggestion
+            suggestedCourse={courseSuggestion.course}
+            sharedTags={courseSuggestion.sharedTags}
+            thumbnailUrl={courseSuggestion.thumbnailUrl}
+            onDismiss={() => setShowCourseSuggestion(false)}
+          />
+        </div>
+      )}
 
       {/* Completion celebration modal (lesson or course level) */}
       <CompletionModal
         open={celebrationOpen}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           setCelebrationOpen(open)
           // When course-level celebration closes, show next course suggestion (AC1)
           if (!open && celebrationType === 'course') {
