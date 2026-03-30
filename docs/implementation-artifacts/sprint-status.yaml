@@ -669,7 +669,7 @@ development_status:
   # Browser push via Service Worker + Supabase Edge Functions
   # Depends on: E58 (notifications), E60 (smart triggers), E44-E49 (Supabase sync)
   # ──────────────────────────────────────────────────
-  epic-61: in-progress
+  epic-61: backlog  # reset 2026-03-30: story specs created but no code implemented
   61-1-vapid-key-setup-and-service-worker-registration: ready-for-dev
   61-2-service-worker-push-and-click-handlers: ready-for-dev
   61-3-push-subscription-management-and-supabase-persistence: ready-for-dev
@@ -698,7 +698,7 @@ development_status:
   # Enriches AI tutor prompt with quiz/knowledge/flashcard/study data
   # Depends on: E57 (AI Tutoring), soft deps on E52/E56/E59
   # ──────────────────────────────────────────────────
-  epic-63: in-progress
+  epic-63: backlog  # reset 2026-03-30: story specs created but no code implemented
   63-1-learner-profile-data-aggregation-layer: ready-for-dev
   63-2-token-aware-profile-formatter-and-orchestrator: ready-for-dev
   63-3-prompt-builder-slot-5-integration: ready-for-dev
@@ -729,7 +729,7 @@ development_status:
   # Distraction-free reading and focused interaction modes
   # Builds on: E30 (Accessibility), E51 (Display Settings)
   # ──────────────────────────────────────────────────
-  epic-65: in-progress
+  epic-65: backlog  # reset 2026-03-30: story specs created but no code implemented
   65-1-core-reading-mode-chrome-hiding-and-content-layout: ready-for-dev
   65-2-reading-mode-floating-toolbar-and-progress-bar: ready-for-dev
   65-3-focus-mode-overlay-focus-trap-and-exit: ready-for-dev
@@ -772,7 +772,7 @@ development_status:
   # Source: epics-on-device-embeddings.md
   # Download progress UI, cache management, warm-up, provider abstraction
   # ──────────────────────────────────────────────────
-  epic-68: in-progress
+  epic-68: backlog  # reset 2026-03-30: story specs created but no code implemented
   68-1-model-download-progress-ui: ready-for-dev
   68-2-cache-api-validation-and-storage-management: ready-for-dev
   68-3-embedding-worker-warm-up-strategy: ready-for-dev
@@ -799,7 +799,7 @@ development_status:
   # Calendar-aware study time suggestions (3 tiers: ambient/on-demand/planner)
   # Depends on: E50-S01, E59-S02, E58, E52
   # ──────────────────────────────────────────────────
-  epic-70: in-progress
+  epic-70: backlog  # reset 2026-03-30: story specs created but no code implemented
   70-1-scheduling-types-and-free-busy-slot-merger: ready-for-dev
   70-2-multi-signal-scoring-algorithm-and-productivity-heatmap: ready-for-dev
   70-3-scheduling-store-and-suggestion-api: ready-for-dev
@@ -976,7 +976,7 @@ development_status:
   # Source: epics-books-audiobooks-library.md
   # EPUB import, OPFS storage, library grid/list, search/filter, metadata
   # ──────────────────────────────────────────────────
-  epic-83: in-progress
+  epic-83: backlog  # reset 2026-03-30: story specs created but no code implemented
   83-1-opfs-storage-service-and-book-data-model: ready-for-dev
   83-2-epub-import-with-metadata-extraction: ready-for-dev
   83-3-library-grid-and-list-views: ready-for-dev
@@ -1101,8 +1101,11 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 91: Imported Course Parity
   # Source: plan wiggly-sniffing-shamir.md (2026-03-30)
+  # Revised: plan elegant-splashing-creek.md (2026-03-30)
   # Restores rich showcase course features to imported courses
   # CTA button, theater mode, mini-player, chapter markers, frame capture, PDF page tracking
+  # + bookmark seek, next course suggestion, tablet layout, hero page (with total duration)
+  # + lesson search, single-note export, caption customization, clickable timestamps
   # Depends on: E89 (UnifiedCourseDetail + UnifiedLessonPlayer must exist)
   # ──────────────────────────────────────────────────
   epic-91: backlog
@@ -1112,4 +1115,12 @@ development_status:
   91-4-mini-player-picture-in-picture: backlog
   91-5-lesson-header-card-and-chapter-markers: backlog
   91-6-frame-capture-pdf-page-tracking-mobile-notes-overlay: backlog
+  91-7-bookmark-seek-and-add-in-side-panel: backlog
+  91-8-next-course-suggestion: backlog
+  91-9-tablet-layout-enhancement: backlog
+  91-10-course-hero-overview-page: backlog        # now includes total duration (absorbed S11)
+  91-11-lesson-search-in-side-panel: backlog       # NEW — replaced total duration story
+  91-12-single-note-export-and-transcript-download: backlog  # NEW
+  91-13-caption-customization: backlog             # NEW
+  91-14-clickable-note-timestamps: backlog         # NEW
   epic-91-retrospective: optional
