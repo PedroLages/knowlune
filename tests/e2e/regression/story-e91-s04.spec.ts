@@ -14,11 +14,11 @@
  * rendering guard (mini-player absent when no blob URL). AC4 verifies
  * YouTube lessons never render the mini-player container.
  */
-import { test, expect } from '../support/fixtures'
-import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
-import { navigateAndWait } from '../support/helpers/navigation'
-import { seedImportedCourses, seedImportedVideos } from '../support/helpers/seed-helpers'
-import { TIMEOUTS } from '../utils/constants'
+import { test, expect } from '../../support/fixtures'
+import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
+import { navigateAndWait } from '../../support/helpers/navigation'
+import { seedImportedCourses, seedImportedVideos } from '../../support/helpers/seed-helpers'
+import { TIMEOUTS } from '../../utils/constants'
 import type { Page } from '@playwright/test'
 
 // ---------------------------------------------------------------------------
