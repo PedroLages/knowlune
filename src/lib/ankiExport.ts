@@ -114,11 +114,27 @@ function createAnkiTemplate(): string {
       name: 'Default',
       replayq: true,
       lapse: { leechFails: 8, minInt: 1, delays: [10], leechAction: 0, mult: 0 },
-      rev: { perDay: 100, fuzz: 0.05, ivlFct: 1, maxIvl: 36500, ease4: 1.3, bury: true, minSpace: 1 },
+      rev: {
+        perDay: 100,
+        fuzz: 0.05,
+        ivlFct: 1,
+        maxIvl: 36500,
+        ease4: 1.3,
+        bury: true,
+        minSpace: 1,
+      },
       timer: 0,
       maxTaken: 60,
       usn: 0,
-      new: { perDay: 20, delays: [1, 10], separate: true, ints: [1, 4, 7], initialFactor: 2500, bury: true, order: 1 },
+      new: {
+        perDay: 20,
+        delays: [1, 10],
+        separate: true,
+        ints: [1, 4, 7],
+        initialFactor: 2500,
+        bury: true,
+        order: 1,
+      },
       mod: 0,
       id: 1,
       autoplay: true,
@@ -377,16 +393,41 @@ export async function exportFlashcardsAsAnki(
       const mod = Math.floor(now / 1000) + i
 
       // Insert note
-      sqlDb.run(
-        'INSERT OR REPLACE INTO notes VALUES(?,?,?,?,?,?,?,?,?,?,?)',
-        [noteId, noteGuid, topModelId, mod, -1, strTags, fields, front, csum, 0, '']
-      )
+      sqlDb.run('INSERT OR REPLACE INTO notes VALUES(?,?,?,?,?,?,?,?,?,?,?)', [
+        noteId,
+        noteGuid,
+        topModelId,
+        mod,
+        -1,
+        strTags,
+        fields,
+        front,
+        csum,
+        0,
+        '',
+      ])
 
       // Insert card
-      sqlDb.run(
-        'INSERT OR REPLACE INTO cards VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-        [cardId, noteId, topDeckId, 0, mod, -1, 0, 0, 179, 0, 0, 0, 0, 0, 0, 0, 0, '']
-      )
+      sqlDb.run('INSERT OR REPLACE INTO cards VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [
+        cardId,
+        noteId,
+        topDeckId,
+        0,
+        mod,
+        -1,
+        0,
+        0,
+        179,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        '',
+      ])
 
       // Progress + yield
       if (i % 20 === 0) {

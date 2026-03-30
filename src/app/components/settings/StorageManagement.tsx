@@ -91,7 +91,9 @@ function QuotaWarningBanner({
       >
         <AlertOctagon className="size-5 text-destructive flex-shrink-0 mt-0.5" aria-hidden="true" />
         <div className="flex-1">
-          <p className="text-sm font-medium text-destructive-soft-foreground">Storage almost full ({percent}%)</p>
+          <p className="text-sm font-medium text-destructive-soft-foreground">
+            Storage almost full ({percent}%)
+          </p>
           <p className="text-xs text-destructive-soft-foreground mt-1">
             You may not be able to save new data. Free up space to continue learning.
           </p>
@@ -166,7 +168,11 @@ function StorageOverviewBar({ overview }: { overview: StorageOverview }) {
       </p>
 
       {hasData ? (
-        <ChartContainer config={chartConfig} className="h-8 w-full" aria-label="Storage usage breakdown chart">
+        <ChartContainer
+          config={chartConfig}
+          className="h-8 w-full"
+          aria-label="Storage usage breakdown chart"
+        >
           <BarChart
             data={chartData}
             layout="vertical"
@@ -224,9 +230,7 @@ function CategoryBreakdownLegend({ overview }: { overview: StorageOverview }) {
     <div role="list" className="grid grid-cols-2 md:grid-cols-3 gap-3">
       {nonEmpty.map(cat => {
         const percent =
-          overview.totalUsage > 0
-            ? Math.round((cat.sizeBytes / overview.totalUsage) * 100)
-            : 0
+          overview.totalUsage > 0 ? Math.round((cat.sizeBytes / overview.totalUsage) * 100) : 0
 
         return (
           <div

@@ -18,7 +18,16 @@
  * @see E89-S05, E89-S06, E89-S07, E89-S08
  */
 
-import { lazy, Suspense, useState, useEffect, useCallback, useMemo, useRef, type RefObject } from 'react'
+import {
+  lazy,
+  Suspense,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  type RefObject,
+} from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -216,9 +225,7 @@ export function UnifiedLessonPlayer() {
         const meta = match?.sourceMetadata
         setLessonDescription(typeof meta?.description === 'string' ? meta.description : undefined)
         // Extract tags if present in sourceMetadata
-        setLessonTags(
-          Array.isArray(meta?.tags) ? (meta.tags as string[]) : undefined
-        )
+        setLessonTags(Array.isArray(meta?.tags) ? (meta.tags as string[]) : undefined)
       })
       .catch(err => {
         // silent-catch-ok — leave defaults (title='Lesson', type=null); UI degrades gracefully

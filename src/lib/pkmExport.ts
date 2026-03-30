@@ -104,12 +104,7 @@ function generateReadme(
   errors: string[] = []
 ): string {
   const totalCount = noteCount + flashcardCount + bookmarkCount
-  const lines = [
-    '# Knowlune PKM Export',
-    '',
-    `Exported on **${exportDate}**`,
-    '',
-  ]
+  const lines = ['# Knowlune PKM Export', '', `Exported on **${exportDate}**`, '']
 
   if (errors.length > 0) {
     lines.push(
@@ -118,7 +113,7 @@ function generateReadme(
       'Some sections failed to export:',
       '',
       ...errors.map(e => `- ${e}`),
-      '',
+      ''
     )
   }
 
@@ -152,7 +147,7 @@ function generateReadme(
     '- [Obsidian](https://obsidian.md/)',
     '- [Logseq](https://logseq.com/)',
     '- Any Markdown-based PKM tool',
-    '',
+    ''
   )
   return lines.join('\n')
 }

@@ -40,10 +40,7 @@ test.describe('E53-S03: Settings Export Cards', () => {
 
   test('Anki export button has correct aria-label', async ({ page }) => {
     const ankiButton = page.getByTestId('export-anki-button')
-    await expect(ankiButton).toHaveAttribute(
-      'aria-label',
-      'Export flashcards as Anki deck'
-    )
+    await expect(ankiButton).toHaveAttribute('aria-label', 'Export flashcards as Anki deck')
   })
 
   test('PKM export button is initially enabled', async ({ page }) => {

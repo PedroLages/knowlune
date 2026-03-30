@@ -65,7 +65,12 @@ function createMockOverview(overrides: Partial<StorageOverview> = {}): StorageOv
       { category: 'courses', label: 'Courses', sizeBytes: 200_000_000, tableBreakdown: {} },
       { category: 'notes', label: 'Notes', sizeBytes: 100_000_000, tableBreakdown: {} },
       { category: 'flashcards', label: 'Flashcards', sizeBytes: 80_000_000, tableBreakdown: {} },
-      { category: 'embeddings', label: 'AI Search Data', sizeBytes: 50_000_000, tableBreakdown: {} },
+      {
+        category: 'embeddings',
+        label: 'AI Search Data',
+        sizeBytes: 50_000_000,
+        tableBreakdown: {},
+      },
       { category: 'thumbnails', label: 'Thumbnails', sizeBytes: 40_000_000, tableBreakdown: {} },
       { category: 'transcripts', label: 'Transcripts', sizeBytes: 30_000_000, tableBreakdown: {} },
     ],
@@ -196,9 +201,7 @@ describe('StorageManagement', () => {
   // -------------------------------------------------------------------------
 
   it('shows amber warning when usage is between 80-94%', async () => {
-    mockGetStorageOverview.mockResolvedValue(
-      createMockOverview({ usagePercent: 0.85 })
-    )
+    mockGetStorageOverview.mockResolvedValue(createMockOverview({ usagePercent: 0.85 }))
 
     renderComponent()
 
@@ -211,9 +214,7 @@ describe('StorageManagement', () => {
   })
 
   it('dismisses warning and stores in sessionStorage', async () => {
-    mockGetStorageOverview.mockResolvedValue(
-      createMockOverview({ usagePercent: 0.85 })
-    )
+    mockGetStorageOverview.mockResolvedValue(createMockOverview({ usagePercent: 0.85 }))
 
     const user = userEvent.setup()
     renderComponent()
@@ -232,9 +233,7 @@ describe('StorageManagement', () => {
   })
 
   it('does not show warning when usage below 80%', async () => {
-    mockGetStorageOverview.mockResolvedValue(
-      createMockOverview({ usagePercent: 0.5 })
-    )
+    mockGetStorageOverview.mockResolvedValue(createMockOverview({ usagePercent: 0.5 }))
 
     renderComponent()
 
@@ -251,9 +250,7 @@ describe('StorageManagement', () => {
   // -------------------------------------------------------------------------
 
   it('shows red critical banner when usage >= 95%', async () => {
-    mockGetStorageOverview.mockResolvedValue(
-      createMockOverview({ usagePercent: 0.97 })
-    )
+    mockGetStorageOverview.mockResolvedValue(createMockOverview({ usagePercent: 0.97 }))
 
     renderComponent()
 
@@ -266,9 +263,7 @@ describe('StorageManagement', () => {
   })
 
   it('critical banner has aria-live assertive', async () => {
-    mockGetStorageOverview.mockResolvedValue(
-      createMockOverview({ usagePercent: 0.96 })
-    )
+    mockGetStorageOverview.mockResolvedValue(createMockOverview({ usagePercent: 0.96 }))
 
     renderComponent()
 
@@ -281,9 +276,7 @@ describe('StorageManagement', () => {
   })
 
   it('View Storage button scrolls to data management', async () => {
-    mockGetStorageOverview.mockResolvedValue(
-      createMockOverview({ usagePercent: 0.96 })
-    )
+    mockGetStorageOverview.mockResolvedValue(createMockOverview({ usagePercent: 0.96 }))
 
     // Create a target element to scroll to
     const target = document.createElement('div')
@@ -310,7 +303,7 @@ describe('StorageManagement', () => {
 
   it('re-fetches data when refresh button is clicked', async () => {
     const initialOverview = createMockOverview({ usagePercent: 0.25 })
-    const refreshedOverview = createMockOverview({ usagePercent: 0.30 })
+    const refreshedOverview = createMockOverview({ usagePercent: 0.3 })
 
     mockGetStorageOverview
       .mockResolvedValueOnce(initialOverview)
@@ -338,9 +331,7 @@ describe('StorageManagement', () => {
   // -------------------------------------------------------------------------
 
   it('shows fallback message when API is unavailable', async () => {
-    mockGetStorageOverview.mockResolvedValue(
-      createMockOverview({ apiAvailable: false })
-    )
+    mockGetStorageOverview.mockResolvedValue(createMockOverview({ apiAvailable: false }))
 
     renderComponent()
 
@@ -361,9 +352,7 @@ describe('StorageManagement', () => {
     renderComponent()
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/No learning data stored yet/)
-      ).toBeInTheDocument()
+      expect(screen.getByText(/No learning data stored yet/)).toBeInTheDocument()
     })
   })
 
@@ -376,7 +365,10 @@ describe('StorageManagement', () => {
       expect(screen.getByRole('link', { name: /Browse Courses/i })).toBeInTheDocument()
     })
 
-    expect(screen.getByRole('link', { name: /Browse Courses/i })).toHaveAttribute('href', '/courses')
+    expect(screen.getByRole('link', { name: /Browse Courses/i })).toHaveAttribute(
+      'href',
+      '/courses'
+    )
   })
 
   // -------------------------------------------------------------------------
@@ -389,14 +381,10 @@ describe('StorageManagement', () => {
     renderComponent()
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Unable to estimate storage/)
-      ).toBeInTheDocument()
+      expect(screen.getByText(/Unable to estimate storage/)).toBeInTheDocument()
     })
 
     // Refresh button should be available for retry
-    expect(
-      screen.getByRole('button', { name: /refresh storage estimates/i })
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /refresh storage estimates/i })).toBeInTheDocument()
   })
 })

@@ -39,9 +39,7 @@ describe('pkmExport', () => {
   })
 
   it('prefixes note files with notes/ folder', async () => {
-    mockExportNotesAsMarkdown.mockResolvedValue([
-      { name: 'my-note.md', content: '# Note' },
-    ])
+    mockExportNotesAsMarkdown.mockResolvedValue([{ name: 'my-note.md', content: '# Note' }])
 
     const result = await exportPkmBundle()
     const noteFile = result.find(f => f.name === 'notes/my-note.md')
@@ -95,9 +93,7 @@ describe('pkmExport', () => {
   })
 
   it('includes README.md in ZIP when data exists', async () => {
-    mockExportNotesAsMarkdown.mockResolvedValue([
-      { name: 'note.md', content: '# Note' },
-    ])
+    mockExportNotesAsMarkdown.mockResolvedValue([{ name: 'note.md', content: '# Note' }])
 
     const result = await exportPkmBundle()
     const readme = result.find(f => f.name === 'README.md')
@@ -118,9 +114,7 @@ describe('pkmExport', () => {
       { name: 'flashcards/C/fc1.md', content: '' },
       { name: 'flashcards/C/fc2.md', content: '' },
     ])
-    mockExportBookmarksAsMarkdown.mockResolvedValue([
-      { name: 'bookmarks/C/bm.md', content: '' },
-    ])
+    mockExportBookmarksAsMarkdown.mockResolvedValue([{ name: 'bookmarks/C/bm.md', content: '' }])
 
     const result = await exportPkmBundle()
     const readme = result.find(f => f.name === 'README.md')!
@@ -132,12 +126,8 @@ describe('pkmExport', () => {
   })
 
   it('reports total file count correctly (data files + README)', async () => {
-    mockExportNotesAsMarkdown.mockResolvedValue([
-      { name: 'n1.md', content: '' },
-    ])
-    mockExportFlashcardsAsMarkdown.mockResolvedValue([
-      { name: 'flashcards/C/fc.md', content: '' },
-    ])
+    mockExportNotesAsMarkdown.mockResolvedValue([{ name: 'n1.md', content: '' }])
+    mockExportFlashcardsAsMarkdown.mockResolvedValue([{ name: 'flashcards/C/fc.md', content: '' }])
     mockExportBookmarksAsMarkdown.mockResolvedValue([])
 
     const result = await exportPkmBundle()
@@ -166,9 +156,7 @@ describe('pkmExport', () => {
     })
 
     it('continues exporting when flashcards sub-exporter fails', async () => {
-      mockExportNotesAsMarkdown.mockResolvedValue([
-        { name: 'note.md', content: '# Note' },
-      ])
+      mockExportNotesAsMarkdown.mockResolvedValue([{ name: 'note.md', content: '# Note' }])
       mockExportFlashcardsAsMarkdown.mockRejectedValue(new Error('Flashcard error'))
       mockExportBookmarksAsMarkdown.mockResolvedValue([
         { name: 'bookmarks/C/bm.md', content: '# BM' },
@@ -182,9 +170,7 @@ describe('pkmExport', () => {
     })
 
     it('continues exporting when bookmarks sub-exporter fails', async () => {
-      mockExportNotesAsMarkdown.mockResolvedValue([
-        { name: 'note.md', content: '# Note' },
-      ])
+      mockExportNotesAsMarkdown.mockResolvedValue([{ name: 'note.md', content: '# Note' }])
       mockExportFlashcardsAsMarkdown.mockResolvedValue([
         { name: 'flashcards/C/fc.md', content: '# FC' },
       ])
@@ -241,7 +227,7 @@ describe('pkmExport', () => {
     })
 
     it('passes weighted sub-progress to notes exporter (0-40%)', async () => {
-      mockExportNotesAsMarkdown.mockImplementation(async (cb) => {
+      mockExportNotesAsMarkdown.mockImplementation(async cb => {
         // Simulate sub-exporter reporting 50% progress
         cb?.(50, 'Processing notes...')
         return [{ name: 'n.md', content: '' }]
@@ -255,7 +241,7 @@ describe('pkmExport', () => {
     })
 
     it('passes weighted sub-progress to flashcards exporter (40-80%)', async () => {
-      mockExportFlashcardsAsMarkdown.mockImplementation(async (cb) => {
+      mockExportFlashcardsAsMarkdown.mockImplementation(async cb => {
         cb?.(50, 'Processing flashcards...')
         return [{ name: 'flashcards/C/fc.md', content: '' }]
       })
@@ -268,7 +254,7 @@ describe('pkmExport', () => {
     })
 
     it('passes weighted sub-progress to bookmarks exporter (80-100%)', async () => {
-      mockExportBookmarksAsMarkdown.mockImplementation(async (cb) => {
+      mockExportBookmarksAsMarkdown.mockImplementation(async cb => {
         cb?.(50, 'Processing bookmarks...')
         return [{ name: 'bookmarks/C/bm.md', content: '' }]
       })
@@ -281,9 +267,7 @@ describe('pkmExport', () => {
     })
 
     it('works without progress callback (no errors)', async () => {
-      mockExportNotesAsMarkdown.mockResolvedValue([
-        { name: 'n.md', content: '' },
-      ])
+      mockExportNotesAsMarkdown.mockResolvedValue([{ name: 'n.md', content: '' }])
 
       await expect(exportPkmBundle()).resolves.toBeDefined()
     })

@@ -26,16 +26,11 @@ export function LessonHeaderCard({
   tags,
 }: LessonHeaderCardProps) {
   return (
-    <Card
-      data-testid="lesson-header-card"
-      className="rounded-[24px] p-6 mt-4"
-    >
+    <Card data-testid="lesson-header-card" className="rounded-[24px] p-6 mt-4">
       <h2 className="text-xl font-semibold text-foreground">{title}</h2>
 
       {description && (
-        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-          {description}
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{description}</p>
       )}
 
       {resourceTypes.length > 0 && (

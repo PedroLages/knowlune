@@ -88,7 +88,9 @@ vi.mock('sql.js/dist/sql-asm.js', () => ({
 
 // Mock jszip — must use function constructor so `new` works
 const mockZipFile = vi.fn()
-const mockGenerateAsync = vi.fn().mockResolvedValue(new Blob(['fake-apkg'], { type: 'application/octet-stream' }))
+const mockGenerateAsync = vi
+  .fn()
+  .mockResolvedValue(new Blob(['fake-apkg'], { type: 'application/octet-stream' }))
 
 function MockJSZip() {
   return {
