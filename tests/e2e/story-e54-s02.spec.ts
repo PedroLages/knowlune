@@ -250,7 +250,10 @@ test.describe('AC4: Auto-advance countdown', () => {
     const countdown = page.getByTestId('auto-advance-countdown')
     await expect(countdown).toBeVisible({ timeout: TIMEOUTS.DEFAULT })
 
-    await countdown.getByRole('button', { name: /Cancel/i }).click()
+    // The YouTube player loading overlay (absolute inset-0) and Sonner toast
+    // notifications intercept pointer events over the Cancel button.
+    // Use dispatchEvent to bypass overlay interception.
+    await countdown.getByRole('button', { name: /Cancel/i }).dispatchEvent('click')
     await expect(countdown).not.toBeVisible({ timeout: TIMEOUTS.SHORT })
   })
 
