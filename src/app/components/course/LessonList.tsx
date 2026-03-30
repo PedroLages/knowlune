@@ -31,6 +31,8 @@ import {
   CollapsibleTrigger,
 } from '@/app/components/ui/collapsible'
 import { cn } from '@/app/components/ui/utils'
+import { StatusIndicator } from '@/app/components/figma/StatusIndicator'
+import type { CompletionStatus } from '@/data/types'
 import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
 import type { FileStatus } from '@/lib/fileVerification'
 
@@ -56,6 +58,14 @@ function stripExtension(filename: string): string {
 function getFolderName(path: string): string {
   const parts = path.split('/')
   return parts.length > 1 ? parts[0] : ''
+}
+
+/** Derive a CompletionStatus from a VideoProgress record (or absence of one). */
+function deriveStatus(progress: VideoProgress | undefined): CompletionStatus {
+  if (!progress) return 'not-started'
+  if (progress.completionPercentage >= 90) return 'completed'
+  if (progress.completionPercentage > 0) return 'in-progress'
+  return 'not-started'
 }
 
 // ---------------------------------------------------------------------------
@@ -226,6 +236,7 @@ export function LessonList({
               groupedContent,
               courseId,
               fileStatuses,
+              progressMap,
               hasMultipleGroups,
               searchQuery
             )}
@@ -358,6 +369,7 @@ function renderLocalGroups(
   groups: ChapterGroup[],
   courseId: string,
   fileStatuses: Map<string, FileStatus>,
+  progressMap: Map<string, VideoProgress>,
   hasMultipleGroups: boolean,
   searchQuery: string
 ) {
@@ -365,9 +377,11 @@ function renderLocalGroups(
     const videoItems = group.videos.map(video => {
       const status = fileStatuses.get(video.id) ?? 'checking'
       const isUnavailable = status === 'missing' || status === 'permission-denied'
+      const completionStatus = deriveStatus(progressMap.get(video.id))
 
       const content = (
         <>
+          <StatusIndicator status={completionStatus} itemId={video.id} mode="display" />
           <Video
             data-testid="content-type-icon"
             className={cn(

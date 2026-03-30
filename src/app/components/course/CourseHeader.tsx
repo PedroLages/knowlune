@@ -10,7 +10,18 @@
  */
 
 import { Link } from 'react-router'
-import { ArrowLeft, Trash2, User, Youtube, RefreshCw, WifiOff, Settings2, Video, FileText, BookOpen } from 'lucide-react'
+import {
+  ArrowLeft,
+  Trash2,
+  User,
+  Youtube,
+  RefreshCw,
+  WifiOff,
+  Settings2,
+  Video,
+  FileText,
+  BookOpen,
+} from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'

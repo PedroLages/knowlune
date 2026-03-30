@@ -120,7 +120,13 @@ interface TranscriptTabProps {
   onSeek?: (time: number) => void
 }
 
-function TranscriptTab({ courseId, lessonId, adapter, currentTime: externalTime, onSeek: externalSeek }: TranscriptTabProps) {
+function TranscriptTab({
+  courseId,
+  lessonId,
+  adapter,
+  currentTime: externalTime,
+  onSeek: externalSeek,
+}: TranscriptTabProps) {
   const [cues, setCues] = useState<TranscriptCue[]>([])
   const [loadingState, setLoadingState] = useState<TranscriptLoadingState>('loading')
 
@@ -448,11 +454,7 @@ function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
 
   if (lessons.length === 0) {
     return (
-      <EmptyState
-        icon={Video}
-        title="No lessons"
-        description="This course has no lessons yet"
-      />
+      <EmptyState icon={Video} title="No lessons" description="This course has no lessons yet" />
     )
   }
 
@@ -461,7 +463,9 @@ function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
   return (
     <div className="p-2 space-y-0.5" data-testid="lessons-tab-list">
       <div className="px-2 pb-2 text-xs text-muted-foreground">
-        {currentIndex >= 0 ? `Lesson ${currentIndex + 1} of ${lessons.length}` : `${lessons.length} lessons`}
+        {currentIndex >= 0
+          ? `Lesson ${currentIndex + 1} of ${lessons.length}`
+          : `${lessons.length} lessons`}
       </div>
       {lessons.map((lesson, index) => {
         const isActive = lesson.id === lessonId
@@ -472,9 +476,7 @@ function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
             to={`/courses/${courseId}/lessons/${lesson.id}`}
             className={cn(
               'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
-              isActive
-                ? 'bg-brand-soft text-brand-soft-foreground font-medium'
-                : 'hover:bg-accent'
+              isActive ? 'bg-brand-soft text-brand-soft-foreground font-medium' : 'hover:bg-accent'
             )}
             aria-current={isActive ? 'page' : undefined}
           >
@@ -586,7 +588,12 @@ export function PlayerSidePanel({
   }, [focusTab])
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full" data-testid="player-side-panel">
+    <Tabs
+      value={activeTab}
+      onValueChange={setActiveTab}
+      className="flex flex-col h-full"
+      data-testid="player-side-panel"
+    >
       {/* Radix Tabs provides arrow-key navigation between triggers by default — no custom keyboard shortcuts needed. */}
       <TabsList className="w-full shrink-0 px-1">
         <TabsTrigger value="lessons" className="text-xs">

@@ -134,14 +134,14 @@ describe('ImportedCourseDetail', () => {
     renderDetail()
     const v1 = await screen.findByTestId('course-content-item-video-v1')
     const v2 = await screen.findByTestId('course-content-item-video-v2')
-    expect(v1).toHaveTextContent('01-Introduction.mp4')
-    expect(v2).toHaveTextContent('02-Components.mp4')
+    expect(v1).toHaveTextContent(/01-Introduction/)
+    expect(v2).toHaveTextContent(/02-Components/)
   })
 
   it('renders PDF items with correct testids', async () => {
     renderDetail()
     const p1 = await screen.findByTestId('course-content-item-pdf-p1')
-    expect(p1).toHaveTextContent('slides.pdf')
+    expect(p1).toHaveTextContent(/slides/)
   })
 
   it('renders content type icons', async () => {

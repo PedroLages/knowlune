@@ -106,7 +106,9 @@ export function LocalVideoContent({
       .catch(() => {
         // silent-catch-ok — bookmarks are non-critical
       })
-    return () => { ignore = true }
+    return () => {
+      ignore = true
+    }
   }, [courseId, lessonId])
 
   const handleBookmarkAdd = useCallback(
