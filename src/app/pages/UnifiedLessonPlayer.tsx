@@ -34,7 +34,7 @@ import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { useSessionTracking } from '@/app/hooks/useSessionTracking'
 import { useLessonNavigation } from '@/app/hooks/useLessonNavigation'
-import { useIsDesktop } from '@/app/hooks/useMediaQuery'
+import { useIsDesktop, useIsTablet } from '@/app/hooks/useMediaQuery'
 import { PlayerHeader } from '@/app/components/course/PlayerHeader'
 import { CourseBreadcrumb } from '@/app/components/course/CourseBreadcrumb'
 import { LessonNavigation } from '@/app/components/course/LessonNavigation'
@@ -51,10 +51,10 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/app/comp
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import type { PanelImperativeHandle } from 'react-resizable-panels'
-import { PanelRight, ClipboardCheck } from 'lucide-react'
+import { PanelRight, ClipboardCheck, Video, PencilLine } from 'lucide-react'
 import { toast } from 'sonner'
 import { useHasQuiz } from '@/hooks/useHasQuiz'
-import { PlayerSidePanel } from '@/app/components/course/PlayerSidePanel'
+import { PlayerSidePanel, NotesTab } from '@/app/components/course/PlayerSidePanel'
 import type { LessonItem } from '@/lib/courseAdapter'
 import { useTheaterMode } from '@/app/hooks/useTheaterMode'
 import { MiniPlayer } from '@/app/components/course/MiniPlayer'
@@ -76,6 +76,7 @@ export function UnifiedLessonPlayer() {
   const course = importedCourses.find(c => c.id === courseId)
 
   const isDesktop = useIsDesktop()
+  const isTablet = useIsTablet()
   const { isTheater, toggleTheater } = useTheaterMode()
   const sidePanelRef = useRef<PanelImperativeHandle>(null)
   const videoPlayerRef = useRef<VideoPlayerHandle>(null)
@@ -122,6 +123,9 @@ export function UnifiedLessonPlayer() {
 
   // Next course suggestion state (E91-S08)
   const [showCourseSuggestion, setShowCourseSuggestion] = useState(false)
+
+  // Tablet toggle state: switch between video and notes (E91-S09)
+  const [tabletNotesOpen, setTabletNotesOpen] = useState(false)
 
   // Focus tab state: set to "notes" when user presses N in VideoPlayer
   const [focusTab, setFocusTab] = useState<string | null>(null)
@@ -210,6 +214,7 @@ export function UnifiedLessonPlayer() {
     setIsVideoPlaying(false)
     setLocalVideoBlobUrl(null)
     setShowCourseSuggestion(false)
+    setTabletNotesOpen(false)
   }, [lessonId])
 
   // Resolve lesson metadata (title + type) from adapter's lesson list
@@ -553,46 +558,94 @@ export function UnifiedLessonPlayer() {
         ) : (
           <div className="h-full">
             <div className="h-full overflow-auto p-4">
-              {mainContent}
-              {lessonTypeResolved && (
-                <LessonHeaderCard
-                  title={lessonTitle}
-                  description={lessonDescription}
-                  resourceTypes={resourceTypes}
-                  tags={lessonTags}
-                />
-              )}
-              {quizButton}
-              {/* Auto-advance countdown after video ends */}
-              {showAutoAdvance && nextLesson && (
-                <div className="mt-4">
-                  <AutoAdvanceCountdown
-                    seconds={5}
-                    nextLessonTitle={nextLesson.title}
-                    onAdvance={handleAutoAdvance}
-                    onCancel={handleCancelAutoAdvance}
-                  />
+              {/* Tablet toggle bar: Video | Notes (E91-S09) */}
+              {isTablet && (
+                <div
+                  className="hidden md:flex lg:hidden gap-1 bg-muted rounded-lg p-1 mb-4"
+                  role="tablist"
+                  aria-label="Content view"
+                  data-testid="tablet-toggle-bar"
+                >
+                  <Button
+                    variant={!tabletNotesOpen ? 'default' : 'ghost'}
+                    size="sm"
+                    className="flex-1 gap-1.5"
+                    role="tab"
+                    aria-selected={!tabletNotesOpen}
+                    aria-controls="tablet-content-panel"
+                    onClick={() => setTabletNotesOpen(false)}
+                    data-testid="tablet-toggle-video"
+                  >
+                    <Video className="size-4" aria-hidden="true" />
+                    Video
+                  </Button>
+                  <Button
+                    variant={tabletNotesOpen ? 'default' : 'ghost'}
+                    size="sm"
+                    className="flex-1 gap-1.5"
+                    role="tab"
+                    aria-selected={tabletNotesOpen}
+                    aria-controls="tablet-content-panel"
+                    onClick={() => setTabletNotesOpen(true)}
+                    data-testid="tablet-toggle-notes"
+                  >
+                    <PencilLine className="size-4" aria-hidden="true" />
+                    Notes
+                  </Button>
                 </div>
               )}
+
+              {/* Tablet: show either video or notes based on toggle */}
+              <div id="tablet-content-panel" role="tabpanel">
+                {isTablet && tabletNotesOpen ? (
+                  <NotesTab courseId={courseId!} lessonId={lessonId!} />
+                ) : (
+                  <>
+                    {mainContent}
+                    {lessonTypeResolved && (
+                      <LessonHeaderCard
+                        title={lessonTitle}
+                        description={lessonDescription}
+                        resourceTypes={resourceTypes}
+                        tags={lessonTags}
+                      />
+                    )}
+                    {quizButton}
+                    {/* Auto-advance countdown after video ends */}
+                    {showAutoAdvance && nextLesson && (
+                      <div className="mt-4">
+                        <AutoAdvanceCountdown
+                          seconds={5}
+                          nextLessonTitle={nextLesson.title}
+                          onAdvance={handleAutoAdvance}
+                          onCancel={handleCancelAutoAdvance}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
-            {/* Mobile sheet trigger */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="fixed bottom-4 right-4 z-50 rounded-full shadow-lg"
-                  aria-label="Open side panel"
-                >
-                  <PanelRight className="size-4" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="bottom" className="h-[60vh]">
-                <SheetTitle className="sr-only">Lesson panel</SheetTitle>
-                {sidePanelContent}
-              </SheetContent>
-            </Sheet>
+            {/* Mobile sheet trigger — hidden on tablet when using toggle (E91-S09) */}
+            {!isTablet && (
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="fixed bottom-4 right-4 z-50 rounded-full shadow-lg"
+                    aria-label="Open side panel"
+                  >
+                    <PanelRight className="size-4" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="h-[60vh]">
+                  <SheetTitle className="sr-only">Lesson panel</SheetTitle>
+                  {sidePanelContent}
+                </SheetContent>
+              </Sheet>
+            )}
           </div>
         )}
       </div>

@@ -1,8 +1,8 @@
 ---
 story_id: E91-S09
 story_name: "Tablet Layout Enhancement"
-status: backlog
-started:
+status: in-progress
+started: 2026-03-30
 completed:
 reviewed: false
 review_started:
