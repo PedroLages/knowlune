@@ -58,7 +58,7 @@ interface NotesTabProps {
   lessonId: string
 }
 
-function NotesTab({ courseId, lessonId }: NotesTabProps) {
+export function NotesTab({ courseId, lessonId }: NotesTabProps) {
   const notes = useNoteStore(s => s.notes)
   const loadNotesByLesson = useNoteStore(s => s.loadNotesByLesson)
   const saveNote = useNoteStore(s => s.saveNote)
