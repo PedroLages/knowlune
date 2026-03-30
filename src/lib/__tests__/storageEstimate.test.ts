@@ -117,8 +117,24 @@ describe('estimateTableSize', () => {
 
     const size = await estimateTableSize('courseThumbnails')
 
-    // Should use blob.size (500) rather than JSON serialization size
-    expect(size).toBe(blob.size * 10)
+    // Should use blob.size plus metadata for non-blob fields
+    const metadataSize = new Blob([JSON.stringify({ id: '1' })]).size
+    expect(size).toBe((blob.size + metadataSize) * 10)
+  })
+
+  it('sums all Blob fields plus metadata in the same row', async () => {
+    const blob1 = new Blob(['x'.repeat(500)])
+    const blob2 = new Blob(['y'.repeat(300)])
+    const rows = [{ id: '1', thumbnail: blob1, screenshot: blob2 }]
+    const table = createMockTable(rows)
+    table.count.mockResolvedValue(10)
+    mockTable.mockReturnValue(table)
+
+    const size = await estimateTableSize('courseThumbnails')
+
+    // Should sum both blobs + metadata for non-blob fields
+    const metadataSize = new Blob([JSON.stringify({ id: '1' })]).size
+    expect(size).toBe((blob1.size + blob2.size + metadataSize) * 10)
   })
 })
 
@@ -247,6 +263,20 @@ describe('getStorageOverview', () => {
 })
 
 describe('getStorageOverview — edge cases', () => {
+  it('clamps usagePercent to max 1.0 when usage exceeds quota', async () => {
+    mockGetStorageEstimate.mockResolvedValue({
+      usage: 1_500_000_000,
+      quota: 1_000_000_000,
+      usagePercent: 1.5,
+      usageMB: 1500,
+      quotaMB: 1000,
+    })
+    mockTable.mockReturnValue(createEmptyMockTable())
+
+    const overview = await getStorageOverview()
+    expect(overview.usagePercent).toBe(1)
+  })
+
   it('returns usagePercent at exactly 0.8 boundary', async () => {
     mockGetStorageEstimate.mockResolvedValue({
       usage: 800_000_000,

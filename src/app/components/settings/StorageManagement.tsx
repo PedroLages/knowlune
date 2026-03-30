@@ -15,6 +15,7 @@ import {
   type ChartConfig,
 } from '@/app/components/ui/chart'
 import { formatFileSize } from '@/lib/format'
+import { toast } from 'sonner'
 import {
   getStorageOverview,
   STORAGE_CATEGORIES,
@@ -91,7 +92,7 @@ function QuotaWarningBanner({
         <AlertOctagon className="size-5 text-destructive flex-shrink-0 mt-0.5" aria-hidden="true" />
         <div className="flex-1">
           <p className="text-sm font-medium text-destructive">Storage almost full ({percent}%)</p>
-          <p className="text-xs text-destructive/80 mt-1">
+          <p className="text-xs text-destructive mt-1">
             You may not be able to save new data. Free up space to continue learning.
           </p>
         </div>
@@ -120,7 +121,7 @@ function QuotaWarningBanner({
         <AlertTriangle className="size-5 text-warning flex-shrink-0 mt-0.5" aria-hidden="true" />
         <div className="flex-1">
           <p className="text-sm font-medium text-warning">Storage is getting full ({percent}%)</p>
-          <p className="text-xs text-warning/80 mt-1">
+          <p className="text-xs text-warning mt-1">
             Consider cleaning up unused data to free space.
           </p>
         </div>
@@ -164,7 +165,7 @@ function StorageOverviewBar({ overview }: { overview: StorageOverview }) {
       </p>
 
       {hasData ? (
-        <ChartContainer config={chartConfig} className="h-8 w-full">
+        <ChartContainer config={chartConfig} className="h-8 w-full" aria-label="Storage usage breakdown chart">
           <BarChart
             data={chartData}
             layout="vertical"
@@ -222,8 +223,8 @@ function CategoryBreakdownLegend({ overview }: { overview: StorageOverview }) {
     <div role="list" className="grid grid-cols-2 md:grid-cols-3 gap-3">
       {nonEmpty.map(cat => {
         const percent =
-          overview.categorizedTotal > 0
-            ? Math.round((cat.sizeBytes / overview.categorizedTotal) * 100)
+          overview.totalUsage > 0
+            ? Math.round((cat.sizeBytes / overview.totalUsage) * 100)
             : 0
 
         return (
@@ -297,8 +298,8 @@ export function StorageManagement() {
       const data = await getStorageOverview()
       setOverview(data)
     } catch {
-      // silent-catch-ok — Error state rendered via setError(true) above
       setError(true)
+      toast.error('Unable to refresh storage data')
     } finally {
       setRefreshing(false)
     }
@@ -394,7 +395,7 @@ export function StorageManagement() {
             <p className="text-sm text-muted-foreground mb-3">
               No learning data stored yet. Import a course to get started!
             </p>
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="outline" size="sm" className="min-h-[44px]" asChild>
               <Link to="/courses">Browse Courses</Link>
             </Button>
           </div>
@@ -407,7 +408,7 @@ export function StorageManagement() {
 
   return (
     <StorageCardShell refreshButton={refreshButton}>
-      <CardContent className="p-6 space-y-6">
+      <CardContent className="p-6 space-y-6" aria-live="polite">
         {overview && (
           <>
             <QuotaWarningBanner

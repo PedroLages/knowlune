@@ -69,9 +69,18 @@ export async function estimateTableSize(tableName: string, sampleSize = 5): Prom
     if (sample.length === 0) return 0
 
     const totalSampleBytes = sample.reduce((sum, row) => {
-      // For rows containing Blob fields (thumbnails, screenshots), use .size directly
-      for (const val of Object.values(row as Record<string, unknown>)) {
-        if (val instanceof Blob) return sum + val.size
+      let blobBytes = 0
+      const nonBlobFields: Record<string, unknown> = {}
+      for (const [key, val] of Object.entries(row as Record<string, unknown>)) {
+        if (val instanceof Blob) {
+          blobBytes += val.size
+        } else {
+          nonBlobFields[key] = val
+        }
+      }
+      if (blobBytes > 0) {
+        // Include both Blob sizes and metadata size
+        return sum + blobBytes + new Blob([JSON.stringify(nonBlobFields)]).size
       }
       return sum + new Blob([JSON.stringify(row)]).size
     }, 0)
@@ -119,7 +128,7 @@ export async function getStorageOverview(): Promise<StorageOverview> {
   const apiAvailable = estimate !== null
   const totalUsage = estimate?.usage ?? 0
   const totalQuota = estimate?.quota ?? 0
-  const usagePercent = estimate?.usagePercent ?? 0
+  const usagePercent = Math.min(1, Math.max(0, estimate?.usagePercent ?? 0))
 
   const categoryResults = await Promise.allSettled(
     STORAGE_CATEGORIES.map(cat => estimateCategory(cat))
