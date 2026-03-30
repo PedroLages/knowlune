@@ -179,6 +179,10 @@ NOTE: `HardDrive` is already imported in Settings.tsx (line 13). The Data Manage
 - **Promise.allSettled for resilience**: Using `Promise.allSettled()` instead of `Promise.all()` ensures one failing table estimation (e.g., a corrupted table) doesn't block the entire overview. Each category gracefully falls back to 0 bytes.
 - **Category mapping consolidation**: Grouped 20+ Dexie tables into 6 user-facing categories. The mapping lives in `storageEstimate.ts` and needs updating when new tables are added to the schema — this is a maintenance consideration for future stories.
 - **Warning banner sessionStorage pattern**: Dismiss state is stored in `sessionStorage` so warnings reappear on new sessions but don't nag within a session. This matches the AC requirement and provides a good UX balance.
+- **Three review rounds to pass WCAG contrast**: R1 caught missing design tokens (`bg-warning-soft` didn't exist). R2 fixed warning banners but critical banner `text-destructive` on `bg-destructive/10` measured only 4.19:1 — below the 4.5:1 threshold. R3 fix used `text-destructive-soft-foreground` (7.28:1). Lesson: always verify contrast of *-soft-foreground tokens on */10 backgrounds before first review.
+- **Binary data estimation pitfall**: `JSON.stringify()` on `ArrayBuffer` or `Uint8Array` produces `{"0":0,"1":0,...}` — inflating estimates 5-10x. Must check `instanceof ArrayBuffer` and `ArrayBuffer.isView()` alongside `Blob` when estimating row sizes.
+- **Double-click race on React state**: `if (refreshing) return` using React state is not synchronous — rapid double-clicks can invoke the handler twice before `setRefreshing(true)` renders. Use a `useRef` guard alongside state for immediate synchronous protection.
+- **"Free Up Space" dead end**: The critical banner's CTA scrolled to `#data-management` which has no cleanup actions until E69-S03. Renamed to "View Storage" with tooltip explaining cleanup is coming — avoids promising functionality that doesn't exist yet.
 
 ## Design Review Feedback
 
