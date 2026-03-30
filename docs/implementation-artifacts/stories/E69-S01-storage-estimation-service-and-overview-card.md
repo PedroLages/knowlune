@@ -3,8 +3,9 @@
 Status: in-progress
 reviewed: in-progress
 review_started: 2026-03-30
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa]
 review_scope: full
+verdict: BLOCKED
 
 ## Story
 
@@ -180,11 +181,22 @@ NOTE: `HardDrive` is already imported in Settings.tsx (line 13). The Data Manage
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**BLOCKER**: `bg-warning-soft` token does not exist in theme.css — warning banner background is transparent. Fix: replace with `bg-warning/10`.
+**HIGH**: Warning text `text-warning-foreground` fails contrast in dark mode (~1.5:1). Fix: use `text-warning` instead.
+**BLOCKER (QA)**: Warning/critical banners unreachable when Dexie tables empty — `categorizedTotal === 0` short-circuits to empty state before banner renders.
+**MEDIUM**: Empty state has no actionable CTA (e.g., "Browse Courses" button).
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**HIGH**: Null overview after `getStorageOverview()` error produces blank card — no error state rendered.
+**HIGH**: Summary line shows `categorizedTotal` (sampled estimate) instead of `totalUsage` (actual browser-reported usage) — misleading.
+**HIGH**: `courses` table missing from CATEGORY_MAP (table was dropped in DB v30, but story spec is stale).
+**MEDIUM**: Unnecessary `useCallback` wrapper around `loadData`.
+**MEDIUM**: Blob-heavy tables (thumbnails) should use `.size` property instead of JSON serialization.
+
+## Test Coverage Feedback
+
+**AC Coverage: 0/7 fully covered (29%)**. Service layer tested (12 unit tests), but zero component-level rendering tests exist for loading state, warning banners, refresh button, or error state.
 
 ## Implementation Plan
 
