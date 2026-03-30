@@ -1,9 +1,9 @@
 ---
 story_id: E91-S02
 story_name: "Local Course Visual Parity"
-status: backlog
-started:
-completed:
+status: complete
+started: 2026-03-30
+completed: 2026-03-30
 reviewed: false
 review_started:
 review_gates_passed: []

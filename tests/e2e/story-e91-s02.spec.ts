@@ -72,9 +72,7 @@ test.describe('E91-S02: Local Course Visual Parity', () => {
 
   // AC1: In-progress video shows progress bar
   test('AC1: shows progress bar for in-progress local video', async ({ page }) => {
-    await seedIndexedDBStore(page, 'ElearningDB', 'progress', [
-      createProgress('vid-a', 65),
-    ])
+    await seedIndexedDBStore(page, 'ElearningDB', 'progress', [createProgress('vid-a', 65)])
     await goToCourse(page, COURSE_ID)
     await page.waitForSelector('[data-testid="unified-course-detail"]', { state: 'visible' })
 
@@ -97,9 +95,7 @@ test.describe('E91-S02: Local Course Visual Parity', () => {
 
   // AC2: Completed video shows completion badge
   test('AC2: shows completion badge for completed local video', async ({ page }) => {
-    await seedIndexedDBStore(page, 'ElearningDB', 'progress', [
-      createProgress('vid-b', 100),
-    ])
+    await seedIndexedDBStore(page, 'ElearningDB', 'progress', [createProgress('vid-b', 100)])
     await goToCourse(page, COURSE_ID)
     await page.waitForSelector('[data-testid="unified-course-detail"]', { state: 'visible' })
 
