@@ -33,8 +33,9 @@ so that all subsequent book features have a reliable storage and data foundation
   - [ ] 1.2 Add `ContentSource` discriminated union (`local` | `remote` | `fileHandle`)
   - [ ] 1.3 Add `ContentPosition` discriminated union (`cfi` | `time` | `page`)
   - [ ] 1.4 Add `Book` interface with all fields per architecture doc
-  - [ ] 1.5 Add `BookChapter` interface
-  - [ ] 1.6 Add `BookHighlight` interface with `cfiRange`, `textAnchor`, `color`, `flashcardId`
+  - [ ] 1.5 Add `tags: string[]` field to `Book` interface (default: empty array, user-defined free-text tags)
+  - [ ] 1.6 Add `BookChapter` interface
+  - [ ] 1.7 Add `BookHighlight` interface with `cfiRange`, `textAnchor`, `color`, `flashcardId`
 
 - [ ] Task 2: Bump Dexie schema to v30 (AC: 2)
   - [ ] 2.1 Add `books` and `bookHighlights` table definitions in `schema.ts` after checkpoint gate

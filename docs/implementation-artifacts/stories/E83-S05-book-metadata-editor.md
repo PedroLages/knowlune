@@ -18,6 +18,8 @@ so that I can correct titles, authors, or genres that were not auto-detected acc
 
 4. **Given** the user clicks Cancel **When** the dialog closes **Then** no changes are persisted
 
+5. **Given** the user is editing book metadata **When** they interact with the Tags field **Then** they can type tag names and press Enter or comma to add them as chips **And** each tag chip has an X button to remove it **And** tags are free-text (no predefined list), stored in the Book's `tags: string[]` field **And** existing tags from other books are suggested via autocomplete as the user types
+
 ## Tasks / Subtasks
 
 - [ ] Task 1: Create `BookMetadataEditor` dialog (AC: 1, 2, 3, 4)
@@ -56,6 +58,13 @@ so that I can correct titles, authors, or genres that were not auto-detected acc
   - [ ] 5.1 Connect "Edit" context menu action (from S04) to open `BookMetadataEditor`
   - [ ] 5.2 Pass selected book data to editor dialog
 
+- [ ] Task 6: Implement tag editor (AC: 5)
+  - [ ] 6.1 Create tag input with chip display using shadcn `Badge` components for each tag
+  - [ ] 6.2 On Enter or comma keypress, add current input value as new tag (trimmed, deduplicated)
+  - [ ] 6.3 X button on each badge removes the tag
+  - [ ] 6.4 Autocomplete: query distinct tags from all books in Dexie, show as suggestions below input
+  - [ ] 6.5 Persist tags array to Book record on save
+
 ## Dev Notes
 
 ### Form Validation
@@ -83,6 +92,10 @@ so that I can correct titles, authors, or genres that were not auto-detected acc
   }
   ```
 - Maximum cover dimensions: 800x1200 (resize if larger to save OPFS space)
+
+### Tags and Filtering
+
+Tags are stored per-book in E83-S01. The tag editor is in this story (E83-S05). Filtering by tags should be added to E83-S04 (Library Search Filter) — add a tag filter dropdown that shows all distinct tags from the library. If E83-S04 is already complete when this story runs, add tag filtering as a follow-up chore.
 
 ### Dependencies on Previous Stories
 
