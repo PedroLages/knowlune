@@ -62,7 +62,7 @@ export function UnifiedLessonPlayer() {
   const isDesktop = useIsDesktop()
 
   // Lesson navigation: prev/next lesson via adapter
-  const { prevLesson, nextLesson, currentIndex, totalLessons } = useLessonNavigation(
+  const { prevLesson, nextLesson, currentIndex, totalLessons, lessons } = useLessonNavigation(
     adapter,
     lessonId
   )
@@ -117,8 +117,6 @@ export function UnifiedLessonPlayer() {
     setFocusTab(null)
   }, [lessonId])
 
-  // NOTE: getLessons() is also called inside useLessonNavigation hook — known duplication.
-  // Consolidation into a shared context is deferred to a future story.
   // Resolve lesson metadata (title + type) from adapter's lesson list
   const [lessonTitle, setLessonTitle] = useState('Lesson')
   const [lessonType, setLessonType] = useState<LessonItem['type'] | null>(null)
@@ -170,27 +168,13 @@ export function UnifiedLessonPlayer() {
    * Checks if all course lessons are now complete for course-level celebration.
    */
   const showCelebration = useCallback(
-    async (title: string) => {
-      if (!adapter) {
-        setCelebrationTitle(title)
-        setCelebrationType('lesson')
-        setCelebrationOpen(true)
-        return
-      }
-
-      try {
-        const allLessons = await adapter.getLessons()
-        const isCourseComplete = checkCourseCompletion(allLessons)
-        setCelebrationType(isCourseComplete ? 'course' : 'lesson')
-        setCelebrationTitle(isCourseComplete ? (course?.name ?? 'Course') : title)
-        setCelebrationOpen(true)
-      } catch { // silent-catch-ok — graceful fallback to lesson-level celebration
-        setCelebrationType('lesson')
-        setCelebrationTitle(title)
-        setCelebrationOpen(true)
-      }
+    (title: string) => {
+      const isCourseComplete = lessons.length > 0 && checkCourseCompletion(lessons)
+      setCelebrationType(isCourseComplete ? 'course' : 'lesson')
+      setCelebrationTitle(isCourseComplete ? (course?.name ?? 'Course') : title)
+      setCelebrationOpen(true)
     },
-    [adapter, checkCourseCompletion, course?.name]
+    [lessons, checkCourseCompletion, course?.name]
   )
 
   // Handle video ended — mark complete, show celebration, trigger auto-advance
@@ -202,10 +186,11 @@ export function UnifiedLessonPlayer() {
       await setItemStatus(courseId, lessonId, 'completed', [])
     } catch {
       toast.error('Failed to mark lesson as complete')
+      return // Don't show celebration or auto-advance if persistence failed
     }
 
     // Show celebration modal
-    await showCelebration(lessonTitle)
+    showCelebration(lessonTitle)
 
     // Trigger auto-advance countdown if next lesson exists
     if (nextLesson) {
@@ -225,9 +210,9 @@ export function UnifiedLessonPlayer() {
 
   // Handle manual completion toggle from PlayerHeader (AC7)
   const handleManualStatusChange = useCallback(
-    async (status: CompletionStatus) => {
+    (status: CompletionStatus) => {
       if (status === 'completed') {
-        await showCelebration(lessonTitle)
+        showCelebration(lessonTitle)
       }
     },
     [showCelebration, lessonTitle]
@@ -397,7 +382,9 @@ export function UnifiedLessonPlayer() {
             </ResizablePanel>
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
-              <div className="h-full overflow-auto border-l border-border/50 bg-card">{sidePanelContent}</div>
+              <div className="h-full overflow-auto border-l border-border/50 bg-card">
+                {sidePanelContent}
+              </div>
             </ResizablePanel>
           </ResizablePanelGroup>
         ) : (
