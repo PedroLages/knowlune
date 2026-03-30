@@ -555,6 +555,10 @@ export default defineConfig({
           if (id.includes('react-youtube')) {
             return 'react-youtube'
           }
+          // sql.js (Anki .apkg export — dynamic import, ~500KB)
+          if (id.includes('sql.js') || id.includes('sql-asm')) {
+            return 'sql-js'
+          }
           // sonner (toast notifications)
           if (id.includes('sonner')) {
             return 'sonner'

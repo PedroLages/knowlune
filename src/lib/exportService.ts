@@ -26,6 +26,7 @@ import type {
 } from '@/data/types'
 import { sessionsToCSV, progressToCSV, deriveStreakDays, streakDaysToCSV } from './csvSerializer'
 import { sanitizeFilename, extractTextFromHtml, htmlToMarkdown } from './noteExport'
+import { yieldToUI } from './uiUtils'
 
 // --- Export Schema ---
 
@@ -55,11 +56,6 @@ export interface KnowluneExport {
 // --- Progress Callback ---
 
 export type ExportProgressCallback = (percent: number, phase: string) => void
-
-/** Yield to the UI thread between heavy operations (works in background tabs) */
-function yieldToUI(): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, 0))
-}
 
 // --- JSON Export (AC1) ---
 
