@@ -10,10 +10,10 @@
  * - AC6: Button uses Maximize2/Minimize2 icons in PlayerHeader
  * - AC7: data-theater-mode attribute on player container
  */
-import { test, expect } from '../support/fixtures'
-import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
-import { navigateAndWait } from '../support/helpers/navigation'
-import { seedImportedCourses, seedImportedVideos } from '../support/helpers/seed-helpers'
+import { test, expect } from '../../support/fixtures'
+import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
+import { navigateAndWait } from '../../support/helpers/navigation'
+import { seedImportedCourses, seedImportedVideos } from '../../support/helpers/seed-helpers'
 import type { Page } from '@playwright/test'
 
 // ---------------------------------------------------------------------------
