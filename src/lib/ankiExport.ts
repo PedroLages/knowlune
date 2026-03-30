@@ -13,13 +13,9 @@ import type { Flashcard, Note } from '@/data/types'
 import type { ExportProgressCallback } from './exportService'
 import { deriveFlashcardTags } from './flashcardExport'
 import { stripHtml } from './textUtils'
+import { yieldToUI } from './uiUtils'
 
 const DECK_NAME = 'Knowlune Export'
-
-/** Yield to the UI thread between heavy operations */
-function yieldToUI(): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, 0))
-}
 
 /**
  * Generate the Anki collection SQL schema template.
@@ -319,100 +315,103 @@ export async function exportFlashcardsAsAnki(
 
   // Initialize SQLite database with Anki schema
   const sqlDb = new SQL.Database()
-  sqlDb.run(createAnkiTemplate())
+  try {
+    sqlDb.run(createAnkiTemplate())
 
-  const now = Date.now()
+    const now = Date.now()
 
-  // Get top-level deck and model IDs
-  const topDeckId = now
-  const topModelId = now + 1
+    // Get top-level deck and model IDs
+    const topDeckId = now
+    const topModelId = now + 1
 
-  // Update deck name to "Knowlune Export"
-  const decksRow = sqlDb.exec('SELECT decks FROM col')[0].values[0][0] as string
-  const existingDecks = JSON.parse(decksRow) as Record<string, Record<string, unknown>>
-  const deckKeys = Object.keys(existingDecks)
-  const lastDeckKey = deckKeys[deckKeys.length - 1]
-  const deckEntry = existingDecks[lastDeckKey]
-  delete existingDecks[lastDeckKey]
-  deckEntry.name = DECK_NAME
-  deckEntry.id = topDeckId
-  existingDecks[String(topDeckId)] = deckEntry
-  sqlDb.run('UPDATE col SET decks=? WHERE id=1', [JSON.stringify(existingDecks)])
+    // Update deck name to "Knowlune Export"
+    const decksRow = sqlDb.exec('SELECT decks FROM col')[0].values[0][0] as string
+    const existingDecks = JSON.parse(decksRow) as Record<string, Record<string, unknown>>
+    const deckKeys = Object.keys(existingDecks)
+    const lastDeckKey = deckKeys[deckKeys.length - 1]
+    const deckEntry = existingDecks[lastDeckKey]
+    delete existingDecks[lastDeckKey]
+    deckEntry.name = DECK_NAME
+    deckEntry.id = topDeckId
+    existingDecks[String(topDeckId)] = deckEntry
+    sqlDb.run('UPDATE col SET decks=? WHERE id=1', [JSON.stringify(existingDecks)])
 
-  // Update model
-  const modelsRow = sqlDb.exec('SELECT models FROM col')[0].values[0][0] as string
-  const existingModels = JSON.parse(modelsRow) as Record<string, Record<string, unknown>>
-  const modelKeys = Object.keys(existingModels)
-  const lastModelKey = modelKeys[modelKeys.length - 1]
-  const modelEntry = existingModels[lastModelKey]
-  delete existingModels[lastModelKey]
-  modelEntry.name = DECK_NAME
-  modelEntry.did = topDeckId
-  modelEntry.id = topModelId
-  existingModels[String(topModelId)] = modelEntry
-  sqlDb.run('UPDATE col SET models=? WHERE id=1', [JSON.stringify(existingModels)])
+    // Update model
+    const modelsRow = sqlDb.exec('SELECT models FROM col')[0].values[0][0] as string
+    const existingModels = JSON.parse(modelsRow) as Record<string, Record<string, unknown>>
+    const modelKeys = Object.keys(existingModels)
+    const lastModelKey = modelKeys[modelKeys.length - 1]
+    const modelEntry = existingModels[lastModelKey]
+    delete existingModels[lastModelKey]
+    modelEntry.name = DECK_NAME
+    modelEntry.did = topDeckId
+    modelEntry.id = topModelId
+    existingModels[String(topModelId)] = modelEntry
+    sqlDb.run('UPDATE col SET models=? WHERE id=1', [JSON.stringify(existingModels)])
 
-  await yieldToUI()
+    await yieldToUI()
 
-  // Add cards
-  onProgress?.(30, 'Adding flashcards to deck...')
-  let cardIdCounter = now + 100
-  let noteIdCounter = now + 100
+    // Add cards
+    onProgress?.(30, 'Adding flashcards to deck...')
+    let cardIdCounter = now + 100
+    let noteIdCounter = now + 100
 
-  for (let i = 0; i < flashcards.length; i++) {
-    const fc: Flashcard = flashcards[i]
+    for (let i = 0; i < flashcards.length; i++) {
+      const fc: Flashcard = flashcards[i]
 
-    // AC3: Reuse deriveFlashcardTags() from E53-S01
-    const tags = deriveFlashcardTags(fc, courseMap, noteTagMap)
-    const strTags = tagsToAnkiString(tags)
+      // AC3: Reuse deriveFlashcardTags() from E53-S01
+      const tags = deriveFlashcardTags(fc, courseMap, noteTagMap)
+      const strTags = tagsToAnkiString(tags)
 
-    // Strip HTML from front/back (EC-HIGH: raw Tiptap HTML may include unwanted attributes)
-    const front = stripHtml(fc.front)
-    const back = stripHtml(fc.back)
+      // Strip HTML from front/back (EC-HIGH: raw Tiptap HTML may include unwanted attributes)
+      const front = stripHtml(fc.front)
+      const back = stripHtml(fc.back)
 
-    const fields = front + SEPARATOR + back
+      const fields = front + SEPARATOR + back
 
-    // Generate unique IDs
-    const noteGuid = await sha1Guid(`${topDeckId}${front}${back}`)
-    const noteId = noteIdCounter++
-    const cardId = cardIdCounter++
-    const csum = await sha1Checksum(fields)
-    const mod = Math.floor(now / 1000) + i
+      // Generate unique IDs
+      const noteGuid = await sha1Guid(`${topDeckId}${front}${back}`)
+      const noteId = noteIdCounter++
+      const cardId = cardIdCounter++
+      const csum = await sha1Checksum(fields)
+      const mod = Math.floor(now / 1000) + i
 
-    // Insert note
-    sqlDb.run(
-      'INSERT OR REPLACE INTO notes VALUES(?,?,?,?,?,?,?,?,?,?,?)',
-      [noteId, noteGuid, topModelId, mod, -1, strTags, fields, front, csum, 0, '']
-    )
+      // Insert note
+      sqlDb.run(
+        'INSERT OR REPLACE INTO notes VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+        [noteId, noteGuid, topModelId, mod, -1, strTags, fields, front, csum, 0, '']
+      )
 
-    // Insert card
-    sqlDb.run(
-      'INSERT OR REPLACE INTO cards VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-      [cardId, noteId, topDeckId, 0, mod, -1, 0, 0, 179, 0, 0, 0, 0, 0, 0, 0, 0, '']
-    )
+      // Insert card
+      sqlDb.run(
+        'INSERT OR REPLACE INTO cards VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        [cardId, noteId, topDeckId, 0, mod, -1, 0, 0, 179, 0, 0, 0, 0, 0, 0, 0, 0, '']
+      )
 
-    // Progress + yield
-    if (i % 20 === 0) {
-      const percent = 30 + Math.round((i / flashcards.length) * 60)
-      onProgress?.(percent, `Adding flashcard ${i + 1}/${flashcards.length}...`)
-      await yieldToUI()
+      // Progress + yield
+      if (i % 20 === 0) {
+        const percent = 30 + Math.round((i / flashcards.length) * 60)
+        onProgress?.(percent, `Adding flashcard ${i + 1}/${flashcards.length}...`)
+        await yieldToUI()
+      }
     }
+
+    onProgress?.(90, 'Generating .apkg file...')
+
+    // Export SQLite DB as binary
+    const binaryArray = sqlDb.export()
+
+    // Create ZIP (apkg is just a ZIP with specific contents)
+    const JSZip = (await import('jszip')).default
+    const zip = new JSZip()
+    zip.file('collection.anki2', binaryArray)
+    zip.file('media', '{}')
+
+    const blob = await zip.generateAsync({ type: 'blob' })
+    onProgress?.(100, 'Complete')
+
+    return blob
+  } finally {
+    sqlDb.close()
   }
-
-  onProgress?.(90, 'Generating .apkg file...')
-
-  // Export SQLite DB as binary
-  const binaryArray = sqlDb.export()
-  sqlDb.close()
-
-  // Create ZIP (apkg is just a ZIP with specific contents)
-  const JSZip = (await import('jszip')).default
-  const zip = new JSZip()
-  zip.file('collection.anki2', binaryArray)
-  zip.file('media', '{}')
-
-  const blob = await zip.generateAsync({ type: 'blob' })
-  onProgress?.(100, 'Complete')
-
-  return blob
 }

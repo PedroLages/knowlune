@@ -35,12 +35,38 @@ vi.mock('../textUtils', () => ({
 
 // Mock sql.js with a minimal Database implementation
 const mockDbRun = vi.fn()
-const mockDbExec = vi.fn().mockReturnValue([{
-  values: [[JSON.stringify({
-    1: { desc: '', name: 'Default', id: 1 },
-    1435588830424: { desc: '', name: 'Template', id: 1435588830424 },
-  })]],
-}])
+
+const mockDecksJson = JSON.stringify({
+  1: { desc: '', name: 'Default', id: 1 },
+  1435588830424: { desc: '', name: 'Template', id: 1435588830424 },
+})
+const mockModelsJson = JSON.stringify({
+  1388596687391: {
+    vers: [],
+    name: 'Basic-f15d2',
+    tags: ['Tag'],
+    did: 1435588830424,
+    usn: -1,
+    flds: [
+      { name: 'Front', media: [], sticky: false, rtl: false, ord: 0, font: 'Arial', size: 20 },
+      { name: 'Back', media: [], sticky: false, rtl: false, ord: 1, font: 'Arial', size: 20 },
+    ],
+    sortf: 0,
+    type: 0,
+    id: 1388596687391,
+    mod: 1435645658,
+  },
+})
+
+const mockDbExec = vi.fn().mockImplementation((sql: string) => {
+  if (sql.includes('SELECT decks')) {
+    return [{ values: [[mockDecksJson]] }]
+  }
+  if (sql.includes('SELECT models')) {
+    return [{ values: [[mockModelsJson]] }]
+  }
+  return [{ values: [['{}']] }]
+})
 const mockDbExport = vi.fn().mockReturnValue(new Uint8Array([1, 2, 3, 4]))
 const mockDbClose = vi.fn()
 
@@ -104,13 +130,16 @@ describe('ankiExport', () => {
     mockCoursesToArray.mockResolvedValue([])
     mockNotesToArray.mockResolvedValue([])
 
-    // Reset exec mock to return valid deck/model JSON
-    mockDbExec.mockReturnValue([{
-      values: [[JSON.stringify({
-        1: { desc: '', name: 'Default', id: 1 },
-        1435588830424: { desc: '', name: 'Template', id: 1435588830424 },
-      })]],
-    }])
+    // Reset exec mock to return differentiated deck/model JSON
+    mockDbExec.mockImplementation((sql: string) => {
+      if (sql.includes('SELECT decks')) {
+        return [{ values: [[mockDecksJson]] }]
+      }
+      if (sql.includes('SELECT models')) {
+        return [{ values: [[mockModelsJson]] }]
+      }
+      return [{ values: [['{}']] }]
+    })
   })
 
   describe('exportFlashcardsAsAnki', () => {
@@ -206,6 +235,45 @@ describe('ankiExport', () => {
       await exportFlashcardsAsAnki()
 
       expect(mockDbClose).toHaveBeenCalled()
+    })
+
+    it('throws descriptive error when sql.js dynamic import fails', async () => {
+      mockFlashcardsToArray.mockResolvedValue([makeFlashcard()])
+      mockCoursesToArray.mockResolvedValue([{ id: 'course-1', name: 'React Mastery' }])
+      mockNotesToArray.mockResolvedValue([])
+
+      // Temporarily override the sql.js mock to simulate import failure
+      // The dynamic import resolves but initSqlJs (default export) rejects,
+      // simulating a corrupted or unavailable sql.js engine
+      const sqlModule = await import('sql.js/dist/sql-asm.js')
+      const originalDefault = sqlModule.default
+      ;(sqlModule as { default: unknown }).default = vi.fn().mockImplementation(() => {
+        throw new Error('Network error loading sql.js')
+      })
+
+      await expect(exportFlashcardsAsAnki()).rejects.toThrow('Network error loading sql.js')
+
+      // Restore original mock
+      ;(sqlModule as { default: unknown }).default = originalDefault
+    })
+
+    it('closes SQLite database even when card insertion throws', async () => {
+      mockFlashcardsToArray.mockResolvedValue([makeFlashcard()])
+      mockCoursesToArray.mockResolvedValue([{ id: 'course-1', name: 'React Mastery' }])
+      mockNotesToArray.mockResolvedValue([])
+
+      // Make the first INSERT OR REPLACE (note insert) throw
+      mockDbRun.mockImplementation((sql: string) => {
+        if (typeof sql === 'string' && sql.includes('INSERT OR REPLACE INTO notes')) {
+          throw new Error('SQLite insertion error')
+        }
+      })
+
+      await expect(exportFlashcardsAsAnki()).rejects.toThrow('SQLite insertion error')
+      expect(mockDbClose).toHaveBeenCalled()
+
+      // Restore mockDbRun
+      mockDbRun.mockReset()
     })
 
     it('strips HTML from card front and back', async () => {

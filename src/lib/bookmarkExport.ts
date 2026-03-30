@@ -9,11 +9,7 @@ import { db } from '@/db/schema'
 import type { VideoBookmark } from '@/data/types'
 import type { ExportProgressCallback } from './exportService'
 import { sanitizeFilename } from './noteExport'
-
-/** Yield to the UI thread between heavy operations */
-function yieldToUI(): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, 0))
-}
+import { yieldToUI } from './uiUtils'
 
 /**
  * Formats a timestamp in seconds to a human-readable string.
