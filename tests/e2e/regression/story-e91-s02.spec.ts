@@ -4,15 +4,15 @@
  * Verifies local course items display progress bars, completion badges,
  * and thumbnail placeholders matching YouTube course visual styling.
  */
-import { test, expect } from '../support/fixtures'
-import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
+import { test, expect } from '../../support/fixtures'
+import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
 import {
   seedImportedCourses,
   seedImportedVideos,
   seedIndexedDBStore,
   clearIndexedDBStore,
-} from '../support/helpers/seed-helpers'
-import { goToCourse, goToCourses } from '../support/helpers/navigation'
+} from '../../support/helpers/seed-helpers'
+import { goToCourse, goToCourses } from '../../support/helpers/navigation'
 
 const COURSE_ID = 'e91s02-local-course'
 const VIDEO_IDS = ['vid-a', 'vid-b', 'vid-c']
