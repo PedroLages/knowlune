@@ -19,7 +19,7 @@ import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
-import { useIsMobile } from '@/app/hooks/useMediaQuery'
+import { useMediaQuery } from '@/app/hooks/useMediaQuery'
 import { NoteEditor } from '@/app/components/notes/NoteEditor'
 import { TranscriptPanel } from '@/app/components/youtube/TranscriptPanel'
 import type { TranscriptLoadingState } from '@/app/components/youtube/TranscriptPanel'
@@ -537,7 +537,9 @@ export function PlayerSidePanel({
   focusTab,
 }: PlayerSidePanelProps) {
   const capabilities = adapter.getCapabilities()
-  const isMobile = useIsMobile()
+  // Use 768px breakpoint per spec (not project's default 639px mobile breakpoint)
+  // so tablets (640-768px) also see the fullscreen notes button
+  const isMobile = useMediaQuery('(max-width: 768px)')
   const [isNotesFullscreen, setIsNotesFullscreen] = useState(false)
   const fullscreenTriggerRef = useRef<HTMLButtonElement>(null)
   const fullscreenEditorRef = useRef<HTMLDivElement>(null)
@@ -583,25 +585,52 @@ export function PlayerSidePanel({
     }
   }, [adapter, lessonId])
 
-  // ESC handler for fullscreen notes overlay
+  // ESC handler + focus trap for fullscreen notes overlay
   useEffect(() => {
     if (!isNotesFullscreen) return
+    const overlay = fullscreenOverlayRef.current
+    if (!overlay) return
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsNotesFullscreen(false)
-        // Return focus to trigger button
         requestAnimationFrame(() => fullscreenTriggerRef.current?.focus())
+        return
+      }
+
+      // Focus trap: cycle Tab within the overlay
+      if (e.key === 'Tab') {
+        const focusableEls = overlay.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"]), [contenteditable]'
+        )
+        if (focusableEls.length === 0) return
+
+        const first = focusableEls[0]
+        const last = focusableEls[focusableEls.length - 1]
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        }
       }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isNotesFullscreen])
 
-  // Focus trap: focus editor on open
+  // Focus first focusable element on overlay open
+  const fullscreenOverlayRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (isNotesFullscreen) {
       requestAnimationFrame(() => {
-        const el = fullscreenEditorRef.current
+        const el = fullscreenOverlayRef.current
         if (el) {
           const focusable = el.querySelector<HTMLElement>(
             'textarea, [contenteditable], input, button'
@@ -676,6 +705,7 @@ export function PlayerSidePanel({
       {/* Fullscreen notes overlay (mobile only) */}
       {isNotesFullscreen && (
         <div
+          ref={fullscreenOverlayRef}
           className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-200"
           role="dialog"
           aria-modal="true"

@@ -169,6 +169,72 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
     }
   }, [lessonId])
 
+  // PDF page tracking: restore last-viewed page from progress table
+  const [savedPage, setSavedPage] = useState<number | undefined>(undefined)
+  const pageRestored = useRef(false)
+
+  useEffect(() => {
+    if (pageRestored.current) return
+    let ignore = false
+    db.progress
+      .get([courseId, lessonId])
+      .then(p => {
+        if (!ignore && p?.currentPage) {
+          setSavedPage(p.currentPage)
+        }
+        pageRestored.current = true
+      })
+      .catch(() => {
+        // silent-catch-ok — page restore is non-critical
+        pageRestored.current = true
+      })
+    return () => {
+      ignore = true
+    }
+  }, [courseId, lessonId])
+
+  // Debounced save of current page to progress table
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handlePageChange = useCallback(
+    (page: number, _totalPages: number) => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = setTimeout(() => {
+        db.progress
+          .where('[courseId+videoId]')
+          .equals([courseId, lessonId])
+          .first()
+          .then(async existing => {
+            if (existing) {
+              await db.progress.update(
+                [courseId, lessonId] as unknown as string,
+                { currentPage: page }
+              )
+            } else {
+              await db.progress.put({
+                courseId,
+                videoId: lessonId,
+                currentTime: 0,
+                completionPercentage: 0,
+                currentPage: page,
+              })
+            }
+          })
+          .catch(() => {
+            // silent-catch-ok — page save is non-critical
+          })
+      }, 500)
+    },
+    [courseId, lessonId]
+  )
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    }
+  }, [])
+
   // Dexie read failed
   if (loadError) {
     return (
@@ -254,69 +320,6 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
       </div>
     )
   }
-
-  // PDF page tracking: restore last-viewed page from progress table
-  const [savedPage, setSavedPage] = useState<number | undefined>(undefined)
-  const pageRestored = useRef(false)
-
-  useEffect(() => {
-    if (pageRestored.current) return
-    let ignore = false
-    db.progress
-      .get([courseId, lessonId])
-      .then(p => {
-        if (!ignore && p?.currentPage) {
-          setSavedPage(p.currentPage)
-        }
-        pageRestored.current = true
-      })
-      .catch(() => {
-        // silent-catch-ok — page restore is non-critical
-        pageRestored.current = true
-      })
-    return () => {
-      ignore = true
-    }
-  }, [courseId, lessonId])
-
-  // Debounced save of current page to progress table
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const handlePageChange = useCallback(
-    (page: number, _totalPages: number) => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-      saveTimerRef.current = setTimeout(() => {
-        db.progress
-          .where('[courseId+videoId]')
-          .equals([courseId, lessonId])
-          .first()
-          .then(existing => {
-            if (existing) {
-              return db.progress.update([courseId, lessonId], { currentPage: page })
-            } else {
-              return db.progress.put({
-                courseId,
-                videoId: lessonId,
-                currentTime: 0,
-                completionPercentage: 0,
-                currentPage: page,
-              })
-            }
-          })
-          .catch(() => {
-            // silent-catch-ok — page save is non-critical
-          })
-      }, 500)
-    },
-    [courseId, lessonId]
-  )
-
-  // Cleanup debounce timer on unmount
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-    }
-  }, [])
 
   // PDF display
   if (!blobUrl) return null

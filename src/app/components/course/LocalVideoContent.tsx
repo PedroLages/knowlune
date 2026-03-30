@@ -158,6 +158,43 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
       return () => observer.disconnect()
     }, [onVisibilityChange])
 
+    // Capture current video frame as JPEG and trigger download
+    const handleCaptureFrame = useCallback(() => {
+      const videoEl = (ref as React.RefObject<VideoPlayerHandle>)?.current?.getVideoElement?.()
+      if (!videoEl) {
+        toast.error('Video not available for capture')
+        return
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = videoEl.videoWidth
+      canvas.height = videoEl.videoHeight
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        toast.error('Canvas not supported')
+        return
+      }
+      ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height)
+      canvas.toBlob(
+        blob => {
+          if (!blob) {
+            toast.error('Failed to capture frame')
+            return
+          }
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `frame-${Date.now()}.jpg`
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          URL.revokeObjectURL(url)
+          toast.success('Frame saved to downloads')
+        },
+        'image/jpeg',
+        0.92
+      )
+    }, [ref])
+
     // Re-grant permission flow (AC8)
     const handleReGrantPermission = useCallback(async () => {
       if (!video?.fileHandle) return
@@ -286,43 +323,6 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
 
     // Video playback
     if (!blobUrl) return null
-
-    // Capture current video frame as JPEG and trigger download
-    const handleCaptureFrame = useCallback(() => {
-      const videoEl = (ref as React.RefObject<VideoPlayerHandle>)?.current?.getVideoElement?.()
-      if (!videoEl) {
-        toast.error('Video not available for capture')
-        return
-      }
-      const canvas = document.createElement('canvas')
-      canvas.width = videoEl.videoWidth
-      canvas.height = videoEl.videoHeight
-      const ctx = canvas.getContext('2d')
-      if (!ctx) {
-        toast.error('Canvas not supported')
-        return
-      }
-      ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height)
-      canvas.toBlob(
-        blob => {
-          if (!blob) {
-            toast.error('Failed to capture frame')
-            return
-          }
-          const url = URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url
-          a.download = `frame-${Date.now()}.jpg`
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-          URL.revokeObjectURL(url)
-          toast.success('Frame saved to downloads')
-        },
-        'image/jpeg',
-        0.92
-      )
-    }, [ref])
 
     // Map bookmarks to the shape VideoPlayer expects for timeline markers
     const bookmarkMarkers = bookmarks.map(b => ({
