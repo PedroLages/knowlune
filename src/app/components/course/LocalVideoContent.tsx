@@ -7,14 +7,14 @@
  * @see E89-S05
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef, forwardRef } from 'react'
 import { Link } from 'react-router'
 import { FileWarning, FolderSearch, RefreshCw, ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/db/schema'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
 import { useCaptionLoader } from '@/app/hooks/useCaptionLoader'
-import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
+import { VideoPlayer, type VideoPlayerHandle } from '@/app/components/figma/VideoPlayer'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
@@ -34,9 +34,15 @@ interface LocalVideoContentProps {
   onSeekComplete?: () => void
   /** Called when the user presses N to switch to the Notes tab */
   onFocusNotes?: () => void
+  /** Called when main video visibility changes (IntersectionObserver) */
+  onVisibilityChange?: (isVisible: boolean) => void
+  /** Called when play state changes */
+  onPlayStateChange?: (isPlaying: boolean) => void
+  /** Called when the blob URL is available (for mini-player) */
+  onBlobUrlReady?: (url: string | null) => void
 }
 
-export function LocalVideoContent({
+export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContentProps>(function LocalVideoContent({
   courseId,
   lessonId,
   onEnded,
@@ -44,7 +50,10 @@ export function LocalVideoContent({
   seekToTime,
   onSeekComplete,
   onFocusNotes,
-}: LocalVideoContentProps) {
+  onVisibilityChange,
+  onPlayStateChange,
+  onBlobUrlReady,
+}, ref) {
   // NOTE: Video loading from Dexie is duplicated between LocalVideoContent and
   // YouTubeVideoContent. This is intentional for now — will be extracted into a
   // shared hook in S07 when both components are consolidated.
@@ -124,6 +133,26 @@ export function LocalVideoContent({
     },
     [courseId, lessonId]
   )
+
+  // Notify parent when blob URL is ready (E91-S04 mini-player)
+  useEffect(() => {
+    onBlobUrlReady?.(blobUrl ?? null)
+  }, [blobUrl, onBlobUrlReady])
+
+  // IntersectionObserver: track whether the video is visible in the viewport (E91-S04)
+  const videoWrapperRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = videoWrapperRef.current
+    if (!el || !onVisibilityChange) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        onVisibilityChange(entry.isIntersecting)
+      },
+      { threshold: 0.1 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [onVisibilityChange])
 
   // Re-grant permission flow (AC8)
   const handleReGrantPermission = useCallback(async () => {
@@ -262,20 +291,24 @@ export function LocalVideoContent({
   }))
 
   return (
-    <VideoPlayer
-      src={blobUrl}
-      title={video.filename}
-      courseId={courseId}
-      lessonId={lessonId}
-      captions={userCaptions ? [userCaptions] : undefined}
-      onLoadCaptions={handleLoadCaptions}
-      onEnded={onEnded}
-      onTimeUpdate={onTimeUpdate}
-      seekToTime={seekToTime}
-      onSeekComplete={onSeekComplete}
-      onBookmarkAdd={handleBookmarkAdd}
-      bookmarks={bookmarkMarkers}
-      onFocusNotes={onFocusNotes}
-    />
+    <div ref={videoWrapperRef} data-testid="local-video-wrapper">
+      <VideoPlayer
+        ref={ref}
+        src={blobUrl}
+        title={video.filename}
+        courseId={courseId}
+        lessonId={lessonId}
+        captions={userCaptions ? [userCaptions] : undefined}
+        onLoadCaptions={handleLoadCaptions}
+        onEnded={onEnded}
+        onTimeUpdate={onTimeUpdate}
+        seekToTime={seekToTime}
+        onSeekComplete={onSeekComplete}
+        onBookmarkAdd={handleBookmarkAdd}
+        bookmarks={bookmarkMarkers}
+        onFocusNotes={onFocusNotes}
+        onPlayStateChange={onPlayStateChange}
+      />
+    </div>
   )
-}
+})

@@ -33,6 +33,7 @@ import { AutoAdvanceCountdown } from '@/app/components/figma/AutoAdvanceCountdow
 import { CompletionModal } from '@/app/components/celebrations/CompletionModal'
 import type { CelebrationType } from '@/app/components/celebrations/CompletionModal'
 import { LocalVideoContent } from '@/app/components/course/LocalVideoContent'
+import type { VideoPlayerHandle } from '@/app/components/figma/VideoPlayer'
 import { YouTubeVideoContent } from '@/app/components/course/YouTubeVideoContent'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
@@ -46,6 +47,7 @@ import { useHasQuiz } from '@/hooks/useHasQuiz'
 import { PlayerSidePanel } from '@/app/components/course/PlayerSidePanel'
 import type { LessonItem } from '@/lib/courseAdapter'
 import { useTheaterMode } from '@/app/hooks/useTheaterMode'
+import { MiniPlayer } from '@/app/components/course/MiniPlayer'
 import type { CompletionStatus } from '@/data/types'
 
 // Lazy-load PdfContent to avoid pdfjs-dist bundle impact for video-only users
@@ -64,6 +66,7 @@ export function UnifiedLessonPlayer() {
   const isDesktop = useIsDesktop()
   const { isTheater, toggleTheater } = useTheaterMode()
   const sidePanelRef = useRef<ImperativePanelHandle>(null)
+  const videoPlayerRef = useRef<VideoPlayerHandle>(null)
 
   // Lesson navigation: prev/next lesson via adapter
   const { prevLesson, nextLesson, currentIndex, totalLessons, lessons } = useLessonNavigation(
@@ -99,8 +102,13 @@ export function UnifiedLessonPlayer() {
   const [currentTime, setCurrentTime] = useState(0)
   const [seekToTime, setSeekToTime] = useState<number | undefined>(undefined)
 
+  // Mini-player state (E91-S04): tracks video visibility, play state, and dismiss
+  const [isVideoVisible, setIsVideoVisible] = useState(true)
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false)
+  const [isMiniPlayerDismissed, setIsMiniPlayerDismissed] = useState(false)
+  const [localVideoBlobUrl, setLocalVideoBlobUrl] = useState<string | null>(null)
+
   // Focus tab state: set to "notes" when user presses N in VideoPlayer
-  const [focusTab, setFocusTab] = useState<string | null>(null)
   const focusTabCounter = useRef(0)
 
   const handleTimeUpdate = useCallback((time: number) => {
@@ -113,6 +121,31 @@ export function UnifiedLessonPlayer() {
 
   const handleSeekComplete = useCallback(() => {
     setSeekToTime(undefined)
+  }, [])
+
+  // Mini-player callbacks
+  const handleVideoVisibilityChange = useCallback((visible: boolean) => {
+    setIsVideoVisible(visible)
+  }, [])
+
+  const handlePlayStateChange = useCallback((playing: boolean) => {
+    setIsVideoPlaying(playing)
+  }, [])
+
+  const handleMiniPlayerClose = useCallback(() => {
+    setIsMiniPlayerDismissed(true)
+  }, [])
+
+  const handleMiniPlayerPlayPause = useCallback(() => {
+    const videoEl = videoPlayerRef.current?.getVideoElement()
+    if (!videoEl) return
+    if (videoEl.paused) {
+      videoEl.play().catch(() => {
+        // silent-catch-ok: autoplay may be blocked
+      })
+    } else {
+      videoEl.pause()
+    }
   }, [])
 
   const handleFocusNotes = useCallback(() => {
@@ -155,6 +188,11 @@ export function UnifiedLessonPlayer() {
     setCurrentTime(0)
     setSeekToTime(undefined)
     setFocusTab(null)
+    // Reset mini-player state on lesson change (E91-S04)
+    setIsMiniPlayerDismissed(false)
+    setIsVideoVisible(true)
+    setIsVideoPlaying(false)
+    setLocalVideoBlobUrl(null)
   }, [lessonId])
 
   // Resolve lesson metadata (title + type) from adapter's lesson list
@@ -354,6 +392,7 @@ export function UnifiedLessonPlayer() {
     />
   ) : (
     <LocalVideoContent
+      ref={videoPlayerRef}
       courseId={courseId!}
       lessonId={lessonId!}
       onEnded={handleVideoEnded}
@@ -361,6 +400,9 @@ export function UnifiedLessonPlayer() {
       seekToTime={seekToTime}
       onSeekComplete={handleSeekComplete}
       onFocusNotes={handleFocusNotes}
+      onVisibilityChange={handleVideoVisibilityChange}
+      onPlayStateChange={handlePlayStateChange}
+      onBlobUrlReady={setLocalVideoBlobUrl}
     />
   )
 
@@ -504,6 +546,18 @@ export function UnifiedLessonPlayer() {
           nextLesson={nextLesson}
           currentIndex={currentIndex}
           totalLessons={totalLessons}
+        />
+      )}
+
+      {/* Mini-player for local video lessons (E91-S04) */}
+      {!isYouTube && !isPdf && localVideoBlobUrl && (
+        <MiniPlayer
+          videoSrc={localVideoBlobUrl}
+          currentTime={currentTime}
+          isMainPlaying={isVideoPlaying}
+          isVisible={!isVideoVisible && !isMiniPlayerDismissed}
+          onClose={handleMiniPlayerClose}
+          onPlayPause={handleMiniPlayerPlayPause}
         />
       )}
 
