@@ -1,12 +1,12 @@
 ---
 story_id: E53-S03
 story_name: "PKM Batch Export & Settings UI"
-status: draft
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-03-30
+completed: 2026-03-30
+reviewed: true
+review_started: 2026-03-30
+review_gates_passed: [build, lint, typecheck, format, unit-tests, e2e-tests, design-review, code-review, test-coverage-review]
 burn_in_validated: false
 ---
 
@@ -164,12 +164,16 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+All checks passed. Cards match existing export card pattern exactly. Design tokens used correctly (bg-brand-soft for PKM, bg-success-soft for Anki). Accessibility verified with aria-labels and touch targets.
+See: `docs/reviews/design/design-review-2026-03-30-E53-S03.md`
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+All checks passed. Error handling follows established try/catch/finally pattern. Double execution guard in place. pkmExport.ts is a clean orchestrator composing existing exporters.
+See: `docs/reviews/code/code-review-2026-03-30-E53-S03.md`
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- Weighted progress callbacks (40/40/20) provide smoother UX than equal weighting when export phases have different durations
+- Composing existing exporters (flashcardExport, bookmarkExport, exportService) into a single PKM bundle keeps the orchestrator thin and testable
+- Following the existing Settings export card pattern exactly reduces review friction to near zero
