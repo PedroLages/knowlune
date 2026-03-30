@@ -18,7 +18,7 @@
  * @see E89-S05, E89-S06, E89-S07, E89-S08
  */
 
-import { lazy, Suspense, useState, useEffect, useCallback, useRef } from 'react'
+import { lazy, Suspense, useState, useEffect, useCallback, useRef, type RefObject } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -39,11 +39,13 @@ import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/app/components/ui/resizable'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
+import type { ImperativePanelHandle } from 'react-resizable-panels'
 import { PanelRight, ClipboardCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { useHasQuiz } from '@/hooks/useHasQuiz'
 import { PlayerSidePanel } from '@/app/components/course/PlayerSidePanel'
 import type { LessonItem } from '@/lib/courseAdapter'
+import { useTheaterMode } from '@/app/hooks/useTheaterMode'
 import type { CompletionStatus } from '@/data/types'
 
 // Lazy-load PdfContent to avoid pdfjs-dist bundle impact for video-only users
@@ -60,6 +62,8 @@ export function UnifiedLessonPlayer() {
   const course = importedCourses.find(c => c.id === courseId)
 
   const isDesktop = useIsDesktop()
+  const { isTheater, toggleTheater } = useTheaterMode()
+  const sidePanelRef = useRef<ImperativePanelHandle>(null)
 
   // Lesson navigation: prev/next lesson via adapter
   const { prevLesson, nextLesson, currentIndex, totalLessons, lessons } = useLessonNavigation(
@@ -116,6 +120,33 @@ export function UnifiedLessonPlayer() {
     focusTabCounter.current += 1
     setFocusTab(`notes`)
   }, [])
+
+  // Theater mode: imperatively collapse/expand the side panel
+  useEffect(() => {
+    if (!isDesktop) return
+    const panel = sidePanelRef.current
+    if (!panel) return
+    if (isTheater) {
+      panel.collapse()
+    } else {
+      panel.expand()
+    }
+  }, [isTheater, isDesktop])
+
+  // Keyboard shortcut: T toggles theater mode (only when not in input/textarea)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase()
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return
+      if ((e.target as HTMLElement)?.isContentEditable) return
+      if (e.key === 't' || e.key === 'T') {
+        e.preventDefault()
+        toggleTheater()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [toggleTheater])
 
   // Reset lifted video state when lesson changes
   useEffect(() => {
@@ -363,7 +394,11 @@ export function UnifiedLessonPlayer() {
   )
 
   return (
-    <div data-testid="lesson-player-content" className="flex flex-col h-full">
+    <div
+      data-testid="lesson-player-content"
+      data-theater-mode={isTheater ? 'true' : 'false'}
+      className="flex flex-col h-full"
+    >
       {/* Breadcrumb: Courses > Course Name > Lesson Title */}
       <div className="px-4 pt-3">
         <CourseBreadcrumb
@@ -380,13 +415,18 @@ export function UnifiedLessonPlayer() {
         courseName={course?.name}
         showCompletionToggle={isPdf || isYouTube || capabilities.hasVideo}
         onStatusChange={handleManualStatusChange}
+        isTheater={isTheater}
+        onToggleTheater={toggleTheater}
       />
 
       {/* Content area: resizable panels on desktop, sheet on mobile */}
       <div className="flex-1 overflow-auto">
         {isDesktop ? (
-          <ResizablePanelGroup orientation="horizontal" className="h-full">
-            <ResizablePanel defaultSize={75} minSize={50}>
+          <ResizablePanelGroup
+            orientation="horizontal"
+            className="h-full transition-all duration-300"
+          >
+            <ResizablePanel defaultSize={isTheater ? 100 : 75} minSize={50}>
               <div className="h-full overflow-auto p-4">
                 {mainContent}
                 {quizButton}
@@ -403,8 +443,15 @@ export function UnifiedLessonPlayer() {
                 )}
               </div>
             </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
+            {!isTheater && <ResizableHandle withHandle />}
+            <ResizablePanel
+              ref={sidePanelRef as RefObject<ImperativePanelHandle>}
+              defaultSize={isTheater ? 0 : 25}
+              minSize={0}
+              maxSize={40}
+              collapsible
+              collapsedSize={0}
+            >
               <div className="h-full overflow-auto border-l border-border/50 bg-card">
                 {sidePanelContent}
               </div>
