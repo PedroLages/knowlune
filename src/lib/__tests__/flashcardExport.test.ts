@@ -201,6 +201,20 @@ describe('flashcardExport', () => {
       expect(result[1].name).toContain('What-is-React-1.md')
     })
 
+    it('escapes quotes in tag values for YAML safety', async () => {
+      const fc = makeFlashcard({ noteId: 'note-1' })
+      mockFlashcardsToArray.mockResolvedValue([fc])
+      mockCoursesToArray.mockResolvedValue([{ id: 'course-1', name: 'React "Hooks"' }])
+      mockNotesToArray.mockResolvedValue([
+        { id: 'note-1', tags: ['say "hello"'] } as Note,
+      ])
+
+      const result = await exportFlashcardsAsMarkdown()
+      const content = result[0].content
+      // Tags should have internal quotes escaped
+      expect(content).toContain('tags: ["react-hooks", "say \\"hello\\""]')
+    })
+
     it('escapes quotes in flashcard front text for YAML', async () => {
       const fc = makeFlashcard({ front: 'What is "React"?', back: 'A "library".' })
       mockFlashcardsToArray.mockResolvedValue([fc])

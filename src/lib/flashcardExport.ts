@@ -80,7 +80,7 @@ function generateFlashcardFrontmatter(
     '---',
     `type: "flashcard"`,
     `deck: ${yamlString(deckName)}`,
-    `tags: [${tags.map(t => `"${t}"`).join(', ')}]`,
+    `tags: [${tags.map(t => yamlString(t)).join(', ')}]`,
     // FSRS scheduling fields
     `stability: ${flashcard.stability}`,
     `difficulty: ${flashcard.difficulty}`,

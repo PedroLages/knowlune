@@ -63,7 +63,8 @@ function generateBookmarkFrontmatter(
  * Returns an empty array without error if no bookmarks exist (AC7).
  */
 export async function exportBookmarksAsMarkdown(
-  onProgress?: ExportProgressCallback
+  onProgress?: ExportProgressCallback,
+  now: Date = new Date()
 ): Promise<Array<{ name: string; content: string }>> {
   onProgress?.(0, 'Loading bookmarks...')
   const bookmarks = await db.bookmarks.toArray()
@@ -96,7 +97,7 @@ export async function exportBookmarksAsMarkdown(
   }
 
   onProgress?.(60, 'Generating Markdown files...')
-  const exportedAt = new Date().toISOString()
+  const exportedAt = now.toISOString()
   const files: Array<{ name: string; content: string }> = []
 
   for (const [courseId, courseBookmarks] of byCourse) {

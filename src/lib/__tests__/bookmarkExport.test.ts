@@ -172,9 +172,9 @@ describe('bookmarkExport', () => {
       mockCoursesToArray.mockResolvedValue([{ id: 'course-1', name: 'Course' }])
       mockVideosToArray.mockResolvedValue([{ id: 'video-1', filename: 'Video.mp4' }])
 
-      const result = await exportBookmarksAsMarkdown()
-      // Should contain an ISO date
-      expect(result[0].content).toMatch(/exported: "\d{4}-\d{2}-\d{2}T/)
+      const fixedDate = new Date('2026-03-30T12:00:00.000Z')
+      const result = await exportBookmarksAsMarkdown(undefined, fixedDate)
+      expect(result[0].content).toContain('exported: "2026-03-30T12:00:00.000Z"')
     })
 
     it('calls onProgress callback', async () => {
