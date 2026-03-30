@@ -35,6 +35,13 @@ import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } 
 import type { FileStatus } from '@/lib/fileVerification'
 
 // ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Percentage threshold at which a lesson is considered completed. */
+const COMPLETION_THRESHOLD = 90
+
+// ---------------------------------------------------------------------------
 // Utility functions
 // ---------------------------------------------------------------------------
 
@@ -377,7 +384,7 @@ function renderLocalGroups(
       const isUnavailable = status === 'missing' || status === 'permission-denied'
       const prog = progressMap.get(video.id)
       const percent = prog?.completionPercentage ?? 0
-      const isCompleted = percent >= 90
+      const isCompleted = percent >= COMPLETION_THRESHOLD
 
       const content = (
         <>
@@ -522,7 +529,7 @@ function renderYouTubeGroups(
         {group.videos.map((video, videoIndex) => {
           const prog = progressMap.get(video.id)
           const percent = prog?.completionPercentage ?? 0
-          const isCompleted = percent >= 90
+          const isCompleted = percent >= COMPLETION_THRESHOLD
           const isRemoved = video.removedFromYouTube === true
 
           return (
