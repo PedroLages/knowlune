@@ -1,11 +1,12 @@
 # Story 69.1: Storage Estimation Service and Overview Card
 
-Status: in-progress
-reviewed: in-progress
+Status: done
+completed: 2026-03-30
+reviewed: true
 review_started: 2026-03-30
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa]
 review_scope: full
-verdict: BLOCKED
+verdict: PASS
 
 ## Story
 

@@ -682,14 +682,15 @@
   "page_metrics": {
     "/": {
       "captured_at": "2026-03-30",
-      "commit": "e24bfb05",
+      "commit": "3085f078",
       "story": "E69-S01",
-      "environment": "dev",
-      "ttfb": 9,
-      "dom_interactive": 92,
-      "dom_complete": 577,
-      "load_complete": 577,
-      "fcp": 886,
+      "round": "R3",
+      "environment": "dev-cold-start",
+      "ttfb": 4,
+      "dom_interactive": 89,
+      "dom_complete": 485,
+      "load_complete": 485,
+      "fcp": 677,
       "resource_count": 236,
       "js_resource_count": 235,
       "css_resource_count": 1,
@@ -697,18 +698,19 @@
     },
     "/settings": {
       "captured_at": "2026-03-30",
-      "commit": "e24bfb05",
+      "commit": "3085f078",
       "story": "E69-S01",
-      "environment": "dev",
-      "ttfb": 8,
-      "dom_interactive": 43,
-      "dom_complete": 231,
-      "load_complete": 231,
-      "fcp": 361,
+      "round": "R3",
+      "environment": "dev-cold-start",
+      "ttfb": 14,
+      "dom_interactive": 111,
+      "dom_complete": 458,
+      "load_complete": 458,
+      "fcp": 627,
       "resource_count": 216,
       "js_resource_count": 215,
       "css_resource_count": 1,
-      "total_transfer_bytes": 2180477
+      "total_transfer_bytes": 13747851
     }
   }
 }
