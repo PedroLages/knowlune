@@ -31,10 +31,15 @@ import {
   CollapsibleTrigger,
 } from '@/app/components/ui/collapsible'
 import { cn } from '@/app/components/ui/utils'
-import { StatusIndicator } from '@/app/components/figma/StatusIndicator'
-import type { CompletionStatus } from '@/data/types'
 import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
 import type { FileStatus } from '@/lib/fileVerification'
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Percentage threshold at which a lesson is considered completed. */
+const COMPLETION_THRESHOLD = 90
 
 // ---------------------------------------------------------------------------
 // Utility functions
@@ -58,14 +63,6 @@ function stripExtension(filename: string): string {
 function getFolderName(path: string): string {
   const parts = path.split('/')
   return parts.length > 1 ? parts[0] : ''
-}
-
-/** Derive a CompletionStatus from a VideoProgress record (or absence of one). */
-function deriveStatus(progress: VideoProgress | undefined): CompletionStatus {
-  if (!progress) return 'not-started'
-  if (progress.completionPercentage >= 90) return 'completed'
-  if (progress.completionPercentage > 0) return 'in-progress'
-  return 'not-started'
 }
 
 // ---------------------------------------------------------------------------
@@ -251,34 +248,42 @@ export function LessonList({
               <li key={pdf.id} data-testid={`course-content-item-pdf-${pdf.id}`}>
                 {isUnavailable ? (
                   <div
-                    className={cn(
-                      'flex flex-wrap items-center gap-3 p-4 rounded-xl border bg-card opacity-50 cursor-not-allowed'
-                    )}
+                    className="flex items-center gap-3 p-4 rounded-xl border bg-card opacity-50 cursor-not-allowed"
                     aria-disabled="true"
                   >
-                    <FileText
-                      className="size-5 shrink-0 text-muted-foreground"
-                      aria-hidden="true"
-                    />
-                    <span className="flex-1 font-medium text-sm">
-                      <HighlightedText text={stripExtension(pdf.filename)} query={searchQuery} />
-                    </span>
-                    <FileStatusBadge status={status} itemId={pdf.id} />
+                    <div className="w-24 h-14 bg-muted rounded-md flex items-center justify-center shrink-0">
+                      <FileText className="size-5 text-muted-foreground" aria-hidden="true" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium">
+                        <HighlightedText text={stripExtension(pdf.filename)} query={searchQuery} />
+                      </span>
+                      <FileStatusBadge status={status} itemId={pdf.id} />
+                    </div>
                   </div>
                 ) : (
                   <Link
                     to={`/courses/${courseId}/lessons/${pdf.id}`}
-                    className="flex flex-wrap items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent transition-colors group"
+                    className="flex items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent transition-colors group"
                   >
-                    <FileText className="size-5 shrink-0 text-warning" aria-hidden="true" />
-                    <span className="flex-1 font-medium text-sm group-hover:text-brand transition-colors">
-                      <HighlightedText text={stripExtension(pdf.filename)} query={searchQuery} />
-                    </span>
-                    {pdf.pageCount > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        {pdf.pageCount} {pdf.pageCount === 1 ? 'page' : 'pages'}
+                    <div
+                      className="w-24 h-14 bg-muted rounded-md flex items-center justify-center shrink-0"
+                      data-testid={`thumbnail-placeholder-${pdf.id}`}
+                    >
+                      <FileText className="size-5 text-warning" aria-hidden="true" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium group-hover:text-brand transition-colors line-clamp-2">
+                        <HighlightedText text={stripExtension(pdf.filename)} query={searchQuery} />
                       </span>
-                    )}
+                      {pdf.pageCount > 0 && (
+                        <div className="mt-0.5">
+                          <span className="text-xs text-muted-foreground">
+                            {pdf.pageCount} {pdf.pageCount === 1 ? 'page' : 'pages'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </Link>
                 )}
               </li>
@@ -374,38 +379,82 @@ function renderLocalGroups(
   searchQuery: string
 ) {
   return groups.map(group => {
-    const videoItems = group.videos.map(video => {
+    const videoItems = group.videos.map((video, videoIndex) => {
       const status = fileStatuses.get(video.id) ?? 'checking'
       const isUnavailable = status === 'missing' || status === 'permission-denied'
-      const completionStatus = deriveStatus(progressMap.get(video.id))
+      const prog = progressMap.get(video.id)
+      const percent = prog?.completionPercentage ?? 0
+      const isCompleted = percent >= COMPLETION_THRESHOLD
 
       const content = (
         <>
-          <StatusIndicator status={completionStatus} itemId={video.id} mode="display" />
-          <Video
-            data-testid="content-type-icon"
+          {/* Index / completion indicator */}
+          <div
             className={cn(
-              'size-5 shrink-0',
-              isUnavailable ? 'text-muted-foreground' : 'text-brand'
-            )}
-            aria-hidden="true"
-          />
-          <span
-            data-testid={`file-status-${video.id}`}
-            data-status={status}
-            className={cn(
-              'flex-1 font-medium text-sm',
-              !isUnavailable && 'group-hover:text-brand transition-colors'
+              'size-8 rounded-full flex items-center justify-center shrink-0 text-xs font-medium',
+              isCompleted ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'
             )}
           >
-            <HighlightedText text={stripExtension(video.filename)} query={searchQuery} />
-          </span>
-          <FileStatusBadge status={status} itemId={video.id} />
-          {video.duration > 0 && (
-            <span className="text-xs text-muted-foreground tabular-nums">
-              {formatDuration(video.duration)}
-            </span>
-          )}
+            {isCompleted ? (
+              <CheckCircle2
+                className="size-4"
+                aria-label="Completed"
+                data-testid={`completion-badge-${video.id}`}
+              />
+            ) : (
+              <span>{videoIndex + 1}</span>
+            )}
+          </div>
+
+          {/* Thumbnail placeholder */}
+          <div
+            className="w-24 h-14 bg-muted rounded-md flex items-center justify-center shrink-0"
+            data-testid={`thumbnail-placeholder-${video.id}`}
+          >
+            <Video className="size-5 text-muted-foreground" aria-hidden="true" />
+          </div>
+
+          {/* Video info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span
+                data-testid={`file-status-${video.id}`}
+                data-status={status}
+                className={cn(
+                  'text-sm font-medium line-clamp-2',
+                  !isUnavailable && 'group-hover:text-brand transition-colors'
+                )}
+              >
+                <HighlightedText text={stripExtension(video.filename)} query={searchQuery} />
+              </span>
+              <FileStatusBadge status={status} itemId={video.id} />
+            </div>
+            <div className="flex items-center gap-2 mt-0.5">
+              {video.duration > 0 && (
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  <Clock className="size-3 inline mr-0.5" aria-hidden="true" />
+                  {formatDuration(video.duration)}
+                </span>
+              )}
+              {percent > 0 && !isCompleted && (
+                <Badge
+                  variant="secondary"
+                  className="text-xs bg-brand-soft text-brand-soft-foreground"
+                  data-testid={`progress-badge-${video.id}`}
+                >
+                  {percent}%
+                </Badge>
+              )}
+            </div>
+            {percent > 0 && (
+              <Progress
+                value={percent}
+                className="h-1 mt-1.5"
+                aria-label={`${percent}% watched`}
+                data-testid={`progress-bar-${video.id}`}
+              />
+            )}
+          </div>
         </>
       )
 
@@ -413,7 +462,7 @@ function renderLocalGroups(
         <li key={video.id} data-testid={`course-content-item-video-${video.id}`}>
           {isUnavailable ? (
             <div
-              className="flex flex-wrap items-center gap-3 p-4 rounded-xl border bg-card opacity-50 cursor-not-allowed"
+              className="flex items-center gap-3 p-4 rounded-xl border bg-card opacity-50 cursor-not-allowed"
               aria-disabled="true"
             >
               {content}
@@ -421,7 +470,7 @@ function renderLocalGroups(
           ) : (
             <Link
               to={`/courses/${courseId}/lessons/${video.id}`}
-              className="flex flex-wrap items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent transition-colors group"
+              className="flex items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent transition-colors group"
             >
               {content}
             </Link>
@@ -480,7 +529,7 @@ function renderYouTubeGroups(
         {group.videos.map((video, videoIndex) => {
           const prog = progressMap.get(video.id)
           const percent = prog?.completionPercentage ?? 0
-          const isCompleted = percent >= 90
+          const isCompleted = percent >= COMPLETION_THRESHOLD
           const isRemoved = video.removedFromYouTube === true
 
           return (
