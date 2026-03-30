@@ -1,6 +1,10 @@
 # Story 69.1: Storage Estimation Service and Overview Card
 
 Status: in-progress
+reviewed: in-progress
+review_started: 2026-03-30
+review_gates_passed: []
+review_scope: full
 
 ## Story
 

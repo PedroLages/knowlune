@@ -120,11 +120,11 @@ function StorageOverviewBar({ overview }: { overview: StorageOverview }) {
   const chartData = [
     STORAGE_CATEGORIES.reduce(
       (acc, cat) => {
-        const found = overview.categories.find((c) => c.category === cat)
+        const found = overview.categories.find(c => c.category === cat)
         acc[cat] = found?.sizeBytes ?? 0
         return acc
       },
-      {} as Record<string, number>,
+      {} as Record<string, number>
     ),
   ]
 
@@ -136,11 +136,7 @@ function StorageOverviewBar({ overview }: { overview: StorageOverview }) {
       </p>
 
       {hasData ? (
-        <ChartContainer
-          config={chartConfig}
-          className="w-full"
-          style={{ height: 32 }}
-        >
+        <ChartContainer config={chartConfig} className="w-full" style={{ height: 32 }}>
           <BarChart
             data={chartData}
             layout="vertical"
@@ -152,12 +148,10 @@ function StorageOverviewBar({ overview }: { overview: StorageOverview }) {
             <YAxis type="category" dataKey="name" hide />
             <ChartTooltip
               content={
-                <ChartTooltipContent
-                  formatter={(value) => `~${formatFileSize(value as number)}`}
-                />
+                <ChartTooltipContent formatter={value => `~${formatFileSize(value as number)}`} />
               }
             />
-            {STORAGE_CATEGORIES.map((cat) => (
+            {STORAGE_CATEGORIES.map(cat => (
               <Bar
                 key={cat}
                 dataKey={cat}
@@ -180,7 +174,7 @@ function StorageOverviewBar({ overview }: { overview: StorageOverview }) {
           </tr>
         </thead>
         <tbody>
-          {overview.categories.map((cat) => (
+          {overview.categories.map(cat => (
             <tr key={cat.category}>
               <td>{cat.label}</td>
               <td>~{formatFileSize(cat.sizeBytes)}</td>
@@ -193,13 +187,13 @@ function StorageOverviewBar({ overview }: { overview: StorageOverview }) {
 }
 
 function CategoryBreakdownLegend({ overview }: { overview: StorageOverview }) {
-  const nonEmpty = overview.categories.filter((c) => c.sizeBytes > 0)
+  const nonEmpty = overview.categories.filter(c => c.sizeBytes > 0)
 
   if (nonEmpty.length === 0) return null
 
   return (
     <div role="list" className="grid grid-cols-2 md:grid-cols-3 gap-3">
-      {nonEmpty.map((cat) => {
+      {nonEmpty.map(cat => {
         const percent =
           overview.categorizedTotal > 0
             ? Math.round((cat.sizeBytes / overview.categorizedTotal) * 100)

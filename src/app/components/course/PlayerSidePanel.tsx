@@ -118,7 +118,13 @@ interface TranscriptTabProps {
   onSeek?: (time: number) => void
 }
 
-function TranscriptTab({ courseId, lessonId, adapter, currentTime: externalTime, onSeek: externalSeek }: TranscriptTabProps) {
+function TranscriptTab({
+  courseId,
+  lessonId,
+  adapter,
+  currentTime: externalTime,
+  onSeek: externalSeek,
+}: TranscriptTabProps) {
   const [cues, setCues] = useState<TranscriptCue[]>([])
   const [loadingState, setLoadingState] = useState<TranscriptLoadingState>('loading')
 
@@ -459,7 +465,12 @@ export function PlayerSidePanel({
   }, [focusTab])
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full" data-testid="player-side-panel">
+    <Tabs
+      value={activeTab}
+      onValueChange={setActiveTab}
+      className="flex flex-col h-full"
+      data-testid="player-side-panel"
+    >
       {/* Radix Tabs provides arrow-key navigation between triggers by default — no custom keyboard shortcuts needed. */}
       <TabsList className="w-full shrink-0 px-1">
         <TabsTrigger value="notes" className="text-xs">

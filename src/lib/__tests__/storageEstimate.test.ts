@@ -18,11 +18,7 @@ vi.mock('@/lib/storageQuotaMonitor', () => ({
 
 // --- Imports (after mocks) ---
 
-import {
-  estimateTableSize,
-  getStorageOverview,
-  STORAGE_CATEGORIES,
-} from '@/lib/storageEstimate'
+import { estimateTableSize, getStorageOverview, STORAGE_CATEGORIES } from '@/lib/storageEstimate'
 
 // --- Helpers ---
 
@@ -225,7 +221,7 @@ describe('getStorageOverview', () => {
 
     const overview = await getStorageOverview()
 
-    const labels = overview.categories.map((c) => c.label)
+    const labels = overview.categories.map(c => c.label)
     expect(labels).toEqual([
       'Courses',
       'Notes',

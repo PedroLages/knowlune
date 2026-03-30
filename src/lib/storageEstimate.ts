@@ -59,10 +59,7 @@ export const STORAGE_CATEGORIES = Object.keys(CATEGORY_MAP) as StorageCategory[]
  * Estimate the storage size of a single Dexie table by sampling rows.
  * Returns 0 if the table is empty or the query fails.
  */
-export async function estimateTableSize(
-  tableName: string,
-  sampleSize = 5,
-): Promise<number> {
+export async function estimateTableSize(tableName: string, sampleSize = 5): Promise<number> {
   try {
     const table = db.table(tableName)
     const count = await table.count()
@@ -90,10 +87,10 @@ async function estimateCategory(category: StorageCategory): Promise<CategoryEsti
   const { label, tables } = CATEGORY_MAP[category]
 
   const results = await Promise.allSettled(
-    tables.map(async (tableName) => ({
+    tables.map(async tableName => ({
       tableName,
       size: await estimateTableSize(tableName),
-    })),
+    }))
   )
 
   const tableBreakdown: Record<string, number> = {}
@@ -121,7 +118,7 @@ export async function getStorageOverview(): Promise<StorageOverview> {
   const usagePercent = estimate?.usagePercent ?? 0
 
   const categoryResults = await Promise.allSettled(
-    STORAGE_CATEGORIES.map((cat) => estimateCategory(cat)),
+    STORAGE_CATEGORIES.map(cat => estimateCategory(cat))
   )
 
   const categories: CategoryEstimate[] = []

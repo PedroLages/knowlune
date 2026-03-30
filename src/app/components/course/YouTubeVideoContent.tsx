@@ -115,9 +115,12 @@ export function YouTubeVideoContent({
     }
   }, [courseId, loadCourseStates])
 
-  const handleTimeUpdate = useCallback((time: number) => {
-    externalTimeUpdate?.(time)
-  }, [externalTimeUpdate])
+  const handleTimeUpdate = useCallback(
+    (time: number) => {
+      externalTimeUpdate?.(time)
+    },
+    [externalTimeUpdate]
+  )
 
   // Handle external seek requests from parent (e.g. transcript click in side panel)
   useEffect(() => {
