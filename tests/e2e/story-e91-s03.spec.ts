@@ -14,7 +14,6 @@ import { test, expect } from '../support/fixtures'
 import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
 import { navigateAndWait } from '../support/helpers/navigation'
 import { seedImportedCourses, seedImportedVideos } from '../support/helpers/seed-helpers'
-import { TIMEOUTS } from '../utils/constants'
 import type { Page } from '@playwright/test'
 
 // ---------------------------------------------------------------------------
@@ -123,6 +122,9 @@ test.describe('E91-S03: Theater Mode', () => {
     await seedAndNavigate(page, 'e91-vid-01')
 
     const playerContent = page.getByTestId('lesson-player-content')
+
+    // Click the player container to ensure keyboard focus is on the page (not an iframe/video)
+    await playerContent.click()
 
     // Press T to enter theater mode
     await page.keyboard.press('t')

@@ -394,7 +394,11 @@ export function UnifiedLessonPlayer() {
   )
 
   return (
-    <div data-testid="lesson-player-content" data-theater-mode={isTheater ? 'true' : 'false'} className="flex flex-col h-full">
+    <div
+      data-testid="lesson-player-content"
+      data-theater-mode={isTheater ? 'true' : 'false'}
+      className="flex flex-col h-full"
+    >
       {/* Breadcrumb: Courses > Course Name > Lesson Title */}
       <div className="px-4 pt-3">
         <CourseBreadcrumb
@@ -418,7 +422,10 @@ export function UnifiedLessonPlayer() {
       {/* Content area: resizable panels on desktop, sheet on mobile */}
       <div className="flex-1 overflow-auto">
         {isDesktop ? (
-          <ResizablePanelGroup orientation="horizontal" className="h-full transition-all duration-300">
+          <ResizablePanelGroup
+            orientation="horizontal"
+            className="h-full transition-all duration-300"
+          >
             <ResizablePanel defaultSize={isTheater ? 100 : 75} minSize={50}>
               <div className="h-full overflow-auto p-4">
                 {mainContent}
