@@ -32,6 +32,7 @@ vi.mock('@/stores/useContentProgressStore', () => ({
     selector({
       setItemStatus: mockSetItemStatus,
       getItemStatus: mockGetItemStatus,
+      loadCourseProgress: vi.fn(),
     }),
 }))
 
@@ -81,6 +82,10 @@ vi.mock('@/app/hooks/useLessonNavigation', () => ({
 
 vi.mock('@/app/hooks/useMediaQuery', () => ({
   useIsDesktop: () => true,
+}))
+
+vi.mock('@/app/hooks/useTheaterMode', () => ({
+  useTheaterMode: () => ({ isTheater: false, toggleTheater: vi.fn() }),
 }))
 
 vi.mock('@/app/hooks/useSessionTracking', () => ({
@@ -136,6 +141,22 @@ vi.mock('@/app/components/course/PlayerSidePanel', () => ({
 }))
 vi.mock('@/app/components/DelayedFallback', () => ({
   DelayedFallback: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
+vi.mock('@/app/components/NextCourseSuggestion', () => ({
+  NextCourseSuggestion: () => <div data-testid="next-course-suggestion">Suggestion</div>,
+}))
+
+vi.mock('@/lib/courseSuggestion', () => ({
+  suggestNextCourse: () => null,
+}))
+
+vi.mock('@/app/components/course/MiniPlayer', () => ({
+  MiniPlayer: () => null,
+}))
+
+vi.mock('@/app/components/course/LessonHeaderCard', () => ({
+  LessonHeaderCard: () => <div>Lesson Header</div>,
 }))
 
 // ---------------------------------------------------------------------------

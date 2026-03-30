@@ -50,7 +50,7 @@ import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/app/components/ui/resizable'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
-import type { ImperativePanelHandle } from 'react-resizable-panels'
+import type { PanelImperativeHandle } from 'react-resizable-panels'
 import { PanelRight, ClipboardCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { useHasQuiz } from '@/hooks/useHasQuiz'
@@ -59,6 +59,8 @@ import type { LessonItem } from '@/lib/courseAdapter'
 import { useTheaterMode } from '@/app/hooks/useTheaterMode'
 import { MiniPlayer } from '@/app/components/course/MiniPlayer'
 import type { CompletionStatus } from '@/data/types'
+import { NextCourseSuggestion } from '@/app/components/NextCourseSuggestion'
+import { suggestNextCourse } from '@/lib/courseSuggestion'
 
 // Lazy-load PdfContent to avoid pdfjs-dist bundle impact for video-only users
 const PdfContent = lazy(() =>
@@ -75,7 +77,7 @@ export function UnifiedLessonPlayer() {
 
   const isDesktop = useIsDesktop()
   const { isTheater, toggleTheater } = useTheaterMode()
-  const sidePanelRef = useRef<ImperativePanelHandle>(null)
+  const sidePanelRef = useRef<PanelImperativeHandle>(null)
   const videoPlayerRef = useRef<VideoPlayerHandle>(null)
 
   // Lesson navigation: prev/next lesson via adapter
@@ -117,6 +119,9 @@ export function UnifiedLessonPlayer() {
   const [isVideoPlaying, setIsVideoPlaying] = useState(false)
   const [isMiniPlayerDismissed, setIsMiniPlayerDismissed] = useState(false)
   const [localVideoBlobUrl, setLocalVideoBlobUrl] = useState<string | null>(null)
+
+  // Next course suggestion state (E91-S08)
+  const [showCourseSuggestion, setShowCourseSuggestion] = useState(false)
 
   // Focus tab state: set to "notes" when user presses N in VideoPlayer
   const [focusTab, setFocusTab] = useState<string | null>(null)
@@ -204,6 +209,7 @@ export function UnifiedLessonPlayer() {
     setIsVideoVisible(true)
     setIsVideoPlaying(false)
     setLocalVideoBlobUrl(null)
+    setShowCourseSuggestion(false)
   }, [lessonId])
 
   // Resolve lesson metadata (title + type) from adapter's lesson list
@@ -334,6 +340,16 @@ export function UnifiedLessonPlayer() {
       navigate(`/courses/${courseId}/lessons/${nextLesson.id}`)
     }
   }, [nextLesson, courseId, navigate])
+
+  // Next course suggestion (E91-S08) — computed via useMemo instead of IIFE in JSX
+  const courseSuggestion = useMemo(() => {
+    if (!showCourseSuggestion || !courseId) return null
+    const suggestion = suggestNextCourse(courseId, importedCourses)
+    if (!suggestion) return null
+    // Thumbnail: prefer YouTube thumbnail, fall back to null (BookOpen icon shown)
+    const thumbnailUrl = suggestion.course.youtubeThumbnailUrl ?? null
+    return { ...suggestion, thumbnailUrl }
+  }, [showCourseSuggestion, courseId, importedCourses])
 
   // Loading state
   if (loading) {
@@ -522,7 +538,7 @@ export function UnifiedLessonPlayer() {
             </ResizablePanel>
             {!isTheater && <ResizableHandle withHandle />}
             <ResizablePanel
-              ref={sidePanelRef as RefObject<ImperativePanelHandle>}
+              ref={sidePanelRef as RefObject<PanelImperativeHandle>}
               defaultSize={isTheater ? 0 : 25}
               minSize={0}
               maxSize={40}
@@ -604,10 +620,28 @@ export function UnifiedLessonPlayer() {
         />
       )}
 
+      {/* Next course suggestion card (E91-S08) */}
+      {courseSuggestion && (
+        <div className="mt-4">
+          <NextCourseSuggestion
+            suggestedCourse={courseSuggestion.course}
+            sharedTags={courseSuggestion.sharedTags}
+            thumbnailUrl={courseSuggestion.thumbnailUrl}
+            onDismiss={() => setShowCourseSuggestion(false)}
+          />
+        </div>
+      )}
+
       {/* Completion celebration modal (lesson or course level) */}
       <CompletionModal
         open={celebrationOpen}
-        onOpenChange={setCelebrationOpen}
+        onOpenChange={open => {
+          setCelebrationOpen(open)
+          // When course-level celebration closes, show next course suggestion (AC1)
+          if (!open && celebrationType === 'course') {
+            setShowCourseSuggestion(true)
+          }
+        }}
         type={celebrationType}
         title={celebrationTitle}
         stats={
