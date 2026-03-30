@@ -1109,7 +1109,7 @@ development_status:
   # Depends on: E89 (UnifiedCourseDetail + UnifiedLessonPlayer must exist)
   # ──────────────────────────────────────────────────
   epic-91: in-progress
-  91-1-start-continue-cta-and-last-position-resume: in-progress
+  91-1-start-continue-cta-and-last-position-resume: done
   91-2-local-course-visual-parity: backlog
   91-3-theater-mode: backlog
   91-4-mini-player-picture-in-picture: backlog
