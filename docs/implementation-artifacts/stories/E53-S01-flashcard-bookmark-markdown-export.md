@@ -1,12 +1,12 @@
 ---
 story_id: E53-S01
 story_name: "Flashcard & Bookmark Markdown Export"
-status: draft
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-03-30
+completed: 2026-03-30
+reviewed: true
+review_started: 2026-03-30
+review_gates_passed: [build, lint, typecheck, format, unit-tests, e2e-tests, code-review, test-coverage-review, lessons-learned]
 burn_in_validated: false
 ---
 
