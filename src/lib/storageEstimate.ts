@@ -74,6 +74,10 @@ export async function estimateTableSize(tableName: string, sampleSize = 5): Prom
       for (const [key, val] of Object.entries(row as Record<string, unknown>)) {
         if (val instanceof Blob) {
           blobBytes += val.size
+        } else if (val instanceof ArrayBuffer) {
+          blobBytes += val.byteLength
+        } else if (ArrayBuffer.isView(val)) {
+          blobBytes += val.byteLength
         } else {
           nonBlobFields[key] = val
         }

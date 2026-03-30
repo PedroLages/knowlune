@@ -1,7 +1,7 @@
 // E69-S01: Storage Management Dashboard Card
 // Settings > Storage & Usage — visual breakdown of IndexedDB storage by category.
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { BarChart3, AlertTriangle, AlertOctagon, RefreshCw, Loader2, Info } from 'lucide-react'
 import { Link } from 'react-router'
 import { BarChart, Bar, YAxis, XAxis } from 'recharts'
@@ -91,8 +91,8 @@ function QuotaWarningBanner({
       >
         <AlertOctagon className="size-5 text-destructive flex-shrink-0 mt-0.5" aria-hidden="true" />
         <div className="flex-1">
-          <p className="text-sm font-medium text-destructive">Storage almost full ({percent}%)</p>
-          <p className="text-xs text-destructive mt-1">
+          <p className="text-sm font-medium text-destructive-soft-foreground">Storage almost full ({percent}%)</p>
+          <p className="text-xs text-destructive-soft-foreground mt-1">
             You may not be able to save new data. Free up space to continue learning.
           </p>
         </div>
@@ -103,8 +103,9 @@ function QuotaWarningBanner({
           onClick={() => {
             document.getElementById('data-management')?.scrollIntoView({ behavior: 'smooth' })
           }}
+          title="Cleanup actions coming in a future update"
         >
-          Free Up Space
+          View Storage
         </Button>
       </div>
     )
@@ -260,6 +261,7 @@ export function StorageManagement() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const refreshingRef = useRef(false)
   const [warningDismissed, setWarningDismissed] = useState(false)
 
   useEffect(() => {
@@ -291,16 +293,21 @@ export function StorageManagement() {
   }, [])
 
   async function handleRefresh() {
-    if (refreshing) return
+    if (refreshingRef.current) return
+    refreshingRef.current = true
     setRefreshing(true)
     setError(false)
     try {
       const data = await getStorageOverview()
+      if (!data.apiAvailable && overview?.apiAvailable) {
+        toast.error('Unable to refresh storage data')
+      }
       setOverview(data)
     } catch {
       setError(true)
       toast.error('Unable to refresh storage data')
     } finally {
+      refreshingRef.current = false
       setRefreshing(false)
     }
   }

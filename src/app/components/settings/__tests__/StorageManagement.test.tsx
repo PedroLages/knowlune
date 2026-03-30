@@ -262,7 +262,7 @@ describe('StorageManagement', () => {
     })
 
     expect(screen.getByText(/Storage almost full \(97%\)/)).toBeInTheDocument()
-    expect(screen.getByText(/Free Up Space/)).toBeInTheDocument()
+    expect(screen.getByText(/View Storage/)).toBeInTheDocument()
   })
 
   it('critical banner has aria-live assertive', async () => {
@@ -280,7 +280,7 @@ describe('StorageManagement', () => {
     expect(alert).toHaveAttribute('aria-live', 'assertive')
   })
 
-  it('Free Up Space button scrolls to data management', async () => {
+  it('View Storage button scrolls to data management', async () => {
     mockGetStorageOverview.mockResolvedValue(
       createMockOverview({ usagePercent: 0.96 })
     )
@@ -295,10 +295,10 @@ describe('StorageManagement', () => {
     renderComponent()
 
     await waitFor(() => {
-      expect(screen.getByText(/Free Up Space/)).toBeInTheDocument()
+      expect(screen.getByText(/View Storage/)).toBeInTheDocument()
     })
 
-    await user.click(screen.getByText(/Free Up Space/))
+    await user.click(screen.getByText(/View Storage/))
     expect(target.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' })
 
     document.body.removeChild(target)
