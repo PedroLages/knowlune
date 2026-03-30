@@ -14,3 +14,15 @@ export { createContentProgress } from './content-progress-factory'
 export { createDexieNote } from './note-factory'
 export { createChallenge } from './challenge-factory'
 export { makeQuestion, makeQuiz, makeAttempt, makeProgress } from './quiz-factory'
+export {
+  createReviewRecord,
+  createDueReviewRecord,
+  createFutureReviewRecord,
+  createNewReviewRecord,
+} from './review-factory'
+export {
+  createFlashcard,
+  createDueFlashcard,
+  createFutureFlashcard,
+  createLearningFlashcard,
+} from './flashcard-factory'

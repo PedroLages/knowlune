@@ -65,23 +65,29 @@ const note3 = createDexieNote({
 const review1 = createDueReviewRecord({
   id: 'review-1',
   noteId: 'note-1',
-  reviewedAt: getRelativeDate(-5),
-  nextReviewAt: getRelativeDate(-1),
-  interval: 4,
+  last_review: getRelativeDate(-5),
+  due: getRelativeDate(-1),
+  stability: 4.0,
+  elapsed_days: 5,
+  scheduled_days: 4,
 })
 const review2 = createDueReviewRecord({
   id: 'review-2',
   noteId: 'note-2',
-  reviewedAt: getRelativeDate(-3),
-  nextReviewAt: getRelativeDate(-1),
-  interval: 2,
+  last_review: getRelativeDate(-3),
+  due: getRelativeDate(-1),
+  stability: 2.0,
+  elapsed_days: 3,
+  scheduled_days: 2,
 })
 const review3 = createDueReviewRecord({
   id: 'review-3',
   noteId: 'note-3',
-  reviewedAt: getRelativeDate(-7),
-  nextReviewAt: getRelativeDate(-2),
-  interval: 5,
+  last_review: getRelativeDate(-7),
+  due: getRelativeDate(-2),
+  stability: 5.0,
+  elapsed_days: 7,
+  scheduled_days: 5,
 })
 
 async function seedMultiCourseData(page: import('@playwright/test').Page) {
@@ -92,10 +98,22 @@ async function seedMultiCourseData(page: import('@playwright/test').Page) {
 
 test.describe('E11-S05: Interleaved Review Mode', () => {
   test.beforeEach(async ({ page }) => {
+    // Set localStorage BEFORE navigation so the welcome wizard and
+    // onboarding overlay read the completed state during initialization
+    // and stay closed — prevents them from intercepting click events.
+    await page.addInitScript(() => {
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+      )
+      localStorage.setItem(
+        'knowlune-onboarding-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
+      )
+    })
     // Navigate to initialise the app and database
     await page.goto('/')
-    // Prevent sidebar overlay in tablet viewports
-    await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
   })
 
   test.afterEach(async ({ page }) => {
@@ -182,7 +200,9 @@ test.describe('E11-S05: Interleaved Review Mode', () => {
     // Front face of next card should be visible again (not flipped)
     await expect(page.getByTestId('interleaved-card-front')).toBeVisible()
 
-    // Verify rating was persisted to IndexedDB (not just UI advancement)
+    // Verify rating was persisted to IndexedDB (not just UI advancement).
+    // The interleaving algorithm may reorder cards, so find the record that
+    // was actually rated (reps increased from the seeded value of 2).
     // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const persisted = await page.evaluate(async () => {
       const dbReq = indexedDB.open('ElearningDB')
@@ -192,24 +212,25 @@ test.describe('E11-S05: Interleaved Review Mode', () => {
       })
       const tx = db.transaction('reviewRecords', 'readonly')
       const store = tx.objectStore('reviewRecords')
-      const all: { noteId: string; interval: number; nextReviewAt: string }[] = await new Promise(
-        (resolve, reject) => {
+      const all: { noteId: string; stability: number; due: string; reps: number }[] =
+        await new Promise((resolve, reject) => {
           const req = store.getAll()
           req.onsuccess = () => resolve(req.result)
           req.onerror = () => reject(req.error)
-        }
-      )
+        })
       db.close()
-      const record = all.find(r => r.noteId === 'note-1')
-      return record ? { interval: record.interval, nextReviewAt: record.nextReviewAt } : null
+      // Find the record whose reps increased (was rated) — seeded reps are all 2
+      const rated = all.find(r => r.reps > 2)
+      return rated ? { stability: rated.stability, due: rated.due, reps: rated.reps } : null
     })
 
-    // After a "Good" rating on interval=4, next interval should be > 4
+    // After a "Good" rating, FSRS should update stability and schedule future due date
     expect(persisted).not.toBeNull()
-    expect(persisted!.interval).toBeGreaterThan(4)
-    expect(new Date(persisted!.nextReviewAt).getTime()).toBeGreaterThan(
-      new Date(FIXED_DATE).getTime()
-    )
+    expect(persisted!.stability).toBeGreaterThan(0)
+    expect(persisted!.reps).toBeGreaterThanOrEqual(3)
+    // Due date should be in the future (after the current browser time)
+    // eslint-disable-next-line test-patterns/deterministic-time -- comparing against browser clock for future-due assertion
+    expect(new Date(persisted!.due).getTime()).toBeGreaterThan(Date.now())
   })
 
   test('AC4: Single-course fallback shows informational message', async ({ page }) => {

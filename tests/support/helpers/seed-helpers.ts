@@ -196,6 +196,22 @@ export async function seedAuthors(page: Page, authors: Record<string, unknown>[]
   await seedIndexedDBStore(page, DB_NAME, 'authors', authors)
 }
 
+/** Seed review records into the reviewRecords store. */
+export async function seedReviewRecords(
+  page: Page,
+  records: Record<string, unknown>[]
+): Promise<void> {
+  await seedIndexedDBStore(page, DB_NAME, 'reviewRecords', records)
+}
+
+/** Seed flashcards into the flashcards store. */
+export async function seedFlashcards(
+  page: Page,
+  flashcards: Record<string, unknown>[]
+): Promise<void> {
+  await seedIndexedDBStore(page, DB_NAME, 'flashcards', flashcards)
+}
+
 /** Clear the learningPaths store. */
 export async function clearLearningPath(page: Page): Promise<void> {
   await clearIndexedDBStore(page, DB_NAME, 'learningPaths')

@@ -638,7 +638,7 @@ development_status:
   # Source: epics-fsrs-migration.md
   # Replaces SM-2 algorithm with FSRS via ts-fsrs library
   # ──────────────────────────────────────────────────
-  epic-59: in-progress
+  epic-59: done
   59-1-fsrs-type-definitions-and-dependency-setup: done
   59-2-fsrs-algorithm-wrapper: done
   59-3-dexie-v29-schema-migration-with-data-transformation: done
@@ -646,7 +646,7 @@ development_status:
   59-5-retention-metrics-and-consumer-updates: done
   59-6-review-ui-again-button-and-keyboard-shortcuts: done
   59-7-unit-test-rewrite-for-fsrs-algorithm: done
-  59-8-e2e-tests-and-test-factory-updates: backlog
+  59-8-e2e-tests-and-test-factory-updates: done
 
   # ──────────────────────────────────────────────────
   # Epic 60: Smart Notification Triggers
