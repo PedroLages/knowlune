@@ -44,6 +44,8 @@ interface PlayerHeaderProps {
   lessonTitle: string
   courseName?: string
   showCompletionToggle?: boolean
+  /** Called after completion status is successfully persisted */
+  onStatusChange?: (status: CompletionStatus) => void
 }
 
 export function PlayerHeader({
@@ -52,6 +54,7 @@ export function PlayerHeader({
   lessonTitle,
   courseName,
   showCompletionToggle = false,
+  onStatusChange,
 }: PlayerHeaderProps) {
   const getItemStatus = useContentProgressStore(s => s.getItemStatus)
   const setItemStatus = useContentProgressStore(s => s.setItemStatus)
@@ -71,11 +74,12 @@ export function PlayerHeader({
       try {
         await setItemStatus(courseId, lessonId, status, [])
         toast.success(`Marked as ${STATUS_LABELS[status]}`)
+        onStatusChange?.(status)
       } catch {
         toast.error('Failed to update completion status')
       }
     },
-    [courseId, lessonId, setItemStatus]
+    [courseId, lessonId, setItemStatus, onStatusChange]
   )
 
   return (

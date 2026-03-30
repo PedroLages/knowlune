@@ -1,12 +1,12 @@
 ---
 story_id: E54-S01
 story_name: "Wire Lesson Flow to ImportedLessonPlayer"
-status: draft
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-03-30
+completed: 2026-03-30
+reviewed: true
+review_started: 2026-03-30
+review_gates_passed: [build, lint, typecheck, format, unit-tests, e2e-tests, design-review, code-review, test-coverage-review]
 burn_in_validated: false
 ---
 

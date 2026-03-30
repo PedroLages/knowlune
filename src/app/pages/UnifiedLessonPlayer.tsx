@@ -22,6 +22,7 @@ import { lazy, Suspense, useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { useSessionTracking } from '@/app/hooks/useSessionTracking'
 import { useLessonNavigation } from '@/app/hooks/useLessonNavigation'
 import { useIsDesktop } from '@/app/hooks/useMediaQuery'
@@ -29,6 +30,8 @@ import { PlayerHeader } from '@/app/components/course/PlayerHeader'
 import { CourseBreadcrumb } from '@/app/components/course/CourseBreadcrumb'
 import { LessonNavigation } from '@/app/components/course/LessonNavigation'
 import { AutoAdvanceCountdown } from '@/app/components/figma/AutoAdvanceCountdown'
+import { CompletionModal } from '@/app/components/celebrations/CompletionModal'
+import type { CelebrationType } from '@/app/components/celebrations/CompletionModal'
 import { LocalVideoContent } from '@/app/components/course/LocalVideoContent'
 import { YouTubeVideoContent } from '@/app/components/course/YouTubeVideoContent'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -37,9 +40,11 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/app/comp
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import { PanelRight, ClipboardCheck } from 'lucide-react'
+import { toast } from 'sonner'
 import { useHasQuiz } from '@/hooks/useHasQuiz'
 import { PlayerSidePanel } from '@/app/components/course/PlayerSidePanel'
 import type { LessonItem } from '@/lib/courseAdapter'
+import type { CompletionStatus } from '@/data/types'
 
 // Lazy-load PdfContent to avoid pdfjs-dist bundle impact for video-only users
 const PdfContent = lazy(() =>
@@ -57,7 +62,7 @@ export function UnifiedLessonPlayer() {
   const isDesktop = useIsDesktop()
 
   // Lesson navigation: prev/next lesson via adapter
-  const { prevLesson, nextLesson, currentIndex, totalLessons } = useLessonNavigation(
+  const { prevLesson, nextLesson, currentIndex, totalLessons, lessons } = useLessonNavigation(
     adapter,
     lessonId
   )
@@ -65,8 +70,26 @@ export function UnifiedLessonPlayer() {
   // Quiz availability: check if a quiz exists for this lesson
   const { hasQuiz } = useHasQuiz(lessonId)
 
+  // Progress store for marking lessons complete on video end
+  const setItemStatus = useContentProgressStore(s => s.setItemStatus)
+  const getItemStatus = useContentProgressStore(s => s.getItemStatus)
+  const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
+
+  // Ensure course progress is loaded so getItemStatus has data for checkCourseCompletion.
+  // PlayerHeader also loads it, but we don't rely on render order for correctness.
+  useEffect(() => {
+    if (courseId) {
+      loadCourseProgress(courseId)
+    }
+  }, [courseId, loadCourseProgress])
+
   // Auto-advance state: shown when video ends and a next lesson exists
   const [showAutoAdvance, setShowAutoAdvance] = useState(false)
+
+  // Celebration modal state
+  const [celebrationOpen, setCelebrationOpen] = useState(false)
+  const [celebrationType, setCelebrationType] = useState<CelebrationType>('lesson')
+  const [celebrationTitle, setCelebrationTitle] = useState('')
 
   // Lifted video state: currentTime for transcript highlighting, seekTo for click-to-seek
   const [currentTime, setCurrentTime] = useState(0)
@@ -97,13 +120,12 @@ export function UnifiedLessonPlayer() {
   // Reset lifted video state when lesson changes
   useEffect(() => {
     setShowAutoAdvance(false)
+    setCelebrationOpen(false)
     setCurrentTime(0)
     setSeekToTime(undefined)
     setFocusTab(null)
   }, [lessonId])
 
-  // NOTE: getLessons() is also called inside useLessonNavigation hook — known duplication.
-  // Consolidation into a shared context is deferred to a future story.
   // Resolve lesson metadata (title + type) from adapter's lesson list
   const [lessonTitle, setLessonTitle] = useState('Lesson')
   const [lessonType, setLessonType] = useState<LessonItem['type'] | null>(null)
@@ -119,8 +141,8 @@ export function UnifiedLessonPlayer() {
         setLessonType(match?.type ?? null)
       })
       .catch(err => {
+        // silent-catch-ok — leave defaults (title='Lesson', type=null); UI degrades gracefully
         console.error('Failed to load lesson metadata:', err)
-        // Leave defaults (title='Lesson', type=null) — UI degrades gracefully
       })
     return () => {
       ignore = true
@@ -134,12 +156,56 @@ export function UnifiedLessonPlayer() {
   // Pass resolved type (or null) — hook defers session start until type is known.
   useSessionTracking(courseId, lessonId, lessonTypeResolved ? (isPdf ? 'pdf' : 'video') : null)
 
-  // Handle video ended — trigger auto-advance countdown if next lesson exists
-  const handleVideoEnded = useCallback(() => {
+  /**
+   * Compute whether all lessons in the course are completed (including the current one).
+   * Used to determine if we show a course-level vs lesson-level celebration.
+   */
+  const checkCourseCompletion = useCallback(
+    (lessonsArr: LessonItem[]): boolean => {
+      if (!courseId || lessonsArr.length === 0) return false
+      // After marking the current lesson complete, check if all others are also complete
+      return lessonsArr.every(l => {
+        if (l.id === lessonId) return true // just marked complete
+        return getItemStatus(courseId, l.id) === 'completed'
+      })
+    },
+    [courseId, lessonId, getItemStatus]
+  )
+
+  /**
+   * Show the appropriate celebration modal.
+   * Checks if all course lessons are now complete for course-level celebration.
+   */
+  const showCelebration = useCallback(
+    (title: string) => {
+      const isCourseComplete = lessons.length > 0 && checkCourseCompletion(lessons)
+      setCelebrationType(isCourseComplete ? 'course' : 'lesson')
+      setCelebrationTitle(isCourseComplete ? (course?.name ?? 'Course') : title)
+      setCelebrationOpen(true)
+    },
+    [lessons, checkCourseCompletion, course?.name]
+  )
+
+  // Handle video ended — mark complete, show celebration, trigger auto-advance
+  const handleVideoEnded = useCallback(async () => {
+    if (!courseId || !lessonId) return
+
+    // Mark the lesson as completed
+    try {
+      await setItemStatus(courseId, lessonId, 'completed', [])
+    } catch {
+      toast.error('Failed to mark lesson as complete')
+      return // Don't show celebration or auto-advance if persistence failed
+    }
+
+    // Show celebration modal
+    showCelebration(lessonTitle)
+
+    // Trigger auto-advance countdown if next lesson exists
     if (nextLesson) {
       setShowAutoAdvance(true)
     }
-  }, [nextLesson])
+  }, [courseId, lessonId, setItemStatus, showCelebration, lessonTitle, nextLesson])
 
   const handleAutoAdvance = useCallback(() => {
     if (nextLesson && courseId) {
@@ -150,6 +216,28 @@ export function UnifiedLessonPlayer() {
   const handleCancelAutoAdvance = useCallback(() => {
     setShowAutoAdvance(false)
   }, [])
+
+  // Handle manual completion toggle from PlayerHeader (AC7)
+  const handleManualStatusChange = useCallback(
+    (status: CompletionStatus) => {
+      if (status === 'completed') {
+        showCelebration(lessonTitle)
+        // Trigger auto-advance countdown if next lesson exists (same as video end)
+        if (nextLesson) {
+          setShowAutoAdvance(true)
+        }
+      }
+    },
+    [showCelebration, lessonTitle, nextLesson]
+  )
+
+  // Handle "Continue Learning" from celebration modal
+  const handleCelebrationContinue = useCallback(() => {
+    setCelebrationOpen(false)
+    if (nextLesson && courseId) {
+      navigate(`/courses/${courseId}/lessons/${nextLesson.id}`)
+    }
+  }, [nextLesson, courseId, navigate])
 
   // Loading state
   if (loading) {
@@ -281,6 +369,7 @@ export function UnifiedLessonPlayer() {
         lessonTitle={lessonTitle}
         courseName={course?.name}
         showCompletionToggle={isPdf || isYouTube || capabilities.hasVideo}
+        onStatusChange={handleManualStatusChange}
       />
 
       {/* Content area: resizable panels on desktop, sheet on mobile */}
@@ -306,7 +395,9 @@ export function UnifiedLessonPlayer() {
             </ResizablePanel>
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
-              <div className="h-full overflow-auto border-l border-border/50 bg-card">{sidePanelContent}</div>
+              <div className="h-full overflow-auto border-l border-border/50 bg-card">
+                {sidePanelContent}
+              </div>
             </ResizablePanel>
           </ResizablePanelGroup>
         ) : (
@@ -358,6 +449,24 @@ export function UnifiedLessonPlayer() {
           totalLessons={totalLessons}
         />
       )}
+
+      {/* Completion celebration modal (lesson or course level) */}
+      <CompletionModal
+        open={celebrationOpen}
+        onOpenChange={setCelebrationOpen}
+        type={celebrationType}
+        title={celebrationTitle}
+        stats={
+          celebrationType === 'course'
+            ? {
+                lessonsCompleted: totalLessons,
+                totalLessons,
+                completionPercent: 100,
+              }
+            : undefined
+        }
+        onContinue={nextLesson ? handleCelebrationContinue : undefined}
+      />
     </div>
   )
 }
