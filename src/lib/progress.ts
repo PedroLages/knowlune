@@ -111,7 +111,10 @@ export async function getLastWatchedLesson(
   if (rows.length === 0) return null
 
   // Pick the most recently active lesson — use currentTime > 0 as a signal,
-  // then highest completionPercentage as tiebreaker
+  // then highest completionPercentage as tiebreaker.
+  // NOTE: VideoProgress has no `updatedAt` field (only completedAt for finished
+  // lessons), so completionPercentage serves as a proxy for recency. This is
+  // imperfect but acceptable until an updatedAt timestamp is added to the schema.
   const sorted = [...rows].sort((a, b) => {
     // Prefer lessons with actual watch time
     if (a.currentTime > 0 && b.currentTime <= 0) return -1
@@ -131,11 +134,12 @@ export async function getLastWatchedLesson(
 
 /**
  * Get the first non-PDF lesson from a course adapter.
- * Returns null if the course has no video lessons.
+ * Falls back to the first lesson of any type if no video lessons exist.
+ * Returns null if the course has no lessons at all.
  */
-export async function getFirstLesson(
-  adapter: { getLessons: () => Promise<Array<{ id: string; title: string; type: string }>> }
-): Promise<{ lessonId: string; lessonTitle: string } | null> {
+export async function getFirstLesson(adapter: {
+  getLessons: () => Promise<Array<{ id: string; title: string; type: string }>>
+}): Promise<{ lessonId: string; lessonTitle: string } | null> {
   const lessons = await adapter.getLessons()
   const first = lessons.find(l => l.type === 'video') ?? lessons[0]
   if (!first) return null

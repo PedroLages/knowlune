@@ -93,6 +93,10 @@ test.describe('E91-S01: Course CTA Button', () => {
     // Seed sidebar closed to prevent overlay blocking
     await page.evaluate(() => {
       localStorage.setItem('knowlune-sidebar-v1', 'false')
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+      )
     })
   })
 
@@ -215,6 +219,7 @@ test.describe('E91-S01: Course CTA Button', () => {
 
     // Verify the button has brand variant (data attribute or CSS class check)
     // The Button component with variant="brand" adds specific styling
-    await expect(ctaButton).toHaveAttribute('data-slot', 'button')
+    // Verify the button has brand variant styling (bg-brand class)
+    await expect(ctaButton).toHaveClass(/bg-brand/)
   })
 })

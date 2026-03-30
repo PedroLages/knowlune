@@ -136,25 +136,33 @@ export function UnifiedCourseDetail() {
     let ignore = false
 
     async function resolveCta() {
-      const lastWatched = await getLastWatchedLesson(courseId!)
-      if (ignore) return
-
-      if (lastWatched) {
-        // Check if ALL videos are completed (completionPercentage >= 90)
-        const allCompleted =
-          videos.length > 0 && videos.every(v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= 90)
-        setCtaVariant(allCompleted ? 'review' : 'continue')
-        setCtaLessonId(lastWatched.lessonId)
-        setCtaLessonTitle(lastWatched.lessonTitle)
-      } else {
-        // No progress — start course
-        const first = await getFirstLesson(adapter!)
+      try {
+        const lastWatched = await getLastWatchedLesson(courseId!)
         if (ignore) return
-        if (first) {
-          setCtaVariant('start')
-          setCtaLessonId(first.lessonId)
-          setCtaLessonTitle(first.lessonTitle)
+
+        if (lastWatched) {
+          // Check if ALL videos are completed (completionPercentage >= 90)
+          const allCompleted =
+            videos.length > 0 &&
+            videos.every(v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= 90)
+          setCtaVariant(allCompleted ? 'review' : 'continue')
+          setCtaLessonId(lastWatched.lessonId)
+          setCtaLessonTitle(lastWatched.lessonTitle)
+        } else {
+          // No progress — start course
+          const first = await getFirstLesson(adapter!)
+          if (ignore) return
+          if (first) {
+            setCtaVariant('start')
+            setCtaLessonId(first.lessonId)
+            setCtaLessonTitle(first.lessonTitle)
+          }
         }
+      } catch (err) {
+        console.error('[CTA] Failed to resolve course CTA:', err)
+        toast.error('Could not determine course progress. Please try again.')
+        // Fallback to start variant
+        setCtaVariant('start')
       }
     }
 
