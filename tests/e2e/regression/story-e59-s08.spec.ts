@@ -7,27 +7,27 @@
  * - Due date filtering works with FSRS `due` field
  * - Review queue shows cards with `due` in the past
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 import {
   clearIndexedDBStore,
   seedNotes,
   seedReviewRecords,
   seedFlashcards,
   seedImportedCourses,
-} from '../support/helpers/seed-helpers'
-import { createDexieNote } from '../support/fixtures/factories/note-factory'
+} from '../../support/helpers/seed-helpers'
+import { createDexieNote } from '../../support/fixtures/factories/note-factory'
 import {
   createDueReviewRecord,
   createFutureReviewRecord,
-} from '../support/fixtures/factories/review-factory'
+} from '../../support/fixtures/factories/review-factory'
 import {
   createFlashcard,
   createDueFlashcard,
   createFutureFlashcard,
-} from '../support/fixtures/factories/flashcard-factory'
-import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
-import { FIXED_DATE, getRelativeDate } from '../utils/test-time'
+} from '../../support/fixtures/factories/flashcard-factory'
+import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
+import { FIXED_DATE, getRelativeDate } from '../../utils/test-time'
 
 const DB_NAME = 'ElearningDB'
 
