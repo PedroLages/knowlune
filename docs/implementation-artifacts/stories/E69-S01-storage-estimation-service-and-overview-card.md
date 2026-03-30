@@ -170,6 +170,22 @@ NOTE: `HardDrive` is already imported in Settings.tsx (line 13). The Data Manage
 - [Source: src/app/components/settings/MyDataSummary.tsx] — Settings card pattern reference
 - [Source: src/db/schema.ts] — Dexie table definitions
 
+## Challenges and Lessons Learned
+
+- **Storage estimation sampling approach**: Chose `new Blob([JSON.stringify(record)]).size` for UTF-8 byte accuracy when estimating table sizes. Sampling 10 records and extrapolating by count provides a good balance between accuracy and performance for tables with thousands of records.
+- **Recharts in shadcn ChartContainer**: The stacked bar chart required inline `style` props for dynamic segment widths — Tailwind can't handle computed percentages at runtime. This triggers the `no-inline-styles` ESLint warning but is the correct pattern for Recharts.
+- **Promise.allSettled for resilience**: Using `Promise.allSettled()` instead of `Promise.all()` ensures one failing table estimation (e.g., a corrupted table) doesn't block the entire overview. Each category gracefully falls back to 0 bytes.
+- **Category mapping consolidation**: Grouped 20+ Dexie tables into 6 user-facing categories. The mapping lives in `storageEstimate.ts` and needs updating when new tables are added to the schema — this is a maintenance consideration for future stories.
+- **Warning banner sessionStorage pattern**: Dismiss state is stored in `sessionStorage` so warnings reappear on new sessions but don't nag within a session. This matches the AC requirement and provides a good UX balance.
+
+## Design Review Feedback
+
+[Populated by /review-story — Playwright MCP findings]
+
+## Code Review Feedback
+
+[Populated by /review-story — adversarial code review findings]
+
 ## Implementation Plan
 
 See [plan](../plans/e69-s01-storage-estimation-overview-card.md) for implementation approach.
