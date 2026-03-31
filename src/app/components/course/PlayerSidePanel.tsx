@@ -591,6 +591,12 @@ function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
     )
   }
 
+  // Pre-compute O(1) lookup map for original lesson indices
+  const lessonIndexMap = useMemo(
+    () => new Map(lessons.map((l, i) => [l.id, i])),
+    [lessons]
+  )
+
   const currentIndex = lessons.findIndex(l => l.id === lessonId)
 
   return (
@@ -641,10 +647,10 @@ function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
           <p className="text-sm">No lessons match your search</p>
         </div>
       ) : (
-        filteredLessons.map((lesson, index) => {
+        filteredLessons.map(lesson => {
           const isActive = lesson.id === lessonId
           // Use the original index for lesson numbering
-          const originalIndex = lessons.indexOf(lesson)
+          const originalIndex = lessonIndexMap.get(lesson.id) ?? 0
           return (
             <Link
               key={lesson.id}
