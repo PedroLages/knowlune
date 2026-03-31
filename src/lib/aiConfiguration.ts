@@ -244,7 +244,7 @@ export function getAIConfiguration(): AIConfigurationSettings {
     }
   } catch (error) {
     // Parsing failed - return defaults
-    console.warn('Failed to parse AI configuration from localStorage, using defaults:', error)
+    console.warn('Failed to parse AI configuration from localStorage, using defaults:', error) // silent-catch-ok: logged
     return { ...DEFAULTS }
   }
 }
@@ -320,7 +320,7 @@ export async function getDecryptedApiKey(): Promise<string | null> {
     return await decryptData(config.apiKeyEncrypted.iv, config.apiKeyEncrypted.encryptedData)
   } catch (error) {
     // Decryption failed (corrupted data or wrong key)
-    console.warn('Failed to decrypt API key - data may be corrupted:', error)
+    console.warn('Failed to decrypt API key - data may be corrupted:', error) // silent-catch-ok: logged
     return null
   }
 }
@@ -413,7 +413,7 @@ export async function getDecryptedApiKeyForProvider(
     try {
       return await decryptData(providerKeyData.iv, providerKeyData.encryptedData)
     } catch (error) {
-      console.warn(`Failed to decrypt provider key for ${provider}:`, error)
+      console.warn(`Failed to decrypt provider key for ${provider}:`, error) // silent-catch-ok: logged
       return null
     }
   }
@@ -421,12 +421,9 @@ export async function getDecryptedApiKeyForProvider(
   // Fall back to legacy single-key field if provider matches global
   if (provider === config.provider && config.apiKeyEncrypted) {
     try {
-      return await decryptData(
-        config.apiKeyEncrypted.iv,
-        config.apiKeyEncrypted.encryptedData
-      )
+      return await decryptData(config.apiKeyEncrypted.iv, config.apiKeyEncrypted.encryptedData)
     } catch (error) {
-      console.warn('Failed to decrypt legacy API key:', error)
+      console.warn('Failed to decrypt legacy API key:', error) // silent-catch-ok: logged
       return null
     }
   }

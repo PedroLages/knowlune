@@ -63,7 +63,7 @@ export async function getLLMClient(feature?: AIFeatureId): Promise<LLMClient> {
           'ollama'
         )
       }
-      const selectedModel = getOllamaSelectedModel() || undefined
+      const selectedModel = resolved.model || getOllamaSelectedModel() || undefined
       return new OllamaLLMClient(serverUrl, isOllamaDirectConnection(), selectedModel)
     }
 
