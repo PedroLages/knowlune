@@ -10,7 +10,7 @@
  * @see E89-S07
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import {
@@ -23,9 +23,11 @@ import {
   PlayCircle,
   Maximize2,
   X,
+  Search,
 } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs'
 import { Button } from '@/app/components/ui/button'
+import { Input } from '@/app/components/ui/input'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
@@ -487,7 +489,7 @@ function parseTranscriptText(text: string): TranscriptCue[] {
 }
 
 // ---------------------------------------------------------------------------
-// Lessons tab — course structure with active lesson highlight
+// Lessons tab — course structure with active lesson highlight + search
 // ---------------------------------------------------------------------------
 
 function formatLessonDuration(seconds: number): string {
@@ -496,6 +498,32 @@ function formatLessonDuration(seconds: number): string {
   const s = Math.floor(seconds % 60)
   if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
   return `${m}:${String(s).padStart(2, '0')}`
+}
+
+/** Minimum number of lessons required to show the search input */
+const LESSON_SEARCH_THRESHOLD = 8
+
+function HighlightedLessonTitle({ text, query }: { text: string; query: string }) {
+  if (!query) return <>{text}</>
+
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const splitRegex = new RegExp(`(${escaped})`, 'gi')
+  const parts = text.split(splitRegex)
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        const isMatch = part.length > 0 && part.toLowerCase() === query.toLowerCase()
+        return isMatch ? (
+          <mark key={i} className="bg-warning/30 text-inherit rounded-sm px-0.5">
+            {part}
+          </mark>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      })}
+    </>
+  )
 }
 
 interface LessonsTabProps {
@@ -507,6 +535,7 @@ interface LessonsTabProps {
 function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
   const [lessons, setLessons] = useState<LessonItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
   const activeRef = useRef<HTMLAnchorElement>(null)
 
   useEffect(() => {
@@ -538,6 +567,14 @@ function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
     }
   }, [isLoading, lessonId])
 
+  const showSearch = lessons.length > LESSON_SEARCH_THRESHOLD
+
+  const filteredLessons = useMemo(() => {
+    if (!searchQuery) return lessons
+    const q = searchQuery.toLowerCase()
+    return lessons.filter(l => l.title.toLowerCase().includes(q))
+  }, [lessons, searchQuery])
+
   if (isLoading) {
     return (
       <div className="p-3 space-y-2">
@@ -558,51 +595,99 @@ function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
 
   return (
     <div className="p-2 space-y-0.5" data-testid="lessons-tab-list">
-      <div className="px-2 pb-2 text-xs text-muted-foreground">
-        {currentIndex >= 0
-          ? `Lesson ${currentIndex + 1} of ${lessons.length}`
-          : `${lessons.length} lessons`}
-      </div>
-      {lessons.map((lesson, index) => {
-        const isActive = lesson.id === lessonId
-        return (
-          <Link
-            key={lesson.id}
-            ref={isActive ? activeRef : undefined}
-            to={`/courses/${courseId}/lessons/${lesson.id}`}
-            className={cn(
-              'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
-              isActive ? 'bg-brand-soft text-brand-soft-foreground font-medium' : 'hover:bg-accent'
+      {showSearch && (
+        <div className="px-2 pt-2 pb-1">
+          <div className="relative">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              type="search"
+              placeholder="Search lessons..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-9 pr-9 rounded-xl"
+              aria-label="Filter lessons by title"
+              data-testid="lesson-search-input"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+                data-testid="lesson-search-clear"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
             )}
-            aria-current={isActive ? 'page' : undefined}
-          >
-            <span className="flex-shrink-0 size-7 rounded-lg bg-brand-soft/50 flex items-center justify-center">
-              {isActive ? (
-                <PlayCircle className="size-3.5 text-brand" aria-hidden="true" />
-              ) : (
-                <span className="text-xs font-semibold text-brand-soft-foreground">
-                  {index + 1}
-                </span>
+          </div>
+        </div>
+      )}
+      <div className="px-2 pb-2 text-xs text-muted-foreground">
+        {searchQuery && filteredLessons.length !== lessons.length
+          ? `Showing ${filteredLessons.length} of ${lessons.length} lessons`
+          : currentIndex >= 0
+            ? `Lesson ${currentIndex + 1} of ${lessons.length}`
+            : `${lessons.length} lessons`}
+      </div>
+      {filteredLessons.length === 0 && searchQuery ? (
+        <div
+          className="flex flex-col items-center justify-center py-12 text-muted-foreground"
+          data-testid="lesson-search-empty"
+        >
+          <Search className="size-10 mb-3 opacity-50" aria-hidden="true" />
+          <p className="text-sm">No lessons match your search</p>
+        </div>
+      ) : (
+        filteredLessons.map((lesson, index) => {
+          const isActive = lesson.id === lessonId
+          // Use the original index for lesson numbering
+          const originalIndex = lessons.indexOf(lesson)
+          return (
+            <Link
+              key={lesson.id}
+              ref={isActive ? activeRef : undefined}
+              to={`/courses/${courseId}/lessons/${lesson.id}`}
+              className={cn(
+                'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
+                isActive
+                  ? 'bg-brand-soft text-brand-soft-foreground font-medium'
+                  : 'hover:bg-accent'
               )}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm truncate">{lesson.title}</p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                {lesson.type === 'pdf' ? (
-                  <FileText className="size-3 text-muted-foreground" aria-hidden="true" />
+              aria-current={isActive ? 'page' : undefined}
+            >
+              <span className="flex-shrink-0 size-7 rounded-lg bg-brand-soft/50 flex items-center justify-center">
+                {isActive ? (
+                  <PlayCircle className="size-3.5 text-brand" aria-hidden="true" />
                 ) : (
-                  <Video className="size-3 text-muted-foreground" aria-hidden="true" />
-                )}
-                {lesson.duration != null && lesson.duration > 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    {formatLessonDuration(lesson.duration)}
+                  <span className="text-xs font-semibold text-brand-soft-foreground">
+                    {originalIndex + 1}
                   </span>
                 )}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm truncate">
+                  <HighlightedLessonTitle text={lesson.title} query={searchQuery} />
+                </p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {lesson.type === 'pdf' ? (
+                    <FileText className="size-3 text-muted-foreground" aria-hidden="true" />
+                  ) : (
+                    <Video className="size-3 text-muted-foreground" aria-hidden="true" />
+                  )}
+                  {lesson.duration != null && lesson.duration > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {formatLessonDuration(lesson.duration)}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          </Link>
-        )
-      })}
+            </Link>
+          )
+        })
+      )}
     </div>
   )
 }

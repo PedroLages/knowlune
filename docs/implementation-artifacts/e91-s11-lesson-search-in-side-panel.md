@@ -1,9 +1,9 @@
 ---
 story_id: E91-S11
 story_name: "Lesson Search in Side Panel"
-status: backlog
-started:
-completed:
+status: done
+started: 2026-03-30
+completed: 2026-03-30
 reviewed: false
 review_started:
 review_gates_passed: []
