@@ -1121,6 +1121,6 @@ development_status:
   91-10-course-hero-overview-page: done            # now includes total duration (absorbed S11)
   91-11-lesson-search-in-side-panel: done
   91-12-single-note-export-and-transcript-download: done
-  91-13-caption-customization: backlog             # NEW
+  91-13-caption-customization: done
   91-14-clickable-note-timestamps: backlog         # NEW
   epic-91-retrospective: optional
