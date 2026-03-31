@@ -292,7 +292,9 @@ export async function saveAIConfiguration(
 }
 
 /**
- * Decrypts and retrieves the stored API key
+ * Decrypts and retrieves the stored API key for the current global provider.
+ *
+ * Delegates to `getDecryptedApiKeyForProvider()` to avoid duplication.
  *
  * @returns Decrypted API key or null if not configured/decryption fails
  *
@@ -301,28 +303,7 @@ export async function saveAIConfiguration(
  */
 export async function getDecryptedApiKey(): Promise<string | null> {
   const config = getAIConfiguration()
-
-  // E2E test escape hatch (DEV mode only) - bypasses encryption for tests
-  // Tests mock API endpoints so keys never reach real servers
-  if (import.meta.env.DEV && config._testApiKey) {
-    return config._testApiKey
-  }
-
-  // Ollama uses server URL instead of API key — return a dummy key
-  // since Ollama ignores auth but the AI SDK requires a non-empty string
-  if (config.provider === 'ollama') {
-    return config.ollamaSettings?.serverUrl ? 'ollama' : null
-  }
-
-  if (!config.apiKeyEncrypted) return null
-
-  try {
-    return await decryptData(config.apiKeyEncrypted.iv, config.apiKeyEncrypted.encryptedData)
-  } catch (error) {
-    // Decryption failed (corrupted data or wrong key)
-    console.warn('Failed to decrypt API key - data may be corrupted:', error) // silent-catch-ok: logged
-    return null
-  }
+  return getDecryptedApiKeyForProvider(config.provider)
 }
 
 /**
@@ -429,6 +410,44 @@ export async function getDecryptedApiKeyForProvider(
   }
 
   return null
+}
+
+/**
+ * Encrypts and stores an API key for a specific provider in the `providerKeys` map.
+ *
+ * Dispatches the `ai-configuration-updated` custom event for cross-tab sync.
+ * Does NOT modify the legacy `apiKeyEncrypted` field — that is preserved as-is.
+ *
+ * @param provider - Provider to store the key for
+ * @param apiKey - Plaintext API key (will be encrypted before storage)
+ * @returns Updated configuration state
+ *
+ * Security note: The plaintext key is never persisted or logged.
+ *
+ * @example
+ * await saveProviderApiKey('anthropic', 'sk-ant-...')
+ */
+export async function saveProviderApiKey(
+  provider: AIProviderId,
+  apiKey: string
+): Promise<AIConfigurationSettings> {
+  const encrypted = await encryptData(apiKey)
+  const current = getAIConfiguration()
+
+  const updatedProviderKeys: Partial<Record<AIProviderId, EncryptedData>> = {
+    ...current.providerKeys,
+    [provider]: encrypted,
+  }
+
+  const updated: AIConfigurationSettings = {
+    ...current,
+    providerKeys: updatedProviderKeys,
+  }
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+  window.dispatchEvent(new CustomEvent('ai-configuration-updated'))
+
+  return updated
 }
 
 /**
