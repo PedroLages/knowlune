@@ -12,6 +12,7 @@
 
 import { encryptData, decryptData, type EncryptedData } from './crypto'
 import type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefaults'
+import { PROVIDER_DEFAULTS, FEATURE_DEFAULTS } from './modelDefaults'
 
 // Re-export for convenience — consumers can import from aiConfiguration
 export type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefaults'
@@ -90,6 +91,12 @@ export interface AIConfigurationSettings {
   consentSettings: ConsentSettings
   /** Ollama-specific settings (only used when provider === 'ollama') */
   ollamaSettings?: OllamaSettings
+  /**
+   * Per-provider encrypted API keys (E90-S03 — Multi-Provider BYOK).
+   * Enables storing keys for multiple providers simultaneously.
+   * Falls back to legacy `apiKeyEncrypted` for the global provider.
+   */
+  providerKeys?: Partial<Record<AIProviderId, EncryptedData>>
   /**
    * Per-feature model overrides (E90 — AI Model Selection Per Feature).
    * When a feature key is present, its config takes priority over provider defaults.
@@ -232,11 +239,12 @@ export function getAIConfiguration(): AIConfigurationSettings {
         ...DEFAULTS.consentSettings,
         ...stored.consentSettings,
       },
+      providerKeys: stored.providerKeys,
       featureModels: stored.featureModels,
     }
   } catch (error) {
     // Parsing failed - return defaults
-    console.warn('Failed to parse AI configuration from localStorage, using defaults:', error)
+    console.warn('Failed to parse AI configuration from localStorage, using defaults:', error) // silent-catch-ok: logged
     return { ...DEFAULTS }
   }
 }
@@ -312,7 +320,7 @@ export async function getDecryptedApiKey(): Promise<string | null> {
     return await decryptData(config.apiKeyEncrypted.iv, config.apiKeyEncrypted.encryptedData)
   } catch (error) {
     // Decryption failed (corrupted data or wrong key)
-    console.warn('Failed to decrypt API key - data may be corrupted:', error)
+    console.warn('Failed to decrypt API key - data may be corrupted:', error) // silent-catch-ok: logged
     return null
   }
 }
@@ -331,6 +339,96 @@ export async function testAIConnection(provider: AIProviderId, apiKey: string): 
   if (!providerConfig) return false
 
   return await providerConfig.testConnection(apiKey)
+}
+
+/**
+ * Resolves the model configuration for a specific AI feature using a three-tier cascade:
+ *
+ * 1. **User per-feature override** — `featureModels[feature]` from saved config
+ * 2. **Feature default** — `FEATURE_DEFAULTS[feature]` from modelDefaults.ts
+ * 3. **Global provider default** — `PROVIDER_DEFAULTS[globalProvider]`
+ *
+ * This is synchronous (localStorage read + object lookup). The factory's
+ * `getLLMClient()` remains async because it decrypts the API key.
+ *
+ * @param feature - AI feature ID to resolve model for
+ * @returns Resolved model configuration with provider and model string
+ *
+ * @example
+ * const resolved = resolveFeatureModel('videoSummary')
+ * // { provider: 'anthropic', model: 'claude-haiku-4-5' }
+ */
+export function resolveFeatureModel(feature: AIFeatureId): FeatureModelConfig {
+  const config = getAIConfiguration()
+
+  // Tier 1: User per-feature override
+  const override = config.featureModels?.[feature]
+  if (override) {
+    return override
+  }
+
+  // Tier 2: Feature default from FEATURE_DEFAULTS
+  const featureDefault = FEATURE_DEFAULTS[feature]
+  if (featureDefault) {
+    return featureDefault
+  }
+
+  // Tier 3: Global provider default
+  const globalProvider = config.provider
+  return {
+    provider: globalProvider,
+    model: PROVIDER_DEFAULTS[globalProvider],
+  }
+}
+
+/**
+ * Decrypts and retrieves the API key for a specific provider.
+ *
+ * Checks `providerKeys[provider]` first, then falls back to legacy
+ * `apiKeyEncrypted` if the provider matches the global provider.
+ *
+ * @param provider - Provider to get the API key for
+ * @returns Decrypted API key or null if not configured/decryption fails
+ *
+ * Security note: Never log or display the returned value.
+ */
+export async function getDecryptedApiKeyForProvider(
+  provider: AIProviderId
+): Promise<string | null> {
+  const config = getAIConfiguration()
+
+  // E2E test escape hatch (DEV mode only)
+  if (import.meta.env.DEV && config._testApiKey) {
+    return config._testApiKey
+  }
+
+  // Ollama uses server URL, not API key
+  if (provider === 'ollama') {
+    return config.ollamaSettings?.serverUrl ? 'ollama' : null
+  }
+
+  // Check providerKeys map first (E90-S03 will populate this)
+  const providerKeyData = config.providerKeys?.[provider]
+  if (providerKeyData) {
+    try {
+      return await decryptData(providerKeyData.iv, providerKeyData.encryptedData)
+    } catch (error) {
+      console.warn(`Failed to decrypt provider key for ${provider}:`, error) // silent-catch-ok: logged
+      return null
+    }
+  }
+
+  // Fall back to legacy single-key field if provider matches global
+  if (provider === config.provider && config.apiKeyEncrypted) {
+    try {
+      return await decryptData(config.apiKeyEncrypted.iv, config.apiKeyEncrypted.encryptedData)
+    } catch (error) {
+      console.warn('Failed to decrypt legacy API key:', error) // silent-catch-ok: logged
+      return null
+    }
+  }
+
+  return null
 }
 
 /**
