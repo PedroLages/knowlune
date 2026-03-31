@@ -39,12 +39,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { getAvatarSrc, getInitials } from '@/lib/authors'
-import type {
-  ImportedVideo,
-  ImportedPdf,
-  VideoProgress,
-  YouTubeCourseChapter,
-} from '@/data/types'
+import { formatClockDuration as formatDuration } from '@/lib/formatDuration'
+import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -55,17 +51,6 @@ const COMPLETION_THRESHOLD = 90
 // ---------------------------------------------------------------------------
 // Utility
 // ---------------------------------------------------------------------------
-
-function formatDuration(seconds: number): string {
-  if (seconds <= 0) return '0:00'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
-  if (h > 0) {
-    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-  }
-  return `${m}:${String(s).padStart(2, '0')}`
-}
 
 function formatTag(tag: string) {
   return tag
@@ -102,10 +87,7 @@ function groupByFolder(videos: ImportedVideo[]): ChapterGroup[] {
   return Array.from(groups.entries()).map(([title, vids]) => ({ title, videos: vids }))
 }
 
-function groupByChapter(
-  videos: ImportedVideo[],
-  chapters: YouTubeCourseChapter[]
-): ChapterGroup[] {
+function groupByChapter(videos: ImportedVideo[], chapters: YouTubeCourseChapter[]): ChapterGroup[] {
   if (chapters.length === 0) return [{ title: '', videos }]
 
   const videoChapterMap = new Map<string, string>()
@@ -217,7 +199,9 @@ export function CourseOverview() {
         if (lastWatched) {
           const allCompleted =
             videos.length > 0 &&
-            videos.every(v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= COMPLETION_THRESHOLD)
+            videos.every(
+              v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= COMPLETION_THRESHOLD
+            )
           setCtaVariant(allCompleted ? 'review' : 'continue')
           setCtaLessonId(lastWatched.lessonId)
         } else {
@@ -275,7 +259,9 @@ export function CourseOverview() {
   )
 
   const completedCount = useMemo(
-    () => videos.filter(v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= COMPLETION_THRESHOLD).length,
+    () =>
+      videos.filter(v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= COMPLETION_THRESHOLD)
+        .length,
     [videos, progressMap]
   )
 
@@ -403,9 +389,7 @@ export function CourseOverview() {
         />
 
         <div
-          className="relative z-10 p-8 md:p-10 flex flex-col justify-end h-full"
-          // eslint-disable-next-line react-best-practices/no-inline-styles -- minHeight for hero layout
-          style={{ minHeight: 280 }}
+          className="relative z-10 p-8 md:p-10 flex flex-col justify-end h-full min-h-[280px]"
         >
           {hasTags && (
             <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -448,9 +432,7 @@ export function CourseOverview() {
             : []),
           { icon: BookOpen, value: `${totalLessons}`, label: 'Lessons' },
           { icon: Play, value: `${videos.length}`, label: 'Videos' },
-          ...(pdfs.length > 0
-            ? [{ icon: FileText, value: `${pdfs.length}`, label: 'PDFs' }]
-            : []),
+          ...(pdfs.length > 0 ? [{ icon: FileText, value: `${pdfs.length}`, label: 'PDFs' }] : []),
         ].map(stat => (
           <div
             key={stat.label}
@@ -472,7 +454,10 @@ export function CourseOverview() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
-          className={cn('space-y-6', hasDescription || (!isYouTube && authorData) ? 'lg:col-span-2' : 'lg:col-span-3')}
+          className={cn(
+            'space-y-6',
+            hasDescription || (!isYouTube && authorData) ? 'lg:col-span-2' : 'lg:col-span-3'
+          )}
         >
           {/* About This Course */}
           {hasDescription && (
@@ -480,7 +465,10 @@ export function CourseOverview() {
               <h2 className="font-display text-lg font-semibold text-foreground mb-4">
                 About This Course
               </h2>
-              <p className="text-muted-foreground leading-relaxed" data-testid="course-overview-description">
+              <p
+                className="text-muted-foreground leading-relaxed"
+                data-testid="course-overview-description"
+              >
                 {course.description}
               </p>
             </div>
@@ -513,7 +501,10 @@ export function CourseOverview() {
                     <p className="text-sm text-muted-foreground mt-0.5">{authorData.title}</p>
                   )}
                 </div>
-                <ChevronRight className="size-5 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
+                <ChevronRight
+                  className="size-5 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-hidden="true"
+                />
               </div>
             </Link>
           )}
@@ -610,14 +601,19 @@ export function CourseOverview() {
           <div className="space-y-2">
             {groupedContent.map((group, groupIndex) => {
               const isExpanded = expandedModules.has(groupIndex)
-              const groupTitle = group.title || (groupedContent.length > 1 ? `Section ${groupIndex + 1}` : 'All Lessons')
+              const groupTitle =
+                group.title ||
+                (groupedContent.length > 1 ? `Section ${groupIndex + 1}` : 'All Lessons')
               const groupCompletedCount = group.videos.filter(
                 v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= COMPLETION_THRESHOLD
               ).length
               const groupDuration = group.videos.reduce((s, v) => s + (v.duration || 0), 0)
 
               return (
-                <div key={`${group.title}-${groupIndex}`} className="rounded-xl border border-border/50 overflow-hidden">
+                <div
+                  key={`${group.title}-${groupIndex}`}
+                  className="rounded-xl border border-border/50 overflow-hidden"
+                >
                   {/* Group header */}
                   <button
                     type="button"
@@ -627,7 +623,10 @@ export function CourseOverview() {
                   >
                     <span className="flex-shrink-0 size-8 rounded-lg bg-brand-soft flex items-center justify-center">
                       {group.title ? (
-                        <FolderOpen className="size-3.5 text-brand-soft-foreground" aria-hidden="true" />
+                        <FolderOpen
+                          className="size-3.5 text-brand-soft-foreground"
+                          aria-hidden="true"
+                        />
                       ) : (
                         <span className="text-sm font-semibold text-brand-soft-foreground">
                           {groupIndex + 1}
@@ -667,9 +666,15 @@ export function CourseOverview() {
                             data-testid={`curriculum-lesson-${video.id}`}
                           >
                             {isCompleted ? (
-                              <CheckCircle2 className="size-4 text-success flex-shrink-0" aria-hidden="true" />
+                              <CheckCircle2
+                                className="size-4 text-success flex-shrink-0"
+                                aria-hidden="true"
+                              />
                             ) : (
-                              <Video className="size-4 text-muted-foreground flex-shrink-0" aria-hidden="true" />
+                              <Video
+                                className="size-4 text-muted-foreground flex-shrink-0"
+                                aria-hidden="true"
+                              />
                             )}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm truncate text-foreground group-hover/lesson:text-brand-soft-foreground transition-colors">

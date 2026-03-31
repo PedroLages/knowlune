@@ -1,9 +1,9 @@
 ---
 story_id: E91-S10
 story_name: "Course Hero Overview Page"
-status: in-progress
+status: complete
 started: 2026-03-30
-completed:
+completed: 2026-03-30
 reviewed: false
 review_started:
 review_gates_passed: []
@@ -37,68 +37,68 @@ so that I can understand what a course offers before starting and feel motivated
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create route (AC: 1)
-  - [ ] 1.1 Add `/courses/:courseId/overview` route in `src/app/routes.tsx`
-  - [ ] 1.2 Lazy-load `CourseOverview` component
-  - [ ] 1.3 Add `RouteErrorBoundary` wrapper
-- [ ] Task 2: Create `CourseOverview.tsx` page (AC: 2, 10)
-  - [ ] 2.1 Create `src/app/pages/CourseOverview.tsx`
-  - [ ] 2.2 Use `useCourseAdapter(courseId)` for all data access
-  - [ ] 2.3 Load videos, PDFs, chapters, progress from Dexie (same pattern as UnifiedCourseDetail)
-  - [ ] 2.4 Load author data from `useAuthorStore` (local courses only)
-  - [ ] 2.5 Loading skeleton and error/not-found states
-- [ ] Task 3: Hero section (AC: 2)
-  - [ ] 3.1 Gradient background: `linear-gradient(160deg, var(--brand-soft) 0%, var(--accent-violet-muted) 50%, var(--card) 100%)`
-  - [ ] 3.2 Course thumbnail overlay (opacity-20) or fallback icon
-  - [ ] 3.3 Gradient overlay for text readability
-  - [ ] 3.4 Course title (h1, text-3xl md:text-4xl)
-  - [ ] 3.5 Tag badges below title (if tags exist)
-  - [ ] 3.6 Container: `rounded-[24px] overflow-hidden shadow-sm min-h-[280px]`
-- [ ] Task 4: Stats row (AC: 3)
-  - [ ] 4.1 Grid: `grid-cols-2 md:grid-cols-4 gap-3`
-  - [ ] 4.2 4 cards: Duration (Clock), Lessons (BookOpen), Videos (Play), PDFs (FileText)
-  - [ ] 4.3 Total duration computed from video durations
-  - [ ] 4.4 Card: `bg-card rounded-xl p-4 text-center shadow-sm border border-border/50`
-- [ ] Task 5: Two-column layout (AC: 4, 5, 6)
-  - [ ] 5.1 Grid: `grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)]`
-  - [ ] 5.2 Left (2/3): "About This Course" card with description + Author card with avatar
-  - [ ] 5.3 Right (1/3): "What You'll Learn" tags checklist + CTA card
-  - [ ] 5.4 Hide "About" section if no description available
-  - [ ] 5.5 Author card: only for local courses (`!isYouTube`), links to author profile
-- [ ] Task 6: CTA card (AC: 7)
-  - [ ] 6.1 Gradient CTA card: `linear-gradient(135deg, var(--brand) 0%, var(--accent-violet) 100%)`
-  - [ ] 6.2 Reuse E91-S01 logic: `getLastWatchedLesson()` / `getFirstLesson()` to determine state
-  - [ ] 6.3 Button: "Start Course" / "Continue Learning" / "Review Course"
-  - [ ] 6.4 Navigate to first/last-watched lesson on click
-- [ ] Task 7: Curriculum accordion (AC: 8)
-  - [ ] 7.1 Lesson list grouped by folder (local) or chapter (YouTube) — reuse `groupByFolder` / `groupByChapter` from LessonList
-  - [ ] 7.2 Each group as a collapsible section with module number, title, lesson count
-  - [ ] 7.3 Lessons show: type icon (Video/FileText), title, duration badge, completion indicator
-  - [ ] 7.4 First group auto-expanded, rest collapsed
-  - [ ] 7.5 Click lesson → navigate to player (`/courses/:courseId/lessons/:lessonId`)
-- [ ] Task 8: "View Overview" button on course detail (AC: 9)
-  - [ ] 8.1 Add button/link to `CourseHeader.tsx`: "View Overview" with `Eye` or `LayoutDashboard` icon
-  - [ ] 8.2 Links to `/courses/:courseId/overview`
-- [ ] Task 9: Responsive design (AC: 11)
-  - [ ] 9.1 Mobile: single column, stacked sections, full-width hero
-  - [ ] 9.2 Tablet: 2-column stats, single-column content
-  - [ ] 9.3 Desktop: 4-column stats, 3-column (2/3 + 1/3) content
-- [ ] Task 10: E2E tests
-  - [ ] 10.1 Navigate to `/courses/:courseId/overview` → hero page renders
-  - [ ] 10.2 Stats row shows correct counts (videos, PDFs, duration)
-  - [ ] 10.3 Author card visible for local course, hidden for YouTube
-  - [ ] 10.4 CTA button text matches course state (start/continue/review)
-  - [ ] 10.5 Click CTA → navigates to correct lesson
-  - [ ] 10.6 Curriculum accordion: expand/collapse, click lesson → navigate
-  - [ ] 10.7 Responsive: test at 375px, 768px, 1440px
-  - [ ] 10.8 Course with duration data → total duration shown in CourseHeader
-  - [ ] 10.9 Course with zero durations → total duration not shown in CourseHeader
-- [ ] Task 11: Add total duration to CourseHeader (AC: 12, 13, 14)
-  - [ ] 11.1 Add `totalDuration?: number` prop to `CourseHeaderProps`
-  - [ ] 11.2 Compute `totalDuration = videos.reduce((sum, v) => sum + (v.duration || 0), 0)` in `UnifiedCourseDetail.tsx`
-  - [ ] 11.3 Pass to `<CourseHeader totalDuration={totalDuration} />`
-  - [ ] 11.4 Render in metadata line when `totalDuration > 0`: `<Clock className="size-3.5" /> {formatDuration(totalDuration)} total`
-  - [ ] 11.5 Reuse `formatDuration` from `LessonList.tsx` or create locally (H:MM:SS vs M:SS)
+- [x] Task 1: Create route (AC: 1)
+  - [x] 1.1 Add `/courses/:courseId/overview` route in `src/app/routes.tsx`
+  - [x] 1.2 Lazy-load `CourseOverview` component
+  - [x] 1.3 Add `RouteErrorBoundary` wrapper
+- [x] Task 2: Create `CourseOverview.tsx` page (AC: 2, 10)
+  - [x] 2.1 Create `src/app/pages/CourseOverview.tsx`
+  - [x] 2.2 Use `useCourseAdapter(courseId)` for all data access
+  - [x] 2.3 Load videos, PDFs, chapters, progress from Dexie (same pattern as UnifiedCourseDetail)
+  - [x] 2.4 Load author data from `useAuthorStore` (local courses only)
+  - [x] 2.5 Loading skeleton and error/not-found states
+- [x] Task 3: Hero section (AC: 2)
+  - [x] 3.1 Gradient background: `linear-gradient(160deg, var(--brand-soft) 0%, var(--accent-violet-muted) 50%, var(--card) 100%)`
+  - [x] 3.2 Course thumbnail overlay (opacity-20) or fallback icon
+  - [x] 3.3 Gradient overlay for text readability
+  - [x] 3.4 Course title (h1, text-3xl md:text-4xl)
+  - [x] 3.5 Tag badges below title (if tags exist)
+  - [x] 3.6 Container: `rounded-[24px] overflow-hidden shadow-sm min-h-[280px]` *(Implementation uses `shadow-studio` — the project-standard elevated shadow token, preferred over `shadow-sm`)*
+- [x] Task 4: Stats row (AC: 3)
+  - [x] 4.1 Grid: `grid-cols-2 md:grid-cols-4 gap-3`
+  - [x] 4.2 4 cards: Duration (Clock), Lessons (BookOpen), Videos (Play), PDFs (FileText)
+  - [x] 4.3 Total duration computed from video durations
+  - [x] 4.4 Card: `bg-card rounded-xl p-4 text-center shadow-sm border border-border/50`
+- [x] Task 5: Two-column layout (AC: 4, 5, 6)
+  - [x] 5.1 Grid: `grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)]`
+  - [x] 5.2 Left (2/3): "About This Course" card with description + Author card with avatar
+  - [x] 5.3 Right (1/3): "What You'll Learn" tags checklist + CTA card
+  - [x] 5.4 Hide "About" section if no description available
+  - [x] 5.5 Author card: only for local courses (`!isYouTube`), links to author profile
+- [x] Task 6: CTA card (AC: 7)
+  - [x] 6.1 Gradient CTA card: `linear-gradient(135deg, var(--brand) 0%, var(--accent-violet) 100%)`
+  - [x] 6.2 Reuse E91-S01 logic: `getLastWatchedLesson()` / `getFirstLesson()` to determine state
+  - [x] 6.3 Button: "Start Course" / "Continue Learning" / "Review Course"
+  - [x] 6.4 Navigate to first/last-watched lesson on click
+- [x] Task 7: Curriculum accordion (AC: 8)
+  - [x] 7.1 Lesson list grouped by folder (local) or chapter (YouTube) — reuse `groupByFolder` / `groupByChapter` from LessonList
+  - [x] 7.2 Each group as a collapsible section with module number, title, lesson count
+  - [x] 7.3 Lessons show: type icon (Video/FileText), title, duration badge, completion indicator
+  - [x] 7.4 First group auto-expanded, rest collapsed
+  - [x] 7.5 Click lesson → navigate to player (`/courses/:courseId/lessons/:lessonId`)
+- [x] Task 8: "View Overview" button on course detail (AC: 9)
+  - [x] 8.1 Add button/link to `CourseHeader.tsx`: "View Overview" with `Eye` or `LayoutDashboard` icon
+  - [x] 8.2 Links to `/courses/:courseId/overview`
+- [x] Task 9: Responsive design (AC: 11)
+  - [x] 9.1 Mobile: single column, stacked sections, full-width hero
+  - [x] 9.2 Tablet: 2-column stats, single-column content
+  - [x] 9.3 Desktop: 4-column stats, 3-column (2/3 + 1/3) content
+- [x] Task 10: E2E tests
+  - [x] 10.1 Navigate to `/courses/:courseId/overview` → hero page renders
+  - [x] 10.2 Stats row shows correct counts (videos, PDFs, duration)
+  - [x] 10.3 Author card visible for local course, hidden for YouTube
+  - [x] 10.4 CTA button text matches course state (start/continue/review)
+  - [x] 10.5 Click CTA → navigates to correct lesson
+  - [x] 10.6 Curriculum accordion: expand/collapse, click lesson → navigate
+  - [x] 10.7 Responsive: test at 375px, 768px, 1440px
+  - [x] 10.8 Course with duration data → total duration shown in CourseHeader
+  - [x] 10.9 Course with zero durations → total duration not shown in CourseHeader
+- [x] Task 11: Add total duration to CourseHeader (AC: 12, 13, 14)
+  - [x] 11.1 Add `totalDuration?: number` prop to `CourseHeaderProps`
+  - [x] 11.2 Compute `totalDuration = videos.reduce((sum, v) => sum + (v.duration || 0), 0)` in `UnifiedCourseDetail.tsx`
+  - [x] 11.3 Pass to `<CourseHeader totalDuration={totalDuration} />`
+  - [x] 11.4 Render in metadata line when `totalDuration > 0`: `<Clock className="size-3.5" /> {formatDuration(totalDuration)} total`
+  - [x] 11.5 Reuse `formatDuration` from `LessonList.tsx` or create locally (H:MM:SS vs M:SS)
 
 ## Design Guidance
 

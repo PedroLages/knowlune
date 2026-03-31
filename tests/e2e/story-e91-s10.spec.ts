@@ -85,11 +85,11 @@ test.describe('Course Overview Page (E91-S10)', () => {
     // Duration stat (3720 + 1800 = 5520s = 1:32:00)
     await expect(stats.getByText('1:32:00')).toBeVisible()
     // Total lessons (2 videos + 1 pdf = 3)
-    await expect(stats.getByText('3')).toBeVisible()
+    await expect(stats.getByText('3', { exact: true })).toBeVisible()
     // Videos count
-    await expect(stats.getByText('2')).toBeVisible()
+    await expect(stats.getByText('2', { exact: true })).toBeVisible()
     // PDFs count
-    await expect(stats.getByText('1')).toBeVisible()
+    await expect(stats.getByText('1', { exact: true })).toBeVisible()
   })
 
   test('shows description in about section', async ({ page }) => {

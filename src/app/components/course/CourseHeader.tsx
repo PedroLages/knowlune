@@ -34,18 +34,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/too
 import { cn } from '@/app/components/ui/utils'
 import { EditableTitle } from '@/app/components/figma/EditableTitle'
 import { getAvatarSrc, getInitials } from '@/lib/authors'
+import { formatClockDuration as formatDuration } from '@/lib/formatDuration'
 import type { ImportedCourse } from '@/data/types'
-
-function formatDuration(seconds: number): string {
-  if (seconds <= 0) return '0:00'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
-  if (h > 0) {
-    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-  }
-  return `${m}:${String(s).padStart(2, '0')}`
-}
 
 interface AuthorInfo {
   id: string
