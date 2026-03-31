@@ -891,7 +891,12 @@ export function PlayerSidePanel({
             </Button>
           </div>
         )}
-        <NotesTab courseId={courseId} lessonId={lessonId} onSeek={externalOnSeek} currentTime={externalCurrentTime} />
+        <NotesTab
+          courseId={courseId}
+          lessonId={lessonId}
+          onSeek={externalOnSeek}
+          currentTime={externalCurrentTime}
+        />
       </TabsContent>
 
       {/* Fullscreen notes overlay (mobile only) */}
@@ -920,7 +925,12 @@ export function PlayerSidePanel({
             </Button>
           </div>
           <div ref={fullscreenEditorRef} className="flex-1 overflow-auto p-4">
-            <NotesTab courseId={courseId} lessonId={lessonId} onSeek={externalOnSeek} currentTime={externalCurrentTime} />
+            <NotesTab
+              courseId={courseId}
+              lessonId={lessonId}
+              onSeek={externalOnSeek}
+              currentTime={externalCurrentTime}
+            />
           </div>
         </div>
       )}
