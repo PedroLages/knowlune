@@ -102,6 +102,25 @@ function generateFrontmatter(note: Note, courseName: string, lessonName: string)
 }
 
 /**
+ * Converts a single note's HTML content to Markdown and returns a download-ready payload.
+ * Does NOT trigger a download — the caller is responsible for that (via downloadAsFile).
+ */
+export function exportSingleNoteAsMarkdown(
+  html: string,
+  title?: string
+): { content: string; filename: string } {
+  const markdown = htmlToMarkdown(html)
+
+  // Derive title from first line of markdown, or use provided title, or fallback
+  const derivedTitle =
+    title || markdown.split('\n')[0]?.replace(/^#+\s*/, '').trim() || 'untitled-note'
+  const sanitized = sanitizeFilename(derivedTitle.slice(0, 50))
+  const filename = `${sanitized || 'note'}.md`
+
+  return { content: markdown, filename }
+}
+
+/**
  * Exports a note as a Markdown file with YAML frontmatter.
  * Triggers a browser download.
  */
