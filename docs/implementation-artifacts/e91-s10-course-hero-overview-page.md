@@ -1,12 +1,12 @@
 ---
 story_id: E91-S10
 story_name: "Course Hero Overview Page"
-status: complete
+status: done
 started: 2026-03-30
 completed: 2026-03-30
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-03-30
+review_gates_passed: [build, lint, type-check, format-check, unit-tests-skipped, e2e-tests, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa]
 burn_in_validated: false
 ---
 
@@ -118,6 +118,13 @@ so that I can understand what a course offers before starting and feel motivated
 - The CTA logic from E91-S01 (`getLastWatchedLesson`, `getFirstLesson`) should be implemented first (S01 is a dependency)
 - YouTube courses: show channel title in hero instead of author
 - Local courses without description: hide the "About" section entirely, expand the right column
+
+## Challenges and Lessons Learned
+
+- Rewrote the entire CourseOverview page from scratch using the adapter pattern (`useCourseAdapter`) instead of the legacy `useCourseStore` — the old 447-line component was incompatible with the current data model
+- Extracted `formatDuration` into a shared utility (`src/lib/formatDuration.ts`) to avoid duplication between CourseOverview, CourseHeader, and LessonList
+- Absorbed E91-S11 (Total Duration in Course Header) into this story since it required only ~10 lines of code — keeping it separate would have added unnecessary overhead
+- Curriculum grouping logic needed to handle both local courses (folder-based) and YouTube courses (chapter-based) through the adapter, requiring careful conditional rendering without checking `course.source` directly
 
 ## Dependencies
 
