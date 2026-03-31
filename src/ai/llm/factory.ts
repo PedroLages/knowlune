@@ -127,7 +127,7 @@ export function getLLMClientForProvider(
   apiKey: string,
   model?: string
 ): LLMClient {
-  const supported: AIProviderId[] = ['openai', 'anthropic', 'groq', 'gemini', 'ollama']
+  const supported: AIProviderId[] = ['openai', 'anthropic', 'groq', 'gemini', 'ollama', 'openrouter', 'glm']
   if (!supported.includes(providerId)) {
     throw new LLMError(`Unsupported AI provider: ${providerId}`, 'UNKNOWN', providerId)
   }

@@ -9,6 +9,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createGroq } from '@ai-sdk/groq'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
+import { createZhipu } from 'zhipu-ai-provider'
 
 import { PROVIDER_DEFAULTS } from '../src/lib/modelDefaults.js'
 import type { AIProviderId } from '../src/lib/modelDefaults.js'
@@ -48,6 +49,9 @@ export function getProviderModel(providerId: string, apiKey: string, model?: str
           'X-Title': 'Knowlune',
         },
       })(model || PROVIDER_DEFAULTS.openrouter)
+
+    case 'glm':
+      return createZhipu({ apiKey })(model || PROVIDER_DEFAULTS.glm)
 
     case 'ollama':
       // Ollama exposes an OpenAI-compatible API at /v1/

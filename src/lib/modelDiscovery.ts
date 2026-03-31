@@ -47,47 +47,43 @@ const modelCache = new Map<string, CacheEntry>()
 
 const MAX_CACHE_ENTRIES = 50
 
-/** Simple string hash to avoid storing raw API keys in cache keys */
-function hashKey(key: string): string {
-  let hash = 0
-  for (let i = 0; i < key.length; i++) {
-    hash = ((hash << 5) - hash + key.charCodeAt(i)) | 0
-  }
-  return hash.toString(36)
-}
-
-/** Build cache key from provider + hashed apiKey (avoid storing raw keys) */
-function cacheKey(provider: AIProviderId, apiKey: string): string {
-  return `${provider}:${hashKey(apiKey)}`
+/** Compute a collision-resistant cache key using SHA-256 */
+async function computeCacheKey(provider: AIProviderId, apiKey: string): Promise<string> {
+  const data = new TextEncoder().encode(apiKey)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashHex = Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+  return `${provider}:${hashHex.slice(0, 16)}`
 }
 
 /** Check if cache entry is still valid */
-function getCached(provider: AIProviderId, apiKey: string): DiscoveredModel[] | null {
-  const entry = modelCache.get(cacheKey(provider, apiKey))
+function getCached(key: string): DiscoveredModel[] | null {
+  const entry = modelCache.get(key)
   if (!entry) return null
   if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
-    modelCache.delete(cacheKey(provider, apiKey))
+    modelCache.delete(key)
     return null
   }
   return entry.models
 }
 
 /** Store models in cache, evicting oldest entries if limit exceeded */
-function setCache(provider: AIProviderId, apiKey: string, models: DiscoveredModel[]): void {
+function setCache(key: string, models: DiscoveredModel[]): void {
   // Evict oldest entries if cache is full
   if (modelCache.size >= MAX_CACHE_ENTRIES) {
     let oldestKey: string | null = null
     let oldestTime = Infinity
-    for (const [key, entry] of modelCache) {
+    for (const [k, entry] of modelCache) {
       if (entry.timestamp < oldestTime) {
         oldestTime = entry.timestamp
-        oldestKey = key
+        oldestKey = k
       }
     }
     if (oldestKey) modelCache.delete(oldestKey)
   }
 
-  modelCache.set(cacheKey(provider, apiKey), {
+  modelCache.set(key, {
     models,
     timestamp: Date.now(),
   })
@@ -367,15 +363,18 @@ export async function discoverModels(
     return []
   }
 
+  // Pre-compute collision-resistant cache key (SHA-256 based)
+  const key = await computeCacheKey(provider, apiKey)
+
   // Check cache first
-  const cached = getCached(provider, apiKey)
+  const cached = getCached(key)
   if (cached) return cached
 
   // OpenRouter has its own dynamic discovery
   if (provider === 'openrouter') {
     try {
       const models = await discoverOpenRouter(apiKey)
-      setCache(provider, apiKey, models)
+      setCache(key, models)
       return models
     } catch (error) {
       console.warn(
@@ -389,7 +388,7 @@ export async function discoverModels(
   // Static-only providers (no API)
   if (provider === 'anthropic' || provider === 'glm') {
     const staticModels = getStaticModels(provider)
-    setCache(provider, apiKey, staticModels)
+    setCache(key, staticModels)
     return staticModels
   }
 
@@ -411,7 +410,7 @@ export async function discoverModels(
         models = getStaticModels(provider)
     }
 
-    setCache(provider, apiKey, models)
+    setCache(key, models)
     return models
   } catch (error) {
     console.warn(
@@ -419,7 +418,7 @@ export async function discoverModels(
       (error as Error).message
     ) // silent-catch-ok: logged + fallback used
     const fallback = getStaticModels(provider)
-    setCache(provider, apiKey, fallback)
+    setCache(key, fallback)
     return fallback
   }
 }
