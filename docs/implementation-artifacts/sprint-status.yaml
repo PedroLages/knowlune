@@ -1096,7 +1096,7 @@ development_status:
   90-9-add-openrouter-as-optional-single-gateway-provider: done
   90-10-multi-provider-api-key-management-ui: done
   90-11-e2e-tests-for-model-selection-flows: done
-  epic-90-retrospective: optional
+  epic-90-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 91: Imported Course Parity
