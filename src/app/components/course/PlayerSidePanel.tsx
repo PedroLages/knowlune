@@ -58,9 +58,13 @@ const YOUTUBE_SOURCE: CourseSource = 'youtube'
 interface NotesTabProps {
   courseId: string
   lessonId: string
+  /** Callback when user clicks a timestamp link to seek video */
+  onSeek?: (time: number) => void
+  /** Current video playback time in seconds (for timestamp insertion) */
+  currentTime?: number
 }
 
-export function NotesTab({ courseId, lessonId }: NotesTabProps) {
+export function NotesTab({ courseId, lessonId, onSeek, currentTime }: NotesTabProps) {
   const notes = useNoteStore(s => s.notes)
   const loadNotesByLesson = useNoteStore(s => s.loadNotesByLesson)
   const saveNote = useNoteStore(s => s.saveNote)
@@ -115,6 +119,8 @@ export function NotesTab({ courseId, lessonId }: NotesTabProps) {
         noteId={existingNote?.id}
         initialContent={existingNote?.content ?? ''}
         onSave={handleSave}
+        onVideoSeek={onSeek}
+        currentVideoTime={currentTime}
         compact
       />
     </div>
@@ -885,7 +891,12 @@ export function PlayerSidePanel({
             </Button>
           </div>
         )}
-        <NotesTab courseId={courseId} lessonId={lessonId} />
+        <NotesTab
+          courseId={courseId}
+          lessonId={lessonId}
+          onSeek={externalOnSeek}
+          currentTime={externalCurrentTime}
+        />
       </TabsContent>
 
       {/* Fullscreen notes overlay (mobile only) */}
@@ -914,7 +925,12 @@ export function PlayerSidePanel({
             </Button>
           </div>
           <div ref={fullscreenEditorRef} className="flex-1 overflow-auto p-4">
-            <NotesTab courseId={courseId} lessonId={lessonId} />
+            <NotesTab
+              courseId={courseId}
+              lessonId={lessonId}
+              onSeek={externalOnSeek}
+              currentTime={externalCurrentTime}
+            />
           </div>
         </div>
       )}

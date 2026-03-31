@@ -105,6 +105,11 @@
         "raw": 134870,
         "file": "LessonPlayer-B57Os1qt.js"
       },
+      "UnifiedLessonPlayer": {
+        "raw": 197519,
+        "file": "UnifiedLessonPlayer-CDQ7SMCN.js",
+        "note": "Merged LessonPlayer+NoteEditor chunks; captured E91-S14 2026-03-30"
+      },
       "Login": {
         "raw": 4878,
         "file": "Login-C0CZHq52.js"
