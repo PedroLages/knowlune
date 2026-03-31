@@ -21,7 +21,7 @@ Auto-answer: Used for /start-story and /finish-story interactive prompts
 | E91-S11 | done | #187 | 1 | 3 |
 | E91-S12 | done | #188 | 1 | 4 |
 | E91-S13 | done | #189 | 1 | 3 |
-| E91-S14 | queued | — | — | — |
+| E91-S14 | done | #190 | 1 | 2 |
 
 ## Pre-Existing Issues (deferred)
 _(none yet)_
