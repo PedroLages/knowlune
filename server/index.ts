@@ -17,6 +17,7 @@ import express from 'express'
 import { generateText, streamText } from 'ai'
 import { z } from 'zod'
 import { getProviderModel, getOllamaProviderModel } from './providers.js'
+import modelsRouter from './routes/models.js'
 import { createOriginCheck } from './middleware/origin-check.js'
 import { createAuthMiddleware } from './middleware/authenticate.js'
 import { createDetectBYOKMiddleware, createEntitlementMiddleware } from './middleware/entitlement.js'
@@ -192,6 +193,9 @@ if (isMiddlewareConfigured) {
     'Middleware chain DISABLED — missing env vars (SUPABASE_JWT_SECRET, ALLOWED_ORIGINS, VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY). AI endpoints are unprotected.'
   )
 }
+
+// Model discovery proxy routes (E90-S04)
+app.use('/api/ai/models', modelsRouter)
 
 /**
  * GET /api/ai/ollama/tags

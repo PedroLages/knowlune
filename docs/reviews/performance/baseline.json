@@ -1,214 +1,205 @@
 {
-  "captured_at": "2026-03-28",
-  "commit": "ef320994",
+  "captured_at": "2026-03-31",
+  "commit": "ae45711b",
   "bundle": {
-    "total_js_bytes": 7139724,
-    "total_css_bytes": 250849,
+    "total_js_bytes": 8317209,
+    "total_css_bytes": 252595,
     "chunks": {
+      "400": {
+        "raw": 899,
+        "file": "400-sxM0VXFx.css"
+      },
+      "700": {
+        "raw": 899,
+        "file": "700-D3x2S8jK.css"
+      },
       "AILearningPath": {
-        "raw": 8788,
-        "file": "AILearningPath-DNiraUxn.js"
+        "raw": 8738,
+        "file": "AILearningPath-BmJJum1j.js"
       },
       "AnswerFeedback": {
         "raw": 177724,
-        "file": "AnswerFeedback-BbBY1pGI.js"
+        "file": "AnswerFeedback-BGwsT2SR.js"
       },
       "AuthorProfile": {
-        "raw": 10492,
-        "file": "AuthorProfile-Ba_NqAzA.js"
+        "raw": 10527,
+        "file": "AuthorProfile-CD8wl_0U.js"
       },
       "Authors": {
-        "raw": 20230,
-        "file": "Authors-DfwMthzZ.js"
+        "raw": 20284,
+        "file": "Authors-B4_r4Ea3.js"
       },
-      "CareerPathDetail": {
-        "raw": 13411,
-        "file": "CareerPathDetail-DsLUVZLE.js"
-      },
-      "CareerPaths-DZvr9Jk": {
-        "raw": 11447,
-        "file": "CareerPaths-DZvr9Jk-.js"
-      },
-      "Challenges-Tj": {
-        "raw": 15334,
-        "file": "Challenges-Tj-25PRs.js"
+      "Challenges-rhVJKa-D": {
+        "raw": 15280,
+        "file": "Challenges-rhVJKa-D.js"
       },
       "ChatQA": {
         "raw": 18235,
-        "file": "ChatQA-BfXboGMa.js"
+        "file": "ChatQA-vBfa4INp.js"
+      },
+      "CourseBreadcrumb": {
+        "raw": 1986,
+        "file": "CourseBreadcrumb-BcNiIGJm.js"
       },
       "CourseCard": {
-        "raw": 27510,
-        "file": "CourseCard-qaLaNkx_.js"
-      },
-      "CourseDetail": {
-        "raw": 17264,
-        "file": "CourseDetail-QCS6Q55w.js"
+        "raw": 23099,
+        "file": "CourseCard-BOEsuDcx.js"
       },
       "CourseOverview": {
-        "raw": 13757,
-        "file": "CourseOverview-BPHjQ0jB.js"
+        "raw": 14906,
+        "file": "CourseOverview-B3U75CHy.js"
       },
       "Courses": {
-        "raw": 123050,
-        "file": "Courses-5Xq5LRRW.js"
+        "raw": 111108,
+        "file": "Courses-Dapc_h0b.js"
       },
-      "DeleteAuthorDialog-Da": {
+      "DeleteAuthorDialog": {
         "raw": 8659,
-        "file": "DeleteAuthorDialog-Da-usFym.js"
+        "file": "DeleteAuthorDialog-eVc7Qk4C.js"
+      },
+      "EditCourseDialog": {
+        "raw": 18761,
+        "file": "EditCourseDialog-eypNuTq3.js"
       },
       "EmptyState": {
         "raw": 1969,
-        "file": "EmptyState-YlSydpvR.js"
+        "file": "EmptyState-CvVhqfGN.js"
       },
-      "Flashcards": {
-        "raw": 17155,
-        "file": "Flashcards-DoYWFFh7.js"
+      "Flashcards-CAGKe-sv": {
+        "raw": 17149,
+        "file": "Flashcards-CAGKe-sv.js"
       },
       "ImportedCourseCard": {
-        "raw": 46585,
-        "file": "ImportedCourseCard-DuOHtlr7.js"
-      },
-      "ImportedCourseDetail": {
-        "raw": 16174,
-        "file": "ImportedCourseDetail-CpOhF9pH.js"
-      },
-      "ImportedLessonPlayer": {
-        "raw": 5826,
-        "file": "ImportedLessonPlayer-CFkJbsX0.js"
+        "raw": 36237,
+        "file": "ImportedCourseCard-d5rn64K7.js"
       },
       "InterleavedReview": {
-        "raw": 24130,
-        "file": "InterleavedReview-D8YNouId.js"
+        "raw": 24141,
+        "file": "InterleavedReview-CSAKkwkI.js"
       },
       "KnowledgeGaps": {
-        "raw": 13150,
-        "file": "KnowledgeGaps-DaKwsHHi.js"
+        "raw": 13141,
+        "file": "KnowledgeGaps-jwsKqk76.js"
       },
       "LearningPathDetail": {
-        "raw": 31757,
-        "file": "LearningPathDetail-wQ1chcDc.js"
+        "raw": 31583,
+        "file": "LearningPathDetail-DJIKOJxL.js"
       },
       "LearningPaths": {
-        "raw": 24026,
-        "file": "LearningPaths-D8dhfJGz.js"
+        "raw": 24014,
+        "file": "LearningPaths-Bhvn9FX_.js"
       },
-      "LegalLayout": {
-        "raw": 2183,
-        "file": "LegalLayout-tkR9hXQx.js"
+      "LegalLayout-D": {
+        "raw": 2182,
+        "file": "LegalLayout-D-5rVnAa.js"
       },
-      "LegalUpdateBanner-BxM3n": {
+      "LegalUpdateBanner": {
         "raw": 1672,
-        "file": "LegalUpdateBanner-BxM3n-8s.js"
-      },
-      "LessonPlayer": {
-        "raw": 134870,
-        "file": "LessonPlayer-B57Os1qt.js"
-      },
-      "UnifiedLessonPlayer": {
-        "raw": 197519,
-        "file": "UnifiedLessonPlayer-CDQ7SMCN.js",
-        "note": "Merged LessonPlayer+NoteEditor chunks; captured E91-S14 2026-03-30"
+        "file": "LegalUpdateBanner-BtejDfE3.js"
       },
       "Login": {
-        "raw": 4878,
-        "file": "Login-C0CZHq52.js"
+        "raw": 5134,
+        "file": "Login-Bv2C_bhm.js"
       },
       "MyClass": {
-        "raw": 13426,
-        "file": "MyClass-Dcwjc6j4.js"
+        "raw": 14662,
+        "file": "MyClass-BN0Yul8G.js"
       },
       "NotFound": {
         "raw": 2095,
-        "file": "NotFound-Bu1BCHfE.js"
-      },
-      "NoteEditor": {
-        "raw": 70848,
-        "file": "NoteEditor-Dwn5LfAi.js"
+        "file": "NotFound-BF1V_z9p.js"
       },
       "Notes": {
-        "raw": 19879,
-        "file": "Notes-U9bNMDTI.js"
+        "raw": 20113,
+        "file": "Notes-CLqJLifs.js"
       },
-      "Overview": {
-        "raw": 153101,
-        "file": "Overview-Djp9at1i.js"
+      "Notifications": {
+        "raw": 7443,
+        "file": "Notifications-4gz87AnY.js"
+      },
+      "Overview-Do-K4Cji": {
+        "raw": 153401,
+        "file": "Overview-Do-K4Cji.js"
+      },
+      "PdfContent": {
+        "raw": 49731,
+        "file": "PdfContent-D6LIXXxO.js"
       },
       "PrivacyPolicy": {
         "raw": 12736,
-        "file": "PrivacyPolicy-DQ_eqDMU.js"
+        "file": "PrivacyPolicy-Dn9O_UbT.js"
       },
       "QAChatPanel": {
-        "raw": 10819,
-        "file": "QAChatPanel-ubFWfQxM.js"
+        "raw": 10827,
+        "file": "QAChatPanel-CBu6NrEg.js"
       },
       "Quiz": {
-        "raw": 27581,
-        "file": "Quiz-CGMOMMk9.js"
+        "raw": 27499,
+        "file": "Quiz-CGd8mKvV.js"
       },
       "QuizResults": {
-        "raw": 38161,
-        "file": "QuizResults-CrEDyjbL.js"
+        "raw": 37835,
+        "file": "QuizResults-7GWhFifr.js"
       },
       "QuizReview": {
-        "raw": 8854,
-        "file": "QuizReview-C6q4zpeo.js"
+        "raw": 8855,
+        "file": "QuizReview-AwBNqPDs.js"
       },
       "ReadOnlyContent": {
         "raw": 626,
-        "file": "ReadOnlyContent-CndSHxu5.js"
+        "file": "ReadOnlyContent-CeoFHhY9.js"
       },
-      "RelatedConceptsPanel-DZI7f": {
+      "RelatedConceptsPanel": {
         "raw": 5795,
-        "file": "RelatedConceptsPanel-DZI7f-Ke.js"
+        "file": "RelatedConceptsPanel-FUFQfYVS.js"
       },
       "Reports": {
-        "raw": 59238,
-        "file": "Reports-K2O4ZP5k.js"
+        "raw": 59785,
+        "file": "Reports-ChTfXtkZ.js"
       },
-      "RetentionDashboard": {
-        "raw": 12086,
-        "file": "RetentionDashboard-Cg5sFgKe.js"
+      "RetentionDashboard-Dsa33Q-P": {
+        "raw": 11907,
+        "file": "RetentionDashboard-Dsa33Q-P.js"
       },
       "ReviewQueue": {
-        "raw": 10064,
-        "file": "ReviewQueue-_jCZgFsj.js"
+        "raw": 9872,
+        "file": "ReviewQueue-vcA24EmM.js"
       },
-      "SessionHistory-BaHi7T": {
-        "raw": 10460,
-        "file": "SessionHistory-BaHi7T-4.js"
+      "SessionHistory": {
+        "raw": 10479,
+        "file": "SessionHistory-Bo6KMgu_.js"
       },
       "Settings": {
-        "raw": 152853,
-        "file": "Settings-Dw4FYCPt.js"
+        "raw": 192460,
+        "file": "Settings-CE3Z4qGJ.js"
       },
-      "StatsCard": {
-        "raw": 11038,
-        "file": "StatsCard-CicbeM1J.js"
+      "StatsCard-DUBTP-FK": {
+        "raw": 11029,
+        "file": "StatsCard-DUBTP-FK.js"
       },
       "TermsOfService": {
         "raw": 12851,
-        "file": "TermsOfService-CzfoT8Y4.js"
+        "file": "TermsOfService-D3Bw6wB3.js"
+      },
+      "UnifiedCourseDetail": {
+        "raw": 35237,
+        "file": "UnifiedCourseDetail-CCy0v30a.js"
+      },
+      "UnifiedLessonPlayer": {
+        "raw": 192885,
+        "file": "UnifiedLessonPlayer-Dhu32vZo.js"
       },
       "VideoPlayer": {
-        "raw": 31762,
-        "file": "VideoPlayer-C7JJosDv.js"
+        "raw": 33744,
+        "file": "VideoPlayer-sX3eLuL2.js"
       },
       "VirtualizedGrid": {
         "raw": 2163,
-        "file": "VirtualizedGrid-vrGWKiIF.js"
+        "file": "VirtualizedGrid-eWOXOFrH.js"
       },
       "WebLLMTest": {
         "raw": 5927,
-        "file": "WebLLMTest-BX0B1bEi.js"
-      },
-      "YouTubeCourseDetail": {
-        "raw": 9568,
-        "file": "YouTubeCourseDetail-DE3ehDPW.js"
-      },
-      "YouTubeLessonPlayer": {
-        "raw": 20372,
-        "file": "YouTubeLessonPlayer-BaGXruO4.js"
+        "file": "WebLLMTest-vp_4fiE4.js"
       },
       "ai-anthropic": {
         "raw": 189119,
@@ -235,172 +226,160 @@
         "file": "ai-zhipu-B2cLYU2D.js"
       },
       "aiConfiguration": {
-        "raw": 3689,
-        "file": "aiConfiguration-BxkP6WOp.js"
+        "raw": 3961,
+        "file": "aiConfiguration-CPwqtSWC.js"
       },
-      "aiEventTracking": {
+      "aiEventTracking-C2v1-IL5": {
         "raw": 2013,
-        "file": "aiEventTracking-sCINc1eL.js"
-      },
-      "alert": {
-        "raw": 1665,
-        "file": "alert-DdrM9ySL.js"
+        "file": "aiEventTracking-C2v1-IL5.js"
       },
       "alert-dialog": {
-        "raw": 3773,
-        "file": "alert-dialog-CgTxBlVP.js"
+        "raw": 3778,
+        "file": "alert-dialog-gZofdYag.js"
+      },
+      "alert": {
+        "raw": 1670,
+        "file": "alert-olG2klQk.js"
       },
       "arrow-left": {
         "raw": 338,
-        "file": "arrow-left-Dm_8iV8T.js"
+        "file": "arrow-left-DPeptExU.js"
       },
       "arrow-right": {
         "raw": 338,
-        "file": "arrow-right-CW4RXiFQ.js"
-      },
-      "arrow-up-down": {
-        "raw": 418,
-        "file": "arrow-up-down-D84sTG1U.js"
+        "file": "arrow-right-DTnARYEc.js"
       },
       "authors": {
-        "raw": 3509,
-        "file": "authors-D7iyelC2.js"
+        "raw": 1373,
+        "file": "authors-DYUzrLyP.js"
       },
       "award": {
         "raw": 447,
-        "file": "award-BU2rEvBf.js"
+        "file": "award-CEj32Zhe.js"
       },
       "bookmark": {
         "raw": 403,
-        "file": "bookmark-N2xOKr6g.js"
+        "file": "bookmark-Cz5NSEGN.js"
       },
       "bookmarks": {
         "raw": 1809,
-        "file": "bookmarks-Co2lyoMP.js"
+        "file": "bookmarks-CKDt1KCO.js"
       },
       "breadcrumb": {
         "raw": 2275,
-        "file": "breadcrumb-D5xXMDkH.js"
+        "file": "breadcrumb-DS1Kv062.js"
       },
       "calendar": {
         "raw": 430,
-        "file": "calendar-DzFy_Qpg.js"
+        "file": "calendar-CnYk4JgE.js"
       },
       "calendar-clock": {
         "raw": 551,
-        "file": "calendar-clock-BhqkaQc8.js"
+        "file": "calendar-clock-CYQGeNJC.js"
       },
       "calendar-days": {
         "raw": 667,
-        "file": "calendar-days-B83MkKHq.js"
+        "file": "calendar-days-picVWtK9.js"
       },
-      "camera": {
-        "raw": 509,
-        "file": "camera-Dit8ts5I.js"
-      },
-      "captions": {
-        "raw": 2278,
-        "file": "captions-DkHfmYox.js"
+      "chart-CWYGhL-n": {
+        "raw": 422291,
+        "file": "chart-CWYGhL-n.js"
       },
       "chart": {
-        "raw": 422291,
-        "file": "chart-DvXZwvSx.js"
+        "raw": 5639,
+        "file": "chart-CqvxZg8E.js"
       },
       "check": {
         "raw": 297,
-        "file": "check-9drk48C6.js"
+        "file": "check-CrmpJNRC.js"
       },
       "checkbox": {
         "raw": 1217,
-        "file": "checkbox-CwrXSnjX.js"
+        "file": "checkbox-DmxFK3pd.js"
       },
       "circle-alert": {
         "raw": 423,
-        "file": "circle-alert-C0Mq5GOQ.js"
+        "file": "circle-alert-Csm_y6ei.js"
       },
       "cmdk": {
         "raw": 11861,
-        "file": "cmdk-VW4BPNi1.js"
+        "file": "cmdk-Dyh_8vM3.js"
       },
-      "collapsible": {
+      "collapsible-CT-WnG6C": {
         "raw": 658,
-        "file": "collapsible-BxnMcG5e.js"
+        "file": "collapsible-CT-WnG6C.js"
       },
-      "coordinator": {
+      "coordinator-CT6tOX-y": {
         "raw": 5502,
-        "file": "coordinator-Deo2zuc4.js"
+        "file": "coordinator-CT6tOX-y.js"
       },
       "dataPruning": {
         "raw": 2010,
-        "file": "dataPruning-DYDX7FCt.js"
+        "file": "dataPruning-eMuTSHFa.js"
       },
-      "date-fns-Ct": {
+      "date-fns": {
         "raw": 30788,
-        "file": "date-fns-Ct-cLpoH.js"
+        "file": "date-fns-C4Xlyi38.js"
       },
       "dexie": {
         "raw": 96417,
-        "file": "dexie-Dw3EmU0s.js"
-      },
-      "download-CamXFcP": {
-        "raw": 405,
-        "file": "download-CamXFcP-.js"
+        "file": "dexie-D8hooWrS.js"
       },
       "empty": {
-        "raw": 3459,
-        "file": "empty-Dd5o0bwl.js"
+        "raw": 3894,
+        "file": "empty-BW1eYIkR.js"
       },
       "external-link": {
         "raw": 424,
-        "file": "external-link-DzbiOFbC.js"
+        "file": "external-link-CTqZ7VQt.js"
       },
-      "eye-Bt": {
+      "eye": {
         "raw": 429,
-        "file": "eye-Bt-3VKnz.js"
+        "file": "eye-ByL1xG2q.js"
       },
       "factory": {
-        "raw": 2397,
-        "file": "factory-Bfe5WE4d.js"
-      },
-      "file-exclamation-point": {
-        "raw": 484,
-        "file": "file-exclamation-point-Ciz2XEWn.js"
+        "raw": 2401,
+        "file": "factory-C7g2DYPq.js"
       },
       "fileDownload": {
-        "raw": 97624,
-        "file": "fileDownload-Cu2N2reD.js"
+        "raw": 98022,
+        "file": "fileDownload-D7X5lFhs.js"
       },
       "format": {
         "raw": 753,
         "file": "format-BtPOu5zR.js"
       },
+      "formatDuration": {
+        "raw": 447,
+        "file": "formatDuration-16kFqsWb.js"
+      },
       "generatePath": {
         "raw": 3836,
-        "file": "generatePath-CFaFdTMs.js"
+        "file": "generatePath-BSNrqm2S.js"
       },
-      "grip-vertical-DcbG": {
+      "grip-vertical": {
         "raw": 544,
-        "file": "grip-vertical-DcbG-1wQ.js"
+        "file": "grip-vertical-CM6CqRWl.js"
       },
       "html2canvas.esm": {
         "raw": 202379,
         "file": "html2canvas.esm-QH1iLAAe.js"
       },
-      "image": {
-        "raw": 1017,
-        "file": "image-CHuqIt0H.js"
+      "index-B": {
+        "raw": 16360,
+        "file": "index-B-ttt5Aw.js"
       },
       "index": {
-        "raw": 241627,
-        "file": "index-R7j1of8u.css"
+        "raw": 682264,
+        "file": "index-pOWPTxRx.js"
       },
       "index.es": {
         "raw": 159959,
-        "file": "index.es-BH7vzsPy.js"
+        "file": "index.es-D9rjVMKa.js"
       },
       "jspdf.es.min": {
         "raw": 390901,
-        "file": "jspdf.es.min-CRz8rgq7.js"
+        "file": "jspdf.es.min-DloLMX2e.js"
       },
       "jspdf.plugin.autotable": {
         "raw": 30990,
@@ -408,51 +387,47 @@
       },
       "lock": {
         "raw": 379,
-        "file": "lock-I6XQSDcE.js"
-      },
-      "media": {
-        "raw": 177,
-        "file": "media-DGy31l5y.js"
+        "file": "lock-DbgJZbXc.js"
       },
       "message-circle": {
         "raw": 414,
-        "file": "message-circle-Cp7T8evT.js"
+        "file": "message-circle-CH1xGFHx.js"
       },
       "minisearch": {
         "raw": 18019,
         "file": "minisearch-D7oNtqOG.js"
       },
-      "minus": {
+      "minus-Dp3-Uhpy": {
         "raw": 290,
-        "file": "minus-BBMpmPY5.js"
+        "file": "minus-Dp3-Uhpy.js"
       },
-      "momentum-nY": {
-        "raw": 21722,
-        "file": "momentum-nY-YRsGe.js"
+      "momentum": {
+        "raw": 22771,
+        "file": "momentum-BAzOz4Tn.js"
       },
-      "noteExport-Duf": {
-        "raw": 12338,
-        "file": "noteExport-Duf-ohEm.js"
-      },
-      "noteLinkSuggestions": {
-        "raw": 2806,
-        "file": "noteLinkSuggestions-CcHLZp4G.js"
+      "noteExport": {
+        "raw": 13722,
+        "file": "noteExport-CGHsVjKj.js"
       },
       "ollama-client": {
-        "raw": 4297,
-        "file": "ollama-client-DPAlrnmx.js"
+        "raw": 4296,
+        "file": "ollama-client-eDE5ysIK.js"
       },
       "ollamaHealthCheck": {
         "raw": 2555,
-        "file": "ollamaHealthCheck-Dhm8HupH.js"
+        "file": "ollamaHealthCheck-kCZdfi6E.js"
       },
       "palette": {
         "raw": 981,
-        "file": "palette-CL1hRB4W.js"
+        "file": "palette-DgL4CQkz.js"
       },
       "pause": {
         "raw": 384,
-        "file": "pause-IbALQ1vG.js"
+        "file": "pause-hzCrAnK7.js"
+      },
+      "pdf-D6Xlj6-e": {
+        "raw": 461348,
+        "file": "pdf-D6Xlj6-e.js"
       },
       "pdf": {
         "raw": 9222,
@@ -460,23 +435,23 @@
       },
       "pencil": {
         "raw": 449,
-        "file": "pencil-BgJJtH9F.js"
+        "file": "pencil-Ddf5iIAd.js"
       },
       "performanceMonitoring": {
         "raw": 6248,
         "file": "performanceMonitoring-FCJXI1_A.js"
       },
-      "plus-C-": {
+      "plus": {
         "raw": 326,
-        "file": "plus-C--2jmof.js"
+        "file": "plus-7y8gOSRr.js"
       },
-      "progress-nNluRl": {
-        "raw": 5861,
-        "file": "progress-nNluRl-L.js"
+      "progress": {
+        "raw": 4927,
+        "file": "progress-SzF9nkcH.js"
       },
       "prosemirror": {
         "raw": 250899,
-        "file": "prosemirror-Bl2gygcx.js"
+        "file": "prosemirror-BMq29A42.js"
       },
       "purify.es": {
         "raw": 22769,
@@ -488,234 +463,177 @@
       },
       "radio-group": {
         "raw": 1413,
-        "file": "radio-group-DDXT46Zc.js"
+        "file": "radio-group-BBYl1jqs.js"
       },
       "radix-ui": {
-        "raw": 136907,
-        "file": "radix-ui-Qu1qkz6m.js"
+        "raw": 133261,
+        "file": "radix-ui-BwTs_dYT.js"
       },
       "react-router": {
         "raw": 87724,
-        "file": "react-router-CARSxaNA.js"
+        "file": "react-router-BJnE7iw7.js"
       },
       "react-vendor": {
-        "raw": 238194,
-        "file": "react-vendor-ClMTCZMv.js"
+        "raw": 238691,
+        "file": "react-vendor-Dr2smFvM.js"
       },
       "react-youtube": {
         "raw": 18692,
-        "file": "react-youtube-CcD_rhUZ.js"
+        "file": "react-youtube-BE78wuaO.js"
       },
       "reportStats": {
         "raw": 2580,
-        "file": "reportStats-DzDdRdEP.js"
+        "file": "reportStats-VnK7lj1X.js"
       },
       "rotate-cw": {
-        "raw": 374,
-        "file": "rotate-cw-BAYKPmKB.js"
+        "raw": 369,
+        "file": "rotate-cw-B4xt9CUT.js"
       },
-      "scoring-B9w": {
+      "scoring-B9w-N5B4": {
         "raw": 1423,
         "file": "scoring-B9w-N5B4.js"
       },
-      "scroll": {
-        "raw": 183,
-        "file": "scroll-DdxxOwKj.js"
-      },
-      "seedCourses": {
-        "raw": 183342,
-        "file": "seedCourses-DynXwmWm.js"
-      },
       "select": {
         "raw": 5589,
-        "file": "select-Qpl9hiIz.js"
+        "file": "select-CJte9dcN.js"
       },
       "send": {
         "raw": 463,
-        "file": "send-COhfggHo.js"
+        "file": "send-PlLL6bSG.js"
       },
-      "shield": {
-        "raw": 445,
-        "file": "shield-CPCDVWLB.js"
+      "settings-2": {
+        "raw": 425,
+        "file": "settings-2-tje8y2vt.js"
       },
       "slider": {
         "raw": 2475,
-        "file": "slider-_gUCKyV4.js"
+        "file": "slider-DZeLhxZu.js"
       },
       "sonner": {
         "raw": 38151,
-        "file": "sonner-ClnlpaXd.js"
+        "file": "sonner-CKm9qksE.js"
       },
-      "sortable.esm-C548um": {
+      "sortable.esm": {
         "raw": 50114,
-        "file": "sortable.esm-C548um-l.js"
+        "file": "sortable.esm-BFAWK5zO.js"
       },
-      "spacedRepetition": {
-        "raw": 797,
-        "file": "spacedRepetition-BltQ0yQd.js"
+      "sql-js": {
+        "raw": 1304880,
+        "file": "sql-js-58qODPCf.js"
       },
       "style-utils": {
         "raw": 25588,
         "file": "style-utils-UivQdTsC.js"
       },
-      "switch": {
-        "raw": 1191,
-        "file": "switch-C4MtiLFi.js"
-      },
       "syntax-highlight": {
         "raw": 61311,
-        "file": "syntax-highlight-CKerfujk.js"
+        "file": "syntax-highlight-NRImnhyV.js"
       },
       "table": {
-        "raw": 9414,
-        "file": "table-YjaPBvnP.js"
-      },
-      "tags-B_VidMm": {
-        "raw": 589,
-        "file": "tags-B_VidMm-.js"
+        "raw": 9440,
+        "file": "table-Bc5CnrHw.js"
       },
       "textarea": {
         "raw": 848,
-        "file": "textarea-DX6kGtsM.js"
+        "file": "textarea-DQYgvVw0.js"
       },
       "tiptap": {
         "raw": 355956,
-        "file": "tiptap-Cu7vnDTt.js"
+        "file": "tiptap-CODEqzDG.js"
       },
       "tiptap-emoji": {
         "raw": 467777,
-        "file": "tiptap-emoji-DMQe0qWL.js"
+        "file": "tiptap-emoji-Bl8FH207.js"
       },
       "trash-2": {
         "raw": 501,
-        "file": "trash-2-C_V7wGiB.js"
+        "file": "trash-2-BaFnbKeC.js"
       },
       "trending-down": {
         "raw": 351,
-        "file": "trending-down-CDWZCKiB.js"
+        "file": "trending-down-DhfqwfG2.js"
       },
       "trending-up": {
-        "raw": 348,
-        "file": "trending-up-DFDzgxxd.js"
+        "raw": 343,
+        "file": "trending-up-DDjshpQW.js"
       },
       "upload": {
         "raw": 403,
-        "file": "upload-B5wxE2ys.js"
+        "file": "upload-BUrvY7Mn.js"
       },
       "useAuthorStore": {
-        "raw": 3469,
-        "file": "useAuthorStore-CZTYe7H8.js"
+        "raw": 3464,
+        "file": "useAuthorStore-DVRbOlHh.js"
       },
-      "useCaptionLoader": {
-        "raw": 1291,
-        "file": "useCaptionLoader-CFjCfDLF.js"
+      "useCourseAdapter": {
+        "raw": 4164,
+        "file": "useCourseAdapter-Cjjgmk7p.js"
       },
-      "useCareerPathStore": {
-        "raw": 7147,
-        "file": "useCareerPathStore-rp8kK6N1.js"
-      },
-      "useContentProgressStore": {
-        "raw": 1564,
-        "file": "useContentProgressStore-bx3lBJ7s.js"
+      "useCourseCardPreview-C": {
+        "raw": 4684,
+        "file": "useCourseCardPreview-C-0_UdpO.js"
       },
       "useEngagementPrefsStore": {
         "raw": 1083,
-        "file": "useEngagementPrefsStore-D_JJaKn9.js"
+        "file": "useEngagementPrefsStore-Cq0rSsV0.js"
       },
       "useEngagementVisible": {
         "raw": 210,
-        "file": "useEngagementVisible-CgTMaShi.js"
+        "file": "useEngagementVisible-B_NDJlD0.js"
       },
       "useFlashcardStore": {
-        "raw": 3273,
-        "file": "useFlashcardStore-CIuZDyCd.js"
-      },
-      "useIdleDetection": {
-        "raw": 1024,
-        "file": "useIdleDetection-DBqyqb_r.js"
+        "raw": 3139,
+        "file": "useFlashcardStore-DduoPlSo.js"
       },
       "useLazyStore": {
         "raw": 231,
-        "file": "useLazyStore-DC0SeEwa.js"
+        "file": "useLazyStore-t0M8To7o.js"
       },
       "useLearningPathStore": {
         "raw": 9003,
-        "file": "useLearningPathStore-BBmQ7bFk.js"
+        "file": "useLearningPathStore-DSps6hee.js"
       },
-      "useNoteStore": {
-        "raw": 3025,
-        "file": "useNoteStore-D5rZll_N.js"
+      "useNoteStore-CRzy0-1U": {
+        "raw": 5718,
+        "file": "useNoteStore-CRzy0-1U.js"
       },
       "usePathProgress": {
-        "raw": 5243,
-        "file": "usePathProgress-yue6_A4h.js"
+        "raw": 4001,
+        "file": "usePathProgress-8vT__APH.js"
       },
-      "useQuizTimer-K": {
-        "raw": 12039,
-        "file": "useQuizTimer-K-mhTJu4.js"
+      "useQuizTimer": {
+        "raw": 13655,
+        "file": "useQuizTimer-DLZN_Xw2.js"
       },
       "useReviewStore": {
-        "raw": 4067,
-        "file": "useReviewStore-CWhFhbF3.js"
+        "raw": 4136,
+        "file": "useReviewStore-L4H4GWZx.js"
       },
       "useVideoFromHandle": {
-        "raw": 840,
-        "file": "useVideoFromHandle-DXYmZu3m.js"
+        "raw": 1345,
+        "file": "useVideoFromHandle-Gnk_1gG1.js"
       },
       "useYouTubeTranscriptStore": {
-        "raw": 4904,
-        "file": "useYouTubeTranscriptStore-D19_PYPT.js"
+        "raw": 8057,
+        "file": "useYouTubeTranscriptStore-DdaPj6m6.js"
       },
       "video": {
         "raw": 421,
-        "file": "video-CyDWfvzz.js"
+        "file": "video-aFxFfqgl.js"
       },
       "wifi-off": {
         "raw": 633,
-        "file": "wifi-off-xzHJKW0h.js"
+        "file": "wifi-off-Drz36hnT.js"
       },
       "workbox-window.prod.es5": {
         "raw": 5761,
         "file": "workbox-window.prod.es5-BIl4cyR9.js"
       },
-      "youtube-D2Ad": {
+      "youtube": {
         "raw": 501,
-        "file": "youtube-D2Ad-jIE.js"
+        "file": "youtube-BwImL90J.js"
       }
     }
   },
-  "page_metrics": {
-    "/": {
-      "captured_at": "2026-03-30",
-      "commit": "3085f078",
-      "story": "E69-S01",
-      "round": "R3",
-      "environment": "dev-cold-start",
-      "ttfb": 4,
-      "dom_interactive": 89,
-      "dom_complete": 485,
-      "load_complete": 485,
-      "fcp": 677,
-      "resource_count": 236,
-      "js_resource_count": 235,
-      "css_resource_count": 1,
-      "total_transfer_bytes": 14249840
-    },
-    "/settings": {
-      "captured_at": "2026-03-30",
-      "commit": "3085f078",
-      "story": "E69-S01",
-      "round": "R3",
-      "environment": "dev-cold-start",
-      "ttfb": 14,
-      "dom_interactive": 111,
-      "dom_complete": 458,
-      "load_complete": 458,
-      "fcp": 627,
-      "resource_count": 216,
-      "js_resource_count": 215,
-      "css_resource_count": 1,
-      "total_transfer_bytes": 13747851
-    }
-  }
+  "page_metrics": {}
 }
