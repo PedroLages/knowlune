@@ -11,14 +11,11 @@
  */
 
 import { encryptData, decryptData, type EncryptedData } from './crypto'
-import type { AIFeatureId, FeatureModelConfig } from './modelDefaults'
+import type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefaults'
 
 // Re-export for convenience — consumers can import from aiConfiguration
-export type { AIFeatureId, FeatureModelConfig } from './modelDefaults'
+export type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefaults'
 export { PROVIDER_DEFAULTS, FEATURE_DEFAULTS, AI_FEATURE_IDS } from './modelDefaults'
-
-/** Supported AI provider IDs */
-export type AIProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini' | 'ollama'
 
 /** AI provider configuration and validation */
 export interface AIProvider {
@@ -235,8 +232,7 @@ export function getAIConfiguration(): AIConfigurationSettings {
         ...DEFAULTS.consentSettings,
         ...stored.consentSettings,
       },
-      // Spread featureModels from storage (undefined is fine — no migration needed)
-      ...(stored.featureModels ? { featureModels: stored.featureModels } : {}),
+      featureModels: stored.featureModels,
     }
   } catch (error) {
     // Parsing failed - return defaults

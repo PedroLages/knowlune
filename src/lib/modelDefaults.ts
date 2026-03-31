@@ -9,7 +9,12 @@
  * @see E90-S01 — Define Shared Model Constants and Feature Model Config Type
  */
 
-import type { AIProviderId } from './aiConfiguration'
+// ---------------------------------------------------------------------------
+// AI Provider Identification
+// ---------------------------------------------------------------------------
+
+/** Supported AI provider IDs */
+export type AIProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini' | 'ollama'
 
 // ---------------------------------------------------------------------------
 // AI Feature Identification
@@ -100,7 +105,7 @@ export const PROVIDER_DEFAULTS: Record<AIProviderId, string> = {
  * - Generation tasks: Haiku (structured output, fast iteration)
  * - Analytics/paths: Haiku (pattern matching, low latency)
  */
-export const FEATURE_DEFAULTS: Record<AIFeatureId, { provider: AIProviderId; model: string }> = {
+export const FEATURE_DEFAULTS: Record<AIFeatureId, FeatureModelConfig> = {
   videoSummary: { provider: 'anthropic', model: 'claude-haiku-4-5' },
   noteQA: { provider: 'anthropic', model: 'claude-haiku-4-5' },
   thumbnailGeneration: { provider: 'openai', model: 'gpt-4o-mini' },
