@@ -11,6 +11,11 @@
  */
 
 import { encryptData, decryptData, type EncryptedData } from './crypto'
+import type { AIFeatureId, FeatureModelConfig } from './modelDefaults'
+
+// Re-export for convenience — consumers can import from aiConfiguration
+export type { AIFeatureId, FeatureModelConfig } from './modelDefaults'
+export { PROVIDER_DEFAULTS, FEATURE_DEFAULTS, AI_FEATURE_IDS } from './modelDefaults'
 
 /** Supported AI provider IDs */
 export type AIProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini' | 'ollama'
@@ -88,6 +93,12 @@ export interface AIConfigurationSettings {
   consentSettings: ConsentSettings
   /** Ollama-specific settings (only used when provider === 'ollama') */
   ollamaSettings?: OllamaSettings
+  /**
+   * Per-feature model overrides (E90 — AI Model Selection Per Feature).
+   * When a feature key is present, its config takes priority over provider defaults.
+   * Undefined/missing keys fall back through the resolution cascade.
+   */
+  featureModels?: Partial<Record<AIFeatureId, FeatureModelConfig>>
   /**
    * E2E test-only plaintext API key bypass (DEV mode only)
    * @internal Only works when import.meta.env.DEV = true
@@ -224,6 +235,8 @@ export function getAIConfiguration(): AIConfigurationSettings {
         ...DEFAULTS.consentSettings,
         ...stored.consentSettings,
       },
+      // Spread featureModels from storage (undefined is fine — no migration needed)
+      ...(stored.featureModels ? { featureModels: stored.featureModels } : {}),
     }
   } catch (error) {
     // Parsing failed - return defaults
