@@ -1084,8 +1084,8 @@ development_status:
   # Consolidates 3 duplicate model maps → single resolver
   # Depends on: E89 recommended first (fewer AI consumer touchpoints)
   # ──────────────────────────────────────────────────
-  epic-90: backlog
-  90-1-define-shared-model-constants-and-feature-model-config-type: backlog
+  epic-90: in-progress
+  90-1-define-shared-model-constants-and-feature-model-config-type: done
   90-2-refactor-llm-client-factory-with-feature-aware-model-resolution: backlog
   90-3-multi-provider-byok-key-storage: backlog
   90-4-model-discovery-for-cloud-providers: backlog
