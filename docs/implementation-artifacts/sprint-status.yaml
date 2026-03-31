@@ -1108,7 +1108,7 @@ development_status:
   # + lesson search, single-note export, caption customization, clickable timestamps
   # Depends on: E89 (UnifiedCourseDetail + UnifiedLessonPlayer must exist)
   # ──────────────────────────────────────────────────
-  epic-91: in-progress
+  epic-91: done
   91-1-start-continue-cta-and-last-position-resume: done
   91-2-local-course-visual-parity: done
   91-3-theater-mode: done
@@ -1122,5 +1122,5 @@ development_status:
   91-11-lesson-search-in-side-panel: done
   91-12-single-note-export-and-transcript-download: done
   91-13-caption-customization: done
-  91-14-clickable-note-timestamps: backlog         # NEW
+  91-14-clickable-note-timestamps: done
   epic-91-retrospective: optional
