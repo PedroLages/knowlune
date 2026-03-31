@@ -4,8 +4,8 @@ story_name: "Build Global Model Picker UI in Settings"
 status: in-progress
 started: 2026-03-30
 completed:
-reviewed: false
-review_started:
+reviewed: in-progress
+review_started: 2026-03-30
 review_gates_passed: []
 burn_in_validated: false
 ---
@@ -45,11 +45,16 @@ so that I can control which model my AI features use without editing code consta
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- `ProviderModelPicker` uses shadcn Command + Popover for accessible combobox with search
+- Models grouped by family when list exceeds 10 items (AC3)
+- `OllamaModelPicker` retained its own fetch logic (local /api/tags) rather than wrapping `ProviderModelPicker`, because Ollama discovery uses a fundamentally different mechanism than cloud providers
+- `globalModelOverride` added to `AIConfigurationSettings` interface for runtime config persistence (AC8)
+- Used ref-based check (`hasModelsRef`) instead of `models.length` in `useCallback` deps to prevent double-fetch
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- No E2E spec for this story — UI-only component changes validated via build and manual review
+- Key edge cases: empty model lists, failed discovery, custom model ID input, grouped vs flat display
 
 ## Pre-Review Checklist
 
@@ -67,12 +72,14 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Populated during /finish-story streamlined review.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Populated during /finish-story streamlined review.
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- `models.length` in `useCallback` dependency arrays causes re-creation on every fetch, leading to potential double-fetch loops. Use a ref (`hasModelsRef`) for mutable state checks inside callbacks.
+- Ollama's local /api/tags endpoint is fundamentally different from cloud provider discovery APIs — wrapping it in the generic `ProviderModelPicker` would add complexity without benefit. Keeping separate fetch logic in `OllamaModelPicker` is the right trade-off.
+- Duplicate imports across `lucide-react` lines are easy to miss during development; consolidate icon imports into a single statement early.
