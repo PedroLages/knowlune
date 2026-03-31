@@ -1119,7 +1119,7 @@ development_status:
   91-8-next-course-suggestion: done
   91-9-tablet-layout-enhancement: done
   91-10-course-hero-overview-page: done            # now includes total duration (absorbed S11)
-  91-11-lesson-search-in-side-panel: backlog       # NEW — replaced total duration story
+  91-11-lesson-search-in-side-panel: done
   91-12-single-note-export-and-transcript-download: backlog  # NEW
   91-13-caption-customization: backlog             # NEW
   91-14-clickable-note-timestamps: backlog         # NEW
