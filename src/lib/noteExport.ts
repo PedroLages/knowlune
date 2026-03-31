@@ -113,7 +113,12 @@ export function exportSingleNoteAsMarkdown(
 
   // Derive title from first line of markdown, or use provided title, or fallback
   const derivedTitle =
-    title || markdown.split('\n')[0]?.replace(/^#+\s*/, '').trim() || 'untitled-note'
+    title ||
+    markdown
+      .split('\n')[0]
+      ?.replace(/^#+\s*/, '')
+      .trim() ||
+    'untitled-note'
   const sanitized = sanitizeFilename(derivedTitle.slice(0, 50))
   const filename = `${sanitized || 'note'}.md`
 

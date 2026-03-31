@@ -17,7 +17,12 @@ import { Search, FileText, Loader2, Download } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Skeleton } from '@/app/components/ui/skeleton'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/app/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/app/components/ui/tooltip'
 import { cn } from '@/app/components/ui/utils'
 import { downloadAsFile } from '@/lib/download'
 import { scrollIntoViewReducedMotion } from '@/lib/scroll'
@@ -243,9 +248,7 @@ export function TranscriptPanel({ cues, currentTime, onSeek, loadingState }: Tra
                   className="size-8 shrink-0"
                   aria-label="Download transcript"
                   onClick={() => {
-                    const lines = cues.map(
-                      cue => `[${formatCueTime(cue.startTime)}] ${cue.text}`
-                    )
+                    const lines = cues.map(cue => `[${formatCueTime(cue.startTime)}] ${cue.text}`)
                     downloadAsFile(lines.join('\n'), 'transcript.txt', 'text/plain')
                   }}
                 >
