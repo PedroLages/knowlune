@@ -18,10 +18,10 @@
  *   These tests seed localStorage to simulate captions-enabled state
  *   and verify the UI controls when they are present.
  */
-import { test, expect } from '../support/fixtures'
-import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
-import { navigateAndWait } from '../support/helpers/navigation'
-import { seedImportedCourses, seedImportedVideos } from '../support/helpers/seed-helpers'
+import { test, expect } from '../../support/fixtures'
+import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
+import { navigateAndWait } from '../../support/helpers/navigation'
+import { seedImportedCourses, seedImportedVideos } from '../../support/helpers/seed-helpers'
 
 const TEST_COURSE = createImportedCourse({
   id: 'e91-s13-caption-course',
