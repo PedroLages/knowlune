@@ -12,6 +12,7 @@
 
 import { db } from '@/db'
 import type { CourseThumbnail, ThumbnailSource } from '@/data/types'
+import { resolveFeatureModel } from './aiConfiguration'
 
 // Target dimensions: 200px wide, 16:9
 const THUMB_W = 200
@@ -147,9 +148,13 @@ export async function generateThumbnailWithGemini(
     `Create a professional, visually engaging course thumbnail for: "${courseName}". ` +
     'Style: clean, modern, educational. Minimal text. Bold visual metaphor for the subject.'
 
+  // Use per-feature model resolution (user override → feature default → provider default)
+  const resolved = resolveFeatureModel('thumbnailGeneration')
+  const modelId = resolved.model || 'gemini-2.0-flash-preview-image-generation'
+
   const endpoint =
     'https://generativelanguage.googleapis.com/v1beta/models/' +
-    `gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`
+    `${modelId}:generateContent?key=${apiKey}`
 
   const body = {
     contents: [{ parts: [{ text: prompt }] }],

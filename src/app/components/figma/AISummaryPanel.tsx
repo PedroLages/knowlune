@@ -21,12 +21,7 @@ import {
 } from '@/app/components/ui/collapsible'
 import { Sparkles, Loader2, AlertCircle, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react'
 import { AIUnavailableBadge } from './AIUnavailableBadge'
-import {
-  getAIConfiguration,
-  getDecryptedApiKey,
-  isFeatureEnabled,
-  isAIAvailable,
-} from '@/lib/aiConfiguration'
+import { isFeatureEnabled, isAIAvailable } from '@/lib/aiConfiguration'
 import { fetchAndParseTranscript, generateVideoSummary } from '@/lib/aiSummary'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 
@@ -97,17 +92,9 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
       // Fetch and parse transcript (with cancellation support)
       const transcript = await fetchAndParseTranscript(transcriptSrc, controller.signal)
 
-      // Get API configuration
-      const config = getAIConfiguration()
-      const apiKey = await getDecryptedApiKey()
-
-      if (!apiKey) {
-        throw new Error('API key not found. Please configure AI provider in Settings.')
-      }
-
       // Stream summary generation with cancellation support
       let fullText = ''
-      const generator = generateVideoSummary(transcript, config.provider, apiKey, controller.signal)
+      const generator = generateVideoSummary(transcript, controller.signal)
 
       for await (const chunk of generator) {
         fullText += chunk

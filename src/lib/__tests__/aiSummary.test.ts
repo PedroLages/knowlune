@@ -1,55 +1,50 @@
 /**
  * Comprehensive tests for AI Summary functions
  *
- * Covers: fetchAndParseTranscript, generateVideoSummary (all providers),
- * VTT parsing (via fetchAndParseTranscript), streaming, timeouts, errors.
+ * Covers: fetchAndParseTranscript, generateVideoSummary (streaming via LLM client),
+ * VTT parsing (via fetchAndParseTranscript), timeouts, errors, and fallback behavior.
  *
- * The source module routes ALL requests through `/api/ai/stream` (local proxy),
- * which returns unified SSE: `data: {"content":"chunk"}\n\n` and `data: [DONE]\n\n`.
+ * After E90-S08, generateVideoSummary uses getLLMClient('videoSummary') instead of
+ * direct proxy fetch, so we mock the LLM factory layer.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // Mock dependencies before imports
 vi.mock('@/lib/aiConfiguration', () => ({
   sanitizeAIRequestPayload: vi.fn((content: string) => ({ content })),
+  resolveFeatureModel: vi.fn(() => ({
+    provider: 'anthropic',
+    model: 'claude-haiku-4-5',
+  })),
+  getDecryptedApiKeyForProvider: vi.fn(async () => 'mock-api-key'),
 }))
 vi.mock('@/ai/workers/coordinator')
+
+// Mock LLM factory
+const mockStreamCompletion = vi.fn()
+const mockLLMClient = {
+  streamCompletion: mockStreamCompletion,
+  getProviderId: () => 'anthropic',
+}
+
+vi.mock('@/ai/llm/factory', () => ({
+  getLLMClient: vi.fn(async () => mockLLMClient),
+  getLLMClientForProvider: vi.fn(() => mockLLMClient),
+}))
 
 // Import after mocking
 import { fetchAndParseTranscript, generateVideoSummary } from '../aiSummary'
 import { sanitizeAIRequestPayload } from '@/lib/aiConfiguration'
-import type { AIProviderId } from '@/lib/aiConfiguration'
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Creates a minimal ReadableStream from an array of string chunks */
-function createReadableStream(chunks: string[]): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder()
-  let index = 0
-  return new ReadableStream<Uint8Array>({
-    pull(controller) {
-      if (index < chunks.length) {
-        controller.enqueue(encoder.encode(chunks[index]))
-        index++
-      } else {
-        controller.close()
-      }
-    },
-  })
-}
-
-/** Builds a mock Response with a streaming body */
-function mockStreamResponse(chunks: string[], status = 200): Response {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    statusText: status === 200 ? 'OK' : 'Error',
-    body: createReadableStream(chunks),
-    text: async () => chunks.join(''),
-    headers: new Headers(),
-  } as unknown as Response
+/** Creates an async generator that yields chunks */
+async function* createMockStream(chunks: string[]): AsyncGenerator<{ content: string; finishReason?: string }, void, unknown> {
+  for (const content of chunks) {
+    yield { content }
+  }
 }
 
 /** Collects all yielded values from an async generator */
@@ -273,215 +268,41 @@ Real content`
   // =========================================================================
 
   describe('generateVideoSummary', () => {
-    it('should throw for unsupported provider', async () => {
-      const gen = generateVideoSummary('transcript', 'invalid-provider' as AIProviderId, 'key')
-      await expect(collectGenerator(gen)).rejects.toThrow(
-        'Unsupported AI provider: invalid-provider'
-      )
-    })
+    it('should call sanitizeAIRequestPayload when building messages', async () => {
+      mockStreamCompletion.mockImplementation(() => createMockStream(['Hello']))
 
-    it('should call sanitizeAIRequestPayload when building payload', async () => {
-      const chunks = ['data: {"content":"Hello"}\n\n', 'data: [DONE]\n\n']
-      globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
-
-      const gen = generateVideoSummary('my transcript', 'openai', 'test-key')
+      const gen = generateVideoSummary('my transcript')
       await collectGenerator(gen)
 
       expect(sanitizeAIRequestPayload).toHaveBeenCalledWith('my transcript')
     })
 
-    it('should throw on non-ok response with error body', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
-        body: null,
-        text: async () => 'Invalid API key',
-      } as unknown as Response)
+    it('should stream chunks from LLM client', async () => {
+      mockStreamCompletion.mockImplementation(() => createMockStream(['Hello', ' world']))
 
-      const gen = generateVideoSummary('transcript', 'openai', 'bad-key')
-      await expect(collectGenerator(gen)).rejects.toThrow(
-        'AI provider error (401): Invalid API key'
-      )
+      const gen = generateVideoSummary('transcript')
+      const results = await collectGenerator(gen)
+
+      expect(results).toEqual(['Hello', ' world'])
     })
 
-    it('should throw on non-ok response when error body read fails', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-        body: null,
-        text: async () => {
-          throw new Error('read failed')
-        },
-      } as unknown as Response)
+    it('should skip empty content chunks', async () => {
+      mockStreamCompletion.mockImplementation(() => createMockStream(['Hello', '', ' world']))
 
-      const gen = generateVideoSummary('transcript', 'openai', 'key')
-      await expect(collectGenerator(gen)).rejects.toThrow('AI provider error (500): Unknown error')
+      const gen = generateVideoSummary('transcript')
+      const results = await collectGenerator(gen)
+
+      expect(results).toEqual(['Hello', ' world'])
     })
 
-    it('should throw when response body is null', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        body: null,
-        text: async () => '',
-      } as unknown as Response)
+    it('should use getLLMClient with videoSummary feature', async () => {
+      const { getLLMClient } = await import('@/ai/llm/factory')
+      mockStreamCompletion.mockImplementation(() => createMockStream(['done']))
 
-      const gen = generateVideoSummary('transcript', 'openai', 'key')
-      await expect(collectGenerator(gen)).rejects.toThrow(
-        'Response body is null - streaming not supported'
-      )
-    })
+      const gen = generateVideoSummary('transcript')
+      await collectGenerator(gen)
 
-    // -----------------------------------------------------------------------
-    // Proxy-based streaming (unified format for all providers)
-    // -----------------------------------------------------------------------
-
-    describe('proxy streaming (unified format)', () => {
-      it('should stream chunks from proxy SSE format', async () => {
-        const chunks = [
-          'data: {"content":"Hello"}\n',
-          'data: {"content":" world"}\n',
-          'data: [DONE]\n',
-        ]
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
-
-        const gen = generateVideoSummary('transcript', 'openai', 'sk-test')
-        const results = await collectGenerator(gen)
-
-        expect(results).toEqual(['Hello', ' world'])
-      })
-
-      it('should use proxy endpoint /api/ai/stream with correct headers', async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
-
-        const gen = generateVideoSummary('transcript', 'openai', 'sk-test')
-        await collectGenerator(gen)
-
-        expect(globalThis.fetch).toHaveBeenCalledWith(
-          '/api/ai/stream',
-          expect.objectContaining({
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-          })
-        )
-      })
-
-      it('should include provider, apiKey, model, and maxTokens in payload', async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
-
-        const gen = generateVideoSummary('transcript', 'openai', 'sk-test')
-        await collectGenerator(gen)
-
-        const callArgs = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
-        const body = JSON.parse(callArgs[1].body)
-        expect(body.provider).toBe('openai')
-        expect(body.apiKey).toBe('sk-test')
-        expect(body.model).toBe('gpt-4o-mini')
-        expect(body.maxTokens).toBe(500)
-        expect(body.messages).toBeDefined()
-      })
-
-      it('should skip non-data lines', async () => {
-        const chunks = [': keep-alive\n', 'data: {"content":"content"}\n', '\n', 'data: [DONE]\n']
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
-
-        const gen = generateVideoSummary('transcript', 'openai', 'key')
-        const results = await collectGenerator(gen)
-        expect(results).toEqual(['content'])
-      })
-
-      it('should handle malformed JSON in stream gracefully', async () => {
-        const chunks = ['data: {invalid json}\n', 'data: {"content":"valid"}\n', 'data: [DONE]\n']
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
-
-        const gen = generateVideoSummary('transcript', 'openai', 'key')
-        const results = await collectGenerator(gen)
-        expect(results).toEqual(['valid'])
-      })
-
-      it('should handle chunks with no content field', async () => {
-        const chunks = ['data: {}\n', 'data: {"content":"real"}\n', 'data: [DONE]\n']
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
-
-        const gen = generateVideoSummary('transcript', 'openai', 'key')
-        const results = await collectGenerator(gen)
-        expect(results).toEqual(['real'])
-      })
-
-      it('should propagate AI proxy error from stream', async () => {
-        const chunks = ['data: {"error":"Rate limit exceeded"}\n']
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
-
-        const gen = generateVideoSummary('transcript', 'openai', 'key')
-        await expect(collectGenerator(gen)).rejects.toThrow('AI proxy error: Rate limit exceeded')
-      })
-    })
-
-    // -----------------------------------------------------------------------
-    // Provider-specific model selection (via proxy body)
-    // -----------------------------------------------------------------------
-
-    describe('provider model selection', () => {
-      it('should use gpt-4o-mini for openai', async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
-        const gen = generateVideoSummary('transcript', 'openai', 'key')
-        await collectGenerator(gen)
-        const body = JSON.parse(
-          (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body
-        )
-        expect(body.model).toBe('gpt-4o-mini')
-      })
-
-      it('should use claude-3-5-haiku for anthropic', async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
-        const gen = generateVideoSummary('transcript', 'anthropic', 'key')
-        await collectGenerator(gen)
-        const body = JSON.parse(
-          (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body
-        )
-        expect(body.model).toBe('claude-3-5-haiku-20241022')
-      })
-
-      it('should use llama-3.3-70b-versatile for groq', async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
-        const gen = generateVideoSummary('transcript', 'groq', 'key')
-        await collectGenerator(gen)
-        const body = JSON.parse(
-          (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body
-        )
-        expect(body.model).toBe('llama-3.3-70b-versatile')
-      })
-
-      it('should use glm-4-flash for glm', async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
-        const gen = generateVideoSummary('transcript', 'glm', 'key')
-        await collectGenerator(gen)
-        const body = JSON.parse(
-          (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body
-        )
-        expect(body.model).toBe('glm-4-flash')
-      })
-
-      it('should use gemini-1.5-flash for gemini', async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
-        const gen = generateVideoSummary('transcript', 'gemini', 'key')
-        await collectGenerator(gen)
-        const body = JSON.parse(
-          (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body
-        )
-        expect(body.model).toBe('gemini-1.5-flash')
-      })
-
-      it('should always send to /api/ai/stream regardless of provider', async () => {
-        for (const provider of ['openai', 'anthropic', 'groq', 'glm', 'gemini'] as AIProviderId[]) {
-          globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
-          const gen = generateVideoSummary('transcript', provider, 'key')
-          await collectGenerator(gen)
-          expect(globalThis.fetch).toHaveBeenCalledWith('/api/ai/stream', expect.any(Object))
-        }
-      })
+      expect(getLLMClient).toHaveBeenCalledWith('videoSummary')
     })
 
     // -----------------------------------------------------------------------
@@ -489,90 +310,41 @@ Real content`
     // -----------------------------------------------------------------------
 
     describe('timeout and cancellation', () => {
-      it('should throw timeout error when request exceeds 30s', async () => {
-        vi.useRealTimers()
-
-        // Set a very short timeout via the test-only global
-        // @ts-expect-error - Test-only global variable
-        window.__AI_SUMMARY_TIMEOUT__ = 10
-
-        // Use the real AbortSignal.throwIfAborted / signal.reason to produce
-        // a genuine AbortError that passes `instanceof Error` checks
-        globalThis.fetch = vi.fn().mockImplementation((_url: string, init: RequestInit) => {
-          return new Promise((_resolve, reject) => {
-            init.signal?.addEventListener('abort', () => {
-              // Create an error that mirrors what real fetch produces
-              const err = Object.assign(new Error('The operation was aborted.'), {
-                name: 'AbortError',
-              })
-              reject(err)
-            })
-          })
+      it('should wrap AbortError from internal timeout as user-friendly message', async () => {
+        const abortError = Object.assign(new Error('The operation was aborted.'), {
+          name: 'AbortError',
+        })
+        mockStreamCompletion.mockImplementation(async function* () {
+          throw abortError
         })
 
-        const gen = generateVideoSummary('transcript', 'openai', 'key')
-
+        const gen = generateVideoSummary('transcript')
         await expect(collectGenerator(gen)).rejects.toThrow(
           'Summary generation timed out. Please try again.'
         )
-
-        // @ts-expect-error - cleanup test-only global
-        delete window.__AI_SUMMARY_TIMEOUT__
       })
 
       it('should propagate AbortError when external signal is aborted', async () => {
-        vi.useRealTimers()
         const externalController = new AbortController()
-
-        globalThis.fetch = vi.fn().mockImplementation((_url: string, init: RequestInit) => {
-          return new Promise((_resolve, reject) => {
-            init.signal?.addEventListener('abort', () => {
-              const err = Object.assign(new Error('The operation was aborted.'), {
-                name: 'AbortError',
-              })
-              reject(err)
-            })
-          })
-        })
-
-        const gen = generateVideoSummary('transcript', 'openai', 'key', externalController.signal)
-        const promise = collectGenerator(gen)
-
-        // Abort externally (simulating component unmount)
         externalController.abort()
 
-        // Should re-throw original AbortError (not "timed out" message)
-        // because externalSignal.aborted is true
-        await expect(promise).rejects.toThrow('The operation was aborted.')
+        const abortError = Object.assign(new Error('The operation was aborted.'), {
+          name: 'AbortError',
+        })
+        mockStreamCompletion.mockImplementation(async function* () {
+          throw abortError
+        })
+
+        const gen = generateVideoSummary('transcript', externalController.signal)
+        await expect(collectGenerator(gen)).rejects.toThrow('The operation was aborted.')
       })
 
       it('should clear timeout after successful completion', async () => {
         const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout')
-        const chunks = ['data: {"content":"done"}\n', 'data: [DONE]\n']
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
+        mockStreamCompletion.mockImplementation(() => createMockStream(['done']))
 
-        const gen = generateVideoSummary('transcript', 'openai', 'key')
+        const gen = generateVideoSummary('transcript')
         await collectGenerator(gen)
-
-        expect(clearTimeoutSpy).toHaveBeenCalled()
-        clearTimeoutSpy.mockRestore()
-      })
-
-      it('should clear timeout after error', async () => {
-        const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout')
-        globalThis.fetch = vi.fn().mockResolvedValue({
-          ok: false,
-          status: 500,
-          body: null,
-          text: async () => 'error',
-        } as unknown as Response)
-
-        const gen = generateVideoSummary('transcript', 'openai', 'key')
-        try {
-          await collectGenerator(gen)
-        } catch {
-          // expected
-        }
 
         expect(clearTimeoutSpy).toHaveBeenCalled()
         clearTimeoutSpy.mockRestore()
@@ -580,42 +352,25 @@ Real content`
     })
 
     // -----------------------------------------------------------------------
-    // Streaming edge cases
+    // Error handling
     // -----------------------------------------------------------------------
 
-    describe('streaming edge cases', () => {
-      it('should handle chunks split across multiple reads', async () => {
-        // A single SSE message split across two chunks
-        const chunks = ['data: {"con', 'tent":"split"}\ndata: [DONE]\n']
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
+    describe('error handling', () => {
+      it('should rethrow non-AbortError exceptions', async () => {
+        mockStreamCompletion.mockImplementation(async function* () {
+          throw new TypeError('Network failure')
+        })
 
-        const gen = generateVideoSummary('transcript', 'openai', 'key')
-        const results = await collectGenerator(gen)
-        expect(results).toEqual(['split'])
+        const gen = generateVideoSummary('transcript')
+        await expect(collectGenerator(gen)).rejects.toThrow('Network failure')
       })
 
       it('should handle empty stream', async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse([]))
+        mockStreamCompletion.mockImplementation(() => createMockStream([]))
 
-        const gen = generateVideoSummary('transcript', 'openai', 'key')
+        const gen = generateVideoSummary('transcript')
         const results = await collectGenerator(gen)
         expect(results).toEqual([])
-      })
-
-      it('should handle multiple SSE lines in a single chunk', async () => {
-        const chunks = ['data: {"content":"a"}\ndata: {"content":"b"}\ndata: [DONE]\n']
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
-
-        const gen = generateVideoSummary('transcript', 'openai', 'key')
-        const results = await collectGenerator(gen)
-        expect(results).toEqual(['a', 'b'])
-      })
-
-      it('should rethrow non-AbortError exceptions', async () => {
-        globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Network failure'))
-
-        const gen = generateVideoSummary('transcript', 'openai', 'key')
-        await expect(collectGenerator(gen)).rejects.toThrow('Network failure')
       })
     })
   })

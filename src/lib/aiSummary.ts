@@ -10,12 +10,13 @@
  * - 30-second timeout on AI requests
  */
 
-import type { AIProviderId } from './aiConfiguration'
 import { sanitizeAIRequestPayload } from './aiConfiguration'
 import type { TranscriptCue } from '@/data/types'
-
-/** Local proxy endpoints (same Express server used by ProxyLLMClient) */
-const PROXY_STREAM_URL = '/api/ai/stream'
+import { getLLMClient } from '@/ai/llm/factory'
+import type { LLMMessage } from '@/ai/llm/types'
+import { LLMError } from '@/ai/llm/types'
+import { PROVIDER_DEFAULTS } from './modelDefaults'
+import { resolveFeatureModel, getDecryptedApiKeyForProvider } from './aiConfiguration'
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -101,26 +102,14 @@ export async function fetchAndParseTranscript(src: string, signal?: AbortSignal)
 }
 
 // ---------------------------------------------------------------------------
-// AI Provider Model Mapping
+// Summary Prompt Builder
 // ---------------------------------------------------------------------------
-
-/** Maps provider IDs to their default model names (used in proxy requests) */
-const PROVIDER_MODELS: Record<AIProviderId, string> = {
-  openai: 'gpt-4o-mini',
-  anthropic: 'claude-3-5-haiku-20241022',
-  groq: 'llama-3.3-70b-versatile',
-  glm: 'glm-4-flash',
-  gemini: 'gemini-1.5-flash',
-  ollama: 'llama3.2',
-}
 
 /**
  * Builds the messages array for the summary prompt.
  * All providers use the same unified message format through the proxy.
  */
-function buildSummaryMessages(
-  transcript: string
-): Array<{ role: 'system' | 'user'; content: string }> {
+function buildSummaryMessages(transcript: string): LLMMessage[] {
   const sanitized = sanitizeAIRequestPayload(transcript)
   return [
     {
@@ -140,36 +129,31 @@ function buildSummaryMessages(
 // ---------------------------------------------------------------------------
 
 /**
- * Generates AI video summary with real-time streaming via the local proxy server.
+ * Generates AI video summary with real-time streaming via getLLMClient.
  *
- * Routes requests through /api/ai/stream (Express proxy) instead of making direct
- * CORS calls to provider APIs. The proxy handles provider-specific authentication
- * and API format differences via the Vercel AI SDK.
+ * Uses the per-feature model resolution cascade (user override → feature default
+ * → global provider default) via getLLMClient('videoSummary').
+ *
+ * If the configured model returns a 403/model-not-found error, falls back to
+ * the provider's default model and logs a warning (AC8).
  *
  * @param transcript - Full transcript text to summarize
- * @param provider - AI provider ID
- * @param apiKey - Decrypted API key
  * @param externalSignal - Optional external AbortSignal for cancellation (e.g., component unmount)
  * @yields Text chunks as they arrive from AI provider
  * @throws Error on timeout (>30s), API errors, network failures, or cancellation
  *
  * @example
  * const controller = new AbortController()
- * const generator = generateVideoSummary(transcript, 'openai', apiKey, controller.signal)
+ * const generator = generateVideoSummary(transcript, controller.signal)
  * for await (const chunk of generator) {
  *   setSummaryText(prev => prev + chunk)
  * }
  */
 export async function* generateVideoSummary(
   transcript: string,
-  provider: AIProviderId,
-  apiKey: string,
   externalSignal?: AbortSignal
 ): AsyncGenerator<string, void, undefined> {
-  const model = PROVIDER_MODELS[provider]
-  if (!model) {
-    throw new Error(`Unsupported AI provider: ${provider}`)
-  }
+  const messages = buildSummaryMessages(transcript)
 
   // Create AbortController for timeout (AC3 requirement: 30s, test-overridable)
   const abortController = new AbortController()
@@ -181,70 +165,52 @@ export async function* generateVideoSummary(
   }
 
   try {
-    const response = await fetch(PROXY_STREAM_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        provider,
-        apiKey,
-        messages: buildSummaryMessages(transcript),
-        model,
-        maxTokens: 500,
-      }),
-      signal: abortController.signal,
-    })
+    // Use feature-aware LLM client (three-tier resolution cascade)
+    let client = await getLLMClient('videoSummary')
 
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => 'Unknown error')
-      throw new Error(`AI provider error (${response.status}): ${errorBody}`)
-    }
-
-    if (!response.body) {
-      throw new Error('Response body is null - streaming not supported')
-    }
-
-    // Parse SSE stream from proxy (unified format: `data: {"content": "..."}\n\n`)
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let buffer = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || '' // Keep incomplete line in buffer
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue
-        const data = line.slice(6).trim()
-        if (data === '[DONE]') continue
-
-        try {
-          const parsed = JSON.parse(data)
-          if (parsed.error) {
-            throw new Error(`AI proxy error: ${parsed.error}`)
-          }
-          if (parsed.content) {
-            yield parsed.content
-          }
-        } catch (parseError) {
-          if (parseError instanceof Error && parseError.message.startsWith('AI proxy error:')) {
-            throw parseError
-          }
-          // Skip malformed chunks
+    try {
+      for await (const chunk of client.streamCompletion(messages)) {
+        if (chunk.content) {
+          yield chunk.content
         }
       }
+    } catch (firstError) {
+      // AC8: Fallback on 403/model-not-found — retry with provider default model
+      if (
+        firstError instanceof LLMError &&
+        (firstError.code === 'AUTH_ERROR' || firstError.code === 'ENTITLEMENT_ERROR')
+      ) {
+        const resolved = resolveFeatureModel('videoSummary')
+        const defaultModel = PROVIDER_DEFAULTS[resolved.provider]
+
+        // Only retry if we were using a non-default model
+        if (resolved.model !== defaultModel) {
+          console.warn(
+            `[aiSummary] Model "${resolved.model}" unavailable, falling back to "${defaultModel}"`
+          )
+
+          // Re-create client with default model via the proxy
+          const apiKey = await getDecryptedApiKeyForProvider(resolved.provider)
+          if (apiKey) {
+            const { getLLMClientForProvider } = await import('@/ai/llm/factory')
+            client = getLLMClientForProvider(resolved.provider, apiKey, defaultModel)
+
+            for await (const chunk of client.streamCompletion(messages)) {
+              if (chunk.content) {
+                yield chunk.content
+              }
+            }
+            return
+          }
+        }
+      }
+      throw firstError
     }
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      // Differentiate external abort (unmount) from timeout abort
       if (externalSignal?.aborted) {
-        // Component unmounted - preserve original AbortError for caller to handle
         throw error
       }
-      // Internal timeout fired - wrap with user-friendly message
       throw new Error('Summary generation timed out. Please try again.')
     }
     throw error

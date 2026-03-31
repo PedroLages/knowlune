@@ -17,7 +17,11 @@
 
 import { db } from '@/db'
 import type { Note } from '@/data/types'
-import type { AIProviderId } from '@/lib/aiConfiguration'
+import { getLLMClient } from '@/ai/llm/factory'
+import type { LLMMessage } from '@/ai/llm/types'
+import { LLMError } from '@/ai/llm/types'
+import { PROVIDER_DEFAULTS } from './modelDefaults'
+import { resolveFeatureModel, getDecryptedApiKeyForProvider } from './aiConfiguration'
 
 /**
  * Retrieved note with similarity score
@@ -25,37 +29,6 @@ import type { AIProviderId } from '@/lib/aiConfiguration'
 export interface RetrievedNote {
   note: Note
   similarity: number
-}
-
-/**
- * Dynamically import the AI provider SDK for the selected provider.
- * Only the provider the user has configured is loaded — avoids bundling
- * all 5 SDKs (OpenAI, Anthropic, Groq, Google, Zhipu) into one chunk.
- */
-async function getModel(providerId: AIProviderId, apiKey: string) {
-  switch (providerId as string) {
-    case 'anthropic': {
-      const { createAnthropic } = await import('@ai-sdk/anthropic')
-      return createAnthropic({ apiKey })('claude-3-5-haiku-20241022')
-    }
-    case 'groq': {
-      const { createGroq } = await import('@ai-sdk/groq')
-      return createGroq({ apiKey })('llama-3.3-70b-versatile')
-    }
-    case 'glm': {
-      const { createZhipu } = await import('zhipu-ai-provider')
-      return createZhipu({ apiKey })('glm-4-flash')
-    }
-    case 'gemini': {
-      const { createGoogleGenerativeAI } = await import('@ai-sdk/google')
-      return createGoogleGenerativeAI({ apiKey })('gemini-2.0-flash-exp')
-    }
-    case 'openai':
-    default: {
-      const { createOpenAI } = await import('@ai-sdk/openai')
-      return createOpenAI({ apiKey })('gpt-4o-mini')
-    }
-  }
 }
 
 /**
@@ -132,8 +105,6 @@ export async function retrieveRelevantNotes(query: string): Promise<RetrievedNot
 export async function* generateQAAnswer(
   query: string,
   retrievedNotes: RetrievedNote[],
-  provider: AIProviderId,
-  apiKey: string,
   signal?: AbortSignal
 ): AsyncGenerator<string, void, undefined> {
   if (retrievedNotes.length === 0) {
@@ -168,28 +139,50 @@ Question: ${query}
 
 Provide a concise answer citing specific notes.`
 
-  try {
-    const { streamText } = await import('ai')
-    const model = await getModel(provider, apiKey)
-    const result = streamText({
-      model,
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt,
-        },
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
-      abortSignal: signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(30000)])
-        : AbortSignal.timeout(30000),
-    })
+  const messages: LLMMessage[] = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
+  ]
 
-    for await (const chunk of result.textStream) {
-      yield chunk
+  try {
+    // Use feature-aware LLM client (three-tier resolution cascade)
+    let client = await getLLMClient('noteQA')
+
+    try {
+      for await (const chunk of client.streamCompletion(messages)) {
+        if (chunk.content) {
+          yield chunk.content
+        }
+      }
+    } catch (firstError) {
+      // AC8: Fallback on 403/model-not-found — retry with provider default model
+      if (
+        firstError instanceof LLMError &&
+        (firstError.code === 'AUTH_ERROR' || firstError.code === 'ENTITLEMENT_ERROR')
+      ) {
+        const resolved = resolveFeatureModel('noteQA')
+        const defaultModel = PROVIDER_DEFAULTS[resolved.provider]
+
+        if (resolved.model !== defaultModel) {
+          console.warn(
+            `[noteQA] Model "${resolved.model}" unavailable, falling back to "${defaultModel}"`
+          )
+
+          const apiKey = await getDecryptedApiKeyForProvider(resolved.provider)
+          if (apiKey) {
+            const { getLLMClientForProvider } = await import('@/ai/llm/factory')
+            client = getLLMClientForProvider(resolved.provider, apiKey, defaultModel)
+
+            for await (const chunk of client.streamCompletion(messages)) {
+              if (chunk.content) {
+                yield chunk.content
+              }
+            }
+            return
+          }
+        }
+      }
+      throw firstError
     }
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {

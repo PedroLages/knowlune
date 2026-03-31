@@ -15,9 +15,6 @@ const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
 /** API version header */
 const ANTHROPIC_VERSION = '2023-06-01'
 
-/** Default model for messages */
-const DEFAULT_MODEL = 'claude-haiku-4-5'
-
 /**
  * Anthropic client for streaming chat completions
  */
@@ -25,7 +22,7 @@ export class AnthropicClient extends BaseLLMClient {
   private apiKey: string
   private model: string
 
-  constructor(apiKey: string, model: string = DEFAULT_MODEL) {
+  constructor(apiKey: string, model: string) {
     super()
     this.apiKey = apiKey
     this.model = model
