@@ -6,6 +6,7 @@ import importPaths from './eslint-plugin-import-paths.js'
 import reactBestPractices from './eslint-plugin-react-best-practices.js'
 import testPatterns from './eslint-plugin-test-patterns.js'
 import errorHandling from './eslint-plugin-error-handling.js'
+import componentSize from './eslint-plugin-component-size.js'
 
 export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.recommended, {
   ignores: [
@@ -30,6 +31,7 @@ export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.r
     'react-best-practices': reactBestPractices,
     'test-patterns': testPatterns,
     'error-handling': errorHandling,
+    'component-size': componentSize,
   },
   rules: {
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
@@ -39,6 +41,12 @@ export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.r
     'import-paths/correct-utils-import': 'error',
     'react-best-practices/no-inline-styles': 'warn',
     'error-handling/no-silent-catch': 'warn',
+  },
+}, {
+  // Component size limits for .tsx files
+  files: ['**/*.tsx'],
+  rules: {
+    'component-size/max-lines': 'warn',
   },
 }, {
   // Test files - enable test anti-pattern rules
