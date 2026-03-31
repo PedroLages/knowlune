@@ -1084,7 +1084,7 @@ development_status:
   # Consolidates 3 duplicate model maps → single resolver
   # Depends on: E89 recommended first (fewer AI consumer touchpoints)
   # ──────────────────────────────────────────────────
-  epic-90: in-progress
+  epic-90: done
   90-1-define-shared-model-constants-and-feature-model-config-type: done
   90-2-refactor-llm-client-factory-with-feature-aware-model-resolution: done
   90-3-multi-provider-byok-key-storage: done
@@ -1095,7 +1095,7 @@ development_status:
   90-8-wire-all-ai-features-to-use-new-config: done
   90-9-add-openrouter-as-optional-single-gateway-provider: done
   90-10-multi-provider-api-key-management-ui: done
-  90-11-e2e-tests-for-model-selection-flows: backlog
+  90-11-e2e-tests-for-model-selection-flows: done
   epic-90-retrospective: optional
 
   # ──────────────────────────────────────────────────
