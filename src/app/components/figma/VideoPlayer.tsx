@@ -8,6 +8,7 @@ import {
   Minimize,
   RectangleHorizontal,
   Settings,
+  Settings2,
   Subtitles,
   Bookmark,
   SkipBack,
@@ -30,6 +31,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
+import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { Slider } from '@/app/components/ui/slider'
 import { cn } from '@/app/components/ui/utils'
 import { VideoShortcutsOverlay } from '@/app/components/figma/VideoShortcutsOverlay'
@@ -66,6 +68,20 @@ export interface VideoPlayerHandle {
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
 const STORAGE_KEY_PLAYBACK_SPEED = 'video-playback-speed'
 const STORAGE_KEY_CAPTIONS_ENABLED = 'video-captions-enabled'
+const STORAGE_KEY_CAPTION_FONT_SIZE = 'video-caption-font-size'
+const STORAGE_KEY_CAPTION_BG_OPACITY = 'video-caption-bg-opacity'
+
+type CaptionFontSize = 'small' | 'medium' | 'large'
+const CAPTION_FONT_SIZE_MAP: Record<CaptionFontSize, string> = {
+  small: '14px',
+  medium: '18px',
+  large: '24px',
+}
+const CAPTION_FONT_SIZE_OPTIONS: { value: CaptionFontSize; label: string }[] = [
+  { value: 'small', label: 'Small' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'large', label: 'Large' },
+]
 
 export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function VideoPlayer(
   {
@@ -153,6 +169,22 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     const saved = localStorage.getItem(STORAGE_KEY_CAPTIONS_ENABLED)
     return saved === 'true'
   })
+
+  // Caption customization settings (persisted to localStorage)
+  const [captionFontSize, setCaptionFontSize] = useState<CaptionFontSize>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_CAPTION_FONT_SIZE)
+    if (saved && saved in CAPTION_FONT_SIZE_MAP) return saved as CaptionFontSize
+    return 'medium'
+  })
+  const [captionBgOpacity, setCaptionBgOpacity] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_CAPTION_BG_OPACITY)
+    if (saved !== null) {
+      const parsed = parseInt(saved, 10)
+      if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) return parsed
+    }
+    return 80
+  })
+  const [captionSettingsOpen, setCaptionSettingsOpen] = useState(false)
 
   // AB-loop: dual ref+state pattern.
   // Refs are read inside handleTimeUpdate (avoids stale closure in video event handler).
@@ -356,6 +388,18 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     }
 
     announce(newEnabled ? 'Captions enabled' : 'Captions disabled')
+  }
+
+  // Caption customization handlers
+  const handleCaptionFontSizeChange = (size: CaptionFontSize) => {
+    setCaptionFontSize(size)
+    localStorage.setItem(STORAGE_KEY_CAPTION_FONT_SIZE, size)
+  }
+
+  const handleCaptionBgOpacityChange = (values: number[]) => {
+    const opacity = values[0]
+    setCaptionBgOpacity(opacity)
+    localStorage.setItem(STORAGE_KEY_CAPTION_BG_OPACITY, String(opacity))
   }
 
   // Change playback speed
@@ -589,8 +633,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         (['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName) || active.isContentEditable)
       if (isInputFocused) return
 
-      // Speed menu handles its own keyboard events via a separate capture-phase handler
-      if (speedMenuOpen) return
+      // Speed menu / caption settings handle their own keyboard events
+      if (speedMenuOpen || captionSettingsOpen) return
 
       // When shortcuts overlay is open, only Escape closes it
       if (shortcutsOpen) {
@@ -739,6 +783,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     jumpToPercentage,
     speedMenuOpen,
     shortcutsOpen,
+    captionSettingsOpen,
     handleAddBookmark,
     onTheaterModeToggle,
     setLoopA,
@@ -753,7 +798,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     // Skip synthesized mouse events that follow touch events on mobile
     if (touchActiveRef.current) return
     setShowControls(true)
-    if (isPlaying && !speedMenuOpen && !shortcutsOpen) {
+    if (isPlaying && !speedMenuOpen && !shortcutsOpen && !captionSettingsOpen) {
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current)
       }
@@ -791,7 +836,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current)
     }
-    if (!speedMenuOpen && !shortcutsOpen) {
+    if (!speedMenuOpen && !shortcutsOpen && !captionSettingsOpen) {
       controlsTimeoutRef.current = setTimeout(() => {
         setShowControls(false)
       }, 3000)
@@ -845,9 +890,21 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         // Hide cursor when playing and controls auto-hide (YouTube-style)
         isPlaying && !showControls && 'cursor-none'
       )}
+      style={
+        {
+          '--caption-font-size': CAPTION_FONT_SIZE_MAP[captionFontSize],
+          '--caption-bg-color': `rgba(0, 0, 0, ${captionBgOpacity / 100})`,
+        } as React.CSSProperties
+      }
       onMouseDown={() => containerRef.current?.focus()}
       onMouseMove={resetControlsTimeout}
-      onMouseLeave={() => isPlaying && !speedMenuOpen && !shortcutsOpen && setShowControls(false)}
+      onMouseLeave={() =>
+        isPlaying &&
+        !speedMenuOpen &&
+        !shortcutsOpen &&
+        !captionSettingsOpen &&
+        setShowControls(false)
+      }
       onTouchStart={e => handleTouchShow(e)}
       tabIndex={0}
       role="region"
@@ -1275,6 +1332,71 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 >
                   <Subtitles className="size-5" />
                 </Button>
+
+                {/* Caption Settings Popover — only visible when captions are active */}
+                {captionsEnabled && captions && captions.length > 0 && (
+                  <Popover open={captionSettingsOpen} onOpenChange={setCaptionSettingsOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-11 text-white hover:bg-white/20"
+                        aria-label="Caption settings"
+                        data-testid="caption-settings-button"
+                      >
+                        <Settings2 className="size-5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-64 p-4 space-y-4 bg-popover"
+                      side="top"
+                      align="center"
+                      sideOffset={8}
+                      onOpenAutoFocus={e => e.preventDefault()}
+                    >
+                      {/* Font Size */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-muted-foreground">
+                          Font Size
+                        </label>
+                        <div className="flex gap-1">
+                          {CAPTION_FONT_SIZE_OPTIONS.map(opt => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              className={cn(
+                                'rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                                captionFontSize === opt.value
+                                  ? 'bg-brand text-brand-foreground'
+                                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                              )}
+                              onClick={() => handleCaptionFontSizeChange(opt.value)}
+                              data-testid={`caption-font-size-${opt.value}`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Background Opacity */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-muted-foreground">
+                          Background Opacity: {captionBgOpacity}%
+                        </label>
+                        <Slider
+                          value={[captionBgOpacity]}
+                          onValueChange={handleCaptionBgOpacityChange}
+                          min={0}
+                          max={100}
+                          step={5}
+                          aria-label="Caption background opacity"
+                          data-testid="caption-bg-opacity-slider"
+                        />
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
 
                 {/* Theater Mode - desktop only (sidebar already hidden on mobile) */}
                 {onTheaterModeToggle && (

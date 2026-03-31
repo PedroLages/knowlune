@@ -550,9 +550,9 @@ html.spacious {
    * Ensures 4.5:1 contrast ratio for accessibility
    */
   video::cue {
-    background-color: rgba(0, 0, 0, 0.85);
+    background-color: var(--caption-bg-color, rgba(0, 0, 0, 0.85));
     color: #ffffff;
-    font-size: 1.125rem; /* Overridden dynamically by VideoPlayer component */
+    font-size: var(--caption-font-size, 18px);
     line-height: 1.6;
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;
