@@ -50,6 +50,7 @@ Before requesting `/review-story`, verify:
 - [ ] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
 - [ ] E2E afterEach cleanup uses `await` (not fire-and-forget)
 - [ ] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
+- [ ] CRUD completeness: For any entity this story touches, verify Create/Read/Update/Delete paths all exist and have tests
 - [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
 - [ ] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md § CSP Configuration)
 

@@ -303,6 +303,22 @@ Recurring ARIA mistakes from Epic 14 retrospective. Check every item when buildi
 - [ ] Touch targets ≥44px (`min-h-12` on clickable elements)
 - [ ] Label text clickable (wraps or `htmlFor` on associated input)
 
+## Review Gate Skip Policy
+
+When and how to skip review gates during `/review-story`:
+
+**Acceptable skip conditions:**
+- Documentation-only changes (no .tsx/.ts/.css)
+- Test-only changes (no production source)
+- Emergency hotfixes (document reason in PR)
+
+**Skip procedure:**
+1. Document the skipped gate(s) in the story's lessons learned
+2. Add `skip-review: [gate-name]` label on the PR
+3. Note the reason in the epic tracking file
+
+**Never skip:** Build, lint, type-check (these are fast and catch real bugs)
+
 ## Playwright addInitScript
 
 `addInitScript` runs on every page load, including `page.reload()`. If you use `localStorage.clear()` inside it, reloads will wipe seeded test data.
