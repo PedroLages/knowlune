@@ -1,8 +1,8 @@
 ---
 story_id: E91-S14
 story_name: "Clickable Note Timestamps"
-status: backlog
-started:
+status: in-progress
+started: 2026-03-30
 completed:
 reviewed: false
 review_started:
