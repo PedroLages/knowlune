@@ -532,6 +532,65 @@ describe('VideoPlayer', () => {
   })
 
   // -------------------------------------------------------------------------
+  // Caption customization
+  // -------------------------------------------------------------------------
+  describe('caption customization', () => {
+    const captionProps = {
+      captions: [{ src: 'en.vtt', label: 'English', language: 'en' }],
+    }
+
+    it('shows caption settings button when captions are enabled', async () => {
+      localStorage.setItem('video-captions-enabled', 'true')
+      renderPlayer(captionProps)
+      expect(screen.getByTestId('caption-settings-button')).toBeInTheDocument()
+    })
+
+    it('hides caption settings button when captions are disabled', () => {
+      localStorage.setItem('video-captions-enabled', 'false')
+      renderPlayer(captionProps)
+      expect(screen.queryByTestId('caption-settings-button')).not.toBeInTheDocument()
+    })
+
+    it('restores font size from localStorage', () => {
+      localStorage.setItem('video-captions-enabled', 'true')
+      localStorage.setItem('video-caption-font-size', 'large')
+      renderPlayer(captionProps)
+      const container = screen.getByTestId('video-player-container')
+      expect(container.style.getPropertyValue('--caption-font-size')).toBe('24px')
+    })
+
+    it('restores background opacity from localStorage', () => {
+      localStorage.setItem('video-captions-enabled', 'true')
+      localStorage.setItem('video-caption-bg-opacity', '50')
+      renderPlayer(captionProps)
+      const container = screen.getByTestId('video-player-container')
+      expect(container.style.getPropertyValue('--caption-bg-color')).toBe('rgba(0, 0, 0, 0.5)')
+    })
+
+    it('defaults to medium font size and 80% opacity', () => {
+      localStorage.setItem('video-captions-enabled', 'true')
+      renderPlayer(captionProps)
+      const container = screen.getByTestId('video-player-container')
+      expect(container.style.getPropertyValue('--caption-font-size')).toBe('18px')
+      expect(container.style.getPropertyValue('--caption-bg-color')).toBe('rgba(0, 0, 0, 0.8)')
+    })
+
+    it('opens caption settings popover on click', async () => {
+      localStorage.setItem('video-captions-enabled', 'true')
+      const user = userEvent.setup()
+      renderPlayer(captionProps)
+
+      const settingsBtn = screen.getByTestId('caption-settings-button')
+      await user.click(settingsBtn)
+
+      // Popover should render font size options (portaled to body)
+      expect(screen.getByTestId('caption-font-size-small')).toBeInTheDocument()
+      expect(screen.getByTestId('caption-font-size-medium')).toBeInTheDocument()
+      expect(screen.getByTestId('caption-font-size-large')).toBeInTheDocument()
+    })
+  })
+
+  // -------------------------------------------------------------------------
   // Playback speed
   // -------------------------------------------------------------------------
   describe('playback speed', () => {
