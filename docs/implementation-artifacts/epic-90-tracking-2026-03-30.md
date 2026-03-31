@@ -9,7 +9,7 @@ Auto-answer: Used for /start-story and /finish-story interactive prompts
 | Story | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|--------|--------|---------------|--------------|
 | E90-S01 | done | #191 | 1 | 3 |
-| E90-S02 | queued | — | — | — |
+| E90-S02 | done | #192 | 1 | 3 |
 | E90-S03 | queued | — | — | — |
 | E90-S04 | queued | — | — | — |
 | E90-S05 | queued | — | — | — |
