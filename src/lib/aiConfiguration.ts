@@ -477,6 +477,39 @@ export async function saveProviderApiKey(
 }
 
 /**
+ * Deletes the stored API key for a specific provider from the `providerKeys` map.
+ *
+ * Dispatches the `ai-configuration-updated` custom event for cross-tab sync.
+ * Does NOT modify the legacy `apiKeyEncrypted` field.
+ *
+ * @param provider - Provider to delete the key for
+ * @returns Updated configuration state
+ *
+ * @example
+ * await deleteProviderApiKey('anthropic')
+ */
+export async function deleteProviderApiKey(
+  provider: AIProviderId
+): Promise<AIConfigurationSettings> {
+  const current = getAIConfiguration()
+
+  const updatedProviderKeys: Partial<Record<AIProviderId, EncryptedData>> = {
+    ...current.providerKeys,
+  }
+  delete updatedProviderKeys[provider]
+
+  const updated: AIConfigurationSettings = {
+    ...current,
+    providerKeys: updatedProviderKeys,
+  }
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+  window.dispatchEvent(new CustomEvent('ai-configuration-updated'))
+
+  return updated
+}
+
+/**
  * Saves a per-feature model override to the `featureModels` map.
  *
  * @param feature - AI feature to override

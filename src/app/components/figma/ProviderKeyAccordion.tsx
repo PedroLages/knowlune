@@ -15,13 +15,25 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/app/components/ui/accordion'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/app/components/ui/alert-dialog'
 import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
-import { CheckCircle2, AlertTriangle, Loader2, KeyRound } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, Loader2, KeyRound, Trash2 } from 'lucide-react'
 import {
   AI_PROVIDERS,
+  deleteProviderApiKey,
   getAIConfiguration,
   getDecryptedApiKeyForProvider,
   saveProviderApiKey,
@@ -233,28 +245,77 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
                   )}
 
                   {/* AC2: Test Connection + Save button */}
-                  <Button
-                    variant="brand"
-                    onClick={() => {
-                      handleTestAndSave(providerId).catch(err => {
-                        console.error(`Failed to test/save key for ${providerId}:`, err)
-                        toast.error('Failed to save API key')
-                      })
-                    }}
-                    disabled={isTesting || !(keyInputs[providerId]?.trim())}
-                    data-testid={`save-key-${providerId}`}
-                    className="min-h-[44px] rounded-lg"
-                    aria-label={`Test and save ${provider.name} API key`}
-                  >
-                    {isTesting ? (
-                      <>
-                        <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
-                        Testing...
-                      </>
-                    ) : (
-                      'Save & Test Connection'
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="brand"
+                      onClick={() => {
+                        handleTestAndSave(providerId).catch(err => {
+                          console.error(`Failed to test/save key for ${providerId}:`, err)
+                          toast.error('Failed to save API key')
+                        })
+                      }}
+                      disabled={isTesting || !(keyInputs[providerId]?.trim())}
+                      data-testid={`save-key-${providerId}`}
+                      className="min-h-[44px] rounded-lg"
+                      aria-label={`Test and save ${provider.name} API key`}
+                    >
+                      {isTesting ? (
+                        <>
+                          <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
+                          Testing...
+                        </>
+                      ) : (
+                        'Save & Test Connection'
+                      )}
+                    </Button>
+
+                    {/* Delete key button — only shown when a key is stored */}
+                    {status?.hasKey && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="min-h-[44px] min-w-[44px] text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            data-testid={`delete-key-${providerId}`}
+                            aria-label={`Delete ${provider.name} API key`}
+                          >
+                            <Trash2 className="size-4" aria-hidden="true" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete {provider.name} API Key?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently remove the stored API key for {provider.name}.
+                              Any features using this provider will stop working until a new key is added.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              data-testid={`confirm-delete-key-${providerId}`}
+                              onClick={() => {
+                                deleteProviderApiKey(providerId)
+                                  .then(async () => {
+                                    await refreshStatuses()
+                                    onConfigChanged()
+                                    toast.success(`${provider.name} API key deleted`)
+                                  })
+                                  .catch(err => {
+                                    console.error(`Failed to delete key for ${providerId}:`, err)
+                                    toast.error('Failed to delete API key')
+                                  })
+                              }}
+                            >
+                              Delete Key
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     )}
-                  </Button>
+                  </div>
                 </div>
               </AccordionContent>
             </AccordionItem>

@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Check, ChevronsUpDown, Loader2, AlertTriangle, Star } from 'lucide-react'
+import { Check, ChevronsUpDown, Loader2, AlertTriangle, Star, CircleAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
@@ -24,6 +24,12 @@ import {
 import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
 import { Badge } from '@/app/components/ui/badge'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/app/components/ui/tooltip'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { discoverModels, type DiscoveredModel } from '@/lib/modelDiscovery'
@@ -184,7 +190,26 @@ export function ProviderModelPicker({
           </Badge>
         )}
         {model.costTier && (
-          <span className="text-xs text-muted-foreground shrink-0 ml-1">{model.costTier}</span>
+          model.costTier === 'high' ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant="outline"
+                    className="ml-1 shrink-0 text-[10px] px-1.5 py-0 border-warning/50 text-warning bg-warning/10"
+                  >
+                    <CircleAlert className="size-2.5 mr-0.5" aria-hidden="true" />
+                    High Cost
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>This model has high per-token costs</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <span className="text-xs text-muted-foreground shrink-0 ml-1">{model.costTier}</span>
+          )
         )}
       </>
     )
