@@ -45,10 +45,20 @@ interface CacheEntry {
 
 const modelCache = new Map<string, CacheEntry>()
 
-/** Build cache key from provider + apiKey hash (avoid storing raw keys) */
+const MAX_CACHE_ENTRIES = 50
+
+/** Simple string hash to avoid storing raw API keys in cache keys */
+function hashKey(key: string): string {
+  let hash = 0
+  for (let i = 0; i < key.length; i++) {
+    hash = ((hash << 5) - hash + key.charCodeAt(i)) | 0
+  }
+  return hash.toString(36)
+}
+
+/** Build cache key from provider + hashed apiKey (avoid storing raw keys) */
 function cacheKey(provider: AIProviderId, apiKey: string): string {
-  // Use first 8 chars of key as discriminator (enough to differentiate keys)
-  return `${provider}:${apiKey.slice(0, 8)}`
+  return `${provider}:${hashKey(apiKey)}`
 }
 
 /** Check if cache entry is still valid */
@@ -62,8 +72,21 @@ function getCached(provider: AIProviderId, apiKey: string): DiscoveredModel[] | 
   return entry.models
 }
 
-/** Store models in cache */
+/** Store models in cache, evicting oldest entries if limit exceeded */
 function setCache(provider: AIProviderId, apiKey: string, models: DiscoveredModel[]): void {
+  // Evict oldest entries if cache is full
+  if (modelCache.size >= MAX_CACHE_ENTRIES) {
+    let oldestKey: string | null = null
+    let oldestTime = Infinity
+    for (const [key, entry] of modelCache) {
+      if (entry.timestamp < oldestTime) {
+        oldestTime = entry.timestamp
+        oldestKey = key
+      }
+    }
+    if (oldestKey) modelCache.delete(oldestKey)
+  }
+
   modelCache.set(cacheKey(provider, apiKey), {
     models,
     timestamp: Date.now(),
@@ -159,8 +182,11 @@ async function discoverOpenAI(apiKey: string): Promise<DiscoveredModel[]> {
  */
 async function discoverGemini(apiKey: string): Promise<DiscoveredModel[]> {
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
-    { signal: AbortSignal.timeout(10_000) }
+    'https://generativelanguage.googleapis.com/v1beta/models',
+    {
+      headers: { 'x-goog-api-key': apiKey },
+      signal: AbortSignal.timeout(10_000),
+    }
   )
 
   if (!response.ok) {

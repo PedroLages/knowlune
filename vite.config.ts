@@ -252,6 +252,10 @@ export function ollamaDevProxy(): Plugin {
  *
  * Gemini is called directly from browser (CORS-friendly).
  *
+ * NOTE: This proxy logic intentionally duplicates server/routes/models.ts.
+ * Vite dev middleware and Express production middleware differ in context
+ * (Connect vs Express), so sharing code would add coupling for little benefit.
+ *
  * @see E90-S04 — Model Discovery for Cloud Providers
  */
 export function modelDiscoveryDevProxy(): Plugin {

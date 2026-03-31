@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { discoverModels, clearModelCache, type DiscoveredModel } from '../modelDiscovery'
+import { discoverModels, clearModelCache } from '../modelDiscovery'
 
 // Mock fetch globally
 const mockFetch = vi.fn()
