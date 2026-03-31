@@ -140,21 +140,17 @@ test.describe('E91-S12: Single-Note Export + Transcript Download', () => {
     const downloadBtn = page.getByRole('button', { name: 'Download note as Markdown' })
 
     // Click and wait for download
-    const [download] = await Promise.all([
-      page.waitForEvent('download'),
-      downloadBtn.click(),
-    ])
+    const [download] = await Promise.all([page.waitForEvent('download'), downloadBtn.click()])
 
     // Verify the downloaded file
     expect(download.suggestedFilename()).toMatch(/\.md$/)
   })
 
-  test('AC4+AC5: Download Transcript button triggers .txt download', async ({ page }) => {
-    // This test requires a transcript to be loaded, which needs YouTube data or VTT file.
-    // For local courses without transcript, the transcript tab shows empty state.
-    // We verify the button exists in the transcript panel when cues are loaded.
-    // Since we cannot easily seed transcript data for local courses in this test,
-    // we skip to avoid false failures.
+  // Skip reason: No seeding infrastructure exists for transcript cues (VTT/YouTube data).
+  // IndexedDB seed helpers cover courses, progress, and sessions but not transcript cues.
+  // Until a transcript cue seeding helper is added, this test cannot run deterministically.
+  // Tracked in lessons learned below and in the story file.
+  test('AC4+AC5: Download Transcript button triggers .txt download', async () => {
     test.skip(true, 'Transcript download requires seeded transcript cues — covered by manual QA')
   })
 })

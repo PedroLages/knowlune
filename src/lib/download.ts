@@ -14,6 +14,9 @@ export function downloadAsFile(content: string, filename: string, mimeType: stri
   document.body.appendChild(link)
   link.click()
 
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
+  // Defer cleanup so the browser has time to initiate the download
+  setTimeout(() => {
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }, 100)
 }
