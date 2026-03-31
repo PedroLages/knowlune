@@ -1,0 +1,48 @@
+# Epic 90: AI Model Selection Per Feature — Execution Tracker
+
+Generated: 2026-03-30
+Last Updated: 2026-03-30
+Auto-answer: Used for /start-story and /finish-story interactive prompts
+
+## Progress Summary
+
+| Story | Status | PR URL | Review Rounds | Issues Fixed |
+|-------|--------|--------|---------------|--------------|
+| E90-S01 | done | #191 | 1 | 3 |
+| E90-S02 | queued | — | — | — |
+| E90-S03 | queued | — | — | — |
+| E90-S04 | queued | — | — | — |
+| E90-S05 | queued | — | — | — |
+| E90-S06 | queued | — | — | — |
+| E90-S07 | queued | — | — | — |
+| E90-S08 | queued | — | — | — |
+| E90-S09 | queued | — | — | — |
+| E90-S10 | queued | — | — | — |
+| E90-S11 | queued | — | — | — |
+
+## Pre-Existing Issues (deferred)
+_(none yet)_
+
+## Non-Issues (False Positives)
+_(none yet)_
+
+## Post-Epic Validation
+
+| Command | Status | Result | Notes |
+|---------|--------|--------|-------|
+| Sprint Status | pending | — | — |
+| Mark Epic Done | pending | ��� | — |
+| Testarch Trace | pending | — | — |
+| Testarch NFR | pending | — | — |
+| Adversarial Review | pending | �� | — |
+| Retrospective | pending | — | — |
+
+## Observed Patterns
+_(collected during execution)_
+
+## Epic Summary
+- Started: 2026-03-30
+- Completed: --
+- Total Stories: 11
+- Total Review Rounds: --
+- Total Issues Fixed: --
