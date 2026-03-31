@@ -121,10 +121,10 @@ describe('VideoReorderList', () => {
     expect(screen.getByTestId('video-reorder-item-v2')).toBeInTheDocument()
     expect(screen.getByTestId('video-reorder-item-v3')).toBeInTheDocument()
 
-    // Check filenames
-    expect(screen.getByText('lesson-1.mp4')).toBeInTheDocument()
-    expect(screen.getByText('lesson-2.mp4')).toBeInTheDocument()
-    expect(screen.getByText('lesson-3.mp4')).toBeInTheDocument()
+    // Check filenames (extensions are stripped in display)
+    expect(screen.getByText('lesson-1')).toBeInTheDocument()
+    expect(screen.getByText('lesson-2')).toBeInTheDocument()
+    expect(screen.getByText('lesson-3')).toBeInTheDocument()
 
     // Check order numbers
     expect(screen.getByText('1')).toBeInTheDocument()

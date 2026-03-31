@@ -10,6 +10,10 @@ vi.mock('@/lib/aiConfiguration', () => ({
   getAIConfiguration: () => mockGetAIConfiguration(),
   saveAIConfiguration: (...args: unknown[]) => mockSaveAIConfiguration(...args),
   testAIConnection: (...args: unknown[]) => mockTestAIConnection(...args),
+  getConfiguredProviderIds: () => [],
+  getDecryptedApiKeyForProvider: vi.fn().mockResolvedValue(null),
+  saveProviderApiKey: vi.fn().mockResolvedValue(undefined),
+  deleteProviderApiKey: vi.fn().mockResolvedValue(undefined),
   AI_PROVIDERS: {
     openai: {
       id: 'openai',
@@ -136,10 +140,10 @@ describe('AIConfigurationSettings', () => {
       expect(screen.queryByTestId('api-key-input')).not.toBeInTheDocument()
     })
 
-    it('shows API key input when a non-Ollama provider is selected', () => {
+    it('shows provider key accordion when a non-Ollama provider is selected', () => {
       render(<AIConfigurationSettings />)
 
-      expect(screen.getByTestId('api-key-input')).toBeInTheDocument()
+      expect(screen.getByTestId('provider-key-accordion')).toBeInTheDocument()
       expect(screen.queryByTestId('ollama-url-input')).not.toBeInTheDocument()
     })
 

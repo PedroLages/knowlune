@@ -49,12 +49,14 @@ type Middleware = (
   next: () => void
 ) => Promise<void> | void
 
-function getMiddleware(): Middleware {
+function getMiddleware(targetPath = '/api/youtube/transcript'): Middleware {
   const plugin = youtubeTranscriptProxy()
   let handler: Middleware | undefined
   const mockServer = {
     middlewares: {
-      use: (_path: string, h: Middleware) => { handler = h },
+      use: (path: string, h: Middleware) => {
+        if (path === targetPath) handler = h
+      },
     },
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -138,7 +140,7 @@ describe('youtube-transcript-proxy', () => {
 
     expect(res.statusCode).toBe(400)
     const body = parseResBody(res) as { code: string }
-    expect(body.code).toBe('invalid-request')
+    expect(body.code).toBe('invalid-video-id')
   })
 
   it('returns 400 for invalid videoId format', async () => {

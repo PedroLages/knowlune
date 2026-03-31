@@ -35,7 +35,7 @@ describe('AtRiskBadge', () => {
       render(<AtRiskBadge daysSinceLastSession={Infinity} />)
       expect(screen.getByTestId('at-risk-badge')).toHaveAttribute(
         'aria-label',
-        'At Risk: Never started'
+        'Not Started: No study sessions yet'
       )
     })
 
@@ -77,7 +77,7 @@ describe('AtRiskBadge', () => {
     it('should handle Infinity days (never started)', () => {
       render(<AtRiskBadge daysSinceLastSession={Infinity} />)
       const badge = screen.getByTestId('at-risk-badge')
-      expect(badge).toHaveAttribute('aria-label', 'At Risk: Never started')
+      expect(badge).toHaveAttribute('aria-label', 'Not Started: No study sessions yet')
     })
   })
 

@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 
+// Disable dev premium bypass so the real hook logic is exercised
+vi.stubEnv('VITE_DEV_PREMIUM', 'false')
+
 // ---------------------------------------------------------------------------
 // Mocks — must be declared before any imports that reference them
 // ---------------------------------------------------------------------------

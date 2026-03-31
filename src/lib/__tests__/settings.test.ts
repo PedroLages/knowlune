@@ -1,4 +1,19 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
+
+// Mock db.delete() used by resetAllData (dynamic import)
+vi.mock('@/db/schema', () => ({
+  db: {
+    delete: vi.fn().mockResolvedValue(undefined),
+  },
+}))
+
+// Mock window.location.reload (called by resetAllData)
+const reloadSpy = vi.fn()
+Object.defineProperty(window, 'location', {
+  value: { ...window.location, reload: reloadSpy },
+  writable: true,
+})
+
 import {
   getSettings,
   saveSettings,
@@ -17,7 +32,7 @@ describe('settings', () => {
     it('returns defaults when nothing stored', () => {
       const settings = getSettings()
       expect(settings).toEqual({
-        displayName: 'Student',
+        displayName: 'Learner',
         bio: '',
         theme: 'system',
         colorScheme: 'professional',
@@ -31,7 +46,7 @@ describe('settings', () => {
       localStorage.setItem('app-settings', 'not-json')
       const settings = getSettings()
       expect(settings).toEqual({
-        displayName: 'Student',
+        displayName: 'Learner',
         bio: '',
         theme: 'system',
         colorScheme: 'professional',
@@ -219,7 +234,7 @@ describe('settings', () => {
       saveSettings({ displayName: 'Gone', theme: 'dark' })
       resetAllData()
       const settings = getSettings()
-      expect(settings.displayName).toBe('Student')
+      expect(settings.displayName).toBe('Learner')
       expect(settings.theme).toBe('system')
     })
 
@@ -396,7 +411,7 @@ describe('settings', () => {
     it('new user with no localStorage gets defaults + user_metadata', () => {
       // No localStorage (fresh install)
       const defaults = getSettings()
-      expect(defaults.displayName).toBe('Student')
+      expect(defaults.displayName).toBe('Learner')
 
       // Hydrate from Supabase user_metadata
       const userMetadata = {

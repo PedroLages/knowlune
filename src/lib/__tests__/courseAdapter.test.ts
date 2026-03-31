@@ -191,6 +191,9 @@ describe('ContentCapabilities', () => {
       supportsQuiz: true,
       supportsPrevNext: true,
       supportsBreadcrumbs: true,
+      requiresNetwork: false,
+      supportsRefresh: false,
+      supportsFileVerification: true,
     })
   })
 
@@ -214,6 +217,9 @@ describe('ContentCapabilities', () => {
       supportsQuiz: true,
       supportsPrevNext: true,
       supportsBreadcrumbs: true,
+      requiresNetwork: true,
+      supportsRefresh: true,
+      supportsFileVerification: false,
     })
   })
 

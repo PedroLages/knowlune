@@ -298,7 +298,7 @@ describe('Authors page', () => {
   })
 
   describe('pre-seeded author fallback', () => {
-    it('shows pre-seeded authors when store is empty', () => {
+    it('does not show pre-seeded authors when store is empty (pre-seeded removed)', () => {
       mockPreseededAuthors.authors = [
         {
           id: 'chase-hughes',
@@ -319,7 +319,9 @@ describe('Authors page', () => {
         error: null,
       })
       renderAuthors()
-      expect(screen.getByText('Chase Hughes')).toBeInTheDocument()
+      // Pre-seeded static authors are no longer shown — only user-imported authors
+      expect(screen.queryByText('Chase Hughes')).not.toBeInTheDocument()
+      expect(screen.getByText('No Authors Yet')).toBeInTheDocument()
     })
 
     it('prefers store author over pre-seeded when IDs match', () => {

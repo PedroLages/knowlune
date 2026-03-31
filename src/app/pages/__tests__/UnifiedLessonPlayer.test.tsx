@@ -82,6 +82,7 @@ vi.mock('@/app/hooks/useLessonNavigation', () => ({
 
 vi.mock('@/app/hooks/useMediaQuery', () => ({
   useIsDesktop: () => true,
+  useIsTablet: () => false,
 }))
 
 vi.mock('@/app/hooks/useTheaterMode', () => ({
@@ -138,6 +139,7 @@ vi.mock('@/app/components/course/YouTubeVideoContent', () => ({
 }))
 vi.mock('@/app/components/course/PlayerSidePanel', () => ({
   PlayerSidePanel: () => <div>Side Panel</div>,
+  NotesTab: () => <div>Notes Tab</div>,
 }))
 vi.mock('@/app/components/DelayedFallback', () => ({
   DelayedFallback: ({ children }: { children: React.ReactNode }) => <>{children}</>,
