@@ -12,6 +12,7 @@
 import { Link } from 'react-router'
 import {
   ArrowLeft,
+  Clock,
   Trash2,
   User,
   Youtube,
@@ -21,6 +22,7 @@ import {
   Video,
   FileText,
   BookOpen,
+  LayoutDashboard,
   Play,
   PlayCircle,
   RotateCcw,
@@ -32,6 +34,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/too
 import { cn } from '@/app/components/ui/utils'
 import { EditableTitle } from '@/app/components/figma/EditableTitle'
 import { getAvatarSrc, getInitials } from '@/lib/authors'
+import { formatClockDuration as formatDuration } from '@/lib/formatDuration'
 import type { ImportedCourse } from '@/data/types'
 
 interface AuthorInfo {
@@ -56,6 +59,8 @@ export interface CourseHeaderProps {
   onDelete: () => void
   onEdit: () => void
   onRefreshMetadata?: () => void
+  /** Total duration of all videos in seconds — omit or 0 to hide */
+  totalDuration?: number
   /** CTA button configuration — omit to hide the CTA */
   ctaVariant?: CtaVariant
   ctaLessonId?: string
@@ -75,6 +80,7 @@ export function CourseHeader({
   onDelete,
   onEdit,
   onRefreshMetadata,
+  totalDuration,
   ctaVariant,
   ctaLessonId,
   ctaLessonTitle,
@@ -174,6 +180,12 @@ export function CourseHeader({
                       {pdfCount} {pdfCount === 1 ? 'PDF' : 'PDFs'}
                     </span>
                   )}
+                  {Boolean(totalDuration && totalDuration > 0) && (
+                    <span data-testid="course-total-duration" className="flex items-center gap-1.5">
+                      <Clock className="size-3.5" aria-hidden="true" />
+                      {formatDuration(totalDuration!)} total
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -249,6 +261,12 @@ export function CourseHeader({
 
             {/* Action buttons row */}
             <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="ghost" size="sm" data-testid="view-overview-button" asChild>
+                <Link to={`/courses/${course.id}/overview`}>
+                  <LayoutDashboard className="size-4 mr-1.5" aria-hidden="true" />
+                  Overview
+                </Link>
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"

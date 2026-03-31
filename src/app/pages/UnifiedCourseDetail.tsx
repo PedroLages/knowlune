@@ -203,6 +203,11 @@ export function UnifiedCourseDetail() {
 
   const allTags = useMemo(() => getAllTags(), [getAllTags])
 
+  const totalDuration = useMemo(
+    () => videos.reduce((sum, v) => sum + (v.duration || 0), 0),
+    [videos]
+  )
+
   const completedCount = useMemo(
     () => videos.filter(v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= 90).length,
     [videos, progressMap]
@@ -313,6 +318,7 @@ export function UnifiedCourseDetail() {
         onDelete={() => setDeleteDialogOpen(true)}
         onEdit={() => setEditDialogOpen(true)}
         onRefreshMetadata={isYouTube ? handleRefresh : undefined}
+        totalDuration={totalDuration}
         ctaVariant={ctaVariant}
         ctaLessonId={ctaLessonId}
         ctaLessonTitle={ctaLessonTitle}
