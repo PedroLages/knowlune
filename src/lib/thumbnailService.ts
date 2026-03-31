@@ -150,7 +150,7 @@ export async function generateThumbnailWithGemini(
 
   // Use per-feature model resolution (user override → feature default → provider default)
   const resolved = resolveFeatureModel('thumbnailGeneration')
-  const modelId = resolved.model || 'gemini-2.0-flash-preview-image-generation'
+  const modelId = resolved.model
 
   const endpoint =
     'https://generativelanguage.googleapis.com/v1beta/models/' +

@@ -12,11 +12,8 @@
 
 import { sanitizeAIRequestPayload } from './aiConfiguration'
 import type { TranscriptCue } from '@/data/types'
-import { getLLMClient } from '@/ai/llm/factory'
+import { withModelFallback } from '@/ai/llm/factory'
 import type { LLMMessage } from '@/ai/llm/types'
-import { LLMError } from '@/ai/llm/types'
-import { PROVIDER_DEFAULTS } from './modelDefaults'
-import { resolveFeatureModel, getDecryptedApiKeyForProvider } from './aiConfiguration'
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -165,46 +162,9 @@ export async function* generateVideoSummary(
   }
 
   try {
-    // Use feature-aware LLM client (three-tier resolution cascade)
-    let client = await getLLMClient('videoSummary')
-
-    try {
-      for await (const chunk of client.streamCompletion(messages)) {
-        if (chunk.content) {
-          yield chunk.content
-        }
-      }
-    } catch (firstError) {
-      // AC8: Fallback on 403/model-not-found — retry with provider default model
-      if (
-        firstError instanceof LLMError &&
-        (firstError.code === 'AUTH_ERROR' || firstError.code === 'ENTITLEMENT_ERROR')
-      ) {
-        const resolved = resolveFeatureModel('videoSummary')
-        const defaultModel = PROVIDER_DEFAULTS[resolved.provider]
-
-        // Only retry if we were using a non-default model
-        if (resolved.model !== defaultModel) {
-          console.warn(
-            `[aiSummary] Model "${resolved.model}" unavailable, falling back to "${defaultModel}"`
-          )
-
-          // Re-create client with default model via the proxy
-          const apiKey = await getDecryptedApiKeyForProvider(resolved.provider)
-          if (apiKey) {
-            const { getLLMClientForProvider } = await import('@/ai/llm/factory')
-            client = getLLMClientForProvider(resolved.provider, apiKey, defaultModel)
-
-            for await (const chunk of client.streamCompletion(messages)) {
-              if (chunk.content) {
-                yield chunk.content
-              }
-            }
-            return
-          }
-        }
-      }
-      throw firstError
+    // Use feature-aware LLM client with automatic model fallback (AC8)
+    for await (const chunk of withModelFallback('videoSummary', messages)) {
+      yield chunk
     }
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {

@@ -49,6 +49,13 @@ const mockLLMClient = {
 vi.mock('@/ai/llm/factory', () => ({
   getLLMClient: vi.fn(async () => mockLLMClient),
   getLLMClientForProvider: vi.fn(() => mockLLMClient),
+  withModelFallback: vi.fn(async function* (_feature: string, messages: unknown) {
+    for await (const chunk of mockLLMClient.streamCompletion(messages)) {
+      if (chunk.content) {
+        yield chunk.content
+      }
+    }
+  }),
 }))
 
 vi.mock('@/lib/aiConfiguration', () => ({
@@ -312,15 +319,15 @@ describe('noteQA', () => {
       expect(results).toEqual(['Hello', ' world', '!'])
     })
 
-    it('should use getLLMClient with noteQA feature', async () => {
-      const { getLLMClient } = await import('@/ai/llm/factory')
+    it('should use withModelFallback with noteQA feature', async () => {
+      const { withModelFallback } = await import('@/ai/llm/factory')
       const notes: RetrievedNote[] = [makeRetrievedNote()]
       mockStreamCompletion.mockImplementation(() => createMockStream(['answer']))
 
       const gen = generateQAAnswer('question', notes)
       await collectGenerator(gen)
 
-      expect(getLLMClient).toHaveBeenCalledWith('noteQA')
+      expect(withModelFallback).toHaveBeenCalledWith('noteQA', expect.any(Array))
     })
 
     it('should include note content in messages passed to streamCompletion', async () => {

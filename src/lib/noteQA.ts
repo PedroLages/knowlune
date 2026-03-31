@@ -17,11 +17,8 @@
 
 import { db } from '@/db'
 import type { Note } from '@/data/types'
-import { getLLMClient } from '@/ai/llm/factory'
+import { withModelFallback } from '@/ai/llm/factory'
 import type { LLMMessage } from '@/ai/llm/types'
-import { LLMError } from '@/ai/llm/types'
-import { PROVIDER_DEFAULTS } from './modelDefaults'
-import { resolveFeatureModel, getDecryptedApiKeyForProvider } from './aiConfiguration'
 
 /**
  * Retrieved note with similarity score
@@ -145,44 +142,9 @@ Provide a concise answer citing specific notes.`
   ]
 
   try {
-    // Use feature-aware LLM client (three-tier resolution cascade)
-    let client = await getLLMClient('noteQA')
-
-    try {
-      for await (const chunk of client.streamCompletion(messages)) {
-        if (chunk.content) {
-          yield chunk.content
-        }
-      }
-    } catch (firstError) {
-      // AC8: Fallback on 403/model-not-found — retry with provider default model
-      if (
-        firstError instanceof LLMError &&
-        (firstError.code === 'AUTH_ERROR' || firstError.code === 'ENTITLEMENT_ERROR')
-      ) {
-        const resolved = resolveFeatureModel('noteQA')
-        const defaultModel = PROVIDER_DEFAULTS[resolved.provider]
-
-        if (resolved.model !== defaultModel) {
-          console.warn(
-            `[noteQA] Model "${resolved.model}" unavailable, falling back to "${defaultModel}"`
-          )
-
-          const apiKey = await getDecryptedApiKeyForProvider(resolved.provider)
-          if (apiKey) {
-            const { getLLMClientForProvider } = await import('@/ai/llm/factory')
-            client = getLLMClientForProvider(resolved.provider, apiKey, defaultModel)
-
-            for await (const chunk of client.streamCompletion(messages)) {
-              if (chunk.content) {
-                yield chunk.content
-              }
-            }
-            return
-          }
-        }
-      }
-      throw firstError
+    // Use feature-aware LLM client with automatic model fallback (AC8)
+    for await (const chunk of withModelFallback('noteQA', messages)) {
+      yield chunk
     }
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {

@@ -30,6 +30,13 @@ const mockLLMClient = {
 vi.mock('@/ai/llm/factory', () => ({
   getLLMClient: vi.fn(async () => mockLLMClient),
   getLLMClientForProvider: vi.fn(() => mockLLMClient),
+  withModelFallback: vi.fn(async function* (_feature: string, messages: unknown) {
+    for await (const chunk of mockLLMClient.streamCompletion(messages)) {
+      if (chunk.content) {
+        yield chunk.content
+      }
+    }
+  }),
 }))
 
 // Import after mocking
@@ -295,14 +302,14 @@ Real content`
       expect(results).toEqual(['Hello', ' world'])
     })
 
-    it('should use getLLMClient with videoSummary feature', async () => {
-      const { getLLMClient } = await import('@/ai/llm/factory')
+    it('should use withModelFallback with videoSummary feature', async () => {
+      const { withModelFallback } = await import('@/ai/llm/factory')
       mockStreamCompletion.mockImplementation(() => createMockStream(['done']))
 
       const gen = generateVideoSummary('transcript')
       await collectGenerator(gen)
 
-      expect(getLLMClient).toHaveBeenCalledWith('videoSummary')
+      expect(withModelFallback).toHaveBeenCalledWith('videoSummary', expect.any(Array))
     })
 
     // -----------------------------------------------------------------------
