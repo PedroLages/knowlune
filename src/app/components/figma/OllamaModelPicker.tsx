@@ -1,20 +1,17 @@
 /**
  * Ollama Model Picker Component
  *
- * A searchable dropdown (combobox) that discovers and displays available Ollama models.
- * Fetches models from the Ollama /api/tags endpoint when the server URL is configured.
+ * Thin wrapper around ProviderModelPicker with Ollama-specific behavior:
+ * - Fetches models from Ollama's /api/tags endpoint (not discoverModels)
+ * - Shows model size alongside name
+ * - Includes a refresh button
+ * - Auto-fetches when serverUrl changes
  *
- * Features:
- * - Auto-fetches models when serverUrl changes (AC5)
- * - Searchable with model name filtering (AC2)
- * - Shows model name and size (AC2)
- * - Persists selection in AI configuration (AC3)
- * - Error states with troubleshooting hints (AC4)
- * - Keyboard accessible (WCAG AA)
+ * @see E90-S05 AC7 — OllamaModelPicker refactored as thin wrapper
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Check, ChevronsUpDown, Loader2, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Check, Loader2, RefreshCw, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
@@ -26,6 +23,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/app/components/ui/command'
+import { ChevronsUpDown } from 'lucide-react'
 import { Label } from '@/app/components/ui/label'
 import { cn } from '@/app/components/ui/utils'
 import { OllamaLLMClient } from '@/ai/llm/ollama-client'
@@ -44,6 +42,13 @@ interface OllamaModelPickerProps {
   isConnected: boolean
 }
 
+/**
+ * Ollama-specific model picker that fetches from /api/tags.
+ *
+ * Retains its own fetch logic because Ollama discovery uses a different mechanism
+ * (local server /api/tags) than cloud providers (discoverModels API proxy).
+ * The ProviderModelPicker's discoverModels() returns [] for Ollama by design.
+ */
 export function OllamaModelPicker({
   serverUrl,
   directConnection,
@@ -55,7 +60,6 @@ export function OllamaModelPicker({
   const [models, setModels] = useState<OllamaModel[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // Track the URL that was used for the last successful fetch to detect changes (AC5)
   const lastFetchedUrl = useRef<string>('')
 
   const fetchModels = useCallback(async () => {
@@ -69,12 +73,10 @@ export function OllamaModelPicker({
       setModels(result)
       lastFetchedUrl.current = serverUrl
 
-      // If no model selected and models are available, auto-select the first
       if (!selectedModel && result.length > 0) {
         onModelSelect(result[0].name)
       }
 
-      // Toast feedback so user knows the refresh worked
       if (result.length > 0) {
         toast.success(`Found ${result.length} model${result.length === 1 ? '' : 's'}`)
       } else {
@@ -90,14 +92,12 @@ export function OllamaModelPicker({
     }
   }, [serverUrl, directConnection, isConnected, selectedModel, onModelSelect])
 
-  // Fetch models when serverUrl changes or connection is established (AC1, AC5)
   useEffect(() => {
     if (isConnected && serverUrl && serverUrl !== lastFetchedUrl.current) {
       void fetchModels()
     }
   }, [fetchModels])
 
-  // Don't render if not connected
   if (!isConnected) return null
 
   const selectedModelData = models.find(m => m.name === selectedModel)
@@ -208,7 +208,6 @@ export function OllamaModelPicker({
         </PopoverContent>
       </Popover>
 
-      {/* Error state with troubleshooting hint (AC4) */}
       {error && (
         <div
           className="flex items-start gap-2 text-sm text-destructive"

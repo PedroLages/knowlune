@@ -98,6 +98,12 @@ export interface AIConfigurationSettings {
    */
   providerKeys?: Partial<Record<AIProviderId, EncryptedData>>
   /**
+   * Global model override per provider (E90-S05 — Global Model Picker UI).
+   * When set for a provider, this model is used instead of `PROVIDER_DEFAULTS[provider]`
+   * in the resolution cascade (Tier 3). Does NOT modify the code constant.
+   */
+  globalModelOverride?: Partial<Record<AIProviderId, string>>
+  /**
    * Per-feature model overrides (E90 — AI Model Selection Per Feature).
    * When a feature key is present, its config takes priority over provider defaults.
    * Undefined/missing keys fall back through the resolution cascade.
@@ -240,6 +246,7 @@ export function getAIConfiguration(): AIConfigurationSettings {
         ...stored.consentSettings,
       },
       providerKeys: stored.providerKeys,
+      globalModelOverride: stored.globalModelOverride,
       featureModels: stored.featureModels,
     }
   } catch (error) {
@@ -354,11 +361,12 @@ export function resolveFeatureModel(feature: AIFeatureId): FeatureModelConfig {
     return featureDefault
   }
 
-  // Tier 3: Global provider default
+  // Tier 3: Global provider default (with user override from globalModelOverride)
   const globalProvider = config.provider
+  const userOverride = config.globalModelOverride?.[globalProvider]
   return {
     provider: globalProvider,
-    model: PROVIDER_DEFAULTS[globalProvider],
+    model: userOverride || PROVIDER_DEFAULTS[globalProvider],
   }
 }
 
