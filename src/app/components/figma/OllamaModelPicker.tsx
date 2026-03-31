@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Check, Loader2, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Check, ChevronsUpDown, Loader2, RefreshCw, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
@@ -23,7 +23,6 @@ import {
   CommandItem,
   CommandList,
 } from '@/app/components/ui/command'
-import { ChevronsUpDown } from 'lucide-react'
 import { Label } from '@/app/components/ui/label'
 import { cn } from '@/app/components/ui/utils'
 import { OllamaLLMClient } from '@/ai/llm/ollama-client'

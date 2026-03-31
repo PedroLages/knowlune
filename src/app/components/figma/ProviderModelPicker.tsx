@@ -101,12 +101,15 @@ export function ProviderModelPicker({
   const defaultModel = PROVIDER_DEFAULTS[provider]
   const shouldGroup = models.length > 10
 
+  // Track whether we have models to avoid re-fetching (ref avoids dependency churn)
+  const hasModelsRef = useRef(false)
+
   const fetchModels = useCallback(async () => {
     if (!apiKey && provider !== 'ollama') return
 
     const fetchKey = `${provider}:${apiKey}`
     // Skip if already fetched for this provider+key combo
-    if (fetchKey === lastFetchRef.current && models.length > 0) return
+    if (fetchKey === lastFetchRef.current && hasModelsRef.current) return
 
     setIsLoading(true)
     setError(null)
@@ -114,16 +117,18 @@ export function ProviderModelPicker({
     try {
       const result = await discoverModels(provider, apiKey)
       setModels(result)
+      hasModelsRef.current = result.length > 0
       lastFetchRef.current = fetchKey
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to discover models'
       setError(message)
       setModels([])
+      hasModelsRef.current = false
       toast.error(`Model discovery failed: ${message}`)
     } finally {
       setIsLoading(false)
     }
-  }, [provider, apiKey, models.length])
+  }, [provider, apiKey])
 
   // Fetch models when provider or apiKey changes
   useEffect(() => {
