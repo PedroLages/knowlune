@@ -459,6 +459,70 @@ export async function saveProviderApiKey(
 }
 
 /**
+ * Saves a per-feature model override to the `featureModels` map.
+ *
+ * @param feature - AI feature to override
+ * @param config - Model configuration (provider + model)
+ * @returns Updated configuration state
+ */
+export async function saveFeatureModelOverride(
+  feature: AIFeatureId,
+  config: FeatureModelConfig
+): Promise<AIConfigurationSettings> {
+  const current = getAIConfiguration()
+  const updatedFeatureModels: Partial<Record<AIFeatureId, FeatureModelConfig>> = {
+    ...current.featureModels,
+    [feature]: config,
+  }
+  return saveAIConfiguration({ featureModels: updatedFeatureModels })
+}
+
+/**
+ * Clears a per-feature model override, reverting to the default cascade.
+ *
+ * @param feature - AI feature to clear override for
+ * @returns Updated configuration state
+ */
+export async function clearFeatureModelOverride(
+  feature: AIFeatureId
+): Promise<AIConfigurationSettings> {
+  const current = getAIConfiguration()
+  const updatedFeatureModels = { ...current.featureModels }
+  delete updatedFeatureModels[feature]
+  return saveAIConfiguration({ featureModels: updatedFeatureModels })
+}
+
+/**
+ * Returns a list of provider IDs that have a configured API key (or are the global provider).
+ * Ollama is included if it has a server URL configured.
+ */
+export function getConfiguredProviderIds(): AIProviderId[] {
+  const config = getAIConfiguration()
+  const configured = new Set<AIProviderId>()
+
+  // Global provider is always available
+  configured.add(config.provider)
+
+  // Providers with keys in providerKeys
+  if (config.providerKeys) {
+    for (const [id, keyData] of Object.entries(config.providerKeys)) {
+      if (keyData) {
+        configured.add(id as AIProviderId)
+      }
+    }
+  }
+
+  // Legacy key covers the global provider (already added above)
+
+  // Ollama is available if server URL is configured
+  if (config.ollamaSettings?.serverUrl) {
+    configured.add('ollama')
+  }
+
+  return Array.from(configured)
+}
+
+/**
  * Checks if a specific AI feature is enabled via consent settings
  *
  * @param feature - Feature to check

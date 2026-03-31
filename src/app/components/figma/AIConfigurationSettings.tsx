@@ -50,6 +50,7 @@ import {
 } from 'lucide-react'
 import { OllamaModelPicker } from './OllamaModelPicker'
 import { ProviderModelPicker } from './ProviderModelPicker'
+import { FeatureModelOverridePanel } from './FeatureModelOverridePanel'
 import {
   getAIConfiguration,
   saveAIConfiguration,
@@ -58,6 +59,7 @@ import {
   AI_PROVIDERS,
   type AIConfigurationSettings as AIConfigSettings,
   type AIProviderId,
+  type AIFeatureId,
   type ConsentSettings,
 } from '@/lib/aiConfiguration'
 import { cn } from '@/app/components/ui/utils'
@@ -151,9 +153,9 @@ export function AIConfigurationSettings() {
   // Decrypt API key for model discovery when connected (non-Ollama providers)
   useEffect(() => {
     if (!isOllama && settings.connectionStatus === 'connected') {
+      // silent-catch-ok: decryption failure is non-critical, picker simply won't render
       getDecryptedApiKeyForProvider(settings.provider)
         .then(key => setDecryptedApiKey(key))
-        // silent-catch-ok: decryption failure is non-critical, picker simply won't render
         .catch(() => setDecryptedApiKey(null))
     } else {
       setDecryptedApiKey(null)
@@ -771,21 +773,30 @@ export function AIConfigurationSettings() {
             <div className="space-y-4" data-testid="consent-toggles">
               {(Object.entries(FEATURE_LABELS) as [keyof ConsentSettings, string][]).map(
                 ([key, label]) => (
-                  <div key={key} className="flex items-center justify-between min-h-[44px]">
-                    <Label htmlFor={`consent-${key}`} className="cursor-pointer">
-                      {label}
-                    </Label>
-                    <Switch
-                      id={`consent-${key}`}
-                      checked={settings.consentSettings[key]}
-                      onCheckedChange={checked =>
-                        updateConsent(key, checked).catch(err => {
-                          console.error(`Failed to update consent for ${key}:`, err)
-                          toast.error('Failed to update consent setting')
-                        })
-                      }
-                      data-testid={`consent-${key}`}
-                      aria-label={`${label} consent`}
+                  <div key={key}>
+                    <div className="flex items-center justify-between min-h-[44px]">
+                      <Label htmlFor={`consent-${key}`} className="cursor-pointer">
+                        {label}
+                      </Label>
+                      <Switch
+                        id={`consent-${key}`}
+                        checked={settings.consentSettings[key]}
+                        onCheckedChange={checked =>
+                          updateConsent(key, checked).catch(err => {
+                            console.error(`Failed to update consent for ${key}:`, err)
+                            toast.error('Failed to update consent setting')
+                          })
+                        }
+                        data-testid={`consent-${key}`}
+                        aria-label={`${label} consent`}
+                      />
+                    </div>
+                    {/* AC1-AC7: Per-feature model override (E90-S06) */}
+                    <FeatureModelOverridePanel
+                      feature={key as AIFeatureId}
+                      currentOverride={settings.featureModels?.[key as AIFeatureId]}
+                      isConsentEnabled={settings.consentSettings[key]}
+                      onConfigChanged={() => setSettings(getAIConfiguration())}
                     />
                   </div>
                 )
