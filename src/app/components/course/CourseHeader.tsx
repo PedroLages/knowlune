@@ -6,7 +6,7 @@
  * with larger thumbnail and icon-enhanced metadata from the Figma wireframes.
  *
  * Used by UnifiedCourseDetail (E89-S04, polished in E89-S12c).
- * Never checks `course.source` directly — uses `isYouTube` prop from parent adapter.
+ * Never checks `course.source` directly — uses adapter capabilities from parent.
  */
 
 import { Link } from 'react-router'
@@ -36,6 +36,7 @@ import { EditableTitle } from '@/app/components/figma/EditableTitle'
 import { getAvatarSrc, getInitials } from '@/lib/authors'
 import { formatClockDuration as formatDuration } from '@/lib/formatDuration'
 import type { ImportedCourse } from '@/data/types'
+import type { ContentCapabilities } from '@/lib/courseAdapter'
 
 interface AuthorInfo {
   id: string
@@ -44,11 +45,19 @@ interface AuthorInfo {
   photoUrl?: string
 }
 
+/** Author info from the adapter (e.g. YouTube channel) — distinct from local AuthorInfo */
+interface AdapterAuthorInfo {
+  name?: string
+  channelUrl?: string
+}
+
 export type CtaVariant = 'start' | 'continue' | 'review'
 
 export interface CourseHeaderProps {
   course: ImportedCourse
-  isYouTube: boolean
+  capabilities: ContentCapabilities
+  /** Author info from the adapter (e.g. YouTube channel name) */
+  adapterAuthorInfo?: AdapterAuthorInfo | null
   thumbnailUrl: string | null
   authorData?: AuthorInfo
   videoCount: number
@@ -69,7 +78,8 @@ export interface CourseHeaderProps {
 
 export function CourseHeader({
   course,
-  isYouTube,
+  capabilities,
+  adapterAuthorInfo,
   thumbnailUrl,
   authorData,
   videoCount,
@@ -113,8 +123,8 @@ export function CourseHeader({
         Back to Courses
       </Link>
 
-      {/* Offline banner (YouTube only) */}
-      {!isOnline && isYouTube && (
+      {/* Offline banner (network-dependent sources only) */}
+      {!isOnline && capabilities.requiresNetwork && (
         <div
           className="flex items-center gap-2 rounded-xl border border-warning/30 bg-warning/10 p-3 mb-4"
           role="status"
@@ -143,7 +153,7 @@ export function CourseHeader({
                   alt=""
                   className="w-full sm:w-40 h-28 sm:h-24 object-cover rounded-xl shrink-0"
                 />
-              ) : isYouTube ? (
+              ) : capabilities.requiresNetwork ? (
                 <div className="w-full sm:w-40 h-28 sm:h-24 bg-muted rounded-xl flex items-center justify-center shrink-0">
                   <Youtube className="size-8 text-muted-foreground" aria-hidden="true" />
                 </div>
@@ -158,13 +168,13 @@ export function CourseHeader({
 
                 {/* Metadata line with icons */}
                 <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
-                  {isYouTube && course.youtubeChannelTitle && (
+                  {adapterAuthorInfo?.name && (
                     <span data-testid="youtube-channel-info" className="flex items-center gap-1.5">
                       <Youtube className="size-3.5" aria-hidden="true" />
-                      {course.youtubeChannelTitle}
+                      {adapterAuthorInfo.name}
                     </span>
                   )}
-                  {!isYouTube && (
+                  {!capabilities.requiresNetwork && (
                     <span className="flex items-center gap-1.5">
                       <BookOpen className="size-3.5" aria-hidden="true" />
                       Imported {new Date(course.importedAt).toLocaleDateString()}
@@ -190,8 +200,8 @@ export function CourseHeader({
               </div>
             </div>
 
-            {/* Author */}
-            {!isYouTube && (
+            {/* Author (local courses only — network courses show channel info in metadata line) */}
+            {!capabilities.requiresNetwork && (
               <div data-testid="course-author-section" className="mb-4">
                 {authorData ? (
                   <Link
@@ -286,8 +296,8 @@ export function CourseHeader({
                 <Trash2 className="size-4 mr-1.5" aria-hidden="true" />
                 Delete
               </Button>
-              {/* Refresh metadata button (YouTube only) */}
-              {isYouTube && onRefreshMetadata && (
+              {/* Refresh metadata button (sources that support refresh) */}
+              {capabilities.supportsRefresh && onRefreshMetadata && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className="inline-block">

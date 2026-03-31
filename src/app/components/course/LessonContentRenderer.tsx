@@ -13,6 +13,7 @@ import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { LocalVideoContent } from '@/app/components/course/LocalVideoContent'
 import { YouTubeVideoContent } from '@/app/components/course/YouTubeVideoContent'
 import type { VideoPlayerHandle } from '@/app/components/figma/VideoPlayer'
+import type { CourseSource } from '@/data/types'
 
 // Lazy-load PdfContent to avoid pdfjs-dist bundle impact for video-only users
 const PdfContent = lazy(() =>
@@ -24,7 +25,8 @@ export interface LessonContentRendererProps {
   lessonId: string
   lessonTypeResolved: boolean
   isPdf: boolean
-  isYouTube: boolean
+  /** Source type determines which video component to render (YouTube embed vs local player) */
+  sourceType: CourseSource
   onEnded: () => void | Promise<void>
   onAutoComplete?: () => void
   onTimeUpdate: (time: number) => void
@@ -43,7 +45,7 @@ export const LessonContentRenderer = forwardRef<VideoPlayerHandle, LessonContent
       lessonId,
       lessonTypeResolved,
       isPdf,
-      isYouTube,
+      sourceType,
       onEnded,
       onAutoComplete,
       onTimeUpdate,
@@ -83,7 +85,7 @@ export const LessonContentRenderer = forwardRef<VideoPlayerHandle, LessonContent
       )
     }
 
-    if (isYouTube) {
+    if (sourceType === 'youtube') {
       return (
         <YouTubeVideoContent
           courseId={courseId}

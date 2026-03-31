@@ -33,6 +33,7 @@ import {
 import { cn } from '@/app/components/ui/utils'
 import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
 import type { FileStatus } from '@/lib/fileVerification'
+import type { ContentCapabilities } from '@/lib/courseAdapter'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -129,7 +130,7 @@ export interface LessonListProps {
   courseId: string
   videos: ImportedVideo[]
   pdfs: ImportedPdf[]
-  isYouTube: boolean
+  capabilities: ContentCapabilities
   fileStatuses: Map<string, FileStatus>
   progressMap: Map<string, VideoProgress>
   chapters: YouTubeCourseChapter[]
@@ -142,11 +143,12 @@ export function LessonList({
   courseId,
   videos,
   pdfs,
-  isYouTube,
+  capabilities,
   fileStatuses,
   progressMap,
   chapters,
 }: LessonListProps) {
+  const isNetworkSource = capabilities.requiresNetwork
   const [searchQuery, setSearchQuery] = useState('')
   const contentListRef = useRef<HTMLUListElement>(null)
 
@@ -174,11 +176,11 @@ export function LessonList({
 
   // Group videos by folder (local) or chapter (YouTube)
   const groupedContent = useMemo(() => {
-    if (isYouTube && chapters.length > 0) {
+    if (isNetworkSource && chapters.length > 0) {
       return groupByChapter(filteredVideos, chapters)
     }
     return groupByFolder(filteredVideos)
-  }, [filteredVideos, chapters, isYouTube])
+  }, [filteredVideos, chapters, isNetworkSource])
 
   const hasMultipleGroups =
     groupedContent.length > 1 || (groupedContent.length === 1 && groupedContent[0].title !== '')
@@ -221,7 +223,7 @@ export function LessonList({
         aria-label="Course content"
         className="flex flex-col gap-2"
       >
-        {isYouTube
+        {isNetworkSource
           ? renderYouTubeGroups(
               groupedContent,
               courseId,
@@ -239,7 +241,7 @@ export function LessonList({
             )}
 
         {/* PDF items (local courses only) */}
-        {!isYouTube &&
+        {!isNetworkSource &&
           filteredPdfs.map(pdf => {
             const status = fileStatuses.get(pdf.id) ?? 'checking'
             const isUnavailable = status === 'missing' || status === 'permission-denied'

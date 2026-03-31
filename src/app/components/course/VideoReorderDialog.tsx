@@ -56,7 +56,8 @@ interface VideoGroup {
 export interface VideoReorderDialogProps {
   videos: ImportedVideo[]
   chapters: YouTubeCourseChapter[]
-  isYouTube: boolean
+  /** Whether to use chapter-based grouping (true) or folder-based (false) */
+  useChapterGrouping: boolean
   onReorder: (reordered: ImportedVideo[]) => void
 }
 
@@ -362,7 +363,7 @@ function CollapsibleGroup({
 export function VideoReorderDialog({
   videos,
   chapters,
-  isYouTube,
+  useChapterGrouping,
   onReorder,
 }: VideoReorderDialogProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -377,11 +378,11 @@ export function VideoReorderDialog({
 
   // Build groups from videos
   const groups = useMemo(() => {
-    if (isYouTube) {
+    if (useChapterGrouping) {
       return groupByChapter(videos, chapters)
     }
     return groupByFolder(videos)
-  }, [videos, chapters, isYouTube])
+  }, [videos, chapters, useChapterGrouping])
 
   const hasMultipleGroups = groups.length > 1 || (groups.length === 1 && groups[0].title !== '')
 

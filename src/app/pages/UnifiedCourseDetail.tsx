@@ -55,7 +55,7 @@ export function UnifiedCourseDetail() {
   const { adapter, loading: adapterLoading, error: adapterError } = useCourseAdapter(courseId)
   const course = adapter?.getCourse()
   const capabilities = adapter?.getCapabilities()
-  const isYouTube = adapter?.getSource() === 'youtube'
+  const adapterAuthorInfo = adapter?.getAuthorInfo() ?? null
 
   // Store access for mutations
   const importedCourses = useCourseImportStore(s => s.importedCourses)
@@ -193,7 +193,10 @@ export function UnifiedCourseDetail() {
     }
   }, [adapter])
 
-  const fileStatuses = useFileStatusVerification(isYouTube ? [] : videos, isYouTube ? [] : pdfs)
+  const fileStatuses = useFileStatusVerification(
+    capabilities?.supportsFileVerification ? videos : [],
+    capabilities?.supportsFileVerification ? pdfs : []
+  )
 
   const authorData = useMemo(() => {
     if (!course?.authorId) return undefined
@@ -307,7 +310,8 @@ export function UnifiedCourseDetail() {
 
       <CourseHeader
         course={course}
-        isYouTube={isYouTube ?? false}
+        capabilities={capabilities}
+        adapterAuthorInfo={adapterAuthorInfo}
         thumbnailUrl={thumbnailUrl}
         authorData={authorData}
         videoCount={videos.length}
@@ -317,7 +321,7 @@ export function UnifiedCourseDetail() {
         onTitleSave={handleTitleSave}
         onDelete={() => setDeleteDialogOpen(true)}
         onEdit={() => setEditDialogOpen(true)}
-        onRefreshMetadata={isYouTube ? handleRefresh : undefined}
+        onRefreshMetadata={capabilities.supportsRefresh ? handleRefresh : undefined}
         totalDuration={totalDuration}
         ctaVariant={ctaVariant}
         ctaLessonId={ctaLessonId}
@@ -344,13 +348,13 @@ export function UnifiedCourseDetail() {
       )}
 
       <CourseProgress completedCount={completedCount} totalCount={videos.length} />
-      {isYouTube && <AISummaryPanel />}
+      {capabilities.requiresNetwork && <AISummaryPanel />}
 
       <LessonList
         courseId={courseId!}
         videos={videos}
         pdfs={pdfs}
-        isYouTube={isYouTube ?? false}
+        capabilities={capabilities}
         fileStatuses={fileStatuses}
         progressMap={progressMap}
         chapters={chapters}

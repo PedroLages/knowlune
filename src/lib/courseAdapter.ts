@@ -45,6 +45,9 @@ export interface ContentCapabilities {
   supportsQuiz: boolean
   supportsPrevNext: boolean
   supportsBreadcrumbs: boolean
+  requiresNetwork: boolean
+  supportsRefresh: boolean
+  supportsFileVerification: boolean
 }
 
 export interface CourseAdapter {
@@ -55,6 +58,8 @@ export interface CourseAdapter {
   getTranscript(lessonId: string): Promise<string | null>
   getThumbnailUrl(): Promise<string | null>
   getCapabilities(): ContentCapabilities
+  getAuthorInfo(): { name?: string; channelUrl?: string } | null
+  getChapterGrouping(): { title: string; items: LessonItem[] }[] | null
 }
 
 // ---------------------------------------------------------------------------
@@ -212,7 +217,18 @@ export class LocalCourseAdapter implements CourseAdapter {
       supportsQuiz: true,
       supportsPrevNext: true,
       supportsBreadcrumbs: true,
+      requiresNetwork: false,
+      supportsRefresh: false,
+      supportsFileVerification: true,
     }
+  }
+
+  getAuthorInfo(): { name?: string; channelUrl?: string } | null {
+    return null
+  }
+
+  getChapterGrouping(): { title: string; items: LessonItem[] }[] | null {
+    return null
   }
 }
 
@@ -307,7 +323,25 @@ export class YouTubeCourseAdapter implements CourseAdapter {
       supportsQuiz: true,
       supportsPrevNext: true,
       supportsBreadcrumbs: true,
+      requiresNetwork: true,
+      supportsRefresh: true,
+      supportsFileVerification: false,
     }
+  }
+
+  getAuthorInfo(): { name?: string; channelUrl?: string } | null {
+    const course = this.getCourse()
+    if (!course.youtubeChannelTitle) return null
+    return {
+      name: course.youtubeChannelTitle,
+    }
+  }
+
+  getChapterGrouping(): { title: string; items: LessonItem[] }[] | null {
+    // Chapter grouping requires chapter data which is loaded externally.
+    // This method is a placeholder — consumers currently handle chapter grouping
+    // via the chapters array passed alongside the adapter.
+    return null
   }
 }
 

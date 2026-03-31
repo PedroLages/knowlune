@@ -204,14 +204,13 @@ export function UnifiedLessonPlayer() {
 
   const source = adapter.getSource()
   const capabilities = adapter.getCapabilities()
-  const isYouTube = source === 'youtube'
 
   // Derive resource type label for LessonHeaderCard (E91-S05)
   const resourceTypes: string[] = !state.lessonTypeResolved
     ? []
     : state.isPdf
       ? ['PDF']
-      : isYouTube
+      : capabilities.requiresNetwork
         ? ['YouTube']
         : ['Video']
 
@@ -253,7 +252,7 @@ export function UnifiedLessonPlayer() {
       lessonId={lessonId!}
       lessonTypeResolved={state.lessonTypeResolved}
       isPdf={state.isPdf}
-      isYouTube={isYouTube}
+      sourceType={source}
       onEnded={completion.handleVideoEnded}
       onAutoComplete={completion.handleYouTubeAutoComplete}
       onTimeUpdate={state.handleTimeUpdate}
@@ -286,7 +285,7 @@ export function UnifiedLessonPlayer() {
         lessonId={lessonId!}
         lessonTitle={state.lessonTitle}
         courseName={course?.name}
-        showCompletionToggle={state.isPdf || isYouTube || capabilities.hasVideo}
+        showCompletionToggle={state.isPdf || capabilities.requiresNetwork || capabilities.hasVideo}
         onStatusChange={completion.handleManualStatusChange}
         isTheater={isTheater}
         onToggleTheater={toggleTheater}
@@ -443,7 +442,7 @@ export function UnifiedLessonPlayer() {
       )}
 
       {/* Mini-player for local video lessons (E91-S04) */}
-      {!isYouTube && !state.isPdf && state.localVideoBlobUrl && (
+      {!capabilities.requiresNetwork && !state.isPdf && state.localVideoBlobUrl && (
         <MiniPlayer
           videoSrc={state.localVideoBlobUrl}
           currentTime={state.currentTime}

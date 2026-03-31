@@ -55,7 +55,7 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
   const [videos, setVideos] = useState<ImportedVideo[]>([])
   const [chapters, setChapters] = useState<YouTubeCourseChapter[]>([])
 
-  const isYouTube = course.source === 'youtube'
+  const useChapterGrouping = course.source === 'youtube'
 
   useEffect(() => {
     loadAuthors()
@@ -355,7 +355,7 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
               <VideoReorderDialog
                 videos={videos}
                 chapters={chapters}
-                isYouTube={isYouTube}
+                useChapterGrouping={useChapterGrouping}
                 onReorder={setVideos}
               />
             </div>

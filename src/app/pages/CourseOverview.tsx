@@ -127,7 +127,8 @@ export function CourseOverview() {
 
   const { adapter, loading: adapterLoading, error: adapterError } = useCourseAdapter(courseId)
   const course = adapter?.getCourse()
-  const isYouTube = adapter?.getSource() === 'youtube'
+  const capabilities = adapter?.getCapabilities()
+  const adapterAuthorInfo = adapter?.getAuthorInfo() ?? null
 
   const storeAuthors = useAuthorStore(s => s.authors)
   const loadAuthors = useAuthorStore(s => s.loadAuthors)
@@ -266,11 +267,11 @@ export function CourseOverview() {
   )
 
   const groupedContent = useMemo(() => {
-    if (isYouTube && chapters.length > 0) {
+    if (capabilities?.requiresNetwork && chapters.length > 0) {
       return groupByChapter(videos, chapters)
     }
     return groupByFolder(videos)
-  }, [videos, chapters, isYouTube])
+  }, [videos, chapters, capabilities?.requiresNetwork])
 
   const toggleModule = useCallback((index: number) => {
     setExpandedModules(prev => {
@@ -410,8 +411,8 @@ export function CourseOverview() {
             {course.name}
           </h1>
 
-          {isYouTube && course.youtubeChannelTitle && (
-            <p className="text-sm text-muted-foreground mt-2">{course.youtubeChannelTitle}</p>
+          {adapterAuthorInfo?.name && (
+            <p className="text-sm text-muted-foreground mt-2">{adapterAuthorInfo.name}</p>
           )}
         </div>
       </motion.div>
@@ -454,7 +455,7 @@ export function CourseOverview() {
           transition={{ duration: 0.4, delay: 0.2 }}
           className={cn(
             'space-y-6',
-            hasDescription || (!isYouTube && authorData) ? 'lg:col-span-2' : 'lg:col-span-3'
+            hasDescription || (!capabilities?.requiresNetwork && authorData) ? 'lg:col-span-2' : 'lg:col-span-3'
           )}
         >
           {/* About This Course */}
@@ -473,7 +474,7 @@ export function CourseOverview() {
           )}
 
           {/* Author Card (local only) */}
-          {!isYouTube && authorData && (
+          {!capabilities?.requiresNetwork && authorData && (
             <Link
               to={`/authors/${authorData.id}`}
               className="block bg-card rounded-[24px] p-6 shadow-studio border border-border/50 hover:shadow-studio-hover hover:-translate-y-px transition-all duration-200 group"
@@ -509,7 +510,7 @@ export function CourseOverview() {
         </motion.div>
 
         {/* Right Column (1/3) */}
-        {(hasDescription || (!isYouTube && authorData)) && (
+        {(hasDescription || (!capabilities?.requiresNetwork && authorData)) && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}

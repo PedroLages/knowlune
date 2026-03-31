@@ -11,11 +11,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { TranscriptPanel } from '@/app/components/youtube/TranscriptPanel'
 import type { TranscriptLoadingState } from '@/app/components/youtube/TranscriptPanel'
 import type { CourseAdapter } from '@/lib/courseAdapter'
-import type { TranscriptCue, CourseSource } from '@/data/types'
+import type { TranscriptCue } from '@/data/types'
 import { db } from '@/db/schema'
-
-/** Source type constant to avoid magic strings when checking adapter source. */
-const YOUTUBE_SOURCE: CourseSource = 'youtube'
 
 // ---------------------------------------------------------------------------
 // VTT parser (for local transcript text)
@@ -92,11 +89,11 @@ export function TranscriptTab({
     setLoadingState('loading')
     setCues([])
 
-    const isYouTube = adapter.getSource() === YOUTUBE_SOURCE
+    const capabilities = adapter.getCapabilities()
 
     const loadTranscript = async () => {
-      // YouTube: try Dexie first for richer cue data
-      if (isYouTube) {
+      // Network sources (YouTube): try Dexie first for richer cue data
+      if (capabilities.requiresNetwork) {
         try {
           const video = await db.importedVideos.get(lessonId)
           if (!cancelled && video?.youtubeVideoId) {
