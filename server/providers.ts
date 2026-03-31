@@ -38,6 +38,17 @@ export function getProviderModel(providerId: string, apiKey: string, model?: str
     case 'gemini':
       return createGoogleGenerativeAI({ apiKey })(model || PROVIDER_DEFAULTS.gemini)
 
+    case 'openrouter':
+      // OpenRouter uses the OpenAI-compatible API format
+      return createOpenAI({
+        baseURL: 'https://openrouter.ai/api/v1',
+        apiKey,
+        headers: {
+          'HTTP-Referer': 'https://knowlune.app',
+          'X-Title': 'Knowlune',
+        },
+      })(model || PROVIDER_DEFAULTS.openrouter)
+
     case 'ollama':
       // Ollama exposes an OpenAI-compatible API at /v1/
       // Use createOpenAI with custom baseURL — no custom client needed

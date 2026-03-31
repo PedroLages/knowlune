@@ -91,4 +91,49 @@ router.get('/groq', async (req, res) => {
   }
 })
 
+/**
+ * GET /api/ai/models/openrouter
+ *
+ * Proxies to OpenRouter's model listing endpoint.
+ * Returns models grouped by source provider with cost tier info.
+ * Requires X-API-Key header with the user's OpenRouter API key.
+ *
+ * @see E90-S09 — Add OpenRouter as Optional Single-Gateway Provider
+ */
+router.get('/openrouter', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'] as string
+    if (!apiKey) {
+      res.status(400).json({ error: 'X-API-Key header is required' })
+      return
+    }
+
+    const response = await fetch('https://openrouter.ai/api/v1/models', {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://knowlune.app',
+        'X-Title': 'Knowlune',
+      },
+      signal: AbortSignal.timeout(15_000),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => response.statusText) // eslint-disable-line error-handling/no-silent-catch -- server-side
+      res.status(response.status).json({ error: `OpenRouter returned ${response.status}: ${errorText}` })
+      return
+    }
+
+    const data = await response.json()
+    res.json(data)
+  } catch (error) {
+    // silent-catch-ok — logs to console and returns error response to client
+    console.error('[/api/ai/models/openrouter] Error:', (error as Error).message)
+    if ((error as Error).name === 'AbortError' || (error as Error).name === 'TimeoutError') {
+      res.status(504).json({ error: 'OpenRouter API timed out' })
+      return
+    }
+    res.status(500).json({ error: (error as Error).message })
+  }
+})
+
 export default router

@@ -1093,7 +1093,7 @@ development_status:
   90-6-build-per-feature-model-override-ui: done
   90-7-add-temperature-and-max-token-sliders-per-feature: done
   90-8-wire-all-ai-features-to-use-new-config: done
-  90-9-add-openrouter-as-optional-single-gateway-provider: backlog
+  90-9-add-openrouter-as-optional-single-gateway-provider: done
   90-10-multi-provider-api-key-management-ui: backlog
   90-11-e2e-tests-for-model-selection-flows: backlog
   epic-90-retrospective: optional

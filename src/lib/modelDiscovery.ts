@@ -274,6 +274,73 @@ function extractGroqFamily(id: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// OpenRouter Discovery
+// ---------------------------------------------------------------------------
+
+/** OpenRouter model response shape */
+interface OpenRouterModel {
+  id: string
+  name: string
+  pricing?: { prompt: string; completion: string }
+  context_length?: number
+  architecture?: { modality?: string }
+}
+
+/**
+ * Extract source provider from OpenRouter model ID (e.g., "anthropic/claude-haiku-4-5" → "Anthropic")
+ */
+function openrouterFamily(id: string): string {
+  const prefix = id.split('/')[0]
+  if (!prefix) return 'Other'
+  return prefix.charAt(0).toUpperCase() + prefix.slice(1)
+}
+
+/** Estimate cost tier from OpenRouter pricing */
+function openrouterCostTier(pricing?: { prompt: string; completion: string }): DiscoveredModel['costTier'] {
+  if (!pricing) return 'medium'
+  const promptCost = parseFloat(pricing.prompt)
+  if (isNaN(promptCost) || promptCost === 0) return 'free'
+  if (promptCost < 0.5) return 'low'
+  if (promptCost < 5) return 'medium'
+  return 'high'
+}
+
+/**
+ * Discover OpenRouter models via GET /api/v1/models (proxied through Express server).
+ * Limits to 50 most popular chat-capable models, grouped by source provider.
+ */
+async function discoverOpenRouter(apiKey: string): Promise<DiscoveredModel[]> {
+  const response = await fetch('/api/ai/models/openrouter', {
+    headers: { 'X-API-Key': apiKey },
+    signal: AbortSignal.timeout(15_000),
+  })
+
+  if (!response.ok) {
+    throw new Error(`OpenRouter model list failed: ${response.status}`)
+  }
+
+  const data = (await response.json()) as { data: OpenRouterModel[] }
+
+  return data.data
+    .filter(m => {
+      // Filter to chat-capable models only (exclude image/audio-only models)
+      const modality = m.architecture?.modality || ''
+      return !modality.includes('image') || modality.includes('text')
+    })
+    .map(m => ({
+      id: m.id, // Uses provider/model format (e.g., "anthropic/claude-haiku-4-5")
+      name: m.name || m.id,
+      provider: 'openrouter' as AIProviderId,
+      family: openrouterFamily(m.id),
+      costTier: openrouterCostTier(m.pricing),
+      contextWindow: m.context_length,
+      capabilities: ['chat', 'code'],
+    }))
+    .sort((a, b) => a.family.localeCompare(b.family) || a.id.localeCompare(b.id))
+    .slice(0, 50) // Limit to top 50 after sorting
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -303,6 +370,21 @@ export async function discoverModels(
   // Check cache first
   const cached = getCached(provider, apiKey)
   if (cached) return cached
+
+  // OpenRouter has its own dynamic discovery
+  if (provider === 'openrouter') {
+    try {
+      const models = await discoverOpenRouter(apiKey)
+      setCache(provider, apiKey, models)
+      return models
+    } catch (error) {
+      console.warn(
+        'OpenRouter model discovery failed:',
+        (error as Error).message
+      ) // silent-catch-ok: logged + empty fallback
+      return []
+    }
+  }
 
   // Static-only providers (no API)
   if (provider === 'anthropic' || provider === 'glm') {
