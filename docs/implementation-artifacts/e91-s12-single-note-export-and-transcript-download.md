@@ -1,12 +1,12 @@
 ---
 story_id: E91-S12
 story_name: "Single-Note Export + Transcript Download"
-status: complete
+status: done
 started: 2026-03-30
 completed: 2026-03-30
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-03-30
+review_gates_passed: [build, lint-skipped, type-check, format-check, unit-tests-skipped, e2e-tests, design-review-skipped, code-review, code-review-testing, performance-benchmark-skipped, security-review, exploratory-qa-skipped]
 burn_in_validated: false
 ---
 
