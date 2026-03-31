@@ -38,3 +38,4 @@ so that I can configure per-feature overrides across different providers.
 ## Lessons Learned
 
 - The existing component already had providerKeys and saveProviderApiKey infrastructure from E90-S03, making this mostly a UI story.
+- Missing affordance: there is no "remove/delete key" button per provider. Users can only overwrite keys, not revoke them. A "delete key" action should be added in a future story.

@@ -30,15 +30,10 @@ import {
 } from '@/lib/aiConfiguration'
 import { cn } from '@/app/components/ui/utils'
 
-/** Providers that use API keys (not server URLs like Ollama) */
-const API_KEY_PROVIDERS: AIProviderId[] = [
-  'openai',
-  'anthropic',
-  'groq',
-  'glm',
-  'gemini',
-  'openrouter',
-]
+/** Providers that use API keys (not server URLs like Ollama) — derived from AI_PROVIDERS to prevent drift */
+const API_KEY_PROVIDERS: AIProviderId[] = (Object.keys(AI_PROVIDERS) as AIProviderId[]).filter(
+  id => id !== 'ollama'
+)
 
 interface ProviderKeyStatus {
   hasKey: boolean
@@ -63,24 +58,26 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
   // Load provider key statuses on mount and when config changes
   const refreshStatuses = useCallback(async () => {
     const config = getAIConfiguration()
-    const statuses: Partial<Record<AIProviderId, ProviderKeyStatus>> = {}
 
-    for (const providerId of API_KEY_PROVIDERS) {
-      const hasProviderKey = !!config.providerKeys?.[providerId]
-      // AC4: Legacy key shows under its provider section
-      const isLegacyProvider = providerId === config.provider && !!config.apiKeyEncrypted
-      const hasKey = hasProviderKey || isLegacyProvider
+    const entries = await Promise.all(
+      API_KEY_PROVIDERS.map(async (providerId) => {
+        const hasProviderKey = !!config.providerKeys?.[providerId]
+        // AC4: Legacy key shows under its provider section
+        const isLegacyProvider = providerId === config.provider && !!config.apiKeyEncrypted
+        const hasKey = hasProviderKey || isLegacyProvider
 
-      // Check if we can decrypt the key (proves it's valid)
-      let isConnected = false
-      if (hasKey) {
-        const decrypted = await getDecryptedApiKeyForProvider(providerId)
-        isConnected = decrypted !== null
-      }
+        // Check if we can decrypt the key (proves it's valid)
+        let isConnected = false
+        if (hasKey) {
+          const decrypted = await getDecryptedApiKeyForProvider(providerId)
+          isConnected = decrypted !== null
+        }
 
-      statuses[providerId] = { hasKey, isConnected, isLegacy: isLegacyProvider && !hasProviderKey }
-    }
+        return [providerId, { hasKey, isConnected, isLegacy: isLegacyProvider && !hasProviderKey }] as const
+      })
+    )
 
+    const statuses: Partial<Record<AIProviderId, ProviderKeyStatus>> = Object.fromEntries(entries)
     setProviderStatuses(statuses)
   }, [])
 

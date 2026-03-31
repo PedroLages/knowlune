@@ -442,7 +442,7 @@ export function AIConfigurationSettings() {
   // AC3: Show consent/override sections when ANY provider has a configured key
   const hasAnyProviderKey = getConfiguredProviderIds().length > 0
   const showFeatureSettings = isConnected || hasAnyProviderKey
-  const saveDisabled = isOllama ? isValidating || !ollamaUrl.trim() : isValidating
+  const ollamaSaveDisabled = isValidating || !ollamaUrl.trim()
 
   return (
     <Card>
@@ -728,7 +728,7 @@ export function AIConfigurationSettings() {
                 toast.error('Failed to save configuration')
               })
             }}
-            disabled={saveDisabled}
+            disabled={ollamaSaveDisabled}
             data-testid="save-ai-config-button"
             className="min-h-[44px] rounded-lg"
           >
