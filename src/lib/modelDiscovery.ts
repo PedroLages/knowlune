@@ -327,7 +327,6 @@ async function discoverOpenRouter(apiKey: string): Promise<DiscoveredModel[]> {
       const modality = m.architecture?.modality || ''
       return !modality.includes('image') || modality.includes('text')
     })
-    .slice(0, 50) // Limit to 50 most popular
     .map(m => ({
       id: m.id, // Uses provider/model format (e.g., "anthropic/claude-haiku-4-5")
       name: m.name || m.id,
@@ -338,6 +337,7 @@ async function discoverOpenRouter(apiKey: string): Promise<DiscoveredModel[]> {
       capabilities: ['chat', 'code'],
     }))
     .sort((a, b) => a.family.localeCompare(b.family) || a.id.localeCompare(b.id))
+    .slice(0, 50) // Limit to top 50 after sorting
 }
 
 // ---------------------------------------------------------------------------

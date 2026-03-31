@@ -207,7 +207,8 @@ export const AI_PROVIDERS: Record<AIProviderId, AIProvider> = {
           signal: AbortSignal.timeout(10_000),
         })
         return response.ok
-      } catch {
+      } catch (error) {
+        console.warn('OpenRouter connection test failed:', error)
         return false
       }
     },
