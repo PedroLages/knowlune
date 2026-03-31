@@ -184,9 +184,7 @@ export function ProviderModelPicker({
           </Badge>
         )}
         {model.costTier && (
-          <span className="text-xs text-muted-foreground shrink-0 ml-1">
-            {model.costTier}
-          </span>
+          <span className="text-xs text-muted-foreground shrink-0 ml-1">{model.costTier}</span>
         )}
       </>
     )
@@ -309,9 +307,7 @@ export function ProviderModelPicker({
                   </CommandGroup>
                 ))
               ) : (
-                <CommandGroup>
-                  {models.map(renderModelOption)}
-                </CommandGroup>
+                <CommandGroup>{models.map(renderModelOption)}</CommandGroup>
               )}
             </CommandList>
           </Command>
@@ -333,10 +329,7 @@ export function ProviderModelPicker({
       {/* Custom model ID escape hatch (AC6) */}
       {showCustomInput && (
         <div className="space-y-1">
-          <Label
-            htmlFor={`${testIdPrefix}-custom-input`}
-            className="text-xs text-muted-foreground"
-          >
+          <Label htmlFor={`${testIdPrefix}-custom-input`} className="text-xs text-muted-foreground">
             Custom model ID
           </Label>
           <div className="flex gap-2">
