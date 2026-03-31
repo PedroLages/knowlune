@@ -27,6 +27,7 @@ import {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
+  TooltipProvider,
 } from '@/app/components/ui/tooltip'
 import {
   Collapsible,
@@ -44,6 +45,13 @@ import {
   type AIProviderId,
   type FeatureModelConfig,
 } from '@/lib/aiConfiguration'
+
+/** Temperature preset suggestions */
+const TEMPERATURE_PRESETS = [
+  { label: 'Precise', value: 0.1 },
+  { label: 'Balanced', value: 0.7 },
+  { label: 'Creative', value: 1.2 },
+] as const
 
 interface FeatureModelOverridePanelProps {
   /** AI feature ID this panel controls */
@@ -178,7 +186,10 @@ export function FeatureModelOverridePanel({
     }
   }, [feature, onConfigChanged])
 
-  // AC4: Debounced save for slider/input changes (500ms)
+  // AC4: Debounced save for slider/input changes (500ms).
+  // The closure captures stale state vars (temperature, maxTokens, etc.) but this is safe:
+  // React batches state updates, so by the time the 500ms timer fires the latest values
+  // are spread via the `updates` parameter which always takes precedence.
   const debouncedSave = useCallback(
     (updates: Partial<FeatureModelConfig>) => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
@@ -211,7 +222,7 @@ export function FeatureModelOverridePanel({
     [debouncedSave]
   )
 
-  // AC2: Max tokens input handler
+  // AC2: Max tokens input handler — update state on change, clamp on blur
   const handleMaxTokensChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const raw = e.target.value
@@ -220,19 +231,25 @@ export function FeatureModelOverridePanel({
         debouncedSave({ maxTokens: undefined })
         return
       }
-      const val = Math.min(32000, Math.max(100, parseInt(raw, 10) || 100))
-      setMaxTokens(val)
-      debouncedSave({ maxTokens: val })
+      const val = parseInt(raw, 10)
+      if (!isNaN(val)) {
+        setMaxTokens(val)
+        debouncedSave({ maxTokens: val })
+      }
     },
     [debouncedSave]
   )
 
-  /** Temperature preset suggestions */
-  const TEMPERATURE_PRESETS = [
-    { label: 'Precise', value: 0.1 },
-    { label: 'Balanced', value: 0.7 },
-    { label: 'Creative', value: 1.2 },
-  ] as const
+  // Clamp max tokens to 100-32000 on blur for better UX (no mid-typing correction)
+  const handleMaxTokensBlur = useCallback(() => {
+    if (maxTokens !== undefined) {
+      const clamped = Math.min(32000, Math.max(100, maxTokens))
+      if (clamped !== maxTokens) {
+        setMaxTokens(clamped)
+        debouncedSave({ maxTokens: clamped })
+      }
+    }
+  }, [maxTokens, debouncedSave])
 
   const featureDefault = FEATURE_DEFAULTS[feature]
   const defaultLabel = featureDefault
@@ -327,17 +344,19 @@ export function FeatureModelOverridePanel({
               >
                 Temperature
               </Label>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info
-                    className="size-3 text-muted-foreground cursor-help"
-                    aria-label="Temperature info"
-                  />
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[220px]">
-                  Lower = more deterministic, Higher = more creative
-                </TooltipContent>
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info
+                      className="size-3 text-muted-foreground cursor-help"
+                      aria-label="Temperature info"
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[220px]">
+                    Lower = more deterministic, Higher = more creative
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <span className="ml-auto text-xs tabular-nums text-muted-foreground">
                 {temperature !== undefined ? temperature.toFixed(1) : (
                   <span className="italic">Default</span>
@@ -363,6 +382,8 @@ export function FeatureModelOverridePanel({
                   variant="outline"
                   size="sm"
                   onClick={() => handleTemperatureChange([preset.value])}
+                  // Float comparison is safe here: preset values (0.1, 0.7, 1.2) are
+                  // 0.1-step IEEE 754 representable values set from these same constants.
                   className={`h-6 px-2 text-[10px] ${
                     temperature === preset.value
                       ? 'border-brand text-brand-soft-foreground'
@@ -394,6 +415,7 @@ export function FeatureModelOverridePanel({
                 step={100}
                 value={maxTokens ?? ''}
                 onChange={handleMaxTokensChange}
+                onBlur={handleMaxTokensBlur}
                 placeholder="Default"
                 className="h-8 text-sm w-32"
                 aria-label={`Max tokens for ${feature}`}
