@@ -592,10 +592,7 @@ function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
   }
 
   // Pre-compute O(1) lookup map for original lesson indices
-  const lessonIndexMap = useMemo(
-    () => new Map(lessons.map((l, i) => [l.id, i])),
-    [lessons]
-  )
+  const lessonIndexMap = useMemo(() => new Map(lessons.map((l, i) => [l.id, i])), [lessons])
 
   const currentIndex = lessons.findIndex(l => l.id === lessonId)
 
