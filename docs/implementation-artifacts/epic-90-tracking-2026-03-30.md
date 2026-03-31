@@ -14,7 +14,7 @@ Auto-answer: Used for /start-story and /finish-story interactive prompts
 | E90-S04 | done | #194 | 1 | 5 |
 | E90-S05 | done | #195 | 1 | 2 |
 | E90-S06 | done | #196 | 1 | 3 |
-| E90-S07 | queued | — | — | — |
+| E90-S07 | done | #197 | 1 | 5 |
 | E90-S08 | queued | — | — | — |
 | E90-S09 | queued | — | — | — |
 | E90-S10 | queued | — | — | — |
