@@ -30,7 +30,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/pop
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { useQAChatStore } from '@/stores/useQAChatStore'
 import { retrieveRelevantNotes, generateQAAnswer } from '@/lib/noteQA'
-import { getAIConfiguration, getDecryptedApiKey, isAIAvailable } from '@/lib/aiConfiguration'
+import { isAIAvailable } from '@/lib/aiConfiguration'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 import { db } from '@/db'
 import { useMediaQuery } from '@/app/hooks/useMediaQuery'
@@ -101,19 +101,11 @@ export function QAChatPanel() {
         return
       }
 
-      // Get AI configuration
-      const config = getAIConfiguration()
-      const apiKey = await getDecryptedApiKey()
-
-      if (!apiKey) {
-        throw new Error('No API key configured. Please add an API key in Settings.')
-      }
-
-      // Generate streaming answer
+      // Generate streaming answer using feature-aware LLM client
       const answerId = addAnswer('', [], retrievedNotes)
       let fullAnswer = ''
 
-      const generator = generateQAAnswer(query, retrievedNotes, config.provider, apiKey)
+      const generator = generateQAAnswer(query, retrievedNotes)
 
       for await (const chunk of generator) {
         fullAnswer += chunk

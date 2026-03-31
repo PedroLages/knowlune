@@ -14,10 +14,12 @@ import {
   isOllamaDirectConnection,
   resolveFeatureModel,
 } from '@/lib/aiConfiguration'
+import { PROVIDER_DEFAULTS } from '@/lib/modelDefaults'
 import type { LLMClient } from './client'
 import { ProxyLLMClient } from './proxy-client'
 import { OllamaLLMClient } from './ollama-client'
 import { LLMError } from './types'
+import type { LLMMessage } from './types'
 
 /**
  * Get LLM client for configured AI provider
@@ -138,4 +140,72 @@ export function getLLMClientForProvider(
   }
 
   return new ProxyLLMClient(providerId, apiKey, model)
+}
+
+/**
+ * Wraps an LLM streaming call with automatic model fallback (AC8).
+ *
+ * If the initial call fails with AUTH_ERROR or ENTITLEMENT_ERROR and the
+ * resolved model differs from the provider default, retries with the
+ * provider's default model. Yields chunks from whichever call succeeds.
+ *
+ * @param feature - AI feature ID used for model resolution
+ * @param messages - LLM messages to send
+ * @yields Text content chunks from the successful call
+ * @throws The original error if fallback is not applicable or also fails
+ */
+export async function* withModelFallback(
+  feature: AIFeatureId,
+  messages: LLMMessage[]
+): AsyncGenerator<string, void, undefined> {
+  let client = await getLLMClient(feature)
+
+  try {
+    for await (const chunk of client.streamCompletion(messages)) {
+      if (chunk.content) {
+        yield chunk.content
+      }
+    }
+  } catch (firstError) {
+    if (
+      firstError instanceof LLMError &&
+      (firstError.code === 'AUTH_ERROR' || firstError.code === 'ENTITLEMENT_ERROR')
+    ) {
+      const resolved = resolveFeatureModel(feature)
+      const defaultModel = PROVIDER_DEFAULTS[resolved.provider]
+
+      if (resolved.model !== defaultModel) {
+        console.warn(
+          `[${feature}] Model "${resolved.model}" unavailable, falling back to "${defaultModel}". ` +
+            'If this persists, check your API key or select a different model in Settings → AI Configuration.'
+        )
+
+        const apiKey = await getDecryptedApiKeyForProvider(resolved.provider)
+        if (!apiKey) {
+          throw new LLMError(
+            `No API key configured for ${resolved.provider}. Please add or check your API key in Settings → AI Configuration.`,
+            'AUTH_ERROR',
+            resolved.provider
+          )
+        }
+
+        client = getLLMClientForProvider(resolved.provider, apiKey, defaultModel)
+
+        for await (const chunk of client.streamCompletion(messages)) {
+          if (chunk.content) {
+            yield chunk.content
+          }
+        }
+        return
+      }
+
+      // Model IS the default — the API key itself is likely bad
+      throw new LLMError(
+        `Authentication failed for ${resolved.provider}. Please check your API key in Settings → AI Configuration.`,
+        firstError.code,
+        resolved.provider
+      )
+    }
+    throw firstError
+  }
 }

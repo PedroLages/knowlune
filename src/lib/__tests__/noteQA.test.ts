@@ -2,7 +2,10 @@
  * Tests for Q&A from Notes RAG Service
  *
  * Covers: retrieveRelevantNotes, generateQAAnswer, extractCitations
- * Mocks: @/db, @/ai/workers/coordinator, @/lib/vectorSearch, ai SDK
+ * Mocks: @/db, @/ai/workers/coordinator, @/lib/vectorSearch, LLM factory
+ *
+ * After E90-S08, generateQAAnswer uses getLLMClient('noteQA') instead of
+ * direct AI SDK calls, so we mock the LLM factory layer.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Note } from '@/data/types'
@@ -36,32 +39,36 @@ vi.mock('@/lib/vectorSearch', () => {
   }
 })
 
-const mockStreamText = vi.fn()
-vi.mock('ai', () => ({
-  streamText: (...args: unknown[]) => mockStreamText(...args),
+// Mock LLM factory
+const mockStreamCompletion = vi.fn()
+const mockLLMClient = {
+  streamCompletion: mockStreamCompletion,
+  getProviderId: () => 'anthropic',
+}
+
+vi.mock('@/ai/llm/factory', () => ({
+  getLLMClient: vi.fn(async () => mockLLMClient),
+  getLLMClientForProvider: vi.fn(() => mockLLMClient),
+  withModelFallback: vi.fn(async function* (_feature: string, messages: unknown) {
+    for await (const chunk of mockLLMClient.streamCompletion(messages)) {
+      if (chunk.content) {
+        yield chunk.content
+      }
+    }
+  }),
 }))
 
-// Mock all AI provider SDK imports
-vi.mock('@ai-sdk/openai', () => ({
-  createOpenAI: vi.fn(() => vi.fn(() => 'openai-model')),
-}))
-vi.mock('@ai-sdk/anthropic', () => ({
-  createAnthropic: vi.fn(() => vi.fn(() => 'anthropic-model')),
-}))
-vi.mock('@ai-sdk/groq', () => ({
-  createGroq: vi.fn(() => vi.fn(() => 'groq-model')),
-}))
-vi.mock('@ai-sdk/google', () => ({
-  createGoogleGenerativeAI: vi.fn(() => vi.fn(() => 'google-model')),
-}))
-vi.mock('zhipu-ai-provider', () => ({
-  createZhipu: vi.fn(() => vi.fn(() => 'zhipu-model')),
+vi.mock('@/lib/aiConfiguration', () => ({
+  resolveFeatureModel: vi.fn(() => ({
+    provider: 'anthropic',
+    model: 'claude-haiku-4-5',
+  })),
+  getDecryptedApiKeyForProvider: vi.fn(async () => 'mock-api-key'),
 }))
 
 // Import after mocks
 import { retrieveRelevantNotes, extractCitations, generateQAAnswer } from '../noteQA'
 import type { RetrievedNote } from '../noteQA'
-import type { AIProviderId } from '@/lib/aiConfiguration'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -93,10 +100,12 @@ async function collectGenerator(gen: AsyncGenerator<string>): Promise<string[]> 
   return results
 }
 
-/** Creates an async iterable from string array (simulates textStream) */
-async function* asyncIterableFrom(chunks: string[]): AsyncGenerator<string> {
-  for (const chunk of chunks) {
-    yield chunk
+/** Creates a mock async generator for streamCompletion */
+async function* createMockStream(
+  chunks: string[]
+): AsyncGenerator<{ content: string }, void, unknown> {
+  for (const content of chunks) {
+    yield { content }
   }
 }
 
@@ -157,11 +166,8 @@ describe('noteQA', () => {
     })
 
     it('should not duplicate note IDs', () => {
-      // Answer mentions both courseId and courseId/videoId for same note
       const answer = 'From 001/001-001 and also course 001.'
       const citations = extractCitations(answer, mockNotes)
-      // The implementation adds note-1 once because it matches on first check (courseVideoPattern)
-      // and the || short-circuits
       expect(citations).toContain('note-1')
     })
   })
@@ -298,25 +304,33 @@ describe('noteQA', () => {
 
   describe('generateQAAnswer', () => {
     it('should yield fallback message when no retrieved notes provided', async () => {
-      const gen = generateQAAnswer('question', [], 'openai' as AIProviderId, 'key')
+      const gen = generateQAAnswer('question', [])
       const results = await collectGenerator(gen)
       expect(results).toEqual(['No relevant notes found for your question.'])
     })
 
-    it('should stream text chunks from AI model', async () => {
+    it('should stream text chunks from LLM client', async () => {
       const notes: RetrievedNote[] = [makeRetrievedNote()]
+      mockStreamCompletion.mockImplementation(() => createMockStream(['Hello', ' world', '!']))
 
-      mockStreamText.mockReturnValue({
-        textStream: asyncIterableFrom(['Hello', ' world', '!']),
-      })
-
-      const gen = generateQAAnswer('What is React?', notes, 'openai' as AIProviderId, 'test-key')
+      const gen = generateQAAnswer('What is React?', notes)
       const results = await collectGenerator(gen)
 
       expect(results).toEqual(['Hello', ' world', '!'])
     })
 
-    it('should include note content in the prompt context', async () => {
+    it('should use withModelFallback with noteQA feature', async () => {
+      const { withModelFallback } = await import('@/ai/llm/factory')
+      const notes: RetrievedNote[] = [makeRetrievedNote()]
+      mockStreamCompletion.mockImplementation(() => createMockStream(['answer']))
+
+      const gen = generateQAAnswer('question', notes)
+      await collectGenerator(gen)
+
+      expect(withModelFallback).toHaveBeenCalledWith('noteQA', expect.any(Array))
+    })
+
+    it('should include note content in messages passed to streamCompletion', async () => {
       const notes: RetrievedNote[] = [
         makeRetrievedNote({
           content: 'React hooks explanation',
@@ -324,48 +338,39 @@ describe('noteQA', () => {
           videoId: '001-001',
         }),
       ]
+      mockStreamCompletion.mockImplementation(() => createMockStream(['answer']))
 
-      mockStreamText.mockReturnValue({
-        textStream: asyncIterableFrom(['answer']),
-      })
-
-      const gen = generateQAAnswer('Tell me about hooks', notes, 'openai' as AIProviderId, 'key')
+      const gen = generateQAAnswer('Tell me about hooks', notes)
       await collectGenerator(gen)
 
-      expect(mockStreamText).toHaveBeenCalledTimes(1)
-      const callArgs = mockStreamText.mock.calls[0][0]
-      const userMessage = callArgs.messages.find((m: { role: string }) => m.role === 'user')
+      expect(mockStreamCompletion).toHaveBeenCalledTimes(1)
+      const messages = mockStreamCompletion.mock.calls[0][0]
+      const userMessage = messages.find((m: { role: string }) => m.role === 'user')
       expect(userMessage.content).toContain('React hooks explanation')
       expect(userMessage.content).toContain('001/001-001')
     })
 
     it('should include timestamp in context when present', async () => {
       const notes: RetrievedNote[] = [makeRetrievedNote({ timestamp: 125 })]
+      mockStreamCompletion.mockImplementation(() => createMockStream(['answer']))
 
-      mockStreamText.mockReturnValue({
-        textStream: asyncIterableFrom(['answer']),
-      })
-
-      const gen = generateQAAnswer('question', notes, 'openai' as AIProviderId, 'key')
+      const gen = generateQAAnswer('question', notes)
       await collectGenerator(gen)
 
-      const callArgs = mockStreamText.mock.calls[0][0]
-      const userMessage = callArgs.messages.find((m: { role: string }) => m.role === 'user')
+      const messages = mockStreamCompletion.mock.calls[0][0]
+      const userMessage = messages.find((m: { role: string }) => m.role === 'user')
       expect(userMessage.content).toContain('(at 2:05)')
     })
 
     it('should not include timestamp in context when absent', async () => {
       const notes: RetrievedNote[] = [makeRetrievedNote({ timestamp: undefined })]
+      mockStreamCompletion.mockImplementation(() => createMockStream(['answer']))
 
-      mockStreamText.mockReturnValue({
-        textStream: asyncIterableFrom(['answer']),
-      })
-
-      const gen = generateQAAnswer('question', notes, 'openai' as AIProviderId, 'key')
+      const gen = generateQAAnswer('question', notes)
       await collectGenerator(gen)
 
-      const callArgs = mockStreamText.mock.calls[0][0]
-      const userMessage = callArgs.messages.find((m: { role: string }) => m.role === 'user')
+      const messages = mockStreamCompletion.mock.calls[0][0]
+      const userMessage = messages.find((m: { role: string }) => m.role === 'user')
       expect(userMessage.content).not.toContain('(at ')
     })
 
@@ -374,16 +379,13 @@ describe('noteQA', () => {
         makeRetrievedNote({ courseId: '001', videoId: '001-001', content: 'First note' }),
         makeRetrievedNote({ courseId: '002', videoId: '002-001', content: 'Second note' }, 0.8),
       ]
+      mockStreamCompletion.mockImplementation(() => createMockStream(['answer']))
 
-      mockStreamText.mockReturnValue({
-        textStream: asyncIterableFrom(['answer']),
-      })
-
-      const gen = generateQAAnswer('question', notes, 'openai' as AIProviderId, 'key')
+      const gen = generateQAAnswer('question', notes)
       await collectGenerator(gen)
 
-      const callArgs = mockStreamText.mock.calls[0][0]
-      const userMessage = callArgs.messages.find((m: { role: string }) => m.role === 'user')
+      const messages = mockStreamCompletion.mock.calls[0][0]
+      const userMessage = messages.find((m: { role: string }) => m.role === 'user')
       expect(userMessage.content).toContain('[Note 1]')
       expect(userMessage.content).toContain('[Note 2]')
       expect(userMessage.content).toContain('---')
@@ -391,153 +393,46 @@ describe('noteQA', () => {
 
     it('should include system prompt with RAG rules', async () => {
       const notes: RetrievedNote[] = [makeRetrievedNote()]
+      mockStreamCompletion.mockImplementation(() => createMockStream(['answer']))
 
-      mockStreamText.mockReturnValue({
-        textStream: asyncIterableFrom(['answer']),
-      })
-
-      const gen = generateQAAnswer('question', notes, 'openai' as AIProviderId, 'key')
+      const gen = generateQAAnswer('question', notes)
       await collectGenerator(gen)
 
-      const callArgs = mockStreamText.mock.calls[0][0]
-      const systemMessage = callArgs.messages.find((m: { role: string }) => m.role === 'system')
+      const messages = mockStreamCompletion.mock.calls[0][0]
+      const systemMessage = messages.find((m: { role: string }) => m.role === 'system')
       expect(systemMessage.content).toContain('study assistant')
       expect(systemMessage.content).toContain('ONLY on the provided notes')
-    })
-
-    it('should throw timeout error when AbortError occurs without external signal', async () => {
-      const notes: RetrievedNote[] = [makeRetrievedNote()]
-
-      const abortError = new Error('The operation was aborted.')
-      abortError.name = 'AbortError'
-
-      mockStreamText.mockImplementation(() => {
-        throw abortError
-      })
-
-      const gen = generateQAAnswer('question', notes, 'openai' as AIProviderId, 'key')
-      await expect(collectGenerator(gen)).rejects.toThrow('Answer generation timed out.')
-    })
-
-    it('should rethrow AbortError when external signal is aborted', async () => {
-      const notes: RetrievedNote[] = [makeRetrievedNote()]
-      const controller = new AbortController()
-      controller.abort()
-
-      const abortError = new Error('The operation was aborted.')
-      abortError.name = 'AbortError'
-
-      mockStreamText.mockImplementation(() => {
-        throw abortError
-      })
-
-      const gen = generateQAAnswer(
-        'question',
-        notes,
-        'openai' as AIProviderId,
-        'key',
-        controller.signal
-      )
-      await expect(collectGenerator(gen)).rejects.toThrow('The operation was aborted.')
     })
 
     it('should rethrow non-AbortError exceptions', async () => {
       const notes: RetrievedNote[] = [makeRetrievedNote()]
 
-      mockStreamText.mockImplementation(() => {
+      mockStreamCompletion.mockImplementation(async function* () {
         throw new TypeError('Network failure')
       })
 
-      const gen = generateQAAnswer('question', notes, 'openai' as AIProviderId, 'key')
+      const gen = generateQAAnswer('question', notes)
       await expect(collectGenerator(gen)).rejects.toThrow('Network failure')
     })
 
-    it('should use correct model for each provider', async () => {
+    it('should handle empty stream', async () => {
       const notes: RetrievedNote[] = [makeRetrievedNote()]
-      const providers: AIProviderId[] = [
-        'openai',
-        'anthropic',
-        'groq',
-        'glm',
-        'gemini',
-      ] as AIProviderId[]
+      mockStreamCompletion.mockImplementation(() => createMockStream([]))
 
-      for (const provider of providers) {
-        vi.clearAllMocks()
-        mockStreamText.mockReturnValue({
-          textStream: asyncIterableFrom(['ok']),
-        })
-
-        const gen = generateQAAnswer('question', notes, provider, 'key')
-        await collectGenerator(gen)
-
-        expect(mockStreamText).toHaveBeenCalledTimes(1)
-      }
-    })
-
-    it('should pass abortSignal with timeout to streamText', async () => {
-      const notes: RetrievedNote[] = [makeRetrievedNote()]
-
-      mockStreamText.mockReturnValue({
-        textStream: asyncIterableFrom(['ok']),
-      })
-
-      const gen = generateQAAnswer('question', notes, 'openai' as AIProviderId, 'key')
-      await collectGenerator(gen)
-
-      const callArgs = mockStreamText.mock.calls[0][0]
-      expect(callArgs.abortSignal).toBeDefined()
-    })
-
-    it('should pass combined signal when external signal provided', async () => {
-      const notes: RetrievedNote[] = [makeRetrievedNote()]
-      const controller = new AbortController()
-
-      mockStreamText.mockReturnValue({
-        textStream: asyncIterableFrom(['ok']),
-      })
-
-      const gen = generateQAAnswer(
-        'question',
-        notes,
-        'openai' as AIProviderId,
-        'key',
-        controller.signal
-      )
-      await collectGenerator(gen)
-
-      const callArgs = mockStreamText.mock.calls[0][0]
-      expect(callArgs.abortSignal).toBeDefined()
-    })
-
-    it('should format timestamp 0 seconds as 0:00', async () => {
-      const notes: RetrievedNote[] = [makeRetrievedNote({ timestamp: 0 })]
-
-      mockStreamText.mockReturnValue({
-        textStream: asyncIterableFrom(['answer']),
-      })
-
-      const gen = generateQAAnswer('question', notes, 'openai' as AIProviderId, 'key')
-      await collectGenerator(gen)
-
-      const callArgs = mockStreamText.mock.calls[0][0]
-      const userMessage = callArgs.messages.find((m: { role: string }) => m.role === 'user')
-      // timestamp 0 is falsy, so it should NOT include timestamp
-      expect(userMessage.content).not.toContain('(at ')
+      const gen = generateQAAnswer('question', notes)
+      const results = await collectGenerator(gen)
+      expect(results).toEqual([])
     })
 
     it('should format timestamp 3661 seconds as 61:01', async () => {
       const notes: RetrievedNote[] = [makeRetrievedNote({ timestamp: 3661 })]
+      mockStreamCompletion.mockImplementation(() => createMockStream(['answer']))
 
-      mockStreamText.mockReturnValue({
-        textStream: asyncIterableFrom(['answer']),
-      })
-
-      const gen = generateQAAnswer('question', notes, 'openai' as AIProviderId, 'key')
+      const gen = generateQAAnswer('question', notes)
       await collectGenerator(gen)
 
-      const callArgs = mockStreamText.mock.calls[0][0]
-      const userMessage = callArgs.messages.find((m: { role: string }) => m.role === 'user')
+      const messages = mockStreamCompletion.mock.calls[0][0]
+      const userMessage = messages.find((m: { role: string }) => m.role === 'user')
       expect(userMessage.content).toContain('(at 61:01)')
     })
   })

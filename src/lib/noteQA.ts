@@ -17,7 +17,8 @@
 
 import { db } from '@/db'
 import type { Note } from '@/data/types'
-import type { AIProviderId } from '@/lib/aiConfiguration'
+import { withModelFallback } from '@/ai/llm/factory'
+import type { LLMMessage } from '@/ai/llm/types'
 
 /**
  * Retrieved note with similarity score
@@ -25,37 +26,6 @@ import type { AIProviderId } from '@/lib/aiConfiguration'
 export interface RetrievedNote {
   note: Note
   similarity: number
-}
-
-/**
- * Dynamically import the AI provider SDK for the selected provider.
- * Only the provider the user has configured is loaded — avoids bundling
- * all 5 SDKs (OpenAI, Anthropic, Groq, Google, Zhipu) into one chunk.
- */
-async function getModel(providerId: AIProviderId, apiKey: string) {
-  switch (providerId as string) {
-    case 'anthropic': {
-      const { createAnthropic } = await import('@ai-sdk/anthropic')
-      return createAnthropic({ apiKey })('claude-3-5-haiku-20241022')
-    }
-    case 'groq': {
-      const { createGroq } = await import('@ai-sdk/groq')
-      return createGroq({ apiKey })('llama-3.3-70b-versatile')
-    }
-    case 'glm': {
-      const { createZhipu } = await import('zhipu-ai-provider')
-      return createZhipu({ apiKey })('glm-4-flash')
-    }
-    case 'gemini': {
-      const { createGoogleGenerativeAI } = await import('@ai-sdk/google')
-      return createGoogleGenerativeAI({ apiKey })('gemini-2.0-flash-exp')
-    }
-    case 'openai':
-    default: {
-      const { createOpenAI } = await import('@ai-sdk/openai')
-      return createOpenAI({ apiKey })('gpt-4o-mini')
-    }
-  }
 }
 
 /**
@@ -132,8 +102,6 @@ export async function retrieveRelevantNotes(query: string): Promise<RetrievedNot
 export async function* generateQAAnswer(
   query: string,
   retrievedNotes: RetrievedNote[],
-  provider: AIProviderId,
-  apiKey: string,
   signal?: AbortSignal
 ): AsyncGenerator<string, void, undefined> {
   if (retrievedNotes.length === 0) {
@@ -168,27 +136,14 @@ Question: ${query}
 
 Provide a concise answer citing specific notes.`
 
-  try {
-    const { streamText } = await import('ai')
-    const model = await getModel(provider, apiKey)
-    const result = streamText({
-      model,
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt,
-        },
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
-      abortSignal: signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(30000)])
-        : AbortSignal.timeout(30000),
-    })
+  const messages: LLMMessage[] = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
+  ]
 
-    for await (const chunk of result.textStream) {
+  try {
+    // Use feature-aware LLM client with automatic model fallback (AC8)
+    for await (const chunk of withModelFallback('noteQA', messages)) {
       yield chunk
     }
   } catch (error) {

@@ -15,7 +15,7 @@ describe('AnthropicClient', () => {
   const mockApiKey = 'sk-ant-test-key-12345'
 
   beforeEach(() => {
-    client = new AnthropicClient(mockApiKey)
+    client = new AnthropicClient(mockApiKey, 'claude-haiku-4-5')
     vi.clearAllMocks()
   })
 

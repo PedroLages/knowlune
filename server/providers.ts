@@ -10,17 +10,11 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { createGroq } from '@ai-sdk/groq'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 
-/** Provider IDs matching the frontend AIProviderId type */
-export type ProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini' | 'ollama'
+import { PROVIDER_DEFAULTS } from '../src/lib/modelDefaults.js'
+import type { AIProviderId } from '../src/lib/modelDefaults.js'
 
-/** Default models per provider */
-const DEFAULT_MODELS: Record<string, string> = {
-  anthropic: 'claude-haiku-4-5',
-  openai: 'gpt-4-turbo',
-  groq: 'llama-3.3-70b-versatile',
-  gemini: 'gemini-2.0-flash',
-  ollama: 'llama3.2',
-}
+/** Provider IDs matching the frontend AIProviderId type */
+export type ProviderId = AIProviderId
 
 /**
  * Create a Vercel AI SDK model instance for the given provider
@@ -33,16 +27,16 @@ const DEFAULT_MODELS: Record<string, string> = {
 export function getProviderModel(providerId: string, apiKey: string, model?: string) {
   switch (providerId) {
     case 'anthropic':
-      return createAnthropic({ apiKey })(model || DEFAULT_MODELS.anthropic)
+      return createAnthropic({ apiKey })(model || PROVIDER_DEFAULTS.anthropic)
 
     case 'openai':
-      return createOpenAI({ apiKey })(model || DEFAULT_MODELS.openai)
+      return createOpenAI({ apiKey })(model || PROVIDER_DEFAULTS.openai)
 
     case 'groq':
-      return createGroq({ apiKey })(model || DEFAULT_MODELS.groq)
+      return createGroq({ apiKey })(model || PROVIDER_DEFAULTS.groq)
 
     case 'gemini':
-      return createGoogleGenerativeAI({ apiKey })(model || DEFAULT_MODELS.gemini)
+      return createGoogleGenerativeAI({ apiKey })(model || PROVIDER_DEFAULTS.gemini)
 
     case 'ollama':
       // Ollama exposes an OpenAI-compatible API at /v1/
@@ -66,5 +60,5 @@ export function getOllamaProviderModel(ollamaServerUrl: string, model?: string) 
   return createOpenAI({
     baseURL: `${ollamaServerUrl.replace(/\/+$/, '')}/v1`,
     apiKey: 'ollama', // Ollama ignores this but SDK requires it
-  })(model || DEFAULT_MODELS.ollama)
+  })(model || PROVIDER_DEFAULTS.ollama)
 }
