@@ -10,24 +10,18 @@
  * - CourseBreadcrumb: breadcrumb trail (Courses > Course > Lesson)
  * - LessonNavigation: prev/next buttons with lesson title preview
  * - AutoAdvanceCountdown: auto-advance to next lesson after video ends
- * - LocalVideoContent: local video playback with permission handling
- * - YouTubeVideoContent: YouTube iframe player with transcript
- * - PdfContent: PDF viewing with permission handling (E89-S06)
+ * - LessonContentRenderer: PDF, YouTube, or local video content (extracted)
  * - PlayerSidePanel: tabbed panel with Notes, Transcript, AI Summary, Bookmarks (E89-S07)
+ *
+ * Hooks:
+ * - useLessonPlayerState: all local state, metadata resolution, reset-on-change
+ * - useCompletionFlow: celebration modals, auto-advance, manual status change
+ * - useMiniPlayerState: mini-player visibility/playback callbacks
  *
  * @see E89-S05, E89-S06, E89-S07, E89-S08
  */
 
-import {
-  lazy,
-  Suspense,
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-  type RefObject,
-} from 'react'
+import { useEffect, useMemo, useRef, type RefObject } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -35,16 +29,17 @@ import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { useSessionTracking } from '@/app/hooks/useSessionTracking'
 import { useLessonNavigation } from '@/app/hooks/useLessonNavigation'
 import { useIsDesktop, useIsTablet } from '@/app/hooks/useMediaQuery'
+import { useLessonPlayerState } from '@/app/hooks/useLessonPlayerState'
+import { useCompletionFlow } from '@/app/hooks/useCompletionFlow'
+import { useMiniPlayerState } from '@/app/hooks/useMiniPlayerState'
 import { PlayerHeader } from '@/app/components/course/PlayerHeader'
 import { CourseBreadcrumb } from '@/app/components/course/CourseBreadcrumb'
 import { LessonNavigation } from '@/app/components/course/LessonNavigation'
 import { LessonHeaderCard } from '@/app/components/course/LessonHeaderCard'
 import { AutoAdvanceCountdown } from '@/app/components/figma/AutoAdvanceCountdown'
 import { CompletionModal } from '@/app/components/celebrations/CompletionModal'
-import type { CelebrationType } from '@/app/components/celebrations/CompletionModal'
-import { LocalVideoContent } from '@/app/components/course/LocalVideoContent'
+import { LessonContentRenderer } from '@/app/components/course/LessonContentRenderer'
 import type { VideoPlayerHandle } from '@/app/components/figma/VideoPlayer'
-import { YouTubeVideoContent } from '@/app/components/course/YouTubeVideoContent'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/app/components/ui/resizable'
@@ -52,20 +47,12 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/app/components/
 import { Button } from '@/app/components/ui/button'
 import type { PanelImperativeHandle } from 'react-resizable-panels'
 import { PanelRight, ClipboardCheck, Video, PencilLine } from 'lucide-react'
-import { toast } from 'sonner'
 import { useHasQuiz } from '@/hooks/useHasQuiz'
 import { PlayerSidePanel, NotesTab } from '@/app/components/course/PlayerSidePanel'
-import type { LessonItem } from '@/lib/courseAdapter'
 import { useTheaterMode } from '@/app/hooks/useTheaterMode'
 import { MiniPlayer } from '@/app/components/course/MiniPlayer'
-import type { CompletionStatus } from '@/data/types'
 import { NextCourseSuggestion } from '@/app/components/NextCourseSuggestion'
 import { suggestNextCourse } from '@/lib/courseSuggestion'
-
-// Lazy-load PdfContent to avoid pdfjs-dist bundle impact for video-only users
-const PdfContent = lazy(() =>
-  import('@/app/components/course/PdfContent').then(m => ({ default: m.PdfContent }))
-)
 
 export function UnifiedLessonPlayer() {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>()
@@ -96,83 +83,49 @@ export function UnifiedLessonPlayer() {
   const loadCourseProgress = useContentProgressStore(s => s.loadCourseProgress)
 
   // Ensure course progress is loaded so getItemStatus has data for checkCourseCompletion.
-  // PlayerHeader also loads it, but we don't rely on render order for correctness.
   useEffect(() => {
     if (courseId) {
       loadCourseProgress(courseId)
     }
   }, [courseId, loadCourseProgress])
 
-  // Auto-advance state: shown when video ends and a next lesson exists
-  const [showAutoAdvance, setShowAutoAdvance] = useState(false)
+  // All local state: auto-advance, celebration, video time, mini-player, metadata, etc.
+  const state = useLessonPlayerState(adapter, lessonId)
 
-  // Celebration modal state
-  const [celebrationOpen, setCelebrationOpen] = useState(false)
-  const [celebrationType, setCelebrationType] = useState<CelebrationType>('lesson')
-  const [celebrationTitle, setCelebrationTitle] = useState('')
-
-  // Lifted video state: currentTime for transcript highlighting, seekTo for click-to-seek
-  const [currentTime, setCurrentTime] = useState(0)
-  const [seekToTime, setSeekToTime] = useState<number | undefined>(undefined)
-
-  // Mini-player state (E91-S04): tracks video visibility, play state, and dismiss
-  const [isVideoVisible, setIsVideoVisible] = useState(true)
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false)
-  const [isMiniPlayerDismissed, setIsMiniPlayerDismissed] = useState(false)
-  const [localVideoBlobUrl, setLocalVideoBlobUrl] = useState<string | null>(null)
-
-  // Next course suggestion state (E91-S08)
-  const [showCourseSuggestion, setShowCourseSuggestion] = useState(false)
-
-  // Tablet toggle state: switch between video and notes (E91-S09)
-  const [tabletNotesOpen, setTabletNotesOpen] = useState(false)
-
-  // Focus tab state: set to "notes" when user presses N in VideoPlayer
-  const [focusTab, setFocusTab] = useState<string | null>(null)
-  const focusTabCounter = useRef(0)
-
-  const handleTimeUpdate = useCallback((time: number) => {
-    setCurrentTime(time)
-  }, [])
-
-  const handleTranscriptSeek = useCallback((time: number) => {
-    setSeekToTime(time)
-  }, [])
-
-  const handleSeekComplete = useCallback(() => {
-    setSeekToTime(undefined)
-  }, [])
+  // Completion flow: celebrations, auto-advance, manual status toggle
+  const completion = useCompletionFlow({
+    courseId,
+    lessonId,
+    courseName: course?.name,
+    lessonTitle: state.lessonTitle,
+    lessons,
+    nextLesson,
+    navigate,
+    getItemStatus,
+    setItemStatus,
+    celebrationType: state.celebrationType,
+    setCelebrationOpen: state.setCelebrationOpen,
+    setCelebrationType: state.setCelebrationType,
+    setCelebrationTitle: state.setCelebrationTitle,
+    setShowAutoAdvance: state.setShowAutoAdvance,
+    setShowCourseSuggestion: state.setShowCourseSuggestion,
+  })
 
   // Mini-player callbacks
-  const handleVideoVisibilityChange = useCallback((visible: boolean) => {
-    setIsVideoVisible(visible)
-  }, [])
+  const miniPlayer = useMiniPlayerState({
+    videoPlayerRef,
+    setIsVideoVisible: state.setIsVideoVisible,
+    setIsVideoPlaying: state.setIsVideoPlaying,
+    setIsMiniPlayerDismissed: state.setIsMiniPlayerDismissed,
+    setLocalVideoBlobUrl: state.setLocalVideoBlobUrl,
+  })
 
-  const handlePlayStateChange = useCallback((playing: boolean) => {
-    setIsVideoPlaying(playing)
-  }, [])
-
-  const handleMiniPlayerClose = useCallback(() => {
-    setIsMiniPlayerDismissed(true)
-  }, [])
-
-  const handleMiniPlayerPlayPause = useCallback(() => {
-    const videoEl = videoPlayerRef.current?.getVideoElement()
-    if (!videoEl) return
-    if (videoEl.paused) {
-      videoEl.play().catch(() => {
-        // silent-catch-ok: autoplay may be blocked
-      })
-    } else {
-      videoEl.pause()
-    }
-  }, [])
-
-  const handleFocusNotes = useCallback(() => {
-    // Increment counter to re-trigger the effect even if already on "notes" tab
-    focusTabCounter.current += 1
-    setFocusTab(`notes`)
-  }, [])
+  // Session tracking: start on mount, pause/resume on idle, end on leave.
+  useSessionTracking(
+    courseId,
+    lessonId,
+    state.lessonTypeResolved ? (state.isPdf ? 'pdf' : 'video') : null
+  )
 
   // Theater mode: imperatively collapse/expand the side panel
   useEffect(() => {
@@ -201,160 +154,14 @@ export function UnifiedLessonPlayer() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [toggleTheater])
 
-  // Reset lifted video state when lesson changes
-  useEffect(() => {
-    setShowAutoAdvance(false)
-    setCelebrationOpen(false)
-    setCurrentTime(0)
-    setSeekToTime(undefined)
-    setFocusTab(null)
-    // Reset mini-player state on lesson change (E91-S04)
-    setIsMiniPlayerDismissed(false)
-    setIsVideoVisible(true)
-    setIsVideoPlaying(false)
-    setLocalVideoBlobUrl(null)
-    setShowCourseSuggestion(false)
-    setTabletNotesOpen(false)
-  }, [lessonId])
-
-  // Resolve lesson metadata (title + type) from adapter's lesson list
-  const [lessonTitle, setLessonTitle] = useState('Lesson')
-  const [lessonType, setLessonType] = useState<LessonItem['type'] | null>(null)
-  const [lessonDescription, setLessonDescription] = useState<string | undefined>(undefined)
-  const [lessonTags, setLessonTags] = useState<string[] | undefined>(undefined)
-  useEffect(() => {
-    if (!adapter || !lessonId) return
-    let ignore = false
-    adapter
-      .getLessons()
-      .then(lessons => {
-        if (ignore) return
-        const match = lessons.find(l => l.id === lessonId)
-        setLessonTitle(match?.title ?? 'Lesson')
-        setLessonType(match?.type ?? null)
-        // Extract description from sourceMetadata (YouTube videos have it)
-        const meta = match?.sourceMetadata
-        setLessonDescription(typeof meta?.description === 'string' ? meta.description : undefined)
-        // Extract tags if present in sourceMetadata
-        setLessonTags(Array.isArray(meta?.tags) ? (meta.tags as string[]) : undefined)
-      })
-      .catch(err => {
-        // silent-catch-ok — leave defaults (title='Lesson', type=null); UI degrades gracefully
-        console.error('Failed to load lesson metadata:', err)
-      })
-    return () => {
-      ignore = true
-    }
-  }, [adapter, lessonId])
-
-  const isPdf = lessonType === 'pdf'
-  const lessonTypeResolved = lessonType !== null
-
-  // Session tracking: start on mount, pause/resume on idle, end on leave.
-  // Pass resolved type (or null) — hook defers session start until type is known.
-  useSessionTracking(courseId, lessonId, lessonTypeResolved ? (isPdf ? 'pdf' : 'video') : null)
-
-  /**
-   * Compute whether all lessons in the course are completed (including the current one).
-   * Used to determine if we show a course-level vs lesson-level celebration.
-   */
-  const checkCourseCompletion = useCallback(
-    (lessonsArr: LessonItem[]): boolean => {
-      if (!courseId || lessonsArr.length === 0) return false
-      // After marking the current lesson complete, check if all others are also complete
-      return lessonsArr.every(l => {
-        if (l.id === lessonId) return true // just marked complete
-        return getItemStatus(courseId, l.id) === 'completed'
-      })
-    },
-    [courseId, lessonId, getItemStatus]
-  )
-
-  /**
-   * Show the appropriate celebration modal.
-   * Checks if all course lessons are now complete for course-level celebration.
-   */
-  const showCelebration = useCallback(
-    (title: string) => {
-      const isCourseComplete = lessons.length > 0 && checkCourseCompletion(lessons)
-      setCelebrationType(isCourseComplete ? 'course' : 'lesson')
-      setCelebrationTitle(isCourseComplete ? (course?.name ?? 'Course') : title)
-      setCelebrationOpen(true)
-    },
-    [lessons, checkCourseCompletion, course?.name]
-  )
-
-  // Handle video ended — mark complete, show celebration, trigger auto-advance
-  const handleVideoEnded = useCallback(async () => {
-    if (!courseId || !lessonId) return
-
-    // Mark the lesson as completed
-    try {
-      await setItemStatus(courseId, lessonId, 'completed', [])
-    } catch {
-      toast.error('Failed to mark lesson as complete')
-      return // Don't show celebration or auto-advance if persistence failed
-    }
-
-    // Show celebration modal
-    showCelebration(lessonTitle)
-
-    // Trigger auto-advance countdown if next lesson exists
-    if (nextLesson) {
-      setShowAutoAdvance(true)
-    }
-  }, [courseId, lessonId, setItemStatus, showCelebration, lessonTitle, nextLesson])
-
-  // Handle YouTube auto-complete (>90% watched) — status already persisted by YouTubeVideoContent,
-  // so we only need to show celebration and trigger auto-advance countdown.
-  const handleYouTubeAutoComplete = useCallback(() => {
-    showCelebration(lessonTitle)
-    if (nextLesson) {
-      setShowAutoAdvance(true)
-    }
-  }, [showCelebration, lessonTitle, nextLesson])
-
-  const handleAutoAdvance = useCallback(() => {
-    if (nextLesson && courseId) {
-      navigate(`/courses/${courseId}/lessons/${nextLesson.id}`)
-    }
-  }, [nextLesson, courseId, navigate])
-
-  const handleCancelAutoAdvance = useCallback(() => {
-    setShowAutoAdvance(false)
-  }, [])
-
-  // Handle manual completion toggle from PlayerHeader (AC7)
-  const handleManualStatusChange = useCallback(
-    (status: CompletionStatus) => {
-      if (status === 'completed') {
-        showCelebration(lessonTitle)
-        // Trigger auto-advance countdown if next lesson exists (same as video end)
-        if (nextLesson) {
-          setShowAutoAdvance(true)
-        }
-      }
-    },
-    [showCelebration, lessonTitle, nextLesson]
-  )
-
-  // Handle "Continue Learning" from celebration modal
-  const handleCelebrationContinue = useCallback(() => {
-    setCelebrationOpen(false)
-    if (nextLesson && courseId) {
-      navigate(`/courses/${courseId}/lessons/${nextLesson.id}`)
-    }
-  }, [nextLesson, courseId, navigate])
-
-  // Next course suggestion (E91-S08) — computed via useMemo instead of IIFE in JSX
+  // Next course suggestion (E91-S08) — computed via useMemo
   const courseSuggestion = useMemo(() => {
-    if (!showCourseSuggestion || !courseId) return null
+    if (!state.showCourseSuggestion || !courseId) return null
     const suggestion = suggestNextCourse(courseId, importedCourses)
     if (!suggestion) return null
-    // Thumbnail: prefer YouTube thumbnail, fall back to null (BookOpen icon shown)
     const thumbnailUrl = suggestion.course.youtubeThumbnailUrl ?? null
     return { ...suggestion, thumbnailUrl }
-  }, [showCourseSuggestion, courseId, importedCourses])
+  }, [state.showCourseSuggestion, courseId, importedCourses])
 
   // Loading state
   if (loading) {
@@ -400,58 +207,13 @@ export function UnifiedLessonPlayer() {
   const isYouTube = source === 'youtube'
 
   // Derive resource type label for LessonHeaderCard (E91-S05)
-  const resourceTypes = useMemo<string[]>(() => {
-    if (!lessonTypeResolved) return []
-    if (isPdf) return ['PDF']
-    if (isYouTube) return ['YouTube']
-    return ['Video']
-  }, [lessonTypeResolved, isPdf, isYouTube])
-
-  // While lessonType is still resolving, show a skeleton instead of
-  // defaulting to video content (prevents PDF lessons from flashing video UI).
-  const mainContent = !lessonTypeResolved ? (
-    <DelayedFallback>
-      <div aria-busy="true" aria-label="Resolving lesson type">
-        <Skeleton className="w-full aspect-video rounded-xl" />
-      </div>
-    </DelayedFallback>
-  ) : isPdf ? (
-    <Suspense
-      fallback={
-        <DelayedFallback>
-          <div aria-busy="true" aria-label="Loading PDF viewer">
-            <Skeleton className="w-full aspect-[3/4] rounded-xl" />
-          </div>
-        </DelayedFallback>
-      }
-    >
-      <PdfContent courseId={courseId!} lessonId={lessonId!} />
-    </Suspense>
-  ) : isYouTube ? (
-    <YouTubeVideoContent
-      courseId={courseId!}
-      lessonId={lessonId!}
-      onEnded={handleVideoEnded}
-      onAutoComplete={handleYouTubeAutoComplete}
-      onTimeUpdate={handleTimeUpdate}
-      seekToTime={seekToTime}
-      onSeekComplete={handleSeekComplete}
-    />
-  ) : (
-    <LocalVideoContent
-      ref={videoPlayerRef}
-      courseId={courseId!}
-      lessonId={lessonId!}
-      onEnded={handleVideoEnded}
-      onTimeUpdate={handleTimeUpdate}
-      seekToTime={seekToTime}
-      onSeekComplete={handleSeekComplete}
-      onFocusNotes={handleFocusNotes}
-      onVisibilityChange={handleVideoVisibilityChange}
-      onPlayStateChange={handlePlayStateChange}
-      onBlobUrlReady={setLocalVideoBlobUrl}
-    />
-  )
+  const resourceTypes: string[] = !state.lessonTypeResolved
+    ? []
+    : state.isPdf
+      ? ['PDF']
+      : isYouTube
+        ? ['YouTube']
+        : ['Video']
 
   // "Take Quiz" button — visible when quiz exists and adapter supports it
   const showQuizButton = capabilities.supportsQuiz && hasQuiz
@@ -461,7 +223,7 @@ export function UnifiedLessonPlayer() {
         variant="brand-outline"
         className="rounded-xl min-h-[44px]"
         onClick={() => navigate(`/courses/${courseId}/lessons/${lessonId}/quiz`)}
-        aria-label={`Take quiz for ${lessonTitle}`}
+        aria-label={`Take quiz for ${state.lessonTitle}`}
         data-testid="take-quiz-button"
       >
         <ClipboardCheck className="size-4 mr-2" aria-hidden="true" />
@@ -476,10 +238,31 @@ export function UnifiedLessonPlayer() {
       courseId={courseId!}
       lessonId={lessonId!}
       adapter={adapter}
-      currentTime={currentTime}
-      onSeek={handleTranscriptSeek}
-      focusTab={focusTab}
-      isPdf={isPdf}
+      currentTime={state.currentTime}
+      onSeek={state.handleTranscriptSeek}
+      focusTab={state.focusTab}
+      isPdf={state.isPdf}
+    />
+  )
+
+  // Main content: PDF, YouTube, or local video via extracted component
+  const mainContent = (
+    <LessonContentRenderer
+      ref={videoPlayerRef}
+      courseId={courseId!}
+      lessonId={lessonId!}
+      lessonTypeResolved={state.lessonTypeResolved}
+      isPdf={state.isPdf}
+      isYouTube={isYouTube}
+      onEnded={completion.handleVideoEnded}
+      onAutoComplete={completion.handleYouTubeAutoComplete}
+      onTimeUpdate={state.handleTimeUpdate}
+      seekToTime={state.seekToTime}
+      onSeekComplete={state.handleSeekComplete}
+      onFocusNotes={state.handleFocusNotes}
+      onVisibilityChange={miniPlayer.handleVideoVisibilityChange}
+      onPlayStateChange={miniPlayer.handlePlayStateChange}
+      onBlobUrlReady={state.setLocalVideoBlobUrl}
     />
   )
 
@@ -494,17 +277,17 @@ export function UnifiedLessonPlayer() {
         <CourseBreadcrumb
           courseId={courseId!}
           courseName={course?.name ?? 'Course'}
-          lessonTitle={lessonTitle}
+          lessonTitle={state.lessonTitle}
         />
       </div>
 
       <PlayerHeader
         courseId={courseId!}
         lessonId={lessonId!}
-        lessonTitle={lessonTitle}
+        lessonTitle={state.lessonTitle}
         courseName={course?.name}
-        showCompletionToggle={isPdf || isYouTube || capabilities.hasVideo}
-        onStatusChange={handleManualStatusChange}
+        showCompletionToggle={state.isPdf || isYouTube || capabilities.hasVideo}
+        onStatusChange={completion.handleManualStatusChange}
         isTheater={isTheater}
         onToggleTheater={toggleTheater}
       />
@@ -519,23 +302,23 @@ export function UnifiedLessonPlayer() {
             <ResizablePanel defaultSize={isTheater ? 100 : 75} minSize={50}>
               <div className="h-full overflow-auto p-4">
                 {mainContent}
-                {lessonTypeResolved && (
+                {state.lessonTypeResolved && (
                   <LessonHeaderCard
-                    title={lessonTitle}
-                    description={lessonDescription}
+                    title={state.lessonTitle}
+                    description={state.lessonDescription}
                     resourceTypes={resourceTypes}
-                    tags={lessonTags}
+                    tags={state.lessonTags}
                   />
                 )}
                 {quizButton}
                 {/* Auto-advance countdown after video ends */}
-                {showAutoAdvance && nextLesson && (
+                {state.showAutoAdvance && nextLesson && (
                   <div className="mt-4">
                     <AutoAdvanceCountdown
                       seconds={5}
                       nextLessonTitle={nextLesson.title}
-                      onAdvance={handleAutoAdvance}
-                      onCancel={handleCancelAutoAdvance}
+                      onAdvance={completion.handleAutoAdvance}
+                      onCancel={completion.handleCancelAutoAdvance}
                     />
                   </div>
                 )}
@@ -566,26 +349,26 @@ export function UnifiedLessonPlayer() {
                 data-testid="tablet-toggle-bar"
               >
                 <Button
-                  variant={!tabletNotesOpen ? 'default' : 'ghost'}
+                  variant={!state.tabletNotesOpen ? 'default' : 'ghost'}
                   size="sm"
                   className="flex-1 gap-1.5"
                   role="tab"
-                  aria-selected={!tabletNotesOpen}
+                  aria-selected={!state.tabletNotesOpen}
                   aria-controls="tablet-content-panel"
-                  onClick={() => setTabletNotesOpen(false)}
+                  onClick={() => state.setTabletNotesOpen(false)}
                   data-testid="tablet-toggle-video"
                 >
                   <Video className="size-4" aria-hidden="true" />
                   Video
                 </Button>
                 <Button
-                  variant={tabletNotesOpen ? 'default' : 'ghost'}
+                  variant={state.tabletNotesOpen ? 'default' : 'ghost'}
                   size="sm"
                   className="flex-1 gap-1.5"
                   role="tab"
-                  aria-selected={tabletNotesOpen}
+                  aria-selected={state.tabletNotesOpen}
                   aria-controls="tablet-content-panel"
-                  onClick={() => setTabletNotesOpen(true)}
+                  onClick={() => state.setTabletNotesOpen(true)}
                   data-testid="tablet-toggle-notes"
                 >
                   <PencilLine className="size-4" aria-hidden="true" />
@@ -595,28 +378,28 @@ export function UnifiedLessonPlayer() {
 
               {/* Tablet: show either video or notes based on toggle */}
               <div id="tablet-content-panel" {...(isTablet ? { role: 'tabpanel' } : {})}>
-                {isTablet && tabletNotesOpen ? (
+                {isTablet && state.tabletNotesOpen ? (
                   <NotesTab courseId={courseId!} lessonId={lessonId!} />
                 ) : (
                   <>
                     {mainContent}
-                    {lessonTypeResolved && (
+                    {state.lessonTypeResolved && (
                       <LessonHeaderCard
-                        title={lessonTitle}
-                        description={lessonDescription}
+                        title={state.lessonTitle}
+                        description={state.lessonDescription}
                         resourceTypes={resourceTypes}
-                        tags={lessonTags}
+                        tags={state.lessonTags}
                       />
                     )}
                     {quizButton}
                     {/* Auto-advance countdown after video ends */}
-                    {showAutoAdvance && nextLesson && (
+                    {state.showAutoAdvance && nextLesson && (
                       <div className="mt-4">
                         <AutoAdvanceCountdown
                           seconds={5}
                           nextLessonTitle={nextLesson.title}
-                          onAdvance={handleAutoAdvance}
-                          onCancel={handleCancelAutoAdvance}
+                          onAdvance={completion.handleAutoAdvance}
+                          onCancel={completion.handleCancelAutoAdvance}
                         />
                       </div>
                     )}
@@ -660,14 +443,14 @@ export function UnifiedLessonPlayer() {
       )}
 
       {/* Mini-player for local video lessons (E91-S04) */}
-      {!isYouTube && !isPdf && localVideoBlobUrl && (
+      {!isYouTube && !state.isPdf && state.localVideoBlobUrl && (
         <MiniPlayer
-          videoSrc={localVideoBlobUrl}
-          currentTime={currentTime}
-          isMainPlaying={isVideoPlaying}
-          isVisible={!isVideoVisible && !isMiniPlayerDismissed}
-          onClose={handleMiniPlayerClose}
-          onPlayPause={handleMiniPlayerPlayPause}
+          videoSrc={state.localVideoBlobUrl}
+          currentTime={state.currentTime}
+          isMainPlaying={state.isVideoPlaying}
+          isVisible={!state.isVideoVisible && !state.isMiniPlayerDismissed}
+          onClose={miniPlayer.handleMiniPlayerClose}
+          onPlayPause={miniPlayer.handleMiniPlayerPlayPause}
         />
       )}
 
@@ -678,25 +461,19 @@ export function UnifiedLessonPlayer() {
             suggestedCourse={courseSuggestion.course}
             sharedTags={courseSuggestion.sharedTags}
             thumbnailUrl={courseSuggestion.thumbnailUrl}
-            onDismiss={() => setShowCourseSuggestion(false)}
+            onDismiss={() => state.setShowCourseSuggestion(false)}
           />
         </div>
       )}
 
       {/* Completion celebration modal (lesson or course level) */}
       <CompletionModal
-        open={celebrationOpen}
-        onOpenChange={open => {
-          setCelebrationOpen(open)
-          // When course-level celebration closes, show next course suggestion (AC1)
-          if (!open && celebrationType === 'course') {
-            setShowCourseSuggestion(true)
-          }
-        }}
-        type={celebrationType}
-        title={celebrationTitle}
+        open={state.celebrationOpen}
+        onOpenChange={completion.handleCelebrationOpenChange}
+        type={state.celebrationType}
+        title={state.celebrationTitle}
         stats={
-          celebrationType === 'course'
+          state.celebrationType === 'course'
             ? {
                 lessonsCompleted: totalLessons,
                 totalLessons,
@@ -704,7 +481,7 @@ export function UnifiedLessonPlayer() {
               }
             : undefined
         }
-        onContinue={nextLesson ? handleCelebrationContinue : undefined}
+        onContinue={nextLesson ? completion.handleCelebrationContinue : undefined}
       />
     </div>
   )
