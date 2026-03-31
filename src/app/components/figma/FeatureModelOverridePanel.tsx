@@ -74,9 +74,12 @@ export function FeatureModelOverridePanel({
     }
   }, [currentOverride])
 
-  // Fetch configured providers
+  // Fetch configured providers (refresh when keys change)
   useEffect(() => {
-    setConfiguredProviders(getConfiguredProviderIds())
+    const refresh = () => setConfiguredProviders(getConfiguredProviderIds())
+    refresh()
+    window.addEventListener('ai-configuration-updated', refresh)
+    return () => window.removeEventListener('ai-configuration-updated', refresh)
   }, [])
 
   // Fetch API key for selected provider
@@ -110,14 +113,11 @@ export function FeatureModelOverridePanel({
     [feature, onConfigChanged]
   )
 
-  const handleProviderChange = useCallback(
-    async (provider: AIProviderId) => {
-      setSelectedProvider(provider)
-      setSelectedModel(undefined) // Reset model when provider changes
-      // Don't save yet — user needs to pick a model
-    },
-    []
-  )
+  const handleProviderChange = async (provider: AIProviderId) => {
+    setSelectedProvider(provider)
+    setSelectedModel(undefined) // Reset model when provider changes
+    // Don't save yet — user needs to pick a model
+  }
 
   const handleModelSelect = useCallback(
     async (modelId: string) => {
@@ -159,7 +159,7 @@ export function FeatureModelOverridePanel({
   return (
     <div className="ml-0 mt-1" data-testid={`feature-override-${feature}`}>
       {/* AC1: Override model toggle */}
-      <div className="flex items-center gap-2 min-h-[36px]">
+      <div className="flex items-center gap-2 min-h-[44px]">
         <Switch
           id={`override-toggle-${feature}`}
           checked={isOverrideEnabled}
