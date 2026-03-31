@@ -13,13 +13,13 @@
  * - AC7: aria-label on search input
  */
 import { test, expect, type Page } from '@playwright/test'
-import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
+import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
 import {
   seedImportedCourses,
   seedImportedVideos,
-} from '../support/helpers/seed-helpers'
-import { navigateAndWait } from '../support/helpers/navigation'
-import { TIMEOUTS } from '../utils/constants'
+} from '../../support/helpers/seed-helpers'
+import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
 
 // ---------------------------------------------------------------------------
 // Test data
