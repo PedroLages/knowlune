@@ -17,7 +17,7 @@ vi.mock('@/lib/crypto', () => ({
     iv: `iv-for-${data}`,
     encryptedData: `enc-${data}`,
   })),
-  decryptData: vi.fn(async (iv: string, encryptedData: string) => {
+  decryptData: vi.fn(async (_iv: string, encryptedData: string) => {
     // Reverse the mock encryption
     if (encryptedData.startsWith('enc-')) {
       return encryptedData.replace('enc-', '')
