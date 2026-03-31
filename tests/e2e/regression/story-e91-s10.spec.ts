@@ -4,10 +4,10 @@
  * Tests the /courses/:courseId/overview route with hero section,
  * stats row, curriculum accordion, CTA card, and responsive layout.
  */
-import { test, expect } from '../support/fixtures'
-import { FIXED_DATE } from '../utils/test-time'
-import { seedImportedCourses, seedImportedVideos, seedImportedPdfs } from '../support/helpers/indexeddb-seed'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { FIXED_DATE } from '../../utils/test-time'
+import { seedImportedCourses, seedImportedVideos, seedImportedPdfs } from '../../support/helpers/indexeddb-seed'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 const COURSE_ID = 'e91-s10-test-course'
 const VIDEO_1_ID = 'e91-s10-video-1'
