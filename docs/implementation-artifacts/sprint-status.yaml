@@ -1089,7 +1089,7 @@ development_status:
   90-2-refactor-llm-client-factory-with-feature-aware-model-resolution: done
   90-3-multi-provider-byok-key-storage: done
   90-4-model-discovery-for-cloud-providers: done
-  90-5-build-global-model-picker-ui-in-settings: backlog
+  90-5-build-global-model-picker-ui-in-settings: done
   90-6-build-per-feature-model-override-ui: backlog
   90-7-add-temperature-and-max-token-sliders-per-feature: backlog
   90-8-wire-all-ai-features-to-use-new-config: backlog

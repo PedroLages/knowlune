@@ -49,10 +49,12 @@ import {
   WifiOff,
 } from 'lucide-react'
 import { OllamaModelPicker } from './OllamaModelPicker'
+import { ProviderModelPicker } from './ProviderModelPicker'
 import {
   getAIConfiguration,
   saveAIConfiguration,
   testAIConnection,
+  getDecryptedApiKeyForProvider,
   AI_PROVIDERS,
   type AIConfigurationSettings as AIConfigSettings,
   type AIProviderId,
@@ -107,6 +109,8 @@ export function AIConfigurationSettings() {
   const successTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const testResultTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
+  const [decryptedApiKey, setDecryptedApiKey] = useState<string | null>(null)
+
   const isOllama = settings.provider === 'ollama'
 
   // Cross-tab synchronization
@@ -143,6 +147,33 @@ export function AIConfigurationSettings() {
       }
     }
   }, [])
+
+  // Decrypt API key for model discovery when connected (non-Ollama providers)
+  useEffect(() => {
+    if (!isOllama && settings.connectionStatus === 'connected') {
+      getDecryptedApiKeyForProvider(settings.provider)
+        .then(key => setDecryptedApiKey(key))
+        // silent-catch-ok: decryption failure is non-critical, picker simply won't render
+        .catch(() => setDecryptedApiKey(null))
+    } else {
+      setDecryptedApiKey(null)
+    }
+  }, [isOllama, settings.connectionStatus, settings.provider])
+
+  /**
+   * Handles global model override selection (AC8).
+   * Persists to `globalModelOverride[provider]` in runtime config.
+   */
+  async function handleGlobalModelSelect(modelId: string) {
+    const current = getAIConfiguration()
+    await saveAIConfiguration({
+      globalModelOverride: {
+        ...current.globalModelOverride,
+        [settings.provider]: modelId,
+      },
+    })
+    setSettings(getAIConfiguration())
+  }
 
   /**
    * Handles provider selection change
@@ -706,6 +737,28 @@ export function AIConfigurationSettings() {
         >
           {isValidating ? 'Testing...' : showSuccess ? 'Saved!' : 'Save & Test Connection'}
         </Button>
+
+        {/* Global Model Picker for non-Ollama providers (AC8) */}
+        {!isOllama && isConnected && decryptedApiKey && (
+          <div
+            className="space-y-1 pt-2 animate-in fade-in-0 slide-in-from-top-1 duration-200"
+            data-testid="global-model-picker-section"
+          >
+            <ProviderModelPicker
+              provider={settings.provider}
+              apiKey={decryptedApiKey}
+              selectedModel={settings.globalModelOverride?.[settings.provider]}
+              onModelSelect={modelId => {
+                handleGlobalModelSelect(modelId).catch(err => {
+                  console.error('Failed to save global model override:', err)
+                  toast.error('Failed to save model selection')
+                })
+              }}
+              label="Default Model"
+              testIdPrefix="global-model-picker"
+            />
+          </div>
+        )}
 
         {/* Per-Feature Consent Toggles */}
         {isConnected && (
