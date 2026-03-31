@@ -88,3 +88,8 @@ None — can be implemented independently. Benefits from E91-S05 (Chapter Marker
 - Load a `.srt` or `.vtt` file via the caption file picker, enable captions, then test customization
 - Verify `::cue` styling works cross-browser (may need `-webkit-media-text-track-display` fallback)
 - Test with prefers-reduced-motion: ensure opacity slider doesn't trigger animations
+
+## Lessons Learned
+
+- **`::cue` CSS variable inheritance is browser-dependent.** Chrome/Edge inherit CSS custom properties from ancestor elements into `video::cue`, but Safari and Firefox may not due to pseudo-element scoping. Always provide fallback values in `var()` expressions (e.g., `var(--caption-font-size, 18px)`) so captions degrade gracefully to readable defaults. Documented in `src/styles/theme.css` near the `video::cue` rule.
+- **Inline styles are unavoidable for CSS custom property injection.** Setting `--caption-font-size` and `--caption-bg-color` on the container `div` requires an inline `style` attribute since Tailwind has no dynamic custom property utility. Suppressed with `eslint-disable-next-line`.

@@ -548,6 +548,12 @@ html.spacious {
   /**
    * Video caption styling for WCAG 2.1 AA compliance
    * Ensures 4.5:1 contrast ratio for accessibility
+   *
+   * Browser compatibility: CSS custom variables (--caption-font-size,
+   * --caption-bg-color) are inherited from the parent container in Chrome/Edge
+   * but may NOT inherit in Safari or Firefox due to ::cue pseudo-element
+   * scoping limitations. The fallback values (18px, rgba(0,0,0,0.85)) provide
+   * graceful degradation — captions remain readable with default styling.
    */
   video::cue {
     background-color: var(--caption-bg-color, rgba(0, 0, 0, 0.85));

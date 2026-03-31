@@ -890,6 +890,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         // Hide cursor when playing and controls auto-hide (YouTube-style)
         isPlaying && !showControls && 'cursor-none'
       )}
+      // eslint-disable-next-line react-best-practices/no-inline-styles
       style={
         {
           '--caption-font-size': CAPTION_FONT_SIZE_MAP[captionFontSize],
