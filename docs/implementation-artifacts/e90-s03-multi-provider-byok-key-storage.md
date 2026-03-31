@@ -1,12 +1,12 @@
 ---
 story_id: E90-S03
 story_name: "Multi-Provider BYOK Key Storage"
-status: in-progress
+status: done
 started: 2026-03-30
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-30
+reviewed: true
+review_started: 2026-03-30
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped, design-review-skipped, code-review, code-review-testing, performance-benchmark-skipped, security-review, exploratory-qa-skipped]
 burn_in_validated: false
 ---
 
