@@ -1,0 +1,317 @@
+/**
+ * Model Discovery Service for Cloud AI Providers
+ *
+ * Discovers available models from cloud providers via API calls (OpenAI, Gemini, Groq)
+ * or static curated lists (Anthropic, GLM). Results are cached in memory for 5 minutes.
+ *
+ * @see E90-S04 — Model Discovery for Cloud Providers
+ */
+
+import type { AIProviderId } from './modelDefaults'
+import { getStaticModels } from './modelDiscovery.static'
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+/** Discovered model from a provider */
+export interface DiscoveredModel {
+  /** Model identifier (e.g., "gpt-4o", "claude-haiku-4-5") */
+  id: string
+  /** Human-readable display name */
+  name: string
+  /** Provider this model belongs to */
+  provider: AIProviderId
+  /** Model family for grouping (e.g., "GPT-4o", "Claude Haiku") */
+  family?: string
+  /** Cost tier indicator */
+  costTier?: 'free' | 'low' | 'medium' | 'high'
+  /** Context window size in tokens */
+  contextWindow?: number
+  /** Model capabilities */
+  capabilities: string[]
+}
+
+// ---------------------------------------------------------------------------
+// Cache
+// ---------------------------------------------------------------------------
+
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+
+interface CacheEntry {
+  models: DiscoveredModel[]
+  timestamp: number
+}
+
+const modelCache = new Map<string, CacheEntry>()
+
+/** Build cache key from provider + apiKey hash (avoid storing raw keys) */
+function cacheKey(provider: AIProviderId, apiKey: string): string {
+  // Use first 8 chars of key as discriminator (enough to differentiate keys)
+  return `${provider}:${apiKey.slice(0, 8)}`
+}
+
+/** Check if cache entry is still valid */
+function getCached(provider: AIProviderId, apiKey: string): DiscoveredModel[] | null {
+  const entry = modelCache.get(cacheKey(provider, apiKey))
+  if (!entry) return null
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    modelCache.delete(cacheKey(provider, apiKey))
+    return null
+  }
+  return entry.models
+}
+
+/** Store models in cache */
+function setCache(provider: AIProviderId, apiKey: string, models: DiscoveredModel[]): void {
+  modelCache.set(cacheKey(provider, apiKey), {
+    models,
+    timestamp: Date.now(),
+  })
+}
+
+/** Clear the model cache (useful for testing or forced refresh) */
+export function clearModelCache(): void {
+  modelCache.clear()
+}
+
+// ---------------------------------------------------------------------------
+// Provider-Specific Discovery
+// ---------------------------------------------------------------------------
+
+/** OpenAI model ID patterns to include (chat-capable models only) */
+const OPENAI_INCLUDE_PATTERNS = [/^gpt-/, /^o1/, /^o3/, /^o4/]
+
+/** OpenAI model ID patterns to exclude (non-chat models) */
+const OPENAI_EXCLUDE_PATTERNS = [
+  /embedding/i,
+  /whisper/i,
+  /dall-e/i,
+  /tts/i,
+  /realtime/i,
+  /audio/i,
+  /search/i,
+  /instruct/i,
+  /moderation/i,
+  /babbage/i,
+  /davinci/i,
+]
+
+/** Extract family name from OpenAI model ID */
+function openaiFamily(id: string): string {
+  if (id.startsWith('gpt-4o')) return 'GPT-4o'
+  if (id.startsWith('gpt-4')) return 'GPT-4'
+  if (id.startsWith('gpt-3.5')) return 'GPT-3.5'
+  if (id.startsWith('o1')) return 'o1'
+  if (id.startsWith('o3')) return 'o3'
+  if (id.startsWith('o4')) return 'o4'
+  return 'Other'
+}
+
+/** Estimate cost tier from OpenAI model name */
+function openaiCostTier(id: string): DiscoveredModel['costTier'] {
+  if (id.includes('mini')) return 'low'
+  if (id.startsWith('gpt-3.5')) return 'low'
+  if (id.startsWith('o1-mini') || id.startsWith('o3-mini')) return 'medium'
+  if (id.startsWith('o1') || id.startsWith('o3') || id.startsWith('o4')) return 'high'
+  if (id.startsWith('gpt-4o')) return 'medium'
+  if (id.startsWith('gpt-4')) return 'high'
+  return 'medium'
+}
+
+/**
+ * Discover OpenAI models via GET /v1/models (proxied through Express server).
+ * Filters to chat-capable models only.
+ */
+async function discoverOpenAI(apiKey: string): Promise<DiscoveredModel[]> {
+  const response = await fetch('/api/ai/models/openai', {
+    headers: { 'X-API-Key': apiKey },
+    signal: AbortSignal.timeout(10_000),
+  })
+
+  if (!response.ok) {
+    throw new Error(`OpenAI model list failed: ${response.status}`)
+  }
+
+  const data = (await response.json()) as { data: Array<{ id: string; created?: number }> }
+
+  return data.data
+    .filter(m => {
+      const matchesInclude = OPENAI_INCLUDE_PATTERNS.some(p => p.test(m.id))
+      const matchesExclude = OPENAI_EXCLUDE_PATTERNS.some(p => p.test(m.id))
+      return matchesInclude && !matchesExclude
+    })
+    .map(m => ({
+      id: m.id,
+      name: m.id,
+      provider: 'openai' as AIProviderId,
+      family: openaiFamily(m.id),
+      costTier: openaiCostTier(m.id),
+      contextWindow: m.id.includes('gpt-4o') ? 128000 : undefined,
+      capabilities: ['chat', 'code'],
+    }))
+    .sort((a, b) => a.id.localeCompare(b.id))
+}
+
+/**
+ * Discover Gemini models via GET /v1beta/models?key={key}.
+ * Filters to models with generateContent capability.
+ */
+async function discoverGemini(apiKey: string): Promise<DiscoveredModel[]> {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+    { signal: AbortSignal.timeout(10_000) }
+  )
+
+  if (!response.ok) {
+    throw new Error(`Gemini model list failed: ${response.status}`)
+  }
+
+  interface GeminiModel {
+    name: string
+    displayName: string
+    supportedGenerationMethods?: string[]
+    inputTokenLimit?: number
+  }
+
+  const data = (await response.json()) as { models: GeminiModel[] }
+
+  return data.models
+    .filter(m => m.supportedGenerationMethods?.includes('generateContent'))
+    .map(m => {
+      // name format: "models/gemini-2.0-flash"
+      const id = m.name.replace('models/', '')
+      return {
+        id,
+        name: m.displayName || id,
+        provider: 'gemini' as AIProviderId,
+        family: extractGeminiFamily(id),
+        costTier: geminiCostTier(id),
+        contextWindow: m.inputTokenLimit,
+        capabilities: ['chat', 'code'],
+      }
+    })
+    .sort((a, b) => a.id.localeCompare(b.id))
+}
+
+function extractGeminiFamily(id: string): string {
+  if (id.includes('2.0')) return 'Gemini 2.0'
+  if (id.includes('1.5')) return 'Gemini 1.5'
+  if (id.includes('1.0')) return 'Gemini 1.0'
+  return 'Gemini'
+}
+
+function geminiCostTier(id: string): DiscoveredModel['costTier'] {
+  if (id.includes('flash-lite')) return 'free'
+  if (id.includes('flash')) return 'free'
+  if (id.includes('pro')) return 'medium'
+  return 'low'
+}
+
+/**
+ * Discover Groq models via GET /openai/v1/models (proxied through Express server).
+ */
+async function discoverGroq(apiKey: string): Promise<DiscoveredModel[]> {
+  const response = await fetch('/api/ai/models/groq', {
+    headers: { 'X-API-Key': apiKey },
+    signal: AbortSignal.timeout(10_000),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Groq model list failed: ${response.status}`)
+  }
+
+  const data = (await response.json()) as {
+    data: Array<{ id: string; owned_by?: string; context_window?: number }>
+  }
+
+  return data.data
+    .map(m => ({
+      id: m.id,
+      name: m.id,
+      provider: 'groq' as AIProviderId,
+      family: extractGroqFamily(m.id),
+      costTier: 'free' as const,
+      contextWindow: m.context_window,
+      capabilities: ['chat', 'code'],
+    }))
+    .sort((a, b) => a.id.localeCompare(b.id))
+}
+
+function extractGroqFamily(id: string): string {
+  if (id.includes('llama-3.3')) return 'Llama 3.3'
+  if (id.includes('llama-3.1')) return 'Llama 3.1'
+  if (id.includes('llama-3')) return 'Llama 3'
+  if (id.includes('mixtral')) return 'Mixtral'
+  if (id.includes('gemma')) return 'Gemma'
+  return 'Other'
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/**
+ * Discover available models for a given AI provider.
+ *
+ * - OpenAI, Groq: Dynamic API fetch via server proxy
+ * - Gemini: Direct API fetch (CORS-friendly)
+ * - Anthropic, GLM: Static curated lists
+ *
+ * Results are cached in memory for 5 minutes. On API error, falls back to
+ * static model list.
+ *
+ * @param provider - AI provider to discover models for
+ * @param apiKey - API key for authentication
+ * @returns Array of discovered models
+ */
+export async function discoverModels(
+  provider: AIProviderId,
+  apiKey: string
+): Promise<DiscoveredModel[]> {
+  // Ollama has its own discovery mechanism (OllamaModelPicker)
+  if (provider === 'ollama') {
+    return []
+  }
+
+  // Check cache first
+  const cached = getCached(provider, apiKey)
+  if (cached) return cached
+
+  // Static-only providers (no API)
+  if (provider === 'anthropic' || provider === 'glm') {
+    const staticModels = getStaticModels(provider)
+    setCache(provider, apiKey, staticModels)
+    return staticModels
+  }
+
+  // Dynamic discovery with static fallback
+  try {
+    let models: DiscoveredModel[]
+
+    switch (provider) {
+      case 'openai':
+        models = await discoverOpenAI(apiKey)
+        break
+      case 'gemini':
+        models = await discoverGemini(apiKey)
+        break
+      case 'groq':
+        models = await discoverGroq(apiKey)
+        break
+      default:
+        models = getStaticModels(provider)
+    }
+
+    setCache(provider, apiKey, models)
+    return models
+  } catch (error) {
+    console.warn(
+      `Model discovery failed for ${provider}, using static fallback:`,
+      (error as Error).message
+    ) // silent-catch-ok: logged + fallback used
+    const fallback = getStaticModels(provider)
+    setCache(provider, apiKey, fallback)
+    return fallback
+  }
+}

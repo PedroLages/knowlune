@@ -242,6 +242,86 @@ export function ollamaDevProxy(): Plugin {
   };
 }
 
+/**
+ * Vite plugin that embeds model discovery proxy endpoints for dev mode.
+ * Used when DEV_SKIP_ENTITLEMENT=true (no separate Express server).
+ *
+ * Endpoints:
+ *   GET /api/ai/models/openai  — Proxy to OpenAI GET /v1/models
+ *   GET /api/ai/models/groq    — Proxy to Groq GET /openai/v1/models
+ *
+ * Gemini is called directly from browser (CORS-friendly).
+ *
+ * @see E90-S04 — Model Discovery for Cloud Providers
+ */
+export function modelDiscoveryDevProxy(): Plugin {
+  return {
+    name: 'model-discovery-dev-proxy',
+    configureServer(server) {
+      // Helper for error responses
+      function sendError(
+        res: import('http').ServerResponse,
+        status: number,
+        message: string
+      ): void {
+        res.statusCode = status;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: message }));
+      }
+
+      // GET /api/ai/models/openai — proxy to OpenAI
+      server.middlewares.use('/api/ai/models/openai', async (req, res, next) => {
+        if (req.method !== 'GET') { next(); return; }
+        const apiKey = req.headers['x-api-key'] as string;
+        if (!apiKey) { sendError(res, 400, 'X-API-Key header is required'); return; }
+
+        try {
+          const response = await fetch('https://api.openai.com/v1/models', {
+            headers: { Authorization: `Bearer ${apiKey}` },
+            signal: AbortSignal.timeout(10_000),
+          });
+          if (!response.ok) {
+            sendError(res, response.status, `OpenAI returned ${response.status}`);
+            return;
+          }
+          const data = await response.json();
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(data));
+        // eslint-disable-next-line error-handling/no-silent-catch -- build-time error handling
+        } catch (error) {
+          console.error('[model-discovery-dev-proxy /openai]', (error as Error).message);
+          sendError(res, 500, (error as Error).message);
+        }
+      });
+
+      // GET /api/ai/models/groq — proxy to Groq
+      server.middlewares.use('/api/ai/models/groq', async (req, res, next) => {
+        if (req.method !== 'GET') { next(); return; }
+        const apiKey = req.headers['x-api-key'] as string;
+        if (!apiKey) { sendError(res, 400, 'X-API-Key header is required'); return; }
+
+        try {
+          const response = await fetch('https://api.groq.com/openai/v1/models', {
+            headers: { Authorization: `Bearer ${apiKey}` },
+            signal: AbortSignal.timeout(10_000),
+          });
+          if (!response.ok) {
+            sendError(res, response.status, `Groq returned ${response.status}`);
+            return;
+          }
+          const data = await response.json();
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(data));
+        // eslint-disable-next-line error-handling/no-silent-catch -- build-time error handling
+        } catch (error) {
+          console.error('[model-discovery-dev-proxy /groq]', (error as Error).message);
+          sendError(res, 500, (error as Error).message);
+        }
+      });
+    }
+  };
+}
+
 function serveLocalMedia(): Plugin {
   return {
     name: 'serve-local-media',
@@ -328,6 +408,7 @@ export default defineConfig({
   tailwindcss(),
   serveLocalMedia(),
   ollamaDevProxy(),
+  modelDiscoveryDevProxy(),
   youtubeTranscriptProxy(),
   premiumImportGuard({ enabled: !process.env.PREMIUM_BUILD }),
   VitePWA({
