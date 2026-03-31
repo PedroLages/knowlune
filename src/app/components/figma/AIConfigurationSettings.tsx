@@ -51,11 +51,13 @@ import {
 import { OllamaModelPicker } from './OllamaModelPicker'
 import { ProviderModelPicker } from './ProviderModelPicker'
 import { FeatureModelOverridePanel } from './FeatureModelOverridePanel'
+import { ProviderKeyAccordion } from './ProviderKeyAccordion'
 import {
   getAIConfiguration,
   saveAIConfiguration,
   testAIConnection,
   getDecryptedApiKeyForProvider,
+  getConfiguredProviderIds,
   AI_PROVIDERS,
   type AIConfigurationSettings as AIConfigSettings,
   type AIProviderId,
@@ -437,7 +439,10 @@ export function AIConfigurationSettings() {
 
   const isConnected = settings.connectionStatus === 'connected'
   const hasError = settings.connectionStatus === 'error'
-  const saveDisabled = isOllama ? isValidating || !ollamaUrl.trim() : isValidating || !apiKey.trim()
+  // AC3: Show consent/override sections when ANY provider has a configured key
+  const hasAnyProviderKey = getConfiguredProviderIds().length > 0
+  const showFeatureSettings = isConnected || hasAnyProviderKey
+  const ollamaSaveDisabled = isValidating || !ollamaUrl.trim()
 
   return (
     <Card>
@@ -603,21 +608,10 @@ export function AIConfigurationSettings() {
             </Collapsible>
           </div>
         ) : (
-          /* API Key Input (non-Ollama providers) */
-          <div>
-            <Label htmlFor="api-key">API Key</Label>
-            <Input
-              id="api-key"
-              type="password"
-              value={apiKey}
-              onChange={e => setApiKey(e.target.value)}
-              placeholder="Enter your API key"
-              className="mt-1"
-              data-testid="api-key-input"
-              aria-invalid={hasError}
-              aria-describedby={hasError ? 'connection-error' : undefined}
-            />
-          </div>
+          /* Multi-Provider API Key Accordion (E90-S10) */
+          <ProviderKeyAccordion
+            onConfigChanged={() => setSettings(getAIConfiguration())}
+          />
         )}
 
         {/* Connection Status */}
@@ -725,20 +719,22 @@ export function AIConfigurationSettings() {
           </div>
         )}
 
-        {/* Save Button */}
-        <Button
-          onClick={() => {
-            handleSave().catch(err => {
-              console.error('Failed to save AI configuration:', err)
-              toast.error('Failed to save configuration')
-            })
-          }}
-          disabled={saveDisabled}
-          data-testid="save-ai-config-button"
-          className="min-h-[44px] rounded-lg"
-        >
-          {isValidating ? 'Testing...' : showSuccess ? 'Saved!' : 'Save & Test Connection'}
-        </Button>
+        {/* Save Button (Ollama only — non-Ollama providers use per-provider save in accordion) */}
+        {isOllama && (
+          <Button
+            onClick={() => {
+              handleSave().catch(err => {
+                console.error('Failed to save AI configuration:', err)
+                toast.error('Failed to save configuration')
+              })
+            }}
+            disabled={ollamaSaveDisabled}
+            data-testid="save-ai-config-button"
+            className="min-h-[44px] rounded-lg"
+          >
+            {isValidating ? 'Testing...' : showSuccess ? 'Saved!' : 'Save & Test Connection'}
+          </Button>
+        )}
 
         {/* Global Model Picker for non-Ollama providers (AC8) */}
         {!isOllama && isConnected && decryptedApiKey && (
@@ -763,7 +759,7 @@ export function AIConfigurationSettings() {
         )}
 
         {/* Per-Feature Consent Toggles */}
-        {isConnected && (
+        {showFeatureSettings && (
           <div className="space-y-4 pt-4 border-t border-border animate-in fade-in-0 slide-in-from-top-1 duration-300">
             <h3 className="text-sm font-medium">Feature Permissions</h3>
             <p className="text-sm text-muted-foreground">
