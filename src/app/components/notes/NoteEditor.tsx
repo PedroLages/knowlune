@@ -254,7 +254,7 @@ export function NoteEditor({
         link: {
           openOnClick: false,
           protocols: ['video'],
-          HTMLAttributes: { class: 'text-brand underline cursor-pointer hover:text-brand/80 transition-colors' },
+          HTMLAttributes: { class: 'text-brand underline cursor-pointer hover:text-brand-hover transition-colors' },
         },
         codeBlock: false,
       }),
