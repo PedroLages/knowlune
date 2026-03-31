@@ -9,9 +9,9 @@
  * - AC5: Settings page renders model picker, overrides, temperature sliders without errors
  * - AC6: Multi-provider key entry and per-feature provider switch
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
-import { TIMEOUTS } from '../utils/constants'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
 import type { Page } from '@playwright/test'
 
 // ---------------------------------------------------------------------------
