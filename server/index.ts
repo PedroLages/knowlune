@@ -343,7 +343,7 @@ const OllamaRequestSchema = z.object({
 
 /** Request body schema — validated on every request */
 const RequestSchema = z.object({
-  provider: z.enum(['openai', 'anthropic', 'groq', 'gemini', 'glm']),
+  provider: z.enum(['openai', 'anthropic', 'groq', 'gemini', 'glm', 'openrouter']),
   apiKey: z.string().min(1, 'API key is required'),
   messages: z
     .array(

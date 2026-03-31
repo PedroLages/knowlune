@@ -195,6 +195,23 @@ export const AI_PROVIDERS: Record<AIProviderId, AIProvider> = {
       return Promise.resolve(key.startsWith('AIza'))
     },
   },
+  openrouter: {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    validateApiKey: key => /^sk-or-v1-[A-Za-z0-9]{48,}$/.test(key),
+    testConnection: async key => {
+      // Test connection by fetching the model list (lightweight endpoint)
+      try {
+        const response = await fetch('/api/ai/models/openrouter', {
+          headers: { 'X-API-Key': key },
+          signal: AbortSignal.timeout(10_000),
+        })
+        return response.ok
+      } catch {
+        return false
+      }
+    },
+  },
   ollama: {
     id: 'ollama',
     name: 'Ollama (Local)',

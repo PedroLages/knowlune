@@ -134,6 +134,82 @@ describe('discoverModels', () => {
     })
   })
 
+  describe('dynamic providers (OpenRouter)', () => {
+    it('fetches and processes OpenRouter models', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: [
+              {
+                id: 'anthropic/claude-haiku-4-5',
+                name: 'Claude Haiku 4.5',
+                pricing: { prompt: '0.25', completion: '1.25' },
+                context_length: 200000,
+              },
+              {
+                id: 'openai/gpt-4o',
+                name: 'GPT-4o',
+                pricing: { prompt: '2.5', completion: '10' },
+                context_length: 128000,
+              },
+            ],
+          }),
+      })
+
+      const models = await discoverModels('openrouter', 'sk-or-v1-testkey1234567890abcdefghijklmnopqrstuvwxyz1234567890ab')
+      expect(mockFetch).toHaveBeenCalledOnce()
+      expect(models.find(m => m.id === 'anthropic/claude-haiku-4-5')).toBeDefined()
+      expect(models.find(m => m.id === 'openai/gpt-4o')).toBeDefined()
+      expect(models[0].provider).toBe('openrouter')
+    })
+
+    it('groups models by source provider family', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: [
+              { id: 'anthropic/claude-haiku-4-5', name: 'Claude Haiku 4.5' },
+              { id: 'openai/gpt-4o', name: 'GPT-4o' },
+            ],
+          }),
+      })
+
+      const models = await discoverModels('openrouter', 'sk-or-v1-testkey1234567890abcdefghijklmnopqrstuvwxyz1234567890ab')
+      expect(models.find(m => m.id === 'anthropic/claude-haiku-4-5')?.family).toBe('Anthropic')
+      expect(models.find(m => m.id === 'openai/gpt-4o')?.family).toBe('Openai')
+    })
+
+    it('assigns cost tiers based on pricing', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: [
+              { id: 'free/model', name: 'Free', pricing: { prompt: '0', completion: '0' } },
+              { id: 'cheap/model', name: 'Cheap', pricing: { prompt: '0.1', completion: '0.1' } },
+              { id: 'mid/model', name: 'Mid', pricing: { prompt: '3', completion: '5' } },
+              { id: 'expensive/model', name: 'Expensive', pricing: { prompt: '10', completion: '30' } },
+            ],
+          }),
+      })
+
+      const models = await discoverModels('openrouter', 'sk-or-v1-testkey1234567890abcdefghijklmnopqrstuvwxyz1234567890ab')
+      expect(models.find(m => m.id === 'free/model')?.costTier).toBe('free')
+      expect(models.find(m => m.id === 'cheap/model')?.costTier).toBe('low')
+      expect(models.find(m => m.id === 'mid/model')?.costTier).toBe('medium')
+      expect(models.find(m => m.id === 'expensive/model')?.costTier).toBe('high')
+    })
+
+    it('returns empty array on API error', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 })
+
+      const models = await discoverModels('openrouter', 'sk-or-v1-bad-key')
+      expect(models).toEqual([])
+    })
+  })
+
   describe('caching', () => {
     it('returns cached results on second call', async () => {
       mockFetch.mockResolvedValueOnce({

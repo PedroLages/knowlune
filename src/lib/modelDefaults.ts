@@ -14,7 +14,7 @@
 // ---------------------------------------------------------------------------
 
 /** Supported AI provider IDs */
-export type AIProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini' | 'ollama'
+export type AIProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini' | 'ollama' | 'openrouter'
 
 // ---------------------------------------------------------------------------
 // AI Feature Identification
@@ -90,6 +90,7 @@ export const PROVIDER_DEFAULTS: Record<AIProviderId, string> = {
   glm: 'glm-4-flash',
   gemini: 'gemini-2.0-flash',
   ollama: 'llama3.2',
+  openrouter: 'anthropic/claude-haiku-4-5',
 }
 
 // ---------------------------------------------------------------------------

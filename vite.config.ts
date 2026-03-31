@@ -520,7 +520,7 @@ export default defineConfig({
       'Content-Security-Policy': [
         "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
         "img-src 'self' data: blob: https://images.unsplash.com https://i.ytimg.com https://img.youtube.com https://*.googleusercontent.com",
-        "connect-src 'self' https://www.googleapis.com/youtube/ ws://localhost:* http://localhost:*",
+        "connect-src 'self' https://www.googleapis.com/youtube/ ws://localhost:* http://localhost:* https://openrouter.ai",
       ].join('; '),
     },
   },
