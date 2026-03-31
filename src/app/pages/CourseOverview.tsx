@@ -388,9 +388,7 @@ export function CourseOverview() {
           }}
         />
 
-        <div
-          className="relative z-10 p-8 md:p-10 flex flex-col justify-end h-full min-h-[280px]"
-        >
+        <div className="relative z-10 p-8 md:p-10 flex flex-col justify-end h-full min-h-[280px]">
           {hasTags && (
             <div className="flex flex-wrap items-center gap-2 mb-4">
               {course.tags.slice(0, 3).map(tag => (

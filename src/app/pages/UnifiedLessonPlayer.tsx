@@ -565,39 +565,36 @@ export function UnifiedLessonPlayer() {
                 aria-label="Content view"
                 data-testid="tablet-toggle-bar"
               >
-                  <Button
-                    variant={!tabletNotesOpen ? 'default' : 'ghost'}
-                    size="sm"
-                    className="flex-1 gap-1.5"
-                    role="tab"
-                    aria-selected={!tabletNotesOpen}
-                    aria-controls="tablet-content-panel"
-                    onClick={() => setTabletNotesOpen(false)}
-                    data-testid="tablet-toggle-video"
-                  >
-                    <Video className="size-4" aria-hidden="true" />
-                    Video
-                  </Button>
-                  <Button
-                    variant={tabletNotesOpen ? 'default' : 'ghost'}
-                    size="sm"
-                    className="flex-1 gap-1.5"
-                    role="tab"
-                    aria-selected={tabletNotesOpen}
-                    aria-controls="tablet-content-panel"
-                    onClick={() => setTabletNotesOpen(true)}
-                    data-testid="tablet-toggle-notes"
-                  >
-                    <PencilLine className="size-4" aria-hidden="true" />
-                    Notes
-                  </Button>
-                </div>
+                <Button
+                  variant={!tabletNotesOpen ? 'default' : 'ghost'}
+                  size="sm"
+                  className="flex-1 gap-1.5"
+                  role="tab"
+                  aria-selected={!tabletNotesOpen}
+                  aria-controls="tablet-content-panel"
+                  onClick={() => setTabletNotesOpen(false)}
+                  data-testid="tablet-toggle-video"
+                >
+                  <Video className="size-4" aria-hidden="true" />
+                  Video
+                </Button>
+                <Button
+                  variant={tabletNotesOpen ? 'default' : 'ghost'}
+                  size="sm"
+                  className="flex-1 gap-1.5"
+                  role="tab"
+                  aria-selected={tabletNotesOpen}
+                  aria-controls="tablet-content-panel"
+                  onClick={() => setTabletNotesOpen(true)}
+                  data-testid="tablet-toggle-notes"
+                >
+                  <PencilLine className="size-4" aria-hidden="true" />
+                  Notes
+                </Button>
+              </div>
 
               {/* Tablet: show either video or notes based on toggle */}
-              <div
-                id="tablet-content-panel"
-                {...(isTablet ? { role: 'tabpanel' } : {})}
-              >
+              <div id="tablet-content-panel" {...(isTablet ? { role: 'tabpanel' } : {})}>
                 {isTablet && tabletNotesOpen ? (
                   <NotesTab courseId={courseId!} lessonId={lessonId!} />
                 ) : (
