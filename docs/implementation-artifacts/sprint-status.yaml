@@ -1087,7 +1087,7 @@ development_status:
   epic-90: in-progress
   90-1-define-shared-model-constants-and-feature-model-config-type: done
   90-2-refactor-llm-client-factory-with-feature-aware-model-resolution: done
-  90-3-multi-provider-byok-key-storage: backlog
+  90-3-multi-provider-byok-key-storage: done
   90-4-model-discovery-for-cloud-providers: backlog
   90-5-build-global-model-picker-ui-in-settings: backlog
   90-6-build-per-feature-model-override-ui: backlog
