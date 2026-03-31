@@ -17,7 +17,7 @@ Auto-answer: Used for /start-story and /finish-story interactive prompts
 | E91-S07 | done | #183 | 1 | 2 |
 | E91-S08 | done | #184 | 2 | 8 |
 | E91-S09 | done | #185 | 1 | 3 |
-| E91-S10 | queued | — | — | — |
+| E91-S10 | done | #186 | 1 | 5 |
 | E91-S11 | queued | — | — | — |
 | E91-S12 | queued | — | — | — |
 | E91-S13 | queued | — | — | — |
