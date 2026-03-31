@@ -13,10 +13,18 @@
  * @see E28-S10
  */
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { Search, FileText, Loader2 } from 'lucide-react'
+import { Search, FileText, Loader2, Download } from 'lucide-react'
+import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/app/components/ui/tooltip'
 import { cn } from '@/app/components/ui/utils'
+import { downloadAsFile } from '@/lib/download'
 import { scrollIntoViewReducedMotion } from '@/lib/scroll'
 import type { TranscriptCue } from '@/data/types'
 
@@ -231,6 +239,25 @@ export function TranscriptPanel({ cues, currentTime, onSeek, loadingState }: Tra
           <FileText className="size-4 text-muted-foreground" aria-hidden="true" />
           <h2 className="font-semibold text-sm">Transcript</h2>
           <span className="text-xs text-muted-foreground ml-auto">{cues.length} segments</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 shrink-0"
+                  aria-label="Download transcript"
+                  onClick={() => {
+                    const lines = cues.map(cue => `[${formatCueTime(cue.startTime)}] ${cue.text}`)
+                    downloadAsFile(lines.join('\n'), 'transcript.txt', 'text/plain')
+                  }}
+                >
+                  <Download className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Download transcript</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         <div className="relative">
           <Search

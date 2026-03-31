@@ -54,6 +54,7 @@ import {
   ChevronDown,
   Clock,
   Camera,
+  Download,
   Image as ImageIcon,
   Youtube as YoutubeIcon,
   GripVertical,
@@ -92,6 +93,8 @@ import {
 import { cn } from '@/app/components/ui/utils'
 import { InteractiveButton } from '@/app/components/ui/interactive-button'
 import { formatTimestamp } from '@/lib/format'
+import { exportSingleNoteAsMarkdown } from '@/lib/noteExport'
+import { downloadAsFile } from '@/lib/download'
 import { FrameCaptureExtension } from './frame-capture'
 import type { CapturedFrame } from '@/lib/frame-capture'
 import type { PatchableNodeView, NodeViewRendererProps, ViewMutationRecord } from '@/types/tiptap'
@@ -945,6 +948,28 @@ export function NoteEditor({
             <Clock className="size-3.5 mr-1.5" />
             Add Timestamp
           </Button>
+
+          {/* Download note as Markdown */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-11 px-3 text-xs"
+                aria-label="Download note as Markdown"
+                disabled={editor.isEmpty}
+                onClick={() => {
+                  const html = editor.getHTML()
+                  const { content, filename } = exportSingleNoteAsMarkdown(html)
+                  downloadAsFile(content, filename, 'text/markdown')
+                }}
+              >
+                <Download className="size-3.5 mr-1.5" />
+                Download
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Download note as Markdown</TooltipContent>
+          </Tooltip>
         </div>
       </TooltipProvider>
 
