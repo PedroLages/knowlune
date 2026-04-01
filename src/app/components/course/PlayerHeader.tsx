@@ -8,7 +8,7 @@
 
 import { lazy, Suspense, useCallback, useEffect } from 'react'
 import { Link } from 'react-router'
-import { ArrowLeft, CheckCircle2, Circle, Clock, Maximize2, Minimize2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Circle, Clock, Maximize2, Minimize2, PencilLine } from 'lucide-react'
 import { toast } from 'sonner'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { PomodoroTimer } from '@/app/components/figma/PomodoroTimer'
@@ -49,6 +49,11 @@ interface PlayerHeaderProps {
   /** Theater mode state and toggle (desktop only) */
   isTheater?: boolean
   onToggleTheater?: () => void
+  /** Notes panel toggle (desktop only, hidden in theater) */
+  notesOpen?: boolean
+  onToggleNotes?: () => void
+  /** Whether notes exist for this lesson (shows dot indicator) */
+  hasNotes?: boolean
 }
 
 export function PlayerHeader({
@@ -60,6 +65,9 @@ export function PlayerHeader({
   onStatusChange,
   isTheater = false,
   onToggleTheater,
+  notesOpen,
+  onToggleNotes,
+  hasNotes,
 }: PlayerHeaderProps) {
   const getItemStatus = useContentProgressStore(s => s.getItemStatus)
   const setItemStatus = useContentProgressStore(s => s.setItemStatus)
@@ -131,6 +139,25 @@ export function PlayerHeader({
           ) : (
             <Maximize2 className="size-4" aria-hidden="true" />
           )}
+        </Button>
+      )}
+
+      {onToggleNotes && !isTheater && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onToggleNotes}
+          aria-expanded={notesOpen}
+          className="hidden lg:flex gap-1.5"
+          data-testid="notes-toggle"
+        >
+          <span className="relative">
+            <PencilLine className="size-4" aria-hidden="true" />
+            {hasNotes && !notesOpen && (
+              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-brand" />
+            )}
+          </span>
+          Notes
         </Button>
       )}
 

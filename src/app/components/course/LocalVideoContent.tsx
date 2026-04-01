@@ -18,7 +18,7 @@ import { VideoPlayer, type VideoPlayerHandle } from '@/app/components/figma/Vide
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
-import { addBookmark, getLessonBookmarks } from '@/lib/bookmarks'
+import { addBookmark, getLessonBookmarks, formatBookmarkTimestamp } from '@/lib/bookmarks'
 import type { ImportedVideo, VideoBookmark } from '@/data/types'
 
 interface LocalVideoContentProps {
@@ -40,6 +40,12 @@ interface LocalVideoContentProps {
   onPlayStateChange?: (isPlaying: boolean) => void
   /** Called when the blob URL is available (for mini-player) */
   onBlobUrlReady?: (url: string | null) => void
+  /** Whether theater mode is active (for VideoPlayer internal styling) */
+  theaterMode?: boolean
+  /** Called when VideoPlayer's theater toggle is clicked */
+  onTheaterModeToggle?: () => void
+  /** Called when a bookmark marker on the timeline is clicked */
+  onBookmarkSeek?: (timestamp: number) => void
 }
 
 export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContentProps>(
@@ -55,6 +61,9 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
       onVisibilityChange,
       onPlayStateChange,
       onBlobUrlReady,
+      theaterMode,
+      onTheaterModeToggle,
+      onBookmarkSeek,
     },
     ref
   ) {
@@ -124,6 +133,43 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
       }
     }, [courseId, lessonId])
 
+    // Resume position: load saved playback position from Dexie progress table
+    const [savedPosition, setSavedPosition] = useState<number | undefined>(undefined)
+    const hasShownResumeToast = useRef(false)
+
+    useEffect(() => {
+      hasShownResumeToast.current = false
+      setSavedPosition(undefined)
+      let ignore = false
+
+      db.progress
+        .where('[courseId+videoId]')
+        .equals([courseId, lessonId])
+        .first()
+        .then(record => {
+          if (!ignore && record && record.currentTime > 5) {
+            setSavedPosition(record.currentTime)
+          }
+        })
+        .catch(() => {
+          // silent-catch-ok — resume is non-critical
+        })
+
+      return () => {
+        ignore = true
+      }
+    }, [courseId, lessonId])
+
+    // Show resume toast once when position is restored
+    useEffect(() => {
+      if (savedPosition && savedPosition > 5 && !hasShownResumeToast.current) {
+        hasShownResumeToast.current = true
+        toast(`Resuming from ${formatBookmarkTimestamp(Math.floor(savedPosition))}`, {
+          duration: 2000,
+        })
+      }
+    }, [savedPosition])
+
     const handleBookmarkAdd = useCallback(
       async (timestamp: number) => {
         try {
@@ -152,7 +198,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
         ([entry]) => {
           onVisibilityChange(entry.isIntersecting)
         },
-        { threshold: 0.1 }
+        { threshold: 0.3 }
       )
       observer.observe(el)
       return () => observer.disconnect()
@@ -349,6 +395,7 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
           title={video.filename}
           courseId={courseId}
           lessonId={lessonId}
+          initialPosition={savedPosition}
           captions={userCaptions ? [userCaptions] : undefined}
           chapters={video.chapters}
           onLoadCaptions={handleLoadCaptions}
@@ -357,9 +404,12 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
           seekToTime={seekToTime}
           onSeekComplete={onSeekComplete}
           onBookmarkAdd={handleBookmarkAdd}
+          onBookmarkSeek={onBookmarkSeek}
           bookmarks={bookmarkMarkers}
           onFocusNotes={onFocusNotes}
           onPlayStateChange={onPlayStateChange}
+          theaterMode={theaterMode}
+          onTheaterModeToggle={onTheaterModeToggle}
         />
       </div>
     )

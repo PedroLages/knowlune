@@ -5,12 +5,16 @@
  * Follows the same pattern as `STORAGE_KEY_PLAYBACK_SPEED` in VideoPlayer.
  */
 
+import type { PomodoroSoundId } from './pomodoroAudio'
+
 export interface PomodoroPreferences {
   focusDuration: number // minutes (default: 25)
   breakDuration: number // minutes (default: 5)
   autoStartBreak: boolean // default: true
   autoStartFocus: boolean // default: false
   notificationVolume: number // 0-1 (default: 0.5)
+  notificationSound: PomodoroSoundId // default: 'gentle-bell'
+  showQualityScore: boolean // default: true (show session quality popup)
 }
 
 const STORAGE_KEY = 'pomodoro-preferences'
@@ -21,6 +25,8 @@ const defaults: PomodoroPreferences = {
   autoStartBreak: true,
   autoStartFocus: false,
   notificationVolume: 0.5,
+  notificationSound: 'gentle-bell',
+  showQualityScore: true,
 }
 
 export function getPomodoroPreferences(): PomodoroPreferences {

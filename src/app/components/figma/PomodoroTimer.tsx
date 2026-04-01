@@ -34,6 +34,7 @@ import {
 export function PomodoroTimer() {
   const [prefs, setPrefs] = useState<PomodoroPreferences>(getPomodoroPreferences)
   const [showPrefs, setShowPrefs] = useState(false)
+  const [popoverOpen, setPopoverOpen] = useState(false)
 
   // Sync preferences to localStorage on change
   const updatePref = useCallback((update: Partial<PomodoroPreferences>) => {
@@ -42,12 +43,12 @@ export function PomodoroTimer() {
   }, [])
 
   const handleFocusComplete = useCallback(() => {
-    playChime(prefs.notificationVolume)
-  }, [prefs.notificationVolume])
+    playChime(prefs.notificationVolume, prefs.notificationSound)
+  }, [prefs.notificationVolume, prefs.notificationSound])
 
   const handleBreakComplete = useCallback(() => {
-    playChime(prefs.notificationVolume)
-  }, [prefs.notificationVolume])
+    playChime(prefs.notificationVolume, prefs.notificationSound)
+  }, [prefs.notificationVolume, prefs.notificationSound])
 
   const { phase, status, timeRemaining, completedSessions, start, pause, resume, reset, skip } =
     usePomodoroTimer({
@@ -73,7 +74,7 @@ export function PomodoroTimer() {
   const sessionLabel = completedSessions === 1 ? '1 session' : `${completedSessions} sessions`
 
   return (
-    <Popover>
+    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"

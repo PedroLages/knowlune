@@ -36,6 +36,12 @@ export interface LessonContentRendererProps {
   onVisibilityChange?: (visible: boolean) => void
   onPlayStateChange?: (playing: boolean) => void
   onBlobUrlReady?: (url: string | null) => void
+  /** Whether theater mode is active (for VideoPlayer internal styling) */
+  theaterMode?: boolean
+  /** Called when VideoPlayer's theater toggle is clicked */
+  onTheaterModeToggle?: () => void
+  /** Called when a bookmark marker on the timeline is clicked */
+  onBookmarkSeek?: (timestamp: number) => void
 }
 
 export const LessonContentRenderer = forwardRef<VideoPlayerHandle, LessonContentRendererProps>(
@@ -55,6 +61,9 @@ export const LessonContentRenderer = forwardRef<VideoPlayerHandle, LessonContent
       onVisibilityChange,
       onPlayStateChange,
       onBlobUrlReady,
+      theaterMode,
+      onTheaterModeToggle,
+      onBookmarkSeek,
     } = props
 
     // While lessonType is still resolving, show a skeleton instead of
@@ -112,6 +121,9 @@ export const LessonContentRenderer = forwardRef<VideoPlayerHandle, LessonContent
         onVisibilityChange={onVisibilityChange}
         onPlayStateChange={onPlayStateChange}
         onBlobUrlReady={onBlobUrlReady}
+        theaterMode={theaterMode}
+        onTheaterModeToggle={onTheaterModeToggle}
+        onBookmarkSeek={onBookmarkSeek}
       />
     )
   }

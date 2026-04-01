@@ -48,6 +48,13 @@ export interface LessonPlayerState {
   tabletNotesOpen: boolean
   setTabletNotesOpen: React.Dispatch<React.SetStateAction<boolean>>
 
+  // Desktop notes side panel
+  notesOpen: boolean
+  setNotesOpen: React.Dispatch<React.SetStateAction<boolean>>
+  pendingNoteFocus: boolean
+  setPendingNoteFocus: React.Dispatch<React.SetStateAction<boolean>>
+  handleNotesToggle: () => void
+
   // Focus tab
   focusTab: string | null
   setFocusTab: React.Dispatch<React.SetStateAction<string | null>>
@@ -98,6 +105,10 @@ export function useLessonPlayerState(
   // Tablet toggle state: switch between video and notes (E91-S09)
   const [tabletNotesOpen, setTabletNotesOpen] = useState(false)
 
+  // Desktop notes side panel state
+  const [notesOpen, setNotesOpen] = useState(false)
+  const [pendingNoteFocus, setPendingNoteFocus] = useState(false)
+
   // Focus tab state: set to "notes" when user presses N in VideoPlayer
   const [focusTab, setFocusTab] = useState<string | null>(null)
   const focusTabCounter = useRef(0)
@@ -122,6 +133,8 @@ export function useLessonPlayerState(
     setLocalVideoBlobUrl(null)
     setShowCourseSuggestion(false)
     setTabletNotesOpen(false)
+    setNotesOpen(false)
+    setPendingNoteFocus(false)
   }, [lessonId])
 
   // Resolve lesson metadata (title + type) from adapter's lesson list
@@ -171,6 +184,13 @@ export function useLessonPlayerState(
     setFocusTab(`notes`)
   }, [])
 
+  const handleNotesToggle = useCallback(() => {
+    setNotesOpen(prev => {
+      if (!prev) setPendingNoteFocus(true)
+      return !prev
+    })
+  }, [])
+
   return {
     showAutoAdvance,
     setShowAutoAdvance,
@@ -196,6 +216,11 @@ export function useLessonPlayerState(
     setShowCourseSuggestion,
     tabletNotesOpen,
     setTabletNotesOpen,
+    notesOpen,
+    setNotesOpen,
+    pendingNoteFocus,
+    setPendingNoteFocus,
+    handleNotesToggle,
     focusTab,
     setFocusTab,
     focusTabCounter,

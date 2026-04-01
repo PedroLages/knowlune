@@ -239,15 +239,15 @@ describe('LocalCourseAdapter.getLessons()', () => {
       makeVideo({ id: 'v2', order: 3, filename: '03-advanced.mp4' }),
       makeVideo({ id: 'v1', order: 1, filename: '01-intro.mp4' }),
     ]
-    const pdfs = [makePdf({ id: 'p1', pageCount: 2 })] // pageCount used as order for PDFs
+    const pdfs = [makePdf({ id: 'p1', filename: '02-resources.pdf', pageCount: 10 })]
 
     const adapter = new adapterLib.LocalCourseAdapter(makeLocalCourse(), videos, pdfs)
     const lessons = await adapter.getLessons()
 
     expect(lessons).toHaveLength(3)
-    expect(lessons[0].id).toBe('v1') // order 1
-    expect(lessons[1].id).toBe('p1') // order 2 (pageCount)
-    expect(lessons[2].id).toBe('v2') // order 3
+    expect(lessons[0].id).toBe('v1') // order 1 (01-intro.mp4)
+    expect(lessons[1].id).toBe('p1') // order 2 (02-resources.pdf — filename prefix)
+    expect(lessons[2].id).toBe('v2') // order 3 (03-advanced.mp4)
   })
 
   it('returns empty array when no content exists', async () => {

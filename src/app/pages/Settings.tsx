@@ -65,6 +65,7 @@ import { CourseReminderSettings } from '@/app/components/figma/CourseReminderSet
 import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationSettings'
 import { YouTubeConfigurationSettings } from '@/app/components/figma/YouTubeConfigurationSettings'
 import { QuizPreferencesForm } from '@/app/components/settings/QuizPreferencesForm'
+import { PomodoroSettings } from '@/app/components/settings/PomodoroSettings'
 import { AvatarCropDialog } from '@/app/components/ui/avatar-crop-dialog'
 import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
 import { EngagementPreferences } from '@/app/components/settings/EngagementPreferences'
@@ -1002,6 +1003,9 @@ export default function Settings() {
 
         {/* Quiz Preferences */}
         <QuizPreferencesForm />
+
+        {/* Pomodoro & Session Preferences */}
+        <PomodoroSettings />
 
         {/* Data Management */}
         <Card id="data-management">
