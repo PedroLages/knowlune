@@ -79,10 +79,10 @@ describe('MiniPlayer', () => {
     expect(onPlayPause).toHaveBeenCalledOnce()
   })
 
-  it('has accessible region landmark', async () => {
+  it('has accessible button role for click-to-return', async () => {
     render(<MiniPlayer {...defaultProps} />)
     await waitFor(() => {
-      expect(screen.getByRole('region', { name: 'Mini video player' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Return to main video' })).toBeInTheDocument()
     })
   })
 })

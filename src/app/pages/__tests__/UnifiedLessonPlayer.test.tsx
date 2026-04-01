@@ -137,9 +137,11 @@ vi.mock('@/app/components/course/LocalVideoContent', () => ({
 vi.mock('@/app/components/course/YouTubeVideoContent', () => ({
   YouTubeVideoContent: () => <div>YT</div>,
 }))
-vi.mock('@/app/components/course/PlayerSidePanel', () => ({
-  PlayerSidePanel: () => <div>Side Panel</div>,
-  NotesTab: () => <div>Notes Tab</div>,
+vi.mock('@/app/components/course/BelowVideoTabs', () => ({
+  BelowVideoTabs: () => <div data-testid="below-video-tabs">Below Video Tabs</div>,
+}))
+vi.mock('@/app/components/course/tabs/LessonsTab', () => ({
+  LessonsTab: () => <div data-testid="lessons-tab">Lessons Tab</div>,
 }))
 vi.mock('@/app/components/DelayedFallback', () => ({
   DelayedFallback: ({ children }: { children: React.ReactNode }) => <>{children}</>,

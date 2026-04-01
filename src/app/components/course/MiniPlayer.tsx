@@ -23,6 +23,8 @@ interface MiniPlayerProps {
   onClose: () => void
   /** Called when the user toggles play/pause in the mini-player */
   onPlayPause: () => void
+  /** Called when the user clicks the mini-player to scroll back to the main video */
+  onScrollToVideo?: () => void
 }
 
 export function MiniPlayer({
@@ -32,6 +34,7 @@ export function MiniPlayer({
   isVisible,
   onClose,
   onPlayPause,
+  onScrollToVideo,
 }: MiniPlayerProps) {
   const miniVideoRef = useRef<HTMLVideoElement>(null)
   const [isAnimating, setIsAnimating] = useState(false)
@@ -102,10 +105,19 @@ export function MiniPlayer({
       className={cn(
         'fixed bottom-16 right-4 z-50 w-72 h-40 rounded-[16px] shadow-2xl overflow-hidden bg-black sm:bottom-4',
         'transition-all duration-200 ease-out',
-        isAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+        isAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4',
+        onScrollToVideo && 'cursor-pointer'
       )}
-      role="region"
-      aria-label="Mini video player"
+      role="button"
+      tabIndex={0}
+      aria-label="Return to main video"
+      onClick={onScrollToVideo}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onScrollToVideo?.()
+        }
+      }}
     >
       {/* Video element — muted to prevent dual audio with main player */}
       <video
