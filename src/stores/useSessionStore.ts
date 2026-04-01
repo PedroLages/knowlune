@@ -193,13 +193,25 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       duration: activeSession.duration + Math.max(0, activeSeconds),
     }
 
-    // Calculate quality score before persisting
-    const qualityResult = calculateQualityScore(sessionWithDuration)
-    const closedSession: StudySession = {
-      ...sessionWithDuration,
-      qualityScore: qualityResult.score,
-      qualityFactors: qualityResult.factors,
-    }
+    // Minimum session duration (60s) to show quality score popup.
+    // Short visits (e.g., quickly browsing between lessons) should not trigger
+    // the disruptive QualityScoreDialog.
+    const MIN_QUALITY_SCORE_DURATION_MS = 60_000
+    const totalSessionDurationMs =
+      new Date(now).getTime() - new Date(activeSession.startTime).getTime()
+    const isLongEnoughForQualityScore = totalSessionDurationMs >= MIN_QUALITY_SCORE_DURATION_MS
+
+    // Calculate quality score only for sessions >= 60 seconds
+    const closedSession: StudySession = isLongEnoughForQualityScore
+      ? (() => {
+          const qualityResult = calculateQualityScore(sessionWithDuration)
+          return {
+            ...sessionWithDuration,
+            qualityScore: qualityResult.score,
+            qualityFactors: qualityResult.factors,
+          }
+        })()
+      : sessionWithDuration
 
     // Persist to database async (fire-and-forget for beforeunload compatibility)
     // If this fails, orphan recovery will handle it on next load
@@ -209,13 +221,21 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       .then(() => {
         // Notify listeners (e.g., momentum scores) that session data changed
         window.dispatchEvent(new CustomEvent('study-log-updated'))
-        // Notify quality score UI to show the result dialog
-        // Event detail includes all needed data so listeners don't need store access
-        window.dispatchEvent(
-          new CustomEvent('session-quality-calculated', {
-            detail: qualityResult,
-          })
-        )
+
+        // Only show quality score popup for sessions >= 60 seconds
+        if (isLongEnoughForQualityScore) {
+          const qualityResult = {
+            score: closedSession.qualityScore!,
+            factors: closedSession.qualityFactors!,
+          }
+          // Notify quality score UI to show the result dialog
+          // Event detail includes all needed data so listeners don't need store access
+          window.dispatchEvent(
+            new CustomEvent('session-quality-calculated', {
+              detail: qualityResult,
+            })
+          )
+        }
 
         // E43-S07: Only emit streak:milestone for meaningful thresholds.
         // The service also filters, but the store is the first gate to avoid
