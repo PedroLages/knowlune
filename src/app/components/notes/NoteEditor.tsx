@@ -346,7 +346,7 @@ export function NoteEditor({
     content: initialContent,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm dark:prose-invert max-w-none min-h-[250px] outline-none px-5 py-4',
+        class: 'prose prose-sm dark:prose-invert max-w-none min-h-[250px] outline-none pl-10 pr-5 py-4',
         role: 'textbox',
         'aria-label': 'Lesson notes editor',
         'aria-multiline': 'true',
