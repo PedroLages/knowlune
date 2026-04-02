@@ -56,7 +56,6 @@ import { Skeleton } from '@/app/components/ui/skeleton'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/app/components/ui/resizable'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/app/components/ui/sheet'
-import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'
 import { usePanelRef } from 'react-resizable-panels'
@@ -473,9 +472,9 @@ export function UnifiedLessonPlayer() {
               </h3>
               <p className="text-xs text-muted-foreground">Course Content</p>
             </div>
-            <ScrollArea className="flex-1 min-h-0 overflow-hidden [&_[data-slot=scroll-area-viewport]>div]:!block">
+            <div className="flex-1 min-h-0 overflow-y-auto">
               <LessonsTab courseId={courseId!} lessonId={lessonId!} adapter={adapter} />
-            </ScrollArea>
+            </div>
           </div>
         </div>
       ) : (
@@ -537,9 +536,9 @@ export function UnifiedLessonPlayer() {
               <SheetTitle className="text-sm px-4 pt-2 flex-shrink-0">
                 {course?.name ?? 'Course Content'}
               </SheetTitle>
-              <ScrollArea className="flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 min-h-0 overflow-y-auto">
                 <LessonsTab courseId={courseId!} lessonId={lessonId!} adapter={adapter} />
-              </ScrollArea>
+              </div>
             </SheetContent>
           </Sheet>
         </div>
