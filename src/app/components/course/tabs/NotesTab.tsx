@@ -4,11 +4,12 @@
  * Extracted from PlayerSidePanel.tsx to reduce god-component complexity.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect, useCallback } from 'react'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { NoteEditor } from '@/app/components/notes/NoteEditor'
 import { useNoteStore } from '@/stores/useNoteStore'
 import type { Note } from '@/data/types'
+import type { CapturedFrame } from '@/lib/frame-capture'
 
 export interface NotesTabProps {
   courseId: string
@@ -17,9 +18,11 @@ export interface NotesTabProps {
   onSeek?: (time: number) => void
   /** Current video playback time in seconds (for timestamp insertion) */
   currentTime?: number
+  /** Callback to capture the current video frame as a JPEG for embedding in notes */
+  onCaptureFrame?: () => Promise<CapturedFrame | null>
 }
 
-export function NotesTab({ courseId, lessonId, onSeek, currentTime }: NotesTabProps) {
+export function NotesTab({ courseId, lessonId, onSeek, currentTime, onCaptureFrame }: NotesTabProps) {
   const notes = useNoteStore(s => s.notes)
   const loadNotesByLesson = useNoteStore(s => s.loadNotesByLesson)
   const saveNote = useNoteStore(s => s.saveNote)
@@ -76,6 +79,7 @@ export function NotesTab({ courseId, lessonId, onSeek, currentTime }: NotesTabPr
         onSave={handleSave}
         onVideoSeek={onSeek}
         currentVideoTime={currentTime}
+        onCaptureFrame={onCaptureFrame}
         compact
       />
     </div>

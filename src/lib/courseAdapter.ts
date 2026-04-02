@@ -104,11 +104,9 @@ export class LocalCourseAdapter implements CourseAdapter {
       title: p.filename,
       type: 'pdf' as const,
       duration: undefined,
-      // Known limitation: ImportedPdf has no `order` field, so we use pageCount
-      // as a rough proxy. This is adequate for MVP but may produce unexpected
-      // ordering for multi-PDF courses. Deferred to S04/S06 where explicit PDF
-      // ordering will be added via a Dexie migration.
-      order: p.pageCount,
+      // Extract numeric prefix from filename for natural sort order
+      // e.g. "01a-Resources.pdf" → 1, "05. Trade Zella.pdf" → 5
+      order: parseInt(p.filename.match(/^(\d+)/)?.[1] ?? '', 10) || Infinity,
       sourceMetadata: {
         path: p.path,
         pageCount: p.pageCount,

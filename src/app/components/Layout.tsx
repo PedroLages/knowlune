@@ -389,6 +389,15 @@ export function Layout() {
 
   useEffect(() => {
     const handleQualityScore = (e: Event) => {
+      // Check user preference before showing the popup
+      try {
+        const raw = localStorage.getItem('pomodoro-preferences')
+        if (raw) {
+          const prefs = JSON.parse(raw)
+          if (prefs.showQualityScore === false) return
+        }
+      } catch { /* use default (show) */ }
+
       const detail = (e as CustomEvent<QualityScoreResult>).detail
       if (detail && typeof detail.score === 'number') {
         setQualityResult(detail)

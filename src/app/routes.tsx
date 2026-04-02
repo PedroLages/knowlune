@@ -11,9 +11,6 @@ import { MessageSquare, Sparkles, Brain, RotateCcw, Shuffle, BarChart3, Layers }
 // Named exports need .then(m => ({ default: m.ExportName }))
 const Overview = React.lazy(() => import('./pages/Overview').then(m => ({ default: m.Overview })))
 const Courses = React.lazy(() => import('./pages/Courses').then(m => ({ default: m.Courses })))
-const UnifiedCourseDetail = React.lazy(() =>
-  import('./pages/UnifiedCourseDetail').then(m => ({ default: m.UnifiedCourseDetail }))
-)
 const CourseOverview = React.lazy(() =>
   import('./pages/CourseOverview').then(m => ({ default: m.CourseOverview }))
 )
@@ -249,12 +246,12 @@ export const router = createBrowserRouter([
           </SuspensePage>
         ),
       },
-      // Unified course routes (E89-S03)
+      // Course detail — rich overview with cinematic hero (replaces flat UnifiedCourseDetail)
       {
         path: 'courses/:courseId',
         element: (
           <SuspensePage>
-            <UnifiedCourseDetail />
+            <CourseOverview />
           </SuspensePage>
         ),
       },
