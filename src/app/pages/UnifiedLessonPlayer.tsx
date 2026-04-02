@@ -473,7 +473,7 @@ export function UnifiedLessonPlayer() {
               </h3>
               <p className="text-xs text-muted-foreground">Course Content</p>
             </div>
-            <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
+            <ScrollArea className="flex-1 min-h-0 overflow-hidden [&_[data-slot=scroll-area-viewport]>div]:!block">
               <LessonsTab courseId={courseId!} lessonId={lessonId!} adapter={adapter} />
             </ScrollArea>
           </div>
@@ -534,10 +534,12 @@ export function UnifiedLessonPlayer() {
               </Button>
             </SheetTrigger>
             <SheetContent side="bottom" className="h-[70vh]">
-              <SheetTitle className="text-sm px-4 pt-2">
+              <SheetTitle className="text-sm px-4 pt-2 flex-shrink-0">
                 {course?.name ?? 'Course Content'}
               </SheetTitle>
-              <LessonsTab courseId={courseId!} lessonId={lessonId!} adapter={adapter} />
+              <ScrollArea className="flex-1 min-h-0 overflow-hidden">
+                <LessonsTab courseId={courseId!} lessonId={lessonId!} adapter={adapter} />
+              </ScrollArea>
             </SheetContent>
           </Sheet>
         </div>
