@@ -6,6 +6,7 @@ import {
   Download,
   Trophy,
   BookOpen,
+  Brain,
   type LucideIcon,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
@@ -58,6 +59,12 @@ const NOTIFICATION_TOGGLES: ToggleDefinition[] = [
     label: 'SRS Due Reminders',
     description: 'When spaced repetition cards are ready for review',
     icon: BookOpen,
+  },
+  {
+    type: 'knowledge-decay',
+    label: 'Knowledge Decay Alerts',
+    description: 'When topic retention drops below a safe threshold',
+    icon: Brain,
   },
 ]
 

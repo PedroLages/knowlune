@@ -82,8 +82,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 31', () => {
-    expect(db.verno).toBe(31)
+  it('should be at version 32', () => {
+    expect(db.verno).toBe(32)
   })
 
   it('should have entitlements table with userId as primary key', () => {

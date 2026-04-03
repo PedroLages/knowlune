@@ -16,9 +16,13 @@ import { useNotificationStore } from '@/stores/useNotificationStore'
 import { useNotificationPrefsStore } from '@/stores/useNotificationPrefsStore'
 import { db } from '@/db'
 import { isDue } from '@/lib/spacedRepetition'
+import { getTopicRetention } from '@/lib/retentionMetrics'
 
 /** Streak milestones that trigger notifications */
 const STREAK_MILESTONES = [7, 14, 30, 60, 100, 365] as const
+
+/** Retention percentage below which a topic is considered decaying (E60-S01) */
+export const DECAY_THRESHOLD = 50
 
 /**
  * Active unsubscribe functions (populated by init, cleared by destroy).
@@ -66,6 +70,26 @@ async function hasSrsDueToday(): Promise<boolean> {
 }
 
 /**
+ * Check whether a `knowledge-decay` notification was already created today
+ * for a specific topic. Dedup key: type + metadata.topic + date.
+ */
+async function hasKnowledgeDecayToday(topic: string): Promise<boolean> {
+  const todayStr = new Date().toLocaleDateString('sv-SE')
+
+  const existing = await db.notifications
+    .where('type')
+    .equals('knowledge-decay')
+    .filter(
+      n =>
+        (n.metadata as Record<string, unknown>)?.topic === topic &&
+        new Date(n.createdAt).toLocaleDateString('sv-SE') === todayStr
+    )
+    .first()
+
+  return existing !== undefined
+}
+
+/**
  * On app startup, count all due flashcards + note reviews and emit
  * an `srs:due` event if any are due. This provides a proactive reminder
  * without requiring the user to navigate to the review page.
@@ -88,6 +112,35 @@ export async function checkSrsDueOnStartup(): Promise<void> {
   }
 }
 
+/**
+ * On app startup, check all topics for knowledge decay and emit
+ * events for topics below the retention threshold.
+ * Uses getTopicRetention() from retentionMetrics to calculate per-topic retention.
+ */
+export async function checkKnowledgeDecayOnStartup(): Promise<void> {
+  const now = new Date()
+
+  const [notes, reviewRecords] = await Promise.all([
+    db.notes.toArray(),
+    db.reviewRecords.toArray(),
+  ])
+
+  if (notes.length === 0 || reviewRecords.length === 0) return
+
+  const topicRetentions = getTopicRetention(notes, reviewRecords, now)
+
+  for (const topic of topicRetentions) {
+    if (topic.retention < DECAY_THRESHOLD) {
+      appEventBus.emit({
+        type: 'knowledge:decay',
+        topic: topic.topic,
+        retention: topic.retention,
+        dueCount: topic.dueCount,
+      })
+    }
+  }
+}
+
 /** Map domain event types to NotificationType for preference lookup */
 const EVENT_TO_NOTIF_TYPE: Record<AppEventType, NotificationType> = {
   'course:completed': 'course-complete',
@@ -96,6 +149,7 @@ const EVENT_TO_NOTIF_TYPE: Record<AppEventType, NotificationType> = {
   'achievement:unlocked': 'achievement-unlocked',
   'review:due': 'review-due',
   'srs:due': 'srs-due',
+  'knowledge:decay': 'knowledge-decay',
 }
 
 /** Handle a single domain event, creating the appropriate notification. */
@@ -191,6 +245,21 @@ async function handleEvent(event: AppEvent): Promise<void> {
       })
       break
     }
+
+    case 'knowledge:decay': {
+      // Deduplicate: one decay notification per topic per day
+      const alreadyDecayNotified = await hasKnowledgeDecayToday(event.topic)
+      if (alreadyDecayNotified) return
+
+      await store.create({
+        type: 'knowledge-decay',
+        title: `Knowledge Fading: ${event.topic}`,
+        message: `Your retention for "${event.topic}" has dropped to ${event.retention}%. Review now to strengthen your memory.`,
+        actionUrl: '/review',
+        metadata: { topic: event.topic, retention: event.retention },
+      })
+      break
+    }
   }
 }
 
@@ -209,6 +278,7 @@ export function initNotificationService(): void {
     'achievement:unlocked',
     'review:due',
     'srs:due',
+    'knowledge:decay',
   ]
 
   for (const type of eventTypes) {
@@ -227,6 +297,12 @@ export function initNotificationService(): void {
   // silent-catch-ok — startup check failure is non-critical; logged for debugging
   checkSrsDueOnStartup().catch(error => {
     console.error('[NotificationService] SRS startup check failed:', error)
+  })
+
+  // Proactive decay check: emit events for topics below retention threshold
+  // silent-catch-ok — startup check failure is non-critical; logged for debugging
+  checkKnowledgeDecayOnStartup().catch(error => {
+    console.error('[NotificationService] Knowledge decay startup check failed:', error)
   })
 }
 

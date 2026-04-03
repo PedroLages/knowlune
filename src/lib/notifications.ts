@@ -1,4 +1,4 @@
-import { Trophy, Flame, Clock, Sparkles, GraduationCap, Download, BookOpen } from 'lucide-react'
+import { Trophy, Flame, Clock, Sparkles, GraduationCap, Download, BookOpen, Brain } from 'lucide-react'
 import type { NotificationType } from '@/data/types'
 
 // --- Shared icon mapping for notification types ---
@@ -10,6 +10,7 @@ export const notificationIcons: Record<NotificationType, typeof Trophy> = {
   'achievement-unlocked': Trophy,
   'review-due': Clock,
   'srs-due': BookOpen,
+  'knowledge-decay': Brain,
 }
 
 export const notificationIconColors: Record<NotificationType, string> = {
@@ -19,6 +20,7 @@ export const notificationIconColors: Record<NotificationType, string> = {
   'achievement-unlocked': 'text-warning',
   'review-due': 'text-muted-foreground',
   'srs-due': 'text-brand',
+  'knowledge-decay': 'text-warning',
 }
 
 // Fallback icons for unknown types

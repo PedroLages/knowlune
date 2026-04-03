@@ -439,6 +439,7 @@ export type NotificationType =
   | 'achievement-unlocked'
   | 'review-due'
   | 'srs-due'
+  | 'knowledge-decay'
 
 export interface Notification {
   id: string // ULID (time-sortable, unique)
@@ -463,6 +464,7 @@ export interface NotificationPreferences {
   achievementUnlocked: boolean
   reviewDue: boolean
   srsDue: boolean
+  knowledgeDecay: boolean
   // Quiet hours
   quietHoursEnabled: boolean
   quietHoursStart: string // "HH:MM" (24h format)
