@@ -79,6 +79,7 @@ export function UnifiedLessonPlayer() {
   const notesPanelRef = usePanelRef()
   const videoPlayerRef = useRef<VideoPlayerHandle>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
+  const videoContainerRef = useRef<HTMLDivElement>(null)
 
   // Lesson navigation: prev/next lesson via adapter
   const { prevLesson, nextLesson, totalLessons, lessons } = useLessonNavigation(
@@ -279,11 +280,12 @@ export function UnifiedLessonPlayer() {
     <>
       {/* Video/PDF Content */}
       <div
+        ref={videoContainerRef}
         className={cn(
-          'relative mb-5 overflow-hidden',
+          'relative mb-5',
           isTheater
-            ? 'w-full h-[calc(100dvh-4rem)]'
-            : 'w-full aspect-video max-h-[calc(60svh)]'
+            ? 'w-full max-h-[min(75dvh,80vh)]' // Theater: up to 75-80% of dynamic viewport
+            : 'w-full max-h-[min(65dvh,70vh)]' // Normal: up to 65-70% of dynamic viewport
         )}
       >
         <LessonContentRenderer
