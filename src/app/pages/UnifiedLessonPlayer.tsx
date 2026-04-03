@@ -29,7 +29,14 @@
 
 import { useEffect, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router'
-import { ChevronLeft, ChevronRight, PanelRight, PencilLine, Video, ClipboardCheck } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  PanelRight,
+  PencilLine,
+  Video,
+  ClipboardCheck,
+} from 'lucide-react'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
@@ -82,10 +89,7 @@ export function UnifiedLessonPlayer() {
   const videoContainerRef = useRef<HTMLDivElement>(null)
 
   // Lesson navigation: prev/next lesson via adapter
-  const { prevLesson, nextLesson, totalLessons, lessons } = useLessonNavigation(
-    adapter,
-    lessonId
-  )
+  const { prevLesson, nextLesson, totalLessons, lessons } = useLessonNavigation(adapter, lessonId)
 
   // Quiz availability: check if a quiz exists for this lesson
   const { hasQuiz } = useHasQuiz(lessonId)
@@ -323,22 +327,28 @@ export function UnifiedLessonPlayer() {
       )}
 
       {/* Lesson description/tags — only shown when there's actual content */}
-      {state.lessonTypeResolved && (state.lessonDescription || (state.lessonTags && state.lessonTags.length > 0)) && (
-        <div className="bg-card rounded-2xl shadow-sm p-5 mt-4">
-          {state.lessonDescription && (
-            <p className="text-sm text-muted-foreground leading-relaxed">{state.lessonDescription}</p>
-          )}
-          {state.lessonTags && state.lessonTags.length > 0 && (
-            <div className={cn('flex flex-wrap gap-1', state.lessonDescription && 'mt-3')}>
-              {state.lessonTags.map(tag => (
-                <span key={tag} className="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs text-brand">
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {state.lessonTypeResolved &&
+        (state.lessonDescription || (state.lessonTags && state.lessonTags.length > 0)) && (
+          <div className="bg-card rounded-2xl shadow-sm p-5 mt-4">
+            {state.lessonDescription && (
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {state.lessonDescription}
+              </p>
+            )}
+            {state.lessonTags && state.lessonTags.length > 0 && (
+              <div className={cn('flex flex-wrap gap-1', state.lessonDescription && 'mt-3')}>
+                {state.lessonTags.map(tag => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs text-brand"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
       {quizButton}
 
@@ -423,13 +433,8 @@ export function UnifiedLessonPlayer() {
             // eslint-disable-next-line react-best-practices/no-inline-styles -- overflow:visible needed for sticky sidebar
             style={{ overflow: 'visible' }}
           >
-            <ResizablePanel
-              defaultSize={state.notesOpen ? '60%' : '100%'}
-              minSize="40%"
-            >
-              <div data-testid="lesson-content-scroll">
-                {mainContent}
-              </div>
+            <ResizablePanel defaultSize={state.notesOpen ? '60%' : '100%'} minSize="40%">
+              <div data-testid="lesson-content-scroll">{mainContent}</div>
             </ResizablePanel>
 
             <ResizableHandle
@@ -469,9 +474,7 @@ export function UnifiedLessonPlayer() {
             )}
           >
             <div className="px-4 py-3 border-b border-border flex-shrink-0">
-              <h3 className="text-sm font-semibold truncate">
-                {course?.name ?? 'Course Content'}
-              </h3>
+              <h3 className="text-sm font-semibold truncate">{course?.name ?? 'Course Content'}</h3>
               <p className="text-xs text-muted-foreground">Course Content</p>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto">

@@ -157,7 +157,10 @@ describe('discoverModels', () => {
           }),
       })
 
-      const models = await discoverModels('openrouter', 'sk-or-v1-testkey1234567890abcdefghijklmnopqrstuvwxyz1234567890ab')
+      const models = await discoverModels(
+        'openrouter',
+        'sk-or-v1-testkey1234567890abcdefghijklmnopqrstuvwxyz1234567890ab'
+      )
       expect(mockFetch).toHaveBeenCalledOnce()
       expect(models.find(m => m.id === 'anthropic/claude-haiku-4-5')).toBeDefined()
       expect(models.find(m => m.id === 'openai/gpt-4o')).toBeDefined()
@@ -176,7 +179,10 @@ describe('discoverModels', () => {
           }),
       })
 
-      const models = await discoverModels('openrouter', 'sk-or-v1-testkey1234567890abcdefghijklmnopqrstuvwxyz1234567890ab')
+      const models = await discoverModels(
+        'openrouter',
+        'sk-or-v1-testkey1234567890abcdefghijklmnopqrstuvwxyz1234567890ab'
+      )
       expect(models.find(m => m.id === 'anthropic/claude-haiku-4-5')?.family).toBe('Anthropic')
       expect(models.find(m => m.id === 'openai/gpt-4o')?.family).toBe('Openai')
     })
@@ -190,12 +196,19 @@ describe('discoverModels', () => {
               { id: 'free/model', name: 'Free', pricing: { prompt: '0', completion: '0' } },
               { id: 'cheap/model', name: 'Cheap', pricing: { prompt: '0.1', completion: '0.1' } },
               { id: 'mid/model', name: 'Mid', pricing: { prompt: '3', completion: '5' } },
-              { id: 'expensive/model', name: 'Expensive', pricing: { prompt: '10', completion: '30' } },
+              {
+                id: 'expensive/model',
+                name: 'Expensive',
+                pricing: { prompt: '10', completion: '30' },
+              },
             ],
           }),
       })
 
-      const models = await discoverModels('openrouter', 'sk-or-v1-testkey1234567890abcdefghijklmnopqrstuvwxyz1234567890ab')
+      const models = await discoverModels(
+        'openrouter',
+        'sk-or-v1-testkey1234567890abcdefghijklmnopqrstuvwxyz1234567890ab'
+      )
       expect(models.find(m => m.id === 'free/model')?.costTier).toBe('free')
       expect(models.find(m => m.id === 'cheap/model')?.costTier).toBe('low')
       expect(models.find(m => m.id === 'mid/model')?.costTier).toBe('medium')

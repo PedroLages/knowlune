@@ -76,9 +76,7 @@ async function goToLesson(page: Page) {
   await page
     .getByTestId('lesson-player-content')
     .waitFor({ state: 'visible', timeout: TIMEOUTS.NETWORK })
-  await page
-    .getByTestId('player-side-panel')
-    .waitFor({ state: 'visible', timeout: TIMEOUTS.LONG })
+  await page.getByTestId('player-side-panel').waitFor({ state: 'visible', timeout: TIMEOUTS.LONG })
 }
 
 /**

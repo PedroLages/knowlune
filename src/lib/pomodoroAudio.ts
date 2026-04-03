@@ -10,11 +10,27 @@
 /** Available notification sounds with display names */
 export const POMODORO_SOUNDS = [
   { id: 'chime', label: 'Chime (default)', file: null },
-  { id: 'alarm-clock', label: 'Alarm Clock', file: '/sounds/pomodoro/sophiahalmen-alarm-clock-207274.mp3' },
-  { id: 'timer-complete', label: 'Timer Complete', file: '/sounds/pomodoro/alexis_gaming_cam-timer-terminer-342934.mp3' },
-  { id: 'clock-alarm', label: 'Clock Alarm', file: '/sounds/pomodoro/microsammy-clock-alarm-8761.mp3' },
+  {
+    id: 'alarm-clock',
+    label: 'Alarm Clock',
+    file: '/sounds/pomodoro/sophiahalmen-alarm-clock-207274.mp3',
+  },
+  {
+    id: 'timer-complete',
+    label: 'Timer Complete',
+    file: '/sounds/pomodoro/alexis_gaming_cam-timer-terminer-342934.mp3',
+  },
+  {
+    id: 'clock-alarm',
+    label: 'Clock Alarm',
+    file: '/sounds/pomodoro/microsammy-clock-alarm-8761.mp3',
+  },
   { id: 'gentle-bell', label: 'Gentle Bell', file: '/sounds/pomodoro/sergei_spas--476798.mp3' },
-  { id: 'timer-ticks', label: 'Timer Ticks', file: '/sounds/pomodoro/kakaist-timer-ticks-314055.mp3' },
+  {
+    id: 'timer-ticks',
+    label: 'Timer Ticks',
+    file: '/sounds/pomodoro/kakaist-timer-ticks-314055.mp3',
+  },
 ] as const
 
 export type PomodoroSoundId = (typeof POMODORO_SOUNDS)[number]['id']

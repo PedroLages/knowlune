@@ -1,4 +1,13 @@
-import { Trophy, Flame, Clock, Sparkles, GraduationCap, Download, BookOpen, Brain } from 'lucide-react'
+import {
+  Trophy,
+  Flame,
+  Clock,
+  Sparkles,
+  GraduationCap,
+  Download,
+  BookOpen,
+  Brain,
+} from 'lucide-react'
 import type { NotificationType } from '@/data/types'
 
 // --- Shared icon mapping for notification types ---

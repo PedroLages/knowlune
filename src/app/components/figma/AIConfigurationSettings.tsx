@@ -609,9 +609,7 @@ export function AIConfigurationSettings() {
           </div>
         ) : (
           /* Multi-Provider API Key Accordion (E90-S10) */
-          <ProviderKeyAccordion
-            onConfigChanged={() => setSettings(getAIConfiguration())}
-          />
+          <ProviderKeyAccordion onConfigChanged={() => setSettings(getAIConfiguration())} />
         )}
 
         {/* Connection Status */}

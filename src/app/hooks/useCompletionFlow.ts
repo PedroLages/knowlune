@@ -95,7 +95,14 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
       setCelebrationTitle(isCourseComplete ? (courseName ?? 'Course') : title)
       setCelebrationOpen(true)
     },
-    [lessons, checkCourseCompletion, courseName, setCelebrationType, setCelebrationTitle, setCelebrationOpen]
+    [
+      lessons,
+      checkCourseCompletion,
+      courseName,
+      setCelebrationType,
+      setCelebrationTitle,
+      setCelebrationOpen,
+    ]
   )
 
   // Handle video ended — mark complete, show celebration, trigger auto-advance
@@ -117,7 +124,15 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
     if (nextLesson) {
       setShowAutoAdvance(true)
     }
-  }, [courseId, lessonId, setItemStatus, showCelebration, lessonTitle, nextLesson, setShowAutoAdvance])
+  }, [
+    courseId,
+    lessonId,
+    setItemStatus,
+    showCelebration,
+    lessonTitle,
+    nextLesson,
+    setShowAutoAdvance,
+  ])
 
   // Handle YouTube auto-complete (>90% watched) — status already persisted by YouTubeVideoContent,
   // so we only need to show celebration and trigger auto-advance countdown.

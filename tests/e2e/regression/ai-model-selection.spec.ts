@@ -85,7 +85,7 @@ async function seedAndNavigate(page: Page, config: Record<string, unknown>) {
 
 /** Reads the current AI config from localStorage */
 async function getStoredConfig(page: Page) {
-  return page.evaluate((key) => {
+  return page.evaluate(key => {
     const raw = localStorage.getItem(key)
     return raw ? JSON.parse(raw) : null
   }, STORAGE_KEY)

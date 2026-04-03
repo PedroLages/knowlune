@@ -26,12 +26,7 @@ export interface MiniPlayerStateResult {
 }
 
 export function useMiniPlayerState(params: MiniPlayerStateParams): MiniPlayerStateResult {
-  const {
-    videoPlayerRef,
-    setIsVideoVisible,
-    setIsVideoPlaying,
-    setIsMiniPlayerDismissed,
-  } = params
+  const { videoPlayerRef, setIsVideoVisible, setIsVideoPlaying, setIsMiniPlayerDismissed } = params
 
   const handleVideoVisibilityChange = useCallback(
     (visible: boolean) => {

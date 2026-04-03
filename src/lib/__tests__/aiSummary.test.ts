@@ -48,7 +48,9 @@ import { sanitizeAIRequestPayload } from '@/lib/aiConfiguration'
 // ---------------------------------------------------------------------------
 
 /** Creates an async generator that yields chunks */
-async function* createMockStream(chunks: string[]): AsyncGenerator<{ content: string; finishReason?: string }, void, unknown> {
+async function* createMockStream(
+  chunks: string[]
+): AsyncGenerator<{ content: string; finishReason?: string }, void, unknown> {
   for (const content of chunks) {
     yield { content }
   }

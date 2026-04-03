@@ -52,7 +52,7 @@ async function computeCacheKey(provider: AIProviderId, apiKey: string): Promise<
   const data = new TextEncoder().encode(apiKey)
   const hashBuffer = await crypto.subtle.digest('SHA-256', data)
   const hashHex = Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, '0'))
+    .map(b => b.toString(16).padStart(2, '0'))
     .join('')
   return `${provider}:${hashHex.slice(0, 16)}`
 }
@@ -177,13 +177,10 @@ async function discoverOpenAI(apiKey: string): Promise<DiscoveredModel[]> {
  * Filters to models with generateContent capability.
  */
 async function discoverGemini(apiKey: string): Promise<DiscoveredModel[]> {
-  const response = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models',
-    {
-      headers: { 'x-goog-api-key': apiKey },
-      signal: AbortSignal.timeout(10_000),
-    }
-  )
+  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
+    headers: { 'x-goog-api-key': apiKey },
+    signal: AbortSignal.timeout(10_000),
+  })
 
   if (!response.ok) {
     throw new Error(`Gemini model list failed: ${response.status}`)
@@ -292,7 +289,10 @@ function openrouterFamily(id: string): string {
 }
 
 /** Estimate cost tier from OpenRouter pricing */
-function openrouterCostTier(pricing?: { prompt: string; completion: string }): DiscoveredModel['costTier'] {
+function openrouterCostTier(pricing?: {
+  prompt: string
+  completion: string
+}): DiscoveredModel['costTier'] {
   if (!pricing) return 'medium'
   const promptCost = parseFloat(pricing.prompt)
   if (isNaN(promptCost) || promptCost === 0) return 'free'
@@ -377,10 +377,7 @@ export async function discoverModels(
       setCache(key, models)
       return models
     } catch (error) {
-      console.warn(
-        'OpenRouter model discovery failed:',
-        (error as Error).message
-      ) // silent-catch-ok: logged + empty fallback
+      console.warn('OpenRouter model discovery failed:', (error as Error).message) // silent-catch-ok: logged + empty fallback
       return []
     }
   }

@@ -120,10 +120,7 @@ export async function checkSrsDueOnStartup(): Promise<void> {
 export async function checkKnowledgeDecayOnStartup(): Promise<void> {
   const now = new Date()
 
-  const [notes, reviewRecords] = await Promise.all([
-    db.notes.toArray(),
-    db.reviewRecords.toArray(),
-  ])
+  const [notes, reviewRecords] = await Promise.all([db.notes.toArray(), db.reviewRecords.toArray()])
 
   if (notes.length === 0 || reviewRecords.length === 0) return
 

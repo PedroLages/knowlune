@@ -100,7 +100,10 @@ test.describe('E91-S13: Caption Customization', () => {
     // Skip if settings button is not rendered (no caption track loaded)
     const isVisible = await settingsButton.isVisible().catch(() => false)
     if (!isVisible) {
-      test.skip(true, 'Caption settings button not rendered — no caption track loaded in test environment')
+      test.skip(
+        true,
+        'Caption settings button not rendered — no caption track loaded in test environment'
+      )
       return
     }
 
@@ -129,7 +132,10 @@ test.describe('E91-S13: Caption Customization', () => {
     const settingsButton = page.getByTestId('caption-settings-button')
     const isVisible = await settingsButton.isVisible().catch(() => false)
     if (!isVisible) {
-      test.skip(true, 'Caption settings button not rendered — no caption track loaded in test environment')
+      test.skip(
+        true,
+        'Caption settings button not rendered — no caption track loaded in test environment'
+      )
       return
     }
 
@@ -139,15 +145,11 @@ test.describe('E91-S13: Caption Customization', () => {
     await page.getByTestId('caption-font-size-large').click()
 
     // Verify localStorage was updated
-    const savedFontSize = await page.evaluate(() =>
-      localStorage.getItem('video-caption-font-size')
-    )
+    const savedFontSize = await page.evaluate(() => localStorage.getItem('video-caption-font-size'))
     expect(savedFontSize).toBe('large')
 
     // Verify opacity default is stored after slider interaction
-    const savedOpacity = await page.evaluate(() =>
-      localStorage.getItem('video-caption-bg-opacity')
-    )
+    const savedOpacity = await page.evaluate(() => localStorage.getItem('video-caption-bg-opacity'))
     // Opacity should be a number string (default 80 or whatever was set)
     if (savedOpacity) {
       expect(Number(savedOpacity)).toBeGreaterThanOrEqual(0)

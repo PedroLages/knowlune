@@ -6,7 +6,11 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { FIXED_DATE } from '../../utils/test-time'
-import { seedImportedCourses, seedImportedVideos, seedImportedPdfs } from '../../support/helpers/indexeddb-seed'
+import {
+  seedImportedCourses,
+  seedImportedVideos,
+  seedImportedPdfs,
+} from '../../support/helpers/indexeddb-seed'
 import { navigateAndWait } from '../../support/helpers/navigation'
 
 const COURSE_ID = 'e91-s10-test-course'
@@ -101,7 +105,7 @@ test.describe('Course Overview Page (E91-S10)', () => {
     )
   })
 
-  test('shows tags in What You\'ll Learn section', async ({ page }) => {
+  test("shows tags in What You'll Learn section", async ({ page }) => {
     await seedTestData(page)
     await navigateAndWait(page, `/courses/${COURSE_ID}/overview`)
 
@@ -135,7 +139,10 @@ test.describe('Course Overview Page (E91-S10)', () => {
   test('hides about section when no description', async ({ page }) => {
     await navigateAndWait(page, '/')
     await seedImportedCourses(page, [{ ...TEST_COURSE, id: 'no-desc', description: undefined }])
-    await seedImportedVideos(page, TEST_VIDEOS.map(v => ({ ...v, courseId: 'no-desc' })))
+    await seedImportedVideos(
+      page,
+      TEST_VIDEOS.map(v => ({ ...v, courseId: 'no-desc' }))
+    )
     await navigateAndWait(page, '/courses/no-desc/overview')
 
     await expect(page.getByTestId('course-overview-page')).toBeVisible()
@@ -164,7 +171,10 @@ test.describe('Course Overview Page (E91-S10)', () => {
   test('total duration hidden when all videos have zero duration', async ({ page }) => {
     await navigateAndWait(page, '/')
     await seedImportedCourses(page, [{ ...TEST_COURSE, id: 'zero-dur' }])
-    await seedImportedVideos(page, TEST_VIDEOS.map(v => ({ ...v, courseId: 'zero-dur', duration: 0 })))
+    await seedImportedVideos(
+      page,
+      TEST_VIDEOS.map(v => ({ ...v, courseId: 'zero-dur', duration: 0 }))
+    )
     await navigateAndWait(page, '/courses/zero-dur')
 
     await expect(page.getByTestId('course-total-duration')).not.toBeVisible()

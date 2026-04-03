@@ -14,10 +14,7 @@
  */
 import { test, expect, type Page } from '@playwright/test'
 import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
-import {
-  seedImportedCourses,
-  seedImportedVideos,
-} from '../../support/helpers/seed-helpers'
+import { seedImportedCourses, seedImportedVideos } from '../../support/helpers/seed-helpers'
 import { navigateAndWait } from '../../support/helpers/navigation'
 import { TIMEOUTS } from '../../utils/constants'
 
@@ -83,17 +80,12 @@ async function seedAndNavigate(page: Page, url: string) {
 // ---------------------------------------------------------------------------
 
 test.describe('E91-S11: Lesson Search in Side Panel', () => {
-  test('AC1+AC7: search input visible for >8 lessons with aria-label', async ({
-    page,
-  }) => {
+  test('AC1+AC7: search input visible for >8 lessons with aria-label', async ({ page }) => {
     await seedAndNavigate(page, LESSON_URL)
 
     const searchInput = page.getByTestId('lesson-search-input')
     await expect(searchInput).toBeVisible({ timeout: TIMEOUTS.LONG })
-    await expect(searchInput).toHaveAttribute(
-      'aria-label',
-      'Filter lessons by title'
-    )
+    await expect(searchInput).toHaveAttribute('aria-label', 'Filter lessons by title')
   })
 
   test('AC5: search input NOT shown for ≤8 lessons', async ({ page }) => {

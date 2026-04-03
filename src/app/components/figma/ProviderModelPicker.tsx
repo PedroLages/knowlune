@@ -189,8 +189,8 @@ export function ProviderModelPicker({
             Recommended
           </Badge>
         )}
-        {model.costTier && (
-          model.costTier === 'high' ? (
+        {model.costTier &&
+          (model.costTier === 'high' ? (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -209,8 +209,7 @@ export function ProviderModelPicker({
             </TooltipProvider>
           ) : (
             <span className="text-xs text-muted-foreground shrink-0 ml-1">{model.costTier}</span>
-          )
-        )}
+          ))}
       </>
     )
   }

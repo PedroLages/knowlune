@@ -212,9 +212,7 @@ function PdfSection({ pdf, courseId }: PdfSectionProps) {
       <CollapsibleContent>
         <div className="px-3 pb-3 pt-1">
           {/* Loading state */}
-          {blobLoading && (
-            <Skeleton className="w-full aspect-[3/4] rounded-xl" />
-          )}
+          {blobLoading && <Skeleton className="w-full aspect-[3/4] rounded-xl" />}
 
           {/* Permission error */}
           {fileError === 'permission-denied' && (

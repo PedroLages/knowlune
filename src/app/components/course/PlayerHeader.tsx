@@ -8,7 +8,15 @@
 
 import { lazy, Suspense, useCallback, useEffect } from 'react'
 import { Link } from 'react-router'
-import { ArrowLeft, CheckCircle2, Circle, Clock, Maximize2, Minimize2, PencilLine } from 'lucide-react'
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Circle,
+  Clock,
+  Maximize2,
+  Minimize2,
+  PencilLine,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { PomodoroTimer } from '@/app/components/figma/PomodoroTimer'
