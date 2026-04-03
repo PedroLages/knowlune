@@ -4,9 +4,9 @@ story_name: "Knowledge Decay Alert Trigger"
 status: in-progress
 started: 2026-04-03
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: in-progress
+review_started: 2026-04-03
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
 burn_in_validated: false
 ---
 
@@ -170,4 +170,12 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+**Schema versioning nuance:** The plan referenced v30 but the actual checkpoint was already at v31, requiring v32. Lesson: always verify `db.verno` at implementation time rather than trusting plan documents — plans can become stale between creation and execution.
+
+**Event bus extension pattern:** Adding a new event type (`knowledge:decay`) followed a well-established pattern — one union variant in `eventBus.ts`, one `EVENT_TO_NOTIF_TYPE` mapping, one `handleEvent()` switch case, and one dedup function. The NotificationService architecture made this mechanical. Future notification types should follow the same 4-step recipe.
+
+**Startup check reuse:** The `checkKnowledgeDecayOnStartup()` function mirrored `checkSrsDueOnStartup()` exactly (async, fire-and-forget, catch + console.error). Reusing existing patterns reduced cognitive overhead and ensured consistent error handling.
+
+**Preference store auto-wiring:** Adding `TYPE_TO_FIELD` and `DEFAULTS` entries was sufficient — `isTypeEnabled()` automatically picked up the new type without any code changes. This is a good example of how map-based lookup tables reduce per-feature boilerplate.
+
+**Dexie migration discipline:** The critical rule — never bump `CHECKPOINT_VERSION` — was followed. Only the live schema versions in `schema.ts` get incremented. This separation ensures checkpoint tests remain stable while allowing incremental schema evolution.
