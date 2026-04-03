@@ -1,8 +1,8 @@
 ---
 story_id: E60-S01
 story_name: "Knowledge Decay Alert Trigger"
-status: ready-for-dev
-started:
+status: in-progress
+started: 2026-04-03
 completed:
 reviewed: false
 review_started:
@@ -66,7 +66,7 @@ So that I can review weakening topics before the knowledge is lost.
   - [ ] 3.1 Add `knowledgeDecay: boolean` to `NotificationPreferences` in `src/data/types.ts`
 
 - [ ] Task 4: Bump Dexie schema version with migration (AC: 1)
-  - [ ] 4.1 Add new version (v30) in `src/db/schema.ts` with upgrade that sets `knowledgeDecay: true` on existing `notificationPreferences` rows
+  - [ ] 4.1 Add new version (v32) in `src/db/schema.ts` with upgrade that sets `knowledgeDecay: true` on existing `notificationPreferences` rows
   - [ ] 4.2 Update `src/db/checkpoint.ts` -- do NOT bump `CHECKPOINT_VERSION`, only add the new version after the checkpoint gate in schema.ts
 
 - [ ] Task 5: Wire preference store with new type (AC: 4)
@@ -88,7 +88,9 @@ So that I can review weakening topics before the knowledge is lost.
   - [ ] 8.3 Define `DECAY_THRESHOLD = 50` constant at module level (export for tests)
   - [ ] 8.4 Call from `initNotificationService()` after existing `checkSrsDueOnStartup()` with same fire-and-forget + catch pattern
 
-## Implementation Notes
+## Implementation Plan
+
+See [plan](plans/plan-e60-s01-knowledge-decay-alert-trigger.md) for implementation approach.
 
 ### Architecture Compliance
 
