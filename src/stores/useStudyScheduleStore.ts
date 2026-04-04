@@ -35,7 +35,7 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
     }
   },
 
-  addSchedule: async (input) => {
+  addSchedule: async input => {
     const now = new Date().toISOString()
     const newSchedule: StudySchedule = {
       ...input,
@@ -49,7 +49,7 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
       await persistWithRetry(async () => {
         await db.studySchedules.add(newSchedule)
       })
-      set((state) => ({ schedules: [...state.schedules, newSchedule] }))
+      set(state => ({ schedules: [...state.schedules, newSchedule] }))
       return newSchedule
     } catch (error) {
       console.error('[StudyScheduleStore] Failed to add schedule:', error)
@@ -60,7 +60,7 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
 
   updateSchedule: async (id, updates) => {
     const { schedules } = get()
-    const existing = schedules.find((s) => s.id === id)
+    const existing = schedules.find(s => s.id === id)
     if (!existing) return
 
     const updatedSchedule: StudySchedule = {
@@ -74,8 +74,8 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
       await persistWithRetry(async () => {
         await db.studySchedules.put(updatedSchedule)
       })
-      set((state) => ({
-        schedules: state.schedules.map((s) => (s.id === id ? updatedSchedule : s)),
+      set(state => ({
+        schedules: state.schedules.map(s => (s.id === id ? updatedSchedule : s)),
       }))
     } catch (error) {
       console.error('[StudyScheduleStore] Failed to update schedule:', error)
@@ -83,17 +83,17 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
     }
   },
 
-  deleteSchedule: async (id) => {
+  deleteSchedule: async id => {
     const { schedules } = get()
-    const existing = schedules.find((s) => s.id === id)
+    const existing = schedules.find(s => s.id === id)
     if (!existing) return
 
     try {
       await persistWithRetry(async () => {
         await db.studySchedules.delete(id)
       })
-      set((state) => ({
-        schedules: state.schedules.filter((s) => s.id !== id),
+      set(state => ({
+        schedules: state.schedules.filter(s => s.id !== id),
       }))
     } catch (error) {
       console.error('[StudyScheduleStore] Failed to delete schedule:', error)
@@ -102,14 +102,10 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
   },
 
   getSchedulesForDay: (day, enabledOnly = true) => {
-    return get().schedules.filter(
-      (s) => s.days.includes(day) && (!enabledOnly || s.enabled)
-    )
+    return get().schedules.filter(s => s.days.includes(day) && (!enabledOnly || s.enabled))
   },
 
   getSchedulesForCourse: (courseId, enabledOnly = true) => {
-    return get().schedules.filter(
-      (s) => s.courseId === courseId && (!enabledOnly || s.enabled)
-    )
+    return get().schedules.filter(s => s.courseId === courseId && (!enabledOnly || s.enabled))
   },
 }))

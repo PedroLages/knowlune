@@ -58,7 +58,8 @@ export function FocusModeSettings() {
           <div className="space-y-0.5">
             <Label htmlFor="focus-auto-flashcard">Auto-activate for Flashcard Review</Label>
             <p className="text-sm text-muted-foreground">
-              Activate focus mode automatically when a flashcard or interleaved review session begins
+              Activate focus mode automatically when a flashcard or interleaved review session
+              begins
             </p>
           </div>
           <Switch

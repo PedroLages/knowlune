@@ -9,5 +9,5 @@
  *           known to aid readability for dyslexic users.
  */
 .reading-dyslexia {
-  --reading-dyslexia-font: "Comic Sans MS", "Trebuchet MS", Arial, sans-serif;
+  --reading-dyslexia-font: 'Comic Sans MS', 'Trebuchet MS', Arial, sans-serif;
 }

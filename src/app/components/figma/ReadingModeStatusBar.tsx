@@ -33,9 +33,7 @@ export function ReadingModeStatusBar({ lessonTitle, onBack, onClose }: ReadingMo
         <ChevronLeft className="size-4" aria-hidden="true" />
       </Button>
 
-      <span className="flex-1 text-sm font-medium text-foreground truncate">
-        {lessonTitle}
-      </span>
+      <span className="flex-1 text-sm font-medium text-foreground truncate">{lessonTitle}</span>
 
       <Button
         variant="ghost"

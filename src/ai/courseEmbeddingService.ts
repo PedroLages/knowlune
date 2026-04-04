@@ -85,17 +85,11 @@ export async function computeCourseEmbedding(
  * Generate course embedding after import. Non-blocking: logs errors
  * but never throws. Missing embeddings fall back to tag-based matching.
  */
-export async function generateCourseEmbeddingAfterImport(
-  course: ImportedCourse
-): Promise<void> {
+export async function generateCourseEmbeddingAfterImport(course: ImportedCourse): Promise<void> {
   try {
     await computeCourseEmbedding(course)
   } catch (error) {
-    console.error(
-      '[CourseEmbedding] Failed to generate embedding for course:',
-      course.id,
-      error
-    )
+    console.error('[CourseEmbedding] Failed to generate embedding for course:', course.id, error)
     // Non-blocking: course import already succeeded.
     // Missing embedding logged for future retry via backfill.
   }
@@ -115,11 +109,7 @@ export async function refreshCourseEmbeddingIfChanged(
   try {
     return await computeCourseEmbedding(course)
   } catch (error) {
-    console.error(
-      '[CourseEmbedding] Failed to refresh embedding for course:',
-      course.id,
-      error
-    )
+    console.error('[CourseEmbedding] Failed to refresh embedding for course:', course.id, error)
     return null
   }
 }
@@ -151,11 +141,7 @@ export async function backfillCourseEmbeddings(): Promise<{
         await computeCourseEmbedding(course)
         processed++
       } catch (error) {
-        console.error(
-          '[CourseEmbedding] Backfill failed for course:',
-          course.id,
-          error
-        )
+        console.error('[CourseEmbedding] Backfill failed for course:', course.id, error)
         failed++
       }
     }
@@ -164,9 +150,7 @@ export async function backfillCourseEmbeddings(): Promise<{
   }
 
   if (processed > 0 || failed > 0) {
-    console.info(
-      `[CourseEmbedding] Backfill complete: ${processed} generated, ${failed} failed`
-    )
+    console.info(`[CourseEmbedding] Backfill complete: ${processed} generated, ${failed} failed`)
   }
 
   return { processed, failed }

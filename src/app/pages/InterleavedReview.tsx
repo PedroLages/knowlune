@@ -364,7 +364,12 @@ export function InterleavedReview() {
   const progressPct = total > 0 ? (interleavedIndex / total) * 100 : 0
 
   return (
-    <main data-testid="interleaved-review" className="space-y-6 p-1" ref={cardRef} data-focus-target="interleaved-review">
+    <main
+      data-testid="interleaved-review"
+      className="space-y-6 p-1"
+      ref={cardRef}
+      data-focus-target="interleaved-review"
+    >
       {/* Header with progress */}
       <div className="flex items-center justify-between">
         <PageHeader onBack={() => navigate('/review')} />

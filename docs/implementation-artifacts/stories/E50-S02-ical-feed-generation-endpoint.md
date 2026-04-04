@@ -1,12 +1,12 @@
 ---
 story_id: E50-S02
 story_name: "iCal Feed Generation Endpoint"
-status: draft
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-04-04
+completed: 2026-04-04
+reviewed: true
+review_started: 2026-04-04
+review_gates_passed: [build, lint, type-check, format-check, unit-tests-skipped, e2e-tests-skipped, design-review-skipped, exploratory-qa-skipped, code-review, code-review-testing, performance-benchmark-skipped, security-review, glm-code-review, openai-code-review-skipped]
 burn_in_validated: false
 ---
 
@@ -127,12 +127,37 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Skipped — no UI changes in this story (server-only endpoint).
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Code Review** (`docs/reviews/code/code-review-2026-04-04-e50-s02.md`):
+
+- HIGH: `generateICalFeed()` threw on malformed `startTime` (no try-catch at call site). Fixed: added `isNaN` guard in generator to skip invalid schedules gracefully.
+- MEDIUM: `createClient` instantiated per request. Noted for future optimization.
+- All 5 ACs verified correct. Route mounting before JWT middleware confirmed.
+
+**Security Review** (`docs/reviews/security/security-review-2026-04-04-e50-s02.md`):
+
+- HIGH: No rate limiting on public `/api/calendar` endpoint. Fixed: added `express-rate-limit` (10 req/min/IP).
+- INFO: Token appears in access logs (accepted trade-off, industry standard).
+
+**GLM Adversarial Review** (`docs/reviews/code/glm-code-review-2026-04-04-e50-s02.md`):
+
+- HIGH: Fire-and-forget `.then()` lacked `.catch()` → unhandledRejection risk. Fixed.
+- MEDIUM: DTSTART used `days[0]` instead of earliest next occurrence. Fixed: now computes minimum across all days.
+- MEDIUM: `select('*')` replaced with specific column list.
+
+**Test Coverage** (`docs/reviews/code/code-review-testing-2026-04-04-e50-s02.md`):
+
+- ADVISORY: No unit tests for `icalFeedGenerator.ts` pure functions. Deferred to future story.
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+**Fire-and-forget promises need `.catch()`**: The `last_accessed_at` update used `.then()` only. Without `.catch()`, a rejected promise triggers an `unhandledRejection` process event in Node.js — potentially crashing the server in strict mode. Always chain `.catch()` on fire-and-forget promises in server code.
+
+**Public endpoints bypass the main middleware chain and need their own rate limiting**: The calendar route was correctly mounted before JWT middleware (required for token-in-URL auth), but that also meant it bypassed the rate limiter. Any route outside the main middleware chain needs its own rate limit applied at mount point.
+
+**DTSTART multi-day RRULE edge case**: When a weekly schedule has multiple days (e.g., `[wednesday, friday]`), DTSTART must be the *earliest* next occurrence across all days — not just `days[0]`. If DTSTART is set to Wednesday and the RRULE includes Friday, some older calendar clients (Apple Calendar) may skip the Friday occurrence that falls before DTSTART.
+
+**`ical-generator` throws on Invalid Date**: Malformed `startTime` from the DB produces `Invalid Date` → ical-generator throws `"start has to be a valid date!"`. The generator must guard against this explicitly since DB data can be corrupted. Pattern: validate inputs at the boundary, skip + warn rather than throw.

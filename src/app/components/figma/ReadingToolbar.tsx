@@ -68,7 +68,7 @@ const DEFAULT_SETTINGS: ReadingSettings = {
 function fontSizeToNumber(s: string | undefined): number | undefined {
   if (!s) return undefined
   const n = parseFloat(s)
-  return FONT_SIZE_LEVELS.includes(n as typeof FONT_SIZE_LEVELS[number]) ? n : undefined
+  return FONT_SIZE_LEVELS.includes(n as (typeof FONT_SIZE_LEVELS)[number]) ? n : undefined
 }
 
 /** Map AppSettings readingTheme to toolbar theme key */
@@ -86,7 +86,9 @@ function loadSettings(): ReadingSettings {
     fontSize: fontSizeToNumber(appSettings.readingFontSize) ?? DEFAULT_SETTINGS.fontSize,
     lineHeight:
       appSettings.readingLineHeight &&
-      LINE_HEIGHT_LEVELS.includes(appSettings.readingLineHeight as typeof LINE_HEIGHT_LEVELS[number])
+      LINE_HEIGHT_LEVELS.includes(
+        appSettings.readingLineHeight as (typeof LINE_HEIGHT_LEVELS)[number]
+      )
         ? appSettings.readingLineHeight
         : DEFAULT_SETTINGS.lineHeight,
     theme: mapTheme(appSettings.readingTheme) ?? DEFAULT_SETTINGS.theme,
@@ -98,10 +100,12 @@ function loadSettings(): ReadingSettings {
     if (!raw) return appDefaults
     const parsed = JSON.parse(raw) as Partial<ReadingSettings>
     return {
-      fontSize: FONT_SIZE_LEVELS.includes(parsed.fontSize as typeof FONT_SIZE_LEVELS[number])
+      fontSize: FONT_SIZE_LEVELS.includes(parsed.fontSize as (typeof FONT_SIZE_LEVELS)[number])
         ? (parsed.fontSize as number)
         : appDefaults.fontSize,
-      lineHeight: LINE_HEIGHT_LEVELS.includes(parsed.lineHeight as typeof LINE_HEIGHT_LEVELS[number])
+      lineHeight: LINE_HEIGHT_LEVELS.includes(
+        parsed.lineHeight as (typeof LINE_HEIGHT_LEVELS)[number]
+      )
         ? (parsed.lineHeight as number)
         : appDefaults.lineHeight,
       theme: THEMES.includes(parsed.theme as ReadingTheme)
@@ -163,7 +167,7 @@ export function ReadingToolbar() {
     applyLineHeight(settings.lineHeight)
     applyTheme(settings.theme)
     // Check if current preset is dyslexia
-    const preset = PRESETS.find((p) => p.label === settings.lastPreset)
+    const preset = PRESETS.find(p => p.label === settings.lastPreset)
     applyDyslexiaFont(!!preset?.dyslexiaFont)
     saveSettings(settings)
   }, [settings])
@@ -178,7 +182,7 @@ export function ReadingToolbar() {
   }, [])
 
   const updateSettings = useCallback((patch: Partial<ReadingSettings>) => {
-    setSettings((prev) => ({
+    setSettings(prev => ({
       ...prev,
       ...patch,
       // Only update lastPreset when explicitly provided; manual tweaks preserve the last applied preset label
@@ -192,25 +196,27 @@ export function ReadingToolbar() {
   // Font size step
   const changeFontSize = useCallback(
     (dir: 1 | -1) => {
-      const idx = FONT_SIZE_LEVELS.indexOf(settings.fontSize as typeof FONT_SIZE_LEVELS[number])
+      const idx = FONT_SIZE_LEVELS.indexOf(settings.fontSize as (typeof FONT_SIZE_LEVELS)[number])
       const next = idx + dir
       if (next >= 0 && next < FONT_SIZE_LEVELS.length) {
         updateSettings({ fontSize: FONT_SIZE_LEVELS[next] })
       }
     },
-    [settings.fontSize, updateSettings],
+    [settings.fontSize, updateSettings]
   )
 
   // Line height step
   const changeLineHeight = useCallback(
     (dir: 1 | -1) => {
-      const idx = LINE_HEIGHT_LEVELS.indexOf(settings.lineHeight as typeof LINE_HEIGHT_LEVELS[number])
+      const idx = LINE_HEIGHT_LEVELS.indexOf(
+        settings.lineHeight as (typeof LINE_HEIGHT_LEVELS)[number]
+      )
       const next = idx + dir
       if (next >= 0 && next < LINE_HEIGHT_LEVELS.length) {
         updateSettings({ lineHeight: LINE_HEIGHT_LEVELS[next] })
       }
     },
-    [settings.lineHeight, updateSettings],
+    [settings.lineHeight, updateSettings]
   )
 
   // Theme toggle
@@ -221,17 +227,14 @@ export function ReadingToolbar() {
   }, [settings.theme, updateSettings])
 
   // Apply preset
-  const applyPreset = useCallback(
-    (preset: ReadingPreset) => {
-      setSettings((prev) => ({
-        ...prev,
-        fontSize: preset.fontSize,
-        lineHeight: preset.lineHeight,
-        lastPreset: preset.label,
-      }))
-    },
-    [],
-  )
+  const applyPreset = useCallback((preset: ReadingPreset) => {
+    setSettings(prev => ({
+      ...prev,
+      fontSize: preset.fontSize,
+      lineHeight: preset.lineHeight,
+      lastPreset: preset.label,
+    }))
+  }, [])
 
   const fontSizeLabel = `${settings.fontSize}x`
   const lineHeightLabel = settings.lineHeight.toFixed(2).replace(/0$/, '')
@@ -256,7 +259,7 @@ export function ReadingToolbar() {
             ? 'opacity-100'
             : 'opacity-0 pointer-events-none'
           : 'transition-opacity duration-150',
-        !reduceMotion && (isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'),
+        !reduceMotion && (isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none')
       )}
       role="toolbar"
       aria-label="Reading toolbar"
@@ -275,7 +278,10 @@ export function ReadingToolbar() {
           <Type className="size-3" aria-hidden="true" />
           <Minus className="size-3" aria-hidden="true" />
         </Button>
-        <span className="text-xs text-muted-foreground w-8 text-center select-none" aria-live="polite">
+        <span
+          className="text-xs text-muted-foreground w-8 text-center select-none"
+          aria-live="polite"
+        >
           {fontSizeLabel}
         </span>
         <Button
@@ -307,7 +313,10 @@ export function ReadingToolbar() {
           <MoveVertical className="size-3" aria-hidden="true" />
           <Minus className="size-3" aria-hidden="true" />
         </Button>
-        <span className="text-xs text-muted-foreground w-8 text-center select-none" aria-live="polite">
+        <span
+          className="text-xs text-muted-foreground w-8 text-center select-none"
+          aria-live="polite"
+        >
           {lineHeightLabel}
         </span>
         <Button
@@ -350,20 +359,16 @@ export function ReadingToolbar() {
             aria-label="Reading presets"
             className="min-w-[44px] min-h-[44px] gap-1 max-sm:hidden"
           >
-            <span className="text-xs">
-              {settings.lastPreset ?? 'Preset'}
-            </span>
+            <span className="text-xs">{settings.lastPreset ?? 'Preset'}</span>
             <ChevronDown className="size-3" aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="center" side="top" sideOffset={8}>
-          {PRESETS.map((preset) => (
+          {PRESETS.map(preset => (
             <DropdownMenuItem
               key={preset.label}
               onClick={() => applyPreset(preset)}
-              className={cn(
-                settings.lastPreset === preset.label && 'bg-accent',
-              )}
+              className={cn(settings.lastPreset === preset.label && 'bg-accent')}
             >
               <span>{preset.label}</span>
               <span className="ml-auto text-xs text-muted-foreground">

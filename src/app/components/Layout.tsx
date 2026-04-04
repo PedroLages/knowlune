@@ -206,6 +206,7 @@ function SidebarContent({
 
 export function Layout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { theme, setTheme } = useTheme()
   const isMobile = useIsMobile()
   const isTablet = useIsTablet()
@@ -399,6 +400,8 @@ export function Layout() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [location.pathname])
+
+  const isLessonPlayerRoute = /\/courses\/[^/]+\/lessons\/[^/]+$/.test(location.pathname)
 
   // Focus mode (E65-S03) — overlay, focus trap, and exit
   const focusMode = useFocusMode(navigate)
@@ -659,7 +662,7 @@ export function Layout() {
         <main
           id="main-content"
           data-testid="main-scroll-container"
-          className="flex-1 overflow-auto p-6 pt-6 pb-20 sm:pb-6 leading-[var(--content-line-height)]"
+          className={`flex-1 overflow-auto p-6 pt-6 leading-[var(--content-line-height)] ${isLessonPlayerRoute ? 'pb-0 sm:pb-0' : 'pb-20 sm:pb-6'}`}
         >
           {!isOnline && (
             <div
@@ -683,7 +686,11 @@ export function Layout() {
       <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
       {/* Mobile Bottom Navigation - Only visible on mobile (<640px) */}
-      {isMobile && <div data-theater-hide><BottomNav /></div>}
+      {isMobile && (
+        <div data-theater-hide>
+          <BottomNav />
+        </div>
+      )}
 
       {/* Quality Score Dialog (E11-S03) */}
       {qualityResult && (

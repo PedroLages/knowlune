@@ -17,12 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/app/components/ui/select'
-import type {
-  AppSettings,
-  ReadingFontSize,
-  ReadingLineHeight,
-  ReadingTheme,
-} from '@/lib/settings'
+import type { AppSettings, ReadingFontSize, ReadingLineHeight, ReadingTheme } from '@/lib/settings'
 
 interface ReadingFocusModesSectionProps {
   settings: AppSettings
@@ -133,7 +128,10 @@ export function ReadingFocusModesSection({
                 onSettingsChange({ readingTheme: value as ReadingTheme })
               }
             >
-              <SelectTrigger id="reading-theme" className="min-h-[44px] sm:max-w-[calc(50%-0.5rem)]">
+              <SelectTrigger
+                id="reading-theme"
+                className="min-h-[44px] sm:max-w-[calc(50%-0.5rem)]"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
