@@ -34,8 +34,12 @@ All gates must use these exact names in `review_gates_passed`. No variants (e.g.
 | `performance-benchmark` | Bundle pre-check + page metrics agent complete | Yes (or `performance-benchmark-skipped` if lightweight review) |
 | `security-review` | Security review agent completes | Yes |
 | `exploratory-qa` | Exploratory QA agent completes | Yes (or `exploratory-qa-skipped` if no UI changes) |
+| `openai-code-review` | External OpenAI review completes | No — optional (`openai-code-review-skipped` if no Codex CLI or no key) |
+| `glm-code-review` | External GLM review completes | No — optional (`glm-code-review-skipped` if no key) |
 
 The `-skipped` suffix indicates the gate was intentionally skipped (no lint script, no test files, no UI changes). Both the base name and `-skipped` variant satisfy the requirement.
+
+**External model gates** (`openai-code-review`, `glm-code-review`) are optional. They contribute findings to the consolidated report and participate in consensus scoring when available, but never block `reviewed: true`.
 
 ## Orchestrator Discipline
 
@@ -75,6 +79,8 @@ The orchestrator should NOT:
 [ ] Performance benchmark — page metrics (Agent)
 [ ] Security review (Agent)
 [ ] Exploratory QA (Agent) [if UI changes]
+[ ] OpenAI adversarial review (Agent) [if Codex CLI + OPENAI_API_KEY set]
+[ ] GLM adversarial review (Agent) [if ZAI_API_KEY set]
 [ ] Consolidate findings and verdict
 ```
 
@@ -438,7 +444,7 @@ Mark the first todo as `in_progress` and proceed:
      - Total lines changed < 50
      - No changes to `src/app/pages/`, `src/app/components/`, `tests/`
      - Changes limited to: docs, config files, renames, story files, style-only tweaks
-     → Skip: design-review, code-review-testing, edge-case-review
+     → Skip: design-review, code-review-testing, edge-case-review, openai-code-review, glm-code-review
      → Run only: code-review (always required)
      → Tag story file: `review_scope: lightweight`
      → Note in output: "Lightweight review — trivial change (<50 lines, no logic/UI changes)"
@@ -458,6 +464,14 @@ Mark the first todo as `in_progress` and proceed:
    - **Performance benchmark**: Skip page metrics if (a) resuming AND `performance-benchmark` in `review_gates_passed` AND report file exists, OR (b) lightweight review (<50 lines, no UI/src changes). If skipping for lightweight review, add `performance-benchmark-skipped` to gates.
    - **Security review**: Skip if resuming AND `security-review` in `review_gates_passed` AND report file exists. Never has a `-skipped` variant — always runs (secrets scan is always relevant).
    - **Exploratory QA**: Skip if (a) resuming AND `exploratory-qa` in `review_gates_passed` AND report file exists, OR (b) no UI changes (`HAS_UI_CHANGES=false`). If skipping for no UI changes, add `exploratory-qa-skipped` to gates.
+   - **OpenAI code review**: Skip if (a) Codex CLI not installed (`which codex` fails) OR `OPENAI_API_KEY` not set, OR (b) resuming AND `openai-code-review` in `review_gates_passed` AND report file exists, OR (c) lightweight review. If skipping for no CLI/key, add `openai-code-review-skipped` to gates.
+   - **GLM code review**: Skip if (a) `ZAI_API_KEY` not set, OR (b) resuming AND `glm-code-review` in `review_gates_passed` AND report file exists, OR (c) lightweight review. If skipping for no key, add `glm-code-review-skipped` to gates.
+
+   **External model availability check** (run before dispatch):
+   ```bash
+   CODEX_AVAILABLE=$(which codex >/dev/null 2>&1 && printenv OPENAI_API_KEY >/dev/null 2>&1 && echo "yes" || echo "no")
+   ZAI_AVAILABLE=$(printenv ZAI_API_KEY >/dev/null 2>&1 && echo "yes" || echo "no")
+   ```
 
    **Design review pre-requisite** (only if design review will run):
    - Check dev server: `curl -s -o /dev/null -w "%{http_code}" http://localhost:5173`.
@@ -517,6 +531,20 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
      prompt: "Exploratory QA for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Dev server at http://localhost:5173. Test affected routes functionally — click buttons, fill forms, check console errors. Write report to ${BASE_PATH}/docs/reviews/qa/exploratory-qa-{YYYY-MM-DD}-{story-id}.md.",
      description: "Exploratory QA E##-S##"
    })
+
+   // Only dispatched if CODEX_AVAILABLE == "yes":
+   Task({
+     subagent_type: "openai-code-review",
+     prompt: "Adversarial code review via OpenAI Codex for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run: bash scripts/external-code-review.sh --provider openai --story-id {story-id} --output ${BASE_PATH}/docs/reviews/code/openai-code-review-{YYYY-MM-DD}-{story-id}.md",
+     description: "OpenAI adversarial review E##-S##"
+   })
+
+   // Only dispatched if ZAI_AVAILABLE == "yes":
+   Task({
+     subagent_type: "glm-code-review",
+     prompt: "Adversarial code review via GLM for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run: bash scripts/external-code-review.sh --provider glm --story-id {story-id} --output ${BASE_PATH}/docs/reviews/code/glm-code-review-{YYYY-MM-DD}-{story-id}.md",
+     description: "GLM adversarial review E##-S##"
+   })
    ```
 
    **Note**: The code-review agent has selective WebFetch access for deprecated APIs, security issues, and framework bugs. It will use this sparingly (max 1-2 fetches) for high-severity findings only. This may add 10-30s to code review time but provides authoritative fix guidance.
@@ -535,12 +563,18 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
    - `${BASE_PATH}/docs/reviews/performance/performance-benchmark-{YYYY-MM-DD}-{story-id}.md`
    - `${BASE_PATH}/docs/reviews/security/security-review-{YYYY-MM-DD}-{story-id}.md`
    - `${BASE_PATH}/docs/reviews/qa/exploratory-qa-{YYYY-MM-DD}-{story-id}.md`
+   - `${BASE_PATH}/docs/reviews/code/openai-code-review-{YYYY-MM-DD}-{story-id}.md` (if dispatched)
+   - `${BASE_PATH}/docs/reviews/code/glm-code-review-{YYYY-MM-DD}-{story-id}.md` (if dispatched)
 
-   **Deduplicate with consensus scoring**: If code-review and code-review-testing flag the same file:line:
-   - Keep the finding with the higher confidence score
-   - **Boost severity by one level** (Nit→Medium, Medium→High, High→Blocker) — independent agents converging on the same location is stronger signal than a single detection
-   - Tag as `[Consensus: N agents]` in the consolidated report
-   - Prefix with source agents (e.g., "[code-review + code-review-testing]")
+   **Deduplicate with multi-model consensus scoring**:
+
+   All code review sources participate in consensus: code-review (Claude), code-review-testing (Claude), security-review (Claude), openai-code-review (OpenAI), glm-code-review (GLM).
+
+   When multiple sources flag the same file:line (within 5-line proximity):
+   - **2 sources agree** → boost severity by one level (Nit→Medium, Medium→High, High→Blocker). Tag as `[Consensus: 2 — source1 + source2]`
+   - **3+ sources agree** → boost severity by two levels (Nit→High, Medium→Blocker). Tag as `[Consensus: N — source1 + ... + sourceN]`
+
+   Cross-architecture consensus (Claude + OpenAI or Claude + GLM agreeing) is stronger evidence than two Claude agents agreeing, because different model architectures have different blind spots.
 
    Security review findings also participate in consensus scoring: if security-review and code-review flag the same file:line, apply the same severity boost.
 
@@ -592,6 +626,14 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
    [Health: N/100 | Bugs: N found | ACs: N/N verified | or "Skipped — no UI changes"]
    Report: ${BASE_PATH}/docs/reviews/qa/exploratory-qa-{date}-{id}.md
 
+   ### OpenAI Adversarial Review
+   [Summary with finding counts | or "Skipped — no Codex CLI / no OPENAI_API_KEY" | or "API error — non-blocking"]
+   Report: ${BASE_PATH}/docs/reviews/code/openai-code-review-{date}-{id}.md
+
+   ### GLM Adversarial Review
+   [Summary with finding counts | or "Skipped — no ZAI_API_KEY" | or "API error — non-blocking"]
+   Report: ${BASE_PATH}/docs/reviews/code/glm-code-review-{date}-{id}.md
+
    ### Consolidated Findings
 
    #### Blockers (must fix)
@@ -616,6 +658,8 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
 10. **Mark reviewed** (with gate validation):
 
    **Validate all required gates** before marking `reviewed: true`. Check that `review_gates_passed` contains one entry (base or `-skipped` variant) for each of the 12 canonical gates: `build`, `lint`, `type-check`, `format-check`, `unit-tests`, `e2e-tests`, `design-review`, `code-review`, `code-review-testing`, `performance-benchmark`, `security-review`, `exploratory-qa`.
+
+   External model gates (`openai-code-review`, `glm-code-review`) are tracked in `review_gates_passed` for resumption purposes but are NOT required for `reviewed: true`. Missing external gates (no API key, no CLI, or API error) do not block the review.
 
    **Note**: The `web-design-guidelines` gate was removed (consolidated into design-review). For backward compatibility, existing stories with `web-design-guidelines` in their `review_gates_passed` are still valid — simply ignore that entry during validation.
 
@@ -653,6 +697,8 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
     | Performance benchmark | [pass/N warnings/regression/skipped] |
     | Security review       | [pass/N findings]                    |
     | Exploratory QA        | [N/100 health, N bugs/skipped]       |
+    | OpenAI review         | [pass/N warnings/skipped/error]      |
+    | GLM review            | [pass/N warnings/skipped/error]      |
 
     **Verdict: PASS** — Story is ready to ship.
 

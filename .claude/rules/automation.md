@@ -98,8 +98,10 @@ These agents provide **deep analysis** during `/review-story` — catching issue
 | `performance-benchmark` | Real browser page metrics (TTFB, FCP, LCP, DOM Complete) via Playwright MCP | HIGH/MEDIUM (regressions) | [.claude/agents/performance-benchmark.md](../../agents/performance-benchmark.md) |
 | `security-review` | OWASP Top 10, secrets scan, STRIDE, attack surface (diff-scoped) | BLOCKER/HIGH/MEDIUM/INFO | [.claude/agents/security-review.md](../../agents/security-review.md) |
 | `exploratory-qa` | Functional QA via Playwright MCP — buttons, forms, flows, console errors | BLOCKER/HIGH/MEDIUM/LOW | [.claude/agents/exploratory-qa.md](../../agents/exploratory-qa.md) |
+| `openai-code-review` | Adversarial review via OpenAI Codex CLI (optional — requires Codex CLI + OPENAI_API_KEY) | BLOCKER/HIGH/MEDIUM/NIT | [.claude/agents/openai-code-review.md](../../agents/openai-code-review.md) |
+| `glm-code-review` | Adversarial review via GLM/z.ai GLM-5.1 (optional — requires ZAI_API_KEY) | BLOCKER/HIGH/MEDIUM/NIT | [.claude/agents/glm-code-review.md](../../agents/glm-code-review.md) |
 
-**Trigger:** `/review-story` automatically dispatches all three agents in parallel (if applicable)
+**Trigger:** `/review-story` automatically dispatches all agents in parallel (if applicable). External model agents are optional — dispatched when API keys are available.
 
 **Test Agent Workflows:**
 ```bash
@@ -125,8 +127,8 @@ These agents provide **deep analysis** during `/review-story` — catching issue
 | **Save-Time** | 8 ESLint rules | Hardcoded colors, test anti-patterns, async cleanup, imports, silent catches | As you type/save in IDE |
 | **Always-On** | 1 Claude Code hook | Destructive commands (rm -rf, force push, hard reset) | Every Claude Code session |
 | **Commit-Time** | 2 git hooks | Dirty working tree, uncommitted changes | Before `/review-story` or `git push` |
-| **Review-Time** | 6 Claude agents | Architecture, UX, accessibility, edge cases, AC coverage, performance, security, functional QA | During `/review-story` workflow |
-| **Total** | **17 mechanisms** | 11 automated + 6 agent-based | Multi-layered enforcement |
+| **Review-Time** | 6 Claude agents + 2 optional external model agents | Architecture, UX, accessibility, edge cases, AC coverage, performance, security, functional QA, cross-model consensus | During `/review-story` workflow |
+| **Total** | **19 mechanisms** | 11 automated + 6 required agents + 2 optional external agents | Multi-layered enforcement |
 
 ## 🎯 Effectiveness Metrics (Research-Backed)
 
