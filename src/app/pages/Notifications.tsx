@@ -87,7 +87,7 @@ function NotificationCard({ notification, onMarkRead, onDismiss }: NotificationC
               </p>
               <span
                 className={cn(
-                  'size-2 shrink-0 rounded-full',
+                  'size-2.5 shrink-0 rounded-full',
                   isUnread ? 'bg-brand' : 'bg-muted-foreground/30'
                 )}
                 aria-hidden="true"
@@ -235,6 +235,7 @@ export function Notifications() {
           type="button"
           onClick={() => setReadFilter('unread')}
           aria-pressed={readFilter === 'unread'}
+          aria-label={`Show unread notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
           className={cn(
             'min-h-[44px] sm:min-h-[36px] rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
             readFilter === 'unread'
@@ -273,7 +274,7 @@ export function Notifications() {
             <section key={group.label} aria-label={`${group.label} notifications`}>
               {/* Timeline header */}
               <div className="mb-3 flex items-center gap-3">
-                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground font-mono">
+                <span className="text-xs font-display font-semibold uppercase tracking-widest text-muted-foreground">
                   {group.label}
                 </span>
                 <div className="h-px flex-1 bg-border" />
