@@ -113,8 +113,6 @@
   /* Content density tokens (E51-S04) */
   --content-padding: 1rem;
   --content-gap: 1.5rem;
-  --video-chrome-offset-normal: 216px;
-  --video-chrome-offset-theater: 160px;
   --content-line-height: 1.6;
   --table-cell-padding: 0.75rem;
 }

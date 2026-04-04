@@ -308,10 +308,8 @@ export function UnifiedLessonPlayer() {
         ref={videoContainerRef}
         className={cn(
           'relative mb-3 w-full overflow-hidden',
-          !state.isPdf && 'aspect-video',
-          isTheater
-            ? 'max-h-[calc(100dvh-var(--video-chrome-offset-theater))]'
-            : 'max-h-[calc(100dvh-var(--video-chrome-offset-normal))]'
+          !state.isPdf && !isTheater && 'aspect-video max-h-[60svh]',
+          !state.isPdf && isTheater && 'h-[calc(100svh-1rem)]'
         )}
       >
         <LessonContentRenderer
