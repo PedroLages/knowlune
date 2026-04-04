@@ -6,7 +6,7 @@ import { useIsMobile } from '@/app/components/ui/use-mobile'
 import { Sheet, SheetContent, SheetTitle } from '@/app/components/ui/sheet'
 import { usePdfViewerState } from './usePdfViewerState'
 import { usePdfSearch } from './usePdfSearch'
-import { PdfToolbar } from './PdfToolbar'
+import { PdfToolbar, openBlobPdfInNewTab } from './PdfToolbar'
 import { PdfPageRenderer } from './PdfPageRenderer'
 import { PdfScrollView } from './PdfScrollView'
 import { PdfSearchBar } from './PdfSearchBar'
@@ -59,7 +59,7 @@ export function PdfViewer({
         <FileText className="mb-4 size-12 text-muted-foreground" />
         <p className="mb-2 text-sm font-medium text-muted-foreground">{title || 'PDF Document'}</p>
         <p className="mb-4 text-xs text-muted-foreground">Unable to preview this document inline</p>
-        <Button variant="outline" size="sm" onClick={() => window.open(src, '_blank')}>
+        <Button variant="outline" size="sm" onClick={() => openBlobPdfInNewTab(src, title)}>
           <ExternalLink className="mr-2 size-4" />
           Open in New Tab
         </Button>

@@ -20,7 +20,7 @@ interface PdfScrollViewProps {
   pageHeight: number
   onPageChange: (page: number) => void
   onDocumentLoadSuccess: (doc: PDFDocumentProxy) => void
-  onDocumentLoadError: () => void
+  onDocumentLoadError: (error: Error) => void
   makeTextRenderer?: (
     pageNumber: number
   ) => ((layer: { str: string; itemIndex: number }) => string) | undefined

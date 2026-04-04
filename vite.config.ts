@@ -516,12 +516,10 @@ export default defineConfig({
       'Cross-Origin-Embedder-Policy': 'credentialless',
       'Cross-Origin-Opener-Policy': 'same-origin',
 
-      // CSP: allow YouTube IFrame embeds, thumbnails, and API access (E28-S09)
-      'Content-Security-Policy': [
-        "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
-        "img-src 'self' data: blob: https://images.unsplash.com https://i.ytimg.com https://img.youtube.com https://*.googleusercontent.com",
-        "connect-src 'self' https://www.googleapis.com/youtube/ ws://localhost:* http://localhost:* https://openrouter.ai",
-      ].join('; '),
+      // CSP is defined in index.html <meta> tag (comprehensive policy with worker-src,
+      // script-src wasm-unsafe-eval, etc.). Do NOT add a partial CSP header here —
+      // browsers enforce both simultaneously, and a partial header can restrict
+      // directives the meta tag intentionally allows (e.g., worker-src for PDF.js).
     },
   },
   optimizeDeps: {
