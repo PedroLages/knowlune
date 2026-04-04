@@ -1,8 +1,8 @@
 ---
 story_id: E60-S02
 story_name: "Content Recommendation Notification Handler"
-status: ready-for-dev
-started:
+status: in-progress
+started: 2026-04-04
 completed:
 reviewed: false
 review_started:
@@ -55,7 +55,7 @@ So that I can discover relevant courses without manually searching.
   - [ ] 3.1 Add `recommendationMatch: boolean` to `NotificationPreferences` in `src/data/types.ts`
 
 - [ ] Task 4: Update Dexie schema migration (AC: 1)
-  - [ ] 4.1 If S01 already added v30, extend that migration to also set `recommendationMatch: true`. If implementing standalone, add v30 (or v31) with upgrade that sets `recommendationMatch: true` on existing `notificationPreferences` rows.
+  - [ ] 4.1 E60-S01 used Dexie v32 for `knowledgeDecay`. Add v33 migration with upgrade that sets `recommendationMatch: true` on existing `notificationPreferences` rows.
 
 - [ ] Task 5: Wire preference store with new type (AC: 4)
   - [ ] 5.1 Add `'recommendation-match': 'recommendationMatch'` to `TYPE_TO_FIELD` in `src/stores/useNotificationPrefsStore.ts`
@@ -102,7 +102,7 @@ This story is **event-consumer only** -- no emitter is created. The `recommendat
 - **Dedup must filter on `metadata.courseId`** -- one recommendation notification per course per day
 - **Use `toLocaleDateString('sv-SE')` for date comparison** in dedup
 - **actionUrl must use `/courses/${event.courseId}`** format -- matches existing course deep-link pattern
-- **If S01 is implemented first**, the Dexie migration may already be v30 -- coordinate to either extend that migration or add v31. Best approach: implement all three type system changes (S01+S02+S03) in one migration.
+- **E60-S01 used Dexie v32** for `knowledgeDecay`. E60-S02 should add v33 for `recommendationMatch`. E60-S03 will use v34.
 
 ### Notification Shape
 
@@ -122,6 +122,10 @@ E60-S01 establishes the pattern for all three triggers. Reuse the same:
 - Dedup function structure (copy `hasKnowledgeDecayToday` and adjust for courseId)
 - handleEvent switch case structure
 - EVENT_TO_NOTIF_TYPE mapping pattern
+
+## Implementation Plan
+
+See [plan](plans/e60-s02-recommendation-handler.md) for implementation approach.
 
 ## Testing Notes
 
