@@ -132,6 +132,37 @@ export function generateICalFeed(schedules: StudySchedule[], timezone: string): 
 }
 
 /**
+ * Generates and triggers a browser download of a `.ics` file from study schedules.
+ *
+ * Reads from local data (Dexie) — works offline.
+ * Does NOT include SRS events (those require server-side flashcard query).
+ *
+ * @param schedules - Study schedules to include in the download
+ * @param filename - Download filename (default: 'knowlune-study-calendar.ics')
+ */
+export function generateIcsDownload(
+  schedules: StudySchedule[],
+  filename = 'knowlune-study-calendar.ics'
+): void {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const icalString = generateICalFeed(schedules, timezone)
+
+  const blob = new Blob([icalString], { type: 'text/calendar;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  anchor.style.display = 'none'
+  document.body.appendChild(anchor)
+  anchor.click()
+
+  // Cleanup to prevent memory leaks
+  document.body.removeChild(anchor)
+  URL.revokeObjectURL(url)
+}
+
+/**
  * Stub for SRS summary events — full implementation in E50-S06.
  */
 export function generateSRSSummaryEvents(
