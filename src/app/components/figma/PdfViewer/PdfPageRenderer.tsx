@@ -39,7 +39,8 @@ export function PdfPageRenderer({
     <div
       ref={contentRef}
       className={cn(
-        'relative min-w-0 flex-1 overflow-auto',
+        'relative min-w-0 flex-1',
+        isFullscreen ? 'overflow-y-scroll overflow-x-auto' : 'overflow-auto',
         !isFullscreen && 'h-[400px] sm:h-[500px] lg:h-[700px] xl:h-[800px]',
         darkMode && '[&_canvas]:invert [&_canvas]:hue-rotate-180'
       )}

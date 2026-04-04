@@ -92,7 +92,8 @@ export function PdfViewer({
       onKeyDown={handleKeyDown}
       className={cn(
         'flex flex-col overflow-hidden rounded-2xl border border-border bg-card focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none',
-        className
+        className,
+        state.isFullscreen && '!max-h-none'
       )}
     >
       <PdfToolbar
