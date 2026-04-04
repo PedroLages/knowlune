@@ -434,7 +434,7 @@ export function Layout() {
   }, [])
 
   return (
-    <div className="flex h-screen bg-background grain-overlay">
+    <div className="flex h-screen overflow-hidden bg-background grain-overlay">
       {/* Skip to content link for keyboard/screen-reader users */}
       <a
         href="#main-content"
@@ -662,7 +662,7 @@ export function Layout() {
         <main
           id="main-content"
           data-testid="main-scroll-container"
-          className={`flex-1 overflow-auto p-6 pt-6 leading-[var(--content-line-height)] ${isLessonPlayerRoute ? 'pb-0 sm:pb-0' : 'pb-20 sm:pb-6'}`}
+          className={`flex-1 overflow-auto px-6 pt-6 leading-[var(--content-line-height)] ${isLessonPlayerRoute ? 'pb-0' : 'pb-20 sm:pb-6'}`}
         >
           {!isOnline && (
             <div
