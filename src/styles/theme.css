@@ -571,6 +571,11 @@ html.spacious {
     display: none !important;
   }
 
+  /* Theater mode: reduce main-content padding to a thin uniform frame */
+  html[data-theater-mode='true'] #main-content {
+    padding: 0.5rem !important;
+  }
+
   /* Reading mode: hide chrome and center content in a narrow column.
      Same pattern as theater mode — CSS-class-driven on <html>.
      We use visibility/opacity collapse instead of display:none so CSS

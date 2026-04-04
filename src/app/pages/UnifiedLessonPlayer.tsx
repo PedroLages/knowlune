@@ -468,24 +468,26 @@ export function UnifiedLessonPlayer() {
         />
       </div>
 
-      <PlayerHeader
-        courseId={courseId!}
-        lessonId={lessonId!}
-        lessonTitle={state.lessonTitle}
-        courseName={course?.name}
-        showCompletionToggle={state.isPdf || capabilities.requiresNetwork || capabilities.hasVideo}
-        onStatusChange={completion.handleManualStatusChange}
-        isTheater={isTheater}
-        onToggleTheater={toggleTheater}
-        notesOpen={state.notesOpen}
-        onToggleNotes={state.handleNotesToggle}
-        onToggleReadingMode={toggleReadingMode}
-        isReadingMode={isReadingMode}
-      />
+      <div data-theater-hide>
+        <PlayerHeader
+          courseId={courseId!}
+          lessonId={lessonId!}
+          lessonTitle={state.lessonTitle}
+          courseName={course?.name}
+          showCompletionToggle={state.isPdf || capabilities.requiresNetwork || capabilities.hasVideo}
+          onStatusChange={completion.handleManualStatusChange}
+          isTheater={isTheater}
+          onToggleTheater={toggleTheater}
+          notesOpen={state.notesOpen}
+          onToggleNotes={state.handleNotesToggle}
+          onToggleReadingMode={toggleReadingMode}
+          isReadingMode={isReadingMode}
+        />
+      </div>
 
       {/* Content area: classic horizontal layout — scrolls via #main-content (no nested scroll) */}
       {isDesktop ? (
-        <div className="flex gap-[var(--content-gap)]">
+        <div className={cn('flex gap-[var(--content-gap)]', !isTheater && 'mt-3')}>
           {/* Main content + Notes panel (resizable) */}
           <ResizablePanelGroup
             orientation="horizontal"
@@ -544,7 +546,7 @@ export function UnifiedLessonPlayer() {
         </div>
       ) : (
         /* Mobile + Tablet: stacked layout */
-        <div>
+        <div className={cn(!isTheater && 'mt-3')}>
           {/* Tablet Video/Notes toggle */}
           {isTablet && (
             <div
