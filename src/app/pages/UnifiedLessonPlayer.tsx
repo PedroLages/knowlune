@@ -286,10 +286,11 @@ export function UnifiedLessonPlayer() {
       <div
         ref={videoContainerRef}
         className={cn(
-          'relative mb-5',
+          'relative mb-5 w-full',
+          !state.isPdf && 'aspect-video',
           isTheater
-            ? 'w-full max-h-[min(75dvh,80vh)]' // Theater: up to 75-80% of dynamic viewport
-            : 'w-full max-h-[min(65dvh,70vh)]' // Normal: up to 65-70% of dynamic viewport
+            ? 'max-h-[calc(100dvh-var(--video-chrome-offset-theater))]'
+            : 'max-h-[calc(100dvh-var(--video-chrome-offset-normal))]'
         )}
       >
         <LessonContentRenderer
