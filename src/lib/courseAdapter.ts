@@ -21,6 +21,16 @@ export type { MaterialGroup } from './lessonMaterialMatcher'
 // Utilities
 // ---------------------------------------------------------------------------
 
+/** Convert a raw filename into a human-readable title. */
+export function humanizeFilename(filename: string): string {
+  return filename
+    .replace(/\.\w+$/, '')          // strip extension
+    .replace(/^\d+[-_.]\s*/, '')    // strip leading numeric prefix (e.g. "01-")
+    .replace(/[_]/g, ' ')          // underscores to spaces
+    .replace(/\s+/g, ' ')          // collapse whitespace
+    .trim()
+}
+
 /**
  * Revoke a blob URL previously created by `getMediaUrl()` or `getThumbnailUrl()`.
  * Callers MUST call this when they no longer need the URL (e.g., on component
@@ -93,7 +103,7 @@ export class LocalCourseAdapter implements CourseAdapter {
   private buildVideoLessons(): LessonItem[] {
     return this.videos.map(v => ({
       id: v.id,
-      title: v.filename,
+      title: humanizeFilename(v.filename),
       type: 'video' as const,
       duration: v.duration,
       order: v.order,
@@ -112,7 +122,7 @@ export class LocalCourseAdapter implements CourseAdapter {
   private buildPdfLessons(): LessonItem[] {
     return this.pdfs.map(p => ({
       id: p.id,
-      title: p.filename,
+      title: humanizeFilename(p.filename),
       type: 'pdf' as const,
       duration: undefined,
       // Extract numeric prefix from filename for natural sort order
@@ -285,7 +295,7 @@ export class YouTubeCourseAdapter implements CourseAdapter {
     return this.videos
       .map(v => ({
         id: v.id,
-        title: v.filename,
+        title: humanizeFilename(v.filename),
         type: 'video' as const,
         duration: v.duration,
         order: v.order,

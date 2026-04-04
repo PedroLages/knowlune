@@ -197,14 +197,14 @@ function LessonLink({
         <p className="text-sm truncate">
           <HighlightedLessonTitle text={lesson.title} query={searchQuery} />
         </p>
-        <div className="flex items-center gap-1.5 mt-0.5">
+        <div className={cn('flex items-center gap-1.5 mt-0.5', isActive ? 'text-brand-soft-foreground/70' : 'text-muted-foreground')}>
           {lesson.type === 'pdf' ? (
-            <FileText className="size-3 text-muted-foreground" aria-hidden="true" />
+            <FileText className="size-3" aria-hidden="true" />
           ) : (
-            <Video className="size-3 text-muted-foreground" aria-hidden="true" />
+            <Video className="size-3" aria-hidden="true" />
           )}
           {lesson.duration != null && lesson.duration > 0 && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs">
               {formatLessonDuration(lesson.duration)}
             </span>
           )}

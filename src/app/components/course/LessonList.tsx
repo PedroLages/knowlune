@@ -39,6 +39,7 @@ import {
 import { cn } from '@/app/components/ui/utils'
 import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
 import type { FileStatus } from '@/lib/fileVerification'
+import { humanizeFilename } from '@/lib/courseAdapter'
 import type { ContentCapabilities } from '@/lib/courseAdapter'
 
 // ---------------------------------------------------------------------------
@@ -61,15 +62,6 @@ function formatDuration(seconds: number): string {
     return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
   }
   return `${m}:${String(s).padStart(2, '0')}`
-}
-
-function humanizeFilename(filename: string): string {
-  return filename
-    .replace(/\.\w+$/, '')          // strip extension
-    .replace(/^\d+[-_.]\s*/, '')    // strip leading numeric prefix (e.g. "01-")
-    .replace(/[_]/g, ' ')          // underscores to spaces
-    .replace(/\s+/g, ' ')          // collapse whitespace
-    .trim()
 }
 
 function getFolderName(path: string): string {
@@ -388,11 +380,12 @@ function renderLocalGroups(
                 ? 'bg-success/10 text-success'
                 : 'bg-resource-video-bg text-resource-video'
             )}
+            aria-label={isCompleted ? 'Completed' : undefined}
           >
             {isCompleted ? (
               <CheckCircle2
                 className="size-3.5"
-                aria-label="Completed"
+                aria-hidden="true"
                 data-testid={`completion-badge-${video.id}`}
               />
             ) : (
@@ -405,6 +398,7 @@ function renderLocalGroups(
             <Tooltip>
               <TooltipTrigger asChild>
                 <span
+                  tabIndex={0}
                   data-testid={`file-status-${video.id}`}
                   data-status={status}
                   className={cn(
@@ -487,6 +481,7 @@ function renderLocalGroups(
             <Tooltip>
               <TooltipTrigger asChild>
                 <span
+                  tabIndex={0}
                   className={cn(
                     'text-sm font-medium truncate block',
                     !isUnavailable && 'group-hover:text-brand transition-colors'
@@ -549,7 +544,7 @@ function renderLocalGroups(
         <Collapsible defaultOpen>
           <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm font-medium text-foreground group/folder">
             <FolderOpen className="size-4 text-muted-foreground shrink-0" aria-hidden="true" />
-            <span className="flex-1 text-left">{group.title || 'General'}</span>
+            <span className="flex-1 text-left">{group.title ? humanizeFilename(group.title) : 'General'}</span>
             <span className="text-xs text-muted-foreground truncate">
               {formatFolderCount(group.videos.length, group.pdfs.length)}
               {totalDuration > 0 && ` · ${formatDuration(totalDuration)}`}

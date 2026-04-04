@@ -50,6 +50,11 @@ export function PdfViewer({
       search.closeSearch()
       return
     }
+    if (e.key === 'Escape' && state.isFullscreen) {
+      e.preventDefault()
+      state.toggleFullscreen()
+      return
+    }
     state.handleKeyDown(e)
   }
 

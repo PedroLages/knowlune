@@ -483,7 +483,7 @@ export function Layout() {
         {/* Header */}
         <header
           data-theater-hide
-          className="bg-card m-6 mb-0 p-4 px-6 flex items-center gap-4 justify-between"
+          className="bg-card m-6 mb-0 p-4 px-6 flex items-center gap-4 justify-between relative z-10"
           role="banner"
         >
           {/* Hamburger Menu Button - Only on tablet (640-1023px) */}
