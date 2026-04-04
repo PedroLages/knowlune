@@ -1,8 +1,8 @@
 /**
- * Dexie Migration Checkpoint — v31
+ * Dexie Migration Checkpoint — v35
  *
- * This file provides a frozen snapshot of the complete IndexedDB schema at version 31.
- * Fresh installs skip the 31 incremental version declarations and create the full
+ * This file provides a frozen snapshot of the complete IndexedDB schema at version 35.
+ * Fresh installs skip the incremental version declarations and create the full
  * schema in a single step. Existing users at lower versions still run incremental
  * migrations through the legacy version chain in schema.ts.
  *
@@ -20,18 +20,19 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 31
+export const CHECKPOINT_VERSION = 35
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
- * This is the result of applying all migrations v1–v31 on a fresh database.
+ * This is the result of applying all migrations v1–v35 on a fresh database.
  *
  * IMPORTANT: This must exactly match the schema produced by running all
- * 31 incremental migrations. The unit test `schema-checkpoint.test.ts`
+ * 35 incremental migrations. The unit test `schema-checkpoint.test.ts`
  * enforces this invariant.
  *
  * Note: `courses` table was dropped in v30 (E89-S01) — dead regular course system removed.
  * v31 (E59-S03): flashcards and reviewRecords indexes updated for FSRS migration.
+ * v35 (E52-S01): courseEmbeddings table added for ML quiz generation.
  */
 export const CHECKPOINT_SCHEMA: Record<string, string> = {
   importedCourses: 'id, name, importedAt, status, *tags, source',
@@ -49,7 +50,7 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   aiUsageEvents: 'id, featureType, timestamp, courseId',
   reviewRecords: 'id, noteId, due, last_review',
   courseReminders: 'id, courseId',
-  quizzes: 'id, lessonId, createdAt',
+  quizzes: 'id, lessonId, createdAt, transcriptHash',
   quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
   videoCaptions: '[courseId+videoId], courseId, videoId',
   authors: 'id, name, createdAt',
@@ -64,4 +65,5 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   youtubeChapters: 'id, courseId, order',
   notifications: 'id, type, createdAt, readAt, dismissedAt',
   notificationPreferences: 'id',
+  courseEmbeddings: 'courseId',
 }
