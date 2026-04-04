@@ -75,9 +75,7 @@ test.describe('E50-S04: Calendar Integration Settings UI', () => {
     await expect(toggle).toHaveAttribute('data-state', 'unchecked')
 
     // Disabled state message should be visible
-    await expect(
-      section.getByText('Enable to sync your study schedule')
-    ).toBeVisible()
+    await expect(section.getByText('Enable to sync your study schedule')).toBeVisible()
 
     // Feed URL input should NOT be visible when disabled
     await expect(page.getByTestId('feed-url-input')).not.toBeVisible()
@@ -123,9 +121,7 @@ test.describe('E50-S04: Calendar Integration Settings UI', () => {
     const dialog = page.getByRole('alertdialog')
     await expect(dialog).toBeVisible()
     await expect(dialog.getByText('Regenerate Feed URL?')).toBeVisible()
-    await expect(
-      dialog.getByText('invalidate your current feed URL')
-    ).toBeVisible()
+    await expect(dialog.getByText('invalidate your current feed URL')).toBeVisible()
 
     // Cancel button should dismiss the dialog
     await dialog.getByRole('button', { name: 'Cancel' }).click()
