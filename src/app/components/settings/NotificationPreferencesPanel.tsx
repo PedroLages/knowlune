@@ -93,7 +93,12 @@ interface ToggleRowProps {
   'data-testid'?: string
 }
 
-function ToggleRow({ toggle, isTypeEnabled, setTypeEnabled, 'data-testid': testId }: ToggleRowProps) {
+function ToggleRow({
+  toggle,
+  isTypeEnabled,
+  setTypeEnabled,
+  'data-testid': testId,
+}: ToggleRowProps) {
   const Icon = toggle.icon
   const enabled = isTypeEnabled(toggle.type)
   const descId = `notif-desc-${toggle.type}`
@@ -171,11 +176,7 @@ export function NotificationPreferencesPanel() {
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
             Smart Triggers
           </h3>
-          <div
-            role="group"
-            aria-label="Smart trigger notification toggles"
-            className="space-y-3"
-          >
+          <div role="group" aria-label="Smart trigger notification toggles" className="space-y-3">
             {SMART_TRIGGER_TOGGLES.map(toggle => (
               <ToggleRow
                 key={toggle.type}
