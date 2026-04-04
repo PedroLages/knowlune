@@ -36,31 +36,32 @@ export function useReadingMode(isLessonPage: boolean) {
       return
     }
 
-    setIsReadingMode(prev => {
-      if (!prev) {
-        // Entering reading mode — save scroll position
-        savedScrollRef.current = window.scrollY
-        requestAnimationFrame(() => {
-          announce('Reading mode activated. Press Escape to exit.')
-        })
-      } else {
-        // Exiting reading mode — restore scroll position
-        const saved = savedScrollRef.current
+    const next = !isReadingMode
+    if (next) {
+      // Entering reading mode — save scroll position
+      savedScrollRef.current = window.scrollY
+      announce('Reading mode activated. Press Escape to exit.')
+    } else {
+      // Exiting reading mode — restore scroll after DOM reflow
+      const saved = savedScrollRef.current
+      requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           window.scrollTo(0, saved)
         })
-        announce('Reading mode deactivated.')
-      }
-      return !prev
-    })
-  }, [isLessonPage, announce])
+      })
+      announce('Reading mode deactivated.')
+    }
+    setIsReadingMode(next)
+  }, [isLessonPage, isReadingMode, announce])
 
   const exitReadingMode = useCallback(() => {
     if (!isReadingMode) return
     const saved = savedScrollRef.current
     setIsReadingMode(false)
     requestAnimationFrame(() => {
-      window.scrollTo(0, saved)
+      requestAnimationFrame(() => {
+        window.scrollTo(0, saved)
+      })
     })
     announce('Reading mode deactivated.')
   }, [isReadingMode, announce])

@@ -20,8 +20,8 @@ export function ReadingModeStatusBar({ lessonTitle, onBack, onClose }: ReadingMo
   return (
     <div
       className="fixed top-0 left-0 right-0 z-50 flex items-center gap-3 h-12 px-4 bg-card border-b border-border"
-      role="banner"
-      aria-label="Reading mode toolbar"
+      role="toolbar"
+      aria-label="Reading mode controls"
     >
       <Button
         variant="ghost"
