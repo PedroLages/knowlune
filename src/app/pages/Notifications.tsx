@@ -131,7 +131,7 @@ export function Notifications() {
               onClick={() => setReadFilter(status)}
               aria-pressed={readFilter === status}
               aria-label={`Filter by ${status} notifications`}
-              className="min-h-[36px] capitalize"
+              className="min-h-[44px] capitalize sm:min-h-[36px]"
             >
               {status}
             </Button>
@@ -146,7 +146,7 @@ export function Notifications() {
             onClick={() => setSelectedType(null)}
             aria-pressed={selectedType === null}
             aria-label="Show all notification types"
-            className="min-h-[36px]"
+            className="min-h-[44px] sm:min-h-[36px]"
           >
             All types
           </Button>
@@ -161,7 +161,7 @@ export function Notifications() {
                 onClick={() => setSelectedType(type)}
                 aria-pressed={selectedType === type}
                 aria-label={`Filter by ${label}`}
-                className="min-h-[36px]"
+                className="min-h-[44px] sm:min-h-[36px]"
               >
                 <Icon className="mr-1.5 size-3.5" aria-hidden="true" />
                 {label}
@@ -174,7 +174,7 @@ export function Notifications() {
               size="sm"
               onClick={clearFilters}
               aria-label="Clear all filters"
-              className="min-h-[36px] text-muted-foreground"
+              className="min-h-[44px] text-muted-foreground sm:min-h-[36px]"
             >
               <X className="mr-1 size-3.5" aria-hidden="true" />
               Clear

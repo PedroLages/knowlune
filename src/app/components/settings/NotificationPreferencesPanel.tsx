@@ -7,6 +7,7 @@ import {
   Trophy,
   BookOpen,
   Brain,
+  Clock,
   type LucideIcon,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
@@ -52,7 +53,7 @@ const NOTIFICATION_TOGGLES: ToggleDefinition[] = [
     type: 'review-due',
     label: 'Flashcard Reviews',
     description: 'Daily reminder when flashcards are due',
-    icon: BookOpen,
+    icon: Clock,
   },
   {
     type: 'srs-due',
@@ -148,10 +149,10 @@ export function NotificationPreferencesPanel() {
             />
           </div>
 
+          <div aria-live="polite">
           {prefs.quietHoursEnabled && (
             <div
               className="grid grid-cols-2 gap-4 animate-in fade-in-0 slide-in-from-top-1 duration-300"
-              aria-live="polite"
             >
               <div className="space-y-1.5">
                 <Label htmlFor="quiet-start" className="text-sm text-muted-foreground">
@@ -179,6 +180,7 @@ export function NotificationPreferencesPanel() {
               </div>
             </div>
           )}
+          </div>
         </div>
       </CardContent>
     </Card>
