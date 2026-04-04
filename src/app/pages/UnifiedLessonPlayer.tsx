@@ -206,14 +206,12 @@ export function UnifiedLessonPlayer() {
         e.preventDefault()
         toggleTheater()
       }
-      if (e.key === 'Escape' && isTheater) {
-        e.preventDefault()
-        toggleTheater()
-      }
+      // Note: ESC in theater mode is handled exclusively by VideoPlayer's internal
+      // handler (cascading priority: loop markers → theater mode). No duplicate here.
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [toggleTheater, isTheater])
+  }, [toggleTheater])
 
   // Next course suggestion (E91-S08) — computed via useMemo
   const courseSuggestion = useMemo(() => {
