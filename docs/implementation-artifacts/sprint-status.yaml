@@ -791,7 +791,7 @@ development_status:
   69-1-storage-estimation-service-and-overview-card: done
   69-2-per-course-storage-table-with-sorting: done
   69-3-cleanup-actions-with-confirmation-dialogs: done
-  epic-69-retrospective: optional
+  epic-69-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 70: Smart Scheduling
