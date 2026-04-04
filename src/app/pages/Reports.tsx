@@ -271,7 +271,7 @@ export default function Reports() {
             className="mb-6"
           >
             <motion.div variants={fadeUp}>
-              <TabsList className="h-11" aria-label="Reports navigation">
+              <TabsList className="min-h-[44px]" aria-label="Reports navigation">
                 <TabsTrigger value="study">Study Analytics</TabsTrigger>
                 <TabsTrigger value="quizzes">Quiz Analytics</TabsTrigger>
                 <TabsTrigger value="ai">AI Analytics</TabsTrigger>

@@ -179,22 +179,22 @@ export function PlayerSidePanel({
       data-testid="player-side-panel"
     >
       {/* Radix Tabs provides arrow-key navigation between triggers by default — no custom keyboard shortcuts needed. */}
-      <TabsList className="w-full shrink-0 px-1">
-        <TabsTrigger value="lessons" className="text-xs">
+      <TabsList variant="default" className="w-full shrink-0 px-1">
+        <TabsTrigger variant="default" value="lessons" className="text-xs">
           Lessons
         </TabsTrigger>
-        <TabsTrigger value="notes" className="text-xs">
+        <TabsTrigger variant="default" value="notes" className="text-xs">
           Notes
         </TabsTrigger>
         {capabilities.hasTranscript && (
-          <TabsTrigger value="transcript" className="text-xs">
+          <TabsTrigger variant="default" value="transcript" className="text-xs">
             Transcript
           </TabsTrigger>
         )}
-        <TabsTrigger value="ai-summary" className="text-xs">
+        <TabsTrigger variant="default" value="ai-summary" className="text-xs">
           AI Summary
         </TabsTrigger>
-        <TabsTrigger value="bookmarks" className="text-xs">
+        <TabsTrigger variant="default" value="bookmarks" className="text-xs">
           Bookmarks
         </TabsTrigger>
       </TabsList>

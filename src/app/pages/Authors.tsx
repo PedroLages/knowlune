@@ -423,7 +423,7 @@ function FeaturedAuthorProfile({
   return (
     <div>
       {/* Hero Card */}
-      <Card className="rounded-3xl border-0 shadow-sm mb-6" data-testid="featured-author">
+      <Card className="rounded-2xl border-0 shadow-sm mb-6" data-testid="featured-author">
         <CardContent className="p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row gap-6">
             {/* Large Avatar */}
@@ -538,7 +538,7 @@ function FeaturedAuthorProfile({
 
       {/* Bio Section */}
       {author.bio && (
-        <Card className="rounded-3xl border-0 shadow-sm mb-6">
+        <Card className="rounded-2xl border-0 shadow-sm mb-6">
           <CardContent className="p-6 sm:p-8">
             <h3 className="text-lg font-semibold mb-4">About</h3>
             <div className="space-y-3 text-muted-foreground leading-relaxed">
@@ -581,7 +581,7 @@ function FeaturedAuthorProfile({
       )}
 
       {/* Teaser CTA */}
-      <Card className="rounded-3xl border-0 shadow-sm bg-brand-soft/30">
+      <Card className="rounded-2xl border-0 shadow-sm bg-brand-soft/30">
         <CardContent className="flex flex-col sm:flex-row items-center gap-4 p-6">
           <Import className="size-8 text-brand shrink-0" aria-hidden="true" />
           <p
