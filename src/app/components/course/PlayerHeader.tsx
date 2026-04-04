@@ -1,13 +1,14 @@
 /**
  * PlayerHeader — Action toolbar for the unified lesson player.
  *
- * Shows pomodoro, Q&A, reading mode, theater mode, notes, and completion toggle.
- * Navigation (back link, lesson title, course name) is handled by CourseBreadcrumb.
+ * Renders inline action buttons (pomodoro, Q&A, reading mode, theater, notes,
+ * completion). No outer wrapper — the parent provides layout and spacing.
  *
  * @see E89-S05
  */
 
 import { lazy, Suspense, useCallback, useEffect } from 'react'
+import { cn } from '@/app/components/ui/utils'
 import {
   BookOpen,
   CheckCircle2,
@@ -45,6 +46,12 @@ const STATUS_ICONS: Record<CompletionStatus, React.ComponentType<{ className?: s
   'not-started': Circle,
   'in-progress': Clock,
   completed: CheckCircle2,
+}
+
+const STATUS_COLORS: Record<CompletionStatus, string> = {
+  'not-started': 'text-muted-foreground',
+  'in-progress': 'text-warning',
+  completed: 'text-success',
 }
 
 interface PlayerHeaderProps {
@@ -107,7 +114,7 @@ export function PlayerHeader({
   )
 
   return (
-    <div className="flex items-center justify-end gap-3 px-4 py-2 border-b border-border/50 bg-card shrink-0">
+    <div className="flex items-center gap-3">
       <PomodoroTimer />
 
       <Suspense fallback={null}>
@@ -125,7 +132,7 @@ export function PlayerHeader({
               aria-pressed={isReadingMode}
               data-testid="reading-mode-toggle"
             >
-              <BookOpen className="size-4" aria-hidden="true" />
+              <BookOpen className="size-5" aria-hidden="true" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Reading mode (Cmd+Shift+R)</TooltipContent>
@@ -142,9 +149,9 @@ export function PlayerHeader({
           data-testid="theater-mode-toggle"
         >
           {isTheater ? (
-            <Minimize2 className="size-4" aria-hidden="true" />
+            <Minimize2 className="size-5" aria-hidden="true" />
           ) : (
-            <Maximize2 className="size-4" aria-hidden="true" />
+            <Maximize2 className="size-5" aria-hidden="true" />
           )}
         </Button>
       )}
@@ -159,7 +166,7 @@ export function PlayerHeader({
           data-testid="notes-toggle"
         >
           <span className="relative">
-            <PencilLine className="size-4" aria-hidden="true" />
+            <PencilLine className="size-5" aria-hidden="true" />
             {hasNotes && !notesOpen && (
               <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-brand" />
             )}
@@ -174,24 +181,26 @@ export function PlayerHeader({
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5"
+              className={cn('gap-1.5', STATUS_COLORS[currentStatus])}
               data-testid="completion-toggle"
               aria-label={`Completion status: ${STATUS_LABELS[currentStatus]}`}
             >
-              <StatusIcon className="size-4" aria-hidden="true" />
+              <StatusIcon className="size-5" aria-hidden="true" />
               <span className="hidden sm:inline">{STATUS_LABELS[currentStatus]}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {(Object.keys(STATUS_LABELS) as CompletionStatus[]).map(status => {
               const Icon = STATUS_ICONS[status]
+              const isActive = status === currentStatus
               return (
                 <DropdownMenuItem
                   key={status}
                   onSelect={() => handleStatusChange(status)}
                   data-testid={`status-option-${status}`}
+                  className={cn(STATUS_COLORS[status], isActive && 'font-semibold bg-accent')}
                 >
-                  <Icon className="size-4 mr-2" aria-hidden="true" />
+                  <Icon className="size-5 mr-2" aria-hidden="true" />
                   {STATUS_LABELS[status]}
                 </DropdownMenuItem>
               )

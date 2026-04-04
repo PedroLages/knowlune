@@ -77,8 +77,8 @@ export function PomodoroTimer() {
     <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
-          size="sm"
+          variant="ghost"
+          size={isActive ? 'sm' : 'icon'}
           className={cn(
             'gap-1.5',
             isRunning && phase === 'focus' && 'border-brand text-brand-soft-foreground',
@@ -91,7 +91,7 @@ export function PomodoroTimer() {
           }
           data-testid="pomodoro-trigger"
         >
-          <Timer className="h-4 w-4" />
+          <Timer className="size-5" />
           {isActive && (
             <span className="font-mono text-xs" data-testid="pomodoro-trigger-time">
               {formatTime(timeRemaining)}

@@ -280,7 +280,7 @@ export function QAChatPanel() {
 
   // Trigger button (shared)
   const triggerButton = (
-    <Button variant="outline" size="icon" title="Ask AI about your notes">
+    <Button variant="ghost" size="icon" title="Ask AI about your notes">
       <MessageCircle className="size-5" />
     </Button>
   )
