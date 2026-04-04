@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-04-03",
+  "captured_at": "2026-04-04",
   "commit": "cdd8ff89",
   "bundle": {
     "total_js_bytes": 8522159,
@@ -636,37 +636,41 @@
       "Overview": {
         "raw": 153297,
         "file": "Overview-CKGK0T54.js"
+      },
+      "Overview-CKGK0T54": {
+        "raw": 153297,
+        "file": "Overview-CKGK0T54.js"
       }
     }
   },
   "page_metrics": {
     "/": {
-      "ttfb": 3,
-      "dom_interactive": 12,
+      "ttfb": 1,
+      "dom_interactive": 7,
       "dom_complete": 102,
       "load_complete": 102,
-      "fcp": 169,
+      "fcp": 189,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
       "resource_count": 239,
       "js_resource_count": 238,
-      "css_resource_count": 1,
+      "css_resource_count": 2,
       "total_transfer_bytes": 57000,
       "samples": 3
     },
     "/settings": {
-      "ttfb": 3,
-      "dom_interactive": 15,
-      "dom_complete": 106,
-      "load_complete": 106,
-      "fcp": 179,
+      "ttfb": 2,
+      "dom_interactive": 8,
+      "dom_complete": 98,
+      "load_complete": 98,
+      "fcp": 176,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
       "resource_count": 229,
       "js_resource_count": 228,
-      "css_resource_count": 1,
+      "css_resource_count": 2,
       "total_transfer_bytes": 56100,
       "samples": 3
     },

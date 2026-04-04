@@ -371,3 +371,9 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Nit2 (pre-existing, RECURRING): String interpolation for className in Notifications.tsx line 231
 - All 6 acceptance criteria verified and passing
 - Positive: Exact pattern replication of existing SRS handler, correct schema v32 migration, checkpoint.ts untouched, sv-SE date pattern correct, dedup on metadata.topic correct
+
+## E60-S01: Knowledge Decay Alert Trigger (Round 2 - Re-Review)
+- Round 1 confirmed: Zero blockers/high/medium, same 2 nits still present (both intentional/pre-existing)
+- All 6 acceptance criteria verified with file:line evidence
+- Clean working tree confirmed
+- No new findings — implementation is clean
