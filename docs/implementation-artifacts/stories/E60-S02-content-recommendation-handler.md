@@ -1,9 +1,9 @@
 ---
 story_id: E60-S02
 story_name: "Content Recommendation Notification Handler"
-status: in-progress
+status: done
 started: 2026-04-04
-completed:
+completed: 2026-04-04
 reviewed: true
 review_started: 2026-04-04
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa, openai-code-review-skipped, glm-code-review-skipped]
