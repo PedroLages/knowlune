@@ -332,3 +332,17 @@ await page.addInitScript(() => {
   localStorage.clear()
 })
 ```
+
+## Dexie Version Sequencing in Story Specs
+
+Each Dexie schema migration consumes a version number (v30, v31, v32...). When stories add new fields that require migrations, always note the **next available version** in the story's guardrails section so subsequent stories pick it up without digging through `schema.ts` history.
+
+```markdown
+### Critical Guardrails (in story spec)
+- Dexie migration: use v33 (v32 consumed by E60-S01 for knowledgeDecay)
+- Next available version after this story: v34
+```
+
+This prevents version collisions when multiple stories in the same epic touch the Dexie schema. Each story author sees the version they should use without reading the full migration chain.
+
+**Case study**: E60-S02 — S01 consumed v32 for `knowledgeDecay`, and S02's spec explicitly noted "use v33 for `recommendationMatch`", avoiding a version conflict.
