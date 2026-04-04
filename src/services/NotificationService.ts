@@ -17,6 +17,7 @@ import { useNotificationPrefsStore } from '@/stores/useNotificationPrefsStore'
 import { db } from '@/db'
 import { isDue } from '@/lib/spacedRepetition'
 import { getTopicRetention, FADING_THRESHOLD } from '@/lib/retentionMetrics'
+import { handleFocusModeNotification } from '@/lib/notificationPiercing'
 
 /** Streak milestones that trigger notifications */
 const STREAK_MILESTONES = [7, 14, 30, 60, 100, 365] as const
@@ -413,6 +414,21 @@ async function handleEvent(event: AppEvent): Promise<void> {
       })
       break
     }
+  }
+
+  // Focus mode piercing (E65-S04): after DB persistence, show a piercing
+  // toast for critical notifications or queue non-critical ones for later.
+  if (notifType) {
+    const titles: Record<string, string> = {
+      'review-due': 'Cards Due for Review',
+      'srs-due': 'Cards Ready for Review',
+    }
+    // handleFocusModeNotification is a no-op when focus mode is inactive
+    handleFocusModeNotification(
+      notifType,
+      titles[notifType] ?? 'Notification',
+      '' // message is already in the notification panel
+    )
   }
 }
 

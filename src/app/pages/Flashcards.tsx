@@ -31,6 +31,8 @@ import { fadeUp, scaleIn, staggerContainer } from '@/lib/motion'
 import type { ReviewRating } from '@/data/types'
 import { toast } from 'sonner'
 import type { FlashcardSessionSummary } from '@/stores/useFlashcardStore'
+import { dispatchFocusRequest, dispatchFocusRelease } from '@/lib/focusModeEvents'
+import { getSettings } from '@/lib/settings'
 
 type FlashcardPhase = 'loading' | 'dashboard' | 'reviewing' | 'summary'
 
@@ -149,6 +151,14 @@ export function Flashcards() {
     startReviewSession(now)
     setIsFlipped(false)
     setPhase('reviewing')
+
+    // Auto-activate focus mode if enabled (E65-S04)
+    const settings = getSettings()
+    if (settings.focusAutoFlashcard !== false) {
+      requestAnimationFrame(() => {
+        dispatchFocusRequest('flashcard-review', 'flashcard')
+      })
+    }
   }, [startReviewSession, now])
 
   const handleFlip = useCallback(() => {
@@ -168,6 +178,7 @@ export function Flashcards() {
           const sessionSummary = getSessionSummary()
           setSummary(sessionSummary)
           setPhase('summary')
+          dispatchFocusRelease()
         } else {
           // Focus the card front after flip animation (500ms)
           setTimeout(() => {
@@ -187,6 +198,7 @@ export function Flashcards() {
     resetReviewSession()
     setSummary(null)
     setPhase('dashboard')
+    dispatchFocusRelease()
   }, [resetReviewSession])
 
   const handleReviewMore = useCallback(() => {

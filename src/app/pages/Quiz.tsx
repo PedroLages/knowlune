@@ -26,6 +26,8 @@ import { isUnanswered } from '@/lib/scoring'
 import { MarkForReview } from '@/app/components/quiz/MarkForReview'
 import { ReviewSummary } from '@/app/components/quiz/ReviewSummary'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import { dispatchFocusRequest, dispatchFocusRelease } from '@/lib/focusModeEvents'
+import { getSettings } from '@/lib/settings'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -198,6 +200,15 @@ export function Quiz() {
     }
     // startQuiz handles errors internally (try/catch + store error state)
     startQuiz(lessonId, accommodation)
+
+    // Auto-activate focus mode if enabled in settings (E65-S04)
+    const settings = getSettings()
+    if (settings.focusAutoQuiz !== false) {
+      // Delay slightly to let the quiz DOM render before focus mode looks for data-focus-target
+      requestAnimationFrame(() => {
+        dispatchFocusRequest(lessonId, 'quiz')
+      })
+    }
   }, [startQuiz, lessonId, accommodation])
 
   const handleResume = useCallback(() => {
@@ -232,6 +243,7 @@ export function Quiz() {
     setShowSubmitDialog(false)
     try {
       await submitQuiz(courseId)
+      dispatchFocusRelease()
       navigate(`/courses/${courseId}/lessons/${lessonId}/quiz/results`)
     } catch {
       // silent-catch-ok: error logged to console
@@ -266,6 +278,7 @@ export function Quiz() {
     }
     try {
       await submitQuiz(courseId)
+      dispatchFocusRelease()
       toast.error("Time's up! Your quiz has been submitted.")
       navigate(`/courses/${courseId}/lessons/${lessonId}/quiz/results`)
     } catch {

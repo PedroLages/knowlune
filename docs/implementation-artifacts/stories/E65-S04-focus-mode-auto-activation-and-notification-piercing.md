@@ -1,8 +1,8 @@
 ---
 story_id: E65-S04
 story_name: "Focus Mode Auto-Activation and Notification Piercing"
-status: ready-for-dev
-started:
+status: in-progress
+started: 2026-04-04
 completed:
 reviewed: false
 review_started:

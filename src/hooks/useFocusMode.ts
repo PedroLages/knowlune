@@ -3,6 +3,8 @@ import { toast } from 'sonner'
 import { useAriaLiveAnnouncer } from '@/hooks/useAriaLiveAnnouncer'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useIsMobile } from '@/app/hooks/useMediaQuery'
+import { setFocusModeActive, setFocusModeInactive } from '@/lib/focusModeState'
+import { flushSuppressedNotifications } from '@/lib/notificationPiercing'
 
 export type FocusTargetType = 'quiz' | 'flashcard' | 'interleaved-review'
 
@@ -116,6 +118,8 @@ export function useFocusMode() {
       // Check if quiz is in progress
       const isQuiz = type === 'quiz' && targetEl.getAttribute('data-focus-active') === 'quiz'
 
+      setFocusModeActive()
+
       setState({
         isFocusMode: true,
         focusTargetId: targetId,
@@ -151,6 +155,8 @@ export function useFocusMode() {
       }
     }
 
+    setFocusModeInactive()
+
     setState({
       isFocusMode: false,
       focusTargetId: null,
@@ -160,6 +166,9 @@ export function useFocusMode() {
     })
 
     announce('Focus mode deactivated.')
+
+    // Flush queued non-critical notifications
+    flushSuppressedNotifications()
 
     // Restore focus
     const savedEl = savedActiveElementRef.current
@@ -247,6 +256,21 @@ export function useFocusMode() {
       }
       if (detail?.targetId && detail?.type) {
         activateFocusMode(detail.targetId, detail.type)
+
+        // First-time auto-activation tooltip (E65-S04 AC7)
+        const tooltipKey = 'focus-auto-tooltip-dismissed'
+        if (!localStorage.getItem(tooltipKey)) {
+          toast.info('Focus mode activated automatically. You can disable this in Settings.', {
+            duration: 8000,
+            action: {
+              label: 'Settings',
+              onClick: () => {
+                window.location.href = '/settings'
+              },
+            },
+          })
+          localStorage.setItem(tooltipKey, 'true')
+        }
       }
     }
 

@@ -32,6 +32,8 @@ import {
 } from '@/app/components/ui/empty'
 import type { Note, ReviewRating } from '@/data/types'
 import type { InterleavedSessionSummary } from '@/stores/useReviewStore'
+import { dispatchFocusRequest, dispatchFocusRelease } from '@/lib/focusModeEvents'
+import { getSettings } from '@/lib/settings'
 
 type SessionPhase = 'loading' | 'single-course-prompt' | 'reviewing' | 'summary' | 'empty'
 
@@ -115,6 +117,15 @@ export function InterleavedReview() {
     startInterleavedSession(noteMap, now)
     setIsFlipped(false)
     setPhase('reviewing')
+
+    // Auto-activate focus mode if enabled (E65-S04)
+    // Interleaved review uses the flashcard auto setting
+    const settings = getSettings()
+    if (settings.focusAutoFlashcard !== false) {
+      requestAnimationFrame(() => {
+        dispatchFocusRequest('interleaved-review', 'interleaved-review')
+      })
+    }
   }, [startInterleavedSession, noteMap, now])
 
   // Determine initial phase after data loads (runs once)
@@ -174,6 +185,7 @@ export function InterleavedReview() {
         const sessionSummary = endInterleavedSession(courseNameMap)
         setSummary(sessionSummary)
         setPhase('summary')
+        dispatchFocusRelease()
       } else {
         // Focus the card after flip animation completes (500ms transition)
         setTimeout(() => {
@@ -357,6 +369,7 @@ export function InterleavedReview() {
             const sessionSummary = endInterleavedSession(courseNameMap)
             setSummary(sessionSummary)
             setPhase('summary')
+            dispatchFocusRelease()
           }}
         >
           End Session

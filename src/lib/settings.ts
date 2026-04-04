@@ -42,12 +42,18 @@ export interface AppSettings {
   contentDensity: ContentDensity
   /** Motion preference: 'system' (follow OS), 'on' (reduce), 'off' (allow all). */
   reduceMotion: ReduceMotion
+  /** Auto-activate focus mode when starting a quiz. Default: true. */
+  focusAutoQuiz?: boolean
+  /** Auto-activate focus mode when starting a flashcard review. Default: true. */
+  focusAutoFlashcard?: boolean
 }
 
 export const DISPLAY_DEFAULTS = {
   accessibilityFont: false as const,
   contentDensity: 'default' as ContentDensity,
   reduceMotion: 'system' as ReduceMotion,
+  focusAutoQuiz: true as const,
+  focusAutoFlashcard: true as const,
 }
 
 const defaults: AppSettings = {
@@ -59,6 +65,8 @@ const defaults: AppSettings = {
   accessibilityFont: false,
   contentDensity: 'default',
   reduceMotion: 'system',
+  focusAutoQuiz: true,
+  focusAutoFlashcard: true,
 }
 
 const VALID_CONTENT_DENSITY: ContentDensity[] = ['default', 'spacious']
