@@ -14,7 +14,7 @@ const statuses: {
     label: 'Not Started',
     icon: PlayCircle,
     activeClass:
-      'data-[state=on]:bg-amber-500 data-[state=on]:text-white data-[state=on]:hover:bg-amber-500/90',
+      'data-[state=on]:bg-warning data-[state=on]:text-warning-foreground data-[state=on]:hover:bg-warning/90',
   },
   {
     value: 'active',

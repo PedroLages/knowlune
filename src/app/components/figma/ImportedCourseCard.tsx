@@ -75,22 +75,22 @@ const statusConfig: Record<
   'not-started': {
     label: 'Not Started',
     icon: PlayCircle,
-    badgeClass: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+    badgeClass: 'bg-warning/10 text-warning dark:bg-warning/20 dark:text-warning',
   },
   active: {
     label: 'Active',
     icon: Circle,
-    badgeClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    badgeClass: 'bg-brand-soft text-brand-soft-foreground',
   },
   completed: {
     label: 'Completed',
     icon: CheckCircle2,
-    badgeClass: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    badgeClass: 'bg-success/10 text-success dark:bg-success/20 dark:text-success',
   },
   paused: {
     label: 'Paused',
     icon: PauseCircle,
-    badgeClass: 'bg-gray-100 text-gray-400 dark:bg-gray-800/50 dark:text-gray-400',
+    badgeClass: 'bg-muted text-muted-foreground',
   },
 }
 
@@ -99,6 +99,7 @@ interface ImportedCourseCardProps {
   allTags: string[]
   completionPercent?: number
   momentumScore?: MomentumScore
+  /** Hides editing controls (camera overlay, edit/delete menu, tag editing). Status changes remain available. */
   readOnly?: boolean
 }
 
@@ -323,15 +324,7 @@ export function ImportedCourseCard({
               </div>
             ) : null}
 
-            {readOnly ? (
-              <div className="absolute top-3 right-3 z-20">
-                <Badge className={cn('border-0 text-xs gap-1 pointer-events-none', config.badgeClass)}>
-                  <StatusIcon className="size-3" aria-hidden="true" />
-                  {config.label}
-                </Badge>
-              </div>
-            ) : (
-              <div className="absolute top-3 right-3 z-20">
+            <div className="absolute top-3 right-3 z-20">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -374,34 +367,37 @@ export function ImportedCourseCard({
                         )
                       }
                     )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      data-testid="edit-course-menu-item"
-                      className="gap-2 min-h-[44px]"
-                      onClick={e => {
-                        e.stopPropagation()
-                        setEditDialogOpen(true)
-                      }}
-                    >
-                      <Pencil className="size-4" aria-hidden="true" />
-                      Edit details
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      data-testid="delete-course-menu-item"
-                      variant="destructive"
-                      className="gap-2 min-h-[44px]"
-                      onClick={e => {
-                        e.stopPropagation()
-                        setDeleteDialogOpen(true)
-                      }}
-                    >
-                      <Trash2 className="size-4" aria-hidden="true" />
-                      Delete course
-                    </DropdownMenuItem>
+                    {!readOnly && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          data-testid="edit-course-menu-item"
+                          className="gap-2 min-h-[44px]"
+                          onClick={e => {
+                            e.stopPropagation()
+                            setEditDialogOpen(true)
+                          }}
+                        >
+                          <Pencil className="size-4" aria-hidden="true" />
+                          Edit details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          data-testid="delete-course-menu-item"
+                          variant="destructive"
+                          className="gap-2 min-h-[44px]"
+                          onClick={e => {
+                            e.stopPropagation()
+                            setDeleteDialogOpen(true)
+                          }}
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
+                          Delete course
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-            )}
 
             {/* Info button */}
             <Popover open={infoOpen} onOpenChange={setInfoOpen}>
