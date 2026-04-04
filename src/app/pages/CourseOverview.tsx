@@ -457,7 +457,7 @@ export function CourseOverview() {
                   </div>
                 </div>
               </div>
-              <div className="w-px h-10 bg-border hidden sm:block" />
+              <div className="w-px h-10 bg-muted-foreground/15 hidden sm:block" />
             </>
           )}
 
@@ -473,7 +473,7 @@ export function CourseOverview() {
             </div>
           </div>
 
-          <div className="w-px h-10 bg-border hidden sm:block" />
+          <div className="w-px h-10 bg-muted-foreground/15 hidden sm:block" />
 
           <div className="flex items-center gap-3 px-4">
             <PlayCircle className="size-5 text-accent-violet" aria-hidden="true" />
@@ -487,7 +487,7 @@ export function CourseOverview() {
 
           {pdfs.length > 0 && (
             <>
-              <div className="w-px h-10 bg-border hidden sm:block" />
+              <div className="w-px h-10 bg-muted-foreground/15 hidden sm:block" />
               <div className="flex items-center gap-3 px-4">
                 <FileText className="size-5 text-accent-violet" aria-hidden="true" />
                 <div>
@@ -521,13 +521,16 @@ export function CourseOverview() {
             )}
           </div>
 
-          <div className="relative border-l-2 border-border ml-4 space-y-10 pb-8">
-            {groupedContent.map((group, groupIndex) => {
+          <div className="relative border-l-2 border-muted-foreground/15 ml-4 space-y-10 pb-8">
+            {(() => {
+              let moduleNum = 0
+              return groupedContent.map((group, groupIndex) => {
               if (group.videos.length === 0) return null
+              moduleNum++
               const status = moduleStatuses[groupIndex]
               const groupTitle =
                 group.title ||
-                (groupedContent.length > 1 ? `Section ${groupIndex + 1}` : 'All Lessons')
+                (groupedContent.length > 1 ? `Section ${moduleNum}` : 'All Lessons')
               const groupLessonCount = group.videos.length
               const groupCompletedCount = group.videos.filter(
                 v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= COMPLETION_THRESHOLD
@@ -555,9 +558,9 @@ export function CourseOverview() {
                   <div
                     className={cn(
                       'rounded-2xl border transition-all overflow-hidden',
-                      status === 'active'
-                        ? 'bg-card border-accent-violet/40 shadow-studio'
-                        : 'bg-card/50 border-border/60 hover:border-muted-foreground/20'
+                      status === 'active' && 'bg-card border-accent-violet/30 shadow-[0_0_20px_var(--accent-violet-muted)]',
+                      status === 'completed' && 'bg-card/30 border-success/15 hover:border-success/30',
+                      status === 'upcoming' && 'bg-card/30 border-muted-foreground/8 hover:border-muted-foreground/20'
                     )}
                   >
                     <button
@@ -570,15 +573,15 @@ export function CourseOverview() {
                         <h3
                           className={cn(
                             'text-lg font-semibold',
-                            status === 'active' || status === 'completed'
-                              ? 'text-foreground'
-                              : 'text-foreground/80'
+                            status === 'active' && 'text-foreground',
+                            status === 'completed' && 'text-foreground/60',
+                            status === 'upcoming' && 'text-foreground/80'
                           )}
                         >
                           {groupTitle}
                         </h3>
                         <span className="text-[10px] font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
-                          Module {groupIndex + 1}
+                          Module {moduleNum}
                         </span>
                       </div>
 
@@ -605,7 +608,8 @@ export function CourseOverview() {
                         />
                       </div>
 
-                      {/* Micro progress bar */}
+                      {/* Micro progress bar — hidden when no progress */}
+                      {groupCompletedCount > 0 && (
                       <div className="w-full h-1 bg-muted rounded-full mt-4 overflow-hidden">
                         <div
                           className={cn(
@@ -614,13 +618,11 @@ export function CourseOverview() {
                           )}
                           // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic width requires inline style
                           style={{
-                            width:
-                              groupLessonCount > 0
-                                ? `${(groupCompletedCount / groupLessonCount) * 100}%`
-                                : '0%',
+                            width: `${(groupCompletedCount / groupLessonCount) * 100}%`,
                           }}
                         />
                       </div>
+                      )}
                     </button>
 
                     {/* Expanded lesson list */}
@@ -682,7 +684,8 @@ export function CourseOverview() {
                   </div>
                 </div>
               )
-            })}
+            })
+            })()}
           </div>
         </motion.div>
 
@@ -694,6 +697,55 @@ export function CourseOverview() {
           className="lg:col-span-1"
         >
           <div className="sticky top-24 space-y-6">
+            {/* Course Progress Ring */}
+            <div className="bg-card/50 border border-muted-foreground/10 rounded-2xl p-6 flex flex-col items-center">
+              <div className="relative size-28 mb-4">
+                <svg className="size-28 -rotate-90" viewBox="0 0 100 100" aria-hidden="true">
+                  {/* Track */}
+                  <circle
+                    cx="50" cy="50" r="42"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    className="text-muted/50"
+                  />
+                  {/* Progress */}
+                  <circle
+                    cx="50" cy="50" r="42"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    strokeLinecap="round"
+                    className="text-accent-violet transition-all duration-1000 ease-out"
+                    strokeDasharray={`${2 * Math.PI * 42}`}
+                    strokeDashoffset={`${2 * Math.PI * 42 * (1 - overallPercent / 100)}`}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-bold text-foreground">{overallPercent}%</span>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {completedCount} of {videos.length} lessons
+              </p>
+            </div>
+
+            {/* Course Tags */}
+            {course.tags.length > 0 && (
+              <div className="bg-card/50 border border-muted-foreground/10 rounded-2xl p-6">
+                <h2 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wider">
+                  Topics
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {course.tags.map(tag => (
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* About / Description */}
             {course.description?.trim() && (
               <div className="bg-card/50 border border-muted-foreground/10 rounded-2xl p-6">
