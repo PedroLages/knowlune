@@ -206,6 +206,8 @@ export function UnifiedLessonPlayer() {
         e.preventDefault()
         toggleTheater()
       }
+      // Note: ESC in theater mode is handled exclusively by VideoPlayer's internal
+      // handler (cascading priority: loop markers → theater mode). No duplicate here.
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
@@ -286,7 +288,7 @@ export function UnifiedLessonPlayer() {
       <div
         ref={videoContainerRef}
         className={cn(
-          'relative mb-5 w-full',
+          'relative mb-3 w-full overflow-hidden',
           !state.isPdf && 'aspect-video',
           isTheater
             ? 'max-h-[calc(100dvh-var(--video-chrome-offset-theater))]'
