@@ -446,7 +446,7 @@ export async function removeOrphanedEmbeddings(): Promise<{
     0
   )
 
-  const orphanIds = orphans.map(e => e.id).filter((id): id is string => id !== undefined)
+  const orphanIds = orphans.map(e => e.noteId).filter((id): id is string => id !== undefined)
 
   await db.transaction('rw', [db.embeddings], async () => {
     await db.embeddings.bulkDelete(orphanIds)

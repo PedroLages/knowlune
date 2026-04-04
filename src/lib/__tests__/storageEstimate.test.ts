@@ -14,6 +14,8 @@ function makeDbTableMock(rows: Record<string, unknown>[] = []) {
     get: vi.fn().mockResolvedValue(undefined),
     bulkDelete: vi.fn().mockResolvedValue(undefined),
     above: vi.fn().mockReturnThis(),
+    toCollection: vi.fn().mockReturnThis(),
+    clear: vi.fn().mockResolvedValue(undefined),
   }
 }
 
@@ -675,7 +677,7 @@ describe('removeOrphanedEmbeddings', () => {
     const result = await removeOrphanedEmbeddings()
     expect(result.count).toBe(1)
     expect(result.bytesFreed).toBeGreaterThan(0)
-    expect(mockEmbeddings.bulkDelete).toHaveBeenCalledWith(['e2'])
+    expect(mockEmbeddings.bulkDelete).toHaveBeenCalledWith(['n-orphan'])
   })
 
   it('returns 0 when no orphans found', async () => {
