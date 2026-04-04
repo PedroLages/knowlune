@@ -67,7 +67,7 @@ function NotificationCard({ notification, onMarkRead, onDismiss }: NotificationC
     >
       {/* Icon */}
       <div
-        className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted ${iconColor}`}
+        className={cn('mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted', iconColor)}
       >
         <Icon className="size-4" aria-hidden="true" />
       </div>
@@ -103,7 +103,7 @@ function NotificationCard({ notification, onMarkRead, onDismiss }: NotificationC
           </div>
 
           {/* Hover-reveal actions */}
-          <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             {isUnread && (
               <Button
                 variant="outline"
@@ -221,7 +221,7 @@ export function Notifications() {
           onClick={() => setReadFilter('all')}
           aria-pressed={readFilter === 'all'}
           className={cn(
-            'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+            'min-h-[44px] sm:min-h-[36px] rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
             readFilter === 'all'
               ? 'bg-brand text-brand-foreground'
               : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -234,7 +234,7 @@ export function Notifications() {
           onClick={() => setReadFilter('unread')}
           aria-pressed={readFilter === 'unread'}
           className={cn(
-            'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+            'min-h-[44px] sm:min-h-[36px] rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
             readFilter === 'unread'
               ? 'bg-brand text-brand-foreground'
               : 'bg-muted text-muted-foreground hover:bg-muted/80'
