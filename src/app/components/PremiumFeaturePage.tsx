@@ -158,7 +158,7 @@ function FeaturePreview({
       {/* Blurred static preview mockup (AC1) */}
       {preview && (
         <div
-          className="pointer-events-none select-none overflow-hidden rounded-[24px] max-h-[600px]"
+          className="pointer-events-none select-none overflow-hidden rounded-2xl max-h-[600px]"
           aria-hidden="true"
         >
           <div className="blur-sm opacity-40 scale-[0.98]">{preview}</div>
@@ -170,19 +170,19 @@ function FeaturePreview({
       {/* Static placeholder when no preview provided */}
       {!preview && (
         <div
-          className="pointer-events-none select-none overflow-hidden rounded-[24px] max-h-[600px]"
+          className="pointer-events-none select-none overflow-hidden rounded-2xl max-h-[600px]"
           aria-hidden="true"
         >
           <div className="blur-sm opacity-30 space-y-4 p-6">
             <div className="h-8 w-48 rounded-lg bg-muted" />
             <div className="h-4 w-72 rounded bg-muted" />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="h-28 rounded-[24px] bg-muted" />
-              <div className="h-28 rounded-[24px] bg-muted" />
-              <div className="h-28 rounded-[24px] bg-muted" />
+              <div className="h-28 rounded-2xl bg-muted" />
+              <div className="h-28 rounded-2xl bg-muted" />
+              <div className="h-28 rounded-2xl bg-muted" />
             </div>
-            <div className="h-48 rounded-[24px] bg-muted" />
-            <div className="h-32 rounded-[24px] bg-muted" />
+            <div className="h-48 rounded-2xl bg-muted" />
+            <div className="h-32 rounded-2xl bg-muted" />
           </div>
         </div>
       )}
@@ -190,7 +190,7 @@ function FeaturePreview({
       {/* Overlay CTA card (AC2) */}
       <div className="absolute inset-0 flex items-center justify-center p-6">
         <div
-          className="w-full max-w-lg rounded-[24px] border border-gold-muted/50 bg-card/95 backdrop-blur-md p-8 shadow-xl"
+          className="w-full max-w-lg rounded-2xl border border-gold-muted/50 bg-card/95 backdrop-blur-md p-8 shadow-xl"
           role="region"
           aria-label={`${featureName} — Premium feature`}
         >

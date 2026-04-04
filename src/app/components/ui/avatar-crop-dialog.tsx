@@ -381,7 +381,7 @@ export function AvatarCropDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-3xl rounded-[24px]"
+        className="max-w-3xl rounded-2xl"
         onKeyDown={handleKeyDown}
         onPointerDown={e => e.stopPropagation()}
       >

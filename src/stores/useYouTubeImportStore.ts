@@ -266,7 +266,7 @@ export const useYouTubeImportStore = create<YouTubeImportState>((set, get) => ({
         importedAt: now,
         category: 'youtube',
         tags: [...new Set(tags.map(t => t.trim().toLowerCase()).filter(Boolean))].sort(),
-        status: 'active',
+        status: 'not-started',
         videoCount: loadedVideos.length,
         pdfCount: 0,
         directoryHandle: null, // YouTube courses don't use FS handles

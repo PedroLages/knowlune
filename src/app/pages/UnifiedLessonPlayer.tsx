@@ -308,10 +308,8 @@ export function UnifiedLessonPlayer() {
         ref={videoContainerRef}
         className={cn(
           'relative mb-3 w-full overflow-hidden',
-          !state.isPdf && 'aspect-video',
-          isTheater
-            ? 'max-h-[calc(100dvh-var(--video-chrome-offset-theater))]'
-            : 'max-h-[calc(100dvh-var(--video-chrome-offset-normal))]'
+          !state.isPdf && !isTheater && 'aspect-video max-h-[60svh]',
+          !state.isPdf && isTheater && 'h-[calc(100svh-1rem)]'
         )}
       >
         <LessonContentRenderer
@@ -470,24 +468,28 @@ export function UnifiedLessonPlayer() {
         />
       </div>
 
-      <PlayerHeader
-        courseId={courseId!}
-        lessonId={lessonId!}
-        lessonTitle={state.lessonTitle}
-        courseName={course?.name}
-        showCompletionToggle={state.isPdf || capabilities.requiresNetwork || capabilities.hasVideo}
-        onStatusChange={completion.handleManualStatusChange}
-        isTheater={isTheater}
-        onToggleTheater={toggleTheater}
-        notesOpen={state.notesOpen}
-        onToggleNotes={state.handleNotesToggle}
-        onToggleReadingMode={toggleReadingMode}
-        isReadingMode={isReadingMode}
-      />
+      <div data-theater-hide>
+        <PlayerHeader
+          courseId={courseId!}
+          lessonId={lessonId!}
+          lessonTitle={state.lessonTitle}
+          courseName={course?.name}
+          showCompletionToggle={
+            state.isPdf || capabilities.requiresNetwork || capabilities.hasVideo
+          }
+          onStatusChange={completion.handleManualStatusChange}
+          isTheater={isTheater}
+          onToggleTheater={toggleTheater}
+          notesOpen={state.notesOpen}
+          onToggleNotes={state.handleNotesToggle}
+          onToggleReadingMode={toggleReadingMode}
+          isReadingMode={isReadingMode}
+        />
+      </div>
 
       {/* Content area: classic horizontal layout — scrolls via #main-content (no nested scroll) */}
       {isDesktop ? (
-        <div className="flex gap-[var(--content-gap)]">
+        <div className={cn('flex gap-[var(--content-gap)]', !isTheater && 'mt-3')}>
           {/* Main content + Notes panel (resizable) */}
           <ResizablePanelGroup
             orientation="horizontal"
@@ -503,6 +505,7 @@ export function UnifiedLessonPlayer() {
               withHandle={state.notesOpen}
               disabled={!state.notesOpen}
               className={cn(state.notesOpen ? 'mx-2' : 'invisible w-0')}
+              onDoubleClick={() => notesPanelRef.current?.resize('40%')}
             />
 
             <ResizablePanel
@@ -522,6 +525,7 @@ export function UnifiedLessonPlayer() {
                   onCaptureFrame={handleCaptureFrame}
                   pendingFocus={state.pendingNoteFocus}
                   onFocusComplete={() => state.setPendingNoteFocus(false)}
+                  isTheater={isTheater}
                 />
               )}
             </ResizablePanel>
@@ -531,7 +535,7 @@ export function UnifiedLessonPlayer() {
           <div
             data-testid="desktop-sidebar"
             className={cn(
-              'sticky top-0 self-start flex-shrink-0 w-96 bg-card rounded-[24px] shadow-sm overflow-hidden flex flex-col max-h-[calc(100svh-3rem)]',
+              'sticky top-0 self-start flex-shrink-0 w-96 bg-card rounded-2xl shadow-sm overflow-hidden flex flex-col max-h-[calc(100svh-3rem)]',
               isTheater || state.notesOpen ? 'hidden' : 'hidden lg:flex'
             )}
           >
@@ -546,7 +550,7 @@ export function UnifiedLessonPlayer() {
         </div>
       ) : (
         /* Mobile + Tablet: stacked layout */
-        <div>
+        <div className={cn(!isTheater && 'mt-3')}>
           {/* Tablet Video/Notes toggle */}
           {isTablet && (
             <div

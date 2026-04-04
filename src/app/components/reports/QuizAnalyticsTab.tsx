@@ -134,10 +134,10 @@ export function QuizAnalyticsTab() {
       <div className="space-y-6" aria-busy="true" aria-label="Loading quiz analytics">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 3 }, (_, i) => (
-            <Skeleton key={i} className="h-28 rounded-[24px]" />
+            <Skeleton key={i} className="h-28 rounded-2xl" />
           ))}
         </div>
-        <Skeleton className="h-40 rounded-[24px]" />
+        <Skeleton className="h-40 rounded-2xl" />
       </div>
     )
   }

@@ -361,7 +361,7 @@ function PathCard({
     <motion.div variants={fadeUp}>
       <Card
         className={cn(
-          'group relative transition-all duration-300 hover:shadow-xl overflow-hidden rounded-[24px]',
+          'group relative transition-all duration-300 hover:shadow-xl overflow-hidden rounded-2xl',
           'focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2 focus-within:ring-offset-background',
           isNotStarted && 'opacity-70'
         )}
@@ -499,7 +499,7 @@ function PathCard({
 
 function PathCardSkeleton() {
   return (
-    <Card className="overflow-hidden rounded-[24px]">
+    <Card className="overflow-hidden rounded-2xl">
       <Skeleton className="h-32 w-full rounded-none" />
       <CardContent className="px-6 pb-6 pt-1 relative">
         <Skeleton className="absolute -top-10 left-6 size-[72px] rounded-full" />

@@ -258,7 +258,7 @@ export function Overview() {
           key="study-history"
           ref={createSectionRef('study-history')}
           {...viewportAnimation}
-          className="rounded-[24px] border border-border/50 bg-card p-[var(--content-padding)]"
+          className="rounded-2xl border border-border/50 bg-card p-[var(--content-padding)]"
           data-testid="section-study-history"
         >
           <h2 className="text-xl font-semibold mb-4">Study History</h2>
@@ -270,7 +270,7 @@ export function Overview() {
           key="study-schedule"
           ref={createSectionRef('study-schedule')}
           {...viewportAnimation}
-          className="rounded-[24px] border border-border/50 bg-card p-[var(--content-padding)]"
+          className="rounded-2xl border border-border/50 bg-card p-[var(--content-padding)]"
           data-testid="section-study-schedule"
         >
           <h2 className="text-xl font-semibold mb-4">Suggested Study Time</h2>
@@ -299,7 +299,7 @@ export function Overview() {
             key="skill-proficiency"
             ref={createSectionRef('skill-proficiency')}
             {...viewportAnimation}
-            className="rounded-[24px] border border-border/50 bg-card p-[var(--content-padding)]"
+            className="rounded-2xl border border-border/50 bg-card p-[var(--content-padding)]"
             data-testid="section-skill-proficiency"
           >
             <h2 className="text-xl font-semibold mb-4">Skill Proficiency</h2>

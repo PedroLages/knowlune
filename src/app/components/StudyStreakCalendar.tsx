@@ -245,7 +245,7 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
       {/* Streak Stats */}
       <div className="grid grid-cols-2 gap-4 mb-6">
         {/* Current Streak */}
-        <div className="bg-momentum-warm-bg rounded-[24px] p-4 border border-warning">
+        <div className="bg-momentum-warm-bg rounded-2xl p-4 border border-warning">
           <div className="flex items-center gap-2 mb-2">
             <motion.div
               animate={
@@ -306,7 +306,7 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
         </div>
 
         {/* Longest Streak */}
-        <div className="bg-brand-soft rounded-[24px] p-4 border border-brand">
+        <div className="bg-brand-soft rounded-2xl p-4 border border-brand">
           <div className="flex items-center gap-2 mb-2">
             <Award className="size-5 text-brand" aria-hidden="true" />
             <span className="text-sm font-medium text-brand">Longest Streak</span>
@@ -349,7 +349,7 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
       </div>
 
       {/* Calendar Heatmap */}
-      <div className="bg-card rounded-[24px] p-5 border border-border">
+      <div className="bg-card rounded-2xl p-5 border border-border">
         <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <h3 className="text-sm font-semibold">Activity</h3>
           <div className="flex items-center gap-2">

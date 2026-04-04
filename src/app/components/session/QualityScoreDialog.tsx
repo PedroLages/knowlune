@@ -81,7 +81,7 @@ export function QualityScoreDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px] rounded-[24px]">
+      <DialogContent className="sm:max-w-[480px] rounded-2xl">
         <DialogHeader>
           <DialogTitle className="text-center">Session Complete</DialogTitle>
           <DialogDescription className="text-center">

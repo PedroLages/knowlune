@@ -94,7 +94,7 @@ export function WelcomeWizard() {
       }}
     >
       <DialogContent
-        className="sm:max-w-lg rounded-[24px]"
+        className="sm:max-w-lg rounded-2xl"
         data-testid="welcome-wizard"
         aria-label="Welcome wizard"
       >

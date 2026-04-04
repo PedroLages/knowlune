@@ -23,7 +23,7 @@ export function RouteErrorFallback({ error, onRetry }: RouteErrorFallbackProps) 
 
   return (
     <div className="flex flex-1 items-center justify-center p-6" role="alert" aria-live="assertive">
-      <div className="mx-auto w-full max-w-md rounded-[24px] border border-border bg-card p-8 text-center shadow-lg">
+      <div className="mx-auto w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-lg">
         {/* Icon */}
         <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">
           <AlertTriangle className="size-8 text-destructive" aria-hidden="true" />

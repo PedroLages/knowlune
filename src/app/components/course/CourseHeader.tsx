@@ -2,7 +2,7 @@
  * CourseHeader — Source-agnostic course header with metadata display,
  * thumbnail, author info, and action buttons.
  *
- * Design ported from old CourseDetail.tsx (bg-card rounded-3xl shadow-sm p-8)
+ * Design ported from old CourseDetail.tsx (bg-card rounded-2xl shadow-sm p-8)
  * with larger thumbnail and icon-enhanced metadata from the Figma wireframes.
  *
  * Used by UnifiedCourseDetail (E89-S04, polished in E89-S12c).
@@ -139,8 +139,8 @@ export function CourseHeader({
         </div>
       )}
 
-      {/* Course header card — ported from old CourseDetail rounded-3xl card */}
-      <div className="bg-card rounded-[24px] shadow-sm p-6 md:p-8 mb-6 border border-border/50">
+      {/* Course header card — ported from old CourseDetail rounded-2xl card */}
+      <div className="bg-card rounded-2xl shadow-sm p-6 md:p-8 mb-6 border border-border/50">
         <div className="flex flex-col lg:flex-row lg:items-start gap-[var(--content-gap)]">
           {/* Main info column */}
           <div className="flex-1 min-w-0">

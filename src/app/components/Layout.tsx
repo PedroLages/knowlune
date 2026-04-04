@@ -120,12 +120,10 @@ function SidebarContent({
   onNavigate,
   iconOnly,
   visibleGroups,
-  hiddenItemCount = 0,
 }: {
   onNavigate?: () => void
   iconOnly?: boolean
   visibleGroups: NavigationGroup[]
-  hiddenItemCount?: number
 }) {
   return (
     <>
@@ -144,7 +142,11 @@ function SidebarContent({
       </div>
 
       {/* Grouped Navigation */}
-      <nav className="flex-1 overflow-y-auto" aria-label="Main navigation">
+      {/* 2px scrollbar — narrower than global 6px */}
+      <nav
+        className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-0.5"
+        aria-label="Main navigation"
+      >
         <div className="space-y-5">
           {visibleGroups.map((group, idx) => (
             <div key={group.label}>
@@ -183,17 +185,6 @@ function SidebarContent({
         </div>
       </nav>
 
-      {/* Disclosure hint: tell users about hidden features */}
-      {hiddenItemCount > 0 && !iconOnly && (
-        <Link
-          to="/settings"
-          onClick={onNavigate}
-          className="block px-4 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          +{hiddenItemCount} more features available
-        </Link>
-      )}
-
       {/* Bottom section: Settings */}
       <div className="mt-4 pt-3 border-t border-border">
         <ul>
@@ -218,9 +209,6 @@ export function Layout() {
   // Progressive sidebar disclosure
   const { filterGroups } = useProgressiveDisclosure()
   const visibleGroups = filterGroups(navigationGroups)
-  const totalItemCount = navigationGroups.reduce((sum, g) => sum + g.items.length, 0)
-  const visibleItemCount = visibleGroups.reduce((sum, g) => sum + g.items.length, 0)
-  const hiddenItemCount = totalItemCount - visibleItemCount
 
   // Ensure courses are loaded from IndexedDB (backup for deferInit race)
   const loadCourses = useCourseStore(s => s.loadCourses)
@@ -456,11 +444,7 @@ export function Layout() {
             className={`${sidebarCollapsed ? 'w-[72px] px-0 py-6' : 'w-[220px] p-6'} bg-card flex flex-col overflow-hidden transition-[width] duration-200 ease-out h-full`}
             aria-label="Sidebar"
           >
-            <SidebarContent
-              iconOnly={sidebarCollapsed}
-              visibleGroups={visibleGroups}
-              hiddenItemCount={hiddenItemCount}
-            />
+            <SidebarContent iconOnly={sidebarCollapsed} visibleGroups={visibleGroups} />
           </aside>
 
           {/* Edge notch toggle */}
@@ -489,7 +473,6 @@ export function Layout() {
             <SidebarContent
               onNavigate={() => setSidebarOpen(false)}
               visibleGroups={visibleGroups}
-              hiddenItemCount={hiddenItemCount}
             />
           </SheetContent>
         </Sheet>
@@ -662,7 +645,7 @@ export function Layout() {
         <main
           id="main-content"
           data-testid="main-scroll-container"
-          className={`flex-1 overflow-auto px-6 pt-6 leading-[var(--content-line-height)] ${isLessonPlayerRoute ? 'pb-0' : 'pb-20 sm:pb-6'}`}
+          className={`flex-1 overflow-auto px-6 pt-6 leading-[var(--content-line-height)] ${isLessonPlayerRoute ? 'pb-6' : 'pb-20 sm:pb-6'}`}
         >
           {!isOnline && (
             <div

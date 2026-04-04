@@ -378,7 +378,11 @@ export const LocalVideoContent = forwardRef<VideoPlayerHandle, LocalVideoContent
     }))
 
     return (
-      <div ref={videoWrapperRef} data-testid="local-video-wrapper" className="relative group/video">
+      <div
+        ref={videoWrapperRef}
+        data-testid="local-video-wrapper"
+        className="relative h-full group/video"
+      >
         <Button
           variant="ghost"
           size="icon"

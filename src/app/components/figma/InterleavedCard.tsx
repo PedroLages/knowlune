@@ -99,7 +99,7 @@ export function InterleavedCard({
             className="absolute inset-0 cursor-pointer"
             style={{ backfaceVisibility: 'hidden', visibility: isFlipped ? 'hidden' : 'visible' }}
           >
-            <Card className="h-full rounded-[24px] transition-shadow duration-200 hover:shadow-lg">
+            <Card className="h-full rounded-2xl transition-shadow duration-200 hover:shadow-lg">
               <CardContent className="flex h-full flex-col justify-between gap-4 p-6">
                 {/* Header: course + topic */}
                 <div className="flex items-center gap-3">
@@ -142,7 +142,7 @@ export function InterleavedCard({
               visibility: isFlipped ? 'visible' : 'hidden',
             }}
           >
-            <Card className="h-full rounded-[24px] shadow-lg">
+            <Card className="h-full rounded-2xl shadow-lg">
               <CardContent className="flex h-full flex-col gap-4 p-6">
                 {/* Header: course + retention */}
                 <div className="flex items-start justify-between gap-3">

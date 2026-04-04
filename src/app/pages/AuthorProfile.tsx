@@ -72,7 +72,7 @@ export function AuthorProfile() {
     return (
       <div>
         <Skeleton className="h-5 w-48 mb-4" />
-        <Skeleton className="h-48 rounded-3xl mb-6" />
+        <Skeleton className="h-48 rounded-2xl mb-6" />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-24 rounded-2xl" />
@@ -117,7 +117,7 @@ export function AuthorProfile() {
       </Breadcrumb>
 
       {/* Hero Section */}
-      <Card className="rounded-3xl border-0 shadow-sm mb-6">
+      <Card className="rounded-2xl border-0 shadow-sm mb-6">
         <CardContent className="p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row gap-[var(--content-gap)]">
             {/* Avatar */}
@@ -226,7 +226,7 @@ export function AuthorProfile() {
 
       {/* Bio Section */}
       {author.bio && (
-        <Card className="rounded-3xl border-0 shadow-sm mb-6">
+        <Card className="rounded-2xl border-0 shadow-sm mb-6">
           <CardContent className="p-6 sm:p-8">
             <h2 className="text-lg font-semibold mb-4">About</h2>
             <div className="space-y-3 text-muted-foreground leading-relaxed">
@@ -269,7 +269,7 @@ export function AuthorProfile() {
       )}
 
       {totalCourseCount === 0 && (
-        <Card className="rounded-3xl border-0 shadow-sm">
+        <Card className="rounded-2xl border-0 shadow-sm">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <BookOpen className="size-12 text-muted-foreground/50 mb-3" aria-hidden="true" />
             <p className="text-muted-foreground">No courses linked to this author yet.</p>

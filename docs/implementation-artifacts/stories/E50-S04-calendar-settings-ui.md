@@ -1,12 +1,26 @@
 ---
 story_id: E50-S04
 story_name: "Calendar Settings UI"
-status: draft
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-04-04
+completed: 2026-04-04
+reviewed: true
+review_started: 2026-04-04
+review_gates_passed:
+  - build
+  - format-check
+  - lint
+  - type-check
+  - unit-tests-skipped
+  - e2e-tests
+  - design-review
+  - code-review
+  - code-review-testing
+  - performance-benchmark
+  - security-review
+  - exploratory-qa-skipped
+  - glm-code-review
+  - openai-code-review-skipped
 burn_in_validated: false
 ---
 
@@ -146,11 +160,30 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Full report: `docs/reviews/design/design-review-2026-04-04-e50-s04.md`
+
+**Summary**: No visual blockers. Design token compliance is excellent (zero hardcoded colors). All ARIA labels present. Touch targets ≥44px. Section renders correctly in the Settings page flow.
+
+**MEDIUM**: Calendar section is far down the page — discoverability concern. Consider jump navigation or reordering sections in a future story.
+
+**LOW**: "Add Study Block" button is permanently disabled (E50-S05 not yet built) — consider hiding it until S05 ships to avoid confusing users.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Full reports:
+- `docs/reviews/code/code-review-2026-04-04-e50-s04.md`
+- `docs/reviews/code/glm-code-review-2026-04-04-e50-s04.md`
+- `docs/reviews/code/code-review-testing-2026-04-04-e50-s04.md`
+
+**HIGH (fix before ship)**: Double toast on regenerate — `handleRegenerate` fires `toast.warning(...)` after `regenerateFeedToken()`, but the store already fires `toast.success(...)` on success. Remove the component-level toast or update the store's message to include the subscription warning.
+
+**MEDIUM**: `isLoaded` in `useEffect` deps causes `loadFeedToken()` to re-run when schedules finish loading. Remove `isLoaded` from deps and call `loadSchedules()` unconditionally (store should deduplicate).
+
+**LOW**: `key={i}` (array index) used in FeedPreview event list. Use a stable composite key: `` `${event.title}-${event.dayLabel}-${event.time}` ``.
+
+**No E2E spec**: All 6 ACs lack automated test coverage. Add `tests/e2e/story-e50-s04.spec.ts` before finish-story.
+
+**GLM also flagged**: Unhandled promise rejection in `handleToggle` and `handleRegenerate` (async callbacks without try/catch). The store handles errors with toasts, but component-level wrapping would be more resilient. Consider adding try/catch to both.
 
 ## Challenges and Lessons Learned
 

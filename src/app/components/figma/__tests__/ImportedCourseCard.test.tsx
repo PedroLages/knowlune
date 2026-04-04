@@ -137,7 +137,7 @@ describe('ImportedCourseCard', () => {
     expect(article).toHaveAttribute('aria-label', 'My Course — 3 videos, 2 PDFs')
   })
 
-  it('uses rounded-[24px] border radius', () => {
+  it('uses rounded-2xl border radius', () => {
     const { container } = renderCard()
     const card = container.querySelector('.rounded-\\[24px\\]')
     expect(card).toBeInTheDocument()

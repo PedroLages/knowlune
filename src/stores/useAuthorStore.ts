@@ -46,7 +46,7 @@ interface AuthorStoreState {
   loadAuthors: () => Promise<void>
   addAuthor: (data: NewAuthorData) => Promise<ImportedAuthor>
   updateAuthor: (id: string, data: UpdateAuthorData) => Promise<void>
-  deleteAuthor: (id: string) => Promise<void>
+  deleteAuthor: (id: string, options?: { silent?: boolean }) => Promise<void>
   getAuthorById: (id: string) => ImportedAuthor | undefined
   linkCourseToAuthor: (authorId: string, courseId: string) => Promise<void>
   unlinkCourseFromAuthor: (authorId: string, courseId: string) => Promise<void>
@@ -162,7 +162,7 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
     }
   },
 
-  deleteAuthor: async (id: string) => {
+  deleteAuthor: async (id: string, options?: { silent?: boolean }) => {
     const { authors } = get()
     const deletedIndex = authors.findIndex(a => a.id === id)
     if (deletedIndex === -1) return
@@ -184,19 +184,21 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
         revokePhotoUrl(deletedAuthor.photoHandle)
       }
 
-      toastWithUndo({
-        message: `Author "${deletedAuthor.name}" deleted`,
-        onUndo: async () => {
-          await db.authors.add(deletedAuthor)
-          // Restore at original index position
-          const current = get().authors
-          const restored = [...current]
-          restored.splice(deletedIndex, 0, deletedAuthor)
-          set({ authors: restored })
-          toast.success('Author restored')
-        },
-        duration: 5000,
-      })
+      if (!options?.silent) {
+        toastWithUndo({
+          message: `Author "${deletedAuthor.name}" deleted`,
+          onUndo: async () => {
+            await db.authors.add(deletedAuthor)
+            // Restore at original index position
+            const current = get().authors
+            const restored = [...current]
+            restored.splice(deletedIndex, 0, deletedAuthor)
+            set({ authors: restored })
+            toast.success('Author restored')
+          },
+          duration: 5000,
+        })
+      }
     } catch (error) {
       // Rollback to full snapshot preserving original order
       set({

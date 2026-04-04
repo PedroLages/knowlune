@@ -27,7 +27,7 @@ export function TopicRetentionCard({ topic, now }: TopicRetentionCardProps) {
 
   return (
     <Card
-      className="rounded-[24px] transition-shadow duration-200 hover:shadow-md"
+      className="rounded-2xl transition-shadow duration-200 hover:shadow-md"
       data-testid="topic-retention-card"
     >
       <CardContent className="flex flex-col gap-3 p-5">

@@ -59,7 +59,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#FAF5EE] p-6">
-        <div className="mx-auto w-full max-w-md rounded-[24px] border border-stone-200 bg-white p-8 text-center shadow-lg">
+        <div className="mx-auto w-full max-w-md rounded-2xl border border-stone-200 bg-white p-8 text-center shadow-lg">
           {/* Icon */}
           <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">
             <svg

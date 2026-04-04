@@ -64,7 +64,7 @@ function SortableCourseCard({
       custom={index}
       data-testid={`learning-path-course-${index}`}
     >
-      <div className="relative bg-card border border-border rounded-[24px] p-8 shadow-sm">
+      <div className="relative bg-card border border-border rounded-2xl p-8 shadow-sm">
         {/* Position Badge */}
         <div className="absolute -top-4 -left-4 size-12 rounded-full bg-gradient-to-br from-gold to-warning flex items-center justify-center font-display text-gold-foreground font-bold shadow-lg">
           {course.position}

@@ -129,7 +129,7 @@ export function AvatarUploadZone({
           onClick={() => !isLoading && fileInputRef.current?.click()}
           onKeyDown={handleKeyDown}
           className={cn(
-            'border-2 border-dashed rounded-[24px] p-4 md:p-6',
+            'border-2 border-dashed rounded-2xl p-4 md:p-6',
             'transition-all duration-200 min-h-[120px] md:min-h-[160px]',
             isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
             dragState.isDragOver

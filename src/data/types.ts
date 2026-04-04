@@ -135,7 +135,7 @@ export interface Note {
 
 export type CourseStatus = 'importing' | 'ready' | 'error'
 
-export type LearnerCourseStatus = 'active' | 'completed' | 'paused'
+export type LearnerCourseStatus = 'not-started' | 'active' | 'completed' | 'paused'
 
 export type VideoFormat = 'mp4' | 'mkv' | 'avi' | 'webm' | 'ts'
 

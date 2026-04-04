@@ -81,7 +81,7 @@ function InlineSectionError({
   onRetry: () => void
 }) {
   return (
-    <div className="rounded-[24px] border border-destructive/50 bg-destructive/10 p-6 text-center">
+    <div className="rounded-2xl border border-destructive/50 bg-destructive/10 p-6 text-center">
       {!isOnline && <WifiOff className="mx-auto mb-2 size-5 text-destructive" aria-hidden="true" />}
       <p className="text-sm text-destructive">{error}</p>
       <Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>
@@ -271,7 +271,7 @@ export default function Reports() {
             className="mb-6"
           >
             <motion.div variants={fadeUp}>
-              <TabsList className="h-11" aria-label="Reports navigation">
+              <TabsList className="min-h-[44px]" aria-label="Reports navigation">
                 <TabsTrigger value="study">Study Analytics</TabsTrigger>
                 <TabsTrigger value="quizzes">Quiz Analytics</TabsTrigger>
                 <TabsTrigger value="ai">AI Analytics</TabsTrigger>

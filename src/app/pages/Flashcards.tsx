@@ -279,7 +279,7 @@ export function Flashcards() {
           </div>
           <h1 className="font-display text-2xl font-semibold tracking-tight">Flashcards</h1>
         </div>
-        <div className="rounded-[24px] border border-destructive/50 bg-destructive/10 p-8 text-center">
+        <div className="rounded-2xl border border-destructive/50 bg-destructive/10 p-8 text-center">
           {!isOnline && (
             <WifiOff className="mx-auto mb-3 size-6 text-destructive" aria-hidden="true" />
           )}
@@ -468,7 +468,7 @@ export function Flashcards() {
     return (
       <div className="mx-auto max-w-lg p-6">
         <motion.div variants={scaleIn} initial="hidden" animate="visible">
-          <Card className="rounded-[24px]">
+          <Card className="rounded-2xl">
             <CardContent className="flex flex-col items-center gap-[var(--content-gap)] p-[var(--content-padding)]">
               {/* Header */}
               <div className="flex flex-col items-center gap-2 text-center">

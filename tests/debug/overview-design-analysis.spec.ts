@@ -259,7 +259,7 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
     })
 
     test('should have rounded corners on cards', async ({ page }) => {
-      // StatsCard uses rounded-[24px] per design system
+      // StatsCard uses rounded-2xl per design system
       const statsGrid = page.getByTestId('stats-grid')
       const card = statsGrid.locator('> *').first()
       await expect(card).toBeVisible()

@@ -124,7 +124,7 @@ export function ReviewQueue() {
           <Skeleton className="h-8 w-48" />
           <div className="mx-auto max-w-2xl space-y-4">
             {Array.from({ length: 3 }, (_, i) => (
-              <Skeleton key={i} className="h-48 w-full rounded-[24px]" />
+              <Skeleton key={i} className="h-48 w-full rounded-2xl" />
             ))}
           </div>
         </div>

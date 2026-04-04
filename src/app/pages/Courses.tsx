@@ -228,7 +228,7 @@ export function Courses() {
         </Card>
       ) : (
         <>
-          <Card className="bg-card rounded-[24px] border-0 shadow-sm p-6 mb-6">
+          <Card className="bg-card rounded-2xl border-0 shadow-sm p-6 mb-6">
             <div className="flex gap-4 items-center">
               <div className="relative flex-1 min-w-0">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />

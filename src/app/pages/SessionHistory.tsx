@@ -214,7 +214,7 @@ export function SessionHistory() {
           </div>
           <div className="space-y-3">
             {Array.from({ length: 5 }, (_, i) => (
-              <Skeleton key={i} className="h-20 w-full rounded-[24px]" />
+              <Skeleton key={i} className="h-20 w-full rounded-2xl" />
             ))}
           </div>
         </div>
@@ -226,7 +226,7 @@ export function SessionHistory() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Study Session History</h1>
-        <div className="rounded-[24px] border border-destructive/50 bg-destructive/10 p-8 text-center">
+        <div className="rounded-2xl border border-destructive/50 bg-destructive/10 p-8 text-center">
           <p className="text-sm text-destructive">{loadError}</p>
         </div>
       </div>
@@ -321,7 +321,7 @@ export function SessionHistory() {
               <li
                 key={session.id}
                 data-testid="session-row"
-                className="list-none rounded-[24px] border border-border bg-card transition-colors hover:bg-accent/50"
+                className="list-none rounded-2xl border border-border bg-card transition-colors hover:bg-accent/50"
               >
                 {/* Clickable header — native button for a11y */}
                 <button

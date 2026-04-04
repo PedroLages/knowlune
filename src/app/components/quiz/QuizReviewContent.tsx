@@ -95,7 +95,7 @@ export function QuizReviewContent({ quiz, attempt, courseId, lessonId }: QuizRev
     <div className="py-6">
       <section
         aria-label="Quiz review"
-        className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm space-y-6"
+        className="bg-card rounded-2xl p-4 sm:p-8 max-w-2xl mx-auto shadow-sm space-y-6"
       >
         {/* Header */}
         <section aria-label="Review progress">

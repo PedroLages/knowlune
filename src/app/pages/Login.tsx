@@ -70,7 +70,7 @@ export function Login() {
         </div>
 
         {/* Auth Card */}
-        <Card className="rounded-[24px]">
+        <Card className="rounded-2xl">
           <CardHeader className="items-center text-center pb-2">
             <div className="mx-auto mb-2 rounded-full bg-brand-soft p-3">
               <Mail className="size-6 text-brand" aria-hidden="true" />
@@ -81,16 +81,16 @@ export function Login() {
 
           <CardContent className="space-y-4">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="w-full h-11">
-                <TabsTrigger value="email" className="gap-1.5">
+              <TabsList variant="default" className="w-full min-h-[44px]">
+                <TabsTrigger variant="default" value="email" className="gap-1.5">
                   <Mail className="size-4" aria-hidden="true" />
                   Email
                 </TabsTrigger>
-                <TabsTrigger value="magic-link" className="gap-1.5">
+                <TabsTrigger variant="default" value="magic-link" className="gap-1.5">
                   <Link2 className="size-4" aria-hidden="true" />
                   Magic Link
                 </TabsTrigger>
-                <TabsTrigger value="google" className="gap-1.5">
+                <TabsTrigger variant="default" value="google" className="gap-1.5">
                   <GoogleIcon className="size-4" />
                   Google
                 </TabsTrigger>

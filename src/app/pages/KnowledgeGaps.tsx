@@ -40,7 +40,7 @@ function GapCard({ gap }: { gap: GapItem }) {
 
   return (
     <article
-      className={cn('rounded-[24px] border p-6 shadow-sm', SEVERITY_CARD_CLASS[gap.severity])}
+      className={cn('rounded-2xl border p-6 shadow-sm', SEVERITY_CARD_CLASS[gap.severity])}
       data-testid="gap-item"
     >
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
@@ -104,7 +104,7 @@ function AnalyzingSkeletons() {
   return (
     <div className="space-y-4" aria-hidden="true">
       {[...Array(3)].map((_, i) => (
-        <div key={i} className="rounded-[24px] border bg-card p-6 space-y-3 shadow-sm">
+        <div key={i} className="rounded-2xl border bg-card p-6 space-y-3 shadow-sm">
           <div className="flex gap-2">
             <Skeleton className="h-5 w-16 rounded-full" />
             <Skeleton className="h-5 w-20 rounded-full" />

@@ -54,7 +54,7 @@ export function AuthDialog({ open, onOpenChange, defaultMode = 'sign-in' }: Auth
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-[24px] sm:max-w-md p-6">
+      <DialogContent className="rounded-2xl sm:max-w-md p-6">
         <DialogHeader className="items-center text-center">
           <div className="mx-auto mb-2 rounded-full bg-brand-soft p-3">
             <Mail className="size-6 text-brand" aria-hidden="true" />
@@ -68,16 +68,16 @@ export function AuthDialog({ open, onOpenChange, defaultMode = 'sign-in' }: Auth
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
-          <TabsList className="w-full h-11">
-            <TabsTrigger value="email" className="gap-1.5">
+          <TabsList variant="default" className="w-full min-h-[44px]">
+            <TabsTrigger variant="default" value="email" className="gap-1.5">
               <Mail className="size-4" aria-hidden="true" />
               Email
             </TabsTrigger>
-            <TabsTrigger value="magic-link" className="gap-1.5">
+            <TabsTrigger variant="default" value="magic-link" className="gap-1.5">
               <Link2 className="size-4" aria-hidden="true" />
               Magic Link
             </TabsTrigger>
-            <TabsTrigger value="google" className="gap-1.5">
+            <TabsTrigger variant="default" value="google" className="gap-1.5">
               <GoogleIcon className="size-4" />
               Google
             </TabsTrigger>

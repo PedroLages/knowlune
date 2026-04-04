@@ -177,7 +177,7 @@ export function CourseReminderSettings() {
   const availableCourses = courses.filter(c => !reminders.some(r => r.courseId === c.id))
 
   return (
-    <Card data-testid="course-reminders-section" className="rounded-[24px]">
+    <Card data-testid="course-reminders-section" className="rounded-2xl">
       <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
         <div className="flex items-center gap-3">
           <div className="rounded-full bg-brand-soft p-2">

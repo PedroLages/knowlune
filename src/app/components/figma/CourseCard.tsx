@@ -253,7 +253,7 @@ export function CourseCard({
 
   const previewDialog = (
     <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-      <DialogContent className="max-w-3xl p-0 overflow-hidden rounded-[24px]">
+      <DialogContent className="max-w-3xl p-0 overflow-hidden rounded-2xl">
         <DialogHeader className="px-6 pt-5 pb-2">
           <DialogTitle>{course.title} — Preview</DialogTitle>
         </DialogHeader>
@@ -772,7 +772,7 @@ export function CourseCard({
           }
         }}
         {...previewHandlers}
-        className="rounded-[24px] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none block h-full cursor-pointer"
+        className="rounded-2xl focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none block h-full cursor-pointer"
       >
         {cardShell}
       </div>

@@ -349,7 +349,7 @@ export function Notes() {
         id={`note-${item.note.id}`}
         data-note-id={item.note.id}
         data-testid="note-card"
-        className="bg-card rounded-[24px] border p-4 transition-shadow hover:shadow-sm"
+        className="bg-card rounded-2xl border p-4 transition-shadow hover:shadow-sm"
       >
         {/* Collapsed preview — click to expand */}
         <div
@@ -486,7 +486,7 @@ export function Notes() {
           <TabsContent value="notes" className="mt-6 space-y-4">
             <Skeleton className="h-10 w-full" />
             {Array.from({ length: 4 }, (_, i) => (
-              <Skeleton key={i} className="h-28 w-full rounded-[24px]" />
+              <Skeleton key={i} className="h-28 w-full rounded-2xl" />
             ))}
           </TabsContent>
           <TabsContent value="bookmarks" className="mt-6">

@@ -30,6 +30,7 @@ import { toast } from 'sonner'
 import { db } from '@/db'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
 import { useAuthorStore } from '@/stores/useAuthorStore'
+import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
 import { getLastWatchedLesson, getFirstLesson } from '@/lib/progress'
 import { revokeObjectUrl } from '@/lib/courseAdapter'
@@ -292,13 +293,13 @@ export function CourseOverview() {
         aria-label="Loading course overview"
       >
         <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-[280px] w-full rounded-[24px]" />
+        <Skeleton className="h-[280px] w-full rounded-2xl" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {Array.from({ length: 4 }, (_, i) => (
             <Skeleton key={i} className="h-24 rounded-xl" />
           ))}
         </div>
-        <Skeleton className="h-48 w-full rounded-[24px]" />
+        <Skeleton className="h-48 w-full rounded-2xl" />
       </div>
     )
   }
@@ -358,7 +359,7 @@ export function CourseOverview() {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="relative rounded-[24px] overflow-hidden shadow-studio mb-6"
+        className="relative rounded-2xl overflow-hidden shadow-studio mb-6"
         // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic gradient requires inline style
         style={{
           background:
@@ -462,7 +463,7 @@ export function CourseOverview() {
         >
           {/* About This Course */}
           {hasDescription && (
-            <div className="bg-card rounded-[24px] p-6 md:p-8 shadow-studio border border-border/50">
+            <div className="bg-card rounded-2xl p-6 md:p-8 shadow-studio border border-border/50">
               <h2 className="font-display text-lg font-semibold text-foreground mb-4">
                 About This Course
               </h2>
@@ -479,7 +480,7 @@ export function CourseOverview() {
           {!capabilities?.requiresNetwork && authorData && (
             <Link
               to={`/authors/${authorData.id}`}
-              className="block bg-card rounded-[24px] p-6 shadow-studio border border-border/50 hover:shadow-studio-hover hover:-translate-y-px transition-all duration-200 group"
+              className="block bg-card rounded-2xl p-6 shadow-studio border border-border/50 hover:shadow-studio-hover hover:-translate-y-px transition-all duration-200 group"
               data-testid="course-overview-author"
             >
               <div className="flex items-center gap-4">
@@ -521,7 +522,7 @@ export function CourseOverview() {
           >
             {/* What You'll Learn */}
             {hasTags && (
-              <div className="bg-card rounded-[24px] p-6 shadow-studio border border-border/50">
+              <div className="bg-card rounded-2xl p-6 shadow-studio border border-border/50">
                 <h2 className="font-display text-lg font-semibold text-foreground mb-4">
                   What You&apos;ll Learn
                 </h2>
@@ -541,7 +542,7 @@ export function CourseOverview() {
             {/* CTA Card */}
             {ctaConfig && ctaLessonId && (
               <div
-                className="rounded-[24px] p-6 shadow-studio text-center"
+                className="rounded-2xl p-6 shadow-studio text-center"
                 // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic gradient requires inline style
                 style={{
                   background: 'linear-gradient(135deg, var(--brand) 0%, var(--accent-violet) 100%)',
@@ -565,12 +566,15 @@ export function CourseOverview() {
                 <Button
                   variant="outline"
                   className="w-full bg-brand-foreground/10 border-brand-foreground/30 text-brand-foreground hover:bg-brand-foreground/20"
-                  asChild
+                  onClick={() => {
+                    if (ctaVariant === 'start' && course.id) {
+                      useCourseImportStore.getState().updateCourseStatus(course.id, 'active')
+                    }
+                    navigate(`/courses/${course.id}/lessons/${ctaLessonId}`)
+                  }}
                 >
-                  <Link to={`/courses/${course.id}/lessons/${ctaLessonId}`}>
-                    <ctaConfig.icon className="mr-2 size-4" aria-hidden="true" />
-                    {ctaConfig.label}
-                  </Link>
+                  <ctaConfig.icon className="mr-2 size-4" aria-hidden="true" />
+                  {ctaConfig.label}
                 </Button>
               </div>
             )}
@@ -584,7 +588,7 @@ export function CourseOverview() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.35 }}
-          className="bg-card rounded-[24px] p-6 md:p-8 shadow-studio border border-border/50 mb-8"
+          className="bg-card rounded-2xl p-6 md:p-8 shadow-studio border border-border/50 mb-8"
           data-testid="course-overview-curriculum"
         >
           <div className="flex items-center gap-3 mb-6">

@@ -407,7 +407,7 @@ export async function persistScannedCourse(
     importedAt: now,
     category: overrides?.category ?? '',
     tags: overrides?.tags ?? [],
-    status: 'active',
+    status: 'not-started',
     videoCount: videos.length,
     pdfCount: pdfs.length,
     directoryHandle: scanned.directoryHandle,

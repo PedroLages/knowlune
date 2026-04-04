@@ -133,7 +133,7 @@ export function CourseNotesTab({ courseId, courseName, modules }: CourseNotesTab
   // Empty state (AC3)
   if (notes.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center bg-card rounded-[24px] border">
+      <div className="flex flex-col items-center justify-center py-16 text-center bg-card rounded-2xl border">
         <FileText className="size-12 text-muted-foreground/50 mb-4" />
         <p className="text-muted-foreground">
           No notes yet. Start taking notes while watching videos.

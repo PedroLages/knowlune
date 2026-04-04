@@ -15,6 +15,7 @@ import { X } from 'lucide-react'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { Button } from '@/app/components/ui/button'
 import { NotesTab } from './tabs/NotesTab'
+import { cn } from '@/app/components/ui/utils'
 import type { CapturedFrame } from '@/lib/frame-capture'
 
 interface NotesPanelProps {
@@ -28,6 +29,8 @@ interface NotesPanelProps {
   pendingFocus: boolean
   /** Called after focus is applied so parent can clear the pending flag */
   onFocusComplete: () => void
+  /** Theater mode — stretches panel to full viewport height */
+  isTheater?: boolean
 }
 
 export function NotesPanel({
@@ -39,6 +42,7 @@ export function NotesPanel({
   onCaptureFrame,
   pendingFocus,
   onFocusComplete,
+  isTheater,
 }: NotesPanelProps) {
   // Deferred focus: focus the ProseMirror editor after panel animation
   useEffect(() => {
@@ -52,7 +56,12 @@ export function NotesPanel({
   }, [pendingFocus, onFocusComplete])
 
   return (
-    <ScrollArea className="sticky top-0 max-h-[calc(100svh-3rem)] h-full">
+    <ScrollArea
+      className={cn(
+        'sticky top-0 h-full',
+        isTheater ? 'max-h-[calc(100svh-1rem)]' : 'max-h-[60svh]'
+      )}
+    >
       <div className="p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold">Notes</h3>

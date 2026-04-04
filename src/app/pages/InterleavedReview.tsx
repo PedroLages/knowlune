@@ -285,7 +285,7 @@ export function InterleavedReview() {
       <DelayedFallback>
         <div className="space-y-6 p-1" aria-busy="true" aria-label="Loading interleaved review">
           <Skeleton className="mx-auto h-8 w-64" />
-          <Skeleton className="mx-auto h-[280px] w-full max-w-lg rounded-[24px]" />
+          <Skeleton className="mx-auto h-[280px] w-full max-w-lg rounded-2xl" />
         </div>
       </DelayedFallback>
     )

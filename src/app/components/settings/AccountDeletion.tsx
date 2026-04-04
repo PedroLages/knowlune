@@ -117,7 +117,7 @@ export function AccountDeletion() {
       </DialogTrigger>
 
       <DialogContent
-        className="rounded-[24px] sm:max-w-md"
+        className="rounded-2xl sm:max-w-md"
         onInteractOutside={e => {
           if (phase === 'deleting') e.preventDefault()
         }}

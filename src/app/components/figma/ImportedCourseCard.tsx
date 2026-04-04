@@ -6,6 +6,8 @@ import {
   Circle,
   CheckCircle2,
   PauseCircle,
+  PlayCircle,
+  Play,
   Eye,
   Info,
   Camera,
@@ -70,20 +72,25 @@ const statusConfig: Record<
   LearnerCourseStatus,
   { label: string; icon: typeof Circle; badgeClass: string }
 > = {
+  'not-started': {
+    label: 'Not Started',
+    icon: PlayCircle,
+    badgeClass: 'bg-warning/10 text-warning dark:bg-warning/20 dark:text-warning',
+  },
   active: {
     label: 'Active',
     icon: Circle,
-    badgeClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    badgeClass: 'bg-brand-soft text-brand-soft-foreground',
   },
   completed: {
     label: 'Completed',
     icon: CheckCircle2,
-    badgeClass: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    badgeClass: 'bg-success/10 text-success dark:bg-success/20 dark:text-success',
   },
   paused: {
     label: 'Paused',
     icon: PauseCircle,
-    badgeClass: 'bg-gray-100 text-gray-400 dark:bg-gray-800/50 dark:text-gray-400',
+    badgeClass: 'bg-muted text-muted-foreground',
   },
 }
 
@@ -92,6 +99,8 @@ interface ImportedCourseCardProps {
   allTags: string[]
   completionPercent?: number
   momentumScore?: MomentumScore
+  /** Hides editing controls (camera overlay, edit/delete menu, tag editing). Status changes remain available. */
+  readOnly?: boolean
 }
 
 export function ImportedCourseCard({
@@ -99,6 +108,7 @@ export function ImportedCourseCard({
   allTags,
   completionPercent = 0,
   momentumScore,
+  readOnly = false,
 }: ImportedCourseCardProps) {
   const updateCourseTags = useCourseImportStore(state => state.updateCourseTags)
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
@@ -245,11 +255,11 @@ export function ImportedCourseCard({
         {...previewHandlers}
         data-preview={showPreview && videoReady ? '' : undefined}
         className={cn(
-          'group rounded-[24px] cursor-default focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none hover:shadow-2xl hover:[transform:scale(1.02)] transition-shadow duration-300 motion-reduce:hover:[transform:scale(1)] h-full',
+          'group rounded-2xl cursor-default focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none hover:shadow-2xl hover:[transform:scale(1.02)] transition-shadow duration-300 motion-reduce:hover:[transform:scale(1)] h-full',
           showPreview && videoReady && '[transform:scale(1.05)] z-10'
         )}
       >
-        <Card className="bg-card rounded-[24px] border-0 shadow-sm overflow-hidden h-full flex flex-col">
+        <Card className="bg-card rounded-2xl border-0 shadow-sm overflow-hidden h-full flex flex-col">
           <div
             data-testid="course-card-placeholder"
             className="relative h-44 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center"
@@ -269,16 +279,18 @@ export function ImportedCourseCard({
               <FolderOpen className="size-16 text-emerald-300 dark:text-emerald-600" />
             )}
             {/* Camera overlay — appears on hover to change thumbnail */}
-            <button
-              onClick={e => {
-                e.stopPropagation()
-                setThumbnailPickerOpen(true)
-              }}
-              aria-label="Change thumbnail"
-              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none z-10"
-            >
-              <Camera className="size-8 text-white drop-shadow" aria-hidden="true" />
-            </button>
+            {!readOnly && (
+              <button
+                onClick={e => {
+                  e.stopPropagation()
+                  setThumbnailPickerOpen(true)
+                }}
+                aria-label="Change thumbnail"
+                className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none z-10"
+              >
+                <Camera className="size-8 text-white drop-shadow" aria-hidden="true" />
+              </button>
+            )}
             {/* Inline video preview */}
             {showPreview && previewBlobUrl && (
               <video
@@ -355,30 +367,34 @@ export function ImportedCourseCard({
                       )
                     }
                   )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    data-testid="edit-course-menu-item"
-                    className="gap-2 min-h-[44px]"
-                    onClick={e => {
-                      e.stopPropagation()
-                      setEditDialogOpen(true)
-                    }}
-                  >
-                    <Pencil className="size-4" aria-hidden="true" />
-                    Edit details
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    data-testid="delete-course-menu-item"
-                    variant="destructive"
-                    className="gap-2 min-h-[44px]"
-                    onClick={e => {
-                      e.stopPropagation()
-                      setDeleteDialogOpen(true)
-                    }}
-                  >
-                    <Trash2 className="size-4" aria-hidden="true" />
-                    Delete course
-                  </DropdownMenuItem>
+                  {!readOnly && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        data-testid="edit-course-menu-item"
+                        className="gap-2 min-h-[44px]"
+                        onClick={e => {
+                          e.stopPropagation()
+                          setEditDialogOpen(true)
+                        }}
+                      >
+                        <Pencil className="size-4" aria-hidden="true" />
+                        Edit details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        data-testid="delete-course-menu-item"
+                        variant="destructive"
+                        className="gap-2 min-h-[44px]"
+                        onClick={e => {
+                          e.stopPropagation()
+                          setDeleteDialogOpen(true)
+                        }}
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                        Delete course
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -517,9 +533,30 @@ export function ImportedCourseCard({
                   </span>
                 )}
               </span>
-              <TagBadgeList tags={course.tags} onRemove={handleRemoveTag} maxVisible={3} />
-              <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
+              <TagBadgeList
+                tags={course.tags}
+                onRemove={readOnly ? undefined : handleRemoveTag}
+                maxVisible={3}
+              />
+              {!readOnly && (
+                <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
+              )}
             </div>
+            {course.status === 'not-started' && !readOnly && (
+              <Button
+                size="sm"
+                variant="brand"
+                className="w-full mb-2"
+                data-testid="start-course-btn"
+                onClick={e => {
+                  e.stopPropagation()
+                  handleStatusChange('active')
+                }}
+              >
+                <Play className="size-3.5 mr-1.5" aria-hidden="true" />
+                Start Studying
+              </Button>
+            )}
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span data-testid="course-card-video-count" className="flex items-center gap-1">
                 <Video className="size-3.5" aria-hidden="true" />
@@ -624,7 +661,7 @@ export function ImportedCourseCard({
       />
 
       <Dialog open={previewOpen} onOpenChange={handleDialogChange}>
-        <DialogContent className="max-w-3xl p-0 overflow-hidden rounded-[24px]">
+        <DialogContent className="max-w-3xl p-0 overflow-hidden rounded-2xl">
           <DialogHeader className="px-6 pt-5 pb-2">
             <DialogTitle>{course.name} — Preview</DialogTitle>
           </DialogHeader>

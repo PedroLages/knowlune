@@ -130,7 +130,7 @@ export function QuizResults() {
           role="status"
           aria-busy="true"
           aria-label="Loading quiz results"
-          className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm space-y-4 text-center"
+          className="bg-card rounded-2xl p-4 sm:p-8 max-w-2xl mx-auto shadow-sm space-y-4 text-center"
         >
           <Skeleton className="h-32 w-32 rounded-full mx-auto" />
           <Skeleton className="h-6 w-48 mx-auto" />
@@ -145,7 +145,7 @@ export function QuizResults() {
     <div className="py-6">
       <section
         aria-label="Quiz results"
-        className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm text-center space-y-6"
+        className="bg-card rounded-2xl p-4 sm:p-8 max-w-2xl mx-auto shadow-sm text-center space-y-6"
       >
         <h1 className="text-2xl font-bold text-foreground">{currentQuiz.title} — Results</h1>
 

@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-04  # E98-S01 story created
+last_updated: 2026-04-04  # E99 epic created (Course Display View Modes)
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -560,7 +560,7 @@ development_status:
   50-1-study-schedule-data-model: done
   50-2-ical-feed-generation-endpoint: done
   50-3-feed-url-management: done
-  50-4-calendar-settings-ui: backlog
+  50-4-calendar-settings-ui: done
   50-5-schedule-editor-course-integration: backlog
   50-6-srs-events-overview-widget: backlog
 
@@ -1205,3 +1205,13 @@ development_status:
   epic-98: done
   98-1-video-player-viewport-sizing-and-theater-mode-fixes: done
   epic-98-retrospective: done
+
+  # ──────────────────────────────────────────────────
+  # Epic 99: Course Display View Modes
+  # ───────────��──────────────────────────────────────
+  epic-99: backlog
+  99-1-view-mode-toggle-and-settings-infrastructure: backlog
+  99-2-grid-column-control: backlog
+  99-3-list-view: backlog
+  99-4-compact-grid-view: backlog
+  99-5-virtualized-grid-integration-and-polish: backlog

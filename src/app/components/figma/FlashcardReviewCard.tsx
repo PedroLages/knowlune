@@ -59,7 +59,7 @@ export function FlashcardReviewCard({
             className="absolute inset-0 cursor-pointer"
             style={{ backfaceVisibility: 'hidden', visibility: isFlipped ? 'hidden' : 'visible' }}
           >
-            <Card className="h-full rounded-[24px] transition-shadow duration-200 hover:shadow-lg">
+            <Card className="h-full rounded-2xl transition-shadow duration-200 hover:shadow-lg">
               <CardContent className="flex h-full flex-col justify-between gap-4 p-6">
                 {/* Header: course badge */}
                 <div className="flex items-center gap-3">
@@ -107,7 +107,7 @@ export function FlashcardReviewCard({
               visibility: isFlipped ? 'visible' : 'hidden',
             }}
           >
-            <Card className={cn('h-full rounded-[24px] shadow-lg', isRating && 'opacity-60')}>
+            <Card className={cn('h-full rounded-2xl shadow-lg', isRating && 'opacity-60')}>
               <CardContent className="flex h-full flex-col gap-4 p-6">
                 {/* Header: course */}
                 <div className="flex items-center gap-3">
