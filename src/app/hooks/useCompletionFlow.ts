@@ -12,7 +12,7 @@ import type { NavigateFunction } from 'react-router'
 import { toast } from 'sonner'
 import type { LessonItem } from '@/lib/courseAdapter'
 import type { CelebrationType } from '@/app/components/celebrations/CompletionModal'
-import type { CompletionStatus } from '@/data/types'
+import type { CompletionStatus, Module } from '@/data/types'
 
 export interface CompletionFlowParams {
   courseId: string | undefined
@@ -27,7 +27,7 @@ export interface CompletionFlowParams {
     courseId: string,
     lessonId: string,
     status: CompletionStatus,
-    tags: string[]
+    modules: Module[]
   ) => Promise<void>
   celebrationType: CelebrationType
   setCelebrationOpen: React.Dispatch<React.SetStateAction<boolean>>

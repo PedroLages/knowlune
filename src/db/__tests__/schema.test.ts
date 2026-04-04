@@ -731,7 +731,7 @@ describe('flashcards table (v31 — FSRS fields)', () => {
       difficulty: 0,
       reps: 0,
       lapses: 0,
-      state: 0, // New
+      state: 0 as const, // New
       elapsed_days: 0,
       scheduled_days: 0,
       due: '2026-03-23T10:00:00.000Z',
