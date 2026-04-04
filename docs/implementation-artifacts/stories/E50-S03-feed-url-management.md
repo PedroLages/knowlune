@@ -4,8 +4,8 @@ story_name: "Feed URL Management"
 status: draft
 started:
 completed:
-reviewed: false
-review_started:
+reviewed: in-progress
+review_started: 2026-04-04
 review_gates_passed: []
 burn_in_validated: false
 ---
@@ -118,4 +118,16 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Web Crypto API is the correct choice for browser token generation.** Node's `crypto.randomBytes()` crashes at runtime in browser environments. `crypto.getRandomValues(new Uint8Array(20))` provides 160-bit entropy with zero dependencies and works in all modern browsers, service workers, and Vite HMR contexts. Pattern to remember: when generating random bytes in code that runs in both server and browser, always use the Web Crypto API.
+
+- **`feedLoading` boolean is essential for race condition prevention.** Rapid on/off toggling of the feed enable/disable Switch can fire multiple Supabase writes concurrently. Adding a `feedLoading: boolean` state field and disabling the Switch UI during async operations (Task 2.7) prevents duplicate token rows and conflicting DELETE/INSERT operations — Supabase's `UNIQUE (user_id)` constraint would catch duplicates, but the user would see an error toast instead of a smooth experience.
+
+- **`URL.revokeObjectURL()` must be called synchronously after anchor click, not in a timeout.** The browser download is initiated by `anchor.click()`, which is synchronous. The blob URL remains valid until revoked — calling `revokeObjectURL()` immediately after is correct and prevents memory leaks. A common mistake is wrapping this in `setTimeout` unnecessarily.
+
+- **One active token per user enforced at the DB level, not just in application code.** The `UNIQUE (user_id)` constraint on `calendar_tokens` means regeneration must DELETE the old row before INSERT (or use upsert). Pure application-level deduplication would be fragile under concurrent sessions. The current implementation deletes then inserts, which means there's a brief window with no active token — acceptable for a personal calendar feed, but worth noting.
+
+- **The `.ics` download function does not include SRS events by design.** SRS review events require a server-side query against flashcard state (Supabase + Dexie), which is not available in a purely client-side download. Stubbed `generateSRSSummaryEvents()` in `icalFeedGenerator.ts` for E50-S06 implementation. This separation keeps the download fast and offline-capable.
+
+- **Supabase auth must be initialized before any token operations.** Token CRUD methods read `supabase.auth.getUser()` to get `user_id`. If called before session is loaded, they return null and the feed URL cannot be generated. `loadFeedToken()` should be called after auth state is confirmed (in `useEffect` with auth guard), not at component mount time.
+
+- **Prettier formatting for store files with many async methods.** Large Zustand stores with chained `.then()` or `async/await` patterns often need explicit trailing commas and consistent brace placement. Running `npx prettier --write` on new store additions before committing avoids post-review formatting noise. Added to the pre-commit mental checklist.
