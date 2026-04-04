@@ -4,10 +4,10 @@ story_name: "Knowledge Decay Alert Trigger"
 status: in-progress
 started: 2026-04-03
 completed:
-reviewed: true
-review_started: 2026-04-03
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa]
-review_scope: full
+reviewed: in-progress
+review_started: 2026-04-04
+review_gates_passed: []
+review_scope:
 burn_in_validated: false
 ---
 
