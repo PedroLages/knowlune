@@ -474,7 +474,9 @@ export function UnifiedLessonPlayer() {
           lessonId={lessonId!}
           lessonTitle={state.lessonTitle}
           courseName={course?.name}
-          showCompletionToggle={state.isPdf || capabilities.requiresNetwork || capabilities.hasVideo}
+          showCompletionToggle={
+            state.isPdf || capabilities.requiresNetwork || capabilities.hasVideo
+          }
           onStatusChange={completion.handleManualStatusChange}
           isTheater={isTheater}
           onToggleTheater={toggleTheater}

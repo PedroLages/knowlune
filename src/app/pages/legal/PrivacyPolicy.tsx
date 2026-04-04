@@ -36,10 +36,7 @@ export function PrivacyPolicy() {
       </header>
 
       {/* Table of contents */}
-      <nav
-        aria-label="Table of contents"
-        className="rounded-2xl border border-border bg-card p-6"
-      >
+      <nav aria-label="Table of contents" className="rounded-2xl border border-border bg-card p-6">
         <h2 className="mb-3 font-display text-lg font-semibold text-foreground">
           Table of Contents
         </h2>

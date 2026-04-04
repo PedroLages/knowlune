@@ -67,7 +67,10 @@ function NotificationCard({ notification, onMarkRead, onDismiss }: NotificationC
     >
       {/* Icon */}
       <div
-        className={cn('mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted', iconColor)}
+        className={cn(
+          'mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted',
+          iconColor
+        )}
       >
         <Icon className="size-4" aria-hidden="true" />
       </div>

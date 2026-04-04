@@ -42,10 +42,7 @@ interface StudyScheduleSummaryProps {
 }
 
 export function StudyScheduleSummary({ schedules }: StudyScheduleSummaryProps) {
-  const enabledSchedules = useMemo(
-    () => schedules.filter(s => s.enabled),
-    [schedules]
-  )
+  const enabledSchedules = useMemo(() => schedules.filter(s => s.enabled), [schedules])
 
   const { dayGroups, totalHours, subjectCount } = useMemo(() => {
     const groups: Record<DayOfWeek, { title: string; timeRange: string }[]> = {

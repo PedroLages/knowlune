@@ -325,79 +325,79 @@ export function ImportedCourseCard({
             ) : null}
 
             <div className="absolute top-3 right-3 z-20">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      ref={statusBadgeRef}
-                      data-testid="status-badge"
-                      onClick={e => e.stopPropagation()}
-                      className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-full outline-none min-h-[44px] flex items-center"
-                      aria-label={`Course status: ${config.label}. Click to change.`}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    ref={statusBadgeRef}
+                    data-testid="status-badge"
+                    onClick={e => e.stopPropagation()}
+                    className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-full outline-none min-h-[44px] flex items-center"
+                    aria-label={`Course status: ${config.label}. Click to change.`}
+                  >
+                    <Badge
+                      className={cn(
+                        'border-0 text-xs gap-1 cursor-pointer hover:opacity-80 transition-opacity',
+                        config.badgeClass
+                      )}
                     >
-                      <Badge
-                        className={cn(
-                          'border-0 text-xs gap-1 cursor-pointer hover:opacity-80 transition-opacity',
-                          config.badgeClass
-                        )}
+                      <StatusIcon className="size-3" aria-hidden="true" />
+                      {config.label}
+                    </Badge>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
+                  {(Object.entries(statusConfig) as [LearnerCourseStatus, typeof config][]).map(
+                    ([key, cfg]) => {
+                      const Icon = cfg.icon
+                      return (
+                        <DropdownMenuItem
+                          key={key}
+                          onClick={() => handleStatusChange(key)}
+                          className="gap-2"
+                        >
+                          <Icon className="size-4" aria-hidden="true" />
+                          {cfg.label}
+                          {key === status && (
+                            <CheckCircle2
+                              className="size-3.5 ml-auto text-brand"
+                              aria-hidden="true"
+                            />
+                          )}
+                        </DropdownMenuItem>
+                      )
+                    }
+                  )}
+                  {!readOnly && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        data-testid="edit-course-menu-item"
+                        className="gap-2 min-h-[44px]"
+                        onClick={e => {
+                          e.stopPropagation()
+                          setEditDialogOpen(true)
+                        }}
                       >
-                        <StatusIcon className="size-3" aria-hidden="true" />
-                        {config.label}
-                      </Badge>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
-                    {(Object.entries(statusConfig) as [LearnerCourseStatus, typeof config][]).map(
-                      ([key, cfg]) => {
-                        const Icon = cfg.icon
-                        return (
-                          <DropdownMenuItem
-                            key={key}
-                            onClick={() => handleStatusChange(key)}
-                            className="gap-2"
-                          >
-                            <Icon className="size-4" aria-hidden="true" />
-                            {cfg.label}
-                            {key === status && (
-                              <CheckCircle2
-                                className="size-3.5 ml-auto text-brand"
-                                aria-hidden="true"
-                              />
-                            )}
-                          </DropdownMenuItem>
-                        )
-                      }
-                    )}
-                    {!readOnly && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          data-testid="edit-course-menu-item"
-                          className="gap-2 min-h-[44px]"
-                          onClick={e => {
-                            e.stopPropagation()
-                            setEditDialogOpen(true)
-                          }}
-                        >
-                          <Pencil className="size-4" aria-hidden="true" />
-                          Edit details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          data-testid="delete-course-menu-item"
-                          variant="destructive"
-                          className="gap-2 min-h-[44px]"
-                          onClick={e => {
-                            e.stopPropagation()
-                            setDeleteDialogOpen(true)
-                          }}
-                        >
-                          <Trash2 className="size-4" aria-hidden="true" />
-                          Delete course
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+                        <Pencil className="size-4" aria-hidden="true" />
+                        Edit details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        data-testid="delete-course-menu-item"
+                        variant="destructive"
+                        className="gap-2 min-h-[44px]"
+                        onClick={e => {
+                          e.stopPropagation()
+                          setDeleteDialogOpen(true)
+                        }}
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                        Delete course
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
             {/* Info button */}
             <Popover open={infoOpen} onOpenChange={setInfoOpen}>
@@ -533,7 +533,11 @@ export function ImportedCourseCard({
                   </span>
                 )}
               </span>
-              <TagBadgeList tags={course.tags} onRemove={readOnly ? undefined : handleRemoveTag} maxVisible={3} />
+              <TagBadgeList
+                tags={course.tags}
+                onRemove={readOnly ? undefined : handleRemoveTag}
+                maxVisible={3}
+              />
               {!readOnly && (
                 <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
               )}

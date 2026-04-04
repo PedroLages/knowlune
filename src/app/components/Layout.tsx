@@ -143,7 +143,10 @@ function SidebarContent({
 
       {/* Grouped Navigation */}
       {/* 2px scrollbar — narrower than global 6px */}
-      <nav className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-0.5" aria-label="Main navigation">
+      <nav
+        className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-0.5"
+        aria-label="Main navigation"
+      >
         <div className="space-y-5">
           {visibleGroups.map((group, idx) => (
             <div key={group.label}>
@@ -441,10 +444,7 @@ export function Layout() {
             className={`${sidebarCollapsed ? 'w-[72px] px-0 py-6' : 'w-[220px] p-6'} bg-card flex flex-col overflow-hidden transition-[width] duration-200 ease-out h-full`}
             aria-label="Sidebar"
           >
-            <SidebarContent
-              iconOnly={sidebarCollapsed}
-              visibleGroups={visibleGroups}
-            />
+            <SidebarContent iconOnly={sidebarCollapsed} visibleGroups={visibleGroups} />
           </aside>
 
           {/* Edge notch toggle */}

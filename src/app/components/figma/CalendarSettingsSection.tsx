@@ -180,16 +180,14 @@ export function CalendarSettingsSection() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Regenerate Feed URL?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will invalidate your current feed URL. Any calendar apps using the old URL
-                      will stop receiving updates. You&apos;ll need to re-subscribe with the new URL.
+                      This will invalidate your current feed URL. Any calendar apps using the old
+                      URL will stop receiving updates. You&apos;ll need to re-subscribe with the new
+                      URL.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleRegenerate}
-                      data-testid="confirm-regenerate"
-                    >
+                    <AlertDialogAction onClick={handleRegenerate} data-testid="confirm-regenerate">
                       Regenerate
                     </AlertDialogAction>
                   </AlertDialogFooter>

@@ -338,7 +338,12 @@ export function ThumbnailPickerDialog({
                       placeholder={courseName}
                     />
                   </div>
-                  <Button variant="brand" onClick={handleGenerate} disabled={isLoading} className="w-full gap-2">
+                  <Button
+                    variant="brand"
+                    onClick={handleGenerate}
+                    disabled={isLoading}
+                    className="w-full gap-2"
+                  >
                     {isLoading ? (
                       <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                     ) : (
