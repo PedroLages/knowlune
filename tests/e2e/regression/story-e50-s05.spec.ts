@@ -8,9 +8,9 @@
  * - AC4: Validation errors shown for missing required fields
  * - AC5: Saving a schedule persists to IndexedDB
  */
-import { test, expect } from '../support/fixtures'
-import { FIXED_DATE } from '../utils/test-time'
-import { seedImportedCourses } from '../support/helpers/indexeddb-seed'
+import { test, expect } from '../../support/fixtures'
+import { FIXED_DATE } from '../../utils/test-time'
+import { seedImportedCourses } from '../../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Constants
