@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { FileText, ChevronRight, ShieldAlert } from 'lucide-react'
+import { FileText, ChevronRight, Loader2, ShieldAlert } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { toast } from 'sonner'
 import { Badge } from '@/app/components/ui/badge'
@@ -27,7 +27,7 @@ import { revokeObjectUrl } from '@/lib/courseAdapter'
 import type { ImportedPdf } from '@/data/types'
 
 import type { CourseAdapter } from '@/lib/courseAdapter'
-import { getCompanionMaterials, getCompanionPdfIds, type MaterialGroup } from '@/lib/lessonMaterialMatcher'
+import { getCompanionMaterials, type MaterialGroup } from '@/lib/lessonMaterialMatcher'
 
 interface MaterialsTabProps {
   courseId: string
@@ -42,10 +42,13 @@ interface MaterialsTabProps {
 interface PdfSectionProps {
   pdf: ImportedPdf
   courseId: string
+  /** Controlled open state for accordion behavior */
+  isOpen: boolean
+  /** Called when the section wants to open/close */
+  onToggle: (pdfId: string, open: boolean) => void
 }
 
-function PdfSection({ pdf, courseId }: PdfSectionProps) {
-  const [isOpen, setIsOpen] = useState(false)
+function PdfSection({ pdf, courseId, isOpen, onToggle }: PdfSectionProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [blobLoading, setBlobLoading] = useState(false)
   const [fileError, setFileError] = useState<'permission-denied' | 'not-found' | null>(null)
@@ -56,52 +59,58 @@ function PdfSection({ pdf, courseId }: PdfSectionProps) {
 
   const displayName = pdf.filename.replace(/\.pdf$/i, '')
 
-  // Resolve blob URL when the section is first expanded
-  useEffect(() => {
-    if (!isOpen || blobUrl || blobLoading || fileError) return
-    if (!pdf.fileHandle) {
-      setFileError('not-found')
-      return
-    }
+  // Handle trigger click — resolve blob URL in user-gesture context so
+  // the File System Access API's requestPermission() is allowed by the browser.
+  // We call e.preventDefault() when opening to stop Radix from toggling, then
+  // manually set isOpen after permission + blob URL are resolved.
+  const handleTriggerClick = useCallback(
+    async (e: React.MouseEvent) => {
+      // Closing — let parent handle via onToggle
+      if (isOpen) {
+        onToggle(pdf.id, false)
+        return
+      }
 
-    let ignore = false
-    setBlobLoading(true)
+      // Re-opening with blob already resolved
+      if (blobUrl) {
+        onToggle(pdf.id, true)
+        return
+      }
 
-    async function resolveBlobUrl(handle: FileSystemFileHandle) {
+      // Opening for the first time — intercept Radix toggle
+      e.preventDefault()
+
+      if (!pdf.fileHandle) {
+        setFileError('not-found')
+        onToggle(pdf.id, true)
+        return
+      }
+
+      setBlobLoading(true)
+      onToggle(pdf.id, true)
+
       try {
-        const permission = await handle.queryPermission({ mode: 'read' })
+        const permission = await pdf.fileHandle.queryPermission({ mode: 'read' })
         if (permission !== 'granted') {
-          const result = await handle.requestPermission({ mode: 'read' })
+          const result = await pdf.fileHandle.requestPermission({ mode: 'read' })
           if (result !== 'granted') {
-            if (!ignore) {
-              setFileError('permission-denied')
-              setBlobLoading(false)
-            }
+            setFileError('permission-denied')
+            setBlobLoading(false)
             return
           }
         }
-        const file = await handle.getFile()
+        const file = await pdf.fileHandle.getFile()
         const url = URL.createObjectURL(file)
-        if (!ignore) {
-          setBlobUrl(url)
-          setBlobLoading(false)
-        } else {
-          revokeObjectUrl(url)
-        }
+        setBlobUrl(url)
+        setBlobLoading(false)
       } catch {
-        if (!ignore) {
-          setFileError('not-found')
-          setBlobLoading(false)
-        }
+        // silent-catch-ok — error surfaced via fileError state (shows "not found" UI)
+        setFileError('not-found')
+        setBlobLoading(false)
       }
-    }
-
-    resolveBlobUrl(pdf.fileHandle)
-
-    return () => {
-      ignore = true
-    }
-  }, [isOpen, blobUrl, blobLoading, fileError, pdf.fileHandle])
+    },
+    [isOpen, blobUrl, pdf.fileHandle]
+  )
 
   // Revoke blob URL on unmount
   useEffect(() => {
@@ -192,11 +201,12 @@ function PdfSection({ pdf, courseId }: PdfSectionProps) {
   }, [pdf.fileHandle])
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} data-testid="materials-entry">
+    <Collapsible open={isOpen} onOpenChange={open => onToggle(pdf.id, open)} data-testid="materials-entry">
       <CollapsibleTrigger asChild>
         <button
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
           aria-expanded={isOpen}
+          onClick={handleTriggerClick}
         >
           <ChevronRight
             className={cn(
@@ -216,9 +226,14 @@ function PdfSection({ pdf, courseId }: PdfSectionProps) {
       </CollapsibleTrigger>
 
       <CollapsibleContent>
-        <div className="px-3 pb-3 pt-1">
+        <div className="pb-2 pt-1">
           {/* Loading state */}
-          {blobLoading && <Skeleton className="w-full aspect-[3/4] rounded-xl" />}
+          {blobLoading && (
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border bg-muted p-8 text-center">
+              <Loader2 className="size-6 text-muted-foreground motion-safe:animate-spin" aria-hidden="true" />
+              <p className="text-sm text-muted-foreground">Loading PDF...</p>
+            </div>
+          )}
 
           {/* Permission error */}
           {fileError === 'permission-denied' && (
@@ -238,7 +253,8 @@ function PdfSection({ pdf, courseId }: PdfSectionProps) {
 
           {/* File not found error */}
           {fileError === 'not-found' && (
-            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-muted p-6 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border bg-muted p-6 text-center">
+              <FileText className="size-8 text-muted-foreground" aria-hidden="true" />
               <p className="text-sm text-muted-foreground">PDF file not found or inaccessible.</p>
             </div>
           )}
@@ -248,7 +264,7 @@ function PdfSection({ pdf, courseId }: PdfSectionProps) {
             <PdfViewer
               src={blobUrl}
               title={pdf.filename}
-              collapsible
+              compact
               initialPage={savedPage ?? 1}
               onPageChange={handlePageChange}
               className="max-h-[70vh]"
@@ -261,49 +277,6 @@ function PdfSection({ pdf, courseId }: PdfSectionProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Standalone PDFs section (course-level resources not matched to any video)
-// ---------------------------------------------------------------------------
-
-interface StandalonePdfsSectionProps {
-  pdfs: ImportedPdf[]
-  courseId: string
-}
-
-function StandalonePdfsSection({ pdfs, courseId }: StandalonePdfsSectionProps) {
-  const [isOpen, setIsOpen] = useState(pdfs.length <= 3)
-
-  return (
-    <div className="pt-2" data-testid="course-resources-section">
-      <div className="border-t border-border/50 pt-2">
-        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-          <CollapsibleTrigger asChild>
-            <button className="flex w-full items-center gap-2 px-1 py-1 text-left">
-              <ChevronRight
-                className={cn(
-                  'size-3.5 shrink-0 text-muted-foreground transition-transform duration-200',
-                  isOpen && 'rotate-90'
-                )}
-                aria-hidden="true"
-              />
-              <span className="text-xs text-muted-foreground">
-                Course resources ({pdfs.length})
-              </span>
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="space-y-1 pt-1">
-              {pdfs.map(pdf => (
-                <PdfSection key={pdf.id} pdf={pdf} courseId={courseId} />
-              ))}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Main MaterialsTab
 // ---------------------------------------------------------------------------
 
@@ -312,6 +285,12 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
   const [groups, setGroups] = useState<MaterialGroup[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showAll, setShowAll] = useState(false)
+  const [openPdfId, setOpenPdfId] = useState<string | null>(null)
+
+  // Accordion: only one PDF open at a time
+  const handlePdfToggle = useCallback((pdfId: string, open: boolean) => {
+    setOpenPdfId(open ? pdfId : null)
+  }, [])
 
   // Load all PDFs and grouped lesson data in parallel
   useEffect(() => {
@@ -340,9 +319,10 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
     }
   }, [courseId, adapter])
 
-  // Reset "show all" when lesson changes
+  // Reset view state when lesson changes
   useEffect(() => {
     setShowAll(false)
+    setOpenPdfId(null)
   }, [lessonId])
 
   if (isLoading) {
@@ -370,10 +350,6 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
   const companionPdfIds = new Set(companionMaterials.map(m => m.id))
   const companionPdfs = allPdfs.filter(p => companionPdfIds.has(p.id))
 
-  // Standalone PDFs: not matched to any video across all groups
-  const allCompanionIds = getCompanionPdfIds(groups)
-  const standalonePdfs = allPdfs.filter(p => !allCompanionIds.has(p.id))
-
   // Show all mode or no companions found
   if (showAll) {
     return (
@@ -392,7 +368,7 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
           </Button>
         </div>
         {allPdfs.map(pdf => (
-          <PdfSection key={pdf.id} pdf={pdf} courseId={courseId} />
+          <PdfSection key={pdf.id} pdf={pdf} courseId={courseId} isOpen={openPdfId === pdf.id} onToggle={handlePdfToggle} />
         ))}
       </div>
     )
@@ -406,9 +382,6 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
           title="No materials for this lesson"
           description="This lesson has no companion PDF documents"
         />
-        {standalonePdfs.length > 0 && (
-          <StandalonePdfsSection pdfs={standalonePdfs} courseId={courseId} />
-        )}
         <div className="flex justify-center">
           <Button
             variant="outline"
@@ -440,11 +413,8 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
         )}
       </div>
       {companionPdfs.map(pdf => (
-        <PdfSection key={pdf.id} pdf={pdf} courseId={courseId} />
+        <PdfSection key={pdf.id} pdf={pdf} courseId={courseId} isOpen={openPdfId === pdf.id} onToggle={handlePdfToggle} />
       ))}
-      {standalonePdfs.length > 0 && (
-        <StandalonePdfsSection pdfs={standalonePdfs} courseId={courseId} />
-      )}
     </div>
   )
 }
