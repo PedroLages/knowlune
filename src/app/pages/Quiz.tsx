@@ -456,7 +456,7 @@ export function Quiz() {
         className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm"
         data-testid="quiz-active-container"
         data-focus-target="quiz"
-        data-focus-active="quiz"
+        data-focus-active={Object.keys(currentProgress.answers).length > 0 ? 'quiz' : undefined}
       >
         <section aria-label="Quiz header">
           <QuizHeader

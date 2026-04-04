@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
@@ -47,18 +47,39 @@ export function FocusOverlay({
   getPortalContainer,
 }: FocusOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
+  const [isExiting, setIsExiting] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Track mount state for enter/exit animation
+  useEffect(() => {
+    if (isFocusMode) {
+      setIsExiting(false)
+      setIsMounted(true)
+    } else if (isMounted) {
+      if (shouldReduceMotion) {
+        setIsMounted(false)
+      } else {
+        setIsExiting(true)
+        const timer = setTimeout(() => {
+          setIsMounted(false)
+          setIsExiting(false)
+        }, 200)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [isFocusMode, shouldReduceMotion])
 
   // Prevent body scroll when overlay is visible
   useEffect(() => {
-    if (isFocusMode) {
+    if (isMounted) {
       document.body.style.overflow = 'hidden'
     }
     return () => {
       document.body.style.overflow = ''
     }
-  }, [isFocusMode])
+  }, [isMounted])
 
-  if (!isFocusMode) return null
+  if (!isMounted) return null
 
   const portalContainer = getPortalContainer()
 
@@ -82,7 +103,9 @@ export function FocusOverlay({
             'fixed inset-0 z-40 bg-black/50 backdrop-blur-sm dark:bg-black/65',
             shouldReduceMotion
               ? 'transition-none'
-              : 'animate-in fade-in duration-200'
+              : isExiting
+                ? 'animate-out fade-out duration-200'
+                : 'animate-in fade-in duration-200'
           )}
           onClick={onOverlayClick}
           data-testid="focus-overlay-backdrop"

@@ -85,5 +85,12 @@ export function useReadingMode(isLessonPage: boolean) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [toggleReadingMode, exitReadingMode, isReadingMode])
 
+  // Listen for custom event dispatched by useFocusMode to enforce mutual exclusivity
+  useEffect(() => {
+    const handleExitReadingMode = () => exitReadingMode()
+    window.addEventListener('exit-reading-mode', handleExitReadingMode)
+    return () => window.removeEventListener('exit-reading-mode', handleExitReadingMode)
+  }, [exitReadingMode])
+
   return { isReadingMode, toggleReadingMode, exitReadingMode, announcement }
 }

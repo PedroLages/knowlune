@@ -29,7 +29,7 @@ const COMPONENT_LABELS: Record<FocusTargetType, string> = {
  * Mutually exclusive with reading mode (E65-S01).
  * Listens for custom events `focus-request` and `focus-release` (E65-S04).
  */
-export function useFocusMode(exitReadingMode?: () => void) {
+export function useFocusMode() {
   const [state, setState] = useState<FocusModeState>({
     isFocusMode: false,
     focusTargetId: null,
@@ -85,8 +85,9 @@ export function useFocusMode(exitReadingMode?: () => void) {
 
   const activateFocusMode = useCallback(
     (targetId: string, type: FocusTargetType) => {
-      // Exit reading mode first (mutual exclusivity)
-      exitReadingMode?.()
+      // Exit reading mode first (mutual exclusivity) — via custom event so Layout
+      // doesn't need to pass exitReadingMode down as a prop
+      window.dispatchEvent(new CustomEvent('exit-reading-mode'))
 
       // Save current focus for restoration
       savedActiveElementRef.current = document.activeElement as HTMLElement | null
@@ -129,7 +130,7 @@ export function useFocusMode(exitReadingMode?: () => void) {
       // Focus the target element
       targetEl.focus({ preventScroll: true })
     },
-    [exitReadingMode, applyInert, announce, isMobile]
+    [applyInert, announce, isMobile]
   )
 
   const deactivateFocusMode = useCallback(() => {
