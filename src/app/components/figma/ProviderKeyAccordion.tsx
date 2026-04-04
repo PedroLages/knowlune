@@ -72,7 +72,7 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
     const config = getAIConfiguration()
 
     const entries = await Promise.all(
-      API_KEY_PROVIDERS.map(async (providerId) => {
+      API_KEY_PROVIDERS.map(async providerId => {
         const hasProviderKey = !!config.providerKeys?.[providerId]
         // AC4: Legacy key shows under its provider section
         const isLegacyProvider = providerId === config.provider && !!config.apiKeyEncrypted
@@ -85,7 +85,10 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
           isConnected = decrypted !== null
         }
 
-        return [providerId, { hasKey, isConnected, isLegacy: isLegacyProvider && !hasProviderKey }] as const
+        return [
+          providerId,
+          { hasKey, isConnected, isLegacy: isLegacyProvider && !hasProviderKey },
+        ] as const
       })
     )
 
@@ -174,7 +177,11 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
           const success = successes[providerId] ?? false
 
           return (
-            <AccordionItem key={providerId} value={providerId} data-testid={`provider-${providerId}`}>
+            <AccordionItem
+              key={providerId}
+              value={providerId}
+              data-testid={`provider-${providerId}`}
+            >
               <AccordionTrigger className="min-h-[44px]">
                 <span className="flex items-center gap-2">
                   <KeyRound className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -213,9 +220,7 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
                         setKeyInputs(prev => ({ ...prev, [providerId]: e.target.value }))
                       }
                       placeholder={
-                        status?.hasKey
-                          ? '••••••••••••••••'
-                          : `Enter ${provider.name} API key`
+                        status?.hasKey ? '••••••••••••••••' : `Enter ${provider.name} API key`
                       }
                       className="mt-1"
                       data-testid={`api-key-input-${providerId}`}
@@ -254,7 +259,7 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
                           toast.error('Failed to save API key')
                         })
                       }}
-                      disabled={isTesting || !(keyInputs[providerId]?.trim())}
+                      disabled={isTesting || !keyInputs[providerId]?.trim()}
                       data-testid={`save-key-${providerId}`}
                       className="min-h-[44px] rounded-lg"
                       aria-label={`Test and save ${provider.name} API key`}
@@ -288,7 +293,8 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
                             <AlertDialogTitle>Delete {provider.name} API Key?</AlertDialogTitle>
                             <AlertDialogDescription>
                               This will permanently remove the stored API key for {provider.name}.
-                              Any features using this provider will stop working until a new key is added.
+                              Any features using this provider will stop working until a new key is
+                              added.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

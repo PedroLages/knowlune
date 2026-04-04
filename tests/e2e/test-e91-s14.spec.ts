@@ -96,9 +96,9 @@ test.describe('E91-S14: Clickable Note Timestamps', () => {
       // Try finding any timestamp button in the toolbar
       const toolbarBtns = await page.locator('button').all()
       for (const btn of toolbarBtns) {
-        const title = await btn.getAttribute('title') ?? ''
-        const ariaLabel = await btn.getAttribute('aria-label') ?? ''
-        const text = await btn.textContent() ?? ''
+        const title = (await btn.getAttribute('title')) ?? ''
+        const ariaLabel = (await btn.getAttribute('aria-label')) ?? ''
+        const text = (await btn.textContent()) ?? ''
         if (/timestamp|time|clock/i.test(title + ariaLabel + text)) {
           console.log('Found timestamp button:', title || ariaLabel || text)
           await btn.click()
@@ -171,7 +171,9 @@ test.describe('E91-S14: Clickable Note Timestamps', () => {
     }
   })
 
-  test('AC5: onVideoSeek wired - Notes tab in side panel renders NoteEditor with seek', async ({ page }) => {
+  test('AC5: onVideoSeek wired - Notes tab in side panel renders NoteEditor with seek', async ({
+    page,
+  }) => {
     await seedAndNavigate(page)
 
     // Check that the Notes tab is rendered in the side panel
@@ -274,7 +276,7 @@ test.describe('E91-S14: Clickable Note Timestamps', () => {
       await page.waitForTimeout(500)
 
       const links = page.locator('.ProseMirror a[href^="video://"]')
-      if (await links.count() > 0) {
+      if ((await links.count()) > 0) {
         await links.first().click({ force: true })
         await page.waitForTimeout(500)
       }

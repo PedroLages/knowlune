@@ -29,10 +29,7 @@ import {
   TooltipContent,
   TooltipProvider,
 } from '@/app/components/ui/tooltip'
-import {
-  Collapsible,
-  CollapsibleContent,
-} from '@/app/components/ui/collapsible'
+import { Collapsible, CollapsibleContent } from '@/app/components/ui/collapsible'
 import { ProviderModelPicker } from './ProviderModelPicker'
 import {
   saveFeatureModelOverride,
@@ -74,15 +71,9 @@ export function FeatureModelOverridePanel({
   const [selectedProvider, setSelectedProvider] = useState<AIProviderId>(
     currentOverride?.provider || FEATURE_DEFAULTS[feature]?.provider || 'openai'
   )
-  const [selectedModel, setSelectedModel] = useState<string | undefined>(
-    currentOverride?.model
-  )
-  const [temperature, setTemperature] = useState<number | undefined>(
-    currentOverride?.temperature
-  )
-  const [maxTokens, setMaxTokens] = useState<number | undefined>(
-    currentOverride?.maxTokens
-  )
+  const [selectedModel, setSelectedModel] = useState<string | undefined>(currentOverride?.model)
+  const [temperature, setTemperature] = useState<number | undefined>(currentOverride?.temperature)
+  const [maxTokens, setMaxTokens] = useState<number | undefined>(currentOverride?.maxTokens)
   const [apiKeyForProvider, setApiKeyForProvider] = useState<string | null>(null)
   const [configuredProviders, setConfiguredProviders] = useState<AIProviderId[]>([])
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -289,10 +280,7 @@ export function FeatureModelOverridePanel({
         <CollapsibleContent className="mt-2 ml-6 space-y-3 animate-in fade-in-0 slide-in-from-top-1 duration-200">
           {/* AC6: Provider dropdown (only providers with configured keys) */}
           <div>
-            <Label
-              htmlFor={`override-provider-${feature}`}
-              className="text-xs font-medium"
-            >
+            <Label htmlFor={`override-provider-${feature}`} className="text-xs font-medium">
               Provider
             </Label>
             <Select
@@ -338,10 +326,7 @@ export function FeatureModelOverridePanel({
           {/* AC1: Temperature slider (0.0–2.0, step 0.1) */}
           <div data-testid={`override-temperature-${feature}`}>
             <div className="flex items-center gap-1.5">
-              <Label
-                htmlFor={`override-temp-${feature}`}
-                className="text-xs font-medium"
-              >
+              <Label htmlFor={`override-temp-${feature}`} className="text-xs font-medium">
                 Temperature
               </Label>
               <TooltipProvider>
@@ -358,7 +343,9 @@ export function FeatureModelOverridePanel({
                 </Tooltip>
               </TooltipProvider>
               <span className="ml-auto text-xs tabular-nums text-muted-foreground">
-                {temperature !== undefined ? temperature.toFixed(1) : (
+                {temperature !== undefined ? (
+                  temperature.toFixed(1)
+                ) : (
                   <span className="italic">Default</span>
                 )}
               </span>
@@ -372,7 +359,9 @@ export function FeatureModelOverridePanel({
               onValueChange={(val: number[]) => handleTemperatureChange([val[0] / 10])}
               className="mt-1.5"
               aria-label={`Temperature for ${feature}`}
-              aria-valuetext={temperature !== undefined ? `${temperature.toFixed(1)}` : 'Default (0.7)'}
+              aria-valuetext={
+                temperature !== undefined ? `${temperature.toFixed(1)}` : 'Default (0.7)'
+              }
               data-testid={`override-temp-slider-${feature}`}
             />
             <div className="flex gap-1 mt-1.5">
@@ -400,10 +389,7 @@ export function FeatureModelOverridePanel({
 
           {/* AC2: Max tokens input (100–32000) */}
           <div data-testid={`override-max-tokens-${feature}`}>
-            <Label
-              htmlFor={`override-tokens-${feature}`}
-              className="text-xs font-medium"
-            >
+            <Label htmlFor={`override-tokens-${feature}`} className="text-xs font-medium">
               Max Tokens
             </Label>
             <div className="flex items-center gap-2 mt-1">
@@ -422,7 +408,9 @@ export function FeatureModelOverridePanel({
                 data-testid={`override-tokens-input-${feature}`}
               />
               <span className="text-[10px] text-muted-foreground">
-                {maxTokens !== undefined ? `${maxTokens.toLocaleString()} tokens` : (
+                {maxTokens !== undefined ? (
+                  `${maxTokens.toLocaleString()} tokens`
+                ) : (
                   <span className="italic">Using model default</span>
                 )}
               </span>

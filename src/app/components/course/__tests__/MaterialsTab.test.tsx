@@ -34,9 +34,7 @@ vi.mock('@/db/schema', () => ({
 
 // Mock PdfViewer to avoid pulling in pdf.js in tests
 vi.mock('@/app/components/figma/PdfViewer', () => ({
-  PdfViewer: ({ title }: { title?: string }) => (
-    <div data-testid="pdf-viewer">{title}</div>
-  ),
+  PdfViewer: ({ title }: { title?: string }) => <div data-testid="pdf-viewer">{title}</div>,
 }))
 
 // Mock courseAdapter
@@ -63,8 +61,22 @@ function renderMaterials(lessonId = 'pdf-1') {
 // ---------------------------------------------------------------------------
 
 const mockPdfs = [
-  { id: 'pdf-1', courseId: 'course-1', filename: 'Chapter1.pdf', path: '/path/1', pageCount: 12, fileHandle: {} },
-  { id: 'pdf-2', courseId: 'course-1', filename: 'Resources.pdf', path: '/path/2', pageCount: 3, fileHandle: {} },
+  {
+    id: 'pdf-1',
+    courseId: 'course-1',
+    filename: 'Chapter1.pdf',
+    path: '/path/1',
+    pageCount: 12,
+    fileHandle: {},
+  },
+  {
+    id: 'pdf-2',
+    courseId: 'course-1',
+    filename: 'Resources.pdf',
+    path: '/path/2',
+    pageCount: 3,
+    fileHandle: {},
+  },
 ]
 
 describe('MaterialsTab', () => {

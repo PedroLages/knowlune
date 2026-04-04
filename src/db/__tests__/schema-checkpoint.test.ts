@@ -98,8 +98,9 @@ describe('Dexie migration checkpoint', () => {
       )
     }
 
-    // 5. Both should be at the same version
-    expect(checkpointVersion).toBe(migrationVersion)
+    // 5. Migration version may be higher than checkpoint (data-only migrations above checkpoint)
+    // but schemas must still be identical
+    expect(migrationVersion).toBeGreaterThanOrEqual(checkpointVersion)
     expect(checkpointVersion).toBe(CHECKPOINT_VERSION)
 
     // Cleanup

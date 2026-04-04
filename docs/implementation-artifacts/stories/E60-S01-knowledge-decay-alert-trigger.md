@@ -1,12 +1,13 @@
 ---
 story_id: E60-S01
-story_name: "Knowledge Decay Alert Trigger"
-status: ready-for-dev
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+story_name: 'Knowledge Decay Alert Trigger'
+status: done
+started: 2026-04-03
+completed: 2026-04-04
+reviewed: true
+review_started: 2026-04-04
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa]
+review_scope: full
 burn_in_validated: false
 ---
 
@@ -66,7 +67,7 @@ So that I can review weakening topics before the knowledge is lost.
   - [ ] 3.1 Add `knowledgeDecay: boolean` to `NotificationPreferences` in `src/data/types.ts`
 
 - [ ] Task 4: Bump Dexie schema version with migration (AC: 1)
-  - [ ] 4.1 Add new version (v30) in `src/db/schema.ts` with upgrade that sets `knowledgeDecay: true` on existing `notificationPreferences` rows
+  - [ ] 4.1 Add new version (v32) in `src/db/schema.ts` with upgrade that sets `knowledgeDecay: true` on existing `notificationPreferences` rows
   - [ ] 4.2 Update `src/db/checkpoint.ts` -- do NOT bump `CHECKPOINT_VERSION`, only add the new version after the checkpoint gate in schema.ts
 
 - [ ] Task 5: Wire preference store with new type (AC: 4)
@@ -88,13 +89,16 @@ So that I can review weakening topics before the knowledge is lost.
   - [ ] 8.3 Define `DECAY_THRESHOLD = 50` constant at module level (export for tests)
   - [ ] 8.4 Call from `initNotificationService()` after existing `checkSrsDueOnStartup()` with same fire-and-forget + catch pattern
 
-## Implementation Notes
+## Implementation Plan
+
+See [plan](plans/plan-e60-s01-knowledge-decay-alert-trigger.md) for implementation approach.
 
 ### Architecture Compliance
 
 **Event Bus Pattern**: Add variant to `AppEvent` union in `src/lib/eventBus.ts` (line ~13). Follow existing naming convention `namespace:action` (e.g., `knowledge:decay`).
 
 **NotificationService Pattern**: Follow exact patterns from existing handlers:
+
 - `EVENT_TO_NOTIF_TYPE` maps event type to notification type (line ~94)
 - `handleEvent()` switch case creates notification via `useNotificationStore.getState().create()` (line ~104)
 - Dedup functions follow `hasReviewDueToday()` pattern: query `db.notifications.where('type').equals(...)` with `.filter()` on date + metadata key
@@ -108,13 +112,13 @@ So that I can review weakening topics before the knowledge is lost.
 
 ### Key Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/lib/eventBus.ts` | Add `knowledge:decay` to `AppEvent` union |
-| `src/data/types.ts` | Add `'knowledge-decay'` to `NotificationType`, `knowledgeDecay: boolean` to `NotificationPreferences` |
-| `src/db/schema.ts` | Add v30 migration for new preference field |
-| `src/stores/useNotificationPrefsStore.ts` | Add `TYPE_TO_FIELD` entry + DEFAULTS |
-| `src/services/NotificationService.ts` | Add handler, dedup, startup check, EVENT_TO_NOTIF_TYPE entry |
+| File                                      | Change                                                                                                |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `src/lib/eventBus.ts`                     | Add `knowledge:decay` to `AppEvent` union                                                             |
+| `src/data/types.ts`                       | Add `'knowledge-decay'` to `NotificationType`, `knowledgeDecay: boolean` to `NotificationPreferences` |
+| `src/db/schema.ts`                        | Add v30 migration for new preference field                                                            |
+| `src/stores/useNotificationPrefsStore.ts` | Add `TYPE_TO_FIELD` entry + DEFAULTS                                                                  |
+| `src/services/NotificationService.ts`     | Add handler, dedup, startup check, EVENT_TO_NOTIF_TYPE entry                                          |
 
 ### Critical Guardrails
 
@@ -141,6 +145,7 @@ await store.create({
 ## Testing Notes
 
 Testing for this story is covered by E60-S05. However, during implementation verify:
+
 - TypeScript compiles with no errors (`npx tsc --noEmit`)
 - Build succeeds (`npm run build`)
 - Existing tests still pass (`npm run test:unit`)
@@ -160,12 +165,35 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story -- Playwright MCP findings]
+**Review Date:** 2026-04-04
+
+- **M1 (Medium):** Duplicate icon — `review-due` and `srs-due` both use `BookOpen` in NotificationPreferencesPanel.tsx. `review-due` should use `Clock` to match Notifications page.
+- **M2 (Medium):** Filter button touch targets on `/notifications` measure 36px at 375px viewport — below 44px mobile minimum. Add `min-h-[44px]` responsively.
+- **N1 (Nit):** `aria-live="polite"` on conditionally-rendered quiet hours div doesn't reliably announce to screen readers.
+
+Report: `docs/reviews/design/design-review-2026-04-04-e60-s01.md`
 
 ## Code Review Feedback
 
-[Populated by /review-story -- adversarial code review findings]
+**Review Date:** 2026-04-04
+
+- **Nit (confidence 75):** `DECAY_THRESHOLD = 50` duplicates `FADING_THRESHOLD = 50` in retentionMetrics.ts. Consider shared constant in future refactor.
+- **Nit (confidence 95):** String interpolation for className instead of `cn()` in Notifications.tsx:231. Pre-existing pattern.
+- **Edge cases (7 found, all LOW risk):** Race condition on rapid emissions, empty topic string, NaN retention display, unbounded `toArray()` load. None blocking — acceptable for personal app scale.
+
+Reports:
+
+- `docs/reviews/code/code-review-2026-04-04-e60-s01.md`
+- `docs/reviews/code/edge-case-review-2026-04-04-e60-s01.md`
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+**Schema versioning nuance:** The plan referenced v30 but the actual checkpoint was already at v31, requiring v32. Lesson: always verify `db.verno` at implementation time rather than trusting plan documents — plans can become stale between creation and execution.
+
+**Event bus extension pattern:** Adding a new event type (`knowledge:decay`) followed a well-established pattern — one union variant in `eventBus.ts`, one `EVENT_TO_NOTIF_TYPE` mapping, one `handleEvent()` switch case, and one dedup function. The NotificationService architecture made this mechanical. Future notification types should follow the same 4-step recipe.
+
+**Startup check reuse:** The `checkKnowledgeDecayOnStartup()` function mirrored `checkSrsDueOnStartup()` exactly (async, fire-and-forget, catch + console.error). Reusing existing patterns reduced cognitive overhead and ensured consistent error handling.
+
+**Preference store auto-wiring:** Adding `TYPE_TO_FIELD` and `DEFAULTS` entries was sufficient — `isTypeEnabled()` automatically picked up the new type without any code changes. This is a good example of how map-based lookup tables reduce per-feature boilerplate.
+
+**Dexie migration discipline:** The critical rule — never bump `CHECKPOINT_VERSION` — was followed. Only the live schema versions in `schema.ts` get incremented. This separation ensures checkpoint tests remain stable while allowing incremental schema evolution.

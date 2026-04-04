@@ -1170,6 +1170,23 @@ function _declareLegacyMigrations(database: Dexie): void {
 
       return Promise.all([flashcardsMigration, reviewRecordsMigration])
     })
+
+  // v32: Add knowledgeDecay preference field (E60-S01)
+  database
+    .version(32)
+    .stores({
+      notificationPreferences: 'id',
+    })
+    .upgrade(tx => {
+      return tx
+        .table('notificationPreferences')
+        .toCollection()
+        .modify(pref => {
+          if (pref.knowledgeDecay === undefined) {
+            pref.knowledgeDecay = true
+          }
+        })
+    })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }

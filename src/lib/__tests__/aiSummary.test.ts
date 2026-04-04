@@ -48,7 +48,9 @@ import { sanitizeAIRequestPayload } from '@/lib/aiConfiguration'
 // ---------------------------------------------------------------------------
 
 /** Creates an async generator that yields chunks */
-async function* createMockStream(chunks: string[]): AsyncGenerator<{ content: string; finishReason?: string }, void, unknown> {
+async function* createMockStream(
+  chunks: string[]
+): AsyncGenerator<{ content: string; finishReason?: string }, void, unknown> {
   for (const content of chunks) {
     yield { content }
   }
@@ -321,6 +323,7 @@ Real content`
         const abortError = Object.assign(new Error('The operation was aborted.'), {
           name: 'AbortError',
         })
+        // eslint-disable-next-line require-yield -- mock generator that throws before yielding
         mockStreamCompletion.mockImplementation(async function* () {
           throw abortError
         })
@@ -338,6 +341,7 @@ Real content`
         const abortError = Object.assign(new Error('The operation was aborted.'), {
           name: 'AbortError',
         })
+        // eslint-disable-next-line require-yield -- mock generator that throws before yielding
         mockStreamCompletion.mockImplementation(async function* () {
           throw abortError
         })
@@ -364,6 +368,7 @@ Real content`
 
     describe('error handling', () => {
       it('should rethrow non-AbortError exceptions', async () => {
+        // eslint-disable-next-line require-yield -- mock generator that throws before yielding
         mockStreamCompletion.mockImplementation(async function* () {
           throw new TypeError('Network failure')
         })

@@ -7,6 +7,7 @@ Detailed findings per story, referenced from MEMORY.md.
 See git history for these older reviews. Key recurring patterns captured in MEMORY.md.
 
 ## E05-S01: Daily Study Streak Counter (Round 3)
+
 - BLOCKER (RECURRING x8): Core fixes exist ONLY in working tree
 - Committed `logStudyAction` does NOT dispatch `study-log-updated` event
 - Committed `getCurrentStreak` still uses `Math.floor` (DST bug)
@@ -15,6 +16,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - ErrorBoundary uses hardcoded `bg-[#FAF5EE]`, `bg-white`, `h-16 w-16`
 
 ## E05-S05: Study Reminders & Notifications
+
 - BLOCKER (RECURRING x9): ENTIRE implementation exists ONLY in working tree
 - `startIntervals` captures stale `settings.dailyReminderTime`
 - `handleStudyUpdate` event listener is a no-op (dead code)
@@ -22,6 +24,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - No E2E tests for AC4/AC5 (notification fires)
 
 ## E05-S06: Streak Milestone Celebrations
+
 - BLOCKER (RECURRING x10): Multiple round-1 fixes exist ONLY in working tree
   - TIER_CONFIG/getTierConfig moved to streakMilestones.ts (uncommitted)
   - cn() usage in MilestoneGallery and StreakMilestoneToast (uncommitted)
@@ -38,6 +41,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - confetti useEffect deps should be [milestone.id] not [milestone.milestoneValue]
 
 ## E07-S02: Recommended Next Dashboard Section (Round 3)
+
 - Round 2 blocker addressed: custom event dispatched from saveAllProgress(), listened in RecommendedNext
 - Round 2 H2 addressed: responsive grid now uses sm:grid-cols-2 lg:grid-cols-3
 - Round 2 M1 addressed: bg-blue-100 replaced with bg-brand-soft theme token
@@ -48,6 +52,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - REMAINING: `totalLessons` from modules.reduce may diverge from course.totalLessons field
 
 ## E06-S01: Create Learning Challenges (Round 3)
+
 - Round 2 items largely fixed: parseLocalDate, error state, cn(), deleteChallenge throw, integer validation, ignore flag
 - REMAINING: E2E afterEach cleanup is fire-and-forget (callback-based IDB API not awaited)
 - REMAINING: useEffect ignore flag is a no-op (loadChallenges state update happens in store, not in .then())
@@ -56,6 +61,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - REMAINING: E2E afterEach IDB cleanup doesn't await transaction completion -- test isolation risk
 
 ## E06-S02: Track Challenge Progress
+
 - String comparison for date filtering (`p.updatedAt >= challenge.createdAt`) -- fragile with mixed ISO formats
 - useEffect `.then()` chain lacks cleanup/ignore flag (stale updates on unmount)
 - `refreshAllProgress` optimistic UI update before DB write -- progress "resets" on reload if bulkPut fails
@@ -64,6 +70,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - E2E afterEach IDB cleanup fire-and-forget (recurring from E06-S01)
 
 ## E06-S03: Challenge Milestone Celebrations
+
 - `fireMilestoneToasts` setTimeout timers never cleaned up on unmount -- leaked toasts after navigation
 - `refreshAllProgress` returns milestoneMap outside try/catch -- returns stale empty map on error
 - `confettiColors` array reference in useEffect deps causes re-fire (referential inequality)
@@ -73,11 +80,12 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - ChallengeMilestoneToast missing `role="status"` for screen reader announcements
 
 ## E07-S04: At-Risk Course Detection & Completion Estimates (Round 1)
+
 - No uncommitted changes (pattern broken -- positive)
 - H1 (RECURRING): `text-gray-500` hardcoded in CompletionEstimate.tsx instead of `text-muted-foreground`
 - H2: Division by zero in completionEstimate.ts when all sessions have duration:0 (renders "Infinity sessions")
 - H3: No clamp on negative remainingContentMinutes (stale progress can produce negative values)
-- H4 (RECURRING): Hardcoded orange-* Tailwind classes in AtRiskBadge instead of theme tokens (--warning exists)
+- H4 (RECURRING): Hardcoded orange-\* Tailwind classes in AtRiskBadge instead of theme tokens (--warning exists)
 - H5: E2E beforeEach missing sidebar localStorage seed -- will fail on tablet viewport in CI
 - M1: Hard wait `waitForTimeout(500)` in AC6 sort test
 - M2: Date.now() in pure calculation functions blocks deterministic unit testing
@@ -85,6 +93,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M4: Magic number 15 (minutes per lesson) not extracted as constant
 
 ## E07-S05: Smart Study Schedule Suggestion
+
 - `allocateTimeAcrossCourses` over-allocates when courses > dailyMinutes (Math.max(1) floor inflates sum)
 - `bg-blue-600` hardcoded on Progress indicators instead of theme token `bg-brand`
 - `buildActiveCoursesWithMomentum` iterates `allCourses` twice (two `.map()` passes), minor perf
@@ -92,6 +101,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - E2E tests don't cover AC6 (rolling window updates) -- only static state snapshots
 
 ## E08-S01: Study Time Analytics (Revalidation)
+
 - Round 1 fixes verified: ignore flag, useMemo, loading state, ARIA cleanup, .catch() on Reports.tsx
 - REMAINING: Sidebar seed in test beforeEach runs AFTER page.goto (should be before)
 - REMAINING: Weekly adherence uses sliding window from most recent session, not current calendar week (contradicts AC2 "this week")
@@ -102,6 +112,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Math.max(...sessions.map(...)) stack overflow risk with large arrays
 
 ## E09-S02: Web Worker Architecture & Memory Management
+
 - H1: `terminate()` clears pendingRequests without rejecting -- promises hang forever (also on visibilitychange)
 - H2: search.worker.ts global error handler posts response without `requestId` -- coordinator can't route it
 - H3: Per-request `addEventListener('message', handleMessage)` leaks if worker crashes before responding
@@ -110,7 +121,9 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M2: `supportsModuleWorkers()` returns same value as `supportsWorkers()` -- misleading (Firefox <114 supports workers but not module workers)
 
 ## E09B-S01: AI Video Summary (Round 2)
+
 **Round 1 fixes verified:**
+
 - BLOCKER fixed: `_testApiKey` now typed on interface, `import.meta.env.DEV` gating added
 - H1 fixed: AbortController ref with useEffect cleanup on unmount
 - H2 fixed: Existing controller aborted before new one created (re-invocation safe)
@@ -119,6 +132,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M3 fixed: Sidebar localStorage seed added to beforeEach
 
 **Round 2 findings:**
+
 - H1: CSP connect-src missing entries for 3 new providers (Groq, GLM, Gemini) -- API calls will be silently blocked
 - H2: VTT parser duplicated between aiSummary.ts and TranscriptPanel.tsx (identical parseVTT/parseTime functions)
 - H3: Word count computed per-chunk in streaming loop is O(n^2) over accumulated text
@@ -128,6 +142,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Nit: `handleGenerate` abort-cancelled state leaves component in `generating` -- no visual reset
 
 ## E9B-S03: AI Learning Path Generation
+
 - BLOCKER: 20s timeout violates AC6 2-second requirement; AC6 E2E test only exercises "no API key" path, never network timeout
 - H1 (RECURRING): Fire-and-forget `regeneratePath()` calls in handleRegenerateClick and handleRegenerateConfirm
 - H2: Timeout promise `setTimeout` never cleared on success (resource leak)
@@ -139,6 +154,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: No uncommitted changes (pattern broken), typed Window mock interface, good LLM response validation
 
 ## E9B-S04: Knowledge Gap Detection
+
 - H1 (RECURRING x14): String interpolation for className instead of cn() in GapCard component (2 instances)
 - H2: Under-noted detection logic scales incorrectly -- per-video noteCount compared against videoCount/3 (course-level), so courses with 30 videos require 10+ notes per video
 - H3: Bidirectional note link write (two db.notes.put) not wrapped in Dexie transaction -- partial write risk
@@ -150,6 +166,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: No uncommitted changes, clean state machine, good AbortController cleanup, typed Window mock
 
 ## E9B-S06: AI Feature Analytics & Auto-Analysis (Round 1)
+
 - H1 (RECURRING): `trackAIUsage()` calls in instrumented files are fire-and-forget without `.catch()` -- promise rejections unhandled
 - H2 (RECURRING): String interpolation `${trendConfig.className}` in AIAnalyticsTab.tsx instead of `cn()` utility
 - H3: `getAIUsageTimeline` ISO string comparison for timestamps -- lexicographic sort works for ISO but fragile pattern
@@ -160,7 +177,9 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: No uncommitted changes, good ignore flag pattern in useEffect, proper AbortController cleanup, consent gating well-implemented
 
 ## E9B-S06: AI Feature Analytics & Auto-Analysis (Round 2 - Revalidation)
+
 **Round 1 fixes verified:**
+
 - H1 FIXED: `.catch(() => {})` added to all `trackAIUsage()` calls in AISummaryPanel, QAChatPanel, OrganizeNotesButton, useLearningPathStore
 - H2 FIXED: `cn()` used for className merging in stat cards
 - H4 FIXED: AC3 test now imports `triggerAutoAnalysis` directly and verifies consent gating blocks AI requests
@@ -169,12 +188,14 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M3 FIXED: `console.warn` added to parseTagsFromResponse catch block
 
 **Round 2 findings:**
+
 - H1: `autoAnalysis.ts` Gemini API key sent as Bearer header instead of `?key=` query param (will 401 for Gemini users)
 - H2: Retry button `setPeriod(p => p)` is a no-op -- React skips re-render when setter returns same value
 - M1: Hard wait `setTimeout(r, 500)` in AC3 test without justification comment
 - Nit: Story doc says "schema v13" but code is v12 (documentation inaccuracy)
 
 ## E10-S02: Empty State Guidance (Round 1)
+
 - No uncommitted changes (positive)
 - H1 (RECURRING x15): Fire-and-forget `importCourseFromFolder()` in Overview.tsx onAction -- no .catch()
 - H2 (RECURRING): `w-16 h-16` / `w-8 h-8` in EmptyState.tsx instead of `size-*` Tailwind v4 shorthand
@@ -187,8 +208,10 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: Clean E2E tests, proper async cleanup patterns, well-typed component API
 
 ## E01-S05: Detect Missing or Relocated Files (Re-Review)
+
 **Round 1 fixes verified:** All 4 high + 3 medium findings addressed (cn(), .catch(), Promise.allSettled index fix, toast aggregation, PDF opacity).
 **Round 2 findings:**
+
 - H1 (RECURRING): `verifyAll()` fire-and-forget async without .catch() in useEffect
 - H2: Dexie .catch() logs but provides no user-facing error state (empty list indistinguishable from load failure)
 - M1: Missing flex-wrap on content rows per design spec (narrow viewport badge overflow)
@@ -197,6 +220,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: All round-1 findings fixed, clean separation of concerns, good unit test coverage for mixed states
 
 ## E11-S02: Knowledge Retention Dashboard (Round 1)
+
 - No uncommitted changes (positive)
 - H1: Inline `style={{ width: ... }}` on TopicRetentionCard progress bar -- should use Tailwind arbitrary value or CSS variable
 - H2: `now` memoized with `useMemo(() => new Date(), [])` -- semantically correct but never updates if user stays on page for hours
@@ -206,6 +230,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: Pure function architecture, deterministic time injection, proper useEffect ignore flag, comprehensive unit tests, good design token usage
 
 ## E11-S03: Study Session Quality Scoring (Round 1)
+
 - No uncommitted changes (positive)
 - H1: `recordInteraction` directly mutates Zustand state object -- breaks immutability contract
 - H2 (RECURRING x16): String interpolation for className instead of cn() in QualityScoreRing, TrendIndicator, QualityBadge (3 instances)
@@ -216,6 +241,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: Pure function scoring engine, comprehensive unit tests, proper design tokens, clean DB migration, good factory usage
 
 ## E12-S03: Create useQuizStore with Zustand (Round 1)
+
 - No uncommitted changes (positive)
 - H1 (RECURRING): `startQuiz` Dexie query has no try/catch -- unhandled rejection leaves store stuck in loading state
 - H2: `loadAttempts` Dexie query has no try/catch -- same pattern
@@ -227,6 +253,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: Snapshot rollback pattern, correct partialize scope, clean scoring logic, proper persist middleware usage
 
 ## E12-S04: Create Quiz Route and QuizPage Component (Round 1)
+
 - No uncommitted changes in story files (positive), but 6 unrelated files modified in working tree
 - BLOCKER: Zod schema JSDoc says timeLimit is "milliseconds" and timeRemaining is "milliseconds" but all code treats both as minutes -- future data import will produce 60x wrong timer values
 - H1 (RECURRING): Silent .catch() in Quiz.tsx Dexie lookup -- sets error state but no console.error
@@ -239,9 +266,11 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: Clean async cleanup pattern, proper component decomposition, good E2E test quality with shared helpers
 
 ## E12-S04: Create Quiz Route and QuizPage Component (Round 2 - Re-Review)
+
 - 5 of 6 carry-forward items STILL OPEN (see Round 1 entry)
 
 ## E12-S04: Create Quiz Route and QuizPage Component (Round 3 - Re-Review)
+
 - All 6 Round 1 carry-forward items FIXED in commits 12207ed and ebf19dc
 - H1 NEW: Persist middleware only saves currentProgress, not currentQuiz -- browser refresh silently loses quiz state (per-quiz localStorage key has no production writer)
 - H2 NEW: useEffect dependency `[remainingSeconds === null]` is fragile boolean expression -- extract to named `isTimed` variable
@@ -251,6 +280,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: All round-1/round-2 findings addressed, clean timer sync architecture, proper Zod safeParse on localStorage
 
 ## E11-S06: Per-Course Study Reminders (Round 1)
+
 - No uncommitted changes (positive)
 - BLOCKER: Notification `data.url` deep-link is inert -- no `onclick` handler or Service Worker `notificationclick` listener (AC2 unmet)
 - BLOCKER: `handleSaveNew` async onClick has no try/catch -- silent IndexedDB failure
@@ -264,6 +294,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: Clean separation of concerns, proper interval cleanup, good accessibility (role=checkbox, aria-checked, 44px targets), proper design token usage, no hardcoded colors
 
 ## E02-S10: Caption and Subtitle Support (Round 1)
+
 - No uncommitted changes (positive)
 - H1 (RECURRING): `handleLoadCaptions` async callback has no try/catch -- IndexedDB write failure or file.text() rejection silently swallowed
 - H2 (RECURRING): `getCaptionForVideo().then()` has no .catch() -- silent failure on IndexedDB read
@@ -274,6 +305,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: Thorough blob URL lifecycle management, clean cancellation pattern, good separation of concerns (VideoPlayer stays presentational)
 
 ## E13-S02: Mark Questions for Review
+
 - H1: Submit dialog gate only opens on unanswered > 0 -- skips ReviewSummary when all answered but some marked
 - H2: ReviewSummary count uses `markedForReview.length` but buttons use filtered `markedIndices.length` -- count/button mismatch on orphaned IDs
 - H3 (RECURRING): MarkForReview touch target ~20px tall, needs `min-h-[44px]`
@@ -285,6 +317,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: Clean component decomposition, solid ARIA (aria-current="step", dynamic aria-labels), defensive store guards, correct array answer handling in QuestionGrid
 
 ## E20-S01: Career Paths System (Round 1)
+
 - No uncommitted changes (positive -- pattern finally stable since ~E07)
 - H1: TOCTOU race on `loadPaths` seed logic -- concurrent calls both see count===0, both call bulkAdd, second throws ConstraintError
 - H2: Stale closure on `enrollments` in enrollInPath/dropPath -- destructures at function start, uses stale snapshot after await
@@ -298,6 +331,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: Correct persistence-before-state pattern, comprehensive test coverage (20 unit + 15 E2E), strong accessibility (aria-label, role, reducedMotion), proper design token usage, no hardcoded colors
 
 ## E18-S10: Export Quiz Results (Round 1)
+
 - No uncommitted changes (positive)
 - BLOCKER: CSV formula injection -- `escapeCsv` handles RFC 4180 delimiters but not formula-injection payloads (`=`, `+`, `-`, `@`)
 - H1 (RECURRING x17): Silent failure on IndexedDB count query -- `console.error` only, no user-facing error state, disabled button misleads
@@ -310,6 +344,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: Clean architecture separation, excellent lazy-loading for jsPDF, thorough unit tests (24 cases), proper useEffect cleanup, good error handling in handleExport, proper design tokens in UI, factory usage in tests
 
 ## E18-S01: Implement Complete Keyboard Navigation (Round 1)
+
 - No uncommitted changes (positive)
 - H1: QuestionGrid Enter key handler missing `e.preventDefault()` -- double `onQuestionClick` invocation (keydown + native button click)
 - H2: AC4 (Checkboxes Tab + Space) has zero E2E test coverage despite header listing it
@@ -320,6 +355,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: WAI-ARIA toolbar pattern correctly implemented, isArrowNavRef event-order pattern is clever, test barriers prevent focus race conditions, clean working tree
 
 ## E15-S05: Display Performance Summary After Quiz (Round 1)
+
 - No uncommitted changes (positive)
 - H1: `text-warning` used for "incorrect" count in correctness bar -- `text-destructive` is the established convention (ScoreSummary.tsx uses it)
 - H2: Skipped questions pushed to `incorrectQuestionNumbers` -- conflates unanswered with wrong answers in growth area suggestions
@@ -330,6 +366,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: Pure function architecture, excellent unit test coverage (14 tests, boundary conditions), proper accessibility (useId, aria-labelledby, semantic HTML), no uncommitted changes, shared E2E seeding helpers used
 
 ## E18-S07: Surface Quiz Analytics in Reports Section (Round 1)
+
 - No uncommitted changes (positive)
 - H1: topPerforming and needsImprovement overlap when <= 5 quizzes (same quiz in both lists)
 - H2 (RECURRING x17): String interpolation for className instead of cn() in QuizAnalyticsDashboard (3 instances)
@@ -342,8 +379,10 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: Proper ignore flag pattern, .catch() on async, design token compliance, clean working tree
 
 ## E69-S01: Storage Estimation Service and Overview Card (Round 2 - Re-Review)
+
 **Round 1 fixes verified:** All 5 findings addressed in commit 53602d0b (error state, totalUsage in summary, courses table removal, useCallback removal, Blob .size). No uncommitted changes.
 **Round 2 findings:**
+
 - H1: Blob estimation returns only FIRST Blob's .size per row, ignores additional Blobs and non-Blob metadata
 - H2: ChartContainer missing aria-label="Storage usage breakdown chart" (AC1 Task 6.6)
 - H3: Refresh failure after successful initial load shows no error feedback (error && !overview condition)
@@ -353,8 +392,10 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Positive: Clean working tree (uncommitted-fix pattern broken), good architecture separation, defensive Promise.allSettled, proper cancelled flag
 
 ## E69-S01: Storage Estimation Service and Overview Card (Round 3)
+
 **Round 2 fixes verified:** Multi-blob estimation fixed, aria-label added, refresh error toast added.
 **Round 3 findings:**
+
 - H1: Category mapping covers only 11 of 30+ Dexie tables -- uncategorizedBytes gap not surfaced to user
 - H2: ArrayBuffer/typed-array fields not handled in estimateTableSize (only Blob instanceof check)
 - H3: handleRefresh has React-state-based concurrency guard (setRefreshing) vulnerable to double-click race
@@ -363,3 +404,19 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M3: sessionStorage key 'storage-warning-dismissed' missing knowlune- namespace prefix
 - M4: No test for refresh failure toast (sonner mock missing)
 - Positive: All R2 blockers addressed, clean committed code, thorough state machine (5 states), excellent a11y
+
+## E60-S01: Knowledge Decay Alert Trigger (Round 1)
+
+- No uncommitted changes (positive -- pattern stable since ~E07)
+- Zero blocker/high/medium findings -- clean implementation
+- Nit1: DECAY_THRESHOLD=50 duplicates FADING_THRESHOLD=50 in retentionMetrics.ts
+- Nit2 (pre-existing, RECURRING): String interpolation for className in Notifications.tsx line 231
+- All 6 acceptance criteria verified and passing
+- Positive: Exact pattern replication of existing SRS handler, correct schema v32 migration, checkpoint.ts untouched, sv-SE date pattern correct, dedup on metadata.topic correct
+
+## E60-S01: Knowledge Decay Alert Trigger (Round 2 - Re-Review)
+
+- Round 1 confirmed: Zero blockers/high/medium, same 2 nits still present (both intentional/pre-existing)
+- All 6 acceptance criteria verified with file:line evidence
+- Clean working tree confirmed
+- No new findings — implementation is clean

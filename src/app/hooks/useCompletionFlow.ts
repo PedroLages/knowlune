@@ -12,7 +12,7 @@ import type { NavigateFunction } from 'react-router'
 import { toast } from 'sonner'
 import type { LessonItem } from '@/lib/courseAdapter'
 import type { CelebrationType } from '@/app/components/celebrations/CompletionModal'
-import type { CompletionStatus } from '@/data/types'
+import type { CompletionStatus, Module } from '@/data/types'
 
 export interface CompletionFlowParams {
   courseId: string | undefined
@@ -27,7 +27,7 @@ export interface CompletionFlowParams {
     courseId: string,
     lessonId: string,
     status: CompletionStatus,
-    tags: string[]
+    modules: Module[]
   ) => Promise<void>
   celebrationType: CelebrationType
   setCelebrationOpen: React.Dispatch<React.SetStateAction<boolean>>
@@ -95,7 +95,14 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
       setCelebrationTitle(isCourseComplete ? (courseName ?? 'Course') : title)
       setCelebrationOpen(true)
     },
-    [lessons, checkCourseCompletion, courseName, setCelebrationType, setCelebrationTitle, setCelebrationOpen]
+    [
+      lessons,
+      checkCourseCompletion,
+      courseName,
+      setCelebrationType,
+      setCelebrationTitle,
+      setCelebrationOpen,
+    ]
   )
 
   // Handle video ended — mark complete, show celebration, trigger auto-advance
@@ -117,7 +124,15 @@ export function useCompletionFlow(params: CompletionFlowParams): CompletionFlowR
     if (nextLesson) {
       setShowAutoAdvance(true)
     }
-  }, [courseId, lessonId, setItemStatus, showCelebration, lessonTitle, nextLesson, setShowAutoAdvance])
+  }, [
+    courseId,
+    lessonId,
+    setItemStatus,
+    showCelebration,
+    lessonTitle,
+    nextLesson,
+    setShowAutoAdvance,
+  ])
 
   // Handle YouTube auto-complete (>90% watched) — status already persisted by YouTubeVideoContent,
   // so we only need to show celebration and trigger auto-advance countdown.

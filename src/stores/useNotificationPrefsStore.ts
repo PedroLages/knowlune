@@ -12,6 +12,7 @@ const TYPE_TO_FIELD: Record<NotificationType, keyof NotificationPreferences> = {
   'achievement-unlocked': 'achievementUnlocked',
   'review-due': 'reviewDue',
   'srs-due': 'srsDue',
+  'knowledge-decay': 'knowledgeDecay',
 }
 
 const DEFAULTS: NotificationPreferences = {
@@ -22,6 +23,7 @@ const DEFAULTS: NotificationPreferences = {
   achievementUnlocked: true,
   reviewDue: true,
   srsDue: true,
+  knowledgeDecay: true,
   quietHoursEnabled: false,
   quietHoursStart: '22:00',
   quietHoursEnd: '07:00',

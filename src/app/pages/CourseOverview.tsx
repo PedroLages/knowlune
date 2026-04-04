@@ -455,7 +455,9 @@ export function CourseOverview() {
           transition={{ duration: 0.4, delay: 0.2 }}
           className={cn(
             'space-y-6',
-            hasDescription || (!capabilities?.requiresNetwork && authorData) ? 'lg:col-span-2' : 'lg:col-span-3'
+            hasDescription || (!capabilities?.requiresNetwork && authorData)
+              ? 'lg:col-span-2'
+              : 'lg:col-span-3'
           )}
         >
           {/* About This Course */}

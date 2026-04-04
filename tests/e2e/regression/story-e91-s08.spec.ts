@@ -60,9 +60,7 @@ test.describe('E91-S08: Next Course Suggestion', () => {
     await expect(page.getByTestId('lesson-player-content')).toBeVisible({ timeout: 10000 })
   })
 
-  test('lesson player renders without errors on course with multiple lessons', async ({
-    page,
-  }) => {
+  test('lesson player renders without errors on course with multiple lessons', async ({ page }) => {
     await seedImportedCourses(page, [
       {
         id: 'course-a',

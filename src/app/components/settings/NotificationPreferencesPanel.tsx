@@ -6,6 +6,8 @@ import {
   Download,
   Trophy,
   BookOpen,
+  Brain,
+  Clock,
   type LucideIcon,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
@@ -51,13 +53,19 @@ const NOTIFICATION_TOGGLES: ToggleDefinition[] = [
     type: 'review-due',
     label: 'Flashcard Reviews',
     description: 'Daily reminder when flashcards are due',
-    icon: BookOpen,
+    icon: Clock,
   },
   {
     type: 'srs-due',
     label: 'SRS Due Reminders',
     description: 'When spaced repetition cards are ready for review',
     icon: BookOpen,
+  },
+  {
+    type: 'knowledge-decay',
+    label: 'Knowledge Decay Alerts',
+    description: 'When topic retention drops below a safe threshold',
+    icon: Brain,
   },
 ]
 
@@ -92,6 +100,7 @@ export function NotificationPreferencesPanel() {
           {NOTIFICATION_TOGGLES.map(toggle => {
             const Icon = toggle.icon
             const enabled = isTypeEnabled(toggle.type)
+            const descId = `notif-desc-${toggle.type}`
             return (
               <div
                 key={toggle.type}
@@ -106,7 +115,9 @@ export function NotificationPreferencesPanel() {
                     >
                       {toggle.label}
                     </Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">{toggle.description}</p>
+                    <p id={descId} className="text-xs text-muted-foreground mt-0.5">
+                      {toggle.description}
+                    </p>
                   </div>
                 </div>
                 <Switch
@@ -114,6 +125,8 @@ export function NotificationPreferencesPanel() {
                   checked={enabled}
                   onCheckedChange={checked => setTypeEnabled(toggle.type, checked)}
                   aria-label={`${toggle.label} notifications`}
+                  aria-describedby={descId}
+                  className="min-h-6"
                 />
               </div>
             )
@@ -129,7 +142,7 @@ export function NotificationPreferencesPanel() {
               <Label htmlFor="quiet-hours" className="text-sm font-medium cursor-pointer">
                 Quiet Hours
               </Label>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p id="quiet-hours-desc" className="text-xs text-muted-foreground mt-0.5">
                 Suppress all notifications during these hours
               </p>
             </div>
@@ -138,40 +151,41 @@ export function NotificationPreferencesPanel() {
               checked={prefs.quietHoursEnabled}
               onCheckedChange={checked => setQuietHours({ quietHoursEnabled: checked })}
               aria-label="Enable quiet hours"
+              aria-describedby="quiet-hours-desc"
+              className="min-h-6"
             />
           </div>
 
-          {prefs.quietHoursEnabled && (
-            <div
-              className="grid grid-cols-2 gap-4 animate-in fade-in-0 slide-in-from-top-1 duration-300"
-              aria-live="polite"
-            >
-              <div className="space-y-1.5">
-                <Label htmlFor="quiet-start" className="text-sm text-muted-foreground">
-                  Start
-                </Label>
-                <input
-                  type="time"
-                  id="quiet-start"
-                  value={prefs.quietHoursStart}
-                  onChange={e => setQuietHours({ quietHoursStart: e.target.value })}
-                  className="block w-full h-11 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
+          <div aria-live="polite">
+            {prefs.quietHoursEnabled && (
+              <div className="grid grid-cols-2 gap-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 duration-300">
+                <div className="space-y-1.5">
+                  <Label htmlFor="quiet-start" className="text-sm text-muted-foreground">
+                    Start
+                  </Label>
+                  <input
+                    type="time"
+                    id="quiet-start"
+                    value={prefs.quietHoursStart}
+                    onChange={e => setQuietHours({ quietHoursStart: e.target.value })}
+                    className="block w-full h-11 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="quiet-end" className="text-sm text-muted-foreground">
+                    End
+                  </Label>
+                  <input
+                    type="time"
+                    id="quiet-end"
+                    value={prefs.quietHoursEnd}
+                    onChange={e => setQuietHours({ quietHoursEnd: e.target.value })}
+                    className="block w-full h-11 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="quiet-end" className="text-sm text-muted-foreground">
-                  End
-                </Label>
-                <input
-                  type="time"
-                  id="quiet-end"
-                  value={prefs.quietHoursEnd}
-                  onChange={e => setQuietHours({ quietHoursEnd: e.target.value })}
-                  className="block w-full h-11 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -112,7 +112,7 @@ export function MiniPlayer({
       tabIndex={0}
       aria-label="Return to main video"
       onClick={onScrollToVideo}
-      onKeyDown={(e) => {
+      onKeyDown={e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
           onScrollToVideo?.()

@@ -9,11 +9,9 @@ import { cn } from './utils'
 const tabsListVariants = cva('inline-flex items-center justify-center', {
   variants: {
     variant: {
-      default:
-        'bg-muted text-muted-foreground min-h-[44px] w-fit rounded-xl p-[3px]',
+      default: 'bg-muted text-muted-foreground min-h-[44px] w-fit rounded-xl p-[3px]',
       'brand-pill': 'bg-card/50 rounded-xl p-1 h-auto gap-1',
-      underline:
-        'w-full rounded-none border-b border-border bg-transparent h-auto p-0',
+      underline: 'w-full rounded-none border-b border-border bg-transparent h-auto p-0',
     },
   },
   defaultVariants: { variant: 'default' },
@@ -25,7 +23,7 @@ const tabsTriggerVariants = cva(
     variants: {
       variant: {
         default:
-          "data-[state=active]:bg-card dark:data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 text-foreground dark:text-muted-foreground min-h-[44px] flex-1 gap-1.5 rounded-xl border border-transparent px-2 py-1 transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1",
+          'data-[state=active]:bg-card dark:data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 text-foreground dark:text-muted-foreground min-h-[44px] flex-1 gap-1.5 rounded-xl border border-transparent px-2 py-1 transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1',
         'brand-pill':
           'gap-1.5 rounded-lg px-3 py-1.5 data-[state=active]:bg-brand data-[state=active]:text-brand-foreground transition-colors duration-150',
         underline:
@@ -39,10 +37,7 @@ const tabsTriggerVariants = cva(
 type TabsListVariantProps = VariantProps<typeof tabsListVariants>
 type TabsTriggerVariantProps = VariantProps<typeof tabsTriggerVariants>
 
-function Tabs({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Root>) {
+function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) {
   return (
     <TabsPrimitive.Root
       data-slot="tabs"
@@ -70,8 +65,7 @@ function TabsTrigger({
   className,
   variant,
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.Trigger> &
-  TabsTriggerVariantProps) {
+}: React.ComponentProps<typeof TabsPrimitive.Trigger> & TabsTriggerVariantProps) {
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
@@ -81,10 +75,7 @@ function TabsTrigger({
   )
 }
 
-function TabsContent({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Content>) {
+function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
@@ -94,12 +85,5 @@ function TabsContent({
   )
 }
 
-export {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-  tabsListVariants,
-  tabsTriggerVariants,
-}
+export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants, tabsTriggerVariants }
 export type { TabsListVariantProps, TabsTriggerVariantProps }

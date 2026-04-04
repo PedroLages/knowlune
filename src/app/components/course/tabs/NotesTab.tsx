@@ -22,7 +22,13 @@ export interface NotesTabProps {
   onCaptureFrame?: () => Promise<CapturedFrame | null>
 }
 
-export function NotesTab({ courseId, lessonId, onSeek, currentTime, onCaptureFrame }: NotesTabProps) {
+export function NotesTab({
+  courseId,
+  lessonId,
+  onSeek,
+  currentTime,
+  onCaptureFrame,
+}: NotesTabProps) {
   const notes = useNoteStore(s => s.notes)
   const loadNotesByLesson = useNoteStore(s => s.loadNotesByLesson)
   const saveNote = useNoteStore(s => s.saveNote)

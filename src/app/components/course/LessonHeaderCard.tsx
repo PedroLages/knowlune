@@ -30,7 +30,11 @@ export const LessonHeaderCard = forwardRef<HTMLHeadingElement, LessonHeaderCardP
     return (
       <Card data-testid="lesson-header-card" className="rounded-[24px] p-6 mt-4">
         <div className="flex items-start justify-between gap-3">
-          <h2 ref={ref} tabIndex={-1} className="text-xl font-semibold text-foreground outline-none">
+          <h2
+            ref={ref}
+            tabIndex={-1}
+            className="text-xl font-semibold text-foreground outline-none"
+          >
             {title}
           </h2>
           {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
