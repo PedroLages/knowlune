@@ -608,7 +608,9 @@ html.spacious {
 
   /* Reading mode: Dyslexia-friendly font (E65-S02) */
   html.reading-mode.reading-dyslexia main {
-    font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+    /* Uses --reading-dyslexia-font defined in fonts.css.
+       TODO E65: Replace with Atkinson Hyperlegible when @fontsource/atkinson-hyperlegible is installed. */
+    font-family: var(--reading-dyslexia-font, "Comic Sans MS", "Trebuchet MS", Arial, sans-serif);
   }
 
   /* Reading mode transitions — animate opacity/transform before collapse.

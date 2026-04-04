@@ -47,7 +47,6 @@ export function ReadingProgressBar() {
       aria-label="Reading progress"
       data-testid="reading-progress-bar"
     >
-      {/* eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic width from scroll percentage */}
       <div
         className="h-full bg-brand transition-[width] duration-150 ease-out"
         style={{ width: `${progress}%` }}

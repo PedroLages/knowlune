@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { Type, Minus, Plus, Palette, ChevronDown, RotateCcw } from 'lucide-react'
+import { Type, Minus, Plus, Palette, ChevronDown, MoveVertical } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import {
   DropdownMenu,
@@ -82,6 +82,7 @@ function loadSettings(): ReadingSettings {
       lastPreset: typeof parsed.lastPreset === 'string' ? parsed.lastPreset : null,
     }
   } catch {
+    // silent-catch-ok: localStorage unavailable in private browsing
     return DEFAULT_SETTINGS
   }
 }
@@ -90,7 +91,7 @@ function saveSettings(s: ReadingSettings): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(s))
   } catch {
-    // localStorage full — silently ignore
+    // silent-catch-ok: localStorage unavailable in private browsing
   }
 }
 
@@ -149,7 +150,15 @@ export function ReadingToolbar() {
   }, [])
 
   const updateSettings = useCallback((patch: Partial<ReadingSettings>) => {
-    setSettings((prev) => ({ ...prev, ...patch, lastPreset: patch.lastPreset ?? null }))
+    setSettings((prev) => ({
+      ...prev,
+      ...patch,
+      // Only update lastPreset when explicitly provided; manual tweaks preserve the last applied preset label
+      ...(Object.prototype.hasOwnProperty.call(patch, 'lastPreset') ? {} : {}),
+      lastPreset: Object.prototype.hasOwnProperty.call(patch, 'lastPreset')
+        ? (patch.lastPreset ?? null)
+        : prev.lastPreset,
+    }))
   }, [])
 
   // Font size step
@@ -267,7 +276,7 @@ export function ReadingToolbar() {
           aria-label="Decrease line height"
           className="min-w-[44px] min-h-[44px]"
         >
-          <RotateCcw className="size-3" aria-hidden="true" />
+          <MoveVertical className="size-3" aria-hidden="true" />
           <Minus className="size-3" aria-hidden="true" />
         </Button>
         <span className="text-xs text-muted-foreground w-8 text-center select-none" aria-live="polite">
@@ -281,7 +290,7 @@ export function ReadingToolbar() {
           aria-label="Increase line height"
           className="min-w-[44px] min-h-[44px]"
         >
-          <RotateCcw className="size-3" aria-hidden="true" />
+          <MoveVertical className="size-3" aria-hidden="true" />
           <Plus className="size-3" aria-hidden="true" />
         </Button>
       </div>

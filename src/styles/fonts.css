@@ -1,3 +1,13 @@
 @import '@fontsource-variable/dm-sans';
 @import '@fontsource-variable/dm-sans/wght-italic.css';
 @import '@fontsource-variable/space-grotesk';
+
+/*
+ * Dyslexia-Friendly font for reading mode (.reading-dyslexia class).
+ * TODO E65: Replace with Atkinson Hyperlegible (@fontsource/atkinson-hyperlegible) or
+ *           OpenDyslexic when added to dependencies. For now, use a system font stack
+ *           known to aid readability for dyslexic users.
+ */
+.reading-dyslexia {
+  --reading-dyslexia-font: "Comic Sans MS", "Trebuchet MS", Arial, sans-serif;
+}
