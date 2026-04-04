@@ -1,10 +1,10 @@
 ---
 story_id: E50-S05
 story_name: "Schedule Editor + Course Integration"
-status: draft
-started:
-completed:
-reviewed: in-progress
+status: done
+started: 2026-04-04
+completed: 2026-04-04
+reviewed: true
 review_started: 2026-04-04
 review_gates_passed: [build, lint, type-check, format-check, unit-tests-skipped, e2e-tests-skipped, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa, glm-code-review, openai-code-review-skipped]
 review_scope: full
