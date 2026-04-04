@@ -4,9 +4,9 @@ story_name: "Content Recommendation Notification Handler"
 status: in-progress
 started: 2026-04-04
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: in-progress
+review_started: 2026-04-04
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped]
 burn_in_validated: false
 ---
 
@@ -154,4 +154,12 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Dexie version sequencing is now a critical dependency chain.** E60-S01 consumed v32 for `knowledgeDecay`, so E60-S02 must use v33 for `recommendationMatch`. The story explicitly called this out in the guardrails — this is a good pattern: always note the "next available version" in story notes so the author picks it up immediately without digging through schema history.
+
+- **Pattern reuse from E60-S01 worked exactly as intended.** The `hasRecommendationMatchToday` dedup function is structurally identical to `hasKnowledgeDecayToday` — just filtering on `metadata.courseId` instead of `metadata.topic`. Keeping these side by side in `NotificationService.ts` makes it easy to see the pattern and add future triggers consistently.
+
+- **The event-consumer-only architecture (no emitter) simplifies implementation but complicates testing.** There's no way to exercise the `recommendation:match` handler without either mocking the event bus or waiting for E52's recommendation engine. E60-S05 will need to use direct event bus emission (`eventBus.emit(...)`) in tests rather than triggering through product logic — this is a valid pattern but worth documenting so S05 doesn't try to simulate the full recommendation pipeline.
+
+- **`toLocaleDateString('sv-SE')` as the canonical date comparison string.** This ISO-8601-like format (`YYYY-MM-DD`) avoids locale ambiguity in dedup comparisons. It's now used in both the `knowledge-decay` and `recommendation-match` dedup functions — worth adding to `engineering-patterns.md` as the project standard for date-string comparisons in storage queries.
+
+- **The `Notifications.tsx` change was minimal (2 lines).** The page automatically picks up the new notification type via the shared notification rendering pipeline — no conditional rendering or type-specific UI was needed. This confirms the notification system's extensibility: adding a new event type requires zero UI changes.
