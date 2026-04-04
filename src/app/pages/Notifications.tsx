@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
-import { Bell, CheckCheck, CircleCheck, Clock, Settings, Trash2 } from 'lucide-react'
+import { Bell, CircleCheck, Clock, Settings, Trash2 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Button } from '@/app/components/ui/button'
 import { EmptyState } from '@/app/components/EmptyState'
@@ -77,13 +77,6 @@ function NotificationCard({ notification, onMarkRead, onDismiss }: NotificationC
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  'size-2 shrink-0 rounded-full',
-                  isUnread ? 'bg-brand' : 'bg-muted-foreground/30'
-                )}
-                aria-label={isUnread ? 'Unread' : 'Read'}
-              />
               <p
                 className={cn(
                   'text-sm leading-tight',
@@ -92,6 +85,13 @@ function NotificationCard({ notification, onMarkRead, onDismiss }: NotificationC
               >
                 {notification.title}
               </p>
+              <span
+                className={cn(
+                  'size-2 shrink-0 rounded-full',
+                  isUnread ? 'bg-brand' : 'bg-muted-foreground/30'
+                )}
+                aria-label={isUnread ? 'Unread' : 'Read'}
+              />
             </div>
             <p className="mt-1 text-sm leading-snug text-muted-foreground">
               {notification.message}
@@ -199,7 +199,7 @@ export function Notifications() {
               onClick={handleMarkAllRead}
               aria-label="Mark all notifications as read"
             >
-              <CheckCheck className="mr-1.5 size-4" aria-hidden="true" />
+              <CircleCheck className="mr-1.5 size-4" aria-hidden="true" />
               Mark all as read
             </Button>
           )}

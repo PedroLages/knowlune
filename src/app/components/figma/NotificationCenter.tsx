@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router'
-import { Bell, CheckCheck } from 'lucide-react'
+import { Bell, CircleCheck } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Button } from '@/app/components/ui/button'
 import { Popover, PopoverTrigger, PopoverContent } from '@/app/components/ui/popover'
@@ -95,7 +95,7 @@ export function NotificationCenter() {
               className="h-auto px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
               onClick={markAllAsRead}
             >
-              <CheckCheck className="mr-1 size-3.5" aria-hidden="true" />
+              <CircleCheck className="mr-1 size-3.5" aria-hidden="true" />
               Mark all as read
             </Button>
           )}
