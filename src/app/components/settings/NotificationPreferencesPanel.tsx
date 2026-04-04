@@ -150,36 +150,34 @@ export function NotificationPreferencesPanel() {
           </div>
 
           <div aria-live="polite">
-          {prefs.quietHoursEnabled && (
-            <div
-              className="grid grid-cols-2 gap-4 animate-in fade-in-0 slide-in-from-top-1 duration-300"
-            >
-              <div className="space-y-1.5">
-                <Label htmlFor="quiet-start" className="text-sm text-muted-foreground">
-                  Start
-                </Label>
-                <input
-                  type="time"
-                  id="quiet-start"
-                  value={prefs.quietHoursStart}
-                  onChange={e => setQuietHours({ quietHoursStart: e.target.value })}
-                  className="block w-full h-11 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
+            {prefs.quietHoursEnabled && (
+              <div className="grid grid-cols-2 gap-4 animate-in fade-in-0 slide-in-from-top-1 duration-300">
+                <div className="space-y-1.5">
+                  <Label htmlFor="quiet-start" className="text-sm text-muted-foreground">
+                    Start
+                  </Label>
+                  <input
+                    type="time"
+                    id="quiet-start"
+                    value={prefs.quietHoursStart}
+                    onChange={e => setQuietHours({ quietHoursStart: e.target.value })}
+                    className="block w-full h-11 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="quiet-end" className="text-sm text-muted-foreground">
+                    End
+                  </Label>
+                  <input
+                    type="time"
+                    id="quiet-end"
+                    value={prefs.quietHoursEnd}
+                    onChange={e => setQuietHours({ quietHoursEnd: e.target.value })}
+                    className="block w-full h-11 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="quiet-end" className="text-sm text-muted-foreground">
-                  End
-                </Label>
-                <input
-                  type="time"
-                  id="quiet-end"
-                  value={prefs.quietHoursEnd}
-                  onChange={e => setQuietHours({ quietHoursEnd: e.target.value })}
-                  className="block w-full h-11 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-              </div>
-            </div>
-          )}
+            )}
           </div>
         </div>
       </CardContent>
