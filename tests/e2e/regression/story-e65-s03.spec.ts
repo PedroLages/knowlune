@@ -102,8 +102,6 @@ test.describe('E65-S03: Focus Mode Overlay', () => {
     await page.keyboard.press('Meta+Shift+F')
 
     // Sonner toast with the message
-    await expect(
-      page.getByText('No interactive component to focus')
-    ).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('No interactive component to focus')).toBeVisible({ timeout: 5000 })
   })
 })

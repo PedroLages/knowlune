@@ -8,7 +8,12 @@
  * Uses ical-generator for RFC 5545-compliant output with automatic VTIMEZONE.
  */
 
-import icalGenerator, { ICalCalendarMethod, ICalAlarmType, ICalEventRepeatingFreq, ICalWeekday } from 'ical-generator'
+import icalGenerator, {
+  ICalCalendarMethod,
+  ICalAlarmType,
+  ICalEventRepeatingFreq,
+  ICalWeekday,
+} from 'ical-generator'
 import type { DayOfWeek, StudySchedule } from '../data/types'
 
 /** Map DayOfWeek to iCal BYDAY abbreviation */
@@ -27,7 +32,7 @@ const DAY_MAP: Record<DayOfWeek, ICalWeekday> = {
  * Example: ['monday', 'wednesday'] → 'MO,WE'
  */
 export function mapDaysToRRule(days: DayOfWeek[]): string {
-  return days.map((d) => DAY_MAP[d]).join(',')
+  return days.map(d => DAY_MAP[d]).join(',')
 }
 
 /**
@@ -70,18 +75,26 @@ export function generateICalFeed(schedules: StudySchedule[], timezone: string): 
   for (const schedule of schedules) {
     if (!schedule.enabled) continue
 
-    // Parse startTime "HH:MM"
+    // Parse startTime "HH:MM" — guard against malformed data from DB
     const [hours, minutes] = schedule.startTime.split(':').map(Number)
+    if (isNaN(hours) || isNaN(minutes)) {
+      console.warn(`[icalFeedGenerator] Skipping schedule ${schedule.id}: invalid startTime "${schedule.startTime}"`)
+      continue
+    }
 
     // Create a reference date for DTSTART (today, with correct time)
     const now = new Date()
     const refDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0)
 
-    // For weekly recurrence, set DTSTART to the first matching day
-    const dtstart =
-      schedule.recurrence === 'weekly' && schedule.days.length > 0
-        ? getNextDayOccurrence(schedule.days[0], refDate)
-        : refDate
+    // For weekly recurrence, set DTSTART to the earliest next occurrence across all days
+    // (not just days[0]) to avoid occurrences before DTSTART in multi-day schedules
+    let dtstart: Date
+    if (schedule.recurrence === 'weekly' && schedule.days.length > 0) {
+      const candidates = schedule.days.map(d => getNextDayOccurrence(d, refDate))
+      dtstart = candidates.reduce((earliest, d) => (d < earliest ? d : earliest))
+    } else {
+      dtstart = new Date(refDate.getTime())
+    }
     dtstart.setHours(hours, minutes, 0, 0)
 
     // Compute end time from duration
@@ -101,7 +114,7 @@ export function generateICalFeed(schedules: StudySchedule[], timezone: string): 
     } else if (schedule.recurrence === 'weekly' && schedule.days.length > 0) {
       event.repeating({
         freq: ICalEventRepeatingFreq.WEEKLY,
-        byDay: schedule.days.map((d) => DAY_MAP[d]),
+        byDay: schedule.days.map(d => DAY_MAP[d]),
       })
     }
 

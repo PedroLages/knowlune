@@ -22,7 +22,7 @@ const STORE_NAME = 'studySchedules'
 
 /** Open the Dexie DB in the browser context and verify a table exists */
 async function getTableNames(page: import('@playwright/test').Page): Promise<string[]> {
-  return page.evaluate((dbName) => {
+  return page.evaluate(dbName => {
     return new Promise<string[]>((resolve, reject) => {
       const req = indexedDB.open(dbName)
       req.onerror = () => reject(req.error)
@@ -67,8 +67,14 @@ async function seedSchedule(
           const db = req.result
           const tx = db.transaction(storeName, 'readwrite')
           tx.objectStore(storeName).put(record)
-          tx.oncomplete = () => { db.close(); resolve() }
-          tx.onerror = () => { db.close(); reject(tx.error) }
+          tx.oncomplete = () => {
+            db.close()
+            resolve()
+          }
+          tx.onerror = () => {
+            db.close()
+            reject(tx.error)
+          }
         }
       })
     },
@@ -78,7 +84,7 @@ async function seedSchedule(
 
 /** Read all records from studySchedules table */
 async function getAllSchedules(page: import('@playwright/test').Page) {
-  return page.evaluate((storeName) => {
+  return page.evaluate(storeName => {
     return new Promise<unknown[]>((resolve, reject) => {
       const req = indexedDB.open('elearning-db')
       req.onerror = () => reject(req.error)
@@ -86,8 +92,14 @@ async function getAllSchedules(page: import('@playwright/test').Page) {
         const db = req.result
         const tx = db.transaction(storeName, 'readonly')
         const getReq = tx.objectStore(storeName).getAll()
-        getReq.onsuccess = () => { db.close(); resolve(getReq.result) }
-        getReq.onerror = () => { db.close(); reject(getReq.error) }
+        getReq.onsuccess = () => {
+          db.close()
+          resolve(getReq.result)
+        }
+        getReq.onerror = () => {
+          db.close()
+          reject(getReq.error)
+        }
       }
     })
   }, STORE_NAME)
@@ -130,9 +142,7 @@ test.describe('E50-S01: Study Schedule Data Model', () => {
     })
 
     const records = await getAllSchedules(page)
-    const saved = (records as Array<{ id: string; title: string }>).find(
-      (r) => r.id === scheduleId
-    )
+    const saved = (records as Array<{ id: string; title: string }>).find(r => r.id === scheduleId)
     expect(saved).toBeDefined()
     expect(saved!.title).toBe('Morning React Study')
 
@@ -153,9 +163,14 @@ test.describe('E50-S01: Study Schedule Data Model', () => {
     })
 
     const afterUpdate = await getAllSchedules(page)
-    const updated = (afterUpdate as Array<{ id: string; title: string; durationMinutes: number; updatedAt: string }>).find(
-      (r) => r.id === scheduleId
-    )
+    const updated = (
+      afterUpdate as Array<{
+        id: string
+        title: string
+        durationMinutes: number
+        updatedAt: string
+      }>
+    ).find(r => r.id === scheduleId)
     expect(updated!.title).toBe('Evening React Study')
     expect(updated!.durationMinutes).toBe(90)
     expect(updated!.updatedAt).toBe(updatedAt)
@@ -170,8 +185,14 @@ test.describe('E50-S01: Study Schedule Data Model', () => {
             const db = req.result
             const tx = db.transaction(storeName, 'readwrite')
             tx.objectStore(storeName).delete(id)
-            tx.oncomplete = () => { db.close(); resolve() }
-            tx.onerror = () => { db.close(); reject(tx.error) }
+            tx.oncomplete = () => {
+              db.close()
+              resolve()
+            }
+            tx.onerror = () => {
+              db.close()
+              reject(tx.error)
+            }
           }
         })
       },
@@ -179,7 +200,7 @@ test.describe('E50-S01: Study Schedule Data Model', () => {
     )
 
     const afterDelete = await getAllSchedules(page)
-    const deleted = (afterDelete as Array<{ id: string }>).find((r) => r.id === scheduleId)
+    const deleted = (afterDelete as Array<{ id: string }>).find(r => r.id === scheduleId)
     expect(deleted).toBeUndefined()
   })
 
@@ -231,19 +252,19 @@ test.describe('E50-S01: Study Schedule Data Model', () => {
     })
 
     // Read all and apply the same filter logic as the store
-    const all = await getAllSchedules(page) as Array<{
+    const all = (await getAllSchedules(page)) as Array<{
       id: string
       days: string[]
       enabled: boolean
     }>
 
     // enabledOnly=true (default): only monday+enabled
-    const mondayEnabled = all.filter((s) => s.days.includes('monday') && s.enabled)
+    const mondayEnabled = all.filter(s => s.days.includes('monday') && s.enabled)
     expect(mondayEnabled).toHaveLength(1)
     expect(mondayEnabled[0].id).toBe('e50-s01-day-mon-enabled')
 
     // enabledOnly=false: both monday schedules
-    const mondayAll = all.filter((s) => s.days.includes('monday'))
+    const mondayAll = all.filter(s => s.days.includes('monday'))
     expect(mondayAll).toHaveLength(2)
   })
 
@@ -297,19 +318,19 @@ test.describe('E50-S01: Study Schedule Data Model', () => {
       updatedAt: now,
     })
 
-    const all = await getAllSchedules(page) as Array<{
+    const all = (await getAllSchedules(page)) as Array<{
       id: string
       courseId?: string
       enabled: boolean
     }>
 
     // enabledOnly=true (default)
-    const courseEnabled = all.filter((s) => s.courseId === courseId && s.enabled)
+    const courseEnabled = all.filter(s => s.courseId === courseId && s.enabled)
     expect(courseEnabled).toHaveLength(1)
     expect(courseEnabled[0].id).toBe('e50-s01-course-enabled')
 
     // enabledOnly=false
-    const courseAll = all.filter((s) => s.courseId === courseId)
+    const courseAll = all.filter(s => s.courseId === courseId)
     expect(courseAll).toHaveLength(2)
   })
 })

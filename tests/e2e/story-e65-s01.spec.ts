@@ -46,7 +46,9 @@ test.describe('E65-S01: Core Reading Mode', () => {
     await expect(toggle).toBeVisible({ timeout: 8000 })
   })
 
-  test('Cmd+Shift+R activates reading mode — html element gets .reading-mode class', async ({ page }) => {
+  test('Cmd+Shift+R activates reading mode — html element gets .reading-mode class', async ({
+    page,
+  }) => {
     await seedAndNavigate(page)
 
     // Ensure page is focused

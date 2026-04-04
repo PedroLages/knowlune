@@ -133,9 +133,7 @@ export function FocusOverlay({
         <AlertDialogContent data-testid="focus-exit-confirmation">
           <AlertDialogHeader>
             <AlertDialogTitle>Exit focus mode?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Your quiz progress will be preserved.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Your quiz progress will be preserved.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={onCancelExit}>Stay</AlertDialogCancel>

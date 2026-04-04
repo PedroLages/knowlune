@@ -93,7 +93,12 @@ export function UnifiedLessonPlayer() {
   const isTablet = useIsTablet()
   const { isTheater, toggleTheater } = useTheaterMode()
   const isLesson = Boolean(courseId && lessonId)
-  const { isReadingMode, toggleReadingMode, exitReadingMode, announcement: readingModeAnnouncement } = useReadingMode(isLesson)
+  const {
+    isReadingMode,
+    toggleReadingMode,
+    exitReadingMode,
+    announcement: readingModeAnnouncement,
+  } = useReadingMode(isLesson)
   const notesPanelRef = usePanelRef()
   const videoPlayerRef = useRef<VideoPlayerHandle>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
@@ -401,7 +406,7 @@ export function UnifiedLessonPlayer() {
 
       {/* Inline prev/next navigation (classic style, inside scroll) */}
       {capabilities.supportsPrevNext && (
-        <div className="flex items-center justify-between mt-6 mb-8">
+        <div className="flex items-center justify-between mt-6">
           {prevLesson ? (
             <Button
               variant="outline"

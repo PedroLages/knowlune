@@ -63,16 +63,13 @@ export function ReadingModeTOC({ isReadingMode }: ReadingModeTOCProps) {
     }
   }, [isReadingMode, isMobile])
 
-  const handleNavigate = useCallback(
-    (id: string) => {
-      const el = document.getElementById(id)
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }
-      setOpen(false)
-    },
-    [],
-  )
+  const handleNavigate = useCallback((id: string) => {
+    const el = document.getElementById(id)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    setOpen(false)
+  }, [])
 
   if (!isMobile || !isReadingMode) return null
 
@@ -100,7 +97,9 @@ export function ReadingModeTOC({ isReadingMode }: ReadingModeTOCProps) {
                 key={h.id}
                 onClick={() => handleNavigate(h.id)}
                 className={`min-h-[44px] rounded-xl px-3 py-2 text-left transition-colors hover:bg-muted ${
-                  h.level === 3 ? 'pl-6 text-sm text-muted-foreground' : 'text-sm font-medium text-foreground'
+                  h.level === 3
+                    ? 'pl-6 text-sm text-muted-foreground'
+                    : 'text-sm font-medium text-foreground'
                 }`}
               >
                 {h.text}

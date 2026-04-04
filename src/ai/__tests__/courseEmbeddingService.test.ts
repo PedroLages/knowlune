@@ -129,7 +129,7 @@ describe('computeCourseEmbedding', () => {
     const updated = makeCourse({ tags: ['new-tag'] })
     const result = await mod.computeCourseEmbedding(updated)
     expect(result).not.toBeNull()
-    expect(result!.sourceHash).not.toBe((await mod.computeSourceHash(course)))
+    expect(result!.sourceHash).not.toBe(await mod.computeSourceHash(course))
   })
 })
 
@@ -137,14 +137,10 @@ describe('generateCourseEmbeddingAfterImport', () => {
   it('does not throw when embedding generation fails', async () => {
     // Override the mock to throw
     const coordinator = await import('@/ai/workers/coordinator')
-    vi.mocked(coordinator.generateEmbeddings).mockRejectedValueOnce(
-      new Error('Worker crashed')
-    )
+    vi.mocked(coordinator.generateEmbeddings).mockRejectedValueOnce(new Error('Worker crashed'))
 
     // Should not throw
-    await expect(
-      mod.generateCourseEmbeddingAfterImport(makeCourse())
-    ).resolves.toBeUndefined()
+    await expect(mod.generateCourseEmbeddingAfterImport(makeCourse())).resolves.toBeUndefined()
   })
 })
 

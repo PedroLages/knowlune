@@ -23,6 +23,7 @@ import { createAuthMiddleware } from './middleware/authenticate.js'
 import { createDetectBYOKMiddleware, createEntitlementMiddleware } from './middleware/entitlement.js'
 import { createRateLimiter } from './middleware/rate-limiter.js'
 import calendarRouter from './routes/calendar.js'
+import rateLimit from 'express-rate-limit'
 
 const app = express()
 const PORT = 3001
@@ -156,8 +157,16 @@ app.get('/api/ai/ollama/health', async (req, res) => {
 // ──────────────────────────────────────────────────────────────────────────────
 // Calendar feed route — token-authenticated, no JWT required (E50-S02)
 // MUST BE BEFORE JWT MIDDLEWARE — calendar uses token-in-URL auth model
+// Rate limited separately since it bypasses the main middleware chain.
 // ──────────────────────────────────────────────────────────────────────────────
-app.use('/api/calendar', calendarRouter)
+const calendarRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute window
+  max: 10, // 10 requests per IP per minute (calendar apps poll every 15-60 min)
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too Many Requests',
+})
+app.use('/api/calendar', calendarRateLimit, calendarRouter)
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Apply middleware chain to all /api/ai/* routes below this point.

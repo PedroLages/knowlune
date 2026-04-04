@@ -610,14 +610,16 @@ html.spacious {
   html.reading-mode.reading-dyslexia main {
     /* Uses --reading-dyslexia-font defined in fonts.css.
        TODO E65: Replace with Atkinson Hyperlegible when @fontsource/atkinson-hyperlegible is installed. */
-    font-family: var(--reading-dyslexia-font, "Comic Sans MS", "Trebuchet MS", Arial, sans-serif);
+    font-family: var(--reading-dyslexia-font, 'Comic Sans MS', 'Trebuchet MS', Arial, sans-serif);
   }
 
   /* Reading mode transitions — animate opacity/transform before collapse.
      prefers-reduced-motion: use instant display:none inside the reduce query. */
   @media (prefers-reduced-motion: no-preference) {
     html.reading-mode [data-theater-hide] {
-      transition: opacity 200ms ease-out, transform 200ms ease-out;
+      transition:
+        opacity 200ms ease-out,
+        transform 200ms ease-out;
     }
   }
 

@@ -75,6 +75,10 @@ router.get('/:token.ics', async (req, res) => {
           console.error('[calendar] Failed to update last_accessed_at:', updateErr.message)
         }
       })
+      // silent-catch-ok — server-side fire-and-forget, no UI to surface errors to
+      .catch((err: Error) => {
+        console.error('[calendar] Unexpected error updating last_accessed_at:', err.message)
+      })
   } catch (err) {
     // silent-catch-ok — logs to console and returns 503 to client
     console.error('[calendar] Token lookup exception:', (err as Error).message)
@@ -87,7 +91,7 @@ router.get('/:token.ics', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('study_schedules')
-      .select('*')
+      .select('id, title, startTime, durationMinutes, recurrence, days, reminderMinutes, enabled, timezone')
       .eq('user_id', userId)
       .eq('enabled', true)
 
