@@ -1,7 +1,7 @@
 ---
 story_id: E60-S04
 story_name: "Smart Triggers Preferences Panel"
-status: in-progress
+status: done
 started: 2026-04-04
 completed:
 reviewed: false
@@ -157,4 +157,4 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+Extracting smart trigger toggles into a separate visual section was straightforward since the store wiring was already in place from S01-S03. Key insight: shared ToggleRow component prevents duplication — both the main notification toggles and the smart trigger section now render via a single `ToggleRow` component, with an optional `data-testid` prop to preserve the smart trigger test IDs.

@@ -86,6 +86,46 @@ const SMART_TRIGGER_TOGGLES: ToggleDefinition[] = [
   },
 ]
 
+interface ToggleRowProps {
+  toggle: ToggleDefinition
+  isTypeEnabled: (type: NotificationType) => boolean
+  setTypeEnabled: (type: NotificationType, enabled: boolean) => void
+  'data-testid'?: string
+}
+
+function ToggleRow({ toggle, isTypeEnabled, setTypeEnabled, 'data-testid': testId }: ToggleRowProps) {
+  const Icon = toggle.icon
+  const enabled = isTypeEnabled(toggle.type)
+  const descId = `notif-desc-${toggle.type}`
+  return (
+    <div
+      key={toggle.type}
+      data-testid={testId}
+      className="flex items-center justify-between gap-4 min-h-[44px]"
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <div className="min-w-0">
+          <Label htmlFor={`notif-${toggle.type}`} className="text-sm font-medium cursor-pointer">
+            {toggle.label}
+          </Label>
+          <p id={descId} className="text-xs text-muted-foreground mt-0.5">
+            {toggle.description}
+          </p>
+        </div>
+      </div>
+      <Switch
+        id={`notif-${toggle.type}`}
+        checked={enabled}
+        onCheckedChange={checked => setTypeEnabled(toggle.type, checked)}
+        aria-label={`${toggle.label} notifications`}
+        aria-describedby={descId}
+        className="min-h-6"
+      />
+    </div>
+  )
+}
+
 export function NotificationPreferencesPanel() {
   const { prefs, isLoaded, init, setTypeEnabled, setQuietHours, isTypeEnabled } =
     useNotificationPrefsStore()
@@ -114,40 +154,14 @@ export function NotificationPreferencesPanel() {
       <CardContent className="p-6 space-y-6">
         {/* Per-type toggles */}
         <div role="group" aria-label="Notification type toggles" className="space-y-3">
-          {NOTIFICATION_TOGGLES.map(toggle => {
-            const Icon = toggle.icon
-            const enabled = isTypeEnabled(toggle.type)
-            const descId = `notif-desc-${toggle.type}`
-            return (
-              <div
-                key={toggle.type}
-                className="flex items-center justify-between gap-4 min-h-[44px]"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                  <div className="min-w-0">
-                    <Label
-                      htmlFor={`notif-${toggle.type}`}
-                      className="text-sm font-medium cursor-pointer"
-                    >
-                      {toggle.label}
-                    </Label>
-                    <p id={descId} className="text-xs text-muted-foreground mt-0.5">
-                      {toggle.description}
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  id={`notif-${toggle.type}`}
-                  checked={enabled}
-                  onCheckedChange={checked => setTypeEnabled(toggle.type, checked)}
-                  aria-label={`${toggle.label} notifications`}
-                  aria-describedby={descId}
-                  className="min-h-6"
-                />
-              </div>
-            )
-          })}
+          {NOTIFICATION_TOGGLES.map(toggle => (
+            <ToggleRow
+              key={toggle.type}
+              toggle={toggle}
+              isTypeEnabled={isTypeEnabled}
+              setTypeEnabled={setTypeEnabled}
+            />
+          ))}
         </div>
 
         <Separator />
@@ -162,41 +176,15 @@ export function NotificationPreferencesPanel() {
             aria-label="Smart trigger notification toggles"
             className="space-y-3"
           >
-            {SMART_TRIGGER_TOGGLES.map(toggle => {
-              const Icon = toggle.icon
-              const enabled = isTypeEnabled(toggle.type)
-              const descId = `notif-desc-${toggle.type}`
-              return (
-                <div
-                  key={toggle.type}
-                  data-testid={`smart-trigger-${toggle.type}`}
-                  className="flex items-center justify-between gap-4 min-h-[44px]"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                    <div className="min-w-0">
-                      <Label
-                        htmlFor={`notif-${toggle.type}`}
-                        className="text-sm font-medium cursor-pointer"
-                      >
-                        {toggle.label}
-                      </Label>
-                      <p id={descId} className="text-xs text-muted-foreground mt-0.5">
-                        {toggle.description}
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    id={`notif-${toggle.type}`}
-                    checked={enabled}
-                    onCheckedChange={checked => setTypeEnabled(toggle.type, checked)}
-                    aria-label={`${toggle.label} notifications`}
-                    aria-describedby={descId}
-                    className="min-h-6"
-                  />
-                </div>
-              )
-            })}
+            {SMART_TRIGGER_TOGGLES.map(toggle => (
+              <ToggleRow
+                key={toggle.type}
+                toggle={toggle}
+                isTypeEnabled={isTypeEnabled}
+                setTypeEnabled={setTypeEnabled}
+                data-testid={`smart-trigger-${toggle.type}`}
+              />
+            ))}
           </div>
         </div>
 
