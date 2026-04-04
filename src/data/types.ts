@@ -325,6 +325,15 @@ export interface StreakMilestone {
   streakStartDate: string // ISO 8601 date string — identifies which streak instance
 }
 
+// --- Course Embeddings (E52-S04) ---
+
+export interface CourseEmbedding {
+  courseId: string // Primary key: FK to ImportedCourse.id
+  embedding: number[] // 384-dimensional vector (all-MiniLM-L6-v2)
+  generatedAt: string // ISO timestamp
+  sourceHash: string // SHA-256 of title+description+tags for change detection
+}
+
 // --- Vector Embeddings (Story 9.3) ---
 
 export interface Embedding {
