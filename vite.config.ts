@@ -322,6 +322,56 @@ export function modelDiscoveryDevProxy(): Plugin {
           sendError(res, 500, (error as Error).message);
         }
       });
+
+      // GET /api/ai/models/glm — proxy to Z.ai
+      server.middlewares.use('/api/ai/models/glm', async (req, res, next) => {
+        if (req.method !== 'GET') { next(); return; }
+        const apiKey = req.headers['x-api-key'] as string;
+        if (!apiKey) { sendError(res, 400, 'X-API-Key header is required'); return; }
+
+        try {
+          const response = await fetch('https://api.z.ai/api/paas/v4/models', {
+            headers: { Authorization: `Bearer ${apiKey}` },
+            signal: AbortSignal.timeout(10_000),
+          });
+          if (!response.ok) {
+            sendError(res, response.status, `Z.ai returned ${response.status}`);
+            return;
+          }
+          const data = await response.json();
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(data));
+        // eslint-disable-next-line error-handling/no-silent-catch -- build-time error handling
+        } catch (error) {
+          console.error('[model-discovery-dev-proxy /glm]', (error as Error).message);
+          sendError(res, 500, (error as Error).message);
+        }
+      });
+
+      // GET /api/ai/models/gemini — proxy to Google Gemini
+      server.middlewares.use('/api/ai/models/gemini', async (req, res, next) => {
+        if (req.method !== 'GET') { next(); return; }
+        const apiKey = req.headers['x-api-key'] as string;
+        if (!apiKey) { sendError(res, 400, 'X-API-Key header is required'); return; }
+
+        try {
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`,
+            { signal: AbortSignal.timeout(10_000) }
+          );
+          if (!response.ok) {
+            sendError(res, response.status, `Gemini returned ${response.status}`);
+            return;
+          }
+          const data = await response.json();
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(data));
+        // eslint-disable-next-line error-handling/no-silent-catch -- build-time error handling
+        } catch (error) {
+          console.error('[model-discovery-dev-proxy /gemini]', (error as Error).message);
+          sendError(res, 500, (error as Error).message);
+        }
+      });
     }
   };
 }
