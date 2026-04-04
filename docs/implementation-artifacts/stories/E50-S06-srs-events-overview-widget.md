@@ -179,4 +179,10 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Overview skeleton delay causes widget mount lag**: The Overview page renders a loading skeleton for 500ms before mounting real content. `TodaysStudyPlan` only mounts after this delay, so `loadFlashcards()` fires late. E2E tests must use generous timeouts (`toBeVisible({ timeout: 15000 })`) or Playwright auto-retry patterns — never assume `networkidle` means all Zustand stores are loaded.
+
+- **Dismiss both overlays in E2E tests**: Two separate overlays guard first-time users — `WelcomeWizard` (`knowlune-welcome-wizard-v1`) and `OnboardingOverlay` (`knowlune-onboarding-v1`). Tests that need UI interaction must set both localStorage keys via `addInitScript` to prevent modal overlay from intercepting pointer events. Setting only the wizard key leaves the onboarding overlay active.
+
+- **`useMemo` with stable function refs**: `useFlashcardStore(s => s.getStats)` returns a stable function reference (Zustand actions don't change reference). The memo `[flashcardStats, flashcardsLoaded]` correctly recomputes when `flashcardsLoaded` changes, but care must be taken that the stable function ref doesn't prevent re-computation. Always pair with a changing scalar dep (e.g., `flashcards.length`) rather than the array itself (which would require deep equality).
+
+- **SRS iCal event generation**: The 90-day rolling window approach works well for feed generation. Using `srs-{YYYY-MM-DD}@knowlune.app` UIDs ensures calendar apps update counts on feed refresh since the UID is deterministic and calendar clients merge by UID.
