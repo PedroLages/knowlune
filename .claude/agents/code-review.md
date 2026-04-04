@@ -45,6 +45,18 @@ Run **three orthogonal review passes** before writing the report. Each pass has 
    - Walk every branch. Any unguarded path is a finding.
 5. List raw edge case findings.
 
+### Pass 2b — AI Code Smell Check
+Since Knowlune is 100% AI-generated, explicitly scan the diff and changed files for these AI-specific anti-patterns:
+
+- **Hallucinated APIs**: Imports or function calls referencing packages not in `package.json`, or functions/hooks that don't exist in the codebase. AI models sometimes "remember" APIs from training data that don't match installed versions. Cross-check suspicious imports with `package.json` and codebase search.
+- **Over-abstraction**: Unnecessary generics, adapter/strategy patterns wrapping a single implementation, premature abstraction for hypothetical future requirements (e.g., `useGenericDataFetcher<T>` when only one type is ever fetched). If a pattern has exactly one consumer, it's likely over-engineered.
+- **Cargo-culted patterns**: Code following conventions from a different framework or library — Next.js patterns in Vite/React Router (e.g., `getServerSideProps`, `app/` directory conventions), Redux patterns in Zustand, Express middleware patterns in client code. AI may blend patterns from training data.
+- **Copy-paste artifacts**: Repeated similar blocks that should be a loop, `.map()`, or shared helper. AI sometimes generates each case individually rather than abstracting. Look for 3+ structurally identical blocks with only data differences.
+- **Phantom error handling**: Catch blocks that `console.log`/`console.error` but provide no user feedback (toast, error boundary, fallback UI), no retry, and no recovery. This is distinct from the Silent Failures check — phantom handling *looks* correct but does nothing useful. Check for `toast.error()` or equivalent user-facing feedback.
+- **Unnecessary complexity**: Solutions more complex than the task requires. Could a 40-line custom hook be replaced by a 5-line inline expression? Could a multi-file abstraction be a single utility function? Check if a simpler approach achieves the same result.
+
+Score each finding 0-100 using the same confidence rules. Tag findings with `[AI Smell]` category. Feed all raw findings into the Judge Filter alongside other passes.
+
 ### Pass 3 — Acceptance Auditor (Spec-aligned)
 6. **Read the story file** from `docs/implementation-artifacts/`. For each acceptance criterion:
    - Find the code that implements it. If you can't find it, it's missing.
@@ -217,7 +229,7 @@ Rules:
 - Findings with confidence < 70 go to Medium or Nits regardless of category
 - Recurring patterns from agent memory get a +10 confidence boost and a `[Recurring]` tag
 - When unsure, score conservatively — false positives erode trust
-- Every finding must include a **Category** tag: `[Security]`, `[Correctness]`, `[Architecture]`, `[Silent Failure]`, `[Testing]`, `[Performance]`, `[Accessibility]`, `[Maintainability]` — this helps developers filter and helps track resolution rates per category
+- Every finding must include a **Category** tag: `[Security]`, `[Correctness]`, `[Architecture]`, `[Silent Failure]`, `[Testing]`, `[Performance]`, `[Accessibility]`, `[Maintainability]`, `[AI Smell]` — this helps developers filter and helps track resolution rates per category
 
 ## Severity Triage
 

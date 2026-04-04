@@ -177,6 +177,34 @@ After generating findings, remove if:
 
 Only confidence ≥ 70 appears in Blockers or High.
 
+## Known False Positives
+
+These patterns look suspicious but are intentional in Knowlune's architecture. Before skipping a finding as false positive, verify it matches the **exact context** described. A localStorage write in a NEW component may NOT be a false positive.
+
+| Pattern | Why It's Safe | Context |
+|---------|--------------|---------|
+| API keys in localStorage | BYOK design — user explicitly stores their own keys | `src/app/` BYOK components |
+| IndexedDB data visible in DevTools | Client-side-only app, all data is user's own | Dexie.js stores |
+| YouTube iframe postMessage handlers | Required for YouTube Player API communication | Course video components |
+| Zustand persist to localStorage | Expected state management pattern, no secrets stored | Store definitions |
+| `window.open()` for external links | Controlled URLs to Unsplash, YouTube — not user-controlled | Attribution links |
+| Test files with mock API keys | Clearly test fixtures, not real credentials | `tests/` directory |
+| Raw HTML rendering in markdown | Content is sanitized with DOMPurify before rendering | Markdown renderer only |
+
+## Emergency Response Protocol
+
+When a REAL secret or critical vulnerability is found in the diff, follow this protocol:
+
+1. **STOP review immediately** — Do not continue to other findings. This takes absolute priority.
+2. **Report as BLOCKER** with exact `file:line` and the exposed value (redacted).
+3. **Remediation steps** (include all in the report):
+   - Remove the secret from code immediately
+   - Add the file or pattern to `.gitignore` if applicable
+   - If already committed: use `git filter-branch` or BFG Repo Cleaner to scrub from history
+   - Rotate the exposed credential immediately — assume it is compromised
+   - Check if the secret was pushed to a remote (`git log --remotes`). If yes, treat it as fully compromised regardless of rotation speed
+4. **Prevention**: Suggest adding a pre-commit hook pattern (e.g., regex in `.git/hooks/pre-commit` or a tool like `detect-secrets`) to catch this class of secret before it enters version control.
+
 ## Report Format
 
 Write the report to the path specified in the dispatch prompt.

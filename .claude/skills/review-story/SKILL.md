@@ -187,7 +187,30 @@ Mark the first todo as `in_progress` and proceed:
    d. **Type check** — `npx tsc --noEmit`. If errors found:
       - Auto-fix: attempt to resolve type errors in files changed by the current branch (`git diff --name-only main...HEAD`). Only fix errors in branch-changed files — do not fix pre-existing errors in other files.
       - Re-run `npx tsc --noEmit`. If errors remain only in files NOT changed by the branch, log them to `docs/known-issues.yaml` (see "Known Issues Register" section below) and continue. If errors remain in branch-changed files, STOP with error output.
-   e. `npm run build` — STOP on failure with build errors.
+   e. `npm run build` — if build fails, attempt auto-recovery before stopping:
+
+      **Build error recovery** (auto-fix via build-error-resolver agent):
+
+      If the build fails:
+      1. Capture the build error output.
+      2. Get the list of branch-changed files: `git diff --name-only main...HEAD`.
+      3. Dispatch the `build-error-resolver` agent:
+         ```
+         Task({
+           subagent_type: "build-error-resolver",
+           prompt: "Fix the following build errors. Only modify files changed in this branch.\n\nBuild errors:\n[build error output]\n\nBranch-changed files:\n[file list from git diff --name-only main...HEAD]\n\nInstructions:\n- Fix build errors in branch-changed files only — do NOT touch files not in the list above.\n- Max 3 fix attempts. After each fix, run `npm run build` to verify.\n- If the build passes, report RESOLVED with a summary of changes made.\n- If the build still fails after 3 attempts, report ESCALATED with the remaining errors.",
+           description: "Build error recovery E##-S##"
+         })
+         ```
+      4. If the agent reports **RESOLVED**:
+         - Verify the build passes: `npm run build`
+         - If passes: commit the fixes (`fix(build): resolve build errors [auto-resolved by build-error-resolver]`), mark `build` gate as passed, continue to next pre-check (step 5f).
+         - If still fails: STOP with error output (agent's fix was insufficient).
+      5. If the agent reports **ESCALATED**:
+         - STOP the review with the agent's remaining errors report.
+         - Output: "Build failed — auto-recovery unsuccessful after 3 attempts. Remaining errors: [agent's escalation report]"
+
+      If the build passes on the first run (no errors), continue normally.
    f. `npm run test:unit -- --run` — STOP on failure. If no unit test script or no test files, note and continue.
    g. E2E tests — run smoke specs + current story's spec on Chromium only:
       ```
@@ -267,21 +290,62 @@ Mark the first todo as `in_progress` and proceed:
       **If burn-in selected**:
       - Run: `npx playwright test ${BASE_PATH}/tests/e2e/story-{id}.spec.ts --repeat-each=10 --project=chromium`
       - If **all iterations pass**: set `burn_in_validated: true` in story frontmatter, continue to reviews
-      - If **any iteration fails**: STOP with flakiness report:
-        ```
-        Burn-in FAILED: X/80 tests failed (flakiness detected)
+      - If **any iteration fails**: evaluate failure rate before deciding next action:
 
-        Failed tests:
-        - [Test name]: Failed on iterations [N, M, ...]
+        1. **Calculate failure rate**: `failures / total_runs` (e.g., 3 failures out of 80 total test runs = 3.75%).
 
-        This indicates non-deterministic behavior. Review:
-        1. Time dependencies (use FIXED_DATE, not Date.now())
-        2. Hard waits (use expect().toBeVisible(), not waitForTimeout())
-        3. Race conditions (use shared helpers with retry logic)
+        2. **If failure rate < 30%** (intermittent/flaky — likely not a real bug):
 
-        Fix anti-patterns and re-run /review-story.
-        ```
-        Keep `reviewed: in-progress`, do NOT add `e2e-tests` to gates (burn-in is part of E2E validation).
+           Use `AskUserQuestion` to offer the user a choice:
+           ```
+           Question: "Burn-in detected flaky test(s) — X/Y runs failed (Z%). How would you like to proceed?"
+           Header: "Flaky test detected"
+           Options:
+             1. "Quarantine flaky test(s) and continue (Recommended)"
+                Description: "Move flaky spec(s) to tests/e2e/quarantine/, log to known-issues.yaml, and continue review."
+             2. "Stop and fix the flakiness"
+                Description: "STOP the review to investigate and fix the non-deterministic behavior."
+           ```
+
+           **If quarantine chosen**:
+           - Create the quarantine directory if it does not exist: `mkdir -p ${BASE_PATH}/tests/e2e/quarantine/`
+           - Move each flaky spec file: `mv ${BASE_PATH}/tests/e2e/story-{id}.spec.ts ${BASE_PATH}/tests/e2e/quarantine/`
+           - Add an entry to `${BASE_PATH}/docs/known-issues.yaml`:
+             ```yaml
+             - id: KI-NNN          # increment from last entry
+               type: flaky-test
+               severity: medium
+               file: tests/e2e/story-{id}.spec.ts
+               quarantined_to: tests/e2e/quarantine/story-{id}.spec.ts
+               failure_rate: "Z%"
+               discovered: YYYY-MM-DD
+               story: E##-S##
+               status: open
+             ```
+           - Commit the quarantine: `chore: quarantine flaky test story-{id}.spec.ts (Z% failure rate)`
+           - Mark `e2e-tests` gate as passed with a note in the consolidated report: "E2E tests passed (1 test quarantined — Z% flaky)"
+           - Continue to reviews (step 6)
+
+           **If stop chosen**:
+           - STOP with the flakiness report (same as >= 30% behavior below)
+
+        3. **If failure rate >= 30%** (likely a real bug, not flakiness):
+
+           STOP with flakiness report:
+           ```
+           Burn-in FAILED: X/Y tests failed (Z% failure rate >= 30% — indicates a real bug, not flakiness)
+
+           Failed tests:
+           - [Test name]: Failed on iterations [N, M, ...]
+
+           This indicates non-deterministic behavior. Review:
+           1. Time dependencies (use FIXED_DATE, not Date.now())
+           2. Hard waits (use expect().toBeVisible(), not waitForTimeout())
+           3. Race conditions (use shared helpers with retry logic)
+
+           Fix the underlying bug and re-run /review-story.
+           ```
+           Keep `reviewed: in-progress`, do NOT add `e2e-tests` to gates (burn-in is part of E2E validation).
 
    If any pre-check fails: show the error output, suggest fixes, and STOP. Do not proceed to reviews. Keep `reviewed: in-progress` so next run resumes.
 

@@ -321,6 +321,16 @@ Mark the first todo as `in_progress` and proceed:
 
    This is informational only — no gates. Purpose is to calibrate expectations and help the workflow recommendation in Step 13.
 
+   **Red Flags Check**: After outputting the complexity signal, scan the story context for common risk indicators and surface any that apply:
+
+   - Does this story touch a module with NO existing tests? → Flag: "⚠ No test coverage in [module] — consider writing tests first"
+   - Does this story introduce a new npm dependency (not already in `package.json`)? → Flag: "⚠ New dependency — verify bundle impact and license"
+   - Does this story cross 3+ architectural boundaries (pages, components, stores, styles, routes)? → Flag: "⚠ Wide blast radius — plan carefully, review thoroughly"
+   - Does this story have 4+ ACs with unclear priority? → Flag: "⚠ Large AC count — clarify acceptance priority with user"
+   - Does this story touch security-sensitive areas (auth, BYOK, API keys, localStorage)? → Flag: "⚠ Security-sensitive — security-review agent will scrutinize this"
+
+   Output red flags as a bullet list after the complexity signal. If no flags trigger, output "No red flags detected ✓".
+
    **TodoWrite**: Mark "Web research (if external deps detected)" → `in_progress`.
 
 9c. **Selective web research** (conditional — skipped if no external signals detected):
@@ -402,6 +412,11 @@ Mark the first todo as `in_progress` and proceed:
     - Suggested implementation approach
     - UX design references (if applicable)
     - Web research findings (if Step 9c produced results): version constraints, breaking changes, security notes
+    - **Risk Assessment** (include when complexity estimate is HIGH):
+      - What could go wrong? (identify top 2-3 risks)
+      - What is the rollback plan? (can changes be reverted cleanly?)
+      - What existing patterns apply? (reference `docs/engineering-patterns.md`)
+      - Are there dependencies between this story and others in the sprint?
     - Note: during implementation, make granular commits after each small task as save points
 
    **TodoWrite**: Mark "Enter plan mode" → `completed`. Mark "Link plan, commit, and output" → `in_progress`.

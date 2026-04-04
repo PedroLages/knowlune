@@ -170,6 +170,42 @@ If `docs/reviews/performance/baseline.json` has a `bundle_sizes` section, compar
 
 Update `bundle_sizes` in baseline.json with new values.
 
+### Phase 4.7: Regression Analysis and Fix Suggestions
+
+After identifying regressions in Phase 3 and bundle size deltas in Phase 4.5, cross-reference each regression with the code diff to produce actionable fix suggestions.
+
+**Step 1: Identify what changed**
+```bash
+git diff --stat main...HEAD
+git diff main...HEAD -- src/
+```
+
+**Step 2: Match regression patterns to likely causes and fixes**
+
+| Regression Signal | Likely Cause | Suggested Fix |
+|-------------------|-------------|---------------|
+| LCP regression + new component added to route | Large initial render, unoptimized images | `React.lazy()` + `Suspense` for new component, or lazy-load images with `loading="lazy"` |
+| DOM Complete regression + new Zustand store subscriptions | Over-rendering from broad store selectors | Narrow Zustand selectors: `useStore(s => s.specificField)` instead of `useStore()` |
+| FCP regression + new CSS/style imports | Blocking CSS in critical path | Check Tailwind CSS v4 purging via `@source` directive, defer non-critical styles |
+| Bundle size increase > 10% | New dependency or missing tree-shaking | Check `npm ls --all` for new heavy deps, verify imports use named exports not barrel imports |
+| TBT regression + new useEffect hooks | Expensive synchronous work in effects | Move heavy computation to `useMemo` or Web Worker, batch state updates |
+| CLS regression + dynamic content | Missing dimensions on dynamic elements | Add explicit `width`/`height` or `aspect-ratio` CSS, use skeleton loading states |
+| TTFB regression (unlikely in SPA) | Development server artifact | Not actionable in dev mode — note as dev-only metric |
+| Multiple metrics regressed simultaneously | Likely a large new feature, not a single fix | Recommend code splitting the new feature into a lazy-loaded route chunk |
+
+**Step 3: Generate fix suggestions**
+
+For each detected regression:
+1. Cross-reference the regression type with the table above
+2. Inspect the diff to identify the specific files and components responsible
+3. Classify confidence as **HIGH** (clear pattern match between regression signal and diff) or **MEDIUM** (plausible match, multiple possible causes)
+4. Provide file paths and component names where possible
+5. If no table entry matches, note the regression as requiring manual investigation
+
+**Step 4: Include in report**
+
+Add a "Fix Suggestions" subsection to the report (see report format below). Only include this subsection when regressions or warnings are detected. Omit it when all metrics pass.
+
 ### Phase 5: Generate Report
 
 Write the report to the path provided in the prompt (format: `docs/reviews/performance/performance-benchmark-{date}-{story-id}.md`).
@@ -226,6 +262,14 @@ For each tested route, list top 5 largest resources:
 
 ### Recommendations
 [Specific, actionable suggestions based on findings]
+
+### Fix Suggestions
+*(Only include when regressions or warnings are detected)*
+
+| Regression | Confidence | Suggested Fix |
+|-----------|-----------|---------------|
+| LCP +340ms on /courses | HIGH | New CourseGrid component renders 50+ cards — wrap in React.lazy() |
+| Bundle +45KB | MEDIUM | lucide-react barrel import detected — use named imports |
 
 ---
 Routes: {N} tested | Samples: 3 per route (median) | Regressions: {N} | Warnings: {N} | Budget violations: {N}

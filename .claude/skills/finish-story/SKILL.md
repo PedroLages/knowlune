@@ -256,6 +256,27 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
      ```
    - **STOP here**. Exit workflow. User will re-run `/finish-story` later.
 
+13c. **Doc sync** (optional, non-blocking): After successful merge (step 13a), dispatch the `doc-sync` agent in the background to check documentation consistency:
+
+   ```
+   Agent(
+     subagent_type: "doc-sync",
+     run_in_background: true,
+     prompt: """
+     Story: ${STORY_KEY}
+     Story file: ${STORY_FILE_PATH}
+     Changed files: $(git diff --name-only main...HEAD)
+
+     Check engineering patterns, known issues, and sprint status
+     for documentation drift after this story shipped.
+     """
+   )
+   ```
+
+   - This is **non-blocking** — do not wait for results before continuing to step 14.
+   - When the agent completes, append its suggestions to the completion output (step 15).
+   - If the agent finds 0 suggestions, omit it from output.
+
 14. **Lessons learned** (optional): Ask the developer via AskUserQuestion with these options:
 
    - **"Claude, write them"** — Auto-generate lessons learned by analyzing the story's git log, review reports, and any blocker/fix cycles encountered during implementation. Write concise, actionable bullets covering: patterns discovered, pitfalls avoided, decisions made and why. Append to the story's "Challenges and Lessons Learned" section.
