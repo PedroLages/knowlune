@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Calendar, Layers, Play } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '@/app/components/ui/card'
@@ -78,7 +78,7 @@ function StudyBlockItem({ schedule }: { schedule: StudySchedule }) {
 export function TodaysStudyPlan() {
   const { schedules, isLoaded, loadSchedules, getSchedulesForDay } = useStudyScheduleStore()
   const flashcardStats = useFlashcardStore(s => s.getStats)
-  const flashcardsLoaded = useFlashcardStore(s => s.flashcards.length >= 0)
+  const flashcardsLoaded = useFlashcardStore(s => s.flashcards.length)
   const loadFlashcards = useFlashcardStore(s => s.loadFlashcards)
 
   useEffect(() => {
@@ -91,7 +91,15 @@ export function TodaysStudyPlan() {
     loadFlashcards()
   }, [loadFlashcards])
 
-  const todayDay = useMemo(() => getTodayDayOfWeek(), [])
+  const [todayDay, setTodayDay] = useState(getTodayDayOfWeek)
+
+  // Refresh day-of-week every 60s to handle midnight crossover
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTodayDay(getTodayDayOfWeek())
+    }, 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   const todaysBlocks = useMemo(() => {
     if (!isLoaded) return []
