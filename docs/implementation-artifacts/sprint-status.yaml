@@ -733,7 +733,7 @@ development_status:
   epic-65: in-progress
   65-1-core-reading-mode-chrome-hiding-and-content-layout: done
   65-2-reading-mode-floating-toolbar-and-progress-bar: ready-for-dev
-  65-3-focus-mode-overlay-focus-trap-and-exit: ready-for-dev
+  65-3-focus-mode-overlay-focus-trap-and-exit: done
   65-4-focus-mode-auto-activation-and-notification-piercing: ready-for-dev
   65-5-settings-integration-and-first-time-discovery: ready-for-dev
   epic-65-retrospective: optional
