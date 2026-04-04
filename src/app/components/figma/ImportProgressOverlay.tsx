@@ -101,6 +101,7 @@ function CourseProgressItem({ course }: { course: CourseImportProgress }) {
 export function ImportProgressOverlay() {
   const isActive = useImportProgressStore(s => s.isActive)
   const isVisible = useImportProgressStore(s => s.isVisible)
+  const dialogOpen = useImportProgressStore(s => s.dialogOpen)
   const courses = useImportProgressStore(s => s.courses)
   const cancelRequested = useImportProgressStore(s => s.cancelRequested)
   const cancelImport = useImportProgressStore(s => s.cancelImport)
@@ -170,7 +171,7 @@ export function ImportProgressOverlay() {
     }
   }, [isActive, dismissOverlay, reset])
 
-  if (!isVisible || totalCourses === 0) return null
+  if (!isVisible || totalCourses === 0 || dialogOpen) return null
 
   // Overall progress for bulk imports (AC3)
   const overallPercent = totalCourses > 0 ? Math.round((completedCourses / totalCourses) * 100) : 0

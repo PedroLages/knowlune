@@ -8,9 +8,14 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { Link } from 'react-router'
-import { Video, PlayCircle, FileText, Search, X } from 'lucide-react'
+import { Video, PlayCircle, FileText, Search, X, FolderOpen, ChevronDown } from 'lucide-react'
 import { Input } from '@/app/components/ui/input'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/app/components/ui/collapsible'
 import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
 import type { CourseAdapter, LessonItem } from '@/lib/courseAdapter'
@@ -54,8 +59,88 @@ export function HighlightedLessonTitle({ text, query }: { text: string; query: s
 }
 
 // ---------------------------------------------------------------------------
+// Folder grouping
+// ---------------------------------------------------------------------------
+
+interface LessonGroup {
+  folder: string
+  lessons: LessonItem[]
+}
+
+function getFolderName(path: string): string {
+  const parts = path.split('/')
+  return parts.length > 1 ? parts[0] : ''
+}
+
+function groupLessonsByFolder(lessons: LessonItem[]): LessonGroup[] {
+  const groups = new Map<string, LessonItem[]>()
+  for (const lesson of lessons) {
+    const path = (lesson.sourceMetadata?.path as string) ?? ''
+    const folder = getFolderName(path)
+    if (!groups.has(folder)) groups.set(folder, [])
+    groups.get(folder)!.push(lesson)
+  }
+  return Array.from(groups.entries())
+    .sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }))
+    .map(([folder, items]) => ({ folder, lessons: items }))
+}
+
+// ---------------------------------------------------------------------------
 // LessonsTab component
 // ---------------------------------------------------------------------------
+
+function LessonLink({
+  lesson,
+  courseId,
+  isActive,
+  index,
+  activeRef,
+  searchQuery,
+}: {
+  lesson: LessonItem
+  courseId: string
+  isActive: boolean
+  index: number
+  activeRef?: React.Ref<HTMLAnchorElement>
+  searchQuery: string
+}) {
+  return (
+    <Link
+      ref={activeRef}
+      to={`/courses/${courseId}/lessons/${lesson.id}`}
+      className={cn(
+        'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
+        isActive ? 'bg-brand-soft text-brand-soft-foreground font-medium' : 'hover:bg-accent'
+      )}
+      aria-current={isActive ? 'page' : undefined}
+    >
+      <span className="flex-shrink-0 size-7 rounded-lg bg-brand-soft/50 flex items-center justify-center">
+        {isActive ? (
+          <PlayCircle className="size-3.5 text-brand" aria-hidden="true" />
+        ) : (
+          <span className="text-xs font-semibold text-brand-soft-foreground">{index + 1}</span>
+        )}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm truncate">
+          <HighlightedLessonTitle text={lesson.title} query={searchQuery} />
+        </p>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          {lesson.type === 'pdf' ? (
+            <FileText className="size-3 text-muted-foreground" aria-hidden="true" />
+          ) : (
+            <Video className="size-3 text-muted-foreground" aria-hidden="true" />
+          )}
+          {lesson.duration != null && lesson.duration > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {formatLessonDuration(lesson.duration)}
+            </span>
+          )}
+        </div>
+      </div>
+    </Link>
+  )
+}
 
 export interface LessonsTabProps {
   courseId: string
@@ -105,6 +190,10 @@ export function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
     const q = searchQuery.toLowerCase()
     return lessons.filter(l => l.title.toLowerCase().includes(q))
   }, [lessons, searchQuery])
+
+  const groupedLessons = useMemo(() => groupLessonsByFolder(filteredLessons), [filteredLessons])
+  const hasMultipleGroups =
+    groupedLessons.length > 1 || (groupedLessons.length === 1 && groupedLessons[0].folder !== '')
 
   if (isLoading) {
     return (
@@ -174,51 +263,54 @@ export function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
           <Search className="size-10 mb-3 opacity-50" aria-hidden="true" />
           <p className="text-sm">No lessons match your search</p>
         </div>
+      ) : hasMultipleGroups ? (
+        groupedLessons.map(group => (
+          <Collapsible key={group.folder || 'root'} defaultOpen>
+            <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm font-medium text-foreground group/folder">
+              <FolderOpen className="size-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+              <span className="flex-1 text-left text-xs truncate">
+                {group.folder || 'General'}
+              </span>
+              <span className="text-xs text-muted-foreground">{group.lessons.length}</span>
+              <ChevronDown
+                className="size-3.5 text-muted-foreground transition-transform group-data-[state=open]/folder:rotate-180"
+                aria-hidden="true"
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="ml-2 pl-2 border-l border-border/50 space-y-0.5">
+                {group.lessons.map((lesson, indexInGroup) => {
+                  const isActive = lesson.id === lessonId
+                  return (
+                    <LessonLink
+                      key={lesson.id}
+                      lesson={lesson}
+                      courseId={courseId}
+                      isActive={isActive}
+                      index={indexInGroup}
+                      activeRef={isActive ? activeRef : undefined}
+                      searchQuery={searchQuery}
+                    />
+                  )
+                })}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        ))
       ) : (
         filteredLessons.map(lesson => {
           const isActive = lesson.id === lessonId
-          // Use the original index for lesson numbering
           const originalIndex = lessonIndexMap.get(lesson.id) ?? 0
           return (
-            <Link
+            <LessonLink
               key={lesson.id}
-              ref={isActive ? activeRef : undefined}
-              to={`/courses/${courseId}/lessons/${lesson.id}`}
-              className={cn(
-                'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
-                isActive
-                  ? 'bg-brand-soft text-brand-soft-foreground font-medium'
-                  : 'hover:bg-accent'
-              )}
-              aria-current={isActive ? 'page' : undefined}
-            >
-              <span className="flex-shrink-0 size-7 rounded-lg bg-brand-soft/50 flex items-center justify-center">
-                {isActive ? (
-                  <PlayCircle className="size-3.5 text-brand" aria-hidden="true" />
-                ) : (
-                  <span className="text-xs font-semibold text-brand-soft-foreground">
-                    {originalIndex + 1}
-                  </span>
-                )}
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm truncate">
-                  <HighlightedLessonTitle text={lesson.title} query={searchQuery} />
-                </p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  {lesson.type === 'pdf' ? (
-                    <FileText className="size-3 text-muted-foreground" aria-hidden="true" />
-                  ) : (
-                    <Video className="size-3 text-muted-foreground" aria-hidden="true" />
-                  )}
-                  {lesson.duration != null && lesson.duration > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      {formatLessonDuration(lesson.duration)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </Link>
+              lesson={lesson}
+              courseId={courseId}
+              isActive={isActive}
+              index={originalIndex}
+              activeRef={isActive ? activeRef : undefined}
+              searchQuery={searchQuery}
+            />
           )
         })
       )}
