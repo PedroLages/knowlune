@@ -7,9 +7,9 @@
  * - AC3: Close button (X) on overlay exits focus mode
  * - AC9: Toast shown when no focus target available
  */
-import { test, expect } from '../support/fixtures'
-import { seedQuizzes } from '../support/helpers/seed-helpers'
-import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
+import { test, expect } from '../../support/fixtures'
+import { seedQuizzes } from '../../support/helpers/seed-helpers'
+import { makeQuiz, makeQuestion } from '../../support/fixtures/factories/quiz-factory'
 
 // ---------------------------------------------------------------------------
 // Test data
