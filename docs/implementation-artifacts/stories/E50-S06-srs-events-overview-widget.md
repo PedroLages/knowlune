@@ -1,12 +1,25 @@
 ---
 story_id: E50-S06
 story_name: "SRS Events in Feed + Overview Widget"
-status: draft
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-04-04
+completed: 2026-04-04
+reviewed: true
+review_started: 2026-04-04
+review_gates_passed:
+  - build
+  - lint
+  - type-check
+  - format-check
+  - unit-tests-skipped
+  - e2e-tests
+  - bundle-analysis
+  - design-review
+  - code-review
+  - code-review-testing
+  - performance-benchmark-skipped
+  - security-review-skipped
+  - exploratory-qa-skipped
 burn_in_validated: false
 ---
 
@@ -171,12 +184,18 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+PASS — 1 LOW finding: card entry animation consistency (no viewport animation vs other sections). Design tokens, accessibility, mobile layout all clean. See `docs/reviews/design/design-review-2026-04-04-e50-s06.md`.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+1 MEDIUM: `generateSRSSummaryEvents` uses `new Date(year, month-1, day, ...)` (local time) instead of UTC, which may offset SRS events for non-local timezone users. Fix: use `Date.UTC(...)` constructor. See `docs/reviews/code/code-review-2026-04-04-e50-s06.md`.
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Overview skeleton delay causes widget mount lag**: The Overview page renders a loading skeleton for 500ms before mounting real content. `TodaysStudyPlan` only mounts after this delay, so `loadFlashcards()` fires late. E2E tests must use generous timeouts (`toBeVisible({ timeout: 15000 })`) or Playwright auto-retry patterns — never assume `networkidle` means all Zustand stores are loaded.
+
+- **Dismiss both overlays in E2E tests**: Two separate overlays guard first-time users — `WelcomeWizard` (`knowlune-welcome-wizard-v1`) and `OnboardingOverlay` (`knowlune-onboarding-v1`). Tests that need UI interaction must set both localStorage keys via `addInitScript` to prevent modal overlay from intercepting pointer events. Setting only the wizard key leaves the onboarding overlay active.
+
+- **`useMemo` with stable function refs**: `useFlashcardStore(s => s.getStats)` returns a stable function reference (Zustand actions don't change reference). The memo `[flashcardStats, flashcardsLoaded]` correctly recomputes when `flashcardsLoaded` changes, but care must be taken that the stable function ref doesn't prevent re-computation. Always pair with a changing scalar dep (e.g., `flashcards.length`) rather than the array itself (which would require deep equality).
+
+- **SRS iCal event generation**: The 90-day rolling window approach works well for feed generation. Using `srs-{YYYY-MM-DD}@knowlune.app` UIDs ensures calendar apps update counts on feed refresh since the UID is deterministic and calendar clients merge by UID.

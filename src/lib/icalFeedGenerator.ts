@@ -171,12 +171,53 @@ export function generateIcsDownload(
 }
 
 /**
- * Stub for SRS summary events — full implementation in E50-S06.
+ * Generates iCal VEVENT entries for daily SRS review sessions.
+ *
+ * Each day with due flashcards gets a standalone event (no RRULE —
+ * SRS intervals are irregular). UID format `srs-{YYYY-MM-DD}@knowlune.app`
+ * ensures calendar apps update counts on feed refresh.
+ *
+ * @param reviewCounts - Array of { date: 'YYYY-MM-DD', count: number }
+ * @param reviewTime - Preferred review time in "HH:MM" format (default "09:00")
+ * @param timezone - IANA timezone string
+ * @returns iCal string containing only the SRS VEVENTs (to be appended to a feed)
  */
 export function generateSRSSummaryEvents(
-  _reviewCounts: { date: string; count: number }[],
-  _reviewTime: string,
-  _timezone: string
-): void {
-  // Stub — will generate VEVENT entries for daily SRS review blocks
+  reviewCounts: { date: string; count: number }[],
+  reviewTime: string = '09:00',
+  timezone: string
+): string {
+  if (reviewCounts.length === 0) return ''
+
+  const calendar = icalGenerator({
+    name: 'Knowlune SRS Reviews',
+    prodId: { company: 'Knowlune', product: 'SRS Reviews', language: 'EN' },
+    timezone,
+    method: ICalCalendarMethod.PUBLISH,
+  })
+
+  const [hours, minutes] = reviewTime.split(':').map(Number)
+  const safeHours = isNaN(hours) ? 9 : hours
+  const safeMinutes = isNaN(minutes) ? 0 : minutes
+
+  for (const { date, count } of reviewCounts) {
+    if (count <= 0) continue
+
+    const [year, month, day] = date.split('-').map(Number)
+    if (isNaN(year) || isNaN(month) || isNaN(day)) continue
+
+    const dtstart = new Date(year, month - 1, day, safeHours, safeMinutes, 0)
+    const dtend = new Date(dtstart.getTime() + 30 * 60 * 1000) // PT30M
+
+    calendar.createEvent({
+      id: `srs-${date}@knowlune.app`,
+      summary: `Review: ${count} ${count === 1 ? 'flashcard' : 'flashcards'} due`,
+      description: `You have ${count} ${count === 1 ? 'flashcard' : 'flashcards'} due for spaced repetition review in Knowlune.`,
+      start: dtstart,
+      end: dtend,
+      timezone,
+    })
+  }
+
+  return calendar.toString()
 }
