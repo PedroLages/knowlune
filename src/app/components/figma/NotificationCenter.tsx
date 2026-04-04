@@ -110,7 +110,7 @@ export function NotificationCenter() {
             <p className="text-sm">No notifications yet</p>
           </div>
         ) : (
-          <ScrollArea className="h-[350px]">
+          <ScrollArea className="h-[400px]">
             <div className="flex flex-col">
               {notifications.map(notification => {
                 const Icon = notificationIcons[notification.type] ?? DEFAULT_ICON
@@ -122,16 +122,16 @@ export function NotificationCenter() {
                     key={notification.id}
                     type="button"
                     className={cn(
-                      'flex items-start gap-2.5 px-3 py-2 text-left transition-colors hover:bg-accent/50 cursor-pointer',
+                      'flex items-start gap-2.5 px-3 py-3 text-left transition-colors hover:bg-accent/50 cursor-pointer',
                       isUnread && 'bg-brand-soft/30'
                     )}
                     onClick={() => handleNotificationClick(notification.id, notification.actionUrl)}
                   >
                     {/* Icon */}
                     <div
-                      className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-muted ${iconColor}`}
+                      className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted ${iconColor}`}
                     >
-                      <Icon className="size-3.5" aria-hidden="true" />
+                      <Icon className="size-4" aria-hidden="true" />
                     </div>
 
                     {/* Content */}
@@ -145,12 +145,13 @@ export function NotificationCenter() {
                         >
                           {notification.title}
                         </p>
-                        {isUnread && (
-                          <span
-                            className="mt-1 flex size-1.5 shrink-0 rounded-full bg-brand"
-                            aria-hidden="true"
-                          />
-                        )}
+                        <span
+                          className={cn(
+                            'mt-1 flex size-2.5 shrink-0 rounded-full',
+                            isUnread ? 'bg-brand' : 'bg-muted-foreground/30'
+                          )}
+                          aria-hidden="true"
+                        />
                       </div>
                       <p className="mt-0.5 text-xs leading-snug text-muted-foreground line-clamp-2">
                         {notification.message}
