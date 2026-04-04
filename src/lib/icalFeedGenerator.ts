@@ -78,7 +78,9 @@ export function generateICalFeed(schedules: StudySchedule[], timezone: string): 
     // Parse startTime "HH:MM" — guard against malformed data from DB
     const [hours, minutes] = schedule.startTime.split(':').map(Number)
     if (isNaN(hours) || isNaN(minutes)) {
-      console.warn(`[icalFeedGenerator] Skipping schedule ${schedule.id}: invalid startTime "${schedule.startTime}"`)
+      console.warn(
+        `[icalFeedGenerator] Skipping schedule ${schedule.id}: invalid startTime "${schedule.startTime}"`
+      )
       continue
     }
 
@@ -129,6 +131,43 @@ export function generateICalFeed(schedules: StudySchedule[], timezone: string): 
   }
 
   return calendar.toString()
+}
+
+/**
+ * Generates and triggers a browser download of a `.ics` file from study schedules.
+ *
+ * Reads from local data (Dexie) — works offline.
+ * Does NOT include SRS events (those require server-side flashcard query).
+ *
+ * @param schedules - Study schedules to include in the download
+ * @param filename - Download filename (default: 'knowlune-study-calendar.ics')
+ */
+export function generateIcsDownload(
+  schedules: StudySchedule[],
+  filename = 'knowlune-study-calendar.ics'
+): void {
+  try {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const icalString = generateICalFeed(schedules, timezone)
+
+    const blob = new Blob([icalString], { type: 'text/calendar;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = filename
+    anchor.style.display = 'none'
+    document.body.appendChild(anchor)
+    anchor.click()
+
+    // Cleanup to prevent memory leaks
+    document.body.removeChild(anchor)
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('[icalFeedGenerator] Failed to generate .ics download:', error)
+    // Re-throw so the caller (UI button handler) can show a toast
+    throw error
+  }
 }
 
 /**
