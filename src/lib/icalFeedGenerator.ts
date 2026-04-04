@@ -78,7 +78,9 @@ export function generateICalFeed(schedules: StudySchedule[], timezone: string): 
     // Parse startTime "HH:MM" — guard against malformed data from DB
     const [hours, minutes] = schedule.startTime.split(':').map(Number)
     if (isNaN(hours) || isNaN(minutes)) {
-      console.warn(`[icalFeedGenerator] Skipping schedule ${schedule.id}: invalid startTime "${schedule.startTime}"`)
+      console.warn(
+        `[icalFeedGenerator] Skipping schedule ${schedule.id}: invalid startTime "${schedule.startTime}"`
+      )
       continue
     }
 

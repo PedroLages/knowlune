@@ -139,7 +139,9 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
   loadFeedToken: async () => {
     if (!supabase) return
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) return
 
       const { data, error } = await supabase
@@ -168,7 +170,9 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
 
     set({ feedLoading: true })
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) {
         toast.error('You must be signed in to enable the calendar feed')
         return null
@@ -179,10 +183,7 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
 
       const { error } = await supabase
         .from('calendar_tokens')
-        .upsert(
-          { user_id: user.id, token, timezone },
-          { onConflict: 'user_id' }
-        )
+        .upsert({ user_id: user.id, token, timezone }, { onConflict: 'user_id' })
 
       if (error) throw error
 
@@ -207,17 +208,16 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
 
     set({ feedLoading: true })
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) {
         toast.error('You must be signed in to regenerate the feed URL')
         return null
       }
 
       // Delete old token first — old URL immediately invalidated
-      await supabase
-        .from('calendar_tokens')
-        .delete()
-        .eq('user_id', user.id)
+      await supabase.from('calendar_tokens').delete().eq('user_id', user.id)
 
       // Insert new token
       const token = generateHexToken()
@@ -251,13 +251,12 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
 
     set({ feedLoading: true })
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) return
 
-      const { error } = await supabase
-        .from('calendar_tokens')
-        .delete()
-        .eq('user_id', user.id)
+      const { error } = await supabase.from('calendar_tokens').delete().eq('user_id', user.id)
 
       if (error) throw error
 
