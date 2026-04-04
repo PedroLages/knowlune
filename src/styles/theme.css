@@ -590,6 +590,27 @@ html.spacious {
     margin-left: auto;
     margin-right: auto;
     padding-top: 4rem; /* space for fixed status bar (48px + gap) */
+    font-size: var(--reading-font-size, 1rem);
+    line-height: var(--reading-line-height, 1.5);
+  }
+
+  /* Reading mode: Sepia theme (E65-S02) */
+  html.reading-mode.reading-sepia {
+    --background: oklch(0.95 0.02 80);
+    --foreground: oklch(0.25 0.02 60);
+  }
+
+  /* Reading mode: High Contrast theme (E65-S02) */
+  html.reading-mode.reading-hc {
+    --background: oklch(0 0 0);
+    --foreground: oklch(1 0 0);
+  }
+
+  /* Reading mode: Dyslexia-friendly font (E65-S02) */
+  html.reading-mode.reading-dyslexia main {
+    /* Uses --reading-dyslexia-font defined in fonts.css.
+       TODO E65: Replace with Atkinson Hyperlegible when @fontsource/atkinson-hyperlegible is installed. */
+    font-family: var(--reading-dyslexia-font, "Comic Sans MS", "Trebuchet MS", Arial, sans-serif);
   }
 
   /* Reading mode transitions — animate opacity/transform before collapse.

@@ -1,7 +1,7 @@
 ---
 story_id: E65-S02
 story_name: "Reading Mode Floating Toolbar and Progress Bar"
-status: ready-for-dev
+status: done
 started:
 completed:
 reviewed: false
@@ -218,4 +218,10 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+**CSS Variable Approach for Reading Mode Settings**: Font size and line height are applied via `document.documentElement.style.setProperty('--reading-font-size', ...)` and `--reading-line-height`. This avoids React re-rendering the entire content tree on every user adjustment — CSS variables propagate instantly without reconciliation overhead. Cleanup on unmount (removeProperty) ensures no stale variables bleed into other pages.
+
+**useAutoHide Hook**: Auto-hide on inactivity is cleanly encapsulated in `useAutoHide(delayMs, disabled)`. When `prefers-reduced-motion` is active, the hook is disabled and the toolbar stays visible permanently — respecting accessibility preferences without duplicating visibility logic in the component.
+
+**localStorage Persistence Pattern**: Settings are loaded once at mount via `useState(loadSettings)` (lazy initializer — runs only once, not on every render). The save effect runs on every settings change. Both `loadSettings` and `saveSettings` wrap localStorage calls in try/catch with `// silent-catch-ok` comments since localStorage is unavailable in private browsing and full-storage scenarios. Validation in `loadSettings` guards against corrupted data by checking values against the allowed `FONT_SIZE_LEVELS` / `LINE_HEIGHT_LEVELS` / `THEMES` constants before accepting them.
+
+**lastPreset as "last applied" indicator**: `lastPreset` tracks which preset was most recently applied; manual adjustments (font size +/-) now preserve the preset label rather than clearing it to `null`. This makes the preset button show the last context ("Comfortable") even after a user nudges font size by one step — a more useful UX signal than clearing it to "Preset" on any tweak.
