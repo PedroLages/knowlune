@@ -7,10 +7,10 @@
  * - AC5: Empty state when no schedules or due cards
  * - AC6: "Start" button navigates to course page
  */
-import { test, expect } from '../support/fixtures'
-import { FIXED_DATE } from '../utils/test-time'
-import { seedIndexedDBStore } from '../support/helpers/seed-helpers'
-import { createDueFlashcard, createFutureFlashcard } from '../support/fixtures/factories/flashcard-factory'
+import { test, expect } from '../../support/fixtures'
+import { FIXED_DATE } from '../../utils/test-time'
+import { seedIndexedDBStore } from '../../support/helpers/seed-helpers'
+import { createDueFlashcard, createFutureFlashcard } from '../../support/fixtures/factories/flashcard-factory'
 
 const DB_NAME = 'ElearningDB'
 
