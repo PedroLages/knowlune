@@ -66,22 +66,37 @@ interface PdfToolbarProps {
 }
 
 /** Open a blob PDF in a new tab via an HTML wrapper (blob URLs show raw binary otherwise). */
-export function openBlobPdfInNewTab(blobUrl: string, title?: string) {
-  const safeTitle = (title || 'PDF').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  const html = `<!DOCTYPE html><html><head><title>${safeTitle}</title></head><body style="margin:0"><iframe src="${blobUrl}" style="width:100%;height:100vh;border:none"></iframe></body></html>`
-  const wrapper = new Blob([html], { type: 'text/html' })
-  const url = URL.createObjectURL(wrapper)
-  window.open(url, '_blank')
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+export async function openBlobPdfInNewTab(blobUrl: string, _title?: string) {
+  // Open window immediately in user-gesture context (avoids popup blocker)
+  const w = window.open('', '_blank')
+  if (!w) return
+
+  try {
+    const res = await fetch(blobUrl)
+    const data = await res.arrayBuffer()
+    const pdfBlob = new Blob([data], { type: 'application/pdf' })
+    const url = URL.createObjectURL(pdfBlob)
+    w.location.href = url
+  } catch {
+    // silent-catch-ok — fallback to direct blob URL
+    w.location.href = blobUrl
+  }
 }
 
-function handlePrint(src: string) {
-  const html = `<!DOCTYPE html><html><head><title>Print PDF</title></head><body style="margin:0"><iframe src="${src}" style="width:100%;height:100vh;border:none" onload="setTimeout(()=>window.print(),300)"></iframe></body></html>`
-  const wrapper = new Blob([html], { type: 'text/html' })
-  const url = URL.createObjectURL(wrapper)
-  const w = window.open(url, '_blank')
-  if (w) {
-    w.addEventListener('afterprint', () => { w.close(); URL.revokeObjectURL(url) }, { once: true })
+async function handlePrint(src: string) {
+  try {
+    const res = await fetch(src)
+    const data = await res.arrayBuffer()
+    const pdfBlob = new Blob([data], { type: 'application/pdf' })
+    const url = URL.createObjectURL(pdfBlob)
+    const w = window.open(url, '_blank')
+    if (w) {
+      w.addEventListener('afterprint', () => { w.close(); URL.revokeObjectURL(url) }, { once: true })
+      w.addEventListener('load', () => setTimeout(() => w.print(), 300), { once: true })
+    }
+  } catch {
+    // silent-catch-ok — fallback: open blob URL directly
+    window.open(src, '_blank')
   }
 }
 
