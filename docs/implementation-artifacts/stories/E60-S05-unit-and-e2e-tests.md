@@ -1,9 +1,9 @@
 ---
 story_id: E60-S05
 story_name: "Smart Trigger Unit and E2E Tests"
-status: in-progress
+status: done
 started: 2026-04-04
-completed:
+completed: 2026-04-04
 reviewed: false
 review_started:
 review_gates_passed: []
@@ -239,4 +239,5 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Dedup cross-day test pattern**: Use `vi.setSystemTime()` to advance clock by 1 day, reset `mockFirst.mockResolvedValue(undefined)` to simulate a fresh day, then re-emit to verify the second notification is allowed. This pattern applies to any time-scoped dedup test.
+- **Empty-course edge case**: When `totalLessons === 0`, the remaining calculation yields 0, which fails the `> 0` guard — no event is emitted and no division-by-zero or crash occurs. Confirmed via explicit test with no videos and no PDFs.

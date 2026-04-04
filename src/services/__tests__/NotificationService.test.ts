@@ -719,6 +719,21 @@ describe('NotificationService', () => {
       emitSpy.mockRestore()
     })
 
+    it('does NOT emit and does not crash when a course has no videos and no PDFs', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockImportedCoursesToArray.mockResolvedValue([{ id: 'empty-course', name: 'Empty Course' }])
+      // No videos and no PDFs → totalLessons = 0
+      mockImportedVideosToArray.mockResolvedValue([])
+      mockImportedPdfsToArray.mockResolvedValue([])
+      mockContentProgressToArray.mockResolvedValue([])
+
+      await expect(checkMilestoneApproachingOnStartup()).resolves.not.toThrow()
+
+      expect(emitSpy).not.toHaveBeenCalled()
+      emitSpy.mockRestore()
+    })
+
     it('exports MILESTONE_THRESHOLD as a positive integer', () => {
       expect(MILESTONE_THRESHOLD).toBeGreaterThan(0)
       expect(Number.isInteger(MILESTONE_THRESHOLD)).toBe(true)
@@ -807,6 +822,49 @@ describe('NotificationService', () => {
       await vi.waitFor(() => expect(mockWhere).toHaveBeenCalled())
 
       expect(mockCreate).not.toHaveBeenCalled()
+    })
+
+    it('allows knowledge-decay notification for the same topic on the next day', async () => {
+      // Day 1: an existing notification was created today
+      mockFirst.mockResolvedValue({
+        id: 'existing-decay',
+        type: 'knowledge-decay',
+        createdAt: FIXED_NOW.toISOString(),
+        metadata: { topic: 'React Hooks' },
+      })
+
+      initNotificationService()
+
+      appEventBus.emit({
+        type: 'knowledge:decay',
+        topic: 'React Hooks',
+        retention: 30,
+        dueCount: 2,
+      })
+
+      await vi.waitFor(() => expect(mockWhere).toHaveBeenCalled())
+      expect(mockCreate).not.toHaveBeenCalled()
+
+      // Advance clock by 1 day — dedup window should reset
+      vi.setSystemTime(new Date('2026-03-16T12:00:00'))
+      mockFirst.mockResolvedValue(undefined) // No notification exists for tomorrow
+      mockCreate.mockClear()
+      mockWhere.mockClear()
+
+      appEventBus.emit({
+        type: 'knowledge:decay',
+        topic: 'React Hooks',
+        retention: 28,
+        dueCount: 3,
+      })
+
+      await vi.waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1))
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'knowledge-decay',
+          metadata: expect.objectContaining({ topic: 'React Hooks' }),
+        })
+      )
     })
 
     it('allows knowledge-decay notification for different topic same day', async () => {
