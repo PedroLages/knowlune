@@ -1,6 +1,9 @@
 # Story 69.3: Cleanup Actions with Confirmation Dialogs
 
-Status: ready-for-dev
+Status: done
+Completed: 2026-04-04
+Reviewed: true
+Review Gates Passed: build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa
 
 ## Story
 
@@ -137,8 +140,22 @@ await db.transaction('rw', [db.importedCourses, db.importedVideos, ...allTables]
 
 ### Agent Model Used
 
+Claude Sonnet 4.6
+
 ### Debug Log References
 
 ### Completion Notes List
 
+- Implemented CleanupActionsSection with three action cards (thumbnail cache, orphaned embeddings, course data deletion)
+- AlertDialog confirmations for thumbnail cache and orphaned embeddings cleanup
+- Course selection dialog with checkboxes for bulk course data deletion
+- Dexie transactions ensure atomic deletes with rollback on failure
+- Post-action toasts and parent onRefresh callback for storage re-fetch
+- Unit tests for all cleanup functions including orphan detection and transaction rollback
+
 ### File List
+
+- src/lib/storageEstimate.ts (modified)
+- src/app/components/settings/StorageManagement.tsx (modified)
+- src/lib/__tests__/storageEstimate.test.ts (modified)
+- tests/e2e/story-e69-s03.spec.ts (added)
