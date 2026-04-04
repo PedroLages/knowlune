@@ -160,3 +160,215 @@ export async function getStorageOverview(): Promise<StorageOverview> {
     apiAvailable,
   }
 }
+
+// --- Per-Course Storage (E69-S02) ---
+
+export interface CourseStorageEntry {
+  courseId: string
+  courseName: string
+  totalBytes: number
+  mediaBytes: number
+  notesBytes: number
+  thumbnailBytes: number
+}
+
+/**
+ * Get per-course storage breakdown sorted by totalBytes descending.
+ */
+export async function getPerCourseUsage(): Promise<CourseStorageEntry[]> {
+  try {
+    const courses = await db.importedCourses.toArray()
+    if (courses.length === 0) return []
+
+    const entries: CourseStorageEntry[] = await Promise.all(
+      courses.map(async course => {
+        let mediaBytes = 0
+        let notesBytes = 0
+        let thumbnailBytes = 0
+
+        try {
+          // Media: videos + pdfs
+          const videos = await db.importedVideos.where('courseId').equals(course.id).toArray()
+          for (const v of videos) {
+            mediaBytes += new Blob([JSON.stringify(v)]).size
+            for (const val of Object.values(v as Record<string, unknown>)) {
+              if (val instanceof Blob) mediaBytes += val.size
+              else if (val instanceof ArrayBuffer) mediaBytes += val.byteLength
+              else if (ArrayBuffer.isView(val)) mediaBytes += val.byteLength
+            }
+          }
+
+          const pdfs = await db.importedPdfs.where('courseId').equals(course.id).toArray()
+          for (const p of pdfs) {
+            mediaBytes += new Blob([JSON.stringify(p)]).size
+            for (const val of Object.values(p as Record<string, unknown>)) {
+              if (val instanceof Blob) mediaBytes += val.size
+              else if (val instanceof ArrayBuffer) mediaBytes += val.byteLength
+              else if (ArrayBuffer.isView(val)) mediaBytes += val.byteLength
+            }
+          }
+
+          // Notes: notes + screenshots
+          const notes = await db.notes.where('courseId').equals(course.id).toArray()
+          for (const n of notes) {
+            notesBytes += new Blob([JSON.stringify(n)]).size
+          }
+
+          const screenshots = await db.screenshots.where('courseId').equals(course.id).toArray()
+          for (const s of screenshots) {
+            notesBytes += new Blob([JSON.stringify(s)]).size
+            for (const val of Object.values(s as Record<string, unknown>)) {
+              if (val instanceof Blob) notesBytes += val.size
+              else if (val instanceof ArrayBuffer) notesBytes += val.byteLength
+              else if (ArrayBuffer.isView(val)) notesBytes += val.byteLength
+            }
+          }
+
+          // Thumbnails
+          const thumb = await db.courseThumbnails.get(course.id)
+          if (thumb) {
+            for (const val of Object.values(thumb as Record<string, unknown>)) {
+              if (val instanceof Blob) thumbnailBytes += val.size
+              else if (val instanceof ArrayBuffer) thumbnailBytes += val.byteLength
+              else if (ArrayBuffer.isView(val)) thumbnailBytes += val.byteLength
+              else thumbnailBytes += new Blob([JSON.stringify(val)]).size
+            }
+          }
+        } catch {
+          // silent-catch-ok — individual course estimation failure shouldn't block others
+        }
+
+        const totalBytes = mediaBytes + notesBytes + thumbnailBytes
+
+        return {
+          courseId: course.id,
+          courseName: course.name ?? course.id,
+          totalBytes,
+          mediaBytes,
+          notesBytes,
+          thumbnailBytes,
+        }
+      })
+    )
+
+    return entries.sort((a, b) => b.totalBytes - a.totalBytes)
+  } catch {
+    // silent-catch-ok — per-course estimation failure renders empty table
+    return []
+  }
+}
+
+/**
+ * Clear the thumbnail for a specific course. Returns bytes freed.
+ */
+export async function clearCourseThumbnail(courseId: string): Promise<number> {
+  const thumb = await db.courseThumbnails.get(courseId)
+  if (!thumb) return 0
+
+  let bytes = 0
+  for (const val of Object.values(thumb as Record<string, unknown>)) {
+    if (val instanceof Blob) bytes += val.size
+    else if (val instanceof ArrayBuffer) bytes += val.byteLength
+    else if (ArrayBuffer.isView(val)) bytes += val.byteLength
+    else bytes += new Blob([JSON.stringify(val)]).size
+  }
+
+  await db.courseThumbnails.delete(courseId)
+  return bytes
+}
+
+/**
+ * Delete all data for the given course IDs across all related tables.
+ * Uses a transaction for atomicity. Returns estimated bytes freed.
+ */
+export async function deleteCourseData(courseIds: string[]): Promise<number> {
+  if (courseIds.length === 0) return 0
+
+  let bytesFreed = 0
+
+  await db.transaction(
+    'rw',
+    [
+      db.importedCourses,
+      db.importedVideos,
+      db.importedPdfs,
+      db.notes,
+      db.screenshots,
+      db.flashcards,
+      db.courseThumbnails,
+      db.embeddings,
+      db.videoCaptions,
+      db.youtubeTranscripts,
+      db.studySessions,
+      db.contentProgress,
+      db.bookmarks,
+      db.quizzes,
+      db.quizAttempts,
+      db.reviewRecords,
+    ],
+    async () => {
+      for (const courseId of courseIds) {
+        // Direct courseId-indexed tables
+        const deleteByIndex = async (table: ReturnType<typeof db.table>, indexName: string) => {
+          const items = await table.where(indexName).equals(courseId).toArray()
+          for (const item of items) {
+            for (const val of Object.values(item as Record<string, unknown>)) {
+              if (val instanceof Blob) bytesFreed += val.size
+              else if (val instanceof ArrayBuffer) bytesFreed += val.byteLength
+              else if (ArrayBuffer.isView(val)) bytesFreed += val.byteLength
+            }
+            bytesFreed += new Blob([JSON.stringify(item)]).size
+          }
+          await table.where(indexName).equals(courseId).delete()
+        }
+
+        await deleteByIndex(db.importedVideos, 'courseId')
+        await deleteByIndex(db.importedPdfs, 'courseId')
+        await deleteByIndex(db.bookmarks, 'courseId')
+        await deleteByIndex(db.studySessions, 'courseId')
+        await deleteByIndex(db.flashcards, 'courseId')
+
+        // Notes and related (screenshots, embeddings linked via noteId)
+        const notes = await db.notes.where('courseId').equals(courseId).toArray()
+        for (const note of notes) {
+          // Delete screenshots linked to this note's course+lesson
+          await db.screenshots.where('courseId').equals(courseId).delete()
+          // Delete embeddings linked to noteId
+          if (note.id) {
+            await db.embeddings.where('noteId').equals(note.id).delete()
+            // Delete review records linked to flashcards (handled via flashcard deletion above)
+          }
+        }
+        bytesFreed += notes.reduce((sum, n) => sum + new Blob([JSON.stringify(n)]).size, 0)
+        await db.notes.where('courseId').equals(courseId).delete()
+
+        // Compound PK tables
+        await db.videoCaptions.where('courseId').equals(courseId).delete()
+        await db.youtubeTranscripts.where('courseId').equals(courseId).delete()
+        await db.contentProgress.where('courseId').equals(courseId).delete()
+
+        // Quizzes and quiz attempts (linked via quizId)
+        const quizzes = await db.quizzes.where('id').above('').toArray()
+        const courseQuizzes = quizzes.filter(
+          q => (q as Record<string, unknown>).courseId === courseId
+        )
+        for (const quiz of courseQuizzes) {
+          await db.quizAttempts.where('quizId').equals(quiz.id).delete()
+        }
+        // Delete quizzes for this course
+        const quizIds = courseQuizzes.map(q => q.id)
+        if (quizIds.length > 0) {
+          await db.quizzes.bulkDelete(quizIds)
+        }
+
+        // Thumbnail
+        await db.courseThumbnails.delete(courseId)
+
+        // The course itself
+        await db.importedCourses.delete(courseId)
+      }
+    }
+  )
+
+  return bytesFreed
+}
