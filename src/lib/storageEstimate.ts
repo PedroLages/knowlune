@@ -400,10 +400,7 @@ export async function estimateOrphanedEmbeddingsSize(): Promise<{
 
     if (orphans.length === 0) return { count: 0, bytes: 0 }
 
-    const bytes = orphans.reduce(
-      (sum, e) => sum + new Blob([JSON.stringify(e)]).size,
-      0
-    )
+    const bytes = orphans.reduce((sum, e) => sum + new Blob([JSON.stringify(e)]).size, 0)
 
     return { count: orphans.length, bytes }
   } catch {
@@ -441,10 +438,7 @@ export async function removeOrphanedEmbeddings(): Promise<{
 
   if (orphans.length === 0) return { count: 0, bytesFreed: 0 }
 
-  const bytesFreed = orphans.reduce(
-    (sum, e) => sum + new Blob([JSON.stringify(e)]).size,
-    0
-  )
+  const bytesFreed = orphans.reduce((sum, e) => sum + new Blob([JSON.stringify(e)]).size, 0)
 
   const orphanIds = orphans.map(e => e.noteId).filter((id): id is string => id !== undefined)
 

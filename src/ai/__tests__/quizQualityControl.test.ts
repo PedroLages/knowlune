@@ -6,11 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import {
-  runQualityControl,
-  extractKeyTerms,
-  textCosineSimilarity,
-} from '../quizQualityControl'
+import { runQualityControl, extractKeyTerms, textCosineSimilarity } from '../quizQualityControl'
 import type { GeneratedQuestion } from '../quizPrompts'
 
 // ---------------------------------------------------------------------------
@@ -62,7 +58,10 @@ describe('extractKeyTerms', () => {
 
 describe('textCosineSimilarity', () => {
   it('returns 1 for identical texts', () => {
-    const v = new Map([['http', 1], ['port', 1]])
+    const v = new Map([
+      ['http', 1],
+      ['port', 1],
+    ])
     expect(textCosineSimilarity(v, v)).toBeCloseTo(1.0)
   })
 
@@ -73,8 +72,17 @@ describe('textCosineSimilarity', () => {
   })
 
   it('returns high similarity for near-identical questions', () => {
-    const a = new Map([['default', 1], ['port', 1], ['http', 1]])
-    const b = new Map([['default', 1], ['port', 1], ['http', 1], ['protocol', 1]])
+    const a = new Map([
+      ['default', 1],
+      ['port', 1],
+      ['http', 1],
+    ])
+    const b = new Map([
+      ['default', 1],
+      ['port', 1],
+      ['http', 1],
+      ['protocol', 1],
+    ])
     expect(textCosineSimilarity(a, b)).toBeGreaterThan(0.8)
   })
 })

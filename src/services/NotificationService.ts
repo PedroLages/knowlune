@@ -405,7 +405,11 @@ async function handleEvent(event: AppEvent): Promise<void> {
         title: 'Almost There!',
         message: `Just ${event.remainingLessons} lesson${event.remainingLessons === 1 ? '' : 's'} left in ${event.courseName}. Keep going!`,
         actionUrl: `/courses/${event.courseId}`,
-        metadata: { courseId: event.courseId, remainingLessons: event.remainingLessons, totalLessons: event.totalLessons },
+        metadata: {
+          courseId: event.courseId,
+          remainingLessons: event.remainingLessons,
+          totalLessons: event.totalLessons,
+        },
       })
       break
     }

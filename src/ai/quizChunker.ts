@@ -74,10 +74,7 @@ export async function chunkTranscript(
   }
 
   // Fetch chapters for this course/video
-  const chapters = await db.youtubeChapters
-    .where('courseId')
-    .equals(courseId)
-    .sortBy('order')
+  const chapters = await db.youtubeChapters.where('courseId').equals(courseId).sortBy('order')
 
   // Filter chapters to only those matching this video
   const videoChapters = chapters.filter(ch => ch.videoId === lessonId)
@@ -110,11 +107,12 @@ function chunkByChapters(
     const startTime = chapter.startTime
     const endTime = chapter.endTime ?? nextChapter?.startTime ?? Infinity
 
-    const chapterCues = cues.filter(
-      cue => cue.startTime >= startTime && cue.startTime < endTime
-    )
+    const chapterCues = cues.filter(cue => cue.startTime >= startTime && cue.startTime < endTime)
 
-    const text = chapterCues.map(c => c.text).join(' ').trim()
+    const text = chapterCues
+      .map(c => c.text)
+      .join(' ')
+      .trim()
     if (!text) continue
 
     const wordCount = countWords(text)
@@ -126,7 +124,10 @@ function chunkByChapters(
       if (countWords(mergedText) <= MAX_WORDS) {
         prev.text = mergedText
         prev.topic = `${prev.topic} & ${chapter.title}`
-        prev.endTime = endTime === Infinity ? chapterCues[chapterCues.length - 1]?.endTime ?? startTime : endTime
+        prev.endTime =
+          endTime === Infinity
+            ? (chapterCues[chapterCues.length - 1]?.endTime ?? startTime)
+            : endTime
         continue
       }
     }
@@ -140,7 +141,10 @@ function chunkByChapters(
         text,
         topic: chapter.title,
         startTime,
-        endTime: endTime === Infinity ? chapterCues[chapterCues.length - 1]?.endTime ?? startTime : endTime,
+        endTime:
+          endTime === Infinity
+            ? (chapterCues[chapterCues.length - 1]?.endTime ?? startTime)
+            : endTime,
       })
     }
   }
@@ -167,11 +171,12 @@ function chunkByTimeWindow(cues: TranscriptCue[]): TranscriptChunk[] {
   while (windowStart < totalDuration) {
     const windowEnd = windowStart + FIXED_WINDOW_SECONDS
 
-    const windowCues = cues.filter(
-      cue => cue.startTime >= windowStart && cue.startTime < windowEnd
-    )
+    const windowCues = cues.filter(cue => cue.startTime >= windowStart && cue.startTime < windowEnd)
 
-    const text = windowCues.map(c => c.text).join(' ').trim()
+    const text = windowCues
+      .map(c => c.text)
+      .join(' ')
+      .trim()
 
     if (text && countWords(text) >= MIN_WORDS / 2) {
       // Accept chunks with at least half the minimum (250 words) to avoid losing content
@@ -226,7 +231,10 @@ function splitLargeChunk(
     const cueWords = countWords(cue.text)
     if (currentWordCount + cueWords > MAX_WORDS && currentCues.length > 0) {
       subChunks.push({
-        text: currentCues.map(c => c.text).join(' ').trim(),
+        text: currentCues
+          .map(c => c.text)
+          .join(' ')
+          .trim(),
         topic: `${topic} (Part ${partNum})`,
         startTime: currentCues[0].startTime,
         endTime: currentCues[currentCues.length - 1].endTime,
@@ -241,7 +249,10 @@ function splitLargeChunk(
 
   if (currentCues.length > 0) {
     subChunks.push({
-      text: currentCues.map(c => c.text).join(' ').trim(),
+      text: currentCues
+        .map(c => c.text)
+        .join(' ')
+        .trim(),
       topic: partNum > 1 ? `${topic} (Part ${partNum})` : topic,
       startTime: currentCues[0].startTime,
       endTime: currentCues[currentCues.length - 1].endTime,

@@ -59,7 +59,12 @@ export function AlertCard({
         </div>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm" className="flex-shrink-0 min-h-[44px]" disabled={loading}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-shrink-0 min-h-[44px]"
+              disabled={loading}
+            >
               {loading ? <Loader2 className="size-4 animate-spin mr-1" /> : null}
               {buttonLabel}
             </Button>
@@ -105,7 +110,9 @@ export function DeleteDialogBody({
     <>
       <div className="flex-1 overflow-y-auto space-y-2 py-2">
         {courseList.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">No imported courses found.</p>
+          <p className="text-sm text-muted-foreground text-center py-4">
+            No imported courses found.
+          </p>
         ) : (
           courseList.map(course => (
             <label
@@ -125,7 +132,9 @@ export function DeleteDialogBody({
         <p className="text-xs text-muted-foreground">{selectedCourses.size} course(s) selected</p>
       )}
       <DialogFooter>
-        <Button variant="outline" onClick={onCancel} className="min-h-[44px]">Cancel</Button>
+        <Button variant="outline" onClick={onCancel} className="min-h-[44px]">
+          Cancel
+        </Button>
         <Button
           variant="destructive"
           onClick={onDelete}

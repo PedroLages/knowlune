@@ -9,10 +9,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
-import {
-  generateQuizForLesson,
-  type QuizGenerationResult,
-} from '@/ai/quizGenerationService'
+import { generateQuizForLesson, type QuizGenerationResult } from '@/ai/quizGenerationService'
 import { isAIAvailable } from '@/lib/aiConfiguration'
 import { testOllamaConnection } from '@/lib/ollamaHealthCheck'
 import { getAIConfiguration, getOllamaSelectedModel } from '@/lib/aiConfiguration'
@@ -169,11 +166,11 @@ export function useQuizGeneration(
       setError(null)
 
       try {
-        const result: QuizGenerationResult = await generateQuizForLesson(
-          lessonId,
-          courseId,
-          { bloomsLevel, signal: controller.signal, regenerate }
-        )
+        const result: QuizGenerationResult = await generateQuizForLesson(lessonId, courseId, {
+          bloomsLevel,
+          signal: controller.signal,
+          regenerate,
+        })
 
         if (controller.signal.aborted) return
 

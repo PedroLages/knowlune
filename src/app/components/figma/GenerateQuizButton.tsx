@@ -90,7 +90,9 @@ export function GenerateQuizButton({
       disabled={isDisabled}
       aria-disabled={isDisabled}
       aria-label={buttonLabel + ' from transcript'}
-      onClick={() => (cachedQuiz && onRegenerate ? onRegenerate(bloomsLevel) : onGenerate(bloomsLevel))}
+      onClick={() =>
+        cachedQuiz && onRegenerate ? onRegenerate(bloomsLevel) : onGenerate(bloomsLevel)
+      }
       data-testid="generate-quiz-button"
     >
       {checkingAvailability ? (
@@ -105,13 +107,13 @@ export function GenerateQuizButton({
   )
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-end" data-testid="quiz-generation-controls">
+    <div
+      className="flex flex-col gap-3 sm:flex-row sm:items-end"
+      data-testid="quiz-generation-controls"
+    >
       {/* Bloom's level picker */}
       <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="blooms-level-select"
-          className="text-xs font-medium text-muted-foreground"
-        >
+        <label htmlFor="blooms-level-select" className="text-xs font-medium text-muted-foreground">
           Difficulty Level
         </label>
         <Select

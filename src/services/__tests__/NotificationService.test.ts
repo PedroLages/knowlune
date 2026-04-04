@@ -587,7 +587,9 @@ describe('NotificationService', () => {
       await vi.advanceTimersByTimeAsync(0)
 
       expect(mockCreate).toHaveBeenCalledTimes(1)
-      expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ actionUrl: '/courses/course-a' }))
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ actionUrl: '/courses/course-a' })
+      )
     })
   })
 
@@ -681,7 +683,9 @@ describe('NotificationService', () => {
     it('skips courses already notified today (batch dedup)', async () => {
       const emitSpy = vi.spyOn(appEventBus, 'emit')
 
-      mockImportedCoursesToArray.mockResolvedValue([{ id: 'ts-course', name: 'Advanced TypeScript' }])
+      mockImportedCoursesToArray.mockResolvedValue([
+        { id: 'ts-course', name: 'Advanced TypeScript' },
+      ])
       mockImportedVideosToArray.mockResolvedValue(
         Array.from({ length: 10 }, (_, i) => ({ id: `v${i}`, courseId: 'ts-course' }))
       )
@@ -795,7 +799,8 @@ describe('NotificationService', () => {
         expect.objectContaining({
           type: 'knowledge-decay',
           title: 'Knowledge Fading: React Hooks',
-          message: 'Your retention for "React Hooks" has dropped to 35%. Review now to strengthen your memory.',
+          message:
+            'Your retention for "React Hooks" has dropped to 35%. Review now to strengthen your memory.',
           actionUrl: '/review',
           metadata: { topic: 'React Hooks', retention: 35 },
         })
@@ -961,14 +966,17 @@ describe('NotificationService', () => {
     it('emits knowledge:decay for topics below DECAY_THRESHOLD', async () => {
       const emitSpy = vi.spyOn(appEventBus, 'emit')
 
-      mockNotesToArray.mockResolvedValue([
-        { id: 'n1', tags: ['React'], deleted: false },
-      ])
-      mockReviewRecordsToArray.mockResolvedValue([
-        { id: 'r1', noteId: 'n1' },
-      ])
+      mockNotesToArray.mockResolvedValue([{ id: 'n1', tags: ['React'], deleted: false }])
+      mockReviewRecordsToArray.mockResolvedValue([{ id: 'r1', noteId: 'n1' }])
       mockGetTopicRetention.mockReturnValue([
-        { topic: 'React', retention: 30, level: 'critical', lastReviewedAt: '2026-03-10T12:00:00', noteCount: 1, dueCount: 1 },
+        {
+          topic: 'React',
+          retention: 30,
+          level: 'critical',
+          lastReviewedAt: '2026-03-10T12:00:00',
+          noteCount: 1,
+          dueCount: 1,
+        },
       ])
       // No existing decay notifications today
       mockToArray.mockResolvedValue([])
@@ -989,14 +997,17 @@ describe('NotificationService', () => {
     it('does NOT emit for topics above DECAY_THRESHOLD', async () => {
       const emitSpy = vi.spyOn(appEventBus, 'emit')
 
-      mockNotesToArray.mockResolvedValue([
-        { id: 'n1', tags: ['React'], deleted: false },
-      ])
-      mockReviewRecordsToArray.mockResolvedValue([
-        { id: 'r1', noteId: 'n1' },
-      ])
+      mockNotesToArray.mockResolvedValue([{ id: 'n1', tags: ['React'], deleted: false }])
+      mockReviewRecordsToArray.mockResolvedValue([{ id: 'r1', noteId: 'n1' }])
       mockGetTopicRetention.mockReturnValue([
-        { topic: 'React', retention: 75, level: 'strong', lastReviewedAt: '2026-03-14T12:00:00', noteCount: 1, dueCount: 0 },
+        {
+          topic: 'React',
+          retention: 75,
+          level: 'strong',
+          lastReviewedAt: '2026-03-14T12:00:00',
+          noteCount: 1,
+          dueCount: 0,
+        },
       ])
 
       await checkKnowledgeDecayOnStartup()
@@ -1008,14 +1019,17 @@ describe('NotificationService', () => {
     it('does NOT emit when retention is exactly at threshold (< required, not <=)', async () => {
       const emitSpy = vi.spyOn(appEventBus, 'emit')
 
-      mockNotesToArray.mockResolvedValue([
-        { id: 'n1', tags: ['React'], deleted: false },
-      ])
-      mockReviewRecordsToArray.mockResolvedValue([
-        { id: 'r1', noteId: 'n1' },
-      ])
+      mockNotesToArray.mockResolvedValue([{ id: 'n1', tags: ['React'], deleted: false }])
+      mockReviewRecordsToArray.mockResolvedValue([{ id: 'r1', noteId: 'n1' }])
       mockGetTopicRetention.mockReturnValue([
-        { topic: 'React', retention: DECAY_THRESHOLD, level: 'fading', lastReviewedAt: '2026-03-14T12:00:00', noteCount: 1, dueCount: 0 },
+        {
+          topic: 'React',
+          retention: DECAY_THRESHOLD,
+          level: 'fading',
+          lastReviewedAt: '2026-03-14T12:00:00',
+          noteCount: 1,
+          dueCount: 0,
+        },
       ])
 
       await checkKnowledgeDecayOnStartup()
@@ -1039,9 +1053,7 @@ describe('NotificationService', () => {
     it('does NOT emit when review records are empty (no reviewed notes)', async () => {
       const emitSpy = vi.spyOn(appEventBus, 'emit')
 
-      mockNotesToArray.mockResolvedValue([
-        { id: 'n1', tags: ['React'], deleted: false },
-      ])
+      mockNotesToArray.mockResolvedValue([{ id: 'n1', tags: ['React'], deleted: false }])
       mockReviewRecordsToArray.mockResolvedValue([])
 
       await checkKnowledgeDecayOnStartup()
@@ -1054,14 +1066,17 @@ describe('NotificationService', () => {
     it('skips topics already notified today (batch dedup)', async () => {
       const emitSpy = vi.spyOn(appEventBus, 'emit')
 
-      mockNotesToArray.mockResolvedValue([
-        { id: 'n1', tags: ['React'], deleted: false },
-      ])
-      mockReviewRecordsToArray.mockResolvedValue([
-        { id: 'r1', noteId: 'n1' },
-      ])
+      mockNotesToArray.mockResolvedValue([{ id: 'n1', tags: ['React'], deleted: false }])
+      mockReviewRecordsToArray.mockResolvedValue([{ id: 'r1', noteId: 'n1' }])
       mockGetTopicRetention.mockReturnValue([
-        { topic: 'React', retention: 30, level: 'critical', lastReviewedAt: '2026-03-10T12:00:00', noteCount: 1, dueCount: 1 },
+        {
+          topic: 'React',
+          retention: 30,
+          level: 'critical',
+          lastReviewedAt: '2026-03-10T12:00:00',
+          noteCount: 1,
+          dueCount: 1,
+        },
       ])
       // Simulate existing decay notification for React today
       mockToArray.mockResolvedValue([
@@ -1084,12 +1099,8 @@ describe('NotificationService', () => {
 
       mockIsTypeEnabled.mockImplementation((type: string) => type !== 'knowledge-decay')
 
-      mockNotesToArray.mockResolvedValue([
-        { id: 'n1', tags: ['React'], deleted: false },
-      ])
-      mockReviewRecordsToArray.mockResolvedValue([
-        { id: 'r1', noteId: 'n1' },
-      ])
+      mockNotesToArray.mockResolvedValue([{ id: 'n1', tags: ['React'], deleted: false }])
+      mockReviewRecordsToArray.mockResolvedValue([{ id: 'r1', noteId: 'n1' }])
 
       await checkKnowledgeDecayOnStartup()
 

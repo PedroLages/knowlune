@@ -156,9 +156,7 @@ export async function generateQuizForLesson(
 
     if (questions) {
       // Map generated questions to full Question objects
-      const mapped = questions.map((q, idx) =>
-        mapToQuestion(q, allQuestions.length + idx + 1)
-      )
+      const mapped = questions.map((q, idx) => mapToQuestion(q, allQuestions.length + idx + 1))
       allQuestions.push(...mapped)
     } else {
       chunksFailed++
@@ -227,9 +225,7 @@ async function callOllamaChat(
 
   try {
     const useDirectConnection = isOllamaDirectConnection()
-    const fetchUrl = useDirectConnection
-      ? `${ollamaConfig.url}/api/chat`
-      : '/api/ai/ollama/chat'
+    const fetchUrl = useDirectConnection ? `${ollamaConfig.url}/api/chat` : '/api/ai/ollama/chat'
 
     const requestBody: Record<string, unknown> = {
       model: ollamaConfig.model,
@@ -302,7 +298,10 @@ async function generateQuestionsForChunk(
     const content = await callOllamaChat(ollamaConfig, systemPrompt, userPrompt, signal)
     if (!content) {
       if (attempt < MAX_RETRIES) {
-        console.warn(LOG_PREFIX, `Chunk "${chunk.topic}" attempt ${attempt + 1} returned no content, retrying...`)
+        console.warn(
+          LOG_PREFIX,
+          `Chunk "${chunk.topic}" attempt ${attempt + 1} returned no content, retrying...`
+        )
         continue
       }
       return null
@@ -311,7 +310,10 @@ async function generateQuestionsForChunk(
     const parsed = parseAndValidate(content)
     if (!parsed) {
       if (attempt < MAX_RETRIES) {
-        console.warn(LOG_PREFIX, `Chunk "${chunk.topic}" attempt ${attempt + 1} failed validation, retrying...`)
+        console.warn(
+          LOG_PREFIX,
+          `Chunk "${chunk.topic}" attempt ${attempt + 1} failed validation, retrying...`
+        )
       }
       continue
     }
@@ -325,7 +327,10 @@ async function generateQuestionsForChunk(
 
     // All questions rejected by QC — retry if attempts remain
     if (qcResult.retryNeeded && attempt < MAX_RETRIES) {
-      console.warn(LOG_PREFIX, `Chunk "${chunk.topic}" attempt ${attempt + 1} failed QC, retrying...`)
+      console.warn(
+        LOG_PREFIX,
+        `Chunk "${chunk.topic}" attempt ${attempt + 1} failed QC, retrying...`
+      )
       continue
     }
 
@@ -397,10 +402,7 @@ async function computeSHA256(text: string): Promise<string> {
 /**
  * Look up a cached quiz by lessonId and transcriptHash.
  */
-async function findCachedQuiz(
-  lessonId: string,
-  transcriptHash: string
-): Promise<Quiz | null> {
+async function findCachedQuiz(lessonId: string, transcriptHash: string): Promise<Quiz | null> {
   const quizzes = await db.quizzes.where('lessonId').equals(lessonId).toArray()
 
   // Find one with matching transcriptHash

@@ -25,7 +25,7 @@ describe('buildQuizPrompt', () => {
 
   it.each<BloomsLevel>(['remember', 'understand', 'apply'])(
     'includes level-specific instructions for %s',
-    (level) => {
+    level => {
       const result = buildQuizPrompt(chunk, level)
       expect(result.systemPrompt).toContain(`"${level}"`)
     }

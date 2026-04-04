@@ -40,22 +40,54 @@ let mockReviewRecords = makeDbTableMock()
 vi.mock('@/db', () => ({
   db: {
     table: (...args: unknown[]) => mockTable(...args),
-    get importedCourses() { return mockImportedCourses },
-    get importedVideos() { return mockImportedVideos },
-    get importedPdfs() { return mockImportedPdfs },
-    get notes() { return mockNotes },
-    get screenshots() { return mockScreenshots },
-    get courseThumbnails() { return mockCourseThumbnails },
-    get embeddings() { return mockEmbeddings },
-    get videoCaptions() { return mockVideoCaptions },
-    get youtubeTranscripts() { return mockYoutubeTranscripts },
-    get studySessions() { return mockStudySessions },
-    get contentProgress() { return mockContentProgress },
-    get bookmarks() { return mockBookmarks },
-    get flashcards() { return mockFlashcards },
-    get quizzes() { return mockQuizzes },
-    get quizAttempts() { return mockQuizAttempts },
-    get reviewRecords() { return mockReviewRecords },
+    get importedCourses() {
+      return mockImportedCourses
+    },
+    get importedVideos() {
+      return mockImportedVideos
+    },
+    get importedPdfs() {
+      return mockImportedPdfs
+    },
+    get notes() {
+      return mockNotes
+    },
+    get screenshots() {
+      return mockScreenshots
+    },
+    get courseThumbnails() {
+      return mockCourseThumbnails
+    },
+    get embeddings() {
+      return mockEmbeddings
+    },
+    get videoCaptions() {
+      return mockVideoCaptions
+    },
+    get youtubeTranscripts() {
+      return mockYoutubeTranscripts
+    },
+    get studySessions() {
+      return mockStudySessions
+    },
+    get contentProgress() {
+      return mockContentProgress
+    },
+    get bookmarks() {
+      return mockBookmarks
+    },
+    get flashcards() {
+      return mockFlashcards
+    },
+    get quizzes() {
+      return mockQuizzes
+    },
+    get quizAttempts() {
+      return mockQuizAttempts
+    },
+    get reviewRecords() {
+      return mockReviewRecords
+    },
     transaction: vi.fn((_mode: string, _tables: unknown[], fn: () => Promise<void>) => fn()),
   },
 }))
@@ -606,9 +638,7 @@ describe('estimateOrphanedEmbeddingsSize', () => {
   })
 
   it('returns 0 when all embeddings have valid noteIds', async () => {
-    mockEmbeddings.toArray.mockResolvedValue([
-      { id: 'e1', noteId: 'n1', data: 'vec' },
-    ])
+    mockEmbeddings.toArray.mockResolvedValue([{ id: 'e1', noteId: 'n1', data: 'vec' }])
     mockNotes.toCollection = vi.fn().mockReturnValue({
       primaryKeys: vi.fn().mockResolvedValue(['n1']),
     })
@@ -681,9 +711,7 @@ describe('removeOrphanedEmbeddings', () => {
   })
 
   it('returns 0 when no orphans found', async () => {
-    mockEmbeddings.toArray.mockResolvedValue([
-      { id: 'e1', noteId: 'n1', data: 'valid' },
-    ])
+    mockEmbeddings.toArray.mockResolvedValue([{ id: 'e1', noteId: 'n1', data: 'valid' }])
     mockNotes.toCollection = vi.fn().mockReturnValue({
       primaryKeys: vi.fn().mockResolvedValue(['n1']),
     })

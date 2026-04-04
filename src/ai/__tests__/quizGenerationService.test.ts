@@ -66,11 +66,7 @@ vi.stubGlobal('crypto', {
 vi.stubGlobal('fetch', mockFetch)
 
 import { generateQuizForLesson } from '../quizGenerationService'
-import {
-  getOllamaServerUrl,
-  getOllamaSelectedModel,
-  isFeatureEnabled,
-} from '@/lib/aiConfiguration'
+import { getOllamaServerUrl, getOllamaSelectedModel, isFeatureEnabled } from '@/lib/aiConfiguration'
 
 // --- Test Helpers ---
 
@@ -80,7 +76,9 @@ function configureOllama() {
   ;(isFeatureEnabled as Mock).mockReturnValue(true)
 }
 
-function mockTranscript(fullText = 'The React library uses a virtual DOM for efficient rendering of UI components on the web.') {
+function mockTranscript(
+  fullText = 'The React library uses a virtual DOM for efficient rendering of UI components on the web.'
+) {
   const words = fullText.split(' ')
   // Create enough cues to make a valid chunk
   const cues = []
@@ -173,7 +171,17 @@ describe('generateQuizForLesson', () => {
       id: 'cached-quiz',
       lessonId: 'vid1',
       transcriptHash: '0'.repeat(64), // SHA-256 of zeroed buffer
-      questions: [{ id: 'q1', text: 'Q?', type: 'true-false', correctAnswer: 'True', explanation: '', points: 1, order: 1 }],
+      questions: [
+        {
+          id: 'q1',
+          text: 'Q?',
+          type: 'true-false',
+          correctAnswer: 'True',
+          explanation: '',
+          points: 1,
+          order: 1,
+        },
+      ],
     }
     mockQuizzesWhere.mockResolvedValue([cachedQuiz])
 

@@ -67,7 +67,10 @@ export type ElearningDatabase = Dexie & {
   youtubeChapters: EntityTable<YouTubeCourseChapter, 'id'>
   notifications: EntityTable<Notification, 'id'>
   notificationPreferences: EntityTable<NotificationPreferences, 'id'>
-  courseEmbeddings: EntityTable<{ courseId: string; embedding?: number[]; updatedAt?: string }, 'courseId'>
+  courseEmbeddings: EntityTable<
+    { courseId: string; embedding?: number[]; updatedAt?: string },
+    'courseId'
+  >
 }
 
 /**

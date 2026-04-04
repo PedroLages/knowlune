@@ -86,9 +86,7 @@ export function runQualityControl(
   }
 
   // Check 3: Duplicate detection (only among non-rejected questions)
-  const candidateIndices = questions
-    .map((_, i) => i)
-    .filter(i => !rejectionMap.has(i))
+  const candidateIndices = questions.map((_, i) => i).filter(i => !rejectionMap.has(i))
 
   const duplicateIndices = detectDuplicates(
     candidateIndices.map(i => questions[i]),
@@ -148,9 +146,7 @@ function checkAnswerUniqueness(question: GeneratedQuestion): string[] {
 
   // Check correctAnswer is in options
   const correctAnswer =
-    typeof question.correctAnswer === 'string'
-      ? question.correctAnswer
-      : question.correctAnswer[0]
+    typeof question.correctAnswer === 'string' ? question.correctAnswer : question.correctAnswer[0]
 
   if (!options.includes(correctAnswer)) {
     reasons.push(`correctAnswer "${correctAnswer}" not found in options`)
@@ -173,10 +169,7 @@ function checkAnswerUniqueness(question: GeneratedQuestion): string[] {
  * Extract key terms from question text and verify they appear in the chunk.
  * Uses simple stop-word filtering and term presence checking.
  */
-function checkTranscriptGrounding(
-  question: GeneratedQuestion,
-  chunkLower: string
-): string[] {
+function checkTranscriptGrounding(question: GeneratedQuestion, chunkLower: string): string[] {
   const terms = extractKeyTerms(question.text)
 
   if (terms.length === 0) return []
@@ -195,20 +188,126 @@ function checkTranscriptGrounding(
 
 /** Common English stop words to filter out */
 const STOP_WORDS = new Set([
-  'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-  'should', 'may', 'might', 'shall', 'can', 'need', 'dare', 'ought',
-  'used', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from',
-  'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below',
-  'between', 'out', 'off', 'over', 'under', 'again', 'further', 'then',
-  'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'each',
-  'every', 'both', 'few', 'more', 'most', 'other', 'some', 'such', 'no',
-  'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very',
-  'just', 'because', 'but', 'and', 'or', 'if', 'while', 'that', 'this',
-  'which', 'what', 'who', 'whom', 'these', 'those', 'it', 'its',
-  'he', 'she', 'they', 'them', 'his', 'her', 'their', 'my', 'your',
-  'we', 'you', 'i', 'me', 'us', 'about', 'up', 'also',
-  'following', 'true', 'false', 'correct', 'incorrect', 'answer',
+  'a',
+  'an',
+  'the',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'have',
+  'has',
+  'had',
+  'do',
+  'does',
+  'did',
+  'will',
+  'would',
+  'could',
+  'should',
+  'may',
+  'might',
+  'shall',
+  'can',
+  'need',
+  'dare',
+  'ought',
+  'used',
+  'to',
+  'of',
+  'in',
+  'for',
+  'on',
+  'with',
+  'at',
+  'by',
+  'from',
+  'as',
+  'into',
+  'through',
+  'during',
+  'before',
+  'after',
+  'above',
+  'below',
+  'between',
+  'out',
+  'off',
+  'over',
+  'under',
+  'again',
+  'further',
+  'then',
+  'once',
+  'here',
+  'there',
+  'when',
+  'where',
+  'why',
+  'how',
+  'all',
+  'each',
+  'every',
+  'both',
+  'few',
+  'more',
+  'most',
+  'other',
+  'some',
+  'such',
+  'no',
+  'nor',
+  'not',
+  'only',
+  'own',
+  'same',
+  'so',
+  'than',
+  'too',
+  'very',
+  'just',
+  'because',
+  'but',
+  'and',
+  'or',
+  'if',
+  'while',
+  'that',
+  'this',
+  'which',
+  'what',
+  'who',
+  'whom',
+  'these',
+  'those',
+  'it',
+  'its',
+  'he',
+  'she',
+  'they',
+  'them',
+  'his',
+  'her',
+  'their',
+  'my',
+  'your',
+  'we',
+  'you',
+  'i',
+  'me',
+  'us',
+  'about',
+  'up',
+  'also',
+  'following',
+  'true',
+  'false',
+  'correct',
+  'incorrect',
+  'answer',
 ])
 
 /**
@@ -232,10 +331,7 @@ export function extractKeyTerms(text: string): string[] {
  *
  * @returns Set of indices (from originalIndices) that are duplicates
  */
-function detectDuplicates(
-  questions: GeneratedQuestion[],
-  originalIndices: number[]
-): Set<number> {
+function detectDuplicates(questions: GeneratedQuestion[], originalIndices: number[]): Set<number> {
   const duplicates = new Set<number>()
   if (questions.length < 2) return duplicates
 
@@ -270,10 +366,7 @@ function buildTermVector(text: string): Map<string, number> {
 }
 
 /** Cosine similarity between two term frequency maps */
-export function textCosineSimilarity(
-  a: Map<string, number>,
-  b: Map<string, number>
-): number {
+export function textCosineSimilarity(a: Map<string, number>, b: Map<string, number>): number {
   let dotProduct = 0
   let normA = 0
   let normB = 0

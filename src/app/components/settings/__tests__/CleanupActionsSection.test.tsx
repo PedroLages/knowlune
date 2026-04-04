@@ -135,8 +135,8 @@ describe('CleanupActionsSection', () => {
     } else {
       // Fallback: find button inside alertdialog
       const dialogButtons = screen.getByRole('alertdialog').querySelectorAll('button')
-      const confirmBtn = Array.from(dialogButtons).find(
-        btn => btn.textContent?.toLowerCase().includes('clear')
+      const confirmBtn = Array.from(dialogButtons).find(btn =>
+        btn.textContent?.toLowerCase().includes('clear')
       )
       if (confirmBtn) await user.click(confirmBtn)
     }
@@ -145,7 +145,9 @@ describe('CleanupActionsSection', () => {
       expect(mockClearThumbnailCache).toHaveBeenCalled()
     })
     await waitFor(() => {
-      expect(vi.mocked(toast).success).toHaveBeenCalledWith(expect.stringContaining('thumbnail cache'))
+      expect(vi.mocked(toast).success).toHaveBeenCalledWith(
+        expect.stringContaining('thumbnail cache')
+      )
     })
     expect(mockOnRefresh).toHaveBeenCalled()
   })
@@ -161,13 +163,15 @@ describe('CleanupActionsSection', () => {
 
     await user.click(screen.getByRole('button', { name: /clear cache/i }))
     const dialogButtons = screen.getByRole('alertdialog').querySelectorAll('button')
-    const confirmBtn = Array.from(dialogButtons).find(
-      btn => btn.textContent?.toLowerCase().includes('clear')
+    const confirmBtn = Array.from(dialogButtons).find(btn =>
+      btn.textContent?.toLowerCase().includes('clear')
     )
     if (confirmBtn) await user.click(confirmBtn)
 
     await waitFor(() => {
-      expect(vi.mocked(toast).error).toHaveBeenCalledWith(expect.stringContaining('thumbnail cache'))
+      expect(vi.mocked(toast).error).toHaveBeenCalledWith(
+        expect.stringContaining('thumbnail cache')
+      )
     })
   })
 
@@ -346,9 +350,7 @@ describe('CleanupActionsSection', () => {
     await user.click(screen.getByRole('button', { name: /delete selected/i }))
 
     await waitFor(() => {
-      expect(vi.mocked(toast).error).toHaveBeenCalledWith(
-        expect.stringContaining('course data')
-      )
+      expect(vi.mocked(toast).error).toHaveBeenCalledWith(expect.stringContaining('course data'))
     })
   })
 })

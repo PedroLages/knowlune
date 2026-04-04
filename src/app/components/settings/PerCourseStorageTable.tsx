@@ -242,8 +242,8 @@ export function PerCourseStorageTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Clear thumbnail?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will delete the thumbnail for &ldquo;{dialogState?.courseName}&rdquo;
-              (~{formatFileSize(dialogState?.estimatedSize ?? 0)} estimated). This action cannot be
+              This will delete the thumbnail for &ldquo;{dialogState?.courseName}&rdquo; (~
+              {formatFileSize(dialogState?.estimatedSize ?? 0)} estimated). This action cannot be
               undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -274,8 +274,8 @@ export function PerCourseStorageTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete course data?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete all data for &ldquo;{dialogState?.courseName}&rdquo;
-              (~{formatFileSize(dialogState?.estimatedSize ?? 0)} estimated), including videos, PDFs,
+              This will permanently delete all data for &ldquo;{dialogState?.courseName}&rdquo; (~
+              {formatFileSize(dialogState?.estimatedSize ?? 0)} estimated), including videos, PDFs,
               notes, flashcards, and progress. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
