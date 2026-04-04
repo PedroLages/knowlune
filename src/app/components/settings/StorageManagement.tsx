@@ -3,14 +3,7 @@
 // Settings > Storage & Usage — visual breakdown of IndexedDB storage by category.
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import {
-  BarChart3,
-  AlertTriangle,
-  AlertOctagon,
-  RefreshCw,
-  Loader2,
-  Info,
-} from 'lucide-react'
+import { BarChart3, AlertTriangle, AlertOctagon, RefreshCw, Loader2, Info } from 'lucide-react'
 import { Link } from 'react-router'
 import { BarChart, Bar, YAxis, XAxis } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'

@@ -31,6 +31,7 @@ import {
   type BloomsLevel,
   type GeneratedQuestion,
 } from './quizPrompts'
+import { runQualityControl } from './quizQualityControl'
 import type { Quiz, Question } from '@/types/quiz'
 
 // ---------------------------------------------------------------------------
@@ -45,6 +46,8 @@ export interface QuizGenerationOptions {
   questionsPerChunk?: number
   /** Optional AbortSignal for cancellation */
   signal?: AbortSignal
+  /** Force regeneration even if cached quiz exists */
+  regenerate?: boolean
 }
 
 /** Result of quiz generation */
@@ -94,7 +97,7 @@ export async function generateQuizForLesson(
   courseId: string,
   options: QuizGenerationOptions = {}
 ): Promise<QuizGenerationResult> {
-  const { bloomsLevel = 'remember', questionsPerChunk = 4, signal } = options
+  const { bloomsLevel = 'remember', questionsPerChunk = 4, signal, regenerate = false } = options
 
   // Check AI consent
   if (!isFeatureEnabled('noteQA')) {
@@ -120,10 +123,12 @@ export async function generateQuizForLesson(
   // Compute transcript hash for cache lookup
   const transcriptHash = await computeSHA256(transcript.fullText)
 
-  // Cache check: look for existing quiz with matching transcriptHash
-  const existingQuiz = await findCachedQuiz(lessonId, transcriptHash)
-  if (existingQuiz) {
-    return { quiz: existingQuiz, cached: true }
+  // Cache check: look for existing quiz with matching transcriptHash (skip on regenerate)
+  if (!regenerate) {
+    const existingQuiz = await findCachedQuiz(lessonId, transcriptHash)
+    if (existingQuiz) {
+      return { quiz: existingQuiz, cached: true }
+    }
   }
 
   // Stage 1: Chunk transcript
@@ -151,9 +156,7 @@ export async function generateQuizForLesson(
 
     if (questions) {
       // Map generated questions to full Question objects
-      const mapped = questions.map((q, idx) =>
-        mapToQuestion(q, allQuestions.length + idx + 1)
-      )
+      const mapped = questions.map((q, idx) => mapToQuestion(q, allQuestions.length + idx + 1))
       allQuestions.push(...mapped)
     } else {
       chunksFailed++
@@ -222,9 +225,7 @@ async function callOllamaChat(
 
   try {
     const useDirectConnection = isOllamaDirectConnection()
-    const fetchUrl = useDirectConnection
-      ? `${ollamaConfig.url}/api/chat`
-      : '/api/ai/ollama/chat'
+    const fetchUrl = useDirectConnection ? `${ollamaConfig.url}/api/chat` : '/api/ai/ollama/chat'
 
     const requestBody: Record<string, unknown> = {
       model: ollamaConfig.model,
@@ -275,8 +276,14 @@ async function callOllamaChat(
 // ---------------------------------------------------------------------------
 
 /**
- * Generate and validate questions for a single transcript chunk.
- * Retries up to MAX_RETRIES times on validation failure.
+ * Generate, validate, and QC questions for a single transcript chunk.
+ * Retries up to MAX_RETRIES times on validation or QC failure.
+ *
+ * Pipeline per attempt:
+ * 1. Call LLM for raw questions
+ * 2. Parse + Zod validate
+ * 3. Run deterministic QC (duplicate detection, answer uniqueness, grounding)
+ * 4. If QC rejects all questions, retry; otherwise return valid subset
  */
 async function generateQuestionsForChunk(
   ollamaConfig: { url: string; model: string },
@@ -291,18 +298,43 @@ async function generateQuestionsForChunk(
     const content = await callOllamaChat(ollamaConfig, systemPrompt, userPrompt, signal)
     if (!content) {
       if (attempt < MAX_RETRIES) {
-        console.warn(LOG_PREFIX, `Chunk "${chunk.topic}" attempt ${attempt + 1} returned no content, retrying...`)
+        console.warn(
+          LOG_PREFIX,
+          `Chunk "${chunk.topic}" attempt ${attempt + 1} returned no content, retrying...`
+        )
         continue
       }
       return null
     }
 
     const parsed = parseAndValidate(content)
-    if (parsed) return parsed
-
-    if (attempt < MAX_RETRIES) {
-      console.warn(LOG_PREFIX, `Chunk "${chunk.topic}" attempt ${attempt + 1} failed validation, retrying...`)
+    if (!parsed) {
+      if (attempt < MAX_RETRIES) {
+        console.warn(
+          LOG_PREFIX,
+          `Chunk "${chunk.topic}" attempt ${attempt + 1} failed validation, retrying...`
+        )
+      }
+      continue
     }
+
+    // Run QC pipeline on validated questions
+    const qcResult = runQualityControl(parsed, chunk.text)
+
+    if (qcResult.validQuestions.length > 0) {
+      return qcResult.validQuestions
+    }
+
+    // All questions rejected by QC — retry if attempts remain
+    if (qcResult.retryNeeded && attempt < MAX_RETRIES) {
+      console.warn(
+        LOG_PREFIX,
+        `Chunk "${chunk.topic}" attempt ${attempt + 1} failed QC, retrying...`
+      )
+      continue
+    }
+
+    return null
   }
 
   console.warn(LOG_PREFIX, `Chunk "${chunk.topic}" failed after ${MAX_RETRIES + 1} attempts`)
@@ -370,10 +402,7 @@ async function computeSHA256(text: string): Promise<string> {
 /**
  * Look up a cached quiz by lessonId and transcriptHash.
  */
-async function findCachedQuiz(
-  lessonId: string,
-  transcriptHash: string
-): Promise<Quiz | null> {
+async function findCachedQuiz(lessonId: string, transcriptHash: string): Promise<Quiz | null> {
   const quizzes = await db.quizzes.where('lessonId').equals(lessonId).toArray()
 
   // Find one with matching transcriptHash

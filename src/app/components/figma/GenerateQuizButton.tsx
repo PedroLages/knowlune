@@ -13,7 +13,7 @@
  */
 
 import { useState } from 'react'
-import { BrainCircuit, Loader2 } from 'lucide-react'
+import { BrainCircuit, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import {
@@ -43,6 +43,8 @@ interface GenerateQuizButtonProps {
   cachedQuiz: Quiz | null
   /** Callback to trigger generation with selected Bloom's level */
   onGenerate: (bloomsLevel: BloomsLevel) => void
+  /** Callback to trigger regeneration (new quiz, preserves old) */
+  onRegenerate?: (bloomsLevel: BloomsLevel) => void
 }
 
 const BLOOMS_OPTIONS: { value: BloomsLevel; label: string }[] = [
@@ -57,11 +59,16 @@ export function GenerateQuizButton({
   checkingAvailability,
   cachedQuiz,
   onGenerate,
+  onRegenerate,
 }: GenerateQuizButtonProps) {
   const [bloomsLevel, setBloomsLevel] = useState<BloomsLevel>('remember')
 
   const isDisabled = !ollamaAvailable || checkingAvailability || isGenerating
-  const buttonLabel = cachedQuiz ? 'Regenerate Quiz' : 'Generate Quiz'
+  // Only show "Regenerate" label/icon when onRegenerate handler is provided.
+  // When cachedQuiz exists but onRegenerate is undefined, onGenerate returns
+  // the cached quiz — so we keep the "Generate Quiz" label to avoid confusion.
+  const canRegenerate = !!cachedQuiz && !!onRegenerate
+  const buttonLabel = canRegenerate ? 'Regenerate Quiz' : 'Generate Quiz'
 
   // Loading state: show skeleton with message
   if (isGenerating) {
@@ -87,11 +94,13 @@ export function GenerateQuizButton({
       disabled={isDisabled}
       aria-disabled={isDisabled}
       aria-label={buttonLabel + ' from transcript'}
-      onClick={() => onGenerate(bloomsLevel)}
+      onClick={() => (canRegenerate ? onRegenerate(bloomsLevel) : onGenerate(bloomsLevel))}
       data-testid="generate-quiz-button"
     >
       {checkingAvailability ? (
         <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+      ) : canRegenerate ? (
+        <RefreshCw className="size-4" aria-hidden="true" />
       ) : (
         <BrainCircuit className="size-4" aria-hidden="true" />
       )}
@@ -100,13 +109,13 @@ export function GenerateQuizButton({
   )
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-end" data-testid="quiz-generation-controls">
+    <div
+      className="flex flex-col gap-3 sm:flex-row sm:items-end"
+      data-testid="quiz-generation-controls"
+    >
       {/* Bloom's level picker */}
       <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="blooms-level-select"
-          className="text-xs font-medium text-muted-foreground"
-        >
+        <label htmlFor="blooms-level-select" className="text-xs font-medium text-muted-foreground">
           Difficulty Level
         </label>
         <Select

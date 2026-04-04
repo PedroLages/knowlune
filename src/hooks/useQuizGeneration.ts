@@ -9,10 +9,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
-import {
-  generateQuizForLesson,
-  type QuizGenerationResult,
-} from '@/ai/quizGenerationService'
+import { generateQuizForLesson, type QuizGenerationResult } from '@/ai/quizGenerationService'
 import { isAIAvailable } from '@/lib/aiConfiguration'
 import { testOllamaConnection } from '@/lib/ollamaHealthCheck'
 import { getAIConfiguration, getOllamaSelectedModel } from '@/lib/aiConfiguration'
@@ -29,8 +26,12 @@ export interface UseQuizGenerationReturn {
   error: string | null
   /** Trigger quiz generation */
   generate: (bloomsLevel?: BloomsLevel) => Promise<void>
+  /** Trigger regeneration (creates new quiz, preserves old) */
+  regenerate: (bloomsLevel?: BloomsLevel) => Promise<void>
   /** Previously cached quiz (loaded on mount) */
   cachedQuiz: Quiz | null
+  /** All quizzes for this lesson (for accessing previous versions) */
+  allQuizzes: Quiz[]
   /** Whether Ollama is available for quiz generation */
   ollamaAvailable: boolean
   /** Whether availability check is still in progress */
@@ -48,14 +49,16 @@ export function useQuizGeneration(
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cachedQuiz, setCachedQuiz] = useState<Quiz | null>(null)
+  const [allQuizzes, setAllQuizzes] = useState<Quiz[]>([])
   const [ollamaAvailable, setOllamaAvailable] = useState(false)
   const [checkingAvailability, setCheckingAvailability] = useState(true)
   const abortRef = useRef<AbortController | null>(null)
 
-  // Check for cached quiz on mount
+  // Check for cached quizzes on mount (load all for this lesson)
   useEffect(() => {
     if (!lessonId) {
       setCachedQuiz(null)
+      setAllQuizzes([])
       return
     }
 
@@ -64,11 +67,18 @@ export function useQuizGeneration(
     db.quizzes
       .where('lessonId')
       .equals(lessonId)
-      .first()
+      .toArray()
       .then(existing => {
-        if (!ignore && existing) {
-          setCachedQuiz(existing as Quiz)
-          setQuiz(existing as Quiz)
+        if (ignore) return
+        const quizzes = existing as Quiz[]
+        setAllQuizzes(quizzes)
+        if (quizzes.length > 0) {
+          // Use most recent quiz as the active one
+          const sorted = [...quizzes].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+          setCachedQuiz(sorted[0])
+          setQuiz(sorted[0])
         }
       })
       .catch(err => {
@@ -140,8 +150,8 @@ export function useQuizGeneration(
     }
   }, [])
 
-  const generate = useCallback(
-    async (bloomsLevel: BloomsLevel = 'remember') => {
+  const generateInternal = useCallback(
+    async (bloomsLevel: BloomsLevel = 'remember', regenerate = false) => {
       if (!lessonId || !courseId) {
         toast.error('Cannot generate quiz: missing lesson or course context.')
         return
@@ -156,11 +166,11 @@ export function useQuizGeneration(
       setError(null)
 
       try {
-        const result: QuizGenerationResult = await generateQuizForLesson(
-          lessonId,
-          courseId,
-          { bloomsLevel, signal: controller.signal }
-        )
+        const result: QuizGenerationResult = await generateQuizForLesson(lessonId, courseId, {
+          bloomsLevel,
+          signal: controller.signal,
+          regenerate,
+        })
 
         if (controller.signal.aborted) return
 
@@ -168,6 +178,13 @@ export function useQuizGeneration(
           setQuiz(result.quiz)
           if (!result.cached) {
             setCachedQuiz(result.quiz)
+            // Refresh all quizzes list
+            try {
+              const all = await db.quizzes.where('lessonId').equals(lessonId).toArray()
+              setAllQuizzes(all as Quiz[])
+            } catch {
+              // silent-catch-ok: non-critical list refresh
+            }
           }
           if (result.error) {
             // Quiz generated but with warnings (e.g. storage failed)
@@ -192,12 +209,24 @@ export function useQuizGeneration(
     [lessonId, courseId]
   )
 
+  const generate = useCallback(
+    (bloomsLevel?: BloomsLevel) => generateInternal(bloomsLevel ?? 'remember', false),
+    [generateInternal]
+  )
+
+  const regenerateQuiz = useCallback(
+    (bloomsLevel?: BloomsLevel) => generateInternal(bloomsLevel ?? 'remember', true),
+    [generateInternal]
+  )
+
   return {
     quiz,
     isGenerating,
     error,
     generate,
+    regenerate: regenerateQuiz,
     cachedQuiz,
+    allQuizzes,
     ollamaAvailable,
     checkingAvailability,
   }

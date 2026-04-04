@@ -46,7 +46,7 @@ test.describe('E52-S02: Quiz Generation UI', () => {
     // The Bloom's selector is rendered inside the quiz generation UI panel.
     // Verify the selector element exists and has the expected option count.
     const bloomsSelector = page.getByTestId('blooms-level-selector')
-    if (await bloomsSelector.count() > 0) {
+    if ((await bloomsSelector.count()) > 0) {
       await expect(bloomsSelector).toBeVisible()
       const options = bloomsSelector.locator('option, [role="option"]')
       await expect(options).toHaveCount(3)
@@ -68,7 +68,7 @@ test.describe('E52-S02: Quiz Generation UI', () => {
     await navigateAndWait(page, '/')
 
     const generateBtn = page.getByTestId('generate-quiz-button')
-    if (await generateBtn.count() > 0) {
+    if ((await generateBtn.count()) > 0) {
       // Button should be disabled when Ollama is offline
       await expect(generateBtn).toBeDisabled()
     }

@@ -1,13 +1,16 @@
 import { useState, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
+import { toast } from 'sonner'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import type { QuestionDisplayMode } from '@/app/components/quiz/QuestionDisplay'
 import { QuestionDisplay } from '@/app/components/quiz/QuestionDisplay'
 import { AnswerFeedback } from '@/app/components/quiz/AnswerFeedback'
+import { QuestionFeedback, type FeedbackValue } from '@/app/components/quiz/QuestionFeedback'
 import { ReviewQuestionGrid } from '@/app/components/quiz/ReviewQuestionGrid'
 import { Button } from '@/app/components/ui/button'
 import { Progress } from '@/app/components/ui/progress'
+import { db } from '@/db'
 
 interface QuizReviewContentProps {
   quiz: Quiz
@@ -18,9 +21,28 @@ interface QuizReviewContentProps {
 
 const noop = () => {}
 
+/** Feedback record stored as extra metadata on the quiz in Dexie */
+export interface QuestionFeedbackRecord {
+  questionId: string
+  feedback: 'up' | 'down'
+  timestamp: string
+}
+
 export function QuizReviewContent({ quiz, attempt, courseId, lessonId }: QuizReviewContentProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const navigate = useNavigate()
+  // Track feedback per question (stored locally in quiz metadata)
+  const [feedbackMap, setFeedbackMap] = useState<Record<string, FeedbackValue>>(() => {
+    // Load existing feedback from quiz extra metadata
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const existing = (quiz as any).questionFeedback as QuestionFeedbackRecord[] | undefined
+    if (!existing) return {}
+    const map: Record<string, FeedbackValue> = {}
+    for (const f of existing) {
+      map[f.questionId] = f.feedback
+    }
+    return map
+  })
 
   // Sort by canonical order
   const questions = [...quiz.questions].sort((a, b) => a.order - b.order)
@@ -40,6 +62,30 @@ export function QuizReviewContent({ quiz, attempt, courseId, lessonId }: QuizRev
   const isLast = currentIndex === questions.length - 1
 
   const progressPct = Math.round(((currentIndex + 1) / questions.length) * 100)
+
+  const handleFeedback = useCallback(
+    async (questionId: string, value: 'up' | 'down') => {
+      setFeedbackMap(prev => ({ ...prev, [questionId]: value }))
+
+      // Persist to Dexie (add to quiz's questionFeedback array)
+      try {
+        const currentQuiz = await db.quizzes.get(quiz.id)
+        if (!currentQuiz) return
+
+        const existing: QuestionFeedbackRecord[] = currentQuiz.questionFeedback ?? []
+        const updated = [
+          ...existing.filter((f: QuestionFeedbackRecord) => f.questionId !== questionId),
+          { questionId, feedback: value, timestamp: new Date().toISOString() },
+        ]
+
+        await db.quizzes.update(quiz.id, { questionFeedback: updated })
+      } catch (err) {
+        console.warn('[QuizReview] Failed to save feedback:', (err as Error).message)
+        toast.error('Failed to save feedback. Please try again.')
+      }
+    },
+    [quiz.id]
+  )
 
   const handleBack = useCallback(() => {
     navigate(`/courses/${courseId}/lessons/${lessonId}/quiz/results`)
@@ -83,6 +129,12 @@ export function QuizReviewContent({ quiz, attempt, courseId, lessonId }: QuizRev
 
           {/* Explanation / feedback */}
           <AnswerFeedback question={currentQuestion} userAnswer={userAnswer} />
+
+          {/* Question quality feedback (thumbs up/down) */}
+          <QuestionFeedback
+            feedback={feedbackMap[currentQuestion.id] ?? null}
+            onFeedback={value => handleFeedback(currentQuestion.id, value)}
+          />
         </section>
 
         {/* Navigation */}
