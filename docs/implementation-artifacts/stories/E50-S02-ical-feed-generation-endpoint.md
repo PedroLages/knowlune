@@ -1,7 +1,7 @@
 ---
 story_id: E50-S02
 story_name: "iCal Feed Generation Endpoint"
-status: complete
+status: done
 started: 2026-04-04
 completed: 2026-04-04
 reviewed: true
