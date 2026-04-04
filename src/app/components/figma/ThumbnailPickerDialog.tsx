@@ -190,32 +190,20 @@ export function ThumbnailPickerDialog({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="w-full rounded-none border-b border-border bg-transparent h-auto p-0">
-            <TabsTrigger
-              value="auto"
-              className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:bg-transparent py-2.5 text-xs gap-1.5"
-            >
+          <TabsList className="w-full">
+            <TabsTrigger value="auto" className="flex-1 gap-1.5">
               <Camera className="size-3.5" aria-hidden="true" />
               Auto
             </TabsTrigger>
-            <TabsTrigger
-              value="local"
-              className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:bg-transparent py-2.5 text-xs gap-1.5"
-            >
+            <TabsTrigger value="local" className="flex-1 gap-1.5">
               <Upload className="size-3.5" aria-hidden="true" />
               Upload
             </TabsTrigger>
-            <TabsTrigger
-              value="url"
-              className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:bg-transparent py-2.5 text-xs gap-1.5"
-            >
+            <TabsTrigger value="url" className="flex-1 gap-1.5">
               <Link className="size-3.5" aria-hidden="true" />
               URL
             </TabsTrigger>
-            <TabsTrigger
-              value="ai"
-              className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:bg-transparent py-2.5 text-xs gap-1.5"
-            >
+            <TabsTrigger value="ai" className="flex-1 gap-1.5">
               <Sparkles className="size-3.5" aria-hidden="true" />
               AI Generate
             </TabsTrigger>
@@ -250,6 +238,7 @@ export function ThumbnailPickerDialog({
                 Extract a frame from the first video in this course at the 10% mark.
               </p>
               <Button
+                variant="brand"
                 onClick={handleAutoExtract}
                 disabled={isLoading || !firstVideo}
                 className="w-full gap-2"
@@ -317,6 +306,7 @@ export function ThumbnailPickerDialog({
                     onKeyDown={e => e.key === 'Enter' && handleFetchUrl()}
                   />
                   <Button
+                    variant="brand"
                     onClick={handleFetchUrl}
                     disabled={isLoading || !urlInput.trim()}
                     className="shrink-0 gap-2"
@@ -348,7 +338,7 @@ export function ThumbnailPickerDialog({
                       placeholder={courseName}
                     />
                   </div>
-                  <Button onClick={handleGenerate} disabled={isLoading} className="w-full gap-2">
+                  <Button variant="brand" onClick={handleGenerate} disabled={isLoading} className="w-full gap-2">
                     {isLoading ? (
                       <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                     ) : (
@@ -383,7 +373,7 @@ export function ThumbnailPickerDialog({
           <Button variant="outline" onClick={() => handleClose(false)}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!pendingBlob} className="gap-2">
+          <Button variant="brand" onClick={handleConfirm} disabled={!pendingBlob} className="gap-2">
             <CheckCircle2 className="size-4" aria-hidden="true" />
             Apply Thumbnail
           </Button>
