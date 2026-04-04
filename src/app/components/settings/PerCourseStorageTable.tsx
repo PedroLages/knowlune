@@ -86,10 +86,10 @@ export function PerCourseStorageTable({
     return <ArrowUpDown className="size-4" />
   }
 
-  function getAriaSortValue(): 'ascending' | 'descending' | 'none' {
+  function getAriaSortValue(): 'ascending' | 'descending' {
+    // Table is always sorted by total size; default and 'desc' both sort descending
     if (sortDir === 'asc') return 'ascending'
-    if (sortDir === 'desc') return 'descending'
-    return 'none'
+    return 'descending'
   }
 
   async function handleClearThumbnail(courseId: string) {

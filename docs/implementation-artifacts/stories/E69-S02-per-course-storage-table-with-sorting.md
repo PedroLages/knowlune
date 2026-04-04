@@ -138,8 +138,26 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+None — implementation completed without errors.
 
 ### Completion Notes List
 
+- Implemented per-course storage table with sortable columns (cycle: default desc → asc → desc), pagination (Show More), and destructive actions with AlertDialog confirmation dialogs (clear thumbnail, delete course data).
+- Extracted `PerCourseStorageTable` component from `StorageManagement.tsx` for testability.
+- Added 14 unit tests covering sort logic, pagination, action dialogs, and accessibility attributes.
+
 ### File List
+
+- src/app/components/settings/PerCourseStorageTable.tsx (new)
+- src/app/components/settings/StorageManagement.tsx (updated)
+- src/lib/storageEstimate.ts (updated)
+- tests/unit/PerCourseStorageTable.test.tsx (new)
+
+## Lessons Learned
+
+- `aria-sort="none"` means no sort is applied; when a column has a default sort direction, use `"ascending"` or `"descending"` instead. A table that is always sorted by a column should never report `aria-sort="none"` for that column.
+- Single-column sort tables do not need a `sortCol` state — track only `sortDir` and always apply `aria-sort` to the single sortable header.
