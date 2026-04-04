@@ -4,9 +4,10 @@ story_name: "Knowledge Decay Alert Trigger"
 status: in-progress
 started: 2026-04-03
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-04-03
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa]
+review_scope: full
 burn_in_validated: false
 ---
 
@@ -162,11 +163,25 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story -- Playwright MCP findings]
+**Review Date:** 2026-04-04
+
+- **M1 (Medium):** Duplicate icon — `review-due` and `srs-due` both use `BookOpen` in NotificationPreferencesPanel.tsx. `review-due` should use `Clock` to match Notifications page.
+- **M2 (Medium):** Filter button touch targets on `/notifications` measure 36px at 375px viewport — below 44px mobile minimum. Add `min-h-[44px]` responsively.
+- **N1 (Nit):** `aria-live="polite"` on conditionally-rendered quiet hours div doesn't reliably announce to screen readers.
+
+Report: `docs/reviews/design/design-review-2026-04-04-e60-s01.md`
 
 ## Code Review Feedback
 
-[Populated by /review-story -- adversarial code review findings]
+**Review Date:** 2026-04-04
+
+- **Nit (confidence 75):** `DECAY_THRESHOLD = 50` duplicates `FADING_THRESHOLD = 50` in retentionMetrics.ts. Consider shared constant in future refactor.
+- **Nit (confidence 95):** String interpolation for className instead of `cn()` in Notifications.tsx:231. Pre-existing pattern.
+- **Edge cases (7 found, all LOW risk):** Race condition on rapid emissions, empty topic string, NaN retention display, unbounded `toArray()` load. None blocking — acceptable for personal app scale.
+
+Reports:
+- `docs/reviews/code/code-review-2026-04-04-e60-s01.md`
+- `docs/reviews/code/edge-case-review-2026-04-04-e60-s01.md`
 
 ## Challenges and Lessons Learned
 
