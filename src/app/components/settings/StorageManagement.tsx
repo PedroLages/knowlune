@@ -1,4 +1,5 @@
 // E69-S01: Storage Management Dashboard Card
+// E69-S03: Cleanup Actions with Confirmation Dialogs
 // Settings > Storage & Usage — visual breakdown of IndexedDB storage by category.
 
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -32,6 +33,7 @@ import {
   type CourseStorageEntry,
 } from '@/lib/storageEstimate'
 import { PerCourseStorageTable } from './PerCourseStorageTable'
+import { CleanupActionsSection } from './CleanupActionsSection'
 
 // --- Chart Config ---
 
@@ -113,11 +115,10 @@ function QuotaWarningBanner({
           size="sm"
           className="flex-shrink-0 border-destructive text-destructive hover:bg-destructive/20 min-h-[44px]"
           onClick={() => {
-            document.getElementById('data-management')?.scrollIntoView({ behavior: 'smooth' })
+            document.getElementById('cleanup-actions')?.scrollIntoView({ behavior: 'smooth' })
           }}
-          title="Cleanup actions coming in a future update"
         >
-          View Storage
+          Free Up Space
         </Button>
       </div>
     )
@@ -453,6 +454,7 @@ export function StorageManagement() {
             <StorageOverviewBar overview={overview} />
             <CategoryBreakdownLegend overview={overview} />
             <PerCourseStorageTable courses={perCourse} onRefresh={handleRefresh} />
+            <CleanupActionsSection onRefresh={handleRefresh} />
           </>
         )}
       </CardContent>

@@ -787,10 +787,10 @@ development_status:
   # Source: epics-storage-management.md
   # Storage visibility, per-course breakdown, cleanup actions
   # ──────────────────────────────────────────────────
-  epic-69: in-progress
+  epic-69: done
   69-1-storage-estimation-service-and-overview-card: done
   69-2-per-course-storage-table-with-sorting: done
-  69-3-cleanup-actions-with-confirmation-dialogs: ready-for-dev
+  69-3-cleanup-actions-with-confirmation-dialogs: done
   epic-69-retrospective: optional
 
   # ──────────────────────────────────────────────────

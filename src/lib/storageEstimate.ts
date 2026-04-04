@@ -373,3 +373,95 @@ export async function deleteCourseData(courseIds: string[]): Promise<number> {
 
   return bytesFreed
 }
+
+// --- Cleanup Estimation Functions (E69-S03) ---
+
+/**
+ * Estimate the total size of the thumbnail cache (courseThumbnails table).
+ */
+export async function estimateThumbnailCacheSize(): Promise<number> {
+  return estimateTableSize('courseThumbnails')
+}
+
+/**
+ * Find orphaned embeddings (noteId not in notes table) and estimate their size.
+ * Returns count and estimated bytes.
+ */
+export async function estimateOrphanedEmbeddingsSize(): Promise<{
+  count: number
+  bytes: number
+}> {
+  try {
+    const allEmbeddings = await db.embeddings.toArray()
+    if (allEmbeddings.length === 0) return { count: 0, bytes: 0 }
+
+    const noteIds = new Set(await db.notes.toCollection().primaryKeys())
+    const orphans = allEmbeddings.filter(e => !noteIds.has(e.noteId))
+
+    if (orphans.length === 0) return { count: 0, bytes: 0 }
+
+    const bytes = orphans.reduce(
+      (sum, e) => sum + new Blob([JSON.stringify(e)]).size,
+      0
+    )
+
+    return { count: orphans.length, bytes }
+  } catch {
+    // silent-catch-ok — estimation failure returns zero
+    return { count: 0, bytes: 0 }
+  }
+}
+
+// --- Cleanup Action Functions (E69-S03) ---
+
+/**
+ * Clear the entire thumbnail cache. Returns bytes freed.
+ */
+export async function clearThumbnailCache(): Promise<{ bytesFreed: number }> {
+  const bytesFreed = await estimateThumbnailCacheSize()
+  await db.transaction('rw', [db.courseThumbnails], async () => {
+    await db.courseThumbnails.clear()
+  })
+  return { bytesFreed }
+}
+
+/**
+ * Remove orphaned embeddings (noteId not found in notes table).
+ * Returns count of removed items and estimated bytes freed.
+ */
+export async function removeOrphanedEmbeddings(): Promise<{
+  count: number
+  bytesFreed: number
+}> {
+  const allEmbeddings = await db.embeddings.toArray()
+  if (allEmbeddings.length === 0) return { count: 0, bytesFreed: 0 }
+
+  const noteIds = new Set(await db.notes.toCollection().primaryKeys())
+  const orphans = allEmbeddings.filter(e => !noteIds.has(e.noteId))
+
+  if (orphans.length === 0) return { count: 0, bytesFreed: 0 }
+
+  const bytesFreed = orphans.reduce(
+    (sum, e) => sum + new Blob([JSON.stringify(e)]).size,
+    0
+  )
+
+  const orphanIds = orphans.map(e => e.noteId).filter((id): id is string => id !== undefined)
+
+  await db.transaction('rw', [db.embeddings], async () => {
+    await db.embeddings.bulkDelete(orphanIds)
+  })
+
+  return { count: orphans.length, bytesFreed }
+}
+
+/**
+ * Delete all data for selected courses. Returns count and bytes freed.
+ * Wraps the existing deleteCourseData with count info.
+ */
+export async function deleteCourseDataWithCount(
+  courseIds: string[]
+): Promise<{ count: number; bytesFreed: number }> {
+  const bytesFreed = await deleteCourseData(courseIds)
+  return { count: courseIds.length, bytesFreed }
+}

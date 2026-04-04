@@ -14,6 +14,8 @@ function makeDbTableMock(rows: Record<string, unknown>[] = []) {
     get: vi.fn().mockResolvedValue(undefined),
     bulkDelete: vi.fn().mockResolvedValue(undefined),
     above: vi.fn().mockReturnThis(),
+    toCollection: vi.fn().mockReturnThis(),
+    clear: vi.fn().mockResolvedValue(undefined),
   }
 }
 
@@ -72,6 +74,11 @@ import {
   getPerCourseUsage,
   clearCourseThumbnail,
   deleteCourseData,
+  estimateThumbnailCacheSize,
+  estimateOrphanedEmbeddingsSize,
+  clearThumbnailCache,
+  removeOrphanedEmbeddings,
+  deleteCourseDataWithCount,
   STORAGE_CATEGORIES,
 } from '@/lib/storageEstimate'
 
@@ -566,5 +573,177 @@ describe('deleteCourseData', () => {
     // Transaction should have been called
     const { db } = await import('@/db')
     expect(db.transaction).toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// E69-S03: Cleanup Estimation Functions
+// ---------------------------------------------------------------------------
+
+describe('estimateThumbnailCacheSize', () => {
+  it('returns estimated size of courseThumbnails table', async () => {
+    const rows = [{ id: 'c1', data: 'thumbnail-data' }]
+    mockTable.mockReturnValue(createMockTable(rows))
+
+    const size = await estimateThumbnailCacheSize()
+    expect(size).toBeGreaterThan(0)
+  })
+
+  it('returns 0 when table is empty', async () => {
+    mockTable.mockReturnValue(createEmptyMockTable())
+
+    const size = await estimateThumbnailCacheSize()
+    expect(size).toBe(0)
+  })
+})
+
+describe('estimateOrphanedEmbeddingsSize', () => {
+  it('returns 0 when no embeddings exist', async () => {
+    mockEmbeddings.toArray.mockResolvedValue([])
+
+    const result = await estimateOrphanedEmbeddingsSize()
+    expect(result).toEqual({ count: 0, bytes: 0 })
+  })
+
+  it('returns 0 when all embeddings have valid noteIds', async () => {
+    mockEmbeddings.toArray.mockResolvedValue([
+      { id: 'e1', noteId: 'n1', data: 'vec' },
+    ])
+    mockNotes.toCollection = vi.fn().mockReturnValue({
+      primaryKeys: vi.fn().mockResolvedValue(['n1']),
+    })
+
+    const result = await estimateOrphanedEmbeddingsSize()
+    expect(result.count).toBe(0)
+    expect(result.bytes).toBe(0)
+  })
+
+  it('identifies orphaned embeddings and estimates their size', async () => {
+    mockEmbeddings.toArray.mockResolvedValue([
+      { id: 'e1', noteId: 'n1', data: 'vec1' },
+      { id: 'e2', noteId: 'n-gone', data: 'vec2' },
+    ])
+    mockNotes.toCollection = vi.fn().mockReturnValue({
+      primaryKeys: vi.fn().mockResolvedValue(['n1']),
+    })
+
+    const result = await estimateOrphanedEmbeddingsSize()
+    expect(result.count).toBe(1)
+    expect(result.bytes).toBeGreaterThan(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// E69-S03: Cleanup Action Functions
+// ---------------------------------------------------------------------------
+
+describe('clearThumbnailCache', () => {
+  it('clears all thumbnails and returns bytes freed', async () => {
+    mockTable.mockReturnValue(createMockTable([{ id: 'c1', data: 'thumb' }]))
+    mockCourseThumbnails.clear = vi.fn().mockResolvedValue(undefined)
+
+    const result = await clearThumbnailCache()
+    expect(result.bytesFreed).toBeGreaterThan(0)
+    expect(mockCourseThumbnails.clear).toHaveBeenCalled()
+  })
+
+  it('returns 0 bytes freed when cache is empty', async () => {
+    mockTable.mockReturnValue(createEmptyMockTable())
+    mockCourseThumbnails.clear = vi.fn().mockResolvedValue(undefined)
+
+    const result = await clearThumbnailCache()
+    expect(result.bytesFreed).toBe(0)
+  })
+})
+
+describe('removeOrphanedEmbeddings', () => {
+  it('returns 0 when no embeddings exist', async () => {
+    mockEmbeddings.toArray.mockResolvedValue([])
+
+    const result = await removeOrphanedEmbeddings()
+    expect(result).toEqual({ count: 0, bytesFreed: 0 })
+  })
+
+  it('removes only orphaned embeddings', async () => {
+    mockEmbeddings.toArray.mockResolvedValue([
+      { id: 'e1', noteId: 'n1', data: 'valid' },
+      { id: 'e2', noteId: 'n-orphan', data: 'orphan' },
+    ])
+    mockNotes.toCollection = vi.fn().mockReturnValue({
+      primaryKeys: vi.fn().mockResolvedValue(['n1']),
+    })
+    mockEmbeddings.bulkDelete = vi.fn().mockResolvedValue(undefined)
+
+    const result = await removeOrphanedEmbeddings()
+    expect(result.count).toBe(1)
+    expect(result.bytesFreed).toBeGreaterThan(0)
+    expect(mockEmbeddings.bulkDelete).toHaveBeenCalledWith(['n-orphan'])
+  })
+
+  it('returns 0 when no orphans found', async () => {
+    mockEmbeddings.toArray.mockResolvedValue([
+      { id: 'e1', noteId: 'n1', data: 'valid' },
+    ])
+    mockNotes.toCollection = vi.fn().mockReturnValue({
+      primaryKeys: vi.fn().mockResolvedValue(['n1']),
+    })
+
+    const result = await removeOrphanedEmbeddings()
+    expect(result.count).toBe(0)
+    expect(result.bytesFreed).toBe(0)
+  })
+})
+
+describe('deleteCourseDataWithCount', () => {
+  it('returns count and bytes freed', async () => {
+    // Minimal mock setup for deleteCourseData to run
+    mockNotes.where.mockReturnThis()
+    mockNotes.equals.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([]),
+      delete: vi.fn().mockResolvedValue(undefined),
+    })
+    mockImportedVideos.where.mockReturnThis()
+    mockImportedVideos.equals.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([]),
+      delete: vi.fn().mockResolvedValue(undefined),
+    })
+    mockImportedPdfs.where.mockReturnThis()
+    mockImportedPdfs.equals.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([]),
+      delete: vi.fn().mockResolvedValue(undefined),
+    })
+    mockBookmarks.where.mockReturnThis()
+    mockBookmarks.equals.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([]),
+      delete: vi.fn().mockResolvedValue(undefined),
+    })
+    mockStudySessions.where.mockReturnThis()
+    mockStudySessions.equals.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([]),
+      delete: vi.fn().mockResolvedValue(undefined),
+    })
+    mockFlashcards.where.mockReturnThis()
+    mockFlashcards.equals.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([]),
+      delete: vi.fn().mockResolvedValue(undefined),
+    })
+    mockScreenshots.where.mockReturnThis()
+    mockScreenshots.equals.mockReturnValue({ delete: vi.fn().mockResolvedValue(undefined) })
+    mockEmbeddings.where.mockReturnThis()
+    mockEmbeddings.equals.mockReturnValue({ delete: vi.fn().mockResolvedValue(undefined) })
+    mockVideoCaptions.where.mockReturnThis()
+    mockVideoCaptions.equals.mockReturnValue({ delete: vi.fn().mockResolvedValue(undefined) })
+    mockYoutubeTranscripts.where.mockReturnThis()
+    mockYoutubeTranscripts.equals.mockReturnValue({ delete: vi.fn().mockResolvedValue(undefined) })
+    mockContentProgress.where.mockReturnThis()
+    mockContentProgress.equals.mockReturnValue({ delete: vi.fn().mockResolvedValue(undefined) })
+    mockQuizzes.where.mockReturnThis()
+    mockQuizzes.above.mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) })
+    mockCourseThumbnails.delete = vi.fn().mockResolvedValue(undefined)
+    mockImportedCourses.delete = vi.fn().mockResolvedValue(undefined)
+
+    const result = await deleteCourseDataWithCount(['c1', 'c2'])
+    expect(result.count).toBe(2)
+    expect(result.bytesFreed).toBeGreaterThanOrEqual(0)
   })
 })
