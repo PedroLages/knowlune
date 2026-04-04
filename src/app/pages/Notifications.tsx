@@ -90,13 +90,14 @@ function NotificationCard({ notification, onMarkRead, onDismiss }: NotificationC
                   'size-2 shrink-0 rounded-full',
                   isUnread ? 'bg-brand' : 'bg-muted-foreground/30'
                 )}
-                aria-label={isUnread ? 'Unread' : 'Read'}
+                aria-hidden="true"
               />
+              <span className="sr-only">{isUnread ? 'Unread' : 'Read'}</span>
             </div>
             <p className="mt-1 text-sm leading-snug text-muted-foreground">
               {notification.message}
             </p>
-            <p className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground/70">
+            <p className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground/80">
               <Clock className="size-3" aria-hidden="true" />
               {relativeTime(notification.createdAt)}
             </p>
@@ -196,6 +197,7 @@ export function Notifications() {
             <Button
               variant="brand"
               size="sm"
+              className="min-h-[44px]"
               onClick={handleMarkAllRead}
               aria-label="Mark all notifications as read"
             >
@@ -206,7 +208,7 @@ export function Notifications() {
           <Button
             variant="outline"
             size="icon"
-            className="size-9"
+            className="size-11"
             aria-label="Notification settings"
           >
             <Settings className="size-4" aria-hidden="true" />
@@ -278,7 +280,7 @@ export function Notifications() {
               </div>
 
               {/* Cards */}
-              <div className="space-y-3" role="list" aria-label={`${group.label} notifications`}>
+              <div className="space-y-3" role="list">
                 {group.items.map(notification => (
                   <NotificationCard
                     key={notification.id}
