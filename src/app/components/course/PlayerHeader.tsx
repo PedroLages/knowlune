@@ -1,15 +1,14 @@
 /**
- * PlayerHeader — Header bar for the unified lesson player.
+ * PlayerHeader — Action toolbar for the unified lesson player.
  *
- * Shows back link, lesson title, course name, and optional completion status toggle.
+ * Shows pomodoro, Q&A, reading mode, theater mode, notes, and completion toggle.
+ * Navigation (back link, lesson title, course name) is handled by CourseBreadcrumb.
  *
  * @see E89-S05
  */
 
 import { lazy, Suspense, useCallback, useEffect } from 'react'
-import { Link } from 'react-router'
 import {
-  ArrowLeft,
   BookOpen,
   CheckCircle2,
   Circle,
@@ -51,8 +50,6 @@ const STATUS_ICONS: Record<CompletionStatus, React.ComponentType<{ className?: s
 interface PlayerHeaderProps {
   courseId: string
   lessonId: string
-  lessonTitle: string
-  courseName?: string
   showCompletionToggle?: boolean
   /** Called after completion status is successfully persisted */
   onStatusChange?: (status: CompletionStatus) => void
@@ -73,8 +70,6 @@ interface PlayerHeaderProps {
 export function PlayerHeader({
   courseId,
   lessonId,
-  lessonTitle,
-  courseName,
   showCompletionToggle = false,
   onStatusChange,
   isTheater = false,
@@ -112,29 +107,7 @@ export function PlayerHeader({
   )
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-card shrink-0">
-      <Link
-        to={`/courses/${courseId}`}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
-        aria-label="Back to course"
-      >
-        <ArrowLeft className="size-4 group-hover:-translate-x-0.5 transition-transform" />
-      </Link>
-      <div className="flex flex-col min-w-0 flex-1">
-        <span data-testid="lesson-header-title" className="font-semibold text-sm truncate">
-          {lessonTitle}
-        </span>
-        {courseName && (
-          <Link
-            to={`/courses/${courseId}`}
-            data-testid="lesson-header-course"
-            className="text-xs text-muted-foreground hover:text-brand transition-colors truncate"
-          >
-            {courseName}
-          </Link>
-        )}
-      </div>
-
+    <div className="flex items-center justify-end gap-3 px-4 py-2 border-b border-border/50 bg-card shrink-0">
       <PomodoroTimer />
 
       <Suspense fallback={null}>

@@ -78,29 +78,29 @@ async function goToLesson(page: Page, courseId: string, lessonId: string): Promi
 // ===========================================================================
 
 test.describe('YouTubeLessonPlayer — Rendering', () => {
-  test('should display lesson player with video title in header', async ({ page }) => {
+  test('should display lesson player with video title in breadcrumb', async ({ page }) => {
     // GIVEN: YouTube course and video data seeded
     await seedLessonData(page)
 
     // WHEN: User navigates to lesson player
     await goToLesson(page, 'yt-lesson-course', 'yt-lesson-vid-01')
 
-    // THEN: Player content area is visible with correct title
+    // THEN: Player content area is visible with correct title in breadcrumb
     await expect(page.getByTestId('youtube-lesson-player-content')).toBeVisible()
-    await expect(page.getByTestId('lesson-header-title')).toHaveText(
+    await expect(page.getByTestId('course-breadcrumb')).toContainText(
       'Getting Started with TypeScript'
     )
   })
 
-  test('should display course name in header subtitle', async ({ page }) => {
+  test('should display course name in breadcrumb', async ({ page }) => {
     // GIVEN: Lesson data seeded
     await seedLessonData(page)
 
     // WHEN: Navigate to lesson
     await goToLesson(page, 'yt-lesson-course', 'yt-lesson-vid-01')
 
-    // THEN: Course name appears in header
-    await expect(page.getByTestId('lesson-header-course')).toHaveText('TypeScript Mastery')
+    // THEN: Course name appears in breadcrumb
+    await expect(page.getByTestId('course-breadcrumb')).toContainText('TypeScript Mastery')
   })
 
   test('should display video description below player', async ({ page }) => {
@@ -297,8 +297,8 @@ test.describe('YouTubeLessonPlayer — Offline', () => {
     // WHEN: Navigate to lesson
     await goToLesson(page, 'yt-lesson-course', 'yt-lesson-vid-01')
 
-    // THEN: Header with title and completion toggle still render
-    await expect(page.getByTestId('lesson-header-title')).toHaveText(
+    // THEN: Breadcrumb with title and completion toggle still render
+    await expect(page.getByTestId('course-breadcrumb')).toContainText(
       'Getting Started with TypeScript'
     )
     await expect(page.getByTestId('completion-toggle')).toBeVisible()

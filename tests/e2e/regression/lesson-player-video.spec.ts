@@ -138,19 +138,19 @@ test.describe('AC-1: Video Playback from Imported Course', () => {
     // WHEN: User navigates to the lesson player
     await goToImportedLessonPlayer(page, 'course-react-101', 'video-intro')
 
-    // THEN: Video title is displayed in the header
-    await expect(page.getByTestId('lesson-header-title')).toContainText('01-Introduction.mp4')
+    // THEN: Video title is displayed in the breadcrumb
+    await expect(page.getByTestId('course-breadcrumb')).toContainText('01-Introduction.mp4')
   })
 
-  test('should display course name in header', async ({ page, indexedDB }) => {
+  test('should display course name in breadcrumb', async ({ page, indexedDB }) => {
     // GIVEN: Imported course with videos seeded
     await seedCourseAndReload(page, indexedDB)
 
     // WHEN: User navigates to the lesson player
     await goToImportedLessonPlayer(page, 'course-react-101', 'video-intro')
 
-    // THEN: Course name is displayed in the header
-    await expect(page.getByTestId('lesson-header-course')).toContainText('React Fundamentals')
+    // THEN: Course name is displayed in the breadcrumb
+    await expect(page.getByTestId('course-breadcrumb')).toContainText('React Fundamentals')
   })
 
   test('should have clean distraction-free layout', async ({ page, indexedDB }) => {

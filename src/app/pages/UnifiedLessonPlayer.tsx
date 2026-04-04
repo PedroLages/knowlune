@@ -310,7 +310,7 @@ export function UnifiedLessonPlayer() {
         ref={videoContainerRef}
         className={cn(
           'relative mb-3 w-full overflow-hidden',
-          !state.isPdf && !isTheater && 'aspect-video max-h-[60svh]',
+          !state.isPdf && !isTheater && 'aspect-video max-h-[65svh] xl:max-h-[72svh] 2xl:max-h-[78svh]',
           !state.isPdf && isTheater && 'h-[calc(100svh-1rem)]'
         )}
       >
@@ -475,8 +475,6 @@ export function UnifiedLessonPlayer() {
         <PlayerHeader
           courseId={courseId!}
           lessonId={lessonId!}
-          lessonTitle={state.lessonTitle}
-          courseName={course?.name}
           showCompletionToggle={
             state.isPdf || capabilities.requiresNetwork || capabilities.hasVideo
           }
