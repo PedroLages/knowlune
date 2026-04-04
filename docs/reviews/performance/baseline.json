@@ -114,8 +114,8 @@
         "file": "Notes-CLqJLifs.js"
       },
       "Notifications": {
-        "raw": 7462,
-        "file": "Notifications-J1ikwIZx.js"
+        "raw": 7530,
+        "file": "Notifications-CTomRrvb.js"
       },
       "Overview-Do-K4Cji": {
         "raw": 153401,
@@ -171,7 +171,7 @@
       },
       "Settings": {
         "raw": 223182,
-        "file": "Settings-CXJZKtvm.js"
+        "file": "Settings-cEcDyzwC.js"
       },
       "StatsCard-DUBTP-FK": {
         "raw": 11029,
@@ -639,17 +639,17 @@
       },
       "Overview-CKGK0T54": {
         "raw": 153297,
-        "file": "Overview-CKGK0T54.js"
+        "file": "Overview-hOpceEbe.js"
       }
     }
   },
   "page_metrics": {
     "/": {
-      "ttfb": 1,
-      "dom_interactive": 7,
-      "dom_complete": 102,
-      "load_complete": 102,
-      "fcp": 189,
+      "ttfb": 6,
+      "dom_interactive": 20,
+      "dom_complete": 134,
+      "load_complete": 134,
+      "fcp": 197,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
@@ -662,9 +662,9 @@
     "/settings": {
       "ttfb": 2,
       "dom_interactive": 8,
-      "dom_complete": 98,
-      "load_complete": 98,
-      "fcp": 176,
+      "dom_complete": 126,
+      "load_complete": 126,
+      "fcp": 219,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
@@ -675,17 +675,17 @@
       "samples": 3
     },
     "/notifications": {
-      "ttfb": 2,
-      "dom_interactive": 10,
-      "dom_complete": 88,
-      "load_complete": 88,
-      "fcp": 146,
+      "ttfb": 6,
+      "dom_interactive": 16,
+      "dom_complete": 92,
+      "load_complete": 92,
+      "fcp": 149,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
       "resource_count": 167,
       "js_resource_count": 166,
-      "css_resource_count": 1,
+      "css_resource_count": 2,
       "total_transfer_bytes": 39300,
       "samples": 3
     }

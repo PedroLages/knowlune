@@ -1,30 +1,30 @@
 ## Security Review: E60-S01 — Knowledge Decay Alert Trigger
 
 **Date:** 2026-04-04
-**Phases executed:** 4/7
-**Diff scope:** 50 files changed, 807 insertions, 205 deletions
+**Phases executed:** 5/7
+**Diff scope:** 56 files changed, 1579 insertions, 253 deletions
 
 ### Phases Executed
 
-| Phase | Name           | Triggered By          | Findings                       |
-| ----- | -------------- | --------------------- | ------------------------------ |
-| 1     | Attack Surface | Always                | 3 vectors identified           |
-| 2     | Secrets Scan   | Always                | Clean                          |
-| 3     | OWASP Top 10   | Always                | 6 categories checked           |
-| 4     | Dependencies   | package.json changed  | N/A — no package.json changes  |
-| 5     | Auth & Access  | auth files changed    | N/A — no auth files changed    |
-| 6     | STRIDE         | new routes/components | N/A — no new routes/components |
-| 7     | Configuration  | config files changed  | N/A — no config files changed  |
+| Phase | Name | Triggered By | Findings |
+|-------|------|-------------|----------|
+| 1 | Attack Surface | Always | 3 vectors identified |
+| 2 | Secrets Scan | Always | Clean |
+| 3 | OWASP Top 10 | Always | 6 categories checked |
+| 4 | Dependencies | package.json changed | N/A — no package.json changes |
+| 5 | Auth & Access | auth files changed | N/A — no auth files changed |
+| 6 | STRIDE | new routes/components | 1 new service function assessed |
+| 7 | Configuration | config files changed | N/A — no config files changed |
 
 ### Attack Surface Changes
 
-This story introduces three new attack surface vectors, all scoped to client-side data processing:
+This story introduces three new attack surface elements:
 
-1. **New event bus event type (`knowledge:decay`)** — Emits user-controlled topic names and numeric retention values through the in-memory event bus. Data originates from IndexedDB (local-only).
+1. **New event bus event type `knowledge:decay`** — Carries `topic` (string from IndexedDB note tags) and `retention` (number) into the notification creation pipeline. The topic string originates from user-created note tags stored in IndexedDB, not from external/untrusted input.
 
-2. **IndexedDB schema migration (v32)** — Adds `knowledgeDecay` boolean preference field with a `modify()` upgrade. The migration only adds a default value (`true`) where the field is undefined.
+2. **New notification type `knowledge-decay`** — Title and message fields interpolate the `topic` string and `retention` number into notification records persisted in IndexedDB. These are rendered via React JSX text nodes (auto-escaped).
 
-3. **Startup data scan (`checkKnowledgeDecayOnStartup`)** — Reads all notes and review records from IndexedDB at app startup. Processes them synchronously to detect decaying topics. New notification records are written back to IndexedDB.
+3. **Dexie schema migration v32** — Adds `knowledgeDecay` boolean field to `notificationPreferences` table. Data-only migration with no schema index changes.
 
 ### Findings
 
@@ -38,50 +38,45 @@ None.
 
 #### Medium (fix when possible)
 
-- **`src/services/NotificationService.ts:76`** (confidence: 72): **Non-deterministic date usage in dedup logic.** The `hasKnowledgeDecayToday()` function uses `new Date()` to compute the current date string for dedup comparison. While not a security vulnerability per se, this creates a subtle integrity issue: if the user's system clock is manipulated (e.g., set back one day), the dedup check would allow duplicate notifications for the same topic on the same actual calendar day. This is consistent with the existing `hasSrsDueToday()` pattern in the same file, so it is an inherited pattern rather than a new introduction.
-
-  **Exploit:** User changes system clock to bypass daily dedup, generating excessive notifications. Low impact since all data is local and user-controlled.
-
-  **Fix:** Accept a `now` parameter (as the `retentionMetrics.ts` functions already do) to enable deterministic testing and consistent time source. Not a blocking issue.
+None.
 
 #### Informational (awareness only)
 
-- **`src/services/NotificationService.ts:253-254`** (confidence: 60): **User-controlled string in notification title/message.** The `event.topic` value (derived from note tags in IndexedDB) is interpolated into notification `title` and `message` fields. React's JSX auto-escaping prevents XSS when these strings are rendered. However, if a future code path were to render notifications using `dangerouslySetInnerHTML`, the topic string would need sanitization. Currently safe — noted for awareness only.
+- **`src/services/NotificationService.ts:253-254`** (confidence: 45): Topic names from IndexedDB note tags are interpolated into notification `title` and `message` fields via template literals. These strings are rendered as React JSX text children in `Notifications.tsx:247,257`, which auto-escapes HTML. No `dangerouslySetInnerHTML` is used anywhere in the notification rendering path. **No XSS risk present** — React's default escaping handles this correctly. Noting for awareness only: if a future change renders notification content as raw HTML, this would need sanitization.
 
-- **`src/services/NotificationService.ts:301`** (confidence: 55): **`console.error` on startup failure.** The `checkKnowledgeDecayOnStartup` catch block logs errors to console. This is appropriate for non-critical startup checks and matches the existing `checkSrsDueOnStartup` pattern. No sensitive data is logged (only the error object). The `// silent-catch-ok` annotation is present.
+- **`src/services/NotificationService.ts:76-90`** (confidence: 40): The `hasKnowledgeDecayToday()` dedup function performs a table scan with `.filter()` callback on all `knowledge-decay` notifications. For a personal learning app with low notification volume, this has negligible performance impact. Not a security concern, but worth noting that dedup relies on client-side date comparison which users could theoretically manipulate by changing system clock — this is by design for a client-side app and not a meaningful attack vector.
 
-- **`src/db/schema.ts` (v32 migration)** (confidence: 50): **Migration modifies existing records.** The v32 migration uses `toCollection().modify()` to add a default `knowledgeDecay: true` field. This is safe — it only adds a boolean field where undefined, does not delete or overwrite existing data, and follows the same pattern as prior migrations (v29-v31). Dexie handles the upgrade transaction atomically.
+- **`src/db/schema.ts:1175-1192`** (confidence: 40): The v32 migration uses `.modify()` to add a default `knowledgeDecay: true` field. This is safe — it only writes to records where the field is `undefined`, and the migration is idempotent. The checkpoint test was correctly updated to allow `migrationVersion >= checkpointVersion` for data-only migrations.
 
 ### Secrets Scan
 
-Clean — no secrets detected in diff.
-
-Test keys found in test files (`src/lib/__tests__/modelDiscovery.test.ts`) are clearly fake placeholder values (`sk-or-v1-testkey1234567890...`) and do not represent real credentials. These were reformatted (not introduced) by this diff.
+Clean — no secrets detected in diff. The grep for API keys, tokens, passwords, and secrets returned no matches in the changed code.
 
 ### OWASP Coverage
 
-| Category                               | Applicable? | Finding? | Details                                                                                             |
-| -------------------------------------- | ----------- | -------- | --------------------------------------------------------------------------------------------------- |
-| CS1: Broken Client-Side Access Control | No          | No       | No premium gating or route guards changed                                                           |
-| CS2: Client-Side Injection (XSS)       | Yes         | No       | Topic strings interpolated in JSX — auto-escaped by React. No `dangerouslySetInnerHTML` in diff     |
-| CS3: Sensitive Data in Client Storage  | No          | No       | Only boolean preference added to IndexedDB. No API keys or tokens involved                          |
-| CS5: Client-Side Integrity             | Yes         | No       | Dexie migration v32 is atomic, adds default value only. Dedup logic checks date + topic combination |
-| CS7: Client-Side Security Logging      | Yes         | No       | `console.error` logs error objects only, no sensitive data. Annotated with `silent-catch-ok`        |
-| CS9: Client-Side Communication         | No          | No       | No postMessage, cross-window, or iframe changes                                                     |
-| A05: Security Misconfiguration         | No          | No       | No config file changes (Vite, CSP, CORS)                                                            |
-| A06: Vulnerable Components             | No          | No       | No dependency changes                                                                               |
-| A07: Auth Failures                     | No          | No       | No auth-related code changed                                                                        |
+| Category | Applicable? | Finding? | Details |
+|----------|------------|----------|---------|
+| CS1: Broken Client-Side Access Control | No | No | No premium gating or route guards changed |
+| CS2: Client-Side Injection (XSS) | Yes | No | Topic names interpolated via template literals, rendered as React text nodes (auto-escaped). No `dangerouslySetInnerHTML`, `ref.innerHTML`, or `href={variable}` in changed code. |
+| CS3: Sensitive Data in Client Storage | No | No | No API keys or auth tokens involved; only notification preferences (boolean) added to IndexedDB |
+| CS5: Client-Side Integrity | Yes | No | Dexie v32 migration is safe and idempotent. Defaults `knowledgeDecay: true` only when field is `undefined`. Schema test updated to v32. |
+| CS7: Client-Side Security Logging | Yes | No | `console.error` statements log generic error messages only — no user data, topics, or retention values in error logs |
+| CS9: Client-Side Communication | No | No | No postMessage handlers or cross-window communication added |
+| A05: Security Misconfiguration | No | No | No Vite config, CSP, or CORS changes |
+| A06: Vulnerable Components | No | No | No new dependencies added |
+| A07: Auth Failures | No | No | No auth-related changes |
 
 ### What's Done Well
 
-1. **Consistent dedup pattern.** The `hasKnowledgeDecayToday()` dedup check mirrors the established `hasSrsDueToday()` pattern, preventing notification spam with a date + topic compound key.
+1. **React auto-escaping relied upon correctly.** Notification title and message containing user-derived topic names are rendered as JSX text children, not via `dangerouslySetInnerHTML`. This is the secure pattern for displaying user-generated content in React.
 
-2. **Hardcoded actionUrl.** The notification's `actionUrl` is set to the static string `'/review'` rather than constructing a URL from user input, eliminating open redirect or `javascript:` protocol risks.
+2. **Event bus type safety.** The `knowledge:decay` event type is added to the `AppEvent` discriminated union in `eventBus.ts`, ensuring TypeScript enforces correct payload shape at compile time. No runtime type confusion possible.
 
-3. **Pure function for retention calculation.** The `getTopicRetention()` function in `retentionMetrics.ts` accepts a `now` parameter for deterministic testing, and the `NotificationService` correctly uses it. The retention logic is side-effect-free and well-separated from the notification creation.
+3. **Dedup-by-topic-and-date pattern.** The `hasKnowledgeDecayToday()` function correctly deduplicates notifications per topic per day, preventing notification spam from the startup check. The pattern mirrors the existing `hasReviewDueToday()` and `hasSrsDueToday()` implementations, maintaining consistency.
 
-4. **Preference-gated notifications.** The new `knowledge-decay` type is properly wired into the `TYPE_TO_FIELD` mapping and the preference store defaults, meaning the existing preference-check middleware in `handleEvent()` will respect the user's opt-out toggle.
+4. **Idempotent migration.** The v32 Dexie migration guards with `if (pref.knowledgeDecay === undefined)` before writing, making it safe to run multiple times without data corruption.
+
+5. **Non-critical failure handling.** The `checkKnowledgeDecayOnStartup()` call is wrapped in `.catch()` with a descriptive console.error, ensuring a failure in retention calculation never blocks app startup.
 
 ---
-
-Phases: 4/7 | Findings: 0 Blockers, 0 High, 1 Medium, 3 Informational | False positives filtered: 2
+Phases: 5/7 | Findings: 0 actionable (3 informational) | Blockers: 0 | False positives filtered: 2
