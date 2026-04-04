@@ -238,6 +238,11 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    - **If in worktree**: Run `worktree-cleanup "${STORY_KEY}"`, switch to main workspace, checkout main, pull.
      **See:** [docs/worktree-cleanup.md](docs/worktree-cleanup.md) for complete worktree cleanup logic.
    - **If NOT in worktree**: `git checkout main && git pull`.
+   - **Checkpoint cleanup**: Delete the session checkpoint file if it exists:
+     ```bash
+     rm -f ${BASE_PATH}/docs/implementation-artifacts/sessions/{story-id}-checkpoint.md
+     ```
+     This is silent — no user notification needed. The checkpoint is no longer relevant after the story is shipped.
    - Continue to step 14.
 
 13b. **If "Keep working" or "Skip merge"**:
@@ -256,11 +261,105 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
      ```
    - **STOP here**. Exit workflow. User will re-run `/finish-story` later.
 
+13c. **Doc sync** (optional, non-blocking): After successful merge (step 13a), dispatch the `doc-sync` agent in the background to check documentation consistency:
+
+   ```
+   Agent(
+     subagent_type: "doc-sync",
+     run_in_background: true,
+     prompt: """
+     Story: ${STORY_KEY}
+     Story file: ${STORY_FILE_PATH}
+     Changed files: $(git diff --name-only main...HEAD)
+
+     Check engineering patterns, known issues, and sprint status
+     for documentation drift after this story shipped.
+     """
+   )
+   ```
+
+   - This is **non-blocking** — do not wait for results before continuing to step 14.
+   - When the agent completes, append its suggestions to the completion output (step 15).
+   - If the agent finds 0 suggestions, omit it from output.
+
 14. **Lessons learned** (optional): Ask the developer via AskUserQuestion with these options:
 
    - **"Claude, write them"** — Auto-generate lessons learned by analyzing the story's git log, review reports, and any blocker/fix cycles encountered during implementation. Write concise, actionable bullets covering: patterns discovered, pitfalls avoided, decisions made and why. Append to the story's "Challenges and Lessons Learned" section.
    - **"Yes, let me share"** — Wait for the developer to provide lessons, then append them.
    - **"Skip"** — No lessons to capture. Continue.
+
+14b. **Pattern extraction** (after lessons captured — skip if Step 14 was skipped):
+
+   Evaluate whether any discovery from this story warrants promotion to a reusable project artifact. This creates a continuous feedback loop — the system improves with each story rather than waiting for epic retrospectives.
+
+   **Gather context:**
+   - Read the story's "Challenges and Lessons Learned" section (just written in Step 14)
+   - Read review reports if they exist (scan for files matching the story ID):
+     - `${BASE_PATH}/docs/reviews/code/code-review-*-{story-id}.md`
+     - `${BASE_PATH}/docs/reviews/design/design-review-*-{story-id}.md`
+     - `${BASE_PATH}/docs/reviews/code/code-review-testing-*-{story-id}.md`
+     - `${BASE_PATH}/docs/reviews/security/security-review-*-{story-id}.md`
+   - Read current `docs/engineering-patterns.md` (for deduplication)
+
+   **Deduplication check:**
+   - Extract all `##` headings from `docs/engineering-patterns.md`
+   - For each candidate pattern, check:
+     - Does the candidate topic match an existing heading? (case-insensitive substring match)
+     - Does the candidate overlap >60% in keywords with an existing pattern's first 50 words?
+   - Skip candidates that match existing patterns — only suggest genuinely new ones
+
+   **Evaluate each substantive lesson** (skip trivial items like "used library X"):
+
+   | Promotion Target | Criteria | Format |
+   |-----------------|----------|--------|
+   | **Engineering pattern** (`docs/engineering-patterns.md`) | Reusable coding pattern, architectural gotcha, or decision that applies across stories | `##` heading + explanation + code example (match format of existing 18 patterns) |
+   | **Rule** (`.claude/rules/{area}.md`) | Process enforcement, quality constraint, or workflow rule that should be checked automatically | Append to existing rule file or create new file |
+   | **Memory entry** | Project-specific context not generalizable enough for patterns/rules | Write via auto-memory system |
+
+   **If no candidates found:** Inform user "No new patterns detected" and proceed to Step 15.
+
+   **If candidates found:** Present via AskUserQuestion:
+
+   ```
+   Pattern extraction from E##-S## lessons:
+
+   1. [pattern] "Pattern Title" → docs/engineering-patterns.md
+      Preview: {2-line summary of what the pattern captures}
+
+   2. [rule] "Rule Title" → .claude/rules/{area}/{file}.md
+      Preview: {2-line summary of the rule}
+
+   Options:
+   - "Approve all" — apply all suggestions
+   - "Review each" — approve/reject individually
+   - "Skip" — no pattern extraction
+   ```
+
+   **If "Review each":** Iterate through suggestions with AskUserQuestion for each (Approve / Reject / Edit).
+
+   **Apply approved suggestions:**
+   - **Patterns**: Append to end of `docs/engineering-patterns.md` using the existing format:
+     ```markdown
+     ## Pattern Title
+
+     [Explanation of the pattern, when to use it, and why]
+
+     [Code example if applicable]
+
+     **Case study**: E##-S## — [brief description of how this was discovered]
+     ```
+   - **Rules**: Append to the most relevant existing rule file in `.claude/rules/`, or create a new file if no existing file fits
+   - **Memory**: Write memory entry using the auto-memory system (frontmatter format to `~/.claude/projects/.../memory/`)
+
+   **Commit** (if any suggestions were applied):
+   ```bash
+   git add docs/engineering-patterns.md .claude/rules/
+   git commit -m "docs: extract patterns from E##-S## implementation lessons
+
+   Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>"
+   ```
+
+   This step is **non-blocking**. If user skips or no candidates found, proceed to Step 15.
 
 15. **Completion output**: Display the following summary to the user.
 

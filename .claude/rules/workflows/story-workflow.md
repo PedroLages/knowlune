@@ -12,6 +12,7 @@ Per-story development loop with integrated quality gates. Three slash commands o
 | `/review-story E##-S##` | Run all quality gates: build, lint, tests, design review, code review |
 | `/finish-story E##-S##` | Validate, create PR. Auto-runs reviews if not already done       |
 | `/design-review`        | Standalone design review via Playwright MCP (also used by `/review-story`) |
+| `/checkpoint [E##-S##]` | Save session context for multi-day story resumption                        |
 
 ## Workflow Modes
 
@@ -70,6 +71,8 @@ git stash push -u -m "WIP before E##-S##"
    - Performance benchmark agent (Playwright MCP - TTFB, FCP, LCP, bundle size)
    - Security review agent (OWASP Top 10, secrets scan, STRIDE, attack surface)
    - Exploratory QA agent (Playwright MCP - functional testing, console errors)
+   - OpenAI adversarial review agent (optional — Codex CLI, requires OPENAI_API_KEY)
+   - GLM adversarial review agent (optional — z.ai API GLM-5.1, requires ZAI_API_KEY)
 
 ## Burn-In Testing (Optional)
 
@@ -107,6 +110,9 @@ When all stories in an epic are done, run in order:
 | `.claude/agents/performance-benchmark.md`          | Playwright MCP performance metrics            |
 | `.claude/agents/security-review.md`                | Diff-scoped security reviewer                 |
 | `.claude/agents/exploratory-qa.md`                 | Playwright MCP functional QA                  |
+| `.claude/agents/openai-code-review.md`             | Optional OpenAI Codex adversarial reviewer    |
+| `.claude/agents/glm-code-review.md`                | Optional GLM (z.ai) adversarial reviewer      |
+| `scripts/external-code-review.sh`                  | Shared external API review script             |
 | `.claude/hooks/safety-guardrail.sh`                | Destructive command guardrail                 |
 | `docs/reviews/design/`                            | Design review reports                        |
 | `docs/reviews/code/`                              | Code review reports                          |

@@ -25,6 +25,7 @@ const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   'review-due': 'Review Due',
   'srs-due': 'SRS Due',
   'knowledge-decay': 'Knowledge Decay',
+  'recommendation-match': 'Recommended',
 }
 
 const ALL_TYPES: NotificationType[] = [
@@ -35,6 +36,7 @@ const ALL_TYPES: NotificationType[] = [
   'review-due',
   'srs-due',
   'knowledge-decay',
+  'recommendation-match',
 ]
 
 type ReadFilter = 'all' | 'unread' | 'read'

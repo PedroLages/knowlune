@@ -34,8 +34,12 @@ All gates must use these exact names in `review_gates_passed`. No variants (e.g.
 | `performance-benchmark` | Bundle pre-check + page metrics agent complete | Yes (or `performance-benchmark-skipped` if lightweight review) |
 | `security-review` | Security review agent completes | Yes |
 | `exploratory-qa` | Exploratory QA agent completes | Yes (or `exploratory-qa-skipped` if no UI changes) |
+| `openai-code-review` | External OpenAI review completes | No — optional (`openai-code-review-skipped` if no Codex CLI or no key) |
+| `glm-code-review` | External GLM review completes | No — optional (`glm-code-review-skipped` if no key) |
 
 The `-skipped` suffix indicates the gate was intentionally skipped (no lint script, no test files, no UI changes). Both the base name and `-skipped` variant satisfy the requirement.
+
+**External model gates** (`openai-code-review`, `glm-code-review`) are optional. They contribute findings to the consolidated report and participate in consensus scoring when available, but never block `reviewed: true`.
 
 ## Orchestrator Discipline
 
@@ -75,6 +79,8 @@ The orchestrator should NOT:
 [ ] Performance benchmark — page metrics (Agent)
 [ ] Security review (Agent)
 [ ] Exploratory QA (Agent) [if UI changes]
+[ ] OpenAI adversarial review (Agent) [if Codex CLI + OPENAI_API_KEY set]
+[ ] GLM adversarial review (Agent) [if ZAI_API_KEY set]
 [ ] Consolidate findings and verdict
 ```
 
@@ -187,7 +193,30 @@ Mark the first todo as `in_progress` and proceed:
    d. **Type check** — `npx tsc --noEmit`. If errors found:
       - Auto-fix: attempt to resolve type errors in files changed by the current branch (`git diff --name-only main...HEAD`). Only fix errors in branch-changed files — do not fix pre-existing errors in other files.
       - Re-run `npx tsc --noEmit`. If errors remain only in files NOT changed by the branch, log them to `docs/known-issues.yaml` (see "Known Issues Register" section below) and continue. If errors remain in branch-changed files, STOP with error output.
-   e. `npm run build` — STOP on failure with build errors.
+   e. `npm run build` — if build fails, attempt auto-recovery before stopping:
+
+      **Build error recovery** (auto-fix via build-error-resolver agent):
+
+      If the build fails:
+      1. Capture the build error output.
+      2. Get the list of branch-changed files: `git diff --name-only main...HEAD`.
+      3. Dispatch the `build-error-resolver` agent:
+         ```
+         Task({
+           subagent_type: "build-error-resolver",
+           prompt: "Fix the following build errors. Only modify files changed in this branch.\n\nBuild errors:\n[build error output]\n\nBranch-changed files:\n[file list from git diff --name-only main...HEAD]\n\nInstructions:\n- Fix build errors in branch-changed files only — do NOT touch files not in the list above.\n- Max 3 fix attempts. After each fix, run `npm run build` to verify.\n- If the build passes, report RESOLVED with a summary of changes made.\n- If the build still fails after 3 attempts, report ESCALATED with the remaining errors.",
+           description: "Build error recovery E##-S##"
+         })
+         ```
+      4. If the agent reports **RESOLVED**:
+         - Verify the build passes: `npm run build`
+         - If passes: commit the fixes (`fix(build): resolve build errors [auto-resolved by build-error-resolver]`), mark `build` gate as passed, continue to next pre-check (step 5f).
+         - If still fails: STOP with error output (agent's fix was insufficient).
+      5. If the agent reports **ESCALATED**:
+         - STOP the review with the agent's remaining errors report.
+         - Output: "Build failed — auto-recovery unsuccessful after 3 attempts. Remaining errors: [agent's escalation report]"
+
+      If the build passes on the first run (no errors), continue normally.
    f. `npm run test:unit -- --run` — STOP on failure. If no unit test script or no test files, note and continue.
    g. E2E tests — run smoke specs + current story's spec on Chromium only:
       ```
@@ -267,21 +296,62 @@ Mark the first todo as `in_progress` and proceed:
       **If burn-in selected**:
       - Run: `npx playwright test ${BASE_PATH}/tests/e2e/story-{id}.spec.ts --repeat-each=10 --project=chromium`
       - If **all iterations pass**: set `burn_in_validated: true` in story frontmatter, continue to reviews
-      - If **any iteration fails**: STOP with flakiness report:
-        ```
-        Burn-in FAILED: X/80 tests failed (flakiness detected)
+      - If **any iteration fails**: evaluate failure rate before deciding next action:
 
-        Failed tests:
-        - [Test name]: Failed on iterations [N, M, ...]
+        1. **Calculate failure rate**: `failures / total_runs` (e.g., 3 failures out of 80 total test runs = 3.75%).
 
-        This indicates non-deterministic behavior. Review:
-        1. Time dependencies (use FIXED_DATE, not Date.now())
-        2. Hard waits (use expect().toBeVisible(), not waitForTimeout())
-        3. Race conditions (use shared helpers with retry logic)
+        2. **If failure rate < 30%** (intermittent/flaky — likely not a real bug):
 
-        Fix anti-patterns and re-run /review-story.
-        ```
-        Keep `reviewed: in-progress`, do NOT add `e2e-tests` to gates (burn-in is part of E2E validation).
+           Use `AskUserQuestion` to offer the user a choice:
+           ```
+           Question: "Burn-in detected flaky test(s) — X/Y runs failed (Z%). How would you like to proceed?"
+           Header: "Flaky test detected"
+           Options:
+             1. "Quarantine flaky test(s) and continue (Recommended)"
+                Description: "Move flaky spec(s) to tests/e2e/quarantine/, log to known-issues.yaml, and continue review."
+             2. "Stop and fix the flakiness"
+                Description: "STOP the review to investigate and fix the non-deterministic behavior."
+           ```
+
+           **If quarantine chosen**:
+           - Create the quarantine directory if it does not exist: `mkdir -p ${BASE_PATH}/tests/e2e/quarantine/`
+           - Move each flaky spec file: `mv ${BASE_PATH}/tests/e2e/story-{id}.spec.ts ${BASE_PATH}/tests/e2e/quarantine/`
+           - Add an entry to `${BASE_PATH}/docs/known-issues.yaml`:
+             ```yaml
+             - id: KI-NNN          # increment from last entry
+               type: flaky-test
+               severity: medium
+               file: tests/e2e/story-{id}.spec.ts
+               quarantined_to: tests/e2e/quarantine/story-{id}.spec.ts
+               failure_rate: "Z%"
+               discovered: YYYY-MM-DD
+               story: E##-S##
+               status: open
+             ```
+           - Commit the quarantine: `chore: quarantine flaky test story-{id}.spec.ts (Z% failure rate)`
+           - Mark `e2e-tests` gate as passed with a note in the consolidated report: "E2E tests passed (1 test quarantined — Z% flaky)"
+           - Continue to reviews (step 6)
+
+           **If stop chosen**:
+           - STOP with the flakiness report (same as >= 30% behavior below)
+
+        3. **If failure rate >= 30%** (likely a real bug, not flakiness):
+
+           STOP with flakiness report:
+           ```
+           Burn-in FAILED: X/Y tests failed (Z% failure rate >= 30% — indicates a real bug, not flakiness)
+
+           Failed tests:
+           - [Test name]: Failed on iterations [N, M, ...]
+
+           This indicates non-deterministic behavior. Review:
+           1. Time dependencies (use FIXED_DATE, not Date.now())
+           2. Hard waits (use expect().toBeVisible(), not waitForTimeout())
+           3. Race conditions (use shared helpers with retry logic)
+
+           Fix the underlying bug and re-run /review-story.
+           ```
+           Keep `reviewed: in-progress`, do NOT add `e2e-tests` to gates (burn-in is part of E2E validation).
 
    If any pre-check fails: show the error output, suggest fixes, and STOP. Do not proceed to reviews. Keep `reviewed: in-progress` so next run resumes.
 
@@ -358,6 +428,22 @@ Mark the first todo as `in_progress` and proceed:
 
    **Rationale**: This automated gate addresses Epic 8 retrospective finding that only 2/5 stories documented lessons learned despite manual reminders, and Epic 16 retrospective finding that thin/placeholder content passed the gate unchecked. The 50-word minimum ensures substantive reflection, not just section existence. Since Claude Code performs the implementation, it has full context to auto-generate meaningful lessons learned — achieving 100% compliance without blocking the review workflow.
 
+6b. **Auto-save session checkpoint** (before expensive agent dispatch):
+
+   Save a session checkpoint to preserve implementation context. This enables smooth resumption if the review is interrupted or the session ends before `/finish-story`.
+
+   ```bash
+   mkdir -p ${BASE_PATH}/docs/implementation-artifacts/sessions
+   ```
+
+   Write checkpoint file to `${BASE_PATH}/docs/implementation-artifacts/sessions/{story-id}-checkpoint.md` following the same format as the `/checkpoint` command:
+   - Read story file tasks (completed/remaining)
+   - Gather git log, diff stat, status
+   - Read Implementation Notes and Challenges sections
+   - Include which pre-check gates have passed so far
+
+   This is **silent** (no user prompt) and **non-blocking**. If the write fails, log a warning and continue to Step 7.
+
 7. **Review agent swarm** (parallel dispatch — design + code + testing):
 
    After pre-checks pass, dispatch ALL applicable review agents **in a single message** for maximum parallelism. Design review, code review, and test coverage review are fully independent — they use different tools (Playwright MCP vs git diff) and analyze different aspects.
@@ -374,7 +460,7 @@ Mark the first todo as `in_progress` and proceed:
      - Total lines changed < 50
      - No changes to `src/app/pages/`, `src/app/components/`, `tests/`
      - Changes limited to: docs, config files, renames, story files, style-only tweaks
-     → Skip: design-review, code-review-testing, edge-case-review
+     → Skip: design-review, code-review-testing, edge-case-review, openai-code-review, glm-code-review
      → Run only: code-review (always required)
      → Tag story file: `review_scope: lightweight`
      → Note in output: "Lightweight review — trivial change (<50 lines, no logic/UI changes)"
@@ -394,6 +480,14 @@ Mark the first todo as `in_progress` and proceed:
    - **Performance benchmark**: Skip page metrics if (a) resuming AND `performance-benchmark` in `review_gates_passed` AND report file exists, OR (b) lightweight review (<50 lines, no UI/src changes). If skipping for lightweight review, add `performance-benchmark-skipped` to gates.
    - **Security review**: Skip if resuming AND `security-review` in `review_gates_passed` AND report file exists. Never has a `-skipped` variant — always runs (secrets scan is always relevant).
    - **Exploratory QA**: Skip if (a) resuming AND `exploratory-qa` in `review_gates_passed` AND report file exists, OR (b) no UI changes (`HAS_UI_CHANGES=false`). If skipping for no UI changes, add `exploratory-qa-skipped` to gates.
+   - **OpenAI code review**: Skip if (a) Codex CLI not installed (`which codex` fails) OR `OPENAI_API_KEY` not set, OR (b) resuming AND `openai-code-review` in `review_gates_passed` AND report file exists, OR (c) lightweight review. If skipping for no CLI/key, add `openai-code-review-skipped` to gates.
+   - **GLM code review**: Skip if (a) `ZAI_API_KEY` not set, OR (b) resuming AND `glm-code-review` in `review_gates_passed` AND report file exists, OR (c) lightweight review. If skipping for no key, add `glm-code-review-skipped` to gates.
+
+   **External model availability check** (run before dispatch):
+   ```bash
+   CODEX_AVAILABLE=$(which codex >/dev/null 2>&1 && printenv OPENAI_API_KEY >/dev/null 2>&1 && echo "yes" || echo "no")
+   ZAI_AVAILABLE=$(printenv ZAI_API_KEY >/dev/null 2>&1 && echo "yes" || echo "no")
+   ```
 
    **Design review pre-requisite** (only if design review will run):
    - Check dev server: `curl -s -o /dev/null -w "%{http_code}" http://localhost:5173`.
@@ -444,7 +538,7 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
 
    Task({
      subagent_type: "security-review",
-     prompt: "Security review for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changed files. Stack: React 19 + TypeScript, Vite 6, Dexie.js (IndexedDB), Zustand, BYOK AI keys, YouTube embeds, File System Access API. Write report to ${BASE_PATH}/docs/reviews/security/security-review-{YYYY-MM-DD}-{story-id}.md.",
+     prompt: "Security review for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changed files. Stack: React 19 + TypeScript, Vite 6, Dexie.js (IndexedDB), Zustand, BYOK AI keys, YouTube embeds, File System Access API. Config files to audit: .mcp.json (MCP servers), .claude/settings.json (hooks), .claude/hooks/ (hook scripts). Always run Phase 8 lightweight checks (8.1, 8.2, 8.5). Write report to ${BASE_PATH}/docs/reviews/security/security-review-{YYYY-MM-DD}-{story-id}.md.",
      description: "Security review E##-S##"
    })
 
@@ -452,6 +546,20 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
      subagent_type: "exploratory-qa",
      prompt: "Exploratory QA for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Dev server at http://localhost:5173. Test affected routes functionally — click buttons, fill forms, check console errors. Write report to ${BASE_PATH}/docs/reviews/qa/exploratory-qa-{YYYY-MM-DD}-{story-id}.md.",
      description: "Exploratory QA E##-S##"
+   })
+
+   // Only dispatched if CODEX_AVAILABLE == "yes":
+   Task({
+     subagent_type: "openai-code-review",
+     prompt: "Adversarial code review via OpenAI Codex for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run: bash scripts/external-code-review.sh --provider openai --story-id {story-id} --output ${BASE_PATH}/docs/reviews/code/openai-code-review-{YYYY-MM-DD}-{story-id}.md",
+     description: "OpenAI adversarial review E##-S##"
+   })
+
+   // Only dispatched if ZAI_AVAILABLE == "yes":
+   Task({
+     subagent_type: "glm-code-review",
+     prompt: "Adversarial code review via GLM for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run: bash scripts/external-code-review.sh --provider glm --story-id {story-id} --output ${BASE_PATH}/docs/reviews/code/glm-code-review-{YYYY-MM-DD}-{story-id}.md",
+     description: "GLM adversarial review E##-S##"
    })
    ```
 
@@ -471,12 +579,18 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
    - `${BASE_PATH}/docs/reviews/performance/performance-benchmark-{YYYY-MM-DD}-{story-id}.md`
    - `${BASE_PATH}/docs/reviews/security/security-review-{YYYY-MM-DD}-{story-id}.md`
    - `${BASE_PATH}/docs/reviews/qa/exploratory-qa-{YYYY-MM-DD}-{story-id}.md`
+   - `${BASE_PATH}/docs/reviews/code/openai-code-review-{YYYY-MM-DD}-{story-id}.md` (if dispatched)
+   - `${BASE_PATH}/docs/reviews/code/glm-code-review-{YYYY-MM-DD}-{story-id}.md` (if dispatched)
 
-   **Deduplicate with consensus scoring**: If code-review and code-review-testing flag the same file:line:
-   - Keep the finding with the higher confidence score
-   - **Boost severity by one level** (Nit→Medium, Medium→High, High→Blocker) — independent agents converging on the same location is stronger signal than a single detection
-   - Tag as `[Consensus: N agents]` in the consolidated report
-   - Prefix with source agents (e.g., "[code-review + code-review-testing]")
+   **Deduplicate with multi-model consensus scoring**:
+
+   All code review sources participate in consensus: code-review (Claude), code-review-testing (Claude), security-review (Claude), openai-code-review (OpenAI), glm-code-review (GLM).
+
+   When multiple sources flag the same file:line (within 5-line proximity):
+   - **2 sources agree** → boost severity by one level (Nit→Medium, Medium→High, High→Blocker). Tag as `[Consensus: 2 — source1 + source2]`
+   - **3+ sources agree** → boost severity by two levels (Nit→High, Medium→Blocker). Tag as `[Consensus: N — source1 + ... + sourceN]`
+
+   Cross-architecture consensus (Claude + OpenAI or Claude + GLM agreeing) is stronger evidence than two Claude agents agreeing, because different model architectures have different blind spots.
 
    Security review findings also participate in consensus scoring: if security-review and code-review flag the same file:line, apply the same severity boost.
 
@@ -521,12 +635,20 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
    Report: ${BASE_PATH}/docs/reviews/performance/performance-benchmark-{date}-{id}.md
 
    ### Security Review
-   [Phases: N/7 executed | Findings: N total (N blockers, N high)]
+   [Phases: N/8 executed | Findings: N total (N blockers, N high)]
    Report: ${BASE_PATH}/docs/reviews/security/security-review-{date}-{id}.md
 
    ### Exploratory QA
    [Health: N/100 | Bugs: N found | ACs: N/N verified | or "Skipped — no UI changes"]
    Report: ${BASE_PATH}/docs/reviews/qa/exploratory-qa-{date}-{id}.md
+
+   ### OpenAI Adversarial Review
+   [Summary with finding counts | or "Skipped — no Codex CLI / no OPENAI_API_KEY" | or "API error — non-blocking"]
+   Report: ${BASE_PATH}/docs/reviews/code/openai-code-review-{date}-{id}.md
+
+   ### GLM Adversarial Review
+   [Summary with finding counts | or "Skipped — no ZAI_API_KEY" | or "API error — non-blocking"]
+   Report: ${BASE_PATH}/docs/reviews/code/glm-code-review-{date}-{id}.md
 
    ### Consolidated Findings
 
@@ -552,6 +674,8 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
 10. **Mark reviewed** (with gate validation):
 
    **Validate all required gates** before marking `reviewed: true`. Check that `review_gates_passed` contains one entry (base or `-skipped` variant) for each of the 12 canonical gates: `build`, `lint`, `type-check`, `format-check`, `unit-tests`, `e2e-tests`, `design-review`, `code-review`, `code-review-testing`, `performance-benchmark`, `security-review`, `exploratory-qa`.
+
+   External model gates (`openai-code-review`, `glm-code-review`) are tracked in `review_gates_passed` for resumption purposes but are NOT required for `reviewed: true`. Missing external gates (no API key, no CLI, or API error) do not block the review.
 
    **Note**: The `web-design-guidelines` gate was removed (consolidated into design-review). For backward compatibility, existing stories with `web-design-guidelines` in their `review_gates_passed` are still valid — simply ignore that entry during validation.
 
@@ -589,6 +713,8 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
     | Performance benchmark | [pass/N warnings/regression/skipped] |
     | Security review       | [pass/N findings]                    |
     | Exploratory QA        | [N/100 health, N bugs/skipped]       |
+    | OpenAI review         | [pass/N warnings/skipped/error]      |
+    | GLM review            | [pass/N warnings/skipped/error]      |
 
     **Verdict: PASS** — Story is ready to ship.
 

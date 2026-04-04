@@ -147,6 +147,37 @@ Mark the first todo as `in_progress` and proceed:
 
    **TodoWrite**: Mark "Set up branch and story file" → `in_progress`.
 
+6b. **Load session checkpoint** (resumption only — skip for new stories):
+
+   If this is a **resumed start** (status was already `in-progress` from Step 2):
+
+   Check if checkpoint file exists:
+   ```bash
+   ls docs/implementation-artifacts/sessions/{story-id}-checkpoint.md 2>/dev/null
+   ```
+
+   **If checkpoint exists:**
+   1. Read the checkpoint file
+   2. Display summary to user:
+      ```
+      Session checkpoint found (saved {saved_at}):
+      - Completed: {N}/{M} tasks
+      - Key decisions: {first 2-3 bullet points from Key Decisions}
+      - Last commit: {most recent line from Implementation Progress}
+      - Current state: {clean / N uncommitted files}
+      ```
+   3. Check for staleness: compare checkpoint `saved_at` against latest commit timestamp (`git log -1 --format=%ci`). If commits exist after the checkpoint was saved, warn:
+      ```
+      Note: {N} commits were made after this checkpoint was saved. The checkpoint may be partially stale.
+      ```
+   4. **Skip Step 9 (3 parallel Explore agents)** — the checkpoint already contains implementation context. Exploration is for initial research; a resumed story already has that context.
+   5. **Skip Step 9c (Web research)** — same reasoning.
+   6. Proceed to Step 10 (Enter plan mode) with checkpoint content injected as additional context. The plan should reference the checkpoint's remaining tasks, key decisions, and failed approaches.
+
+   **If no checkpoint exists** (resumed but no checkpoint saved):
+   Inform user: "No session checkpoint found. Running full exploration."
+   Continue to Step 7 normally (existing behavior).
+
 7. **Update sprint status** (idempotent):
    - Check current status in `docs/implementation-artifacts/sprint-status.yaml`.
    - **Already `in-progress`**: Skip update. Inform user: "Sprint status already in-progress."
@@ -321,6 +352,16 @@ Mark the first todo as `in_progress` and proceed:
 
    This is informational only — no gates. Purpose is to calibrate expectations and help the workflow recommendation in Step 13.
 
+   **Red Flags Check**: After outputting the complexity signal, scan the story context for common risk indicators and surface any that apply:
+
+   - Does this story touch a module with NO existing tests? → Flag: "⚠ No test coverage in [module] — consider writing tests first"
+   - Does this story introduce a new npm dependency (not already in `package.json`)? → Flag: "⚠ New dependency — verify bundle impact and license"
+   - Does this story cross 3+ architectural boundaries (pages, components, stores, styles, routes)? → Flag: "⚠ Wide blast radius — plan carefully, review thoroughly"
+   - Does this story have 4+ ACs with unclear priority? → Flag: "⚠ Large AC count — clarify acceptance priority with user"
+   - Does this story touch security-sensitive areas (auth, BYOK, API keys, localStorage)? → Flag: "⚠ Security-sensitive — security-review agent will scrutinize this"
+
+   Output red flags as a bullet list after the complexity signal. If no flags trigger, output "No red flags detected ✓".
+
    **TodoWrite**: Mark "Web research (if external deps detected)" → `in_progress`.
 
 9c. **Selective web research** (conditional — skipped if no external signals detected):
@@ -402,6 +443,11 @@ Mark the first todo as `in_progress` and proceed:
     - Suggested implementation approach
     - UX design references (if applicable)
     - Web research findings (if Step 9c produced results): version constraints, breaking changes, security notes
+    - **Risk Assessment** (include when complexity estimate is HIGH):
+      - What could go wrong? (identify top 2-3 risks)
+      - What is the rollback plan? (can changes be reverted cleanly?)
+      - What existing patterns apply? (reference `docs/engineering-patterns.md`)
+      - Are there dependencies between this story and others in the sprint?
     - Note: during implementation, make granular commits after each small task as save points
 
    **TodoWrite**: Mark "Enter plan mode" → `completed`. Mark "Link plan, commit, and output" → `in_progress`.
@@ -479,7 +525,8 @@ Mark the first todo as `in_progress` and proceed:
        Implement E##-S## following the plan at docs/implementation-artifacts/plans/{plan-filename}.md
        ```
     2. Make **granular commits** after each task as save points
-    3. When done, ship it:
+    3. Before ending your session, run `/checkpoint` to save implementation context for next time
+    4. When done, ship it:
 
        **Recommended: [Review first / Quick ship]**
        [reason — bold the criterion that triggered the recommendation. E.g., "This story has **UI changes** across **4 tasks** — a design review will catch visual regressions before shipping." or "**1 task**, no UI changes — reviews run inline during finish."]

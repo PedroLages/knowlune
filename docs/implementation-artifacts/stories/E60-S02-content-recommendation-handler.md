@@ -1,12 +1,12 @@
 ---
 story_id: E60-S02
 story_name: "Content Recommendation Notification Handler"
-status: ready-for-dev
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-04-04
+completed: 2026-04-04
+reviewed: true
+review_started: 2026-04-04
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa, openai-code-review-skipped, glm-code-review-skipped]
 burn_in_validated: false
 ---
 
@@ -55,7 +55,7 @@ So that I can discover relevant courses without manually searching.
   - [ ] 3.1 Add `recommendationMatch: boolean` to `NotificationPreferences` in `src/data/types.ts`
 
 - [ ] Task 4: Update Dexie schema migration (AC: 1)
-  - [ ] 4.1 If S01 already added v30, extend that migration to also set `recommendationMatch: true`. If implementing standalone, add v30 (or v31) with upgrade that sets `recommendationMatch: true` on existing `notificationPreferences` rows.
+  - [ ] 4.1 E60-S01 used Dexie v32 for `knowledgeDecay`. Add v33 migration with upgrade that sets `recommendationMatch: true` on existing `notificationPreferences` rows.
 
 - [ ] Task 5: Wire preference store with new type (AC: 4)
   - [ ] 5.1 Add `'recommendation-match': 'recommendationMatch'` to `TYPE_TO_FIELD` in `src/stores/useNotificationPrefsStore.ts`
@@ -102,7 +102,7 @@ This story is **event-consumer only** -- no emitter is created. The `recommendat
 - **Dedup must filter on `metadata.courseId`** -- one recommendation notification per course per day
 - **Use `toLocaleDateString('sv-SE')` for date comparison** in dedup
 - **actionUrl must use `/courses/${event.courseId}`** format -- matches existing course deep-link pattern
-- **If S01 is implemented first**, the Dexie migration may already be v30 -- coordinate to either extend that migration or add v31. Best approach: implement all three type system changes (S01+S02+S03) in one migration.
+- **E60-S01 used Dexie v32** for `knowledgeDecay`. E60-S02 should add v33 for `recommendationMatch`. E60-S03 will use v34.
 
 ### Notification Shape
 
@@ -123,6 +123,10 @@ E60-S01 establishes the pattern for all three triggers. Reuse the same:
 - handleEvent switch case structure
 - EVENT_TO_NOTIF_TYPE mapping pattern
 
+## Implementation Plan
+
+See [plan](plans/e60-s02-recommendation-handler.md) for implementation approach.
+
 ## Testing Notes
 
 Testing for this story is covered by E60-S05. During implementation verify:
@@ -142,12 +146,26 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story -- Playwright MCP findings]
+- **BLOCKER (fixed)**: Missing `recommendation-match` toggle in `NOTIFICATION_TOGGLES` array in `NotificationPreferencesPanel.tsx`. Added `Sparkles` icon entry with label "Content Recommendations". Fix committed.
+- **MEDIUM (pre-existing)**: "All" filter button 41px wide on mobile (< 44px touch target minimum).
+- All existing notification toggles have proper `aria-label` + `aria-describedby`.
+- Dark mode contrast passes on both Notifications and Settings pages.
 
 ## Code Review Feedback
 
-[Populated by /review-story -- adversarial code review findings]
+- **Architecture**: Clean — 0 findings. Exact pattern replication from E60-S01. All type system touchpoints wired correctly.
+- **Security**: 0 blockers. XSS safe (React JSX escaping), no open redirect risk (React Router internal), metadata cast uses optional chaining.
+- **Performance**: No regressions. Bundle +60 bytes. FCP within natural variance.
+- **Testing (advisory)**: AC2/AC3/AC4 unit tests deferred to E60-S05 per story design. v33 migration upgrade test and preference store test recommended for S05.
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Dexie version sequencing is now a critical dependency chain.** E60-S01 consumed v32 for `knowledgeDecay`, so E60-S02 must use v33 for `recommendationMatch`. The story explicitly called this out in the guardrails — this is a good pattern: always note the "next available version" in story notes so the author picks it up immediately without digging through schema history.
+
+- **Pattern reuse from E60-S01 worked exactly as intended.** The `hasRecommendationMatchToday` dedup function is structurally identical to `hasKnowledgeDecayToday` — just filtering on `metadata.courseId` instead of `metadata.topic`. Keeping these side by side in `NotificationService.ts` makes it easy to see the pattern and add future triggers consistently.
+
+- **The event-consumer-only architecture (no emitter) simplifies implementation but complicates testing.** There's no way to exercise the `recommendation:match` handler without either mocking the event bus or waiting for E52's recommendation engine. E60-S05 will need to use direct event bus emission (`eventBus.emit(...)`) in tests rather than triggering through product logic — this is a valid pattern but worth documenting so S05 doesn't try to simulate the full recommendation pipeline.
+
+- **`toLocaleDateString('sv-SE')` as the canonical date comparison string.** This ISO-8601-like format (`YYYY-MM-DD`) avoids locale ambiguity in dedup comparisons. It's now used in both the `knowledge-decay` and `recommendation-match` dedup functions — worth adding to `engineering-patterns.md` as the project standard for date-string comparisons in storage queries.
+
+- **The `Notifications.tsx` change was minimal (2 lines).** The page automatically picks up the new notification type via the shared notification rendering pipeline — no conditional rendering or type-specific UI was needed. This confirms the notification system's extensibility: adding a new event type requires zero UI changes.

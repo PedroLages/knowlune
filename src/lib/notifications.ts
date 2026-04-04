@@ -20,6 +20,7 @@ export const notificationIcons: Record<NotificationType, typeof Trophy> = {
   'review-due': Clock,
   'srs-due': BookOpen,
   'knowledge-decay': Brain,
+  'recommendation-match': Sparkles,
 }
 
 export const notificationIconColors: Record<NotificationType, string> = {
@@ -30,6 +31,7 @@ export const notificationIconColors: Record<NotificationType, string> = {
   'review-due': 'text-muted-foreground',
   'srs-due': 'text-brand',
   'knowledge-decay': 'text-warning',
+  'recommendation-match': 'text-brand',
 }
 
 // Fallback icons for unknown types
