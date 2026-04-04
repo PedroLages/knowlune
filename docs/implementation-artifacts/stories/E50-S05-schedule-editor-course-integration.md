@@ -1,12 +1,13 @@
 ---
 story_id: E50-S05
 story_name: "Schedule Editor + Course Integration"
-status: draft
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-04-04
+completed: 2026-04-04
+reviewed: true
+review_started: 2026-04-04
+review_gates_passed: [build, lint, type-check, format-check, unit-tests-skipped, e2e-tests-skipped, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa, glm-code-review, openai-code-review-skipped]
+review_scope: full
 burn_in_validated: false
 ---
 
@@ -159,12 +160,40 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Date**: 2026-04-04 | **Report**: `docs/reviews/design/design-review-2026-04-04-e50-s05.md`
+
+**BLOCKER**: The "Schedule study time" button was added to `CourseHeader.tsx`, but `CourseHeader` is only used by `UnifiedCourseDetail.tsx` which is not routed. The active course route (`/courses/:courseId`) renders `CourseOverview`, which has no schedule integration. AC3 is unreachable in the live app. Fix: integrate `StudyScheduleEditor` into `CourseOverview`.
+
+**Medium**: Calendar feed requires sign-in to enable, which gates the full editor flow for unauthenticated users.
+
+**Nit**: DayPicker abbreviated labels (T/T, S/S) are accessible but a hover tooltip showing full day names would improve discoverability.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Date**: 2026-04-04 | **Report**: `docs/reviews/code/code-review-2026-04-04-e50-s05.md`
+
+**BLOCKER**: AC3 integration is dead code — `CourseHeader` is not routed (see above).
+
+**Medium** (`StudyScheduleEditor.tsx:73`): `existing` computed inline via `schedules.find()` changes identity on every render, causing the reset `useEffect` to re-fire unnecessarily. Fix with `useMemo`.
+
+**Medium** (`TimePicker.tsx:39`): If a stored schedule has a non-padded hour (e.g., `"6:00"`), the hour Select will appear blank. Normalize with `hour.padStart(2, '0')` on entry.
+
+**Nit** (`StudyScheduleEditor.tsx:247`): `aria-live="assertive"` on validation error — use `"polite"` for user-initiated validation.
+
+**GLM Review** (`docs/reviews/code/glm-code-review-2026-04-04-e50-s05.md`): Confirmed the `existing` identity issue and TimePicker normalization concern. GLM blocker finding (form reset on re-open) is a false positive — `open` is in the deps array and re-triggers correctly.
+
+**Testing gap**: No E2E spec file and no unit tests written. 0/5 ACs have automated coverage.
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Missing required type field caught at review time**: The `StudySchedule` type requires a `timezone` field that was omitted from the `scheduleData` object passed to `addSchedule()`. TypeScript caught this during the `/review-story` type-check gate. The fix was straightforward — `Intl.DateTimeFormat().resolvedOptions().timeZone` is the canonical way to get the user's local timezone. Lesson: always cross-check the target type's required fields when constructing an object literal; required fields on a shared data model type are easy to overlook when writing a new consumer.
+
+- **Prettier auto-fixed on review**: Two branch files (`TimePicker.tsx`, `FeedPreview.tsx`) had minor formatting inconsistencies that Prettier auto-corrected during the format-check gate. These were small trailing whitespace and quote style issues. Lesson: run `npx prettier --write` locally before committing to avoid spurious fix commits during review.
+
+- **`useId()` for accessible form label association**: Each form field uses `useId()` to generate unique, stable IDs for `<Label htmlFor>` and `<Input id>` pairing. This avoids collisions when multiple `StudyScheduleEditor` instances are rendered simultaneously (e.g., from different trigger points). React 18's `useId()` is the correct pattern — do not use `Math.random()` or static string IDs for form elements.
+
+- **`FREE_STUDY` sentinel value for optional courseId**: The course selector must support a "Free study block" option where `courseId` is `undefined`. Using a `const FREE_STUDY = '__free__'` sentinel avoids the need to handle `""` (empty string) as a special case in downstream logic. Pattern: use an explicit sentinel constant rather than relying on empty string falsy checks, which are error-prone when a real ID could theoretically be empty.
+
+- **Locale-aware time display via Intl**: The `TimePicker` displays time in the user's locale format (12h or 24h) using `Intl.DateTimeFormat`, while storing the value internally as 24h `HH:MM`. This separation of display format from storage format is the correct pattern — never store locale-formatted strings, always store canonical formats.
+
+- **DayPicker ToggleGroup multiple selection**: The shadcn `ToggleGroup` with `type="multiple"` returns an array of selected values. The `aria-label` for each toggle must use the full day name (e.g., "Monday"), not the abbreviated label ("M"), to satisfy accessibility requirements. This was specified in the story but worth noting as a common oversight in abbreviated toggle UIs.

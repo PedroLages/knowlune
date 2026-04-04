@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { Calendar, Copy, RefreshCw, Download, Plus, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
@@ -20,8 +20,12 @@ import { useStudyScheduleStore } from '@/stores/useStudyScheduleStore'
 import { generateIcsDownload } from '@/lib/icalFeedGenerator'
 import { FeedPreview } from './FeedPreview'
 import { StudyScheduleSummary } from './StudyScheduleSummary'
+import { StudyScheduleEditor } from './StudyScheduleEditor'
 
 export function CalendarSettingsSection() {
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [editingScheduleId, setEditingScheduleId] = useState<string | undefined>()
+
   const {
     feedEnabled,
     feedLoading,
@@ -234,17 +238,29 @@ export function CalendarSettingsSection() {
             {/* AC5: Weekly Summary */}
             <StudyScheduleSummary schedules={schedules} />
 
-            {/* AC (Task 1.9): Add Study Block — S05 not yet built */}
+            {/* Add Study Block — opens StudyScheduleEditor sheet */}
             <Button
               variant="brand"
-              disabled
               className="gap-2 min-h-[44px] w-full"
-              aria-label="Add study block (coming soon)"
+              aria-label="Add study block"
               data-testid="add-study-block"
+              onClick={() => {
+                setEditingScheduleId(undefined)
+                setEditorOpen(true)
+              }}
             >
               <Plus className="size-4" />
               Add Study Block
             </Button>
+
+            <StudyScheduleEditor
+              scheduleId={editingScheduleId}
+              open={editorOpen}
+              onOpenChange={open => {
+                setEditorOpen(open)
+                if (!open) setEditingScheduleId(undefined)
+              }}
+            />
           </>
         )}
       </CardContent>
