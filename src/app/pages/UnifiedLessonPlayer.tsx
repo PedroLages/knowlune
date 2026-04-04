@@ -67,6 +67,9 @@ import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'
 import { usePanelRef } from 'react-resizable-panels'
 import { useHasQuiz } from '@/hooks/useHasQuiz'
+import { useQuizGeneration } from '@/hooks/useQuizGeneration'
+import { GenerateQuizButton } from '@/app/components/figma/GenerateQuizButton'
+import { QuizBadge } from '@/app/components/figma/QuizBadge'
 import { useTheaterMode } from '@/app/hooks/useTheaterMode'
 import { MiniPlayer } from '@/app/components/course/MiniPlayer'
 import { NextCourseSuggestion } from '@/app/components/NextCourseSuggestion'
@@ -93,6 +96,9 @@ export function UnifiedLessonPlayer() {
 
   // Quiz availability: check if a quiz exists for this lesson
   const { hasQuiz } = useHasQuiz(lessonId)
+
+  // Quiz generation: hook for generating quizzes from transcripts
+  const quizGen = useQuizGeneration(lessonId, courseId)
 
   // Progress store for marking lessons complete on video end
   const setItemStatus = useContentProgressStore(s => s.setItemStatus)
@@ -354,6 +360,22 @@ export function UnifiedLessonPlayer() {
         )}
 
       {quizButton}
+
+      {/* Quiz generation controls: Generate/Regenerate button with Bloom's picker */}
+      <div className="mt-4">
+        <GenerateQuizButton
+          isGenerating={quizGen.isGenerating}
+          ollamaAvailable={quizGen.ollamaAvailable}
+          checkingAvailability={quizGen.checkingAvailability}
+          cachedQuiz={quizGen.cachedQuiz}
+          onGenerate={quizGen.generate}
+        />
+        {quizGen.quiz && (quizGen.cachedQuiz || quizGen.quiz) && (
+          <div className="mt-2">
+            <QuizBadge />
+          </div>
+        )}
+      </div>
 
       {/* Below-video tabs: Notes, Bookmarks, Transcript, AI Summary, Materials */}
       <BelowVideoTabs
