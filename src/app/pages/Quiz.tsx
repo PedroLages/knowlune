@@ -381,6 +381,13 @@ export function Quiz() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [isQuizActive])
 
+  // Release focus mode on unmount to prevent stuck focus state (E65-S04)
+  useEffect(() => {
+    return () => {
+      dispatchFocusRelease()
+    }
+  }, [])
+
   // Programmatic focus on question change (AC #2)
   // Moves focus to the question container when the current question index changes.
   // The container uses tabIndex={-1} so it is reachable via .focus() but not Tab.

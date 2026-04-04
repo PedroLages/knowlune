@@ -113,6 +113,13 @@ export function InterleavedReview() {
     }
   }, [loadReviews, loadNotes, loadImportedCourses, resetInterleavedSession])
 
+  // Release focus mode on unmount to prevent stuck focus state (E65-S04)
+  useEffect(() => {
+    return () => {
+      dispatchFocusRelease()
+    }
+  }, [])
+
   const startSession = useCallback(() => {
     startInterleavedSession(noteMap, now)
     setIsFlipped(false)

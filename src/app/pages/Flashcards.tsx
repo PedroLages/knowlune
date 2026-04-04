@@ -147,6 +147,13 @@ export function Flashcards() {
     }
   }, [resetReviewSession])
 
+  // Release focus mode on unmount to prevent stuck focus state (E65-S04)
+  useEffect(() => {
+    return () => {
+      dispatchFocusRelease()
+    }
+  }, [])
+
   const handleStartReview = useCallback(() => {
     startReviewSession(now)
     setIsFlipped(false)

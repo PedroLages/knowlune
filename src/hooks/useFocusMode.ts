@@ -31,7 +31,7 @@ const COMPONENT_LABELS: Record<FocusTargetType, string> = {
  * Mutually exclusive with reading mode (E65-S01).
  * Listens for custom events `focus-request` and `focus-release` (E65-S04).
  */
-export function useFocusMode() {
+export function useFocusMode(navigate?: (path: string) => void) {
   const [state, setState] = useState<FocusModeState>({
     isFocusMode: false,
     focusTargetId: null,
@@ -265,7 +265,11 @@ export function useFocusMode() {
             action: {
               label: 'Settings',
               onClick: () => {
-                window.location.href = '/settings'
+                if (navigate) {
+                  navigate('/settings')
+                } else {
+                  window.location.href = '/settings'
+                }
               },
             },
           })

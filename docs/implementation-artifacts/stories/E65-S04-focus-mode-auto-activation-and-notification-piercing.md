@@ -1,7 +1,7 @@
 ---
 story_id: E65-S04
 story_name: "Focus Mode Auto-Activation and Notification Piercing"
-status: in-progress
+status: done
 started: 2026-04-04
 completed:
 reviewed: false
@@ -198,4 +198,10 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Focus mode stuck on navigation**: Components that auto-activate focus mode must also dispatch `dispatchFocusRelease()` on unmount via a cleanup `useEffect`. Without this, navigating away mid-session leaves the focus overlay permanently active. Pattern: pair every `dispatchFocusRequest` with a `useEffect(() => () => dispatchFocusRelease(), [])` in the same component.
+
+- **Custom hook + React Router navigation**: `useFocusMode` is a custom hook used in `Layout.tsx`. Since hooks can't call `useNavigate` themselves (they're not components), the solution is to accept an optional `navigate` callback as a parameter and fall back to `window.location.href` only when absent. This avoids full-page reloads in the toast action while keeping the hook usable outside a Router context.
+
+- **Settings UI gap**: Auto-activation settings (`focusAutoQuiz`, `focusAutoFlashcard`) were implemented in the settings store but the Settings page had no UI for them. Always ensure every configurable behavior has a corresponding Settings UI — otherwise users can't discover or disable the feature, and the first-time tooltip pointing to Settings becomes misleading.
+
+- **Notification DB vs toast split is intentional**: During focus mode, toasts are suppressed/deferred but notifications are always written to the DB. This ensures the notification panel remains accurate. Document this explicitly in the NotificationService to prevent future maintainers from "fixing" it by skipping DB writes during focus sessions.

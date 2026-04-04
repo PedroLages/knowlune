@@ -418,6 +418,11 @@ async function handleEvent(event: AppEvent): Promise<void> {
 
   // Focus mode piercing (E65-S04): after DB persistence, show a piercing
   // toast for critical notifications or queue non-critical ones for later.
+  //
+  // Intentional design: notifications are ALWAYS persisted to the DB (for the
+  // notification panel) regardless of focus mode. Only the toast display is
+  // deferred/suppressed during focus sessions. This ensures the panel remains
+  // accurate and no notifications are silently lost.
   if (notifType) {
     const titles: Record<string, string> = {
       'review-due': 'Cards Due for Review',
