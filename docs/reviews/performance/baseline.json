@@ -1,8 +1,8 @@
 {
-  "captured_at": "2026-03-31",
-  "commit": "ae45711b",
+  "captured_at": "2026-04-03",
+  "commit": "cdd8ff89",
   "bundle": {
-    "total_js_bytes": 8317209,
+    "total_js_bytes": 8522159,
     "total_css_bytes": 252595,
     "chunks": {
       "400": {
@@ -114,8 +114,8 @@
         "file": "Notes-CLqJLifs.js"
       },
       "Notifications": {
-        "raw": 7443,
-        "file": "Notifications-4gz87AnY.js"
+        "raw": 7462,
+        "file": "Notifications-J1ikwIZx.js"
       },
       "Overview-Do-K4Cji": {
         "raw": 153401,
@@ -170,8 +170,8 @@
         "file": "SessionHistory-Bo6KMgu_.js"
       },
       "Settings": {
-        "raw": 192460,
-        "file": "Settings-CE3Z4qGJ.js"
+        "raw": 223182,
+        "file": "Settings-CXJZKtvm.js"
       },
       "StatsCard-DUBTP-FK": {
         "raw": 11029,
@@ -370,8 +370,8 @@
         "file": "index-B-ttt5Aw.js"
       },
       "index": {
-        "raw": 682264,
-        "file": "index-pOWPTxRx.js"
+        "raw": 692156,
+        "file": "index-CcNaHEKs.js"
       },
       "index.es": {
         "raw": 159959,
@@ -632,8 +632,58 @@
       "youtube": {
         "raw": 501,
         "file": "youtube-BwImL90J.js"
+      },
+      "Overview": {
+        "raw": 153297,
+        "file": "Overview-CKGK0T54.js"
       }
     }
   },
-  "page_metrics": {}
+  "page_metrics": {
+    "/": {
+      "ttfb": 3,
+      "dom_interactive": 12,
+      "dom_complete": 102,
+      "load_complete": 102,
+      "fcp": 169,
+      "lcp": null,
+      "cls": 0,
+      "tbt": 0,
+      "resource_count": 239,
+      "js_resource_count": 238,
+      "css_resource_count": 1,
+      "total_transfer_bytes": 57000,
+      "samples": 3
+    },
+    "/settings": {
+      "ttfb": 3,
+      "dom_interactive": 15,
+      "dom_complete": 106,
+      "load_complete": 106,
+      "fcp": 179,
+      "lcp": null,
+      "cls": 0,
+      "tbt": 0,
+      "resource_count": 229,
+      "js_resource_count": 228,
+      "css_resource_count": 1,
+      "total_transfer_bytes": 56100,
+      "samples": 3
+    },
+    "/notifications": {
+      "ttfb": 2,
+      "dom_interactive": 10,
+      "dom_complete": 88,
+      "load_complete": 88,
+      "fcp": 146,
+      "lcp": null,
+      "cls": 0,
+      "tbt": 0,
+      "resource_count": 167,
+      "js_resource_count": 166,
+      "css_resource_count": 1,
+      "total_transfer_bytes": 39300,
+      "samples": 3
+    }
+  }
 }

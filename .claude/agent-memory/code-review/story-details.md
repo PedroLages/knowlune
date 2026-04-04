@@ -363,3 +363,11 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M3: sessionStorage key 'storage-warning-dismissed' missing knowlune- namespace prefix
 - M4: No test for refresh failure toast (sonner mock missing)
 - Positive: All R2 blockers addressed, clean committed code, thorough state machine (5 states), excellent a11y
+
+## E60-S01: Knowledge Decay Alert Trigger (Round 1)
+- No uncommitted changes (positive -- pattern stable since ~E07)
+- Zero blocker/high/medium findings -- clean implementation
+- Nit1: DECAY_THRESHOLD=50 duplicates FADING_THRESHOLD=50 in retentionMetrics.ts
+- Nit2 (pre-existing, RECURRING): String interpolation for className in Notifications.tsx line 231
+- All 6 acceptance criteria verified and passing
+- Positive: Exact pattern replication of existing SRS handler, correct schema v32 migration, checkpoint.ts untouched, sv-SE date pattern correct, dedup on metadata.topic correct
