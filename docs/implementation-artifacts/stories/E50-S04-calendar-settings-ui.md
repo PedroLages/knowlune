@@ -1,9 +1,9 @@
 ---
 story_id: E50-S04
 story_name: "Calendar Settings UI"
-status: in-progress
-started:
-completed:
+status: done
+started: 2026-04-04
+completed: 2026-04-04
 reviewed: true
 review_started: 2026-04-04
 review_gates_passed:

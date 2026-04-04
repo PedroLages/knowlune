@@ -49,7 +49,7 @@ export function CalendarSettingsSection() {
     return () => {
       ignore = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- isLoaded intentionally read once on mount
+    // isLoaded intentionally read once on mount (stale closure avoids redundant loadSchedules calls)
   }, [loadFeedToken, loadSchedules])
 
   const feedUrl = getFeedUrl()
