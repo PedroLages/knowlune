@@ -1,10 +1,10 @@
 ---
 story_id: E65-S03
 story_name: "Focus Mode — Overlay, Focus Trap, and Exit"
-status: ready-for-dev
-started:
-completed:
-reviewed: false
+status: done
+started: 2026-04-04
+completed: 2026-04-04
+reviewed: true
 review_started:
 review_gates_passed: []
 burn_in_validated: false
@@ -67,65 +67,65 @@ so that I can concentrate on the activity without visual distractions.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `useFocusMode()` hook (AC: 1, 2, 5, 9, 10)
-  - [ ] 1.1 Create `src/hooks/useFocusMode.ts`
-  - [ ] 1.2 Manage state: `isFocusMode`, `focusTargetId`, `componentType` (quiz/flashcard)
-  - [ ] 1.3 Expose: `activateFocusMode(targetId, type)`, `deactivateFocusMode()`, `isFocusMode`
-  - [ ] 1.4 On activate: check for reading mode (import `exitReadingMode` from E65-S01), exit it first
-  - [ ] 1.5 On activate: store `document.activeElement` as return-focus target
-  - [ ] 1.6 On deactivate: restore focus to the stored element
-  - [ ] 1.7 Apply `inert` attribute to all siblings of the focused component's container
+- [x] Task 1: Create `useFocusMode()` hook (AC: 1, 2, 5, 9, 10)
+  - [x] 1.1 Create `src/hooks/useFocusMode.ts`
+  - [x] 1.2 Manage state: `isFocusMode`, `focusTargetId`, `componentType` (quiz/flashcard)
+  - [x] 1.3 Expose: `activateFocusMode(targetId, type)`, `deactivateFocusMode()`, `isFocusMode`
+  - [x] 1.4 On activate: check for reading mode (import `exitReadingMode` from E65-S01), exit it first
+  - [x] 1.5 On activate: store `document.activeElement` as return-focus target
+  - [x] 1.6 On deactivate: restore focus to the stored element
+  - [x] 1.7 Apply `inert` attribute to all siblings of the focused component's container
 
-- [ ] Task 2: Register keyboard shortcut Cmd+Shift+F (AC: 1, 9)
-  - [ ] 2.1 Add `useEffect` keydown listener for `metaKey+shiftKey+f` / `ctrlKey+shiftKey+f`
-  - [ ] 2.2 Call `event.preventDefault()`
-  - [ ] 2.3 Find nearest `[data-focus-target]` element on the page
-  - [ ] 2.4 If no target found: `toast.info('No interactive component to focus')`
-  - [ ] 2.5 If target found: `activateFocusMode(targetId, type)`
+- [x] Task 2: Register keyboard shortcut Cmd+Shift+F (AC: 1, 9)
+  - [x] 2.1 Add `useEffect` keydown listener for `metaKey+shiftKey+f` / `ctrlKey+shiftKey+f`
+  - [x] 2.2 Call `event.preventDefault()`
+  - [x] 2.3 Find nearest `[data-focus-target]` element on the page
+  - [x] 2.4 If no target found: `toast.info('No interactive component to focus')`
+  - [x] 2.5 If target found: `activateFocusMode(targetId, type)`
 
-- [ ] Task 3: Create `FocusOverlay` component (AC: 1, 3, 7, 8)
-  - [ ] 3.1 Create `src/app/components/figma/FocusOverlay.tsx`
-  - [ ] 3.2 Render via React portal to `document.body`
-  - [ ] 3.3 Overlay: `fixed inset-0`, `backdrop-filter: blur(4px)`, z-index z-40
-  - [ ] 3.4 Light mode: `bg-black/50`; dark mode: `bg-black/65`
-  - [ ] 3.5 Transition: 200ms opacity fade (0ms if reduced motion)
-  - [ ] 3.6 Click handler on overlay: if quiz in progress, show confirmation dialog; otherwise deactivate
-  - [ ] 3.7 Close button (X) in top-right corner above overlay
+- [x] Task 3: Create `FocusOverlay` component (AC: 1, 3, 7, 8)
+  - [x] 3.1 Create `src/app/components/figma/FocusOverlay.tsx`
+  - [x] 3.2 Render via React portal to `document.body`
+  - [x] 3.3 Overlay: `fixed inset-0`, `backdrop-filter: blur(4px)`, z-index z-40
+  - [x] 3.4 Light mode: `bg-black/50`; dark mode: `bg-black/65`
+  - [x] 3.5 Transition: 200ms opacity fade (0ms if reduced motion)
+  - [x] 3.6 Click handler on overlay: if quiz in progress, show confirmation dialog; otherwise deactivate
+  - [x] 3.7 Close button (X) in top-right corner above overlay
 
-- [ ] Task 4: Implement focus trap (AC: 5)
-  - [ ] 4.1 When focus mode activates, apply `inert` attribute to all direct children of `<body>` except the portal and focused component
-  - [ ] 4.2 Remove `inert` on deactivate
-  - [ ] 4.3 Follow Radix UI focus-trap pattern used by Dialog/Sheet components
-  - [ ] 4.4 Ensure Tab cycles within the focused component only
+- [x] Task 4: Implement focus trap (AC: 5)
+  - [x] 4.1 When focus mode activates, apply `inert` attribute to all direct children of `<body>` except the portal and focused component
+  - [x] 4.2 Remove `inert` on deactivate
+  - [x] 4.3 Follow Radix UI focus-trap pattern used by Dialog/Sheet components
+  - [x] 4.4 Ensure Tab cycles within the focused component only
 
-- [ ] Task 5: Implement quiz-in-progress confirmation (AC: 4)
-  - [ ] 5.1 Use `AlertDialog` from shadcn/ui for confirmation
-  - [ ] 5.2 Title: "Exit focus mode?"
-  - [ ] 5.3 Description: "Your quiz progress will be preserved."
-  - [ ] 5.4 Actions: "Stay" (cancel) and "Exit" (confirm deactivate)
-  - [ ] 5.5 Check quiz state via `data-focus-active="quiz"` attribute or callback prop
+- [x] Task 5: Implement quiz-in-progress confirmation (AC: 4)
+  - [x] 5.1 Use `AlertDialog` from shadcn/ui for confirmation
+  - [x] 5.2 Title: "Exit focus mode?"
+  - [x] 5.3 Description: "Your quiz progress will be preserved."
+  - [x] 5.4 Actions: "Stay" (cancel) and "Exit" (confirm deactivate)
+  - [x] 5.5 Check quiz state via `data-focus-active="quiz"` attribute or callback prop
 
-- [ ] Task 6: Add `data-focus-target` attributes to interactive components (AC: 1, 9)
-  - [ ] 6.1 Add `data-focus-target="quiz"` to Quiz component root in `src/app/pages/Quiz.tsx`
-  - [ ] 6.2 Add `data-focus-target="flashcard"` to Flashcards component root in `src/app/pages/Flashcards.tsx`
-  - [ ] 6.3 Add `data-focus-target="interleaved-review"` to InterleavedReview component root
+- [x] Task 6: Add `data-focus-target` attributes to interactive components (AC: 1, 9)
+  - [x] 6.1 Add `data-focus-target="quiz"` to Quiz component root in `src/app/pages/Quiz.tsx`
+  - [x] 6.2 Add `data-focus-target="flashcard"` to Flashcards component root in `src/app/pages/Flashcards.tsx`
+  - [x] 6.3 Add `data-focus-target="interleaved-review"` to InterleavedReview component root
 
-- [ ] Task 7: Implement aria-live announcement (AC: 6)
-  - [ ] 7.1 On focus mode activate: announce "Focus mode activated. [Quiz/Flashcard review] in progress. Press Escape to exit."
-  - [ ] 7.2 On focus mode deactivate: announce "Focus mode deactivated."
-  - [ ] 7.3 Use `role="status"` `aria-live="polite"` region (can reuse pattern from E65-S01)
+- [x] Task 7: Implement aria-live announcement (AC: 6)
+  - [x] 7.1 On focus mode activate: announce "Focus mode activated. [Quiz/Flashcard review] in progress. Press Escape to exit."
+  - [x] 7.2 On focus mode deactivate: announce "Focus mode deactivated."
+  - [x] 7.3 Use `role="status"` `aria-live="polite"` region (can reuse pattern from E65-S01)
 
-- [ ] Task 8: Implement Escape key exit with quiz guard (AC: 2, 4)
-  - [ ] 8.1 Listen for Escape key in `useFocusMode`
-  - [ ] 8.2 If no quiz in progress: deactivate immediately
-  - [ ] 8.3 If quiz in progress: show confirmation dialog instead
-  - [ ] 8.4 On confirmation: deactivate and restore focus
+- [x] Task 8: Implement Escape key exit with quiz guard (AC: 2, 4)
+  - [x] 8.1 Listen for Escape key in `useFocusMode`
+  - [x] 8.2 If no quiz in progress: deactivate immediately
+  - [x] 8.3 If quiz in progress: show confirmation dialog instead
+  - [x] 8.4 On confirmation: deactivate and restore focus
 
-- [ ] Task 9: Mobile focus mode (UX-DR6)
-  - [ ] 9.1 On mobile: focused component fills viewport (no overlay needed)
-  - [ ] 9.2 Apply `position: fixed; inset: 0; z-index: 50` to the focused component
-  - [ ] 9.3 Add close button at top of the full-screen view
-  - [ ] 9.4 Detect mobile via `useIsMobile()` hook
+- [x] Task 9: Mobile focus mode (UX-DR6)
+  - [x] 9.1 On mobile: focused component fills viewport (no overlay needed)
+  - [x] 9.2 Apply `position: fixed; inset: 0; z-index: 50` to the focused component
+  - [x] 9.3 Add close button at top of the full-screen view
+  - [x] 9.4 Detect mobile via `useIsMobile()` hook
 
 ## Design Guidance
 
@@ -201,15 +201,15 @@ so that I can concentrate on the activity without visual distractions.
 
 Before requesting `/review-story`, verify:
 
-- [ ] All changes committed (`git status` clean)
-- [ ] No error swallowing — catch blocks log AND surface errors
-- [ ] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
-- [ ] No optimistic UI updates before persistence — state updates after DB write succeeds
-- [ ] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
-- [ ] E2E afterEach cleanup uses `await` (not fire-and-forget)
-- [ ] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
-- [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
-- [ ] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md CSP Configuration)
+- [x] All changes committed (`git status` clean)
+- [x] No error swallowing — catch blocks log AND surface errors
+- [x] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
+- [x] No optimistic UI updates before persistence — state updates after DB write succeeds
+- [x] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
+- [x] E2E afterEach cleanup uses `await` (not fire-and-forget)
+- [x] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
+- [x] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
+- [x] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md CSP Configuration)
 
 ## Design Review Feedback
 
@@ -221,4 +221,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+**Reading mode mutual exclusivity via custom events**: Passing `exitReadingMode` as a prop to `useFocusMode` creates a coupling that breaks when the hook is called far from the component that owns reading mode state. The cleaner pattern is to dispatch a `window.dispatchEvent(new CustomEvent('exit-reading-mode'))` from within the focus mode hook and listen for it inside `useReadingMode`. This decouples the two hooks without requiring a shared store.
+
+**Quiz-in-progress detection must be dynamic**: A static `data-focus-active="quiz"` attribute always triggers the exit confirmation dialog, even before the user has answered anything. The correct heuristic is `Object.keys(answers).length > 0` — only guard exit when the user has actual progress to lose.
+
+**Overlay exit animation requires separate mount state**: Directly returning `null` when `isFocusMode` is false prevents the exit animation from playing. The fix is to track a separate `isMounted` state that stays `true` until after the 200ms `animate-out` completes, then unmounts. A `shouldReduceMotion` guard skips the timeout entirely for accessibility.

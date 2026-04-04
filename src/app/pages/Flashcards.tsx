@@ -409,7 +409,7 @@ export function Flashcards() {
       reviewQueue.length > 0 ? Math.round((reviewIndex / reviewQueue.length) * 100) : 0
 
     return (
-      <div className="mx-auto max-w-2xl space-y-6 p-6">
+      <div className="mx-auto max-w-2xl space-y-6 p-6" data-focus-target="flashcard">
         {/* Header row */}
         <div className="flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={handleBackToDashboard}>
