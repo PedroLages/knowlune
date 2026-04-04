@@ -27,6 +27,7 @@ export type AppEvent =
   | { type: 'review:due'; dueCount: number }
   | { type: 'srs:due'; dueCount: number }
   | { type: 'knowledge:decay'; topic: string; retention: number; dueCount: number }
+  | { type: 'recommendation:match'; courseId: string; courseName: string; reason: string }
 
 export type AppEventType = AppEvent['type']
 

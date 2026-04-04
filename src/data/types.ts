@@ -440,6 +440,7 @@ export type NotificationType =
   | 'review-due'
   | 'srs-due'
   | 'knowledge-decay'
+  | 'recommendation-match'
 
 export interface Notification {
   id: string // ULID (time-sortable, unique)
@@ -465,6 +466,7 @@ export interface NotificationPreferences {
   reviewDue: boolean
   srsDue: boolean
   knowledgeDecay: boolean
+  recommendationMatch: boolean
   // Quiet hours
   quietHoursEnabled: boolean
   quietHoursStart: string // "HH:MM" (24h format)

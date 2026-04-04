@@ -1187,6 +1187,22 @@ function _declareLegacyMigrations(database: Dexie): void {
           }
         })
     })
+  // v33: Add recommendationMatch preference field (E60-S02)
+  database
+    .version(33)
+    .stores({
+      notificationPreferences: 'id',
+    })
+    .upgrade(tx => {
+      return tx
+        .table('notificationPreferences')
+        .toCollection()
+        .modify(pref => {
+          if (pref.recommendationMatch === undefined) {
+            pref.recommendationMatch = true
+          }
+        })
+    })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }

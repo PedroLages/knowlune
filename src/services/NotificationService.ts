@@ -92,6 +92,20 @@ async function hasKnowledgeDecayToday(topic: string): Promise<boolean> {
   return existing !== undefined
 }
 
+async function hasRecommendationMatchToday(courseId: string): Promise<boolean> {
+  const todayStr = new Date().toLocaleDateString('sv-SE')
+  const existing = await db.notifications
+    .where('type')
+    .equals('recommendation-match')
+    .filter(
+      n =>
+        (n.metadata as Record<string, unknown>)?.courseId === courseId &&
+        new Date(n.createdAt).toLocaleDateString('sv-SE') === todayStr
+    )
+    .first()
+  return existing !== undefined
+}
+
 /**
  * On app startup, count all due flashcards + note reviews and emit
  * an `srs:due` event if any are due. This provides a proactive reminder
@@ -164,6 +178,7 @@ const EVENT_TO_NOTIF_TYPE: Record<AppEventType, NotificationType> = {
   'review:due': 'review-due',
   'srs:due': 'srs-due',
   'knowledge:decay': 'knowledge-decay',
+  'recommendation:match': 'recommendation-match',
 }
 
 /** Handle a single domain event, creating the appropriate notification. */
@@ -274,6 +289,19 @@ async function handleEvent(event: AppEvent): Promise<void> {
       })
       break
     }
+
+    case 'recommendation:match': {
+      const alreadyRecommended = await hasRecommendationMatchToday(event.courseId)
+      if (alreadyRecommended) return
+      await store.create({
+        type: 'recommendation-match',
+        title: 'Recommended for You',
+        message: `${event.courseName}: ${event.reason}`,
+        actionUrl: `/courses/${event.courseId}`,
+        metadata: { courseId: event.courseId, courseName: event.courseName },
+      })
+      break
+    }
   }
 }
 
@@ -293,6 +321,7 @@ export function initNotificationService(): void {
     'review:due',
     'srs:due',
     'knowledge:decay',
+    'recommendation:match',
   ]
 
   for (const type of eventTypes) {
