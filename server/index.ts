@@ -22,6 +22,7 @@ import { createOriginCheck } from './middleware/origin-check.js'
 import { createAuthMiddleware } from './middleware/authenticate.js'
 import { createDetectBYOKMiddleware, createEntitlementMiddleware } from './middleware/entitlement.js'
 import { createRateLimiter } from './middleware/rate-limiter.js'
+import calendarRouter from './routes/calendar.js'
 
 const app = express()
 const PORT = 3001
@@ -151,6 +152,12 @@ app.get('/api/ai/ollama/health', async (req, res) => {
     res.status(500).json({ error: (error as Error).message })
   }
 })
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Calendar feed route — token-authenticated, no JWT required (E50-S02)
+// MUST BE BEFORE JWT MIDDLEWARE — calendar uses token-in-URL auth model
+// ──────────────────────────────────────────────────────────────────────────────
+app.use('/api/calendar', calendarRouter)
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Apply middleware chain to all /api/ai/* routes below this point.
