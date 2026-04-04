@@ -10,6 +10,7 @@ import {
 } from '@/lib/thumbnailService'
 import type { ThumbnailSource } from '@/data/types'
 import type { AutoAnalysisStatus } from '@/lib/autoAnalysis'
+import { refreshCourseEmbeddingIfChanged } from '@/ai/courseEmbeddingService'
 
 function normalizeTags(tags: string[]): string[] {
   const unique = [...new Set(tags.map(t => t.trim().toLowerCase()).filter(Boolean))]
@@ -153,6 +154,13 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       await persistWithRetry(async () => {
         await db.importedCourses.update(courseId, { tags: normalized })
       })
+      // Refresh embedding after successful tag update (fire-and-forget, E52-S04)
+      const updated = get().importedCourses.find(c => c.id === courseId)
+      if (updated) {
+        refreshCourseEmbeddingIfChanged(updated).catch(() => {
+          // silent-catch-ok: embedding failure logged inside refreshCourseEmbeddingIfChanged
+        })
+      }
     } catch (error) {
       // Rollback on failure
       set(state => ({
@@ -219,6 +227,13 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       await persistWithRetry(async () => {
         await db.importedCourses.update(courseId, patch)
       })
+      // Refresh embedding after successful metadata update (fire-and-forget, E52-S04)
+      const updated = get().importedCourses.find(c => c.id === courseId)
+      if (updated) {
+        refreshCourseEmbeddingIfChanged(updated).catch(() => {
+          // silent-catch-ok: embedding failure logged inside refreshCourseEmbeddingIfChanged
+        })
+      }
       return true
     } catch (error) {
       // Rollback on failure

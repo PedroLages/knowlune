@@ -498,8 +498,9 @@ export async function persistScannedCourse(
   triggerOllamaTagging(course, videos, pdfs)
 
   // Generate course embedding for ML recommendations (fire-and-forget, E52-S04)
-  generateCourseEmbeddingAfterImport(course).catch(() => {
-    // silent-catch-ok: embedding generation is non-blocking — recommendations fall back to tag-based matching
+  generateCourseEmbeddingAfterImport(course).catch(err => {
+    // silent-catch-ok: embedding failure logged inside generateCourseEmbeddingAfterImport
+    console.error('[CourseEmbedding] Unexpected outer catch during import embedding:', err)
   })
 
   // Auto-generate thumbnail from first video at 10% mark (E1B-S04 AC1)
