@@ -128,17 +128,17 @@ test.describe('AC1: Course Card Grid Display', () => {
     expect(gridClass).toContain('grid-cols-1')
   })
 
-  test('should apply rounded-[24px] border radius on imported course cards', async ({
+  test('should apply rounded-2xl border radius on imported course cards', async ({
     page,
     indexedDB,
   }) => {
     // GIVEN: Imported course card rendered
     await seedAndReload(page, indexedDB, [course])
 
-    // THEN: Card has rounded-[24px] class (not rounded-3xl)
+    // THEN: Card has rounded-2xl class (design token, not hardcoded)
     const card = page.getByTestId('imported-course-card').first()
     const cardClass = await card.getAttribute('class')
-    expect(cardClass).toContain('rounded-[24px]')
+    expect(cardClass).toContain('rounded-2xl')
   })
 
   test('should use design system background color', async ({ page, indexedDB }) => {

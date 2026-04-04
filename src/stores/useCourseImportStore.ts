@@ -124,13 +124,17 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
         set({ thumbnailUrls: rest })
       }
 
-      // Clean up orphaned author
+      // Clean up orphaned author (best-effort — course deletion already succeeded)
       if (courseToRemove?.authorId) {
-        const authorStore = useAuthorStore.getState()
-        await authorStore.unlinkCourseFromAuthor(courseToRemove.authorId, courseId)
-        const author = authorStore.getAuthorById(courseToRemove.authorId)
-        if (author && author.courseIds.length === 0 && !author.isPreseeded) {
-          await authorStore.deleteAuthor(courseToRemove.authorId)
+        try {
+          const authorStore = useAuthorStore.getState()
+          await authorStore.unlinkCourseFromAuthor(courseToRemove.authorId, courseId)
+          const author = authorStore.getAuthorById(courseToRemove.authorId)
+          if (author && author.courseIds.length === 0 && !author.isPreseeded) {
+            await authorStore.deleteAuthor(courseToRemove.authorId, { silent: true })
+          }
+        } catch (authorError) {
+          console.error('[Database] Failed to clean up orphaned author:', authorError)
         }
       }
     } catch (error) {
