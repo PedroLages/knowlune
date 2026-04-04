@@ -4,6 +4,8 @@ import {
   initNotificationService,
   destroyNotificationService,
   checkSrsDueOnStartup,
+  checkMilestoneApproachingOnStartup,
+  MILESTONE_THRESHOLD,
 } from '@/services/NotificationService'
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -18,14 +20,29 @@ vi.mock('@/stores/useNotificationStore', () => ({
   },
 }))
 
-// Chainable Dexie mock for db.notifications.where().equals().filter().first()
+// Chainable Dexie mock for db.notifications.where().equals().filter().first()/.toArray()
 const mockFirst = vi.fn()
-const mockFilter = vi.fn(() => ({ first: mockFirst }))
+const mockToArray = vi.fn().mockResolvedValue([])
+const mockFilter = vi.fn(() => ({ first: mockFirst, toArray: mockToArray }))
 const mockEquals = vi.fn(() => ({ filter: mockFilter }))
 const mockWhere = vi.fn(() => ({ equals: mockEquals }))
 
 const mockFlashcardsToArray = vi.fn().mockResolvedValue([])
 const mockReviewRecordsToArray = vi.fn().mockResolvedValue([])
+const mockNotesToArray = vi.fn().mockResolvedValue([])
+const mockImportedCoursesToArray = vi.fn().mockResolvedValue([])
+const mockContentProgressToArray = vi.fn().mockResolvedValue([])
+const mockImportedVideosToArray = vi.fn().mockResolvedValue([])
+const mockImportedPdfsToArray = vi.fn().mockResolvedValue([])
+
+vi.mock('@/stores/useNotificationPrefsStore', () => ({
+  useNotificationPrefsStore: {
+    getState: () => ({
+      isTypeEnabled: () => true,
+      isInQuietHours: () => false,
+    }),
+  },
+}))
 
 vi.mock('@/db', () => ({
   db: {
@@ -37,6 +54,21 @@ vi.mock('@/db', () => ({
     },
     reviewRecords: {
       toArray: () => mockReviewRecordsToArray(),
+    },
+    notes: {
+      toArray: () => mockNotesToArray(),
+    },
+    importedCourses: {
+      toArray: () => mockImportedCoursesToArray(),
+    },
+    contentProgress: {
+      toArray: () => mockContentProgressToArray(),
+    },
+    importedVideos: {
+      toArray: () => mockImportedVideosToArray(),
+    },
+    importedPdfs: {
+      toArray: () => mockImportedPdfsToArray(),
     },
   },
 }))
@@ -51,15 +83,27 @@ describe('NotificationService', () => {
     appEventBus.clear()
     mockCreate.mockClear()
     mockFirst.mockClear()
+    mockToArray.mockClear()
     mockFilter.mockClear()
     mockEquals.mockClear()
     mockWhere.mockClear()
     mockFlashcardsToArray.mockClear()
     mockReviewRecordsToArray.mockClear()
-    // Default: no existing notification + no due cards
+    mockNotesToArray.mockClear()
+    mockImportedCoursesToArray.mockClear()
+    mockContentProgressToArray.mockClear()
+    mockImportedVideosToArray.mockClear()
+    mockImportedPdfsToArray.mockClear()
+    // Default: no existing notification + no due cards + no courses
     mockFirst.mockResolvedValue(undefined)
+    mockToArray.mockResolvedValue([])
     mockFlashcardsToArray.mockResolvedValue([])
     mockReviewRecordsToArray.mockResolvedValue([])
+    mockNotesToArray.mockResolvedValue([])
+    mockImportedCoursesToArray.mockResolvedValue([])
+    mockContentProgressToArray.mockResolvedValue([])
+    mockImportedVideosToArray.mockResolvedValue([])
+    mockImportedPdfsToArray.mockResolvedValue([])
   })
 
   afterEach(() => {
@@ -418,6 +462,247 @@ describe('NotificationService', () => {
 
       expect(emitSpy).not.toHaveBeenCalled()
       emitSpy.mockRestore()
+    })
+  })
+
+  // ── milestone:approaching event handling ──────────────────
+
+  describe('milestone:approaching event handling', () => {
+    it('creates milestone-approaching notification on milestone:approaching event', async () => {
+      initNotificationService()
+
+      appEventBus.emit({
+        type: 'milestone:approaching',
+        courseId: 'ts-course',
+        courseName: 'Advanced TypeScript',
+        remainingLessons: 2,
+        totalLessons: 10,
+      })
+
+      await vi.waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1))
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'milestone-approaching',
+          title: 'Almost There!',
+          message: 'Just 2 lessons left in Advanced TypeScript. Keep going!',
+          actionUrl: '/courses/ts-course',
+          metadata: { courseId: 'ts-course', remainingLessons: 2, totalLessons: 10 },
+        })
+      )
+    })
+
+    it('uses singular "lesson" when remainingLessons === 1', async () => {
+      initNotificationService()
+
+      appEventBus.emit({
+        type: 'milestone:approaching',
+        courseId: 'ts-course',
+        courseName: 'Advanced TypeScript',
+        remainingLessons: 1,
+        totalLessons: 10,
+      })
+
+      await vi.waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1))
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Just 1 lesson left in Advanced TypeScript. Keep going!',
+        })
+      )
+    })
+
+    it('does not create duplicate milestone notification for same course on same day', async () => {
+      mockFirst.mockResolvedValue({
+        id: 'existing-milestone',
+        type: 'milestone-approaching',
+        createdAt: FIXED_NOW.toISOString(),
+      })
+
+      initNotificationService()
+
+      appEventBus.emit({
+        type: 'milestone:approaching',
+        courseId: 'ts-course',
+        courseName: 'Advanced TypeScript',
+        remainingLessons: 2,
+        totalLessons: 10,
+      })
+
+      await vi.waitFor(() => expect(mockWhere).toHaveBeenCalled())
+
+      expect(mockCreate).not.toHaveBeenCalled()
+    })
+
+    it('creates notifications for different courses on the same day', async () => {
+      // First course has no existing notification; second course does
+      mockFirst
+        .mockResolvedValueOnce(undefined) // course-a: no existing notif
+        .mockResolvedValueOnce({
+          id: 'existing',
+          type: 'milestone-approaching',
+          createdAt: FIXED_NOW.toISOString(),
+        }) // course-b: already notified
+
+      initNotificationService()
+
+      appEventBus.emit({
+        type: 'milestone:approaching',
+        courseId: 'course-a',
+        courseName: 'Course A',
+        remainingLessons: 2,
+        totalLessons: 8,
+      })
+
+      await vi.waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1))
+
+      appEventBus.emit({
+        type: 'milestone:approaching',
+        courseId: 'course-b',
+        courseName: 'Course B',
+        remainingLessons: 1,
+        totalLessons: 5,
+      })
+
+      // Give async handler time — course-b should be suppressed
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(mockCreate).toHaveBeenCalledTimes(1)
+      expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ actionUrl: '/courses/course-a' }))
+    })
+  })
+
+  // ── checkMilestoneApproachingOnStartup ─────────────────────
+
+  describe('checkMilestoneApproachingOnStartup', () => {
+    it('emits milestone:approaching for a course with remaining <= MILESTONE_THRESHOLD', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockImportedCoursesToArray.mockResolvedValue([
+        { id: 'ts-course', name: 'Advanced TypeScript' },
+      ])
+      // 10 lessons: 8 videos + 2 pdfs
+      mockImportedVideosToArray.mockResolvedValue(
+        Array.from({ length: 8 }, (_, i) => ({ id: `v${i}`, courseId: 'ts-course' }))
+      )
+      mockImportedPdfsToArray.mockResolvedValue([
+        { id: 'p0', courseId: 'ts-course' },
+        { id: 'p1', courseId: 'ts-course' },
+      ])
+      // 8 lessons completed → 2 remaining (at threshold)
+      mockContentProgressToArray.mockResolvedValue(
+        Array.from({ length: 8 }, (_, i) => ({
+          courseId: 'ts-course',
+          itemId: `v${i}`,
+          status: 'completed',
+          updatedAt: FIXED_NOW.toISOString(),
+        }))
+      )
+
+      await checkMilestoneApproachingOnStartup()
+
+      expect(emitSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'milestone:approaching',
+          courseId: 'ts-course',
+          courseName: 'Advanced TypeScript',
+          remainingLessons: 2,
+          totalLessons: 10,
+        })
+      )
+      emitSpy.mockRestore()
+    })
+
+    it('does NOT emit when remaining > MILESTONE_THRESHOLD', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockImportedCoursesToArray.mockResolvedValue([
+        { id: 'ts-course', name: 'Advanced TypeScript' },
+      ])
+      mockImportedVideosToArray.mockResolvedValue(
+        Array.from({ length: 10 }, (_, i) => ({ id: `v${i}`, courseId: 'ts-course' }))
+      )
+      mockImportedPdfsToArray.mockResolvedValue([])
+      // 5 completed → 5 remaining (above threshold of ${MILESTONE_THRESHOLD})
+      mockContentProgressToArray.mockResolvedValue(
+        Array.from({ length: 5 }, (_, i) => ({
+          courseId: 'ts-course',
+          itemId: `v${i}`,
+          status: 'completed',
+          updatedAt: FIXED_NOW.toISOString(),
+        }))
+      )
+
+      await checkMilestoneApproachingOnStartup()
+
+      expect(emitSpy).not.toHaveBeenCalled()
+      emitSpy.mockRestore()
+    })
+
+    it('does NOT emit when remaining === 0 (course complete)', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockImportedCoursesToArray.mockResolvedValue([{ id: 'c1', name: 'Done Course' }])
+      mockImportedVideosToArray.mockResolvedValue([
+        { id: 'v0', courseId: 'c1' },
+        { id: 'v1', courseId: 'c1' },
+      ])
+      mockImportedPdfsToArray.mockResolvedValue([])
+      mockContentProgressToArray.mockResolvedValue([
+        { courseId: 'c1', itemId: 'v0', status: 'completed', updatedAt: FIXED_NOW.toISOString() },
+        { courseId: 'c1', itemId: 'v1', status: 'completed', updatedAt: FIXED_NOW.toISOString() },
+      ])
+
+      await checkMilestoneApproachingOnStartup()
+
+      expect(emitSpy).not.toHaveBeenCalled()
+      emitSpy.mockRestore()
+    })
+
+    it('skips courses already notified today (batch dedup)', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockImportedCoursesToArray.mockResolvedValue([{ id: 'ts-course', name: 'Advanced TypeScript' }])
+      mockImportedVideosToArray.mockResolvedValue(
+        Array.from({ length: 10 }, (_, i) => ({ id: `v${i}`, courseId: 'ts-course' }))
+      )
+      mockImportedPdfsToArray.mockResolvedValue([])
+      mockContentProgressToArray.mockResolvedValue(
+        Array.from({ length: 8 }, (_, i) => ({
+          courseId: 'ts-course',
+          itemId: `v${i}`,
+          status: 'completed',
+          updatedAt: FIXED_NOW.toISOString(),
+        }))
+      )
+      // Simulate an existing milestone notification today for this course
+      mockToArray.mockResolvedValue([
+        {
+          id: 'existing',
+          type: 'milestone-approaching',
+          createdAt: FIXED_NOW.toISOString(),
+          metadata: { courseId: 'ts-course' },
+        },
+      ])
+
+      await checkMilestoneApproachingOnStartup()
+
+      expect(emitSpy).not.toHaveBeenCalled()
+      emitSpy.mockRestore()
+    })
+
+    it('does NOT emit when no courses exist', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      await checkMilestoneApproachingOnStartup()
+
+      expect(emitSpy).not.toHaveBeenCalled()
+      emitSpy.mockRestore()
+    })
+
+    it('exports MILESTONE_THRESHOLD as a positive integer', () => {
+      expect(MILESTONE_THRESHOLD).toBeGreaterThan(0)
+      expect(Number.isInteger(MILESTONE_THRESHOLD)).toBe(true)
     })
   })
 
