@@ -655,8 +655,8 @@ development_status:
   # Source: epics-smart-notification-triggers.md
   # Proactive notifications: knowledge decay, recommendations, milestones
   # ──────────────────────────────────────────────────
-  epic-60: in-progress
-  60-1-knowledge-decay-alert-trigger: in-progress
+  epic-60: backlog
+  60-1-knowledge-decay-alert-trigger: done
   60-2-content-recommendation-notification-handler: backlog
   60-3-milestone-approaching-trigger: backlog
   60-4-smart-triggers-preferences-panel: backlog
