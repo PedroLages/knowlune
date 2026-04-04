@@ -1,4 +1,4 @@
-import { Circle, CheckCircle2, PauseCircle } from 'lucide-react'
+import { Circle, CheckCircle2, PauseCircle, PlayCircle } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
 import type { LearnerCourseStatus } from '@/data/types'
@@ -9,6 +9,13 @@ const statuses: {
   icon: typeof Circle
   activeClass: string
 }[] = [
+  {
+    value: 'not-started',
+    label: 'Not Started',
+    icon: PlayCircle,
+    activeClass:
+      'data-[state=on]:bg-amber-500 data-[state=on]:text-white data-[state=on]:hover:bg-amber-500/90',
+  },
   {
     value: 'active',
     label: 'Active',

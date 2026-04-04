@@ -6,6 +6,8 @@ import {
   Circle,
   CheckCircle2,
   PauseCircle,
+  PlayCircle,
+  Play,
   Eye,
   Info,
   Camera,
@@ -70,6 +72,11 @@ const statusConfig: Record<
   LearnerCourseStatus,
   { label: string; icon: typeof Circle; badgeClass: string }
 > = {
+  'not-started': {
+    label: 'Not Started',
+    icon: PlayCircle,
+    badgeClass: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  },
   active: {
     label: 'Active',
     icon: Circle,
@@ -92,6 +99,7 @@ interface ImportedCourseCardProps {
   allTags: string[]
   completionPercent?: number
   momentumScore?: MomentumScore
+  readOnly?: boolean
 }
 
 export function ImportedCourseCard({
@@ -99,6 +107,7 @@ export function ImportedCourseCard({
   allTags,
   completionPercent = 0,
   momentumScore,
+  readOnly = false,
 }: ImportedCourseCardProps) {
   const updateCourseTags = useCourseImportStore(state => state.updateCourseTags)
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
@@ -269,16 +278,18 @@ export function ImportedCourseCard({
               <FolderOpen className="size-16 text-emerald-300 dark:text-emerald-600" />
             )}
             {/* Camera overlay — appears on hover to change thumbnail */}
-            <button
-              onClick={e => {
-                e.stopPropagation()
-                setThumbnailPickerOpen(true)
-              }}
-              aria-label="Change thumbnail"
-              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none z-10"
-            >
-              <Camera className="size-8 text-white drop-shadow" aria-hidden="true" />
-            </button>
+            {!readOnly && (
+              <button
+                onClick={e => {
+                  e.stopPropagation()
+                  setThumbnailPickerOpen(true)
+                }}
+                aria-label="Change thumbnail"
+                className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none z-10"
+              >
+                <Camera className="size-8 text-white drop-shadow" aria-hidden="true" />
+              </button>
+            )}
             {/* Inline video preview */}
             {showPreview && previewBlobUrl && (
               <video
@@ -312,76 +323,85 @@ export function ImportedCourseCard({
               </div>
             ) : null}
 
-            <div className="absolute top-3 right-3 z-20">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    ref={statusBadgeRef}
-                    data-testid="status-badge"
-                    onClick={e => e.stopPropagation()}
-                    className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-full outline-none min-h-[44px] flex items-center"
-                    aria-label={`Course status: ${config.label}. Click to change.`}
-                  >
-                    <Badge
-                      className={cn(
-                        'border-0 text-xs gap-1 cursor-pointer hover:opacity-80 transition-opacity',
-                        config.badgeClass
-                      )}
+            {readOnly ? (
+              <div className="absolute top-3 right-3 z-20">
+                <Badge className={cn('border-0 text-xs gap-1 pointer-events-none', config.badgeClass)}>
+                  <StatusIcon className="size-3" aria-hidden="true" />
+                  {config.label}
+                </Badge>
+              </div>
+            ) : (
+              <div className="absolute top-3 right-3 z-20">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      ref={statusBadgeRef}
+                      data-testid="status-badge"
+                      onClick={e => e.stopPropagation()}
+                      className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-full outline-none min-h-[44px] flex items-center"
+                      aria-label={`Course status: ${config.label}. Click to change.`}
                     >
-                      <StatusIcon className="size-3" aria-hidden="true" />
-                      {config.label}
-                    </Badge>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
-                  {(Object.entries(statusConfig) as [LearnerCourseStatus, typeof config][]).map(
-                    ([key, cfg]) => {
-                      const Icon = cfg.icon
-                      return (
-                        <DropdownMenuItem
-                          key={key}
-                          onClick={() => handleStatusChange(key)}
-                          className="gap-2"
-                        >
-                          <Icon className="size-4" aria-hidden="true" />
-                          {cfg.label}
-                          {key === status && (
-                            <CheckCircle2
-                              className="size-3.5 ml-auto text-brand"
-                              aria-hidden="true"
-                            />
-                          )}
-                        </DropdownMenuItem>
-                      )
-                    }
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    data-testid="edit-course-menu-item"
-                    className="gap-2 min-h-[44px]"
-                    onClick={e => {
-                      e.stopPropagation()
-                      setEditDialogOpen(true)
-                    }}
-                  >
-                    <Pencil className="size-4" aria-hidden="true" />
-                    Edit details
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    data-testid="delete-course-menu-item"
-                    variant="destructive"
-                    className="gap-2 min-h-[44px]"
-                    onClick={e => {
-                      e.stopPropagation()
-                      setDeleteDialogOpen(true)
-                    }}
-                  >
-                    <Trash2 className="size-4" aria-hidden="true" />
-                    Delete course
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                      <Badge
+                        className={cn(
+                          'border-0 text-xs gap-1 cursor-pointer hover:opacity-80 transition-opacity',
+                          config.badgeClass
+                        )}
+                      >
+                        <StatusIcon className="size-3" aria-hidden="true" />
+                        {config.label}
+                      </Badge>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
+                    {(Object.entries(statusConfig) as [LearnerCourseStatus, typeof config][]).map(
+                      ([key, cfg]) => {
+                        const Icon = cfg.icon
+                        return (
+                          <DropdownMenuItem
+                            key={key}
+                            onClick={() => handleStatusChange(key)}
+                            className="gap-2"
+                          >
+                            <Icon className="size-4" aria-hidden="true" />
+                            {cfg.label}
+                            {key === status && (
+                              <CheckCircle2
+                                className="size-3.5 ml-auto text-brand"
+                                aria-hidden="true"
+                              />
+                            )}
+                          </DropdownMenuItem>
+                        )
+                      }
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      data-testid="edit-course-menu-item"
+                      className="gap-2 min-h-[44px]"
+                      onClick={e => {
+                        e.stopPropagation()
+                        setEditDialogOpen(true)
+                      }}
+                    >
+                      <Pencil className="size-4" aria-hidden="true" />
+                      Edit details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      data-testid="delete-course-menu-item"
+                      variant="destructive"
+                      className="gap-2 min-h-[44px]"
+                      onClick={e => {
+                        e.stopPropagation()
+                        setDeleteDialogOpen(true)
+                      }}
+                    >
+                      <Trash2 className="size-4" aria-hidden="true" />
+                      Delete course
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
 
             {/* Info button */}
             <Popover open={infoOpen} onOpenChange={setInfoOpen}>
@@ -517,9 +537,26 @@ export function ImportedCourseCard({
                   </span>
                 )}
               </span>
-              <TagBadgeList tags={course.tags} onRemove={handleRemoveTag} maxVisible={3} />
-              <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
+              <TagBadgeList tags={course.tags} onRemove={readOnly ? undefined : handleRemoveTag} maxVisible={3} />
+              {!readOnly && (
+                <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
+              )}
             </div>
+            {course.status === 'not-started' && !readOnly && (
+              <Button
+                size="sm"
+                variant="brand"
+                className="w-full mb-2"
+                data-testid="start-course-btn"
+                onClick={e => {
+                  e.stopPropagation()
+                  handleStatusChange('active')
+                }}
+              >
+                <Play className="size-3.5 mr-1.5" aria-hidden="true" />
+                Start Studying
+              </Button>
+            )}
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span data-testid="course-card-video-count" className="flex items-center gap-1">
                 <Video className="size-3.5" aria-hidden="true" />

@@ -30,6 +30,7 @@ import { toast } from 'sonner'
 import { db } from '@/db'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
 import { useAuthorStore } from '@/stores/useAuthorStore'
+import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
 import { getLastWatchedLesson, getFirstLesson } from '@/lib/progress'
 import { revokeObjectUrl } from '@/lib/courseAdapter'
@@ -565,12 +566,15 @@ export function CourseOverview() {
                 <Button
                   variant="outline"
                   className="w-full bg-brand-foreground/10 border-brand-foreground/30 text-brand-foreground hover:bg-brand-foreground/20"
-                  asChild
+                  onClick={() => {
+                    if (ctaVariant === 'start' && course.id) {
+                      useCourseImportStore.getState().updateCourseStatus(course.id, 'active')
+                    }
+                    navigate(`/courses/${course.id}/lessons/${ctaLessonId}`)
+                  }}
                 >
-                  <Link to={`/courses/${course.id}/lessons/${ctaLessonId}`}>
-                    <ctaConfig.icon className="mr-2 size-4" aria-hidden="true" />
-                    {ctaConfig.label}
-                  </Link>
+                  <ctaConfig.icon className="mr-2 size-4" aria-hidden="true" />
+                  {ctaConfig.label}
                 </Button>
               </div>
             )}
