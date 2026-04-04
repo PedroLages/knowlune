@@ -144,7 +144,8 @@ function SidebarContent({
       </div>
 
       {/* Grouped Navigation */}
-      <nav className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1" aria-label="Main navigation">
+      {/* 2px scrollbar — narrower than global 6px */}
+      <nav className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-0.5" aria-label="Main navigation">
         <div className="space-y-5">
           {visibleGroups.map((group, idx) => (
             <div key={group.label}>
