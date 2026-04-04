@@ -323,6 +323,7 @@ Real content`
         const abortError = Object.assign(new Error('The operation was aborted.'), {
           name: 'AbortError',
         })
+        // eslint-disable-next-line require-yield -- mock generator that throws before yielding
         mockStreamCompletion.mockImplementation(async function* () {
           throw abortError
         })
@@ -340,6 +341,7 @@ Real content`
         const abortError = Object.assign(new Error('The operation was aborted.'), {
           name: 'AbortError',
         })
+        // eslint-disable-next-line require-yield -- mock generator that throws before yielding
         mockStreamCompletion.mockImplementation(async function* () {
           throw abortError
         })
@@ -366,6 +368,7 @@ Real content`
 
     describe('error handling', () => {
       it('should rethrow non-AbortError exceptions', async () => {
+        // eslint-disable-next-line require-yield -- mock generator that throws before yielding
         mockStreamCompletion.mockImplementation(async function* () {
           throw new TypeError('Network failure')
         })
