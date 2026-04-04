@@ -146,22 +146,28 @@ export function generateIcsDownload(
   schedules: StudySchedule[],
   filename = 'knowlune-study-calendar.ics'
 ): void {
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-  const icalString = generateICalFeed(schedules, timezone)
+  try {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const icalString = generateICalFeed(schedules, timezone)
 
-  const blob = new Blob([icalString], { type: 'text/calendar;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
+    const blob = new Blob([icalString], { type: 'text/calendar;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
 
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.style.display = 'none'
-  document.body.appendChild(anchor)
-  anchor.click()
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = filename
+    anchor.style.display = 'none'
+    document.body.appendChild(anchor)
+    anchor.click()
 
-  // Cleanup to prevent memory leaks
-  document.body.removeChild(anchor)
-  URL.revokeObjectURL(url)
+    // Cleanup to prevent memory leaks
+    document.body.removeChild(anchor)
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('[icalFeedGenerator] Failed to generate .ics download:', error)
+    // Re-throw so the caller (UI button handler) can show a toast
+    throw error
+  }
 }
 
 /**

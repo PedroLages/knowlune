@@ -157,6 +157,8 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
       })
     } catch (error) {
       console.error('[StudyScheduleStore] Failed to load feed token:', error)
+      // Reset to safe defaults — stale persisted state could show an invalid feed URL
+      set({ feedToken: null, feedEnabled: false })
     }
   },
 
@@ -217,17 +219,25 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
       }
 
       // Delete old token first — old URL immediately invalidated
-      await supabase.from('calendar_tokens').delete().eq('user_id', user.id)
+      const { error: deleteError } = await supabase
+        .from('calendar_tokens')
+        .delete()
+        .eq('user_id', user.id)
+      if (deleteError) throw deleteError
 
       // Insert new token
       const token = generateHexToken()
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
 
-      const { error } = await supabase
+      const { error: insertError } = await supabase
         .from('calendar_tokens')
         .insert({ user_id: user.id, token, timezone })
 
-      if (error) throw error
+      if (insertError) {
+        // Insert failed after delete — token is gone, clear state to reflect DB reality
+        set({ feedToken: null, feedEnabled: false })
+        throw insertError
+      }
 
       set({ feedToken: token, feedEnabled: true })
       toast.success('Feed URL regenerated. Update your calendar subscription.')
