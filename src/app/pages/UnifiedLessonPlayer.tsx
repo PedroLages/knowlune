@@ -467,7 +467,7 @@ export function UnifiedLessonPlayer() {
         {readingModeAnnouncement}
       </div>
       {/* Slim toolbar: back arrow + course name (left), action buttons (right) */}
-      <div className="flex items-center gap-3 px-4 py-2 border border-border/30 bg-card/50 rounded-xl shrink-0 -mt-3 mb-3" data-theater-hide>
+      <div className="flex items-center gap-3 px-4 py-2 border border-border/30 bg-card rounded-xl shrink-0 -mt-3 mb-3 sticky top-0 z-10" data-theater-hide>
         <Link
           to={`/courses/${courseId}`}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
