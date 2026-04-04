@@ -6,7 +6,8 @@ started:
 completed:
 reviewed: in-progress
 review_started: 2026-04-04
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests-skipped, e2e-tests-skipped, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa, glm-code-review, openai-code-review-skipped]
+review_scope: full
 burn_in_validated: false
 ---
 
@@ -159,11 +160,29 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Date**: 2026-04-04 | **Report**: `docs/reviews/design/design-review-2026-04-04-e50-s05.md`
+
+**BLOCKER**: The "Schedule study time" button was added to `CourseHeader.tsx`, but `CourseHeader` is only used by `UnifiedCourseDetail.tsx` which is not routed. The active course route (`/courses/:courseId`) renders `CourseOverview`, which has no schedule integration. AC3 is unreachable in the live app. Fix: integrate `StudyScheduleEditor` into `CourseOverview`.
+
+**Medium**: Calendar feed requires sign-in to enable, which gates the full editor flow for unauthenticated users.
+
+**Nit**: DayPicker abbreviated labels (T/T, S/S) are accessible but a hover tooltip showing full day names would improve discoverability.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Date**: 2026-04-04 | **Report**: `docs/reviews/code/code-review-2026-04-04-e50-s05.md`
+
+**BLOCKER**: AC3 integration is dead code — `CourseHeader` is not routed (see above).
+
+**Medium** (`StudyScheduleEditor.tsx:73`): `existing` computed inline via `schedules.find()` changes identity on every render, causing the reset `useEffect` to re-fire unnecessarily. Fix with `useMemo`.
+
+**Medium** (`TimePicker.tsx:39`): If a stored schedule has a non-padded hour (e.g., `"6:00"`), the hour Select will appear blank. Normalize with `hour.padStart(2, '0')` on entry.
+
+**Nit** (`StudyScheduleEditor.tsx:247`): `aria-live="assertive"` on validation error — use `"polite"` for user-initiated validation.
+
+**GLM Review** (`docs/reviews/code/glm-code-review-2026-04-04-e50-s05.md`): Confirmed the `existing` identity issue and TimePicker normalization concern. GLM blocker finding (form reset on re-open) is a false positive — `open` is in the deps array and re-triggers correctly.
+
+**Testing gap**: No E2E spec file and no unit tests written. 0/5 ACs have automated coverage.
 
 ## Challenges and Lessons Learned
 
