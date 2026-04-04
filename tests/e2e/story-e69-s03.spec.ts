@@ -8,9 +8,26 @@
  */
 import { test, expect } from '../support/fixtures'
 import { goToSettings } from '../support/helpers/navigation'
+import { seedImportedCourses } from '../support/helpers/indexeddb-seed'
+
+/** Seed at least one course so StorageManagement renders the normal state (not empty state). */
+async function seedCourseData(page: import('@playwright/test').Page) {
+  // Navigate to root first — IndexedDB APIs throw SecurityError at about:blank
+  await page.goto('/')
+  await seedImportedCourses(page, [
+    {
+      id: 'e69-s03-test-course',
+      name: 'Test Course for Storage Management',
+      importedAt: '2026-01-01T00:00:00.000Z',
+      status: 'ready',
+      tags: [],
+    },
+  ])
+}
 
 test.describe('E69-S03: Cleanup Actions with Confirmation Dialogs', () => {
   test('cleanup actions section is visible in Settings', async ({ page }) => {
+    await seedCourseData(page)
     await goToSettings(page)
 
     // Navigate to Storage & Usage section
@@ -30,6 +47,7 @@ test.describe('E69-S03: Cleanup Actions with Confirmation Dialogs', () => {
   })
 
   test('confirmation dialog appears when clicking Clear Cache button', async ({ page }) => {
+    await seedCourseData(page)
     await goToSettings(page)
 
     const storageTab = page.getByRole('tab', { name: /storage/i })
@@ -53,6 +71,7 @@ test.describe('E69-S03: Cleanup Actions with Confirmation Dialogs', () => {
   })
 
   test('confirmation dialog appears when clicking Remove Orphaned button', async ({ page }) => {
+    await seedCourseData(page)
     await goToSettings(page)
 
     const storageTab = page.getByRole('tab', { name: /storage/i })
@@ -76,6 +95,7 @@ test.describe('E69-S03: Cleanup Actions with Confirmation Dialogs', () => {
   })
 
   test('Free Up Space button scrolls to cleanup actions', async ({ page }) => {
+    await seedCourseData(page)
     await goToSettings(page)
 
     const storageTab = page.getByRole('tab', { name: /storage/i })

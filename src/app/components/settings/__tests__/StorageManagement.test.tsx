@@ -11,14 +11,16 @@ import type { StorageOverview, StorageCategory } from '@/lib/storageEstimate'
 
 const mockGetStorageOverview = vi.fn()
 const mockGetPerCourseUsage = vi.fn()
-const mockClearCourseThumbnail = vi.fn()
-const mockDeleteCourseData = vi.fn()
 
 vi.mock('@/lib/storageEstimate', () => ({
   getStorageOverview: (...args: unknown[]) => mockGetStorageOverview(...args),
   getPerCourseUsage: (...args: unknown[]) => mockGetPerCourseUsage(...args),
-  clearCourseThumbnail: (...args: unknown[]) => mockClearCourseThumbnail(...args),
-  deleteCourseData: (...args: unknown[]) => mockDeleteCourseData(...args),
+  // CleanupActionsSection functions — not exercised in StorageManagement tests
+  estimateThumbnailCacheSize: vi.fn().mockResolvedValue(0),
+  estimateOrphanedEmbeddingsSize: vi.fn().mockResolvedValue({ count: 0, bytes: 0 }),
+  clearThumbnailCache: vi.fn(),
+  removeOrphanedEmbeddings: vi.fn(),
+  deleteCourseDataWithCount: vi.fn(),
   STORAGE_CATEGORIES: [
     'courses',
     'notes',
@@ -27,6 +29,14 @@ vi.mock('@/lib/storageEstimate', () => ({
     'thumbnails',
     'transcripts',
   ] as StorageCategory[],
+}))
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+
+vi.mock('@/db', () => ({
+  db: {
+    importedCourses: { toArray: vi.fn().mockResolvedValue([]) },
+  },
 }))
 
 vi.mock('@/lib/toastHelpers', () => ({
@@ -122,10 +132,7 @@ function renderComponent() {
 beforeEach(() => {
   vi.clearAllMocks()
   sessionStorage.clear()
-  // Default implementations for new functions
   mockGetPerCourseUsage.mockResolvedValue([])
-  mockClearCourseThumbnail.mockResolvedValue(0)
-  mockDeleteCourseData.mockResolvedValue(0)
 })
 
 describe('StorageManagement', () => {
