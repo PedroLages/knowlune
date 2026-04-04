@@ -332,3 +332,9 @@ html.reduce-motion *::after {
 html.reduce-motion .reduced-motion-fade {
   transition: opacity 300ms ease !important;
 }
+
+/* Focus mode: critical notifications pierce the overlay (E65-S04) */
+/* Focus overlay is z-40; critical toasts must render above it */
+.focus-mode-critical-toast {
+  z-index: 60 !important;
+}

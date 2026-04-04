@@ -66,6 +66,7 @@ import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationS
 import { YouTubeConfigurationSettings } from '@/app/components/figma/YouTubeConfigurationSettings'
 import { QuizPreferencesForm } from '@/app/components/settings/QuizPreferencesForm'
 import { PomodoroSettings } from '@/app/components/settings/PomodoroSettings'
+import { FocusModeSettings } from '@/app/components/settings/FocusModeSettings'
 import { AvatarCropDialog } from '@/app/components/ui/avatar-crop-dialog'
 import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
 import { EngagementPreferences } from '@/app/components/settings/EngagementPreferences'
@@ -1003,6 +1004,9 @@ export default function Settings() {
 
         {/* Quiz Preferences */}
         <QuizPreferencesForm />
+
+        {/* Focus Mode Auto-Activation */}
+        <FocusModeSettings />
 
         {/* Pomodoro & Session Preferences */}
         <PomodoroSettings />

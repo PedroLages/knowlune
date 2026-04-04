@@ -401,7 +401,7 @@ export function Layout() {
   }, [location.pathname])
 
   // Focus mode (E65-S03) — overlay, focus trap, and exit
-  const focusMode = useFocusMode()
+  const focusMode = useFocusMode(navigate)
 
   // Quality score dialog state (E11-S03)
   const [qualityDialogOpen, setQualityDialogOpen] = useState(false)
