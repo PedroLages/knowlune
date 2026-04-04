@@ -1,9 +1,9 @@
 ---
 story_id: E50-S03
 story_name: "Feed URL Management"
-status: draft
-started:
-completed:
+status: done
+started: 2026-04-04
+completed: 2026-04-04
 reviewed: true
 review_started: 2026-04-04
 review_gates_passed:

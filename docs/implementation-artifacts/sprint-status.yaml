@@ -559,7 +559,7 @@ development_status:
   epic-50: in-progress
   50-1-study-schedule-data-model: done
   50-2-ical-feed-generation-endpoint: done
-  50-3-feed-url-management: backlog
+  50-3-feed-url-management: done
   50-4-calendar-settings-ui: backlog
   50-5-schedule-editor-course-integration: backlog
   50-6-srs-events-overview-widget: backlog
