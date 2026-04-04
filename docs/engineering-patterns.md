@@ -49,6 +49,8 @@ function parseLocalDate(dateStr: string): Date {
 }
 ```
 
+**Dedup storage queries**: `toLocaleDateString('sv-SE')` is also the project standard for same-day dedup keys in IndexedDB queries. Both `hasKnowledgeDecayToday()` and `hasRecommendationMatchToday()` in `src/services/NotificationService.ts` use this format. When adding new dedup functions, match this pattern rather than using epoch timestamps or ISO strings.
+
 ## Type Guard Edge Cases
 
 When form state allows empty or undefined values, always guard dynamic lookups before using them in validation messages or UI labels.
