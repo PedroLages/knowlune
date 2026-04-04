@@ -660,7 +660,7 @@ development_status:
   60-2-content-recommendation-notification-handler: done
   60-3-milestone-approaching-trigger: done
   60-4-smart-triggers-preferences-panel: done
-  60-5-smart-trigger-unit-and-e2e-tests: in-progress
+  60-5-smart-trigger-unit-and-e2e-tests: done
   epic-60-retrospective: optional
 
   # ──────────────────────────────────────────────────
