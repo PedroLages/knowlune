@@ -432,7 +432,7 @@ export function CourseOverview() {
         className="max-w-5xl mx-auto -mt-10 relative z-20 px-6"
       >
         <div
-          className="bg-card/80 backdrop-blur-xl border border-border rounded-2xl p-4 flex flex-wrap justify-around items-center shadow-studio relative overflow-hidden"
+          className="bg-card border border-border rounded-2xl p-4 flex flex-wrap justify-around items-center shadow-studio relative overflow-hidden"
           role="group"
           aria-label="Course statistics"
           data-testid="course-overview-stats"
@@ -503,24 +503,25 @@ export function CourseOverview() {
       </motion.div>
 
       {/* Content Area: Timeline + Sidebar */}
-      <div className="max-w-5xl mx-auto px-6 mt-16 grid grid-cols-1 lg:grid-cols-3 gap-12">
+      {/* Section heading above the grid so both columns align */}
+      <div className="max-w-5xl mx-auto px-6 mt-16 mb-8 flex items-center gap-3">
+        <h2 className="text-xl font-bold text-foreground">Course Journey</h2>
+        {completedCount > 0 && (
+          <Badge variant="secondary" className="text-xs">
+            {completedCount} / {videos.length} completed
+          </Badge>
+        )}
+      </div>
+
+      <div className="max-w-5xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-3 gap-12">
         {/* Timeline Curriculum (Left 2/3) */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.25 }}
-          className="lg:col-span-2 space-y-8"
+          className="lg:col-span-2"
           data-testid="course-overview-curriculum"
         >
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold text-foreground">Course Journey</h2>
-            {completedCount > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {completedCount} / {videos.length} completed
-              </Badge>
-            )}
-          </div>
-
           <div className="relative border-l-2 border-muted-foreground/15 ml-4 space-y-10 pb-8">
             {(() => {
               let moduleNum = 0

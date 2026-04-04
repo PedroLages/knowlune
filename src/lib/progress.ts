@@ -125,9 +125,11 @@ export async function getLastWatchedLesson(
 
   const best = sorted[0]
 
-  // Look up the video title from Dexie
+  // Look up the lesson title from Dexie (check videos first, then PDFs)
   const video = await db.importedVideos.get(best.videoId)
-  const title = video?.filename ?? 'Unknown Lesson'
+  const pdf = video ? null : await db.importedPdfs.get(best.videoId)
+  const raw = video?.filename ?? pdf?.filename ?? 'Unknown Lesson'
+  const title = raw.replace(/\.(pdf|mp4|mkv|avi|webm|ts)$/i, '').replace(/_/g, ' ')
 
   return { lessonId: best.videoId, lessonTitle: title }
 }
