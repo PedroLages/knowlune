@@ -464,6 +464,7 @@ html.spacious {
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
+    overflow: hidden;
   }
 
   h1,
@@ -500,7 +501,7 @@ html.spacious {
 
   html {
     font-size: var(--font-size);
-    scrollbar-gutter: stable;
+    overflow: hidden;
   }
 
   h1 {
