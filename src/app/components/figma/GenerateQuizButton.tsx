@@ -13,7 +13,7 @@
  */
 
 import { useState } from 'react'
-import { BrainCircuit, Loader2 } from 'lucide-react'
+import { BrainCircuit, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import {
@@ -43,6 +43,8 @@ interface GenerateQuizButtonProps {
   cachedQuiz: Quiz | null
   /** Callback to trigger generation with selected Bloom's level */
   onGenerate: (bloomsLevel: BloomsLevel) => void
+  /** Callback to trigger regeneration (new quiz, preserves old) */
+  onRegenerate?: (bloomsLevel: BloomsLevel) => void
 }
 
 const BLOOMS_OPTIONS: { value: BloomsLevel; label: string }[] = [
@@ -57,6 +59,7 @@ export function GenerateQuizButton({
   checkingAvailability,
   cachedQuiz,
   onGenerate,
+  onRegenerate,
 }: GenerateQuizButtonProps) {
   const [bloomsLevel, setBloomsLevel] = useState<BloomsLevel>('remember')
 
@@ -87,11 +90,13 @@ export function GenerateQuizButton({
       disabled={isDisabled}
       aria-disabled={isDisabled}
       aria-label={buttonLabel + ' from transcript'}
-      onClick={() => onGenerate(bloomsLevel)}
+      onClick={() => (cachedQuiz && onRegenerate ? onRegenerate(bloomsLevel) : onGenerate(bloomsLevel))}
       data-testid="generate-quiz-button"
     >
       {checkingAvailability ? (
         <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+      ) : cachedQuiz ? (
+        <RefreshCw className="size-4" aria-hidden="true" />
       ) : (
         <BrainCircuit className="size-4" aria-hidden="true" />
       )}

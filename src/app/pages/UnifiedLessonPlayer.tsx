@@ -369,6 +369,7 @@ export function UnifiedLessonPlayer() {
           checkingAvailability={quizGen.checkingAvailability}
           cachedQuiz={quizGen.cachedQuiz}
           onGenerate={quizGen.generate}
+          onRegenerate={quizGen.regenerate}
         />
         {quizGen.quiz && (
           <div className="mt-2">
