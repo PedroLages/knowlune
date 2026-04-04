@@ -151,6 +151,7 @@ export function StudyScheduleEditor({
         reminderMinutes: Number(reminderMinutes),
         recurrence: 'weekly' as const,
         enabled: true,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       }
 
       if (isEdit && scheduleId) {

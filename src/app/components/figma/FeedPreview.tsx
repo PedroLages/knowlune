@@ -96,7 +96,7 @@ export function FeedPreview({ schedules }: FeedPreviewProps) {
       <h4 className="text-sm font-medium mb-2">Upcoming Events</h4>
       <ScrollArea className="max-h-48">
         <div className="space-y-2">
-          {upcomingEvents.map((event) => (
+          {upcomingEvents.map(event => (
             <div
               key={`${event.title}-${event.dayLabel}-${event.time}`}
               className="flex items-center gap-3 rounded-lg border border-border/50 p-3 text-sm"

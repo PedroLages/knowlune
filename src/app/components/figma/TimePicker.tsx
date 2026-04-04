@@ -52,10 +52,7 @@ export function TimePicker({ value, onChange }: TimePickerProps) {
       </PopoverTrigger>
       <PopoverContent className="w-56 p-3" align="start">
         <div className="flex items-center gap-2">
-          <Select
-            value={hour}
-            onValueChange={h => onChange(`${h}:${minute}`)}
-          >
+          <Select value={hour} onValueChange={h => onChange(`${h}:${minute}`)}>
             <SelectTrigger className="flex-1" aria-label="Hour">
               <SelectValue />
             </SelectTrigger>
@@ -68,10 +65,7 @@ export function TimePicker({ value, onChange }: TimePickerProps) {
             </SelectContent>
           </Select>
           <span className="text-muted-foreground font-medium">:</span>
-          <Select
-            value={minute}
-            onValueChange={m => onChange(`${hour}:${m}`)}
-          >
+          <Select value={minute} onValueChange={m => onChange(`${hour}:${m}`)}>
             <SelectTrigger className="flex-1" aria-label="Minute">
               <SelectValue />
             </SelectTrigger>
