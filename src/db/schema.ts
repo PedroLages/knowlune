@@ -30,6 +30,7 @@ import type {
   Notification,
   NotificationPreferences,
   CourseEmbedding,
+  StudySchedule,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA } from './checkpoint'
@@ -69,6 +70,7 @@ export type ElearningDatabase = Dexie & {
   notifications: EntityTable<Notification, 'id'>
   notificationPreferences: EntityTable<NotificationPreferences, 'id'>
   courseEmbeddings: EntityTable<CourseEmbedding, 'courseId'>
+  studySchedules: EntityTable<StudySchedule, 'id'>
 }
 
 /**
@@ -1226,6 +1228,13 @@ function _declareLegacyMigrations(database: Dexie): void {
   database.version(35).stores({
     courseEmbeddings: 'courseId',
     quizzes: 'id, lessonId, createdAt, transcriptHash',
+  })
+
+  // v36: Study schedule data model (E50-S01)
+  // - New studySchedules table for calendar integration
+  // - Indexes on courseId, learningPathId, enabled for filtering
+  database.version(36).stores({
+    studySchedules: 'id, courseId, learningPathId, enabled',
   })
 } // end _declareLegacyMigrations
 
