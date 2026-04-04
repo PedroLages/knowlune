@@ -10,6 +10,12 @@
 
 import type { ImportedCourse, ImportedVideo, ImportedPdf, CourseSource } from '@/data/types'
 import { db } from '@/db'
+import {
+  matchMaterialsToLessons,
+  getCompanionPdfIds,
+  type MaterialGroup,
+} from './lessonMaterialMatcher'
+export type { MaterialGroup } from './lessonMaterialMatcher'
 
 // ---------------------------------------------------------------------------
 // Utilities
@@ -54,6 +60,7 @@ export interface CourseAdapter {
   getCourse(): ImportedCourse
   getSource(): CourseSource
   getLessons(): Promise<LessonItem[]>
+  getGroupedLessons(): Promise<MaterialGroup[]>
   getMediaUrl(lessonId: string): Promise<string | null>
   getTranscript(lessonId: string): Promise<string | null>
   getThumbnailUrl(): Promise<string | null>
@@ -67,6 +74,8 @@ export interface CourseAdapter {
 // ---------------------------------------------------------------------------
 
 export class LocalCourseAdapter implements CourseAdapter {
+  private cachedGroups: MaterialGroup[] | null = null
+
   constructor(
     private course: ImportedCourse,
     private videos: ImportedVideo[],
@@ -81,8 +90,8 @@ export class LocalCourseAdapter implements CourseAdapter {
     return 'local'
   }
 
-  async getLessons(): Promise<LessonItem[]> {
-    const videoLessons: LessonItem[] = this.videos.map(v => ({
+  private buildVideoLessons(): LessonItem[] {
+    return this.videos.map(v => ({
       id: v.id,
       title: v.filename,
       type: 'video' as const,
@@ -98,8 +107,10 @@ export class LocalCourseAdapter implements CourseAdapter {
         chapters: v.chapters,
       },
     }))
+  }
 
-    const pdfLessons: LessonItem[] = this.pdfs.map(p => ({
+  private buildPdfLessons(): LessonItem[] {
+    return this.pdfs.map(p => ({
       id: p.id,
       title: p.filename,
       type: 'pdf' as const,
@@ -112,12 +123,34 @@ export class LocalCourseAdapter implements CourseAdapter {
         pageCount: p.pageCount,
       },
     }))
+  }
 
-    // Combine and sort by order, then by title for stable ordering
-    return [...videoLessons, ...pdfLessons].sort((a, b) => {
-      if (a.order !== b.order) return a.order - b.order
-      return a.title.localeCompare(b.title)
-    })
+  async getGroupedLessons(): Promise<MaterialGroup[]> {
+    if (this.cachedGroups) return this.cachedGroups
+    const groups = matchMaterialsToLessons(
+      this.buildVideoLessons(),
+      this.buildPdfLessons()
+    )
+    this.cachedGroups = groups
+    return groups
+  }
+
+  async getLessons(): Promise<LessonItem[]> {
+    // Exclude companion PDFs from the flat list — they appear as
+    // nested materials under their parent video in the sidebar.
+    // This ensures prev/next navigation skips companion PDFs.
+    const groups = await this.getGroupedLessons()
+    const companionIds = getCompanionPdfIds(groups)
+
+    const videoLessons = this.buildVideoLessons()
+    const pdfLessons = this.buildPdfLessons()
+
+    return [...videoLessons, ...pdfLessons]
+      .filter(l => !companionIds.has(l.id))
+      .sort((a, b) => {
+        if (a.order !== b.order) return a.order - b.order
+        return a.title.localeCompare(b.title)
+      })
   }
 
   /**
@@ -266,6 +299,11 @@ export class YouTubeCourseAdapter implements CourseAdapter {
         },
       }))
       .sort((a, b) => a.order - b.order)
+  }
+
+  async getGroupedLessons(): Promise<MaterialGroup[]> {
+    const lessons = await this.getLessons()
+    return lessons.map(l => ({ primary: l, materials: [] }))
   }
 
   async getMediaUrl(lessonId: string): Promise<string | null> {

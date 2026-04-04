@@ -1,7 +1,9 @@
 /**
  * LessonsTab — Course lesson list sub-panel for PlayerSidePanel.
  *
- * Includes search/filter, highlighted titles, and lesson duration formatting.
+ * Includes search/filter, highlighted titles, lesson duration formatting,
+ * and companion material count badges (PDFs matched to videos by filename).
+ * Sidebar shows only videos — PDFs are accessible via the Materials tab.
  *
  * Extracted from PlayerSidePanel.tsx to reduce god-component complexity.
  */
@@ -10,6 +12,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { Link } from 'react-router'
 import { Video, PlayCircle, FileText, Search, X, FolderOpen, ChevronDown } from 'lucide-react'
 import { Input } from '@/app/components/ui/input'
+import { Badge } from '@/app/components/ui/badge'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import {
   Collapsible,
@@ -18,7 +21,7 @@ import {
 } from '@/app/components/ui/collapsible'
 import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
-import type { CourseAdapter, LessonItem } from '@/lib/courseAdapter'
+import type { CourseAdapter, LessonItem, MaterialGroup } from '@/lib/courseAdapter'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -59,12 +62,12 @@ export function HighlightedLessonTitle({ text, query }: { text: string; query: s
 }
 
 // ---------------------------------------------------------------------------
-// Folder grouping
+// Folder grouping (operates on MaterialGroup[])
 // ---------------------------------------------------------------------------
 
-interface LessonGroup {
+interface FolderGroup {
   folder: string
-  lessons: LessonItem[]
+  groups: MaterialGroup[]
 }
 
 function getFolderName(path: string): string {
@@ -72,21 +75,21 @@ function getFolderName(path: string): string {
   return parts.length > 1 ? parts[0] : ''
 }
 
-function groupLessonsByFolder(lessons: LessonItem[]): LessonGroup[] {
-  const groups = new Map<string, LessonItem[]>()
-  for (const lesson of lessons) {
-    const path = (lesson.sourceMetadata?.path as string) ?? ''
+function groupByFolder(materialGroups: MaterialGroup[]): FolderGroup[] {
+  const folders = new Map<string, MaterialGroup[]>()
+  for (const group of materialGroups) {
+    const path = (group.primary.sourceMetadata?.path as string) ?? ''
     const folder = getFolderName(path)
-    if (!groups.has(folder)) groups.set(folder, [])
-    groups.get(folder)!.push(lesson)
+    if (!folders.has(folder)) folders.set(folder, [])
+    folders.get(folder)!.push(group)
   }
-  return Array.from(groups.entries())
+  return Array.from(folders.entries())
     .sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }))
-    .map(([folder, items]) => ({ folder, lessons: items }))
+    .map(([folder, groups]) => ({ folder, groups }))
 }
 
 // ---------------------------------------------------------------------------
-// LessonsTab component
+// LessonLink (primary lesson row)
 // ---------------------------------------------------------------------------
 
 function LessonLink({
@@ -94,15 +97,19 @@ function LessonLink({
   courseId,
   isActive,
   index,
+  materialCount,
   activeRef,
   searchQuery,
+  onFocusMaterials,
 }: {
   lesson: LessonItem
   courseId: string
   isActive: boolean
   index: number
+  materialCount: number
   activeRef?: React.Ref<HTMLAnchorElement>
   searchQuery: string
+  onFocusMaterials?: () => void
 }) {
   return (
     <Link
@@ -136,20 +143,85 @@ function LessonLink({
               {formatLessonDuration(lesson.duration)}
             </span>
           )}
+          {materialCount > 0 && onFocusMaterials && (
+            <button
+              type="button"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center -m-2 rounded-sm"
+              onClick={e => {
+                e.preventDefault()
+                e.stopPropagation()
+                onFocusMaterials()
+              }}
+              aria-label="View materials"
+            >
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                <FileText className="size-2.5 mr-0.5" aria-hidden="true" />
+                {materialCount}
+              </Badge>
+            </button>
+          )}
+          {materialCount > 0 && !onFocusMaterials && (
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 ml-1">
+              <FileText className="size-2.5 mr-0.5" aria-hidden="true" />
+              {materialCount}
+            </Badge>
+          )}
         </div>
       </div>
     </Link>
   )
 }
 
+// ---------------------------------------------------------------------------
+// MaterialGroupRow — primary lesson with material count badge
+// ---------------------------------------------------------------------------
+
+function MaterialGroupRow({
+  group,
+  courseId,
+  lessonId,
+  index,
+  activeRef,
+  searchQuery,
+  onFocusMaterials,
+}: {
+  group: MaterialGroup
+  courseId: string
+  lessonId: string
+  index: number
+  activeRef?: React.Ref<HTMLAnchorElement>
+  searchQuery: string
+  onFocusMaterials?: () => void
+}) {
+  const isActive = group.primary.id === lessonId
+
+  return (
+    <LessonLink
+      lesson={group.primary}
+      courseId={courseId}
+      isActive={isActive}
+      index={index}
+      materialCount={group.materials.length}
+      activeRef={isActive ? activeRef : undefined}
+      searchQuery={searchQuery}
+      onFocusMaterials={onFocusMaterials}
+    />
+  )
+}
+
+// ---------------------------------------------------------------------------
+// LessonsTab component
+// ---------------------------------------------------------------------------
+
 export interface LessonsTabProps {
   courseId: string
   lessonId: string
   adapter: CourseAdapter
+  onFocusMaterials?: () => void
 }
 
-export function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
-  const [lessons, setLessons] = useState<LessonItem[]>([])
+export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: LessonsTabProps) {
+  const [materialGroups, setMaterialGroups] = useState<MaterialGroup[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const activeRef = useRef<HTMLAnchorElement>(null)
@@ -159,10 +231,10 @@ export function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
     setIsLoading(true)
 
     adapter
-      .getLessons()
-      .then(items => {
+      .getGroupedLessons()
+      .then(groups => {
         if (!ignore) {
-          setLessons(items)
+          setMaterialGroups(groups)
           setIsLoading(false)
         }
       })
@@ -183,17 +255,54 @@ export function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
     }
   }, [isLoading, lessonId])
 
-  const showSearch = lessons.length > LESSON_SEARCH_THRESHOLD
+  // Sidebar shows only videos (standalone PDFs are accessed via Materials tab)
+  const videoGroups = useMemo(
+    () => materialGroups.filter(g => g.primary.type === 'video'),
+    [materialGroups]
+  )
 
-  const filteredLessons = useMemo(() => {
-    if (!searchQuery) return lessons
+  const showSearch = videoGroups.length > LESSON_SEARCH_THRESHOLD
+
+  // Filter groups by search query (match primary title or material titles)
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery) return videoGroups
     const q = searchQuery.toLowerCase()
-    return lessons.filter(l => l.title.toLowerCase().includes(q))
-  }, [lessons, searchQuery])
+    return videoGroups.filter(
+      g =>
+        g.primary.title.toLowerCase().includes(q) ||
+        g.materials.some(m => m.title.toLowerCase().includes(q))
+    )
+  }, [videoGroups, searchQuery])
 
-  const groupedLessons = useMemo(() => groupLessonsByFolder(filteredLessons), [filteredLessons])
-  const hasMultipleGroups =
-    groupedLessons.length > 1 || (groupedLessons.length === 1 && groupedLessons[0].folder !== '')
+  const folderGroups = useMemo(() => groupByFolder(filteredGroups), [filteredGroups])
+  const hasMultipleFolders =
+    folderGroups.length > 1 || (folderGroups.length === 1 && folderGroups[0].folder !== '')
+
+  // Determine which folder contains the active lesson
+  const activeFolder = useMemo(() => {
+    if (!hasMultipleFolders) return ''
+    const activeGroup = videoGroups.find(g => g.primary.id === lessonId)
+    if (!activeGroup) return ''
+    const path = (activeGroup.primary.sourceMetadata?.path as string) ?? ''
+    return getFolderName(path)
+  }, [videoGroups, lessonId, hasMultipleFolders])
+
+  // Lesson index within the active folder (for contextual "Lesson X of Y")
+  const activeFolderGroup = useMemo(
+    () => folderGroups.find(fg => fg.folder === activeFolder),
+    [folderGroups, activeFolder]
+  )
+  const indexInFolder = activeFolderGroup
+    ? activeFolderGroup.groups.findIndex(g => g.primary.id === lessonId)
+    : -1
+
+  // Pre-compute O(1) lookup for original group indices (must be before early returns)
+  const groupIndexMap = useMemo(
+    () => new Map(videoGroups.map((g, i) => [g.primary.id, i])),
+    [videoGroups]
+  )
+
+  const currentIndex = videoGroups.findIndex(g => g.primary.id === lessonId)
 
   if (isLoading) {
     return (
@@ -205,16 +314,11 @@ export function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
     )
   }
 
-  if (lessons.length === 0) {
+  if (videoGroups.length === 0) {
     return (
       <EmptyState icon={Video} title="No lessons" description="This course has no lessons yet" />
     )
   }
-
-  // Pre-compute O(1) lookup map for original lesson indices
-  const lessonIndexMap = useMemo(() => new Map(lessons.map((l, i) => [l.id, i])), [lessons])
-
-  const currentIndex = lessons.findIndex(l => l.id === lessonId)
 
   return (
     <div className="p-2 space-y-0.5" data-testid="lessons-tab-list">
@@ -249,13 +353,15 @@ export function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
         </div>
       )}
       <div className="px-2 pb-2 text-xs text-muted-foreground">
-        {searchQuery && filteredLessons.length !== lessons.length
-          ? `Showing ${filteredLessons.length} of ${lessons.length} lessons`
-          : currentIndex >= 0
-            ? `Lesson ${currentIndex + 1} of ${lessons.length}`
-            : `${lessons.length} lessons`}
+        {searchQuery && filteredGroups.length !== videoGroups.length
+          ? `Showing ${filteredGroups.length} of ${videoGroups.length} lessons`
+          : hasMultipleFolders && activeFolderGroup && indexInFolder >= 0
+            ? `Lesson ${indexInFolder + 1} of ${activeFolderGroup.groups.length} in ${activeFolder || 'General'}`
+            : currentIndex >= 0
+              ? `Lesson ${currentIndex + 1} of ${videoGroups.length}`
+              : `${videoGroups.length} lessons`}
       </div>
-      {filteredLessons.length === 0 && searchQuery ? (
+      {filteredGroups.length === 0 && searchQuery ? (
         <div
           className="flex flex-col items-center justify-center py-12 text-muted-foreground"
           data-testid="lesson-search-empty"
@@ -263,53 +369,60 @@ export function LessonsTab({ courseId, lessonId, adapter }: LessonsTabProps) {
           <Search className="size-10 mb-3 opacity-50" aria-hidden="true" />
           <p className="text-sm">No lessons match your search</p>
         </div>
-      ) : hasMultipleGroups ? (
-        groupedLessons.map(group => (
-          <Collapsible key={group.folder || 'root'} defaultOpen>
-            <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm font-medium text-foreground group/folder">
-              <FolderOpen className="size-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
-              <span className="flex-1 text-left text-xs truncate">
-                {group.folder || 'General'}
-              </span>
-              <span className="text-xs text-muted-foreground">{group.lessons.length}</span>
-              <ChevronDown
-                className="size-3.5 text-muted-foreground transition-transform group-data-[state=open]/folder:rotate-180"
-                aria-hidden="true"
-              />
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="ml-2 pl-2 border-l border-border/50 space-y-0.5">
-                {group.lessons.map((lesson, indexInGroup) => {
-                  const isActive = lesson.id === lessonId
-                  return (
-                    <LessonLink
-                      key={lesson.id}
-                      lesson={lesson}
-                      courseId={courseId}
-                      isActive={isActive}
-                      index={indexInGroup}
-                      activeRef={isActive ? activeRef : undefined}
-                      searchQuery={searchQuery}
-                    />
-                  )
-                })}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        ))
-      ) : (
-        filteredLessons.map(lesson => {
-          const isActive = lesson.id === lessonId
-          const originalIndex = lessonIndexMap.get(lesson.id) ?? 0
+      ) : hasMultipleFolders ? (
+        folderGroups.map(fg => {
+          const groupCount = fg.groups.length
+          const isActiveFolder = fg.folder === activeFolder
           return (
-            <LessonLink
-              key={lesson.id}
-              lesson={lesson}
+            <Collapsible key={fg.folder || 'root'} defaultOpen={isActiveFolder}>
+              <CollapsibleTrigger className={cn(
+                'flex w-full items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium group/folder',
+                isActiveFolder
+                  ? 'bg-brand-soft/30 text-foreground'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+              )}>
+                <FolderOpen className="size-3.5 shrink-0" aria-hidden="true" />
+                <span className="flex-1 text-left text-xs truncate">
+                  {fg.folder || 'General'}
+                </span>
+                <span className="text-xs text-muted-foreground">{groupCount}</span>
+                <ChevronDown
+                  className="size-3.5 text-muted-foreground transition-transform group-data-[state=open]/folder:rotate-180"
+                  aria-hidden="true"
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="ml-2 pl-2 border-l border-border/50 space-y-0.5">
+                  {fg.groups.map((group, idx) => (
+                    <MaterialGroupRow
+                      key={group.primary.id}
+                      group={group}
+                      courseId={courseId}
+                      lessonId={lessonId}
+                      index={idx}
+                      activeRef={group.primary.id === lessonId ? activeRef : undefined}
+                      searchQuery={searchQuery}
+                      onFocusMaterials={onFocusMaterials}
+                    />
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )
+        })
+      ) : (
+        filteredGroups.map(group => {
+          const originalIndex = groupIndexMap.get(group.primary.id) ?? 0
+          return (
+            <MaterialGroupRow
+              key={group.primary.id}
+              group={group}
               courseId={courseId}
-              isActive={isActive}
+              lessonId={lessonId}
               index={originalIndex}
-              activeRef={isActive ? activeRef : undefined}
+              activeRef={group.primary.id === lessonId ? activeRef : undefined}
               searchQuery={searchQuery}
+              onFocusMaterials={onFocusMaterials}
             />
           )
         })

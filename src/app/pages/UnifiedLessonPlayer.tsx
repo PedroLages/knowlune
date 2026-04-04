@@ -397,6 +397,7 @@ export function UnifiedLessonPlayer() {
         currentTime={state.currentTime}
         onSeek={state.handleTranscriptSeek}
         focusTab={state.focusTab}
+        focusTabKey={state.focusTabCounter.current}
         isPdf={state.isPdf}
         hideNotesTab={isDesktop && state.notesOpen}
         onCaptureFrame={handleCaptureFrame}
@@ -544,7 +545,7 @@ export function UnifiedLessonPlayer() {
               <p className="text-xs text-muted-foreground">Course Content</p>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto">
-              <LessonsTab courseId={courseId!} lessonId={lessonId!} adapter={adapter} />
+              <LessonsTab courseId={courseId!} lessonId={lessonId!} adapter={adapter} onFocusMaterials={state.handleFocusMaterials} />
             </div>
           </div>
         </div>
@@ -608,7 +609,7 @@ export function UnifiedLessonPlayer() {
                 {course?.name ?? 'Course Content'}
               </SheetTitle>
               <div className="flex-1 min-h-0 overflow-y-auto">
-                <LessonsTab courseId={courseId!} lessonId={lessonId!} adapter={adapter} />
+                <LessonsTab courseId={courseId!} lessonId={lessonId!} adapter={adapter} onFocusMaterials={state.handleFocusMaterials} />
               </div>
             </SheetContent>
           </Sheet>

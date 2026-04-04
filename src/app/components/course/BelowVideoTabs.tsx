@@ -33,6 +33,8 @@ interface BelowVideoTabsProps {
   onSeek?: (time: number) => void
   /** Programmatically switch to a tab (e.g. "notes" when user presses N) */
   focusTab?: string | null
+  /** Counter that increments on each focus request, enabling re-triggers for the same tab */
+  focusTabKey?: number
   /** Whether the current lesson is a PDF (hides Bookmarks tab) */
   isPdf?: boolean
   /** When true, hide the Notes tab (desktop notes panel is open instead) */
@@ -48,6 +50,7 @@ export function BelowVideoTabs({
   currentTime,
   onSeek,
   focusTab,
+  focusTabKey,
   isPdf,
   hideNotesTab,
   onCaptureFrame,
@@ -64,12 +67,13 @@ export function BelowVideoTabs({
     setActiveTab(isPdf ? 'materials' : 'notes')
   }, [lessonId, isPdf])
 
-  // Programmatic tab switching (e.g. N key -> Notes)
+  // Programmatic tab switching (e.g. N key -> Notes, badge click -> Materials)
   useEffect(() => {
     if (focusTab) {
       setActiveTab(focusTab)
     }
-  }, [focusTab])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusTab, focusTabKey])
 
   // Auto-switch away from notes tab when desktop notes panel is open
   useEffect(() => {
@@ -300,7 +304,7 @@ export function BelowVideoTabs({
         {capabilities.hasPdf && (
           <TabsContent value="materials" className="mt-4">
             <div className="bg-card rounded-2xl shadow-sm">
-              <MaterialsTab courseId={courseId} lessonId={lessonId} />
+              <MaterialsTab courseId={courseId} lessonId={lessonId} adapter={adapter} />
             </div>
           </TabsContent>
         )}

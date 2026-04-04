@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { FileText, ChevronRight, ShieldAlert } from 'lucide-react'
+import { cn } from '@/app/components/ui/utils'
 import { toast } from 'sonner'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
@@ -25,9 +26,13 @@ import { db } from '@/db/schema'
 import { revokeObjectUrl } from '@/lib/courseAdapter'
 import type { ImportedPdf } from '@/data/types'
 
+import type { CourseAdapter } from '@/lib/courseAdapter'
+import { getCompanionMaterials, getCompanionPdfIds, type MaterialGroup } from '@/lib/lessonMaterialMatcher'
+
 interface MaterialsTabProps {
   courseId: string
   lessonId: string
+  adapter: CourseAdapter
 }
 
 // ---------------------------------------------------------------------------
@@ -194,9 +199,10 @@ function PdfSection({ pdf, courseId }: PdfSectionProps) {
           aria-expanded={isOpen}
         >
           <ChevronRight
-            className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
-              isOpen ? 'rotate-90' : ''
-            }`}
+            className={cn(
+              'size-4 shrink-0 text-muted-foreground transition-transform duration-200',
+              isOpen && 'rotate-90'
+            )}
             aria-hidden="true"
           />
           <FileText className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -255,24 +261,72 @@ function PdfSection({ pdf, courseId }: PdfSectionProps) {
 }
 
 // ---------------------------------------------------------------------------
+// Standalone PDFs section (course-level resources not matched to any video)
+// ---------------------------------------------------------------------------
+
+interface StandalonePdfsSectionProps {
+  pdfs: ImportedPdf[]
+  courseId: string
+}
+
+function StandalonePdfsSection({ pdfs, courseId }: StandalonePdfsSectionProps) {
+  const [isOpen, setIsOpen] = useState(pdfs.length <= 3)
+
+  return (
+    <div className="pt-2" data-testid="course-resources-section">
+      <div className="border-t border-border/50 pt-2">
+        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+          <CollapsibleTrigger asChild>
+            <button className="flex w-full items-center gap-2 px-1 py-1 text-left">
+              <ChevronRight
+                className={cn(
+                  'size-3.5 shrink-0 text-muted-foreground transition-transform duration-200',
+                  isOpen && 'rotate-90'
+                )}
+                aria-hidden="true"
+              />
+              <span className="text-xs text-muted-foreground">
+                Course resources ({pdfs.length})
+              </span>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="space-y-1 pt-1">
+              {pdfs.map(pdf => (
+                <PdfSection key={pdf.id} pdf={pdf} courseId={courseId} />
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main MaterialsTab
 // ---------------------------------------------------------------------------
 
-export function MaterialsTab({ courseId, lessonId: _lessonId }: MaterialsTabProps) {
-  const [pdfs, setPdfs] = useState<ImportedPdf[]>([])
+export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps) {
+  const [allPdfs, setAllPdfs] = useState<ImportedPdf[]>([])
+  const [groups, setGroups] = useState<MaterialGroup[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [showAll, setShowAll] = useState(false)
 
+  // Load all PDFs and grouped lesson data in parallel
   useEffect(() => {
     let ignore = false
     setIsLoading(true)
+    setShowAll(false)
 
-    db.importedPdfs
-      .where('courseId')
-      .equals(courseId)
-      .toArray()
-      .then(results => {
+    Promise.all([
+      db.importedPdfs.where('courseId').equals(courseId).toArray(),
+      adapter.getGroupedLessons(),
+    ])
+      .then(([pdfs, materialGroups]) => {
         if (!ignore) {
-          setPdfs(results)
+          setAllPdfs(pdfs)
+          setGroups(materialGroups)
           setIsLoading(false)
         }
       })
@@ -284,7 +338,12 @@ export function MaterialsTab({ courseId, lessonId: _lessonId }: MaterialsTabProp
     return () => {
       ignore = true
     }
-  }, [courseId])
+  }, [courseId, adapter])
+
+  // Reset "show all" when lesson changes
+  useEffect(() => {
+    setShowAll(false)
+  }, [lessonId])
 
   if (isLoading) {
     return (
@@ -296,7 +355,7 @@ export function MaterialsTab({ courseId, lessonId: _lessonId }: MaterialsTabProp
     )
   }
 
-  if (pdfs.length === 0) {
+  if (allPdfs.length === 0) {
     return (
       <EmptyState
         icon={FileText}
@@ -306,14 +365,86 @@ export function MaterialsTab({ courseId, lessonId: _lessonId }: MaterialsTabProp
     )
   }
 
+  // Find companion materials for current lesson
+  const companionMaterials = getCompanionMaterials(lessonId, groups)
+  const companionPdfIds = new Set(companionMaterials.map(m => m.id))
+  const companionPdfs = allPdfs.filter(p => companionPdfIds.has(p.id))
+
+  // Standalone PDFs: not matched to any video across all groups
+  const allCompanionIds = getCompanionPdfIds(groups)
+  const standalonePdfs = allPdfs.filter(p => !allCompanionIds.has(p.id))
+
+  // Show all mode or no companions found
+  if (showAll) {
+    return (
+      <div className="p-3 space-y-1" data-testid="materials-tab">
+        <div className="flex items-center justify-between mb-2 px-1">
+          <p className="text-xs text-muted-foreground">
+            All course materials ({allPdfs.length})
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs h-6 px-2"
+            onClick={() => setShowAll(false)}
+          >
+            Show lesson only
+          </Button>
+        </div>
+        {allPdfs.map(pdf => (
+          <PdfSection key={pdf.id} pdf={pdf} courseId={courseId} />
+        ))}
+      </div>
+    )
+  }
+
+  if (companionPdfs.length === 0) {
+    return (
+      <div className="p-3 space-y-3" data-testid="materials-tab">
+        <EmptyState
+          icon={FileText}
+          title="No materials for this lesson"
+          description="This lesson has no companion PDF documents"
+        />
+        {standalonePdfs.length > 0 && (
+          <StandalonePdfsSection pdfs={standalonePdfs} courseId={courseId} />
+        )}
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAll(true)}
+          >
+            View all course materials ({allPdfs.length})
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="p-3 space-y-1" data-testid="materials-tab">
-      <p className="text-xs text-muted-foreground mb-2 px-1">
-        {pdfs.length} document{pdfs.length !== 1 ? 's' : ''}
-      </p>
-      {pdfs.map(pdf => (
+      <div className="flex items-center justify-between mb-2 px-1">
+        <p className="text-xs text-muted-foreground">
+          {companionPdfs.length} material{companionPdfs.length !== 1 ? 's' : ''} for this lesson
+        </p>
+        {allPdfs.length > companionPdfs.length && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs h-6 px-2"
+            onClick={() => setShowAll(true)}
+          >
+            All ({allPdfs.length})
+          </Button>
+        )}
+      </div>
+      {companionPdfs.map(pdf => (
         <PdfSection key={pdf.id} pdf={pdf} courseId={courseId} />
       ))}
+      {standalonePdfs.length > 0 && (
+        <StandalonePdfsSection pdfs={standalonePdfs} courseId={courseId} />
+      )}
     </div>
   )
 }

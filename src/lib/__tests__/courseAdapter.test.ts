@@ -367,6 +367,68 @@ describe('LocalCourseAdapter.getMediaUrl()', () => {
 })
 
 // ---------------------------------------------------------------------------
+// LocalCourseAdapter.getGroupedLessons() — video-primary groups (AC7)
+// ---------------------------------------------------------------------------
+
+describe('LocalCourseAdapter.getGroupedLessons()', () => {
+  it('returns MaterialGroup[] with video as primary and matched PDFs in materials', async () => {
+    const videos = [
+      makeVideo({ id: 'v1', order: 1, filename: '01-Intro.mp4' }),
+      makeVideo({ id: 'v2', order: 2, filename: '02-Advanced.mp4' }),
+    ]
+    const pdfs = [
+      makePdf({ id: 'p1', filename: '01-Intro.pdf', pageCount: 5 }),
+      makePdf({ id: 'p2', filename: 'Resources.pdf', pageCount: 20 }),
+    ]
+
+    const adapter = new adapterLib.LocalCourseAdapter(makeLocalCourse(), videos, pdfs)
+    const groups = await adapter.getGroupedLessons()
+
+    // Video group 1 should have the matching PDF as a material
+    const group1 = groups.find(g => g.primary.id === 'v1')!
+    expect(group1).toBeDefined()
+    expect(group1.primary.type).toBe('video')
+    expect(group1.materials).toHaveLength(1)
+    expect(group1.materials[0].title).toBe('01-Intro.pdf')
+
+    // Video group 2 has no matching PDF
+    const group2 = groups.find(g => g.primary.id === 'v2')!
+    expect(group2).toBeDefined()
+    expect(group2.materials).toHaveLength(0)
+
+    // Unmatched PDF becomes standalone group
+    const standalone = groups.find(g => g.primary.title === 'Resources.pdf')
+    expect(standalone).toBeDefined()
+    expect(standalone!.primary.type).toBe('pdf')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// LocalCourseAdapter.getLessons() — excludes companion PDFs
+// ---------------------------------------------------------------------------
+
+describe('LocalCourseAdapter.getLessons() companion exclusion', () => {
+  it('excludes companion PDFs that are matched to videos', async () => {
+    const videos = [
+      makeVideo({ id: 'v1', order: 1, filename: '01-Intro.mp4' }),
+    ]
+    const pdfs = [
+      makePdf({ id: 'p1', filename: '01-Intro.pdf', pageCount: 5 }),
+      makePdf({ id: 'p2', filename: 'Resources.pdf', pageCount: 20 }),
+    ]
+
+    const adapter = new adapterLib.LocalCourseAdapter(makeLocalCourse(), videos, pdfs)
+    const lessons = await adapter.getLessons()
+
+    // The companion PDF "01-Intro.pdf" should be excluded from the flat list
+    const ids = lessons.map(l => l.id)
+    expect(ids).toContain('v1')
+    expect(ids).not.toContain('p1') // companion — excluded
+    expect(ids).toContain('p2') // standalone — included
+  })
+})
+
+// ---------------------------------------------------------------------------
 // YouTubeCourseAdapter.getLessons() — sorted by order
 // ---------------------------------------------------------------------------
 
