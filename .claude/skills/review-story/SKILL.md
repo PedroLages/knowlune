@@ -428,6 +428,22 @@ Mark the first todo as `in_progress` and proceed:
 
    **Rationale**: This automated gate addresses Epic 8 retrospective finding that only 2/5 stories documented lessons learned despite manual reminders, and Epic 16 retrospective finding that thin/placeholder content passed the gate unchecked. The 50-word minimum ensures substantive reflection, not just section existence. Since Claude Code performs the implementation, it has full context to auto-generate meaningful lessons learned — achieving 100% compliance without blocking the review workflow.
 
+6b. **Auto-save session checkpoint** (before expensive agent dispatch):
+
+   Save a session checkpoint to preserve implementation context. This enables smooth resumption if the review is interrupted or the session ends before `/finish-story`.
+
+   ```bash
+   mkdir -p ${BASE_PATH}/docs/implementation-artifacts/sessions
+   ```
+
+   Write checkpoint file to `${BASE_PATH}/docs/implementation-artifacts/sessions/{story-id}-checkpoint.md` following the same format as the `/checkpoint` command:
+   - Read story file tasks (completed/remaining)
+   - Gather git log, diff stat, status
+   - Read Implementation Notes and Challenges sections
+   - Include which pre-check gates have passed so far
+
+   This is **silent** (no user prompt) and **non-blocking**. If the write fails, log a warning and continue to Step 7.
+
 7. **Review agent swarm** (parallel dispatch — design + code + testing):
 
    After pre-checks pass, dispatch ALL applicable review agents **in a single message** for maximum parallelism. Design review, code review, and test coverage review are fully independent — they use different tools (Playwright MCP vs git diff) and analyze different aspects.
@@ -522,7 +538,7 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
 
    Task({
      subagent_type: "security-review",
-     prompt: "Security review for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changed files. Stack: React 19 + TypeScript, Vite 6, Dexie.js (IndexedDB), Zustand, BYOK AI keys, YouTube embeds, File System Access API. Write report to ${BASE_PATH}/docs/reviews/security/security-review-{YYYY-MM-DD}-{story-id}.md.",
+     prompt: "Security review for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changed files. Stack: React 19 + TypeScript, Vite 6, Dexie.js (IndexedDB), Zustand, BYOK AI keys, YouTube embeds, File System Access API. Config files to audit: .mcp.json (MCP servers), .claude/settings.json (hooks), .claude/hooks/ (hook scripts). Always run Phase 8 lightweight checks (8.1, 8.2, 8.5). Write report to ${BASE_PATH}/docs/reviews/security/security-review-{YYYY-MM-DD}-{story-id}.md.",
      description: "Security review E##-S##"
    })
 
@@ -619,7 +635,7 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
    Report: ${BASE_PATH}/docs/reviews/performance/performance-benchmark-{date}-{id}.md
 
    ### Security Review
-   [Phases: N/7 executed | Findings: N total (N blockers, N high)]
+   [Phases: N/8 executed | Findings: N total (N blockers, N high)]
    Report: ${BASE_PATH}/docs/reviews/security/security-review-{date}-{id}.md
 
    ### Exploratory QA

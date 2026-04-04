@@ -12,6 +12,7 @@ Per-story development loop with integrated quality gates. Three slash commands o
 | `/review-story E##-S##` | Run all quality gates: build, lint, tests, design review, code review |
 | `/finish-story E##-S##` | Validate, create PR. Auto-runs reviews if not already done       |
 | `/design-review`        | Standalone design review via Playwright MCP (also used by `/review-story`) |
+| `/checkpoint [E##-S##]` | Save session context for multi-day story resumption                        |
 
 ## Workflow Modes
 

@@ -147,6 +147,37 @@ Mark the first todo as `in_progress` and proceed:
 
    **TodoWrite**: Mark "Set up branch and story file" → `in_progress`.
 
+6b. **Load session checkpoint** (resumption only — skip for new stories):
+
+   If this is a **resumed start** (status was already `in-progress` from Step 2):
+
+   Check if checkpoint file exists:
+   ```bash
+   ls docs/implementation-artifacts/sessions/{story-id}-checkpoint.md 2>/dev/null
+   ```
+
+   **If checkpoint exists:**
+   1. Read the checkpoint file
+   2. Display summary to user:
+      ```
+      Session checkpoint found (saved {saved_at}):
+      - Completed: {N}/{M} tasks
+      - Key decisions: {first 2-3 bullet points from Key Decisions}
+      - Last commit: {most recent line from Implementation Progress}
+      - Current state: {clean / N uncommitted files}
+      ```
+   3. Check for staleness: compare checkpoint `saved_at` against latest commit timestamp (`git log -1 --format=%ci`). If commits exist after the checkpoint was saved, warn:
+      ```
+      Note: {N} commits were made after this checkpoint was saved. The checkpoint may be partially stale.
+      ```
+   4. **Skip Step 9 (3 parallel Explore agents)** — the checkpoint already contains implementation context. Exploration is for initial research; a resumed story already has that context.
+   5. **Skip Step 9c (Web research)** — same reasoning.
+   6. Proceed to Step 10 (Enter plan mode) with checkpoint content injected as additional context. The plan should reference the checkpoint's remaining tasks, key decisions, and failed approaches.
+
+   **If no checkpoint exists** (resumed but no checkpoint saved):
+   Inform user: "No session checkpoint found. Running full exploration."
+   Continue to Step 7 normally (existing behavior).
+
 7. **Update sprint status** (idempotent):
    - Check current status in `docs/implementation-artifacts/sprint-status.yaml`.
    - **Already `in-progress`**: Skip update. Inform user: "Sprint status already in-progress."
@@ -494,7 +525,8 @@ Mark the first todo as `in_progress` and proceed:
        Implement E##-S## following the plan at docs/implementation-artifacts/plans/{plan-filename}.md
        ```
     2. Make **granular commits** after each task as save points
-    3. When done, ship it:
+    3. Before ending your session, run `/checkpoint` to save implementation context for next time
+    4. When done, ship it:
 
        **Recommended: [Review first / Quick ship]**
        [reason — bold the criterion that triggered the recommendation. E.g., "This story has **UI changes** across **4 tasks** — a design review will catch visual regressions before shipping." or "**1 task**, no UI changes — reviews run inline during finish."]

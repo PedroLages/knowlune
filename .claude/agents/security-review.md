@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: "Diff-scoped security reviewer. Analyzes changed code for vulnerabilities, secrets, attack surface expansion, and OWASP Top 10 compliance. Adapted from GStack /cso methodology for per-story review. Dispatched by /review-story."
+description: "Diff-scoped security reviewer. Analyzes changed code for vulnerabilities, secrets, attack surface expansion, OWASP Top 10 compliance, and Claude Code configuration security. Adapted from GStack /cso methodology for per-story review. Dispatched by /review-story."
 model: opus
 tools:
   - Read
@@ -160,6 +160,70 @@ frame-ancestors 'none';
 - Add `referrerpolicy="strict-origin-when-cross-origin"`
 - Verify no `allow-popups` or `allow-forms` in sandbox unless explicitly needed
 
+### Phase 8: Configuration Security Audit (HYBRID — always-on lightweight + conditional deep audit)
+
+**Always-on checks** (run every review regardless of diff):
+- Check 8.1: Secrets in Configuration Files
+- Check 8.2: MCP Server Security
+- Check 8.5: .env File Tracking
+
+**Full audit trigger** (conditional): When `.claude/**`, `.mcp.json`, or files matching `*hook*`, `*guardrail*` appear in `git diff --name-only main...HEAD`, also run:
+- Check 8.3: Hook Script Security
+- Check 8.4: Settings Security
+
+#### 8.1 Secrets in Configuration Files (ALWAYS-ON)
+
+Scan committed configuration files for plaintext secrets:
+```bash
+# Check .mcp.json for API keys, tokens, secrets
+cat .mcp.json 2>/dev/null | grep -iE '(api.?key|token|secret|password|bearer|authorization)' | grep -v '^\s*//'
+
+# Check .claude/settings.json
+cat .claude/settings.json 2>/dev/null | grep -iE '(api.?key|token|secret|password|bearer)'
+
+# Check hook scripts for hardcoded secrets
+grep -rnE '(AKIA|sk-|ghp_|gho_|xoxb-|password=|SECRET=|API_KEY=)' .claude/hooks/ 2>/dev/null
+```
+
+If secrets found:
+- **Blocker** if in `.mcp.json` or `.claude/settings.json` (committed to git)
+- **High** if in `.claude/settings.local.json` (may be gitignored)
+- Recommend: use environment variables, `.env.local`, or OS keychain
+
+#### 8.2 MCP Server Security (ALWAYS-ON)
+
+If `.mcp.json` exists:
+- Check: are API keys/tokens passed in `headers` or `args` fields in plaintext?
+- Check: are HTTP MCP server URLs using HTTPS (not plain HTTP)?
+- Check: is `.mcp.json` in `.gitignore`? (It should be if it contains secrets)
+- Check: is `.mcp.json` tracked by git? (`git ls-files --error-unmatch .mcp.json 2>/dev/null`)
+- Recommend: move secrets to environment variables referenced as `${ENV_VAR_NAME}`, or add `.mcp.json` to `.gitignore`
+
+#### 8.3 Hook Script Security (CONDITIONAL — when hook files change)
+
+If files in `.claude/hooks/` appear in the diff:
+- Check: no `eval` or `$()` with unsanitized external input
+- Check: no `curl | bash` or `wget | sh` patterns
+- Check: input parsing uses safe methods (e.g., `jq` for JSON, not regex on untrusted input)
+- Check: no hardcoded file paths that could be symlink-attacked
+- Check: exit codes are explicit (no silent fall-through to allow)
+
+#### 8.4 Settings Security (CONDITIONAL — when settings change)
+
+If `.claude/settings.json` or `.claude/settings.local.json` changed:
+- Check: hook commands don't reference remote URLs or download scripts
+- Check: no overly broad tool permissions without guardrails
+- Check: `allowedTools` don't include dangerous MCP tools without justification
+
+#### 8.5 .env File Tracking (ALWAYS-ON)
+
+```bash
+git ls-files --error-unmatch .env .env.local .env.production 2>/dev/null
+```
+If any `.env` file is tracked by git:
+- **Blocker**: `.env` files must be in `.gitignore`
+- Check `.gitignore` includes `.env`, `*.local`, `.env.*`
+
 ## False Positive Filtering
 
 After generating findings, remove if:
@@ -213,7 +277,7 @@ Write the report to the path specified in the dispatch prompt.
 ## Security Review: {story-id} — {story-name}
 
 **Date:** {YYYY-MM-DD}
-**Phases executed:** {N}/7
+**Phases executed:** {N}/8
 **Diff scope:** {N} files changed, {N} insertions, {N} deletions
 
 ### Phases Executed
@@ -227,6 +291,7 @@ Write the report to the path specified in the dispatch prompt.
 | 5 | Auth & Access | auth files changed | N/A / {N} findings |
 | 6 | STRIDE | new routes/components | N/A / {N} threats |
 | 7 | Configuration | config files changed | N/A / {N} findings |
+| 8 | Config Security | Always-on (secrets) + .claude/**/.mcp.json changed | {N} findings |
 
 ### Attack Surface Changes
 
@@ -269,7 +334,7 @@ Write the report to the path specified in the dispatch prompt.
 [2-3 positive security observations about the code]
 
 ---
-Phases: {N}/7 | Findings: {N} total | Blockers: {N} | False positives filtered: {N}
+Phases: {N}/8 | Findings: {N} total | Blockers: {N} | False positives filtered: {N}
 ```
 
 ## Anti-Manipulation
