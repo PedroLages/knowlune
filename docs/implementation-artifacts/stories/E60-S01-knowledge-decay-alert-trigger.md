@@ -1,6 +1,6 @@
 ---
 story_id: E60-S01
-story_name: "Knowledge Decay Alert Trigger"
+story_name: 'Knowledge Decay Alert Trigger'
 status: in-progress
 started: 2026-04-03
 completed:
@@ -98,6 +98,7 @@ See [plan](plans/plan-e60-s01-knowledge-decay-alert-trigger.md) for implementati
 **Event Bus Pattern**: Add variant to `AppEvent` union in `src/lib/eventBus.ts` (line ~13). Follow existing naming convention `namespace:action` (e.g., `knowledge:decay`).
 
 **NotificationService Pattern**: Follow exact patterns from existing handlers:
+
 - `EVENT_TO_NOTIF_TYPE` maps event type to notification type (line ~94)
 - `handleEvent()` switch case creates notification via `useNotificationStore.getState().create()` (line ~104)
 - Dedup functions follow `hasReviewDueToday()` pattern: query `db.notifications.where('type').equals(...)` with `.filter()` on date + metadata key
@@ -111,13 +112,13 @@ See [plan](plans/plan-e60-s01-knowledge-decay-alert-trigger.md) for implementati
 
 ### Key Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/lib/eventBus.ts` | Add `knowledge:decay` to `AppEvent` union |
-| `src/data/types.ts` | Add `'knowledge-decay'` to `NotificationType`, `knowledgeDecay: boolean` to `NotificationPreferences` |
-| `src/db/schema.ts` | Add v30 migration for new preference field |
-| `src/stores/useNotificationPrefsStore.ts` | Add `TYPE_TO_FIELD` entry + DEFAULTS |
-| `src/services/NotificationService.ts` | Add handler, dedup, startup check, EVENT_TO_NOTIF_TYPE entry |
+| File                                      | Change                                                                                                |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `src/lib/eventBus.ts`                     | Add `knowledge:decay` to `AppEvent` union                                                             |
+| `src/data/types.ts`                       | Add `'knowledge-decay'` to `NotificationType`, `knowledgeDecay: boolean` to `NotificationPreferences` |
+| `src/db/schema.ts`                        | Add v30 migration for new preference field                                                            |
+| `src/stores/useNotificationPrefsStore.ts` | Add `TYPE_TO_FIELD` entry + DEFAULTS                                                                  |
+| `src/services/NotificationService.ts`     | Add handler, dedup, startup check, EVENT_TO_NOTIF_TYPE entry                                          |
 
 ### Critical Guardrails
 
@@ -144,6 +145,7 @@ await store.create({
 ## Testing Notes
 
 Testing for this story is covered by E60-S05. However, during implementation verify:
+
 - TypeScript compiles with no errors (`npx tsc --noEmit`)
 - Build succeeds (`npm run build`)
 - Existing tests still pass (`npm run test:unit`)
@@ -180,6 +182,7 @@ Report: `docs/reviews/design/design-review-2026-04-04-e60-s01.md`
 - **Edge cases (7 found, all LOW risk):** Race condition on rapid emissions, empty topic string, NaN retention display, unbounded `toArray()` load. None blocking — acceptable for personal app scale.
 
 Reports:
+
 - `docs/reviews/code/code-review-2026-04-04-e60-s01.md`
 - `docs/reviews/code/edge-case-review-2026-04-04-e60-s01.md`
 

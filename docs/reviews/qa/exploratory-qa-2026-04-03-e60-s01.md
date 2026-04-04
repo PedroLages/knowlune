@@ -6,16 +6,16 @@
 
 ### Health Score Breakdown
 
-| Category | Score | Weight | Weighted |
-|----------|-------|--------|----------|
-| Functional | 90 | 30% | 27 |
-| Edge Cases | 80 | 15% | 12 |
-| Console | 100 | 15% | 15 |
-| UX | 80 | 15% | 12 |
-| Links | 100 | 10% | 10 |
-| Performance | 90 | 10% | 9 |
-| Content | 0 | 5% | 0 |
-| **Total** | | | **85/100** |
+| Category    | Score | Weight | Weighted   |
+| ----------- | ----- | ------ | ---------- |
+| Functional  | 90    | 30%    | 27         |
+| Edge Cases  | 80    | 15%    | 12         |
+| Console     | 100   | 15%    | 15         |
+| UX          | 80    | 15%    | 12         |
+| Links       | 100   | 10%    | 10         |
+| Performance | 90    | 10%    | 9          |
+| Content     | 0     | 5%     | 0          |
+| **Total**   |       |        | **85/100** |
 
 ### Top Issues
 
@@ -25,12 +25,14 @@
 ### Bugs Found
 
 #### BUG-001: Onboarding Dialog Blocks Interaction Tests
+
 **Severity:** Low
 **Category:** UX / Test Infrastructure
 **Route:** /settings, /notifications
 **AC:** General
 
 **Steps to Reproduce:**
+
 1. Navigate to /settings or /notifications
 2. Observe onboarding dialog appears
 3. Attempt to interact with page elements
@@ -44,13 +46,14 @@
 
 ### AC Verification
 
-| AC# | Description | Status | Notes |
-|-----|-------------|--------|-------|
-| 1 | Event type and type system updates | Pass | TypeScript types verified via successful build |
-| 4 | Preference toggle exists and works | Pass | Toggle visible, checked by default, accessible label correct |
-| UI | Renders correctly for new notification type | Pass | Brain icon, correct label, correct description, filter button on /notifications |
+| AC# | Description                                 | Status | Notes                                                                           |
+| --- | ------------------------------------------- | ------ | ------------------------------------------------------------------------------- |
+| 1   | Event type and type system updates          | Pass   | TypeScript types verified via successful build                                  |
+| 4   | Preference toggle exists and works          | Pass   | Toggle visible, checked by default, accessible label correct                    |
+| UI  | Renders correctly for new notification type | Pass   | Brain icon, correct label, correct description, filter button on /notifications |
 
 **Evidence from accessibility tree snapshot:**
+
 ```
 - generic:
     - img
@@ -62,11 +65,11 @@
 
 ### Console Health
 
-| Level | Count | Notable |
-|-------|-------|---------|
-| Errors | 0 | No errors detected |
-| Warnings | 0 | No warnings detected |
-| Info | 0 | Clean console |
+| Level    | Count | Notable              |
+| -------- | ----- | -------------------- |
+| Errors   | 0     | No errors detected   |
+| Warnings | 0     | No warnings detected |
+| Info     | 0     | Clean console        |
 
 ### What Works Well
 
@@ -85,12 +88,14 @@
 ### Test Evidence
 
 **Screenshots captured:**
+
 - `/tmp/qa-settings-initial.png` - Settings page with Notification Preferences panel
 - `/tmp/qa-notifications-initial.png` - Notifications page with Knowledge Decay filter
 - `/tmp/qa-settings-mobile.png` - Mobile viewport (375px) settings
 - `/tmp/qa-notifications-mobile.png` - Mobile viewport (375px) notifications
 
 **Playwright test results:**
+
 - 6 tests passed
 - 3 tests blocked by onboarding dialog (not feature bugs)
 
@@ -101,4 +106,5 @@
 2. **Manual Verification** - A manual test of the toggle persistence (toggle off, reload, verify still off) should be performed to confirm AC4 fully works.
 
 ---
+
 Health: 85/100 | Bugs: 1 (Low severity, test infrastructure) | Blockers: 0 | ACs: 2/2 verified

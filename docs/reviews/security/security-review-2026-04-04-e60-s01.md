@@ -6,15 +6,15 @@
 
 ### Phases Executed
 
-| Phase | Name | Triggered By | Findings |
-|-------|------|-------------|----------|
-| 1 | Attack Surface | Always | 3 vectors identified |
-| 2 | Secrets Scan | Always | Clean |
-| 3 | OWASP Top 10 | Always | 6 categories checked |
-| 4 | Dependencies | package.json changed | N/A — no package.json changes |
-| 5 | Auth & Access | auth files changed | N/A — no auth files changed |
-| 6 | STRIDE | new routes/components | N/A — no new routes/components |
-| 7 | Configuration | config files changed | N/A — no config files changed |
+| Phase | Name           | Triggered By          | Findings                       |
+| ----- | -------------- | --------------------- | ------------------------------ |
+| 1     | Attack Surface | Always                | 3 vectors identified           |
+| 2     | Secrets Scan   | Always                | Clean                          |
+| 3     | OWASP Top 10   | Always                | 6 categories checked           |
+| 4     | Dependencies   | package.json changed  | N/A — no package.json changes  |
+| 5     | Auth & Access  | auth files changed    | N/A — no auth files changed    |
+| 6     | STRIDE         | new routes/components | N/A — no new routes/components |
+| 7     | Configuration  | config files changed  | N/A — no config files changed  |
 
 ### Attack Surface Changes
 
@@ -60,17 +60,17 @@ Test keys found in test files (`src/lib/__tests__/modelDiscovery.test.ts`) are c
 
 ### OWASP Coverage
 
-| Category | Applicable? | Finding? | Details |
-|----------|------------|----------|---------|
-| CS1: Broken Client-Side Access Control | No | No | No premium gating or route guards changed |
-| CS2: Client-Side Injection (XSS) | Yes | No | Topic strings interpolated in JSX — auto-escaped by React. No `dangerouslySetInnerHTML` in diff |
-| CS3: Sensitive Data in Client Storage | No | No | Only boolean preference added to IndexedDB. No API keys or tokens involved |
-| CS5: Client-Side Integrity | Yes | No | Dexie migration v32 is atomic, adds default value only. Dedup logic checks date + topic combination |
-| CS7: Client-Side Security Logging | Yes | No | `console.error` logs error objects only, no sensitive data. Annotated with `silent-catch-ok` |
-| CS9: Client-Side Communication | No | No | No postMessage, cross-window, or iframe changes |
-| A05: Security Misconfiguration | No | No | No config file changes (Vite, CSP, CORS) |
-| A06: Vulnerable Components | No | No | No dependency changes |
-| A07: Auth Failures | No | No | No auth-related code changed |
+| Category                               | Applicable? | Finding? | Details                                                                                             |
+| -------------------------------------- | ----------- | -------- | --------------------------------------------------------------------------------------------------- |
+| CS1: Broken Client-Side Access Control | No          | No       | No premium gating or route guards changed                                                           |
+| CS2: Client-Side Injection (XSS)       | Yes         | No       | Topic strings interpolated in JSX — auto-escaped by React. No `dangerouslySetInnerHTML` in diff     |
+| CS3: Sensitive Data in Client Storage  | No          | No       | Only boolean preference added to IndexedDB. No API keys or tokens involved                          |
+| CS5: Client-Side Integrity             | Yes         | No       | Dexie migration v32 is atomic, adds default value only. Dedup logic checks date + topic combination |
+| CS7: Client-Side Security Logging      | Yes         | No       | `console.error` logs error objects only, no sensitive data. Annotated with `silent-catch-ok`        |
+| CS9: Client-Side Communication         | No          | No       | No postMessage, cross-window, or iframe changes                                                     |
+| A05: Security Misconfiguration         | No          | No       | No config file changes (Vite, CSP, CORS)                                                            |
+| A06: Vulnerable Components             | No          | No       | No dependency changes                                                                               |
+| A07: Auth Failures                     | No          | No       | No auth-related code changed                                                                        |
 
 ### What's Done Well
 
@@ -83,4 +83,5 @@ Test keys found in test files (`src/lib/__tests__/modelDiscovery.test.ts`) are c
 4. **Preference-gated notifications.** The new `knowledge-decay` type is properly wired into the `TYPE_TO_FIELD` mapping and the preference store defaults, meaning the existing preference-check middleware in `handleEvent()` will respect the user's opt-out toggle.
 
 ---
+
 Phases: 4/7 | Findings: 0 Blockers, 0 High, 1 Medium, 3 Informational | False positives filtered: 2

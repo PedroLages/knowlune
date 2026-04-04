@@ -5,11 +5,12 @@
 **Story**: E60-S01 — Knowledge Decay Alert Trigger
 **Branch**: `feature/e60-s01-knowledge-decay-alert-trigger`
 **Changed Files Reviewed**:
+
 - `src/app/components/settings/NotificationPreferencesPanel.tsx`
 - `src/app/pages/Notifications.tsx`
-**Affected Pages**: `/settings` (Notification Preferences panel), `/notifications`
-**Breakpoints Tested**: 375px (mobile), 768px (tablet), 1024px (sidebar collapse), 1440px (desktop)
-**Accessibility**: axe-core 4.10.2 (WCAG 2.1 AA), manual keyboard and ARIA audit
+  **Affected Pages**: `/settings` (Notification Preferences panel), `/notifications`
+  **Breakpoints Tested**: 375px (mobile), 768px (tablet), 1024px (sidebar collapse), 1440px (desktop)
+  **Accessibility**: axe-core 4.10.2 (WCAG 2.1 AA), manual keyboard and ARIA audit
 
 ---
 
@@ -84,6 +85,7 @@ None.
 **Location**: `src/app/pages/Notifications.tsx:127-170`
 
 **Evidence**: Measured via `getBoundingClientRect()`:
+
 ```
 { text: "all",              h: 36, w: 41  }
 { text: "unread",           h: 36, w: 74  }
@@ -102,7 +104,7 @@ The buttons use `size="sm"` with `min-h-[36px]`, which is appropriate for deskto
 
 ### N1 — aria-live placement on the quiet hours container
 
-**Issue**: The `aria-live="polite"` attribute is placed on the animated container `<div>` that wraps the Start/End time inputs. The intent is presumably to announce when the quiet hours section expands. However, `aria-live` regions announce changes to their *content*, not their own appearance. Since the container itself is conditionally rendered (not always in the DOM), screen readers will not reliably announce its appearance.
+**Issue**: The `aria-live="polite"` attribute is placed on the animated container `<div>` that wraps the Start/End time inputs. The intent is presumably to announce when the quiet hours section expands. However, `aria-live` regions announce changes to their _content_, not their own appearance. Since the container itself is conditionally rendered (not always in the DOM), screen readers will not reliably announce its appearance.
 
 **Location**: `src/app/components/settings/NotificationPreferencesPanel.tsx:153-155`
 
@@ -121,34 +123,34 @@ The buttons use `size="sm"` with `min-h-[36px]`, which is appropriate for deskto
 
 ## Accessibility Checklist
 
-| Check | Status | Notes |
-|-------|--------|-------|
-| Text contrast ≥4.5:1 (light mode) | Pass | Empty state title `rgb(28,29,43)` on white, description `rgb(101,104,112)` — both pass AA |
-| Text contrast ≥4.5:1 (dark mode) | Pass | Label `rgb(232,233,240)`, muted `rgb(178,181,200)` on dark bg confirmed |
-| Keyboard navigation — switch focusable | Pass | `#notif-knowledge-decay` receives Tab focus and keyboard Space activation confirmed |
-| Focus indicator visible | Pass (advisory) | Box-shadow ring at 2.51px present. Ring color at 42% opacity on white calculates to ~1.1:1 against panel background — meets WCAG 2.1 AA (no focus appearance requirement) but would fail WCAG 2.2 SC 2.4.11 advisory. Consider strengthening for future-proofing. |
-| Focus indicators on filter buttons | Pass | Radix/shadcn focus-visible ring confirmed on notification page filter buttons |
-| Heading hierarchy | Pass | H1 → H2 correct, no skipped levels |
-| ARIA labels on switches | Pass | Both `htmlFor`/`id` association and explicit `aria-label` present |
-| Semantic HTML | Pass | No `<div onClick>`, no images without alt, proper button elements throughout |
-| Form labels associated | Pass | All time inputs (`#quiet-start`, `#quiet-end`) have `<Label htmlFor>` |
-| Live regions for dynamic content | Pass | `aria-live="polite" role="status"` on notifications page for mark-read/dismiss actions |
-| prefers-reduced-motion | Pass | Confirmed present in compiled CSS |
-| Touch targets ≥44px (notification toggles) | Pass | All switch rows enforce `min-h-[44px]`, measured at 44px on mobile |
-| Touch targets ≥44px (filter buttons) | Fail | Filter buttons render at 36px on mobile (see M2) |
-| No horizontal scroll at 375px | Pass | Confirmed on both /settings and /notifications |
-| axe-core WCAG 2.1 AA scan | Pass (scoped) | 3 axe violations found — all from `agentation` third-party library (`styles-module__` selectors), none from E60-S01 code |
+| Check                                      | Status          | Notes                                                                                                                                                                                                                                                             |
+| ------------------------------------------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Text contrast ≥4.5:1 (light mode)          | Pass            | Empty state title `rgb(28,29,43)` on white, description `rgb(101,104,112)` — both pass AA                                                                                                                                                                         |
+| Text contrast ≥4.5:1 (dark mode)           | Pass            | Label `rgb(232,233,240)`, muted `rgb(178,181,200)` on dark bg confirmed                                                                                                                                                                                           |
+| Keyboard navigation — switch focusable     | Pass            | `#notif-knowledge-decay` receives Tab focus and keyboard Space activation confirmed                                                                                                                                                                               |
+| Focus indicator visible                    | Pass (advisory) | Box-shadow ring at 2.51px present. Ring color at 42% opacity on white calculates to ~1.1:1 against panel background — meets WCAG 2.1 AA (no focus appearance requirement) but would fail WCAG 2.2 SC 2.4.11 advisory. Consider strengthening for future-proofing. |
+| Focus indicators on filter buttons         | Pass            | Radix/shadcn focus-visible ring confirmed on notification page filter buttons                                                                                                                                                                                     |
+| Heading hierarchy                          | Pass            | H1 → H2 correct, no skipped levels                                                                                                                                                                                                                                |
+| ARIA labels on switches                    | Pass            | Both `htmlFor`/`id` association and explicit `aria-label` present                                                                                                                                                                                                 |
+| Semantic HTML                              | Pass            | No `<div onClick>`, no images without alt, proper button elements throughout                                                                                                                                                                                      |
+| Form labels associated                     | Pass            | All time inputs (`#quiet-start`, `#quiet-end`) have `<Label htmlFor>`                                                                                                                                                                                             |
+| Live regions for dynamic content           | Pass            | `aria-live="polite" role="status"` on notifications page for mark-read/dismiss actions                                                                                                                                                                            |
+| prefers-reduced-motion                     | Pass            | Confirmed present in compiled CSS                                                                                                                                                                                                                                 |
+| Touch targets ≥44px (notification toggles) | Pass            | All switch rows enforce `min-h-[44px]`, measured at 44px on mobile                                                                                                                                                                                                |
+| Touch targets ≥44px (filter buttons)       | Fail            | Filter buttons render at 36px on mobile (see M2)                                                                                                                                                                                                                  |
+| No horizontal scroll at 375px              | Pass            | Confirmed on both /settings and /notifications                                                                                                                                                                                                                    |
+| axe-core WCAG 2.1 AA scan                  | Pass (scoped)   | 3 axe violations found — all from `agentation` third-party library (`styles-module__` selectors), none from E60-S01 code                                                                                                                                          |
 
 ---
 
 ## Responsive Design Verification
 
-| Breakpoint | /settings | /notifications | Notes |
-|------------|-----------|----------------|-------|
-| 375px (mobile) | Pass | Pass (advisory M2) | No horizontal scroll; toggle rows 44px; filter buttons 36px (M2) |
-| 768px (tablet) | Pass | Pass | Layout reflows correctly; filter chips wrap naturally |
-| 1024px (sidebar) | Pass | — | Sidebar collapse behavior unaffected by this story's changes |
-| 1440px (desktop) | Pass | Pass | Full layout renders correctly; all 7 toggle rows visible |
+| Breakpoint       | /settings | /notifications     | Notes                                                            |
+| ---------------- | --------- | ------------------ | ---------------------------------------------------------------- |
+| 375px (mobile)   | Pass      | Pass (advisory M2) | No horizontal scroll; toggle rows 44px; filter buttons 36px (M2) |
+| 768px (tablet)   | Pass      | Pass               | Layout reflows correctly; filter chips wrap naturally            |
+| 1024px (sidebar) | Pass      | —                  | Sidebar collapse behavior unaffected by this story's changes     |
+| 1440px (desktop) | Pass      | Pass               | Full layout renders correctly; all 7 toggle rows visible         |
 
 **Dark mode**: Both pages render correctly. Text contrast verified programmatically.
 
