@@ -72,7 +72,7 @@ All components follow shadcn/ui patterns with Radix UI primitives and class-vari
 **Core spacing and styling:**
 - Background: `#FAF5EE` (warm off-white) - never hardcode
 - Primary blue: `blue-600` for CTAs and active states
-- Border radius: `rounded-[24px]` for cards, `rounded-xl` for buttons
+- Border radius: `rounded-2xl` for cards, `rounded-xl` for buttons (tokens in theme.css)
 - Spacing: 8px base grid (use multiples of 0.5rem via Tailwind)
 - Typography: System fonts, line-height 1.5-1.7
 - Consistent 24px (1.5rem) margins between major sections

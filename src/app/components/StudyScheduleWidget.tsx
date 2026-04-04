@@ -101,7 +101,7 @@ function InsufficientDataState({
   return (
     <div
       data-testid="schedule-insufficient-data"
-      className="flex flex-col items-center justify-center rounded-[24px] border border-dashed border-border bg-card p-8 text-center"
+      className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card p-8 text-center"
     >
       <Calendar className="size-10 text-muted-foreground mb-3" aria-hidden="true" />
       <h3 className="text-sm font-semibold text-foreground mb-1">Build Your Study Pattern</h3>
@@ -138,7 +138,7 @@ function NoGoalState({ optimalHour }: { optimalHour: number }) {
           {formatHour(optimalHour)}
         </span>
       </div>
-      <div className="flex flex-col items-center justify-center rounded-[24px] border border-dashed border-border bg-card p-6 text-center gap-3">
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card p-6 text-center gap-3">
         <Target className="size-8 text-muted-foreground" aria-hidden="true" />
         <p className="text-sm text-muted-foreground">
           Set a weekly study goal to see your full personalized schedule.

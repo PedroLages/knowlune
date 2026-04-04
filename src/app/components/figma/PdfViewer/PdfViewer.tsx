@@ -91,7 +91,7 @@ export function PdfViewer({
       tabIndex={0}
       onKeyDown={handleKeyDown}
       className={cn(
-        'flex flex-col overflow-hidden rounded-[24px] border border-border bg-card focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none',
+        'flex flex-col overflow-hidden rounded-2xl border border-border bg-card focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none',
         className
       )}
     >

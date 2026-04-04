@@ -568,7 +568,7 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
                     {isCancelLoading ? 'Processing...' : 'Cancel Trial'}
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="rounded-[24px]">
+                <AlertDialogContent className="rounded-2xl">
                   <AlertDialogHeader>
                     <AlertDialogTitle>Cancel your free trial?</AlertDialogTitle>
                     <AlertDialogDescription asChild>
@@ -720,7 +720,7 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
                     {isCancelLoading ? 'Processing...' : 'Cancel Subscription'}
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="rounded-[24px]">
+                <AlertDialogContent className="rounded-2xl">
                   <AlertDialogHeader>
                     <AlertDialogTitle>Cancel your subscription?</AlertDialogTitle>
                     <AlertDialogDescription asChild>

@@ -185,7 +185,7 @@ export function ImportProgressOverlay() {
       aria-label="Import progress"
       data-testid="import-progress-overlay"
     >
-      <Card className="bg-card rounded-[24px] border border-brand/30 shadow-xl shadow-brand/10 overflow-hidden">
+      <Card className="bg-card rounded-2xl border border-brand/30 shadow-xl shadow-brand/10 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <div className="flex items-center gap-2">

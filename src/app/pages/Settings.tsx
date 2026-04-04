@@ -157,7 +157,7 @@ function AgeRangeSection({
                   Re-apply defaults
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="rounded-[24px]">
+              <AlertDialogContent className="rounded-2xl">
                 <AlertDialogHeader>
                   <AlertDialogTitle>Re-apply age-specific defaults?</AlertDialogTitle>
                   <AlertDialogDescription>
@@ -1306,7 +1306,7 @@ export default function Settings() {
                         Reset
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="rounded-[24px]">
+                    <AlertDialogContent className="rounded-2xl">
                       <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>

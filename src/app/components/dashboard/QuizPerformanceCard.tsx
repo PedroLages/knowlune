@@ -13,7 +13,7 @@ import type { QuizMetrics } from '@/lib/quizMetrics'
 function QuizPerformanceSkeleton() {
   return (
     <div
-      className="rounded-[24px] border border-border/50 bg-card p-6"
+      className="rounded-2xl border border-border/50 bg-card p-6"
       aria-busy="true"
       aria-label="Loading quiz performance"
       data-testid="quiz-performance-skeleton"
@@ -106,7 +106,7 @@ export function QuizPerformanceCard() {
   if (metrics.totalQuizzes === 0) {
     return (
       <div
-        className="w-full text-left rounded-[24px] border border-border/50 bg-card p-6"
+        className="w-full text-left rounded-2xl border border-border/50 bg-card p-6"
         data-testid="quiz-performance-card"
       >
         {/* Header */}
@@ -122,13 +122,13 @@ export function QuizPerformanceCard() {
 
   return (
     <div
-      className="relative w-full text-left rounded-[24px] border border-border/50 bg-card p-6 hover:border-brand-muted motion-safe:transition-colors motion-safe:duration-200"
+      className="relative w-full text-left rounded-2xl border border-border/50 bg-card p-6 hover:border-brand-muted motion-safe:transition-colors motion-safe:duration-200"
       data-testid="quiz-performance-card"
     >
       {/* Card-level link overlay — visually hidden, stretches to fill the card */}
       <Link
         to="/reports?tab=quizzes"
-        className="absolute inset-0 rounded-[24px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="absolute inset-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         aria-label="Quiz Performance — view detailed analytics"
         tabIndex={0}
       >

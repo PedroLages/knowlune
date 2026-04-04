@@ -30,7 +30,7 @@ export function InterleavedSummary({
       className="mx-auto w-full max-w-lg"
       data-testid="interleaved-summary"
     >
-      <Card className="rounded-[24px]">
+      <Card className="rounded-2xl">
         <CardContent className="flex flex-col items-center gap-6 p-6">
           {/* Header */}
           <div className="flex flex-col items-center gap-2 text-center">

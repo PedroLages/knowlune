@@ -245,11 +245,11 @@ export function ImportedCourseCard({
         {...previewHandlers}
         data-preview={showPreview && videoReady ? '' : undefined}
         className={cn(
-          'group rounded-[24px] cursor-default focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none hover:shadow-2xl hover:[transform:scale(1.02)] transition-shadow duration-300 motion-reduce:hover:[transform:scale(1)] h-full',
+          'group rounded-2xl cursor-default focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none hover:shadow-2xl hover:[transform:scale(1.02)] transition-shadow duration-300 motion-reduce:hover:[transform:scale(1)] h-full',
           showPreview && videoReady && '[transform:scale(1.05)] z-10'
         )}
       >
-        <Card className="bg-card rounded-[24px] border-0 shadow-sm overflow-hidden h-full flex flex-col">
+        <Card className="bg-card rounded-2xl border-0 shadow-sm overflow-hidden h-full flex flex-col">
           <div
             data-testid="course-card-placeholder"
             className="relative h-44 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center"
@@ -624,7 +624,7 @@ export function ImportedCourseCard({
       />
 
       <Dialog open={previewOpen} onOpenChange={handleDialogChange}>
-        <DialogContent className="max-w-3xl p-0 overflow-hidden rounded-[24px]">
+        <DialogContent className="max-w-3xl p-0 overflow-hidden rounded-2xl">
           <DialogHeader className="px-6 pt-5 pb-2">
             <DialogTitle>{course.name} — Preview</DialogTitle>
           </DialogHeader>

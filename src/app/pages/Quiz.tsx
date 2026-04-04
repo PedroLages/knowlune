@@ -405,7 +405,7 @@ export function Quiz() {
         role="status"
         aria-busy="true"
         aria-label="Loading quiz"
-        className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm space-y-4"
+        className="bg-card rounded-2xl p-4 sm:p-8 max-w-2xl mx-auto shadow-sm space-y-4"
       >
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-4 w-full" />
@@ -426,7 +426,7 @@ export function Quiz() {
     return (
       <div
         role="alert"
-        className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm text-center py-12"
+        className="bg-card rounded-2xl p-4 sm:p-8 max-w-2xl mx-auto shadow-sm text-center py-12"
       >
         <p className="text-muted-foreground">{storeError || 'No quiz found for this lesson.'}</p>
         <Link
@@ -473,7 +473,7 @@ export function Quiz() {
     return (
       <section
         aria-label="Quiz questions"
-        className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm"
+        className="bg-card rounded-2xl p-4 sm:p-8 max-w-2xl mx-auto shadow-sm"
         data-testid="quiz-active-container"
         data-focus-target="quiz"
         data-focus-active={Object.keys(currentProgress.answers).length > 0 ? 'quiz' : undefined}

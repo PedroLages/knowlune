@@ -24,7 +24,7 @@ export function CourseProgress({ completedCount, totalCount }: CourseProgressPro
 
   return (
     <div
-      className="rounded-[24px] bg-muted/50 p-5 mb-6 border border-border/50"
+      className="rounded-2xl bg-muted/50 p-5 mb-6 border border-border/50"
       data-testid="course-progress-card"
     >
       <h2 className="font-semibold text-sm mb-3">Your Progress</h2>

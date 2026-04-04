@@ -175,7 +175,7 @@ export function DisplayAccessibilitySection({
               Reset display settings to defaults
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent className="rounded-[24px]">
+          <AlertDialogContent className="rounded-2xl">
             <AlertDialogHeader>
               <AlertDialogTitle>Reset display settings?</AlertDialogTitle>
               <AlertDialogDescription>

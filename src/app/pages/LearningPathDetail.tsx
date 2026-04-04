@@ -680,7 +680,7 @@ export function LearningPathDetail() {
             <Skeleton className="h-5 w-96" />
           </div>
           {Array.from({ length: 3 }, (_, i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-[24px]" />
+            <Skeleton key={i} className="h-20 w-full rounded-2xl" />
           ))}
         </div>
       </DelayedFallback>
@@ -805,7 +805,7 @@ export function LearningPathDetail() {
                   const pct = info?.completionPct ?? 0
                   return (
                     <motion.section variants={fadeUp}>
-                      <Card className="overflow-hidden shadow-xl border-brand/20 rounded-[24px]">
+                      <Card className="overflow-hidden shadow-xl border-brand/20 rounded-2xl">
                         <div className="flex flex-col md:flex-row min-h-[280px]">
                           {/* Thumbnail */}
                           <div className="md:w-5/12 relative bg-muted">
@@ -871,7 +871,7 @@ export function LearningPathDetail() {
                       return (
                         <div
                           key={entry.courseId}
-                          className="min-w-[180px] bg-card p-4 rounded-[24px] shadow-sm border border-border flex-shrink-0"
+                          className="min-w-[180px] bg-card p-4 rounded-2xl shadow-sm border border-border flex-shrink-0"
                         >
                           <div className="relative w-full h-24 rounded-xl overflow-hidden mb-3 bg-muted">
                             {thumbnailUrls[entry.courseId] ? (
@@ -970,7 +970,7 @@ export function LearningPathDetail() {
 
               {/* Coming Up Next */}
               {upcomingEntries.length > 0 && (
-                <Card className="rounded-[24px]">
+                <Card className="rounded-2xl">
                   <CardContent className="p-8">
                     <h3 className="text-lg font-bold mb-6">Coming Up Next</h3>
                     <div className="space-y-6">
@@ -1013,7 +1013,7 @@ export function LearningPathDetail() {
               {courseEntries.length >= 2 &&
                 (isOrderSuggestionAvailable() ? (
                   <button
-                    className="w-full bg-brand-soft p-6 rounded-[24px] border border-brand/20 flex items-center justify-between group hover:bg-brand-muted transition-all text-left"
+                    className="w-full bg-brand-soft p-6 rounded-2xl border border-brand/20 flex items-center justify-between group hover:bg-brand-muted transition-all text-left"
                     onClick={handleSuggestOrder}
                     disabled={isSuggesting}
                     data-testid="suggest-order-button"
@@ -1038,7 +1038,7 @@ export function LearningPathDetail() {
                 ) : (
                   <Link
                     to="/settings"
-                    className="w-full block bg-muted p-6 rounded-[24px] border border-border"
+                    className="w-full block bg-muted p-6 rounded-2xl border border-border"
                     data-testid="suggest-order-settings-link"
                   >
                     <div className="flex items-center gap-3">
@@ -1053,7 +1053,7 @@ export function LearningPathDetail() {
                 ))}
 
               {/* Daily Tip Card */}
-              <div className="p-6 bg-gradient-to-br from-brand to-brand-hover rounded-[24px] text-brand-foreground">
+              <div className="p-6 bg-gradient-to-br from-brand to-brand-hover rounded-2xl text-brand-foreground">
                 <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded-full mb-4 inline-block">
                   Study Tip
                 </span>

@@ -59,13 +59,13 @@ export function QuizAnalyticsDashboard() {
       <div className="space-y-6" aria-busy="true" aria-label="Loading quiz analytics">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[0, 1, 2].map(i => (
-            <Skeleton key={i} className="h-28 rounded-[24px]" />
+            <Skeleton key={i} className="h-28 rounded-2xl" />
           ))}
         </div>
-        <Skeleton className="h-52 rounded-[24px]" />
+        <Skeleton className="h-52 rounded-2xl" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <Skeleton className="h-52 rounded-[24px]" />
-          <Skeleton className="h-52 rounded-[24px]" />
+          <Skeleton className="h-52 rounded-2xl" />
+          <Skeleton className="h-52 rounded-2xl" />
         </div>
       </div>
     )
@@ -76,7 +76,7 @@ export function QuizAnalyticsDashboard() {
       <div
         role="alert"
         data-testid="quiz-analytics-error"
-        className="rounded-[24px] border border-destructive/30 bg-destructive/10 p-6 text-center"
+        className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-center"
       >
         <p className="text-sm text-destructive">{error}</p>
         <button

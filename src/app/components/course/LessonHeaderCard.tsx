@@ -28,7 +28,7 @@ interface LessonHeaderCardProps {
 export const LessonHeaderCard = forwardRef<HTMLHeadingElement, LessonHeaderCardProps>(
   function LessonHeaderCard({ title, description, resourceTypes, tags, actions }, ref) {
     return (
-      <Card data-testid="lesson-header-card" className="rounded-[24px] p-6 mt-4">
+      <Card data-testid="lesson-header-card" className="rounded-2xl p-6 mt-4">
         <div className="flex items-start justify-between gap-3">
           <h2
             ref={ref}

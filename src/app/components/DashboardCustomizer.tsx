@@ -192,7 +192,7 @@ export function DashboardCustomizer({
       {isOpen && (
         <div
           id="dashboard-customizer-panel"
-          className="mt-3 space-y-2 rounded-[24px] border border-border/50 bg-card/80 p-4 backdrop-blur"
+          className="mt-3 space-y-2 rounded-2xl border border-border/50 bg-card/80 p-4 backdrop-blur"
           role="region"
           aria-label="Dashboard section order"
         >

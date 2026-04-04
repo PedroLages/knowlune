@@ -34,7 +34,7 @@ export function StoreLoadingSkeleton({ cards = 3, variant = 'grid' }: StoreLoadi
         {variant === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {Array.from({ length: cards }, (_, i) => (
-              <Skeleton key={i} className="h-40 w-full rounded-[24px]" />
+              <Skeleton key={i} className="h-40 w-full rounded-2xl" />
             ))}
           </div>
         ) : (

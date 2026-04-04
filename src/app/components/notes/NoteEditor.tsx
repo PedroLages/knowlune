@@ -609,7 +609,7 @@ export function NoteEditor({
     <div
       ref={editorContainerRef}
       data-testid="note-editor"
-      className={cn('bg-card rounded-[24px] shadow-sm overflow-hidden', className)}
+      className={cn('bg-card rounded-2xl shadow-sm overflow-hidden', className)}
     >
       {/* Toolbar */}
       <TooltipProvider>

@@ -37,7 +37,7 @@ export function FeaturedAuthor({ author }: { author: Author }) {
   const yearsExp = Number.isFinite(author.yearsExperience) ? Math.max(0, author.yearsExperience) : 0
 
   return (
-    <Card className="rounded-[24px] border-0 shadow-sm" data-testid="featured-author">
+    <Card className="rounded-2xl border-0 shadow-sm" data-testid="featured-author">
       <CardContent className="p-6 sm:p-8">
         {/* Hero section: avatar + info */}
         <div className="flex flex-col sm:flex-row gap-6">

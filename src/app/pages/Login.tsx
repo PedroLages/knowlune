@@ -70,7 +70,7 @@ export function Login() {
         </div>
 
         {/* Auth Card */}
-        <Card className="rounded-[24px]">
+        <Card className="rounded-2xl">
           <CardHeader className="items-center text-center pb-2">
             <div className="mx-auto mb-2 rounded-full bg-brand-soft p-3">
               <Mail className="size-6 text-brand" aria-hidden="true" />

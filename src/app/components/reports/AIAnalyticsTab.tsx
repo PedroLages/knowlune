@@ -161,10 +161,10 @@ export function AIAnalyticsTab() {
         <Skeleton className="h-10 w-64" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {Array.from({ length: 5 }, (_, i) => (
-            <Skeleton key={i} className="h-28 rounded-[24px]" />
+            <Skeleton key={i} className="h-28 rounded-2xl" />
           ))}
         </div>
-        <Skeleton className="h-[300px] rounded-[24px]" />
+        <Skeleton className="h-[300px] rounded-2xl" />
       </div>
     )
   }

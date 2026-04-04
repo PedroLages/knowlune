@@ -60,7 +60,7 @@ export function ReviewCard({ record, note, courseName, now, onRate, disabled }: 
       data-testid="review-card"
       aria-label={getNoteExcerpt(note.content, 60)}
     >
-      <Card className="rounded-[24px] transition-shadow duration-200 hover:shadow-md">
+      <Card className="rounded-2xl transition-shadow duration-200 hover:shadow-md">
         <CardContent className="flex flex-col gap-4 p-5">
           {/* Header: icon + metadata */}
           <div className="flex items-start justify-between gap-3">

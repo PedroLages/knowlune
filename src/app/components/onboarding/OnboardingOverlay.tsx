@@ -148,7 +148,7 @@ export function OnboardingOverlay() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.97 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="relative w-full max-w-md rounded-[24px] bg-card p-8 shadow-xl"
+            className="relative w-full max-w-md rounded-2xl bg-card p-8 shadow-xl"
           >
             {/* Close / Skip button */}
             {!isComplete && (

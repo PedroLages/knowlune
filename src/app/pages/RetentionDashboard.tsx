@@ -64,7 +64,7 @@ export function RetentionDashboard() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 3 }, (_, i) => (
-              <div key={i} className="h-40 rounded-[24px] bg-muted animate-pulse" />
+              <div key={i} className="h-40 rounded-2xl bg-muted animate-pulse" />
             ))}
           </div>
         </div>
@@ -108,7 +108,7 @@ export function RetentionDashboard() {
           {/* Row 2: Topic Retention Cards */}
           {topicRetention.length > 0 && (
             <motion.section variants={fadeUp} aria-labelledby="retention-by-topic-heading">
-              <Card className="rounded-[24px]">
+              <Card className="rounded-2xl">
                 <CardHeader>
                   <h2
                     id="retention-by-topic-heading"
@@ -131,7 +131,7 @@ export function RetentionDashboard() {
 
           {/* Row 3: Engagement Status */}
           <motion.section variants={fadeUp} aria-labelledby="engagement-health-heading">
-            <Card className="rounded-[24px]">
+            <Card className="rounded-2xl">
               <CardHeader>
                 <h2
                   id="engagement-health-heading"

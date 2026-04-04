@@ -177,7 +177,7 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         data-testid="edit-course-dialog"
-        className="max-w-lg max-h-[85vh] flex flex-col rounded-[24px]"
+        className="max-w-lg max-h-[85vh] flex flex-col rounded-2xl"
         onClick={e => e.stopPropagation()}
         onKeyDown={e => e.stopPropagation()}
       >

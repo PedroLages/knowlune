@@ -54,7 +54,7 @@ export function AuthDialog({ open, onOpenChange, defaultMode = 'sign-in' }: Auth
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-[24px] sm:max-w-md p-6">
+      <DialogContent className="rounded-2xl sm:max-w-md p-6">
         <DialogHeader className="items-center text-center">
           <div className="mx-auto mb-2 rounded-full bg-brand-soft p-3">
             <Mail className="size-6 text-brand" aria-hidden="true" />

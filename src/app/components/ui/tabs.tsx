@@ -14,7 +14,7 @@ const tabsListVariants = cva('inline-flex items-center justify-center', {
       underline: 'w-full rounded-none border-b border-border bg-transparent h-auto p-0',
     },
   },
-  defaultVariants: { variant: 'default' },
+  defaultVariants: { variant: 'brand-pill' },
 })
 
 const tabsTriggerVariants = cva(
@@ -30,7 +30,7 @@ const tabsTriggerVariants = cva(
           'flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:bg-transparent py-2.5 text-xs gap-1.5',
       },
     },
-    defaultVariants: { variant: 'default' },
+    defaultVariants: { variant: 'brand-pill' },
   }
 )
 

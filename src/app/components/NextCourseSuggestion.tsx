@@ -49,7 +49,7 @@ export function NextCourseSuggestion({
       ref={cardRef}
       tabIndex={-1}
       data-testid="next-course-suggestion"
-      className="rounded-[24px] bg-card shadow-sm border border-border/50 p-6 outline-none animate-in fade-in duration-300 motion-reduce:animate-none"
+      className="rounded-2xl bg-card shadow-sm border border-border/50 p-6 outline-none animate-in fade-in duration-300 motion-reduce:animate-none"
       role="region"
       aria-label="Next course suggestion"
     >

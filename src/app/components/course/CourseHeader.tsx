@@ -140,7 +140,7 @@ export function CourseHeader({
       )}
 
       {/* Course header card — ported from old CourseDetail rounded-3xl card */}
-      <div className="bg-card rounded-[24px] shadow-sm p-6 md:p-8 mb-6 border border-border/50">
+      <div className="bg-card rounded-2xl shadow-sm p-6 md:p-8 mb-6 border border-border/50">
         <div className="flex flex-col lg:flex-row lg:items-start gap-[var(--content-gap)]">
           {/* Main info column */}
           <div className="flex-1 min-w-0">

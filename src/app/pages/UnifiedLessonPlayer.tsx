@@ -533,7 +533,7 @@ export function UnifiedLessonPlayer() {
           <div
             data-testid="desktop-sidebar"
             className={cn(
-              'sticky top-0 self-start flex-shrink-0 w-96 bg-card rounded-[24px] shadow-sm overflow-hidden flex flex-col max-h-[calc(100svh-3rem)]',
+              'sticky top-0 self-start flex-shrink-0 w-96 bg-card rounded-2xl shadow-sm overflow-hidden flex flex-col max-h-[calc(100svh-3rem)]',
               isTheater || state.notesOpen ? 'hidden' : 'hidden lg:flex'
             )}
           >

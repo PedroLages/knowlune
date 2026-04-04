@@ -20,7 +20,7 @@ export default function PremiumAnalyticsDashboard() {
         Premium analytics dashboard with trend analysis and predictive insights.
       </p>
       <div
-        className="rounded-[24px] border border-border bg-surface p-6"
+        className="rounded-2xl border border-border bg-surface p-6"
         role="region"
         aria-label="Premium analytics content"
       >

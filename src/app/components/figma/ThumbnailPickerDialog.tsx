@@ -181,7 +181,7 @@ export function ThumbnailPickerDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg rounded-[24px] p-0 overflow-hidden">
+      <DialogContent className="max-w-lg rounded-2xl p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-5 pb-3">
           <DialogTitle className="flex items-center gap-2">
             <Camera className="size-4" aria-hidden="true" />

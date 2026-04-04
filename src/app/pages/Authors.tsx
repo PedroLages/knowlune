@@ -93,7 +93,7 @@ export function Authors() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--content-gap)]">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-72 rounded-[24px]" />
+            <Skeleton key={i} className="h-72 rounded-2xl" />
           ))}
         </div>
       </div>
@@ -193,7 +193,7 @@ export function Authors() {
 
       {/* Empty State */}
       {isLoaded && allAuthors.length === 0 && (
-        <Card className="rounded-[24px] border-0 shadow-sm">
+        <Card className="rounded-2xl border-0 shadow-sm">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Users className="size-16 text-muted-foreground/50 mb-4" aria-hidden="true" />
             <h2 className="text-lg font-semibold mb-2">No Authors Yet</h2>
@@ -215,7 +215,7 @@ export function Authors() {
 
       {/* No search results (multi-author only) */}
       {allAuthors.length > 1 && sorted.length === 0 && searchQuery.trim() && (
-        <Card className="rounded-[24px] border-0 shadow-sm">
+        <Card className="rounded-2xl border-0 shadow-sm">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Search className="size-12 text-muted-foreground/50 mb-4" aria-hidden="true" />
             <h2 className="text-lg font-semibold mb-2">No Authors Found</h2>
@@ -287,10 +287,10 @@ function AuthorCard({
     <div className="group relative">
       <Link
         to={`/authors/${author.id}`}
-        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-[24px]"
+        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-2xl"
         data-testid="author-card"
       >
-        <Card className="h-full rounded-[24px] border-0 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+        <Card className="h-full rounded-2xl border-0 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
           <CardContent className="flex flex-col items-center text-center p-6 pt-8">
             {/* Avatar */}
             <Avatar className="size-24 mb-4 ring-2 ring-border/50 group-hover:ring-brand/30 transition-all">

@@ -46,7 +46,7 @@ export function PremiumGate({
     if (!showSkeleton) return null
     return (
       <div
-        className="animate-pulse space-y-3 rounded-[24px] border border-border/50 bg-surface-sunken/30 p-6"
+        className="animate-pulse space-y-3 rounded-2xl border border-border/50 bg-surface-sunken/30 p-6"
         role="status"
         aria-label={`Loading ${featureLabel}`}
       >

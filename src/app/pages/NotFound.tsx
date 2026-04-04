@@ -6,7 +6,7 @@ import { Link } from 'react-router'
 export function NotFound() {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
-      <Card className="max-w-md w-full rounded-[24px]">
+      <Card className="max-w-md w-full rounded-2xl">
         <CardContent className="flex flex-col items-center justify-center py-12 px-6 text-center">
           <div className="size-16 rounded-full bg-brand-soft flex items-center justify-center mb-4">
             <MapPinOff className="size-8 text-brand-muted" aria-hidden="true" />
