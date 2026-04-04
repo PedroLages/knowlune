@@ -4,8 +4,10 @@ import {
   initNotificationService,
   destroyNotificationService,
   checkSrsDueOnStartup,
+  checkKnowledgeDecayOnStartup,
   checkMilestoneApproachingOnStartup,
   MILESTONE_THRESHOLD,
+  DECAY_THRESHOLD,
 } from '@/services/NotificationService'
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -35,13 +37,23 @@ const mockContentProgressToArray = vi.fn().mockResolvedValue([])
 const mockImportedVideosToArray = vi.fn().mockResolvedValue([])
 const mockImportedPdfsToArray = vi.fn().mockResolvedValue([])
 
+const mockIsTypeEnabled = vi.fn().mockReturnValue(true)
+const mockIsInQuietHours = vi.fn().mockReturnValue(false)
+
 vi.mock('@/stores/useNotificationPrefsStore', () => ({
   useNotificationPrefsStore: {
     getState: () => ({
-      isTypeEnabled: () => true,
-      isInQuietHours: () => false,
+      isTypeEnabled: (...args: unknown[]) => mockIsTypeEnabled(...args),
+      isInQuietHours: () => mockIsInQuietHours(),
     }),
   },
+}))
+
+const mockGetTopicRetention = vi.fn().mockReturnValue([])
+
+vi.mock('@/lib/retentionMetrics', () => ({
+  getTopicRetention: (...args: unknown[]) => mockGetTopicRetention(...args),
+  FADING_THRESHOLD: 50,
 }))
 
 vi.mock('@/db', () => ({
@@ -94,6 +106,13 @@ describe('NotificationService', () => {
     mockContentProgressToArray.mockClear()
     mockImportedVideosToArray.mockClear()
     mockImportedPdfsToArray.mockClear()
+    mockIsTypeEnabled.mockClear()
+    mockIsInQuietHours.mockClear()
+    mockGetTopicRetention.mockClear()
+    // Default prefs: all types enabled, not in quiet hours
+    mockIsTypeEnabled.mockReturnValue(true)
+    mockIsInQuietHours.mockReturnValue(false)
+    mockGetTopicRetention.mockReturnValue([])
     // Default: no existing notification + no due cards + no courses
     mockFirst.mockResolvedValue(undefined)
     mockToArray.mockResolvedValue([])
@@ -700,6 +719,21 @@ describe('NotificationService', () => {
       emitSpy.mockRestore()
     })
 
+    it('does NOT emit and does not crash when a course has no videos and no PDFs', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockImportedCoursesToArray.mockResolvedValue([{ id: 'empty-course', name: 'Empty Course' }])
+      // No videos and no PDFs → totalLessons = 0
+      mockImportedVideosToArray.mockResolvedValue([])
+      mockImportedPdfsToArray.mockResolvedValue([])
+      mockContentProgressToArray.mockResolvedValue([])
+
+      await expect(checkMilestoneApproachingOnStartup()).resolves.not.toThrow()
+
+      expect(emitSpy).not.toHaveBeenCalled()
+      emitSpy.mockRestore()
+    })
+
     it('exports MILESTONE_THRESHOLD as a positive integer', () => {
       expect(MILESTONE_THRESHOLD).toBeGreaterThan(0)
       expect(Number.isInteger(MILESTONE_THRESHOLD)).toBe(true)
@@ -736,6 +770,408 @@ describe('NotificationService', () => {
       })
 
       // Flush microtasks
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(mockCreate).not.toHaveBeenCalled()
+    })
+  })
+
+  // ── knowledge:decay event handling ──────────────────────────
+
+  describe('knowledge:decay event handling', () => {
+    it('creates knowledge-decay notification on knowledge:decay event', async () => {
+      initNotificationService()
+
+      appEventBus.emit({
+        type: 'knowledge:decay',
+        topic: 'React Hooks',
+        retention: 35,
+        dueCount: 3,
+      })
+
+      await vi.waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1))
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'knowledge-decay',
+          title: 'Knowledge Fading: React Hooks',
+          message: 'Your retention for "React Hooks" has dropped to 35%. Review now to strengthen your memory.',
+          actionUrl: '/review',
+          metadata: { topic: 'React Hooks', retention: 35 },
+        })
+      )
+    })
+
+    it('does not create duplicate knowledge-decay notification for same topic same day', async () => {
+      mockFirst.mockResolvedValue({
+        id: 'existing-decay',
+        type: 'knowledge-decay',
+        createdAt: FIXED_NOW.toISOString(),
+        metadata: { topic: 'React Hooks' },
+      })
+
+      initNotificationService()
+
+      appEventBus.emit({
+        type: 'knowledge:decay',
+        topic: 'React Hooks',
+        retention: 30,
+        dueCount: 2,
+      })
+
+      await vi.waitFor(() => expect(mockWhere).toHaveBeenCalled())
+
+      expect(mockCreate).not.toHaveBeenCalled()
+    })
+
+    it('allows knowledge-decay notification for the same topic on the next day', async () => {
+      // Day 1: an existing notification was created today
+      mockFirst.mockResolvedValue({
+        id: 'existing-decay',
+        type: 'knowledge-decay',
+        createdAt: FIXED_NOW.toISOString(),
+        metadata: { topic: 'React Hooks' },
+      })
+
+      initNotificationService()
+
+      appEventBus.emit({
+        type: 'knowledge:decay',
+        topic: 'React Hooks',
+        retention: 30,
+        dueCount: 2,
+      })
+
+      await vi.waitFor(() => expect(mockWhere).toHaveBeenCalled())
+      expect(mockCreate).not.toHaveBeenCalled()
+
+      // Advance clock by 1 day — dedup window should reset
+      vi.setSystemTime(new Date('2026-03-16T12:00:00'))
+      mockFirst.mockResolvedValue(undefined) // No notification exists for tomorrow
+      mockCreate.mockClear()
+      mockWhere.mockClear()
+
+      appEventBus.emit({
+        type: 'knowledge:decay',
+        topic: 'React Hooks',
+        retention: 28,
+        dueCount: 3,
+      })
+
+      await vi.waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1))
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'knowledge-decay',
+          metadata: expect.objectContaining({ topic: 'React Hooks' }),
+        })
+      )
+    })
+
+    it('allows knowledge-decay notification for different topic same day', async () => {
+      // First call: no existing notif for "TypeScript"; second call: existing for "React"
+      mockFirst
+        .mockResolvedValueOnce(undefined) // TypeScript: no existing
+        .mockResolvedValueOnce({
+          id: 'existing',
+          type: 'knowledge-decay',
+          createdAt: FIXED_NOW.toISOString(),
+          metadata: { topic: 'React Hooks' },
+        })
+
+      initNotificationService()
+
+      appEventBus.emit({
+        type: 'knowledge:decay',
+        topic: 'TypeScript',
+        retention: 25,
+        dueCount: 1,
+      })
+
+      await vi.waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1))
+
+      appEventBus.emit({
+        type: 'knowledge:decay',
+        topic: 'React Hooks',
+        retention: 30,
+        dueCount: 2,
+      })
+
+      // Give async handler time — React Hooks should be suppressed
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(mockCreate).toHaveBeenCalledTimes(1)
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Knowledge Fading: TypeScript' })
+      )
+    })
+  })
+
+  // ── recommendation:match event handling ─────────────────────
+
+  describe('recommendation:match event handling', () => {
+    it('creates recommendation-match notification on recommendation:match event', async () => {
+      initNotificationService()
+
+      appEventBus.emit({
+        type: 'recommendation:match',
+        courseId: 'adv-react',
+        courseName: 'Advanced React Patterns',
+        reason: 'Matches your weak area in hooks',
+      })
+
+      await vi.waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1))
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'recommendation-match',
+          title: 'Recommended for You',
+          message: 'Advanced React Patterns: Matches your weak area in hooks',
+          actionUrl: '/courses/adv-react',
+          metadata: { courseId: 'adv-react', courseName: 'Advanced React Patterns' },
+        })
+      )
+    })
+
+    it('does not create duplicate recommendation-match for same courseId same day', async () => {
+      mockFirst.mockResolvedValue({
+        id: 'existing-rec',
+        type: 'recommendation-match',
+        createdAt: FIXED_NOW.toISOString(),
+        metadata: { courseId: 'adv-react' },
+      })
+
+      initNotificationService()
+
+      appEventBus.emit({
+        type: 'recommendation:match',
+        courseId: 'adv-react',
+        courseName: 'Advanced React Patterns',
+        reason: 'Matches your weak area',
+      })
+
+      await vi.waitFor(() => expect(mockWhere).toHaveBeenCalled())
+
+      expect(mockCreate).not.toHaveBeenCalled()
+    })
+  })
+
+  // ── checkKnowledgeDecayOnStartup ─────────────────────────────
+
+  describe('checkKnowledgeDecayOnStartup', () => {
+    it('emits knowledge:decay for topics below DECAY_THRESHOLD', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockNotesToArray.mockResolvedValue([
+        { id: 'n1', tags: ['React'], deleted: false },
+      ])
+      mockReviewRecordsToArray.mockResolvedValue([
+        { id: 'r1', noteId: 'n1' },
+      ])
+      mockGetTopicRetention.mockReturnValue([
+        { topic: 'React', retention: 30, level: 'critical', lastReviewedAt: '2026-03-10T12:00:00', noteCount: 1, dueCount: 1 },
+      ])
+      // No existing decay notifications today
+      mockToArray.mockResolvedValue([])
+
+      await checkKnowledgeDecayOnStartup()
+
+      expect(emitSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'knowledge:decay',
+          topic: 'React',
+          retention: 30,
+          dueCount: 1,
+        })
+      )
+      emitSpy.mockRestore()
+    })
+
+    it('does NOT emit for topics above DECAY_THRESHOLD', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockNotesToArray.mockResolvedValue([
+        { id: 'n1', tags: ['React'], deleted: false },
+      ])
+      mockReviewRecordsToArray.mockResolvedValue([
+        { id: 'r1', noteId: 'n1' },
+      ])
+      mockGetTopicRetention.mockReturnValue([
+        { topic: 'React', retention: 75, level: 'strong', lastReviewedAt: '2026-03-14T12:00:00', noteCount: 1, dueCount: 0 },
+      ])
+
+      await checkKnowledgeDecayOnStartup()
+
+      expect(emitSpy).not.toHaveBeenCalled()
+      emitSpy.mockRestore()
+    })
+
+    it('does NOT emit when retention is exactly at threshold (< required, not <=)', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockNotesToArray.mockResolvedValue([
+        { id: 'n1', tags: ['React'], deleted: false },
+      ])
+      mockReviewRecordsToArray.mockResolvedValue([
+        { id: 'r1', noteId: 'n1' },
+      ])
+      mockGetTopicRetention.mockReturnValue([
+        { topic: 'React', retention: DECAY_THRESHOLD, level: 'fading', lastReviewedAt: '2026-03-14T12:00:00', noteCount: 1, dueCount: 0 },
+      ])
+
+      await checkKnowledgeDecayOnStartup()
+
+      expect(emitSpy).not.toHaveBeenCalled()
+      emitSpy.mockRestore()
+    })
+
+    it('does NOT emit when notes array is empty', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockNotesToArray.mockResolvedValue([])
+      mockReviewRecordsToArray.mockResolvedValue([])
+
+      await checkKnowledgeDecayOnStartup()
+
+      expect(emitSpy).not.toHaveBeenCalled()
+      emitSpy.mockRestore()
+    })
+
+    it('does NOT emit when review records are empty (no reviewed notes)', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockNotesToArray.mockResolvedValue([
+        { id: 'n1', tags: ['React'], deleted: false },
+      ])
+      mockReviewRecordsToArray.mockResolvedValue([])
+
+      await checkKnowledgeDecayOnStartup()
+
+      // getTopicRetention is never called because reviewRecords.length === 0
+      expect(emitSpy).not.toHaveBeenCalled()
+      emitSpy.mockRestore()
+    })
+
+    it('skips topics already notified today (batch dedup)', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockNotesToArray.mockResolvedValue([
+        { id: 'n1', tags: ['React'], deleted: false },
+      ])
+      mockReviewRecordsToArray.mockResolvedValue([
+        { id: 'r1', noteId: 'n1' },
+      ])
+      mockGetTopicRetention.mockReturnValue([
+        { topic: 'React', retention: 30, level: 'critical', lastReviewedAt: '2026-03-10T12:00:00', noteCount: 1, dueCount: 1 },
+      ])
+      // Simulate existing decay notification for React today
+      mockToArray.mockResolvedValue([
+        {
+          id: 'existing',
+          type: 'knowledge-decay',
+          createdAt: FIXED_NOW.toISOString(),
+          metadata: { topic: 'React' },
+        },
+      ])
+
+      await checkKnowledgeDecayOnStartup()
+
+      expect(emitSpy).not.toHaveBeenCalled()
+      emitSpy.mockRestore()
+    })
+
+    it('does NOT emit when knowledge-decay preference is disabled', async () => {
+      const emitSpy = vi.spyOn(appEventBus, 'emit')
+
+      mockIsTypeEnabled.mockImplementation((type: string) => type !== 'knowledge-decay')
+
+      mockNotesToArray.mockResolvedValue([
+        { id: 'n1', tags: ['React'], deleted: false },
+      ])
+      mockReviewRecordsToArray.mockResolvedValue([
+        { id: 'r1', noteId: 'n1' },
+      ])
+
+      await checkKnowledgeDecayOnStartup()
+
+      // Should return early, never calling getTopicRetention
+      expect(mockGetTopicRetention).not.toHaveBeenCalled()
+      expect(emitSpy).not.toHaveBeenCalled()
+      emitSpy.mockRestore()
+    })
+
+    it('exports DECAY_THRESHOLD as a positive number', () => {
+      expect(DECAY_THRESHOLD).toBeGreaterThan(0)
+      expect(DECAY_THRESHOLD).toBe(50)
+    })
+  })
+
+  // ── Preference suppression ──────────────────────────────────
+
+  describe('preference suppression', () => {
+    it('does NOT create notification when knowledge-decay is disabled', async () => {
+      mockIsTypeEnabled.mockImplementation((type: string) => type !== 'knowledge-decay')
+
+      initNotificationService()
+
+      appEventBus.emit({
+        type: 'knowledge:decay',
+        topic: 'React',
+        retention: 30,
+        dueCount: 1,
+      })
+
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(mockCreate).not.toHaveBeenCalled()
+    })
+
+    it('does NOT create notification when recommendation-match is disabled', async () => {
+      mockIsTypeEnabled.mockImplementation((type: string) => type !== 'recommendation-match')
+
+      initNotificationService()
+
+      appEventBus.emit({
+        type: 'recommendation:match',
+        courseId: 'c1',
+        courseName: 'Test Course',
+        reason: 'Good match',
+      })
+
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(mockCreate).not.toHaveBeenCalled()
+    })
+
+    it('does NOT create notification when milestone-approaching is disabled', async () => {
+      mockIsTypeEnabled.mockImplementation((type: string) => type !== 'milestone-approaching')
+
+      initNotificationService()
+
+      appEventBus.emit({
+        type: 'milestone:approaching',
+        courseId: 'c1',
+        courseName: 'Test Course',
+        remainingLessons: 1,
+        totalLessons: 10,
+      })
+
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(mockCreate).not.toHaveBeenCalled()
+    })
+
+    it('does NOT create any notification during quiet hours', async () => {
+      mockIsInQuietHours.mockReturnValue(true)
+
+      initNotificationService()
+
+      appEventBus.emit({
+        type: 'knowledge:decay',
+        topic: 'React',
+        retention: 30,
+        dueCount: 1,
+      })
+
       await vi.advanceTimersByTimeAsync(0)
 
       expect(mockCreate).not.toHaveBeenCalled()
