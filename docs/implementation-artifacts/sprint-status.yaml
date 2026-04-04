@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-03-30  # E54 retrospective completed
+last_updated: 2026-04-04  # E98-S01 story created
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -789,7 +789,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-69: in-progress
   69-1-storage-estimation-service-and-overview-card: done
-  69-2-per-course-storage-table-with-sorting: ready-for-dev
+  69-2-per-course-storage-table-with-sorting: done
   69-3-cleanup-actions-with-confirmation-dialogs: ready-for-dev
   epic-69-retrospective: optional
 
@@ -1194,3 +1194,13 @@ development_status:
   97-3-initial-upload-wizard: backlog
   97-4-new-device-download-experience: backlog
   epic-97-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 98: Lesson Player Layout Polish
+  # Source: User-reported video player sizing issues (2026-04-04)
+  # Fixes: viewport overflow, theater mode clipping, ESC key, video-tabs gap
+  # Builds on: E89 (UnifiedLessonPlayer), E91-S03 (Theater Mode)
+  # ──────────────────────────────────────────────────
+  epic-98: in-progress
+  98-1-video-player-viewport-sizing-and-theater-mode-fixes: ready-for-dev
+  epic-98-retrospective: optional

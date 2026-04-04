@@ -10,9 +10,15 @@ import type { StorageOverview, StorageCategory } from '@/lib/storageEstimate'
 // ---------------------------------------------------------------------------
 
 const mockGetStorageOverview = vi.fn()
+const mockGetPerCourseUsage = vi.fn()
+const mockClearCourseThumbnail = vi.fn()
+const mockDeleteCourseData = vi.fn()
 
 vi.mock('@/lib/storageEstimate', () => ({
   getStorageOverview: (...args: unknown[]) => mockGetStorageOverview(...args),
+  getPerCourseUsage: (...args: unknown[]) => mockGetPerCourseUsage(...args),
+  clearCourseThumbnail: (...args: unknown[]) => mockClearCourseThumbnail(...args),
+  deleteCourseData: (...args: unknown[]) => mockDeleteCourseData(...args),
   STORAGE_CATEGORIES: [
     'courses',
     'notes',
@@ -116,6 +122,10 @@ function renderComponent() {
 beforeEach(() => {
   vi.clearAllMocks()
   sessionStorage.clear()
+  // Default implementations for new functions
+  mockGetPerCourseUsage.mockResolvedValue([])
+  mockClearCourseThumbnail.mockResolvedValue(0)
+  mockDeleteCourseData.mockResolvedValue(0)
 })
 
 describe('StorageManagement', () => {

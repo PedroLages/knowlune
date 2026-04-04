@@ -1,8 +1,15 @@
 // E69-S01: Storage Management Dashboard Card
 // Settings > Storage & Usage — visual breakdown of IndexedDB storage by category.
 
-import { useState, useEffect, useRef } from 'react'
-import { BarChart3, AlertTriangle, AlertOctagon, RefreshCw, Loader2, Info } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import {
+  BarChart3,
+  AlertTriangle,
+  AlertOctagon,
+  RefreshCw,
+  Loader2,
+  Info,
+} from 'lucide-react'
 import { Link } from 'react-router'
 import { BarChart, Bar, YAxis, XAxis } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
@@ -18,10 +25,13 @@ import { formatFileSize } from '@/lib/format'
 import { toast } from 'sonner'
 import {
   getStorageOverview,
+  getPerCourseUsage,
   STORAGE_CATEGORIES,
   type StorageOverview,
   type StorageCategory,
+  type CourseStorageEntry,
 } from '@/lib/storageEstimate'
+import { PerCourseStorageTable } from './PerCourseStorageTable'
 
 // --- Chart Config ---
 
@@ -262,19 +272,31 @@ function CategoryBreakdownLegend({ overview }: { overview: StorageOverview }) {
 
 export function StorageManagement() {
   const [overview, setOverview] = useState<StorageOverview | null>(null)
+  const [perCourse, setPerCourse] = useState<CourseStorageEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const refreshingRef = useRef(false)
   const [warningDismissed, setWarningDismissed] = useState(false)
 
+  const loadAll = useCallback(async () => {
+    const [overviewData, courseData] = await Promise.all([
+      getStorageOverview(),
+      getPerCourseUsage(),
+    ])
+    return { overviewData, courseData }
+  }, [])
+
   useEffect(() => {
     let cancelled = false
 
     async function load() {
       try {
-        const data = await getStorageOverview()
-        if (!cancelled) setOverview(data)
+        const { overviewData, courseData } = await loadAll()
+        if (!cancelled) {
+          setOverview(overviewData)
+          setPerCourse(courseData)
+        }
       } catch {
         // silent-catch-ok — Error state rendered via setError(true) below
         if (!cancelled) setError(true)
@@ -294,7 +316,7 @@ export function StorageManagement() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [loadAll])
 
   async function handleRefresh() {
     if (refreshingRef.current) return
@@ -302,11 +324,12 @@ export function StorageManagement() {
     setRefreshing(true)
     setError(false)
     try {
-      const data = await getStorageOverview()
-      if (!data.apiAvailable && overview?.apiAvailable) {
+      const { overviewData, courseData } = await loadAll()
+      if (!overviewData.apiAvailable && overview?.apiAvailable) {
         toast.error('Unable to refresh storage data')
       }
-      setOverview(data)
+      setOverview(overviewData)
+      setPerCourse(courseData)
     } catch {
       setError(true)
       toast.error('Unable to refresh storage data')
@@ -429,6 +452,7 @@ export function StorageManagement() {
             />
             <StorageOverviewBar overview={overview} />
             <CategoryBreakdownLegend overview={overview} />
+            <PerCourseStorageTable courses={perCourse} onRefresh={handleRefresh} />
           </>
         )}
       </CardContent>
