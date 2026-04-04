@@ -49,16 +49,22 @@ export function CalendarSettingsSection() {
     return () => {
       ignore = true
     }
-  }, [loadFeedToken, loadSchedules, isLoaded])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- isLoaded intentionally read once on mount
+  }, [loadFeedToken, loadSchedules])
 
   const feedUrl = getFeedUrl()
 
   const handleToggle = useCallback(
     async (checked: boolean) => {
-      if (checked) {
-        await generateFeedToken()
-      } else {
-        await disableFeed()
+      try {
+        if (checked) {
+          await generateFeedToken()
+        } else {
+          await disableFeed()
+        }
+      } catch (error) {
+        console.error('[CalendarSettings] Toggle failed:', error)
+        toast.error('Failed to update calendar feed')
       }
     },
     [generateFeedToken, disableFeed]
@@ -76,8 +82,12 @@ export function CalendarSettingsSection() {
   }, [feedUrl])
 
   const handleRegenerate = useCallback(async () => {
-    await regenerateFeedToken()
-    toast.warning('Old calendar subscriptions will stop updating.')
+    try {
+      await regenerateFeedToken()
+    } catch (error) {
+      console.error('[CalendarSettings] Regenerate failed:', error)
+      toast.error('Failed to regenerate feed URL')
+    }
   }, [regenerateFeedToken])
 
   const handleDownload = useCallback(() => {

@@ -98,7 +98,7 @@ export function FeedPreview({ schedules }: FeedPreviewProps) {
         <div className="space-y-2">
           {upcomingEvents.map((event, i) => (
             <div
-              key={i}
+              key={`${event.title}-${event.dayLabel}-${event.time}`}
               className="flex items-center gap-3 rounded-lg border border-border/50 p-3 text-sm"
             >
               <Clock className="size-4 text-muted-foreground flex-shrink-0" aria-hidden="true" />
