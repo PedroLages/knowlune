@@ -17,8 +17,8 @@ interface StudyScheduleState {
   deleteSchedule: (id: string) => Promise<void>
 
   // Getters
-  getSchedulesForDay: (day: DayOfWeek) => StudySchedule[]
-  getSchedulesForCourse: (courseId: string) => StudySchedule[]
+  getSchedulesForDay: (day: DayOfWeek, enabledOnly?: boolean) => StudySchedule[]
+  getSchedulesForCourse: (courseId: string, enabledOnly?: boolean) => StudySchedule[]
 }
 
 export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
@@ -39,6 +39,7 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
     const now = new Date().toISOString()
     const newSchedule: StudySchedule = {
       ...input,
+      timezone: input.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
       id: crypto.randomUUID(),
       createdAt: now,
       updatedAt: now,
@@ -100,11 +101,15 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
     }
   },
 
-  getSchedulesForDay: (day) => {
-    return get().schedules.filter((s) => s.days.includes(day))
+  getSchedulesForDay: (day, enabledOnly = true) => {
+    return get().schedules.filter(
+      (s) => s.days.includes(day) && (!enabledOnly || s.enabled)
+    )
   },
 
-  getSchedulesForCourse: (courseId) => {
-    return get().schedules.filter((s) => s.courseId === courseId)
+  getSchedulesForCourse: (courseId, enabledOnly = true) => {
+    return get().schedules.filter(
+      (s) => s.courseId === courseId && (!enabledOnly || s.enabled)
+    )
   },
 }))

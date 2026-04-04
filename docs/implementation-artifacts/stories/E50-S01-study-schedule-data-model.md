@@ -1,9 +1,9 @@
 ---
 story_id: E50-S01
 story_name: "Study Schedule Data Model"
-status: draft
-started:
-completed:
+status: done
+started: 2026-04-04
+completed: 2026-04-04
 reviewed: false
 review_started:
 review_gates_passed: []
@@ -20,7 +20,7 @@ So that I can create, edit, and delete recurring study blocks that persist acros
 
 ## Acceptance Criteria
 
-**AC1:** Given a fresh database, when the app starts, then Dexie v28 creates the `studySchedules` table without errors.
+**AC1:** Given a fresh database, when the app starts, then Dexie v36 creates the `studySchedules` table without errors.
 
 **AC2:** Given a user calls `addSchedule()` with title, days, and startTime, when the schedule is saved, then a new record is persisted in Dexie with auto-generated id, createdAt, updatedAt, and default durationMinutes=60.
 
@@ -32,27 +32,27 @@ So that I can create, edit, and delete recurring study blocks that persist acros
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `StudySchedule` interface to types (AC: 1, 2)
-  - [ ] 1.1 Add `StudySchedule` interface after `CourseReminder` (line ~399) in `src/data/types.ts`
-  - [ ] 1.2 Fields: id (string UUID), courseId? (string), learningPathId? (string), title (string), days (DayOfWeek[]), startTime (string "HH:MM"), durationMinutes (number, default 60), recurrence ('weekly' | 'daily'), reminderMinutes (number, default 15), enabled (boolean), timezone (string IANA), createdAt (string ISO), updatedAt (string ISO). NOTE: `'once'` recurrence removed from Phase 1-2 — one-time events need a `date` field which is deferred to Phase 3 (Edge case review HIGH EC-34)
-  - [ ] 1.3 Reuse existing `DayOfWeek` type from `src/data/types.ts:381-388`
+- [x] Task 1: Add `StudySchedule` interface to types (AC: 1, 2)
+  - [x] 1.1 Add `StudySchedule` interface after `CourseReminder` (line ~399) in `src/data/types.ts`
+  - [x] 1.2 Fields: id (string UUID), courseId? (string), learningPathId? (string), title (string), days (DayOfWeek[]), startTime (string "HH:MM"), durationMinutes (number, default 60), recurrence ('weekly' | 'daily'), reminderMinutes (number, default 15), enabled (boolean), timezone (string IANA), createdAt (string ISO), updatedAt (string ISO). NOTE: `'once'` recurrence removed from Phase 1-2 — one-time events need a `date` field which is deferred to Phase 3 (Edge case review HIGH EC-34)
+  - [x] 1.3 Reuse existing `DayOfWeek` type from `src/data/types.ts:381-388`
 
-- [ ] Task 2: Add `studySchedules` table to Dexie v28 (AC: 1)
-  - [ ] 2.1 Add `studySchedules: EntityTable<StudySchedule, 'id'>` to the `ElearningDatabase` type in `src/db/schema.ts` (around line 66)
-  - [ ] 2.2 Add `StudySchedule` to the import list from `@/data/types` at top of `src/db/schema.ts`
-  - [ ] 2.3 Add v28 declaration after v27 (line ~966): `database.version(28).stores({ studySchedules: 'id, courseId, learningPathId, enabled' })`
-  - [ ] 2.4 Do NOT update `src/db/checkpoint.ts` — stays at v27
+- [x] Task 2: Add `studySchedules` table to Dexie v36 (AC: 1)
+  - [x] 2.1 Add `studySchedules: EntityTable<StudySchedule, 'id'>` to the `ElearningDatabase` type in `src/db/schema.ts` (around line 66)
+  - [x] 2.2 Add `StudySchedule` to the import list from `@/data/types` at top of `src/db/schema.ts`
+  - [x] 2.3 Add v36 declaration: `database.version(36).stores({ studySchedules: 'id, courseId, learningPathId, enabled' })`
+  - [x] 2.4 Do NOT update `src/db/checkpoint.ts` — stays at v27
 
-- [ ] Task 3: Create `useStudyScheduleStore` Zustand store (AC: 2, 3, 4, 5)
-  - [ ] 3.1 Create `src/stores/useStudyScheduleStore.ts` following `useFlashcardStore.ts` pattern
-  - [ ] 3.2 State: `schedules: StudySchedule[]`, `isLoaded: boolean`
-  - [ ] 3.3 Implement `loadSchedules()` — reads all from Dexie
-  - [ ] 3.4 Implement `addSchedule(schedule: Omit<StudySchedule, 'id' | 'createdAt' | 'updatedAt'>)` — generates UUID via `crypto.randomUUID()`, sets timestamps, writes to Dexie
-  - [ ] 3.5 Implement `updateSchedule(id: string, updates: Partial<StudySchedule>)` — updates Dexie record, refreshes `updatedAt`, updates local state
-  - [ ] 3.6 Implement `deleteSchedule(id: string)` — removes from Dexie and local state
-  - [ ] 3.7 Implement `getSchedulesForDay(day: DayOfWeek)` — filtered getter returning schedules containing the given day
-  - [ ] 3.8 Implement `getSchedulesForCourse(courseId: string)` — filtered getter
-  - [ ] 3.9 Default `timezone` to `Intl.DateTimeFormat().resolvedOptions().timeZone`
+- [x] Task 3: Create `useStudyScheduleStore` Zustand store (AC: 2, 3, 4, 5)
+  - [x] 3.1 Create `src/stores/useStudyScheduleStore.ts` following `useFlashcardStore.ts` pattern
+  - [x] 3.2 State: `schedules: StudySchedule[]`, `isLoaded: boolean`
+  - [x] 3.3 Implement `loadSchedules()` — reads all from Dexie
+  - [x] 3.4 Implement `addSchedule(schedule: Omit<StudySchedule, 'id' | 'createdAt' | 'updatedAt'>)` — generates UUID via `crypto.randomUUID()`, sets timestamps, writes to Dexie
+  - [x] 3.5 Implement `updateSchedule(id: string, updates: Partial<StudySchedule>)` — updates Dexie record, refreshes `updatedAt`, updates local state
+  - [x] 3.6 Implement `deleteSchedule(id: string)` — removes from Dexie and local state
+  - [x] 3.7 Implement `getSchedulesForDay(day: DayOfWeek, enabledOnly?: boolean)` — filtered getter (default: enabled only)
+  - [x] 3.8 Implement `getSchedulesForCourse(courseId: string, enabledOnly?: boolean)` — filtered getter (default: enabled only)
+  - [x] 3.9 Default `timezone` to `Intl.DateTimeFormat().resolvedOptions().timeZone`
 
 ## Implementation Notes
 
@@ -60,11 +60,11 @@ So that I can create, edit, and delete recurring study blocks that persist acros
 - Separate `StudySchedule` from `CourseReminder` — different concerns (calendar scheduling vs notification triggers). `CourseReminder` remains untouched.
 - `courseId` is optional to support free-form study blocks not linked to any course.
 - `learningPathId` is included for future learning-path-level scheduling (UI deferred to Phase 3+).
-- Dexie v28 is incremental — no checkpoint update needed. Dexie auto-creates new tables for fresh installs via the migration chain.
+- Dexie v36 is incremental — no checkpoint update needed. Dexie auto-creates new tables for fresh installs via the migration chain. (Story was planned at v28; actual landing version is v36 due to other epics shipped concurrently.)
 
 **Key files:**
 - `src/data/types.ts` — Add `StudySchedule` interface (after line ~399)
-- `src/db/schema.ts` — Add v28 declaration and EntityTable type (lines ~66 and ~966)
+- `src/db/schema.ts` — Add v36 declaration and EntityTable type
 - `src/stores/useStudyScheduleStore.ts` — NEW file
 - Reference pattern: `src/stores/useFlashcardStore.ts` (full CRUD with add/update/delete)
 - Reference pattern: `src/stores/useCourseStore.ts` (simple read-only store)
@@ -75,7 +75,7 @@ So that I can create, edit, and delete recurring study blocks that persist acros
 ## Testing Notes
 
 **E2E tests:**
-- Verify Dexie v28 migration succeeds on fresh database
+- Verify Dexie v36 migration succeeds on fresh database
 - Verify schedule CRUD through store: add → read → update → delete
 - Verify `getSchedulesForDay()` filtering returns correct subset
 
@@ -117,4 +117,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Dexie version drift**: Story was designed targeting v28 but shipped at v36 due to parallel epics. Always confirm the current schema version in `src/db/schema.ts` before referencing it in story files — the planned version becomes stale quickly in a fast-moving codebase.
+
+- **Timezone default belongs in the store, not the caller**: `addSchedule()` now defaults `timezone` to `Intl.DateTimeFormat().resolvedOptions().timeZone` so callers never need to supply it. This prevents silent omission — Dexie records would have had an empty timezone field if the UI forgot to pass it.
+
+- **Getter enabled-filtering should default to true**: `getSchedulesForDay` and `getSchedulesForCourse` now accept an optional `enabledOnly` parameter (default `true`). Without this, every downstream consumer would have to remember to filter on `s.enabled`, creating duplicated logic and easy-to-miss bugs when disabled schedules leaked into calendar views.
