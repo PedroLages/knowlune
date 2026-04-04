@@ -73,6 +73,8 @@ import { QuizBadge } from '@/app/components/figma/QuizBadge'
 import { useTheaterMode } from '@/app/hooks/useTheaterMode'
 import { useReadingMode } from '@/hooks/useReadingMode'
 import { ReadingModeStatusBar } from '@/app/components/figma/ReadingModeStatusBar'
+import { ReadingToolbar } from '@/app/components/figma/ReadingToolbar'
+import { ReadingProgressBar } from '@/app/components/figma/ReadingProgressBar'
 import { MiniPlayer } from '@/app/components/course/MiniPlayer'
 import { NextCourseSuggestion } from '@/app/components/NextCourseSuggestion'
 import { suggestNextCourse } from '@/lib/courseSuggestion'
@@ -431,13 +433,17 @@ export function UnifiedLessonPlayer() {
       data-theater-mode={isTheater ? 'true' : 'false'}
       className="flex flex-col"
     >
-      {/* Reading mode status bar */}
+      {/* Reading mode status bar, toolbar, and progress bar */}
       {isReadingMode && (
-        <ReadingModeStatusBar
-          lessonTitle={state.lessonTitle}
-          onBack={() => navigate(`/courses/${courseId}`)}
-          onClose={exitReadingMode}
-        />
+        <>
+          <ReadingModeStatusBar
+            lessonTitle={state.lessonTitle}
+            onBack={() => navigate(`/courses/${courseId}`)}
+            onClose={exitReadingMode}
+          />
+          <ReadingProgressBar />
+          <ReadingToolbar />
+        </>
       )}
 
       {/* Aria-live region for reading mode announcements */}
