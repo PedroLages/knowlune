@@ -16,7 +16,7 @@ interface PdfPageRendererProps {
   isLoading: boolean
   contentRef: React.RefObject<HTMLDivElement | null>
   onDocumentLoadSuccess: (doc: PDFDocumentProxy) => void
-  onDocumentLoadError: () => void
+  onDocumentLoadError: (error: Error) => void
   onPageLoadSuccess: (page: { width: number; height: number }) => void
   customTextRenderer?: (layer: { str: string; itemIndex: number }) => string
 }

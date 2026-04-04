@@ -100,7 +100,8 @@ export function usePdfViewerState(
     setAnnouncement(`PDF loaded. ${doc.numPages} pages. Showing page ${startPage}.`)
   }
 
-  const handleDocumentLoadError = () => {
+  const handleDocumentLoadError = (error: Error) => {
+    console.error('[PdfViewer] Document load failed:', error)
     setLoadError(true)
     setIsLoading(false)
   }

@@ -65,10 +65,23 @@ interface PdfToolbarProps {
   toggleCollapsed?: () => void
 }
 
+/** Open a blob PDF in a new tab via an HTML wrapper (blob URLs show raw binary otherwise). */
+export function openBlobPdfInNewTab(blobUrl: string, title?: string) {
+  const safeTitle = (title || 'PDF').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const html = `<!DOCTYPE html><html><head><title>${safeTitle}</title></head><body style="margin:0"><iframe src="${blobUrl}" style="width:100%;height:100vh;border:none"></iframe></body></html>`
+  const wrapper = new Blob([html], { type: 'text/html' })
+  const url = URL.createObjectURL(wrapper)
+  window.open(url, '_blank')
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
 function handlePrint(src: string) {
-  const w = window.open(src, '_blank')
+  const html = `<!DOCTYPE html><html><head><title>Print PDF</title></head><body style="margin:0"><iframe src="${src}" style="width:100%;height:100vh;border:none" onload="setTimeout(()=>window.print(),300)"></iframe></body></html>`
+  const wrapper = new Blob([html], { type: 'text/html' })
+  const url = URL.createObjectURL(wrapper)
+  const w = window.open(url, '_blank')
   if (w) {
-    w.addEventListener('load', () => w.print(), { once: true })
+    w.addEventListener('afterprint', () => { w.close(); URL.revokeObjectURL(url) }, { once: true })
   }
 }
 
@@ -501,7 +514,7 @@ export function PdfToolbar({
         variant="ghost"
         size="icon"
         className="h-11 w-11 sm:h-8 sm:w-8"
-        onClick={() => window.open(src, '_blank')}
+        onClick={() => openBlobPdfInNewTab(src, title)}
         aria-label="Open PDF in new tab"
         title="Open in new tab"
       >
