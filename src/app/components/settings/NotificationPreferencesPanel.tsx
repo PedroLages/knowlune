@@ -8,6 +8,7 @@ import {
   BookOpen,
   Brain,
   Clock,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
@@ -66,6 +67,12 @@ const NOTIFICATION_TOGGLES: ToggleDefinition[] = [
     label: 'Knowledge Decay Alerts',
     description: 'When topic retention drops below a safe threshold',
     icon: Brain,
+  },
+  {
+    type: 'recommendation-match',
+    label: 'Content Recommendations',
+    description: 'When new courses match your weak areas',
+    icon: Sparkles,
   },
 ]
 
