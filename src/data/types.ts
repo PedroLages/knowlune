@@ -416,6 +416,24 @@ export interface CourseReminder {
   updatedAt: string // ISO 8601
 }
 
+// --- Study Schedule (E50-S01) ---
+
+export interface StudySchedule {
+  id: string // Primary key: UUID
+  courseId?: string // FK → ImportedCourse.id (optional for free-form blocks)
+  learningPathId?: string // FK → LearningPath.id (future learning-path scheduling)
+  title: string // User-facing schedule name
+  days: DayOfWeek[] // Selected days of the week
+  startTime: string // "HH:MM" format
+  durationMinutes: number // Default 60
+  recurrence: 'weekly' | 'daily' // Recurrence pattern
+  reminderMinutes: number // Minutes before start to remind (default 15)
+  enabled: boolean // Whether schedule is active
+  timezone: string // IANA timezone (e.g., "America/New_York")
+  createdAt: string // ISO 8601
+  updatedAt: string // ISO 8601
+}
+
 // --- Imported Author Types (Epic 25) ---
 // These types support user-managed author profiles stored in IndexedDB.
 // They exist alongside the existing Author type used for pre-seeded data.
