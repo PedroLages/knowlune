@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
-import { Bell, CheckCheck, Clock, Settings, Trash2 } from 'lucide-react'
+import { Bell, CheckCheck, CircleCheck, Clock, Settings, Trash2 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Button } from '@/app/components/ui/button'
 import { EmptyState } from '@/app/components/EmptyState'
@@ -112,7 +112,7 @@ function NotificationCard({ notification, onMarkRead, onDismiss }: NotificationC
                 onClick={() => onMarkRead(notification.id)}
                 aria-label={`Mark "${notification.title}" as read`}
               >
-                <CheckCheck className="size-3.5" aria-hidden="true" />
+                <CircleCheck className="size-3.5" aria-hidden="true" />
               </Button>
             )}
             <Button
