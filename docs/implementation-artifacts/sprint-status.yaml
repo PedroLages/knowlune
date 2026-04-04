@@ -1201,6 +1201,6 @@ development_status:
   # Fixes: viewport overflow, theater mode clipping, ESC key, video-tabs gap
   # Builds on: E89 (UnifiedLessonPlayer), E91-S03 (Theater Mode)
   # ──────────────────────────────────────────────────
-  epic-98: in-progress
-  98-1-video-player-viewport-sizing-and-theater-mode-fixes: ready-for-dev
+  epic-98: done
+  98-1-video-player-viewport-sizing-and-theater-mode-fixes: done
   epic-98-retrospective: optional

@@ -1,7 +1,8 @@
 # E98-S01: Video Player Viewport Sizing and Theater Mode Fixes
 
 **Epic:** E98 — Lesson Player Layout Polish
-**Status:** Complete
+**Status:** done
+**Completed:** 2026-04-04
 **Branch:** `feature/e98-s01-video-player-viewport-theater-mode`
 **Builds on:** E89 (UnifiedLessonPlayer), E91-S03 (Theater Mode)
 
