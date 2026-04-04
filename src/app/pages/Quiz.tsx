@@ -455,6 +455,8 @@ export function Quiz() {
         aria-label="Quiz questions"
         className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm"
         data-testid="quiz-active-container"
+        data-focus-target="quiz"
+        data-focus-active="quiz"
       >
         <section aria-label="Quiz header">
           <QuizHeader

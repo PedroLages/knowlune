@@ -48,6 +48,8 @@ import { toast } from 'sonner'
 import { QualityScoreDialog } from './session/QualityScoreDialog'
 import type { QualityScoreResult } from '@/lib/qualityScore'
 import { OnboardingOverlay } from './onboarding/OnboardingOverlay'
+import { useFocusMode } from '@/hooks/useFocusMode'
+import { FocusOverlay } from './figma/FocusOverlay'
 import { TrialIndicator } from './trial/TrialIndicator'
 import { TrialReminderBanner } from './trial/TrialReminderBanner'
 import { ImportProgressOverlay } from './figma/ImportProgressOverlay'
@@ -398,6 +400,9 @@ export function Layout() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [location.pathname])
 
+  // Focus mode (E65-S03) — overlay, focus trap, and exit
+  const focusMode = useFocusMode()
+
   // Quality score dialog state (E11-S03)
   const [qualityDialogOpen, setQualityDialogOpen] = useState(false)
   const [qualityResult, setQualityResult] = useState<QualityScoreResult | null>(null)
@@ -695,6 +700,20 @@ export function Layout() {
 
       {/* Import progress indicator (E1B-S03) — non-blocking overlay */}
       <ImportProgressOverlay />
+
+      {/* Focus mode overlay (E65-S03) */}
+      <FocusOverlay
+        isFocusMode={focusMode.isFocusMode}
+        isMobile={focusMode.isMobile}
+        shouldReduceMotion={focusMode.shouldReduceMotion}
+        showExitConfirmation={focusMode.showExitConfirmation}
+        announcement={focusMode.announcement}
+        onOverlayClick={focusMode.requestExit}
+        onCloseClick={focusMode.requestExit}
+        onConfirmExit={focusMode.confirmExit}
+        onCancelExit={focusMode.cancelExitConfirmation}
+        getPortalContainer={focusMode.getPortalContainer}
+      />
     </div>
   )
 }
