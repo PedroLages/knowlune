@@ -44,7 +44,7 @@ const MS_PER_DAY = 86_400_000
 
 /** Retention thresholds for level classification */
 const STRONG_THRESHOLD = 80
-const FADING_THRESHOLD = 50
+export const FADING_THRESHOLD = 50
 
 // ─────────────────────────────────────────────────────────
 // Topic Retention

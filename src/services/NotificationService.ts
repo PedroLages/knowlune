@@ -16,13 +16,16 @@ import { useNotificationStore } from '@/stores/useNotificationStore'
 import { useNotificationPrefsStore } from '@/stores/useNotificationPrefsStore'
 import { db } from '@/db'
 import { isDue } from '@/lib/spacedRepetition'
-import { getTopicRetention } from '@/lib/retentionMetrics'
+import { getTopicRetention, FADING_THRESHOLD } from '@/lib/retentionMetrics'
 
 /** Streak milestones that trigger notifications */
 const STREAK_MILESTONES = [7, 14, 30, 60, 100, 365] as const
 
-/** Retention percentage below which a topic is considered decaying (E60-S01) */
-export const DECAY_THRESHOLD = 50
+/**
+ * Retention percentage below which a topic triggers a decay alert.
+ * Re-exported from retentionMetrics.FADING_THRESHOLD to keep a single source of truth.
+ */
+export const DECAY_THRESHOLD = FADING_THRESHOLD
 
 /**
  * Active unsubscribe functions (populated by init, cleared by destroy).
@@ -118,6 +121,9 @@ export async function checkSrsDueOnStartup(): Promise<void> {
  * Uses getTopicRetention() from retentionMetrics to calculate per-topic retention.
  */
 export async function checkKnowledgeDecayOnStartup(): Promise<void> {
+  const prefsStore = useNotificationPrefsStore.getState()
+  if (!prefsStore.isTypeEnabled('knowledge-decay')) return
+
   const now = new Date()
 
   const [notes, reviewRecords] = await Promise.all([db.notes.toArray(), db.reviewRecords.toArray()])
@@ -126,8 +132,19 @@ export async function checkKnowledgeDecayOnStartup(): Promise<void> {
 
   const topicRetentions = getTopicRetention(notes, reviewRecords, now)
 
+  // Batch-query all today's decay notifications once (O(1) DB query instead of O(N))
+  const todayStr = now.toLocaleDateString('sv-SE')
+  const todayDecayNotifs = await db.notifications
+    .where('type')
+    .equals('knowledge-decay')
+    .filter(n => new Date(n.createdAt).toLocaleDateString('sv-SE') === todayStr)
+    .toArray()
+  const notifiedTopics = new Set(
+    todayDecayNotifs.map(n => (n.metadata as Record<string, unknown>)?.topic)
+  )
+
   for (const topic of topicRetentions) {
-    if (topic.retention < DECAY_THRESHOLD) {
+    if (topic.retention < DECAY_THRESHOLD && !notifiedTopics.has(topic.topic)) {
       appEventBus.emit({
         type: 'knowledge:decay',
         topic: topic.topic,

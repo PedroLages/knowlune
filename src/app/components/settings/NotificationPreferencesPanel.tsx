@@ -100,6 +100,7 @@ export function NotificationPreferencesPanel() {
           {NOTIFICATION_TOGGLES.map(toggle => {
             const Icon = toggle.icon
             const enabled = isTypeEnabled(toggle.type)
+            const descId = `notif-desc-${toggle.type}`
             return (
               <div
                 key={toggle.type}
@@ -114,7 +115,9 @@ export function NotificationPreferencesPanel() {
                     >
                       {toggle.label}
                     </Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">{toggle.description}</p>
+                    <p id={descId} className="text-xs text-muted-foreground mt-0.5">
+                      {toggle.description}
+                    </p>
                   </div>
                 </div>
                 <Switch
@@ -122,6 +125,8 @@ export function NotificationPreferencesPanel() {
                   checked={enabled}
                   onCheckedChange={checked => setTypeEnabled(toggle.type, checked)}
                   aria-label={`${toggle.label} notifications`}
+                  aria-describedby={descId}
+                  className="min-h-6"
                 />
               </div>
             )
@@ -137,7 +142,7 @@ export function NotificationPreferencesPanel() {
               <Label htmlFor="quiet-hours" className="text-sm font-medium cursor-pointer">
                 Quiet Hours
               </Label>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p id="quiet-hours-desc" className="text-xs text-muted-foreground mt-0.5">
                 Suppress all notifications during these hours
               </p>
             </div>
@@ -146,12 +151,14 @@ export function NotificationPreferencesPanel() {
               checked={prefs.quietHoursEnabled}
               onCheckedChange={checked => setQuietHours({ quietHoursEnabled: checked })}
               aria-label="Enable quiet hours"
+              aria-describedby="quiet-hours-desc"
+              className="min-h-6"
             />
           </div>
 
           <div aria-live="polite">
             {prefs.quietHoursEnabled && (
-              <div className="grid grid-cols-2 gap-4 animate-in fade-in-0 slide-in-from-top-1 duration-300">
+              <div className="grid grid-cols-2 gap-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 duration-300">
                 <div className="space-y-1.5">
                   <Label htmlFor="quiet-start" className="text-sm text-muted-foreground">
                     Start
