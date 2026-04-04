@@ -487,9 +487,9 @@ export function UnifiedLessonPlayer() {
       {/* Slim toolbar: back arrow + course name (left), action buttons (right) */}
       <div
         className={cn(
-          'flex items-center gap-3 px-4 py-2 shrink-0 sticky top-0 z-10 transition-all duration-200',
+          'flex items-center gap-3 px-4 py-2 shrink-0 sticky top-0 z-20 transition-all duration-200',
           isToolbarStuck
-            ? 'bg-card/95 backdrop-blur-sm shadow-lg shadow-black/20 border-b border-border/50 rounded-none -mx-6 px-6'
+            ? 'bg-card shadow-lg shadow-black/25 border-b border-border/30 rounded-none'
             : 'border border-border/30 bg-card/50 rounded-xl -mt-3 mb-3'
         )}
         data-theater-hide
