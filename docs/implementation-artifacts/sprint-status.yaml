@@ -599,8 +599,8 @@ development_status:
   # Source: epics-ml-phase1-hybrid.md (4 stories — simplified scope)
   # NOTE: Story files created by /start-story from epic definition
   # ──────────────────────────────────────────────────
-  epic-52: backlog
-  52-1-simplified-quiz-generation: backlog
+  epic-52: in-progress
+  52-1-simplified-quiz-generation: in-progress
   52-2-quiz-generation-ui: backlog
   52-3-basic-quiz-quality-control: backlog
   52-4-tag-based-recommendations: backlog
@@ -655,13 +655,13 @@ development_status:
   # Source: epics-smart-notification-triggers.md
   # Proactive notifications: knowledge decay, recommendations, milestones
   # ──────────────────────────────────────────────────
-  epic-60: in-progress
+  epic-60: done
   60-1-knowledge-decay-alert-trigger: done
   60-2-content-recommendation-notification-handler: done
   60-3-milestone-approaching-trigger: done
   60-4-smart-triggers-preferences-panel: done
   60-5-smart-trigger-unit-and-e2e-tests: done
-  epic-60-retrospective: optional
+  epic-60-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 61: PWA Push Notifications

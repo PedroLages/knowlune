@@ -67,6 +67,7 @@ export type ElearningDatabase = Dexie & {
   youtubeChapters: EntityTable<YouTubeCourseChapter, 'id'>
   notifications: EntityTable<Notification, 'id'>
   notificationPreferences: EntityTable<NotificationPreferences, 'id'>
+  courseEmbeddings: EntityTable<{ courseId: string; embedding?: number[]; updatedAt?: string }, 'courseId'>
 }
 
 /**
@@ -1219,6 +1220,12 @@ function _declareLegacyMigrations(database: Dexie): void {
           }
         })
     })
+  // v35: Add courseEmbeddings table for ML quiz generation (E52-S01)
+  // Also adds transcriptHash index to quizzes for cache lookup
+  database.version(35).stores({
+    courseEmbeddings: 'courseId',
+    quizzes: 'id, lessonId, createdAt, transcriptHash',
+  })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }
