@@ -11,6 +11,7 @@ import {
 import type { ThumbnailSource } from '@/data/types'
 import type { AutoAnalysisStatus } from '@/lib/autoAnalysis'
 import { refreshCourseEmbeddingIfChanged } from '@/ai/courseEmbeddingService'
+import { useAuthorStore } from './useAuthorStore'
 
 function normalizeTags(tags: string[]): string[] {
   const unique = [...new Set(tags.map(t => t.trim().toLowerCase()).filter(Boolean))]
@@ -121,6 +122,16 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { [courseId]: _removed, ...rest } = thumbnailUrls
         set({ thumbnailUrls: rest })
+      }
+
+      // Clean up orphaned author
+      if (courseToRemove?.authorId) {
+        const authorStore = useAuthorStore.getState()
+        await authorStore.unlinkCourseFromAuthor(courseToRemove.authorId, courseId)
+        const author = authorStore.getAuthorById(courseToRemove.authorId)
+        if (author && author.courseIds.length === 0 && !author.isPreseeded) {
+          await authorStore.deleteAuthor(courseToRemove.authorId)
+        }
       }
     } catch (error) {
       // Rollback on failure
