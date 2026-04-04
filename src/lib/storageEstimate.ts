@@ -11,6 +11,7 @@
 
 import { db } from '@/db'
 import { getStorageEstimate } from '@/lib/storageQuotaMonitor'
+import type { Table } from 'dexie'
 
 // --- Types ---
 
@@ -191,7 +192,7 @@ export async function getPerCourseUsage(): Promise<CourseStorageEntry[]> {
           const videos = await db.importedVideos.where('courseId').equals(course.id).toArray()
           for (const v of videos) {
             mediaBytes += new Blob([JSON.stringify(v)]).size
-            for (const val of Object.values(v as Record<string, unknown>)) {
+            for (const val of Object.values(v as unknown as Record<string, unknown>)) {
               if (val instanceof Blob) mediaBytes += val.size
               else if (val instanceof ArrayBuffer) mediaBytes += val.byteLength
               else if (ArrayBuffer.isView(val)) mediaBytes += val.byteLength
@@ -201,7 +202,7 @@ export async function getPerCourseUsage(): Promise<CourseStorageEntry[]> {
           const pdfs = await db.importedPdfs.where('courseId').equals(course.id).toArray()
           for (const p of pdfs) {
             mediaBytes += new Blob([JSON.stringify(p)]).size
-            for (const val of Object.values(p as Record<string, unknown>)) {
+            for (const val of Object.values(p as unknown as Record<string, unknown>)) {
               if (val instanceof Blob) mediaBytes += val.size
               else if (val instanceof ArrayBuffer) mediaBytes += val.byteLength
               else if (ArrayBuffer.isView(val)) mediaBytes += val.byteLength
@@ -217,7 +218,7 @@ export async function getPerCourseUsage(): Promise<CourseStorageEntry[]> {
           const screenshots = await db.screenshots.where('courseId').equals(course.id).toArray()
           for (const s of screenshots) {
             notesBytes += new Blob([JSON.stringify(s)]).size
-            for (const val of Object.values(s as Record<string, unknown>)) {
+            for (const val of Object.values(s as unknown as Record<string, unknown>)) {
               if (val instanceof Blob) notesBytes += val.size
               else if (val instanceof ArrayBuffer) notesBytes += val.byteLength
               else if (ArrayBuffer.isView(val)) notesBytes += val.byteLength
@@ -227,7 +228,7 @@ export async function getPerCourseUsage(): Promise<CourseStorageEntry[]> {
           // Thumbnails
           const thumb = await db.courseThumbnails.get(course.id)
           if (thumb) {
-            for (const val of Object.values(thumb as Record<string, unknown>)) {
+            for (const val of Object.values(thumb as unknown as Record<string, unknown>)) {
               if (val instanceof Blob) thumbnailBytes += val.size
               else if (val instanceof ArrayBuffer) thumbnailBytes += val.byteLength
               else if (ArrayBuffer.isView(val)) thumbnailBytes += val.byteLength
@@ -266,7 +267,7 @@ export async function clearCourseThumbnail(courseId: string): Promise<number> {
   if (!thumb) return 0
 
   let bytes = 0
-  for (const val of Object.values(thumb as Record<string, unknown>)) {
+  for (const val of Object.values(thumb as unknown as Record<string, unknown>)) {
     if (val instanceof Blob) bytes += val.size
     else if (val instanceof ArrayBuffer) bytes += val.byteLength
     else if (ArrayBuffer.isView(val)) bytes += val.byteLength
@@ -309,7 +310,7 @@ export async function deleteCourseData(courseIds: string[]): Promise<number> {
     async () => {
       for (const courseId of courseIds) {
         // Direct courseId-indexed tables
-        const deleteByIndex = async (table: ReturnType<typeof db.table>, indexName: string) => {
+        const deleteByIndex = async (table: Table<unknown, unknown>, indexName: string) => {
           const items = await table.where(indexName).equals(courseId).toArray()
           for (const item of items) {
             for (const val of Object.values(item as Record<string, unknown>)) {
@@ -322,11 +323,11 @@ export async function deleteCourseData(courseIds: string[]): Promise<number> {
           await table.where(indexName).equals(courseId).delete()
         }
 
-        await deleteByIndex(db.importedVideos, 'courseId')
-        await deleteByIndex(db.importedPdfs, 'courseId')
-        await deleteByIndex(db.bookmarks, 'courseId')
-        await deleteByIndex(db.studySessions, 'courseId')
-        await deleteByIndex(db.flashcards, 'courseId')
+        await deleteByIndex(db.importedVideos as unknown as Table<unknown, unknown>, 'courseId')
+        await deleteByIndex(db.importedPdfs as unknown as Table<unknown, unknown>, 'courseId')
+        await deleteByIndex(db.bookmarks as unknown as Table<unknown, unknown>, 'courseId')
+        await deleteByIndex(db.studySessions as unknown as Table<unknown, unknown>, 'courseId')
+        await deleteByIndex(db.flashcards as unknown as Table<unknown, unknown>, 'courseId')
 
         // Notes and related (screenshots, embeddings linked via noteId)
         const notes = await db.notes.where('courseId').equals(courseId).toArray()

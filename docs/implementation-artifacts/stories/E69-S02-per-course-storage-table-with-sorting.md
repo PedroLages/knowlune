@@ -1,6 +1,6 @@
 # Story 69.2: Per-Course Storage Table with Sorting
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
