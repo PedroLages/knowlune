@@ -14,6 +14,10 @@ import { createDueFlashcard, createFutureFlashcard } from '../support/fixtures/f
 
 const DB_NAME = 'ElearningDB'
 
+// Dismiss WelcomeWizard and OnboardingOverlay by marking both complete in localStorage
+const WIZARD_DISMISSED = JSON.stringify({ completedAt: FIXED_DATE })
+const ONBOARDING_DISMISSED = JSON.stringify({ completedAt: FIXED_DATE, skipped: true })
+
 // FIXED_DATE is 2025-01-15 (Wednesday)
 const TODAY_DAY = 'wednesday'
 
@@ -115,6 +119,11 @@ test.describe('E50-S06: Today\'s Study Plan Widget', () => {
       }
       globalThis.Date = MockDate as unknown as DateConstructor
     }, FIXED_DATE)
+    // Dismiss WelcomeWizard + OnboardingOverlay so they don't cover widget
+    await page.addInitScript(([wizardVal, onboardingVal]: string[]) => {
+      localStorage.setItem('knowlune-welcome-wizard-v1', wizardVal)
+      localStorage.setItem('knowlune-onboarding-v1', onboardingVal)
+    }, [WIZARD_DISMISSED, ONBOARDING_DISMISSED])
 
     await page.goto('/')
     await page.waitForLoadState('networkidle')
@@ -133,8 +142,10 @@ test.describe('E50-S06: Today\'s Study Plan Widget', () => {
     const widget = page.getByTestId('todays-study-plan')
     await expect(widget).toBeVisible()
 
-    // Should show "3 flashcards due for review"
-    await expect(widget.getByText(/3 flashcards due for review/)).toBeVisible()
+    // Wait for Overview skeleton to clear (500ms delay) and flashcards to load from IDB
+    // The widget may briefly show empty state before loadFlashcards() resolves
+    await expect(widget.getByText(/\d+ flashcards? due for review/)).toBeVisible({ timeout: 15000 })
+    await expect(widget.getByText(/3 flashcards due for review/)).toBeVisible({ timeout: 5000 })
     await expect(widget.getByText('Review now')).toBeVisible()
   })
 
@@ -151,6 +162,11 @@ test.describe('E50-S06: Today\'s Study Plan Widget', () => {
       }
       globalThis.Date = MockDate as unknown as DateConstructor
     }, FIXED_DATE)
+    // Dismiss WelcomeWizard + OnboardingOverlay so Start button is clickable
+    await page.addInitScript(([wizardVal, onboardingVal]: string[]) => {
+      localStorage.setItem('knowlune-welcome-wizard-v1', wizardVal)
+      localStorage.setItem('knowlune-onboarding-v1', onboardingVal)
+    }, [WIZARD_DISMISSED, ONBOARDING_DISMISSED])
 
     await page.goto('/')
     await page.waitForLoadState('networkidle')
