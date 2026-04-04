@@ -13,6 +13,7 @@ import { useParams, useNavigate, Link } from 'react-router'
 import {
   ArrowLeft,
   BookOpen,
+  Calendar,
   Check,
   ChevronDown,
   ChevronRight,
@@ -39,6 +40,7 @@ import { Badge } from '@/app/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
+import { StudyScheduleEditor } from '@/app/components/figma/StudyScheduleEditor'
 import { getAvatarSrc, getInitials } from '@/lib/authors'
 import { formatClockDuration as formatDuration } from '@/lib/formatDuration'
 import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
@@ -150,6 +152,9 @@ export function CourseOverview() {
 
   // Accordion state
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set([0]))
+
+  // Schedule editor state
+  const [scheduleEditorOpen, setScheduleEditorOpen] = useState(false)
 
   // Load content
   useEffect(() => {
@@ -578,6 +583,32 @@ export function CourseOverview() {
                 </Button>
               </div>
             )}
+
+            {/* Schedule study time */}
+            <div className="bg-card rounded-2xl p-6 shadow-studio border border-border/50 text-center">
+              <Calendar className="size-6 text-muted-foreground mx-auto mb-3" aria-hidden="true" />
+              <h3 className="font-display text-sm font-semibold text-foreground mb-1">
+                Schedule Study Time
+              </h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Set recurring study blocks for this course
+              </p>
+              <Button
+                variant="brand-outline"
+                size="sm"
+                className="w-full min-h-[44px]"
+                data-testid="schedule-study-time-button"
+                onClick={() => setScheduleEditorOpen(true)}
+              >
+                <Calendar className="size-4 mr-1.5" aria-hidden="true" />
+                Schedule study time
+              </Button>
+              <StudyScheduleEditor
+                courseId={course.id}
+                open={scheduleEditorOpen}
+                onOpenChange={setScheduleEditorOpen}
+              />
+            </div>
           </motion.div>
         )}
       </div>

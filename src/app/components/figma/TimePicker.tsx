@@ -36,7 +36,8 @@ function formatTimeLocale(time: string): string {
 }
 
 export function TimePicker({ value, onChange }: TimePickerProps) {
-  const [hour, minute] = value.split(':')
+  const [rawHour, minute] = value.split(':')
+  const hour = rawHour.padStart(2, '0')
 
   return (
     <Popover>

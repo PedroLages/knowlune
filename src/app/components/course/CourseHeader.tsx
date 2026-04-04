@@ -10,10 +10,8 @@
  */
 
 import { Link } from 'react-router'
-import { useState } from 'react'
 import {
   ArrowLeft,
-  Calendar,
   Clock,
   Trash2,
   User,
@@ -34,7 +32,6 @@ import { Badge } from '@/app/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip'
 import { cn } from '@/app/components/ui/utils'
-import { StudyScheduleEditor } from '@/app/components/figma/StudyScheduleEditor'
 import { EditableTitle } from '@/app/components/figma/EditableTitle'
 import { getAvatarSrc, getInitials } from '@/lib/authors'
 import { formatClockDuration as formatDuration } from '@/lib/formatDuration'
@@ -98,8 +95,6 @@ export function CourseHeader({
   ctaLessonId,
   ctaLessonTitle,
 }: CourseHeaderProps) {
-  const [scheduleEditorOpen, setScheduleEditorOpen] = useState(false)
-
   const ctaConfig = ctaVariant
     ? {
         start: {
@@ -291,20 +286,6 @@ export function CourseHeader({
                 <Settings2 className="size-4 mr-1.5" aria-hidden="true" />
                 Edit
               </Button>
-              <Button
-                variant="brand-outline"
-                size="sm"
-                data-testid="schedule-study-time-button"
-                onClick={() => setScheduleEditorOpen(true)}
-              >
-                <Calendar className="size-4 mr-1.5" aria-hidden="true" />
-                Schedule study time
-              </Button>
-              <StudyScheduleEditor
-                courseId={course.id}
-                open={scheduleEditorOpen}
-                onOpenChange={setScheduleEditorOpen}
-              />
               <Button
                 variant="ghost"
                 size="sm"

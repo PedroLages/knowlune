@@ -8,7 +8,7 @@
  * @see E50-S05
  */
 
-import { useState, useEffect, useCallback, useId } from 'react'
+import { useState, useEffect, useCallback, useId, useMemo } from 'react'
 import { toast } from 'sonner'
 import {
   Sheet,
@@ -70,7 +70,10 @@ export function StudyScheduleEditor({
   const { importedCourses } = useCourseImportStore()
 
   const isEdit = Boolean(scheduleId)
-  const existing = isEdit ? schedules.find(s => s.id === scheduleId) : undefined
+  const existing = useMemo(
+    () => (isEdit ? schedules.find(s => s.id === scheduleId) : undefined),
+    [isEdit, schedules, scheduleId]
+  )
 
   // Form state
   const [title, setTitle] = useState('')
@@ -244,7 +247,7 @@ export function StudyScheduleEditor({
             <Label>Days</Label>
             <DayPicker value={days} onChange={setDays} />
             {errors.days && (
-              <p className="text-sm text-destructive" role="alert" aria-live="assertive">
+              <p className="text-sm text-destructive" role="alert" aria-live="polite">
                 {errors.days}
               </p>
             )}
