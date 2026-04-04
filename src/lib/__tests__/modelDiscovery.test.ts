@@ -33,8 +33,17 @@ describe('discoverModels', () => {
     it('returns static GLM models without API call', async () => {
       const models = await discoverModels('glm', 'test-glm-key-12345678')
       expect(mockFetch).not.toHaveBeenCalled()
-      expect(models.find(m => m.id === 'glm-4-flash')).toBeDefined()
-      expect(models.find(m => m.id === 'glm-4-plus')).toBeDefined()
+      expect(models).toHaveLength(6)
+      expect(models.find(m => m.id === 'glm-4.7-flash')).toBeDefined()
+      expect(models.find(m => m.id === 'glm-5.1')).toBeDefined()
+    })
+
+    it('GLM models have correct cost tiers', async () => {
+      const models = await discoverModels('glm', 'test-glm-key-12345678')
+      const freeModels = models.filter(m => m.costTier === 'free')
+      const paidModels = models.filter(m => m.costTier === 'medium' || m.costTier === 'high')
+      expect(freeModels.length).toBe(3)
+      expect(paidModels.length).toBe(3)
     })
 
     it('returns empty array for Ollama', async () => {

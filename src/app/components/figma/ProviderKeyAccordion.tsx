@@ -185,7 +185,14 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
               <AccordionTrigger className="min-h-[44px]">
                 <span className="flex items-center gap-2">
                   <KeyRound className="size-4 text-muted-foreground" aria-hidden="true" />
-                  <span>{provider.name}</span>
+                  <span className="flex flex-col items-start">
+                    <span>{provider.name}</span>
+                    {provider.hasFreeModels && (
+                      <span className="text-[10px] text-muted-foreground font-normal">
+                        {providerId === 'groq' ? 'All models free' : 'Free & paid models'}
+                      </span>
+                    )}
+                  </span>
                   {/* AC1: Status badge */}
                   {status?.hasKey && (
                     <Badge

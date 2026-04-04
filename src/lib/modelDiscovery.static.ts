@@ -61,19 +61,57 @@ export const ANTHROPIC_MODELS: DiscoveredModel[] = [
 /** Static GLM/Z.ai models — no public model listing API */
 export const GLM_MODELS: DiscoveredModel[] = [
   {
-    id: 'glm-4-flash',
-    name: 'GLM-4 Flash',
+    id: 'glm-4.5-flash',
+    name: 'GLM-4.5 Flash',
     provider: 'glm',
     family: 'GLM-4',
     costTier: 'free',
+    contextWindow: 128000,
     capabilities: ['chat', 'code'],
   },
   {
-    id: 'glm-4-plus',
-    name: 'GLM-4 Plus',
+    id: 'glm-4.7-flash',
+    name: 'GLM-4.7 Flash',
     provider: 'glm',
     family: 'GLM-4',
     costTier: 'free',
+    contextWindow: 128000,
+    capabilities: ['chat', 'code'],
+  },
+  {
+    id: 'glm-4.6v-flash',
+    name: 'GLM-4.6V Flash',
+    provider: 'glm',
+    family: 'GLM-4',
+    costTier: 'free',
+    contextWindow: 128000,
+    capabilities: ['chat', 'vision'],
+  },
+  {
+    id: 'glm-4.7',
+    name: 'GLM-4.7',
+    provider: 'glm',
+    family: 'GLM-4',
+    costTier: 'medium',
+    contextWindow: 128000,
+    capabilities: ['chat', 'code', 'reasoning'],
+  },
+  {
+    id: 'glm-5',
+    name: 'GLM-5',
+    provider: 'glm',
+    family: 'GLM-5',
+    costTier: 'high',
+    contextWindow: 200000,
+    capabilities: ['chat', 'code', 'reasoning'],
+  },
+  {
+    id: 'glm-5.1',
+    name: 'GLM-5.1',
+    provider: 'glm',
+    family: 'GLM-5',
+    costTier: 'high',
+    contextWindow: 200000,
     capabilities: ['chat', 'code', 'reasoning'],
   },
 ]
@@ -206,6 +244,15 @@ export const GROQ_FALLBACK_MODELS: DiscoveredModel[] = [
     capabilities: ['chat'],
   },
 ]
+
+/**
+ * Get the first free-tier model ID for a provider (synchronous).
+ * Used by budget mode to auto-select free defaults without async discovery.
+ */
+export function getFreeTierDefaultModel(provider: string): string | undefined {
+  const models = getStaticModels(provider)
+  return models.find(m => m.costTier === 'free')?.id
+}
 
 /** Get static fallback models for a given provider */
 export function getStaticModels(provider: string): DiscoveredModel[] {

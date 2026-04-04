@@ -478,6 +478,44 @@ export function AIConfigurationSettings() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Budget Mode Toggle */}
+        <div
+          className={cn(
+            'flex items-center justify-between rounded-lg border p-3',
+            settings.budgetMode
+              ? 'border-success/30 bg-success/5'
+              : 'border-border'
+          )}
+        >
+          <div className="space-y-0.5">
+            <Label
+              htmlFor="budget-mode"
+              className="text-sm font-medium cursor-pointer"
+            >
+              Free Models Only
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              {settings.budgetMode
+                ? 'Only free-tier models will be used — no per-token costs'
+                : 'Restrict AI features to only use models with no costs'}
+            </p>
+          </div>
+          <Switch
+            id="budget-mode"
+            checked={settings.budgetMode ?? false}
+            onCheckedChange={checked => {
+              saveAIConfiguration({ budgetMode: checked }).catch(err => {
+                console.error('Failed to toggle budget mode:', err)
+                toast.error('Failed to update budget mode')
+              })
+              setSettings(prev => ({ ...prev, budgetMode: checked }))
+              toast.success(checked ? 'Budget mode enabled — using free models only' : 'Budget mode disabled')
+            }}
+            data-testid="budget-mode-toggle"
+            aria-label="Enable free models only mode"
+          />
+        </div>
+
         {/* Provider Selection */}
         <div>
           <Label htmlFor="ai-provider">AI Provider</Label>
@@ -752,6 +790,7 @@ export function AIConfigurationSettings() {
               }}
               label="Default Model"
               testIdPrefix="global-model-picker"
+              budgetMode={settings.budgetMode}
             />
           </div>
         )}
@@ -791,6 +830,7 @@ export function AIConfigurationSettings() {
                       currentOverride={settings.featureModels?.[key as AIFeatureId]}
                       isConsentEnabled={settings.consentSettings[key]}
                       onConfigChanged={() => setSettings(getAIConfiguration())}
+                      budgetMode={settings.budgetMode}
                     />
                   </div>
                 )

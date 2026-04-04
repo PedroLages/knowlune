@@ -94,7 +94,7 @@ export const PROVIDER_DEFAULTS: Record<AIProviderId, string> = {
   openai: 'gpt-4o-mini',
   anthropic: 'claude-haiku-4-5',
   groq: 'llama-3.3-70b-versatile',
-  glm: 'glm-4-flash',
+  glm: 'glm-4.7-flash',
   gemini: 'gemini-2.0-flash',
   ollama: 'llama3.2',
   openrouter: 'anthropic/claude-haiku-4-5',

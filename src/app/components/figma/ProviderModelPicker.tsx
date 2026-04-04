@@ -34,6 +34,7 @@ import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { discoverModels, type DiscoveredModel } from '@/lib/modelDiscovery'
 import { PROVIDER_DEFAULTS, type AIProviderId } from '@/lib/modelDefaults'
+import { filterFreeModels } from '@/lib/aiConfiguration'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,6 +59,8 @@ export interface ProviderModelPickerProps {
   showCustomInput?: boolean
   /** Test ID prefix for data-testid attributes */
   testIdPrefix?: string
+  /** When true, only show free-tier models */
+  budgetMode?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -93,6 +96,7 @@ export function ProviderModelPicker({
   label = 'Model',
   showCustomInput = true,
   testIdPrefix = 'provider-model-picker',
+  budgetMode = false,
 }: ProviderModelPickerProps) {
   const [open, setOpen] = useState(false)
   const [models, setModels] = useState<DiscoveredModel[]>([])
@@ -105,7 +109,11 @@ export function ProviderModelPicker({
   const lastFetchRef = useRef<string>('')
 
   const defaultModel = PROVIDER_DEFAULTS[provider]
-  const shouldGroup = models.length > 10
+
+  // Apply budget mode filtering
+  const displayModels = budgetMode ? filterFreeModels(models) : models
+  const shouldGroup = displayModels.length > 10
+  const budgetFilteredAll = budgetMode && models.length > 0 && displayModels.length === 0
 
   // Track whether we have models to avoid re-fetching (ref avoids dependency churn)
   const hasModelsRef = useRef(false)
@@ -189,27 +197,38 @@ export function ProviderModelPicker({
             Recommended
           </Badge>
         )}
-        {model.costTier &&
-          (model.costTier === 'high' ? (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge
-                    variant="outline"
-                    className="ml-1 shrink-0 text-[10px] px-1.5 py-0 border-warning/50 text-warning bg-warning/10"
-                  >
-                    <CircleAlert className="size-2.5 mr-0.5" aria-hidden="true" />
-                    High Cost
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>This model has high per-token costs</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : (
-            <span className="text-xs text-muted-foreground shrink-0 ml-1">{model.costTier}</span>
-          ))}
+        {model.costTier === 'free' && (
+          <Badge
+            variant="outline"
+            className="ml-1 shrink-0 text-[10px] px-1.5 py-0 border-success/50 text-success bg-success/10"
+          >
+            Free
+          </Badge>
+        )}
+        {model.costTier === 'low' && (
+          <span className="ml-1 shrink-0 text-[10px] text-muted-foreground">$</span>
+        )}
+        {model.costTier === 'medium' && (
+          <span className="ml-1 shrink-0 text-[10px] text-muted-foreground">$$</span>
+        )}
+        {model.costTier === 'high' && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant="outline"
+                  className="ml-1 shrink-0 text-[10px] px-1.5 py-0 border-warning/50 text-warning bg-warning/10"
+                >
+                  <CircleAlert className="size-2.5 mr-0.5" aria-hidden="true" />
+                  $$$
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>This model has high per-token costs</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </>
     )
   }
@@ -323,15 +342,22 @@ export function ProviderModelPicker({
                 )}
               </CommandEmpty>
 
+              {/* Budget mode warning when all models filtered out */}
+              {budgetFilteredAll && (
+                <div className="px-3 py-2 text-sm text-warning">
+                  No free models available for this provider.
+                </div>
+              )}
+
               {/* Grouped display when >10 models (AC3) */}
               {shouldGroup ? (
-                Array.from(groupByFamily(models)).map(([family, familyModels]) => (
+                Array.from(groupByFamily(displayModels)).map(([family, familyModels]) => (
                   <CommandGroup key={family} heading={family}>
                     {familyModels.map(renderModelOption)}
                   </CommandGroup>
                 ))
               ) : (
-                <CommandGroup>{models.map(renderModelOption)}</CommandGroup>
+                <CommandGroup>{displayModels.map(renderModelOption)}</CommandGroup>
               )}
             </CommandList>
           </Command>

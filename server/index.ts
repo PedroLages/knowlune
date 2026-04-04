@@ -452,11 +452,6 @@ app.post('/api/ai/generate', async (req, res) => {
 
     const { provider, apiKey, messages, model, temperature, maxTokens } = parsed.data
 
-    if (provider === 'glm') {
-      res.status(400).json({ error: 'GLM provider is not yet supported' })
-      return
-    }
-
     const providerModel = getProviderModel(provider, apiKey, model)
 
     const result = await generateText({
@@ -491,11 +486,6 @@ app.post('/api/ai/stream', async (req, res) => {
     }
 
     const { provider, apiKey, messages, model, temperature, maxTokens } = parsed.data
-
-    if (provider === 'glm') {
-      res.status(400).json({ error: 'GLM provider is not yet supported' })
-      return
-    }
 
     const providerModel = getProviderModel(provider, apiKey, model)
 
