@@ -1,8 +1,8 @@
 ---
 story_id: E60-S03
 story_name: "Milestone Approaching Trigger"
-status: ready-for-dev
-started:
+status: in-progress
+started: 2026-04-04
 completed:
 reviewed: false
 review_started:

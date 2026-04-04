@@ -441,6 +441,7 @@ export type NotificationType =
   | 'srs-due'
   | 'knowledge-decay'
   | 'recommendation-match'
+  | 'milestone-approaching'
 
 export interface Notification {
   id: string // ULID (time-sortable, unique)
@@ -467,6 +468,7 @@ export interface NotificationPreferences {
   srsDue: boolean
   knowledgeDecay: boolean
   recommendationMatch: boolean
+  milestoneApproaching: boolean
   // Quiet hours
   quietHoursEnabled: boolean
   quietHoursStart: string // "HH:MM" (24h format)

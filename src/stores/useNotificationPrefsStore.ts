@@ -14,6 +14,7 @@ const TYPE_TO_FIELD: Record<NotificationType, keyof NotificationPreferences> = {
   'srs-due': 'srsDue',
   'knowledge-decay': 'knowledgeDecay',
   'recommendation-match': 'recommendationMatch',
+  'milestone-approaching': 'milestoneApproaching',
 }
 
 const DEFAULTS: NotificationPreferences = {
@@ -26,6 +27,7 @@ const DEFAULTS: NotificationPreferences = {
   srsDue: true,
   knowledgeDecay: true,
   recommendationMatch: true,
+  milestoneApproaching: true,
   quietHoursEnabled: false,
   quietHoursStart: '22:00',
   quietHoursEnd: '07:00',
