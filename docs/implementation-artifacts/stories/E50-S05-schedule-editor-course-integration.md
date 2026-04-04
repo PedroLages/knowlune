@@ -4,8 +4,8 @@ story_name: "Schedule Editor + Course Integration"
 status: draft
 started:
 completed:
-reviewed: false
-review_started:
+reviewed: in-progress
+review_started: 2026-04-04
 review_gates_passed: []
 burn_in_validated: false
 ---
@@ -167,4 +167,14 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Missing required type field caught at review time**: The `StudySchedule` type requires a `timezone` field that was omitted from the `scheduleData` object passed to `addSchedule()`. TypeScript caught this during the `/review-story` type-check gate. The fix was straightforward — `Intl.DateTimeFormat().resolvedOptions().timeZone` is the canonical way to get the user's local timezone. Lesson: always cross-check the target type's required fields when constructing an object literal; required fields on a shared data model type are easy to overlook when writing a new consumer.
+
+- **Prettier auto-fixed on review**: Two branch files (`TimePicker.tsx`, `FeedPreview.tsx`) had minor formatting inconsistencies that Prettier auto-corrected during the format-check gate. These were small trailing whitespace and quote style issues. Lesson: run `npx prettier --write` locally before committing to avoid spurious fix commits during review.
+
+- **`useId()` for accessible form label association**: Each form field uses `useId()` to generate unique, stable IDs for `<Label htmlFor>` and `<Input id>` pairing. This avoids collisions when multiple `StudyScheduleEditor` instances are rendered simultaneously (e.g., from different trigger points). React 18's `useId()` is the correct pattern — do not use `Math.random()` or static string IDs for form elements.
+
+- **`FREE_STUDY` sentinel value for optional courseId**: The course selector must support a "Free study block" option where `courseId` is `undefined`. Using a `const FREE_STUDY = '__free__'` sentinel avoids the need to handle `""` (empty string) as a special case in downstream logic. Pattern: use an explicit sentinel constant rather than relying on empty string falsy checks, which are error-prone when a real ID could theoretically be empty.
+
+- **Locale-aware time display via Intl**: The `TimePicker` displays time in the user's locale format (12h or 24h) using `Intl.DateTimeFormat`, while storing the value internally as 24h `HH:MM`. This separation of display format from storage format is the correct pattern — never store locale-formatted strings, always store canonical formats.
+
+- **DayPicker ToggleGroup multiple selection**: The shadcn `ToggleGroup` with `type="multiple"` returns an array of selected values. The `aria-label` for each toggle must use the full day name (e.g., "Monday"), not the abbreviated label ("M"), to satisfy accessibility requirements. This was specified in the story but worth noting as a common oversight in abbreviated toggle UIs.
