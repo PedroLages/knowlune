@@ -6,6 +6,9 @@ export type FontSize = 'small' | 'medium' | 'large' | 'extra-large'
 export type AgeRange = 'gen-z' | 'millennial' | 'boomer' | 'prefer-not-to-say'
 export type ContentDensity = 'default' | 'spacious'
 export type ReduceMotion = 'system' | 'on' | 'off'
+export type ReadingFontSize = '1x' | '1.25x' | '1.5x' | '2x'
+export type ReadingLineHeight = 1.5 | 1.75 | 2.0
+export type ReadingTheme = 'auto' | 'sepia' | 'high-contrast'
 
 /** Maps font size labels to root font-size pixel values */
 export const FONT_SIZE_PX: Record<FontSize, number> = {
@@ -46,6 +49,12 @@ export interface AppSettings {
   focusAutoQuiz?: boolean
   /** Auto-activate focus mode when starting a flashcard review. Default: true. */
   focusAutoFlashcard?: boolean
+  /** Reading mode default font size. Default: '1x'. */
+  readingFontSize?: ReadingFontSize
+  /** Reading mode default line height. Default: 1.5. */
+  readingLineHeight?: ReadingLineHeight
+  /** Reading mode default theme. Default: 'auto'. */
+  readingTheme?: ReadingTheme
 }
 
 export const DISPLAY_DEFAULTS = {
@@ -54,6 +63,9 @@ export const DISPLAY_DEFAULTS = {
   reduceMotion: 'system' as ReduceMotion,
   focusAutoQuiz: true as const,
   focusAutoFlashcard: true as const,
+  readingFontSize: '1x' as const,
+  readingLineHeight: 1.5 as const,
+  readingTheme: 'auto' as const,
 }
 
 const defaults: AppSettings = {
@@ -67,10 +79,16 @@ const defaults: AppSettings = {
   reduceMotion: 'system',
   focusAutoQuiz: true,
   focusAutoFlashcard: true,
+  readingFontSize: '1x',
+  readingLineHeight: 1.5,
+  readingTheme: 'auto',
 }
 
 const VALID_CONTENT_DENSITY: ContentDensity[] = ['default', 'spacious']
 const VALID_REDUCE_MOTION: ReduceMotion[] = ['system', 'on', 'off']
+const VALID_READING_FONT_SIZE: ReadingFontSize[] = ['1x', '1.25x', '1.5x', '2x']
+const VALID_READING_LINE_HEIGHT: ReadingLineHeight[] = [1.5, 1.75, 2.0]
+const VALID_READING_THEME: ReadingTheme[] = ['auto', 'sepia', 'high-contrast']
 
 export function getSettings(): AppSettings {
   try {
@@ -86,6 +104,15 @@ export function getSettings(): AppSettings {
     }
     if (typeof parsed.accessibilityFont !== 'boolean') {
       parsed.accessibilityFont = defaults.accessibilityFont
+    }
+    if (!VALID_READING_FONT_SIZE.includes(parsed.readingFontSize)) {
+      parsed.readingFontSize = defaults.readingFontSize
+    }
+    if (!VALID_READING_LINE_HEIGHT.includes(parsed.readingLineHeight)) {
+      parsed.readingLineHeight = defaults.readingLineHeight
+    }
+    if (!VALID_READING_THEME.includes(parsed.readingTheme)) {
+      parsed.readingTheme = defaults.readingTheme
     }
     return parsed
   } catch {

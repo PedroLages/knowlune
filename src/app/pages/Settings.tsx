@@ -72,6 +72,7 @@ import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
 import { EngagementPreferences } from '@/app/components/settings/EngagementPreferences'
 import { NotificationPreferencesPanel } from '@/app/components/settings/NotificationPreferencesPanel'
 import { DisplayAccessibilitySection } from '@/app/components/settings/DisplayAccessibilitySection'
+import { ReadingFocusModesSection } from '@/app/components/settings/ReadingFocusModesSection'
 import { SubscriptionCard } from '@/app/components/settings/SubscriptionCard'
 import { AccountDeletion } from '@/app/components/settings/AccountDeletion'
 import { ChangePassword } from '@/app/components/settings/ChangePassword'
@@ -973,6 +974,19 @@ export default function Settings() {
 
         {/* Display & Accessibility */}
         <DisplayAccessibilitySection
+          settings={settings}
+          onSettingsChange={updates => {
+            setSettings(prev => {
+              const updated = { ...prev, ...updates }
+              saveSettings(updated)
+              window.dispatchEvent(new Event('settingsUpdated'))
+              return updated
+            })
+          }}
+        />
+
+        {/* Reading & Focus Modes */}
+        <ReadingFocusModesSection
           settings={settings}
           onSettingsChange={updates => {
             setSettings(prev => {
