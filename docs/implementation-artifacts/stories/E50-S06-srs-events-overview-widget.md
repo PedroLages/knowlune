@@ -1,12 +1,25 @@
 ---
 story_id: E50-S06
 story_name: "SRS Events in Feed + Overview Widget"
-status: in-progress
+status: done
 started: 2026-04-04
-completed:
-reviewed: in-progress
+completed: 2026-04-04
+reviewed: true
 review_started: 2026-04-04
-review_gates_passed: []
+review_gates_passed:
+  - build
+  - lint
+  - type-check
+  - format-check
+  - unit-tests-skipped
+  - e2e-tests
+  - bundle-analysis
+  - design-review
+  - code-review
+  - code-review-testing
+  - performance-benchmark-skipped
+  - security-review-skipped
+  - exploratory-qa-skipped
 burn_in_validated: false
 ---
 
@@ -171,11 +184,11 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+PASS — 1 LOW finding: card entry animation consistency (no viewport animation vs other sections). Design tokens, accessibility, mobile layout all clean. See `docs/reviews/design/design-review-2026-04-04-e50-s06.md`.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+1 MEDIUM: `generateSRSSummaryEvents` uses `new Date(year, month-1, day, ...)` (local time) instead of UTC, which may offset SRS events for non-local timezone users. Fix: use `Date.UTC(...)` constructor. See `docs/reviews/code/code-review-2026-04-04-e50-s06.md`.
 
 ## Challenges and Lessons Learned
 
