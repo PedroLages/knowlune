@@ -23,12 +23,15 @@ interface ImportProgressState {
   isActive: boolean
   /** Whether the overlay is visible (user can dismiss but import continues) */
   isVisible: boolean
+  /** Whether an import dialog is currently open (overlay hides when true) */
+  dialogOpen: boolean
   /** Map of courseId → progress for each importing course */
   courses: Map<string, CourseImportProgress>
   /** Cancellation signal — checked by import loops */
   cancelRequested: boolean
 
   // Actions
+  setDialogOpen: (open: boolean) => void
   startImport: (courseId: string, courseName: string) => void
   updateScanProgress: (courseId: string, filesProcessed: number, totalFiles: number | null) => void
   updateProcessingProgress: (courseId: string, filesProcessed: number, totalFiles: number) => void
@@ -44,8 +47,13 @@ interface ImportProgressState {
 export const useImportProgressStore = create<ImportProgressState>((set, _get) => ({
   isActive: false,
   isVisible: false,
+  dialogOpen: false,
   courses: new Map(),
   cancelRequested: false,
+
+  setDialogOpen: (open: boolean) => {
+    set({ dialogOpen: open })
+  },
 
   startImport: (courseId: string, courseName: string) => {
     set(state => {
@@ -161,6 +169,7 @@ export const useImportProgressStore = create<ImportProgressState>((set, _get) =>
     set({
       isActive: false,
       isVisible: false,
+      dialogOpen: false,
       courses: new Map(),
       cancelRequested: false,
     })

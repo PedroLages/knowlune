@@ -76,20 +76,37 @@ function stripExtension(filename: string): string {
 interface ChapterGroup {
   title: string
   videos: ImportedVideo[]
+  pdfs: ImportedPdf[]
 }
 
-function groupByFolder(videos: ImportedVideo[]): ChapterGroup[] {
-  const groups = new Map<string, ImportedVideo[]>()
+function groupByFolder(videos: ImportedVideo[], pdfs: ImportedPdf[] = []): ChapterGroup[] {
+  const videoGroups = new Map<string, ImportedVideo[]>()
+  const pdfGroups = new Map<string, ImportedPdf[]>()
+
   for (const video of videos) {
     const folder = getFolderName(video.path)
-    if (!groups.has(folder)) groups.set(folder, [])
-    groups.get(folder)!.push(video)
+    if (!videoGroups.has(folder)) videoGroups.set(folder, [])
+    videoGroups.get(folder)!.push(video)
   }
-  return Array.from(groups.entries()).map(([title, vids]) => ({ title, videos: vids }))
+
+  for (const pdf of pdfs) {
+    const folder = getFolderName(pdf.path)
+    if (!pdfGroups.has(folder)) pdfGroups.set(folder, [])
+    pdfGroups.get(folder)!.push(pdf)
+  }
+
+  const allFolders = new Set([...videoGroups.keys(), ...pdfGroups.keys()])
+  return Array.from(allFolders)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+    .map(title => ({
+      title,
+      videos: videoGroups.get(title) ?? [],
+      pdfs: pdfGroups.get(title) ?? [],
+    }))
 }
 
 function groupByChapter(videos: ImportedVideo[], chapters: YouTubeCourseChapter[]): ChapterGroup[] {
-  if (chapters.length === 0) return [{ title: '', videos }]
+  if (chapters.length === 0) return [{ title: '', videos, pdfs: [] }]
 
   const videoChapterMap = new Map<string, string>()
   for (const ch of chapters) {
@@ -105,14 +122,14 @@ function groupByChapter(videos: ImportedVideo[], chapters: YouTubeCourseChapter[
   for (const video of videos) {
     const chTitle = videoChapterMap.get(video.youtubeVideoId ?? '') ?? ''
     if (chTitle !== currentTitle && currentVideos.length > 0) {
-      groups.push({ title: currentTitle, videos: currentVideos })
+      groups.push({ title: currentTitle, videos: currentVideos, pdfs: [] })
       currentVideos = []
     }
     currentTitle = chTitle
     currentVideos.push(video)
   }
   if (currentVideos.length > 0) {
-    groups.push({ title: currentTitle, videos: currentVideos })
+    groups.push({ title: currentTitle, videos: currentVideos, pdfs: [] })
   }
 
   return groups
@@ -271,8 +288,8 @@ export function CourseOverview() {
     if (capabilities?.requiresNetwork && chapters.length > 0) {
       return groupByChapter(videos, chapters)
     }
-    return groupByFolder(videos)
-  }, [videos, chapters, capabilities?.requiresNetwork])
+    return groupByFolder(videos, capabilities?.requiresNetwork ? [] : pdfs)
+  }, [videos, pdfs, chapters, capabilities?.requiresNetwork])
 
   const toggleModule = useCallback((index: number) => {
     setExpandedModules(prev => {
@@ -641,7 +658,8 @@ export function CourseOverview() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-foreground truncate">{groupTitle}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {group.videos.length} {group.videos.length === 1 ? 'lesson' : 'lessons'}
+                        {group.videos.length + group.pdfs.length}{' '}
+                        {group.videos.length + group.pdfs.length === 1 ? 'lesson' : 'lessons'}
                         {groupDuration > 0 && ` · ${formatDuration(groupDuration)}`}
                         {groupCompletedCount > 0 && ` · ${groupCompletedCount} done`}
                       </p>

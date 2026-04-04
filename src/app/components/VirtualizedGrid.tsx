@@ -131,11 +131,15 @@ export function VirtualizedGrid<T>({
   })
 
   // Reset scroll position when items change (filter/search)
+  // Debounced to avoid scroll jitter during rapid bulk-import additions
   const prevLengthRef = useRef(items.length)
   useEffect(() => {
     if (items.length !== prevLengthRef.current) {
-      virtualizer.scrollToOffset(0)
+      const timer = setTimeout(() => {
+        virtualizer.scrollToOffset(0)
+      }, 300)
       prevLengthRef.current = items.length
+      return () => clearTimeout(timer)
     }
   }, [items.length, virtualizer])
 
