@@ -95,3 +95,13 @@ deferInit(() => {
     })
   })
 })
+
+// E52-S04: Backfill course embeddings for courses that lack them (deferred — non-critical)
+deferInit(() => {
+  import('@/ai/courseEmbeddingService').then(({ backfillCourseEmbeddings }) => {
+    backfillCourseEmbeddings().catch(err => {
+      // silent-catch-ok: backfill is advisory, recommendations fall back to tag-based matching
+      console.warn('[CourseEmbedding] Startup backfill failed:', err)
+    })
+  })
+})

@@ -3,6 +3,7 @@ import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useImportProgressStore } from '@/stores/useImportProgressStore'
 import { useNotificationStore } from '@/stores/useNotificationStore'
 import { triggerAutoAnalysis } from '@/lib/autoAnalysis'
+import { generateCourseEmbeddingAfterImport } from '@/ai/courseEmbeddingService'
 import { unlockSidebarItem } from '@/app/hooks/useProgressiveDisclosure'
 import { triggerOllamaTagging } from '@/lib/ollamaTagging'
 import {
@@ -495,6 +496,12 @@ export async function persistScannedCourse(
 
   // Trigger Ollama auto-tagging (fire-and-forget, independent of cloud AI)
   triggerOllamaTagging(course, videos, pdfs)
+
+  // Generate course embedding for ML recommendations (fire-and-forget, E52-S04)
+  generateCourseEmbeddingAfterImport(course).catch(err => {
+    // silent-catch-ok: embedding failure logged inside generateCourseEmbeddingAfterImport
+    console.error('[CourseEmbedding] Unexpected outer catch during import embedding:', err)
+  })
 
   // Auto-generate thumbnail from first video at 10% mark (E1B-S04 AC1)
   // Skip if user selected a cover image in the wizard — don't overwrite their choice

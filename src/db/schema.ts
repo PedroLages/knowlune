@@ -29,6 +29,7 @@ import type {
   YouTubeCourseChapter,
   Notification,
   NotificationPreferences,
+  CourseEmbedding,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA } from './checkpoint'
@@ -67,10 +68,7 @@ export type ElearningDatabase = Dexie & {
   youtubeChapters: EntityTable<YouTubeCourseChapter, 'id'>
   notifications: EntityTable<Notification, 'id'>
   notificationPreferences: EntityTable<NotificationPreferences, 'id'>
-  courseEmbeddings: EntityTable<
-    { courseId: string; embedding?: number[]; updatedAt?: string },
-    'courseId'
-  >
+  courseEmbeddings: EntityTable<CourseEmbedding, 'courseId'>
 }
 
 /**
