@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
 import { useAutoHide } from '@/hooks/useAutoHide'
-import { shouldReduceMotion } from '@/lib/settings'
+import { shouldReduceMotion, getSettings } from '@/lib/settings'
 import { cn } from '@/app/components/ui/utils'
 
 // --- Types & Constants ---
@@ -64,26 +64,54 @@ const DEFAULT_SETTINGS: ReadingSettings = {
   lastPreset: null,
 }
 
+/** Map AppSettings readingFontSize string ('1.5x') to numeric (1.5) */
+function fontSizeToNumber(s: string | undefined): number | undefined {
+  if (!s) return undefined
+  const n = parseFloat(s)
+  return FONT_SIZE_LEVELS.includes(n as typeof FONT_SIZE_LEVELS[number]) ? n : undefined
+}
+
+/** Map AppSettings readingTheme to toolbar theme key */
+function mapTheme(t: string | undefined): ReadingTheme | undefined {
+  if (t === 'auto') return 'auto'
+  if (t === 'sepia') return 'sepia'
+  if (t === 'high-contrast') return 'hc'
+  return undefined
+}
+
 function loadSettings(): ReadingSettings {
+  // Priority: session localStorage > AppSettings defaults > hardcoded defaults
+  const appSettings = getSettings()
+  const appDefaults: ReadingSettings = {
+    fontSize: fontSizeToNumber(appSettings.readingFontSize) ?? DEFAULT_SETTINGS.fontSize,
+    lineHeight:
+      appSettings.readingLineHeight &&
+      LINE_HEIGHT_LEVELS.includes(appSettings.readingLineHeight as typeof LINE_HEIGHT_LEVELS[number])
+        ? appSettings.readingLineHeight
+        : DEFAULT_SETTINGS.lineHeight,
+    theme: mapTheme(appSettings.readingTheme) ?? DEFAULT_SETTINGS.theme,
+    lastPreset: null,
+  }
+
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return DEFAULT_SETTINGS
+    if (!raw) return appDefaults
     const parsed = JSON.parse(raw) as Partial<ReadingSettings>
     return {
       fontSize: FONT_SIZE_LEVELS.includes(parsed.fontSize as typeof FONT_SIZE_LEVELS[number])
         ? (parsed.fontSize as number)
-        : DEFAULT_SETTINGS.fontSize,
+        : appDefaults.fontSize,
       lineHeight: LINE_HEIGHT_LEVELS.includes(parsed.lineHeight as typeof LINE_HEIGHT_LEVELS[number])
         ? (parsed.lineHeight as number)
-        : DEFAULT_SETTINGS.lineHeight,
+        : appDefaults.lineHeight,
       theme: THEMES.includes(parsed.theme as ReadingTheme)
         ? (parsed.theme as ReadingTheme)
-        : DEFAULT_SETTINGS.theme,
+        : appDefaults.theme,
       lastPreset: typeof parsed.lastPreset === 'string' ? parsed.lastPreset : null,
     }
   } catch {
     // silent-catch-ok: localStorage unavailable in private browsing
-    return DEFAULT_SETTINGS
+    return appDefaults
   }
 }
 

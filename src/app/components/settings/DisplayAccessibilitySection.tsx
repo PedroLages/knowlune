@@ -30,6 +30,12 @@ export function DisplayAccessibilitySection({
 }: DisplayAccessibilitySectionProps) {
   function handleReset() {
     onSettingsChange(DISPLAY_DEFAULTS)
+    // Also clear session-level reading mode customizations
+    try {
+      localStorage.removeItem('reading-mode-settings')
+    } catch {
+      // silent-catch-ok: localStorage unavailable
+    }
     toastSuccess.saved('Display settings reset to defaults')
   }
 
@@ -173,8 +179,8 @@ export function DisplayAccessibilitySection({
             <AlertDialogHeader>
               <AlertDialogTitle>Reset display settings?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will reset accessibility font, spacious mode, and motion preference to their
-                default values.
+                This will reset accessibility font, spacious mode, motion preference, reading mode
+                defaults, and focus mode auto-activation to their default values.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

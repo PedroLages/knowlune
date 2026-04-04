@@ -75,6 +75,8 @@ import { useReadingMode } from '@/hooks/useReadingMode'
 import { ReadingModeStatusBar } from '@/app/components/figma/ReadingModeStatusBar'
 import { ReadingToolbar } from '@/app/components/figma/ReadingToolbar'
 import { ReadingProgressBar } from '@/app/components/figma/ReadingProgressBar'
+import { ReadingModeDiscoveryTooltip } from '@/app/components/figma/ReadingModeDiscoveryTooltip'
+import { ReadingModeTOC } from '@/app/components/figma/ReadingModeTOC'
 import { MiniPlayer } from '@/app/components/course/MiniPlayer'
 import { NextCourseSuggestion } from '@/app/components/NextCourseSuggestion'
 import { suggestNextCourse } from '@/lib/courseSuggestion'
@@ -433,6 +435,9 @@ export function UnifiedLessonPlayer() {
       data-theater-mode={isTheater ? 'true' : 'false'}
       className="flex flex-col"
     >
+      {/* First-time reading mode discovery tooltip */}
+      <ReadingModeDiscoveryTooltip />
+
       {/* Reading mode status bar, toolbar, and progress bar */}
       {isReadingMode && (
         <>
@@ -443,6 +448,7 @@ export function UnifiedLessonPlayer() {
           />
           <ReadingProgressBar />
           <ReadingToolbar />
+          <ReadingModeTOC isReadingMode={isReadingMode} />
         </>
       )}
 
