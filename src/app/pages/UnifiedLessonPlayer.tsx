@@ -503,6 +503,7 @@ export function UnifiedLessonPlayer() {
               withHandle={state.notesOpen}
               disabled={!state.notesOpen}
               className={cn(state.notesOpen ? 'mx-2' : 'invisible w-0')}
+              onDoubleClick={() => notesPanelRef.current?.resize('40%')}
             />
 
             <ResizablePanel
@@ -522,6 +523,7 @@ export function UnifiedLessonPlayer() {
                   onCaptureFrame={handleCaptureFrame}
                   pendingFocus={state.pendingNoteFocus}
                   onFocusComplete={() => state.setPendingNoteFocus(false)}
+                  isTheater={isTheater}
                 />
               )}
             </ResizablePanel>
