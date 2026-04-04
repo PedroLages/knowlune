@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { Calendar, Clock, Layers, Play } from 'lucide-react'
+import { Calendar, Layers, Play } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '@/app/components/ui/card'
 import { Button } from '@/app/components/ui/button'
 import { Separator } from '@/app/components/ui/separator'
@@ -95,9 +95,7 @@ export function TodaysStudyPlan() {
 
   const todaysBlocks = useMemo(() => {
     if (!isLoaded) return []
-    return getSchedulesForDay(todayDay, true).sort((a, b) =>
-      a.startTime.localeCompare(b.startTime)
-    )
+    return getSchedulesForDay(todayDay, true).sort((a, b) => a.startTime.localeCompare(b.startTime))
   }, [isLoaded, todayDay, getSchedulesForDay, schedules])
 
   const { dueToday } = useMemo(() => flashcardStats(), [flashcardStats, flashcardsLoaded])
@@ -137,12 +135,7 @@ export function TodaysStudyPlan() {
                   <p className="text-foreground flex-1">
                     {dueToday} {dueToday === 1 ? 'flashcard' : 'flashcards'} due for review
                   </p>
-                  <Button
-                    variant="brand-outline"
-                    size="sm"
-                    asChild
-                    className="shrink-0"
-                  >
+                  <Button variant="brand-outline" size="sm" asChild className="shrink-0">
                     <Link
                       to="/flashcards"
                       aria-label={`Review ${dueToday} due ${dueToday === 1 ? 'flashcard' : 'flashcards'}`}
