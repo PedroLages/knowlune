@@ -1,9 +1,9 @@
 ---
 story_id: E60-S03
 story_name: "Milestone Approaching Trigger"
-status: ready-for-dev
-started:
-completed:
+status: done
+started: 2026-04-04
+completed: 2026-04-04
 reviewed: false
 review_started:
 review_gates_passed: []
@@ -31,7 +31,7 @@ So that I am motivated to complete the final lessons.
 **Given** a course "Advanced TypeScript" has 10 total lessons and 8 are completed
 **When** the user marks the 8th lesson as complete (2 remaining, at threshold)
 **Then** a `milestone:approaching` event is emitted with `{ courseId, courseName: 'Advanced TypeScript', remainingLessons: 2, totalLessons: 10 }`
-**And** a notification is created with title "Almost There!", message "Just 2 lessons left in Advanced TypeScript", and actionUrl to the course page
+**And** a notification is created with title "Almost There!", message "Just 2 lessons left in Advanced TypeScript. Keep going!", and actionUrl to the course page
 
 **AC3: No notification when above threshold**
 **Given** a course has 10 total lessons and 5 are completed
@@ -55,46 +55,46 @@ So that I am motivated to complete the final lessons.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `milestone:approaching` event type to `AppEvent` union (AC: 1)
-  - [ ] 1.1 Add `| { type: 'milestone:approaching'; courseId: string; courseName: string; remainingLessons: number; totalLessons: number }` to `AppEvent` in `src/lib/eventBus.ts`
+- [x] Task 1: Add `milestone:approaching` event type to `AppEvent` union (AC: 1)
+  - [x] 1.1 Add `| { type: 'milestone:approaching'; courseId: string; courseName: string; remainingLessons: number; totalLessons: number }` to `AppEvent` in `src/lib/eventBus.ts`
 
-- [ ] Task 2: Add `milestone-approaching` to `NotificationType` union (AC: 1)
-  - [ ] 2.1 Add `| 'milestone-approaching'` to `NotificationType` in `src/data/types.ts`
+- [x] Task 2: Add `milestone-approaching` to `NotificationType` union (AC: 1)
+  - [x] 2.1 Add `| 'milestone-approaching'` to `NotificationType` in `src/data/types.ts`
 
-- [ ] Task 3: Add `milestoneApproaching` field to `NotificationPreferences` interface (AC: 1)
-  - [ ] 3.1 Add `milestoneApproaching: boolean` to `NotificationPreferences` in `src/data/types.ts`
+- [x] Task 3: Add `milestoneApproaching` field to `NotificationPreferences` interface (AC: 1)
+  - [x] 3.1 Add `milestoneApproaching: boolean` to `NotificationPreferences` in `src/data/types.ts`
 
-- [ ] Task 4: Update Dexie schema migration (AC: 1)
-  - [ ] 4.1 Coordinate with S01/S02 migration. Best approach: single v30 migration that adds all three preference fields (`knowledgeDecay`, `recommendationMatch`, `milestoneApproaching`) in one upgrade.
+- [x] Task 4: Update Dexie schema migration (AC: 1)
+  - [x] 4.1 Coordinate with S01/S02 migration. Best approach: single v30 migration that adds all three preference fields (`knowledgeDecay`, `recommendationMatch`, `milestoneApproaching`) in one upgrade.
 
-- [ ] Task 5: Wire preference store with new type (AC: 1)
-  - [ ] 5.1 Add `'milestone-approaching': 'milestoneApproaching'` to `TYPE_TO_FIELD` in `src/stores/useNotificationPrefsStore.ts`
-  - [ ] 5.2 Add `milestoneApproaching: true` to `DEFAULTS`
+- [x] Task 5: Wire preference store with new type (AC: 1)
+  - [x] 5.1 Add `'milestone-approaching': 'milestoneApproaching'` to `TYPE_TO_FIELD` in `src/stores/useNotificationPrefsStore.ts`
+  - [x] 5.2 Add `milestoneApproaching: true` to `DEFAULTS`
 
-- [ ] Task 6: Add `EVENT_TO_NOTIF_TYPE` mapping + `handleEvent` case (AC: 2)
-  - [ ] 6.1 Add `'milestone:approaching': 'milestone-approaching'` to `EVENT_TO_NOTIF_TYPE`
-  - [ ] 6.2 Add `case 'milestone:approaching'` to `handleEvent()` switch
-  - [ ] 6.3 Register `'milestone:approaching'` in `initNotificationService()` eventTypes array
+- [x] Task 6: Add `EVENT_TO_NOTIF_TYPE` mapping + `handleEvent` case (AC: 2)
+  - [x] 6.1 Add `'milestone:approaching': 'milestone-approaching'` to `EVENT_TO_NOTIF_TYPE`
+  - [x] 6.2 Add `case 'milestone:approaching'` to `handleEvent()` switch
+  - [x] 6.3 Register `'milestone:approaching'` in `initNotificationService()` eventTypes array
 
-- [ ] Task 7: Add dedup function `hasMilestoneApproachingToday(courseId)` (AC: 6)
-  - [ ] 7.1 Create `hasMilestoneApproachingToday(courseId: string): Promise<boolean>` in NotificationService
-  - [ ] 7.2 Call dedup check in the `milestone:approaching` case before creating notification
+- [x] Task 7: Add dedup function `hasMilestoneApproachingToday(courseId)` (AC: 6)
+  - [x] 7.1 Create `hasMilestoneApproachingToday(courseId: string): Promise<boolean>` in NotificationService
+  - [x] 7.2 Call dedup check in the `milestone:approaching` case before creating notification
 
-- [ ] Task 8: Create `checkMilestoneApproachingOnStartup()` function (AC: 5)
-  - [ ] 8.1 Export `checkMilestoneApproachingOnStartup()` from NotificationService
-  - [ ] 8.2 Load all imported courses from `db.importedCourses`, load `db.contentProgress` for each, count total lessons vs completed lessons across all modules
-  - [ ] 8.3 For each course where `0 < remainingLessons <= MILESTONE_THRESHOLD`, emit `milestone:approaching` event
-  - [ ] 8.4 Define `export const MILESTONE_THRESHOLD = 2` at module level
-  - [ ] 8.5 Call from `initNotificationService()` after `checkKnowledgeDecayOnStartup()` with same fire-and-forget + catch pattern
+- [x] Task 8: Create `checkMilestoneApproachingOnStartup()` function (AC: 5)
+  - [x] 8.1 Export `checkMilestoneApproachingOnStartup()` from NotificationService
+  - [x] 8.2 Load all imported courses from `db.importedCourses`, load `db.contentProgress` for each, count total lessons vs completed lessons across all modules
+  - [x] 8.3 For each course where `0 < remainingLessons <= MILESTONE_THRESHOLD`, emit `milestone:approaching` event
+  - [x] 8.4 Define `export const MILESTONE_THRESHOLD = 2` at module level
+  - [x] 8.5 Call from `initNotificationService()` after `checkKnowledgeDecayOnStartup()` with same fire-and-forget + catch pattern
 
-- [ ] Task 9: Add real-time milestone check in content progress store (AC: 2, 3, 4)
-  - [ ] 9.1 In `src/stores/useContentProgressStore.ts`, in `setItemStatus()`, after a lesson is marked `completed` and before the existing `course:completed` check:
+- [x] Task 9: Add real-time milestone check in content progress store (AC: 2, 3, 4)
+  - [x] 9.1 In `src/stores/useContentProgressStore.ts`, in `setItemStatus()`, after a lesson is marked `completed` and before the existing `course:completed` check:
     - Count total lessons across all modules
     - Count completed lessons (including the one just marked)
     - Calculate `remaining = total - completed`
     - If `remaining > 0 && remaining <= MILESTONE_THRESHOLD`, emit `milestone:approaching` event
-  - [ ] 9.2 Import `MILESTONE_THRESHOLD` from NotificationService (or define locally as 2)
-  - [ ] 9.3 Only emit when transitioning TO `completed` status (not when marking incomplete)
+  - [x] 9.2 Import `MILESTONE_THRESHOLD` from NotificationService (or define locally as 2)
+  - [x] 9.3 Only emit when transitioning TO `completed` status (not when marking incomplete)
 
 ## Implementation Notes
 
@@ -185,4 +185,7 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- `ImportedCourse` type lacks a `modules` field — used `importedVideos` and `importedPdfs` tables to count lessons per course in the startup scan, while the real-time check uses the `modules` parameter already present in `setItemStatus`.
+- Milestone check must sit outside the progress try/catch (or in its own nested try/catch) — if it throws it should not roll back lesson completion, which is the primary operation.
+- Daily per-course dedup (`hasMilestoneApproachingToday`) filters on `metadata.courseId` + same-day `createdAt`; prevents duplicate notifications when startup check and real-time trigger both fire on the same day.
+- The `remaining > 0` guard is essential: when all lessons are complete `remaining` is 0, so the milestone event is correctly suppressed and only `course:completed` fires.

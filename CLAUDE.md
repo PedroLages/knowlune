@@ -6,8 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Knowlune is a personal learning platform featuring progress tracking, study streaks, course management, and achievement analytics. Originally designed from Figma wireframes, it's evolved into a comprehensive learning dashboard with six main sections: Overview, My Class, Courses, Authors, Reports, and Settings.
 
-Original Figma design: https://www.figma.com/design/q4x6ttJD11avObQNFoeQ2D/E-learning-platform-wireframes (design foundation)
-
 ## Development Commands
 
 - `npm i` - Install dependencies
@@ -137,25 +135,6 @@ When I make a mistake due to missing context:
 - Root CLAUDE.md: Keep < 300 lines (currently ~250)
 - `.claude/rules/*.md`: No limit, but prefer splitting large files
 - Use path-specific frontmatter in rules to control when they load
-
-## Auto-Story Script Configuration
-
-The `scripts/auto-story.py` autonomous batch workflow uses increased buffer size (10MB) for complex feature implementations.
-
-**Why This Matters:**
-- Epic 9+ stories (vector search, RAG, embeddings) generate verbose AI outputs exceeding the default 1MB limit
-- Claude Agent SDK enforces JSON message buffer limits during subprocess communication
-- Without increased buffer, implementation sessions fail with buffer overflow errors
-
-**Configuration** ([scripts/auto-story.py:476](scripts/auto-story.py#L476)):
-```python
-max_buffer_size=10 * 1024 * 1024,  # 10MB buffer (Epic 9B AI features exceed 1MB default)
-```
-
-**Troubleshooting Buffer Overflows:**
-- If 10MB is still insufficient, increase to 20MB or 50MB
-- Check logs for `ClaudeAgentOptions configured with XMB message buffer` (debug level)
-- Consider splitting exceptionally complex stories into smaller subtasks
 
 ## References
 

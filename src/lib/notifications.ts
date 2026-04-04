@@ -7,6 +7,7 @@ import {
   Download,
   BookOpen,
   Brain,
+  Target,
 } from 'lucide-react'
 import type { NotificationType } from '@/data/types'
 
@@ -21,6 +22,7 @@ export const notificationIcons: Record<NotificationType, typeof Trophy> = {
   'srs-due': BookOpen,
   'knowledge-decay': Brain,
   'recommendation-match': Sparkles,
+  'milestone-approaching': Target,
 }
 
 export const notificationIconColors: Record<NotificationType, string> = {
@@ -32,6 +34,7 @@ export const notificationIconColors: Record<NotificationType, string> = {
   'srs-due': 'text-brand',
   'knowledge-decay': 'text-warning',
   'recommendation-match': 'text-brand',
+  'milestone-approaching': 'text-success',
 }
 
 // Fallback icons for unknown types

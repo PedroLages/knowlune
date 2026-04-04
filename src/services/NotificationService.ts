@@ -28,6 +28,11 @@ const STREAK_MILESTONES = [7, 14, 30, 60, 100, 365] as const
 export const DECAY_THRESHOLD = FADING_THRESHOLD
 
 /**
+ * Number of remaining lessons at or below which a milestone notification fires.
+ */
+export const MILESTONE_THRESHOLD = 2
+
+/**
  * Active unsubscribe functions (populated by init, cleared by destroy).
  *
  * Module-level mutable state is intentional here: NotificationService is a
@@ -107,6 +112,24 @@ async function hasRecommendationMatchToday(courseId: string): Promise<boolean> {
 }
 
 /**
+ * Check whether a `milestone-approaching` notification was already created today
+ * for a specific course. Dedup key: type + metadata.courseId + date.
+ */
+async function hasMilestoneApproachingToday(courseId: string): Promise<boolean> {
+  const todayStr = new Date().toLocaleDateString('sv-SE')
+  const existing = await db.notifications
+    .where('type')
+    .equals('milestone-approaching')
+    .filter(
+      n =>
+        (n.metadata as Record<string, unknown>)?.courseId === courseId &&
+        new Date(n.createdAt).toLocaleDateString('sv-SE') === todayStr
+    )
+    .first()
+  return existing !== undefined
+}
+
+/**
  * On app startup, count all due flashcards + note reviews and emit
  * an `srs:due` event if any are due. This provides a proactive reminder
  * without requiring the user to navigate to the review page.
@@ -169,6 +192,76 @@ export async function checkKnowledgeDecayOnStartup(): Promise<void> {
   }
 }
 
+/**
+ * On app startup, check all in-progress courses for milestone proximity.
+ * Emits `milestone:approaching` for courses with 0 < remaining <= MILESTONE_THRESHOLD.
+ */
+export async function checkMilestoneApproachingOnStartup(): Promise<void> {
+  const prefsStore = useNotificationPrefsStore.getState()
+  if (!prefsStore.isTypeEnabled('milestone-approaching')) return
+
+  const importedCourses = await db.importedCourses.toArray()
+  if (importedCourses.length === 0) return
+
+  const [allProgress, allVideos, allPdfs] = await Promise.all([
+    db.contentProgress.toArray(),
+    db.importedVideos.toArray(),
+    db.importedPdfs.toArray(),
+  ])
+
+  const progressMap = new Map<string, string>()
+  for (const p of allProgress) {
+    progressMap.set(`${p.courseId}:${p.itemId}`, p.status)
+  }
+
+  // Build per-course lesson ID sets from importedVideos + importedPdfs
+  const courseLessonIds = new Map<string, string[]>()
+  for (const v of allVideos) {
+    const arr = courseLessonIds.get(v.courseId) ?? []
+    arr.push(v.id)
+    courseLessonIds.set(v.courseId, arr)
+  }
+  for (const p of allPdfs) {
+    const arr = courseLessonIds.get(p.courseId) ?? []
+    arr.push(p.id)
+    courseLessonIds.set(p.courseId, arr)
+  }
+
+  // Batch-query today's milestone notifications once
+  const todayStr = new Date().toLocaleDateString('sv-SE')
+  const todayMilestoneNotifs = await db.notifications
+    .where('type')
+    .equals('milestone-approaching')
+    .filter(n => new Date(n.createdAt).toLocaleDateString('sv-SE') === todayStr)
+    .toArray()
+  const notifiedCourses = new Set(
+    todayMilestoneNotifs.map(n => (n.metadata as Record<string, unknown>)?.courseId)
+  )
+
+  for (const course of importedCourses) {
+    if (notifiedCourses.has(course.id)) continue
+
+    const lessonIds = courseLessonIds.get(course.id) ?? []
+    const totalLessons = lessonIds.length
+    if (totalLessons === 0) continue
+
+    const completedLessons = lessonIds.filter(
+      id => progressMap.get(`${course.id}:${id}`) === 'completed'
+    ).length
+    const remaining = totalLessons - completedLessons
+
+    if (remaining > 0 && remaining <= MILESTONE_THRESHOLD) {
+      appEventBus.emit({
+        type: 'milestone:approaching',
+        courseId: course.id,
+        courseName: course.name,
+        remainingLessons: remaining,
+        totalLessons,
+      })
+    }
+  }
+}
+
 /** Map domain event types to NotificationType for preference lookup */
 const EVENT_TO_NOTIF_TYPE: Record<AppEventType, NotificationType> = {
   'course:completed': 'course-complete',
@@ -179,6 +272,7 @@ const EVENT_TO_NOTIF_TYPE: Record<AppEventType, NotificationType> = {
   'srs:due': 'srs-due',
   'knowledge:decay': 'knowledge-decay',
   'recommendation:match': 'recommendation-match',
+  'milestone:approaching': 'milestone-approaching',
 }
 
 /** Handle a single domain event, creating the appropriate notification. */
@@ -302,6 +396,19 @@ async function handleEvent(event: AppEvent): Promise<void> {
       })
       break
     }
+
+    case 'milestone:approaching': {
+      const alreadyMilestone = await hasMilestoneApproachingToday(event.courseId)
+      if (alreadyMilestone) return
+      await store.create({
+        type: 'milestone-approaching',
+        title: 'Almost There!',
+        message: `Just ${event.remainingLessons} lesson${event.remainingLessons === 1 ? '' : 's'} left in ${event.courseName}. Keep going!`,
+        actionUrl: `/courses/${event.courseId}`,
+        metadata: { courseId: event.courseId, remainingLessons: event.remainingLessons, totalLessons: event.totalLessons },
+      })
+      break
+    }
   }
 }
 
@@ -322,6 +429,7 @@ export function initNotificationService(): void {
     'srs:due',
     'knowledge:decay',
     'recommendation:match',
+    'milestone:approaching',
   ]
 
   for (const type of eventTypes) {
@@ -346,6 +454,12 @@ export function initNotificationService(): void {
   // silent-catch-ok — startup check failure is non-critical; logged for debugging
   checkKnowledgeDecayOnStartup().catch(error => {
     console.error('[NotificationService] Knowledge decay startup check failed:', error)
+  })
+
+  // Proactive milestone check: emit events for courses near completion
+  // silent-catch-ok — startup check failure is non-critical; logged for debugging
+  checkMilestoneApproachingOnStartup().catch(error => {
+    console.error('[NotificationService] Milestone approaching startup check failed:', error)
   })
 }
 

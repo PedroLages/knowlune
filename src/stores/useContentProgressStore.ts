@@ -4,6 +4,7 @@ import type { CompletionStatus, ContentProgress, Module } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { markLessonComplete, markLessonIncomplete } from '@/lib/progress'
 import { appEventBus } from '@/lib/eventBus'
+import { MILESTONE_THRESHOLD } from '@/services/NotificationService'
 
 interface ContentProgressState {
   /** Map of `courseId:itemId` → status for fast lookups */
@@ -126,15 +127,40 @@ export const useContentProgressStore = create<ContentProgressState>((set, get) =
         })
       })
 
-      // E43-S07: Check if all modules are now completed (course finished)
+      // E60-S03 + E43-S07: Side-effect checks (notification triggers)
+      // Resolve course once and share between both checks
       if (status === 'completed' && modules.length > 0) {
+        const course = await db.importedCourses.get(courseId)
+        const courseName = course?.name ?? 'Unknown Course'
+
+        // E60-S03: Check if course is approaching completion (milestone trigger)
+        try {
+          const totalLessons = modules.reduce((sum, m) => sum + m.lessons.length, 0)
+          const completedLessons = modules.reduce(
+            (sum, m) =>
+              sum + m.lessons.filter(l => newMap[key(courseId, l.id)] === 'completed').length,
+            0
+          )
+          const remaining = totalLessons - completedLessons
+          if (remaining > 0 && remaining <= MILESTONE_THRESHOLD) {
+            appEventBus.emit({
+              type: 'milestone:approaching',
+              courseId,
+              courseName,
+              remainingLessons: remaining,
+              totalLessons,
+            })
+          }
+        } catch (milestoneError) {
+          // silent-catch-ok: notification side-effect should not roll back progress
+          console.error('[ContentProgressStore] Milestone check failed:', milestoneError)
+        }
+
+        // E43-S07: Check if all modules are now completed (course finished)
         const allModulesComplete = modules.every(
           mod => newMap[key(courseId, mod.id)] === 'completed'
         )
         if (allModulesComplete) {
-          // Resolve course name from Dexie (imported courses)
-          const course = await db.importedCourses.get(courseId)
-          const courseName = course?.name ?? 'Unknown Course'
           appEventBus.emit({
             type: 'course:completed',
             courseId,

@@ -9,6 +9,7 @@ import {
   Brain,
   Clock,
   Sparkles,
+  Target,
   type LucideIcon,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
@@ -73,6 +74,12 @@ const NOTIFICATION_TOGGLES: ToggleDefinition[] = [
     label: 'Content Recommendations',
     description: 'When new courses match your weak areas',
     icon: Sparkles,
+  },
+  {
+    type: 'milestone-approaching',
+    label: 'Milestone Approaching',
+    description: 'When you are close to finishing a course',
+    icon: Target,
   },
 ]
 

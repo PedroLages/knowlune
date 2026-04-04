@@ -1203,6 +1203,22 @@ function _declareLegacyMigrations(database: Dexie): void {
           }
         })
     })
+  // v34: Add milestoneApproaching preference field (E60-S03)
+  database
+    .version(34)
+    .stores({
+      notificationPreferences: 'id',
+    })
+    .upgrade(tx => {
+      return tx
+        .table('notificationPreferences')
+        .toCollection()
+        .modify(pref => {
+          if (pref.milestoneApproaching === undefined) {
+            pref.milestoneApproaching = true
+          }
+        })
+    })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }
