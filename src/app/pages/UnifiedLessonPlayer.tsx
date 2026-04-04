@@ -26,7 +26,7 @@
  * @see E89-S05, E89-S06, E89-S07, E89-S08
  */
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import {
   ArrowLeft,
@@ -104,6 +104,22 @@ export function UnifiedLessonPlayer() {
   const videoPlayerRef = useRef<VideoPlayerHandle>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const videoContainerRef = useRef<HTMLDivElement>(null)
+
+  // Sticky toolbar detection: sentinel element goes above toolbar,
+  // when it scrolls out of view the toolbar is "stuck" at the top
+  const toolbarSentinelRef = useRef<HTMLDivElement>(null)
+  const [isToolbarStuck, setIsToolbarStuck] = useState(false)
+
+  useEffect(() => {
+    const sentinel = toolbarSentinelRef.current
+    if (!sentinel) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsToolbarStuck(!entry.isIntersecting),
+      { threshold: 0 }
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [])
 
   // Lesson navigation: prev/next lesson via adapter
   const { prevLesson, nextLesson, totalLessons, lessons } = useLessonNavigation(adapter, lessonId)
@@ -466,8 +482,18 @@ export function UnifiedLessonPlayer() {
       <div role="status" aria-live="polite" className="sr-only">
         {readingModeAnnouncement}
       </div>
+      {/* Sentinel: when this scrolls out of view, toolbar is "stuck" */}
+      <div ref={toolbarSentinelRef} className="h-0 shrink-0" aria-hidden="true" />
       {/* Slim toolbar: back arrow + course name (left), action buttons (right) */}
-      <div className="flex items-center gap-3 px-4 py-2 border border-border/30 bg-card rounded-xl shrink-0 -mt-3 mb-3 sticky top-0 z-10" data-theater-hide>
+      <div
+        className={cn(
+          'flex items-center gap-3 px-4 py-2 shrink-0 sticky top-0 z-10 transition-all duration-200',
+          isToolbarStuck
+            ? 'bg-card/95 backdrop-blur-sm shadow-lg shadow-black/20 border-b border-border/50 rounded-none -mx-6 px-6'
+            : 'border border-border/30 bg-card/50 rounded-xl -mt-3 mb-3'
+        )}
+        data-theater-hide
+      >
         <Link
           to={`/courses/${courseId}`}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
