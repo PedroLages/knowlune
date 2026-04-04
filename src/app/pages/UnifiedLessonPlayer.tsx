@@ -71,6 +71,8 @@ import { useQuizGeneration } from '@/hooks/useQuizGeneration'
 import { GenerateQuizButton } from '@/app/components/figma/GenerateQuizButton'
 import { QuizBadge } from '@/app/components/figma/QuizBadge'
 import { useTheaterMode } from '@/app/hooks/useTheaterMode'
+import { useReadingMode } from '@/hooks/useReadingMode'
+import { ReadingModeStatusBar } from '@/app/components/figma/ReadingModeStatusBar'
 import { MiniPlayer } from '@/app/components/course/MiniPlayer'
 import { NextCourseSuggestion } from '@/app/components/NextCourseSuggestion'
 import { suggestNextCourse } from '@/lib/courseSuggestion'
@@ -86,6 +88,8 @@ export function UnifiedLessonPlayer() {
   const isDesktop = useIsDesktop()
   const isTablet = useIsTablet()
   const { isTheater, toggleTheater } = useTheaterMode()
+  const isLesson = Boolean(courseId && lessonId)
+  const { isReadingMode, toggleReadingMode, exitReadingMode, announcement: readingModeAnnouncement } = useReadingMode(isLesson)
   const notesPanelRef = usePanelRef()
   const videoPlayerRef = useRef<VideoPlayerHandle>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
@@ -427,6 +431,19 @@ export function UnifiedLessonPlayer() {
       data-theater-mode={isTheater ? 'true' : 'false'}
       className="flex flex-col"
     >
+      {/* Reading mode status bar */}
+      {isReadingMode && (
+        <ReadingModeStatusBar
+          lessonTitle={state.lessonTitle}
+          onBack={() => navigate(`/courses/${courseId}`)}
+          onClose={exitReadingMode}
+        />
+      )}
+
+      {/* Aria-live region for reading mode announcements */}
+      <div role="status" aria-live="polite" className="sr-only">
+        {readingModeAnnouncement}
+      </div>
       {/* Breadcrumb: Courses > Course Name > Lesson Title */}
       <div className="px-4 pt-3" data-theater-hide>
         <CourseBreadcrumb
@@ -447,6 +464,8 @@ export function UnifiedLessonPlayer() {
         onToggleTheater={toggleTheater}
         notesOpen={state.notesOpen}
         onToggleNotes={state.handleNotesToggle}
+        onToggleReadingMode={toggleReadingMode}
+        isReadingMode={isReadingMode}
       />
 
       {/* Content area: classic horizontal layout — scrolls via #main-content (no nested scroll) */}

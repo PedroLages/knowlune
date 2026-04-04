@@ -572,6 +572,55 @@ html.spacious {
     display: none !important;
   }
 
+  /* Reading mode: hide chrome and center content in a narrow column.
+     Same pattern as theater mode — CSS-class-driven on <html>.
+     We use visibility/opacity collapse instead of display:none so CSS
+     transitions can animate before the element is visually removed. */
+  html.reading-mode [data-theater-hide] {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    overflow: hidden;
+    height: 0;
+    width: 0;
+  }
+
+  html.reading-mode main {
+    max-width: 75ch;
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 4rem; /* space for fixed status bar (48px + gap) */
+  }
+
+  /* Reading mode transitions — animate opacity/transform before collapse.
+     prefers-reduced-motion: use instant display:none inside the reduce query. */
+  @media (prefers-reduced-motion: no-preference) {
+    html.reading-mode [data-theater-hide] {
+      transition: opacity 200ms ease-out, transform 200ms ease-out;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html.reading-mode [data-theater-hide] {
+      display: none !important;
+    }
+  }
+
+  /* Tablet: narrower column */
+  @media (min-width: 640px) and (max-width: 1023px) {
+    html.reading-mode main {
+      max-width: 65ch;
+    }
+  }
+
+  /* Mobile: full-bleed with inline padding */
+  @media (max-width: 639px) {
+    html.reading-mode main {
+      max-width: 100%;
+      padding-inline: 1rem;
+    }
+  }
+
   /* Highlighted/active cue styling */
   video::cue(:past) {
     opacity: 0.7;

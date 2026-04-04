@@ -1,9 +1,9 @@
 ---
 story_id: E65-S01
 story_name: "Core Reading Mode — Chrome Hiding and Content Layout"
-status: ready-for-dev
-started:
-completed:
+status: done
+started: 2026-04-04
+completed: 2026-04-04
 reviewed: false
 review_started:
 review_gates_passed: []
@@ -186,4 +186,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **CSS transitions vs `display: none`**: `display: none` prevents CSS transitions from running because the element is immediately removed from layout. Use `opacity: 0; pointer-events: none; position: absolute; height: 0; width: 0` instead, and add `display: none` only inside `prefers-reduced-motion: reduce` for instant hiding.
+- **`announce()` inside setState updater**: Side effects (like `announce()`) must not be called inside the `setIsReadingMode` updater function. Compute the next value first, then call both the setter and side effects sequentially in the event handler.
+- **Duplicate `role="banner"`**: `<header>` already carries `role="banner"` implicitly. A fixed status bar is a `role="toolbar"`, not a second banner.
+- **Scroll restoration race**: A single `requestAnimationFrame` after `setIsReadingMode(false)` may run before React has committed the DOM reflow. Use double `requestAnimationFrame` (nested) to ensure the layout has settled before calling `window.scrollTo`.
+- **Hardcoded `useReadingMode(true)`**: Derive the `isLessonPage` flag from route params (`Boolean(courseId && lessonId)`) so it reflects actual route state rather than a compile-time constant.

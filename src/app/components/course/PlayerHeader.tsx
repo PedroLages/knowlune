@@ -10,6 +10,7 @@ import { lazy, Suspense, useCallback, useEffect } from 'react'
 import { Link } from 'react-router'
 import {
   ArrowLeft,
+  BookOpen,
   CheckCircle2,
   Circle,
   Clock,
@@ -21,6 +22,7 @@ import { toast } from 'sonner'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { PomodoroTimer } from '@/app/components/figma/PomodoroTimer'
 import { Button } from '@/app/components/ui/button'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/app/components/ui/tooltip'
 
 // Lazy-load QAChatPanel to avoid pulling AI infra into the initial player bundle
 const QAChatPanel = lazy(() =>
@@ -62,6 +64,10 @@ interface PlayerHeaderProps {
   onToggleNotes?: () => void
   /** Whether notes exist for this lesson (shows dot indicator) */
   hasNotes?: boolean
+  /** Reading mode toggle callback */
+  onToggleReadingMode?: () => void
+  /** Whether reading mode is active */
+  isReadingMode?: boolean
 }
 
 export function PlayerHeader({
@@ -76,6 +82,8 @@ export function PlayerHeader({
   notesOpen,
   onToggleNotes,
   hasNotes,
+  onToggleReadingMode,
+  isReadingMode = false,
 }: PlayerHeaderProps) {
   const getItemStatus = useContentProgressStore(s => s.getItemStatus)
   const setItemStatus = useContentProgressStore(s => s.setItemStatus)
@@ -132,6 +140,24 @@ export function PlayerHeader({
       <Suspense fallback={null}>
         <QAChatPanel />
       </Suspense>
+
+      {onToggleReadingMode && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleReadingMode}
+              aria-label={isReadingMode ? 'Exit reading mode' : 'Enter reading mode (Cmd+Shift+R)'}
+              aria-pressed={isReadingMode}
+              data-testid="reading-mode-toggle"
+            >
+              <BookOpen className="size-4" aria-hidden="true" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Reading mode (Cmd+Shift+R)</TooltipContent>
+        </Tooltip>
+      )}
 
       {onToggleTheater && (
         <Button
