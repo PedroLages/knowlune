@@ -67,6 +67,7 @@ vi.mock('recharts', async importOriginal => {
 // ---------------------------------------------------------------------------
 
 import { StorageManagement } from '../StorageManagement'
+import { toast } from 'sonner'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -386,6 +387,56 @@ describe('StorageManagement', () => {
       'href',
       '/courses'
     )
+  })
+
+  // -------------------------------------------------------------------------
+  // BUG-002: Refresh error toast — fires even when API stays unavailable
+  // -------------------------------------------------------------------------
+
+  it('shows error toast on refresh when API is unavailable (BUG-002 fix)', async () => {
+    // Initial load: API available
+    mockGetStorageOverview.mockResolvedValueOnce(createMockOverview({ apiAvailable: true }))
+    // Refresh: API now unavailable (getStorageEstimate swallows internally, never throws)
+    mockGetStorageOverview.mockResolvedValueOnce(createMockOverview({ apiAvailable: false }))
+
+    const user = userEvent.setup()
+    renderComponent()
+
+    await waitFor(() => {
+      expect(screen.getByText(/Total Usage/)).toBeInTheDocument()
+    })
+
+    const refreshBtn = screen.getByRole('button', { name: /refresh storage estimates/i })
+    await user.click(refreshBtn)
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Unable to refresh storage data')
+    })
+  })
+
+  it('shows error toast on refresh when API was already unavailable (BUG-002 fix)', async () => {
+    // Both initial load and refresh: API unavailable — previously no toast fired
+    mockGetStorageOverview.mockResolvedValue(createMockOverview({ apiAvailable: false }))
+
+    const user = userEvent.setup()
+    renderComponent()
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Storage estimation is not available in this browser/)
+      ).toBeInTheDocument()
+    })
+
+    // Clear toast calls from initial load (which doesn't call toast.error)
+    vi.clearAllMocks()
+    mockGetStorageOverview.mockResolvedValue(createMockOverview({ apiAvailable: false }))
+
+    const refreshBtn = screen.getByRole('button', { name: /refresh storage estimates/i })
+    await user.click(refreshBtn)
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Unable to refresh storage data')
+    })
   })
 
   // -------------------------------------------------------------------------

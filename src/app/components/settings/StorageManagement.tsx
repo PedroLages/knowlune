@@ -326,7 +326,11 @@ export function StorageManagement() {
     setError(false)
     try {
       const { overviewData, courseData } = await loadAll()
-      if (!overviewData.apiAvailable && overview?.apiAvailable) {
+      if (!overviewData.apiAvailable) {
+        // BUG-002 fix: always surface error on refresh when API is unavailable,
+        // not only on transition. getStorageEstimate() swallows errors internally
+        // and returns null (sets apiAvailable: false), so loadAll() never throws
+        // and the catch block below would never fire. We must check here.
         toast.error('Unable to refresh storage data')
       }
       setOverview(overviewData)
