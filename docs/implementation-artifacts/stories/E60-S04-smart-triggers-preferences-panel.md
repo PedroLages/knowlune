@@ -3,10 +3,22 @@ story_id: E60-S04
 story_name: "Smart Triggers Preferences Panel"
 status: done
 started: 2026-04-04
-completed:
-reviewed: in-progress
+completed: 2026-04-04
+reviewed: true
 review_started: 2026-04-04
-review_gates_passed: []
+review_gates_passed:
+  - build
+  - lint
+  - type-check
+  - format-check
+  - unit-tests-skipped
+  - e2e-tests-skipped
+  - design-review
+  - code-review
+  - code-review-testing
+  - performance-benchmark
+  - security-review
+  - exploratory-qa
 burn_in_validated: false
 ---
 
