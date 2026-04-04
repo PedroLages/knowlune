@@ -667,6 +667,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           if (loopStartRef.current !== null || loopEndRef.current !== null) {
             e.preventDefault()
             clearLoop()
+          } else if (theaterMode && onTheaterModeToggle) {
+            // Exit theater mode via ESC when no loop markers active
+            e.preventDefault()
+            onTheaterModeToggle()
           }
           break
         case 't':

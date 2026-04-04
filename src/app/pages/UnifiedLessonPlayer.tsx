@@ -206,10 +206,14 @@ export function UnifiedLessonPlayer() {
         e.preventDefault()
         toggleTheater()
       }
+      if (e.key === 'Escape' && isTheater) {
+        e.preventDefault()
+        toggleTheater()
+      }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [toggleTheater])
+  }, [toggleTheater, isTheater])
 
   // Next course suggestion (E91-S08) — computed via useMemo
   const courseSuggestion = useMemo(() => {
@@ -286,7 +290,7 @@ export function UnifiedLessonPlayer() {
       <div
         ref={videoContainerRef}
         className={cn(
-          'relative mb-5 w-full',
+          'relative mb-3 w-full overflow-hidden',
           !state.isPdf && 'aspect-video',
           isTheater
             ? 'max-h-[calc(100dvh-var(--video-chrome-offset-theater))]'
