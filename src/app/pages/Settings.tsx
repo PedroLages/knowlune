@@ -62,6 +62,7 @@ import { Switch } from '@/app/components/ui/switch'
 import { useProgressiveDisclosure } from '@/app/hooks/useProgressiveDisclosure'
 import { ReminderSettings } from '@/app/components/figma/ReminderSettings'
 import { CourseReminderSettings } from '@/app/components/figma/CourseReminderSettings'
+import { CalendarSettingsSection } from '@/app/components/figma/CalendarSettingsSection'
 import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationSettings'
 import { YouTubeConfigurationSettings } from '@/app/components/figma/YouTubeConfigurationSettings'
 import { QuizPreferencesForm } from '@/app/components/settings/QuizPreferencesForm'
@@ -1009,6 +1010,9 @@ export default function Settings() {
 
         {/* Per-Course Reminders */}
         <CourseReminderSettings />
+
+        {/* Calendar Integration */}
+        <CalendarSettingsSection />
 
         {/* AI Configuration */}
         <AIConfigurationSettings />
