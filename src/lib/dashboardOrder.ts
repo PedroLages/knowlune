@@ -21,6 +21,7 @@ export type DashboardSectionId =
   | 'study-history'
   | 'study-schedule'
   | 'skill-proficiency'
+  | 'todays-study-plan'
   | 'insight-action'
   | 'course-gallery'
 
@@ -33,6 +34,7 @@ export const SECTION_LABELS: Record<DashboardSectionId, string> = {
   'study-history': 'Study History',
   'study-schedule': 'Suggested Study Time',
   'skill-proficiency': 'Skill Proficiency',
+  'todays-study-plan': "Today's Study Plan",
   'insight-action': 'Progress & Quick Actions',
   'course-gallery': 'Your Library',
 }
@@ -45,6 +47,7 @@ export const DEFAULT_ORDER: DashboardSectionId[] = [
   'engagement-zone',
   'study-history',
   'study-schedule',
+  'todays-study-plan',
   'skill-proficiency',
   'insight-action',
   'course-gallery',

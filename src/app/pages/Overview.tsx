@@ -22,6 +22,7 @@ import { CourseCard } from '@/app/components/figma/CourseCard'
 import { ProgressChart } from '@/app/components/charts/ProgressChart'
 import { DashboardCustomizer } from '@/app/components/DashboardCustomizer'
 import { SkillProficiencyRadar } from '@/app/components/overview/SkillProficiencyRadar'
+import { TodaysStudyPlan } from '@/app/components/figma/TodaysStudyPlan'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
 import {
@@ -291,6 +292,16 @@ export function Overview() {
             lastWatchedCourse={lastWatchedCourse}
             lastWatchedLesson={lastWatchedLesson}
           />
+        </motion.section>
+      ),
+      'todays-study-plan': () => (
+        <motion.section
+          key="todays-study-plan"
+          ref={createSectionRef('todays-study-plan')}
+          {...viewportAnimation}
+          data-testid="section-todays-study-plan"
+        >
+          <TodaysStudyPlan />
         </motion.section>
       ),
       'skill-proficiency': () =>
