@@ -556,8 +556,8 @@ development_status:
   # Epic 50: Calendar Integration Phase 1-2
   # Source: epics-calendar.md
   # ──────────────────────────────────────────────────
-  epic-50: backlog
-  50-1-study-schedule-data-model: backlog
+  epic-50: in-progress
+  50-1-study-schedule-data-model: done
   50-2-ical-feed-generation-endpoint: backlog
   50-3-feed-url-management: backlog
   50-4-calendar-settings-ui: backlog
@@ -730,13 +730,13 @@ development_status:
   # Distraction-free reading and focused interaction modes
   # Builds on: E30 (Accessibility), E51 (Display Settings)
   # ──────────────────────────────────────────────────
-  epic-65: in-progress
+  epic-65: done
   65-1-core-reading-mode-chrome-hiding-and-content-layout: done
-  65-2-reading-mode-floating-toolbar-and-progress-bar: ready-for-dev
+  65-2-reading-mode-floating-toolbar-and-progress-bar: done
   65-3-focus-mode-overlay-focus-trap-and-exit: done
-  65-4-focus-mode-auto-activation-and-notification-piercing: ready-for-dev
-  65-5-settings-integration-and-first-time-discovery: ready-for-dev
-  epic-65-retrospective: optional
+  65-4-focus-mode-auto-activation-and-notification-piercing: done
+  65-5-settings-integration-and-first-time-discovery: done
+  epic-65-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 66: WCAG 2.2 Compliance
