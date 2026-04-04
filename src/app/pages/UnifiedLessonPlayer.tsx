@@ -370,7 +370,7 @@ export function UnifiedLessonPlayer() {
           cachedQuiz={quizGen.cachedQuiz}
           onGenerate={quizGen.generate}
         />
-        {quizGen.quiz && (quizGen.cachedQuiz || quizGen.quiz) && (
+        {quizGen.quiz && (
           <div className="mt-2">
             <QuizBadge />
           </div>

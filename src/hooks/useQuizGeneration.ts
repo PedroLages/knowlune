@@ -72,6 +72,7 @@ export function useQuizGeneration(
         }
       })
       .catch(err => {
+        // silent-catch-ok: cache miss is non-critical, falls through to generate
         console.warn('[useQuizGeneration] Cache lookup failed:', (err as Error).message)
       })
 
@@ -115,6 +116,7 @@ export function useQuizGeneration(
           setCheckingAvailability(false)
         }
       } catch {
+        // silent-catch-ok: Ollama offline is expected, button shows disabled state
         if (!ignore) {
           setOllamaAvailable(false)
           setCheckingAvailability(false)
