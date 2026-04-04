@@ -383,6 +383,21 @@ export function Layout() {
     localStorage.setItem('knowlune-sidebar-collapsed-v1', JSON.stringify(sidebarCollapsed))
   }, [sidebarCollapsed])
 
+  // Reading mode: global keyboard shortcut for non-lesson pages shows info toast (E65-S01)
+  useEffect(() => {
+    const isLessonRoute = /\/courses\/[^/]+\/lessons\/[^/]+$/.test(location.pathname)
+    if (isLessonRoute) return // Handled by useReadingMode in UnifiedLessonPlayer
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'r') {
+        e.preventDefault()
+        toast.info('Reading mode is available on lesson pages')
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [location.pathname])
+
   // Quality score dialog state (E11-S03)
   const [qualityDialogOpen, setQualityDialogOpen] = useState(false)
   const [qualityResult, setQualityResult] = useState<QualityScoreResult | null>(null)
@@ -476,6 +491,7 @@ export function Layout() {
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Header */}
         <header
+          data-theater-hide
           className="bg-card m-6 mb-0 p-4 px-6 flex items-center gap-4 justify-between"
           role="banner"
         >
@@ -662,7 +678,7 @@ export function Layout() {
       <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
       {/* Mobile Bottom Navigation - Only visible on mobile (<640px) */}
-      {isMobile && <BottomNav />}
+      {isMobile && <div data-theater-hide><BottomNav /></div>}
 
       {/* Quality Score Dialog (E11-S03) */}
       {qualityResult && (
