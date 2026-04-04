@@ -120,12 +120,10 @@ function SidebarContent({
   onNavigate,
   iconOnly,
   visibleGroups,
-  hiddenItemCount = 0,
 }: {
   onNavigate?: () => void
   iconOnly?: boolean
   visibleGroups: NavigationGroup[]
-  hiddenItemCount?: number
 }) {
   return (
     <>
@@ -184,17 +182,6 @@ function SidebarContent({
         </div>
       </nav>
 
-      {/* Disclosure hint: tell users about hidden features */}
-      {hiddenItemCount > 0 && !iconOnly && (
-        <Link
-          to="/settings"
-          onClick={onNavigate}
-          className="block px-4 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          +{hiddenItemCount} more features available
-        </Link>
-      )}
-
       {/* Bottom section: Settings */}
       <div className="mt-4 pt-3 border-t border-border">
         <ul>
@@ -219,9 +206,6 @@ export function Layout() {
   // Progressive sidebar disclosure
   const { filterGroups } = useProgressiveDisclosure()
   const visibleGroups = filterGroups(navigationGroups)
-  const totalItemCount = navigationGroups.reduce((sum, g) => sum + g.items.length, 0)
-  const visibleItemCount = visibleGroups.reduce((sum, g) => sum + g.items.length, 0)
-  const hiddenItemCount = totalItemCount - visibleItemCount
 
   // Ensure courses are loaded from IndexedDB (backup for deferInit race)
   const loadCourses = useCourseStore(s => s.loadCourses)
@@ -460,7 +444,6 @@ export function Layout() {
             <SidebarContent
               iconOnly={sidebarCollapsed}
               visibleGroups={visibleGroups}
-              hiddenItemCount={hiddenItemCount}
             />
           </aside>
 
@@ -490,7 +473,6 @@ export function Layout() {
             <SidebarContent
               onNavigate={() => setSidebarOpen(false)}
               visibleGroups={visibleGroups}
-              hiddenItemCount={hiddenItemCount}
             />
           </SheetContent>
         </Sheet>
