@@ -658,7 +658,7 @@ development_status:
   epic-60: in-progress
   60-1-knowledge-decay-alert-trigger: done
   60-2-content-recommendation-notification-handler: done
-  60-3-milestone-approaching-trigger: backlog
+  60-3-milestone-approaching-trigger: done
   60-4-smart-triggers-preferences-panel: backlog
   60-5-smart-trigger-unit-and-e2e-tests: backlog
   epic-60-retrospective: optional
@@ -1203,4 +1203,4 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-98: done
   98-1-video-player-viewport-sizing-and-theater-mode-fixes: done
-  epic-98-retrospective: optional
+  epic-98-retrospective: done
