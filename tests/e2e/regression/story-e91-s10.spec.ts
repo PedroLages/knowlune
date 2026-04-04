@@ -105,14 +105,14 @@ test.describe('Course Overview Page (E91-S10)', () => {
     )
   })
 
-  test("shows tags in What You'll Learn section", async ({ page }) => {
+  test('shows first tag as badge in hero section', async ({ page }) => {
     await seedTestData(page)
     await navigateAndWait(page, `/courses/${COURSE_ID}/overview`)
 
-    const tagsList = page.getByTestId('course-overview-tags')
-    await expect(tagsList).toBeVisible()
-    await expect(tagsList.getByText('Testing')).toBeVisible()
-    await expect(tagsList.getByText('E2e')).toBeVisible()
+    const hero = page.getByTestId('course-overview-hero')
+    await expect(hero).toBeVisible()
+    // First tag is shown as a badge in the hero section
+    await expect(hero.getByText('testing')).toBeVisible()
   })
 
   test('shows curriculum accordion with lessons', async ({ page }) => {

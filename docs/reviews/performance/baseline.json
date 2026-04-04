@@ -46,8 +46,8 @@
         "file": "CourseCard-BOEsuDcx.js"
       },
       "CourseOverview": {
-        "raw": 14906,
-        "file": "CourseOverview-B3U75CHy.js"
+        "raw": 17030,
+        "file": "CourseOverview-CiRXESk5.js"
       },
       "Courses": {
         "raw": 111108,
@@ -645,18 +645,18 @@
   },
   "page_metrics": {
     "/": {
-      "ttfb": 4,
-      "dom_interactive": 12,
-      "dom_complete": 126,
-      "load_complete": 126,
-      "fcp": 216,
+      "ttfb": 2,
+      "dom_interactive": 9,
+      "dom_complete": 115,
+      "load_complete": 115,
+      "fcp": 187,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
-      "resource_count": 239,
-      "js_resource_count": 238,
+      "resource_count": 250,
+      "js_resource_count": 249,
       "css_resource_count": 1,
-      "total_transfer_bytes": 57000,
+      "total_transfer_bytes": 60300,
       "samples": 3
     },
     "/settings": {
@@ -687,6 +687,21 @@
       "js_resource_count": 166,
       "css_resource_count": 1,
       "total_transfer_bytes": 39300,
+      "samples": 3
+    },
+    "/courses/:courseId": {
+      "ttfb": 3,
+      "dom_interactive": 10,
+      "dom_complete": 108,
+      "load_complete": 108,
+      "fcp": 171,
+      "lcp": null,
+      "cls": 0,
+      "tbt": 0,
+      "resource_count": 193,
+      "js_resource_count": 192,
+      "css_resource_count": 1,
+      "total_transfer_bytes": 166809,
       "samples": 3
     }
   }

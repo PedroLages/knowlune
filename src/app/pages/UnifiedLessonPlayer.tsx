@@ -88,6 +88,8 @@ export function UnifiedLessonPlayer() {
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const course = importedCourses.find(c => c.id === courseId)
+  const adapterCourse = adapter?.getCourse?.()
+  const courseName = adapterCourse?.name ?? course?.name ?? 'Course'
 
   const isDesktop = useIsDesktop()
   const isTablet = useIsTablet()
@@ -464,7 +466,7 @@ export function UnifiedLessonPlayer() {
       <div className="px-4 pt-3" data-theater-hide>
         <CourseBreadcrumb
           courseId={courseId!}
-          courseName={course?.name ?? 'Course'}
+          courseName={courseName}
           lessonTitle={state.lessonTitle}
         />
       </div>

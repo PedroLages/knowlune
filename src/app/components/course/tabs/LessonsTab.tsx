@@ -8,7 +8,7 @@
  * Extracted from PlayerSidePanel.tsx to reduce god-component complexity.
  */
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Link } from 'react-router'
 import { Video, PlayCircle, FileText, Search, X, FolderOpen, ChevronDown } from 'lucide-react'
 import { Input } from '@/app/components/ui/input'
@@ -287,6 +287,28 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
     return getFolderName(path)
   }, [videoGroups, lessonId, hasMultipleFolders])
 
+  // Controlled expanded-folders state: collapse all, auto-expand active folder
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() =>
+    activeFolder ? new Set([activeFolder]) : new Set()
+  )
+
+  // When active lesson changes folder, auto-expand the new folder
+  useEffect(() => {
+    if (activeFolder && !expandedFolders.has(activeFolder)) {
+      setExpandedFolders(new Set([activeFolder]))
+    }
+    // Only react to folder changes, not expandedFolders state updates
+  }, [activeFolder])
+
+  const toggleFolder = useCallback((folder: string) => {
+    setExpandedFolders(prev => {
+      const next = new Set(prev)
+      if (next.has(folder)) next.delete(folder)
+      else next.add(folder)
+      return next
+    })
+  }, [])
+
   // Lesson index within the active folder (for contextual "Lesson X of Y")
   const activeFolderGroup = useMemo(
     () => folderGroups.find(fg => fg.folder === activeFolder),
@@ -374,7 +396,7 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
           const groupCount = fg.groups.length
           const isActiveFolder = fg.folder === activeFolder
           return (
-            <Collapsible key={fg.folder || 'root'} defaultOpen={isActiveFolder}>
+            <Collapsible key={fg.folder || 'root'} open={searchQuery ? true : expandedFolders.has(fg.folder)} onOpenChange={() => toggleFolder(fg.folder)}>
               <CollapsibleTrigger className={cn(
                 'flex w-full items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium group/folder',
                 isActiveFolder

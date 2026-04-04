@@ -8,21 +8,17 @@
  * @see E91-S10
  */
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import {
   ArrowLeft,
   BookOpen,
   Calendar,
-  Check,
   ChevronDown,
-  ChevronRight,
   Clock,
   FileText,
-  FolderOpen,
   Play,
   PlayCircle,
-  RotateCcw,
   Video,
   CheckCircle2,
 } from 'lucide-react'
@@ -34,14 +30,11 @@ import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
 import { getLastWatchedLesson, getFirstLesson } from '@/lib/progress'
-import { revokeObjectUrl } from '@/lib/courseAdapter'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
 import { StudyScheduleEditor } from '@/app/components/figma/StudyScheduleEditor'
-import { getAvatarSrc, getInitials } from '@/lib/authors'
 import { formatClockDuration as formatDuration } from '@/lib/formatDuration'
 import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
 
@@ -54,13 +47,6 @@ const COMPLETION_THRESHOLD = 90
 // ---------------------------------------------------------------------------
 // Utility
 // ---------------------------------------------------------------------------
-
-function formatTag(tag: string) {
-  return tag
-    .split('-')
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ')
-}
 
 function getFolderName(path: string): string {
   const parts = path.split('/')
@@ -159,13 +145,12 @@ export function CourseOverview() {
   const [pdfs, setPdfs] = useState<ImportedPdf[]>([])
   const [chapters, setChapters] = useState<YouTubeCourseChapter[]>([])
   const [progressMap, setProgressMap] = useState<Map<string, VideoProgress>>(new Map())
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null)
-  const thumbnailUrlRef = useRef<string | null>(null)
   const [contentLoading, setContentLoading] = useState(true)
 
   // CTA state
   const [ctaVariant, setCtaVariant] = useState<'start' | 'continue' | 'review' | undefined>()
   const [ctaLessonId, setCtaLessonId] = useState<string | undefined>()
+  const [ctaLessonTitle, setCtaLessonTitle] = useState<string | undefined>()
 
   // Accordion state
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set([0]))
@@ -228,12 +213,14 @@ export function CourseOverview() {
             )
           setCtaVariant(allCompleted ? 'review' : 'continue')
           setCtaLessonId(lastWatched.lessonId)
+          setCtaLessonTitle(lastWatched.lessonTitle)
         } else {
           const first = await getFirstLesson(adapter!)
           if (ignore) return
           if (first) {
             setCtaVariant('start')
             setCtaLessonId(first.lessonId)
+            setCtaLessonTitle(first.lessonTitle)
           }
         }
       } catch (err) {
@@ -248,27 +235,6 @@ export function CourseOverview() {
       ignore = true
     }
   }, [courseId, adapter, contentLoading, videos, progressMap])
-
-  // Thumbnail
-  useEffect(() => {
-    if (!adapter) return
-    let ignore = false
-    // silent-catch-ok — thumbnail is non-critical
-    adapter
-      .getThumbnailUrl()
-      .then(url => {
-        if (!ignore) {
-          setThumbnailUrl(url)
-          thumbnailUrlRef.current = url
-        }
-      })
-      .catch(() => {})
-    return () => {
-      ignore = true
-      const blobUrl = thumbnailUrlRef.current
-      if (blobUrl?.startsWith('blob:')) revokeObjectUrl(blobUrl)
-    }
-  }, [adapter])
 
   // Derived data
   const authorData = useMemo(() => {
@@ -304,6 +270,25 @@ export function CourseOverview() {
       return next
     })
   }, [])
+
+  // Determine module status for timeline dots (must be before early returns — Rules of Hooks)
+  const moduleStatuses = useMemo(() => {
+    let foundActive = false
+    return groupedContent.map(group => {
+      const groupVideos = group.videos
+      const allCompleted =
+        groupVideos.length > 0 &&
+        groupVideos.every(
+          v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= COMPLETION_THRESHOLD
+        )
+      if (allCompleted) return 'completed' as const
+      if (!foundActive) {
+        foundActive = true
+        return 'active' as const
+      }
+      return 'upcoming' as const
+    })
+  }, [groupedContent, progressMap])
 
   // Loading
   if (adapterLoading || contentLoading) {
@@ -346,267 +331,390 @@ export function CourseOverview() {
     )
   }
 
-  const ctaConfig = ctaVariant
-    ? {
-        start: { label: 'Start Course', icon: Play },
-        continue: { label: 'Continue Learning', icon: PlayCircle },
-        review: { label: 'Review Course', icon: RotateCcw },
-      }[ctaVariant]
-    : null
+  const ctaLabel = ctaVariant === 'start'
+    ? 'Start Course'
+    : ctaVariant === 'continue' && ctaLessonTitle
+      ? `Resume: ${ctaLessonTitle}`
+      : ctaVariant === 'continue'
+        ? 'Continue Learning'
+        : ctaVariant === 'review'
+          ? 'Review Course'
+          : null
 
-  const hasDescription = Boolean(course.description?.trim())
-  const hasTags = course.tags.length > 0
+  const overallPercent = videos.length > 0
+    ? Math.round((completedCount / videos.length) * 100)
+    : 0
+
   const totalLessons = videos.length + pdfs.length
+  const authorName = adapterAuthorInfo?.name ?? authorData?.name
 
   return (
-    <div data-testid="course-overview-page" className="max-w-6xl mx-auto px-4 py-8">
-      {/* Back nav */}
+    <div data-testid="course-overview-page" className="w-full min-h-screen pb-20 bg-surface-sunken rounded-2xl overflow-hidden">
+      {/* Cinematic Hero Banner */}
       <motion.div
-        initial={{ opacity: 0, x: -12 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-5 group"
-        >
-          <ArrowLeft className="size-4 group-hover:-translate-x-0.5 transition-transform" />
-          Back
-        </button>
-      </motion.div>
-
-      {/* Hero Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="relative rounded-2xl overflow-hidden shadow-studio mb-6"
-        // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic gradient requires inline style
-        style={{
-          background:
-            'linear-gradient(160deg, var(--brand-soft) 0%, var(--accent-violet-muted) 50%, var(--card) 100%)',
-          minHeight: 280,
-        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="relative h-[45vh] min-h-[400px] w-full bg-surface-sunken flex flex-col items-center justify-center text-center px-6 overflow-hidden border-b border-border/60"
         data-testid="course-overview-hero"
       >
-        {thumbnailUrl && (
-          <img
-            src={thumbnailUrl}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover opacity-20"
-            onError={e => {
-              ;(e.target as HTMLImageElement).style.display = 'none'
-            }}
-          />
-        )}
-
-        {/* Gradient overlay */}
+        {/* Radial glow */}
         <div
           className="absolute inset-0"
-          // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic gradient requires inline style
+          // eslint-disable-next-line react-best-practices/no-inline-styles -- radial gradient requires inline style
           style={{
-            background:
-              'linear-gradient(to top, var(--card) 0%, transparent 60%), linear-gradient(160deg, var(--brand-soft) 0%, var(--accent-violet-muted) 50%, transparent 100%)',
-            opacity: 0.85,
+            background: 'radial-gradient(ellipse at center, var(--accent-violet-muted), transparent 70%)',
           }}
         />
-
-        <div className="relative z-10 p-8 md:p-10 flex flex-col justify-end h-full min-h-[280px]">
-          {hasTags && (
-            <div className="flex flex-wrap items-center gap-2 mb-4">
-              {course.tags.slice(0, 3).map(tag => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="text-[11px] font-semibold uppercase tracking-[0.12em]"
-                >
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
-
-          <h1
-            className="font-display text-3xl md:text-4xl font-bold text-foreground leading-tight max-w-3xl"
+        {/* Dot pattern texture */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          // eslint-disable-next-line react-best-practices/no-inline-styles -- SVG pattern and mask require inline style
+          style={{
+            backgroundImage: `url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9ImN1cnJlbnRDb2xvciIvPjwvc3ZnPg==")`,
+            maskImage: 'linear-gradient(to bottom, white, transparent)',
+          }}
+        />
+        <div className="relative z-10 max-w-3xl mx-auto space-y-6">
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="font-display text-5xl sm:text-6xl font-bold text-foreground tracking-tight"
             data-testid="course-overview-title"
           >
             {course.name}
-          </h1>
+          </motion.h1>
+          {authorName && (
+            authorData?.id ? (
+              <Link
+                to={`/authors/${authorData.id}`}
+                className="text-lg text-muted-foreground font-light hover:text-foreground transition-colors inline-block"
+              >
+                By {authorName}
+              </Link>
+            ) : (
+              <p className="text-lg text-muted-foreground font-light">By {authorName}</p>
+            )
+          )}
 
-          {adapterAuthorInfo?.name && (
-            <p className="text-sm text-muted-foreground mt-2">{adapterAuthorInfo.name}</p>
+          {ctaLabel && ctaLessonId && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+              className="pt-6 flex justify-center"
+            >
+              <button
+                type="button"
+                className="bg-foreground text-background hover:bg-foreground/90 px-8 py-4 rounded-full font-bold flex items-center gap-3 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)] motion-safe:hover:scale-105"
+                data-testid="course-overview-cta"
+                onClick={() => {
+                  if (ctaVariant === 'start' && course.id) {
+                    useCourseImportStore.getState().updateCourseStatus(course.id, 'active')
+                  }
+                  navigate(`/courses/${course.id}/lessons/${ctaLessonId}`)
+                }}
+              >
+                <Play className="size-5 fill-current" aria-hidden="true" />
+                {ctaLabel}
+              </button>
+            </motion.div>
           )}
         </div>
       </motion.div>
 
-      {/* Stats Row */}
+      {/* Floating Stats Bar */}
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-        className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8"
-        data-testid="course-overview-stats"
+        transition={{ duration: 0.4, delay: 0.15 }}
+        className="max-w-5xl mx-auto -mt-10 relative z-20 px-6"
       >
-        {[
-          ...(totalDuration > 0
-            ? [{ icon: Clock, value: formatDuration(totalDuration), label: 'Duration' }]
-            : []),
-          { icon: BookOpen, value: `${totalLessons}`, label: 'Lessons' },
-          { icon: Play, value: `${videos.length}`, label: 'Videos' },
-          ...(pdfs.length > 0 ? [{ icon: FileText, value: `${pdfs.length}`, label: 'PDFs' }] : []),
-        ].map(stat => (
+        <div
+          className="bg-card/80 backdrop-blur-xl border border-border rounded-2xl p-4 flex flex-wrap justify-around items-center shadow-studio relative overflow-hidden"
+          role="group"
+          aria-label="Course statistics"
+          data-testid="course-overview-stats"
+        >
+          {/* Progress line at top */}
           <div
-            key={stat.label}
-            className="bg-card rounded-xl p-4 text-center shadow-studio border border-border/50"
-          >
-            <stat.icon className="size-5 text-muted-foreground mx-auto mb-2" aria-hidden="true" />
-            <p className="font-semibold text-foreground capitalize">{stat.value}</p>
-            <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground mt-0.5">
-              {stat.label}
-            </p>
+            className="absolute top-0 left-0 h-1 bg-accent-violet shadow-[0_0_10px_var(--accent-violet)] transition-all duration-1000 ease-out"
+            // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic width
+            style={{ width: `${overallPercent}%` }}
+          />
+
+          {totalDuration > 0 && (
+            <>
+              <div className="flex items-center gap-3 px-4">
+                <Clock className="size-5 text-accent-violet" aria-hidden="true" />
+                <div>
+                  <div className="text-lg font-bold text-foreground leading-none">
+                    {formatDuration(totalDuration)}
+                  </div>
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-1">
+                    Total Time
+                  </div>
+                </div>
+              </div>
+              <div className="w-px h-10 bg-border hidden sm:block" />
+            </>
+          )}
+
+          <div className="flex items-center gap-3 px-4">
+            <BookOpen className="size-5 text-accent-violet" aria-hidden="true" />
+            <div>
+              <div className="text-lg font-bold text-foreground leading-none">
+                {completedCount} / {totalLessons}
+              </div>
+              <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-1">
+                Lessons Done
+              </div>
+            </div>
           </div>
-        ))}
+
+          <div className="w-px h-10 bg-border hidden sm:block" />
+
+          <div className="flex items-center gap-3 px-4">
+            <PlayCircle className="size-5 text-accent-violet" aria-hidden="true" />
+            <div>
+              <div className="text-lg font-bold text-foreground leading-none">{overallPercent}%</div>
+              <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-1">
+                Completed
+              </div>
+            </div>
+          </div>
+
+          {pdfs.length > 0 && (
+            <>
+              <div className="w-px h-10 bg-border hidden sm:block" />
+              <div className="flex items-center gap-3 px-4">
+                <FileText className="size-5 text-accent-violet" aria-hidden="true" />
+                <div>
+                  <div className="text-lg font-bold text-foreground leading-none">{pdfs.length}</div>
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-1">
+                    Resources
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </motion.div>
 
-      {/* Two-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)] mb-8">
-        {/* Left Column (2/3) */}
+      {/* Content Area: Timeline + Sidebar */}
+      <div className="max-w-5xl mx-auto px-6 mt-16 grid grid-cols-1 lg:grid-cols-3 gap-12">
+        {/* Timeline Curriculum (Left 2/3) */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          className={cn(
-            'space-y-6',
-            hasDescription || (!capabilities?.requiresNetwork && authorData)
-              ? 'lg:col-span-2'
-              : 'lg:col-span-3'
-          )}
+          transition={{ duration: 0.4, delay: 0.25 }}
+          className="lg:col-span-2 space-y-8"
+          data-testid="course-overview-curriculum"
         >
-          {/* About This Course */}
-          {hasDescription && (
-            <div className="bg-card rounded-2xl p-6 md:p-8 shadow-studio border border-border/50">
-              <h2 className="font-display text-lg font-semibold text-foreground mb-4">
-                About This Course
-              </h2>
-              <p
-                className="text-muted-foreground leading-relaxed"
-                data-testid="course-overview-description"
-              >
-                {course.description}
-              </p>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold text-foreground">Course Journey</h2>
+            {completedCount > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {completedCount} / {videos.length} completed
+              </Badge>
+            )}
+          </div>
 
-          {/* Author Card (local only) */}
-          {!capabilities?.requiresNetwork && authorData && (
-            <Link
-              to={`/authors/${authorData.id}`}
-              className="block bg-card rounded-2xl p-6 shadow-studio border border-border/50 hover:shadow-studio-hover hover:-translate-y-px transition-all duration-200 group"
-              data-testid="course-overview-author"
-            >
-              <div className="flex items-center gap-4">
-                <Avatar className="size-14 ring-2 ring-border">
-                  {authorData.photoUrl && (
-                    <AvatarImage {...getAvatarSrc(authorData.photoUrl, 56)} alt={authorData.name} />
-                  )}
-                  <AvatarFallback className="bg-brand-soft text-brand-soft-foreground text-lg font-semibold">
-                    {getInitials(authorData.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-1">
-                    Instructor
-                  </p>
-                  <p className="font-semibold text-foreground group-hover:text-brand-soft-foreground transition-colors">
-                    {authorData.name}
-                  </p>
-                  {authorData.title && (
-                    <p className="text-sm text-muted-foreground mt-0.5">{authorData.title}</p>
-                  )}
+          <div className="relative border-l-2 border-border ml-4 space-y-10 pb-8">
+            {groupedContent.map((group, groupIndex) => {
+              if (group.videos.length === 0) return null
+              const status = moduleStatuses[groupIndex]
+              const groupTitle =
+                group.title ||
+                (groupedContent.length > 1 ? `Section ${groupIndex + 1}` : 'All Lessons')
+              const groupLessonCount = group.videos.length
+              const groupCompletedCount = group.videos.filter(
+                v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= COMPLETION_THRESHOLD
+              ).length
+              const groupDuration = group.videos.reduce((s, v) => s + (v.duration || 0), 0)
+              const isExpanded = expandedModules.has(groupIndex)
+
+              return (
+                <div key={`${group.title}-${groupIndex}`} className="relative pl-8 group/module">
+                  {/* Timeline dot */}
+                  <div
+                    className={cn(
+                      'absolute -left-[13px] top-1 size-6 rounded-full border-4 border-background flex items-center justify-center transition-colors duration-300',
+                      status === 'completed' && 'bg-success shadow-[0_0_8px_var(--success)]',
+                      status === 'active' && 'bg-accent-violet shadow-[0_0_12px_var(--accent-violet)]',
+                      status === 'upcoming' && 'bg-muted-foreground/30'
+                    )}
+                  >
+                    {status === 'completed' && (
+                      <CheckCircle2 className="size-3 text-success-foreground" aria-hidden="true" />
+                    )}
+                  </div>
+
+                  {/* Module card */}
+                  <div
+                    className={cn(
+                      'rounded-2xl border transition-all overflow-hidden',
+                      status === 'active'
+                        ? 'bg-card border-accent-violet/40 shadow-studio'
+                        : 'bg-card/50 border-border/60 hover:border-muted-foreground/20'
+                    )}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleModule(groupIndex)}
+                      aria-expanded={isExpanded}
+                      className="w-full text-left p-6"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <h3
+                          className={cn(
+                            'text-lg font-semibold',
+                            status === 'active' || status === 'completed'
+                              ? 'text-foreground'
+                              : 'text-foreground/80'
+                          )}
+                        >
+                          {groupTitle}
+                        </h3>
+                        <span className="text-[10px] font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
+                          Module {groupIndex + 1}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <BookOpen className="size-3.5" aria-hidden="true" />
+                            {groupCompletedCount} / {groupLessonCount}{' '}
+                            {groupLessonCount === 1 ? 'lesson' : 'lessons'}
+                          </span>
+                          {groupDuration > 0 && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="size-3.5" aria-hidden="true" />
+                              {formatDuration(groupDuration)}
+                            </span>
+                          )}
+                        </div>
+                        <ChevronDown
+                          className={cn(
+                            'size-5 text-muted-foreground transition-transform duration-200',
+                            isExpanded && 'rotate-180'
+                          )}
+                          aria-hidden="true"
+                        />
+                      </div>
+
+                      {/* Micro progress bar */}
+                      <div className="w-full h-1 bg-muted rounded-full mt-4 overflow-hidden">
+                        <div
+                          className={cn(
+                            'h-full transition-all duration-500',
+                            status === 'completed' ? 'bg-success' : 'bg-accent-violet'
+                          )}
+                          // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic width requires inline style
+                          style={{
+                            width:
+                              groupLessonCount > 0
+                                ? `${(groupCompletedCount / groupLessonCount) * 100}%`
+                                : '0%',
+                          }}
+                        />
+                      </div>
+                    </button>
+
+                    {/* Expanded lesson list */}
+                    {isExpanded && (
+                      <div className="bg-surface-sunken border-t-2 border-muted-foreground/40 p-2">
+                        <div className="max-h-[400px] overflow-y-auto space-y-0.5 pr-1">
+                          {group.videos.map(video => {
+                            const prog = progressMap.get(video.id)
+                            const percent = prog?.completionPercentage ?? 0
+                            const isCompleted = percent >= COMPLETION_THRESHOLD
+
+                            return (
+                              <Link
+                                key={video.id}
+                                to={`/courses/${courseId}/lessons/${video.id}`}
+                                className={cn(
+                                  'flex items-center gap-3 px-4 py-2.5 min-h-[44px] rounded-xl transition-colors group/lesson',
+                                  isCompleted
+                                    ? 'bg-success/5 hover:bg-success/10'
+                                    : 'hover:bg-muted/50'
+                                )}
+                                data-testid={`curriculum-lesson-${video.id}`}
+                              >
+                                {isCompleted ? (
+                                  <CheckCircle2
+                                    className="size-5 text-success flex-shrink-0"
+                                    aria-hidden="true"
+                                  />
+                                ) : (
+                                  <Video
+                                    className="size-5 text-muted-foreground flex-shrink-0"
+                                    aria-hidden="true"
+                                  />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p
+                                    className={cn(
+                                      'text-sm font-medium truncate transition-colors',
+                                      isCompleted
+                                        ? 'text-success-foreground'
+                                        : 'text-foreground/80 group-hover/lesson:text-foreground'
+                                    )}
+                                  >
+                                    {stripExtension(video.filename)}
+                                  </p>
+                                  {video.duration > 0 && (
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                      <PlayCircle className="size-3" aria-hidden="true" />
+                                      {formatDuration(video.duration)}
+                                    </p>
+                                  )}
+                                </div>
+                              </Link>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <ChevronRight
-                  className="size-5 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-hidden="true"
-                />
-              </div>
-            </Link>
-          )}
+              )
+            })}
+          </div>
         </motion.div>
 
-        {/* Right Column (1/3) */}
-        {(hasDescription || (!capabilities?.requiresNetwork && authorData)) && (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-            className="space-y-6"
-          >
-            {/* What You'll Learn */}
-            {hasTags && (
-              <div className="bg-card rounded-2xl p-6 shadow-studio border border-border/50">
-                <h2 className="font-display text-lg font-semibold text-foreground mb-4">
-                  What You&apos;ll Learn
+        {/* Sticky Sidebar (Right 1/3) */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          className="lg:col-span-1"
+        >
+          <div className="sticky top-24 space-y-6">
+            {/* About / Description */}
+            {course.description?.trim() && (
+              <div className="bg-card/50 border border-muted-foreground/10 rounded-2xl p-6">
+                <h2 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wider">
+                  About
                 </h2>
-                <ul className="space-y-3" data-testid="course-overview-tags">
-                  {course.tags.map(tag => (
-                    <li key={tag} className="flex items-start gap-3">
-                      <span className="mt-0.5 flex-shrink-0 size-5 rounded-full bg-success-soft flex items-center justify-center">
-                        <Check className="size-3 text-success" aria-hidden="true" />
-                      </span>
-                      <span className="text-sm text-foreground leading-snug">{formatTag(tag)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* CTA Card */}
-            {ctaConfig && ctaLessonId && (
-              <div
-                className="rounded-2xl p-6 shadow-studio text-center"
-                // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic gradient requires inline style
-                style={{
-                  background: 'linear-gradient(135deg, var(--brand) 0%, var(--accent-violet) 100%)',
-                }}
-                data-testid="course-overview-cta"
-              >
-                <h3 className="font-display text-lg font-semibold text-brand-foreground mb-1">
-                  {ctaVariant === 'start'
-                    ? 'Ready to Start?'
-                    : ctaVariant === 'continue'
-                      ? 'Welcome Back!'
-                      : 'Revisit This Course'}
-                </h3>
-                <p className="text-brand-foreground/80 text-sm mb-5">
-                  {ctaVariant === 'start'
-                    ? 'Start your learning journey'
-                    : ctaVariant === 'continue'
-                      ? 'Pick up where you left off'
-                      : 'Review the material at your own pace'}
-                </p>
-                <Button
-                  variant="outline"
-                  className="w-full bg-brand-foreground/10 border-brand-foreground/30 text-brand-foreground hover:bg-brand-foreground/20"
-                  onClick={() => {
-                    if (ctaVariant === 'start' && course.id) {
-                      useCourseImportStore.getState().updateCourseStatus(course.id, 'active')
-                    }
-                    navigate(`/courses/${course.id}/lessons/${ctaLessonId}`)
-                  }}
+                <p
+                  className="text-sm text-muted-foreground leading-relaxed"
+                  data-testid="course-overview-description"
                 >
-                  <ctaConfig.icon className="mr-2 size-4" aria-hidden="true" />
-                  {ctaConfig.label}
-                </Button>
+                  {course.description}
+                </p>
               </div>
             )}
 
             {/* Schedule study time */}
-            <div className="bg-card rounded-2xl p-6 shadow-studio border border-border/50 text-center">
+            <div className="bg-card/50 border border-muted-foreground/10 rounded-2xl p-6 text-center">
               <Calendar className="size-6 text-muted-foreground mx-auto mb-3" aria-hidden="true" />
-              <h3 className="font-display text-sm font-semibold text-foreground mb-1">
+              <h2 className="font-display text-sm font-semibold text-foreground mb-1">
                 Schedule Study Time
-              </h3>
+              </h2>
               <p className="text-xs text-muted-foreground mb-4">
                 Set recurring study blocks for this course
               </p>
@@ -626,162 +734,9 @@ export function CourseOverview() {
                 onOpenChange={setScheduleEditorOpen}
               />
             </div>
-          </motion.div>
-        )}
-      </div>
-
-      {/* Curriculum Section */}
-      {totalLessons > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.35 }}
-          className="bg-card rounded-2xl p-6 md:p-8 shadow-studio border border-border/50 mb-8"
-          data-testid="course-overview-curriculum"
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <h2 className="font-display text-lg font-semibold text-foreground">Curriculum</h2>
-            <Badge variant="secondary" className="text-xs">
-              {totalLessons} {totalLessons === 1 ? 'lesson' : 'lessons'}
-            </Badge>
-            {completedCount > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {completedCount} / {videos.length} completed
-              </Badge>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            {groupedContent.map((group, groupIndex) => {
-              const isExpanded = expandedModules.has(groupIndex)
-              const groupTitle =
-                group.title ||
-                (groupedContent.length > 1 ? `Section ${groupIndex + 1}` : 'All Lessons')
-              const groupCompletedCount = group.videos.filter(
-                v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= COMPLETION_THRESHOLD
-              ).length
-              const groupDuration = group.videos.reduce((s, v) => s + (v.duration || 0), 0)
-
-              return (
-                <div
-                  key={`${group.title}-${groupIndex}`}
-                  className="rounded-xl border border-border/50 overflow-hidden"
-                >
-                  {/* Group header */}
-                  <button
-                    type="button"
-                    onClick={() => toggleModule(groupIndex)}
-                    aria-expanded={isExpanded}
-                    className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/50 transition-colors"
-                  >
-                    <span className="flex-shrink-0 size-8 rounded-lg bg-brand-soft flex items-center justify-center">
-                      {group.title ? (
-                        <FolderOpen
-                          className="size-3.5 text-brand-soft-foreground"
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        <span className="text-sm font-semibold text-brand-soft-foreground">
-                          {groupIndex + 1}
-                        </span>
-                      )}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate">{groupTitle}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {group.videos.length + group.pdfs.length}{' '}
-                        {group.videos.length + group.pdfs.length === 1 ? 'lesson' : 'lessons'}
-                        {groupDuration > 0 && ` · ${formatDuration(groupDuration)}`}
-                        {groupCompletedCount > 0 && ` · ${groupCompletedCount} done`}
-                      </p>
-                    </div>
-                    <ChevronDown
-                      className={cn(
-                        'size-4 text-muted-foreground transition-transform duration-200',
-                        isExpanded && 'rotate-180'
-                      )}
-                      aria-hidden="true"
-                    />
-                  </button>
-
-                  {/* Lessons */}
-                  {isExpanded && (
-                    <div className="border-t border-border/50">
-                      {group.videos.map(video => {
-                        const prog = progressMap.get(video.id)
-                        const percent = prog?.completionPercentage ?? 0
-                        const isCompleted = percent >= COMPLETION_THRESHOLD
-
-                        return (
-                          <Link
-                            key={video.id}
-                            to={`/courses/${courseId}/lessons/${video.id}`}
-                            className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors border-b border-border/30 last:border-b-0 group/lesson"
-                            data-testid={`curriculum-lesson-${video.id}`}
-                          >
-                            {isCompleted ? (
-                              <CheckCircle2
-                                className="size-4 text-success flex-shrink-0"
-                                aria-hidden="true"
-                              />
-                            ) : (
-                              <Video
-                                className="size-4 text-muted-foreground flex-shrink-0"
-                                aria-hidden="true"
-                              />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm truncate text-foreground group-hover/lesson:text-brand-soft-foreground transition-colors">
-                                {stripExtension(video.filename)}
-                              </p>
-                            </div>
-                            {video.duration > 0 && (
-                              <Badge variant="secondary" className="text-[10px] flex-shrink-0">
-                                {formatDuration(video.duration)}
-                              </Badge>
-                            )}
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-
-            {/* PDFs section */}
-            {pdfs.length > 0 && (
-              <div className="rounded-xl border border-border/50 overflow-hidden">
-                <div className="flex items-center gap-3 p-4">
-                  <span className="flex-shrink-0 size-8 rounded-lg bg-warning/10 flex items-center justify-center">
-                    <FileText className="size-3.5 text-warning" aria-hidden="true" />
-                  </span>
-                  <div>
-                    <p className="font-medium text-foreground">PDFs</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {pdfs.length} {pdfs.length === 1 ? 'document' : 'documents'}
-                    </p>
-                  </div>
-                </div>
-                <div className="border-t border-border/50">
-                  {pdfs.map(pdf => (
-                    <Link
-                      key={pdf.id}
-                      to={`/courses/${courseId}/lessons/${pdf.id}`}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors border-b border-border/30 last:border-b-0"
-                    >
-                      <FileText className="size-4 text-warning flex-shrink-0" aria-hidden="true" />
-                      <p className="text-sm truncate text-foreground flex-1 min-w-0">
-                        {stripExtension(pdf.filename)}
-                      </p>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </motion.div>
-      )}
+      </div>
     </div>
   )
 }
