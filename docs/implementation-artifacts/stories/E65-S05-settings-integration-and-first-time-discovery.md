@@ -1,9 +1,9 @@
 ---
 story_id: E65-S05
 story_name: "Settings Integration and First-Time Discovery"
-status: ready-for-dev
-started:
-completed:
+status: done
+started: 2026-04-04
+completed: 2026-04-04
 reviewed: false
 review_started:
 review_gates_passed: []
@@ -206,4 +206,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+**useCallback ordering matters for hooks exhaustive-deps:** The `dismiss` callback was defined *after* the `useEffect` that called it, requiring an eslint-disable comment to suppress the missing-dependency warning. Moving `useCallback` declarations before any `useEffect` that references them eliminates the need for eslint-disable and ensures the dependency array is correct (`[visible, dismiss]`). This is the correct pattern: define callbacks first, then effects that depend on them.
+
+**Settings section testid visibility:** The `ReadingFocusModesSection` wraps its content in a `CardContent` with `data-testid="reading-focus-modes-section"`. E2E tests can assert both the testid presence and text content (e.g., `toContainText('Reading & Focus Modes')`) to confirm the section rendered correctly without relying on heading hierarchy.
+
+**Focus mode toggles use `role="switch"`:** shadcn/ui `<Switch>` renders with `role="switch"`, not `role="checkbox"`. Playwright selectors should use `getByRole('switch', { name: '...' })` with the `aria-label` value to target toggles reliably across themes and viewport sizes.

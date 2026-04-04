@@ -29,16 +29,6 @@ export function ReadingModeDiscoveryTooltip() {
     }
   }, [])
 
-  // Auto-dismiss after 8 seconds
-  useEffect(() => {
-    if (!visible) return
-    const timer = setTimeout(() => {
-      dismiss()
-    }, 8000)
-    return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible])
-
   const dismiss = useCallback(() => {
     setVisible(false)
     try {
@@ -47,6 +37,15 @@ export function ReadingModeDiscoveryTooltip() {
       // silent-catch-ok: localStorage unavailable
     }
   }, [])
+
+  // Auto-dismiss after 8 seconds
+  useEffect(() => {
+    if (!visible) return
+    const timer = setTimeout(() => {
+      dismiss()
+    }, 8000)
+    return () => clearTimeout(timer)
+  }, [visible, dismiss])
 
   if (!visible) return null
 
