@@ -9,8 +9,8 @@
  * - AC5: Weekly study summary displayed
  * - AC6: Download .ics button visible when enabled
  */
-import { test, expect } from '../support/fixtures'
-import { goToSettings } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { goToSettings } from '../../support/helpers/navigation'
 
 // ---------------------------------------------------------------------------
 // Helpers
