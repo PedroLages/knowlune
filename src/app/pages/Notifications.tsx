@@ -1,12 +1,10 @@
 import { useState, useCallback, useMemo } from 'react'
-import { Bell, CheckCheck, X, Filter } from 'lucide-react'
+import { Bell, CheckCheck, Clock, Settings, Trash2 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Button } from '@/app/components/ui/button'
-import { Badge } from '@/app/components/ui/badge'
-import { Card } from '@/app/components/ui/card'
 import { EmptyState } from '@/app/components/EmptyState'
 import { useNotificationStore } from '@/stores/useNotificationStore'
-import type { NotificationType } from '@/data/types'
+import type { Notification } from '@/data/types'
 import {
   notificationIcons,
   notificationIconColors,
@@ -15,35 +13,125 @@ import {
   relativeTime,
 } from '@/lib/notifications'
 
-// --- Notification type labels ---
+// --- Timeline grouping ---
 
-const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
-  'course-complete': 'Course Complete',
-  'streak-milestone': 'Streak Milestone',
-  'import-finished': 'Import Finished',
-  'achievement-unlocked': 'Achievement',
-  'review-due': 'Review Due',
-  'srs-due': 'SRS Due',
-  'knowledge-decay': 'Knowledge Decay',
-  'recommendation-match': 'Recommended',
-  'milestone-approaching': 'Milestone',
+function groupByTimeline(notifications: Notification[]) {
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterdayStart = new Date(todayStart.getTime() - 86400000)
+  const weekStart = new Date(todayStart.getTime() - 7 * 86400000)
+
+  const groups: { label: string; items: Notification[] }[] = [
+    { label: 'TODAY', items: [] },
+    { label: 'YESTERDAY', items: [] },
+    { label: 'THIS WEEK', items: [] },
+    { label: 'OLDER', items: [] },
+  ]
+
+  for (const n of notifications) {
+    const d = new Date(n.createdAt)
+    if (d >= todayStart) groups[0].items.push(n)
+    else if (d >= yesterdayStart) groups[1].items.push(n)
+    else if (d >= weekStart) groups[2].items.push(n)
+    else groups[3].items.push(n)
+  }
+
+  return groups.filter(g => g.items.length > 0)
 }
 
-const ALL_TYPES: NotificationType[] = [
-  'course-complete',
-  'streak-milestone',
-  'import-finished',
-  'achievement-unlocked',
-  'review-due',
-  'srs-due',
-  'knowledge-decay',
-  'recommendation-match',
-  'milestone-approaching',
-]
+// --- Notification Card ---
 
-type ReadFilter = 'all' | 'unread' | 'read'
+interface NotificationCardProps {
+  notification: Notification
+  onMarkRead: (id: string) => void
+  onDismiss: (id: string) => void
+}
 
-// --- Component ---
+function NotificationCard({ notification, onMarkRead, onDismiss }: NotificationCardProps) {
+  const Icon = notificationIcons[notification.type] ?? DEFAULT_ICON
+  const iconColor = notificationIconColors[notification.type] ?? DEFAULT_ICON_COLOR
+  const isUnread = notification.readAt === null
+
+  return (
+    <div
+      role="listitem"
+      className={cn(
+        'group relative flex items-start gap-3 rounded-2xl p-4 transition-colors',
+        isUnread
+          ? 'border border-l-[3px] border-border border-l-brand bg-brand-soft/20'
+          : 'border border-border'
+      )}
+      data-testid="notification-item"
+      data-notification-id={notification.id}
+      data-read={!isUnread}
+    >
+      {/* Icon */}
+      <div
+        className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted ${iconColor}`}
+      >
+        <Icon className="size-4" aria-hidden="true" />
+      </div>
+
+      {/* Content */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  'size-2 shrink-0 rounded-full',
+                  isUnread ? 'bg-brand' : 'bg-muted-foreground/30'
+                )}
+                aria-label={isUnread ? 'Unread' : 'Read'}
+              />
+              <p
+                className={cn(
+                  'text-sm leading-tight',
+                  isUnread ? 'font-bold' : 'font-medium text-foreground/80'
+                )}
+              >
+                {notification.title}
+              </p>
+            </div>
+            <p className="mt-1 text-sm leading-snug text-muted-foreground">
+              {notification.message}
+            </p>
+            <p className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground/70">
+              <Clock className="size-3" aria-hidden="true" />
+              {relativeTime(notification.createdAt)}
+            </p>
+          </div>
+
+          {/* Hover-reveal actions */}
+          <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+            {isUnread && (
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-8"
+                onClick={() => onMarkRead(notification.id)}
+                aria-label={`Mark "${notification.title}" as read`}
+              >
+                <CheckCheck className="size-3.5" aria-hidden="true" />
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-8 hover:text-destructive"
+              onClick={() => onDismiss(notification.id)}
+              aria-label={`Dismiss "${notification.title}"`}
+            >
+              <Trash2 className="size-3.5" aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// --- Main Component ---
 
 export function Notifications() {
   const notifications = useNotificationStore(s => s.notifications)
@@ -52,18 +140,20 @@ export function Notifications() {
   const storeMarkAllRead = useNotificationStore(s => s.markAllRead)
   const storeDismiss = useNotificationStore(s => s.dismiss)
 
-  const [selectedType, setSelectedType] = useState<NotificationType | null>(null)
-  const [readFilter, setReadFilter] = useState<ReadFilter>('all')
+  const [readFilter, setReadFilter] = useState<'all' | 'unread'>('all')
   const [liveMessage, setLiveMessage] = useState('')
 
   const filteredNotifications = useMemo(() => {
     return notifications.filter(n => {
-      if (selectedType && n.type !== selectedType) return false
       if (readFilter === 'unread' && n.readAt !== null) return false
-      if (readFilter === 'read' && n.readAt === null) return false
       return true
     })
-  }, [notifications, selectedType, readFilter])
+  }, [notifications, readFilter])
+
+  const timelineGroups = useMemo(
+    () => groupByTimeline(filteredNotifications),
+    [filteredNotifications]
+  )
 
   const handleMarkRead = useCallback(
     (id: string) => {
@@ -86,116 +176,84 @@ export function Notifications() {
     [storeDismiss]
   )
 
-  const clearFilters = useCallback(() => {
-    setSelectedType(null)
-    setReadFilter('all')
-  }, [])
-
-  const hasActiveFilters = selectedType !== null || readFilter !== 'all'
+  const hasActiveFilter = readFilter !== 'all'
 
   return (
-    <div className="space-y-6" data-testid="notifications-page">
+    <div className="mx-auto max-w-3xl space-y-6" data-testid="notifications-page">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="font-display text-2xl font-semibold">Notifications</h1>
+        <div>
+          <div className="flex items-center gap-2.5">
+            <Bell className="size-6 text-brand" aria-hidden="true" />
+            <h1 className="font-display text-2xl font-semibold">Notifications</h1>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Stay on top of your learning milestones and updates.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
           {unreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="text-xs"
-              aria-label={`${unreadCount} unread notifications`}
-            >
-              {unreadCount} unread
-            </Badge>
-          )}
-        </div>
-        {unreadCount > 0 && (
-          <Button
-            variant="brand-outline"
-            size="sm"
-            onClick={handleMarkAllRead}
-            aria-label="Mark all notifications as read"
-          >
-            <CheckCheck className="mr-1.5 size-4" aria-hidden="true" />
-            Mark all as read
-          </Button>
-        )}
-      </div>
-
-      {/* Filters */}
-      <div className="space-y-3" role="group" aria-label="Notification filters">
-        {/* Read status filter */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Filter className="size-4 text-muted-foreground" aria-hidden="true" />
-          {(['all', 'unread', 'read'] as const).map(status => (
             <Button
-              key={status}
-              variant={readFilter === status ? 'brand' : 'outline'}
+              variant="brand"
               size="sm"
-              onClick={() => setReadFilter(status)}
-              aria-pressed={readFilter === status}
-              aria-label={`Filter by ${status} notifications`}
-              className="min-h-[44px] capitalize sm:min-h-[36px]"
+              onClick={handleMarkAllRead}
+              aria-label="Mark all notifications as read"
             >
-              {status}
-            </Button>
-          ))}
-        </div>
-
-        {/* Type filter */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant={selectedType === null ? 'brand' : 'outline'}
-            size="sm"
-            onClick={() => setSelectedType(null)}
-            aria-pressed={selectedType === null}
-            aria-label="Show all notification types"
-            className="min-h-[44px] sm:min-h-[36px]"
-          >
-            All types
-          </Button>
-          {ALL_TYPES.map(type => {
-            const Icon = notificationIcons[type]
-            const label = NOTIFICATION_TYPE_LABELS[type]
-            return (
-              <Button
-                key={type}
-                variant={selectedType === type ? 'brand' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedType(type)}
-                aria-pressed={selectedType === type}
-                aria-label={`Filter by ${label}`}
-                className="min-h-[44px] sm:min-h-[36px]"
-              >
-                <Icon className="mr-1.5 size-3.5" aria-hidden="true" />
-                {label}
-              </Button>
-            )
-          })}
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearFilters}
-              aria-label="Clear all filters"
-              className="min-h-[44px] text-muted-foreground sm:min-h-[36px]"
-            >
-              <X className="mr-1 size-3.5" aria-hidden="true" />
-              Clear
+              <CheckCheck className="mr-1.5 size-4" aria-hidden="true" />
+              Mark all as read
             </Button>
           )}
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-9"
+            aria-label="Notification settings"
+          >
+            <Settings className="size-4" aria-hidden="true" />
+          </Button>
         </div>
       </div>
 
-      {/* Notification list */}
+      {/* Filter pills */}
+      <div className="flex items-center gap-2" role="group" aria-label="Notification filters">
+        <button
+          type="button"
+          onClick={() => setReadFilter('all')}
+          aria-pressed={readFilter === 'all'}
+          className={cn(
+            'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+            readFilter === 'all'
+              ? 'bg-brand text-brand-foreground'
+              : 'bg-muted text-muted-foreground hover:bg-muted/80'
+          )}
+        >
+          All
+        </button>
+        <button
+          type="button"
+          onClick={() => setReadFilter('unread')}
+          aria-pressed={readFilter === 'unread'}
+          className={cn(
+            'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+            readFilter === 'unread'
+              ? 'bg-brand text-brand-foreground'
+              : 'bg-muted text-muted-foreground hover:bg-muted/80'
+          )}
+        >
+          Unread {unreadCount > 0 && unreadCount}
+        </button>
+      </div>
+
+      {/* Notification list grouped by timeline */}
       {filteredNotifications.length === 0 ? (
-        hasActiveFilters ? (
+        hasActiveFilter ? (
           <EmptyState
-            icon={Filter}
-            title="No matching notifications"
-            description="Try adjusting your filters to see more notifications."
-            actionLabel="Clear filters"
-            onAction={clearFilters}
+            icon={Bell}
+            title="No unread notifications"
+            description="You're all caught up! Switch to All to see past notifications."
+            actionLabel="Show all"
+            onAction={() => setReadFilter('all')}
+            className="border border-dashed"
             data-testid="notifications-empty-filtered"
           />
         ) : (
@@ -203,96 +261,35 @@ export function Notifications() {
             icon={Bell}
             title="No notifications yet"
             description="You're all caught up! Notifications about your learning progress will appear here."
+            className="border border-dashed"
             data-testid="notifications-empty"
           />
         )
       ) : (
-        <div
-          className="space-y-2"
-          role="list"
-          aria-label="Notifications list"
-          data-testid="notifications-list"
-        >
-          {filteredNotifications.map(notification => {
-            const Icon = notificationIcons[notification.type] ?? DEFAULT_ICON
-            const iconColor = notificationIconColors[notification.type] ?? DEFAULT_ICON_COLOR
-            const isUnread = notification.readAt === null
+        <div className="space-y-6" data-testid="notifications-list">
+          {timelineGroups.map(group => (
+            <section key={group.label} aria-label={`${group.label} notifications`}>
+              {/* Timeline header */}
+              <div className="mb-3 flex items-center gap-3">
+                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground font-mono">
+                  {group.label}
+                </span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
 
-            return (
-              <Card
-                key={notification.id}
-                role="listitem"
-                className={cn(
-                  'flex items-start gap-3 p-4 transition-colors',
-                  isUnread && 'bg-brand-soft/30'
-                )}
-                data-testid="notification-item"
-                data-notification-id={notification.id}
-                data-read={!isUnread}
-              >
-                {/* Icon */}
-                <div
-                  className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted ${iconColor}`}
-                >
-                  <Icon className="size-4" aria-hidden="true" />
-                </div>
-
-                {/* Content */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p
-                          className={cn(
-                            'text-sm leading-tight',
-                            isUnread ? 'font-semibold' : 'font-medium text-foreground/80'
-                          )}
-                        >
-                          {notification.title}
-                        </p>
-                        {isUnread && (
-                          <span
-                            className="flex size-2 shrink-0 rounded-full bg-brand"
-                            aria-label="Unread"
-                          />
-                        )}
-                      </div>
-                      <p className="mt-1 text-sm leading-snug text-muted-foreground">
-                        {notification.message}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground/70">
-                        {relativeTime(notification.createdAt)}
-                      </p>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex shrink-0 items-center gap-1">
-                      {isUnread && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground min-w-[44px]"
-                          onClick={() => handleMarkRead(notification.id)}
-                          aria-label={`Mark "${notification.title}" as read`}
-                        >
-                          <CheckCheck className="size-3.5" aria-hidden="true" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive min-w-[44px]"
-                        onClick={() => handleDismiss(notification.id)}
-                        aria-label={`Dismiss "${notification.title}"`}
-                      >
-                        <X className="size-3.5" aria-hidden="true" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            )
-          })}
+              {/* Cards */}
+              <div className="space-y-3" role="list" aria-label={`${group.label} notifications`}>
+                {group.items.map(notification => (
+                  <NotificationCard
+                    key={notification.id}
+                    notification={notification}
+                    onMarkRead={handleMarkRead}
+                    onDismiss={handleDismiss}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 
