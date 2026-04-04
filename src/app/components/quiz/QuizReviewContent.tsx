@@ -69,8 +69,7 @@ export function QuizReviewContent({ quiz, attempt, courseId, lessonId }: QuizRev
 
       // Persist to Dexie (add to quiz's questionFeedback array)
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const currentQuiz = (await db.quizzes.get(quiz.id)) as any
+        const currentQuiz = await db.quizzes.get(quiz.id)
         if (!currentQuiz) return
 
         const existing: QuestionFeedbackRecord[] = currentQuiz.questionFeedback ?? []
@@ -79,7 +78,7 @@ export function QuizReviewContent({ quiz, attempt, courseId, lessonId }: QuizRev
           { questionId, feedback: value, timestamp: new Date().toISOString() },
         ]
 
-        await db.quizzes.update(quiz.id, { questionFeedback: updated } as never)
+        await db.quizzes.update(quiz.id, { questionFeedback: updated })
       } catch (err) {
         console.warn('[QuizReview] Failed to save feedback:', (err as Error).message)
         toast.error('Failed to save feedback. Please try again.')

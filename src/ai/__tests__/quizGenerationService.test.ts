@@ -97,6 +97,8 @@ function mockTranscript(
 }
 
 function mockValidLLMResponse() {
+  // Questions reference words from the mock transcript (word0..word299) so the
+  // transcript-grounding QC check (30% min term ratio) passes.
   mockFetch.mockResolvedValue({
     ok: true,
     json: () =>
@@ -105,19 +107,19 @@ function mockValidLLMResponse() {
           content: JSON.stringify({
             questions: [
               {
-                text: 'What does React use for efficient rendering?',
+                text: 'What is word0 related to in the context of word1?',
                 type: 'multiple-choice',
-                options: ['Virtual DOM', 'Shadow DOM', 'Real DOM', 'None'],
-                correctAnswer: 'Virtual DOM',
-                explanation: 'React uses a virtual DOM.',
+                options: ['word2', 'word3', 'word4', 'word5'],
+                correctAnswer: 'word2',
+                explanation: 'word0 and word1 are key terms.',
                 bloomsLevel: 'remember',
               },
               {
-                text: 'React is a framework.',
+                text: 'Is word6 a type of word7?',
                 type: 'true-false',
                 options: ['True', 'False'],
-                correctAnswer: 'False',
-                explanation: 'React is a library.',
+                correctAnswer: 'True',
+                explanation: 'word6 is indeed a type of word7.',
                 bloomsLevel: 'remember',
               },
             ],

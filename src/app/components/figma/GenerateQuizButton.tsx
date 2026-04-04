@@ -64,7 +64,11 @@ export function GenerateQuizButton({
   const [bloomsLevel, setBloomsLevel] = useState<BloomsLevel>('remember')
 
   const isDisabled = !ollamaAvailable || checkingAvailability || isGenerating
-  const buttonLabel = cachedQuiz ? 'Regenerate Quiz' : 'Generate Quiz'
+  // Only show "Regenerate" label/icon when onRegenerate handler is provided.
+  // When cachedQuiz exists but onRegenerate is undefined, onGenerate returns
+  // the cached quiz — so we keep the "Generate Quiz" label to avoid confusion.
+  const canRegenerate = !!cachedQuiz && !!onRegenerate
+  const buttonLabel = canRegenerate ? 'Regenerate Quiz' : 'Generate Quiz'
 
   // Loading state: show skeleton with message
   if (isGenerating) {
@@ -90,14 +94,12 @@ export function GenerateQuizButton({
       disabled={isDisabled}
       aria-disabled={isDisabled}
       aria-label={buttonLabel + ' from transcript'}
-      onClick={() =>
-        cachedQuiz && onRegenerate ? onRegenerate(bloomsLevel) : onGenerate(bloomsLevel)
-      }
+      onClick={() => (canRegenerate ? onRegenerate(bloomsLevel) : onGenerate(bloomsLevel))}
       data-testid="generate-quiz-button"
     >
       {checkingAvailability ? (
         <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-      ) : cachedQuiz ? (
+      ) : canRegenerate ? (
         <RefreshCw className="size-4" aria-hidden="true" />
       ) : (
         <BrainCircuit className="size-4" aria-hidden="true" />

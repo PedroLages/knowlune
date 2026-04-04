@@ -157,6 +157,16 @@ export const QuizSchema = z.object({
   createdAt: z.string().datetime(),
   /** ISO 8601 last-updated timestamp */
   updatedAt: z.string().datetime(),
+  /** Per-question feedback submitted by the learner (E52-S03) */
+  questionFeedback: z
+    .array(
+      z.object({
+        questionId: z.string().min(1),
+        feedback: z.enum(['up', 'down']),
+        timestamp: z.string().datetime(),
+      })
+    )
+    .optional(),
 })
 export type Quiz = z.infer<typeof QuizSchema>
 

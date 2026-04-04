@@ -17,8 +17,8 @@ export type FeedbackValue = 'up' | 'down' | null
 interface QuestionFeedbackProps {
   /** Current feedback value (null = no feedback given) */
   feedback: FeedbackValue
-  /** Callback when user clicks a feedback button */
-  onFeedback: (value: 'up' | 'down') => void
+  /** Callback when user clicks a feedback button. May return a Promise. */
+  onFeedback: (value: 'up' | 'down') => void | Promise<void>
   /** Whether buttons are disabled (e.g. during submission) */
   disabled?: boolean
 }
@@ -36,8 +36,11 @@ export function QuestionFeedback({
   const handleClick = useCallback(
     (value: 'up' | 'down') => {
       if (disabled || currentFeedback !== null) return
-      setOptimistic(value)
-      onFeedback(value)
+      // Only set optimistic state after persistence succeeds to avoid showing
+      // stale UI when the async write fails.
+      Promise.resolve(onFeedback(value)).then(() => {
+        setOptimistic(value)
+      })
     },
     [disabled, currentFeedback, onFeedback]
   )

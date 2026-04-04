@@ -147,6 +147,33 @@ describe('runQualityControl — transcript grounding', () => {
     expect(result.rejectedQuestions).toHaveLength(1)
     expect(result.rejectedQuestions[0].reasons[0]).toContain('transcript grounding')
   })
+
+  it('passes at exactly 30% match ratio (boundary)', () => {
+    // extractKeyTerms filters stop words; craft a question where exactly 3 of
+    // 10 non-stop key terms appear in the chunk, giving ratio = 0.30 (threshold).
+    // "port" and "http" appear in CHUNK_TEXT; we pad with 8 unique alien terms so
+    // total key terms = 10, found = 3 (port, http, default) → ratio = 0.3.
+    const q = makeQuestion({
+      text: 'port http default alpha bravo charlie delta echo foxtrot golf',
+      options: ['80', '443', '8080', '3000'],
+      correctAnswer: '80',
+    })
+    const result = runQualityControl([q], CHUNK_TEXT)
+    expect(result.validQuestions).toHaveLength(1)
+    expect(result.rejectedQuestions).toHaveLength(0)
+  })
+
+  it('rejects at just below 30% match ratio (boundary — fail)', () => {
+    // 1 found out of 4 key terms → ratio = 0.25 < 0.30 → should be rejected.
+    const q = makeQuestion({
+      text: 'http alpha bravo charlie',
+      options: ['80', '443', '8080', '3000'],
+      correctAnswer: '80',
+    })
+    const result = runQualityControl([q], CHUNK_TEXT)
+    expect(result.rejectedQuestions).toHaveLength(1)
+    expect(result.rejectedQuestions[0].reasons[0]).toContain('transcript grounding')
+  })
 })
 
 // ---------------------------------------------------------------------------
