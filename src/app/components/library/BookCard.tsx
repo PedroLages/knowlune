@@ -69,6 +69,7 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
           <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
             <div
               className="h-full rounded-full bg-brand transition-all"
+              // eslint-disable-next-line react-best-practices/no-inline-styles
               style={{ width: `${book.progress}%` }}
             />
           </div>
