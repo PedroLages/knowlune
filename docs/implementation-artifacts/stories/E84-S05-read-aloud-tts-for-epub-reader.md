@@ -1,6 +1,6 @@
 # Story 84.5: Read-Aloud (TTS) for EPUB Reader
 
-Status: backlog
+Status: done
 
 ## Story
 
@@ -91,9 +91,25 @@ This feature uses only the native Web Speech API — **no new npm dependencies r
 ## Dev Agent Record
 
 ### Agent Model Used
+claude-sonnet-4-6
 
 ### Debug Log References
+None.
 
 ### Completion Notes List
+- Chrome 15s speechSynthesis bug workaround: text split into sentence-level chunks via SENTENCE_SPLIT_RE + maxChunkLength=200; chunks queued sequentially via utterance.onend
+- Word highlighting: TreeWalker scans epub iframe text nodes to find char position, then surroundContents() wraps word in <mark class="tts-active-word">; styles injected via injectTtsStyles()
+- Auto-advance: when onEnd fires (chunk queue exhausted), rendition.next() called, 500ms delay, then new page text extracted and spoken
+- TTS controls: TtsControlBar (fixed, above ReaderFooter) with play/pause, stop, speed Select
+- useTts hook manages all state; ttsService singleton handles Web Speech API lifecycle
+- onReadAloud prop on ReaderHeader only set when isTtsAvailable; if browser lacks speechSynthesis, menu item hidden entirely
+- Rate change while active: stops current utterance and restarts startTts() with new rate (50ms delay for cancel to settle)
 
 ### File List
+- src/services/TtsService.ts (created)
+- src/app/hooks/useTts.ts (created)
+- src/app/components/reader/TtsControlBar.tsx (created)
+- src/app/components/reader/ReaderHeader.tsx (updated — onReadAloud prop + Volume2 icon in menu)
+- src/app/pages/BookReader.tsx (updated — useTts wired, TtsControlBar rendered when active)
+- docs/implementation-artifacts/sprint-status.yaml (updated)
+- docs/implementation-artifacts/stories/E84-S05-read-aloud-tts-for-epub-reader.md (updated)

@@ -8,7 +8,7 @@
  *
  * @module ReaderHeader
  */
-import { ArrowLeft, MoreHorizontal } from 'lucide-react'
+import { ArrowLeft, MoreHorizontal, Volume2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Button } from '@/app/components/ui/button'
 import {
@@ -39,6 +39,8 @@ interface ReaderHeaderProps {
   visible: boolean
   onTocOpen?: () => void
   onSettingsOpen?: () => void
+  /** Called when Read Aloud menu item is clicked. Hidden if undefined (TTS not available). */
+  onReadAloud?: () => void
 }
 
 export function ReaderHeader({
@@ -48,6 +50,7 @@ export function ReaderHeader({
   visible,
   onTocOpen,
   onSettingsOpen,
+  onReadAloud,
 }: ReaderHeaderProps) {
   const navigate = useNavigate()
 
@@ -129,6 +132,15 @@ export function ReaderHeader({
           >
             Reading Settings
           </DropdownMenuItem>
+          {onReadAloud && (
+            <DropdownMenuItem
+              onClick={onReadAloud}
+              data-testid="reader-menu-read-aloud"
+            >
+              <Volume2 className="size-4 mr-2" aria-hidden="true" />
+              Read Aloud
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem data-testid="reader-menu-highlights">
             Highlights
           </DropdownMenuItem>
