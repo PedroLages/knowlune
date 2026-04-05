@@ -17,6 +17,7 @@ import { useAudioPlayer, formatAudioTime } from '@/app/hooks/useAudioPlayer'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
 import { useSleepTimer, consumeSleepTimerEndedFlag } from '@/app/hooks/useSleepTimer'
 import { useMediaSession } from '@/app/hooks/useMediaSession'
+import { useAudioListeningSession } from '@/app/hooks/useAudioListeningSession'
 import { SpeedControl } from './SpeedControl'
 import { SleepTimer } from './SleepTimer'
 import { ChapterList } from './ChapterList'
@@ -72,6 +73,9 @@ export function AudiobookRenderer({ book, bookmarksOpen: bookmarksOpenProp, onBo
   }, [])
 
   const currentChapterTitle = currentChapter?.title ?? `Chapter ${currentChapterIndex + 1}`
+
+  // Session tracking for streak counting and Reports (E87-S06)
+  useAudioListeningSession({ bookId: book.id, isPlaying })
 
   // Media Session API — OS-level lock screen / Bluetooth headset controls (E87-S05)
   useMediaSession({

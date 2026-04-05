@@ -14,7 +14,8 @@ export interface StudyAction {
     | 'pdf_progress'
     | 'quiz_complete'
     | 'book_read' // Reading session ended with >= 30s duration (E85-S06)
-  courseId: string // For book_read: use bookId as courseId sentinel
+    | 'book_listened' // Audiobook listening session ended with >= 30s duration (E87-S06)
+  courseId: string // For book_read/book_listened: use bookId as courseId sentinel
   lessonId?: string
   timestamp: string
   metadata?: Record<string, unknown>
@@ -217,7 +218,8 @@ function studyDaysFromLog(log: StudyAction[]): string[] {
     if (
       a.type === 'lesson_complete' ||
       a.type === 'quiz_complete' ||
-      a.type === 'book_read' // Book reading sessions count toward streak (E85-S06)
+      a.type === 'book_read' || // Book reading sessions count toward streak (E85-S06)
+      a.type === 'book_listened' // Audiobook listening sessions count toward streak (E87-S06)
     ) {
       days.add(toLocalDateString(new Date(a.timestamp)))
     }
@@ -325,7 +327,8 @@ function activityFromLog(
     if (
       a.type === 'lesson_complete' ||
       a.type === 'quiz_complete' ||
-      a.type === 'book_read' // Count book reading toward daily activity (E85-S06)
+      a.type === 'book_read' || // Count book reading toward daily activity (E85-S06)
+      a.type === 'book_listened' // Count audiobook listening toward daily activity (E87-S06)
     ) {
       const d = toLocalDateString(new Date(a.timestamp))
       countMap.set(d, (countMap.get(d) ?? 0) + 1)

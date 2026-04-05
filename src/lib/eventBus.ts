@@ -34,6 +34,7 @@ export type AppEvent =
   | { type: 'highlight:updated'; highlightId: string; bookId: string }
   | { type: 'highlight:deleted'; highlightId: string; bookId: string }
   | { type: 'reading:session-ended'; bookId: string; durationMinutes: number }
+  | { type: 'listening:session-ended'; bookId: string; durationMinutes: number }
   | { type: 'book:finished'; bookId: string; finishedAt: string }
   | {
       type: 'milestone:approaching'

@@ -25,8 +25,9 @@ export interface ReadingStats {
 }
 
 /**
- * Fetch all reading sessions from Dexie.
- * Book sessions are identified by courseId === '' (sentinel).
+ * Fetch all reading and listening sessions from Dexie.
+ * Both book reading and audiobook listening use courseId === '' as a sentinel (E85-S06, E87-S06).
+ * This gives a unified "media time" view that covers EPUB reading + audiobook listening.
  */
 async function getBookSessions() {
   return db.studySessions.where('courseId').equals('').toArray()
