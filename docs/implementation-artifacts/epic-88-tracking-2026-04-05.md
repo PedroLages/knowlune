@@ -9,7 +9,7 @@
 | Story | Title | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|-------|--------|--------|---------------|--------------|
 | E88-S01 | OPDS Catalog Connection | done | #257 | 2 | 9 |
-| E88-S02 | OPDS Catalog Browsing and Import | queued | — | — | — |
+| E88-S02 | OPDS Catalog Browsing and Import | reviewing (R2) | — | 2 | 8 |
 | E88-S03 | Remote EPUB Streaming | queued | — | — | — |
 | E88-S04 | M4B Audiobook Import | queued | — | — | — |
 
