@@ -69,6 +69,8 @@ interface HighlightLayerProps {
   bookId: string
   currentHref?: string
   onFlashcardRequest?: (text: string, highlightId?: string) => void
+  /** If set, briefly pulse this highlight after restore (E85-S05 back-navigation) */
+  focusHighlightId?: string
 }
 
 export function HighlightLayer({
@@ -76,6 +78,7 @@ export function HighlightLayer({
   bookId,
   currentHref,
   onFlashcardRequest,
+  focusHighlightId,
 }: HighlightLayerProps) {
   const createHighlight = useHighlightStore(s => s.createHighlight)
   const updateHighlight = useHighlightStore(s => s.updateHighlight)
@@ -132,7 +135,55 @@ export function HighlightLayer({
         // silent-catch-ok: CFI may be stale if EPUB was re-imported
       }
     }
-  }, [rendition, highlights])
+
+    // Pulse the focused highlight after restore (E85-S05 back-navigation emphasis)
+    // Respects prefers-reduced-motion: skips animation when reduced motion is preferred
+    if (!focusHighlightId) return
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (prefersReduced) return
+
+    const targetHighlight = highlights.find(h => h.id === focusHighlightId)
+    if (!targetHighlight?.cfiRange) return
+
+    // Inject keyframe + flash class into the epub iframe document
+    const injectPulse = () => {
+      try {
+        const contents = rendition.getContents()[0] as unknown as { document?: Document }
+        const doc = contents?.document
+        if (!doc) return
+
+        // Inject keyframe animation if not already present
+        if (!doc.getElementById('hl-pulse-style')) {
+          const style = doc.createElement('style')
+          style.id = 'hl-pulse-style'
+          style.textContent = `
+            @keyframes hl-pulse {
+              0%   { fill-opacity: 0.3; }
+              40%  { fill-opacity: 0.7; }
+              100% { fill-opacity: 0.3; }
+            }
+            .epub-highlight-pulse rect, .epub-highlight-pulse path {
+              animation: hl-pulse 800ms ease-out forwards;
+            }
+          `
+          doc.head.appendChild(style)
+        }
+
+        // Find the annotation element by data-epubcfi attribute
+        const annotEl = doc.querySelector(`[data-epubcfi]`)
+        if (annotEl) {
+          annotEl.classList.add('epub-highlight-pulse')
+          setTimeout(() => annotEl.classList.remove('epub-highlight-pulse'), 900)
+        }
+      } catch {
+        // silent-catch-ok: pulse is cosmetic; failure is non-fatal
+      }
+    }
+
+    // Delay slightly to ensure epub.js has rendered the annotation after display()
+    const timer = setTimeout(injectPulse, 600)
+    return () => clearTimeout(timer)
+  }, [rendition, highlights, focusHighlightId])
 
   // Register epub.js `selected` event listener
   useEffect(() => {

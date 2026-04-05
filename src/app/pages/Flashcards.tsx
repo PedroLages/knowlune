@@ -1,3 +1,4 @@
+// eslint-disable-next-line component-size/max-lines -- page orchestrator: manages flashcard review phases (loading, dashboard, reviewing, summary) and book back-navigation
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { motion } from 'motion/react'
 import {
@@ -12,7 +13,9 @@ import {
 import { useFlashcardStore } from '@/stores/useFlashcardStore'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useBookStore } from '@/stores/useBookStore'
 import { FlashcardReviewCard } from '@/app/components/figma/FlashcardReviewCard'
+import type { FlashcardSourceLink } from '@/app/components/figma/FlashcardReviewCard'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Progress } from '@/app/components/ui/progress'
@@ -104,6 +107,7 @@ export function Flashcards() {
 
   const allCourses = useCourseStore(s => s.courses)
   const { importedCourses, loadImportedCourses } = useCourseImportStore()
+  const allBooks = useBookStore(s => s.books)
 
   // Build course name lookup
   const courseNameMap = useMemo(() => {
@@ -297,6 +301,20 @@ export function Flashcards() {
   const currentCourseName =
     (currentCard && courseNameMap.get(currentCard.courseId)) ?? 'Unknown Course'
 
+  // Compute back-navigation source link for book-sourced flashcards (E85-S05)
+  // BookReader resolves sourceHighlightId → cfiRange via Dexie on open
+  const currentCardSourceLink: FlashcardSourceLink | undefined = (() => {
+    if (!currentCard || currentCard.sourceType !== 'book') return undefined
+    const sourceBook = allBooks.find(b => b.id === currentCard.sourceBookId)
+    if (!sourceBook) return 'deleted'
+    const params = new URLSearchParams()
+    if (currentCard.sourceHighlightId) {
+      params.set('sourceHighlightId', currentCard.sourceHighlightId)
+    }
+    const href = `/library/${sourceBook.id}/read?${params.toString()}`
+    return { href, label: `View in "${sourceBook.title}"` }
+  })()
+
   // ── Dashboard phase ──
   if (phase === 'dashboard') {
     const upcomingSchedule = getUpcomingSchedule(flashcards, now)
@@ -454,6 +472,7 @@ export function Flashcards() {
             onFlip={handleFlip}
             onRate={rating => void handleRate(rating)}
             isRating={isRating}
+            sourceLink={currentCardSourceLink}
           />
         </div>
       </div>

@@ -21,7 +21,7 @@
  */
 // eslint-disable-next-line component-size/max-lines -- page orchestrator: coordinates reader subsystems (EPUB loading, position save, idle timer, keyboard nav, TOC, settings)
 import { lazy, Suspense, useEffect, useRef, useCallback, useState } from 'react'
-import { useParams, useNavigate } from 'react-router'
+import { useParams, useNavigate, useSearchParams } from 'react-router'
 import type { Rendition } from 'epubjs'
 import type { NavItem } from 'epubjs'
 import { toast } from 'sonner'
@@ -67,6 +67,7 @@ function LoadingSkeleton() {
 export function BookReader() {
   const { bookId } = useParams<{ bookId: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const books = useBookStore(s => s.books)
   const isLoaded = useBookStore(s => s.isLoaded)
   const loadBooks = useBookStore(s => s.loadBooks)
@@ -87,6 +88,8 @@ export function BookReader() {
   const [epubUrl, setEpubUrl] = useState<string | null>(null)
   const [isLoadingContent, setIsLoadingContent] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  // CFI resolved from sourceHighlightId query param (E85-S05 back-navigation)
+  const [highlightCfi, setHighlightCfi] = useState<string | null>(null)
   // highlightsOpen state: wired to ReaderHeader → HighlightListPanel (E85-S03)
   const [highlightsOpen, setHighlightsOpen] = useState(false)
   // Cloze flashcard creator state (E85-S04)
@@ -145,6 +148,23 @@ export function BookReader() {
       console.error('[BookReader] Failed to update lastOpenedAt:', err)
     })
   }, [bookId]) // Only run once on mount (bookId is stable for this page)
+
+  // Resolve sourceHighlightId query param → cfiRange for back-navigation (E85-S05)
+  useEffect(() => {
+    const highlightId = searchParams.get('sourceHighlightId')
+    if (!highlightId) return
+
+    let ignore = false
+    db.bookHighlights.get(highlightId).then(highlight => {
+      if (!ignore && highlight?.cfiRange) {
+        setHighlightCfi(highlight.cfiRange)
+      }
+    }).catch(err => {
+      // silent-catch-ok: highlight lookup failure is non-fatal — reader opens at saved position
+      console.warn('[BookReader] Could not resolve sourceHighlightId to CFI:', err)
+    })
+    return () => { ignore = true }
+  }, [searchParams])
 
   // Load EPUB content
   useEffect(() => {
@@ -377,10 +397,10 @@ export function BookReader() {
     setRetryKey(k => k + 1)
   }, [])
 
-  // Derive initial CFI from book.currentPosition
-  const initialCfi = book?.currentPosition?.type === 'cfi'
-    ? book.currentPosition.value
-    : null
+  // Derive initial CFI: prefer highlight back-navigation CFI (E85-S05) over saved position
+  const initialCfi =
+    highlightCfi ??
+    (book?.currentPosition?.type === 'cfi' ? book.currentPosition.value : null)
 
   // Book not found (after store is loaded)
   if (isLoaded && !book) {
@@ -492,6 +512,7 @@ export function BookReader() {
           rendition={renditionRef.current}
           bookId={bookId}
           currentHref={currentHref}
+          focusHighlightId={searchParams.get('sourceHighlightId') ?? undefined}
           onFlashcardRequest={(text, highlightId) => {
             setClozeText(text)
             setClozeHighlightId(highlightId)
