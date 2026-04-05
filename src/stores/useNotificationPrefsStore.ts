@@ -17,6 +17,7 @@ const TYPE_TO_FIELD: Record<NotificationType, keyof NotificationPreferences> = {
   'milestone-approaching': 'milestoneApproaching',
   'book-imported': 'bookImported',
   'book-deleted': 'bookDeleted',
+  'highlight-review': 'highlightReview', // E86-S02
 }
 
 const DEFAULTS: NotificationPreferences = {
@@ -32,6 +33,7 @@ const DEFAULTS: NotificationPreferences = {
   milestoneApproaching: true,
   bookImported: true,
   bookDeleted: true,
+  highlightReview: true, // E86-S02
   quietHoursEnabled: false,
   quietHoursStart: '22:00',
   quietHoursEnd: '07:00',

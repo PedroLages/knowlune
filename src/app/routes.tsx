@@ -89,6 +89,11 @@ const BookReader = React.lazy(() =>
   import('./pages/BookReader').then(m => ({ default: m.BookReader }))
 )
 
+// E86-S02: Highlight Review — daily highlight surfacing page
+const HighlightReview = React.lazy(() =>
+  import('./pages/HighlightReview').then(m => ({ default: m.HighlightReview }))
+)
+
 function PageLoader() {
   return (
     <DelayedFallback>
@@ -197,6 +202,21 @@ export const router = createBrowserRouter([
         <BookReader />
       </SuspensePage>
     ),
+  },
+  // E86-S02: Highlight Review — daily highlight review page (inside Layout for nav access)
+  {
+    path: 'highlight-review',
+    Component: Layout,
+    children: [
+      {
+        index: true,
+        element: (
+          <SuspensePage>
+            <HighlightReview />
+          </SuspensePage>
+        ),
+      },
+    ],
   },
   {
     path: '/',
