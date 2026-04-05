@@ -9,14 +9,7 @@
  */
 
 import { useState } from 'react'
-import {
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  Eye,
-  EyeOff,
-  AlertTriangle,
-} from 'lucide-react'
+import { Loader2, CheckCircle2, XCircle, Eye, EyeOff, AlertTriangle } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'

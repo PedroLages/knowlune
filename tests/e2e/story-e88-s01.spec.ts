@@ -117,12 +117,10 @@ test.describe('E88-S01: OPDS Catalog Settings', () => {
   test('shows connected catalog in list view', async ({ page }) => {
     // Seed the catalog before navigating
     await page.goto('/')
-    await seedIndexedDBStore(
-      page,
-      DB_NAME,
-      'opdsCatalogs',
-      [TEST_CATALOG] as unknown as Record<string, unknown>[]
-    )
+    await seedIndexedDBStore(page, DB_NAME, 'opdsCatalogs', [TEST_CATALOG] as unknown as Record<
+      string,
+      unknown
+    >[])
 
     await openOpdsCatalogDialog(page)
 
@@ -132,12 +130,10 @@ test.describe('E88-S01: OPDS Catalog Settings', () => {
 
   test('shows edit and remove buttons for connected catalogs', async ({ page }) => {
     await page.goto('/')
-    await seedIndexedDBStore(
-      page,
-      DB_NAME,
-      'opdsCatalogs',
-      [TEST_CATALOG] as unknown as Record<string, unknown>[]
-    )
+    await seedIndexedDBStore(page, DB_NAME, 'opdsCatalogs', [TEST_CATALOG] as unknown as Record<
+      string,
+      unknown
+    >[])
 
     await openOpdsCatalogDialog(page)
 

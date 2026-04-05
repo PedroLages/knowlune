@@ -26,8 +26,7 @@ export function CatalogListView({ catalogs, onAdd, onEdit, onDelete }: CatalogLi
           <Globe className="size-12 text-muted-foreground/40" aria-hidden="true" />
           <p className="text-sm text-muted-foreground">No catalogs connected yet.</p>
           <p className="text-xs text-muted-foreground max-w-xs text-center">
-            Connect to a Calibre-Web or other OPDS-compatible server to browse your book
-            collection.
+            Connect to a Calibre-Web or other OPDS-compatible server to browse your book collection.
           </p>
         </div>
       )}
