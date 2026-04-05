@@ -1,0 +1,147 @@
+/**
+ * List-view book row with thumbnail, metadata, progress, and status.
+ *
+ * Navigates to /library/{bookId} on click. Keyboard accessible via Tab/Enter.
+ *
+ * @since E83-S03
+ */
+
+import React from 'react'
+import { useNavigate } from 'react-router'
+import { BookOpen } from 'lucide-react'
+import type { Book, BookStatus } from '@/data/types'
+import { BookStatusBadge } from './BookStatusBadge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/app/components/ui/select'
+import { useBookStore } from '@/stores/useBookStore'
+
+interface BookListItemProps {
+  book: Book
+}
+
+/**
+ * Lightweight relative time formatter — no external dependency.
+ */
+function relativeTime(date: string | undefined): string {
+  if (!date) return ''
+  const diff = Date.now() - new Date(date).getTime()
+  const hours = Math.floor(diff / 3600000)
+  if (hours < 1) return 'Just now'
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  return new Date(date).toLocaleDateString('sv-SE')
+}
+
+const STATUS_OPTIONS: { value: BookStatus; label: string }[] = [
+  { value: 'unread', label: 'Want to Read' },
+  { value: 'reading', label: 'Reading' },
+  { value: 'finished', label: 'Finished' },
+  { value: 'abandoned', label: 'Abandoned' },
+]
+
+export const BookListItem = React.memo(function BookListItem({ book }: BookListItemProps) {
+  const navigate = useNavigate()
+  const updateBookStatus = useBookStore(s => s.updateBookStatus)
+
+  const handleClick = () => navigate(`/library/${book.id}`)
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      navigate(`/library/${book.id}`)
+    }
+  }
+
+  const handleStatusChange = (value: string) => {
+    // Stop propagation handled by Select portal — no need to stopPropagation
+    updateBookStatus(book.id, value as BookStatus)
+  }
+
+  return (
+    <div
+      role="article"
+      aria-label={`${book.title} by ${book.author}, ${book.progress}% complete`}
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      className="flex items-center gap-4 p-3 rounded-xl hover:bg-muted/50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      data-testid={`book-list-item-${book.id}`}
+    >
+      {/* Thumbnail */}
+      <div className="size-16 flex-shrink-0 rounded-lg overflow-hidden">
+        {book.coverUrl ? (
+          <img
+            src={book.coverUrl}
+            alt={`Cover of ${book.title}`}
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-muted rounded-lg">
+            <BookOpen className="h-5 w-5 text-muted-foreground" />
+          </div>
+        )}
+      </div>
+
+      {/* Title + Author */}
+      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+        <p className="text-sm font-medium text-foreground truncate">{book.title}</p>
+        <p className="text-xs text-muted-foreground truncate">{book.author}</p>
+        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <span className="uppercase">{book.format}</span>
+          {book.totalPages && <span>{book.totalPages} pages</span>}
+        </div>
+      </div>
+
+      {/* Progress */}
+      <div className="hidden sm:flex flex-col items-end gap-1 min-w-[120px]">
+        <div className="flex items-center gap-2 w-full">
+          <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full bg-brand transition-all"
+              style={{ width: `${book.progress}%` }}
+            />
+          </div>
+          <span className="text-[10px] text-muted-foreground tabular-nums w-8 text-right">
+            {book.progress}%
+          </span>
+        </div>
+        {book.lastOpenedAt && (
+          <span className="text-[10px] text-muted-foreground">
+            {relativeTime(book.lastOpenedAt)}
+          </span>
+        )}
+      </div>
+
+      {/* Status dropdown */}
+      <div
+        className="hidden md:block flex-shrink-0"
+        onClick={e => e.stopPropagation()}
+        onKeyDown={e => e.stopPropagation()}
+      >
+        <Select value={book.status} onValueChange={handleStatusChange}>
+          <SelectTrigger className="h-8 w-[130px] text-xs" aria-label="Book status">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map(opt => (
+              <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Mobile status badge (shown when dropdown hidden) */}
+      <div className="md:hidden flex-shrink-0">
+        <BookStatusBadge status={book.status} />
+      </div>
+    </div>
+  )
+})
