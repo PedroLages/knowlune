@@ -39,7 +39,8 @@ const THEME_CIRCLES: { value: ReadingTheme; label: string; bg: string; border: s
   { value: 'auto', label: 'White', bg: 'bg-[#ffffff]', border: 'border-[#d4d4d4]' },
   { value: 'sepia', label: 'Sepia', bg: 'bg-[#f4ecd8]', border: 'border-[#e0d5b8]' },
   { value: 'gray', label: 'Gray', bg: 'bg-[#e5e5e5]', border: 'border-[#cccccc]' },
-  { value: 'high-contrast', label: 'Dark', bg: 'bg-[#2c2c2e]', border: 'border-[#2c2c2e]' },
+  { value: 'dark', label: 'Dark', bg: 'bg-[#383a56]', border: 'border-[#4e5070]' },
+  { value: 'high-contrast', label: 'Black', bg: 'bg-[#000000]', border: 'border-[#000000]' },
 ]
 
 export function ReadingFocusModesSection({

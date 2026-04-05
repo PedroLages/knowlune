@@ -7,7 +7,7 @@ export type ContentDensity = 'default' | 'spacious'
 export type ReduceMotion = 'system' | 'on' | 'off'
 export type ReadingFontSize = '1x' | '1.25x' | '1.5x' | '2x'
 export type ReadingLineHeight = 1.5 | 1.75 | 2.0
-export type ReadingTheme = 'auto' | 'sepia' | 'gray' | 'high-contrast'
+export type ReadingTheme = 'auto' | 'sepia' | 'gray' | 'dark' | 'high-contrast'
 
 /** Maps font size labels to root font-size pixel values */
 export const FONT_SIZE_PX: Record<FontSize, number> = {
@@ -86,7 +86,7 @@ const VALID_CONTENT_DENSITY: ContentDensity[] = ['default', 'spacious']
 const VALID_REDUCE_MOTION: ReduceMotion[] = ['system', 'on', 'off']
 const VALID_READING_FONT_SIZE: ReadingFontSize[] = ['1x', '1.25x', '1.5x', '2x']
 const VALID_READING_LINE_HEIGHT: ReadingLineHeight[] = [1.5, 1.75, 2.0]
-const VALID_READING_THEME: ReadingTheme[] = ['auto', 'sepia', 'gray', 'high-contrast']
+const VALID_READING_THEME: ReadingTheme[] = ['auto', 'sepia', 'gray', 'dark', 'high-contrast']
 
 export function getSettings(): AppSettings {
   try {

@@ -611,6 +611,12 @@ html.spacious {
     --foreground: oklch(0.2 0 0);
   }
 
+  /* Reading mode: Dark theme (app dark mode surface) */
+  html.reading-mode.reading-dark {
+    --background: #383a56;
+    --foreground: #e8e9f0;
+  }
+
   /* Reading mode: High Contrast theme (E65-S02) */
   html.reading-mode.reading-hc {
     --background: oklch(0 0 0);
