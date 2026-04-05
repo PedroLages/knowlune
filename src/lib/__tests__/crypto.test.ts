@@ -9,8 +9,16 @@
  * - Error handling for invalid inputs
  */
 
-import { describe, it, expect } from 'vitest'
-import { encryptData, decryptData } from '../crypto'
+import 'fake-indexeddb/auto'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { encryptData, decryptData, _resetKeyCache } from '../crypto'
+import { _resetDBForTesting } from '../cryptoKeyStore'
+
+beforeEach(async () => {
+  _resetKeyCache()
+  await _resetDBForTesting()
+  indexedDB.deleteDatabase('CryptoKeyStore')
+})
 
 describe('crypto utilities', () => {
   describe('encryptData', () => {
@@ -170,6 +178,50 @@ describe('crypto utilities', () => {
 
       // All IVs should be unique (probability of collision is negligible)
       expect(ivs.size).toBe(iterations)
+    })
+  })
+
+  describe('session key persistence', () => {
+    it('decrypts successfully after simulated page refresh', async () => {
+      const plaintext = 'sk-test-persistent-key-12345'
+
+      // Encrypt with session key (auto-generated and persisted to IndexedDB)
+      const encrypted = await encryptData(plaintext)
+
+      // Simulate page refresh: clear in-memory cache
+      _resetKeyCache()
+
+      // Decrypt should reload key from IndexedDB and succeed
+      const decrypted = await decryptData(encrypted.iv, encrypted.encryptedData)
+      expect(decrypted).toBe(plaintext)
+    })
+
+    it('uses the same key across multiple encrypt/decrypt calls', async () => {
+      const plaintext1 = 'first-secret'
+      const plaintext2 = 'second-secret'
+
+      const encrypted1 = await encryptData(plaintext1)
+      const encrypted2 = await encryptData(plaintext2)
+
+      // Both should decrypt with the same session key
+      const decrypted1 = await decryptData(encrypted1.iv, encrypted1.encryptedData)
+      const decrypted2 = await decryptData(encrypted2.iv, encrypted2.encryptedData)
+
+      expect(decrypted1).toBe(plaintext1)
+      expect(decrypted2).toBe(plaintext2)
+    })
+
+    it('fails gracefully when IndexedDB key is deleted', async () => {
+      const plaintext = 'sk-will-be-lost'
+      const encrypted = await encryptData(plaintext)
+
+      // Simulate IndexedDB being cleared (user clears browsing data)
+      _resetKeyCache()
+      await _resetDBForTesting()
+      indexedDB.deleteDatabase('CryptoKeyStore')
+
+      // New key is generated — old ciphertext is unreadable
+      await expect(decryptData(encrypted.iv, encrypted.encryptedData)).rejects.toThrow()
     })
   })
 })
