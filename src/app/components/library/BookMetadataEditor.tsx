@@ -197,6 +197,10 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
   // Cover re-fetch from Open Library
   const handleRefetchCover = useCallback(async () => {
     if (!book) return
+    if (!navigator.onLine) {
+      toast.warning('You are offline. Cover fetch requires an internet connection.')
+      return
+    }
     setIsFetchingCover(true)
     try {
       const result = await fetchOpenLibraryMetadata({

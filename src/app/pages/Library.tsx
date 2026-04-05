@@ -11,7 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, Plus } from 'lucide-react'
+import { BookOpen, Plus, WifiOff } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
 import { StorageIndicator } from '@/app/components/library/StorageIndicator'
@@ -23,8 +23,10 @@ import { LibraryFilters } from '@/app/components/library/LibraryFilters'
 import { useBookStore } from '@/stores/useBookStore'
 import type { Book } from '@/data/types'
 import { cn } from '@/app/components/ui/utils'
+import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 
 export function Library() {
+  const isOnline = useOnlineStatus()
   const [importOpen, setImportOpen] = useState(false)
   const [droppedFile, setDroppedFile] = useState<File | null>(null)
   const [editingBook, setEditingBook] = useState<Book | null>(null)
@@ -72,7 +74,20 @@ export function Library() {
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-foreground">Books</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold text-foreground">Books</h1>
+          {!isOnline && (
+            <span
+              role="status"
+              aria-label="You are offline"
+              className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning-foreground"
+              data-testid="library-offline-badge"
+            >
+              <WifiOff className="size-3" aria-hidden="true" />
+              Offline
+            </span>
+          )}
+        </div>
         <Button
           variant="brand"
           onClick={() => setImportOpen(true)}

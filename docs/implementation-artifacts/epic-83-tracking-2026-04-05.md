@@ -14,7 +14,7 @@ Last Updated: 2026-04-05
 | E83-S05 | done | pending | 1 | 3 |
 | E83-S06 | queued | — | — | — |
 | E83-S07 | queued | — | — | — |
-| E83-S08 | queued | — | — | — |
+| E83-S08 | done | pending | 1 | 3 |
 
 ## Story Details
 
@@ -119,15 +119,18 @@ _(none yet)_
 ---
 
 ### E83-S08: PWA Offline Shell for Library
-**Status:** queued
+**Status:** done
+**Completed:** 2026-04-05
 #### Errors
-_(none yet)_
+_(none)_
 #### Review Findings
-_(none yet)_
+- Round 1: 1 MEDIUM (offline() return type ambiguity), 1 LOW (JSDoc comment precision), 1 NIT (test assertion order)
 #### Fixes Applied
-_(none yet)_
+- Clarified `offline()` return type with explicit boolean annotation
+- Updated JSDoc comments for clarity on service worker registration flow
+- Fixed test assertion order for deterministic spec execution
 #### Notes
-_(none yet)_
+- All ACs implemented. Service worker registration, offline detection guard, graceful degradation for library page.
 
 ---
 
