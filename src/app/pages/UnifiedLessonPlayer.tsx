@@ -242,12 +242,15 @@ export function UnifiedLessonPlayer() {
         e.preventDefault()
         toggleTheater()
       }
-      // Note: ESC in theater mode is handled exclusively by VideoPlayer's internal
-      // handler (cascading priority: loop markers → theater mode). No duplicate here.
+      // ESC exits theater mode for PDFs (VideoPlayer handles its own ESC for videos)
+      if (e.key === 'Escape' && isTheater && state.isPdf) {
+        e.preventDefault()
+        toggleTheater()
+      }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [toggleTheater])
+  }, [toggleTheater, isTheater, state.isPdf])
 
   // Next course suggestion (E91-S08) — computed via useMemo
   const courseSuggestion = useMemo(() => {
@@ -490,7 +493,7 @@ export function UnifiedLessonPlayer() {
           'flex items-center gap-3 px-4 py-2 shrink-0 sticky top-0 z-20 transition-all duration-200',
           isToolbarStuck
             ? 'bg-card shadow-lg shadow-black/25 border-b border-border/30 rounded-none'
-            : 'border border-border/30 bg-card/50 rounded-xl -mt-3 mb-3'
+            : 'border border-border/30 bg-card/80 backdrop-blur-sm rounded-xl -mt-3 mb-3'
         )}
         data-theater-hide
       >
