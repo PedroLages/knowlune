@@ -17,13 +17,16 @@ import { BookImportDialog } from '@/app/components/library/BookImportDialog'
 import { BookCard } from '@/app/components/library/BookCard'
 import { BookListItem } from '@/app/components/library/BookListItem'
 import { BookContextMenu } from '@/app/components/library/BookContextMenu'
+import { BookMetadataEditor } from '@/app/components/library/BookMetadataEditor'
 import { LibraryFilters } from '@/app/components/library/LibraryFilters'
 import { useBookStore } from '@/stores/useBookStore'
+import type { Book } from '@/data/types'
 import { cn } from '@/app/components/ui/utils'
 
 export function Library() {
   const [importOpen, setImportOpen] = useState(false)
   const [droppedFile, setDroppedFile] = useState<File | null>(null)
+  const [editingBook, setEditingBook] = useState<Book | null>(null)
   const books = useBookStore(s => s.books)
   const libraryView = useBookStore(s => s.libraryView)
   const getFilteredBooks = useBookStore(s => s.getFilteredBooks)
@@ -117,7 +120,7 @@ export function Library() {
       {books.length > 0 && libraryView === 'grid' && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {filteredBooks.map(book => (
-            <BookContextMenu key={book.id} book={book}>
+            <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
               <BookCard book={book} />
             </BookContextMenu>
           ))}
@@ -128,7 +131,7 @@ export function Library() {
       {books.length > 0 && libraryView === 'list' && (
         <div className="flex flex-col divide-y divide-border/50">
           {filteredBooks.map(book => (
-            <BookContextMenu key={book.id} book={book}>
+            <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
               <BookListItem book={book} />
             </BookContextMenu>
           ))}
@@ -157,6 +160,14 @@ export function Library() {
           if (!open) setDroppedFile(null)
         }}
         initialFile={droppedFile}
+      />
+
+      <BookMetadataEditor
+        book={editingBook}
+        open={editingBook !== null}
+        onOpenChange={open => {
+          if (!open) setEditingBook(null)
+        }}
       />
     </div>
   )

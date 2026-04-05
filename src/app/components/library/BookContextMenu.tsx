@@ -83,9 +83,10 @@ function StatusMenuItems({
 interface BookContextMenuProps {
   book: Book
   children: ReactNode
+  onEdit?: () => void
 }
 
-export function BookContextMenu({ book, children }: BookContextMenuProps) {
+export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps) {
   const updateBookStatus = useBookStore(s => s.updateBookStatus)
   const deleteBook = useBookStore(s => s.deleteBook)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
@@ -110,7 +111,7 @@ export function BookContextMenu({ book, children }: BookContextMenuProps) {
           <ContextMenuTrigger>{children}</ContextMenuTrigger>
           <ContextMenuContent className="w-48">
             <ContextMenuItem
-              disabled
+              onClick={onEdit}
               data-testid="context-menu-edit"
             >
               Edit
@@ -146,7 +147,7 @@ export function BookContextMenu({ book, children }: BookContextMenuProps) {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-48">
-            <DropdownMenuItem disabled>Edit</DropdownMenuItem>
+            <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>Change Status</DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="w-44">
