@@ -1009,8 +1009,8 @@ development_status:
   # Text highlights, annotations, cloze flashcards, reading sessions
   # Depends on: E84 (EPUB Reader)
   # ──────────────────────────────────────────────────
-  epic-85: backlog
-  85-1-text-selection-and-highlight-creation: backlog
+  epic-85: in-progress
+  85-1-text-selection-and-highlight-creation: done
   85-2-highlight-annotations-and-management: backlog
   85-3-highlight-list-panel: backlog
   85-4-cloze-deletion-flashcard-creator: backlog

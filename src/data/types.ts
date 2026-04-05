@@ -680,12 +680,16 @@ export interface BookHighlight {
   id: string // UUID v4
   bookId: string
   cfiRange?: string // EPUB CFI range
-  textAnchor: string // highlighted text snippet
+  textAnchor: string // highlighted text snippet (selected text)
+  /** Surrounding context: 30 chars before and after the selection (for fallback matching) */
+  textContext?: { prefix: string; suffix: string }
+  chapterHref?: string // EPUB chapter href for grouping in HighlightListPanel
   note?: string
   color: HighlightColor
   flashcardId?: string // FK to Flashcard.id
   position: ContentPosition
   createdAt: string // ISO 8601
+  updatedAt?: string // ISO 8601
 }
 
 export interface YouTubeCourseChapter {

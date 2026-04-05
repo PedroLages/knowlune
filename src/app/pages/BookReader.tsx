@@ -35,6 +35,7 @@ import { ReaderErrorBoundary } from '@/app/components/reader/ReaderErrorBoundary
 import { TableOfContents } from '@/app/components/reader/TableOfContents'
 import { ReaderSettingsPanel } from '@/app/components/reader/ReaderSettingsPanel'
 import { TtsControlBar } from '@/app/components/reader/TtsControlBar'
+import { HighlightLayer } from '@/app/components/reader/HighlightLayer'
 import { useTts } from '@/app/hooks/useTts'
 import { db } from '@/db/schema'
 import type { ContentPosition } from '@/data/types'
@@ -84,6 +85,9 @@ export function BookReader() {
   const [epubUrl, setEpubUrl] = useState<string | null>(null)
   const [isLoadingContent, setIsLoadingContent] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  // highlightsOpen state: wired to ReaderHeader → HighlightListPanel (E85-S03)
+  const [highlightsOpen, setHighlightsOpen] = useState(false)
+  void highlightsOpen // used by HighlightListPanel in E85-S03
   const [retryKey, setRetryKey] = useState(0)
   const [toc, setToc] = useState<NavItem[]>([])
   const [currentHref, setCurrentHref] = useState<string | undefined>(undefined)
@@ -404,6 +408,7 @@ export function BookReader() {
         visible={headerVisible}
         onTocOpen={() => setTocOpen(true)}
         onSettingsOpen={() => setSettingsOpen(true)}
+        onHighlightsOpen={() => setHighlightsOpen(true)}
         onReadAloud={isTtsAvailable ? startTts : undefined}
       />
 
@@ -463,6 +468,15 @@ export function BookReader() {
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />
+
+      {/* Highlight layer (E85-S01) — text selection events + highlight overlays */}
+      {bookId && (
+        <HighlightLayer
+          rendition={renditionRef.current}
+          bookId={bookId}
+          currentHref={currentHref}
+        />
+      )}
 
       {/* TTS Read-Aloud control bar (E84-S05) — shown when TTS is active */}
       {(isTtsPlaying || isTtsPaused) && (
