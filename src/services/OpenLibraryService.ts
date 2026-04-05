@@ -13,6 +13,8 @@ export interface OpenLibraryResult {
   coverUrl?: string
   description?: string
   subjects?: string[]
+  /** True when the fetch was skipped because the browser reported offline status. */
+  skippedOffline?: boolean
 }
 
 const TIMEOUT_MS = 5000
@@ -27,8 +29,15 @@ export async function fetchOpenLibraryMetadata(params: {
   title: string
   author: string
 }): Promise<OpenLibraryResult> {
-  // E83-S08: Skip network requests when offline — OPFS books still work
-  if (!navigator.onLine) return {}
+  // E83-S08: Skip network requests when offline — OPFS books still work.
+  // navigator.onLine can return true when behind a captive portal or with no
+  // actual connectivity; the try/catch below provides defense-in-depth for
+  // those cases. We return a typed sentinel so callers can distinguish
+  // "skipped: offline" from "fetched but found nothing".
+  if (!navigator.onLine) {
+    console.info('[OpenLibraryService] Skipping metadata fetch — browser reports offline')
+    return { skippedOffline: true }
+  }
 
   try {
     // Try ISBN search first
