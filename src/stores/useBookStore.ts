@@ -18,7 +18,7 @@ import { appEventBus } from '@/lib/eventBus'
 import { unlockSidebarItem } from '@/app/hooks/useProgressiveDisclosure'
 
 interface BookFilters {
-  status?: BookStatus
+  status?: BookStatus | 'all'
   search?: string
 }
 
@@ -36,6 +36,9 @@ interface BookStoreState {
   setSelectedBookId: (id: string | null) => void
   setLibraryView: (view: 'grid' | 'list') => void
   setFilters: (filters: BookFilters) => void
+  setFilter: (key: keyof BookFilters, value: string | undefined) => void
+  getFilteredBooks: () => Book[]
+  getBookCountByStatus: () => Record<'all' | BookStatus, number>
 }
 
 export const useBookStore = create<BookStoreState>((set, get) => ({
@@ -121,4 +124,32 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
   setSelectedBookId: (id: string | null) => set({ selectedBookId: id }),
   setLibraryView: (view: 'grid' | 'list') => set({ libraryView: view }),
   setFilters: (filters: BookFilters) => set({ filters }),
+  setFilter: (key, value) =>
+    set(state => ({ filters: { ...state.filters, [key]: value } })),
+
+  getFilteredBooks: () => {
+    const { books, filters } = get()
+    let result = books
+    if (filters.status && filters.status !== 'all') {
+      result = result.filter(b => b.status === filters.status)
+    }
+    if (filters.search) {
+      const q = filters.search.toLowerCase()
+      result = result.filter(
+        b =>
+          b.title.toLowerCase().includes(q) ||
+          b.author.toLowerCase().includes(q)
+      )
+    }
+    return result
+  },
+
+  getBookCountByStatus: () => {
+    const { books } = get()
+    const counts: Record<string, number> = { all: books.length }
+    for (const b of books) {
+      counts[b.status] = (counts[b.status] || 0) + 1
+    }
+    return counts as Record<'all' | BookStatus, number>
+  },
 }))
