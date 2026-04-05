@@ -177,17 +177,16 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete book?</AlertDialogTitle>
+            <AlertDialogTitle>Delete &ldquo;{book.title}&rdquo;?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete &ldquo;{book.title}&rdquo; and all its highlights. This
-              action cannot be undone.
+              This will remove the book and all its highlights. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 min-h-[44px]"
               data-testid="confirm-delete-book"
             >
               Delete
