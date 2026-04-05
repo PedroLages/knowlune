@@ -11,7 +11,7 @@
 | E88-S01 | OPDS Catalog Connection | done | #257 | 2 | 9 |
 | E88-S02 | OPDS Catalog Browsing and Import | done | #258 | 3 | 8 |
 | E88-S03 | Remote EPUB Streaming | done | #259 | 2 | 9 |
-| E88-S04 | M4B Audiobook Import | queued | — | — | — |
+| E88-S04 | M4B Audiobook Import | done | #260 | 2 | 11 |
 
 ## Known Issues Summary (pass to all Review agents)
 
