@@ -8,6 +8,8 @@ import {
   BookOpen,
   Brain,
   Target,
+  Library,
+  Trash2,
 } from 'lucide-react'
 import type { NotificationType } from '@/data/types'
 
@@ -23,6 +25,8 @@ export const notificationIcons: Record<NotificationType, typeof Trophy> = {
   'knowledge-decay': Brain,
   'recommendation-match': Sparkles,
   'milestone-approaching': Target,
+  'book-imported': Library,
+  'book-deleted': Trash2,
 }
 
 export const notificationIconColors: Record<NotificationType, string> = {
@@ -35,6 +39,8 @@ export const notificationIconColors: Record<NotificationType, string> = {
   'knowledge-decay': 'text-warning',
   'recommendation-match': 'text-brand',
   'milestone-approaching': 'text-success',
+  'book-imported': 'text-brand',
+  'book-deleted': 'text-muted-foreground',
 }
 
 // Fallback icons for unknown types

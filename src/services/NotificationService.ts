@@ -274,6 +274,8 @@ const EVENT_TO_NOTIF_TYPE: Record<AppEventType, NotificationType> = {
   'knowledge:decay': 'knowledge-decay',
   'recommendation:match': 'recommendation-match',
   'milestone:approaching': 'milestone-approaching',
+  'book:imported': 'book-imported',
+  'book:deleted': 'book-deleted',
 }
 
 /** Handle a single domain event, creating the appropriate notification. */
@@ -414,6 +416,20 @@ async function handleEvent(event: AppEvent): Promise<void> {
       })
       break
     }
+
+    case 'book:imported':
+      await store.create({
+        type: 'book-imported',
+        title: 'Book Added',
+        message: `"${event.title}" has been added to your library.`,
+        actionUrl: `/library/${event.bookId}`,
+        metadata: { bookId: event.bookId },
+      })
+      break
+
+    case 'book:deleted':
+      // No notification for deletions — user initiated the action
+      break
   }
 
   // Focus mode piercing (E65-S04): after DB persistence, show a piercing

@@ -15,6 +15,8 @@ const TYPE_TO_FIELD: Record<NotificationType, keyof NotificationPreferences> = {
   'knowledge-decay': 'knowledgeDecay',
   'recommendation-match': 'recommendationMatch',
   'milestone-approaching': 'milestoneApproaching',
+  'book-imported': 'bookImported',
+  'book-deleted': 'bookDeleted',
 }
 
 const DEFAULTS: NotificationPreferences = {
@@ -28,6 +30,8 @@ const DEFAULTS: NotificationPreferences = {
   knowledgeDecay: true,
   recommendationMatch: true,
   milestoneApproaching: true,
+  bookImported: true,
+  bookDeleted: true,
   quietHoursEnabled: false,
   quietHoursStart: '22:00',
   quietHoursEnd: '07:00',

@@ -469,6 +469,8 @@ export type NotificationType =
   | 'knowledge-decay'
   | 'recommendation-match'
   | 'milestone-approaching'
+  | 'book-imported'
+  | 'book-deleted'
 
 export interface Notification {
   id: string // ULID (time-sortable, unique)
@@ -496,6 +498,8 @@ export interface NotificationPreferences {
   knowledgeDecay: boolean
   recommendationMatch: boolean
   milestoneApproaching: boolean
+  bookImported: boolean
+  bookDeleted: boolean
   // Quiet hours
   quietHoursEnabled: boolean
   quietHoursStart: string // "HH:MM" (24h format)
@@ -619,6 +623,67 @@ export interface YouTubeTranscriptRecord {
   status: 'pending' | 'fetching' | 'done' | 'failed' | 'unavailable'
   failureReason?: string // e.g., 'no-captions-available', 'network-error'
   fetchedAt: string // ISO 8601
+}
+
+// --- Book / Library Types (E83) ---
+
+export type BookFormat = 'epub' | 'pdf' | 'audiobook'
+
+export type BookStatus = 'unread' | 'reading' | 'finished' | 'abandoned'
+
+export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'orange'
+
+/** Where the file content lives */
+export type ContentSource =
+  | { type: 'local'; opfsPath: string }
+  | { type: 'remote'; url: string }
+  | { type: 'fileHandle'; handle: FileSystemFileHandle }
+
+/** Position within a book */
+export type ContentPosition =
+  | { type: 'cfi'; value: string } // EPUB CFI
+  | { type: 'time'; seconds: number } // Audiobook
+  | { type: 'page'; pageNumber: number } // PDF
+
+export interface BookChapter {
+  id: string
+  bookId: string
+  title: string
+  order: number
+  position: ContentPosition
+}
+
+export interface Book {
+  id: string // UUID v4
+  title: string
+  author: string
+  format: BookFormat
+  status: BookStatus
+  coverUrl?: string
+  description?: string
+  tags: string[]
+  chapters: BookChapter[]
+  source: ContentSource
+  currentPosition?: ContentPosition
+  totalPages?: number
+  totalDuration?: number // audiobook seconds
+  progress: number // 0-100
+  rating?: number // 1-5
+  createdAt: string // ISO 8601
+  lastOpenedAt?: string // ISO 8601
+  fileSize?: number // bytes
+}
+
+export interface BookHighlight {
+  id: string // UUID v4
+  bookId: string
+  cfiRange?: string // EPUB CFI range
+  textAnchor: string // highlighted text snippet
+  note?: string
+  color: HighlightColor
+  flashcardId?: string // FK to Flashcard.id
+  position: ContentPosition
+  createdAt: string // ISO 8601
 }
 
 export interface YouTubeCourseChapter {
