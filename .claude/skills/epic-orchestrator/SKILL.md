@@ -178,12 +178,16 @@ Keep two small data structures in-context for the report handoff:
 |-------|--------|--------|---------------|--------------|
 ```
 
-**Pre-existing issues list** (issues in files NOT changed by any story — deferred to final report):
+**Known issues matched** (already in known-issues.yaml — reference only):
 ```
-PRE-EXISTING ISSUES (deferred):
-- [SEVERITY] description — file:line (found during E##-S##)
+KNOWN ISSUES MATCHED:
+- KI-NNN: description (re-encountered during E##-S##)
 ```
 
+**New pre-existing issues** (genuinely new — will be added to known-issues.yaml in Phase 2):
+```
+NEW PRE-EXISTING ISSUES:
+- [SEVERITY] description — file:line (found during E##-S##)
 These are the ONLY state in-context. Everything else is in TodoWrite or sub-agent output.
 
 ### Persistent Tracking File

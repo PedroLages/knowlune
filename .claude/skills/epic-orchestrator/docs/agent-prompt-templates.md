@@ -39,6 +39,12 @@ STEP 3: Return a brief summary:
 ```
 Run `/review-story {STORY_ID}` on the current branch.
 
+KNOWN ISSUES (already tracked in docs/known-issues.yaml — do NOT re-flag these):
+{KNOWN_ISSUES_SUMMARY}
+
+If a pre-existing issue matches one of the above known issues (same file or same category
+of problem), classify it as KNOWN, not PRE-EXISTING. This prevents duplicate reporting.
+
 This runs the full quality gate pipeline:
 - Pre-checks: build, lint (auto-fix), type-check, format (auto-fix), unit tests, E2E tests
 - Design review: Playwright MCP browser testing (mobile/tablet/desktop)
@@ -71,6 +77,11 @@ TOTAL: [count]
 - [SEVERITY] [description] — [file:line]
 ...
 
+KNOWN ISSUES (already in known-issues.yaml — no action needed):
+TOTAL: [count]
+- KI-NNN: [matched description]
+...
+
 NON-ISSUES (verified false positives — not actual problems):
 TOTAL: [count]
 - [ORIGINAL_SEVERITY] [description] — [why it's not an issue]
@@ -80,8 +91,11 @@ REPORT PATHS:
 - Code: [path]
 - Testing: [path]
 
-IMPORTANT: Report ALL issues at every severity level. Classify each correctly.
-Story-related issues will be fixed now. Pre-existing issues go in the final report for a later date.
+IMPORTANT: Report ALL issues at every severity level. Classify each into one of four tiers:
+- STORY-RELATED: in files changed by this story — will be fixed now
+- PRE-EXISTING (NEW): in untouched files, NOT in known-issues.yaml — goes in final report
+- KNOWN: matches an entry in known-issues.yaml — acknowledged, no action needed
+- NON-ISSUES: verified false positives — not actual problems
 ```
 
 ---
@@ -319,12 +333,15 @@ GATHER INFORMATION FROM:
 - Sprint status: docs/implementation-artifacts/sprint-status.yaml
 - Git log: git log main --oneline (recent merges)
 - Post-epic outputs: testarch-trace, testarch-nfr, adversarial review, retrospective
+- Known issues register: docs/known-issues.yaml (cross-reference deferred issues)
 
 REPORT STRUCTURE:
 1. **Executive Summary** — Epic goal, outcome, date range
 2. **Stories Delivered** — Table: story ID, name, PR URL, review rounds, issues fixed
 3. **Review Metrics** — Total story-related issues found/fixed by severity across all stories
-4. **Deferred Issues (Pre-Existing)** — Issues found in files NOT changed by any story. These exist on main and were NOT introduced by this epic. List each with severity, description, file:line, and which story's review discovered it. These should be fixed in a future sprint.
+4. **Deferred Issues**
+   - **4a. Known Issues (Already Tracked)** — Pre-existing issues that matched entries in `docs/known-issues.yaml`. Reference by KI-NNN. These need no new action.
+   - **4b. New Pre-Existing Issues** — Genuinely new issues NOT in `known-issues.yaml`. Listed with assigned KI-NNN (added to register in Phase 2), severity, description, file:line, and discovering story.
 5. **Post-Epic Validation** — Trace coverage, NFR assessment, adversarial findings summary
 6. **Lessons Learned** — Key insights from retrospective
 7. **Suggestions for Next Epic** — Actionable recommendations based on observed patterns:
@@ -337,8 +354,11 @@ REPORT STRUCTURE:
 COORDINATOR DATA (use this for the stories table):
 {PASTE_TRACKING_TABLE}
 
-PRE-EXISTING ISSUES (deferred — include in section 4):
-{PASTE_PRE_EXISTING_ISSUES_LIST}
+KNOWN ISSUES MATCHED (reference only — already tracked):
+{PASTE_KNOWN_ISSUES_MATCHED}
+
+NEW PRE-EXISTING ISSUES (added to known-issues.yaml in Phase 2):
+{PASTE_NEW_PRE_EXISTING_ISSUES_WITH_KI_IDS}
 
 OBSERVED PATTERNS (coordinator passes these for the Suggestions section):
 {PASTE_OBSERVED_PATTERNS}

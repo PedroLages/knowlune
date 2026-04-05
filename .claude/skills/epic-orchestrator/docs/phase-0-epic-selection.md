@@ -68,7 +68,30 @@ Extract:
 
 Store as `{EPIC_NAME}`, `{STORY_LIST}` (array of `{STORY_ID}: {STORY_NAME}` pairs).
 
-## Step 3: Check Current Status
+## Step 3: Load Known Issues Register
+
+Read `docs/known-issues.yaml` and extract all entries where `status: open`.
+
+Build a compact summary called `{KNOWN_ISSUES_SUMMARY}` with one line per open issue:
+```
+KI-NNN: [type] summary (file)
+```
+
+Example:
+```
+KI-016: [test] ImportWizardDialog.test.tsx — 28 unit tests failing (src/app/components/figma/__tests__/ImportWizardDialog.test.tsx)
+KI-026: [lint] 3 ESLint parsing errors in scripts/get-smoke-specs*.js (scripts/get-smoke-specs.js)
+KI-029: [test] Unit test coverage 63.67% below 70% threshold (vitest.config.ts)
+```
+
+Store:
+- `{KNOWN_ISSUES_SUMMARY}` — passed to Review Agent prompts to prevent re-flagging
+- `{NEXT_KI_NUMBER}` — last entry's ID + 1 (for assigning IDs to new findings in Phase 2)
+- `{KNOWN_ISSUES_COUNT}` — count of open issues for status banner
+
+**If `docs/known-issues.yaml` does not exist**, skip this step and set `{KNOWN_ISSUES_SUMMARY}` to empty, `{KNOWN_ISSUES_COUNT}` to 0.
+
+## Step 4: Check Current Status
 
 Read `docs/implementation-artifacts/sprint-status.yaml`:
 - Check each story's current status (`backlog`, `in-progress`, `done`)
@@ -77,7 +100,7 @@ Read `docs/implementation-artifacts/sprint-status.yaml`:
 
 Build the filtered list: `{STORIES_TO_PROCESS}` (excluding `done`).
 
-## Step 4: Create Master TodoWrite
+## Step 5: Create Master TodoWrite
 
 Create TodoWrite with all phases and stories:
 
@@ -104,7 +127,7 @@ Phase 3:
 [ ] Final report
 ```
 
-## Step 5: Environment Prep
+## Step 6: Environment Prep
 
 ```bash
 # Kill any running dev server (port 5173 conflicts with Playwright)
@@ -115,7 +138,7 @@ git checkout main
 git pull
 ```
 
-## Step 6: Initialize Tracking Table
+## Step 7: Initialize Tracking Table
 
 Start the in-context coordinator tracking table:
 
@@ -124,7 +147,7 @@ Start the in-context coordinator tracking table:
 |-------|--------|--------|---------------|--------------|
 ```
 
-## Step 7: Create Persistent Tracking File
+## Step 8: Create Persistent Tracking File
 
 Write the initial tracking file to `docs/implementation-artifacts/epic-{EPIC_NUMBER}-tracking-{DATE}.md`:
 
@@ -169,6 +192,14 @@ _(none yet)_
 | Retrospective | pending | — | — |
 
 ## Non-Issues (False Positives)
+_(none yet)_
+
+## Known Issues Cross-Reference
+
+### Matched (already in register)
+_(none yet)_
+
+### New (to be added to register in Phase 2)
 _(none yet)_
 
 ## Epic Summary

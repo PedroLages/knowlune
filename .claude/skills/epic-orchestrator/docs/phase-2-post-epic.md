@@ -114,6 +114,42 @@ digraph trace_cycle {
 
 **Coordinator after**: Output completion banner with retro document path and key action items.
 
+### 7. Known Issues Register Update (Coordinator Directly)
+
+After all post-epic commands complete, the coordinator updates `docs/known-issues.yaml` with genuinely NEW pre-existing issues discovered during this epic.
+
+**Input:** The `NEW PRE-EXISTING ISSUES` list accumulated during Phase 1 review loops.
+
+**Steps:**
+
+1. Re-read `docs/known-issues.yaml` to get the current last KI number (may have changed if another process updated it).
+2. For each NEW pre-existing issue, append a YAML entry:
+   ```yaml
+   - id: KI-{NEXT_NUMBER}
+     type: {type}           # test | lint | typecheck | build | design | code
+     summary: "{summary}"
+     file: "{file:line}"
+     severity: {severity}
+     discovered_by: {STORY_ID_THAT_FOUND_IT}
+     discovered_on: {TODAY_DATE}
+     status: open
+     scheduled_for: null
+     fixed_by: null
+     notes: "Discovered during Epic {N} orchestrated run."
+   ```
+3. Commit the updated register:
+   ```bash
+   git add docs/known-issues.yaml
+   git commit -m "chore(Epic {N}): add {COUNT} new known issues (KI-{FIRST} to KI-{LAST})"
+   git push
+   ```
+
+**Skip conditions:**
+- If the NEW pre-existing issues list is empty, skip this step entirely.
+- If an issue was already added to `known-issues.yaml` by a `/review-story` sub-agent (check by file path and summary), do not duplicate it.
+
+**Coordination with /review-story:** The standalone `/review-story` skill has its own known-issues logging workflow. When running inside the epic orchestrator, review agents classify issues as KNOWN, NEW PRE-EXISTING, or STORY-RELATED — the coordinator handles all register writes in this single Phase 2 step to prevent concurrent modification and ensure proper KI-NNN sequencing.
+
 ## Post-Epic TodoWrite Updates
 
 ```
@@ -127,6 +163,7 @@ digraph trace_cycle {
 [x] Testarch NFR revalidation — gate: {DECISION} (if needed)
 [x] Adversarial review — {N} findings
 [x] Retrospective — {path}
+[x] Known issues register — {N} new issues added (KI-{FIRST} to KI-{LAST})
 ```
 
 ## Commit Post-Epic Artifacts
@@ -134,7 +171,7 @@ digraph trace_cycle {
 After all post-epic commands complete (including any fix rounds):
 
 ```bash
-git add docs/implementation-artifacts/ docs/reviews/ tests/
+git add docs/implementation-artifacts/ docs/reviews/ docs/known-issues.yaml tests/
 git commit -m "docs(Epic {N}): add post-epic validation reports and test coverage fixes"
 git push
 ```
@@ -149,7 +186,7 @@ After each post-epic command completes, **update the tracking file** Post-Epic V
 
 | Group | Commands | Constraint |
 |-------|----------|-----------|
-| A (sequential) | Sprint Status → Mark Epic Done | Must confirm done before marking |
+| A (sequential) | Sprint Status → Mark Epic Done → Known Issues Register | Must confirm done and have all findings before writing |
 | B (sequential) | Testarch Trace (+ fix cycle) → Testarch NFR (+ fix cycle) | Trace fixes may add tests NFR evaluates |
 | C (independent) | Adversarial Review, Retrospective | No dependencies on each other |
 
