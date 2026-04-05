@@ -46,6 +46,11 @@ import { getTimeReadToday } from '@/services/ReadingStatsService'
 import { db } from '@/db/schema'
 import type { ContentPosition } from '@/data/types'
 
+// Lazy-loaded audiobook renderer — keeps audiobook code out of the initial bundle (NFR20)
+const AudiobookRenderer = lazy(() =>
+  import('@/app/components/audiobook/AudiobookRenderer').then(m => ({ default: m.AudiobookRenderer }))
+)
+
 // Code-split: epub.js + react-reader must NOT be in the initial bundle (architecture decision 12)
 const EpubRenderer = lazy(() =>
   import('@/app/components/reader/EpubRenderer').then(m => ({ default: m.EpubRenderer }))
@@ -444,6 +449,33 @@ export function BookReader() {
             Back to Library
           </button>
         </div>
+      </div>
+    )
+  }
+
+  // Audiobook: render the AudiobookRenderer instead of the EPUB reader (E87-S02)
+  if (book?.format === 'audiobook') {
+    return (
+      <div className="fixed inset-0 flex flex-col bg-background overflow-y-auto" data-testid="audiobook-reader">
+        {/* Minimal header for back navigation */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+          <button
+            onClick={() => navigate('/library')}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors min-h-[44px] flex items-center"
+            aria-label="Back to Library"
+          >
+            ← Library
+          </button>
+        </div>
+        <Suspense
+          fallback={
+            <div className="flex h-[60vh] items-center justify-center">
+              <Loader2 className="size-8 animate-spin text-muted-foreground" />
+            </div>
+          }
+        >
+          <AudiobookRenderer book={book} />
+        </Suspense>
       </div>
     )
   }

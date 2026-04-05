@@ -19,9 +19,11 @@ interface BookCardProps {
 export const BookCard = memo(function BookCard({ book }: BookCardProps) {
   const navigate = useNavigate()
 
-  // E84: EPUB books open the reader; other formats stay on library detail (future)
+  // E84/E87: EPUB and audiobook books open the reader; other formats stay on library detail (future)
   const readerPath =
-    book.format === 'epub' ? `/library/${book.id}/read` : `/library/${book.id}`
+    book.format === 'epub' || book.format === 'audiobook'
+      ? `/library/${book.id}/read`
+      : `/library/${book.id}`
 
   const handleClick = () => navigate(readerPath)
   const handleKeyDown = (e: KeyboardEvent) => {
