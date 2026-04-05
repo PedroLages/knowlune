@@ -84,6 +84,11 @@ const MyClass = React.lazy(() => import('./pages/MyClass'))
 const Reports = React.lazy(() => import('./pages/Reports'))
 const Settings = React.lazy(() => import('./pages/Settings'))
 
+// E84: EPUB Reader — code-split, outside Layout (full-viewport)
+const BookReader = React.lazy(() =>
+  import('./pages/BookReader').then(m => ({ default: m.BookReader }))
+)
+
 function PageLoader() {
   return (
     <DelayedFallback>
@@ -181,6 +186,15 @@ export const router = createBrowserRouter([
     element: (
       <SuspensePage>
         <Login />
+      </SuspensePage>
+    ),
+  },
+  // E84: EPUB Reader — full-viewport, outside Layout (no sidebar/header)
+  {
+    path: 'library/:bookId/read',
+    element: (
+      <SuspensePage>
+        <BookReader />
       </SuspensePage>
     ),
   },
