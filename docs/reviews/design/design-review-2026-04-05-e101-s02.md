@@ -1,24 +1,29 @@
 ## Design Review — E101-S02: Server Connection & Authentication UI (2026-04-05)
 
-### Summary
+### Round 2 Summary
 
-Tested at desktop (1440px) and mobile (375px) via Playwright MCP. All UI elements render correctly with proper accessibility structure.
+Re-tested at desktop (1440px) and mobile (375px) via Playwright MCP. No new design issues found. R1 was clean (PASS with no new issues).
 
 ### Findings
 
 #### Blockers
-*(none)*
+
+None.
 
 #### High Priority
-*(none)*
+
+None.
 
 #### Medium
-*(none)*
+
+None.
 
 #### Low
+
 - **[PRE-EXISTING / KI-035]** Edit and Remove icon buttons use `size-9` (36px), below the 44px WCAG AA minimum touch target. Already tracked in known-issues.yaml.
 
 #### Positive Observations
+
 - Dialog has proper heading hierarchy (h2), description, and aria-describedby
 - Empty state uses headphone icon with helpful copy
 - Form labels properly associated via htmlFor/id
@@ -34,4 +39,5 @@ Tested at desktop (1440px) and mobile (375px) via Playwright MCP. All UI element
 - Status badges use icon + text (NFR12 compliant)
 
 ### Verdict
-PASS — no new design issues found.
+
+PASS — no new design issues found (R1 and R2 both clean).
