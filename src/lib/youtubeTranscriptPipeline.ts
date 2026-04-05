@@ -19,6 +19,7 @@
 import type { TranscriptCue, YouTubeTranscriptRecord } from '@/data/types'
 import { db } from '@/db/schema'
 import { getYouTubeConfiguration } from '@/lib/youtubeConfiguration'
+import { getWhisperConfig } from '@/lib/whisper'
 import { parseVTT } from '@/lib/captions'
 
 // ---------------------------------------------------------------------------
@@ -44,8 +45,8 @@ const TIER1_TIMEOUT = 5_000
 /** Maximum time to wait for Tier 2 yt-dlp subtitle fetch (ms) */
 const TIER2_TIMEOUT = 15_000
 
-/** Maximum time to wait for Tier 3 Whisper transcription (ms) — FR118: 60s target */
-const TIER3_TIMEOUT = 60_000
+/** Maximum time to wait for Tier 3 Whisper transcription (ms) — yt-dlp download (~30s) + CPU transcription (up to 2min) */
+const TIER3_TIMEOUT = 180_000
 
 /** Tier 1 failure codes that trigger Tier 2 fallback */
 const TIER2_FALLBACK_CODES = new Set([
@@ -280,7 +281,16 @@ export async function fetchTranscript(
   }
 
   // --- Tier 3: Whisper transcription (if configured) ---
-  if (config.whisperEndpointUrl) {
+  const whisperConfig = getWhisperConfig()
+
+  if (whisperConfig.provider === 'browser') {
+    // Browser provider (in-browser WASM) is too slow for full YouTube videos — skip Tier 3
+  } else if (whisperConfig.provider === 'groq' || whisperConfig.provider === 'openai') {
+    // TODO: Cloud YouTube Tier 3 requires the Vite proxy at /api/youtube/whisper/transcribe
+    // to support `provider` + `apiKey` fields (yt-dlp download + cloud API forwarding).
+    // Until the proxy is extended, cloud providers fall through to unavailable for YouTube.
+  } else if (config.whisperEndpointUrl) {
+    // Self-hosted: existing behavior via whisperEndpointUrl
     try {
       const tier3 = await fetchTier3(videoId, config.whisperEndpointUrl, lang)
       if (tier3.ok) {

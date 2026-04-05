@@ -65,6 +65,7 @@ import { CourseReminderSettings } from '@/app/components/figma/CourseReminderSet
 import { CalendarSettingsSection } from '@/app/components/figma/CalendarSettingsSection'
 import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationSettings'
 import { YouTubeConfigurationSettings } from '@/app/components/figma/YouTubeConfigurationSettings'
+import { WhisperSettings } from '@/app/components/settings/WhisperSettings'
 import { QuizPreferencesForm } from '@/app/components/settings/QuizPreferencesForm'
 import { PomodoroSettings } from '@/app/components/settings/PomodoroSettings'
 import { FocusModeSettings } from '@/app/components/settings/FocusModeSettings'
@@ -1019,6 +1020,9 @@ export default function Settings() {
 
         {/* YouTube Configuration */}
         <YouTubeConfigurationSettings />
+
+        {/* Speech-to-Text Configuration */}
+        <WhisperSettings />
 
         {/* Quiz Preferences */}
         <QuizPreferencesForm />
