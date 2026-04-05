@@ -1053,7 +1053,7 @@ development_status:
   # Depends on: E83 (Book Library), E87 (Audiobook Player)
   # ──────────────────────────────────────────────────
   epic-88: in-progress
-  88-1-opds-catalog-connection: in-progress
+  88-1-opds-catalog-connection: done
   88-2-opds-catalog-browsing-and-import: backlog
   88-3-remote-epub-streaming: backlog
   88-4-m4b-audiobook-import: backlog
