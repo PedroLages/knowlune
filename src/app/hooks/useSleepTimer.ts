@@ -87,8 +87,9 @@ export function useSleepTimer(): UseSleepTimerReturn {
       setActiveOption(option)
 
       if (option === 'end-of-chapter') {
-        // Listen for the audio ended event on the current chapter
-        const handleEnded = () => {
+        // Listen for the audio ended event on the current chapter (multi-file)
+        // AND the custom 'chapterend' event (single-file M4B — dispatched by useAudioPlayer)
+        const handleChapterEnd = () => {
           const audio = audioRef.current
           if (!audio) return
           localStorage.setItem(LS_KEY, '1')
@@ -98,8 +99,12 @@ export function useSleepTimer(): UseSleepTimerReturn {
         }
         const audio = audioRef.current
         if (audio) {
-          audio.addEventListener('ended', handleEnded)
-          eocCleanupRef.current = () => audio.removeEventListener('ended', handleEnded)
+          audio.addEventListener('ended', handleChapterEnd)
+          audio.addEventListener('chapterend', handleChapterEnd)
+          eocCleanupRef.current = () => {
+            audio.removeEventListener('ended', handleChapterEnd)
+            audio.removeEventListener('chapterend', handleChapterEnd)
+          }
         }
         return
       }
