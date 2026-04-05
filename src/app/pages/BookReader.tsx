@@ -40,6 +40,9 @@ import { HighlightListPanel } from '@/app/components/reader/HighlightListPanel'
 import { ClozeFlashcardCreator } from '@/app/components/reader/ClozeFlashcardCreator'
 import { useTts } from '@/app/hooks/useTts'
 import { useReadingSession } from '@/app/hooks/useReadingSession'
+import { appEventBus } from '@/lib/eventBus'
+import { useReadingGoalStore } from '@/stores/useReadingGoalStore'
+import { getTimeReadToday } from '@/services/ReadingStatsService'
 import { db } from '@/db/schema'
 import type { ContentPosition } from '@/data/types'
 
@@ -112,6 +115,24 @@ export function BookReader() {
 
   // Reading session tracking and streak integration (E85-S06)
   useReadingSession({ bookId: bookId ?? '', isReady: isEpubReady })
+
+  // Daily reading goal celebration — check after each session ends (E86-S05)
+  const checkDailyGoalMet = useReadingGoalStore(s => s.checkDailyGoalMet)
+  useEffect(() => {
+    const unsub = appEventBus.on('reading:session-ended', async () => {
+      try {
+        const secondsToday = await getTimeReadToday()
+        const minutesToday = Math.floor(secondsToday / 60)
+        const isNewlyMet = checkDailyGoalMet(minutesToday)
+        if (isNewlyMet) {
+          toast.success('Daily reading goal reached! ✓', { duration: 4000 })
+        }
+      } catch {
+        // silent-catch-ok: goal check failure should not affect reading UX
+      }
+    })
+    return unsub
+  }, [checkDailyGoalMet])
 
   // TTS read-aloud integration (E84-S05)
   const {

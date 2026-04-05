@@ -46,6 +46,7 @@ import { RecentActivityTimeline } from '@/app/components/reports/RecentActivityT
 import { ActivityHeatmap } from '@/app/components/reports/ActivityHeatmap'
 import { QuizExportCard } from '@/app/components/reports/QuizExportCard'
 import { ReadingStatsSection } from '@/app/components/reports/ReadingStatsSection'
+import { ReadingGoalsCard } from '@/app/components/reports/ReadingGoalsCard'
 import { toast } from 'sonner'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 
@@ -313,6 +314,11 @@ export default function Reports() {
               {/* ── Reading Stats Section (E86-S01) — shown when book data exists ── */}
               <motion.div variants={fadeUp}>
                 <ReadingStatsSection />
+              </motion.div>
+
+              {/* ── Reading Goals Card (E86-S05) — shown when reading goal is set ── */}
+              <motion.div variants={fadeUp}>
+                <ReadingGoalsCard />
               </motion.div>
 
               {/* ── Row 2: Weekly Goal Ring + Study Time ── */}

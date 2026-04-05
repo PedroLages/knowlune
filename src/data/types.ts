@@ -637,6 +637,18 @@ export type BookFormat = 'epub' | 'pdf' | 'audiobook'
 
 export type BookStatus = 'unread' | 'reading' | 'finished' | 'abandoned'
 
+/** User reading goals persisted in localStorage */
+export interface ReadingGoal {
+  /** Whether daily goal is measured in minutes or pages */
+  dailyType: 'minutes' | 'pages'
+  /** Daily target value (minutes or pages) */
+  dailyTarget: number
+  /** Target number of books to finish in the current year */
+  yearlyBookTarget: number
+  /** ISO 8601 timestamp of last update */
+  updatedAt: string
+}
+
 export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'orange'
 
 /** Where the file content lives */
@@ -680,6 +692,7 @@ export interface Book {
   updatedAt?: string // ISO 8601
   lastOpenedAt?: string // ISO 8601
   fileSize?: number // bytes
+  finishedAt?: string // ISO 8601 — set when status transitions to 'finished'
 }
 
 export interface BookHighlight {

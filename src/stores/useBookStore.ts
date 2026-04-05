@@ -89,13 +89,21 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
   },
 
   updateBookStatus: async (bookId: string, status: BookStatus) => {
+    const finishedAt = status === 'finished' ? new Date().toISOString() : undefined
+    const updates: Partial<{ status: BookStatus; finishedAt: string }> = { status }
+    if (finishedAt) updates.finishedAt = finishedAt
+
     // Optimistic update
     set(state => ({
-      books: state.books.map(b => (b.id === bookId ? { ...b, status } : b)),
+      books: state.books.map(b => (b.id === bookId ? { ...b, ...updates } : b)),
     }))
 
     try {
-      await db.books.update(bookId, { status })
+      await db.books.update(bookId, updates)
+      // Emit book:finished so reading goal store can check yearly goal
+      if (status === 'finished' && finishedAt) {
+        appEventBus.emit({ type: 'book:finished', bookId, finishedAt })
+      }
     } catch {
       // Rollback on failure — reload from DB
       const books = await db.books.toArray()
