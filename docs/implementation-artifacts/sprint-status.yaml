@@ -1223,7 +1223,7 @@ development_status:
   # Cool blue-white palette, Inter font, Apple-inspired design
   # Light-mode only — dark mode inherits default dark tokens
   # ──────────────────────────────────────────────────
-  epic-100: in-progress
+  epic-100: done
   100-1-css-theme-tokens-and-type-system: done
-  100-2-settings-ui-and-visual-qa: backlog
+  100-2-settings-ui-and-visual-qa: done
   epic-100-retrospective: optional
