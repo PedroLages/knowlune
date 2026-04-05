@@ -125,7 +125,12 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
   setLibraryView: (view: 'grid' | 'list') => set({ libraryView: view }),
   setFilters: (filters: BookFilters) => set({ filters }),
   setFilter: (key, value) =>
-    set(state => ({ filters: { ...state.filters, [key]: value } })),
+    set(state => ({
+      filters: {
+        ...state.filters,
+        [key]: key === 'status' && value === 'all' ? undefined : value,
+      },
+    })),
 
   getFilteredBooks: () => {
     const { books, filters } = get()

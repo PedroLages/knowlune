@@ -57,6 +57,9 @@ const TEST_BOOKS = [
 
 async function seedBooks(page: import('@playwright/test').Page): Promise<void> {
   await page.goto('/')
+  await page.evaluate(() => {
+    localStorage.setItem('knowlune-onboarding-v1', JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true }))
+  })
   await seedIndexedDBStore(
     page,
     DB_NAME,

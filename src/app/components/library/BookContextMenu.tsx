@@ -50,6 +50,36 @@ const STATUS_OPTIONS: { value: BookStatus; label: string }[] = [
   { value: 'abandoned', label: 'Abandoned' },
 ]
 
+/** Shared status menu items used by both ContextMenu and DropdownMenu. */
+function StatusMenuItems({
+  book,
+  onStatusChange,
+  MenuItem,
+}: {
+  book: Book
+  onStatusChange: (status: BookStatus) => void
+  MenuItem: React.ComponentType<{ key?: string; onClick?: () => void; children: ReactNode; 'data-testid'?: string }>
+}) {
+  return (
+    <>
+      {STATUS_OPTIONS.map(opt => (
+        <MenuItem
+          key={opt.value}
+          onClick={() => onStatusChange(opt.value)}
+          data-testid={`context-menu-status-${opt.value}`}
+        >
+          <span className="flex items-center gap-2">
+            {book.status === opt.value && <Check className="h-3.5 w-3.5" />}
+            <span className={book.status === opt.value ? 'font-medium' : ''}>
+              {opt.label}
+            </span>
+          </span>
+        </MenuItem>
+      ))}
+    </>
+  )
+}
+
 interface BookContextMenuProps {
   book: Book
   children: ReactNode
@@ -69,6 +99,10 @@ export function BookContextMenu({ book, children }: BookContextMenuProps) {
     setConfirmDeleteOpen(false)
   }
 
+  const handleStatusChange = (status: BookStatus) => {
+    updateBookStatus(book.id, status)
+  }
+
   return (
     <>
       <div className="group relative">
@@ -86,20 +120,7 @@ export function BookContextMenu({ book, children }: BookContextMenuProps) {
                 Change Status
               </ContextMenuSubTrigger>
               <ContextMenuSubContent className="w-44">
-                {STATUS_OPTIONS.map(opt => (
-                  <ContextMenuItem
-                    key={opt.value}
-                    onClick={() => updateBookStatus(book.id, opt.value)}
-                    data-testid={`context-menu-status-${opt.value}`}
-                  >
-                    <span className="flex items-center gap-2">
-                      {book.status === opt.value && <Check className="h-3.5 w-3.5" />}
-                      <span className={book.status === opt.value ? 'font-medium' : ''}>
-                        {opt.label}
-                      </span>
-                    </span>
-                  </ContextMenuItem>
-                ))}
+                <StatusMenuItems book={book} onStatusChange={handleStatusChange} MenuItem={ContextMenuItem} />
               </ContextMenuSubContent>
             </ContextMenuSub>
             <ContextMenuSeparator />
@@ -129,19 +150,7 @@ export function BookContextMenu({ book, children }: BookContextMenuProps) {
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>Change Status</DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="w-44">
-                {STATUS_OPTIONS.map(opt => (
-                  <DropdownMenuItem
-                    key={opt.value}
-                    onClick={() => updateBookStatus(book.id, opt.value)}
-                  >
-                    <span className="flex items-center gap-2">
-                      {book.status === opt.value && <Check className="h-3.5 w-3.5" />}
-                      <span className={book.status === opt.value ? 'font-medium' : ''}>
-                        {opt.label}
-                      </span>
-                    </span>
-                  </DropdownMenuItem>
-                ))}
+                <StatusMenuItems book={book} onStatusChange={handleStatusChange} MenuItem={DropdownMenuItem} />
               </DropdownMenuSubContent>
             </DropdownMenuSub>
             <DropdownMenuSeparator />

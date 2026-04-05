@@ -70,7 +70,7 @@ export function LibraryFilters() {
         </div>
 
         {/* View toggle */}
-        <div className="flex items-center rounded-lg border border-border/50 p-0.5 flex-shrink-0">
+        <div className="flex items-center rounded-lg border border-border/50 p-0.5 flex-shrink-0" role="toolbar" aria-label="View toggle">
           <button
             onClick={() => setLibraryView('grid')}
             className={cn(
@@ -127,9 +127,7 @@ export function LibraryFilters() {
               data-testid={`filter-pill-${pill.value}`}
             >
               {pill.label}
-              {pill.value === 'all' && (
-                <span className="ml-1.5 text-xs opacity-80">({count})</span>
-              )}
+              <span className="ml-1.5 text-xs opacity-80">({count})</span>
             </button>
           )
         })}
