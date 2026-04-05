@@ -29,6 +29,7 @@ import { ReaderHeader } from '@/app/components/reader/ReaderHeader'
 import { ReaderFooter } from '@/app/components/reader/ReaderFooter'
 import { ReaderErrorBoundary } from '@/app/components/reader/ReaderErrorBoundary'
 import { TableOfContents } from '@/app/components/reader/TableOfContents'
+import { ReaderSettingsPanel } from '@/app/components/reader/ReaderSettingsPanel'
 
 // Code-split: epub.js + react-reader must NOT be in the initial bundle (architecture decision 12)
 const EpubRenderer = lazy(() =>
@@ -68,6 +69,7 @@ export function BookReader() {
   const theme = useReaderStore(s => s.theme)
   const tocOpen = useReaderStore(s => s.tocOpen)
   const setTocOpen = useReaderStore(s => s.setTocOpen)
+  const settingsOpen = useReaderStore(s => s.settingsOpen)
   const setSettingsOpen = useReaderStore(s => s.setSettingsOpen)
 
   const [epubUrl, setEpubUrl] = useState<string | null>(null)
@@ -340,6 +342,12 @@ export function BookReader() {
         toc={toc}
         currentHref={currentHref}
         rendition={renditionRef.current}
+      />
+
+      {/* Reading Settings panel (E84-S03) */}
+      <ReaderSettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
       />
     </div>
   )
