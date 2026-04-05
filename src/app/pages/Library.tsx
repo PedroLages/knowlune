@@ -11,7 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, Plus, WifiOff, Target } from 'lucide-react'
+import { BookOpen, Globe, Plus, WifiOff, Target } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
@@ -22,6 +22,7 @@ import { BookContextMenu } from '@/app/components/library/BookContextMenu'
 import { BookMetadataEditor } from '@/app/components/library/BookMetadataEditor'
 import { LibraryFilters } from '@/app/components/library/LibraryFilters'
 import { ReadingGoalSettings } from '@/app/components/library/ReadingGoalSettings'
+import { OpdsCatalogSettings } from '@/app/components/library/OpdsCatalogSettings'
 import { DailyGoalRing } from '@/app/components/library/DailyGoalRing'
 import { YearlyGoalProgress } from '@/app/components/library/YearlyGoalProgress'
 import { useBookStore } from '@/stores/useBookStore'
@@ -37,6 +38,7 @@ export function Library() {
   const [droppedFile, setDroppedFile] = useState<File | null>(null)
   const [editingBook, setEditingBook] = useState<Book | null>(null)
   const [goalsOpen, setGoalsOpen] = useState(false)
+  const [catalogsOpen, setCatalogsOpen] = useState(false)
   const books = useBookStore(s => s.books)
   const libraryView = useBookStore(s => s.libraryView)
   const getFilteredBooks = useBookStore(s => s.getFilteredBooks)
@@ -123,6 +125,17 @@ export function Library() {
           <div className="flex items-center gap-2">
             {/* Daily goal ring — compact, only visible when goal is set */}
             <DailyGoalRing />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCatalogsOpen(true)}
+              className="size-11 rounded-xl"
+              aria-label="OPDS catalog settings"
+              title="OPDS Catalogs"
+              data-testid="opds-catalog-settings-trigger"
+            >
+              <Globe className="size-5" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -239,6 +252,7 @@ export function Library() {
       />
 
       <ReadingGoalSettings open={goalsOpen} onOpenChange={setGoalsOpen} />
+      <OpdsCatalogSettings open={catalogsOpen} onOpenChange={setCatalogsOpen} />
     </div>
   )
 }

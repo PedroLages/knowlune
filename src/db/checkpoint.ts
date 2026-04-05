@@ -20,14 +20,14 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 38
+export const CHECKPOINT_VERSION = 39
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
  * This is the result of applying all migrations v1–v38 on a fresh database.
  *
  * IMPORTANT: This must exactly match the schema produced by running all
- * 38 incremental migrations. The unit test `schema-checkpoint.test.ts`
+ * 39 incremental migrations. The unit test `schema-checkpoint.test.ts`
  * enforces this invariant.
  *
  * Note: `courses` table was dropped in v30 (E89-S01) — dead regular course system removed.
@@ -36,6 +36,7 @@ export const CHECKPOINT_VERSION = 38
  * v36 (E50-S01): studySchedules table for calendar integration.
  * v37 (E83-S01): books, bookHighlights, bookFiles tables for book library.
  * v38 (E87-S01): audioBookmarks table for audiobook chapter bookmarks.
+ * v39 (E88-S01): opdsCatalogs table for OPDS catalog connections.
  */
 export const CHECKPOINT_SCHEMA: Record<string, string> = {
   importedCourses: 'id, name, importedAt, status, *tags, source',
@@ -74,4 +75,5 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   bookHighlights: 'id, bookId, color, flashcardId, createdAt',
   bookFiles: '[bookId+filename], bookId',
   audioBookmarks: 'id, bookId, chapterIndex, timestamp, createdAt',
+  opdsCatalogs: 'id, name, url, createdAt',
 }
