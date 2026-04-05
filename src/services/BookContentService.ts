@@ -85,7 +85,8 @@ class BookContentService {
     try {
       const headers: Record<string, string> = {}
       if (source.auth?.username) {
-        headers['Authorization'] = `Basic ${btoa(`${source.auth.username}:${source.auth.password}`)}`
+        headers['Authorization'] =
+          `Basic ${btoa(`${source.auth.username}:${source.auth.password}`)}`
       }
 
       const response = await fetch(source.url, {

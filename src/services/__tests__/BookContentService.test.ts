@@ -98,7 +98,10 @@ describe('BookContentService', () => {
 
   describe('getEpubContent — routing by source type', () => {
     it('throws for non-EPUB format', async () => {
-      const book = { ...makeBook({ type: 'local', opfsPath: '/books/test.epub' }), format: 'pdf' as const }
+      const book = {
+        ...makeBook({ type: 'local', opfsPath: '/books/test.epub' }),
+        format: 'pdf' as const,
+      }
       await expect(bookContentService.getEpubContent(book as Book)).rejects.toThrow('not an EPUB')
     })
 

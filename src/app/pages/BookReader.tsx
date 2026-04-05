@@ -572,9 +572,7 @@ export function BookReader() {
       <main className="flex-1 overflow-hidden">
         {(isLoadingContent || !isLoaded) && (
           <LoadingSkeleton
-            message={
-              book?.source.type === 'remote' ? 'Loading from server...' : 'Loading book...'
-            }
+            message={book?.source.type === 'remote' ? 'Loading from server...' : 'Loading book...'}
           />
         )}
 
