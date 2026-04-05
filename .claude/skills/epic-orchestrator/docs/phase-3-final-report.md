@@ -35,10 +35,15 @@ Aggregate across all stories:
 - Average review rounds per story
 - Stories that needed 2+ rounds (and why)
 
-### 4. Deferred Issues (Pre-Existing)
-Issues found in files NOT changed by any story during this epic. These exist on `main` already and should be addressed in a future sprint. Listed with severity, description, file:line, and which story's review discovered them.
+### 4. Deferred Issues
 
-### 4b. Non-Issues (False Positives)
+#### 4a. Known Issues (Already Tracked)
+Pre-existing issues that matched entries in `docs/known-issues.yaml` at epic start. Reference by KI-NNN with a brief note of which story re-encountered them. These require no new action — they're in the triage pipeline. This section demonstrates awareness without re-flagging.
+
+#### 4b. New Pre-Existing Issues (Added to Register)
+Genuinely new issues found in files NOT changed by any story that were NOT in `known-issues.yaml` at epic start. These were added to the register in Phase 2 with KI-NNN IDs. Listed with: KI-NNN, severity, description, file:line, discovering story, and disposition (open for future triage).
+
+### 4c. Non-Issues (False Positives)
 Items flagged by review agents that were verified as not actual problems. Listed for transparency with original severity, description, and reason for classification.
 
 ### 5. Post-Epic Validation Results

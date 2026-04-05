@@ -327,3 +327,99 @@ issues:
     scheduled_for: null
     fixed_by: null
     notes: "Export button in expanded note view test fails. May be a UI change that moved or renamed the button."
+
+  - id: KI-026
+    type: lint
+    summary: "3 ESLint parsing errors in scripts/get-smoke-specs*.js (shebang files linted by mistake)"
+    file: "scripts/get-smoke-specs.js"
+    severity: high
+    discovered_by: E83-review
+    discovered_on: 2026-04-05
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Trivial fix: add scripts/ to ESLint ignorePatterns or add shebang comment support."
+
+  - id: KI-027
+    type: lint
+    summary: "react-hooks/exhaustive-deps rule not found — missing ESLint plugin config"
+    file: "src/app/components/course/BelowVideoTabs.tsx:75"
+    severity: high
+    discovered_by: E83-review
+    discovered_on: 2026-04-05
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Trivial fix: install/configure eslint-plugin-react-hooks or remove the disable comment."
+
+  - id: KI-028
+    type: code
+    summary: "8 console errors from EmbeddingWorker model fetch failures on page load"
+    file: "src/workers/EmbeddingWorker.ts"
+    severity: medium
+    discovered_by: E83-review
+    discovered_on: 2026-04-05
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "AI model preload fails when offline or model not cached. Not a bug per se — but noisy in dev console and E2E test logs."
+
+  - id: KI-029
+    type: test
+    summary: "Unit test coverage 63.67% below 70% global threshold"
+    file: "vitest.config.ts"
+    severity: medium
+    discovered_by: E83-review
+    discovered_on: 2026-04-05
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Pre-existing across many epics. Threshold was set aspirationally. Either lower threshold or schedule coverage improvement epic."
+
+  - id: KI-030
+    type: lint
+    summary: "5 ESLint errors in non-story files (parsing, missing rule, require-yield)"
+    file: "various"
+    severity: medium
+    discovered_by: E83-review
+    discovered_on: 2026-04-05
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Overlaps KI-026/KI-027 but includes additional errors in server/ files and test specs."
+
+  - id: KI-031
+    type: lint
+    summary: "25+ files need Prettier formatting"
+    file: "various"
+    severity: low
+    discovered_by: E83-review
+    discovered_on: 2026-04-05
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Trivial fix: run npx prettier --write on affected files. Accumulates noise in every review."
+
+  - id: KI-032
+    type: code
+    summary: "4 silent-catch warnings in vite-plugin-youtube-transcript.ts"
+    file: "vite-plugin-youtube-transcript.ts"
+    severity: low
+    discovered_by: E83-review
+    discovered_on: 2026-04-05
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Trivial fix: annotate with silent-catch-ok or surface errors via console.warn."
+
+  - id: KI-033
+    type: lint
+    summary: "110+ ESLint warnings across codebase (component size, hard waits, silent catches, unused vars)"
+    file: "various"
+    severity: low
+    discovered_by: E83-review
+    discovered_on: 2026-04-05
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Accumulated tech debt. Not blocking but adds noise to every lint run. Incremental cleanup recommended."

@@ -77,12 +77,13 @@ PRE-EXISTING ISSUES (in files NOT changed by this story):
 Report paths: {paths}
 ```
 
-## Classifying Issues: Story vs Pre-Existing
+## Classifying Issues: Story vs Known vs New Pre-Existing
 
 Review agents analyze `git diff main...HEAD` to determine which files the story changed. Issues are classified as:
 
 - **Story-related**: Found in files that the story branch modified. These **must be fixed** before shipping.
 - **Pre-existing**: Found in files the story did NOT touch — these exist on `main` already. These are **reported to the coordinator** for inclusion in the final report but do NOT block the story.
+- **Known (already tracked)**: Pre-existing issues that match an entry in the `{KNOWN_ISSUES_SUMMARY}` passed to the review agent. These are acknowledged in the return but require no coordinator action beyond logging the match. They do NOT appear in the "NEW PRE-EXISTING ISSUES" list — they're already in `docs/known-issues.yaml`.
 
 **The fix agent only fixes story-related issues.** Pre-existing issues are collected by the coordinator and passed to the Report Agent in Phase 3.
 
@@ -91,11 +92,20 @@ Review agents analyze `git diff main...HEAD` to determine which files the story 
 The coordinator maintains a running list of pre-existing issues across all stories:
 
 ```
-PRE-EXISTING ISSUES (deferred):
-- [MEDIUM] Missing error boundary in Layout.tsx — src/app/components/Layout.tsx:45 (found during E20-S01)
-- [LOW] Unused import in Overview.tsx — src/app/pages/Overview.tsx:3 (found during E20-S02)
+KNOWN ISSUES MATCHED (already in known-issues.yaml — no action needed):
+- KI-016: ImportWizardDialog test failures (matched during E##-S##)
+- KI-029: Unit test coverage below 70% (matched during E##-S##)
+...
+
+NEW PRE-EXISTING ISSUES (to add to known-issues.yaml in Phase 2):
+- [MEDIUM] Missing error boundary in Layout.tsx — src/app/components/Layout.tsx:45 (found during E##-S##)
+- [LOW] Unused import in Overview.tsx — src/app/pages/Overview.tsx:3 (found during E##-S##)
 ...
 ```
+
+**Deduplication**: When a review agent reports a pre-existing issue, the coordinator checks it against `{KNOWN_ISSUES_SUMMARY}`. Match by file path or by issue category (e.g., "ESLint parsing errors in scripts/" matches KI-026). If matched → add to KNOWN list with KI-NNN. If no match → add to NEW list.
+
+**Cross-story deduplication**: If a NEW pre-existing issue was already reported by a previous story in this same epic, do not duplicate it. The first story that discovers it gets credit.
 
 This list is passed to the Report Agent to include in the final completion report as "Deferred Issues for Future Fix."
 
