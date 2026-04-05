@@ -96,10 +96,12 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
 
   const processFile = useCallback(
     async (selectedFile: File) => {
-      // M4B files auto-switch to audiobook import mode
+      // M4B/MP3 files auto-switch to audiobook import mode; the file is passed via
+      // AudiobookImportFlow's initialFile prop so it isn't lost on the mode switch
       const fileName = selectedFile.name.toLowerCase()
       if (fileName.endsWith('.m4b') || fileName.endsWith('.mp3')) {
         setImportMode('audiobook')
+        setFile(selectedFile) // preserve the file so AudiobookImportFlow can receive it
         return
       }
 
@@ -301,6 +303,11 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
               reset()
               onOpenChange(false)
             }}
+            initialFile={
+              file && (file.name.toLowerCase().endsWith('.m4b') || file.name.toLowerCase().endsWith('.mp3'))
+                ? file
+                : null
+            }
           />
         )}
 

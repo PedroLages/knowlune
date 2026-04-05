@@ -109,6 +109,14 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
   const [localCurrentTime, setLocalCurrentTime] = useState(0)
   const [localDuration, setLocalDuration] = useState(0)
 
+  // Refs to avoid stale closures in the singleton event listener effect
+  const singleFileRef = useRef<boolean>(false)
+  const bookRef = useRef<Book | null>(null)
+  // loadChapterInternalRef is assigned after loadChapterInternal is defined below
+  const loadChapterInternalRef = useRef<(index: number, autoPlay?: boolean) => Promise<void>>(
+    async () => {}
+  )
+
   const {
     currentChapterIndex,
     isPlaying,
@@ -140,12 +148,16 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
 
   const singleFile = book ? isSingleFileAudiobook(book) : false
 
+  // Keep refs up-to-date on every render so the singleton event listener sees fresh values
+  singleFileRef.current = singleFile
+  bookRef.current = book
+
   /** Attach event listeners to the singleton audio element */
   useEffect(() => {
     const audio = getSharedAudio()
 
     const handleEnded = () => {
-      if (singleFile) {
+      if (singleFileRef.current) {
         // Single-file: audio ended means entire audiobook ended
         setIsPlaying(false)
         stopRafLoop()
@@ -153,9 +165,9 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
       }
       // Multi-file: auto-advance to next chapter
       const nextIndex = useAudioPlayerStore.getState().currentChapterIndex + 1
-      const chapters = book?.chapters ?? []
+      const chapters = bookRef.current?.chapters ?? []
       if (nextIndex < chapters.length) {
-        loadChapterInternal(nextIndex, true)
+        loadChapterInternalRef.current(nextIndex, true)
       } else {
         setIsPlaying(false)
         stopRafLoop()
@@ -222,7 +234,9 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
     }, 500) // Check every 500ms — lightweight chapter boundary detection
 
     return () => clearInterval(interval)
-  }, [singleFile, book, setCurrentChapterIndex])
+  // Use book?.id instead of book to avoid recreating the interval on every render
+  // (book object identity changes on each render even when the book hasn't changed)
+  }, [singleFile, book?.id, setCurrentChapterIndex])
 
   /** Sync playback rate when it changes in the store */
   useEffect(() => {
@@ -341,8 +355,6 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
 
         audio.src = url
         audio.playbackRate = playbackRate
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ;(audio as any).preservesPitch = true
         audio.load()
 
         setCurrentChapterIndex(index)
@@ -370,6 +382,10 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
       setCurrentTime,
     ]
   )
+
+  // Keep loadChapterInternalRef in sync so the singleton handleEnded callback always calls the
+  // latest version of loadChapterInternal (avoids stale closure in the [] effect above)
+  loadChapterInternalRef.current = loadChapterInternal
 
   const play = useCallback(async () => {
     const audio = _sharedAudio

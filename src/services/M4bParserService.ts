@@ -47,17 +47,20 @@ export async function parseM4bFile(file: File, bookId: string): Promise<M4bMetad
   let chapters: BookChapter[] = []
 
   // music-metadata v11+ exposes chapters on the result object
+  // Use a type-safe interface and optional-chain to avoid fragile Record<string, unknown> casts
+  interface RawChapter {
+    title?: string
+    sampleOffset?: number
+    offset?: number
+    startTime?: number
+  }
+  const metadataWithChapters = metadata as { chapters?: unknown }
+  const rawChaptersCandidate = metadataWithChapters.chapters
   if (
-    'chapters' in metadata &&
-    Array.isArray((metadata as Record<string, unknown>).chapters) &&
-    ((metadata as Record<string, unknown>).chapters as unknown[]).length > 0
+    Array.isArray(rawChaptersCandidate) &&
+    rawChaptersCandidate.length > 0
   ) {
-    const rawChapters = (metadata as Record<string, unknown>).chapters as Array<{
-      title?: string
-      sampleOffset?: number
-      offset?: number
-      startTime?: number
-    }>
+    const rawChapters = rawChaptersCandidate as RawChapter[]
 
     chapters = rawChapters.map((ch, index) => {
       const startTime =
@@ -76,12 +79,14 @@ export async function parseM4bFile(file: File, bookId: string): Promise<M4bMetad
     })
   }
 
-  // Fallback: check iTunes native tags for chapter markers
+  // Fallback: check iTunes native tags for chapter markers.
+  // Only match well-known iTunes chapter tag IDs to avoid false positives from
+  // unrelated tags that happen to contain 'chap' in their name.
+  const ITUNES_CHAPTER_TAG_IDS = new Set(['CHAP', '©chp', 'chpl'])
   if (chapters.length === 0 && metadata.native?.['iTunes']) {
     const itunesTags = metadata.native['iTunes']
-    const chapterTags = itunesTags.filter(
-      (tag: { id: string }) =>
-        tag.id.toLowerCase().includes('chap') || tag.id.toLowerCase().includes('chapter')
+    const chapterTags = itunesTags.filter((tag: { id: string }) =>
+      ITUNES_CHAPTER_TAG_IDS.has(tag.id)
     )
 
     if (chapterTags.length > 0) {

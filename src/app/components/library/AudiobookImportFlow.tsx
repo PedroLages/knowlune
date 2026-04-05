@@ -9,7 +9,7 @@
  * @modified E88-S04 — added M4B single-file import with chapter extraction
  */
 // eslint-disable-next-line component-size/max-lines -- self-contained multi-step import flow: file selection, ID3 parsing, duration calc, OPFS storage, metadata form
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { Headphones, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
@@ -129,6 +129,8 @@ function parseId3v2Tags(buffer: ArrayBuffer): { title: string | null; artist: st
 interface AudiobookImportFlowProps {
   onCancel: () => void
   onImported: () => void
+  /** Pre-selected file from drag-drop or initialFile on the parent dialog */
+  initialFile?: File | null
 }
 
 interface ChapterFile {
@@ -142,6 +144,7 @@ type Phase = 'idle' | 'processing' | 'storing' | 'done' | 'error'
 
 /** M4B parsed state — populated after parsing a single .m4b file */
 interface M4bParsed {
+  bookId: string // generated once during parsing; reused on import
   file: File
   title: string
   author: string
@@ -150,7 +153,7 @@ interface M4bParsed {
   totalDuration: number
 }
 
-export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlowProps) {
+export function AudiobookImportFlow({ onCancel, onImported, initialFile }: AudiobookImportFlowProps) {
   const importBook = useBookStore(s => s.importBook)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -167,17 +170,26 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
 
   /** Process an M4B file — lazy-loads music-metadata for chapter extraction */
   const processM4bFile = useCallback(async (file: File) => {
+    // Enforce file size limit — 2GB is generous for audiobooks while preventing runaway uploads
+    const MAX_M4B_SIZE_BYTES = 2 * 1024 * 1024 * 1024 // 2 GB
+    if (file.size > MAX_M4B_SIZE_BYTES) {
+      toast.error('File too large. M4B audiobooks must be under 2 GB.')
+      return
+    }
+
     setPhase('processing')
     setProgressLabel('Parsing chapters…')
     setProgress(50)
 
     try {
+      // Generate bookId once here; chapters are keyed to it and it's reused on import
       const bookId = crypto.randomUUID()
       const result = await parseM4bFile(file, bookId)
 
       setTitle(result.title)
       setAuthor(result.author)
       setM4bParsed({
+        bookId,
         file,
         title: result.title,
         author: result.author,
@@ -200,6 +212,13 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
       // Check for M4B file first — single-file audiobook
       const m4bFile = files.find(f => f.name.toLowerCase().endsWith('.m4b'))
       if (m4bFile) {
+        // Warn if non-M4B files were also selected — they will be ignored
+        const nonM4bFiles = files.filter(f => !f.name.toLowerCase().endsWith('.m4b'))
+        if (nonM4bFiles.length > 0) {
+          toast.warning(
+            `Only the M4B file will be imported. ${nonM4bFiles.length} other file${nonM4bFiles.length !== 1 ? 's' : ''} will be ignored.`
+          )
+        }
         await processM4bFile(m4bFile)
         return
       }
@@ -258,6 +277,18 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
     },
     [title, processM4bFile]
   )
+
+  // Keep processFilesRef current so the initialFile effect always calls the latest version
+  processFilesRef.current = processFiles
+
+  // Process initialFile when the component mounts (e.g. M4B dropped on the library page).
+  // processFilesRef.current always holds the latest processFiles — no dep needed.
+  // intentional empty deps: run once on mount only
+  useEffect(() => {
+    if (initialFile) {
+      processFilesRef.current?.([initialFile])
+    }
+  }, []) // intentionally empty — processFilesRef is used to avoid stale closure
 
   const handleFileInput = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -345,14 +376,12 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
     setProgress(30)
 
     try {
-      const bookId = crypto.randomUUID()
+      // Reuse the bookId generated during parsing — chapters are already keyed to it
+      const bookId = m4bParsed.bookId
       const now = new Date().toISOString()
 
-      // Update chapter bookIds to match the final bookId
-      const bookChapters: BookChapter[] = m4bParsed.chapters.map(ch => ({
-        ...ch,
-        bookId,
-      }))
+      // Chapters already have the correct bookId from processM4bFile; no remapping needed
+      const bookChapters: BookChapter[] = m4bParsed.chapters
 
       // Store M4B as single file: book.m4b
       const m4bFile = new File([m4bParsed.file], 'book.m4b', {
