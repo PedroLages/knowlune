@@ -16,6 +16,7 @@ import { Slider } from '@/app/components/ui/slider'
 import { useAudioPlayer, formatAudioTime } from '@/app/hooks/useAudioPlayer'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
 import { useSleepTimer, consumeSleepTimerEndedFlag } from '@/app/hooks/useSleepTimer'
+import { useMediaSession } from '@/app/hooks/useMediaSession'
 import { SpeedControl } from './SpeedControl'
 import { SleepTimer } from './SleepTimer'
 import { ChapterList } from './ChapterList'
@@ -43,6 +44,7 @@ export function AudiobookRenderer({ book, bookmarksOpen: bookmarksOpenProp, onBo
     skipForward,
     skipBack,
     loadChapter,
+    play,
     pause,
   } = useAudioPlayer(book)
 
@@ -68,6 +70,23 @@ export function AudiobookRenderer({ book, bookmarksOpen: bookmarksOpenProp, onBo
       toast('Sleep timer ended', { duration: 3000 })
     }
   }, [])
+
+  const currentChapterTitle = currentChapter?.title ?? `Chapter ${currentChapterIndex + 1}`
+
+  // Media Session API — OS-level lock screen / Bluetooth headset controls (E87-S05)
+  useMediaSession({
+    title: currentChapterTitle,
+    artist: book.author,
+    album: book.title,
+    artworkUrl: book.coverUrl ?? undefined,
+    isPlaying,
+    onPlay: play,
+    onPause: pause,
+    onSkipBack: () => skipBack(15),
+    onSkipForward: () => skipForward(30),
+    onPrevTrack: () => loadChapter(Math.max(0, currentChapterIndex - 1), isPlaying),
+    onNextTrack: () => loadChapter(Math.min(book.chapters.length - 1, currentChapterIndex + 1), isPlaying),
+  })
 
   const currentChapter = book.chapters[currentChapterIndex]
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0

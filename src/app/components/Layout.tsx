@@ -54,6 +54,8 @@ import { TrialIndicator } from './trial/TrialIndicator'
 import { TrialReminderBanner } from './trial/TrialReminderBanner'
 import { ImportProgressOverlay } from './figma/ImportProgressOverlay'
 import { SessionExpiredBanner } from './figma/SessionExpiredBanner'
+import { AudioMiniPlayer } from './audiobook/AudioMiniPlayer'
+import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
 
 // Individual nav link — wraps in Tooltip when collapsed
 function NavLink({
@@ -391,6 +393,13 @@ export function Layout() {
 
   const isLessonPlayerRoute = /\/courses\/[^/]+\/lessons\/[^/]+$/.test(location.pathname)
 
+  // Show mini-player padding when audiobook is active and not on the player page (E87-S05)
+  const audiobookCurrentBookId = useAudioPlayerStore(s => s.currentBookId)
+  const isAudiobookPlayerPage = audiobookCurrentBookId
+    ? location.pathname.includes(`/library/${audiobookCurrentBookId}/read`)
+    : false
+  const hasMiniPlayer = !!audiobookCurrentBookId && !isAudiobookPlayerPage
+
   // Focus mode (E65-S03) — overlay, focus trap, and exit
   const focusMode = useFocusMode(navigate)
 
@@ -647,7 +656,7 @@ export function Layout() {
         <main
           id="main-content"
           data-testid="main-scroll-container"
-          className={`flex-1 px-6 pt-6 leading-[var(--content-line-height)] ${isLessonPlayerRoute ? 'pb-6' : 'overflow-auto pb-20 sm:pb-6'}`}
+          className={`flex-1 px-6 pt-6 leading-[var(--content-line-height)] ${isLessonPlayerRoute ? 'pb-6' : `overflow-auto ${hasMiniPlayer ? 'pb-36 sm:pb-20' : 'pb-20 sm:pb-6'}`}`}
         >
           {!isOnline && (
             <div
@@ -706,6 +715,9 @@ export function Layout() {
         onCancelExit={focusMode.cancelExitConfirmation}
         getPortalContainer={focusMode.getPortalContainer}
       />
+
+      {/* Audiobook Mini-Player — persistent bar across all pages when audiobook is active (E87-S05) */}
+      <AudioMiniPlayer />
     </div>
   )
 }
