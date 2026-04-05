@@ -37,6 +37,7 @@ import { ReaderSettingsPanel } from '@/app/components/reader/ReaderSettingsPanel
 import { TtsControlBar } from '@/app/components/reader/TtsControlBar'
 import { HighlightLayer } from '@/app/components/reader/HighlightLayer'
 import { HighlightListPanel } from '@/app/components/reader/HighlightListPanel'
+import { ClozeFlashcardCreator } from '@/app/components/reader/ClozeFlashcardCreator'
 import { useTts } from '@/app/hooks/useTts'
 import { db } from '@/db/schema'
 import type { ContentPosition } from '@/data/types'
@@ -88,6 +89,10 @@ export function BookReader() {
   const [loadError, setLoadError] = useState<string | null>(null)
   // highlightsOpen state: wired to ReaderHeader → HighlightListPanel (E85-S03)
   const [highlightsOpen, setHighlightsOpen] = useState(false)
+  // Cloze flashcard creator state (E85-S04)
+  const [clozeText, setClozeText] = useState('')
+  const [clozeHighlightId, setClozeHighlightId] = useState<string | undefined>(undefined)
+  const [clozeOpen, setClozeOpen] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
   const [toc, setToc] = useState<NavItem[]>([])
   const [currentHref, setCurrentHref] = useState<string | undefined>(undefined)
@@ -474,6 +479,11 @@ export function BookReader() {
         open={highlightsOpen}
         onClose={() => setHighlightsOpen(false)}
         rendition={renditionRef.current}
+        onFlashcardRequest={(text, highlightId) => {
+          setClozeText(text)
+          setClozeHighlightId(highlightId)
+          setClozeOpen(true)
+        }}
       />
 
       {/* Highlight layer (E85-S01) — text selection events + highlight overlays */}
@@ -482,6 +492,22 @@ export function BookReader() {
           rendition={renditionRef.current}
           bookId={bookId}
           currentHref={currentHref}
+          onFlashcardRequest={(text, highlightId) => {
+            setClozeText(text)
+            setClozeHighlightId(highlightId)
+            setClozeOpen(true)
+          }}
+        />
+      )}
+
+      {/* Cloze flashcard creator (E85-S04) */}
+      {bookId && (
+        <ClozeFlashcardCreator
+          open={clozeOpen}
+          onClose={() => setClozeOpen(false)}
+          text={clozeText}
+          highlightId={clozeHighlightId}
+          bookId={bookId}
         />
       )}
 
