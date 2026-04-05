@@ -28,8 +28,8 @@ function extractSchema(db: Dexie): Record<string, string> {
 }
 
 describe('Dexie migration checkpoint', () => {
-  it('CHECKPOINT_VERSION should be 39', () => {
-    expect(CHECKPOINT_VERSION).toBe(39)
+  it('CHECKPOINT_VERSION should be 40', () => {
+    expect(CHECKPOINT_VERSION).toBe(40)
   })
 
   it('CHECKPOINT_SCHEMA should define all expected tables', () => {
@@ -37,9 +37,11 @@ describe('Dexie migration checkpoint', () => {
     // courseEmbeddings added in v35 (E52-S01)
     // audioBookmarks added in v38 (E87-S01)
     // opdsCatalogs added in v39 (E88-S01)
+    // audiobookshelfServers added in v40 (E101-S01)
     const expectedTables = [
       'aiUsageEvents',
       'audioBookmarks',
+      'audiobookshelfServers',
       'authors',
       'bookFiles',
       'bookHighlights',
