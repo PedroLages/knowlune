@@ -1,0 +1,97 @@
+import {
+  Moon,
+  Sun,
+  Monitor,
+  Type,
+  Eye,
+  Users,
+  Shield,
+  CreditCard,
+  User,
+  Camera,
+  Palette,
+  Accessibility,
+  BookOpen,
+  Bell,
+  Calendar,
+  BrainCircuit,
+  Youtube,
+  Mic,
+  Gamepad2,
+  Timer,
+  Target,
+  Download,
+  Upload,
+  Trash2,
+  HardDrive,
+  Key,
+  GraduationCap,
+  type LucideIcon,
+} from 'lucide-react'
+import type { SettingsCategorySlug } from './settingsCategories'
+
+export interface SettingsSearchEntry {
+  label: string
+  description: string
+  keywords: string[]
+  category: SettingsCategorySlug
+  icon: LucideIcon
+}
+
+export const SETTINGS_SEARCH_INDEX: SettingsSearchEntry[] = [
+  // Account
+  { label: 'Sign In / Sign Up', description: 'Create or access your account', keywords: ['login', 'register', 'auth', 'email', 'password'], category: 'account', icon: Shield },
+  { label: 'Sign Out', description: 'Log out of your account', keywords: ['logout', 'disconnect'], category: 'account', icon: Shield },
+  { label: 'Change Password', description: 'Update your account password', keywords: ['security', 'credentials'], category: 'account', icon: Shield },
+  { label: 'Change Email', description: 'Update your email address', keywords: ['email', 'address'], category: 'account', icon: Shield },
+  { label: 'Delete Account', description: 'Permanently remove your account and data', keywords: ['remove', 'close', 'gdpr'], category: 'account', icon: Trash2 },
+  { label: 'Subscription', description: 'Manage your premium plan', keywords: ['billing', 'premium', 'plan', 'upgrade', 'payment', 'stripe'], category: 'account', icon: CreditCard },
+  { label: 'My Data Summary', description: 'GDPR data overview', keywords: ['privacy', 'gdpr', 'data'], category: 'account', icon: Shield },
+
+  // Profile
+  { label: 'Display Name', description: 'Change how your name appears', keywords: ['name', 'username', 'identity'], category: 'profile', icon: User },
+  { label: 'Bio', description: 'Edit your profile description', keywords: ['about', 'description', 'introduction'], category: 'profile', icon: User },
+  { label: 'Profile Photo', description: 'Upload or change your avatar', keywords: ['avatar', 'picture', 'image', 'photo'], category: 'profile', icon: Camera },
+  { label: 'Age Range', description: 'Set age-based defaults', keywords: ['gen z', 'millennial', 'boomer', 'age', 'generation'], category: 'profile', icon: Users },
+
+  // Appearance
+  { label: 'Dark Mode', description: 'Switch to dark theme', keywords: ['theme', 'night', 'dark'], category: 'appearance', icon: Moon },
+  { label: 'Light Mode', description: 'Switch to light theme', keywords: ['theme', 'bright', 'light'], category: 'appearance', icon: Sun },
+  { label: 'System Theme', description: 'Follow device theme settings', keywords: ['auto', 'os', 'system'], category: 'appearance', icon: Monitor },
+  { label: 'Font Size', description: 'Adjust text size', keywords: ['text', 'size', 'small', 'large', 'bigger', 'smaller'], category: 'appearance', icon: Type },
+  { label: 'Show All Menu Items', description: 'Toggle progressive disclosure', keywords: ['navigation', 'sidebar', 'menu', 'show', 'hide'], category: 'appearance', icon: Eye },
+  { label: 'Accessibility Font', description: 'Atkinson Hyperlegible for improved readability', keywords: ['dyslexia', 'readability', 'atkinson', 'accessible'], category: 'appearance', icon: Accessibility },
+  { label: 'Spacious Mode', description: 'Increase padding and spacing', keywords: ['density', 'compact', 'spacious', 'spacing'], category: 'appearance', icon: Palette },
+  { label: 'Reduce Motion', description: 'Control animation preferences', keywords: ['animation', 'motion', 'reduce', 'disable'], category: 'appearance', icon: Palette },
+  { label: 'Color Scheme', description: 'Professional or vibrant color palette', keywords: ['vibrant', 'professional', 'colors', 'palette'], category: 'appearance', icon: Palette },
+  { label: 'Reading Mode', description: 'Font size, line height, and theme for reading', keywords: ['reading', 'sepia', 'contrast', 'line height'], category: 'appearance', icon: BookOpen },
+
+  // Learning
+  { label: 'Engagement Preferences', description: 'Achievements, streaks, badges, animations', keywords: ['gamification', 'achievements', 'streaks', 'badges', 'rewards'], category: 'learning', icon: Gamepad2 },
+  { label: 'Quiz Preferences', description: 'Quiz display and timing settings', keywords: ['quiz', 'test', 'questions', 'answers'], category: 'learning', icon: GraduationCap },
+  { label: 'Focus Mode', description: 'Auto-activate focus for quizzes and flashcards', keywords: ['focus', 'distraction', 'concentrate'], category: 'learning', icon: Target },
+  { label: 'Pomodoro Timer', description: 'Work/break durations and session scoring', keywords: ['pomodoro', 'timer', 'break', 'session', 'study'], category: 'learning', icon: Timer },
+
+  // Notifications
+  { label: 'Study Reminders', description: 'Browser notification reminders', keywords: ['reminder', 'notification', 'alert', 'schedule'], category: 'notifications', icon: Bell },
+  { label: 'Notification Types', description: 'Toggle individual notification types', keywords: ['notification', 'streak', 'achievement', 'course', 'review'], category: 'notifications', icon: Bell },
+  { label: 'Quiet Hours', description: 'Suppress notifications during set times', keywords: ['quiet', 'silent', 'do not disturb', 'mute'], category: 'notifications', icon: Bell },
+  { label: 'Course Reminders', description: 'Per-course reminder scheduling', keywords: ['course', 'reminder', 'schedule'], category: 'notifications', icon: Bell },
+  { label: 'Calendar Integration', description: 'iCal feed and calendar sync', keywords: ['calendar', 'ical', 'google', 'outlook', 'sync'], category: 'notifications', icon: Calendar },
+
+  // Integrations & Data
+  { label: 'AI Configuration', description: 'Provider selection and API keys', keywords: ['ai', 'openai', 'anthropic', 'groq', 'ollama', 'llm', 'model'], category: 'integrations', icon: BrainCircuit },
+  { label: 'API Keys', description: 'Configure AI provider API keys', keywords: ['key', 'api', 'secret', 'token', 'openai', 'anthropic'], category: 'integrations', icon: Key },
+  { label: 'YouTube Configuration', description: 'YouTube API key for imports', keywords: ['youtube', 'video', 'playlist', 'import'], category: 'integrations', icon: Youtube },
+  { label: 'Speech-to-Text', description: 'Whisper audio transcription settings', keywords: ['whisper', 'speech', 'audio', 'transcription', 'voice', 'stt'], category: 'integrations', icon: Mic },
+  { label: 'Export Data (JSON)', description: 'Download all data as JSON', keywords: ['export', 'backup', 'download', 'json'], category: 'integrations', icon: Download },
+  { label: 'Export Data (CSV)', description: 'Download data as CSV files', keywords: ['export', 'csv', 'spreadsheet'], category: 'integrations', icon: Download },
+  { label: 'Export Notes', description: 'Download notes as Markdown', keywords: ['export', 'notes', 'markdown'], category: 'integrations', icon: Download },
+  { label: 'Export Badges', description: 'Open Badges v3.0 credentials', keywords: ['export', 'badges', 'achievements', 'credentials'], category: 'integrations', icon: Download },
+  { label: 'Export for Obsidian', description: 'PKM bundle with YAML frontmatter', keywords: ['export', 'obsidian', 'pkm', 'knowledge'], category: 'integrations', icon: Download },
+  { label: 'Export for Anki', description: 'Flashcard deck as .apkg', keywords: ['export', 'anki', 'flashcards', 'spaced repetition'], category: 'integrations', icon: Download },
+  { label: 'Import Data', description: 'Restore from JSON backup', keywords: ['import', 'restore', 'backup', 'upload'], category: 'integrations', icon: Upload },
+  { label: 'Data Retention', description: 'Cleanup policies and auto-delete rules', keywords: ['retention', 'cleanup', 'delete', 'old data'], category: 'integrations', icon: HardDrive },
+  { label: 'Storage Management', description: 'Database size and per-course storage', keywords: ['storage', 'disk', 'space', 'size', 'quota'], category: 'integrations', icon: HardDrive },
+  { label: 'Reset All Data', description: 'Permanently delete everything', keywords: ['reset', 'wipe', 'clear', 'delete all', 'danger'], category: 'integrations', icon: Trash2 },
+]
