@@ -11,6 +11,19 @@
 
 const FETCH_TIMEOUT_MS = 10_000
 
+/**
+ * Returns true if the given URL uses HTTP (not HTTPS).
+ * Used to warn users when credentials may be sent unencrypted.
+ */
+export function isInsecureUrl(url: string): boolean {
+  try {
+    return new URL(url).protocol === 'http:'
+  } catch {
+    // silent-catch-ok — invalid URL simply means not insecure
+    return false
+  }
+}
+
 /** Metadata extracted from a successfully validated OPDS catalog root feed. */
 export interface OpdsCatalogMeta {
   title: string
@@ -51,6 +64,7 @@ export async function validateCatalog(
 
     response = await fetch(url, { signal: controller.signal, headers })
     clearTimeout(timeoutId)
+    // eslint-disable-next-line error-handling/no-silent-catch -- returns discriminated error result instead of throwing
   } catch (err: unknown) {
     if (err instanceof DOMException && err.name === 'AbortError') {
       return { ok: false, error: 'Connection timed out. Check the URL and try again.' }
@@ -95,6 +109,7 @@ export async function validateCatalog(
         error: 'Response is not valid XML. Make sure the URL points to an OPDS catalog.',
       }
     }
+    // eslint-disable-next-line error-handling/no-silent-catch -- returns discriminated error result instead of throwing
   } catch {
     return {
       ok: false,
