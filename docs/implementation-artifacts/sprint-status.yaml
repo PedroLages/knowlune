@@ -996,7 +996,7 @@ development_status:
   # Depends on: E83 (Book Library)
   # ──────────────────────────────────────────────────
   epic-84: in-progress
-  84-1-epub-reader-with-epubjs-integration: in-progress
+  84-1-epub-reader-with-epubjs-integration: done
   84-2-page-navigation-and-table-of-contents: backlog
   84-3-reading-themes-and-font-controls: backlog
   84-4-reading-position-persistence-and-progress: backlog

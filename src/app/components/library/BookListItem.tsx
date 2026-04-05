@@ -49,11 +49,15 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
   const navigate = useNavigate()
   const updateBookStatus = useBookStore(s => s.updateBookStatus)
 
-  const handleClick = () => navigate(`/library/${book.id}`)
+  // E84: EPUB books open the reader; other formats stay on library detail (future)
+  const readerPath =
+    book.format === 'epub' ? `/library/${book.id}/read` : `/library/${book.id}`
+
+  const handleClick = () => navigate(readerPath)
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
-      navigate(`/library/${book.id}`)
+      navigate(readerPath)
     }
   }
 
