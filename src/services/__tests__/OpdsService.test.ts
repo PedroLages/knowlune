@@ -329,9 +329,7 @@ describe('OpdsService.fetchCatalogEntries', () => {
     if (!result.ok) return
 
     // Relative /get/epub/42 should resolve to absolute URL
-    expect(result.entries[0].acquisitionLinks[0].href).toBe(
-      'https://calibre.local/get/epub/42'
-    )
+    expect(result.entries[0].acquisitionLinks[0].href).toBe('https://calibre.local/get/epub/42')
     expect(result.entries[0].coverUrl).toBe('https://calibre.local/cover/42.jpg')
   })
 
@@ -351,15 +349,11 @@ describe('OpdsService.fetchCatalogEntries', () => {
 
 describe('OpdsService.getFormatLabel', () => {
   it('returns EPUB for epub links', () => {
-    expect(
-      getFormatLabel([{ href: '/book.epub', type: 'application/epub+zip' }])
-    ).toBe('EPUB')
+    expect(getFormatLabel([{ href: '/book.epub', type: 'application/epub+zip' }])).toBe('EPUB')
   })
 
   it('returns PDF for pdf links', () => {
-    expect(
-      getFormatLabel([{ href: '/book.pdf', type: 'application/pdf' }])
-    ).toBe('PDF')
+    expect(getFormatLabel([{ href: '/book.pdf', type: 'application/pdf' }])).toBe('PDF')
   })
 
   it('returns combined label for multiple formats', () => {
@@ -372,9 +366,9 @@ describe('OpdsService.getFormatLabel', () => {
   })
 
   it('returns MOBI for mobipocket links', () => {
-    expect(
-      getFormatLabel([{ href: '/book.mobi', type: 'application/x-mobipocket-ebook' }])
-    ).toBe('MOBI')
+    expect(getFormatLabel([{ href: '/book.mobi', type: 'application/x-mobipocket-ebook' }])).toBe(
+      'MOBI'
+    )
   })
 
   it('returns Unknown for empty links', () => {

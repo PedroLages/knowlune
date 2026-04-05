@@ -19,7 +19,13 @@ interface CatalogListViewProps {
   onBrowse?: (catalog: OpdsCatalog) => void
 }
 
-export function CatalogListView({ catalogs, onAdd, onEdit, onDelete, onBrowse }: CatalogListViewProps) {
+export function CatalogListView({
+  catalogs,
+  onAdd,
+  onEdit,
+  onDelete,
+  onBrowse,
+}: CatalogListViewProps) {
   return (
     <div className="flex flex-col gap-4">
       {catalogs.length === 0 && (

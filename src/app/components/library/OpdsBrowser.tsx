@@ -84,7 +84,8 @@ function isAlreadyInLibrary(entry: OpdsEntry, books: Book[]): boolean {
   return books.some(
     b =>
       // Check by OPDS ID match in source URL
-      (b.source.type === 'remote' && entry.acquisitionLinks.some(l => b.source.type === 'remote' && b.source.url === l.href)) ||
+      (b.source.type === 'remote' &&
+        entry.acquisitionLinks.some(l => b.source.type === 'remote' && b.source.url === l.href)) ||
       // Fallback: title + author match (case-insensitive)
       (b.title.toLowerCase() === entry.title.toLowerCase() &&
         b.author.toLowerCase() === entry.author.toLowerCase())
@@ -95,7 +96,10 @@ function isAlreadyInLibrary(entry: OpdsEntry, books: Book[]): boolean {
 
 function EntrySkeletons() {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" data-testid="opds-browser-skeleton">
+    <div
+      className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"
+      data-testid="opds-browser-skeleton"
+    >
       {Array.from({ length: 8 }).map((_, i) => (
         <div key={i} className="flex flex-col gap-2">
           <Skeleton className="aspect-[2/3] rounded-xl" />
@@ -194,7 +198,9 @@ function OpdsBookCard({
           disabled={alreadyAdded || isAdding}
           onClick={() => onAdd(entry)}
           className="w-full min-h-[36px]"
-          aria-label={alreadyAdded ? `${entry.title} already in library` : `Add ${entry.title} to library`}
+          aria-label={
+            alreadyAdded ? `${entry.title} already in library` : `Add ${entry.title} to library`
+          }
           data-testid={`opds-add-${entry.id}`}
         >
           {isAdding ? (
@@ -299,29 +305,26 @@ export function OpdsBrowser({ open, onOpenChange, initialCatalogId }: OpdsBrowse
     fetchFeed(selectedCatalog.url, selectedCatalog)
   }, [selectedCatalogId]) // Only refetch when catalog selection changes
 
-  const fetchFeed = useCallback(
-    async (url: string, catalog: OpdsCatalog) => {
-      setIsLoading(true)
-      setError(null)
-      setFeedState(null)
+  const fetchFeed = useCallback(async (url: string, catalog: OpdsCatalog) => {
+    setIsLoading(true)
+    setError(null)
+    setFeedState(null)
 
-      const result = await fetchCatalogEntries(url, catalog.auth)
+    const result = await fetchCatalogEntries(url, catalog.auth)
 
-      if (result.ok) {
-        setFeedState({
-          entries: result.entries,
-          navigationLinks: result.navigationLinks,
-          nextPageUrl: result.nextPageUrl,
-          feedTitle: result.feedTitle,
-        })
-      } else {
-        setError(result.error)
-      }
+    if (result.ok) {
+      setFeedState({
+        entries: result.entries,
+        navigationLinks: result.navigationLinks,
+        nextPageUrl: result.nextPageUrl,
+        feedTitle: result.feedTitle,
+      })
+    } else {
+      setError(result.error)
+    }
 
-      setIsLoading(false)
-    },
-    []
-  )
+    setIsLoading(false)
+  }, [])
 
   // Track current feed URL for breadcrumb navigation
   const [currentFeedUrl, setCurrentFeedUrl] = useState<string>('')
@@ -441,7 +444,8 @@ export function OpdsBrowser({ open, onOpenChange, initialCatalogId }: OpdsBrowse
     [selectedCatalog, books, importBook]
   )
 
-  const hasContent = feedState && (feedState.entries.length > 0 || feedState.navigationLinks.length > 0)
+  const hasContent =
+    feedState && (feedState.entries.length > 0 || feedState.navigationLinks.length > 0)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
