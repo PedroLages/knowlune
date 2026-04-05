@@ -153,9 +153,14 @@ interface M4bParsed {
   totalDuration: number
 }
 
-export function AudiobookImportFlow({ onCancel, onImported, initialFile }: AudiobookImportFlowProps) {
+export function AudiobookImportFlow({
+  onCancel,
+  onImported,
+  initialFile,
+}: AudiobookImportFlowProps) {
   const importBook = useBookStore(s => s.importBook)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const processFilesRef = useRef<((files: File[]) => Promise<void>) | null>(null)
 
   const [phase, setPhase] = useState<Phase>('idle')
   const [chapters, setChapters] = useState<ChapterFile[]>([])

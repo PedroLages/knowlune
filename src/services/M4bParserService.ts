@@ -56,10 +56,7 @@ export async function parseM4bFile(file: File, bookId: string): Promise<M4bMetad
   }
   const metadataWithChapters = metadata as { chapters?: unknown }
   const rawChaptersCandidate = metadataWithChapters.chapters
-  if (
-    Array.isArray(rawChaptersCandidate) &&
-    rawChaptersCandidate.length > 0
-  ) {
+  if (Array.isArray(rawChaptersCandidate) && rawChaptersCandidate.length > 0) {
     const rawChapters = rawChaptersCandidate as RawChapter[]
 
     chapters = rawChapters.map((ch, index) => {

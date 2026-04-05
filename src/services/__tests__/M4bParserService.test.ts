@@ -31,9 +31,27 @@ function makeAudiobookBook(overrides: Partial<Book> = {}): Book {
     status: 'reading',
     tags: [],
     chapters: [
-      { id: 'ch-1', bookId: 'book-1', title: 'Intro', order: 0, position: { type: 'time', seconds: 0 } },
-      { id: 'ch-2', bookId: 'book-1', title: 'Chapter 1', order: 1, position: { type: 'time', seconds: 300 } },
-      { id: 'ch-3', bookId: 'book-1', title: 'Chapter 2', order: 2, position: { type: 'time', seconds: 900 } },
+      {
+        id: 'ch-1',
+        bookId: 'book-1',
+        title: 'Intro',
+        order: 0,
+        position: { type: 'time', seconds: 0 },
+      },
+      {
+        id: 'ch-2',
+        bookId: 'book-1',
+        title: 'Chapter 1',
+        order: 1,
+        position: { type: 'time', seconds: 300 },
+      },
+      {
+        id: 'ch-3',
+        bookId: 'book-1',
+        title: 'Chapter 2',
+        order: 2,
+        position: { type: 'time', seconds: 900 },
+      },
     ],
     source: { type: 'local', opfsPath: 'books/book-1/book.m4b' },
     progress: 0,
@@ -98,9 +116,9 @@ describe('parseM4bFile — 6.1: chapter extraction', () => {
     ]
 
     vi.doMock('music-metadata', () => ({
-      parseBlob: vi.fn().mockResolvedValue(
-        mockMusicMetadata({ chaptersField: rawChapters, duration: 600 })
-      ),
+      parseBlob: vi
+        .fn()
+        .mockResolvedValue(mockMusicMetadata({ chaptersField: rawChapters, duration: 600 })),
     }))
 
     const { parseM4bFile: parse } = await import('@/services/M4bParserService')
@@ -146,15 +164,15 @@ describe('parseM4bFile — 6.1: chapter extraction', () => {
     ]
 
     vi.doMock('music-metadata', () => ({
-      parseBlob: vi.fn().mockResolvedValue(
-        mockMusicMetadata({ chaptersField: rawChapters, sampleRate })
-      ),
+      parseBlob: vi
+        .fn()
+        .mockResolvedValue(mockMusicMetadata({ chaptersField: rawChapters, sampleRate })),
     }))
 
     const { parseM4bFile: parse } = await import('@/services/M4bParserService')
     const result = await parse(makeM4bFile(), BOOK_ID)
 
-    expect(result.chapters[1].position.seconds).toBe(60)
+    expect(result.chapters[1].position).toEqual({ type: 'time', seconds: 60 })
   })
 
   it('extracts title, author, and duration from metadata', async () => {
@@ -298,10 +316,7 @@ describe('chapter progress detection — 6.3: current chapter from currentTime',
    * Replicates the logic used in useAudioPlayer's setInterval to find the
    * current chapter index based on audio.currentTime.
    */
-  function detectCurrentChapter(
-    chapters: Book['chapters'],
-    currentTime: number
-  ): number {
+  function detectCurrentChapter(chapters: Book['chapters'], currentTime: number): number {
     for (let i = chapters.length - 1; i >= 0; i--) {
       const pos = chapters[i].position
       const startTime = pos.type === 'time' ? pos.seconds : 0
@@ -347,7 +362,13 @@ describe('chapter progress detection — 6.3: current chapter from currentTime',
 
   it('returns chapter 0 when only a single chapter exists', () => {
     const single: Book['chapters'] = [
-      { id: 'ch-1', bookId: 'b', title: 'Full Book', order: 0, position: { type: 'time', seconds: 0 } },
+      {
+        id: 'ch-1',
+        bookId: 'b',
+        title: 'Full Book',
+        order: 0,
+        position: { type: 'time', seconds: 0 },
+      },
     ]
     expect(detectCurrentChapter(single, 0)).toBe(0)
     expect(detectCurrentChapter(single, 5000)).toBe(0)
@@ -386,9 +407,9 @@ describe('parseM4bFile — 6.5: single-chapter fallback', () => {
 
   it('uses the book title as the single chapter title in fallback', async () => {
     vi.doMock('music-metadata', () => ({
-      parseBlob: vi.fn().mockResolvedValue(
-        mockMusicMetadata({ title: 'War and Peace', duration: 86400 })
-      ),
+      parseBlob: vi
+        .fn()
+        .mockResolvedValue(mockMusicMetadata({ title: 'War and Peace', duration: 86400 })),
     }))
 
     const { parseM4bFile: parse } = await import('@/services/M4bParserService')
@@ -399,9 +420,9 @@ describe('parseM4bFile — 6.5: single-chapter fallback', () => {
 
   it('falls back to single chapter when chapters field is an empty array', async () => {
     vi.doMock('music-metadata', () => ({
-      parseBlob: vi.fn().mockResolvedValue(
-        mockMusicMetadata({ chaptersField: [], duration: 3600 })
-      ),
+      parseBlob: vi
+        .fn()
+        .mockResolvedValue(mockMusicMetadata({ chaptersField: [], duration: 3600 })),
     }))
 
     const { parseM4bFile: parse } = await import('@/services/M4bParserService')

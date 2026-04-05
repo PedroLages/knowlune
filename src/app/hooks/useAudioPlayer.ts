@@ -234,8 +234,8 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
     }, 500) // Check every 500ms — lightweight chapter boundary detection
 
     return () => clearInterval(interval)
-  // Use book?.id instead of book to avoid recreating the interval on every render
-  // (book object identity changes on each render even when the book hasn't changed)
+    // Use book?.id instead of book to avoid recreating the interval on every render
+    // (book object identity changes on each render even when the book hasn't changed)
   }, [singleFile, book?.id, setCurrentChapterIndex])
 
   /** Sync playback rate when it changes in the store */

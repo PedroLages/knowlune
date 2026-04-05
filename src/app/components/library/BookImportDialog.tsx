@@ -304,7 +304,8 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
               onOpenChange(false)
             }}
             initialFile={
-              file && (file.name.toLowerCase().endsWith('.m4b') || file.name.toLowerCase().endsWith('.mp3'))
+              file &&
+              (file.name.toLowerCase().endsWith('.m4b') || file.name.toLowerCase().endsWith('.mp3'))
                 ? file
                 : null
             }
