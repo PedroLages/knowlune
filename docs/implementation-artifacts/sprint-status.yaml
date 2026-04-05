@@ -1227,3 +1227,43 @@ development_status:
   100-1-css-theme-tokens-and-type-system: done
   100-2-settings-ui-and-visual-qa: done
   epic-100-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 101: Audiobookshelf Streaming & Learning Loop (MVP)
+  # Source: epics-audiobookshelf-integration.md
+  # Connect ABS server, browse library, stream audiobooks, bookmarks → flashcards, progress
+  # Depends on: E88 (OPDS patterns), E87 (audiobook player)
+  # ──────────────────────────────────────────────────
+  epic-101: backlog
+  101-1-audiobookshelf-service-and-data-foundation: backlog
+  101-2-server-connection-and-authentication-ui: backlog
+  101-3-library-browsing-and-catalog-sync: backlog
+  101-4-streaming-playback: backlog
+  101-5-audio-bookmarks-and-learning-loop: backlog
+  101-6-progress-tracking-and-streaks: backlog
+  epic-101-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 102: Audiobookshelf Sync & Discovery (Growth)
+  # Source: epics-audiobookshelf-integration.md
+  # Bidirectional progress sync, series browsing, collections, Socket.IO real-time
+  # Depends on: E101
+  # ──────────────────────────────────────────────────
+  epic-102: backlog
+  102-1-bidirectional-progress-sync: backlog
+  102-2-series-browsing: backlog
+  102-3-collections: backlog
+  102-4-socket-io-real-time-sync: backlog
+  epic-102-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 103: Whispersync — EPUB-Audiobook Format Switching
+  # Source: epics-audiobookshelf-integration.md
+  # Chapter title matching, format switching UI, dual position tracking
+  # Depends on: E101, E84 (EPUB reader)
+  # ──────────────────────────────────────────────────
+  epic-103: backlog
+  103-1-chapter-title-matching-engine: backlog
+  103-2-format-switching-ui: backlog
+  103-3-dual-position-tracking: backlog
+  epic-103-retrospective: optional
