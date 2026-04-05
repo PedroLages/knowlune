@@ -37,14 +37,15 @@ export function AppearanceSection() {
                       : 'border-border hover:border-brand/30'
                   )}
                 >
+                  {/* Hardcoded: top=light, bottom=dark to represent System (auto) */}
                   <div className="absolute inset-0 flex flex-col">
-                    <div className="h-1/2 bg-muted" />
-                    <div className="h-1/2 bg-foreground" />
+                    <div className="h-1/2 bg-[#e9e7e4]" />
+                    <div className="h-1/2 bg-[#1a1b26]" />
                   </div>
                   <div className="absolute inset-0 p-3 flex flex-col gap-2">
-                    <div className="h-2 w-12 bg-muted-foreground/20 rounded-full" />
-                    <div className="h-4 w-full bg-muted-foreground/15 rounded-lg" />
-                    <div className="h-4 w-2/3 bg-muted-foreground/15 rounded-lg" />
+                    <div className="h-2 w-12 bg-[#656870]/30 rounded-full" />
+                    <div className="h-4 w-full bg-[#656870]/20 rounded-lg" />
+                    <div className="h-4 w-2/3 bg-[#656870]/20 rounded-lg" />
                   </div>
                   {theme === 'system' && (
                     <div className="absolute top-2 right-2 size-5 bg-brand rounded-full flex items-center justify-center">
@@ -60,17 +61,18 @@ export function AppearanceSection() {
                 <RadioGroupItem value="light" className="sr-only" />
                 <div
                   className={cn(
-                    'relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-muted',
+                    'relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-[#e9e7e4]',
                     'border-2 transition-all',
                     theme === 'light'
                       ? 'border-brand shadow-md shadow-brand/10'
                       : 'border-border hover:border-brand/30'
                   )}
                 >
+                  {/* Hardcoded: light theme preview always shows light colors */}
                   <div className="absolute inset-0 p-3 flex flex-col gap-2">
-                    <div className="h-2 w-12 bg-muted-foreground/20 rounded-full" />
-                    <div className="h-4 w-full bg-muted-foreground/10 rounded-lg" />
-                    <div className="h-4 w-2/3 bg-muted-foreground/10 rounded-lg" />
+                    <div className="h-2 w-12 bg-[#656870]/30 rounded-full" />
+                    <div className="h-4 w-full bg-[#656870]/15 rounded-lg" />
+                    <div className="h-4 w-2/3 bg-[#656870]/15 rounded-lg" />
                   </div>
                   {theme === 'light' && (
                     <div className="absolute top-2 right-2 size-5 bg-brand rounded-full flex items-center justify-center">
@@ -86,17 +88,18 @@ export function AppearanceSection() {
                 <RadioGroupItem value="dark" className="sr-only" />
                 <div
                   className={cn(
-                    'relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-foreground',
+                    'relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-[#1a1b26]',
                     'border-2 transition-all',
                     theme === 'dark'
                       ? 'border-brand shadow-md shadow-brand/10'
                       : 'border-border hover:border-brand/30'
                   )}
                 >
+                  {/* Hardcoded: dark theme preview always shows dark colors */}
                   <div className="absolute inset-0 p-3 flex flex-col gap-2">
-                    <div className="h-2 w-12 bg-white/20 rounded-full" />
-                    <div className="h-4 w-full bg-white/10 rounded-lg" />
-                    <div className="h-4 w-2/3 bg-white/10 rounded-lg" />
+                    <div className="h-2 w-12 bg-[#b2b5c8]/30 rounded-full" />
+                    <div className="h-4 w-full bg-[#b2b5c8]/15 rounded-lg" />
+                    <div className="h-4 w-2/3 bg-[#b2b5c8]/15 rounded-lg" />
                   </div>
                   {theme === 'dark' && (
                     <div className="absolute top-2 right-2 size-5 bg-brand rounded-full flex items-center justify-center">
