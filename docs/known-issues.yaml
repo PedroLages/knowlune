@@ -423,3 +423,27 @@ issues:
     scheduled_for: null
     fixed_by: null
     notes: "Accumulated tech debt. Not blocking but adds noise to every lint run. Incremental cleanup recommended."
+
+  - id: KI-034
+    type: security
+    summary: "OPDS credentials stored in plaintext IndexedDB — both in opdsCatalogs table and duplicated per-book in Book.source.auth"
+    file: "src/data/db.ts"
+    severity: high
+    discovered_by: E88-NFR
+    discovered_on: 2026-04-05
+    status: open
+    scheduled_for: E19
+    fixed_by: null
+    notes: "Acceptable for local-first. Must be encrypted or excluded before Supabase sync (E19). NFR assessment flagged as HIGH advisory."
+
+  - id: KI-035
+    type: design
+    summary: "CatalogListView browse/edit/delete buttons size-9 (36px) below 44px WCAG touch target minimum"
+    file: "src/app/components/library/CatalogListView.tsx:73,84,93"
+    severity: low
+    discovered_by: E88-S02-R2
+    discovered_on: 2026-04-05
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Pre-existing from E88-S01. Not introduced by E88-S02."

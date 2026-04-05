@@ -130,6 +130,7 @@ You have access to WebFetch for targeted documentation lookup. Use SPARINGLY (ma
 - Edge cases: empty states, loading states, error states
 - Async operations: race conditions, cleanup on unmount
 - State management: stale closures, missing dependencies in effects
+- **TDZ after dep array changes**: When a fix adds identifiers to a useEffect/useCallback dependency array, verify the identifier is declared BEFORE the hook that references it. Moving an identifier into deps without checking declaration order causes a Temporal Dead Zone ReferenceError that crashes the component. This was a BLOCKER in E88-S02.
 - Dexie.js transactions — are multi-table operations atomic?
 - File System Access API: permission re-requests, handle invalidation
 
