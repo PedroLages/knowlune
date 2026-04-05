@@ -14,11 +14,13 @@
  *
  * @module HighlightLayer
  */
-import { useEffect, useState, useCallback } from 'react'
+// eslint-disable-next-line component-size/max-lines -- manages multiple epub.js event subsystems: selection, overlay restoration, mini-popover, annotation callbacks
+import { useEffect, useState, useCallback, useRef } from 'react'
 import type { Rendition } from 'epubjs'
 import { toast } from 'sonner'
 import { useHighlightStore } from '@/stores/useHighlightStore'
 import { HighlightPopover } from '@/app/components/reader/HighlightPopover'
+import { HighlightMiniPopover } from '@/app/components/reader/HighlightMiniPopover'
 import type { HighlightPosition } from '@/app/components/reader/HighlightPopover'
 import type { BookHighlight, HighlightColor } from '@/data/types'
 
@@ -57,6 +59,11 @@ interface SelectionData {
   position: HighlightPosition
 }
 
+interface MiniPopoverState {
+  highlight: BookHighlight
+  position: { top: number; left: number }
+}
+
 interface HighlightLayerProps {
   rendition: Rendition | null
   bookId: string
@@ -71,10 +78,16 @@ export function HighlightLayer({
   onFlashcardRequest,
 }: HighlightLayerProps) {
   const createHighlight = useHighlightStore(s => s.createHighlight)
+  const updateHighlight = useHighlightStore(s => s.updateHighlight)
+  const deleteHighlight = useHighlightStore(s => s.deleteHighlight)
   const highlights = useHighlightStore(s => s.highlights)
   const loadHighlightsForBook = useHighlightStore(s => s.loadHighlightsForBook)
+  // Keep a ref to highlights for use inside epub.js callbacks (closure capture)
+  const highlightsRef = useRef(highlights)
+  useEffect(() => { highlightsRef.current = highlights }, [highlights])
 
   const [selection, setSelection] = useState<SelectionData | null>(null)
+  const [miniPopover, setMiniPopover] = useState<MiniPopoverState | null>(null)
   const [showIosBanner, setShowIosBanner] = useState(false)
 
   // Load highlights for this book when rendition is ready
@@ -99,15 +112,24 @@ export function HighlightLayer({
     for (const highlight of highlights) {
       if (!highlight.cfiRange) continue
       try {
+        // Annotation callback fires when user taps/clicks the highlight overlay
         rendition.annotations.highlight(
           highlight.cfiRange,
           { highlightId: highlight.id },
-          undefined,
+          (e: MouseEvent) => {
+            // Find current highlight from ref (not stale closure)
+            const h = highlightsRef.current.find(x => x.id === highlight.id)
+            if (!h) return
+            setMiniPopover({
+              highlight: h,
+              position: { top: e.clientY, left: e.clientX },
+            })
+          },
           'epub-highlight',
           highlightStyles(highlight.color)
         )
       } catch {
-        // silent-catch-ok: CFI may be stale if EPUB was re-imported; text anchor fallback is E85-S02
+        // silent-catch-ok: CFI may be stale if EPUB was re-imported
       }
     }
   }, [rendition, highlights])
@@ -197,11 +219,17 @@ export function HighlightLayer({
       }
 
       // Apply overlay in epub.js immediately (optimistic)
+      // Store highlight ref for the callback closure
+      const capturedId = id
       try {
         rendition.annotations.highlight(
           selection.cfiRange,
-          { highlightId: id },
-          undefined,
+          { highlightId: capturedId },
+          (e: MouseEvent) => {
+            const h = highlightsRef.current.find(x => x.id === capturedId)
+            if (!h) return
+            setMiniPopover({ highlight: h, position: { top: e.clientY, left: e.clientX } })
+          },
           'epub-highlight',
           highlightStyles(color)
         )
@@ -249,6 +277,60 @@ export function HighlightLayer({
     onFlashcardRequest?.(selection.text)
   }, [selection, onFlashcardRequest])
 
+  /** Update an existing highlight (color + note) — remove+re-add annotation for color change */
+  const handleMiniUpdate = useCallback(
+    async (updates: Partial<Pick<BookHighlight, 'color' | 'note'>>) => {
+      if (!miniPopover || !rendition) return
+      const { highlight } = miniPopover
+
+      // If color changed, remove old annotation and re-add with new color
+      if (updates.color && updates.color !== highlight.color && highlight.cfiRange) {
+        try {
+          rendition.annotations.remove(highlight.cfiRange)
+        } catch {
+          // silent-catch-ok: annotation removal failure is non-fatal
+        }
+        const newColor = updates.color
+        const capturedId = highlight.id
+        try {
+          rendition.annotations.highlight(
+            highlight.cfiRange,
+            { highlightId: capturedId },
+            (e: MouseEvent) => {
+              const h = highlightsRef.current.find(x => x.id === capturedId)
+              if (!h) return
+              setMiniPopover({ highlight: h, position: { top: e.clientY, left: e.clientX } })
+            },
+            'epub-highlight',
+            highlightStyles(newColor)
+          )
+        } catch {
+          // silent-catch-ok: annotation re-add failure is non-fatal
+        }
+      }
+
+      await updateHighlight(highlight.id, updates)
+    },
+    [miniPopover, rendition, updateHighlight]
+  )
+
+  /** Delete an existing highlight — remove annotation and Dexie record */
+  const handleMiniDelete = useCallback(async () => {
+    if (!miniPopover || !rendition) return
+    const { highlight } = miniPopover
+
+    // Remove epub.js annotation
+    if (highlight.cfiRange) {
+      try {
+        rendition.annotations.remove(highlight.cfiRange)
+      } catch {
+        // silent-catch-ok: annotation removal failure is non-fatal
+      }
+    }
+
+    await deleteHighlight(highlight.id)
+  }, [miniPopover, rendition, deleteHighlight])
+
   const handleClose = useCallback(() => {
     setSelection(null)
     // Clear selection in epub iframe
@@ -285,7 +367,7 @@ export function HighlightLayer({
         </div>
       )}
 
-      {/* Highlight action popover */}
+      {/* Highlight action popover (new selection) */}
       {selection && (
         <HighlightPopover
           position={selection.position}
@@ -293,6 +375,25 @@ export function HighlightLayer({
           onNote={handleNote}
           onFlashcard={handleFlashcard}
           onClose={handleClose}
+        />
+      )}
+
+      {/* Mini-popover for existing highlight tap (E85-S02) */}
+      {miniPopover && (
+        <HighlightMiniPopover
+          highlight={miniPopover.highlight}
+          position={miniPopover.position}
+          onClose={() => setMiniPopover(null)}
+          onUpdate={handleMiniUpdate}
+          onDelete={handleMiniDelete}
+          onCreateFlashcard={() => {
+            setMiniPopover(null)
+            onFlashcardRequest?.(miniPopover.highlight.textAnchor, miniPopover.highlight.id)
+          }}
+          onViewFlashcard={() => {
+            // E85-S05 will handle navigation; stub for now
+            setMiniPopover(null)
+          }}
         />
       )}
     </>
