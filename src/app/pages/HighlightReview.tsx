@@ -57,18 +57,23 @@ export function HighlightReview() {
   // Load random highlights on mount
   useEffect(() => {
     let ignore = false
-    db.bookHighlights.toArray().then(all => {
-      if (ignore) return
-      const sampled = sampleN(all, REVIEW_CARD_COUNT)
-      setHighlights(sampled)
-      setIsLoading(false)
-    }).catch(err => {
-      if (ignore) return
-      // silent-catch-ok: highlight load failure shows empty state
-      console.error('[HighlightReview] Failed to load highlights:', err)
-      setIsLoading(false)
-    })
-    return () => { ignore = true }
+    db.bookHighlights
+      .toArray()
+      .then(all => {
+        if (ignore) return
+        const sampled = sampleN(all, REVIEW_CARD_COUNT)
+        setHighlights(sampled)
+        setIsLoading(false)
+      })
+      .catch(err => {
+        if (ignore) return
+        // silent-catch-ok: highlight load failure shows empty state
+        console.error('[HighlightReview] Failed to load highlights:', err)
+        setIsLoading(false)
+      })
+    return () => {
+      ignore = true
+    }
   }, [])
 
   const handleNext = useCallback(() => {
@@ -142,9 +147,7 @@ export function HighlightReview() {
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
           ← Back
         </Button>
-        <h1 className="text-base font-semibold">
-          Highlight Review
-        </h1>
+        <h1 className="text-base font-semibold">Highlight Review</h1>
         <span className="text-sm tabular-nums text-muted-foreground">
           {currentIndex + 1} / {highlights.length}
         </span>

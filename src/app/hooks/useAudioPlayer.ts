@@ -59,7 +59,9 @@ function revokeSharedObjectUrl() {
  * Pass this to useSleepTimer for direct volume manipulation (fade-out).
  */
 export const sharedAudioRef: React.RefObject<HTMLAudioElement | null> = {
-  get current() { return _sharedAudio },
+  get current() {
+    return _sharedAudio
+  },
 }
 
 export interface UseAudioPlayerReturn {
@@ -87,8 +89,14 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
   const [localCurrentTime, setLocalCurrentTime] = useState(0)
   const [localDuration, setLocalDuration] = useState(0)
 
-  const { currentChapterIndex, isPlaying, playbackRate, setIsPlaying, setCurrentTime, setCurrentChapterIndex } =
-    useAudioPlayerStore()
+  const {
+    currentChapterIndex,
+    isPlaying,
+    playbackRate,
+    setIsPlaying,
+    setCurrentTime,
+    setCurrentChapterIndex,
+  } = useAudioPlayerStore()
 
   /** Start the rAF loop to update currentTime */
   const startRafLoop = useCallback(() => {
@@ -275,7 +283,8 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
         const nextIndex = currentChapterIndex + 1
         if (nextIndex < book.chapters.length) {
           await loadChapterInternal(nextIndex, isPlaying)
-          if (_sharedAudio) _sharedAudio.currentTime = Math.min(remainingTime, _sharedAudio.duration || 0)
+          if (_sharedAudio)
+            _sharedAudio.currentTime = Math.min(remainingTime, _sharedAudio.duration || 0)
         }
       }
     },

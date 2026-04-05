@@ -152,10 +152,7 @@ describe('OpdsService.validateCatalog', () => {
   })
 
   it('returns CORS error for TypeError from fetch', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockRejectedValue(new TypeError('Failed to fetch'))
-    )
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
 
     const result = await validateCatalog('https://calibre.local/opds')
 

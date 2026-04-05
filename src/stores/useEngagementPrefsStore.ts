@@ -43,7 +43,9 @@ function loadPersistedPrefs(): EngagementPrefs {
         badges: typeof parsed.badges === 'boolean' ? parsed.badges : defaults.badges,
         animations:
           typeof parsed.animations === 'boolean' ? parsed.animations : defaults.animations,
-        colorScheme: ['professional', 'vibrant', 'clean'].includes(parsed.colorScheme) ? parsed.colorScheme : 'professional',
+        colorScheme: ['professional', 'vibrant', 'clean'].includes(parsed.colorScheme)
+          ? parsed.colorScheme
+          : 'professional',
       }
     }
   } catch {

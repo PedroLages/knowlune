@@ -79,7 +79,8 @@ export function ReaderFooter({
             Page {currentPage} of {totalPages}
           </span>
         ) : (
-          progress > 0 && progress < 1 && (
+          progress > 0 &&
+          progress < 1 && (
             <span className="text-xs opacity-60">
               {Math.round((1 - progress) * 100)}% remaining
             </span>

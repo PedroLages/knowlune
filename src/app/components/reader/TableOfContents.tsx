@@ -9,12 +9,7 @@
 import type { NavItem } from 'epubjs'
 import type { Rendition } from 'epubjs'
 import { BookOpen, X } from 'lucide-react'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/app/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { cn } from '@/app/components/ui/utils'
@@ -46,19 +41,14 @@ function TocItem({ item, depth, currentHref, onNavigate }: TocItemProps) {
 
   return (
     <>
-      <li
-        role="listitem"
-        aria-current={isActive ? 'true' : undefined}
-      >
+      <li role="listitem" aria-current={isActive ? 'true' : undefined}>
         <button
           onClick={() => onNavigate(item.href)}
           className={cn(
             'w-full text-left py-2.5 px-3 rounded-lg transition-colors text-sm',
             'hover:bg-muted/60 active:bg-muted',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
-            isActive
-              ? 'text-brand font-medium bg-brand-soft/40'
-              : 'text-foreground'
+            isActive ? 'text-brand font-medium bg-brand-soft/40' : 'text-foreground'
           )}
           style={{ paddingLeft: `${(depth + 1) * 12}px` }}
         >
@@ -101,11 +91,7 @@ export function TableOfContents({
 
   return (
     <Sheet open={open} onOpenChange={open => !open && onClose()}>
-      <SheetContent
-        side="left"
-        className="w-80 p-0 flex flex-col"
-        data-testid="toc-panel"
-      >
+      <SheetContent side="left" className="w-80 p-0 flex flex-col" data-testid="toc-panel">
         <SheetHeader className="flex-row items-center justify-between px-4 py-3 border-b border-border/50">
           <div className="flex items-center gap-2">
             <BookOpen className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -128,11 +114,7 @@ export function TableOfContents({
               No table of contents available
             </p>
           ) : (
-            <ul
-              role="list"
-              aria-label="Table of contents"
-              className="space-y-0.5"
-            >
+            <ul role="list" aria-label="Table of contents" className="space-y-0.5">
               {toc.map(item => (
                 <TocItem
                   key={item.id}

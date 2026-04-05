@@ -28,17 +28,23 @@ function getChapterDuration(
   index: number,
   totalDuration?: number
 ): number | null {
-  const start = chapters[index]?.position?.type === 'time' ? (chapters[index].position.value as number) : null
+  const start =
+    chapters[index]?.position?.type === 'time' ? (chapters[index].position.value as number) : null
   if (start === null) return null
   const nextStart =
     index + 1 < chapters.length && chapters[index + 1]?.position?.type === 'time'
       ? (chapters[index + 1].position.value as number)
-      : totalDuration ?? null
+      : (totalDuration ?? null)
   if (nextStart === null) return null
   return nextStart - start
 }
 
-export function ChapterList({ chapters, currentChapterIndex, totalDuration, onChapterSelect }: ChapterListProps) {
+export function ChapterList({
+  chapters,
+  currentChapterIndex,
+  totalDuration,
+  onChapterSelect,
+}: ChapterListProps) {
   if (chapters.length <= 1) return null
 
   return (

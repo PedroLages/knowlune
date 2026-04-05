@@ -156,9 +156,7 @@ export function PomodoroSettings() {
         <div className="p-4 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors">
           <div>
             <p className="text-sm font-medium">Session quality score</p>
-            <p className="text-xs text-muted-foreground">
-              Show quality popup after study sessions
-            </p>
+            <p className="text-xs text-muted-foreground">Show quality popup after study sessions</p>
           </div>
           <Switch
             id="show-quality-score"
@@ -179,9 +177,7 @@ export function PomodoroSettings() {
             <div className="flex items-center gap-2">
               <Select
                 value={prefs.notificationSound}
-                onValueChange={(value: PomodoroSoundId) =>
-                  updatePref({ notificationSound: value })
-                }
+                onValueChange={(value: PomodoroSoundId) => updatePref({ notificationSound: value })}
               >
                 <SelectTrigger className="w-[140px] min-h-[36px] text-xs">
                   <SelectValue />

@@ -45,7 +45,11 @@ export interface UseSleepTimerReturn {
   /** Human-readable badge text, e.g. "23m" or "EOC" */
   badgeText: string | null
   /** Start or change the sleep timer */
-  setTimer: (option: SleepTimerOption, audioRef: React.RefObject<HTMLAudioElement | null>, onPause: () => void) => void
+  setTimer: (
+    option: SleepTimerOption,
+    audioRef: React.RefObject<HTMLAudioElement | null>,
+    onPause: () => void
+  ) => void
   /** Cancel the sleep timer */
   cancelTimer: () => void
 }

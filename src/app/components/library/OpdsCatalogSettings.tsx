@@ -245,7 +245,9 @@ export function OpdsCatalogSettings({ open, onOpenChange }: OpdsCatalogSettingsP
                         <span className="text-sm font-medium text-foreground truncate">
                           {catalog.name}
                         </span>
-                        <span className="text-xs text-muted-foreground truncate">{catalog.url}</span>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {catalog.url}
+                        </span>
                         {catalog.lastSynced && (
                           <span className="text-xs text-muted-foreground">
                             Last synced:{' '}
@@ -423,12 +425,13 @@ export function OpdsCatalogSettings({ open, onOpenChange }: OpdsCatalogSettingsP
       </Dialog>
 
       {/* Delete confirmation */}
-      <AlertDialog open={deleteTarget !== null} onOpenChange={open => !open && setDeleteTarget(null)}>
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={open => !open && setDeleteTarget(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Remove &ldquo;{deleteTarget?.name}&rdquo;?
-            </AlertDialogTitle>
+            <AlertDialogTitle>Remove &ldquo;{deleteTarget?.name}&rdquo;?</AlertDialogTitle>
             <AlertDialogDescription>
               This will remove the catalog connection. Books already imported from this catalog will
               not be affected.

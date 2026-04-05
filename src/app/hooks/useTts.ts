@@ -39,7 +39,13 @@ function clearHighlight(doc: Document): void {
 }
 
 /** Highlights a word at charIndex/charLength in the document's text */
-function highlightWord(doc: Document, fullText: string, charIndex: number, charLength: number, chunkOffset: number): void {
+function highlightWord(
+  doc: Document,
+  fullText: string,
+  charIndex: number,
+  charLength: number,
+  chunkOffset: number
+): void {
   const absoluteIndex = chunkOffset + charIndex
   if (charLength <= 0 || absoluteIndex < 0) return
 
@@ -203,7 +209,13 @@ export function useTts(renditionRef: React.RefObject<Rendition | null>): UseTtsR
                         if (renditionRef.current) {
                           const doc = getEpubDocument(renditionRef.current)
                           if (doc) {
-                            highlightWord(doc, fullTextRef.current, event.charIndex, event.charLength, chunkOffset)
+                            highlightWord(
+                              doc,
+                              fullTextRef.current,
+                              event.charIndex,
+                              event.charLength,
+                              chunkOffset
+                            )
                           }
                         }
                       },
@@ -256,14 +268,17 @@ export function useTts(renditionRef: React.RefObject<Rendition | null>): UseTtsR
     }
   }, [isTtsPlaying, isTtsPaused, startTts, pauseTts, resumeTts])
 
-  const setTtsRate = useCallback((rate: number) => {
-    setTtsRateState(rate)
-    // Restart with new rate if currently playing
-    if (isTtsPlaying || isTtsPaused) {
-      ttsService.stop()
-      setTimeout(() => startTts(), 50)
-    }
-  }, [isTtsPlaying, isTtsPaused, startTts])
+  const setTtsRate = useCallback(
+    (rate: number) => {
+      setTtsRateState(rate)
+      // Restart with new rate if currently playing
+      if (isTtsPlaying || isTtsPaused) {
+        ttsService.stop()
+        setTimeout(() => startTts(), 50)
+      }
+    },
+    [isTtsPlaying, isTtsPaused, startTts]
+  )
 
   // Stop TTS on unmount
   useEffect(() => {

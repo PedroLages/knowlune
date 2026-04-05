@@ -9,12 +9,7 @@
  */
 import { StickyNote, Layers, Highlighter } from 'lucide-react'
 import type { Rendition } from 'epubjs'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/app/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { cn } from '@/app/components/ui/utils'
@@ -74,7 +69,13 @@ function HighlightCard({ highlight, onNavigate, onFlashcard }: HighlightCardProp
         <p className="text-xs text-muted-foreground mt-1 pl-5">
           {date}
           {highlight.chapterHref && (
-            <span className="ml-2 opacity-60">· {highlight.chapterHref.split('/').pop()?.replace(/\.[^.]+$/, '') ?? ''}</span>
+            <span className="ml-2 opacity-60">
+              ·{' '}
+              {highlight.chapterHref
+                .split('/')
+                .pop()
+                ?.replace(/\.[^.]+$/, '') ?? ''}
+            </span>
           )}
         </p>
       </button>
@@ -91,7 +92,9 @@ function HighlightCard({ highlight, onNavigate, onFlashcard }: HighlightCardProp
       <div className="flex justify-end mt-1.5">
         <button
           onClick={() => onFlashcard(highlight)}
-          aria-label={highlight.flashcardId ? 'View linked flashcard' : 'Create flashcard from highlight'}
+          aria-label={
+            highlight.flashcardId ? 'View linked flashcard' : 'Create flashcard from highlight'
+          }
           className={cn(
             'p-1 rounded hover:bg-muted/60 transition-colors',
             highlight.flashcardId ? 'text-brand' : 'text-muted-foreground'
@@ -128,7 +131,9 @@ export function HighlightListPanel({
   const handleNavigate = (cfiRange: string) => {
     if (!rendition) return
     // silent-catch-ok: navigation failure is non-fatal; user can tap again
-    rendition.display(cfiRange).catch(() => { /* silent-catch-ok */ })
+    rendition.display(cfiRange).catch(() => {
+      /* silent-catch-ok */
+    })
     onClose()
   }
 

@@ -34,7 +34,9 @@ export function DailyGoalRing({ className }: DailyGoalRingProps) {
         // silent-catch-ok: stats failure degrades gracefully (ring shows 0)
         if (!ignore) setMinutesToday(0)
       })
-    return () => { ignore = true }
+    return () => {
+      ignore = true
+    }
   }, [])
 
   if (!goal || goal.dailyType !== 'minutes') return null

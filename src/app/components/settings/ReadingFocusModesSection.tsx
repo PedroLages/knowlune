@@ -111,11 +111,7 @@ export function ReadingFocusModesSection({
           {/* Reading Theme Circles */}
           <div className="mt-6">
             <Label className="text-xs text-muted-foreground mb-3 block">Reading Theme</Label>
-            <div
-              className="flex flex-wrap gap-6"
-              role="radiogroup"
-              aria-label="Reading theme"
-            >
+            <div className="flex flex-wrap gap-6" role="radiogroup" aria-label="Reading theme">
               {THEME_CIRCLES.map(opt => {
                 const isSelected = (settings.readingTheme ?? 'auto') === opt.value
                 return (
@@ -136,9 +132,7 @@ export function ReadingFocusModesSection({
                           : `${opt.border} group-hover:border-brand/50`
                       )}
                     />
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {opt.label}
-                    </span>
+                    <span className="text-xs font-medium text-muted-foreground">{opt.label}</span>
                   </button>
                 )
               })}

@@ -32,7 +32,11 @@ interface AudiobookRendererProps {
   onBookmarksClose?: () => void
 }
 
-export function AudiobookRenderer({ book, bookmarksOpen: bookmarksOpenProp, onBookmarksClose }: AudiobookRendererProps) {
+export function AudiobookRenderer({
+  book,
+  bookmarksOpen: bookmarksOpenProp,
+  onBookmarksClose,
+}: AudiobookRendererProps) {
   const {
     isPlaying,
     currentTime,
@@ -89,7 +93,8 @@ export function AudiobookRenderer({ book, bookmarksOpen: bookmarksOpenProp, onBo
     onSkipBack: () => skipBack(15),
     onSkipForward: () => skipForward(30),
     onPrevTrack: () => loadChapter(Math.max(0, currentChapterIndex - 1), isPlaying),
-    onNextTrack: () => loadChapter(Math.min(book.chapters.length - 1, currentChapterIndex + 1), isPlaying),
+    onNextTrack: () =>
+      loadChapter(Math.min(book.chapters.length - 1, currentChapterIndex + 1), isPlaying),
   })
 
   const currentChapter = book.chapters[currentChapterIndex]
@@ -136,9 +141,7 @@ export function AudiobookRenderer({ book, bookmarksOpen: bookmarksOpenProp, onBo
             </span>
           )}
         </p>
-        {book.author && (
-          <p className="text-xs text-muted-foreground">{book.author}</p>
-        )}
+        {book.author && <p className="text-xs text-muted-foreground">{book.author}</p>}
       </div>
 
       {/* Progress Scrubber */}

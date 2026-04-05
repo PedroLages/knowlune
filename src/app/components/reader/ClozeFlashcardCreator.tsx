@@ -14,12 +14,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { X, Layers } from 'lucide-react'
 import { toast } from 'sonner'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/app/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'
 import { db } from '@/db/schema'
@@ -41,9 +36,7 @@ function buildClozeFront(tokens: string[], blanked: Set<number>): string {
 
 /** Build cloze back text (original text with blanked words indicated) */
 function buildClozeBack(tokens: string[], blanked: Set<number>): string {
-  return tokens
-    .map((token, i) => (blanked.has(i) ? `**${token.trim()}**` : token))
-    .join('')
+  return tokens.map((token, i) => (blanked.has(i) ? `**${token.trim()}**` : token)).join('')
 }
 
 interface ClozeFlashcardCreatorProps {
@@ -98,18 +91,21 @@ export function ClozeFlashcardCreator({
     localStorage.setItem(TUTORIAL_KEY, '1')
   }
 
-  const toggleBlank = useCallback((index: number) => {
-    setBlanked(prev => {
-      const next = new Set(prev)
-      if (next.has(index)) {
-        next.delete(index)
-      } else {
-        next.add(index)
-      }
-      return next
-    })
-    if (showTutorial) dismissTutorial()
-  }, [showTutorial])
+  const toggleBlank = useCallback(
+    (index: number) => {
+      setBlanked(prev => {
+        const next = new Set(prev)
+        if (next.has(index)) {
+          next.delete(index)
+        } else {
+          next.add(index)
+        }
+        return next
+      })
+      if (showTutorial) dismissTutorial()
+    },
+    [showTutorial]
+  )
 
   const front = buildClozeFront(tokens, blanked)
   const back = buildClozeBack(tokens, blanked)
@@ -183,9 +179,7 @@ export function ClozeFlashcardCreator({
         </SheetHeader>
 
         {/* Instruction */}
-        <p className="text-sm text-muted-foreground mb-3">
-          Tap words to create blanks:
-        </p>
+        <p className="text-sm text-muted-foreground mb-3">Tap words to create blanks:</p>
 
         {/* First-time tutorial tooltip */}
         {showTutorial && (
@@ -213,7 +207,11 @@ export function ClozeFlashcardCreator({
             const isWord = token.trim().length > 0
             if (!isWord) {
               // Whitespace token — render as space
-              return <span key={i} className="inline">{token}</span>
+              return (
+                <span key={i} className="inline">
+                  {token}
+                </span>
+              )
             }
             const isBlanked = blanked.has(i)
             const isFirst = wordIndices[0] === i
@@ -237,9 +235,7 @@ export function ClozeFlashcardCreator({
                   isBlanked
                     ? 'bg-brand text-brand-foreground'
                     : 'bg-muted/30 hover:bg-muted cursor-pointer',
-                  isFirst && pulseFirst && !isBlanked
-                    ? 'motion-safe:animate-pulse'
-                    : ''
+                  isFirst && pulseFirst && !isBlanked ? 'motion-safe:animate-pulse' : ''
                 )}
                 data-testid={`cloze-word-${i}`}
               >
@@ -261,18 +257,17 @@ export function ClozeFlashcardCreator({
 
         {/* Footer actions */}
         <div className="flex gap-3">
-          <Button
-            variant="ghost"
-            className="flex-1"
-            onClick={onClose}
-            data-testid="cloze-cancel"
-          >
+          <Button variant="ghost" className="flex-1" onClick={onClose} data-testid="cloze-cancel">
             Cancel
           </Button>
           <Button
             variant="brand"
             className="flex-1"
-            onClick={() => { handleCreate().catch(() => { /* silent-catch-ok */ }) }}
+            onClick={() => {
+              handleCreate().catch(() => {
+                /* silent-catch-ok */
+              })
+            }}
             disabled={!hasBlanks || isCreating}
             aria-disabled={!hasBlanks}
             data-testid="cloze-create"

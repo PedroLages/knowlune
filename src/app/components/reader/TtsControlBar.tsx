@@ -113,10 +113,7 @@ export function TtsControlBar({
       )}
 
       {/* Speed selector */}
-      <Select
-        value={String(rate)}
-        onValueChange={val => onRateChange(Number(val))}
-      >
+      <Select value={String(rate)} onValueChange={val => onRateChange(Number(val))}>
         <SelectTrigger
           className="w-20 h-8 text-xs"
           aria-label="Reading speed"

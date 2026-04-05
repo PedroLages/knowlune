@@ -67,9 +67,7 @@ test.describe('E100-S02: Clean Color Theme Settings UI', () => {
     expect(htmlClasses).toContain('clean')
   })
 
-  test('AC6: Switching back to Professional removes .clean class from <html>', async ({
-    page,
-  }) => {
+  test('AC6: Switching back to Professional removes .clean class from <html>', async ({ page }) => {
     await goToSettingsLearning(page)
 
     // First select Clean

@@ -72,7 +72,10 @@ export function AccountSection() {
           <h4 className="px-1 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
             Account
           </h4>
-          <div className="bg-card rounded-xl shadow-sm overflow-hidden" data-testid="account-section">
+          <div
+            className="bg-card rounded-xl shadow-sm overflow-hidden"
+            data-testid="account-section"
+          >
             {/* User row */}
             <div className="p-4 flex justify-between items-center">
               <div className="flex items-center gap-4">

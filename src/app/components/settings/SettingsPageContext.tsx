@@ -2,13 +2,7 @@
 import { createContext, useContext, useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router'
 import { useTheme } from 'next-themes'
-import {
-  getSettings,
-  saveSettings,
-  type AppSettings,
-
-
-} from '@/lib/settings'
+import { getSettings, saveSettings, type AppSettings } from '@/lib/settings'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
 import { exportAllAsJson, exportAllAsCsv, exportNotesAsMarkdown } from '@/lib/exportService'

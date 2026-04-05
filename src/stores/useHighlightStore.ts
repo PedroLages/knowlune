@@ -43,10 +43,7 @@ export const useHighlightStore = create<HighlightStoreState>((set, get) => ({
     // Skip reload if already loaded for same book
     if (get().currentBookId === bookId && get().isLoaded) return
 
-    const highlights = await db.bookHighlights
-      .where('bookId')
-      .equals(bookId)
-      .sortBy('createdAt')
+    const highlights = await db.bookHighlights.where('bookId').equals(bookId).sortBy('createdAt')
     set({ highlights, currentBookId: bookId, isLoaded: true })
   },
 
@@ -56,7 +53,11 @@ export const useHighlightStore = create<HighlightStoreState>((set, get) => ({
 
     try {
       await db.bookHighlights.put(highlight)
-      appEventBus.emit({ type: 'highlight:created', highlightId: highlight.id, bookId: highlight.bookId })
+      appEventBus.emit({
+        type: 'highlight:created',
+        highlightId: highlight.id,
+        bookId: highlight.bookId,
+      })
     } catch {
       // Rollback on failure
       set(state => ({
@@ -113,9 +114,9 @@ export const useHighlightStore = create<HighlightStoreState>((set, get) => ({
     }
   },
 
-  setSelectedHighlightId: (id) => set({ selectedHighlightId: id }),
+  setSelectedHighlightId: id => set({ selectedHighlightId: id }),
 
-  setColorFilter: (color) => set({ colorFilter: color }),
+  setColorFilter: color => set({ colorFilter: color }),
 
   getFilteredHighlights: () => {
     const { highlights, colorFilter } = get()

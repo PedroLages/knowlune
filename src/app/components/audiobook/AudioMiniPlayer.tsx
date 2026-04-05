@@ -53,9 +53,12 @@ export function AudioMiniPlayer() {
       audio.pause()
       setIsPlaying(false)
     } else {
-      audio.play().then(() => setIsPlaying(true)).catch(() => {
-        // silent-catch-ok: play() rejection is handled gracefully
-      })
+      audio
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => {
+          // silent-catch-ok: play() rejection is handled gracefully
+        })
     }
   }, [isPlaying, setIsPlaying])
 
@@ -132,7 +135,11 @@ export function AudioMiniPlayer() {
           className="flex-shrink-0 flex size-10 items-center justify-center rounded-full bg-brand text-brand-foreground hover:bg-brand-hover transition-colors"
           aria-label={isPlaying ? 'Pause' : 'Play'}
         >
-          {isPlaying ? <Pause className="size-5" aria-hidden="true" /> : <Play className="size-5 ml-0.5" aria-hidden="true" />}
+          {isPlaying ? (
+            <Pause className="size-5" aria-hidden="true" />
+          ) : (
+            <Play className="size-5 ml-0.5" aria-hidden="true" />
+          )}
         </button>
 
         {/* Skip controls — desktop only */}

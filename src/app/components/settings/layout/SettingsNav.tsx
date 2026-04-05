@@ -44,10 +44,7 @@ export function SettingsNav({
                       )}
                     >
                       <Icon
-                        className={cn(
-                          'size-4',
-                          isActive ? 'text-brand-foreground' : 'text-brand'
-                        )}
+                        className={cn('size-4', isActive ? 'text-brand-foreground' : 'text-brand')}
                         aria-hidden="true"
                       />
                     </div>

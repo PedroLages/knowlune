@@ -190,9 +190,7 @@ export function ReadingGoalSettings({ open, onOpenChange }: ReadingGoalSettingsP
                   className="text-center text-lg font-semibold h-11"
                   aria-label="Yearly book goal"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  books this year
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">books this year</p>
               </div>
               <Button
                 variant="outline"
@@ -210,7 +208,12 @@ export function ReadingGoalSettings({ open, onOpenChange }: ReadingGoalSettingsP
           {/* Actions */}
           <div className="flex justify-between pt-2">
             {goal && (
-              <Button variant="ghost" size="sm" onClick={handleClear} className="text-muted-foreground">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClear}
+                className="text-muted-foreground"
+              >
                 Clear goals
               </Button>
             )}

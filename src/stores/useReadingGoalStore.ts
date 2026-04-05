@@ -83,11 +83,15 @@ export const useReadingGoalStore = create<ReadingGoalState>((set, get) => ({
       set({ goal, streak, hasGoal: goal !== null })
     } catch {
       // silent-catch-ok: corrupted storage — start fresh
-      set({ goal: null, streak: { currentStreak: 0, longestStreak: 0, lastMetDate: null }, hasGoal: false })
+      set({
+        goal: null,
+        streak: { currentStreak: 0, longestStreak: 0, lastMetDate: null },
+        hasGoal: false,
+      })
     }
   },
 
-  saveGoal: (partial) => {
+  saveGoal: partial => {
     const goal: ReadingGoal = { ...partial, updatedAt: new Date().toISOString() }
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(goal))
@@ -104,7 +108,11 @@ export const useReadingGoalStore = create<ReadingGoalState>((set, get) => ({
     } catch {
       // silent-catch-ok
     }
-    set({ goal: null, hasGoal: false, streak: { currentStreak: 0, longestStreak: 0, lastMetDate: null } })
+    set({
+      goal: null,
+      hasGoal: false,
+      streak: { currentStreak: 0, longestStreak: 0, lastMetDate: null },
+    })
   },
 
   checkDailyGoalMet: (minutesToday: number): boolean => {
