@@ -1,8 +1,13 @@
-# Design Review — E88-S03: Remote EPUB Streaming (2026-04-05)
+# Design Review — E88-S03: Remote EPUB Streaming (2026-04-05, Round 2)
 
 ## Scope
 
 UI changes in `BookReader.tsx`: LoadingSkeleton parameterized message, error state with cached fallback button, hardcoded color fixes.
+
+## Round 1 Fix Verification
+
+- **D1 (MEDIUM) — Raw button replaced with shadcn Button**: FIXED. Now uses `<Button variant="brand">` and `<Button variant="brand-outline">`.
+- **D2 (LOW) — flex-wrap added**: FIXED. Error button container has `flex flex-wrap gap-3 justify-center`.
 
 ## Testing
 
@@ -14,24 +19,16 @@ UI changes in `BookReader.tsx`: LoadingSkeleton parameterized message, error sta
 
 ### GOOD
 
-- **Hardcoded color fix**: `bg-[#FAF5EE]` replaced with `bg-background` in both LoadingSkeleton and error state. Correct design token usage.
-- **Dynamic loading message**: "Loading from server..." for remote books vs "Loading book..." for local — good UX differentiation.
-- **Touch targets**: Both "Read cached version" and "Retry" buttons have `min-h-[44px]` meeting WCAG touch target requirements.
-- **Error state accessibility**: Error container has `role="alert"` for screen reader announcement. Error message has `data-testid` for testing.
-- **Design tokens**: All colors use tokens (`bg-background`, `text-destructive`, `text-brand`, `bg-brand`, `text-brand-foreground`, `hover:bg-brand-hover`, `text-muted-foreground`).
+- **Design token compliance**: All hardcoded `bg-[#FAF5EE]` replaced with `bg-background`. No hardcoded colors remain.
+- **Dynamic loading message**: "Loading from server..." for remote vs "Loading book..." for local.
+- **Accessibility**: Error container has `role="alert"`, proper `data-testid` attributes, LoadingSkeleton has dynamic `aria-label`.
+- **Button component library**: Uses `<Button variant="brand">` and `<Button variant="brand-outline">` consistently.
+- **Responsive layout**: `flex-wrap` on button container, centered content.
 
-### MEDIUM
+### No Issues Found
 
-**D1 — "Read cached version" button uses inline classes instead of shadcn Button** — `BookReader.tsx:589-595`
-
-The cached fallback button uses raw `<button>` with inline Tailwind classes (`rounded-xl bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand-hover`) instead of `<Button variant="brand">` from the component library. This works visually but diverges from component library patterns. Consistency recommendation — use `<Button>`.
-
-### LOW
-
-**D2 — Error state layout could use `flex-wrap` for very narrow viewports** — `BookReader.tsx:587`
-
-The `flex gap-3` container for the two buttons doesn't have `flex-wrap`. On very narrow viewports with long button text, buttons could overflow. At current text lengths ("Read cached version" + "Retry") this is unlikely to cause issues at 375px+.
+All Round 1 design findings have been addressed.
 
 ## Verdict
 
-No blockers. 1 MEDIUM (component library consistency), 1 LOW (flex-wrap). Design token migration is a positive improvement.
+No issues. All Round 1 findings fixed. Design token compliance is clean.
