@@ -982,7 +982,7 @@ development_status:
   83-1-opfs-storage-service-and-book-data-model: done
   83-2-epub-import-with-metadata-extraction: done
   83-3-library-grid-and-list-views: ready-for-dev
-  83-4-library-search-filter-and-status-management: ready-for-dev
+  83-4-library-search-filter-and-status-management: done
   83-5-book-metadata-editor: ready-for-dev
   83-6-book-deletion-with-opfs-cleanup: ready-for-dev
   83-7-storage-indicator: ready-for-dev
