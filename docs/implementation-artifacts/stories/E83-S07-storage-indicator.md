@@ -1,6 +1,6 @@
 # Story 83.7: Storage Indicator
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
