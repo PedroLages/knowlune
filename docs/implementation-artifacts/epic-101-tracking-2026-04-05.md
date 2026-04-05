@@ -17,15 +17,16 @@ Last Updated: 2026-04-05
 ## Story Details
 
 ### E101-S01: AudiobookshelfService & Data Foundation
-**Status:** queued
+**Status:** reviewing (R1)
 #### Errors
 _(none yet)_
 #### Review Findings
-_(none yet)_
+_(R1 in progress)_
 #### Fixes Applied
 _(none yet)_
 #### Notes
-_(none yet)_
+- Dexie v39→v40, audiobookshelfServers table, AudiobookshelfService.ts (10 exports), 23 unit tests
+- No .tsx changes → design-review skipped
 
 ---
 
