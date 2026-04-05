@@ -978,8 +978,8 @@ development_status:
   # Source: epics-books-audiobooks-library.md
   # EPUB import, OPFS storage, library grid/list, search/filter, metadata
   # ──────────────────────────────────────────────────
-  epic-83: backlog  # reset 2026-03-30: story specs created but no code implemented
-  83-1-opfs-storage-service-and-book-data-model: ready-for-dev
+  epic-83: in-progress
+  83-1-opfs-storage-service-and-book-data-model: done
   83-2-epub-import-with-metadata-extraction: ready-for-dev
   83-3-library-grid-and-list-views: ready-for-dev
   83-4-library-search-filter-and-status-management: ready-for-dev
