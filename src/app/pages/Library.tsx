@@ -11,7 +11,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, Plus, WifiOff } from 'lucide-react'
+import { BookOpen, Plus, WifiOff, Target } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
 import { StorageIndicator } from '@/app/components/library/StorageIndicator'
@@ -20,7 +21,12 @@ import { BookListItem } from '@/app/components/library/BookListItem'
 import { BookContextMenu } from '@/app/components/library/BookContextMenu'
 import { BookMetadataEditor } from '@/app/components/library/BookMetadataEditor'
 import { LibraryFilters } from '@/app/components/library/LibraryFilters'
+import { ReadingGoalSettings } from '@/app/components/library/ReadingGoalSettings'
+import { DailyGoalRing } from '@/app/components/library/DailyGoalRing'
+import { YearlyGoalProgress } from '@/app/components/library/YearlyGoalProgress'
 import { useBookStore } from '@/stores/useBookStore'
+import { useReadingGoalStore } from '@/stores/useReadingGoalStore'
+import { appEventBus } from '@/lib/eventBus'
 import type { Book } from '@/data/types'
 import { cn } from '@/app/components/ui/utils'
 import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
@@ -30,12 +36,22 @@ export function Library() {
   const [importOpen, setImportOpen] = useState(false)
   const [droppedFile, setDroppedFile] = useState<File | null>(null)
   const [editingBook, setEditingBook] = useState<Book | null>(null)
+  const [goalsOpen, setGoalsOpen] = useState(false)
   const books = useBookStore(s => s.books)
   const libraryView = useBookStore(s => s.libraryView)
   const getFilteredBooks = useBookStore(s => s.getFilteredBooks)
   const filters = useBookStore(s => s.filters)
   const setFilters = useBookStore(s => s.setFilters)
   const loadBooks = useBookStore(s => s.loadBooks)
+
+  const loadGoal = useReadingGoalStore(s => s.loadGoal)
+  const goal = useReadingGoalStore(s => s.goal)
+  const checkYearlyGoalReached = useReadingGoalStore(s => s.checkYearlyGoalReached)
+
+  // Load goals from localStorage on mount (E86-S05)
+  useEffect(() => {
+    loadGoal()
+  }, [loadGoal])
 
   // Memoize filtered books to avoid new array on every render
   const filteredBooks = useMemo(() => getFilteredBooks(), [getFilteredBooks, books, filters])
@@ -44,6 +60,21 @@ export function Library() {
   useEffect(() => {
     loadBooks()
   }, [loadBooks])
+
+  // Yearly goal celebration — fires when a book is marked finished (E86-S05)
+  useEffect(() => {
+    const unsub = appEventBus.on('book:finished', () => {
+      if (!goal) return
+      const currentYear = new Date().getFullYear().toString()
+      const finishedThisYear = books.filter(
+        b => b.status === 'finished' && b.finishedAt?.startsWith(currentYear)
+      ).length
+      if (checkYearlyGoalReached(finishedThisYear)) {
+        toast.success('Yearly reading goal achieved! 🎉', { duration: 6000 })
+      }
+    })
+    return unsub
+  }, [goal, books, checkYearlyGoalReached])
 
   // Drag-drop state for empty state zone
   const [isDragOver, setIsDragOver] = useState(false)
@@ -73,30 +104,48 @@ export function Library() {
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold text-foreground">Books</h1>
-          {!isOnline && (
-            <span
-              role="status"
-              aria-label="You are offline"
-              className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning-foreground"
-              data-testid="library-offline-badge"
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold text-foreground">Books</h1>
+            {!isOnline && (
+              <span
+                role="status"
+                aria-label="You are offline"
+                className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning-foreground"
+                data-testid="library-offline-badge"
+              >
+                <WifiOff className="size-3" aria-hidden="true" />
+                Offline
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Daily goal ring — compact, only visible when goal is set */}
+            <DailyGoalRing />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setGoalsOpen(true)}
+              className="size-11 rounded-xl"
+              aria-label="Reading goals"
+              title="Reading Goals"
             >
-              <WifiOff className="size-3" aria-hidden="true" />
-              Offline
-            </span>
-          )}
+              <Target className="size-5" />
+            </Button>
+            <Button
+              variant="brand"
+              onClick={() => setImportOpen(true)}
+              className="min-h-[44px]"
+              data-testid="import-book-trigger"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Import Book
+            </Button>
+          </div>
         </div>
-        <Button
-          variant="brand"
-          onClick={() => setImportOpen(true)}
-          className="min-h-[44px]"
-          data-testid="import-book-trigger"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Import Book
-        </Button>
+        {/* Yearly goal progress bar — only visible when yearly goal is set */}
+        <YearlyGoalProgress />
       </div>
 
       {/* Empty state */}
@@ -188,6 +237,8 @@ export function Library() {
           if (!open) setEditingBook(null)
         }}
       />
+
+      <ReadingGoalSettings open={goalsOpen} onOpenChange={setGoalsOpen} />
     </div>
   )
 }

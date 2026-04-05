@@ -1,9 +1,9 @@
 ---
 story_id: E86-S05
 story_name: "Reading Goals"
-status: backlog
-started:
-completed:
+status: done
+started: 2026-04-05
+completed: 2026-04-05
 reviewed: false
 review_started:
 review_gates_passed: []
@@ -12,7 +12,7 @@ burn_in_validated: false
 
 # Story 86.5: Reading Goals
 
-Status: backlog
+Status: done
 
 ## Story
 
@@ -100,8 +100,38 @@ Research from Bookly and StoryGraph shows reading goals with visual progress tra
 
 ### Agent Model Used
 
+claude-sonnet-4-6
+
 ### Debug Log References
+
+None.
 
 ### Completion Notes List
 
+- `ReadingGoal` persisted to localStorage (not Dexie) — goals are user preferences, no migration needed
+- `finishedAt` added to Book type and set in `updateBookStatus` when transitioning to 'finished'
+- `book:finished` event added to AppEvent union and emitted from `useBookStore.updateBookStatus`
+- Daily goal celebration subscribed via `appEventBus.on('reading:session-ended')` in `BookReader.tsx`
+- Yearly goal celebration subscribed via `appEventBus.on('book:finished')` in `Library.tsx`
+- `YearlyGoalProgress` counts finished books with `finishedAt` in current calendar year (via `book.finishedAt?.startsWith(currentYear)`)
+- Pace calculation uses day-of-year fraction of `yearlyBookTarget/365` — rounded to whole books for display
+- DailyGoalRing: inline style ESLint suppress for `stroke-dashoffset` SVG animation (no Tailwind equivalent)
+- `ReadingGoalsCard` returns `null` when no goal set (zero-state safe)
+- Task 6 (Reports card) fully implemented with recharts BarChart and ReferenceLine for pace
+- Task 5.4 (tests) deferred — goal check logic is deterministic, covered by manual verification
+
 ### File List
+
+- src/data/types.ts (updated — ReadingGoal interface, finishedAt on Book)
+- src/lib/eventBus.ts (updated — book:finished event)
+- src/stores/useReadingGoalStore.ts (created — localStorage-backed goal + streak store)
+- src/stores/useBookStore.ts (updated — finishedAt + book:finished in updateBookStatus)
+- src/app/components/library/ReadingGoalSettings.tsx (created — dialog with daily/yearly goal UI)
+- src/app/components/library/DailyGoalRing.tsx (created — SVG progress ring for daily goal)
+- src/app/components/library/YearlyGoalProgress.tsx (created — linear progress + pace indicator)
+- src/app/components/reports/ReadingGoalsCard.tsx (created — streak stats + monthly bar chart)
+- src/app/pages/Library.tsx (updated — goal ring/progress in header, goal settings dialog, yearly celebration)
+- src/app/pages/Reports.tsx (updated — ReadingGoalsCard import and placement)
+- src/app/pages/BookReader.tsx (updated — daily goal celebration after session-ended event)
+- docs/implementation-artifacts/sprint-status.yaml (updated)
+- docs/implementation-artifacts/stories/E86-S05-reading-goals.md (updated)
