@@ -30,18 +30,34 @@ export function SettingsNav({
                     aria-current={isActive ? 'page' : undefined}
                     aria-label={isModified ? `${category.label} (modified)` : category.label}
                     className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left',
-                      'transition-all duration-200 min-h-[44px]',
+                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left',
+                      'transition-all duration-150 min-h-[44px]',
                       isActive
-                        ? 'bg-brand-soft text-brand-soft-foreground border-l-2 border-brand font-medium'
+                        ? 'bg-brand text-brand-foreground font-medium shadow-md shadow-brand/20'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     )}
                   >
-                    <Icon className="size-4 flex-shrink-0" aria-hidden="true" />
+                    <div
+                      className={cn(
+                        'flex items-center justify-center size-7 rounded-lg flex-shrink-0',
+                        isActive ? 'bg-brand-foreground/20' : 'bg-brand-soft'
+                      )}
+                    >
+                      <Icon
+                        className={cn(
+                          'size-4',
+                          isActive ? 'text-brand-foreground' : 'text-brand'
+                        )}
+                        aria-hidden="true"
+                      />
+                    </div>
                     <span className="text-sm truncate">{category.label}</span>
                     {isModified && (
                       <span
-                        className="ml-auto w-2 h-2 rounded-full bg-warning flex-shrink-0"
+                        className={cn(
+                          'ml-auto w-2 h-2 rounded-full flex-shrink-0',
+                          isActive ? 'bg-brand-foreground/70' : 'bg-warning'
+                        )}
                         aria-hidden="true"
                       />
                     )}

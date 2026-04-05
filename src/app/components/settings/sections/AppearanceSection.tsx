@@ -1,6 +1,5 @@
-import { Monitor, Sun, Moon, Eye, Type } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
-import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
 import { Label } from '@/app/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
 import { Switch } from '@/app/components/ui/switch'
@@ -17,114 +16,115 @@ export function AppearanceSection() {
   const { showAll, toggleShowAll } = useProgressiveDisclosure()
 
   return (
-    <div className="space-y-6">
-      {/* Theme */}
-      <Card>
-        <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-brand-soft p-2">
-              <Monitor className="size-5 text-brand" aria-hidden="true" />
-            </div>
-            <div>
-              <h2 className="text-lg font-display leading-none">Appearance</h2>
-              <p className="text-sm text-muted-foreground mt-1">Choose your preferred theme</p>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div>
-            <Label>Theme</Label>
-            <RadioGroup value={theme} onValueChange={setTheme} aria-label="Theme" className="mt-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <label
+    <div className="space-y-8">
+      {/* Theme Mode */}
+      <section>
+        <h4 className="px-1 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
+          Theme Mode
+        </h4>
+        <div className="bg-card rounded-xl shadow-sm p-6">
+          <RadioGroup value={theme} onValueChange={setTheme} aria-label="Theme">
+            <div className="grid grid-cols-3 gap-4">
+              {/* System */}
+              <label className="flex flex-col items-center gap-3 cursor-pointer group">
+                <RadioGroupItem value="system" className="sr-only" />
+                <div
                   className={cn(
-                    'relative flex flex-col gap-3 p-4 border-2 rounded-xl cursor-pointer',
-                    'transition-all duration-200 hover:shadow-sm',
+                    'relative w-full aspect-[4/5] rounded-xl overflow-hidden',
+                    'border-2 transition-all',
                     theme === 'system'
-                      ? 'border-brand bg-brand-soft shadow-sm'
-                      : 'border-border bg-background hover:border-brand/50'
+                      ? 'border-brand shadow-md shadow-brand/10'
+                      : 'border-border hover:border-brand/30'
                   )}
                 >
-                  <RadioGroupItem value="system" className="sr-only" />
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Monitor className="size-5 text-muted-foreground" />
-                      <span className="text-sm font-medium">System</span>
-                    </div>
-                    {theme === 'system' && <div className="w-2 h-2 bg-brand rounded-full" />}
+                  <div className="absolute inset-0 flex flex-col">
+                    <div className="h-1/2 bg-muted" />
+                    <div className="h-1/2 bg-foreground" />
                   </div>
-                  <p className="text-xs text-muted-foreground">Matches your device settings</p>
-                </label>
+                  <div className="absolute inset-0 p-3 flex flex-col gap-2">
+                    <div className="h-2 w-12 bg-muted-foreground/20 rounded-full" />
+                    <div className="h-4 w-full bg-muted-foreground/15 rounded-lg" />
+                    <div className="h-4 w-2/3 bg-muted-foreground/15 rounded-lg" />
+                  </div>
+                  {theme === 'system' && (
+                    <div className="absolute top-2 right-2 size-5 bg-brand rounded-full flex items-center justify-center">
+                      <Check className="size-3 text-brand-foreground" strokeWidth={3} />
+                    </div>
+                  )}
+                </div>
+                <span className="text-sm font-medium">System</span>
+              </label>
 
-                <label
+              {/* Light */}
+              <label className="flex flex-col items-center gap-3 cursor-pointer group">
+                <RadioGroupItem value="light" className="sr-only" />
+                <div
                   className={cn(
-                    'relative flex flex-col gap-3 p-4 border-2 rounded-xl cursor-pointer',
-                    'transition-all duration-200 hover:shadow-sm',
+                    'relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-muted',
+                    'border-2 transition-all',
                     theme === 'light'
-                      ? 'border-brand bg-brand-soft shadow-sm'
-                      : 'border-border bg-background hover:border-brand/50'
+                      ? 'border-brand shadow-md shadow-brand/10'
+                      : 'border-border hover:border-brand/30'
                   )}
                 >
-                  <RadioGroupItem value="light" className="sr-only" />
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Sun className="size-5 text-muted-foreground" />
-                      <span className="text-sm font-medium">Light</span>
-                    </div>
-                    {theme === 'light' && <div className="w-2 h-2 bg-brand rounded-full" />}
+                  <div className="absolute inset-0 p-3 flex flex-col gap-2">
+                    <div className="h-2 w-12 bg-muted-foreground/20 rounded-full" />
+                    <div className="h-4 w-full bg-muted-foreground/10 rounded-lg" />
+                    <div className="h-4 w-2/3 bg-muted-foreground/10 rounded-lg" />
                   </div>
-                  <p className="text-xs text-muted-foreground">Bright and clean interface</p>
-                </label>
+                  {theme === 'light' && (
+                    <div className="absolute top-2 right-2 size-5 bg-brand rounded-full flex items-center justify-center">
+                      <Check className="size-3 text-brand-foreground" strokeWidth={3} />
+                    </div>
+                  )}
+                </div>
+                <span className="text-sm font-medium">Light</span>
+              </label>
 
-                <label
+              {/* Dark */}
+              <label className="flex flex-col items-center gap-3 cursor-pointer group">
+                <RadioGroupItem value="dark" className="sr-only" />
+                <div
                   className={cn(
-                    'relative flex flex-col gap-3 p-4 border-2 rounded-xl cursor-pointer',
-                    'transition-all duration-200 hover:shadow-sm',
+                    'relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-foreground',
+                    'border-2 transition-all',
                     theme === 'dark'
-                      ? 'border-brand bg-brand-soft shadow-sm'
-                      : 'border-border bg-background hover:border-brand/50'
+                      ? 'border-brand shadow-md shadow-brand/10'
+                      : 'border-border hover:border-brand/30'
                   )}
                 >
-                  <RadioGroupItem value="dark" className="sr-only" />
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Moon className="size-5 text-muted-foreground" />
-                      <span className="text-sm font-medium">Dark</span>
-                    </div>
-                    {theme === 'dark' && <div className="w-2 h-2 bg-brand rounded-full" />}
+                  <div className="absolute inset-0 p-3 flex flex-col gap-2">
+                    <div className="h-2 w-12 bg-background/20 rounded-full" />
+                    <div className="h-4 w-full bg-background/10 rounded-lg" />
+                    <div className="h-4 w-2/3 bg-background/10 rounded-lg" />
                   </div>
-                  <p className="text-xs text-muted-foreground">Easy on the eyes in low light</p>
-                </label>
-              </div>
-            </RadioGroup>
-          </div>
-        </CardContent>
-      </Card>
+                  {theme === 'dark' && (
+                    <div className="absolute top-2 right-2 size-5 bg-brand rounded-full flex items-center justify-center">
+                      <Check className="size-3 text-brand-foreground" strokeWidth={3} />
+                    </div>
+                  )}
+                </div>
+                <span className="text-sm font-medium">Dark</span>
+              </label>
+            </div>
+          </RadioGroup>
+        </div>
+      </section>
 
       {/* Navigation */}
-      <Card>
-        <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-brand-soft p-2">
-              <Eye className="size-5 text-brand" aria-hidden="true" />
-            </div>
+      <section>
+        <h4 className="px-1 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
+          Navigation
+        </h4>
+        <div className="bg-card rounded-xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between gap-4 p-4 hover:bg-muted/30 transition-colors">
             <div>
-              <h2 className="text-lg font-display leading-none">Navigation</h2>
-              <p className="text-sm text-muted-foreground mt-1">Control sidebar menu visibility</p>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div>
-                <Label htmlFor="show-all-nav" className="text-sm font-medium">
-                  Show all menu items
-                </Label>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Bypass progressive disclosure and show every sidebar item
-                </p>
-              </div>
+              <Label htmlFor="show-all-nav" className="text-sm font-medium">
+                Show all menu items
+              </Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Bypass progressive disclosure and show every sidebar item
+              </p>
             </div>
             <Switch
               id="show-all-nav"
@@ -133,25 +133,15 @@ export function AppearanceSection() {
               aria-label="Show all menu items"
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {/* Font Size */}
-      <Card>
-        <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-brand-soft p-2">
-              <Type className="size-5 text-brand" aria-hidden="true" />
-            </div>
-            <div>
-              <h2 className="text-lg font-display leading-none">Font Size</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                Adjust text size for comfortable reading
-              </p>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-6" data-testid="font-size-section">
+      <section>
+        <h4 className="px-1 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
+          Text Size
+        </h4>
+        <div className="bg-card rounded-xl shadow-sm p-6" data-testid="font-size-section">
           <FontSizePicker
             value={settings.fontSize ?? 'medium'}
             onChange={(size: FontSize) => {
@@ -159,8 +149,8 @@ export function AppearanceSection() {
               toastSuccess.saved('Font size')
             }}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {/* Display & Accessibility */}
       <DisplayAccessibilitySection

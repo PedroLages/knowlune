@@ -57,8 +57,11 @@ export function SettingsLayout({ modifiedCategories, onSearchOpen }: SettingsLay
   return (
     <div>
       {/* Page header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Settings</h1>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-display font-extrabold tracking-tight">Settings</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage your learning environment and preferences</p>
+        </div>
         {onSearchOpen && (
           <Button
             variant="outline"
@@ -86,8 +89,12 @@ export function SettingsLayout({ modifiedCategories, onSearchOpen }: SettingsLay
           />
           <div className="flex-1 max-w-2xl">
             {/* Category heading */}
-            <div className="mb-6">
-              <h2 className="text-xl font-display" tabIndex={-1} id={`settings-${activeCategory}`}>
+            <div className="mb-8">
+              <h2
+                className="text-2xl font-display font-extrabold tracking-tight"
+                tabIndex={-1}
+                id={`settings-${activeCategory}`}
+              >
                 {activeMeta.label}
               </h2>
               <p className="text-sm text-muted-foreground mt-1">{activeMeta.description}</p>
