@@ -88,8 +88,7 @@ function isAlreadyInLibrary(entry: OpdsEntry, books: Book[]): boolean {
   return books.some(
     b =>
       // Check by OPDS ID match in source URL
-      (b.source.type === 'remote' &&
-        entry.acquisitionLinks.some(l => b.source.url === l.href)) ||
+      (b.source.type === 'remote' && entry.acquisitionLinks.some(l => b.source.url === l.href)) ||
       // Fallback: title + author match (case-insensitive)
       (b.title.toLowerCase() === entry.title.toLowerCase() &&
         b.author.toLowerCase() === entry.author.toLowerCase())
