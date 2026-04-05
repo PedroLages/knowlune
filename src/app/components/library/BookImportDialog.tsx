@@ -7,8 +7,9 @@
  * @since E83-S02
  */
 
+// eslint-disable-next-line component-size/max-lines -- multi-mode import dialog (EPUB + audiobook); split would require prop-drilling the shared open/close state
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Upload, BookOpen } from 'lucide-react'
+import { Upload, BookOpen, Headphones } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -23,6 +24,9 @@ import { fetchOpenLibraryMetadata, fetchCoverImage } from '@/services/OpenLibrar
 import { opfsStorageService } from '@/services/OpfsStorageService'
 import type { Book, BookStatus } from '@/data/types'
 import { BookDetailsForm, GENRES, type ImportPhase } from './BookDetailsForm'
+import { AudiobookImportFlow } from './AudiobookImportFlow'
+
+type ImportMode = 'epub' | 'audiobook'
 
 interface BookImportDialogProps {
   open: boolean
@@ -34,6 +38,7 @@ interface BookImportDialogProps {
 export function BookImportDialog({ open, onOpenChange, initialFile }: BookImportDialogProps) {
   const importBook = useBookStore(s => s.importBook)
 
+  const [importMode, setImportMode] = useState<ImportMode>('epub')
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
@@ -76,6 +81,7 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
     setCoverBlob(null)
     setPhase('idle')
     setIsDragActive(false)
+    setImportMode('epub')
   }, [setSafeCoverPreviewUrl])
 
   const handleClose = useCallback(
@@ -240,11 +246,59 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
             <BookOpen className="h-5 w-5 text-brand" />
             Import Book
           </DialogTitle>
-          <DialogDescription>Import an EPUB file to add it to your library.</DialogDescription>
+          <DialogDescription>
+            {importMode === 'epub'
+              ? 'Import an EPUB file to add it to your library.'
+              : 'Import MP3 files to add an audiobook to your library.'}
+          </DialogDescription>
         </DialogHeader>
 
-        {/* Drop zone — shown when no file is selected */}
+        {/* Mode switcher — only show when no file is in progress */}
         {!file && (
+          <div className="flex gap-2" role="tablist" aria-label="Import type">
+            <button
+              role="tab"
+              aria-selected={importMode === 'epub'}
+              onClick={() => setImportMode('epub')}
+              className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-medium transition-colors min-h-[44px] ${
+                importMode === 'epub'
+                  ? 'border-brand bg-brand-soft text-brand-soft-foreground'
+                  : 'border-border bg-surface-elevated text-muted-foreground hover:bg-surface-elevated/80'
+              }`}
+            >
+              <BookOpen className="size-4" aria-hidden="true" />
+              EPUB
+            </button>
+            <button
+              role="tab"
+              aria-selected={importMode === 'audiobook'}
+              onClick={() => setImportMode('audiobook')}
+              className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-medium transition-colors min-h-[44px] ${
+                importMode === 'audiobook'
+                  ? 'border-brand bg-brand-soft text-brand-soft-foreground'
+                  : 'border-border bg-surface-elevated text-muted-foreground hover:bg-surface-elevated/80'
+              }`}
+              data-testid="audiobook-import-tab"
+            >
+              <Headphones className="size-4" aria-hidden="true" />
+              Audiobook
+            </button>
+          </div>
+        )}
+
+        {/* Audiobook import flow */}
+        {importMode === 'audiobook' && (
+          <AudiobookImportFlow
+            onCancel={() => handleClose(false)}
+            onImported={() => {
+              reset()
+              onOpenChange(false)
+            }}
+          />
+        )}
+
+        {/* EPUB: Drop zone — shown when no file is selected */}
+        {importMode === 'epub' && !file && (
           <div
             role="button"
             tabIndex={0}
@@ -279,8 +333,8 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
           </div>
         )}
 
-        {/* Book details — shown after file is selected */}
-        {file && (
+        {/* EPUB: Book details — shown after file is selected */}
+        {importMode === 'epub' && file && (
           <BookDetailsForm
             file={file}
             title={title}

@@ -8,7 +8,7 @@
 
 import { memo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { BookOpen } from 'lucide-react'
+import { BookOpen, Headphones } from 'lucide-react'
 import type { Book, BookStatus } from '@/data/types'
 import { BookStatusBadge } from './BookStatusBadge'
 import {
@@ -87,7 +87,11 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-muted rounded-lg">
-            <BookOpen className="h-5 w-5 text-muted-foreground" />
+            {book.format === 'audiobook' ? (
+              <Headphones className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <BookOpen className="h-5 w-5 text-muted-foreground" />
+            )}
           </div>
         )}
       </div>
@@ -97,8 +101,18 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
         <p className="text-sm font-medium text-foreground truncate">{book.title}</p>
         <p className="text-xs text-muted-foreground truncate">{book.author}</p>
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          <span className="uppercase">{book.format}</span>
-          {book.totalPages && <span>{book.totalPages} pages</span>}
+          {book.format === 'audiobook' ? (
+            <span className="flex items-center gap-1">
+              <Headphones className="size-3" aria-hidden="true" />
+              Audiobook
+            </span>
+          ) : (
+            <span className="uppercase">{book.format}</span>
+          )}
+          {book.totalPages && book.format !== 'audiobook' && <span>{book.totalPages} pages</span>}
+          {book.format === 'audiobook' && book.totalDuration && (
+            <span>{Math.floor(book.totalDuration / 60)} min</span>
+          )}
         </div>
       </div>
 
@@ -108,7 +122,6 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
           <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
             <div
               className="h-full rounded-full bg-brand transition-all"
-              // eslint-disable-next-line react-best-practices/no-inline-styles
               style={{ width: `${book.progress}%` }}
             />
           </div>

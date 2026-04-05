@@ -711,6 +711,16 @@ export interface BookHighlight {
   updatedAt?: string // ISO 8601
 }
 
+/** A bookmark within an audiobook chapter */
+export interface AudioBookmark {
+  id: string // UUID v4
+  bookId: string // FK to Book.id
+  chapterIndex: number // 0-based index into Book.chapters
+  timestamp: number // seconds from chapter start
+  note?: string
+  createdAt: string // ISO 8601
+}
+
 export interface YouTubeCourseChapter {
   id: string // PK — UUID
   courseId: string // FK to ImportedCourse.id

@@ -1,7 +1,7 @@
 /**
- * Dexie Migration Checkpoint — v35
+ * Dexie Migration Checkpoint — v38
  *
- * This file provides a frozen snapshot of the complete IndexedDB schema at version 35.
+ * This file provides a frozen snapshot of the complete IndexedDB schema at version 38.
  * Fresh installs skip the incremental version declarations and create the full
  * schema in a single step. Existing users at lower versions still run incremental
  * migrations through the legacy version chain in schema.ts.
@@ -20,14 +20,14 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 37
+export const CHECKPOINT_VERSION = 38
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
- * This is the result of applying all migrations v1–v37 on a fresh database.
+ * This is the result of applying all migrations v1–v38 on a fresh database.
  *
  * IMPORTANT: This must exactly match the schema produced by running all
- * 37 incremental migrations. The unit test `schema-checkpoint.test.ts`
+ * 38 incremental migrations. The unit test `schema-checkpoint.test.ts`
  * enforces this invariant.
  *
  * Note: `courses` table was dropped in v30 (E89-S01) — dead regular course system removed.
@@ -35,6 +35,7 @@ export const CHECKPOINT_VERSION = 37
  * v35 (E52-S01): courseEmbeddings table added for ML quiz generation.
  * v36 (E50-S01): studySchedules table for calendar integration.
  * v37 (E83-S01): books, bookHighlights, bookFiles tables for book library.
+ * v38 (E87-S01): audioBookmarks table for audiobook chapter bookmarks.
  */
 export const CHECKPOINT_SCHEMA: Record<string, string> = {
   importedCourses: 'id, name, importedAt, status, *tags, source',
@@ -72,4 +73,5 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   books: 'id, title, author, format, status, createdAt, lastOpenedAt',
   bookHighlights: 'id, bookId, color, flashcardId, createdAt',
   bookFiles: '[bookId+filename], bookId',
+  audioBookmarks: 'id, bookId, chapterIndex, timestamp, createdAt',
 }
