@@ -1,6 +1,6 @@
 # Story 83.2: EPUB Import with Metadata Extraction
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

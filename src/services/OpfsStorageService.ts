@@ -127,6 +127,57 @@ class OpfsStorageService {
   }
 
   /**
+   * Store a cover image for a book.
+   * Returns the OPFS path or 'indexeddb' when in fallback mode.
+   */
+  async storeCoverFile(bookId: string, blob: Blob): Promise<string> {
+    await this.init()
+
+    const filename = 'cover.jpg'
+
+    if (this._useIndexedDBFallback) {
+      const file = new File([blob], filename, { type: blob.type })
+      await db.bookFiles.put({ bookId, filename, blob: file })
+      return 'indexeddb'
+    }
+
+    const bookDir = await this.getBookDir(bookId)
+    const fileHandle = await bookDir.getFileHandle(filename, { create: true })
+    const writable = await fileHandle.createWritable()
+    await writable.write(blob)
+    await writable.close()
+
+    return `/${OPFS_ROOT}/${BOOKS_DIR}/${bookId}/${filename}`
+  }
+
+  /**
+   * Read a cover image as an object URL. Caller must revoke when done.
+   */
+  async getCoverUrl(bookId: string): Promise<string | null> {
+    await this.init()
+
+    if (this._useIndexedDBFallback) {
+      const records = await db.bookFiles
+        .where('bookId')
+        .equals(bookId)
+        .filter(r => r.filename === 'cover.jpg')
+        .toArray()
+      if (records.length === 0) return null
+      return URL.createObjectURL(records[0].blob)
+    }
+
+    try {
+      const bookDir = await this.getBookDir(bookId)
+      const fileHandle = await bookDir.getFileHandle('cover.jpg')
+      const file = await fileHandle.getFile()
+      return URL.createObjectURL(file)
+    } catch {
+      // silent-catch-ok: cover may not exist
+      return null
+    }
+  }
+
+  /**
    * Get storage estimate (quota and usage).
    */
   async getStorageEstimate(): Promise<{ usage: number; quota: number } | null> {
