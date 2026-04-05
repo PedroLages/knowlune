@@ -533,8 +533,12 @@ export interface ReviewRecord {
 
 export interface Flashcard {
   id: string // UUID
-  courseId: string // FK to ImportedCourse.id
+  courseId: string // FK to ImportedCourse.id ('' for book-sourced flashcards)
   noteId?: string // Optional: provenance from note (for traceability)
+  /** Discriminated source for back-navigation (E85-S04, E85-S05) */
+  sourceType?: 'course' | 'book'
+  sourceBookId?: string // FK to Book.id (when sourceType === 'book')
+  sourceHighlightId?: string // FK to BookHighlight.id (when sourceType === 'book')
   front: string // Question / prompt text
   back: string // Answer text
   // Embedded FSRS fields — self-contained, no join needed
