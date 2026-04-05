@@ -39,6 +39,7 @@ interface ReaderHeaderProps {
   visible: boolean
   onTocOpen?: () => void
   onSettingsOpen?: () => void
+  onHighlightsOpen?: () => void
   /** Called when Read Aloud menu item is clicked. Hidden if undefined (TTS not available). */
   onReadAloud?: () => void
 }
@@ -50,6 +51,7 @@ export function ReaderHeader({
   visible,
   onTocOpen,
   onSettingsOpen,
+  onHighlightsOpen,
   onReadAloud,
 }: ReaderHeaderProps) {
   const navigate = useNavigate()
@@ -141,7 +143,10 @@ export function ReaderHeader({
               Read Aloud
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem data-testid="reader-menu-highlights">
+          <DropdownMenuItem
+            onClick={onHighlightsOpen}
+            data-testid="reader-menu-highlights"
+          >
             Highlights
           </DropdownMenuItem>
           <DropdownMenuItem data-testid="reader-menu-about">

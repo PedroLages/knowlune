@@ -30,6 +30,10 @@ export type AppEvent =
   | { type: 'recommendation:match'; courseId: string; courseName: string; reason: string }
   | { type: 'book:imported'; bookId: string; title: string }
   | { type: 'book:deleted'; bookId: string }
+  | { type: 'highlight:created'; highlightId: string; bookId: string }
+  | { type: 'highlight:updated'; highlightId: string; bookId: string }
+  | { type: 'highlight:deleted'; highlightId: string; bookId: string }
+  | { type: 'reading:session-ended'; bookId: string; durationMinutes: number }
   | {
       type: 'milestone:approaching'
       courseId: string
