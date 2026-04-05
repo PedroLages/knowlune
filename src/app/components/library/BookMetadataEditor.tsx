@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BookOpen, Loader2, RefreshCw, Upload, X } from 'lucide-react'
+import { BookOpen, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -21,7 +21,6 @@ import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
 import { Textarea } from '@/app/components/ui/textarea'
-import { Badge } from '@/app/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -34,6 +33,8 @@ import { useBookStore } from '@/stores/useBookStore'
 import { fetchOpenLibraryMetadata, fetchCoverImage } from '@/services/OpenLibraryService'
 import { opfsStorageService } from '@/services/OpfsStorageService'
 import { GENRES } from './BookDetailsForm'
+import { EditorCoverSection } from './EditorCoverSection'
+import { EditorTagSection } from './EditorTagSection'
 
 interface BookMetadataEditorProps {
   book: Book | null
@@ -46,9 +47,13 @@ const NONE_GENRE = '__none__'
 /** Convert image to JPEG, resizing if larger than max dimensions. */
 async function toJpeg(file: File): Promise<Blob> {
   const img = new Image()
-  img.src = URL.createObjectURL(file)
-  await new Promise(r => { img.onload = r })
-  URL.revokeObjectURL(img.src)
+  const objectUrl = URL.createObjectURL(file)
+  img.src = objectUrl
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve()
+    img.onerror = () => reject(new Error(`Failed to load image: ${file.name}`))
+  })
+  URL.revokeObjectURL(objectUrl)
 
   const MAX_W = 800
   const MAX_H = 1200
@@ -62,8 +67,24 @@ async function toJpeg(file: File): Promise<Blob> {
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height
-  canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
-  return new Promise(r => canvas.toBlob(b => r(b!), 'image/jpeg', 0.85))
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    throw new Error('Failed to create canvas 2D context')
+  }
+  ctx.drawImage(img, 0, 0, width, height)
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      blob => {
+        if (blob) {
+          resolve(blob)
+        } else {
+          reject(new Error('Failed to convert canvas to JPEG blob'))
+        }
+      },
+      'image/jpeg',
+      0.85
+    )
+  })
 }
 
 export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEditorProps) {
@@ -137,32 +158,39 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
   }, [isSaving, onOpenChange])
 
   // Tag management
-  const addTag = useCallback((value: string) => {
-    const trimmed = value.trim()
-    if (trimmed && !tags.includes(trimmed)) {
-      setTags(prev => [...prev, trimmed])
-    }
-    setTagInput('')
-    setShowTagSuggestions(false)
-  }, [tags])
+  const addTag = useCallback(
+    (value: string) => {
+      const trimmed = value.trim()
+      if (trimmed && !tags.includes(trimmed)) {
+        setTags(prev => [...prev, trimmed])
+      }
+      setTagInput('')
+      setShowTagSuggestions(false)
+    },
+    [tags]
+  )
 
   const removeTag = useCallback((tag: string) => {
     setTags(prev => prev.filter(t => t !== tag))
   }, [])
 
-  const handleTagKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
-      e.preventDefault()
-      addTag(tagInput)
-    }
-  }, [tagInput, addTag])
+  const handleTagKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
+        e.preventDefault()
+        addTag(tagInput)
+      }
+    },
+    [tagInput, addTag]
+  )
 
   // Tag autocomplete suggestions
   const tagSuggestions = tagInput.trim()
-    ? allTags().filter(t =>
-        t.toLowerCase().includes(tagInput.toLowerCase()) &&
-        !tags.includes(t) &&
-        !GENRES.includes(t)
+    ? allTags().filter(
+        t =>
+          t.toLowerCase().includes(tagInput.toLowerCase()) &&
+          !tags.includes(t) &&
+          !GENRES.includes(t)
       )
     : []
 
@@ -197,20 +225,23 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
   }, [book, isbn, title, author, setSafeCoverPreviewUrl])
 
   // Custom cover upload
-  const handleCoverUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    try {
-      const jpegBlob = await toJpeg(file)
-      const url = URL.createObjectURL(jpegBlob)
-      setSafeCoverPreviewUrl(url)
-      setNewCoverBlob(jpegBlob)
-    } catch {
-      toast.error('Failed to process image')
-    }
-    // Reset file input so same file can be re-selected
-    e.target.value = ''
-  }, [setSafeCoverPreviewUrl])
+  const handleCoverUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      try {
+        const jpegBlob = await toJpeg(file)
+        const url = URL.createObjectURL(jpegBlob)
+        setSafeCoverPreviewUrl(url)
+        setNewCoverBlob(jpegBlob)
+      } catch {
+        toast.error('Failed to process image')
+      }
+      // Reset file input so same file can be re-selected
+      e.target.value = ''
+    },
+    [setSafeCoverPreviewUrl]
+  )
 
   // Save
   const handleSave = useCallback(async () => {
@@ -243,80 +274,54 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
     } finally {
       setIsSaving(false)
     }
-  }, [book, title, author, isbn, description, genre, tags, newCoverBlob, updateBookMetadata, onOpenChange])
+  }, [
+    book,
+    title,
+    author,
+    isbn,
+    description,
+    genre,
+    tags,
+    newCoverBlob,
+    updateBookMetadata,
+    onOpenChange,
+  ])
 
   if (!book) return null
 
   const canSave = title.trim().length > 0 && author.trim().length > 0
 
   return (
-    <Dialog open={open} onOpenChange={v => { if (!v) handleClose() }}>
-      <DialogContent className="max-w-lg" aria-label="Edit book details" data-testid="book-metadata-editor">
+    <Dialog
+      open={open}
+      onOpenChange={v => {
+        if (!v) handleClose()
+      }}
+    >
+      <DialogContent
+        className="max-w-lg"
+        aria-label="Edit book details"
+        data-testid="book-metadata-editor"
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-brand" />
             Edit Book Details
           </DialogTitle>
-          <DialogDescription>
-            Update the metadata for &ldquo;{book.title}&rdquo;.
-          </DialogDescription>
+          <DialogDescription>Update the metadata for &ldquo;{book.title}&rdquo;.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Cover section */}
-          <div className="flex gap-4">
-            <div className="relative shrink-0">
-              {coverPreviewUrl ? (
-                <img
-                  src={coverPreviewUrl}
-                  alt={`Cover of ${title}`}
-                  className="h-32 w-24 rounded-lg object-cover"
-                  data-testid="editor-cover-preview"
-                />
-              ) : (
-                <div className="flex h-32 w-24 items-center justify-center rounded-lg bg-muted">
-                  <BookOpen className="h-8 w-8 text-muted-foreground" />
-                </div>
-              )}
-              {isFetchingCover && (
-                <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/60">
-                  <Loader2 className="h-6 w-6 animate-spin text-brand" />
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefetchCover}
-                disabled={isFetchingCover || isSaving}
-                className="min-h-[44px]"
-                data-testid="refetch-cover-button"
-              >
-                <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                Re-fetch from Open Library
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isSaving}
-                className="min-h-[44px]"
-                data-testid="upload-cover-button"
-              >
-                <Upload className="mr-2 h-3.5 w-3.5" />
-                Upload custom cover
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".jpg,.jpeg,.png,.webp"
-                className="hidden"
-                onChange={handleCoverUpload}
-                data-testid="cover-file-input"
-              />
-            </div>
-          </div>
+          <EditorCoverSection
+            coverPreviewUrl={coverPreviewUrl}
+            title={title}
+            isFetchingCover={isFetchingCover}
+            isSaving={isSaving}
+            fileInputRef={fileInputRef}
+            onRefetchCover={handleRefetchCover}
+            onCoverUpload={handleCoverUpload}
+          />
 
           {/* Title */}
           <div>
@@ -381,80 +386,34 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
               <SelectContent>
                 <SelectItem value={NONE_GENRE}>None</SelectItem>
                 {GENRES.map(g => (
-                  <SelectItem key={g} value={g}>{g}</SelectItem>
+                  <SelectItem key={g} value={g}>
+                    {g}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
           {/* Tags */}
-          <div>
-            <Label htmlFor="edit-book-tags">Tags</Label>
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {tags.map(tag => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="gap-1 pr-1"
-                  data-testid={`tag-chip-${tag}`}
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => removeTag(tag)}
-                    className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
-                    aria-label={`Remove tag ${tag}`}
-                    data-testid={`remove-tag-${tag}`}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-            <div className="relative">
-              <Input
-                ref={tagInputRef}
-                id="edit-book-tags"
-                value={tagInput}
-                onChange={e => {
-                  setTagInput(e.target.value)
-                  setShowTagSuggestions(true)
-                }}
-                onKeyDown={handleTagKeyDown}
-                onFocus={() => setShowTagSuggestions(true)}
-                onBlur={() => {
-                  // Delay to allow click on suggestion
-                  setTimeout(() => setShowTagSuggestions(false), 200)
-                }}
-                placeholder="Type a tag and press Enter"
-                disabled={isSaving}
-                data-testid="edit-book-tag-input"
-              />
-              {showTagSuggestions && tagSuggestions.length > 0 && (
-                <ul
-                  className="absolute z-50 mt-1 max-h-32 w-full overflow-auto rounded-md border bg-popover p-1 shadow-md"
-                  data-testid="tag-suggestions"
-                >
-                  {tagSuggestions.slice(0, 8).map(suggestion => (
-                    <li key={suggestion}>
-                      <button
-                        type="button"
-                        className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
-                        onMouseDown={e => {
-                          e.preventDefault()
-                          addTag(suggestion)
-                          tagInputRef.current?.focus()
-                        }}
-                        data-testid={`tag-suggestion-${suggestion}`}
-                      >
-                        {suggestion}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
+          <EditorTagSection
+            tags={tags}
+            tagInput={tagInput}
+            showTagSuggestions={showTagSuggestions}
+            tagSuggestions={tagSuggestions}
+            isSaving={isSaving}
+            tagInputRef={tagInputRef}
+            onTagInputChange={v => {
+              setTagInput(v)
+              setShowTagSuggestions(true)
+            }}
+            onTagKeyDown={handleTagKeyDown}
+            onFocus={() => setShowTagSuggestions(true)}
+            onBlur={() => {
+              setTimeout(() => setShowTagSuggestions(false), 200)
+            }}
+            onAddTag={addTag}
+            onRemoveTag={removeTag}
+          />
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-2">
