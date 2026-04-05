@@ -1,6 +1,7 @@
 /**
  * AudiobookRenderer — full-screen audiobook player with cover art, chapter title,
- * progress scrubber, play/pause/skip controls, speed control, and sleep timer.
+ * progress scrubber, play/pause/skip controls, speed control, sleep timer,
+ * chapter list, and bookmark support.
  *
  * Lazy-loadable via React.lazy() for code splitting.
  * Uses useAudioPlayer hook for HTMLAudioElement management.
@@ -8,7 +9,7 @@
  * @module AudiobookRenderer
  * @since E87-S02
  */
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Play, Pause, SkipBack, SkipForward, BookOpen } from 'lucide-react'
 import { toast } from 'sonner'
 import { Slider } from '@/app/components/ui/slider'
@@ -17,13 +18,19 @@ import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
 import { useSleepTimer, consumeSleepTimerEndedFlag } from '@/app/hooks/useSleepTimer'
 import { SpeedControl } from './SpeedControl'
 import { SleepTimer } from './SleepTimer'
+import { ChapterList } from './ChapterList'
+import { BookmarkButton } from './BookmarkButton'
+import { BookmarkListPanel } from './BookmarkListPanel'
 import type { Book } from '@/data/types'
 
 interface AudiobookRendererProps {
   book: Book
+  /** Controlled from BookReader header to open the bookmark panel */
+  bookmarksOpen?: boolean
+  onBookmarksClose?: () => void
 }
 
-export function AudiobookRenderer({ book }: AudiobookRendererProps) {
+export function AudiobookRenderer({ book, bookmarksOpen: bookmarksOpenProp, onBookmarksClose }: AudiobookRendererProps) {
   const {
     isPlaying,
     currentTime,
@@ -41,6 +48,13 @@ export function AudiobookRenderer({ book }: AudiobookRendererProps) {
 
   const setCurrentBook = useAudioPlayerStore(s => s.setCurrentBook)
   const { activeOption, badgeText, setTimer, cancelTimer } = useSleepTimer()
+  // bookmarksOpen can be controlled externally (from BookReader header) or internally
+  const [bookmarksOpenInternal, setBookmarksOpenInternal] = useState(false)
+  const bookmarksOpen = bookmarksOpenProp ?? bookmarksOpenInternal
+  const handleBookmarksClose = () => {
+    setBookmarksOpenInternal(false)
+    onBookmarksClose?.()
+  }
 
   // Register this book as the active audiobook and load the first chapter
   useEffect(() => {
@@ -64,6 +78,13 @@ export function AudiobookRenderer({ book }: AudiobookRendererProps) {
     } else {
       setTimer(option, audioRef, pause)
     }
+  }
+
+  /** Seek to a bookmark: load correct chapter then seek to timestamp */
+  const handleBookmarkSeek = async (chapterIndex: number, timestamp: number) => {
+    await loadChapter(chapterIndex, false)
+    // Wait a tick for the audio element to be ready after chapter load
+    setTimeout(() => seekTo(timestamp), 100)
   }
 
   return (
@@ -156,9 +177,14 @@ export function AudiobookRenderer({ book }: AudiobookRendererProps) {
         </button>
       </div>
 
-      {/* Secondary Controls: Speed | Sleep Timer */}
+      {/* Secondary Controls: Speed | Bookmark | Sleep Timer */}
       <div className="flex items-center gap-2">
         <SpeedControl />
+        <BookmarkButton
+          bookId={book.id}
+          chapterIndex={currentChapterIndex}
+          currentTime={currentTime}
+        />
         <SleepTimer
           activeOption={activeOption}
           badgeText={badgeText}
@@ -170,6 +196,23 @@ export function AudiobookRenderer({ book }: AudiobookRendererProps) {
       <p className="text-xs text-muted-foreground" aria-live="polite">
         {Math.round(progressPercent)}% complete
       </p>
+
+      {/* Chapter List — hidden for single-chapter audiobooks */}
+      <ChapterList
+        chapters={book.chapters}
+        currentChapterIndex={currentChapterIndex}
+        totalDuration={book.totalDuration}
+        onChapterSelect={index => loadChapter(index, isPlaying)}
+      />
+
+      {/* Bookmark List Panel — slides in from right */}
+      <BookmarkListPanel
+        open={bookmarksOpen}
+        onClose={handleBookmarksClose}
+        bookId={book.id}
+        chapters={book.chapters}
+        onSeek={handleBookmarkSeek}
+      />
     </div>
   )
 }
