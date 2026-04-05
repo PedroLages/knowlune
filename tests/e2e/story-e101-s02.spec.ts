@@ -54,7 +54,7 @@ async function openAbsSettings(page: import('@playwright/test').Page): Promise<v
  * so we override window.fetch for ABS URLs before the app loads.
  */
 async function mockAbsApiSuccess(page: import('@playwright/test').Page): Promise<void> {
-  await page.addInitScript((serverUrl) => {
+  await page.addInitScript(serverUrl => {
     const _origFetch = window.fetch
     window.fetch = async (input, init) => {
       const url = typeof input === 'string' ? input : (input as Request).url
@@ -81,7 +81,7 @@ async function mockAbsApiSuccess(page: import('@playwright/test').Page): Promise
 }
 
 async function mockAbsApiAuthFailure(page: import('@playwright/test').Page): Promise<void> {
-  await page.addInitScript((serverUrl) => {
+  await page.addInitScript(serverUrl => {
     const _origFetch = window.fetch
     window.fetch = async (input, init) => {
       const url = typeof input === 'string' ? input : (input as Request).url
@@ -97,7 +97,7 @@ async function mockAbsApiAuthFailure(page: import('@playwright/test').Page): Pro
 }
 
 async function mockAbsApiCorsError(page: import('@playwright/test').Page): Promise<void> {
-  await page.addInitScript((serverUrl) => {
+  await page.addInitScript(serverUrl => {
     const _origFetch = window.fetch
     window.fetch = async (input, init) => {
       const url = typeof input === 'string' ? input : (input as Request).url
@@ -262,12 +262,9 @@ test.describe('E101-S02: Audiobookshelf Server Connection & Auth UI', () => {
 
   test('edit server pre-fills form with masked API key', async ({ page }) => {
     await navigateAndWait(page, '/')
-    await seedIndexedDBStore(
-      page,
-      DB_NAME,
-      'audiobookshelfServers',
-      [TEST_SERVER] as unknown as Record<string, unknown>[]
-    )
+    await seedIndexedDBStore(page, DB_NAME, 'audiobookshelfServers', [
+      TEST_SERVER,
+    ] as unknown as Record<string, unknown>[])
 
     await openAbsSettings(page)
 
@@ -284,12 +281,9 @@ test.describe('E101-S02: Audiobookshelf Server Connection & Auth UI', () => {
 
   test('remove server shows confirmation and removes from list', async ({ page }) => {
     await navigateAndWait(page, '/')
-    await seedIndexedDBStore(
-      page,
-      DB_NAME,
-      'audiobookshelfServers',
-      [TEST_SERVER] as unknown as Record<string, unknown>[]
-    )
+    await seedIndexedDBStore(page, DB_NAME, 'audiobookshelfServers', [
+      TEST_SERVER,
+    ] as unknown as Record<string, unknown>[])
 
     await openAbsSettings(page)
 
@@ -349,12 +343,9 @@ test.describe('E101-S02: Audiobookshelf Server Connection & Auth UI', () => {
     }
 
     await navigateAndWait(page, '/')
-    await seedIndexedDBStore(
-      page,
-      DB_NAME,
-      'audiobookshelfServers',
-      [authFailedServer] as unknown as Record<string, unknown>[]
-    )
+    await seedIndexedDBStore(page, DB_NAME, 'audiobookshelfServers', [
+      authFailedServer,
+    ] as unknown as Record<string, unknown>[])
 
     await openAbsSettings(page)
 

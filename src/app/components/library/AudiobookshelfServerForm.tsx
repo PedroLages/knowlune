@@ -205,10 +205,7 @@ export function AudiobookshelfServerForm({
           <Label className="text-sm font-medium">Select libraries to sync</Label>
           <div className="flex flex-col gap-2">
             {testResult.libraries.map(lib => (
-              <label
-                key={lib.id}
-                className="flex items-center gap-2 cursor-pointer text-sm"
-              >
+              <label key={lib.id} className="flex items-center gap-2 cursor-pointer text-sm">
                 <Checkbox
                   checked={selectedLibraryIds.includes(lib.id)}
                   onCheckedChange={() => onLibraryToggle(lib.id)}

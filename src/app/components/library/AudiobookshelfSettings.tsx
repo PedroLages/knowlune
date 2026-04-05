@@ -230,11 +230,7 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
   }, [deleteTarget, removeServer])
 
   const dialogTitle =
-    mode === 'list'
-      ? 'Audiobookshelf Servers'
-      : mode === 'add'
-        ? 'Add Server'
-        : 'Edit Server'
+    mode === 'list' ? 'Audiobookshelf Servers' : mode === 'add' ? 'Add Server' : 'Edit Server'
   const dialogDescription =
     mode === 'list'
       ? 'Connect to Audiobookshelf servers to browse and sync audiobooks.'
@@ -252,9 +248,7 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
         >
           <DialogHeader>
             <DialogTitle>{dialogTitle}</DialogTitle>
-            <DialogDescription id="abs-settings-description">
-              {dialogDescription}
-            </DialogDescription>
+            <DialogDescription id="abs-settings-description">{dialogDescription}</DialogDescription>
           </DialogHeader>
 
           {mode === 'list' && (

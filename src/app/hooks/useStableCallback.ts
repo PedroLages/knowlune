@@ -19,15 +19,10 @@ import { useRef, useCallback } from 'react'
  * @see https://react.dev/reference/react/useRef#referencing-a-value-with-a-ref
  * @see Epic 88 retrospective — stale closure pattern in S02/S04
  */
-export function useStableCallback<T extends (...args: never[]) => unknown>(
-  callback: T
-): T {
+export function useStableCallback<T extends (...args: never[]) => unknown>(callback: T): T {
   const callbackRef = useRef<T>(callback)
   callbackRef.current = callback
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  return useCallback(
-    ((...args: Parameters<T>) => callbackRef.current(...args)) as T,
-    []
-  )
+  return useCallback(((...args: Parameters<T>) => callbackRef.current(...args)) as T, [])
 }

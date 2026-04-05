@@ -57,7 +57,10 @@ export function AudiobookshelfServerCard({
         <span className="text-xs text-muted-foreground truncate">{server.url}</span>
         <div className="flex items-center gap-1.5 mt-1">
           <StatusIcon className={`size-3.5 ${status.className}`} aria-hidden="true" />
-          <span className={`text-xs font-medium ${status.className}`} data-testid="abs-server-status">
+          <span
+            className={`text-xs font-medium ${status.className}`}
+            data-testid="abs-server-status"
+          >
             {status.label}
           </span>
         </div>
