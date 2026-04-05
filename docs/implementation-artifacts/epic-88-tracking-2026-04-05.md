@@ -85,7 +85,7 @@ Pre-existing issues — do NOT re-flag these:
 | Sprint Status | pending | — | — |
 | Testarch Trace | pending | — | — |
 | Testarch NFR | pending | — | — |
-| Retrospective | pending | — | — |
+| Retrospective | done | docs/implementation-artifacts/epic-88-retro-2026-04-05.md | 37 issues fixed, stale closure pattern, 4 action items |
 | Completion Report | pending | — | — |
 
 ## Event Log
