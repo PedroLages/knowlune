@@ -105,21 +105,35 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
   },
 
   deleteBook: async (bookId: string) => {
-    // Remove from state first (optimistic)
+    // Guard against double-delete
+    const book = get().books.find(b => b.id === bookId)
+    if (!book) return
+
+    const title = book.title
+
+    // Optimistic removal from local state
     set(state => ({
       books: state.books.filter(b => b.id !== bookId),
       selectedBookId: state.selectedBookId === bookId ? null : state.selectedBookId,
     }))
 
     try {
-      // Clean up storage and DB
-      await opfsStorageService.deleteBookFiles(bookId)
+      // Cascade deletion order: highlights → book record → OPFS files (best-effort)
       await db.bookHighlights.where('bookId').equals(bookId).delete()
       await db.books.delete(bookId)
 
+      // OPFS cleanup is best-effort — partial cleanup is acceptable (AC4)
+      try {
+        await opfsStorageService.deleteBookFiles(bookId)
+      } catch {
+        // silent-catch-ok: OPFS failure is non-fatal — Dexie records already cleaned
+        toast.warning('Book removed but some files may not have been cleaned up')
+      }
+
+      toast.success(`${title} removed from your library`)
       appEventBus.emit({ type: 'book:deleted', bookId })
     } catch {
-      // Rollback on failure — reload from DB
+      // Dexie failure — rollback optimistic update
       const books = await db.books.toArray()
       set({ books })
       toast.error('Failed to delete book')

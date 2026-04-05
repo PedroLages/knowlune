@@ -1,6 +1,7 @@
 # Story 83.6: Book Deletion with OPFS Cleanup
 
-Status: ready-for-dev
+Status: done
+Completed: 2026-04-05
 
 ## Story
 
