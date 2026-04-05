@@ -1024,7 +1024,7 @@ development_status:
   # Reading stats in reports, daily highlight review, cross-highlight search, PKM export
   # Depends on: E85 (Highlights & Sessions)
   # ──────────────────────────────────────────────────
-  epic-86: in-progress
+  epic-86: done
   86-1-reading-statistics-in-reports-dashboard: done
   86-2-daily-highlight-review-notifications: done
   86-3-cross-highlight-search: done
