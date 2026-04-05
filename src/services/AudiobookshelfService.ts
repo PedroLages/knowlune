@@ -160,7 +160,8 @@ export async function fetchItem(
  * Pure function — no fetch call.
  */
 export function getStreamUrl(baseUrl: string, itemId: string, apiKey: string): string {
-  return `${baseUrl}/api/items/${itemId}/play?token=${encodeURIComponent(apiKey)}`
+  const normalizedBase = baseUrl.replace(/\/+$/, '')
+  return `${normalizedBase}/api/items/${encodeURIComponent(itemId)}/play?token=${encodeURIComponent(apiKey)}`
 }
 
 /**
@@ -168,7 +169,8 @@ export function getStreamUrl(baseUrl: string, itemId: string, apiKey: string): s
  * Pure function — no fetch call.
  */
 export function getCoverUrl(baseUrl: string, itemId: string): string {
-  return `${baseUrl}/api/items/${itemId}/cover`
+  const normalizedBase = baseUrl.replace(/\/+$/, '')
+  return `${normalizedBase}/api/items/${encodeURIComponent(itemId)}/cover`
 }
 
 /**
@@ -184,7 +186,7 @@ export async function searchLibrary(
   return absApiFetch<AbsSearchResult>(
     url,
     apiKey,
-    `/api/libraries/${libraryId}/search?q=${encodeURIComponent(query)}`
+    `/api/libraries/${encodeURIComponent(libraryId)}/search?q=${encodeURIComponent(query)}`
   )
 }
 
@@ -198,7 +200,7 @@ export async function fetchProgress(
   apiKey: string,
   itemId: string
 ): Promise<AbsResult<AbsProgress>> {
-  return absApiFetch<AbsProgress>(url, apiKey, `/api/me/progress/${itemId}`)
+  return absApiFetch<AbsProgress>(url, apiKey, `/api/me/progress/${encodeURIComponent(itemId)}`)
 }
 
 /**
@@ -212,7 +214,7 @@ export async function updateProgress(
   itemId: string,
   progress: { currentTime: number; duration: number; progress: number; isFinished: boolean }
 ): Promise<AbsResult<AbsProgress>> {
-  return absApiFetch<AbsProgress>(url, apiKey, `/api/me/progress/${itemId}`, {
+  return absApiFetch<AbsProgress>(url, apiKey, `/api/me/progress/${encodeURIComponent(itemId)}`, {
     method: 'PATCH',
     body: progress,
   })
