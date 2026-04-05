@@ -83,10 +83,29 @@ class BookContentService {
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
     try {
+      // Issue 4: Validate URL before fetch
+      if (!source.url || !/^https?:\/\//i.test(source.url)) {
+        throw new RemoteEpubError(
+          'Invalid book URL. Only http:// and https:// URLs are supported.',
+          'network',
+          false
+        )
+      }
+
       const headers: Record<string, string> = {}
       if (source.auth?.username) {
-        headers['Authorization'] =
-          `Basic ${btoa(`${source.auth.username}:${source.auth.password}`)}`
+        // Issue 2: Warn if credentials are sent over plain HTTP (RFC 7617 security)
+        if (/^http:\/\//i.test(source.url)) {
+          console.warn(
+            '[BookContentService] Credentials are being sent over an insecure connection (http://). ' +
+              'Use https:// to protect your credentials.'
+          )
+        }
+        // Issue 1: Use TextEncoder to handle non-ASCII credentials (RFC 7617 compliance)
+        const credentials = `${source.auth.username}:${source.auth.password}`
+        const encoded = new TextEncoder().encode(credentials)
+        const base64 = btoa(String.fromCharCode(...encoded))
+        headers['Authorization'] = `Basic ${base64}`
       }
 
       const response = await fetch(source.url, {
@@ -152,7 +171,7 @@ class BookContentService {
       }
 
       throw new RemoteEpubError(
-        'Could not reach your library server. Check your connection and try again.',
+        'Could not reach your library server. Check your connection and ensure the server allows cross-origin requests (CORS).',
         'network',
         hasCached
       )
@@ -166,9 +185,12 @@ class BookContentService {
     const cache = await caches.open(CACHE_NAME)
     const cacheKey = this.getCacheKey(bookId)
 
-    // Store with a timestamp header for LRU eviction
+    // Store with Content-Type and a timestamp header for LRU eviction
     const response = new Response(buffer, {
-      headers: { 'X-Cached-At': new Date().toISOString() },
+      headers: {
+        'Content-Type': 'application/epub+zip',
+        'X-Cached-At': new Date().toISOString(),
+      },
     })
     await cache.put(cacheKey, response)
 

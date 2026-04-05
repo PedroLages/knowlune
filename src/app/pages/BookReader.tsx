@@ -26,6 +26,7 @@ import type { Rendition } from 'epubjs'
 import type { NavItem } from 'epubjs'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { Button } from '@/app/components/ui/button'
 import { useBookStore } from '@/stores/useBookStore'
 import { useReaderStore } from '@/stores/useReaderStore'
 import { bookContentService, RemoteEpubError } from '@/services/BookContentService'
@@ -110,8 +111,8 @@ export function BookReader() {
   const [clozeHighlightId, setClozeHighlightId] = useState<string | undefined>(undefined)
   const [clozeOpen, setClozeOpen] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
-  // Remote EPUB cache fallback (E88-S03)
-  const [hasCachedFallback, setHasCachedFallback] = useState(false)
+  // Remote EPUB cache fallback (E88-S03) — stored as RemoteEpubError for derived state
+  const [remoteEpubError, setRemoteEpubError] = useState<RemoteEpubError | null>(null)
   // Set to true once EPUB renders successfully — triggers reading session start (E85-S06)
   const [isEpubReady, setIsEpubReady] = useState(false)
   const [toc, setToc] = useState<NavItem[]>([])
@@ -214,7 +215,7 @@ export function BookReader() {
     let cancelled = false
     setIsLoadingContent(true)
     setLoadError(null)
-    setHasCachedFallback(false)
+    setRemoteEpubError(null)
 
     // Revoke previous Blob URL to avoid memory leaks
     if (blobUrlRef.current) {
@@ -239,7 +240,7 @@ export function BookReader() {
           console.error(`[BookReader] Remote EPUB error (${err.code}):`, err.message)
           toast.error(err.message)
           setLoadError(err.message)
-          setHasCachedFallback(err.hasCachedVersion)
+          setRemoteEpubError(err)
         } else {
           const message = err instanceof Error ? err.message : 'Unknown error loading book'
           console.error('[BookReader] Failed to load EPUB:', message)
@@ -458,7 +459,7 @@ export function BookReader() {
     if (!book) return
     setIsLoadingContent(true)
     setLoadError(null)
-    setHasCachedFallback(false)
+    setRemoteEpubError(null)
 
     try {
       const arrayBuffer = await bookContentService.getCachedEpub(book.id)
@@ -481,12 +482,15 @@ export function BookReader() {
       setEpubUrl(url)
       setIsLoadingContent(false)
     } catch {
-      // silent-catch-ok: cache read failure surfaces as user-visible error below
+      // silent-catch-ok: Cache API unavailable (e.g. private browsing) — user-visible error set below
       toast.error('Failed to load cached version')
       setLoadError('Failed to load cached version')
       setIsLoadingContent(false)
     }
   }, [book])
+
+  // Derived: whether there is a cached fallback available (E88-S03)
+  const hasCachedFallback = remoteEpubError?.hasCachedVersion ?? false
 
   // Derive initial CFI: prefer highlight back-navigation CFI (E85-S05) over saved position
   const initialCfi =
@@ -584,23 +588,23 @@ export function BookReader() {
             <p className="text-destructive font-medium" data-testid="reader-error-message">
               {loadError}
             </p>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3 justify-center">
               {hasCachedFallback && (
-                <button
+                <Button
+                  variant="brand"
                   onClick={handleLoadCached}
-                  className="rounded-xl bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand-hover transition-colors min-h-[44px]"
                   data-testid="reader-load-cached-button"
                 >
                   Read cached version
-                </button>
+                </Button>
               )}
-              <button
+              <Button
+                variant="brand-outline"
                 onClick={handleRetry}
-                className="text-sm text-brand underline underline-offset-2 min-h-[44px] flex items-center"
                 data-testid="reader-retry-button"
               >
                 {hasCachedFallback ? 'Retry' : 'Try again'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
