@@ -668,8 +668,10 @@ export interface Book {
   totalPages?: number
   totalDuration?: number // audiobook seconds
   progress: number // 0-100
+  isbn?: string
   rating?: number // 1-5
   createdAt: string // ISO 8601
+  updatedAt?: string // ISO 8601
   lastOpenedAt?: string // ISO 8601
   fileSize?: number // bytes
 }

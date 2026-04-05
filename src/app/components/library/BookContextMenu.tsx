@@ -58,7 +58,12 @@ function StatusMenuItems({
 }: {
   book: Book
   onStatusChange: (status: BookStatus) => void
-  MenuItem: React.ComponentType<{ key?: string; onClick?: () => void; children: ReactNode; 'data-testid'?: string }>
+  MenuItem: React.ComponentType<{
+    key?: string
+    onClick?: () => void
+    children: ReactNode
+    'data-testid'?: string
+  }>
 }) {
   return (
     <>
@@ -70,9 +75,7 @@ function StatusMenuItems({
         >
           <span className="flex items-center gap-2">
             {book.status === opt.value && <Check className="h-3.5 w-3.5" />}
-            <span className={book.status === opt.value ? 'font-medium' : ''}>
-              {opt.label}
-            </span>
+            <span className={book.status === opt.value ? 'font-medium' : ''}>{opt.label}</span>
           </span>
         </MenuItem>
       ))}
@@ -83,9 +86,10 @@ function StatusMenuItems({
 interface BookContextMenuProps {
   book: Book
   children: ReactNode
+  onEdit?: () => void
 }
 
-export function BookContextMenu({ book, children }: BookContextMenuProps) {
+export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps) {
   const updateBookStatus = useBookStore(s => s.updateBookStatus)
   const deleteBook = useBookStore(s => s.deleteBook)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
@@ -109,10 +113,7 @@ export function BookContextMenu({ book, children }: BookContextMenuProps) {
         <ContextMenu>
           <ContextMenuTrigger>{children}</ContextMenuTrigger>
           <ContextMenuContent className="w-48">
-            <ContextMenuItem
-              disabled
-              data-testid="context-menu-edit"
-            >
+            <ContextMenuItem onClick={onEdit} data-testid="context-menu-edit">
               Edit
             </ContextMenuItem>
             <ContextMenuSub>
@@ -120,7 +121,11 @@ export function BookContextMenu({ book, children }: BookContextMenuProps) {
                 Change Status
               </ContextMenuSubTrigger>
               <ContextMenuSubContent className="w-44">
-                <StatusMenuItems book={book} onStatusChange={handleStatusChange} MenuItem={ContextMenuItem} />
+                <StatusMenuItems
+                  book={book}
+                  onStatusChange={handleStatusChange}
+                  MenuItem={ContextMenuItem}
+                />
               </ContextMenuSubContent>
             </ContextMenuSub>
             <ContextMenuSeparator />
@@ -146,11 +151,15 @@ export function BookContextMenu({ book, children }: BookContextMenuProps) {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-48">
-            <DropdownMenuItem disabled>Edit</DropdownMenuItem>
+            <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>Change Status</DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="w-44">
-                <StatusMenuItems book={book} onStatusChange={handleStatusChange} MenuItem={DropdownMenuItem} />
+                <StatusMenuItems
+                  book={book}
+                  onStatusChange={handleStatusChange}
+                  MenuItem={DropdownMenuItem}
+                />
               </DropdownMenuSubContent>
             </DropdownMenuSub>
             <DropdownMenuSeparator />
@@ -170,7 +179,8 @@ export function BookContextMenu({ book, children }: BookContextMenuProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete book?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete &ldquo;{book.title}&rdquo; and all its highlights. This action cannot be undone.
+              This will permanently delete &ldquo;{book.title}&rdquo; and all its highlights. This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

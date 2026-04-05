@@ -38,6 +38,11 @@ interface BookStoreState {
   setFilters: (filters: BookFilters) => void
   setFilter: (key: keyof BookFilters, value: string | undefined) => void
   getFilteredBooks: () => Book[]
+  updateBookMetadata: (
+    bookId: string,
+    updates: Partial<Pick<Book, 'title' | 'author' | 'isbn' | 'description' | 'tags' | 'coverUrl'>>
+  ) => Promise<void>
+  getAllTags: () => string[]
   getBookCountByStatus: () => Record<'all' | BookStatus, number>
 }
 
@@ -141,12 +146,41 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     if (filters.search) {
       const q = filters.search.toLowerCase()
       result = result.filter(
-        b =>
-          b.title.toLowerCase().includes(q) ||
-          b.author.toLowerCase().includes(q)
+        b => b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q)
       )
     }
     return result
+  },
+
+  updateBookMetadata: async (bookId, updates) => {
+    const prev = get().books.find(b => b.id === bookId)
+    if (!prev) return
+
+    const merged = { ...prev, ...updates, updatedAt: new Date().toISOString() }
+
+    // Optimistic update
+    set(state => ({
+      books: state.books.map(b => (b.id === bookId ? merged : b)),
+    }))
+
+    try {
+      await db.books.update(bookId, { ...updates, updatedAt: merged.updatedAt })
+      toast.success('Book details updated')
+    } catch {
+      // Rollback on failure — reload from DB
+      const books = await db.books.toArray()
+      set({ books })
+      toast.error('Failed to update book details')
+    }
+  },
+
+  getAllTags: () => {
+    const { books } = get()
+    const tagSet = new Set<string>()
+    for (const b of books) {
+      for (const t of b.tags) tagSet.add(t)
+    }
+    return Array.from(tagSet).sort()
   },
 
   getBookCountByStatus: () => {
