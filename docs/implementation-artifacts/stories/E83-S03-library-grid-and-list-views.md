@@ -1,6 +1,7 @@
 # Story 83.3: Library Grid and List Views
 
-Status: ready-for-dev
+Status: done
+Completed: 2026-04-05
 
 ## Story
 
@@ -124,9 +125,25 @@ function relativeTime(date: string): string {
 ## Dev Agent Record
 
 ### Agent Model Used
+claude-sonnet-4-6
 
 ### Debug Log References
+- docs/reviews/code/code-review-2026-04-05-e83-s03.md
+- docs/reviews/code/code-review-2026-04-05-e83-s03-r2.md
+- docs/reviews/design/design-review-2026-04-05-e83-s03.md
+- docs/reviews/design/design-review-2026-04-05-e83-s03-r2.md
+- docs/reviews/code/code-review-testing-2026-04-05-e83-s03.md
+- docs/reviews/code/code-review-testing-2026-04-05-e83-s03-r2.md
 
 ### Completion Notes List
+- All 9 ACs implemented: responsive grid/list views, BookCard, BookListItem, BookStatusBadge, empty state with drag-drop
+- 2 review rounds: Round 1 had 9 issues (1 HIGH, 4 MEDIUM, 3 LOW, 1 NIT), all resolved
+- Round 2 had 1 MEDIUM (E2E onboarding seed) + 1 LOW, both resolved in final commit
+- Performance: React.memo on list components, lazy image loading, granular Zustand selectors
 
 ### File List
+- src/app/components/library/BookCard.tsx (new)
+- src/app/components/library/BookListItem.tsx (new)
+- src/app/components/library/BookStatusBadge.tsx (new)
+- src/app/pages/Library.tsx (updated)
+- tests/e2e/regression/story-e83-s03.spec.ts (new)
