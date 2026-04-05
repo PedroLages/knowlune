@@ -1216,3 +1216,14 @@ development_status:
   99-3-list-view: backlog
   99-4-compact-grid-view: backlog
   99-5-virtualized-grid-integration-and-polish: backlog
+
+  # ──────────────────────────────────────────────────
+  # Epic 100: Clean Color Theme — Apple-Inspired White Aesthetic
+  # Adds "Clean" as third color scheme (Professional/Vibrant/Clean)
+  # Cool blue-white palette, Inter font, Apple-inspired design
+  # Light-mode only — dark mode inherits default dark tokens
+  # ──────────────────────────────────────────────────
+  epic-100: in-progress
+  100-1-css-theme-tokens-and-type-system: in-progress
+  100-2-settings-ui-and-visual-qa: backlog
+  epic-100-retrospective: optional

@@ -94,9 +94,9 @@ export function AppearanceSection() {
                   )}
                 >
                   <div className="absolute inset-0 p-3 flex flex-col gap-2">
-                    <div className="h-2 w-12 bg-background/20 rounded-full" />
-                    <div className="h-4 w-full bg-background/10 rounded-lg" />
-                    <div className="h-4 w-2/3 bg-background/10 rounded-lg" />
+                    <div className="h-2 w-12 bg-white/20 rounded-full" />
+                    <div className="h-4 w-full bg-white/10 rounded-lg" />
+                    <div className="h-4 w-2/3 bg-white/10 rounded-lg" />
                   </div>
                   {theme === 'dark' && (
                     <div className="absolute top-2 right-2 size-5 bg-brand rounded-full flex items-center justify-center">

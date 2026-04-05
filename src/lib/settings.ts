@@ -36,7 +36,7 @@ export interface AppSettings {
    * design tokens in theme.css with more saturated OKLCH values.
    * UI toggle ships in E21-S05; this story (E21-S04) provides the tokens + hook.
    */
-  colorScheme: 'professional' | 'vibrant'
+  colorScheme: 'professional' | 'vibrant' | 'clean'
   /** Whether to use Atkinson Hyperlegible font for improved readability. */
   accessibilityFont: boolean
   /** Content area density: 'default' or 'spacious' (increased padding/gap/line-height). */

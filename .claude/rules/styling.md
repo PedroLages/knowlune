@@ -12,6 +12,11 @@
 
 **Theme System**: Uses CSS custom properties for light/dark mode with OKLCH color space. All theme tokens defined in `--color-*` variables.
 
+**Color Schemes**: Three schemes available, toggled via `.vibrant` or `.clean` CSS class on `<html>`:
+- **Professional** (default): Warm cream background (`#faf5ee`), purple-blue brand (`#5e6ad2`), DM Sans + Space Grotesk fonts
+- **Vibrant**: Same structure as Professional but with ~15% higher OKLCH chroma for more saturated colors
+- **Clean** (E100): Cool blue-white background (`#f9f9fe`), Apple blue brand (`#005bc1`), Inter font. Light-mode only — dark mode inherits default dark tokens.
+
 **Critical Note**: React and Tailwind plugins are both required in vite.config.ts even if Tailwind isn't actively being modified - do not remove them.
 
 ## Design Token System
