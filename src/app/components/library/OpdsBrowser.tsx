@@ -72,10 +72,14 @@ interface FeedState {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Determine best format for a book from its acquisition links */
-function getBookFormat(entry: OpdsEntry): 'epub' | 'pdf' {
+function getBookFormat(entry: OpdsEntry): 'epub' | 'pdf' | 'audiobook' {
   for (const link of entry.acquisitionLinks) {
     if (link.type.includes('epub')) return 'epub'
+    if (link.type.includes('pdf')) return 'pdf'
+    if (link.type.includes('audio')) return 'audiobook'
   }
+  // Unable to determine format from MIME types — default to 'pdf' as a safe fallback.
+  // Callers should treat this as a best-effort guess when no recognised MIME type is present.
   return 'pdf'
 }
 
@@ -85,7 +89,7 @@ function isAlreadyInLibrary(entry: OpdsEntry, books: Book[]): boolean {
     b =>
       // Check by OPDS ID match in source URL
       (b.source.type === 'remote' &&
-        entry.acquisitionLinks.some(l => b.source.type === 'remote' && b.source.url === l.href)) ||
+        entry.acquisitionLinks.some(l => b.source.url === l.href)) ||
       // Fallback: title + author match (case-insensitive)
       (b.title.toLowerCase() === entry.title.toLowerCase() &&
         b.author.toLowerCase() === entry.author.toLowerCase())
@@ -197,7 +201,7 @@ function OpdsBookCard({
           size="sm"
           disabled={alreadyAdded || isAdding}
           onClick={() => onAdd(entry)}
-          className="w-full min-h-[36px]"
+          className="w-full min-h-[44px]"
           aria-label={
             alreadyAdded ? `${entry.title} already in library` : `Add ${entry.title} to library`
           }
@@ -297,13 +301,15 @@ export function OpdsBrowser({ open, onOpenChange, initialCatalogId }: OpdsBrowse
     }
   }, [open])
 
-  // Fetch root feed when catalog selected
+  // Fetch root feed when catalog selected or catalogs list changes.
+  // `catalogs` is included to avoid a stale-closure if the catalog record is
+  // updated (e.g. URL / auth changed) without the selected ID changing.
   useEffect(() => {
     if (!selectedCatalog) return
     setCurrentFeedUrl(selectedCatalog.url)
     setBreadcrumbs([])
     fetchFeed(selectedCatalog.url, selectedCatalog)
-  }, [selectedCatalogId]) // Only refetch when catalog selection changes
+  }, [selectedCatalogId, catalogs, fetchFeed])
 
   const fetchFeed = useCallback(async (url: string, catalog: OpdsCatalog) => {
     setIsLoading(true)
@@ -424,6 +430,12 @@ export function OpdsBrowser({ open, onOpenChange, initialCatalogId }: OpdsBrowse
         source: {
           type: 'remote',
           url: primaryLink.href,
+          // Auth credentials are copied from the catalog into the Book record at
+          // import time. This is intentional for the local-first architecture where
+          // credentials never leave the device. The trade-off is that if the catalog
+          // credentials change, existing books will retain stale creds until the user
+          // re-imports them. Credential refresh / re-sync from catalog is tracked as
+          // future work (look up at read-time via catalogId).
           auth: selectedCatalog.auth
             ? { username: selectedCatalog.auth.username, password: selectedCatalog.auth.password }
             : undefined,
@@ -432,14 +444,19 @@ export function OpdsBrowser({ open, onOpenChange, initialCatalogId }: OpdsBrowse
         createdAt: new Date().toISOString(),
       }
 
-      await importBook(book)
-      toast.success(`"${entry.title}" added to your library`)
-
-      setAddingIds(prev => {
-        const next = new Set(prev)
-        next.delete(entry.id)
-        return next
-      })
+      try {
+        await importBook(book)
+        toast.success(`"${entry.title}" added to your library`)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to add book to library.'
+        toast.error(message)
+      } finally {
+        setAddingIds(prev => {
+          const next = new Set(prev)
+          next.delete(entry.id)
+          return next
+        })
+      }
     },
     [selectedCatalog, books, importBook]
   )
