@@ -26,10 +26,7 @@ export interface M4bMetadata {
  * Falls back to a single chapter spanning full duration when no
  * chapter markers are found.
  */
-export async function parseM4bFile(
-  file: File,
-  bookId: string
-): Promise<M4bMetadata> {
+export async function parseM4bFile(file: File, bookId: string): Promise<M4bMetadata> {
   // Lazy-load music-metadata — only imported on M4B import
   const { parseBlob } = await import('music-metadata')
   const metadata = await parseBlob(file)
@@ -64,9 +61,10 @@ export async function parseM4bFile(
 
     chapters = rawChapters.map((ch, index) => {
       const startTime =
-        ch.startTime ?? (ch.sampleOffset != null && metadata.format.sampleRate
+        ch.startTime ??
+        (ch.sampleOffset != null && metadata.format.sampleRate
           ? ch.sampleOffset / metadata.format.sampleRate
-          : ch.offset ?? 0)
+          : (ch.offset ?? 0))
 
       return {
         id: crypto.randomUUID(),
@@ -83,34 +81,31 @@ export async function parseM4bFile(
     const itunesTags = metadata.native['iTunes']
     const chapterTags = itunesTags.filter(
       (tag: { id: string }) =>
-        tag.id.toLowerCase().includes('chap') ||
-        tag.id.toLowerCase().includes('chapter')
+        tag.id.toLowerCase().includes('chap') || tag.id.toLowerCase().includes('chapter')
     )
 
     if (chapterTags.length > 0) {
-      chapters = chapterTags.map(
-        (tag: { id: string; value: unknown }, index: number) => {
-          // iTunes chapter tags may have various formats
-          const value = tag.value as Record<string, unknown> | string | number
-          let startTime = 0
-          if (typeof value === 'object' && value !== null && 'startTime' in value) {
-            startTime = Number(value.startTime) || 0
-          }
-
-          const chTitle =
-            typeof value === 'object' && value !== null && 'title' in value
-              ? String(value.title)
-              : `Chapter ${index + 1}`
-
-          return {
-            id: crypto.randomUUID(),
-            bookId,
-            title: chTitle,
-            order: index,
-            position: { type: 'time' as const, seconds: startTime },
-          }
+      chapters = chapterTags.map((tag: { id: string; value: unknown }, index: number) => {
+        // iTunes chapter tags may have various formats
+        const value = tag.value as Record<string, unknown> | string | number
+        let startTime = 0
+        if (typeof value === 'object' && value !== null && 'startTime' in value) {
+          startTime = Number(value.startTime) || 0
         }
-      )
+
+        const chTitle =
+          typeof value === 'object' && value !== null && 'title' in value
+            ? String(value.title)
+            : `Chapter ${index + 1}`
+
+        return {
+          id: crypto.randomUUID(),
+          bookId,
+          title: chTitle,
+          order: index,
+          position: { type: 'time' as const, seconds: startTime },
+        }
+      })
     }
   }
 

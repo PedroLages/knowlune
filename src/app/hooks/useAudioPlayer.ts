@@ -211,7 +211,9 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
         if (currentTime >= startTime) {
           if (i !== currentIdx) {
             // Chapter boundary crossed — dispatch custom event for sleep timer EOC
-            audio.dispatchEvent(new CustomEvent('chapterend', { detail: { fromIndex: currentIdx, toIndex: i } }))
+            audio.dispatchEvent(
+              new CustomEvent('chapterend', { detail: { fromIndex: currentIdx, toIndex: i } })
+            )
             setCurrentChapterIndex(i)
           }
           break
@@ -250,7 +252,10 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
           stopRafLoop()
 
           try {
-            const file = await opfsStorageService.readBookFile(book.source.type === 'local' ? book.source.opfsPath : '', book.id)
+            const file = await opfsStorageService.readBookFile(
+              book.source.type === 'local' ? book.source.opfsPath : '',
+              book.id
+            )
             if (!file) {
               toast.error('Could not load audiobook file')
               setIsLoading(false)
@@ -354,7 +359,16 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
         setIsLoading(false)
       }
     },
-    [book, singleFile, playbackRate, startRafLoop, stopRafLoop, setIsPlaying, setCurrentChapterIndex, setCurrentTime]
+    [
+      book,
+      singleFile,
+      playbackRate,
+      startRafLoop,
+      stopRafLoop,
+      setIsPlaying,
+      setCurrentChapterIndex,
+      setCurrentTime,
+    ]
   )
 
   const play = useCallback(async () => {

@@ -166,37 +166,34 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
   const isImporting = phase === 'processing' || phase === 'storing'
 
   /** Process an M4B file — lazy-loads music-metadata for chapter extraction */
-  const processM4bFile = useCallback(
-    async (file: File) => {
-      setPhase('processing')
-      setProgressLabel('Parsing chapters…')
-      setProgress(50)
+  const processM4bFile = useCallback(async (file: File) => {
+    setPhase('processing')
+    setProgressLabel('Parsing chapters…')
+    setProgress(50)
 
-      try {
-        const bookId = crypto.randomUUID()
-        const result = await parseM4bFile(file, bookId)
+    try {
+      const bookId = crypto.randomUUID()
+      const result = await parseM4bFile(file, bookId)
 
-        setTitle(result.title)
-        setAuthor(result.author)
-        setM4bParsed({
-          file,
-          title: result.title,
-          author: result.author,
-          coverBlob: result.coverBlob,
-          chapters: result.chapters,
-          totalDuration: result.totalDuration,
-        })
+      setTitle(result.title)
+      setAuthor(result.author)
+      setM4bParsed({
+        file,
+        title: result.title,
+        author: result.author,
+        coverBlob: result.coverBlob,
+        chapters: result.chapters,
+        totalDuration: result.totalDuration,
+      })
 
-        setPhase('idle')
-        setProgress(0)
-        setProgressLabel('')
-      } catch {
-        toast.error('Failed to parse M4B file. The file may be corrupted.')
-        setPhase('error')
-      }
-    },
-    []
-  )
+      setPhase('idle')
+      setProgress(0)
+      setProgressLabel('')
+    } catch {
+      toast.error('Failed to parse M4B file. The file may be corrupted.')
+      setPhase('error')
+    }
+  }, [])
 
   const processFiles = useCallback(
     async (files: File[]) => {
@@ -392,7 +389,9 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
       setProgress(100)
 
       setPhase('done')
-      toast.success(`"${title}" imported (${bookChapters.length} chapter${bookChapters.length !== 1 ? 's' : ''})`)
+      toast.success(
+        `"${title}" imported (${bookChapters.length} chapter${bookChapters.length !== 1 ? 's' : ''})`
+      )
 
       setTimeout(() => {
         onImported()
@@ -457,7 +456,8 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
           <div className="rounded-xl bg-muted/30 p-3 text-sm">
             <div className="flex items-center justify-between">
               <span className="font-medium">
-                M4B audiobook — {m4bParsed.chapters.length} chapter{m4bParsed.chapters.length !== 1 ? 's' : ''}
+                M4B audiobook — {m4bParsed.chapters.length} chapter
+                {m4bParsed.chapters.length !== 1 ? 's' : ''}
               </span>
               <button
                 onClick={() => {
@@ -472,8 +472,8 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
               </button>
             </div>
             <p className="text-muted-foreground mt-1 text-xs">
-              Duration: {Math.floor(m4bParsed.totalDuration / 60)} min |
-              Size: {(m4bParsed.file.size / (1024 * 1024)).toFixed(1)} MB
+              Duration: {Math.floor(m4bParsed.totalDuration / 60)} min | Size:{' '}
+              {(m4bParsed.file.size / (1024 * 1024)).toFixed(1)} MB
             </p>
           </div>
 

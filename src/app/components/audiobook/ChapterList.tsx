@@ -32,10 +32,7 @@ function getChapterDuration(
   const start = pos?.type === 'time' ? pos.seconds : null
   if (start === null) return null
   const nextPos = index + 1 < chapters.length ? chapters[index + 1]?.position : null
-  const nextStart =
-    nextPos?.type === 'time'
-      ? nextPos.seconds
-      : (totalDuration ?? null)
+  const nextStart = nextPos?.type === 'time' ? nextPos.seconds : (totalDuration ?? null)
   if (nextStart === null) return null
   return nextStart - start
 }
