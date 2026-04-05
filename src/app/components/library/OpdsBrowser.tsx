@@ -502,7 +502,7 @@ export function OpdsBrowser({ open, onOpenChange, initialCatalogId }: OpdsBrowse
               variant="ghost"
               size="icon"
               onClick={handleGoBack}
-              className="size-8 shrink-0"
+              className="size-11 shrink-0"
               aria-label="Go back"
               data-testid="opds-browser-back"
             >
