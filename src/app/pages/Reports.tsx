@@ -1,3 +1,4 @@
+// eslint-disable-next-line component-size/max-lines -- page orchestrator: study/quiz/ai tabs with multiple chart sections and per-section error handling
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'react-router'
 import { BookOpen, CheckCircle, FileText, TrendingUp, Clock, Target, WifiOff } from 'lucide-react'
@@ -44,6 +45,7 @@ import { WeeklyGoalRing } from '@/app/components/reports/WeeklyGoalRing'
 import { RecentActivityTimeline } from '@/app/components/reports/RecentActivityTimeline'
 import { ActivityHeatmap } from '@/app/components/reports/ActivityHeatmap'
 import { QuizExportCard } from '@/app/components/reports/QuizExportCard'
+import { ReadingStatsSection } from '@/app/components/reports/ReadingStatsSection'
 import { toast } from 'sonner'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 
@@ -307,6 +309,11 @@ export default function Reports() {
                   />
                 </motion.div>
               )}
+
+              {/* ── Reading Stats Section (E86-S01) — shown when book data exists ── */}
+              <motion.div variants={fadeUp}>
+                <ReadingStatsSection />
+              </motion.div>
 
               {/* ── Row 2: Weekly Goal Ring + Study Time ── */}
               <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
