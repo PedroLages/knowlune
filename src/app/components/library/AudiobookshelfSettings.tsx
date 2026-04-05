@@ -153,12 +153,12 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
     })
 
     // Auto-select all libraries if none were previously selected
-    if (selectedLibraryIds.length === 0) {
-      setSelectedLibraryIds(libResult.data.map(lib => lib.id))
-    }
+    setSelectedLibraryIds(prev =>
+      prev.length === 0 ? libResult.data.map(lib => lib.id) : prev
+    )
 
     setIsTesting(false)
-  }, [url, apiKey, existingApiKey, selectedLibraryIds.length])
+  }, [url, apiKey, existingApiKey])
 
   const handleLibraryToggle = useCallback((libraryId: string) => {
     setSelectedLibraryIds(prev =>
@@ -176,39 +176,44 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
     const effectiveApiKey = apiKey.trim() || existingApiKey
     const now = new Date().toISOString()
 
-    if (mode === 'edit' && editingId) {
-      const updates: Partial<Omit<AudiobookshelfServer, 'id'>> = {
-        name: name.trim() || url.trim(),
-        url: url.trim(),
-        libraryIds: selectedLibraryIds,
-        status: 'connected',
-        updatedAt: now,
+    try {
+      if (mode === 'edit' && editingId) {
+        const updates: Partial<Omit<AudiobookshelfServer, 'id'>> = {
+          name: name.trim() || url.trim(),
+          url: url.trim(),
+          libraryIds: selectedLibraryIds,
+          status: 'connected',
+          updatedAt: now,
+        }
+        // Only update API key if user typed a new one
+        if (apiKey.trim()) {
+          updates.apiKey = apiKey.trim()
+        }
+        await updateServer(editingId, updates)
+        toastSuccess.saved('Server updated')
+      } else {
+        const newServer: AudiobookshelfServer = {
+          id: crypto.randomUUID(),
+          name: name.trim() || url.trim(),
+          url: url.trim(),
+          apiKey: effectiveApiKey,
+          libraryIds: selectedLibraryIds,
+          status: 'connected',
+          lastSyncedAt: undefined,
+          createdAt: now,
+          updatedAt: now,
+        }
+        await addServer(newServer)
+        toastSuccess.saved('Server added')
       }
-      // Only update API key if user typed a new one
-      if (apiKey.trim()) {
-        updates.apiKey = apiKey.trim()
-      }
-      await updateServer(editingId, updates)
-      toastSuccess.saved('Server updated')
-    } else {
-      const newServer: AudiobookshelfServer = {
-        id: crypto.randomUUID(),
-        name: name.trim() || url.trim(),
-        url: url.trim(),
-        apiKey: effectiveApiKey,
-        libraryIds: selectedLibraryIds,
-        status: 'connected',
-        lastSyncedAt: undefined,
-        createdAt: now,
-        updatedAt: now,
-      }
-      await addServer(newServer)
-      toastSuccess.saved('Server added')
-    }
 
-    setIsSaving(false)
-    resetForm()
-    setMode('list')
+      resetForm()
+      setMode('list')
+    } catch {
+      // silent-catch-ok — store already shows toast.error; stay on form so user can retry
+    } finally {
+      setIsSaving(false)
+    }
   }, [
     name,
     url,

@@ -42,11 +42,12 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
 
   addServer: async (server: AudiobookshelfServer) => {
     try {
-      await db.audiobookshelfServers.put(server)
+      await db.audiobookshelfServers.add(server)
       set(state => ({ servers: [...state.servers, server] }))
     } catch (err) {
       console.error('[AudiobookshelfStore] Failed to add server:', err)
       toast.error('Failed to save Audiobookshelf server.')
+      throw err
     }
   },
 
@@ -59,6 +60,7 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
     } catch (err) {
       console.error('[AudiobookshelfStore] Failed to update server:', err)
       toast.error('Failed to update Audiobookshelf server.')
+      throw err
     }
   },
 

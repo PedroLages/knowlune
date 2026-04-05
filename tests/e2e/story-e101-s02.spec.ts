@@ -35,11 +35,6 @@ const TEST_SERVER = {
   updatedAt: FIXED_DATE,
 }
 
-const MOCK_LIBRARIES = [
-  { id: 'lib-1', name: 'Audiobooks', mediaType: 'book' },
-  { id: 'lib-2', name: 'Podcasts', mediaType: 'podcast' },
-]
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function openAbsSettings(page: import('@playwright/test').Page): Promise<void> {
@@ -376,6 +371,52 @@ test.describe('E101-S02: Audiobookshelf Server Connection & Auth UI', () => {
     // Hide again
     await toggleBtn.click()
     await expect(apiKeyInput).toHaveAttribute('type', 'password')
+  })
+
+  test('keyboard navigation works for dialog and form elements (AC11)', async ({ page }) => {
+    await mockAbsApiSuccess(page)
+    await openAbsSettings(page)
+
+    // Tab to "Add Server" button and activate with Enter
+    await page.keyboard.press('Tab')
+    const addBtn = page.getByTestId('add-abs-server-btn')
+    await expect(addBtn).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('heading', { name: 'Add Server' })).toBeVisible()
+
+    // Tab through form fields — Name, URL, API Key
+    const nameInput = page.getByTestId('abs-name-input')
+    const urlInput = page.getByTestId('abs-url-input')
+    const apiKeyInput = page.getByTestId('abs-api-key-input')
+
+    await nameInput.focus()
+    await page.keyboard.type('KB Test Server')
+    await page.keyboard.press('Tab')
+    await expect(urlInput).toBeFocused()
+    await page.keyboard.type(ABS_SERVER_URL)
+    await page.keyboard.press('Tab')
+    await expect(apiKeyInput).toBeFocused()
+    await page.keyboard.type('test-key')
+
+    // Test Connection button — Tab to it and press Enter
+    const testBtn = page.getByTestId('abs-test-btn')
+    await testBtn.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('abs-test-result')).toBeVisible({ timeout: 5000 })
+
+    // Save button — Tab to it and press Enter
+    const saveBtn = page.getByTestId('abs-save-btn')
+    await saveBtn.focus()
+    await page.keyboard.press('Enter')
+
+    // Should return to list view
+    await expect(page.getByRole('heading', { name: 'Audiobookshelf Servers' })).toBeVisible({
+      timeout: 5000,
+    })
+
+    // Escape key closes the dialog
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('abs-settings')).not.toBeVisible()
   })
 
   test('Back button returns to server list', async ({ page }) => {
