@@ -34,6 +34,7 @@ import type {
   Book,
   BookHighlight,
   AudioBookmark,
+  OpdsCatalog,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA } from './checkpoint'
@@ -78,6 +79,7 @@ export type ElearningDatabase = Dexie & {
   bookHighlights: EntityTable<BookHighlight, 'id'>
   bookFiles: Table<{ bookId: string; filename: string; blob: Blob }> // OPFS fallback
   audioBookmarks: EntityTable<AudioBookmark, 'id'>
+  opdsCatalogs: EntityTable<OpdsCatalog, 'id'>
 }
 
 /**
@@ -1257,6 +1259,11 @@ function _declareLegacyMigrations(database: Dexie): void {
   // - Indexes on bookId, chapterIndex, timestamp, createdAt
   database.version(38).stores({
     audioBookmarks: 'id, bookId, chapterIndex, timestamp, createdAt',
+  })
+  // v39: OPDS catalog connections (E88-S01)
+  // - New opdsCatalogs table for OPDS feed URLs and auth credentials
+  database.version(39).stores({
+    opdsCatalogs: 'id, name, url, createdAt',
   })
 } // end _declareLegacyMigrations
 

@@ -183,7 +183,13 @@ export function ReadingToolbar() {
     return () => {
       document.documentElement.style.removeProperty('--reading-font-size')
       document.documentElement.style.removeProperty('--reading-line-height')
-      document.documentElement.classList.remove('reading-sepia', 'reading-gray', 'reading-dark', 'reading-hc', 'reading-dyslexia')
+      document.documentElement.classList.remove(
+        'reading-sepia',
+        'reading-gray',
+        'reading-dark',
+        'reading-hc',
+        'reading-dyslexia'
+      )
     }
   }, [])
 

@@ -10,12 +10,7 @@
 import { useEffect, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/app/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { Button } from '@/app/components/ui/button'
 import { db } from '@/db/schema'
@@ -31,7 +26,13 @@ interface BookmarkListPanelProps {
   onSeek: (chapterIndex: number, timestamp: number) => void
 }
 
-export function BookmarkListPanel({ open, onClose, bookId, chapters, onSeek }: BookmarkListPanelProps) {
+export function BookmarkListPanel({
+  open,
+  onClose,
+  bookId,
+  chapters,
+  onSeek,
+}: BookmarkListPanelProps) {
   const [bookmarks, setBookmarks] = useState<AudioBookmark[]>([])
 
   // Load bookmarks when panel opens
@@ -71,7 +72,12 @@ export function BookmarkListPanel({ open, onClose, bookId, chapters, onSeek }: B
   }
 
   return (
-    <Sheet open={open} onOpenChange={v => { if (!v) onClose() }}>
+    <Sheet
+      open={open}
+      onOpenChange={v => {
+        if (!v) onClose()
+      }}
+    >
       <SheetContent side="right" className="flex flex-col w-full sm:max-w-md p-0">
         <SheetHeader className="px-4 pt-4 pb-2 border-b border-border/50">
           <SheetTitle>Bookmarks</SheetTitle>
@@ -86,8 +92,7 @@ export function BookmarkListPanel({ open, onClose, bookId, chapters, onSeek }: B
             <ul role="list" className="divide-y divide-border/50">
               {bookmarks.map(bookmark => {
                 const chapterTitle =
-                  chapters[bookmark.chapterIndex]?.title ??
-                  `Chapter ${bookmark.chapterIndex + 1}`
+                  chapters[bookmark.chapterIndex]?.title ?? `Chapter ${bookmark.chapterIndex + 1}`
 
                 return (
                   <li key={bookmark.id} className="flex items-start gap-2 px-4 py-3">
@@ -101,7 +106,9 @@ export function BookmarkListPanel({ open, onClose, bookId, chapters, onSeek }: B
                         {chapterTitle} · {formatAudioTime(bookmark.timestamp)}
                       </span>
                       {bookmark.note && (
-                        <span className="text-sm text-foreground line-clamp-2">{bookmark.note}</span>
+                        <span className="text-sm text-foreground line-clamp-2">
+                          {bookmark.note}
+                        </span>
                       )}
                     </button>
 

@@ -74,11 +74,7 @@ export function ReaderHeader({
         size="icon"
         onClick={() => navigate('/library')}
         aria-label="Back to library"
-        className={cn(
-          'min-h-[44px] min-w-[44px]',
-          'hover:bg-black/10',
-          HEADER_TEXT[theme]
-        )}
+        className={cn('min-h-[44px] min-w-[44px]', 'hover:bg-black/10', HEADER_TEXT[theme])}
         data-testid="reader-back-button"
       >
         <ArrowLeft className="size-5" />
@@ -111,47 +107,29 @@ export function ReaderHeader({
             variant="ghost"
             size="icon"
             aria-label="Reader menu"
-            className={cn(
-              'min-h-[44px] min-w-[44px]',
-              'hover:bg-black/10',
-              HEADER_TEXT[theme]
-            )}
+            className={cn('min-h-[44px] min-w-[44px]', 'hover:bg-black/10', HEADER_TEXT[theme])}
             data-testid="reader-menu-button"
           >
             <MoreHorizontal className="size-5" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuItem
-            onClick={onTocOpen}
-            data-testid="reader-menu-toc"
-          >
+          <DropdownMenuItem onClick={onTocOpen} data-testid="reader-menu-toc">
             Table of Contents
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={onSettingsOpen}
-            data-testid="reader-menu-settings"
-          >
+          <DropdownMenuItem onClick={onSettingsOpen} data-testid="reader-menu-settings">
             Reading Settings
           </DropdownMenuItem>
           {onReadAloud && (
-            <DropdownMenuItem
-              onClick={onReadAloud}
-              data-testid="reader-menu-read-aloud"
-            >
+            <DropdownMenuItem onClick={onReadAloud} data-testid="reader-menu-read-aloud">
               <Volume2 className="size-4 mr-2" aria-hidden="true" />
               Read Aloud
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem
-            onClick={onHighlightsOpen}
-            data-testid="reader-menu-highlights"
-          >
+          <DropdownMenuItem onClick={onHighlightsOpen} data-testid="reader-menu-highlights">
             Highlights
           </DropdownMenuItem>
-          <DropdownMenuItem data-testid="reader-menu-about">
-            About Book
-          </DropdownMenuItem>
+          <DropdownMenuItem data-testid="reader-menu-about">About Book</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

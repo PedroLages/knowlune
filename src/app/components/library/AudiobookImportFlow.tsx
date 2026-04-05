@@ -30,12 +30,13 @@ function extractLeadingNumber(name: string): number {
 
 /** Derive a chapter title from an MP3 filename (strip leading number, extension). */
 function chapterTitleFromFilename(name: string): string {
-  return name
-    .replace(/\.[^.]+$/, '') // remove extension
-    .replace(/^\d+[-_ ]*/, '') // remove leading number
-    .replace(/[-_]/g, ' ') // normalize separators
-    .trim()
-    || name.replace(/\.[^.]+$/, '')
+  return (
+    name
+      .replace(/\.[^.]+$/, '') // remove extension
+      .replace(/^\d+[-_ ]*/, '') // remove leading number
+      .replace(/[-_]/g, ' ') // normalize separators
+      .trim() || name.replace(/\.[^.]+$/, '')
+  )
 }
 
 /** Get duration of an audio file using a temporary Audio element. */
@@ -86,11 +87,19 @@ function parseId3v2Tags(buffer: ArrayBuffer): { title: string | null; artist: st
   const decoder = new TextDecoder('utf-8', { fatal: false })
 
   while (offset + 10 < buffer.byteLength && (title === null || artist === null)) {
-    const frameId = String.fromCharCode(view[offset], view[offset + 1], view[offset + 2], view[offset + 3])
+    const frameId = String.fromCharCode(
+      view[offset],
+      view[offset + 1],
+      view[offset + 2],
+      view[offset + 3]
+    )
     if (frameId === '\0\0\0\0') break
 
     const frameSize =
-      (view[offset + 4] << 24) | (view[offset + 5] << 16) | (view[offset + 6] << 8) | view[offset + 7]
+      (view[offset + 4] << 24) |
+      (view[offset + 5] << 16) |
+      (view[offset + 6] << 8) |
+      view[offset + 7]
 
     if (frameSize <= 0 || frameSize > 1_000_000) break
 
@@ -142,59 +151,62 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
 
   const isImporting = phase === 'processing' || phase === 'storing'
 
-  const processFiles = useCallback(async (files: File[]) => {
-    const mp3s = files.filter(f => f.name.toLowerCase().endsWith('.mp3'))
-    if (mp3s.length === 0) {
-      toast.error('No MP3 files found. Please select MP3 audiobook files.')
-      return
-    }
+  const processFiles = useCallback(
+    async (files: File[]) => {
+      const mp3s = files.filter(f => f.name.toLowerCase().endsWith('.mp3'))
+      if (mp3s.length === 0) {
+        toast.error('No MP3 files found. Please select MP3 audiobook files.')
+        return
+      }
 
-    setPhase('processing')
-    setProgress(0)
+      setPhase('processing')
+      setProgress(0)
 
-    // Sort by leading number in filename, then alphabetically
-    const sorted = [...mp3s].sort((a, b) => {
-      const na = extractLeadingNumber(a.name)
-      const nb = extractLeadingNumber(b.name)
-      if (na !== nb) return na - nb
-      return a.name.localeCompare(b.name)
-    })
-
-    // Extract ID3 tags from first file
-    try {
-      const slice = sorted[0].slice(0, 4096) // Read just header bytes
-      const buf = await slice.arrayBuffer()
-      const tags = parseId3v2Tags(buf)
-      if (tags.title) setTitle(tags.title)
-      if (tags.artist) setAuthor(tags.artist)
-    } catch {
-      // silent-catch-ok: ID3 parsing failure falls back to filename heuristic
-    }
-
-    // Fallback title from filename (strip number + extension)
-    if (!title) {
-      setTitle(chapterTitleFromFilename(sorted[0].name) || 'Untitled Audiobook')
-    }
-
-    // Calculate duration for each chapter
-    const result: ChapterFile[] = []
-    for (let i = 0; i < sorted.length; i++) {
-      setProgressLabel(`Reading chapter ${i + 1} of ${sorted.length}…`)
-      setProgress(Math.round(((i + 1) / sorted.length) * 100))
-      const duration = await getAudioDuration(sorted[i])
-      result.push({
-        file: sorted[i],
-        order: i,
-        title: chapterTitleFromFilename(sorted[i].name) || `Chapter ${i + 1}`,
-        duration,
+      // Sort by leading number in filename, then alphabetically
+      const sorted = [...mp3s].sort((a, b) => {
+        const na = extractLeadingNumber(a.name)
+        const nb = extractLeadingNumber(b.name)
+        if (na !== nb) return na - nb
+        return a.name.localeCompare(b.name)
       })
-    }
 
-    setChapters(result)
-    setPhase('idle')
-    setProgress(0)
-    setProgressLabel('')
-  }, [title])
+      // Extract ID3 tags from first file
+      try {
+        const slice = sorted[0].slice(0, 4096) // Read just header bytes
+        const buf = await slice.arrayBuffer()
+        const tags = parseId3v2Tags(buf)
+        if (tags.title) setTitle(tags.title)
+        if (tags.artist) setAuthor(tags.artist)
+      } catch {
+        // silent-catch-ok: ID3 parsing failure falls back to filename heuristic
+      }
+
+      // Fallback title from filename (strip number + extension)
+      if (!title) {
+        setTitle(chapterTitleFromFilename(sorted[0].name) || 'Untitled Audiobook')
+      }
+
+      // Calculate duration for each chapter
+      const result: ChapterFile[] = []
+      for (let i = 0; i < sorted.length; i++) {
+        setProgressLabel(`Reading chapter ${i + 1} of ${sorted.length}…`)
+        setProgress(Math.round(((i + 1) / sorted.length) * 100))
+        const duration = await getAudioDuration(sorted[i])
+        result.push({
+          file: sorted[i],
+          order: i,
+          title: chapterTitleFromFilename(sorted[i].name) || `Chapter ${i + 1}`,
+          duration,
+        })
+      }
+
+      setChapters(result)
+      setPhase('idle')
+      setProgress(0)
+      setProgressLabel('')
+    },
+    [title]
+  )
 
   const handleFileInput = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -336,8 +348,7 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
               </button>
             </div>
             <p className="text-muted-foreground mt-1 text-xs">
-              Total duration:{' '}
-              {Math.floor(chapters.reduce((s, c) => s + c.duration, 0) / 60)} min
+              Total duration: {Math.floor(chapters.reduce((s, c) => s + c.duration, 0) / 60)} min
             </p>
           </div>
 
@@ -373,7 +384,8 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
                 <span className="text-muted-foreground mr-2 tabular-nums">{i + 1}.</span>
                 <span className="flex-1 truncate">{ch.title}</span>
                 <span className="text-muted-foreground ml-2 tabular-nums">
-                  {Math.floor(ch.duration / 60)}:{String(Math.round(ch.duration % 60)).padStart(2, '0')}
+                  {Math.floor(ch.duration / 60)}:
+                  {String(Math.round(ch.duration % 60)).padStart(2, '0')}
                 </span>
               </div>
             ))}

@@ -84,7 +84,14 @@ export function ReadingStatsSection() {
   }, [loadStats])
 
   // No reading activity — render nothing (don't clutter the Reports page for new users)
-  if (!isLoading && stats && stats.timeReadTodayMinutes === 0 && stats.booksInProgress === 0 && stats.totalBooksFinished === 0 && stats.readingTrend.every(p => p.minutes === 0)) {
+  if (
+    !isLoading &&
+    stats &&
+    stats.timeReadTodayMinutes === 0 &&
+    stats.booksInProgress === 0 &&
+    stats.totalBooksFinished === 0 &&
+    stats.readingTrend.every(p => p.minutes === 0)
+  ) {
     return null
   }
 
@@ -177,7 +184,12 @@ export function ReadingStatsSection() {
                     />
                   }
                 />
-                <Bar dataKey="minutes" radius={[4, 4, 0, 0]} barSize={16} fill="var(--color-minutes)" />
+                <Bar
+                  dataKey="minutes"
+                  radius={[4, 4, 0, 0]}
+                  barSize={16}
+                  fill="var(--color-minutes)"
+                />
               </BarChart>
             </ChartContainer>
           </CardContent>

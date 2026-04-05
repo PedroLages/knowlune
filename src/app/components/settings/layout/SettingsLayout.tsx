@@ -60,7 +60,9 @@ export function SettingsLayout({ modifiedCategories, onSearchOpen }: SettingsLay
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-display font-extrabold tracking-tight">Settings</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage your learning environment and preferences</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage your learning environment and preferences
+          </p>
         </div>
         {onSearchOpen && (
           <Button

@@ -48,7 +48,9 @@ import type { ContentPosition } from '@/data/types'
 
 // Lazy-loaded audiobook renderer — keeps audiobook code out of the initial bundle (NFR20)
 const AudiobookRenderer = lazy(() =>
-  import('@/app/components/audiobook/AudiobookRenderer').then(m => ({ default: m.AudiobookRenderer }))
+  import('@/app/components/audiobook/AudiobookRenderer').then(m => ({
+    default: m.AudiobookRenderer,
+  }))
 )
 
 // Code-split: epub.js + react-reader must NOT be in the initial bundle (architecture decision 12)
@@ -172,9 +174,7 @@ export function BookReader() {
     const now = new Date().toISOString()
     // Update in-memory state
     useBookStore.setState(state => ({
-      books: state.books.map(b =>
-        b.id === bookId ? { ...b, lastOpenedAt: now } : b
-      ),
+      books: state.books.map(b => (b.id === bookId ? { ...b, lastOpenedAt: now } : b)),
     }))
     // Persist to Dexie (best-effort, non-blocking)
     // silent-catch-ok: lastOpenedAt failure is non-fatal — sorting will use previous value
@@ -189,15 +189,20 @@ export function BookReader() {
     if (!highlightId) return
 
     let ignore = false
-    db.bookHighlights.get(highlightId).then(highlight => {
-      if (!ignore && highlight?.cfiRange) {
-        setHighlightCfi(highlight.cfiRange)
-      }
-    }).catch(err => {
-      // silent-catch-ok: highlight lookup failure is non-fatal — reader opens at saved position
-      console.warn('[BookReader] Could not resolve sourceHighlightId to CFI:', err)
-    })
-    return () => { ignore = true }
+    db.bookHighlights
+      .get(highlightId)
+      .then(highlight => {
+        if (!ignore && highlight?.cfiRange) {
+          setHighlightCfi(highlight.cfiRange)
+        }
+      })
+      .catch(err => {
+        // silent-catch-ok: highlight lookup failure is non-fatal — reader opens at saved position
+        console.warn('[BookReader] Could not resolve sourceHighlightId to CFI:', err)
+      })
+    return () => {
+      ignore = true
+    }
   }, [searchParams])
 
   // Load EPUB content
@@ -324,9 +329,7 @@ export function BookReader() {
         // Update in-memory BookStore
         useBookStore.setState(state => ({
           books: state.books.map(b =>
-            b.id === bookId
-              ? { ...b, currentPosition: position, progress: progressInt }
-              : b
+            b.id === bookId ? { ...b, currentPosition: position, progress: progressInt } : b
           ),
         }))
 
@@ -355,7 +358,9 @@ export function BookReader() {
         try {
           const loc = renditionRef.current.currentLocation()
           if (loc && typeof loc === 'object' && 'start' in loc) {
-            const start = (loc as { start?: { percentage?: number; href?: string; location?: number } }).start
+            const start = (
+              loc as { start?: { percentage?: number; href?: string; location?: number } }
+            ).start
             if (typeof start?.percentage === 'number') {
               setReadingProgress(start.percentage)
               debouncedSavePosition(cfi, start.percentage)
@@ -407,27 +412,31 @@ export function BookReader() {
     [currentChapter, setCurrentChapter]
   )
 
-  const handleRenditionReady = useCallback(
-    (rendition: Rendition) => {
-      renditionRef.current = rendition
-      // Signal that EPUB rendered successfully — starts reading session timer (E85-S06)
-      setIsEpubReady(true)
+  const handleRenditionReady = useCallback((rendition: Rendition) => {
+    renditionRef.current = rendition
+    // Signal that EPUB rendered successfully — starts reading session timer (E85-S06)
+    setIsEpubReady(true)
 
-      // Generate locations for page count estimation (async, non-blocking)
-      // epub.js generates ~1000 chars per "page" by default
-      const epubBook = (rendition as unknown as { book?: { locations?: { generate: (n: number) => Promise<void>; total: number } } }).book
-      if (epubBook?.locations?.generate) {
-        epubBook.locations.generate(1000).then(() => {
+    // Generate locations for page count estimation (async, non-blocking)
+    // epub.js generates ~1000 chars per "page" by default
+    const epubBook = (
+      rendition as unknown as {
+        book?: { locations?: { generate: (n: number) => Promise<void>; total: number } }
+      }
+    ).book
+    if (epubBook?.locations?.generate) {
+      epubBook.locations
+        .generate(1000)
+        .then(() => {
           if (epubBook.locations && epubBook.locations.total > 0) {
             setTotalPages(epubBook.locations.total)
           }
-        }).catch(() => {
+        })
+        .catch(() => {
           // silent-catch-ok: location generation is optional for page counts
         })
-      }
-    },
-    []
-  )
+    }
+  }, [])
 
   const handleRetry = useCallback(() => {
     setRetryKey(k => k + 1)
@@ -435,8 +444,7 @@ export function BookReader() {
 
   // Derive initial CFI: prefer highlight back-navigation CFI (E85-S05) over saved position
   const initialCfi =
-    highlightCfi ??
-    (book?.currentPosition?.type === 'cfi' ? book.currentPosition.value : null)
+    highlightCfi ?? (book?.currentPosition?.type === 'cfi' ? book.currentPosition.value : null)
 
   // Book not found (after store is loaded)
   if (isLoaded && !book) {
@@ -458,7 +466,10 @@ export function BookReader() {
   // Audiobook: render the AudiobookRenderer instead of the EPUB reader (E87-S02)
   if (book?.format === 'audiobook') {
     return (
-      <div className="fixed inset-0 flex flex-col bg-background overflow-y-auto" data-testid="audiobook-reader">
+      <div
+        className="fixed inset-0 flex flex-col bg-background overflow-y-auto"
+        data-testid="audiobook-reader"
+      >
         {/* Minimal header for back navigation + bookmarks */}
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
           <button
@@ -563,10 +574,7 @@ export function BookReader() {
       />
 
       {/* Reading Settings panel (E84-S03) */}
-      <ReaderSettingsPanel
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
+      <ReaderSettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       {/* Highlight list panel (E85-S03) */}
       <HighlightListPanel

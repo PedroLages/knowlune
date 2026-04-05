@@ -101,12 +101,7 @@ export function BookmarkButton({ bookId, chapterIndex, currentTime }: BookmarkBu
             className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             aria-label="Bookmark note"
           />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={handleSaveNote}
-          >
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={handleSaveNote}>
             Save
           </Button>
         </div>

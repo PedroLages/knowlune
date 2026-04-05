@@ -16,7 +16,20 @@ import { useReadingGoalStore } from '@/stores/useReadingGoalStore'
 import { useBookStore } from '@/stores/useBookStore'
 import { ChartContainer, ChartTooltipContent } from '@/app/components/ui/chart'
 
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const MONTH_LABELS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+]
 
 interface MonthDataPoint {
   month: string
@@ -103,19 +116,17 @@ export function ReadingGoalsCard() {
 
         {/* Monthly books chart */}
         <div>
-          <h3 className="text-sm font-medium mb-3">
-            Books Finished per Month ({currentYear})
-          </h3>
+          <h3 className="text-sm font-medium mb-3">Books Finished per Month ({currentYear})</h3>
           <ChartContainer config={chartConfig} className="h-48 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                <XAxis
-                  dataKey="month"
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                <YAxis
                   tick={{ fontSize: 10 }}
                   tickLine={false}
                   axisLine={false}
+                  allowDecimals={false}
                 />
-                <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip content={<ChartTooltipContent />} />
                 <ReferenceLine
                   y={goal.yearlyBookTarget / 12}

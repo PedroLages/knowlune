@@ -103,18 +103,22 @@ export function HighlightMiniPopover({
           {/* Color indicator + text preview */}
           <div className="flex items-start gap-2">
             <span
-              className={cn('size-3 rounded-full mt-0.5 shrink-0', COLORS.find(c => c.id === highlight.color)?.bg ?? 'bg-[#FFEB3B]')}
+              className={cn(
+                'size-3 rounded-full mt-0.5 shrink-0',
+                COLORS.find(c => c.id === highlight.color)?.bg ?? 'bg-[#FFEB3B]'
+              )}
               aria-hidden="true"
             />
-            <p className="text-xs text-foreground line-clamp-3 flex-1">
-              {highlight.textAnchor}
-            </p>
+            <p className="text-xs text-foreground line-clamp-3 flex-1">{highlight.textAnchor}</p>
           </div>
 
           {/* Note preview */}
           {highlight.note && (
             <div className="flex items-start gap-1.5 pl-5">
-              <StickyNote className="size-3 text-muted-foreground mt-0.5 shrink-0" aria-hidden="true" />
+              <StickyNote
+                className="size-3 text-muted-foreground mt-0.5 shrink-0"
+                aria-hidden="true"
+              />
               <p className="text-xs text-muted-foreground italic line-clamp-2">{highlight.note}</p>
             </div>
           )}
@@ -217,7 +221,9 @@ export function HighlightMiniPopover({
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
-                handleSaveEdit().catch(() => { /* silent-catch-ok */ })
+                handleSaveEdit().catch(() => {
+                  /* silent-catch-ok */
+                })
               }
               if (e.key === 'Escape') setMode('view')
             }}
@@ -237,7 +243,11 @@ export function HighlightMiniPopover({
             <Button
               variant="brand"
               size="sm"
-              onClick={() => { handleSaveEdit().catch(() => { /* silent-catch-ok */ }) }}
+              onClick={() => {
+                handleSaveEdit().catch(() => {
+                  /* silent-catch-ok */
+                })
+              }}
               disabled={isSaving}
               className="h-7 text-xs gap-1"
               data-testid="mini-popover-save"
@@ -271,7 +281,11 @@ export function HighlightMiniPopover({
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => { handleDelete().catch(() => { /* silent-catch-ok */ }) }}
+              onClick={() => {
+                handleDelete().catch(() => {
+                  /* silent-catch-ok */
+                })
+              }}
               disabled={isSaving}
               className="h-7 text-xs"
               data-testid="mini-popover-confirm-delete"

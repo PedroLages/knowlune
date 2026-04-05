@@ -102,7 +102,11 @@ export async function exportHighlightsAsObsidian(
     }
 
     // Sanitize title for safe filename
-    const safeName = title.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-').slice(0, 60)
+    const safeName = title
+      .replace(/[^\w\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-')
+      .slice(0, 60)
     files.push({
       name: `book-highlights/${safeName}.md`,
       content: lines.join('\n'),
@@ -164,10 +168,9 @@ export async function exportHighlightsAsReadwiseCsv(
     const book = bookMap.get(h.bookId)
     const title = book?.title ?? 'Unknown Book'
     const author = book?.author ?? ''
-    const location =
-      h.chapterHref
-        ? (h.chapterHref.split('#')[0].split('/').pop() ?? h.chapterHref)
-        : (h.cfiRange ?? '')
+    const location = h.chapterHref
+      ? (h.chapterHref.split('#')[0].split('/').pop() ?? h.chapterHref)
+      : (h.cfiRange ?? '')
     const date = h.createdAt.slice(0, 10)
 
     rows.push(

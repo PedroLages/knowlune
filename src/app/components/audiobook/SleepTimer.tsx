@@ -53,8 +53,7 @@ export function SleepTimer({ activeOption, badgeText, onSelect }: SleepTimerProp
         <ul role="listbox" aria-label="Sleep timer">
           {TIMER_OPTIONS.map(opt => {
             const isActive =
-              opt.value === activeOption ||
-              (opt.value === 'off' && activeOption === null)
+              opt.value === activeOption || (opt.value === 'off' && activeOption === null)
             return (
               <li key={String(opt.value)} role="option" aria-selected={isActive}>
                 <button

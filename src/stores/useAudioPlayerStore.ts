@@ -37,11 +37,11 @@ export const useAudioPlayerStore = create<AudioPlayerState>(set => ({
   playbackRate: 1.0,
   isPlaying: false,
 
-  setCurrentBook: (bookId) => set({ currentBookId: bookId }),
-  setCurrentChapterIndex: (index) => set({ currentChapterIndex: index }),
-  setCurrentTime: (time) => set({ currentTime: time }),
-  setPlaybackRate: (rate) => set({ playbackRate: rate }),
-  setIsPlaying: (playing) => set({ isPlaying: playing }),
+  setCurrentBook: bookId => set({ currentBookId: bookId }),
+  setCurrentChapterIndex: index => set({ currentChapterIndex: index }),
+  setCurrentTime: time => set({ currentTime: time }),
+  setPlaybackRate: rate => set({ playbackRate: rate }),
+  setIsPlaying: playing => set({ isPlaying: playing }),
   reset: () =>
     set({
       currentBookId: null,

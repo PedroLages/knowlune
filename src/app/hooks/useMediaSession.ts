@@ -41,9 +41,7 @@ export function useMediaSession({
   useEffect(() => {
     if (!('mediaSession' in navigator)) return
 
-    const artwork = artworkUrl
-      ? [{ src: artworkUrl, sizes: '256x256', type: 'image/jpeg' }]
-      : []
+    const artwork = artworkUrl ? [{ src: artworkUrl, sizes: '256x256', type: 'image/jpeg' }] : []
 
     navigator.mediaSession.metadata = new MediaMetadata({
       title,

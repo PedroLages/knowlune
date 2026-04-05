@@ -246,7 +246,9 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
         // silent-catch-ok: highlight search failure degrades gracefully (no results shown)
         if (!ignore) setHighlightResults([])
       })
-    return () => { ignore = true }
+    return () => {
+      ignore = true
+    }
   }, [debouncedQuery, allBooks])
 
   const handleOpenChange = (newOpen: boolean) => {

@@ -721,6 +721,22 @@ export interface AudioBookmark {
   createdAt: string // ISO 8601
 }
 
+/** OPDS catalog connection configuration (E88-S01) */
+export interface OpdsCatalog {
+  id: string // UUID v4
+  name: string // User-assigned display name
+  url: string // OPDS catalog root URL
+  auth?: {
+    username: string
+    // NOTE: Password stored in plaintext — acceptable for local-first architecture
+    // where data never leaves the device. Must be encrypted before any cloud sync
+    // or backup feature is introduced (tracked for pre-sync encryption work).
+    password: string
+  }
+  lastSynced?: string // ISO 8601
+  createdAt: string // ISO 8601
+}
+
 export interface YouTubeCourseChapter {
   id: string // PK — UUID
   courseId: string // FK to ImportedCourse.id

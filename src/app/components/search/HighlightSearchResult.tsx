@@ -36,7 +36,7 @@ interface HighlightSearchResultProps {
 export function HighlightSearchResult({ result, patterns }: HighlightSearchResultProps) {
   const colorHex = HIGHLIGHT_HEX[result.color] ?? '#FFEB3B'
   const chapterLabel = result.chapterHref
-    ? result.chapterHref.split('#')[0].split('/').pop() ?? ''
+    ? (result.chapterHref.split('#')[0].split('/').pop() ?? '')
     : ''
 
   return (

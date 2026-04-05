@@ -22,7 +22,9 @@ class BookContentService {
    */
   async getEpubContent(book: Book): Promise<ArrayBuffer> {
     if (book.format !== 'epub') {
-      throw new Error(`BookContentService: book "${book.id}" is not an EPUB (format: ${book.format})`)
+      throw new Error(
+        `BookContentService: book "${book.id}" is not an EPUB (format: ${book.format})`
+      )
     }
 
     const source = book.source
@@ -43,9 +45,7 @@ class BookContentService {
     // source.type === 'local' — read from OPFS / IDB fallback
     const file = await opfsStorageService.readBookFile(source.opfsPath, book.id)
     if (!file) {
-      throw new Error(
-        `BookContentService: EPUB file not found in storage for book "${book.id}"`
-      )
+      throw new Error(`BookContentService: EPUB file not found in storage for book "${book.id}"`)
     }
     return file.arrayBuffer()
   }

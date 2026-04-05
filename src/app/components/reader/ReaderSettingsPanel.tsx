@@ -14,12 +14,7 @@
  * @module ReaderSettingsPanel
  */
 import { Sun, Moon, BookOpen } from 'lucide-react'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/app/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import { Slider } from '@/app/components/ui/slider'
 import {
@@ -39,7 +34,13 @@ interface ReaderSettingsPanelProps {
 }
 
 // Theme configuration
-const THEMES: { id: ReaderTheme; label: string; icon: React.ReactNode; bg: string; text: string }[] = [
+const THEMES: {
+  id: ReaderTheme
+  label: string
+  icon: React.ReactNode
+  bg: string
+  text: string
+}[] = [
   {
     id: 'light',
     label: 'Light',
@@ -113,14 +114,13 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
 
         {/* Theme Selector */}
         <section aria-labelledby="theme-label" className="mb-6">
-          <p id="theme-label" className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3">
+          <p
+            id="theme-label"
+            className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3"
+          >
             Theme
           </p>
-          <div
-            role="radiogroup"
-            aria-label="Reading theme"
-            className="grid grid-cols-3 gap-2"
-          >
+          <div role="radiogroup" aria-label="Reading theme" className="grid grid-cols-3 gap-2">
             {THEMES.map(t => (
               <button
                 key={t.id}
@@ -133,9 +133,7 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                   t.bg,
                   t.text,
-                  theme === t.id
-                    ? 'border-brand shadow-sm'
-                    : 'border-border/30 hover:border-border'
+                  theme === t.id ? 'border-brand shadow-sm' : 'border-border/30 hover:border-border'
                 )}
               >
                 {t.icon}
@@ -147,7 +145,10 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
 
         {/* Font Size */}
         <section aria-labelledby="font-size-label" className="mb-6">
-          <p id="font-size-label" className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3">
+          <p
+            id="font-size-label"
+            className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3"
+          >
             Font Size — {fontSize}%
           </p>
           <div className="flex items-center gap-3">
@@ -191,13 +192,13 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
 
         {/* Font Family */}
         <section aria-labelledby="font-family-label" className="mb-6">
-          <p id="font-family-label" className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3">
+          <p
+            id="font-family-label"
+            className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3"
+          >
             Font Family
           </p>
-          <Select
-            value={fontFamily}
-            onValueChange={val => setFontFamily(val as ReaderFontFamily)}
-          >
+          <Select value={fontFamily} onValueChange={val => setFontFamily(val as ReaderFontFamily)}>
             <SelectTrigger
               className="w-full"
               aria-label="Font family"
@@ -217,13 +218,13 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
 
         {/* Line Height */}
         <section aria-labelledby="line-height-label" className="mb-6">
-          <p id="line-height-label" className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3">
+          <p
+            id="line-height-label"
+            className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3"
+          >
             Line Height
           </p>
-          <Select
-            value={String(lineHeight)}
-            onValueChange={val => setLineHeight(Number(val))}
-          >
+          <Select value={String(lineHeight)} onValueChange={val => setLineHeight(Number(val))}>
             <SelectTrigger
               className="w-full"
               aria-label="Line height"

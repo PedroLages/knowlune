@@ -7,9 +7,7 @@ import { RatingButtons } from './RatingButtons'
 import type { ReviewRating, Flashcard } from '@/data/types'
 
 /** Source link for book-sourced flashcards. 'deleted' means the book was removed. */
-export type FlashcardSourceLink =
-  | { href: string; label: string }
-  | 'deleted'
+export type FlashcardSourceLink = { href: string; label: string } | 'deleted'
 
 interface FlashcardReviewCardProps {
   flashcard: Flashcard

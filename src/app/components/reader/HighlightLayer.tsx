@@ -45,8 +45,7 @@ function highlightStyles(color: HighlightColor): Record<string, string> {
 /** Detect iOS Safari where epub.js text selection is broken (upstream bug #904) */
 function isIosSafari(): boolean {
   const ua = navigator.userAgent
-  const isIos = /iPad|iPhone|iPod/.test(ua) ||
-    (ua.includes('Mac') && navigator.maxTouchPoints > 1)
+  const isIos = /iPad|iPhone|iPod/.test(ua) || (ua.includes('Mac') && navigator.maxTouchPoints > 1)
   const isSafari = /Safari/.test(ua) && !/Chrome/.test(ua)
   return isIos && isSafari
 }
@@ -87,7 +86,9 @@ export function HighlightLayer({
   const loadHighlightsForBook = useHighlightStore(s => s.loadHighlightsForBook)
   // Keep a ref to highlights for use inside epub.js callbacks (closure capture)
   const highlightsRef = useRef(highlights)
-  useEffect(() => { highlightsRef.current = highlights }, [highlights])
+  useEffect(() => {
+    highlightsRef.current = highlights
+  }, [highlights])
 
   const [selection, setSelection] = useState<SelectionData | null>(null)
   const [miniPopover, setMiniPopover] = useState<MiniPopoverState | null>(null)
@@ -189,10 +190,7 @@ export function HighlightLayer({
   useEffect(() => {
     if (!rendition) return
 
-    const handleSelected = (
-      cfiRange: string,
-      contents: { window: Window }
-    ) => {
+    const handleSelected = (cfiRange: string, contents: { window: Window }) => {
       const win = contents.window
       const sel = win.getSelection()
       if (!sel || sel.isCollapsed) return
@@ -307,7 +305,11 @@ export function HighlightLayer({
       } catch {
         // Rollback annotation if persist fails
         // silent-catch-ok: inner annotation removal failure is non-fatal
-        try { rendition.annotations.remove(selection.cfiRange) } catch { /* silent-catch-ok */ }
+        try {
+          rendition.annotations.remove(selection.cfiRange)
+        } catch {
+          /* silent-catch-ok */
+        }
         toast.error('Failed to save highlight')
       }
     },
@@ -318,7 +320,9 @@ export function HighlightLayer({
     // Save highlight with yellow default, then open note (E85-S02)
     if (selection) {
       // silent-catch-ok: note initiation failure falls back gracefully
-      handleColorSelect('yellow').catch(() => { /* silent-catch-ok */ })
+      handleColorSelect('yellow').catch(() => {
+        /* silent-catch-ok */
+      })
     }
   }, [selection, handleColorSelect])
 
@@ -392,7 +396,9 @@ export function HighlightLayer({
           const win = (content as unknown as { window?: Window }).window
           win?.getSelection()?.removeAllRanges()
         }
-      } catch { /* silent-catch-ok */ }
+      } catch {
+        /* silent-catch-ok */
+      }
     }
   }, [rendition])
 
@@ -406,7 +412,8 @@ export function HighlightLayer({
           data-testid="ios-tts-banner"
         >
           <p className="text-xs text-warning-foreground leading-snug">
-            Text selection is limited on iOS Safari. For best highlighting experience, use Chrome on desktop or Android.
+            Text selection is limited on iOS Safari. For best highlighting experience, use Chrome on
+            desktop or Android.
           </p>
           <button
             onClick={() => setShowIosBanner(false)}
