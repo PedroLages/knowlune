@@ -26,10 +26,21 @@ interface ReaderFooterProps {
   progress: number
   theme: ReaderTheme
   visible: boolean
+  /** Current page number (1-based), optional — shown when available */
+  currentPage?: number
+  /** Total page estimate from epub.js locations.total, optional */
+  totalPages?: number
 }
 
-export function ReaderFooter({ progress, theme, visible }: ReaderFooterProps) {
+export function ReaderFooter({
+  progress,
+  theme,
+  visible,
+  currentPage,
+  totalPages,
+}: ReaderFooterProps) {
   const progressPercent = Math.round(progress * 100)
+  const showPageIndicator = currentPage != null && totalPages != null && totalPages > 0
 
   return (
     <footer
@@ -63,10 +74,16 @@ export function ReaderFooter({ progress, theme, visible }: ReaderFooterProps) {
         <span className="text-xs opacity-60" data-testid="reader-progress-text">
           {progressPercent}% read
         </span>
-        {progress > 0 && progress < 1 && (
-          <span className="text-xs opacity-60">
-            {Math.round((1 - progress) * 100)}% remaining
+        {showPageIndicator ? (
+          <span className="text-xs opacity-60" data-testid="reader-page-indicator">
+            Page {currentPage} of {totalPages}
           </span>
+        ) : (
+          progress > 0 && progress < 1 && (
+            <span className="text-xs opacity-60">
+              {Math.round((1 - progress) * 100)}% remaining
+            </span>
+          )
         )}
       </div>
     </footer>
