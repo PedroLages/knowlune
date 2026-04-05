@@ -980,7 +980,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-83: in-progress
   83-1-opfs-storage-service-and-book-data-model: done
-  83-2-epub-import-with-metadata-extraction: ready-for-dev
+  83-2-epub-import-with-metadata-extraction: done
   83-3-library-grid-and-list-views: ready-for-dev
   83-4-library-search-filter-and-status-management: ready-for-dev
   83-5-book-metadata-editor: ready-for-dev
