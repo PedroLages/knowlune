@@ -1234,8 +1234,8 @@ development_status:
   # Connect ABS server, browse library, stream audiobooks, bookmarks → flashcards, progress
   # Depends on: E88 (OPDS patterns), E87 (audiobook player)
   # ──────────────────────────────────────────────────
-  epic-101: backlog
-  101-1-audiobookshelf-service-and-data-foundation: ready-for-dev
+  epic-101: in-progress
+  101-1-audiobookshelf-service-and-data-foundation: in-progress
   101-2-server-connection-and-authentication-ui: ready-for-dev
   101-3-library-browsing-and-catalog-sync: ready-for-dev
   101-4-streaming-playback: ready-for-dev

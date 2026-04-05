@@ -693,6 +693,8 @@ export interface Book {
   lastOpenedAt?: string // ISO 8601
   fileSize?: number // bytes
   finishedAt?: string // ISO 8601 — set when status transitions to 'finished'
+  absServerId?: string // FK to AudiobookshelfServer.id (if sourced from ABS)
+  absItemId?: string // ABS item ID for dedup on re-sync
 }
 
 export interface BookHighlight {
@@ -735,6 +737,66 @@ export interface OpdsCatalog {
   }
   lastSynced?: string // ISO 8601
   createdAt: string // ISO 8601
+}
+
+/** Audiobookshelf server connection configuration (E101-S01) */
+export interface AudiobookshelfServer {
+  id: string // UUID v4
+  name: string // User-friendly label (e.g., "Home Server")
+  url: string // Base URL (e.g., "http://192.168.1.50:13378")
+  // NOTE: API key stored in plaintext — acceptable for local-first architecture
+  // where data never leaves the device. Must be encrypted before any cloud sync
+  // or backup feature is introduced (tracked for pre-sync encryption work).
+  apiKey: string // Bearer token from ABS Settings > Users > API Keys
+  libraryIds: string[] // Selected ABS library IDs to sync
+  status: 'connected' | 'offline' | 'auth-failed'
+  lastSyncedAt?: string // ISO date of last successful catalog fetch
+  createdAt: string // ISO 8601
+  updatedAt: string // ISO 8601
+}
+
+// ABS REST API response shapes (E101-S01)
+
+export interface AbsLibrary {
+  id: string
+  name: string
+  mediaType: string // 'book' | 'podcast'
+}
+
+export interface AbsLibraryItem {
+  id: string
+  ino: string // inode — used in streaming URLs
+  media: {
+    metadata: {
+      title: string
+      authors: Array<{ id: string; name: string }>
+      narrators: string[]
+      duration: number // seconds
+      numChapters: number
+      description?: string
+      isbn?: string
+      series?: string
+      seriesSequence?: string
+    }
+    coverPath?: string
+    chapters: Array<{ id: string; title: string; start: number; end: number }>
+  }
+}
+
+/** Full item has the same shape as AbsLibraryItem — extended in E102+ if needed */
+export type AbsItem = AbsLibraryItem
+
+export interface AbsSearchResult {
+  book: AbsLibraryItem[]
+}
+
+export interface AbsProgress {
+  id: string
+  currentTime: number // seconds
+  duration: number // seconds
+  progress: number // 0-1
+  isFinished: boolean
+  updatedAt: number // Unix timestamp ms
 }
 
 export interface YouTubeCourseChapter {
