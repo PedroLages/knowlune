@@ -1,7 +1,7 @@
 /**
  * BookReader — full-viewport EPUB reader page.
  *
- * Route: /library/:bookId (registered in routes.tsx).
+ * Route: /library/:bookId/read (registered in routes.tsx).
  * Full-screen layout — NOT nested inside the standard Layout component.
  *
  * Responsibilities:
@@ -10,6 +10,9 @@
  * - Render EpubRenderer (lazy-loaded) with loading skeleton
  * - Show ReaderHeader and ReaderFooter with auto-hide behavior
  * - Manage 3-second idle timeout for header/footer auto-hide
+ * - Keyboard navigation (Left/Right/Space for page turns, Escape → library)
+ * - TOC panel wired to ReaderHeader menu
+ * - Chapter tracking updated from TOC + locationChanged callback
  *
  * @module BookReader
  */
@@ -25,6 +28,7 @@ import { bookContentService } from '@/services/BookContentService'
 import { ReaderHeader } from '@/app/components/reader/ReaderHeader'
 import { ReaderFooter } from '@/app/components/reader/ReaderFooter'
 import { ReaderErrorBoundary } from '@/app/components/reader/ReaderErrorBoundary'
+import { TableOfContents } from '@/app/components/reader/TableOfContents'
 
 // Code-split: epub.js + react-reader must NOT be in the initial bundle (architecture decision 12)
 const EpubRenderer = lazy(() =>
@@ -62,6 +66,7 @@ export function BookReader() {
   const setReadingProgress = useReaderStore(s => s.setReadingProgress)
   const setCurrentCfi = useReaderStore(s => s.setCurrentCfi)
   const theme = useReaderStore(s => s.theme)
+  const tocOpen = useReaderStore(s => s.tocOpen)
   const setTocOpen = useReaderStore(s => s.setTocOpen)
   const setSettingsOpen = useReaderStore(s => s.setSettingsOpen)
 
@@ -69,6 +74,8 @@ export function BookReader() {
   const [isLoadingContent, setIsLoadingContent] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [retryKey, setRetryKey] = useState(0)
+  const [toc, setToc] = useState<NavItem[]>([])
+  const [currentHref, setCurrentHref] = useState<string | undefined>(undefined)
 
   const renditionRef = useRef<Rendition | null>(null)
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -155,18 +162,40 @@ export function BookReader() {
     }
   }, [resetIdleTimer])
 
-  // Keyboard: Escape to go back
+  // Keyboard navigation: Left/Right/Space for page turns, Escape → back
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        navigate('/library')
+      // Don't capture keyboard in inputs/textareas
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+
+      const rendition = renditionRef.current
+      if (!rendition) return
+
+      switch (e.key) {
+        case 'ArrowRight':
+        case ' ':
+          e.preventDefault()
+          rendition.next().catch(() => {
+            // silent-catch-ok: at last page
+          })
+          break
+        case 'ArrowLeft':
+          e.preventDefault()
+          rendition.prev().catch(() => {
+            // silent-catch-ok: at first page
+          })
+          break
+        case 'Escape':
+          navigate('/library')
+          break
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [navigate])
 
-  /** CFI location change — update store position + progress */
+  /** CFI location change — update store position + progress + current chapter */
   const handleLocationChanged = useCallback(
     (cfi: string) => {
       setCurrentCfi(cfi)
@@ -176,9 +205,18 @@ export function BookReader() {
         try {
           const loc = renditionRef.current.currentLocation()
           if (loc && typeof loc === 'object' && 'start' in loc) {
-            const start = (loc as { start?: { percentage?: number } }).start
+            const start = (loc as { start?: { percentage?: number; href?: string } }).start
             if (typeof start?.percentage === 'number') {
               setReadingProgress(start.percentage)
+            }
+            // Update current href for TOC active state
+            if (start?.href) {
+              setCurrentHref(start.href)
+              // Find matching TOC chapter label
+              const matchingChapter = findChapterByHref(toc, start.href)
+              if (matchingChapter) {
+                setCurrentChapter(matchingChapter.label)
+              }
             }
           }
         } catch {
@@ -186,14 +224,29 @@ export function BookReader() {
         }
       }
     },
-    [setCurrentCfi, setReadingProgress]
+    [setCurrentCfi, setReadingProgress, setCurrentChapter, toc]
   )
 
-  /** TOC loaded — extract first chapter name as initial current chapter */
+  /** Find a TOC item by href (recursive for nested items) */
+  function findChapterByHref(items: NavItem[], href: string): NavItem | null {
+    for (const item of items) {
+      if (item.href === href || item.href.split('#')[0] === href.split('#')[0]) {
+        return item
+      }
+      if (item.subitems) {
+        const found = findChapterByHref(item.subitems, href)
+        if (found) return found
+      }
+    }
+    return null
+  }
+
+  /** TOC loaded — store TOC and set initial chapter name */
   const handleTocLoaded = useCallback(
-    (toc: NavItem[]) => {
-      if (toc.length > 0 && !currentChapter) {
-        setCurrentChapter(toc[0].label)
+    (loadedToc: NavItem[]) => {
+      setToc(loadedToc)
+      if (loadedToc.length > 0 && !currentChapter) {
+        setCurrentChapter(loadedToc[0].label)
       }
     },
     [currentChapter, setCurrentChapter]
@@ -278,6 +331,15 @@ export function BookReader() {
         progress={readingProgress}
         theme={theme}
         visible={headerVisible}
+      />
+
+      {/* Table of Contents panel (E84-S02) */}
+      <TableOfContents
+        open={tocOpen}
+        onClose={() => setTocOpen(false)}
+        toc={toc}
+        currentHref={currentHref}
+        rendition={renditionRef.current}
       />
     </div>
   )
