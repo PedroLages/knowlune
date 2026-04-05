@@ -1,3 +1,4 @@
+// eslint-disable-next-line component-size/max-lines -- SettingsPageProvider is a context hub; splitting would require prop-drilling across 10+ handlers
 import { createContext, useContext, useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router'
 import { useTheme } from 'next-themes'
@@ -15,6 +16,7 @@ import { importFullData } from '@/lib/importService'
 import { downloadJson, downloadZip, downloadBlob } from '@/lib/fileDownload'
 import { exportAchievementsAsBadges } from '@/lib/openBadges'
 import { exportPkmBundle } from '@/lib/pkmExport'
+import { exportHighlightsAsReadwiseCsv } from '@/lib/highlightExport'
 import { exportFlashcardsAsAnki } from '@/lib/ankiExport'
 import { validateImageFile, compressAvatar, fileToDataUrl } from '@/lib/avatarUpload'
 import { resetAllData } from '@/lib/settings'
@@ -64,6 +66,7 @@ interface SettingsPageContextValue {
   handleExportMarkdown: () => void
   handleExportBadges: () => void
   handleExportPkm: () => void
+  handleExportReadwise: () => void
   handleExportAnki: () => void
   handleImport: (e: React.ChangeEvent<HTMLInputElement>) => void
   handleReset: () => void
@@ -263,7 +266,7 @@ export function SettingsPageProvider({ children }: { children: React.ReactNode }
     if (isExporting) return
     setIsExporting(true)
     try {
-      const files = await exportPkmBundle((percent, phase) => {
+      const { files, highlightSummary } = await exportPkmBundle((percent, phase) => {
         setExportProgress(percent)
         setExportPhase(phase)
       })
@@ -273,9 +276,41 @@ export function SettingsPageProvider({ children }: { children: React.ReactNode }
       }
       const dateStr = new Date().toLocaleDateString('sv-SE')
       await downloadZip(files, `knowlune-pkm-export-${dateStr}.zip`)
-      toastSuccess.exported(`PKM bundle (${files.length} files)`)
+      const summary = highlightSummary
+        ? `PKM bundle (${files.length} files) · ${highlightSummary}`
+        : `PKM bundle (${files.length} files)`
+      toastSuccess.exported(summary)
     } catch (error) {
       console.error('PKM export error:', error)
+      toastError.saveFailed('Export failed — try freeing disk space')
+    } finally {
+      setIsExporting(false)
+      setExportProgress(0)
+      setExportPhase('')
+    }
+  }
+
+  async function handleExportReadwise() {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      const { files, highlightCount, bookCount } = await exportHighlightsAsReadwiseCsv(
+        (percent, phase) => {
+          setExportProgress(percent)
+          setExportPhase(phase)
+        }
+      )
+      if (files.length === 0) {
+        toastSuccess.exported('No book highlights to export — create highlights first')
+        return
+      }
+      const dateStr = new Date().toLocaleDateString('sv-SE')
+      await downloadZip(files, `knowlune-readwise-${dateStr}.zip`)
+      toastSuccess.exported(
+        `Exported ${highlightCount} highlight${highlightCount !== 1 ? 's' : ''} from ${bookCount} book${bookCount !== 1 ? 's' : ''} (Readwise CSV)`
+      )
+    } catch (error) {
+      console.error('Readwise export error:', error)
       toastError.saveFailed('Export failed — try freeing disk space')
     } finally {
       setIsExporting(false)
@@ -446,6 +481,7 @@ export function SettingsPageProvider({ children }: { children: React.ReactNode }
     handleExportMarkdown,
     handleExportBadges,
     handleExportPkm,
+    handleExportReadwise,
     handleExportAnki,
     handleImport,
     handleReset,

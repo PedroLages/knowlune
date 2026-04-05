@@ -1,3 +1,4 @@
+// eslint-disable-next-line component-size/max-lines -- IntegrationsDataSection aggregates all export/import/danger-zone UI; content-heavy by design
 import {
   Download,
   Upload,
@@ -10,6 +11,7 @@ import {
   HardDrive,
   FolderOpen,
   BrainCircuit,
+  BookMarked,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
 import { Button } from '@/app/components/ui/button'
@@ -43,6 +45,7 @@ export function IntegrationsDataSection() {
     handleExportMarkdown,
     handleExportBadges,
     handleExportPkm,
+    handleExportReadwise,
     handleExportAnki,
     handleImport,
     handleReset,
@@ -202,6 +205,35 @@ export function IntegrationsDataSection() {
                 >
                   <Download className="size-4" />
                   Obsidian
+                </Button>
+              </div>
+            </div>
+
+            {/* Book Highlights Export (Readwise CSV) */}
+            <div className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-lg bg-brand-soft p-2 mt-0.5">
+                    <BookMarked className="size-4 text-brand" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium">Book Highlights Export (Readwise)</h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      All highlights as CSV: title, author, text, note, location, color, date
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportReadwise}
+                  disabled={isExporting}
+                  className="gap-2 min-h-[44px]"
+                  aria-label="Export book highlights as Readwise-compatible CSV"
+                  data-testid="export-readwise-button"
+                >
+                  <Download className="size-4" />
+                  Readwise
                 </Button>
               </div>
             </div>
