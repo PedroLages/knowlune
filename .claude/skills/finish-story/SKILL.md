@@ -238,6 +238,15 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    - **If in worktree**: Run `worktree-cleanup "${STORY_KEY}"`, switch to main workspace, checkout main, pull.
      **See:** [docs/worktree-cleanup.md](docs/worktree-cleanup.md) for complete worktree cleanup logic.
    - **If NOT in worktree**: `git checkout main && git pull`.
+   - **Stale branch cleanup**: Prune remote-tracking refs and delete local branches whose upstream is gone:
+     ```bash
+     git fetch --prune
+     GONE_BRANCHES=$(git branch -vv | grep ': gone]' | awk '{print $1}')
+     if [ -n "$GONE_BRANCHES" ]; then
+       echo "$GONE_BRANCHES" | xargs git branch -D
+     fi
+     ```
+     This is silent if no stale branches exist. If branches are cleaned, output: "Cleaned up N stale branches: [list]".
    - **Checkpoint cleanup**: Delete the session checkpoint file if it exists:
      ```bash
      rm -f ${BASE_PATH}/docs/implementation-artifacts/sessions/{story-id}-checkpoint.md

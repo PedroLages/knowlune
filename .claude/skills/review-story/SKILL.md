@@ -34,12 +34,13 @@ All gates must use these exact names in `review_gates_passed`. No variants (e.g.
 | `performance-benchmark` | Bundle pre-check + page metrics agent complete | Yes (or `performance-benchmark-skipped` if lightweight review) |
 | `security-review` | Security review agent completes | Yes |
 | `exploratory-qa` | Exploratory QA agent completes | Yes (or `exploratory-qa-skipped` if no UI changes) |
+| `techdebt-scan` | Deduplication scan completes | No — optional (`techdebt-scan-skipped` if no duplicates or user declines) |
 | `openai-code-review` | External OpenAI review completes | No — optional (`openai-code-review-skipped` if no Codex CLI or no key) |
 | `glm-code-review` | External GLM review completes | No — optional (`glm-code-review-skipped` if no key) |
 
 The `-skipped` suffix indicates the gate was intentionally skipped (no lint script, no test files, no UI changes). Both the base name and `-skipped` variant satisfy the requirement.
 
-**External model gates** (`openai-code-review`, `glm-code-review`) are optional. They contribute findings to the consolidated report and participate in consensus scoring when available, but never block `reviewed: true`.
+**Optional gates** (`techdebt-scan`, `openai-code-review`, `glm-code-review`) are tracked for resumption and reporting but never block `reviewed: true`.
 
 ## Orchestrator Discipline
 
@@ -73,6 +74,7 @@ The orchestrator should NOT:
 [ ] Pre-checks: E2E tests
 [ ] Optional: burn-in validation (if applicable)
 [ ] Lessons learned gate
+[ ] Deduplication scan (optional)
 [ ] Design review (Agent)
 [ ] Code review — architecture (Agent)
 [ ] Code review — testing (Agent)
@@ -442,7 +444,46 @@ Mark the first todo as `in_progress` and proceed:
    - Read Implementation Notes and Challenges sections
    - Include which pre-check gates have passed so far
 
-   This is **silent** (no user prompt) and **non-blocking**. If the write fails, log a warning and continue to Step 7.
+   This is **silent** (no user prompt) and **non-blocking**. If the write fails, log a warning and continue to Step 6c.
+
+6c. **Deduplication scan** (optional — surfaces duplicates before code review sees the code):
+
+   Run `/techdebt` Phase 1-2 (harvest + scan) to detect duplication in the branch's changes. This step runs *before* the agent swarm so that if duplicates are extracted, code review analyzes the *cleaned* code.
+
+   **Phase 1 — Harvest**: Parse `git diff main...HEAD` to identify new artifacts (functions, components, hooks, types, constants, inline patterns). Build an artifact manifest.
+
+   **Phase 2 — Scan**: For each artifact, search `src/lib/`, `src/hooks/`, `src/types/` for existing shared versions, then search the full codebase for cross-file duplication using the 9 duplication categories (see `/techdebt` skill docs).
+
+   **If no duplicates found**:
+   - Add `techdebt-scan-skipped` to `review_gates_passed`
+   - Output: "Deduplication scan — no duplicates detected."
+   - **TodoWrite**: Mark "Deduplication scan" → `completed`
+   - Continue to Step 7
+
+   **If duplicates found**: Present findings and ask via `AskUserQuestion`:
+   ```
+   Question: "Deduplication scan found N duplicate patterns. Extract shared modules before code review?"
+   Header: "Deduplication scan"
+   Options:
+     1. "Extract duplicates (Recommended)"
+        Description: "Run /techdebt Phase 3-5: create shared modules, update consumers, verify build. Code review will analyze the cleaned code."
+     2. "Skip — proceed to reviews"
+        Description: "Duplicates noted but not extracted. Code review may flag these as copy-paste artifacts."
+   ```
+
+   **If "Extract duplicates"**:
+   - Run `/techdebt` Phase 3-5 (plan → extract → verify). Cap at 5 extractions.
+   - If extractions succeed: commit (`refactor: extract shared modules (techdebt scan)`), add `techdebt-scan` to `review_gates_passed`
+   - If extractions fail (build breaks): revert, add `techdebt-scan-skipped` to gates, warn user
+   - Output: "Deduplication scan — extracted N shared modules, N lines saved."
+
+   **If "Skip"**:
+   - Add `techdebt-scan-skipped` to `review_gates_passed`
+   - Output: "Deduplication scan — skipped by user."
+
+   **TodoWrite**: Mark "Deduplication scan" → `completed`. Continue to Step 7.
+
+   **Note**: This gate is optional — `techdebt-scan` / `techdebt-scan-skipped` is tracked for reporting but never blocks `reviewed: true`.
 
 7. **Review agent swarm** (parallel dispatch — design + code + testing):
 
@@ -650,6 +691,9 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
    [Summary with finding counts | or "Skipped — no ZAI_API_KEY" | or "API error — non-blocking"]
    Report: ${BASE_PATH}/docs/reviews/code/glm-code-review-{date}-{id}.md
 
+   ### Deduplication Scan
+   [N duplicates found, N extracted | or "No duplicates detected" | or "Skipped by user"]
+
    ### Consolidated Findings
 
    #### Blockers (must fix)
@@ -713,6 +757,7 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
     | Performance benchmark | [pass/N warnings/regression/skipped] |
     | Security review       | [pass/N findings]                    |
     | Exploratory QA        | [N/100 health, N bugs/skipped]       |
+    | Dedup scan            | [N extracted/no duplicates/skipped]  |
     | OpenAI review         | [pass/N warnings/skipped/error]      |
     | GLM review            | [pass/N warnings/skipped/error]      |
 

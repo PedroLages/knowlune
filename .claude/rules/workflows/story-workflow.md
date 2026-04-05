@@ -64,7 +64,9 @@ git stash push -u -m "WIP before E##-S##"
 
 2. **Lessons learned gate**: Blocks if placeholder text remains
 
-3. **Review agent swarm** (parallel dispatch):
+3. **Deduplication scan** (optional): Runs `/techdebt` Phase 1-2 to detect duplicates, offers extraction before code review sees the code
+
+4. **Review agent swarm** (parallel dispatch):
    - Design review agent (Playwright MCP - UI/UX/accessibility)
    - Code review agent (architecture, security, silent failures)
    - Test coverage agent (AC mapping, edge cases, test quality)
