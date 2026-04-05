@@ -8,7 +8,7 @@
 
 import { memo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { BookOpen, Headphones } from 'lucide-react'
+import { BookOpen, Cloud, Headphones } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { BookStatusBadge } from './BookStatusBadge'
 
@@ -70,6 +70,16 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
           <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-muted/90 px-2 py-0.5 text-[10px] text-muted-foreground backdrop-blur-sm">
             <Headphones className="size-3" aria-hidden="true" />
             Audio
+          </div>
+        )}
+        {/* Remote source badge (E88-S02) */}
+        {book.source.type === 'remote' && (
+          <div
+            className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[10px] text-brand-soft-foreground backdrop-blur-sm"
+            data-testid={`remote-badge-${book.id}`}
+          >
+            <Cloud className="size-3" aria-hidden="true" />
+            Remote
           </div>
         )}
       </div>

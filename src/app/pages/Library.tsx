@@ -23,9 +23,11 @@ import { BookMetadataEditor } from '@/app/components/library/BookMetadataEditor'
 import { LibraryFilters } from '@/app/components/library/LibraryFilters'
 import { ReadingGoalSettings } from '@/app/components/library/ReadingGoalSettings'
 import { OpdsCatalogSettings } from '@/app/components/library/OpdsCatalogSettings'
+import { OpdsBrowser } from '@/app/components/library/OpdsBrowser'
 import { DailyGoalRing } from '@/app/components/library/DailyGoalRing'
 import { YearlyGoalProgress } from '@/app/components/library/YearlyGoalProgress'
 import { useBookStore } from '@/stores/useBookStore'
+import { useOpdsCatalogStore } from '@/stores/useOpdsCatalogStore'
 import { useReadingGoalStore } from '@/stores/useReadingGoalStore'
 import { appEventBus } from '@/lib/eventBus'
 import type { Book } from '@/data/types'
@@ -39,12 +41,17 @@ export function Library() {
   const [editingBook, setEditingBook] = useState<Book | null>(null)
   const [goalsOpen, setGoalsOpen] = useState(false)
   const [catalogsOpen, setCatalogsOpen] = useState(false)
+  const [browserOpen, setBrowserOpen] = useState(false)
+  const [browserCatalogId, setBrowserCatalogId] = useState<string | undefined>()
   const books = useBookStore(s => s.books)
   const libraryView = useBookStore(s => s.libraryView)
   const getFilteredBooks = useBookStore(s => s.getFilteredBooks)
   const filters = useBookStore(s => s.filters)
   const setFilters = useBookStore(s => s.setFilters)
   const loadBooks = useBookStore(s => s.loadBooks)
+
+  const opdsCatalogs = useOpdsCatalogStore(s => s.catalogs)
+  const loadCatalogs = useOpdsCatalogStore(s => s.loadCatalogs)
 
   const loadGoal = useReadingGoalStore(s => s.loadGoal)
   const goal = useReadingGoalStore(s => s.goal)
@@ -54,6 +61,11 @@ export function Library() {
   useEffect(() => {
     loadGoal()
   }, [loadGoal])
+
+  // Load catalogs on mount (E88-S02) — needed for Browse button visibility
+  useEffect(() => {
+    loadCatalogs()
+  }, [loadCatalogs])
 
   // Memoize filtered books to avoid new array on every render
   const filteredBooks = useMemo(() => getFilteredBooks(), [getFilteredBooks, books, filters])
@@ -125,6 +137,17 @@ export function Library() {
           <div className="flex items-center gap-2">
             {/* Daily goal ring — compact, only visible when goal is set */}
             <DailyGoalRing />
+            {opdsCatalogs.length > 0 && (
+              <Button
+                variant="brand-outline"
+                onClick={() => setBrowserOpen(true)}
+                className="min-h-[44px]"
+                data-testid="browse-catalog-trigger"
+              >
+                <Globe className="mr-2 h-4 w-4" />
+                Browse Catalog
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -252,7 +275,22 @@ export function Library() {
       />
 
       <ReadingGoalSettings open={goalsOpen} onOpenChange={setGoalsOpen} />
-      <OpdsCatalogSettings open={catalogsOpen} onOpenChange={setCatalogsOpen} />
+      <OpdsCatalogSettings
+        open={catalogsOpen}
+        onOpenChange={setCatalogsOpen}
+        onBrowse={catalogId => {
+          setBrowserCatalogId(catalogId)
+          setBrowserOpen(true)
+        }}
+      />
+      <OpdsBrowser
+        open={browserOpen}
+        onOpenChange={open => {
+          setBrowserOpen(open)
+          if (!open) setBrowserCatalogId(undefined)
+        }}
+        initialCatalogId={browserCatalogId}
+      />
     </div>
   )
 }
