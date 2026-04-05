@@ -40,11 +40,9 @@ Execute an entire epic autonomously — `/start-story` through implementation, `
 
 Sub-agents generate heavy tool call output (bash, read, edit, glob...) that floods the conversation. The orchestrator must provide a **scannable, high-level experience** so the user always knows what's happening without drowning in noise.
 
-### Rule 1: Foreground for Sequential, Background for Parallel
+### Rule 1: Background Agents
 
-**Story, Review, Fix, and Finish agents run FOREGROUND** (do NOT use `run_in_background: true`). The coordinator blocks until each completes — there's no parallelism benefit from background dispatch, and foreground simplifies coordination.
-
-**Only parallel post-epic commands and the Report Agent use `run_in_background: true`** — these can overlap and the coordinator has other work while waiting.
+**Always dispatch sub-agents with `run_in_background: true`**. This keeps intermediate tool calls out of the coordinator's context window — critical for full epic runs where 5+ stories x 4 steps would otherwise exhaust context. The coordinator is notified when each agent completes and extracts only the structured return data.
 
 ### Rule 2: Status Banners
 
