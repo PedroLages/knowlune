@@ -1235,12 +1235,12 @@ development_status:
   # Depends on: E88 (OPDS patterns), E87 (audiobook player)
   # ──────────────────────────────────────────────────
   epic-101: backlog
-  101-1-audiobookshelf-service-and-data-foundation: backlog
-  101-2-server-connection-and-authentication-ui: backlog
-  101-3-library-browsing-and-catalog-sync: backlog
-  101-4-streaming-playback: backlog
-  101-5-audio-bookmarks-and-learning-loop: backlog
-  101-6-progress-tracking-and-streaks: backlog
+  101-1-audiobookshelf-service-and-data-foundation: ready-for-dev
+  101-2-server-connection-and-authentication-ui: ready-for-dev
+  101-3-library-browsing-and-catalog-sync: ready-for-dev
+  101-4-streaming-playback: ready-for-dev
+  101-5-audio-bookmarks-and-learning-loop: ready-for-dev
+  101-6-progress-tracking-and-streaks: ready-for-dev
   epic-101-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -1250,10 +1250,10 @@ development_status:
   # Depends on: E101
   # ──────────────────────────────────────────────────
   epic-102: backlog
-  102-1-bidirectional-progress-sync: backlog
-  102-2-series-browsing: backlog
-  102-3-collections: backlog
-  102-4-socket-io-real-time-sync: backlog
+  102-1-bidirectional-progress-sync: ready-for-dev
+  102-2-series-browsing: ready-for-dev
+  102-3-collections: ready-for-dev
+  102-4-socket-io-real-time-sync: ready-for-dev
   epic-102-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -1263,7 +1263,7 @@ development_status:
   # Depends on: E101, E84 (EPUB reader)
   # ──────────────────────────────────────────────────
   epic-103: backlog
-  103-1-chapter-title-matching-engine: backlog
-  103-2-format-switching-ui: backlog
-  103-3-dual-position-tracking: backlog
+  103-1-chapter-title-matching-engine: ready-for-dev
+  103-2-format-switching-ui: ready-for-dev
+  103-3-dual-position-tracking: ready-for-dev
   epic-103-retrospective: optional
