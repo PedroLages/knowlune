@@ -1037,13 +1037,13 @@ development_status:
   # Source: epics-books-audiobooks-library.md
   # MP3 folder import, playback controls, speed/sleep, chapters, mini-player
   # ──────────────────────────────────────────────────
-  epic-87: in-progress
+  epic-87: done
   87-1-audiobook-import-and-data-model: done
   87-2-audiobook-player-controls-and-playback: done
   87-3-speed-control-and-sleep-timer: done
   87-4-chapter-navigation-and-bookmarks: done
   87-5-mini-player-and-media-session-integration: done
-  87-6-audiobook-session-tracking-and-streak: backlog
+  87-6-audiobook-session-tracking-and-streak: done
   epic-87-retrospective: optional
 
   # ──────────────────────────────────────────────────
