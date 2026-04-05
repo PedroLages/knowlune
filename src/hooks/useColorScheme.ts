@@ -12,21 +12,22 @@ import { getSettings } from '@/lib/settings'
  * @returns The current color scheme value ('professional' | 'vibrant')
  */
 export function useColorScheme() {
-  const [colorScheme, setColorScheme] = useState<'professional' | 'vibrant'>(() => {
+  const [colorScheme, setColorScheme] = useState(() => {
     return getSettings().colorScheme ?? 'professional'
   })
 
   // Apply / remove the `.vibrant` class on <html> whenever the preference changes
   useEffect(() => {
     const root = document.documentElement
+    root.classList.remove('vibrant', 'clean')
     if (colorScheme === 'vibrant') {
       root.classList.add('vibrant')
-    } else {
-      root.classList.remove('vibrant')
+    } else if (colorScheme === 'clean') {
+      root.classList.add('clean')
     }
 
     return () => {
-      root.classList.remove('vibrant')
+      root.classList.remove('vibrant', 'clean')
     }
   }, [colorScheme])
 

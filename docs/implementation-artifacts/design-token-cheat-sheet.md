@@ -235,6 +235,22 @@ text-accent-violet        // Violet text (#7c3aed)
    - Browse `src/styles/theme.css` for full token list
    - Create new token if truly needed (rare)
 
+## Color Scheme Variants
+
+Tokens adapt automatically based on the active color scheme class on `<html>`:
+
+| Token | Professional (default) | Vibrant | Clean |
+| ----- | -------------------- | ------- | ----- |
+| `bg-background` | `#faf5ee` (warm cream) | inherited | `#f9f9fe` (cool blue-white) |
+| `bg-brand` | `#5e6ad2` (purple-blue) | oklch 0.19 chroma | `#005bc1` (Apple blue) |
+| `bg-brand-soft` | `#d0d2ee` | oklch 0.08 chroma | `#d8e2ff` |
+| `bg-sidebar` | `oklch(0.985)` | inherited | `#ebeef7` (cool gray) |
+| `text-foreground` | `#1c1d2b` | inherited | `#2c333d` |
+| `text-muted-foreground` | `#656870` | inherited | `#595f6a` |
+| Font | DM Sans + Space Grotesk | inherited | Inter |
+
+**Note:** Clean scheme is light-mode only. In dark mode, it inherits the default dark tokens regardless of scheme selection. No code changes needed — just use design tokens and they adapt automatically.
+
 ---
 
 ## ⚡ Quick Fixes
@@ -275,5 +291,5 @@ npx eslint src/ --fix --rule 'design-tokens/no-hardcoded-colors: error'
 
 ---
 
-**Last Updated:** 2026-03-09
+**Last Updated:** 2026-04-05
 **Migration Status:** ✅ All 186 hardcoded colors migrated to design tokens

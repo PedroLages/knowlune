@@ -348,6 +348,79 @@
 }
 
 /* --------------------------------------------------------------------------
+ * Clean color scheme — activated by `.clean` class on <html>
+ * (E100: Apple-inspired cool blue-white aesthetic)
+ *
+ * Light-mode only — dark mode inherits default dark tokens.
+ * Overrides structural + brand tokens for a crisp, cool-toned look.
+ * -------------------------------------------------------------------------- */
+
+.clean {
+  /* Core surfaces — cool blue-white instead of warm cream */
+  --background: #f9f9fe;
+  --foreground: #2c333d;
+  --card: #ffffff;
+  --card-foreground: #2c333d;
+  --popover: #ffffff;
+  --popover-foreground: #2c333d;
+  --muted: #dce3f0;
+  --muted-foreground: #595f6a;
+  --accent: #ebeef7;
+  --accent-foreground: #2c333d;
+  --secondary: #e2e2e9;
+  --secondary-foreground: #3e3f45;
+  --border: rgba(116, 123, 134, 0.15);
+  --input: transparent;
+  --input-background: #ebeef7;
+  --switch-background: #acb2bf;
+  --ring: #005bc1;
+  --surface-elevated: #ffffff;
+  --surface-sunken: #f2f3fa;
+
+  /* Primary — dark text-based stays, but ring/focus use blue */
+  --primary: #2c333d;
+  --primary-foreground: #ffffff;
+
+  /* Brand — Apple blue */
+  --brand: #005bc1;
+  --brand-hover: #004faa;
+  --brand-foreground: #ffffff;
+  --brand-soft: #d8e2ff;
+  --brand-soft-foreground: #004ea8;
+  --brand-muted: #c2d4ff;
+
+  /* Semantic colors */
+  --success: #2d7a4f;
+  --success-foreground: #ffffff;
+  --success-soft: #e8f5ed;
+  --warning: #8a6518;
+  --warning-foreground: #ffffff;
+  --destructive: #9f403d;
+  --destructive-foreground: #ffffff;
+  --destructive-soft-foreground: #752121;
+  --info: #005bc1;
+  --info-foreground: #ffffff;
+
+  /* Sidebar — cool container background */
+  --sidebar: #ebeef7;
+  --sidebar-foreground: #2c333d;
+  --sidebar-primary: #005bc1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f2f3fa;
+  --sidebar-accent-foreground: #2c333d;
+  --sidebar-border: rgba(116, 123, 134, 0.12);
+  --sidebar-ring: #005bc1;
+
+  /* Scrollbar */
+  --scrollbar-thumb: #acb2bf;
+  --scrollbar-thumb-hover: #747b86;
+
+  /* Font override — Inter for Clean theme */
+  --font-body: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* --------------------------------------------------------------------------
  * Spacious content density — activated by `.spacious` class on <html>
  * (E51-S04: Spacious Content Density Mode)
  *

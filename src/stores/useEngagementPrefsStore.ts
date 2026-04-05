@@ -3,7 +3,7 @@ import { saveSettings } from '@/lib/settings'
 
 const STORAGE_KEY = 'levelup-engagement-prefs-v1'
 
-export type ColorScheme = 'professional' | 'vibrant'
+export type ColorScheme = 'professional' | 'vibrant' | 'clean'
 
 export interface EngagementPrefs {
   /** Show achievement banners and completion celebrations */
@@ -43,7 +43,7 @@ function loadPersistedPrefs(): EngagementPrefs {
         badges: typeof parsed.badges === 'boolean' ? parsed.badges : defaults.badges,
         animations:
           typeof parsed.animations === 'boolean' ? parsed.animations : defaults.animations,
-        colorScheme: parsed.colorScheme === 'vibrant' ? 'vibrant' : 'professional',
+        colorScheme: ['professional', 'vibrant', 'clean'].includes(parsed.colorScheme) ? parsed.colorScheme : 'professional',
       }
     }
   } catch {

@@ -101,7 +101,7 @@ export function EngagementPreferences() {
             value={colorScheme}
             onValueChange={(value: string) => setPreference('colorScheme', value as ColorScheme)}
             aria-label="Color scheme"
-            className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-3"
             data-testid="color-scheme-picker"
           >
             {/* Professional */}
@@ -143,6 +143,26 @@ export function EngagementPreferences() {
               </div>
               <p className="text-xs text-muted-foreground">
                 High-contrast vibrant colors for an energized experience
+              </p>
+            </label>
+
+            {/* Clean */}
+            <label
+              className={cn(
+                'relative flex flex-col gap-2 p-4 border-2 rounded-xl cursor-pointer',
+                'transition-all duration-200 hover:shadow-sm',
+                colorScheme === 'clean'
+                  ? 'border-brand bg-brand-soft shadow-sm'
+                  : 'border-border bg-background hover:border-brand/50'
+              )}
+            >
+              <RadioGroupItem value="clean" className="sr-only" />
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Clean</span>
+                {colorScheme === 'clean' && <div className="w-2 h-2 bg-brand rounded-full" />}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Cool white workspace inspired by Apple design
               </p>
             </label>
           </RadioGroup>
