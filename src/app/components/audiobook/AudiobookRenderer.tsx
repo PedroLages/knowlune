@@ -1,6 +1,6 @@
 /**
  * AudiobookRenderer — full-screen audiobook player with cover art, chapter title,
- * progress scrubber, and play/pause/skip controls.
+ * progress scrubber, play/pause/skip controls, speed control, and sleep timer.
  *
  * Lazy-loadable via React.lazy() for code splitting.
  * Uses useAudioPlayer hook for HTMLAudioElement management.
@@ -10,9 +10,13 @@
  */
 import { useEffect } from 'react'
 import { Play, Pause, SkipBack, SkipForward, BookOpen } from 'lucide-react'
+import { toast } from 'sonner'
 import { Slider } from '@/app/components/ui/slider'
 import { useAudioPlayer, formatAudioTime } from '@/app/hooks/useAudioPlayer'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
+import { useSleepTimer, consumeSleepTimerEndedFlag } from '@/app/hooks/useSleepTimer'
+import { SpeedControl } from './SpeedControl'
+import { SleepTimer } from './SleepTimer'
 import type { Book } from '@/data/types'
 
 interface AudiobookRendererProps {
@@ -26,14 +30,17 @@ export function AudiobookRenderer({ book }: AudiobookRendererProps) {
     duration,
     currentChapterIndex,
     isLoading,
+    audioRef,
     toggle,
     seekTo,
     skipForward,
     skipBack,
     loadChapter,
+    pause,
   } = useAudioPlayer(book)
 
   const setCurrentBook = useAudioPlayerStore(s => s.setCurrentBook)
+  const { activeOption, badgeText, setTimer, cancelTimer } = useSleepTimer()
 
   // Register this book as the active audiobook and load the first chapter
   useEffect(() => {
@@ -41,8 +48,23 @@ export function AudiobookRenderer({ book }: AudiobookRendererProps) {
     loadChapter(0, false)
   }, [book.id]) // book.id is stable after mount; loadChapter/setCurrentBook identity stable
 
+  // Check for post-sleep toast on mount
+  useEffect(() => {
+    if (consumeSleepTimerEndedFlag()) {
+      toast('Sleep timer ended', { duration: 3000 })
+    }
+  }, [])
+
   const currentChapter = book.chapters[currentChapterIndex]
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
+
+  const handleSleepTimerSelect = (option: Parameters<typeof setTimer>[0]) => {
+    if (option === 'off') {
+      cancelTimer()
+    } else {
+      setTimer(option, audioRef, pause)
+    }
+  }
 
   return (
     <div className="flex flex-col items-center gap-8 p-6 max-w-lg mx-auto w-full min-h-[60vh] justify-center">
@@ -132,6 +154,16 @@ export function AudiobookRenderer({ book }: AudiobookRendererProps) {
           <SkipForward className="size-6" aria-hidden="true" />
           <span className="text-[10px] tabular-nums">30s</span>
         </button>
+      </div>
+
+      {/* Secondary Controls: Speed | Sleep Timer */}
+      <div className="flex items-center gap-2">
+        <SpeedControl />
+        <SleepTimer
+          activeOption={activeOption}
+          badgeText={badgeText}
+          onSelect={handleSleepTimerSelect}
+        />
       </div>
 
       {/* Progress percentage fallback */}

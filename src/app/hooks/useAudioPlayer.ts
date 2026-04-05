@@ -12,6 +12,7 @@
  * @since E87-S02
  */
 import { useEffect, useRef, useCallback, useState } from 'react'
+import type React from 'react'
 import { toast } from 'sonner'
 import type { Book } from '@/data/types'
 import { opfsStorageService } from '@/services/OpfsStorageService'
@@ -37,6 +38,8 @@ export interface UseAudioPlayerReturn {
   duration: number
   currentChapterIndex: number
   isLoading: boolean
+  /** Ref to the underlying HTMLAudioElement — for direct volume control (sleep timer fade-out) */
+  audioRef: React.RefObject<HTMLAudioElement | null>
   play: () => void
   pause: () => void
   toggle: () => void
@@ -123,7 +126,12 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
   /** Sync playback rate when it changes in the store */
   useEffect(() => {
     const audio = audioRef.current
-    if (audio) audio.playbackRate = playbackRate
+    if (audio) {
+      audio.playbackRate = playbackRate
+      // preservesPitch prevents chipmunk effect — Chrome 86+, Firefox 101+, Safari 15.4+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(audio as any).preservesPitch = true
+    }
   }, [playbackRate])
 
   const loadChapterInternal = useCallback(
@@ -157,6 +165,8 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
 
         audio.src = url
         audio.playbackRate = playbackRate
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(audio as any).preservesPitch = true
         audio.load()
 
         setCurrentChapterIndex(index)
@@ -282,6 +292,7 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
     duration: localDuration,
     currentChapterIndex,
     isLoading,
+    audioRef,
     play,
     pause,
     toggle,
