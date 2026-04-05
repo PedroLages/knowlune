@@ -5,8 +5,8 @@ import {
   getSettings,
   saveSettings,
   type AppSettings,
-  type FontSize,
-  type AgeRange,
+
+
 } from '@/lib/settings'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
@@ -68,10 +68,6 @@ interface SettingsPageContextValue {
   handleImport: (e: React.ChangeEvent<HTMLInputElement>) => void
   handleReset: () => void
   importFileRef: React.RefObject<HTMLInputElement | null>
-
-  // Age range
-  handleAgeRangeChange: (age: AgeRange | undefined) => void
-  handleReapplyAgeDefaults: (age: AgeRange) => void
 
   // Display helpers
   displayNameCount: number
@@ -417,30 +413,6 @@ export function SettingsPageProvider({ children }: { children: React.ReactNode }
     window.dispatchEvent(new Event('settingsUpdated'))
   }
 
-  // --- Age range handlers ---
-
-  function handleAgeRangeChange(age: AgeRange | undefined) {
-    const updated = { ...settings, ageRange: age }
-    setSettings(updated)
-    saveSettings(updated)
-    window.dispatchEvent(new Event('settingsUpdated'))
-  }
-
-  function handleReapplyAgeDefaults(age: AgeRange) {
-    const AGE_FONT_DEFAULTS: Record<AgeRange, FontSize> = {
-      'gen-z': 'medium',
-      millennial: 'medium',
-      boomer: 'large',
-      'prefer-not-to-say': 'medium',
-    }
-    const fontSize = AGE_FONT_DEFAULTS[age]
-    const updated = { ...settings, ageRange: age, fontSize }
-    setSettings(updated)
-    saveSettings(updated)
-    window.dispatchEvent(new Event('settingsUpdated'))
-    toastSuccess.saved('Age-specific defaults re-applied')
-  }
-
   const value: SettingsPageContextValue = {
     settings,
     setSettings,
@@ -478,8 +450,6 @@ export function SettingsPageProvider({ children }: { children: React.ReactNode }
     handleImport,
     handleReset,
     importFileRef,
-    handleAgeRangeChange,
-    handleReapplyAgeDefaults,
     displayNameCount,
     bioCount,
     DISPLAY_NAME_LIMIT,

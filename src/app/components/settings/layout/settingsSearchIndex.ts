@@ -4,7 +4,6 @@ import {
   Monitor,
   Type,
   Eye,
-  Users,
   Shield,
   CreditCard,
   User,
@@ -111,13 +110,6 @@ export const SETTINGS_SEARCH_INDEX: SettingsSearchEntry[] = [
     keywords: ['avatar', 'picture', 'image', 'photo'],
     category: 'profile',
     icon: Camera,
-  },
-  {
-    label: 'Age Range',
-    description: 'Set age-based defaults',
-    keywords: ['gen z', 'millennial', 'boomer', 'age', 'generation'],
-    category: 'profile',
-    icon: Users,
   },
 
   // Appearance

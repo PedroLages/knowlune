@@ -3,7 +3,6 @@ import { supabase } from '@/lib/auth/supabase'
 const STORAGE_KEY = 'app-settings'
 
 export type FontSize = 'small' | 'medium' | 'large' | 'extra-large'
-export type AgeRange = 'gen-z' | 'millennial' | 'boomer' | 'prefer-not-to-say'
 export type ContentDensity = 'default' | 'spacious'
 export type ReduceMotion = 'system' | 'on' | 'off'
 export type ReadingFontSize = '1x' | '1.25x' | '1.5x' | '2x'
@@ -29,8 +28,6 @@ export interface AppSettings {
   profilePhotoUrl?: string
   /** User-selected font size for proportional scaling. Default: 'medium' (16px) */
   fontSize?: FontSize
-  /** Age range selected in welcome wizard. Stored locally, never sent to server. */
-  ageRange?: AgeRange
   /**
    * Color scheme preference: 'professional' (default muted palette) or
    * 'vibrant' (higher saturation, Gen Z energy boost).

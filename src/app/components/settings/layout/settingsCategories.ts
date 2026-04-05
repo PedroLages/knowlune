@@ -25,7 +25,7 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
   {
     slug: 'profile',
     label: 'Profile',
-    description: 'Your identity, avatar, and age preferences',
+    description: 'Your identity and avatar',
     icon: User,
   },
   {

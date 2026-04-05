@@ -1,9 +1,8 @@
 /**
- * E2E tests for E21-S07: Age-Appropriate Defaults & Font Scaling
+ * E2E tests for E21-S07: Font Scaling & Welcome Wizard
  *
  * Tests:
  * - Welcome wizard appears on first visit, not on subsequent visits
- * - Age range selection updates recommended font size
  * - Font size picker in Settings persists and applies scaling
  * - Font scale CSS custom property updates on <html>
  */
@@ -50,7 +49,7 @@ test.describe('E21-S07: Welcome Wizard', () => {
     await expect(page.getByTestId('welcome-wizard')).not.toBeVisible()
   })
 
-  test('completes full wizard flow: age selection -> font size -> finish', async ({
+  test('completes full wizard flow: welcome -> font size -> finish', async ({
     page,
     localStorage,
   }) => {
@@ -62,32 +61,15 @@ test.describe('E21-S07: Welcome Wizard', () => {
     // Step 1: Welcome — click "Get Started"
     await page.getByTestId('wizard-start').click()
 
-    // Step 2: Age selection — pick "Boomer"
-    await page.getByTestId('age-option-boomer').click()
-    await expect(page.getByTestId('age-option-boomer')).toHaveAttribute('aria-checked', 'true')
-
-    // Continue to font step
-    await page.getByTestId('wizard-continue').click()
-
-    // Step 3: Font size — "Large" should be pre-selected (boomer default)
-    // The Finish Setup button should be visible
+    // Step 2: Font size — pick a size and finish
     await page.getByTestId('wizard-finish').click()
 
     // Wizard closes
     await expect(wizard).not.toBeVisible()
 
     // Check settings persisted
-    const settings = await localStorage.get<{ fontSize: string; ageRange: string }>(
-      SETTINGS_STORAGE_KEY
-    )
-    expect(settings?.fontSize).toBe('large')
-    expect(settings?.ageRange).toBe('boomer')
-
-    // Font size CSS variable applied
-    const fontSize = await page.evaluate(() =>
-      getComputedStyle(document.documentElement).getPropertyValue('--font-size').trim()
-    )
-    expect(fontSize).toBe('18px')
+    const settings = await localStorage.get<{ fontSize: string }>(SETTINGS_STORAGE_KEY)
+    expect(settings?.fontSize).toBe('medium')
   })
 })
 
@@ -159,57 +141,6 @@ test.describe('E21-S07: Font Size Settings', () => {
       getComputedStyle(document.documentElement).getPropertyValue('--font-size').trim()
     )
     expect(fontSizeAfterNav).toBe('18px')
-  })
-})
-
-test.describe('E21-S07: Age Range in Settings (AC5)', () => {
-  test('displays seeded age range and persists change after reload', async ({
-    page,
-    localStorage,
-  }) => {
-    await page.goto('/')
-
-    // Pre-seed: wizard completed with age range set to gen-z
-    await localStorage.seed(WIZARD_STORAGE_KEY, {
-      completedAt: '2026-01-01T00:00:00.000Z',
-    })
-    await localStorage.seed(SETTINGS_STORAGE_KEY, {
-      displayName: 'Student',
-      bio: '',
-      theme: 'system',
-      ageRange: 'gen-z',
-    })
-    await page.reload()
-
-    // Navigate to Settings
-    await page.goto('/settings')
-    await expect(page.locator('h1')).toContainText('Settings')
-
-    // Find the Age Range section
-    const ageSection = page.getByTestId('age-range-section')
-    await expect(ageSection).toBeVisible()
-
-    // Verify 'Gen Z' radio is currently selected
-    const genZRadio = ageSection.getByRole('radio', { name: /gen z/i })
-    await expect(genZRadio).toHaveAttribute('aria-checked', 'true')
-
-    // Change age range to 'Boomer'
-    const boomerRadio = ageSection.getByRole('radio', { name: /boomer/i })
-    await boomerRadio.click()
-    await expect(boomerRadio).toHaveAttribute('aria-checked', 'true')
-
-    // Verify persisted in localStorage
-    const settings = await localStorage.get<{ ageRange: string }>(SETTINGS_STORAGE_KEY)
-    expect(settings?.ageRange).toBe('boomer')
-
-    // Reload and verify persistence
-    await page.reload()
-    await expect(page.locator('h1')).toContainText('Settings')
-
-    const ageSectionAfter = page.getByTestId('age-range-section')
-    await expect(ageSectionAfter).toBeVisible()
-    const boomerAfterReload = ageSectionAfter.getByRole('radio', { name: /boomer/i })
-    await expect(boomerAfterReload).toHaveAttribute('aria-checked', 'true')
   })
 })
 

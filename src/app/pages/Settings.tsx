@@ -14,8 +14,8 @@ function getModifiedCategories(): Set<SettingsCategorySlug> {
   const s = getSettings()
   const modified = new Set<SettingsCategorySlug>()
 
-  // Profile: non-default name, bio, avatar, or age range
-  if (s.displayName !== 'Learner' || s.bio !== '' || s.profilePhotoUrl || s.ageRange) {
+  // Profile: non-default name, bio, or avatar
+  if (s.displayName !== 'Learner' || s.bio !== '' || s.profilePhotoUrl) {
     modified.add('profile')
   }
 
