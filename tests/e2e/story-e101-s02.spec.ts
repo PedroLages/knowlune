@@ -48,40 +48,65 @@ async function openAbsSettings(page: import('@playwright/test').Page): Promise<v
   await expect(page.getByTestId('abs-settings')).toBeVisible({ timeout: 5000 })
 }
 
-/** Intercept ABS API calls with success responses. */
+/**
+ * Mock ABS API at the fetch level using addInitScript.
+ * page.route() doesn't reliably intercept cross-origin fetch in Chromium,
+ * so we override window.fetch for ABS URLs before the app loads.
+ */
 async function mockAbsApiSuccess(page: import('@playwright/test').Page): Promise<void> {
-  await page.route(`${ABS_SERVER_URL}/api/ping`, async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ success: true, version: '2.17.3' }),
-    })
-  })
-  await page.route(`${ABS_SERVER_URL}/api/libraries`, async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ libraries: MOCK_LIBRARIES }),
-    })
-  })
+  await page.addInitScript((serverUrl) => {
+    const _origFetch = window.fetch
+    window.fetch = async (input, init) => {
+      const url = typeof input === 'string' ? input : (input as Request).url
+      if (url.startsWith(serverUrl) && url.includes('/api/ping')) {
+        return new Response(JSON.stringify({ success: true, version: '2.17.3' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      if (url.startsWith(serverUrl) && url.includes('/api/libraries')) {
+        return new Response(
+          JSON.stringify({
+            libraries: [
+              { id: 'lib-1', name: 'Audiobooks', mediaType: 'book' },
+              { id: 'lib-2', name: 'Podcasts', mediaType: 'podcast' },
+            ],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+      return _origFetch(input, init)
+    }
+  }, ABS_SERVER_URL)
 }
 
-/** Intercept ABS API /api/ping with 401. */
 async function mockAbsApiAuthFailure(page: import('@playwright/test').Page): Promise<void> {
-  await page.route(`${ABS_SERVER_URL}/api/ping`, async route => {
-    await route.fulfill({
-      status: 401,
-      contentType: 'application/json',
-      body: JSON.stringify({ error: 'Unauthorized' }),
-    })
-  })
+  await page.addInitScript((serverUrl) => {
+    const _origFetch = window.fetch
+    window.fetch = async (input, init) => {
+      const url = typeof input === 'string' ? input : (input as Request).url
+      if (url.startsWith(serverUrl)) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      return _origFetch(input, init)
+    }
+  }, ABS_SERVER_URL)
 }
 
-/** Intercept ABS API /api/ping with network error (simulates CORS). */
 async function mockAbsApiCorsError(page: import('@playwright/test').Page): Promise<void> {
-  await page.route(`${ABS_SERVER_URL}/api/ping`, async route => {
-    await route.abort('failed')
-  })
+  await page.addInitScript((serverUrl) => {
+    const _origFetch = window.fetch
+    window.fetch = async (input, init) => {
+      const url = typeof input === 'string' ? input : (input as Request).url
+      if (url.startsWith(serverUrl)) {
+        throw new TypeError('Failed to fetch')
+      }
+      return _origFetch(input, init)
+    }
+  }, ABS_SERVER_URL)
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -135,6 +160,7 @@ test.describe('E101-S02: Audiobookshelf Server Connection & Auth UI', () => {
   })
 
   test('successful connection shows server version and library checkboxes', async ({ page }) => {
+    // Set up route intercepts BEFORE navigating
     await mockAbsApiSuccess(page)
     await openAbsSettings(page)
     await page.getByTestId('add-abs-server-btn').click()
