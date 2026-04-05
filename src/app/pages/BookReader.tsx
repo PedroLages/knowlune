@@ -13,9 +13,13 @@
  * - Keyboard navigation (Left/Right/Space for page turns, Escape → library)
  * - TOC panel wired to ReaderHeader menu
  * - Chapter tracking updated from TOC + locationChanged callback
+ * - Position persistence: debounced save to Dexie on location change
+ * - Position restoration: resume from Book.currentPosition on open
+ * - Update Book.lastOpenedAt on reader open
  *
  * @module BookReader
  */
+// eslint-disable-next-line component-size/max-lines -- page orchestrator: coordinates reader subsystems (EPUB loading, position save, idle timer, keyboard nav, TOC, settings)
 import { lazy, Suspense, useEffect, useRef, useCallback, useState } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import type { Rendition } from 'epubjs'
@@ -30,6 +34,8 @@ import { ReaderFooter } from '@/app/components/reader/ReaderFooter'
 import { ReaderErrorBoundary } from '@/app/components/reader/ReaderErrorBoundary'
 import { TableOfContents } from '@/app/components/reader/TableOfContents'
 import { ReaderSettingsPanel } from '@/app/components/reader/ReaderSettingsPanel'
+import { db } from '@/db/schema'
+import type { ContentPosition } from '@/data/types'
 
 // Code-split: epub.js + react-reader must NOT be in the initial bundle (architecture decision 12)
 const EpubRenderer = lazy(() =>
@@ -37,6 +43,7 @@ const EpubRenderer = lazy(() =>
 )
 
 const IDLE_TIMEOUT_MS = 3000
+const POSITION_SAVE_DEBOUNCE_MS = 500
 
 function LoadingSkeleton() {
   return (
@@ -78,10 +85,13 @@ export function BookReader() {
   const [retryKey, setRetryKey] = useState(0)
   const [toc, setToc] = useState<NavItem[]>([])
   const [currentHref, setCurrentHref] = useState<string | undefined>(undefined)
+  const [currentPage, setCurrentPage] = useState<number | undefined>(undefined)
+  const [totalPages, setTotalPages] = useState<number | undefined>(undefined)
 
   const renditionRef = useRef<Rendition | null>(null)
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const blobUrlRef = useRef<string | null>(null)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Load books if not yet loaded
   useEffect(() => {
@@ -92,6 +102,24 @@ export function BookReader() {
 
   // Find book in store
   const book = books.find(b => b.id === bookId)
+
+  // Update lastOpenedAt when reader opens (once book is found)
+  useEffect(() => {
+    if (!book || !bookId) return
+
+    const now = new Date().toISOString()
+    // Update in-memory state
+    useBookStore.setState(state => ({
+      books: state.books.map(b =>
+        b.id === bookId ? { ...b, lastOpenedAt: now } : b
+      ),
+    }))
+    // Persist to Dexie (best-effort, non-blocking)
+    // silent-catch-ok: lastOpenedAt failure is non-fatal — sorting will use previous value
+    db.books.update(bookId, { lastOpenedAt: now }).catch(err => {
+      console.error('[BookReader] Failed to update lastOpenedAt:', err)
+    })
+  }, [bookId]) // Only run once on mount (bookId is stable for this page)
 
   // Load EPUB content
   useEffect(() => {
@@ -136,6 +164,10 @@ export function BookReader() {
     return () => {
       if (blobUrlRef.current) {
         URL.revokeObjectURL(blobUrlRef.current)
+      }
+      // Clear pending save timer
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
       }
     }
   }, [])
@@ -197,6 +229,43 @@ export function BookReader() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [navigate])
 
+  /** Debounced position save: persists CFI + progress to Dexie and updates BookStore */
+  const debouncedSavePosition = useCallback(
+    (cfi: string, progress: number) => {
+      if (!bookId) return
+
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+      }
+
+      saveTimerRef.current = setTimeout(() => {
+        const position: ContentPosition = { type: 'cfi', value: cfi }
+        const progressInt = Math.round(progress * 100) // 0–100
+
+        // Update in-memory BookStore
+        useBookStore.setState(state => ({
+          books: state.books.map(b =>
+            b.id === bookId
+              ? { ...b, currentPosition: position, progress: progressInt }
+              : b
+          ),
+        }))
+
+        // Persist to Dexie — single update, no toast (non-disruptive during reading)
+        // silent-catch-ok: position will be re-saved on next page turn (non-fatal during reading)
+        db.books
+          .update(bookId, {
+            currentPosition: position,
+            progress: progressInt,
+          })
+          .catch(err => {
+            console.error('[BookReader] Failed to save position:', err)
+          })
+      }, POSITION_SAVE_DEBOUNCE_MS)
+    },
+    [bookId]
+  )
+
   /** CFI location change — update store position + progress + current chapter */
   const handleLocationChanged = useCallback(
     (cfi: string) => {
@@ -207,9 +276,10 @@ export function BookReader() {
         try {
           const loc = renditionRef.current.currentLocation()
           if (loc && typeof loc === 'object' && 'start' in loc) {
-            const start = (loc as { start?: { percentage?: number; href?: string } }).start
+            const start = (loc as { start?: { percentage?: number; href?: string; location?: number } }).start
             if (typeof start?.percentage === 'number') {
               setReadingProgress(start.percentage)
+              debouncedSavePosition(cfi, start.percentage)
             }
             // Update current href for TOC active state
             if (start?.href) {
@@ -220,13 +290,17 @@ export function BookReader() {
                 setCurrentChapter(matchingChapter.label)
               }
             }
+            // Update page indicator if locations are available
+            if (typeof start?.location === 'number') {
+              setCurrentPage(start.location + 1) // 0-based → 1-based
+            }
           }
         } catch {
           // silent-catch-ok: progress estimation failure is non-fatal
         }
       }
     },
-    [setCurrentCfi, setReadingProgress, setCurrentChapter, toc]
+    [setCurrentCfi, setReadingProgress, setCurrentChapter, toc, debouncedSavePosition]
   )
 
   /** Find a TOC item by href (recursive for nested items) */
@@ -254,13 +328,34 @@ export function BookReader() {
     [currentChapter, setCurrentChapter]
   )
 
-  const handleRenditionReady = useCallback((rendition: Rendition) => {
-    renditionRef.current = rendition
-  }, [])
+  const handleRenditionReady = useCallback(
+    (rendition: Rendition) => {
+      renditionRef.current = rendition
+
+      // Generate locations for page count estimation (async, non-blocking)
+      // epub.js generates ~1000 chars per "page" by default
+      const epubBook = (rendition as unknown as { book?: { locations?: { generate: (n: number) => Promise<void>; total: number } } }).book
+      if (epubBook?.locations?.generate) {
+        epubBook.locations.generate(1000).then(() => {
+          if (epubBook.locations && epubBook.locations.total > 0) {
+            setTotalPages(epubBook.locations.total)
+          }
+        }).catch(() => {
+          // silent-catch-ok: location generation is optional for page counts
+        })
+      }
+    },
+    []
+  )
 
   const handleRetry = useCallback(() => {
     setRetryKey(k => k + 1)
   }, [])
+
+  // Derive initial CFI from book.currentPosition
+  const initialCfi = book?.currentPosition?.type === 'cfi'
+    ? book.currentPosition.value
+    : null
 
   // Book not found (after store is loaded)
   if (isLoaded && !book) {
@@ -318,7 +413,7 @@ export function BookReader() {
               <EpubRenderer
                 key={retryKey}
                 url={epubUrl}
-                initialLocation={null}
+                initialLocation={initialCfi}
                 onLocationChanged={handleLocationChanged}
                 onTocLoaded={handleTocLoaded}
                 onRenditionReady={handleRenditionReady}
@@ -333,6 +428,8 @@ export function BookReader() {
         progress={readingProgress}
         theme={theme}
         visible={headerVisible}
+        currentPage={currentPage}
+        totalPages={totalPages}
       />
 
       {/* Table of Contents panel (E84-S02) */}
