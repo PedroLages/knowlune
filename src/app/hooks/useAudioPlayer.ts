@@ -355,6 +355,8 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
 
         audio.src = url
         audio.playbackRate = playbackRate
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(audio as any).preservesPitch = true
         audio.load()
 
         setCurrentChapterIndex(index)
@@ -442,7 +444,8 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
 
       if (singleFile) {
         // Single-file: just adjust currentTime — chapter tracking updates automatically
-        const newTime = Math.min(audio.currentTime + seconds, audio.duration || 0)
+        const maxTime = isFinite(audio.duration) ? audio.duration : Infinity
+        const newTime = Math.min(audio.currentTime + seconds, maxTime)
         seekTo(newTime)
         return
       }

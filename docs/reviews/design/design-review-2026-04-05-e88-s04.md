@@ -1,38 +1,29 @@
-## Design Review — E88-S04: M4B Audiobook Import (2026-04-05)
+## Design Review — E88-S04: M4B Audiobook Import (2026-04-05, Round 2)
 
-### Testing Scope
+### Pages Tested
 
-- **Desktop (1440x900)**: Import dialog with Audiobook tab, M4B drop zone
-- **Mobile (375x812)**: Same flow at mobile viewport
-- **Routes tested**: /library (Import Book dialog)
+- `/library` — Import Book dialog (Audiobook tab)
+
+### Viewports
+
+- Desktop (1440x900)
+- Mobile (375x812)
 
 ### Findings
 
-#### Passed
+No issues found.
 
-- Dialog description correctly updated: "Import MP3 files or a single M4B audiobook to your library."
-- Audiobook tab drop zone shows clear M4B support: "Select MP3 files or a single M4B file"
-- Help text distinguishes formats: "MP3: sorted by number... | M4B: chapters extracted automatically"
-- EPUB tab unaffected by changes
-- Accessible: aria-label="Select audiobook files to import" is correct
-- Tab switching between EPUB and Audiobook works without errors
-- File input accepts `.mp3,.m4b,audio/mpeg,audio/mp4` — correct MIME types
-- Touch targets meet 44px minimum (`min-h-[44px]` on buttons)
-- Uses design tokens correctly (bg-muted/30, text-muted-foreground, border-brand/50)
-- Brand button variant used for CTA (variant="brand")
-- Focus-visible ring on drop zone (focus-visible:ring-2 focus-visible:ring-brand)
+### Observations
 
-#### Mobile Responsiveness
-
-- Dialog adapts well at 375px — text wraps properly
-- Tab buttons remain legible and tappable
-- Drop zone text wraps cleanly without overflow
-- No horizontal scroll
-
-#### Console
-
-- 0 errors, 1 warning (pre-existing)
+- Tab switching: EPUB/Audiobook tabs work correctly with proper active state styling
+- Description text updates appropriately when switching to Audiobook tab
+- Drop zone has clear instructions for both MP3 and M4B formats
+- Proper ARIA: role="tablist", aria-selected states, aria-label on drop zone
+- Touch targets meet 44px minimum (min-h-[44px] on action buttons)
+- Dialog adapts well to mobile viewport (375px) — no overflow, readable text
+- All colors use theme tokens (border-brand, text-muted-foreground, bg-brand-soft)
+- Keyboard navigation: drop zone has tabIndex=0 and onKeyDown for Enter/Space
 
 ### Verdict
 
-**PASS** — No design issues found. UI changes are minimal, well-integrated, and accessible.
+**PASS** — UI is consistent, accessible, and responsive.

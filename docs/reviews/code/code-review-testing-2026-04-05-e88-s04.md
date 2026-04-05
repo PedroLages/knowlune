@@ -1,33 +1,32 @@
-## Test Coverage Review — E88-S04: M4B Audiobook Import (2026-04-05)
+## Test Coverage Review — E88-S04: M4B Audiobook Import (2026-04-05, Round 2)
 
-### AC Coverage Table
+### Test File
 
-| AC | Description | Unit Tests | E2E Tests | Coverage |
-|----|-------------|-----------|-----------|----------|
-| AC1 | M4B file selection, parsing, chapter extraction, OPFS storage | None | None | NOT COVERED |
-| AC2 | Single-file playback, chapter navigation, audiobook features | None | None | NOT COVERED |
+`src/services/__tests__/M4bParserService.test.ts` — 28 tests, all passing
 
-### Findings
+### Acceptance Criteria Coverage
 
-#### HIGH — Missing Test Coverage
+| AC | Test Coverage | Status |
+|----|--------------|--------|
+| 6.1: Chapter extraction | 7 tests (extraction, ordering, sampleOffset fallback, metadata, filename fallback, unique IDs, placeholder titles) | Covered |
+| 6.2: Single-file detection | 5 tests (M4B path, any .m4b extension, non-audiobook, remote source, MP3 multi-file) | Covered |
+| 6.2: Time formatting | 3 tests (mm:ss, h:mm:ss, zero-padding) | Covered |
+| 6.3: Chapter progress detection | 7 tests (boundaries, within chapters, exact starts, single chapter) | Covered |
+| 6.5: Single-chapter fallback | 6 tests (no chapters, title fallback, empty array, empty iTunes, bookId, null cover) | Covered |
 
-- **No unit tests for M4bParserService.ts**: The core parsing logic (chapter extraction, metadata extraction, fallback to single chapter) has zero test coverage. This is a new service with complex parsing logic that should have unit tests covering:
-  - Happy path: M4B with chapters
-  - Fallback: M4B without chapters (single-chapter creation)
-  - iTunes native tag fallback
-  - Cover art extraction
-  - Missing metadata fields
+### Test Quality
 
-- **No unit tests for isSingleFileAudiobook()**: This is a pure function with simple logic that is easily unit-testable.
+- Tests use `vi.doMock` + `vi.resetModules` for clean lazy-import isolation
+- No flaky patterns (no Date.now(), no waitForTimeout, no manual IDB seeding)
+- Mock helper `mockMusicMetadata()` is well-structured and reusable
+- Chapter detection tests replicate the actual algorithm from useAudioPlayer
 
-- **No unit tests for getChapterStartTime()**: Another pure function.
+### Gaps (Advisory)
 
-- **No E2E tests**: Story has no `tests/e2e/story-e88-s04.spec.ts`. The M4B import flow involves file input interaction and OPFS storage which are testable via Playwright.
-
-#### MEDIUM — Test Quality Gaps
-
-- **Story tasks list 5 test subtasks (6.1-6.5) but none were implemented.** All test tasks in the story file remain unchecked.
+- No unit tests for `processM4bFile` in AudiobookImportFlow (component-level)
+- No tests for 2GB file size limit enforcement
+- No tests for mixed M4B+MP3 warning toast — low risk, UI-only
 
 ### Verdict
 
-**GAPS FOUND** — 0/2 ACs have test coverage. No tests were written for this story. The story's own task list specifies 5 test subtasks that are all incomplete.
+**PASS** — 28/28 tests passing. All subtasks from Task 6 covered. Test quality is high.
