@@ -23,6 +23,7 @@ const TEST_BOOKS = [
     tags: [],
     chapters: [],
     source: { type: 'local', opfsPath: '' },
+    coverUrl: '',
     progress: 40,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
@@ -36,6 +37,7 @@ const TEST_BOOKS = [
     tags: [],
     chapters: [],
     source: { type: 'local', opfsPath: '' },
+    coverUrl: '',
     progress: 100,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
@@ -49,6 +51,7 @@ const TEST_BOOKS = [
     tags: [],
     chapters: [],
     source: { type: 'local', opfsPath: '' },
+    coverUrl: '',
     progress: 0,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
@@ -67,6 +70,7 @@ async function seedBooks(page: import('@playwright/test').Page): Promise<void> {
     TEST_BOOKS as unknown as Record<string, unknown>[]
   )
   await page.goto('/library')
+  await page.reload()
 }
 
 test.describe('E83-S04: Library Search, Filters & Context Menu', () => {

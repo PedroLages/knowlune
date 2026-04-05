@@ -7,7 +7,7 @@
  * @since E83-S04
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LayoutGrid, List, Search } from 'lucide-react'
 import { Input } from '@/app/components/ui/input'
 import { useBookStore } from '@/stores/useBookStore'
@@ -27,9 +27,10 @@ export function LibraryFilters() {
   const setFilter = useBookStore(s => s.setFilter)
   const libraryView = useBookStore(s => s.libraryView)
   const setLibraryView = useBookStore(s => s.setLibraryView)
+  const books = useBookStore(s => s.books)
   const getBookCountByStatus = useBookStore(s => s.getBookCountByStatus)
 
-  const counts = getBookCountByStatus()
+  const counts = useMemo(() => getBookCountByStatus(), [books, getBookCountByStatus])
   const activeStatus = filters.status || 'all'
 
   // Debounced search

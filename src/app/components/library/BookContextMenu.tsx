@@ -138,7 +138,7 @@ export function BookContextMenu({ book, children }: BookContextMenuProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="absolute top-1 right-1 z-10 rounded-md p-1.5 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity min-h-[36px] min-w-[36px] flex items-center justify-center touch-manipulation sm:min-h-[44px] sm:min-w-[44px]"
+              className="absolute top-1 right-1 z-10 rounded-md p-1.5 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation"
               aria-label={`More actions for ${book.title}`}
               data-testid="book-more-actions"
             >
