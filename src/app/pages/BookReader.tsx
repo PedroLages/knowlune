@@ -28,7 +28,7 @@ import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { useBookStore } from '@/stores/useBookStore'
 import { useReaderStore } from '@/stores/useReaderStore'
-import { bookContentService } from '@/services/BookContentService'
+import { bookContentService, RemoteEpubError } from '@/services/BookContentService'
 import { ReaderHeader } from '@/app/components/reader/ReaderHeader'
 import { ReaderFooter } from '@/app/components/reader/ReaderFooter'
 import { ReaderErrorBoundary } from '@/app/components/reader/ReaderErrorBoundary'
@@ -61,16 +61,16 @@ const EpubRenderer = lazy(() =>
 const IDLE_TIMEOUT_MS = 3000
 const POSITION_SAVE_DEBOUNCE_MS = 500
 
-function LoadingSkeleton() {
+function LoadingSkeleton({ message = 'Loading book...' }: { message?: string }) {
   return (
     <div
-      className="flex h-full flex-col items-center justify-center gap-3 bg-[#FAF5EE]"
+      className="flex h-full flex-col items-center justify-center gap-3 bg-background"
       data-testid="reader-loading"
       role="status"
-      aria-label="Loading book..."
+      aria-label={message}
     >
       <Loader2 className="size-8 animate-spin text-brand" aria-hidden="true" />
-      <p className="text-sm text-muted-foreground">Loading book...</p>
+      <p className="text-sm text-muted-foreground">{message}</p>
     </div>
   )
 }
@@ -110,6 +110,8 @@ export function BookReader() {
   const [clozeHighlightId, setClozeHighlightId] = useState<string | undefined>(undefined)
   const [clozeOpen, setClozeOpen] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
+  // Remote EPUB cache fallback (E88-S03)
+  const [hasCachedFallback, setHasCachedFallback] = useState(false)
   // Set to true once EPUB renders successfully — triggers reading session start (E85-S06)
   const [isEpubReady, setIsEpubReady] = useState(false)
   const [toc, setToc] = useState<NavItem[]>([])
@@ -212,6 +214,7 @@ export function BookReader() {
     let cancelled = false
     setIsLoadingContent(true)
     setLoadError(null)
+    setHasCachedFallback(false)
 
     // Revoke previous Blob URL to avoid memory leaks
     if (blobUrlRef.current) {
@@ -231,10 +234,18 @@ export function BookReader() {
       })
       .catch((err: unknown) => {
         if (cancelled) return
-        const message = err instanceof Error ? err.message : 'Unknown error loading book'
-        console.error('[BookReader] Failed to load EPUB:', message)
-        toast.error('Failed to load book')
-        setLoadError(message)
+
+        if (err instanceof RemoteEpubError) {
+          console.error(`[BookReader] Remote EPUB error (${err.code}):`, err.message)
+          toast.error(err.message)
+          setLoadError(err.message)
+          setHasCachedFallback(err.hasCachedVersion)
+        } else {
+          const message = err instanceof Error ? err.message : 'Unknown error loading book'
+          console.error('[BookReader] Failed to load EPUB:', message)
+          toast.error('Failed to load book')
+          setLoadError(message)
+        }
         setIsLoadingContent(false)
       })
 
@@ -442,6 +453,41 @@ export function BookReader() {
     setRetryKey(k => k + 1)
   }, [])
 
+  /** Load cached version of a remote EPUB (E88-S03 offline fallback) */
+  const handleLoadCached = useCallback(async () => {
+    if (!book) return
+    setIsLoadingContent(true)
+    setLoadError(null)
+    setHasCachedFallback(false)
+
+    try {
+      const arrayBuffer = await bookContentService.getCachedEpub(book.id)
+      if (!arrayBuffer) {
+        toast.error('Cached version no longer available')
+        setLoadError('Cached version no longer available')
+        setIsLoadingContent(false)
+        return
+      }
+
+      // Revoke previous Blob URL
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current)
+        blobUrlRef.current = null
+      }
+
+      const blob = new Blob([arrayBuffer], { type: 'application/epub+zip' })
+      const url = URL.createObjectURL(blob)
+      blobUrlRef.current = url
+      setEpubUrl(url)
+      setIsLoadingContent(false)
+    } catch {
+      // silent-catch-ok: cache read failure surfaces as user-visible error below
+      toast.error('Failed to load cached version')
+      setLoadError('Failed to load cached version')
+      setIsLoadingContent(false)
+    }
+  }, [book])
+
   // Derive initial CFI: prefer highlight back-navigation CFI (E85-S05) over saved position
   const initialCfi =
     highlightCfi ?? (book?.currentPosition?.type === 'cfi' ? book.currentPosition.value : null)
@@ -524,18 +570,40 @@ export function BookReader() {
 
       {/* Main content area */}
       <main className="flex-1 overflow-hidden">
-        {(isLoadingContent || !isLoaded) && <LoadingSkeleton />}
+        {(isLoadingContent || !isLoaded) && (
+          <LoadingSkeleton
+            message={
+              book?.source.type === 'remote' ? 'Loading from server...' : 'Loading book...'
+            }
+          />
+        )}
 
         {!isLoadingContent && loadError && (
-          <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center bg-[#FAF5EE]">
-            <p className="text-destructive font-medium">Failed to load book</p>
-            <button
-              onClick={handleRetry}
-              className="text-sm text-brand underline underline-offset-2"
-              data-testid="reader-retry-button"
-            >
-              Try again
-            </button>
+          <div
+            className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center bg-background"
+            role="alert"
+          >
+            <p className="text-destructive font-medium" data-testid="reader-error-message">
+              {loadError}
+            </p>
+            <div className="flex gap-3">
+              {hasCachedFallback && (
+                <button
+                  onClick={handleLoadCached}
+                  className="rounded-xl bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand-hover transition-colors min-h-[44px]"
+                  data-testid="reader-load-cached-button"
+                >
+                  Read cached version
+                </button>
+              )}
+              <button
+                onClick={handleRetry}
+                className="text-sm text-brand underline underline-offset-2 min-h-[44px] flex items-center"
+                data-testid="reader-retry-button"
+              >
+                {hasCachedFallback ? 'Retry' : 'Try again'}
+              </button>
+            </div>
           </div>
         )}
 
