@@ -6,7 +6,7 @@
  * @since E83-S03
  */
 
-import React from 'react'
+import { memo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { BookOpen } from 'lucide-react'
 import type { Book } from '@/data/types'
@@ -16,11 +16,11 @@ interface BookCardProps {
   book: Book
 }
 
-export const BookCard = React.memo(function BookCard({ book }: BookCardProps) {
+export const BookCard = memo(function BookCard({ book }: BookCardProps) {
   const navigate = useNavigate()
 
   const handleClick = () => navigate(`/library/${book.id}`)
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       navigate(`/library/${book.id}`)
@@ -29,7 +29,7 @@ export const BookCard = React.memo(function BookCard({ book }: BookCardProps) {
 
   return (
     <div
-      role="article"
+      role="link"
       aria-label={`${book.title} by ${book.author}, ${book.progress}% complete`}
       tabIndex={0}
       onClick={handleClick}

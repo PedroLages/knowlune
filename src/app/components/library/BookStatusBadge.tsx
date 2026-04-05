@@ -10,10 +10,10 @@ import type { BookStatus } from '@/data/types'
 import { cn } from '@/app/components/ui/utils'
 
 const STATUS_CONFIG: Record<BookStatus, { label: string; className: string }> = {
-  reading: { label: 'Reading', className: 'bg-brand/90 text-white' },
-  finished: { label: 'Finished', className: 'bg-success/90 text-white' },
-  unread: { label: 'Want to Read', className: 'bg-gold/90 text-white' },
-  abandoned: { label: 'Abandoned', className: 'bg-muted-foreground/70 text-white' },
+  reading: { label: 'Reading', className: 'bg-brand/90 text-brand-foreground' },
+  finished: { label: 'Finished', className: 'bg-success/90 text-success-foreground' },
+  unread: { label: 'Want to Read', className: 'bg-gold/90 text-gold-foreground' },
+  abandoned: { label: 'Abandoned', className: 'bg-muted-foreground/70 text-background' },
 }
 
 interface BookStatusBadgeProps {
@@ -28,7 +28,7 @@ export function BookStatusBadge({ status, className }: BookStatusBadgeProps) {
       className={cn(
         'text-[10px] px-2 py-0.5 rounded-full font-medium leading-tight',
         config.className,
-        className,
+        className
       )}
     >
       {config.label}

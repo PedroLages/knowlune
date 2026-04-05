@@ -20,11 +20,11 @@ import { cn } from '@/app/components/ui/utils'
 
 export function Library() {
   const [importOpen, setImportOpen] = useState(false)
+  const [droppedFile, setDroppedFile] = useState<File | null>(null)
   const books = useBookStore(s => s.books)
   const libraryView = useBookStore(s => s.libraryView)
   const setLibraryView = useBookStore(s => s.setLibraryView)
   const loadBooks = useBookStore(s => s.loadBooks)
-  const importBook = useBookStore(s => s.importBook)
 
   // Load books on mount
   useEffect(() => {
@@ -47,18 +47,15 @@ export function Library() {
     }
   }, [])
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      setIsDragOver(false)
-      const files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.epub'))
-      if (files.length > 0) {
-        // Open import dialog — user will complete metadata there
-        setImportOpen(true)
-      }
-    },
-    [],
-  )
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    const files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.epub'))
+    if (files.length > 0) {
+      setDroppedFile(files[0])
+      setImportOpen(true)
+    }
+  }, [])
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -74,8 +71,8 @@ export function Library() {
                 className={cn(
                   'rounded-md p-1.5 transition-colors',
                   libraryView === 'grid'
-                    ? 'bg-brand text-white'
-                    : 'text-muted-foreground hover:text-foreground',
+                    ? 'bg-brand text-brand-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
                 )}
                 aria-label="Grid view"
                 aria-pressed={libraryView === 'grid'}
@@ -87,8 +84,8 @@ export function Library() {
                 className={cn(
                   'rounded-md p-1.5 transition-colors',
                   libraryView === 'list'
-                    ? 'bg-brand text-white'
-                    : 'text-muted-foreground hover:text-foreground',
+                    ? 'bg-brand text-brand-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
                 )}
                 aria-label="List view"
                 aria-pressed={libraryView === 'list'}
@@ -118,7 +115,7 @@ export function Library() {
           onDrop={handleDrop}
           className={cn(
             'flex flex-col items-center justify-center gap-4 py-24 rounded-[24px] border-2 border-dashed transition-colors',
-            isDragOver ? 'border-brand bg-brand-soft/20' : 'border-border/50',
+            isDragOver ? 'border-brand bg-brand-soft/20' : 'border-border/50'
           )}
         >
           <BookOpen className="size-16 text-muted-foreground/40" />
@@ -157,7 +154,14 @@ export function Library() {
         </div>
       )}
 
-      <BookImportDialog open={importOpen} onOpenChange={setImportOpen} />
+      <BookImportDialog
+        open={importOpen}
+        onOpenChange={open => {
+          setImportOpen(open)
+          if (!open) setDroppedFile(null)
+        }}
+        initialFile={droppedFile}
+      />
     </div>
   )
 }

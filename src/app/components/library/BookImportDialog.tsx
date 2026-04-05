@@ -27,9 +27,11 @@ import { BookDetailsForm, GENRES, type ImportPhase } from './BookDetailsForm'
 interface BookImportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Pre-selected file from drag-drop on the library page */
+  initialFile?: File | null
 }
 
-export function BookImportDialog({ open, onOpenChange }: BookImportDialogProps) {
+export function BookImportDialog({ open, onOpenChange, initialFile }: BookImportDialogProps) {
   const importBook = useBookStore(s => s.importBook)
 
   const [file, setFile] = useState<File | null>(null)
@@ -148,6 +150,13 @@ export function BookImportDialog({ open, onOpenChange }: BookImportDialogProps) 
     },
     [setSafeCoverPreviewUrl]
   )
+
+  // Process initialFile when dialog opens with a pre-selected file (e.g., drag-drop on library page)
+  useEffect(() => {
+    if (open && initialFile) {
+      processFile(initialFile)
+    }
+  }, [open, initialFile, processFile])
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {

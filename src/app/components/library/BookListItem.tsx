@@ -6,7 +6,7 @@
  * @since E83-S03
  */
 
-import React from 'react'
+import { memo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { BookOpen } from 'lucide-react'
 import type { Book, BookStatus } from '@/data/types'
@@ -27,9 +27,9 @@ interface BookListItemProps {
 /**
  * Lightweight relative time formatter — no external dependency.
  */
-function relativeTime(date: string | undefined): string {
+function relativeTime(date: string | undefined, now: number = Date.now()): string {
   if (!date) return ''
-  const diff = Date.now() - new Date(date).getTime()
+  const diff = now - new Date(date).getTime()
   const hours = Math.floor(diff / 3600000)
   if (hours < 1) return 'Just now'
   if (hours < 24) return `${hours}h ago`
@@ -45,12 +45,12 @@ const STATUS_OPTIONS: { value: BookStatus; label: string }[] = [
   { value: 'abandoned', label: 'Abandoned' },
 ]
 
-export const BookListItem = React.memo(function BookListItem({ book }: BookListItemProps) {
+export const BookListItem = memo(function BookListItem({ book }: BookListItemProps) {
   const navigate = useNavigate()
   const updateBookStatus = useBookStore(s => s.updateBookStatus)
 
   const handleClick = () => navigate(`/library/${book.id}`)
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       navigate(`/library/${book.id}`)
@@ -64,7 +64,7 @@ export const BookListItem = React.memo(function BookListItem({ book }: BookListI
 
   return (
     <div
-      role="article"
+      role="link"
       aria-label={`${book.title} by ${book.author}, ${book.progress}% complete`}
       tabIndex={0}
       onClick={handleClick}
