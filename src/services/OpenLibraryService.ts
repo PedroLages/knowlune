@@ -27,6 +27,9 @@ export async function fetchOpenLibraryMetadata(params: {
   title: string
   author: string
 }): Promise<OpenLibraryResult> {
+  // E83-S08: Skip network requests when offline — OPFS books still work
+  if (!navigator.onLine) return {}
+
   try {
     // Try ISBN search first
     if (params.isbn) {
@@ -46,6 +49,9 @@ export async function fetchOpenLibraryMetadata(params: {
  * Fetch cover image as a Blob. Returns null if unavailable.
  */
 export async function fetchCoverImage(coverUrl: string): Promise<Blob | null> {
+  // E83-S08: Skip network requests when offline
+  if (!navigator.onLine) return null
+
   try {
     const response = await fetchWithTimeout(coverUrl)
     if (!response.ok) return null
