@@ -1,6 +1,7 @@
 # Story 83.4: Library Search, Filter, and Status Management
 
-Status: ready-for-dev
+Status: done
+Completed: 2026-04-05
 
 ## Story
 
