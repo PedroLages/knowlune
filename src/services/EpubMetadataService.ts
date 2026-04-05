@@ -103,8 +103,7 @@ function extractIsbn(identifier: string): string | undefined {
 
   // Check if the identifier itself looks like an ISBN (stripping hyphens)
   const cleaned = identifier.replace(/[-\s]/g, '')
-  if (/^(?:978|979)\d{10}$/.test(cleaned) && isValidIsbn13(cleaned))
-    return cleaned
+  if (/^(?:978|979)\d{10}$/.test(cleaned) && isValidIsbn13(cleaned)) return cleaned
   if (/^\d{9}[\dXx]$/.test(cleaned) && isValidIsbn10(cleaned)) return cleaned
 
   return undefined

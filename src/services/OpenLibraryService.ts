@@ -67,18 +67,12 @@ async function searchByIsbn(isbn: string): Promise<OpenLibraryResult | null> {
 
   return {
     coverUrl: entry.cover?.large || entry.cover?.medium,
-    description:
-      typeof entry.excerpts?.[0]?.text === 'string'
-        ? entry.excerpts[0].text
-        : undefined,
+    description: typeof entry.excerpts?.[0]?.text === 'string' ? entry.excerpts[0].text : undefined,
     subjects: entry.subjects?.map((s: { name: string }) => s.name).slice(0, 5),
   }
 }
 
-async function searchByTitleAuthor(
-  title: string,
-  author: string
-): Promise<OpenLibraryResult> {
+async function searchByTitleAuthor(title: string, author: string): Promise<OpenLibraryResult> {
   const params = new URLSearchParams({
     title: title,
     author: author,
@@ -94,9 +88,7 @@ async function searchByTitleAuthor(
 
   const coverId = doc.cover_i
   return {
-    coverUrl: coverId
-      ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`
-      : undefined,
+    coverUrl: coverId ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg` : undefined,
     subjects: doc.subject?.slice(0, 5),
   }
 }
@@ -105,7 +97,5 @@ function fetchWithTimeout(url: string): Promise<Response> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
-  return fetch(url, { signal: controller.signal }).finally(() =>
-    clearTimeout(timeoutId)
-  )
+  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timeoutId))
 }

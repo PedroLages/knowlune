@@ -41,8 +41,7 @@ export function Library() {
             <LibraryIcon className="h-8 w-8 text-brand-soft-foreground" />
           </div>
           <p className="max-w-sm text-center text-muted-foreground">
-            Import your first book to get started. Supports EPUB, PDF, and
-            audiobook formats.
+            Import your first book to get started. Supports EPUB, PDF, and audiobook formats.
           </p>
           <Button
             variant="brand-outline"
@@ -69,12 +68,8 @@ export function Library() {
                 <LibraryIcon className="h-8 w-8 text-muted-foreground" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {book.title}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {book.author}
-                </p>
+                <p className="truncate text-sm font-medium text-foreground">{book.title}</p>
+                <p className="truncate text-xs text-muted-foreground">{book.author}</p>
               </div>
             </div>
           ))}
