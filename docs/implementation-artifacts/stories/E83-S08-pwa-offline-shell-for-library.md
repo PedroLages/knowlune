@@ -1,6 +1,6 @@
 # Story 83.8: PWA Offline Shell for Library
 
-Status: backlog
+Status: done
 
 ## Story
 
@@ -87,8 +87,19 @@ OPFS stores the *file content* on-device, but the *app shell* (React JS bundles,
 
 ### Agent Model Used
 
+Claude Opus 4.6 (1M context)
+
 ### Debug Log References
 
 ### Completion Notes List
 
+- VitePWA was already configured with precaching (261 entries) and navigateFallback — AC1/AC2 were pre-existing
+- Added offline guards to OpenLibraryService (AC5) and Library page offline badge (AC4)
+- Kept registerType as 'prompt' (existing PWAUpdatePrompt component) rather than 'autoUpdate' from story spec
+- EPUB reader toolbar offline indicator deferred to E84 (reader does not exist yet)
+
 ### File List
+
+- `src/services/OpenLibraryService.ts` — offline early-return guards
+- `src/app/pages/Library.tsx` — offline badge in header
+- `src/app/components/library/BookMetadataEditor.tsx` — online guard on cover refetch
