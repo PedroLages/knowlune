@@ -96,8 +96,17 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
 
   const processFile = useCallback(
     async (selectedFile: File) => {
-      if (!selectedFile.name.toLowerCase().endsWith('.epub')) {
-        toast.error('Only EPUB files are supported')
+      // M4B/MP3 files auto-switch to audiobook import mode; the file is passed via
+      // AudiobookImportFlow's initialFile prop so it isn't lost on the mode switch
+      const fileName = selectedFile.name.toLowerCase()
+      if (fileName.endsWith('.m4b') || fileName.endsWith('.mp3')) {
+        setImportMode('audiobook')
+        setFile(selectedFile) // preserve the file so AudiobookImportFlow can receive it
+        return
+      }
+
+      if (!fileName.endsWith('.epub')) {
+        toast.error('Supported formats: EPUB, MP3, M4B')
         return
       }
 
@@ -249,7 +258,7 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
           <DialogDescription>
             {importMode === 'epub'
               ? 'Import an EPUB file to add it to your library.'
-              : 'Import MP3 files to add an audiobook to your library.'}
+              : 'Import MP3 files or a single M4B audiobook to your library.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -294,6 +303,12 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
               reset()
               onOpenChange(false)
             }}
+            initialFile={
+              file &&
+              (file.name.toLowerCase().endsWith('.m4b') || file.name.toLowerCase().endsWith('.mp3'))
+                ? file
+                : null
+            }
           />
         )}
 

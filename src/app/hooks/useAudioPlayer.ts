@@ -4,6 +4,7 @@
  * Features:
  * - Singleton audio element (module-level) — survives React route changes
  * - OPFS-backed MP3 loading via OpfsStorageService → URL.createObjectURL()
+ * - Single-file M4B playback: one audio source, chapter nav seeks within file (E88-S04)
  * - requestAnimationFrame loop for smooth scrubber updates
  * - Cross-chapter skip (forward 30s, back 15s)
  * - Auto-rewind 5s when resuming after a pause > 30 seconds
@@ -11,6 +12,7 @@
  *
  * @module useAudioPlayer
  * @since E87-S02
+ * @modified E88-S04 — single-file M4B playback mode
  */
 import { useEffect, useRef, useCallback, useState } from 'react'
 import type React from 'react'
@@ -34,11 +36,29 @@ export function formatAudioTime(seconds: number): string {
 }
 
 /**
+ * Detect single-file audiobook (M4B) vs multi-file (MP3 folder).
+ * M4B books store a single `book.m4b` file; chapters reference offsets within it.
+ */
+export function isSingleFileAudiobook(book: Book): boolean {
+  if (book.format !== 'audiobook') return false
+  if (book.source.type !== 'local') return false
+  return book.source.opfsPath.endsWith('book.m4b') || book.source.opfsPath.endsWith('.m4b')
+}
+
+/** Get the start time (in seconds) for a chapter from its position. */
+function getChapterStartTime(chapter: { position: Book['chapters'][0]['position'] }): number {
+  if (chapter.position.type === 'time') return chapter.position.seconds
+  return 0
+}
+
+/**
  * Module-level singleton HTMLAudioElement — created once, survives route changes.
  * Lazy-initialized on first hook call (SSR-safe, avoids creating Audio in tests).
  */
 let _sharedAudio: HTMLAudioElement | null = null
 let _sharedObjectUrl: string | null = null
+/** Track which book is loaded in the singleton audio to avoid re-loading the same M4B file */
+let _loadedBookId: string | null = null
 
 function getSharedAudio(): HTMLAudioElement {
   if (!_sharedAudio) {
@@ -89,6 +109,14 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
   const [localCurrentTime, setLocalCurrentTime] = useState(0)
   const [localDuration, setLocalDuration] = useState(0)
 
+  // Refs to avoid stale closures in the singleton event listener effect
+  const singleFileRef = useRef<boolean>(false)
+  const bookRef = useRef<Book | null>(null)
+  // loadChapterInternalRef is assigned after loadChapterInternal is defined below
+  const loadChapterInternalRef = useRef<(index: number, autoPlay?: boolean) => Promise<void>>(
+    async () => {}
+  )
+
   const {
     currentChapterIndex,
     isPlaying,
@@ -118,16 +146,28 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
     }
   }, [])
 
+  const singleFile = book ? isSingleFileAudiobook(book) : false
+
+  // Keep refs up-to-date on every render so the singleton event listener sees fresh values
+  singleFileRef.current = singleFile
+  bookRef.current = book
+
   /** Attach event listeners to the singleton audio element */
   useEffect(() => {
     const audio = getSharedAudio()
 
     const handleEnded = () => {
-      // Auto-advance to next chapter
+      if (singleFileRef.current) {
+        // Single-file: audio ended means entire audiobook ended
+        setIsPlaying(false)
+        stopRafLoop()
+        return
+      }
+      // Multi-file: auto-advance to next chapter
       const nextIndex = useAudioPlayerStore.getState().currentChapterIndex + 1
-      const chapters = book?.chapters ?? []
+      const chapters = bookRef.current?.chapters ?? []
       if (nextIndex < chapters.length) {
-        loadChapterInternal(nextIndex, true)
+        loadChapterInternalRef.current(nextIndex, true)
       } else {
         setIsPlaying(false)
         stopRafLoop()
@@ -159,6 +199,45 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
     }
   }, []) // intentionally run once on mount — event listener lifecycle
 
+  /**
+   * Single-file chapter tracking: determine current chapter from audio.currentTime.
+   * Checks every 500ms. Dispatches a custom 'chapterend' event on the audio element
+   * when a chapter boundary is crossed (consumed by useSleepTimer's EOC mode).
+   */
+  useEffect(() => {
+    if (!singleFile || !book) return
+
+    const chapters = book.chapters
+    if (chapters.length <= 1) return
+
+    const interval = setInterval(() => {
+      const audio = _sharedAudio
+      if (!audio || audio.paused) return
+
+      const currentTime = audio.currentTime
+      const currentIdx = useAudioPlayerStore.getState().currentChapterIndex
+
+      // Find which chapter currentTime falls into
+      for (let i = chapters.length - 1; i >= 0; i--) {
+        const startTime = getChapterStartTime(chapters[i])
+        if (currentTime >= startTime) {
+          if (i !== currentIdx) {
+            // Chapter boundary crossed — dispatch custom event for sleep timer EOC
+            audio.dispatchEvent(
+              new CustomEvent('chapterend', { detail: { fromIndex: currentIdx, toIndex: i } })
+            )
+            setCurrentChapterIndex(i)
+          }
+          break
+        }
+      }
+    }, 500) // Check every 500ms — lightweight chapter boundary detection
+
+    return () => clearInterval(interval)
+    // Use book?.id instead of book to avoid recreating the interval on every render
+    // (book object identity changes on each render even when the book hasn't changed)
+  }, [singleFile, book?.id, setCurrentChapterIndex])
+
   /** Sync playback rate when it changes in the store */
   useEffect(() => {
     const audio = _sharedAudio
@@ -178,6 +257,80 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
       const chapters = book.chapters
       if (index < 0 || index >= chapters.length) return
 
+      // ─── Single-file mode (M4B): seek within loaded file ───
+      if (singleFile) {
+        // Load the M4B file into audio element if not already loaded
+        if (_loadedBookId !== book.id) {
+          setIsLoading(true)
+          audio.pause()
+          stopRafLoop()
+
+          try {
+            const file = await opfsStorageService.readBookFile(
+              book.source.type === 'local' ? book.source.opfsPath : '',
+              book.id
+            )
+            if (!file) {
+              toast.error('Could not load audiobook file')
+              setIsLoading(false)
+              return
+            }
+
+            revokeSharedObjectUrl()
+            const url = URL.createObjectURL(file)
+            _sharedObjectUrl = url
+            _loadedBookId = book.id
+
+            audio.src = url
+            audio.playbackRate = playbackRate
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(audio as any).preservesPitch = true
+
+            // Wait for metadata to be loaded before seeking
+            await new Promise<void>((resolve, reject) => {
+              const onLoaded = () => {
+                audio.removeEventListener('loadedmetadata', onLoaded)
+                audio.removeEventListener('error', onError)
+                resolve()
+              }
+              const onError = () => {
+                audio.removeEventListener('loadedmetadata', onLoaded)
+                audio.removeEventListener('error', onError)
+                reject(new Error('Failed to load audio'))
+              }
+              if (audio.readyState >= 1) {
+                resolve()
+              } else {
+                audio.addEventListener('loadedmetadata', onLoaded)
+                audio.addEventListener('error', onError)
+                audio.load()
+              }
+            })
+          } catch {
+            toast.error('Failed to load audiobook file')
+            setIsLoading(false)
+            return
+          }
+        }
+
+        // Seek to chapter start time
+        const startTime = getChapterStartTime(chapters[index])
+        audio.currentTime = startTime
+        setLocalCurrentTime(startTime)
+        setLocalDuration(audio.duration)
+        setCurrentChapterIndex(index)
+        setCurrentTime(startTime)
+
+        if (autoPlay) {
+          await audio.play()
+          setIsPlaying(true)
+          startRafLoop()
+        }
+        setIsLoading(false)
+        return
+      }
+
+      // ─── Multi-file mode (MP3 folder): load individual chapter file ───
       setIsLoading(true)
       audio.pause()
       stopRafLoop()
@@ -198,6 +351,7 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
         revokeSharedObjectUrl()
         const url = URL.createObjectURL(file)
         _sharedObjectUrl = url
+        _loadedBookId = null // multi-file: no book-level cache
 
         audio.src = url
         audio.playbackRate = playbackRate
@@ -219,8 +373,21 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
         setIsLoading(false)
       }
     },
-    [book, playbackRate, startRafLoop, stopRafLoop, setIsPlaying, setCurrentChapterIndex]
+    [
+      book,
+      singleFile,
+      playbackRate,
+      startRafLoop,
+      stopRafLoop,
+      setIsPlaying,
+      setCurrentChapterIndex,
+      setCurrentTime,
+    ]
   )
+
+  // Keep loadChapterInternalRef in sync so the singleton handleEnded callback always calls the
+  // latest version of loadChapterInternal (avoids stale closure in the [] effect above)
+  loadChapterInternalRef.current = loadChapterInternal
 
   const play = useCallback(async () => {
     const audio = _sharedAudio
@@ -274,6 +441,16 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
     async (seconds = 30) => {
       const audio = _sharedAudio
       if (!audio || !book) return
+
+      if (singleFile) {
+        // Single-file: just adjust currentTime — chapter tracking updates automatically
+        const maxTime = isFinite(audio.duration) ? audio.duration : Infinity
+        const newTime = Math.min(audio.currentTime + seconds, maxTime)
+        seekTo(newTime)
+        return
+      }
+
+      // Multi-file: may need cross-chapter file loading
       const newTime = audio.currentTime + seconds
       if (newTime <= localDuration) {
         seekTo(newTime)
@@ -288,13 +465,22 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
         }
       }
     },
-    [book, localDuration, seekTo, currentChapterIndex, isPlaying, loadChapterInternal]
+    [book, singleFile, localDuration, seekTo, currentChapterIndex, isPlaying, loadChapterInternal]
   )
 
   const skipBack = useCallback(
     async (seconds = 15) => {
       const audio = _sharedAudio
       if (!audio || !book) return
+
+      if (singleFile) {
+        // Single-file: just adjust currentTime — chapter tracking updates automatically
+        const newTime = Math.max(0, audio.currentTime - seconds)
+        seekTo(newTime)
+        return
+      }
+
+      // Multi-file: may need cross-chapter file loading
       const newTime = audio.currentTime - seconds
       if (newTime >= 0) {
         seekTo(newTime)
@@ -311,7 +497,7 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
         // At first chapter start — do nothing
       }
     },
-    [book, seekTo, currentChapterIndex, isPlaying, loadChapterInternal]
+    [book, singleFile, seekTo, currentChapterIndex, isPlaying, loadChapterInternal]
   )
 
   const loadChapter = useCallback(

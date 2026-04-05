@@ -1,13 +1,15 @@
 /**
- * AudiobookImportFlow — handles MP3 file selection, chapter ordering,
- * ID3 tag extraction, duration calculation, and OPFS storage for audiobooks.
+ * AudiobookImportFlow — handles MP3 file selection and M4B single-file import,
+ * chapter ordering, ID3 tag extraction, duration calculation, and OPFS storage.
  *
  * Renders within BookImportDialog when "Audiobook" mode is selected.
  *
  * @module AudiobookImportFlow
+ * @since E87-S01
+ * @modified E88-S04 — added M4B single-file import with chapter extraction
  */
 // eslint-disable-next-line component-size/max-lines -- self-contained multi-step import flow: file selection, ID3 parsing, duration calc, OPFS storage, metadata form
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { Headphones, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
@@ -16,6 +18,7 @@ import { Label } from '@/app/components/ui/label'
 import { Progress } from '@/app/components/ui/progress'
 import { useBookStore } from '@/stores/useBookStore'
 import { opfsStorageService } from '@/services/OpfsStorageService'
+import { parseM4bFile } from '@/services/M4bParserService'
 import type { Book, BookChapter, BookStatus } from '@/data/types'
 
 // ---------------------------------------------------------------------------
@@ -126,6 +129,8 @@ function parseId3v2Tags(buffer: ArrayBuffer): { title: string | null; artist: st
 interface AudiobookImportFlowProps {
   onCancel: () => void
   onImported: () => void
+  /** Pre-selected file from drag-drop or initialFile on the parent dialog */
+  initialFile?: File | null
 }
 
 interface ChapterFile {
@@ -137,9 +142,25 @@ interface ChapterFile {
 
 type Phase = 'idle' | 'processing' | 'storing' | 'done' | 'error'
 
-export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlowProps) {
+/** M4B parsed state — populated after parsing a single .m4b file */
+interface M4bParsed {
+  bookId: string // generated once during parsing; reused on import
+  file: File
+  title: string
+  author: string
+  coverBlob: Blob | null
+  chapters: BookChapter[]
+  totalDuration: number
+}
+
+export function AudiobookImportFlow({
+  onCancel,
+  onImported,
+  initialFile,
+}: AudiobookImportFlowProps) {
   const importBook = useBookStore(s => s.importBook)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const processFilesRef = useRef<((files: File[]) => Promise<void>) | null>(null)
 
   const [phase, setPhase] = useState<Phase>('idle')
   const [chapters, setChapters] = useState<ChapterFile[]>([])
@@ -148,14 +169,68 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
   const [status] = useState<BookStatus>('unread')
   const [progress, setProgress] = useState(0)
   const [progressLabel, setProgressLabel] = useState('')
+  const [m4bParsed, setM4bParsed] = useState<M4bParsed | null>(null)
 
   const isImporting = phase === 'processing' || phase === 'storing'
 
+  /** Process an M4B file — lazy-loads music-metadata for chapter extraction */
+  const processM4bFile = useCallback(async (file: File) => {
+    // Enforce file size limit — 2GB is generous for audiobooks while preventing runaway uploads
+    const MAX_M4B_SIZE_BYTES = 2 * 1024 * 1024 * 1024 // 2 GB
+    if (file.size > MAX_M4B_SIZE_BYTES) {
+      toast.error('File too large. M4B audiobooks must be under 2 GB.')
+      return
+    }
+
+    setPhase('processing')
+    setProgressLabel('Parsing chapters…')
+    setProgress(50)
+
+    try {
+      // Generate bookId once here; chapters are keyed to it and it's reused on import
+      const bookId = crypto.randomUUID()
+      const result = await parseM4bFile(file, bookId)
+
+      setTitle(result.title)
+      setAuthor(result.author)
+      setM4bParsed({
+        bookId,
+        file,
+        title: result.title,
+        author: result.author,
+        coverBlob: result.coverBlob,
+        chapters: result.chapters,
+        totalDuration: result.totalDuration,
+      })
+
+      setPhase('idle')
+      setProgress(0)
+      setProgressLabel('')
+    } catch {
+      toast.error('Failed to parse M4B file. The file may be corrupted.')
+      setPhase('error')
+    }
+  }, [])
+
   const processFiles = useCallback(
     async (files: File[]) => {
+      // Check for M4B file first — single-file audiobook
+      const m4bFile = files.find(f => f.name.toLowerCase().endsWith('.m4b'))
+      if (m4bFile) {
+        // Warn if non-M4B files were also selected — they will be ignored
+        const nonM4bFiles = files.filter(f => !f.name.toLowerCase().endsWith('.m4b'))
+        if (nonM4bFiles.length > 0) {
+          toast.warning(
+            `Only the M4B file will be imported. ${nonM4bFiles.length} other file${nonM4bFiles.length !== 1 ? 's' : ''} will be ignored.`
+          )
+        }
+        await processM4bFile(m4bFile)
+        return
+      }
+
       const mp3s = files.filter(f => f.name.toLowerCase().endsWith('.mp3'))
       if (mp3s.length === 0) {
-        toast.error('No MP3 files found. Please select MP3 audiobook files.')
+        toast.error('No MP3 or M4B files found. Please select audiobook files.')
         return
       }
 
@@ -205,8 +280,20 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
       setProgress(0)
       setProgressLabel('')
     },
-    [title]
+    [title, processM4bFile]
   )
+
+  // Keep processFilesRef current so the initialFile effect always calls the latest version
+  processFilesRef.current = processFiles
+
+  // Process initialFile when the component mounts (e.g. M4B dropped on the library page).
+  // processFilesRef.current always holds the latest processFiles — no dep needed.
+  // intentional empty deps: run once on mount only
+  useEffect(() => {
+    if (initialFile) {
+      processFilesRef.current?.([initialFile])
+    }
+  }, []) // intentionally empty — processFilesRef is used to avoid stale closure
 
   const handleFileInput = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -234,7 +321,7 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
           bookId,
           title: ch.title,
           order: ch.order,
-          position: { type: 'time', value: cumulativeStart },
+          position: { type: 'time', seconds: cumulativeStart },
         }
         cumulativeStart += ch.duration
         return chapter
@@ -285,14 +372,80 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
     }
   }, [chapters, title, author, status, importBook, onImported])
 
+  /** Import an M4B audiobook — stores single file + cover in OPFS */
+  const handleImportM4b = useCallback(async () => {
+    if (!m4bParsed || !title.trim()) return
+
+    setPhase('storing')
+    setProgressLabel('Storing audiobook…')
+    setProgress(30)
+
+    try {
+      // Reuse the bookId generated during parsing — chapters are already keyed to it
+      const bookId = m4bParsed.bookId
+      const now = new Date().toISOString()
+
+      // Chapters already have the correct bookId from processM4bFile; no remapping needed
+      const bookChapters: BookChapter[] = m4bParsed.chapters
+
+      // Store M4B as single file: book.m4b
+      const m4bFile = new File([m4bParsed.file], 'book.m4b', {
+        type: 'audio/mp4',
+      })
+      const opfsPath = await opfsStorageService.storeBookFile(bookId, m4bFile)
+      setProgress(60)
+
+      // Store cover art if extracted
+      let coverUrl: string | undefined
+      if (m4bParsed.coverBlob) {
+        const coverPath = await opfsStorageService.storeCoverFile(bookId, m4bParsed.coverBlob)
+        coverUrl = coverPath === 'indexeddb' ? `opfs-cover://${bookId}` : `opfs://${coverPath}`
+      }
+      setProgress(80)
+
+      const book: Book = {
+        id: bookId,
+        title: title.trim(),
+        author: author.trim() || 'Unknown Author',
+        format: 'audiobook',
+        status,
+        coverUrl,
+        tags: [],
+        chapters: bookChapters,
+        source: { type: 'local', opfsPath: opfsPath === 'indexeddb' ? 'indexeddb' : opfsPath },
+        progress: 0,
+        totalDuration: Math.round(m4bParsed.totalDuration),
+        createdAt: now,
+        fileSize: m4bParsed.file.size,
+      }
+
+      await importBook(book)
+      setProgress(100)
+
+      setPhase('done')
+      toast.success(
+        `"${title}" imported (${bookChapters.length} chapter${bookChapters.length !== 1 ? 's' : ''})`
+      )
+
+      setTimeout(() => {
+        onImported()
+      }, 600)
+    } catch {
+      setPhase('error')
+      toast.error('Failed to import M4B audiobook. Please try again.')
+    }
+  }, [m4bParsed, title, author, status, importBook, onImported])
+
+  const hasContent = chapters.length > 0 || m4bParsed !== null
+
   return (
     <div className="space-y-4">
       {/* File picker — shown when no chapters loaded yet */}
-      {chapters.length === 0 && !isImporting && (
+      {!hasContent && !isImporting && (
         <div
           role="button"
           tabIndex={0}
-          aria-label="Select MP3 files to import"
+          aria-label="Select audiobook files to import"
           data-testid="audiobook-drop-zone"
           className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border p-8 transition-colors hover:border-brand/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
           onClick={() => fileInputRef.current?.click()}
@@ -305,15 +458,15 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
         >
           <Headphones className="h-8 w-8 text-muted-foreground" />
           <p className="text-center text-sm text-muted-foreground">
-            Select MP3 files (one per chapter)
+            Select MP3 files or a single M4B file
           </p>
           <p className="text-center text-xs text-muted-foreground">
-            Files will be sorted by leading number (01-intro.mp3, 02-chapter.mp3…)
+            MP3: sorted by number (01-intro.mp3…) | M4B: chapters extracted automatically
           </p>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".mp3,audio/mpeg"
+            accept=".mp3,.m4b,audio/mpeg,audio/mp4"
             multiple
             className="hidden"
             onChange={handleFileInput}
@@ -330,8 +483,95 @@ export function AudiobookImportFlow({ onCancel, onImported }: AudiobookImportFlo
         </div>
       )}
 
-      {/* Metadata form — shown after chapters are loaded */}
-      {chapters.length > 0 && !isImporting && (
+      {/* M4B metadata form — shown after M4B file is parsed */}
+      {m4bParsed && !isImporting && (
+        <div className="space-y-4">
+          {/* File summary */}
+          <div className="rounded-xl bg-muted/30 p-3 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">
+                M4B audiobook — {m4bParsed.chapters.length} chapter
+                {m4bParsed.chapters.length !== 1 ? 's' : ''}
+              </span>
+              <button
+                onClick={() => {
+                  setM4bParsed(null)
+                  setTitle('')
+                  setAuthor('')
+                }}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Clear selected file"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Duration: {Math.floor(m4bParsed.totalDuration / 60)} min | Size:{' '}
+              {(m4bParsed.file.size / (1024 * 1024)).toFixed(1)} MB
+            </p>
+          </div>
+
+          {/* Title */}
+          <div className="space-y-1.5">
+            <Label htmlFor="audiobook-title">Title</Label>
+            <Input
+              id="audiobook-title"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="Audiobook title"
+            />
+          </div>
+
+          {/* Author */}
+          <div className="space-y-1.5">
+            <Label htmlFor="audiobook-author">Author</Label>
+            <Input
+              id="audiobook-author"
+              value={author}
+              onChange={e => setAuthor(e.target.value)}
+              placeholder="Author name"
+            />
+          </div>
+
+          {/* Chapter list preview */}
+          <div className="max-h-32 overflow-y-auto rounded-lg border border-border bg-surface-elevated">
+            {m4bParsed.chapters.map((ch, i) => (
+              <div
+                key={ch.id}
+                className="flex items-center justify-between px-3 py-1.5 text-xs border-b border-border/40 last:border-0"
+              >
+                <span className="text-muted-foreground mr-2 tabular-nums">{i + 1}.</span>
+                <span className="flex-1 truncate">{ch.title}</span>
+                <span className="text-muted-foreground ml-2 tabular-nums">
+                  {ch.position.type === 'time'
+                    ? `${Math.floor(ch.position.seconds / 60)}:${String(Math.floor(ch.position.seconds % 60)).padStart(2, '0')}`
+                    : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" size="sm" onClick={onCancel} className="min-h-[44px]">
+              Cancel
+            </Button>
+            <Button
+              variant="brand"
+              size="sm"
+              onClick={handleImportM4b}
+              disabled={!title.trim()}
+              className="min-h-[44px] gap-2"
+            >
+              <Upload className="size-4" />
+              Import Audiobook
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* MP3 metadata form — shown after MP3 chapters are loaded */}
+      {chapters.length > 0 && !m4bParsed && !isImporting && (
         <div className="space-y-4">
           {/* Chapter summary */}
           <div className="rounded-xl bg-muted/30 p-3 text-sm">
