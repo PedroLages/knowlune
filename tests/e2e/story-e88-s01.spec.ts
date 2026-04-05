@@ -10,6 +10,7 @@
  * - AC6: Catalog list shows connected catalogs with edit/remove actions
  */
 import { test, expect } from '../support/fixtures'
+import { navigateAndWait } from '../support/helpers/navigation'
 import { seedIndexedDBStore } from '../support/helpers/seed-helpers'
 import { FIXED_DATE } from '../utils/test-time'
 
@@ -22,42 +23,22 @@ const TEST_CATALOG = {
   createdAt: FIXED_DATE,
 }
 
-async function setupPage(page: import('@playwright/test').Page): Promise<void> {
-  await page.addInitScript(() => {
-    try {
-      localStorage.setItem('knowlune-sidebar-v1', 'false')
-      localStorage.setItem(
-        'knowlune-onboarding-v1',
-        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
-      )
-    } catch {
-      // about:blank throws SecurityError — ignore
-    }
-  })
-}
-
 async function openOpdsCatalogDialog(page: import('@playwright/test').Page): Promise<void> {
-  await page.goto('/library')
-  await page.waitForLoadState('networkidle')
+  await navigateAndWait(page, '/library')
   await page.getByTestId('opds-catalog-settings-trigger').click()
   await expect(page.getByTestId('opds-catalog-settings')).toBeVisible({ timeout: 5000 })
 }
 
 test.describe('E88-S01: OPDS Catalog Settings', () => {
-  test.beforeEach(async ({ page }) => {
-    await setupPage(page)
-  })
-
   test('opens OPDS catalog dialog from Library page', async ({ page }) => {
-    await page.goto('/library')
-    await page.waitForLoadState('networkidle')
+    await navigateAndWait(page, '/library')
 
     const trigger = page.getByTestId('opds-catalog-settings-trigger')
     await expect(trigger).toBeVisible({ timeout: 5000 })
     await trigger.click()
 
     await expect(page.getByTestId('opds-catalog-settings')).toBeVisible({ timeout: 5000 })
-    await expect(page.getByText('OPDS Catalogs')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'OPDS Catalogs' })).toBeVisible()
   })
 
   test('shows empty state when no catalogs are connected', async ({ page }) => {
@@ -111,12 +92,12 @@ test.describe('E88-S01: OPDS Catalog Settings', () => {
     await expect(page.getByText('Add Catalog')).toBeVisible()
     await page.getByRole('button', { name: 'Back' }).click()
 
-    await expect(page.getByText('OPDS Catalogs')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'OPDS Catalogs' })).toBeVisible()
   })
 
   test('shows connected catalog in list view', async ({ page }) => {
     // Seed the catalog before navigating
-    await page.goto('/')
+    await navigateAndWait(page, '/')
     await seedIndexedDBStore(page, DB_NAME, 'opdsCatalogs', [TEST_CATALOG] as unknown as Record<
       string,
       unknown
@@ -129,7 +110,7 @@ test.describe('E88-S01: OPDS Catalog Settings', () => {
   })
 
   test('shows edit and remove buttons for connected catalogs', async ({ page }) => {
-    await page.goto('/')
+    await navigateAndWait(page, '/')
     await seedIndexedDBStore(page, DB_NAME, 'opdsCatalogs', [TEST_CATALOG] as unknown as Record<
       string,
       unknown
