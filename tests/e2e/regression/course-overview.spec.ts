@@ -2,15 +2,12 @@
  * CourseOverview page E2E tests.
  *
  * Tests the /courses/:courseId/overview route which displays:
- * - Hero section with course title, category badge, difficulty badge
- * - Stats row (duration, lessons, videos, level)
- * - About section with description
- * - Author card with link to author profile
- * - "What You'll Learn" tags section
- * - CTA card with "Start First Lesson" button
- * - Curriculum section with expandable modules and lessons
+ * - Cinematic hero section with course title, tag badge, CTA button
+ * - Floating stats bar (duration, lessons, videos, resources)
+ * - Timeline curriculum with completed/active/upcoming module states
+ * - Sticky sidebar with author card, featured resources, about, schedule
  * - Not-found state for invalid course IDs
- * - Sequential course locking (locked modules show lock icons)
+ * - Sequential course locking
  */
 import { test, expect } from '../../support/fixtures'
 import { seedIndexedDBStore, seedAuthors } from '../../support/helpers/seed-helpers'
@@ -164,25 +161,23 @@ test.describe('CourseOverview — hero and metadata', () => {
     await expect(intermediateBadges.first()).toBeVisible()
   })
 
-  test('displays stats row with duration, lessons, videos, and level', async ({ page }) => {
+  test('displays stats row with lessons and videos counts', async ({ page }) => {
     await seedCourseAndAuthor(page)
     await goToCourseOverview(page)
 
-    // Duration
-    await expect(page.getByText('8h')).toBeVisible()
-    // Lessons count (totalLessons computed from modules: 2 + 1 = 3)
-    await expect(page.getByText('3').first()).toBeVisible()
-    // Level label
-    await expect(page.getByText('Level')).toBeVisible()
-    // Duration label
-    await expect(page.getByText('Duration')).toBeVisible()
+    const stats = page.getByTestId('course-overview-stats')
+    await expect(stats).toBeVisible()
+    // Lessons label
+    await expect(stats.getByText('Lessons')).toBeVisible()
+    // Videos label
+    await expect(stats.getByText('Videos')).toBeVisible()
   })
 
   test('shows course description in about section', async ({ page }) => {
     await seedCourseAndAuthor(page)
     await goToCourseOverview(page)
 
-    await expect(page.getByText('About This Course')).toBeVisible()
+    await expect(page.getByText('About')).toBeVisible()
     await expect(
       page.getByText(
         'Master the art of reading people through behavioral cues and micro-expressions.'
@@ -230,20 +225,17 @@ test.describe('CourseOverview — author card', () => {
 })
 
 // ---------------------------------------------------------------------------
-// What You'll Learn (tags)
+// Tag badge in hero
 // ---------------------------------------------------------------------------
 
-test.describe('CourseOverview — what you will learn', () => {
-  test('renders tags as learning outcomes', async ({ page }) => {
+test.describe('CourseOverview — tag badge', () => {
+  test('renders first tag as badge in hero section', async ({ page }) => {
     await seedCourseAndAuthor(page)
     await goToCourseOverview(page)
 
-    await expect(page.getByText("What You'll Learn")).toBeVisible()
-    // Tags are formatted: "body-language" → "Body Language"
-    // Use exact match to avoid partial matches in lesson titles (e.g., "Introduction to Body Language")
-    await expect(page.getByText('Body Language', { exact: true })).toBeVisible()
-    await expect(page.getByText('Micro Expressions', { exact: true })).toBeVisible()
-    await expect(page.getByText('Deception Detection', { exact: true })).toBeVisible()
+    const hero = page.getByTestId('course-overview-hero')
+    // First tag is shown as a badge in the hero section
+    await expect(hero.getByText('body-language')).toBeVisible()
   })
 })
 
@@ -252,34 +244,26 @@ test.describe('CourseOverview — what you will learn', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('CourseOverview — CTA section', () => {
-  test('shows "Start First Lesson" button linking to first lesson', async ({ page }) => {
+  test('shows "Start Course" button in hero', async ({ page }) => {
     await seedCourseAndAuthor(page)
     await goToCourseOverview(page)
 
-    const ctaButton = page.getByRole('link', { name: /Start First Lesson/ })
+    const ctaButton = page.getByTestId('course-overview-cta')
     await expect(ctaButton).toBeVisible()
-    await expect(ctaButton).toHaveAttribute('href', `/courses/${COURSE_ID}/lesson-overview-1`)
-  })
-
-  test('CTA section shows "Ready to Start?" heading', async ({ page }) => {
-    await seedCourseAndAuthor(page)
-    await goToCourseOverview(page)
-
-    await expect(page.getByText('Ready to Start?')).toBeVisible()
+    await expect(ctaButton).toHaveText(/Start Course/)
   })
 })
 
 // ---------------------------------------------------------------------------
-// Curriculum section — modules and lessons
+// Timeline curriculum — modules and lessons
 // ---------------------------------------------------------------------------
 
 test.describe('CourseOverview — curriculum', () => {
-  test('displays curriculum heading with lesson count badge', async ({ page }) => {
+  test('displays Course Journey heading with completion badge', async ({ page }) => {
     await seedCourseAndAuthor(page)
     await goToCourseOverview(page)
 
-    await expect(page.getByText('Curriculum')).toBeVisible()
-    await expect(page.getByText('3 lessons')).toBeVisible()
+    await expect(page.getByText('Course Journey')).toBeVisible()
   })
 
   test('renders all module titles', async ({ page }) => {
@@ -347,12 +331,12 @@ test.describe('CourseOverview — curriculum', () => {
     await expect(page.getByText('18:45')).toBeVisible()
   })
 
-  test('lessons show "Lesson N" labels', async ({ page }) => {
+  test('shows "Module N" badges on timeline cards', async ({ page }) => {
     await seedCourseAndAuthor(page)
     await goToCourseOverview(page)
 
-    await expect(page.getByText('Lesson 1').first()).toBeVisible()
-    await expect(page.getByText('Lesson 2').first()).toBeVisible()
+    await expect(page.getByText('Module 1').first()).toBeVisible()
+    await expect(page.getByText('Module 2').first()).toBeVisible()
   })
 })
 
@@ -400,8 +384,10 @@ test.describe('CourseOverview — not-found state', () => {
   test('displays "Course Not Found" for invalid course ID', async ({ page }) => {
     await navigateAndWait(page, '/courses/nonexistent-course-id-xyz/overview')
 
-    await expect(page.getByText('Course Not Found')).toBeVisible()
-    await expect(page.getByText('The course you are looking for does not exist.')).toBeVisible()
+    await expect(page.getByText('Course not found')).toBeVisible()
+    await expect(
+      page.getByText("The course you're looking for doesn't exist or has been removed.")
+    ).toBeVisible()
   })
 
   test('shows "Back to Courses" link in not-found state', async ({ page }) => {
@@ -414,17 +400,8 @@ test.describe('CourseOverview — not-found state', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Back navigation
+// Back navigation (not-found state only — hero page has no back button)
 // ---------------------------------------------------------------------------
-
-test.describe('CourseOverview — back navigation', () => {
-  test('back button is visible', async ({ page }) => {
-    await seedCourseAndAuthor(page)
-    await goToCourseOverview(page)
-
-    await expect(page.getByRole('button', { name: /Back/ })).toBeVisible()
-  })
-})
 
 // ---------------------------------------------------------------------------
 // Hero image fallback

@@ -28,6 +28,8 @@ export type AppEvent =
   | { type: 'srs:due'; dueCount: number }
   | { type: 'knowledge:decay'; topic: string; retention: number; dueCount: number }
   | { type: 'recommendation:match'; courseId: string; courseName: string; reason: string }
+  | { type: 'book:imported'; bookId: string; title: string }
+  | { type: 'book:deleted'; bookId: string }
   | {
       type: 'milestone:approaching'
       courseId: string

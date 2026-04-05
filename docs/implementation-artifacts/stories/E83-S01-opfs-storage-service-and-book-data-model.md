@@ -1,6 +1,7 @@
 # Story 83.1: OPFS Storage Service and Book Data Model
 
-Status: ready-for-dev
+Status: done
+Completed: 2026-04-05
 
 ## Story
 

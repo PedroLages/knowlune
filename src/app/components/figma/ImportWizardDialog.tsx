@@ -9,6 +9,7 @@ import {
   DialogFooter,
 } from '@/app/components/ui/dialog'
 import { Button } from '@/app/components/ui/button'
+import { Progress } from '@/app/components/ui/progress'
 import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
 import { Badge } from '@/app/components/ui/badge'
@@ -44,8 +45,50 @@ import { usePathPlacementSuggestion } from '@/ai/hooks/usePathPlacementSuggestio
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { isPathPlacementAvailable } from '@/ai/learningPath/suggestPlacement'
 import { toast } from 'sonner'
+import { useImportProgressStore } from '@/stores/useImportProgressStore'
 
 type WizardStep = 'select' | 'details' | 'path'
+
+/** Live scan progress shown inside the wizard during folder scanning. */
+function ScanProgressIndicator() {
+  const courses = useImportProgressStore(s => s.courses)
+  const courseList = [...courses.values()]
+  const current = courseList[courseList.length - 1] // Most recent (single import = 1 entry)
+
+  if (!current) return null
+
+  const isScanning = current.phase === 'scanning'
+  const totalFiles = current.totalFiles
+  const processed = current.filesProcessed
+  const percent =
+    totalFiles && totalFiles > 0 ? Math.round((processed / totalFiles) * 100) : undefined
+
+  return (
+    <div
+      className="w-full max-w-xs space-y-2 text-center"
+      role="status"
+      aria-live="polite"
+      data-testid="wizard-scan-progress"
+    >
+      <div className="flex items-center gap-2 justify-center">
+        <Loader2 className="size-4 text-brand animate-spin shrink-0" aria-hidden="true" />
+        <span className="text-sm font-medium truncate">{current.courseName}</span>
+      </div>
+      <Progress
+        value={percent ?? 0}
+        className="h-1.5"
+        aria-label="Scan progress"
+      />
+      <p className="text-xs text-muted-foreground">
+        {isScanning && (totalFiles === null || totalFiles === 0)
+          ? `Scanning folder\u2026 ${processed} of ? files processed`
+          : percent !== undefined
+            ? `${processed} of ${totalFiles} files processed (${percent}%)`
+            : `Scanning\u2026 ${processed} files found`}
+      </p>
+    </div>
+  )
+}
 
 interface ImportWizardDialogProps {
   open: boolean
@@ -83,6 +126,16 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
       loadPaths()
     }
   }, [open, loadPaths])
+
+  // Sync dialog open state with progress store so overlay hides while dialog is showing activity
+  useEffect(() => {
+    if (open && (isScanning || isPersisting)) {
+      useImportProgressStore.getState().setDialogOpen(true)
+    }
+    return () => {
+      useImportProgressStore.getState().setDialogOpen(false)
+    }
+  }, [open, isScanning, isPersisting])
 
   // Determine if path step should be shown
   const showPathStep = useMemo(() => {
@@ -464,7 +517,10 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
                 </>
               )}
             </Button>
-            <ImportDropZone onFilesDropped={handleFilesDropped} disabled={isScanning} />
+            {isScanning && <ScanProgressIndicator />}
+            {!isScanning && (
+              <ImportDropZone onFilesDropped={handleFilesDropped} disabled={isScanning} />
+            )}
           </div>
         )}
 

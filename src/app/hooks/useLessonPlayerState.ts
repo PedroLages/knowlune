@@ -75,6 +75,7 @@ export interface LessonPlayerState {
   handleTranscriptSeek: (time: number) => void
   handleSeekComplete: () => void
   handleFocusNotes: () => void
+  handleFocusMaterials: () => void
 }
 
 export function useLessonPlayerState(
@@ -184,6 +185,11 @@ export function useLessonPlayerState(
     setFocusTab(`notes`)
   }, [])
 
+  const handleFocusMaterials = useCallback(() => {
+    focusTabCounter.current += 1
+    setFocusTab('materials')
+  }, [])
+
   const handleNotesToggle = useCallback(() => {
     setNotesOpen(prev => {
       if (!prev) setPendingNoteFocus(true)
@@ -234,5 +240,6 @@ export function useLessonPlayerState(
     handleTranscriptSeek,
     handleSeekComplete,
     handleFocusNotes,
+    handleFocusMaterials,
   }
 }

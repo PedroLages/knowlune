@@ -350,6 +350,7 @@ export async function persistScannedCourse(
     tags?: string[]
     coverImageHandle?: FileSystemFileHandle
     authorId?: string
+    skipStoreUpdate?: boolean
   }
 ): Promise<ImportedCourse> {
   const now = new Date().toISOString()
@@ -480,10 +481,12 @@ export async function persistScannedCourse(
     }
   }
 
-  // Update Zustand store
-  useCourseImportStore.setState(state => ({
-    importedCourses: [...state.importedCourses, course],
-  }))
+  // Update Zustand store (skip when caller handles batch refresh)
+  if (!overrides?.skipStoreUpdate) {
+    useCourseImportStore.setState(state => ({
+      importedCourses: [...state.importedCourses, course],
+    }))
+  }
 
   // Show success toast (AC4: include author name when detected)
   const authorSuffix = detectedAuthorName ? ` by ${detectedAuthorName}` : ''

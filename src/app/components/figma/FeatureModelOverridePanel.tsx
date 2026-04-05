@@ -59,6 +59,8 @@ interface FeatureModelOverridePanelProps {
   isConsentEnabled: boolean
   /** Called after save so parent can refresh state */
   onConfigChanged: () => void
+  /** When true, only show free-tier models in the model picker */
+  budgetMode?: boolean
 }
 
 export function FeatureModelOverridePanel({
@@ -66,6 +68,7 @@ export function FeatureModelOverridePanel({
   currentOverride,
   isConsentEnabled,
   onConfigChanged,
+  budgetMode = false,
 }: FeatureModelOverridePanelProps) {
   const [isOverrideEnabled, setIsOverrideEnabled] = useState(!!currentOverride)
   const [selectedProvider, setSelectedProvider] = useState<AIProviderId>(
@@ -320,6 +323,7 @@ export function FeatureModelOverridePanel({
               label="Model"
               showCustomInput={true}
               testIdPrefix={`override-model-${feature}`}
+              budgetMode={budgetMode}
             />
           )}
 

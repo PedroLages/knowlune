@@ -7,8 +7,7 @@
  * modern adapter-driven architecture.
  *
  * Sub-components:
- * - PlayerHeader: back link, lesson title, course name, Pomodoro, Q&A, theater, completion
- * - CourseBreadcrumb: breadcrumb trail (Courses > Course > Lesson)
+ * - PlayerHeader: action toolbar (Pomodoro, Q&A, theater, notes, completion)
  * - LessonContentRenderer: PDF, YouTube, or local video content
  * - LessonHeaderCard: title, description, badges, tags, actions slot
  * - BelowVideoTabs: Notes, Bookmarks, Transcript, AI Summary, Materials
@@ -27,9 +26,10 @@
  * @see E89-S05, E89-S06, E89-S07, E89-S08
  */
 
-import { useEffect, useMemo, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useParams, useNavigate, Link } from 'react-router'
 import {
+  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   PanelRight,
@@ -50,7 +50,6 @@ import { useDeepLinkEffects } from '@/app/hooks/useDeepLinkEffects'
 import { useLessonFocusEffects } from '@/app/hooks/useLessonFocusEffects'
 import { useFrameCapture } from '@/app/hooks/useFrameCapture'
 import { PlayerHeader } from '@/app/components/course/PlayerHeader'
-import { CourseBreadcrumb } from '@/app/components/course/CourseBreadcrumb'
 import { AutoAdvanceCountdown } from '@/app/components/figma/AutoAdvanceCountdown'
 import { CompletionModal } from '@/app/components/celebrations/CompletionModal'
 import { LessonContentRenderer } from '@/app/components/course/LessonContentRenderer'
@@ -88,6 +87,8 @@ export function UnifiedLessonPlayer() {
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const course = importedCourses.find(c => c.id === courseId)
+  const adapterCourse = adapter?.getCourse?.()
+  const courseName = adapterCourse?.name ?? course?.name ?? 'Course'
 
   const isDesktop = useIsDesktop()
   const isTablet = useIsTablet()
@@ -103,6 +104,22 @@ export function UnifiedLessonPlayer() {
   const videoPlayerRef = useRef<VideoPlayerHandle>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const videoContainerRef = useRef<HTMLDivElement>(null)
+
+  // Sticky toolbar detection: sentinel element goes above toolbar,
+  // when it scrolls out of view the toolbar is "stuck" at the top
+  const toolbarSentinelRef = useRef<HTMLDivElement>(null)
+  const [isToolbarStuck, setIsToolbarStuck] = useState(false)
+
+  useEffect(() => {
+    const sentinel = toolbarSentinelRef.current
+    if (!sentinel) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsToolbarStuck(!entry.isIntersecting),
+      { threshold: 0 }
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [])
 
   // Lesson navigation: prev/next lesson via adapter
   const { prevLesson, nextLesson, totalLessons, lessons } = useLessonNavigation(adapter, lessonId)
@@ -225,12 +242,15 @@ export function UnifiedLessonPlayer() {
         e.preventDefault()
         toggleTheater()
       }
-      // Note: ESC in theater mode is handled exclusively by VideoPlayer's internal
-      // handler (cascading priority: loop markers → theater mode). No duplicate here.
+      // ESC exits theater mode for PDFs (VideoPlayer handles its own ESC for videos)
+      if (e.key === 'Escape' && isTheater && state.isPdf) {
+        e.preventDefault()
+        toggleTheater()
+      }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [toggleTheater])
+  }, [toggleTheater, isTheater, state.isPdf])
 
   // Next course suggestion (E91-S08) — computed via useMemo
   const courseSuggestion = useMemo(() => {
@@ -308,7 +328,7 @@ export function UnifiedLessonPlayer() {
         ref={videoContainerRef}
         className={cn(
           'relative mb-3 w-full overflow-hidden',
-          !state.isPdf && !isTheater && 'aspect-video max-h-[60svh]',
+          !state.isPdf && !isTheater && 'aspect-video max-h-[65svh] xl:max-h-[72svh] 2xl:max-h-[78svh]',
           !state.isPdf && isTheater && 'h-[calc(100svh-1rem)]'
         )}
       >
@@ -333,6 +353,11 @@ export function UnifiedLessonPlayer() {
           onBookmarkSeek={state.handleTranscriptSeek}
         />
       </div>
+
+      {/* Lesson title — below video, matching YouTube/Udemy/Coursera pattern */}
+      <h1 className="text-lg font-semibold mt-3 mb-1 truncate text-center" data-testid="lesson-title">
+        {state.lessonTitle.replace(/\.\w{2,4}$/, '')}
+      </h1>
 
       {/* Auto-advance countdown */}
       {state.showAutoAdvance && nextLesson && (
@@ -397,6 +422,7 @@ export function UnifiedLessonPlayer() {
         currentTime={state.currentTime}
         onSeek={state.handleTranscriptSeek}
         focusTab={state.focusTab}
+        focusTabKey={state.focusTabCounter.current}
         isPdf={state.isPdf}
         hideNotesTab={isDesktop && state.notesOpen}
         onCaptureFrame={handleCaptureFrame}
@@ -459,21 +485,30 @@ export function UnifiedLessonPlayer() {
       <div role="status" aria-live="polite" className="sr-only">
         {readingModeAnnouncement}
       </div>
-      {/* Breadcrumb: Courses > Course Name > Lesson Title */}
-      <div className="px-4 pt-3" data-theater-hide>
-        <CourseBreadcrumb
-          courseId={courseId!}
-          courseName={course?.name ?? 'Course'}
-          lessonTitle={state.lessonTitle}
-        />
-      </div>
-
-      <div data-theater-hide>
+      {/* Sentinel: when this scrolls out of view, toolbar is "stuck" */}
+      <div ref={toolbarSentinelRef} className="h-0 shrink-0" aria-hidden="true" />
+      {/* Slim toolbar: back arrow + course name (left), action buttons (right) */}
+      <div
+        className={cn(
+          'flex items-center gap-3 px-4 py-2 shrink-0 sticky top-0 z-20 transition-all duration-200',
+          isToolbarStuck
+            ? 'bg-card shadow-lg shadow-black/25 border-b border-border/30 rounded-none'
+            : 'border border-border/30 bg-card/80 backdrop-blur-sm rounded-xl -mt-3 mb-3'
+        )}
+        data-theater-hide
+      >
+        <Link
+          to={`/courses/${courseId}`}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+          aria-label="Back to course"
+        >
+          <ArrowLeft className="size-5 group-hover:-translate-x-0.5 transition-transform" />
+          <span className="truncate max-w-[200px] sm:max-w-[300px]">{courseName}</span>
+        </Link>
+        <div className="flex-1" />
         <PlayerHeader
           courseId={courseId!}
           lessonId={lessonId!}
-          lessonTitle={state.lessonTitle}
-          courseName={course?.name}
           showCompletionToggle={
             state.isPdf || capabilities.requiresNetwork || capabilities.hasVideo
           }
@@ -489,7 +524,7 @@ export function UnifiedLessonPlayer() {
 
       {/* Content area: classic horizontal layout — scrolls via #main-content (no nested scroll) */}
       {isDesktop ? (
-        <div className={cn('flex gap-[var(--content-gap)]', !isTheater && 'mt-3')}>
+        <div className={cn('flex gap-[var(--content-gap)]')}>
           {/* Main content + Notes panel (resizable) */}
           <ResizablePanelGroup
             orientation="horizontal"
@@ -544,7 +579,7 @@ export function UnifiedLessonPlayer() {
               <p className="text-xs text-muted-foreground">Course Content</p>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto">
-              <LessonsTab courseId={courseId!} lessonId={lessonId!} adapter={adapter} />
+              <LessonsTab courseId={courseId!} lessonId={lessonId!} adapter={adapter} onFocusMaterials={state.handleFocusMaterials} />
             </div>
           </div>
         </div>
@@ -608,7 +643,7 @@ export function UnifiedLessonPlayer() {
                 {course?.name ?? 'Course Content'}
               </SheetTitle>
               <div className="flex-1 min-h-0 overflow-y-auto">
-                <LessonsTab courseId={courseId!} lessonId={lessonId!} adapter={adapter} />
+                <LessonsTab courseId={courseId!} lessonId={lessonId!} adapter={adapter} onFocusMaterials={state.handleFocusMaterials} />
               </div>
             </SheetContent>
           </Sheet>

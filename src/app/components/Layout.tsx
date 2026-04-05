@@ -479,11 +479,11 @@ export function Layout() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <div className={`flex-1 flex flex-col min-w-0 ${isLessonPlayerRoute ? 'overflow-auto' : 'overflow-hidden'}`}>
         {/* Header */}
         <header
           data-theater-hide
-          className="bg-card m-6 mb-0 p-4 px-6 flex items-center gap-4 justify-between"
+          className="bg-card m-6 mb-0 p-4 px-6 flex items-center gap-4 justify-between relative z-10"
           role="banner"
         >
           {/* Hamburger Menu Button - Only on tablet (640-1023px) */}
@@ -645,7 +645,7 @@ export function Layout() {
         <main
           id="main-content"
           data-testid="main-scroll-container"
-          className={`flex-1 overflow-auto px-6 pt-6 leading-[var(--content-line-height)] ${isLessonPlayerRoute ? 'pb-6' : 'pb-20 sm:pb-6'}`}
+          className={`flex-1 px-6 pt-6 leading-[var(--content-line-height)] ${isLessonPlayerRoute ? 'pb-6' : 'overflow-auto pb-20 sm:pb-6'}`}
         >
           {!isOnline && (
             <div

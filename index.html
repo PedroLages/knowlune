@@ -24,8 +24,8 @@
         img-src     'self' data: blob: https://images.unsplash.com https://*.unsplash.com https://*.googleusercontent.com;
         media-src   'self' blob:;
         font-src    'self';
-        connect-src 'self' ws: wss: https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com http://titan.local:* http://localhost:* http://127.0.0.1:* https://*.stripe.com https://*.supabase.co https://www.googleapis.com https://www.youtube.com https://*.ingest.sentry.io https://openrouter.ai;
-        frame-src   'self' https://www.youtube.com https://www.youtube-nocookie.com https://checkout.stripe.com https://js.stripe.com https://accounts.google.com;
+        connect-src 'self' blob: ws: wss: https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com http://titan.local:* http://localhost:* http://127.0.0.1:* https://*.stripe.com https://*.supabase.co https://www.googleapis.com https://www.youtube.com https://*.ingest.sentry.io https://openrouter.ai;
+        frame-src   'self' blob: https://www.youtube.com https://www.youtube-nocookie.com https://checkout.stripe.com https://js.stripe.com https://accounts.google.com;
         worker-src  'self' blob:;
         object-src  'none';
         base-uri    'self';

@@ -136,4 +136,80 @@ router.get('/openrouter', async (req, res) => {
   }
 })
 
+/**
+ * GET /api/ai/models/glm
+ *
+ * Proxies to Z.ai's model listing endpoint.
+ * Requires X-API-Key header with the user's GLM API key.
+ */
+router.get('/glm', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'] as string
+    if (!apiKey) {
+      res.status(400).json({ error: 'X-API-Key header is required' })
+      return
+    }
+
+    const response = await fetch('https://api.z.ai/api/paas/v4/models', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10_000),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => response.statusText) // eslint-disable-line error-handling/no-silent-catch -- server-side
+      res.status(response.status).json({ error: `Z.ai returned ${response.status}: ${errorText}` })
+      return
+    }
+
+    const data = await response.json()
+    res.json(data)
+  } catch (error) {
+    // silent-catch-ok — logs to console and returns error response to client
+    console.error('[/api/ai/models/glm] Error:', (error as Error).message)
+    if ((error as Error).name === 'AbortError' || (error as Error).name === 'TimeoutError') {
+      res.status(504).json({ error: 'Z.ai API timed out' })
+      return
+    }
+    res.status(500).json({ error: (error as Error).message })
+  }
+})
+
+/**
+ * GET /api/ai/models/gemini
+ *
+ * Proxies to Google Gemini's model listing endpoint.
+ * Requires X-API-Key header with the user's Gemini API key.
+ */
+router.get('/gemini', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'] as string
+    if (!apiKey) {
+      res.status(400).json({ error: 'X-API-Key header is required' })
+      return
+    }
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`,
+      { signal: AbortSignal.timeout(10_000) }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => response.statusText) // eslint-disable-line error-handling/no-silent-catch -- server-side
+      res.status(response.status).json({ error: `Gemini returned ${response.status}: ${errorText}` })
+      return
+    }
+
+    const data = await response.json()
+    res.json(data)
+  } catch (error) {
+    // silent-catch-ok — logs to console and returns error response to client
+    console.error('[/api/ai/models/gemini] Error:', (error as Error).message)
+    if ((error as Error).name === 'AbortError' || (error as Error).name === 'TimeoutError') {
+      res.status(504).json({ error: 'Gemini API timed out' })
+      return
+    }
+    res.status(500).json({ error: (error as Error).message })
+  }
+})
+
 export default router

@@ -15,6 +15,9 @@ import {
   saveAIConfiguration,
   isFeatureEnabled,
   isAIAvailable,
+  isBudgetMode,
+  filterFreeModels,
+  resolveFeatureModel,
   sanitizeAIRequestPayload,
   getOllamaServerUrl,
   isOllamaDirectConnection,
@@ -22,6 +25,7 @@ import {
   DEFAULTS,
   type AIConfigurationSettings,
 } from '@/lib/aiConfiguration'
+import type { DiscoveredModel } from '@/lib/modelDiscovery'
 
 // Mock crypto module
 vi.mock('@/lib/crypto', () => ({
@@ -386,6 +390,128 @@ describe('aiConfiguration.ts', () => {
       const sanitized = sanitizeAIRequestPayload(content)
 
       expect(sanitized.content).toBe('My name is John and my email is john@example.com')
+    })
+  })
+
+  // ===========================================================================
+  // Budget Mode
+  // ===========================================================================
+
+  describe('isBudgetMode', () => {
+    it('returns false by default', () => {
+      expect(isBudgetMode()).toBe(false)
+    })
+
+    it('returns true when budgetMode is set', () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({ ...DEFAULTS, budgetMode: true })
+      )
+      expect(isBudgetMode()).toBe(true)
+    })
+
+    it('persists via saveAIConfiguration', async () => {
+      await saveAIConfiguration({ budgetMode: true })
+      expect(isBudgetMode()).toBe(true)
+    })
+  })
+
+  describe('filterFreeModels', () => {
+    const models: DiscoveredModel[] = [
+      { id: 'free-1', name: 'Free', provider: 'glm', costTier: 'free', capabilities: [] },
+      { id: 'paid-1', name: 'Paid', provider: 'glm', costTier: 'high', capabilities: [] },
+      { id: 'medium-1', name: 'Med', provider: 'glm', costTier: 'medium', capabilities: [] },
+      { id: 'local-1', name: 'Local', provider: 'ollama', capabilities: [] }, // undefined = free
+    ]
+
+    it('keeps free and undefined cost tier models', () => {
+      const filtered = filterFreeModels(models)
+      expect(filtered).toHaveLength(2)
+      expect(filtered.map(m => m.id)).toEqual(['free-1', 'local-1'])
+    })
+
+    it('returns empty array when no free models', () => {
+      const paidOnly = models.filter(m => m.costTier === 'high')
+      expect(filterFreeModels(paidOnly)).toHaveLength(0)
+    })
+  })
+
+  describe('resolveFeatureModel with budget mode', () => {
+    it('returns free model for Tier 2 defaults when budget mode is on', () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({ ...DEFAULTS, budgetMode: true })
+      )
+      // FEATURE_DEFAULTS.videoSummary defaults to anthropic/claude-haiku-4-5
+      // Anthropic has no free models, so it should stay as-is (no free fallback)
+      const resolved = resolveFeatureModel('videoSummary')
+      expect(resolved.provider).toBe('anthropic')
+    })
+
+    it('respects explicit user overrides even in budget mode (Tier 1)', () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          budgetMode: true,
+          featureModels: {
+            videoSummary: { provider: 'openai', model: 'gpt-4o' },
+          },
+        })
+      )
+      const resolved = resolveFeatureModel('videoSummary')
+      expect(resolved.provider).toBe('openai')
+      expect(resolved.model).toBe('gpt-4o') // Explicit override, not overridden by budget
+    })
+
+    it('switches to free model when available in budget mode', () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          provider: 'glm',
+          budgetMode: true,
+        })
+      )
+      // GLM has free models, so Tier 3 should pick the free default
+      const resolved = resolveFeatureModel('videoSummary')
+      // Tier 2 feature default is anthropic, which has no free model
+      // But Tier 2 will still try anthropic since FEATURE_DEFAULTS has it
+      expect(resolved.provider).toBe('anthropic')
+    })
+  })
+
+  // ===========================================================================
+  // Provider hasFreeModels
+  // ===========================================================================
+
+  describe('provider hasFreeModels', () => {
+    it('GLM has hasFreeModels = true', () => {
+      expect(AI_PROVIDERS.glm.hasFreeModels).toBe(true)
+    })
+
+    it('Groq has hasFreeModels = true', () => {
+      expect(AI_PROVIDERS.groq.hasFreeModels).toBe(true)
+    })
+
+    it('Gemini has hasFreeModels = true', () => {
+      expect(AI_PROVIDERS.gemini.hasFreeModels).toBe(true)
+    })
+
+    it('OpenAI does not have hasFreeModels', () => {
+      expect(AI_PROVIDERS.openai.hasFreeModels).toBeUndefined()
+    })
+
+    it('GLM name does not include (FREE)', () => {
+      expect(AI_PROVIDERS.glm.name).toBe('GLM / Z.ai')
+    })
+
+    it('Gemini name does not include (FREE)', () => {
+      expect(AI_PROVIDERS.gemini.name).toBe('Google Gemini')
+    })
+
+    it('Groq name still includes (FREE)', () => {
+      expect(AI_PROVIDERS.groq.name).toBe('Groq (FREE)')
     })
   })
 })

@@ -6,7 +6,7 @@ import { useIsMobile } from '@/app/components/ui/use-mobile'
 import { Sheet, SheetContent, SheetTitle } from '@/app/components/ui/sheet'
 import { usePdfViewerState } from './usePdfViewerState'
 import { usePdfSearch } from './usePdfSearch'
-import { PdfToolbar } from './PdfToolbar'
+import { PdfToolbar, openBlobPdfInNewTab } from './PdfToolbar'
 import { PdfPageRenderer } from './PdfPageRenderer'
 import { PdfScrollView } from './PdfScrollView'
 import { PdfSearchBar } from './PdfSearchBar'
@@ -50,6 +50,11 @@ export function PdfViewer({
       search.closeSearch()
       return
     }
+    if (e.key === 'Escape' && state.isFullscreen) {
+      e.preventDefault()
+      state.toggleFullscreen()
+      return
+    }
     state.handleKeyDown(e)
   }
 
@@ -59,7 +64,7 @@ export function PdfViewer({
         <FileText className="mb-4 size-12 text-muted-foreground" />
         <p className="mb-2 text-sm font-medium text-muted-foreground">{title || 'PDF Document'}</p>
         <p className="mb-4 text-xs text-muted-foreground">Unable to preview this document inline</p>
-        <Button variant="outline" size="sm" onClick={() => window.open(src, '_blank')}>
+        <Button variant="outline" size="sm" onClick={() => openBlobPdfInNewTab(src, title)}>
           <ExternalLink className="mr-2 size-4" />
           Open in New Tab
         </Button>
@@ -92,7 +97,8 @@ export function PdfViewer({
       onKeyDown={handleKeyDown}
       className={cn(
         'flex flex-col overflow-hidden rounded-2xl border border-border bg-card focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none',
-        className
+        className,
+        state.isFullscreen && '!max-h-none'
       )}
     >
       <PdfToolbar

@@ -5,11 +5,14 @@
  * both confidentiality and integrity protection for sensitive data.
  *
  * Security guarantees:
- * - 256-bit AES encryption
+ * - 256-bit AES encryption (non-extractable key)
  * - Unique random IV per encryption operation
  * - Authenticated encryption prevents tampering
- * - No keys persisted (generated per-session)
+ * - Key persisted in IndexedDB via cryptoKeyStore.ts — survives page refresh
+ * - Non-extractable: even malicious extensions cannot export the raw key bytes
  */
+
+import { loadCryptoKey, saveCryptoKey } from './cryptoKeyStore'
 
 export interface EncryptedData {
   /** Initialization Vector (12 bytes, hex-encoded) */
@@ -19,32 +22,56 @@ export interface EncryptedData {
 }
 
 /**
- * Session-scoped encryption key singleton
+ * In-memory cache for the encryption key.
  *
- * Maintains the same key across multiple encrypt/decrypt operations within
- * a browser session. Key is regenerated only when:
- * - Browser tab is closed/refreshed
- * - User explicitly clears session storage
- *
- * This ensures encrypted data can be decrypted during the same session
- * without persisting keys to disk (which would be a security risk).
+ * The canonical key lives in IndexedDB ("CryptoKeyStore"). This variable
+ * is a fast-path cache that avoids hitting IndexedDB on every encrypt/decrypt
+ * call within a session. On page refresh the cache is empty and the key is
+ * reloaded from IndexedDB.
  */
 let _sessionKey: CryptoKey | null = null
 
 /**
- * Gets or generates the session-scoped encryption key
+ * Gets or generates the persistent encryption key.
  *
- * @returns CryptoKey that persists for the duration of the browser session
+ * Resolution order:
+ * 1. In-memory cache (_sessionKey) — fast path, no I/O
+ * 2. IndexedDB ("CryptoKeyStore") — survives page refresh
+ * 3. Generate new key → persist to IndexedDB → cache in memory
  */
 async function getSessionKey(): Promise<CryptoKey> {
-  if (!_sessionKey) {
-    _sessionKey = await crypto.subtle.generateKey(
-      { name: 'AES-GCM', length: 256 },
-      true, // extractable
-      ['encrypt', 'decrypt']
-    )
+  if (_sessionKey) return _sessionKey
+
+  // Try loading persisted key from IndexedDB
+  try {
+    const persisted = await loadCryptoKey()
+    if (persisted) {
+      _sessionKey = persisted
+      return _sessionKey
+    }
+  } catch {
+    // IndexedDB unavailable (e.g. Firefox private browsing quirks) — fall through to generate
   }
+
+  // Generate new non-extractable key and persist it
+  _sessionKey = await crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: 256 },
+    false, // non-extractable: prevents extension-based key theft
+    ['encrypt', 'decrypt']
+  )
+
+  try {
+    await saveCryptoKey(_sessionKey)
+  } catch {
+    // IndexedDB write failed — key still works in-memory for this session
+  }
+
   return _sessionKey
+}
+
+/** @internal Clear in-memory key cache to simulate page refresh in tests. */
+export function _resetKeyCache(): void {
+  _sessionKey = null
 }
 
 /**

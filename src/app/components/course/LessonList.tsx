@@ -26,6 +26,12 @@ import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Progress } from '@/app/components/ui/progress'
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/app/components/ui/tooltip'
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -33,6 +39,7 @@ import {
 import { cn } from '@/app/components/ui/utils'
 import type { ImportedVideo, ImportedPdf, VideoProgress, YouTubeCourseChapter } from '@/data/types'
 import type { FileStatus } from '@/lib/fileVerification'
+import { humanizeFilename } from '@/lib/courseAdapter'
 import type { ContentCapabilities } from '@/lib/courseAdapter'
 
 // ---------------------------------------------------------------------------
@@ -57,13 +64,16 @@ function formatDuration(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-function stripExtension(filename: string): string {
-  return filename.replace(/\.\w+$/, '')
-}
-
 function getFolderName(path: string): string {
   const parts = path.split('/')
   return parts.length > 1 ? parts[0] : ''
+}
+
+function formatFolderCount(videoCount: number, pdfCount: number): string {
+  const parts: string[] = []
+  if (videoCount > 0) parts.push(`${videoCount} video${videoCount !== 1 ? 's' : ''}`)
+  if (pdfCount > 0) parts.push(`${pdfCount} PDF${pdfCount !== 1 ? 's' : ''}`)
+  return parts.join(' · ') || '0 items'
 }
 
 // ---------------------------------------------------------------------------
@@ -124,6 +134,7 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
 interface ChapterGroup {
   title: string
   videos: ImportedVideo[]
+  pdfs: ImportedPdf[]
 }
 
 export interface LessonListProps {
@@ -174,18 +185,19 @@ export function LessonList({
     contentListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
 
-  // Group videos by folder (local) or chapter (YouTube)
+  // Group videos and PDFs by folder (local) or chapter (YouTube)
   const groupedContent = useMemo(() => {
     if (isNetworkSource && chapters.length > 0) {
       return groupByChapter(filteredVideos, chapters)
     }
-    return groupByFolder(filteredVideos)
-  }, [filteredVideos, chapters, isNetworkSource])
+    return groupByFolder(filteredVideos, isNetworkSource ? [] : filteredPdfs)
+  }, [filteredVideos, filteredPdfs, chapters, isNetworkSource])
 
   const hasMultipleGroups =
     groupedContent.length > 1 || (groupedContent.length === 1 && groupedContent[0].title !== '')
 
   return (
+    <TooltipProvider delayDuration={300}>
     <div>
       {/* Search/filter input */}
       {showSearch && (
@@ -221,7 +233,7 @@ export function LessonList({
         ref={contentListRef}
         data-testid="course-content-list"
         aria-label="Course content"
-        className="flex flex-col gap-2"
+        className="flex flex-col gap-0.5"
       >
         {isNetworkSource
           ? renderYouTubeGroups(
@@ -240,57 +252,8 @@ export function LessonList({
               searchQuery
             )}
 
-        {/* PDF items (local courses only) */}
-        {!isNetworkSource &&
-          filteredPdfs.map(pdf => {
-            const status = fileStatuses.get(pdf.id) ?? 'checking'
-            const isUnavailable = status === 'missing' || status === 'permission-denied'
-
-            return (
-              <li key={pdf.id} data-testid={`course-content-item-pdf-${pdf.id}`}>
-                {isUnavailable ? (
-                  <div
-                    className="flex items-center gap-3 p-4 rounded-xl border bg-card opacity-50 cursor-not-allowed"
-                    aria-disabled="true"
-                  >
-                    <div className="w-24 h-14 bg-muted rounded-md flex items-center justify-center shrink-0">
-                      <FileText className="size-5 text-muted-foreground" aria-hidden="true" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium">
-                        <HighlightedText text={stripExtension(pdf.filename)} query={searchQuery} />
-                      </span>
-                      <FileStatusBadge status={status} itemId={pdf.id} />
-                    </div>
-                  </div>
-                ) : (
-                  <Link
-                    to={`/courses/${courseId}/lessons/${pdf.id}`}
-                    className="flex items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent transition-colors group"
-                  >
-                    <div
-                      className="w-24 h-14 bg-muted rounded-md flex items-center justify-center shrink-0"
-                      data-testid={`thumbnail-placeholder-${pdf.id}`}
-                    >
-                      <FileText className="size-5 text-warning" aria-hidden="true" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium group-hover:text-brand transition-colors line-clamp-2">
-                        <HighlightedText text={stripExtension(pdf.filename)} query={searchQuery} />
-                      </span>
-                      {pdf.pageCount > 0 && (
-                        <div className="mt-0.5">
-                          <span className="text-xs text-muted-foreground">
-                            {pdf.pageCount} {pdf.pageCount === 1 ? 'page' : 'pages'}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-                )}
-              </li>
-            )
-          })}
+        {/* Ungrouped PDFs (PDFs without folder paths in local courses) */}
+        {/* PDFs with folder paths are now rendered inside their folder groups */}
 
         {/* Empty state: no matches from search filter */}
         {searchQuery && !hasResults && (
@@ -319,6 +282,7 @@ export function LessonList({
         )}
       </ul>
     </div>
+    </TooltipProvider>
   )
 }
 
@@ -326,19 +290,36 @@ export function LessonList({
 // Grouping functions
 // ---------------------------------------------------------------------------
 
-function groupByFolder(videos: ImportedVideo[]): ChapterGroup[] {
-  const groups = new Map<string, ImportedVideo[]>()
+function groupByFolder(videos: ImportedVideo[], pdfs: ImportedPdf[] = []): ChapterGroup[] {
+  const videoGroups = new Map<string, ImportedVideo[]>()
+  const pdfGroups = new Map<string, ImportedPdf[]>()
+
   for (const video of videos) {
     const folder = getFolderName(video.path)
-    if (!groups.has(folder)) groups.set(folder, [])
-    groups.get(folder)!.push(video)
+    if (!videoGroups.has(folder)) videoGroups.set(folder, [])
+    videoGroups.get(folder)!.push(video)
   }
-  return Array.from(groups.entries()).map(([title, vids]) => ({ title, videos: vids }))
+
+  for (const pdf of pdfs) {
+    const folder = getFolderName(pdf.path)
+    if (!pdfGroups.has(folder)) pdfGroups.set(folder, [])
+    pdfGroups.get(folder)!.push(pdf)
+  }
+
+  // Merge all folder names from both videos and PDFs
+  const allFolders = new Set([...videoGroups.keys(), ...pdfGroups.keys()])
+  return Array.from(allFolders)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+    .map(title => ({
+      title,
+      videos: videoGroups.get(title) ?? [],
+      pdfs: pdfGroups.get(title) ?? [],
+    }))
 }
 
 function groupByChapter(videos: ImportedVideo[], chapters: YouTubeCourseChapter[]): ChapterGroup[] {
   if (chapters.length === 0) {
-    return [{ title: '', videos }]
+    return [{ title: '', videos, pdfs: [] }]
   }
 
   const videoChapterMap = new Map<string, string>()
@@ -355,14 +336,14 @@ function groupByChapter(videos: ImportedVideo[], chapters: YouTubeCourseChapter[
   for (const video of videos) {
     const chTitle = videoChapterMap.get(video.youtubeVideoId ?? '') ?? ''
     if (chTitle !== currentTitle && currentVideos.length > 0) {
-      groups.push({ title: currentTitle, videos: currentVideos })
+      groups.push({ title: currentTitle, videos: currentVideos, pdfs: [] })
       currentVideos = []
     }
     currentTitle = chTitle
     currentVideos.push(video)
   }
   if (currentVideos.length > 0) {
-    groups.push({ title: currentTitle, videos: currentVideos })
+    groups.push({ title: currentTitle, videos: currentVideos, pdfs: [] })
   }
 
   return groups
@@ -388,53 +369,55 @@ function renderLocalGroups(
       const percent = prog?.completionPercentage ?? 0
       const isCompleted = percent >= COMPLETION_THRESHOLD
 
+      const humanized = humanizeFilename(video.filename)
       const content = (
         <>
           {/* Index / completion indicator */}
-          <div
+          <span
             className={cn(
-              'size-8 rounded-full flex items-center justify-center shrink-0 text-xs font-medium',
-              isCompleted ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'
+              'size-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold',
+              isCompleted
+                ? 'bg-success/10 text-success'
+                : 'bg-resource-video-bg text-resource-video'
             )}
+            aria-label={isCompleted ? 'Completed' : undefined}
           >
             {isCompleted ? (
               <CheckCircle2
-                className="size-4"
-                aria-label="Completed"
+                className="size-3.5"
+                aria-hidden="true"
                 data-testid={`completion-badge-${video.id}`}
               />
             ) : (
               <span>{videoIndex + 1}</span>
             )}
-          </div>
-
-          {/* Thumbnail placeholder */}
-          <div
-            className="w-24 h-14 bg-muted rounded-md flex items-center justify-center shrink-0"
-            data-testid={`thumbnail-placeholder-${video.id}`}
-          >
-            <Video className="size-5 text-muted-foreground" aria-hidden="true" />
-          </div>
+          </span>
 
           {/* Video info */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span
-                data-testid={`file-status-${video.id}`}
-                data-status={status}
-                className={cn(
-                  'text-sm font-medium line-clamp-2',
-                  !isUnavailable && 'group-hover:text-brand transition-colors'
-                )}
-              >
-                <HighlightedText text={stripExtension(video.filename)} query={searchQuery} />
-              </span>
-              <FileStatusBadge status={status} itemId={video.id} />
-            </div>
-            <div className="flex items-center gap-2 mt-0.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  tabIndex={0}
+                  data-testid={`file-status-${video.id}`}
+                  data-status={status}
+                  className={cn(
+                    'text-sm font-medium truncate block',
+                    !isUnavailable && 'group-hover:text-brand transition-colors'
+                  )}
+                >
+                  <HighlightedText text={humanized} query={searchQuery} />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8} className="max-w-xs">
+                {humanized}
+              </TooltipContent>
+            </Tooltip>
+            <FileStatusBadge status={status} itemId={video.id} />
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <Video className="size-3 text-muted-foreground" aria-hidden="true" />
               {video.duration > 0 && (
                 <span className="text-xs text-muted-foreground tabular-nums">
-                  <Clock className="size-3 inline mr-0.5" aria-hidden="true" />
                   {formatDuration(video.duration)}
                 </span>
               )}
@@ -464,7 +447,7 @@ function renderLocalGroups(
         <li key={video.id} data-testid={`course-content-item-video-${video.id}`}>
           {isUnavailable ? (
             <div
-              className="flex items-center gap-3 p-4 rounded-xl border bg-card opacity-50 cursor-not-allowed"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl opacity-50 cursor-not-allowed"
               aria-disabled="true"
             >
               {content}
@@ -472,7 +455,71 @@ function renderLocalGroups(
           ) : (
             <Link
               to={`/courses/${courseId}/lessons/${video.id}`}
-              className="flex items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent transition-colors group"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-accent transition-colors group"
+            >
+              {content}
+            </Link>
+          )}
+        </li>
+      )
+    })
+
+    const pdfItems = group.pdfs.map(pdf => {
+      const status = fileStatuses.get(pdf.id) ?? 'checking'
+      const isUnavailable = status === 'missing' || status === 'permission-denied'
+      const humanized = humanizeFilename(pdf.filename)
+
+      const content = (
+        <>
+          {/* PDF type indicator */}
+          <span className="size-7 rounded-lg bg-resource-pdf-bg flex items-center justify-center shrink-0">
+            <FileText className="size-3.5 text-resource-pdf" aria-hidden="true" />
+          </span>
+
+          {/* PDF info */}
+          <div className="flex-1 min-w-0">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  tabIndex={0}
+                  className={cn(
+                    'text-sm font-medium truncate block',
+                    !isUnavailable && 'group-hover:text-brand transition-colors'
+                  )}
+                >
+                  <HighlightedText text={humanized} query={searchQuery} />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8} className="max-w-xs">
+                {humanized}
+              </TooltipContent>
+            </Tooltip>
+            <FileStatusBadge status={status} itemId={pdf.id} />
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <FileText className="size-3 text-muted-foreground" aria-hidden="true" />
+              {pdf.pageCount > 0 && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                  {pdf.pageCount} {pdf.pageCount === 1 ? 'pg' : 'pgs'}
+                </Badge>
+              )}
+            </div>
+          </div>
+        </>
+      )
+
+      return (
+        <li key={pdf.id} data-testid={`course-content-item-pdf-${pdf.id}`}>
+          {isUnavailable ? (
+            <div
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl opacity-50 cursor-not-allowed"
+              aria-disabled="true"
+            >
+              {content}
+            </div>
+          ) : (
+            <Link
+              to={`/courses/${courseId}/lessons/${pdf.id}`}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-accent transition-colors group"
             >
               {content}
             </Link>
@@ -482,7 +529,12 @@ function renderLocalGroups(
     })
 
     if (!hasMultipleGroups) {
-      return <Fragment key={group.title || 'root'}>{videoItems}</Fragment>
+      return (
+        <Fragment key={group.title || 'root'}>
+          {videoItems}
+          {pdfItems}
+        </Fragment>
+      )
     }
 
     const totalDuration = group.videos.reduce((sum, v) => sum + v.duration, 0)
@@ -492,9 +544,9 @@ function renderLocalGroups(
         <Collapsible defaultOpen>
           <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm font-medium text-foreground group/folder">
             <FolderOpen className="size-4 text-muted-foreground shrink-0" aria-hidden="true" />
-            <span className="flex-1 text-left">{group.title || 'General'}</span>
-            <span className="text-xs text-muted-foreground">
-              {group.videos.length} {group.videos.length === 1 ? 'video' : 'videos'}
+            <span className="flex-1 text-left">{group.title ? humanizeFilename(group.title) : 'General'}</span>
+            <span className="text-xs text-muted-foreground truncate">
+              {formatFolderCount(group.videos.length, group.pdfs.length)}
               {totalDuration > 0 && ` · ${formatDuration(totalDuration)}`}
             </span>
             <ChevronDown
@@ -503,8 +555,9 @@ function renderLocalGroups(
             />
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <ul className="flex flex-col gap-2 mt-1 ml-2 pl-4 border-l border-border/50">
+            <ul className="flex flex-col gap-0.5 mt-1 ml-2 pl-4 border-l border-border/50">
               {videoItems}
+              {pdfItems}
             </ul>
           </CollapsibleContent>
         </Collapsible>

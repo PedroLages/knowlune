@@ -65,10 +65,38 @@ interface PdfToolbarProps {
   toggleCollapsed?: () => void
 }
 
-function handlePrint(src: string) {
-  const w = window.open(src, '_blank')
-  if (w) {
-    w.addEventListener('load', () => w.print(), { once: true })
+/** Open a blob PDF in a new tab via an HTML wrapper (blob URLs show raw binary otherwise). */
+export async function openBlobPdfInNewTab(blobUrl: string, _title?: string) {
+  // Open window immediately in user-gesture context (avoids popup blocker)
+  const w = window.open('', '_blank')
+  if (!w) return
+
+  try {
+    const res = await fetch(blobUrl)
+    const data = await res.arrayBuffer()
+    const pdfBlob = new Blob([data], { type: 'application/pdf' })
+    const url = URL.createObjectURL(pdfBlob)
+    w.location.href = url
+  } catch {
+    // silent-catch-ok — fallback to direct blob URL
+    w.location.href = blobUrl
+  }
+}
+
+async function handlePrint(src: string) {
+  try {
+    const res = await fetch(src)
+    const data = await res.arrayBuffer()
+    const pdfBlob = new Blob([data], { type: 'application/pdf' })
+    const url = URL.createObjectURL(pdfBlob)
+    const w = window.open(url, '_blank')
+    if (w) {
+      w.addEventListener('afterprint', () => { w.close(); URL.revokeObjectURL(url) }, { once: true })
+      w.addEventListener('load', () => setTimeout(() => w.print(), 300), { once: true })
+    }
+  } catch {
+    // silent-catch-ok — fallback: open blob URL directly
+    window.open(src, '_blank')
   }
 }
 
@@ -501,7 +529,7 @@ export function PdfToolbar({
         variant="ghost"
         size="icon"
         className="h-11 w-11 sm:h-8 sm:w-8"
-        onClick={() => window.open(src, '_blank')}
+        onClick={() => openBlobPdfInNewTab(src, title)}
         aria-label="Open PDF in new tab"
         title="Open in new tab"
       >

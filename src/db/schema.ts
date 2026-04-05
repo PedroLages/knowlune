@@ -31,6 +31,8 @@ import type {
   NotificationPreferences,
   CourseEmbedding,
   StudySchedule,
+  Book,
+  BookHighlight,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA } from './checkpoint'
@@ -71,6 +73,9 @@ export type ElearningDatabase = Dexie & {
   notificationPreferences: EntityTable<NotificationPreferences, 'id'>
   courseEmbeddings: EntityTable<CourseEmbedding, 'courseId'>
   studySchedules: EntityTable<StudySchedule, 'id'>
+  books: EntityTable<Book, 'id'>
+  bookHighlights: EntityTable<BookHighlight, 'id'>
+  bookFiles: Table<{ bookId: string; filename: string; blob: Blob }> // OPFS fallback
 }
 
 /**
@@ -1235,6 +1240,15 @@ function _declareLegacyMigrations(database: Dexie): void {
   // - Indexes on courseId, learningPathId, enabled for filtering
   database.version(36).stores({
     studySchedules: 'id, courseId, learningPathId, enabled',
+  })
+  // v37: Book library data model (E83-S01)
+  // - New books table for epub/pdf/audiobook metadata
+  // - New bookHighlights table for user highlights
+  // - New bookFiles table for IndexedDB fallback when OPFS unavailable
+  database.version(37).stores({
+    books: 'id, title, author, format, status, createdAt, lastOpenedAt',
+    bookHighlights: 'id, bookId, color, flashcardId, createdAt',
+    bookFiles: '[bookId+filename], bookId',
   })
 } // end _declareLegacyMigrations
 

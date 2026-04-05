@@ -67,6 +67,7 @@ const Login = React.lazy(() => import('./pages/Login').then(m => ({ default: m.L
 const Notifications = React.lazy(() =>
   import('./pages/Notifications').then(m => ({ default: m.Notifications }))
 )
+const LibraryPage = React.lazy(() => import('./pages/Library').then(m => ({ default: m.Library })))
 const NotFound = React.lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })))
 const LegalLayout = React.lazy(() =>
   import('./pages/legal/LegalLayout').then(m => ({ default: m.LegalLayout }))
@@ -285,7 +286,19 @@ export const router = createBrowserRouter([
       },
       {
         path: 'library',
-        element: <Navigate to="/notes?tab=bookmarks" replace />,
+        element: (
+          <SuspensePage>
+            <LibraryPage />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'library/:bookId',
+        element: (
+          <SuspensePage>
+            <LibraryPage />
+          </SuspensePage>
+        ),
       },
       {
         path: 'notes',

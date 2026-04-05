@@ -1,15 +1,15 @@
 /**
- * PlayerHeader — Header bar for the unified lesson player.
+ * PlayerHeader — Action toolbar for the unified lesson player.
  *
- * Shows back link, lesson title, course name, and optional completion status toggle.
+ * Renders inline action buttons (pomodoro, Q&A, reading mode, theater, notes,
+ * completion). No outer wrapper — the parent provides layout and spacing.
  *
  * @see E89-S05
  */
 
 import { lazy, Suspense, useCallback, useEffect } from 'react'
-import { Link } from 'react-router'
+import { cn } from '@/app/components/ui/utils'
 import {
-  ArrowLeft,
   BookOpen,
   CheckCircle2,
   Circle,
@@ -48,11 +48,15 @@ const STATUS_ICONS: Record<CompletionStatus, React.ComponentType<{ className?: s
   completed: CheckCircle2,
 }
 
+const STATUS_COLORS: Record<CompletionStatus, string> = {
+  'not-started': 'text-muted-foreground',
+  'in-progress': 'text-warning',
+  completed: 'text-success',
+}
+
 interface PlayerHeaderProps {
   courseId: string
   lessonId: string
-  lessonTitle: string
-  courseName?: string
   showCompletionToggle?: boolean
   /** Called after completion status is successfully persisted */
   onStatusChange?: (status: CompletionStatus) => void
@@ -73,8 +77,6 @@ interface PlayerHeaderProps {
 export function PlayerHeader({
   courseId,
   lessonId,
-  lessonTitle,
-  courseName,
   showCompletionToggle = false,
   onStatusChange,
   isTheater = false,
@@ -112,29 +114,7 @@ export function PlayerHeader({
   )
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-card shrink-0">
-      <Link
-        to={`/courses/${courseId}`}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
-        aria-label="Back to course"
-      >
-        <ArrowLeft className="size-4 group-hover:-translate-x-0.5 transition-transform" />
-      </Link>
-      <div className="flex flex-col min-w-0 flex-1">
-        <span data-testid="lesson-header-title" className="font-semibold text-sm truncate">
-          {lessonTitle}
-        </span>
-        {courseName && (
-          <Link
-            to={`/courses/${courseId}`}
-            data-testid="lesson-header-course"
-            className="text-xs text-muted-foreground hover:text-brand transition-colors truncate"
-          >
-            {courseName}
-          </Link>
-        )}
-      </div>
-
+    <div className="flex items-center gap-3">
       <PomodoroTimer />
 
       <Suspense fallback={null}>
@@ -152,7 +132,7 @@ export function PlayerHeader({
               aria-pressed={isReadingMode}
               data-testid="reading-mode-toggle"
             >
-              <BookOpen className="size-4" aria-hidden="true" />
+              <BookOpen className="size-5" aria-hidden="true" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Reading mode (Cmd+Shift+R)</TooltipContent>
@@ -169,9 +149,9 @@ export function PlayerHeader({
           data-testid="theater-mode-toggle"
         >
           {isTheater ? (
-            <Minimize2 className="size-4" aria-hidden="true" />
+            <Minimize2 className="size-5" aria-hidden="true" />
           ) : (
-            <Maximize2 className="size-4" aria-hidden="true" />
+            <Maximize2 className="size-5" aria-hidden="true" />
           )}
         </Button>
       )}
@@ -186,7 +166,7 @@ export function PlayerHeader({
           data-testid="notes-toggle"
         >
           <span className="relative">
-            <PencilLine className="size-4" aria-hidden="true" />
+            <PencilLine className="size-5" aria-hidden="true" />
             {hasNotes && !notesOpen && (
               <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-brand" />
             )}
@@ -201,24 +181,26 @@ export function PlayerHeader({
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5"
+              className={cn('gap-1.5', STATUS_COLORS[currentStatus])}
               data-testid="completion-toggle"
               aria-label={`Completion status: ${STATUS_LABELS[currentStatus]}`}
             >
-              <StatusIcon className="size-4" aria-hidden="true" />
+              <StatusIcon className="size-5" aria-hidden="true" />
               <span className="hidden sm:inline">{STATUS_LABELS[currentStatus]}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {(Object.keys(STATUS_LABELS) as CompletionStatus[]).map(status => {
               const Icon = STATUS_ICONS[status]
+              const isActive = status === currentStatus
               return (
                 <DropdownMenuItem
                   key={status}
                   onSelect={() => handleStatusChange(status)}
                   data-testid={`status-option-${status}`}
+                  className={cn(STATUS_COLORS[status], isActive && 'font-semibold bg-accent')}
                 >
-                  <Icon className="size-4 mr-2" aria-hidden="true" />
+                  <Icon className="size-5 mr-2" aria-hidden="true" />
                   {STATUS_LABELS[status]}
                 </DropdownMenuItem>
               )

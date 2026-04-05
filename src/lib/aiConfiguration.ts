@@ -13,6 +13,8 @@
 import { encryptData, decryptData, type EncryptedData } from './crypto'
 import type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefaults'
 import { PROVIDER_DEFAULTS, FEATURE_DEFAULTS } from './modelDefaults'
+import type { DiscoveredModel } from './modelDiscovery'
+import { getFreeTierDefaultModel } from './modelDiscovery.static'
 
 // Re-export for convenience — consumers can import from aiConfiguration
 export type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefaults'
@@ -26,6 +28,8 @@ export interface AIProvider {
   name: string
   /** Whether this provider uses a server URL instead of an API key */
   usesServerUrl?: boolean
+  /** Whether this provider has free-tier models available */
+  hasFreeModels?: boolean
   /** Validates credential format without making network calls (API key or server URL for Ollama) */
   validateApiKey: (keyOrUrl: string) => boolean
   /** Tests provider connectivity (stub for S01, real implementation in S02-S07) */
@@ -110,6 +114,12 @@ export interface AIConfigurationSettings {
    */
   featureModels?: Partial<Record<AIFeatureId, FeatureModelConfig>>
   /**
+   * Budget mode — restricts model selection to free-tier models only.
+   * When enabled, model pickers filter to costTier === 'free' and
+   * feature defaults auto-switch to free alternatives.
+   */
+  budgetMode?: boolean
+  /**
    * E2E test-only plaintext API key bypass (DEV mode only)
    * @internal Only works when import.meta.env.DEV = true
    * Production builds ignore this field for security
@@ -144,56 +154,84 @@ export const DEFAULTS: AIConfigurationSettings = {
  * - GLM (Z.ai): `[32+ alphanumeric characters]`
  * - Gemini: `AIza[32+ alphanumeric characters]`
  */
+/**
+ * Tests a provider connection by proxying through `/api/ai/models/:provider`.
+ * Avoids CORS issues that occur when calling external APIs directly from the browser.
+ */
+async function testViaModelProxy(provider: string, key: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/ai/models/${provider}`, {
+      headers: { 'X-API-Key': key },
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (res.ok) return true
+    if (res.status === 401) throw new Error('Invalid API key')
+    if (res.status === 429) throw new Error('Rate limited — key is valid but quota exceeded')
+    throw new Error(`Connection failed (${res.status})`)
+  } catch (e) {
+    if (e instanceof Error && (e.message.startsWith('Invalid') || e.message.startsWith('Rate'))) throw e
+    console.warn(`${provider} connection test failed:`, e)
+    return false
+  }
+}
+
 export const AI_PROVIDERS: Record<AIProviderId, AIProvider> = {
   openai: {
     id: 'openai',
     name: 'OpenAI',
     validateApiKey: key => /^sk-[A-Za-z0-9-_]{8,}$/.test(key),
-    testConnection: async key => {
-      // Stub: Real OpenAI API call implemented in future stories (S02-S07)
-      // For now, validate format only
-      return Promise.resolve(key.startsWith('sk-'))
-    },
+    testConnection: key => testViaModelProxy('openai', key),
   },
   anthropic: {
     id: 'anthropic',
     name: 'Anthropic',
     validateApiKey: key => /^sk-ant-[A-Za-z0-9-_]{8,}$/.test(key),
     testConnection: async key => {
-      // Stub: Real Anthropic API call implemented in future stories (S02-S07)
-      // For now, validate format only
-      return Promise.resolve(key.startsWith('sk-ant-'))
+      // Anthropic has no public model listing endpoint, so we send a minimal
+      // chat request through our Express proxy to verify the key works.
+      try {
+        const res = await fetch('/api/ai/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: 'anthropic',
+            apiKey: key,
+            messages: [{ role: 'user', content: 'hi' }],
+            maxTokens: 1,
+          }),
+          signal: AbortSignal.timeout(10_000),
+        })
+        if (res.ok) return true
+        if (res.status === 401) throw new Error('Invalid API key')
+        if (res.status === 429) throw new Error('Rate limited — key is valid but quota exceeded')
+        throw new Error(`Connection failed (${res.status})`)
+      } catch (e) {
+        if (e instanceof Error && (e.message.startsWith('Invalid') || e.message.startsWith('Rate'))) throw e
+        console.warn('Anthropic connection test failed:', e)
+        return false
+      }
     },
   },
   groq: {
     id: 'groq',
     name: 'Groq (FREE)',
+    hasFreeModels: true,
     validateApiKey: key => /^gsk_[A-Za-z0-9-_]{8,}$/.test(key),
-    testConnection: async key => {
-      // Stub: Real Groq API call implemented in future stories (S02-S07)
-      // For now, validate format only
-      return Promise.resolve(key.startsWith('gsk_'))
-    },
+    testConnection: key => testViaModelProxy('groq', key),
   },
   glm: {
     id: 'glm',
-    name: 'GLM / Z.ai (FREE)',
+    name: 'GLM / Z.ai',
+    hasFreeModels: true,
     validateApiKey: key => /^[A-Za-z0-9-_.]{16,}$/.test(key),
-    testConnection: async key => {
-      // Stub: Real GLM API call implemented in future stories (S02-S07)
-      // For now, validate format only (GLM keys are alphanumeric)
-      return Promise.resolve(key.length >= 16)
-    },
+    testConnection: key => testViaModelProxy('glm', key),
   },
   gemini: {
     id: 'gemini',
-    name: 'Google Gemini (FREE)',
+    name: 'Google Gemini',
+    hasFreeModels: true,
     validateApiKey: key => /^AIza[A-Za-z0-9-_]{32,}$/.test(key),
-    testConnection: async key => {
-      // Stub: Real Gemini API call implemented in future stories (S02-S07)
-      // For now, validate format only
-      return Promise.resolve(key.startsWith('AIza'))
-    },
+    testConnection: key => testViaModelProxy('gemini', key),
   },
   openrouter: {
     id: 'openrouter',
@@ -217,6 +255,7 @@ export const AI_PROVIDERS: Record<AIProviderId, AIProvider> = {
     id: 'ollama',
     name: 'Ollama (Local)',
     usesServerUrl: true,
+    hasFreeModels: true,
     validateApiKey: (url: string) => {
       // Validates URL format: must be http:// or https:// with optional port
       try {
@@ -348,6 +387,21 @@ export async function testAIConnection(provider: AIProviderId, apiKey: string): 
 }
 
 /**
+ * Checks if budget mode is currently active.
+ */
+export function isBudgetMode(): boolean {
+  return getAIConfiguration().budgetMode === true
+}
+
+/**
+ * Filters a list of discovered models to only include free-tier models.
+ * Models with `costTier === undefined` (e.g., Ollama) are treated as free.
+ */
+export function filterFreeModels(models: DiscoveredModel[]): DiscoveredModel[] {
+  return models.filter(m => m.costTier === 'free' || m.costTier === undefined)
+}
+
+/**
  * Resolves the model configuration for a specific AI feature using a three-tier cascade:
  *
  * 1. **User per-feature override** — `featureModels[feature]` from saved config
@@ -366,8 +420,9 @@ export async function testAIConnection(provider: AIProviderId, apiKey: string): 
  */
 export function resolveFeatureModel(feature: AIFeatureId): FeatureModelConfig {
   const config = getAIConfiguration()
+  const budget = config.budgetMode === true
 
-  // Tier 1: User per-feature override
+  // Tier 1: User per-feature override (always respected, even in budget mode)
   const override = config.featureModels?.[feature]
   if (override) {
     return override
@@ -376,15 +431,25 @@ export function resolveFeatureModel(feature: AIFeatureId): FeatureModelConfig {
   // Tier 2: Feature default from FEATURE_DEFAULTS
   const featureDefault = FEATURE_DEFAULTS[feature]
   if (featureDefault) {
+    if (budget) {
+      // In budget mode, swap to a free model for this provider
+      const freeModel = getFreeTierDefaultModel(featureDefault.provider)
+      if (freeModel) {
+        return { ...featureDefault, model: freeModel }
+      }
+    }
     return featureDefault
   }
 
   // Tier 3: Global provider default (with user override from globalModelOverride)
   const globalProvider = config.provider
   const userOverride = config.globalModelOverride?.[globalProvider]
+  const model = budget
+    ? getFreeTierDefaultModel(globalProvider) || userOverride || PROVIDER_DEFAULTS[globalProvider]
+    : userOverride || PROVIDER_DEFAULTS[globalProvider]
   return {
     provider: globalProvider,
-    model: userOverride || PROVIDER_DEFAULTS[globalProvider],
+    model,
   }
 }
 

@@ -18,6 +18,7 @@ export type DisclosureKey =
   | 'review-used' // Review, Retention appear
   | 'challenge-used' // Challenges, Session History appear
   | 'ai-used' // AI Learning Path, Knowledge Gaps, AI Analytics appear
+  | 'book-imported' // Books nav item appears
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
