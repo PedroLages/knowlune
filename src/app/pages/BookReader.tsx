@@ -101,6 +101,8 @@ export function BookReader() {
   const [highlightCfi, setHighlightCfi] = useState<string | null>(null)
   // highlightsOpen state: wired to ReaderHeader → HighlightListPanel (E85-S03)
   const [highlightsOpen, setHighlightsOpen] = useState(false)
+  // audiobookBookmarksOpen: controls BookmarkListPanel in AudiobookRenderer (E87-S04)
+  const [audiobookBookmarksOpen, setAudiobookBookmarksOpen] = useState(false)
   // Cloze flashcard creator state (E85-S04)
   const [clozeText, setClozeText] = useState('')
   const [clozeHighlightId, setClozeHighlightId] = useState<string | undefined>(undefined)
@@ -457,14 +459,21 @@ export function BookReader() {
   if (book?.format === 'audiobook') {
     return (
       <div className="fixed inset-0 flex flex-col bg-background overflow-y-auto" data-testid="audiobook-reader">
-        {/* Minimal header for back navigation */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+        {/* Minimal header for back navigation + bookmarks */}
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
           <button
             onClick={() => navigate('/library')}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors min-h-[44px] flex items-center"
             aria-label="Back to Library"
           >
             ← Library
+          </button>
+          <button
+            onClick={() => setAudiobookBookmarksOpen(true)}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors min-h-[44px] flex items-center"
+            aria-label="View bookmarks"
+          >
+            Bookmarks
           </button>
         </div>
         <Suspense
@@ -474,7 +483,11 @@ export function BookReader() {
             </div>
           }
         >
-          <AudiobookRenderer book={book} />
+          <AudiobookRenderer
+            book={book}
+            bookmarksOpen={audiobookBookmarksOpen}
+            onBookmarksClose={() => setAudiobookBookmarksOpen(false)}
+          />
         </Suspense>
       </div>
     )

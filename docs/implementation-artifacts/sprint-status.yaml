@@ -1041,7 +1041,7 @@ development_status:
   87-1-audiobook-import-and-data-model: done
   87-2-audiobook-player-controls-and-playback: done
   87-3-speed-control-and-sleep-timer: done
-  87-4-chapter-navigation-and-bookmarks: backlog
+  87-4-chapter-navigation-and-bookmarks: done
   87-5-mini-player-and-media-session-integration: backlog
   87-6-audiobook-session-tracking-and-streak: backlog
   epic-87-retrospective: optional
