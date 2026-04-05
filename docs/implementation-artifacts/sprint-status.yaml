@@ -556,13 +556,14 @@ development_status:
   # Epic 50: Calendar Integration Phase 1-2
   # Source: epics-calendar.md
   # ──────────────────────────────────────────────────
-  epic-50: in-progress
+  epic-50: done
   50-1-study-schedule-data-model: done
   50-2-ical-feed-generation-endpoint: done
   50-3-feed-url-management: done
   50-4-calendar-settings-ui: done
   50-5-schedule-editor-course-integration: done
   50-6-srs-events-overview-widget: done
+  epic-50-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 53: PKM Export Phase 1

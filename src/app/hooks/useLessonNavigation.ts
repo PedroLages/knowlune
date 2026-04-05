@@ -60,23 +60,13 @@ export function useLessonNavigation(
 
   const currentIndex = lessonId ? lessons.findIndex(l => l.id === lessonId) : -1
 
-  // Video-only navigation: scan forward/backward for the next video,
-  // skipping standalone PDF lessons. PDFs remain accessible via sidebar click.
-  const nextLesson = (() => {
-    if (currentIndex < 0) return null
-    for (let i = currentIndex + 1; i < lessons.length; i++) {
-      if (lessons[i].type === 'video') return lessons[i]
-    }
-    return null
-  })()
+  // Navigate to the immediate next/previous lesson regardless of type (video or PDF).
+  const nextLesson =
+    currentIndex >= 0 && currentIndex < lessons.length - 1
+      ? lessons[currentIndex + 1]
+      : null
 
-  const prevLesson = (() => {
-    if (currentIndex <= 0) return null
-    for (let i = currentIndex - 1; i >= 0; i--) {
-      if (lessons[i].type === 'video') return lessons[i]
-    }
-    return null
-  })()
+  const prevLesson = currentIndex > 0 ? lessons[currentIndex - 1] : null
 
   return {
     prevLesson,
