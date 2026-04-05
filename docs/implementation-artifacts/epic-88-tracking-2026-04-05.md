@@ -36,9 +36,9 @@ Pre-existing issues — do NOT re-flag these:
 
 ### E88-S01: OPDS Catalog Connection
 
-- **Status:** queued
-- **Branch:** —
-- **Story Agent dispatched:** —
+- **Status:** implemented
+- **Branch:** feature/e88-s01-opds-catalog-connection
+- **Story Agent dispatched:** completed
 - **Review Round 1:** —
 - **Fix Round 1:** —
 - **Finish Agent:** —
