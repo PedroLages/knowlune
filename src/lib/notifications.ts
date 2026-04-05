@@ -27,6 +27,7 @@ export const notificationIcons: Record<NotificationType, typeof Trophy> = {
   'milestone-approaching': Target,
   'book-imported': Library,
   'book-deleted': Trash2,
+  'highlight-review': BookOpen, // Daily highlight review (E86-S02)
 }
 
 export const notificationIconColors: Record<NotificationType, string> = {
@@ -41,6 +42,7 @@ export const notificationIconColors: Record<NotificationType, string> = {
   'milestone-approaching': 'text-success',
   'book-imported': 'text-brand',
   'book-deleted': 'text-muted-foreground',
+  'highlight-review': 'text-brand-soft-foreground', // E86-S02
 }
 
 // Fallback icons for unknown types

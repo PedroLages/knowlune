@@ -263,8 +263,52 @@ export async function checkMilestoneApproachingOnStartup(): Promise<void> {
   }
 }
 
-/** Map domain event types to NotificationType for preference lookup */
-const EVENT_TO_NOTIF_TYPE: Record<AppEventType, NotificationType> = {
+/** Minimum highlight count to trigger a daily highlight review notification (AC: 1) */
+export const HIGHLIGHT_REVIEW_MIN_COUNT = 10
+
+/**
+ * Check whether a `highlight-review` notification was already created today.
+ */
+async function hasHighlightReviewToday(): Promise<boolean> {
+  const todayStr = new Date().toLocaleDateString('sv-SE')
+  const existing = await db.notifications
+    .where('type')
+    .equals('highlight-review')
+    .filter(n => new Date(n.createdAt).toLocaleDateString('sv-SE') === todayStr)
+    .first()
+  return existing !== undefined
+}
+
+/**
+ * On app startup, count all book highlights. If >= 10 exist and no
+ * highlight-review notification was sent today, create one. (AC: 1, E86-S02)
+ */
+export async function checkHighlightReviewOnStartup(): Promise<void> {
+  const prefsStore = useNotificationPrefsStore.getState()
+  if (!prefsStore.isTypeEnabled('highlight-review')) return
+
+  const count = await db.bookHighlights.count()
+  if (count < HIGHLIGHT_REVIEW_MIN_COUNT) return
+
+  const alreadySent = await hasHighlightReviewToday()
+  if (alreadySent) return
+
+  const store = useNotificationStore.getState()
+  await store.create({
+    type: 'highlight-review',
+    title: 'Time to Review Your Highlights',
+    message: `You have ${count} highlights to review. Revisit 5 random passages from your books.`,
+    actionUrl: '/highlight-review',
+    metadata: { highlightCount: count },
+  })
+}
+
+/**
+ * Map domain event types to NotificationType for preference lookup.
+ * Only events that create notifications appear here; highlight/reading events
+ * are handled via proactive startup checks rather than event subscriptions.
+ */
+const EVENT_TO_NOTIF_TYPE: Partial<Record<AppEventType, NotificationType>> = {
   'course:completed': 'course-complete',
   'streak:milestone': 'streak-milestone',
   'import:finished': 'import-finished',
@@ -276,6 +320,7 @@ const EVENT_TO_NOTIF_TYPE: Record<AppEventType, NotificationType> = {
   'milestone:approaching': 'milestone-approaching',
   'book:imported': 'book-imported',
   'book:deleted': 'book-deleted',
+  // highlight:* and reading:session-ended are not mapped — no notifications emitted for these event types
 }
 
 /** Handle a single domain event, creating the appropriate notification. */
@@ -501,6 +546,12 @@ export function initNotificationService(): void {
   // silent-catch-ok — startup check failure is non-critical; logged for debugging
   checkMilestoneApproachingOnStartup().catch(error => {
     console.error('[NotificationService] Milestone approaching startup check failed:', error)
+  })
+
+  // Proactive highlight review check: notify when >= 10 highlights exist (E86-S02)
+  // silent-catch-ok — startup check failure is non-critical; logged for debugging
+  checkHighlightReviewOnStartup().catch(error => {
+    console.error('[NotificationService] Highlight review startup check failed:', error)
   })
 }
 

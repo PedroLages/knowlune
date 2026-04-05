@@ -471,6 +471,7 @@ export type NotificationType =
   | 'milestone-approaching'
   | 'book-imported'
   | 'book-deleted'
+  | 'highlight-review' // Daily highlight review surfacing (E86-S02)
 
 export interface Notification {
   id: string // ULID (time-sortable, unique)
@@ -500,6 +501,7 @@ export interface NotificationPreferences {
   milestoneApproaching: boolean
   bookImported: boolean
   bookDeleted: boolean
+  highlightReview: boolean // Daily highlight review surfacing (E86-S02)
   // Quiet hours
   quietHoursEnabled: boolean
   quietHoursStart: string // "HH:MM" (24h format)
