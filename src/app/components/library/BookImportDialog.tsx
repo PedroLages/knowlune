@@ -7,7 +7,7 @@
  * @since E83-S02
  */
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Upload, Loader2, BookOpen, X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -91,7 +91,26 @@ export function BookImportDialog({ open, onOpenChange }: BookImportDialogProps) 
   const [isDragActive, setIsDragActive] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const coverPreviewUrlRef = useRef<string | null>(null)
   const isImporting = phase !== 'idle' && phase !== 'done' && phase !== 'error'
+
+  // Revoke object URL on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (coverPreviewUrlRef.current) {
+        URL.revokeObjectURL(coverPreviewUrlRef.current)
+      }
+    }
+  }, [])
+
+  /** Revoke previous object URL before setting a new one */
+  const setSafeCoverPreviewUrl = useCallback((url: string | null) => {
+    if (coverPreviewUrlRef.current) {
+      URL.revokeObjectURL(coverPreviewUrlRef.current)
+    }
+    coverPreviewUrlRef.current = url
+    setCoverPreviewUrl(url)
+  }, [])
 
   const reset = useCallback(() => {
     setFile(null)
@@ -99,12 +118,11 @@ export function BookImportDialog({ open, onOpenChange }: BookImportDialogProps) 
     setAuthor('')
     setGenre('Other')
     setStatus('unread')
-    if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl)
-    setCoverPreviewUrl(null)
+    setSafeCoverPreviewUrl(null)
     setCoverBlob(null)
     setPhase('idle')
     setIsDragActive(false)
-  }, [coverPreviewUrl])
+  }, [setSafeCoverPreviewUrl])
 
   const handleClose = useCallback(
     (nextOpen: boolean) => {
@@ -122,6 +140,12 @@ export function BookImportDialog({ open, onOpenChange }: BookImportDialogProps) 
       return
     }
 
+    const MAX_FILE_SIZE_MB = 500
+    if (selectedFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      toast.error(`File too large. Maximum size is ${MAX_FILE_SIZE_MB} MB.`)
+      return
+    }
+
     setFile(selectedFile)
     setPhase('extracting')
 
@@ -133,7 +157,7 @@ export function BookImportDialog({ open, onOpenChange }: BookImportDialogProps) 
       // Use embedded cover if available
       if (metadata.coverBlob) {
         const url = URL.createObjectURL(metadata.coverBlob)
-        setCoverPreviewUrl(url)
+        setSafeCoverPreviewUrl(url)
         setCoverBlob(metadata.coverBlob)
       }
 
@@ -150,7 +174,7 @@ export function BookImportDialog({ open, onOpenChange }: BookImportDialogProps) 
         const blob = await fetchCoverImage(olResult.coverUrl)
         if (blob) {
           const url = URL.createObjectURL(blob)
-          setCoverPreviewUrl(url)
+          setSafeCoverPreviewUrl(url)
           setCoverBlob(blob)
         }
       }
@@ -170,7 +194,7 @@ export function BookImportDialog({ open, onOpenChange }: BookImportDialogProps) 
       toast.error('Failed to extract metadata from EPUB')
       setPhase('error')
     }
-  }, [])
+  }, [setSafeCoverPreviewUrl])
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -286,7 +310,7 @@ export function BookImportDialog({ open, onOpenChange }: BookImportDialogProps) 
             tabIndex={0}
             aria-label="Select EPUB file to import"
             data-testid="epub-drop-zone"
-            className={`flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed p-8 transition-colors ${
+            className={`flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed p-8 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${
               isDragActive
                 ? 'border-brand bg-brand-soft/20'
                 : 'border-border hover:border-brand/50'

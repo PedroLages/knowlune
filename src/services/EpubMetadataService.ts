@@ -56,24 +56,56 @@ export async function extractEpubMetadata(file: File): Promise<EpubMetadata> {
 }
 
 /**
+ * Validate ISBN-10 check digit (modulo 11).
+ */
+function isValidIsbn10(isbn: string): boolean {
+  if (isbn.length !== 10) return false
+  let sum = 0
+  for (let i = 0; i < 9; i++) {
+    const digit = parseInt(isbn[i], 10)
+    if (isNaN(digit)) return false
+    sum += digit * (10 - i)
+  }
+  const last = isbn[9].toUpperCase()
+  sum += last === 'X' ? 10 : parseInt(last, 10)
+  return sum % 11 === 0
+}
+
+/**
+ * Validate ISBN-13 check digit (modulo 10).
+ */
+function isValidIsbn13(isbn: string): boolean {
+  if (isbn.length !== 13) return false
+  let sum = 0
+  for (let i = 0; i < 13; i++) {
+    const digit = parseInt(isbn[i], 10)
+    if (isNaN(digit)) return false
+    sum += i % 2 === 0 ? digit : digit * 3
+  }
+  return sum % 10 === 0
+}
+
+/**
  * Extract ISBN-10 or ISBN-13 from an identifier string.
  * Returns undefined if no valid ISBN pattern is found.
+ * Validates check digits to reduce false positives.
  */
 function extractIsbn(identifier: string): string | undefined {
   if (!identifier) return undefined
 
   // ISBN-13 pattern
   const isbn13 = identifier.match(/(?:978|979)\d{10}/)
-  if (isbn13) return isbn13[0]
+  if (isbn13 && isValidIsbn13(isbn13[0])) return isbn13[0]
 
-  // ISBN-10 pattern
-  const isbn10 = identifier.match(/\d{9}[\dXx]/)
-  if (isbn10) return isbn10[0]
+  // ISBN-10 pattern (anchored with word boundary to reduce false positives)
+  const isbn10 = identifier.match(/\b\d{9}[\dXx]\b/)
+  if (isbn10 && isValidIsbn10(isbn10[0])) return isbn10[0]
 
   // Check if the identifier itself looks like an ISBN (stripping hyphens)
   const cleaned = identifier.replace(/[-\s]/g, '')
-  if (/^(?:978|979)\d{10}$/.test(cleaned)) return cleaned
-  if (/^\d{9}[\dXx]$/.test(cleaned)) return cleaned
+  if (/^(?:978|979)\d{10}$/.test(cleaned) && isValidIsbn13(cleaned))
+    return cleaned
+  if (/^\d{9}[\dXx]$/.test(cleaned) && isValidIsbn10(cleaned)) return cleaned
 
   return undefined
 }

@@ -65,17 +65,9 @@ export function Library() {
               className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3"
               data-testid={`book-card-${book.id}`}
             >
-              {book.coverUrl ? (
-                <div className="aspect-[2/3] overflow-hidden rounded-lg bg-muted">
-                  <div className="flex h-full items-center justify-center">
-                    <LibraryIcon className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                </div>
-              ) : (
-                <div className="flex aspect-[2/3] items-center justify-center rounded-lg bg-muted">
-                  <LibraryIcon className="h-8 w-8 text-muted-foreground" />
-                </div>
-              )}
+              <div className="flex aspect-[2/3] items-center justify-center rounded-lg bg-muted">
+                <LibraryIcon className="h-8 w-8 text-muted-foreground" />
+              </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-foreground">
                   {book.title}
