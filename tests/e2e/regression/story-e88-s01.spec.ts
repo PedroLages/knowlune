@@ -9,10 +9,10 @@
  * - AC5: Save button is disabled when required fields are missing
  * - AC6: Catalog list shows connected catalogs with edit/remove actions
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
-import { seedIndexedDBStore } from '../support/helpers/seed-helpers'
-import { FIXED_DATE } from '../utils/test-time'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
+import { seedIndexedDBStore } from '../../support/helpers/seed-helpers'
+import { FIXED_DATE } from '../../utils/test-time'
 
 const DB_NAME = 'ElearningDB'
 
