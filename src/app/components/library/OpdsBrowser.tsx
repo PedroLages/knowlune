@@ -300,15 +300,8 @@ export function OpdsBrowser({ open, onOpenChange, initialCatalogId }: OpdsBrowse
     }
   }, [open])
 
-  // Fetch root feed when catalog selected or catalogs list changes.
-  // `catalogs` is included to avoid a stale-closure if the catalog record is
-  // updated (e.g. URL / auth changed) without the selected ID changing.
-  useEffect(() => {
-    if (!selectedCatalog) return
-    setCurrentFeedUrl(selectedCatalog.url)
-    setBreadcrumbs([])
-    fetchFeed(selectedCatalog.url, selectedCatalog)
-  }, [selectedCatalogId, catalogs, fetchFeed])
+  // Track current feed URL for breadcrumb navigation
+  const [currentFeedUrl, setCurrentFeedUrl] = useState<string>('')
 
   const fetchFeed = useCallback(async (url: string, catalog: OpdsCatalog) => {
     setIsLoading(true)
@@ -331,8 +324,15 @@ export function OpdsBrowser({ open, onOpenChange, initialCatalogId }: OpdsBrowse
     setIsLoading(false)
   }, [])
 
-  // Track current feed URL for breadcrumb navigation
-  const [currentFeedUrl, setCurrentFeedUrl] = useState<string>('')
+  // Fetch root feed when catalog selected or catalogs list changes.
+  // `catalogs` is included to avoid a stale-closure if the catalog record is
+  // updated (e.g. URL / auth changed) without the selected ID changing.
+  useEffect(() => {
+    if (!selectedCatalog) return
+    setCurrentFeedUrl(selectedCatalog.url)
+    setBreadcrumbs([])
+    fetchFeed(selectedCatalog.url, selectedCatalog)
+  }, [selectedCatalogId, catalogs, fetchFeed])
 
   const handleNavigateToFeed = useCallback(
     (href: string, _title: string) => {
