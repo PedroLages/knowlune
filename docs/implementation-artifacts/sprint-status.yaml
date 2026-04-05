@@ -984,7 +984,7 @@ development_status:
   83-3-library-grid-and-list-views: ready-for-dev
   83-4-library-search-filter-and-status-management: done
   83-5-book-metadata-editor: ready-for-dev
-  83-6-book-deletion-with-opfs-cleanup: ready-for-dev
+  83-6-book-deletion-with-opfs-cleanup: done
   83-7-storage-indicator: ready-for-dev
   83-8-pwa-offline-shell-for-library: backlog
   epic-83-retrospective: optional
