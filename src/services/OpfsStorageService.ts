@@ -76,11 +76,10 @@ class OpfsStorageService {
    * Read a book file. In OPFS mode, reads from the given path.
    * In fallback mode, reads from IndexedDB.
    */
-  async readBookFile(opfsPath: string, bookId?: string): Promise<File | null> {
+  async readBookFile(opfsPath: string, bookId: string): Promise<File | null> {
     await this.init()
 
     if (this._useIndexedDBFallback) {
-      if (!bookId) return null
       const records = await db.bookFiles.where('bookId').equals(bookId).toArray()
       if (records.length === 0) return null
       const record = records[0]

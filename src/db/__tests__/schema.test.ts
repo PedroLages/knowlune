@@ -51,7 +51,10 @@ describe('ElearningDB schema', () => {
     expect(db.tables.map(t => t.name).sort()).toEqual([
       'aiUsageEvents',
       'authors',
+      'bookFiles',
+      'bookHighlights',
       'bookmarks',
+      'books',
       'careerPaths',
       'challenges',
       'contentProgress',
@@ -75,6 +78,7 @@ describe('ElearningDB schema', () => {
       'quizzes',
       'reviewRecords',
       'screenshots',
+      'studySchedules',
       'studySessions',
       'videoCaptions',
       'youtubeChapters',
@@ -83,8 +87,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 35', () => {
-    expect(db.verno).toBe(35)
+  it('should be at version 37', () => {
+    expect(db.verno).toBe(37)
   })
 
   it('should have entitlements table with userId as primary key', () => {

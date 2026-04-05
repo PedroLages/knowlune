@@ -10,6 +10,7 @@
  */
 
 import { create } from 'zustand'
+import { toast } from 'sonner'
 import type { Book, BookStatus } from '@/data/types'
 import { db } from '@/db/schema'
 import { opfsStorageService } from '@/services/OpfsStorageService'
@@ -54,7 +55,9 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     // Store file if provided
     if (file) {
       const path = await opfsStorageService.storeBookFile(book.id, file)
-      if (path !== 'indexeddb') {
+      if (path === 'indexeddb') {
+        book = { ...book, source: { type: 'local', opfsPath: 'indexeddb' } }
+      } else {
         book = { ...book, source: { type: 'local', opfsPath: path } }
       }
     }
@@ -82,6 +85,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       // Rollback on failure — reload from DB
       const books = await db.books.toArray()
       set({ books })
+      toast.error('Failed to update book status')
     }
   },
 
