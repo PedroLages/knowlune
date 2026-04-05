@@ -1044,7 +1044,7 @@ development_status:
   87-4-chapter-navigation-and-bookmarks: done
   87-5-mini-player-and-media-session-integration: done
   87-6-audiobook-session-tracking-and-streak: done
-  epic-87-retrospective: optional
+  epic-87-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 88: OPDS Catalogs and Advanced Sources
