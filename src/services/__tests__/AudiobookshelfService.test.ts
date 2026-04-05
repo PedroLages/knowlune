@@ -90,17 +90,27 @@ describe('AudiobookshelfService.testConnection', () => {
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error).toBe(
-        'Could not connect to server. Check the URL and CORS settings.'
-      )
+      expect(result.error).toBe('Could not connect to server. Check the URL and CORS settings.')
     }
   })
 
-  it('returns timeout error for AbortError', async () => {
-    const abortError = new DOMException('The operation was aborted', 'AbortError')
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(abortError))
+  it('returns timeout error when request exceeds 10 seconds', async () => {
+    // Simulate a fetch that never resolves, so the AbortController fires via setTimeout
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((_url: string, opts: RequestInit) => {
+        return new Promise<Response>((_resolve, reject) => {
+          opts.signal?.addEventListener('abort', () => {
+            reject(new DOMException('The operation was aborted', 'AbortError'))
+          })
+        })
+      })
+    )
 
-    const result = await testConnection(TEST_URL, TEST_API_KEY)
+    const resultPromise = testConnection(TEST_URL, TEST_API_KEY)
+    // Advance fake timers past the 10-second timeout so setTimeout fires controller.abort()
+    await vi.advanceTimersByTimeAsync(10_001)
+    const result = await resultPromise
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
@@ -224,9 +234,7 @@ describe('AudiobookshelfService.fetchLibraryItems', () => {
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error).toBe(
-        'Could not connect to server. Check the URL and CORS settings.'
-      )
+      expect(result.error).toBe('Could not connect to server. Check the URL and CORS settings.')
     }
   })
 })
@@ -266,9 +274,7 @@ describe('AudiobookshelfService.getStreamUrl', () => {
   it('returns correctly formatted stream URL with token parameter', () => {
     const url = getStreamUrl(TEST_URL, 'item-1', TEST_API_KEY)
 
-    expect(url).toBe(
-      `${TEST_URL}/api/items/item-1/play?token=${encodeURIComponent(TEST_API_KEY)}`
-    )
+    expect(url).toBe(`${TEST_URL}/api/items/item-1/play?token=${encodeURIComponent(TEST_API_KEY)}`)
   })
 
   it('encodes special characters in API key', () => {

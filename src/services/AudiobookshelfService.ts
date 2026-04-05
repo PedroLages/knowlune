@@ -41,9 +41,10 @@ async function absApiFetch<T>(
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
   try {
+    const hasBody = options?.body !== undefined
     const headers: Record<string, string> = {
       Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
+      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     }
 
     const fetchOptions: RequestInit = {
@@ -52,11 +53,12 @@ async function absApiFetch<T>(
       headers,
     }
 
-    if (options?.body !== undefined) {
-      fetchOptions.body = JSON.stringify(options.body)
+    if (hasBody) {
+      fetchOptions.body = JSON.stringify(options!.body)
     }
 
-    const response = await fetch(`${baseUrl}${path}`, fetchOptions)
+    const normalizedBase = baseUrl.replace(/\/+$/, '')
+    const response = await fetch(`${normalizedBase}${path}`, fetchOptions)
     clearTimeout(timeoutId)
 
     if (response.status === 401) {
@@ -77,6 +79,9 @@ async function absApiFetch<T>(
 
     if (err instanceof DOMException && err.name === 'AbortError') {
       return { ok: false, error: 'Connection timed out. Check the URL and try again.' }
+    }
+    if (err instanceof SyntaxError) {
+      return { ok: false, error: 'Server returned an invalid response. Check the URL.' }
     }
     if (err instanceof TypeError) {
       return {
