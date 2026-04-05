@@ -1,20 +1,23 @@
 /**
- * Library page — book management with grid/list views and empty state.
+ * Library page — book management with grid/list views, search, filters, and empty state.
  *
  * Shows empty state with drag-drop import CTA when no books exist,
- * or a responsive book grid/list with view toggle.
+ * or a responsive book grid/list with search, status filters, and view toggle.
  *
  * @since E83-S01
  * @modified E83-S02 — added import button and BookImportDialog
  * @modified E83-S03 — full grid/list views, BookCard, BookListItem, empty state redesign
+ * @modified E83-S04 — search, status filter pills, context menus
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { BookOpen, LayoutGrid, List, Plus } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { BookOpen, Plus } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
 import { BookCard } from '@/app/components/library/BookCard'
 import { BookListItem } from '@/app/components/library/BookListItem'
+import { BookContextMenu } from '@/app/components/library/BookContextMenu'
+import { LibraryFilters } from '@/app/components/library/LibraryFilters'
 import { useBookStore } from '@/stores/useBookStore'
 import { cn } from '@/app/components/ui/utils'
 
@@ -23,8 +26,13 @@ export function Library() {
   const [droppedFile, setDroppedFile] = useState<File | null>(null)
   const books = useBookStore(s => s.books)
   const libraryView = useBookStore(s => s.libraryView)
-  const setLibraryView = useBookStore(s => s.setLibraryView)
+  const getFilteredBooks = useBookStore(s => s.getFilteredBooks)
+  const filters = useBookStore(s => s.filters)
+  const setFilters = useBookStore(s => s.setFilters)
   const loadBooks = useBookStore(s => s.loadBooks)
+
+  // Memoize filtered books to avoid new array on every render
+  const filteredBooks = useMemo(() => getFilteredBooks(), [getFilteredBooks, books, filters])
 
   // Load books on mount
   useEffect(() => {
@@ -41,7 +49,6 @@ export function Library() {
   }, [])
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
-    // Only leave if actually leaving the drop zone
     if (dropRef.current && !dropRef.current.contains(e.relatedTarget as Node)) {
       setIsDragOver(false)
     }
@@ -62,48 +69,15 @@ export function Library() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Books</h1>
-        <div className="flex items-center gap-2">
-          {/* View toggle — only show when books exist */}
-          {books.length > 0 && (
-            <div className="flex items-center rounded-lg border border-border/50 p-0.5">
-              <button
-                onClick={() => setLibraryView('grid')}
-                className={cn(
-                  'rounded-md p-1.5 transition-colors',
-                  libraryView === 'grid'
-                    ? 'bg-brand text-brand-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-                aria-label="Grid view"
-                aria-pressed={libraryView === 'grid'}
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setLibraryView('list')}
-                className={cn(
-                  'rounded-md p-1.5 transition-colors',
-                  libraryView === 'list'
-                    ? 'bg-brand text-brand-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-                aria-label="List view"
-                aria-pressed={libraryView === 'list'}
-              >
-                <List className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-          <Button
-            variant="brand"
-            onClick={() => setImportOpen(true)}
-            className="min-h-[44px]"
-            data-testid="import-book-trigger"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Import Book
-          </Button>
-        </div>
+        <Button
+          variant="brand"
+          onClick={() => setImportOpen(true)}
+          className="min-h-[44px]"
+          data-testid="import-book-trigger"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Import Book
+        </Button>
       </div>
 
       {/* Empty state */}
@@ -136,11 +110,16 @@ export function Library() {
         </div>
       )}
 
+      {/* Filters — only show when books exist */}
+      {books.length > 0 && <LibraryFilters />}
+
       {/* Grid view */}
       {books.length > 0 && libraryView === 'grid' && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {books.map(book => (
-            <BookCard key={book.id} book={book} />
+          {filteredBooks.map(book => (
+            <BookContextMenu key={book.id} book={book}>
+              <BookCard book={book} />
+            </BookContextMenu>
           ))}
         </div>
       )}
@@ -148,9 +127,26 @@ export function Library() {
       {/* List view */}
       {books.length > 0 && libraryView === 'list' && (
         <div className="flex flex-col divide-y divide-border/50">
-          {books.map(book => (
-            <BookListItem key={book.id} book={book} />
+          {filteredBooks.map(book => (
+            <BookContextMenu key={book.id} book={book}>
+              <BookListItem book={book} />
+            </BookContextMenu>
           ))}
+        </div>
+      )}
+
+      {/* No results message */}
+      {books.length > 0 && filteredBooks.length === 0 && (
+        <div className="flex flex-col items-center gap-3 py-12">
+          <p className="text-muted-foreground">No books match your filters.</p>
+          <Button
+            variant="outline"
+            onClick={() => setFilters({})}
+            className="min-h-[44px]"
+            data-testid="clear-filters"
+          >
+            Clear filters
+          </Button>
         </div>
       )}
 
