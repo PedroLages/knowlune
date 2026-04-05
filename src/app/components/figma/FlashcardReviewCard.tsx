@@ -1,9 +1,15 @@
 import { motion } from 'motion/react'
-import { RotateCcw, Layers } from 'lucide-react'
+import { RotateCcw, Layers, BookOpen } from 'lucide-react'
+import { Link } from 'react-router'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
 import { RatingButtons } from './RatingButtons'
 import type { ReviewRating, Flashcard } from '@/data/types'
+
+/** Source link for book-sourced flashcards. 'deleted' means the book was removed. */
+export type FlashcardSourceLink =
+  | { href: string; label: string }
+  | 'deleted'
 
 interface FlashcardReviewCardProps {
   flashcard: Flashcard
@@ -12,6 +18,8 @@ interface FlashcardReviewCardProps {
   onFlip: () => void
   onRate: (rating: ReviewRating) => void
   isRating?: boolean
+  /** Optional back-navigation link for book-sourced flashcards (E85-S05) */
+  sourceLink?: FlashcardSourceLink
 }
 
 function getReviewCountLabel(count: number): string {
@@ -27,6 +35,7 @@ export function FlashcardReviewCard({
   onFlip,
   onRate,
   isRating = false,
+  sourceLink,
 }: FlashcardReviewCardProps) {
   function handleKeyDown(e: React.KeyboardEvent) {
     if ((e.key === ' ' || e.key === 'Enter') && !isFlipped) {
@@ -138,6 +147,32 @@ export function FlashcardReviewCard({
             </Card>
           </div>
         </motion.div>
+
+        {/* Source link for book-sourced flashcards (E85-S05) */}
+        {sourceLink && (
+          <div className="mt-3 flex justify-center">
+            {sourceLink === 'deleted' ? (
+              <span
+                className="flex items-center gap-1.5 text-sm text-muted-foreground cursor-not-allowed select-none"
+                aria-label="Source book has been removed"
+                data-testid="flashcard-book-removed"
+              >
+                <BookOpen className="size-3.5" aria-hidden="true" />
+                Book removed
+              </span>
+            ) : (
+              <Link
+                to={sourceLink.href}
+                className="flex items-center gap-1.5 text-sm text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
+                aria-label={`View source highlight in ${sourceLink.label}`}
+                data-testid="flashcard-view-in-book"
+              >
+                <BookOpen className="size-3.5" aria-hidden="true" />
+                {sourceLink.label}
+              </Link>
+            )}
+          </div>
+        )}
 
         {/* Screen reader announcement */}
         {isFlipped && (
