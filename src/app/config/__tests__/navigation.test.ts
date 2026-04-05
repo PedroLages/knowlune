@@ -29,16 +29,14 @@ describe('navigationGroups', () => {
     ])
   })
 
-  it('Track group has 7 items in correct order', () => {
+  it('Track group has 5 items in correct order', () => {
     const track = navigationGroups[2]
     expect(track.items.map(i => i.name)).toEqual([
       'Challenges',
       'Knowledge Gaps',
       'Retention',
       'Session History',
-      'Study Analytics',
-      'Quiz Analytics',
-      'AI Analytics',
+      'Reports',
     ])
   })
 
@@ -67,8 +65,8 @@ describe('getOverflowNav', () => {
   it('returns remaining items including Authors, Settings, and all Study/Track items', () => {
     const overflow = getOverflowNav()
     const names = overflow.map(i => i.name)
-    // 17 total group items + Settings = 18 - 4 primary = 14 overflow
-    expect(overflow).toHaveLength(14)
+    // 15 total group items + 1 Settings = 16 - 4 primary = 12 overflow
+    expect(overflow).toHaveLength(12)
     expect(names).toContain('Learning Paths')
     expect(names).toContain('Authors')
     expect(names).toContain('Settings')

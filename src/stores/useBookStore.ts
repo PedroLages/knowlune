@@ -52,25 +52,32 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
   },
 
   importBook: async (book: Book, file?: File) => {
-    // Store file if provided
-    if (file) {
-      const path = await opfsStorageService.storeBookFile(book.id, file)
-      if (path === 'indexeddb') {
-        book = { ...book, source: { type: 'local', opfsPath: 'indexeddb' } }
-      } else {
-        book = { ...book, source: { type: 'local', opfsPath: path } }
+    try {
+      // Store file if provided
+      if (file) {
+        const path = await opfsStorageService.storeBookFile(book.id, file)
+        if (path === 'indexeddb') {
+          book = { ...book, source: { type: 'local', opfsPath: 'indexeddb' } }
+        } else {
+          book = { ...book, source: { type: 'local', opfsPath: path } }
+        }
       }
+
+      await db.books.put(book)
+
+      // Filter-then-append to prevent duplicate IDs in memory
+      set(state => ({
+        books: [...state.books.filter(b => b.id !== book.id), book],
+      }))
+
+      // Unlock sidebar item
+      unlockSidebarItem('book-imported')
+
+      // Emit event
+      appEventBus.emit({ type: 'book:imported', bookId: book.id, title: book.title })
+    } catch {
+      toast.error('Failed to import book')
     }
-
-    await db.books.put(book)
-
-    set(state => ({ books: [...state.books, book] }))
-
-    // Unlock sidebar item
-    unlockSidebarItem('book-imported')
-
-    // Emit event
-    appEventBus.emit({ type: 'book:imported', bookId: book.id, title: book.title })
   },
 
   updateBookStatus: async (bookId: string, status: BookStatus) => {
@@ -90,18 +97,25 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
   },
 
   deleteBook: async (bookId: string) => {
-    // Remove from state first
+    // Remove from state first (optimistic)
     set(state => ({
       books: state.books.filter(b => b.id !== bookId),
       selectedBookId: state.selectedBookId === bookId ? null : state.selectedBookId,
     }))
 
-    // Clean up storage and DB
-    await opfsStorageService.deleteBookFiles(bookId)
-    await db.bookHighlights.where('bookId').equals(bookId).delete()
-    await db.books.delete(bookId)
+    try {
+      // Clean up storage and DB
+      await opfsStorageService.deleteBookFiles(bookId)
+      await db.bookHighlights.where('bookId').equals(bookId).delete()
+      await db.books.delete(bookId)
 
-    appEventBus.emit({ type: 'book:deleted', bookId })
+      appEventBus.emit({ type: 'book:deleted', bookId })
+    } catch {
+      // Rollback on failure — reload from DB
+      const books = await db.books.toArray()
+      set({ books })
+      toast.error('Failed to delete book')
+    }
   },
 
   setSelectedBookId: (id: string | null) => set({ selectedBookId: id }),
