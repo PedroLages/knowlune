@@ -654,7 +654,7 @@ export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'orange'
 /** Where the file content lives */
 export type ContentSource =
   | { type: 'local'; opfsPath: string }
-  | { type: 'remote'; url: string }
+  | { type: 'remote'; url: string; auth?: { username: string; password: string } }
   | { type: 'fileHandle'; handle: FileSystemFileHandle }
 
 /** Position within a book */

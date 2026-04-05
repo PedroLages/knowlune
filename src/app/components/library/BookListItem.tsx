@@ -8,7 +8,7 @@
 
 import { memo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { BookOpen, Headphones } from 'lucide-react'
+import { BookOpen, Cloud, Headphones } from 'lucide-react'
 import type { Book, BookStatus } from '@/data/types'
 import { BookStatusBadge } from './BookStatusBadge'
 import {
@@ -110,6 +110,15 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
             </span>
           ) : (
             <span className="uppercase">{book.format}</span>
+          )}
+          {book.source.type === 'remote' && (
+            <span
+              className="flex items-center gap-1 text-brand-soft-foreground"
+              data-testid={`remote-badge-${book.id}`}
+            >
+              <Cloud className="size-3" aria-hidden="true" />
+              Remote
+            </span>
           )}
           {book.totalPages && book.format !== 'audiobook' && <span>{book.totalPages} pages</span>}
           {book.format === 'audiobook' && book.totalDuration && (

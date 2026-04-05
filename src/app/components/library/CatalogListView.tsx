@@ -6,7 +6,7 @@
  * @since E88-S01
  */
 
-import { Globe, Pencil, Plus, Trash2 } from 'lucide-react'
+import { BookOpen, Globe, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Separator } from '@/app/components/ui/separator'
 import type { OpdsCatalog } from '@/data/types'
@@ -16,9 +16,10 @@ interface CatalogListViewProps {
   onAdd: () => void
   onEdit: (catalog: OpdsCatalog) => void
   onDelete: (catalog: OpdsCatalog) => void
+  onBrowse?: (catalog: OpdsCatalog) => void
 }
 
-export function CatalogListView({ catalogs, onAdd, onEdit, onDelete }: CatalogListViewProps) {
+export function CatalogListView({ catalogs, onAdd, onEdit, onDelete, onBrowse }: CatalogListViewProps) {
   return (
     <div className="flex flex-col gap-4">
       {catalogs.length === 0 && (
@@ -58,6 +59,18 @@ export function CatalogListView({ catalogs, onAdd, onEdit, onDelete }: CatalogLi
                 )}
               </div>
               <div className="flex items-center gap-1 shrink-0">
+                {onBrowse && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onBrowse(catalog)}
+                    className="size-9"
+                    aria-label={`Browse ${catalog.name}`}
+                    data-testid={`browse-catalog-${catalog.id}`}
+                  >
+                    <BookOpen className="size-4" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"

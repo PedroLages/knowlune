@@ -35,13 +35,15 @@ import { DeleteCatalogDialog } from './DeleteCatalogDialog'
 interface OpdsCatalogSettingsProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Called when user clicks "Browse" on a catalog — parent opens OpdsBrowser */
+  onBrowse?: (catalogId: string) => void
 }
 
 type FormMode = 'list' | 'add' | 'edit'
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function OpdsCatalogSettings({ open, onOpenChange }: OpdsCatalogSettingsProps) {
+export function OpdsCatalogSettings({ open, onOpenChange, onBrowse }: OpdsCatalogSettingsProps) {
   const catalogs = useOpdsCatalogStore(s => s.catalogs)
   const loadCatalogs = useOpdsCatalogStore(s => s.loadCatalogs)
   const addCatalog = useOpdsCatalogStore(s => s.addCatalog)
@@ -211,6 +213,14 @@ export function OpdsCatalogSettings({ open, onOpenChange }: OpdsCatalogSettingsP
               onAdd={handleOpenAdd}
               onEdit={handleOpenEdit}
               onDelete={setDeleteTarget}
+              onBrowse={
+                onBrowse
+                  ? catalog => {
+                      onOpenChange(false) // Close settings dialog
+                      onBrowse(catalog.id) // Open browser for this catalog
+                    }
+                  : undefined
+              }
             />
           )}
 
