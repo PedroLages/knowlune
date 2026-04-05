@@ -136,7 +136,7 @@ export async function fetchLibraryItems(
   return absApiFetch<{ results: AbsLibraryItem[]; total: number }>(
     url,
     apiKey,
-    `/api/libraries/${libraryId}/items?page=${page}&limit=${limit}`
+    `/api/libraries/${encodeURIComponent(libraryId)}/items?page=${page}&limit=${limit}`
   )
 }
 
@@ -149,7 +149,7 @@ export async function fetchItem(
   apiKey: string,
   itemId: string
 ): Promise<AbsResult<AbsItem>> {
-  return absApiFetch<AbsItem>(url, apiKey, `/api/items/${itemId}`)
+  return absApiFetch<AbsItem>(url, apiKey, `/api/items/${encodeURIComponent(itemId)}`)
 }
 
 /**

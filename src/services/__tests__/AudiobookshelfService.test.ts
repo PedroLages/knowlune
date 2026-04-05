@@ -139,6 +139,25 @@ describe('AudiobookshelfService.testConnection', () => {
       expect(result.error).toBe('Access denied. Your API key may lack permissions.')
     }
   })
+
+  it('returns invalid response error for malformed JSON body', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response('not valid json {{{', {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+    )
+
+    const result = await testConnection(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBe('Server returned an invalid response. Check the URL.')
+    }
+  })
 })
 
 // ── fetchLibraries ─────────────────────────────────────────────────
