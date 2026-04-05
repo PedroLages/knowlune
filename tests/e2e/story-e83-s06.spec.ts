@@ -77,6 +77,7 @@ async function seedBooksAndHighlights(page: import('@playwright/test').Page): Pr
     )
   })
   await page.goto('/library')
+  await page.reload()
 }
 
 test.describe('E83-S06: Book Deletion with OPFS Cleanup', () => {
