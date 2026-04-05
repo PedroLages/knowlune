@@ -57,12 +57,6 @@ const TEST_HIGHLIGHTS = [
 
 async function seedBooksAndHighlights(page: import('@playwright/test').Page): Promise<void> {
   await page.goto('/')
-  await page.evaluate(() => {
-    localStorage.setItem(
-      'knowlune-onboarding-v1',
-      JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
-    )
-  })
   await seedIndexedDBStore(
     page,
     DB_NAME,
@@ -75,8 +69,14 @@ async function seedBooksAndHighlights(page: import('@playwright/test').Page): Pr
     'bookHighlights',
     TEST_HIGHLIGHTS as unknown as Record<string, unknown>[]
   )
+  await page.evaluate(() => {
+    localStorage.setItem('knowlune-sidebar-v1', 'false')
+    localStorage.setItem(
+      'knowlune-onboarding-v1',
+      JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
+    )
+  })
   await page.goto('/library')
-  await page.reload()
 }
 
 test.describe('E83-S06: Book Deletion with OPFS Cleanup', () => {
@@ -123,7 +123,7 @@ test.describe('E83-S06: Book Deletion with OPFS Cleanup', () => {
     })
   })
 
-  test('AC1: cancel button closes dialog without deleting', async ({ page }) => {
+  test('AC1b: cancel button closes dialog without deleting', async ({ page }) => {
     await seedBooksAndHighlights(page)
 
     await expect(page.getByText('TypeScript Handbook')).toBeVisible({ timeout: 8000 })
