@@ -1224,6 +1224,6 @@ development_status:
   # Light-mode only — dark mode inherits default dark tokens
   # ──────────────────────────────────────────────────
   epic-100: in-progress
-  100-1-css-theme-tokens-and-type-system: in-progress
+  100-1-css-theme-tokens-and-type-system: done
   100-2-settings-ui-and-visual-qa: backlog
   epic-100-retrospective: optional
