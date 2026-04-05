@@ -29,10 +29,7 @@ export function createMockFile(
 /**
  * Create a mock M4B audiobook file (empty but valid for metadata parsing mocks).
  */
-export function createMockM4bFile(
-  name = 'audiobook.m4b',
-  sizeKb = 100
-): File {
+export function createMockM4bFile(name = 'audiobook.m4b', sizeKb = 100): File {
   const buffer = new ArrayBuffer(sizeKb * 1024)
   return createMockFile(buffer, name, {
     type: 'audio/mp4',
@@ -42,10 +39,7 @@ export function createMockM4bFile(
 /**
  * Create a mock EPUB file.
  */
-export function createMockEpubFile(
-  name = 'book.epub',
-  sizeKb = 50
-): File {
+export function createMockEpubFile(name = 'book.epub', sizeKb = 50): File {
   const buffer = new ArrayBuffer(sizeKb * 1024)
   return createMockFile(buffer, name, {
     type: 'application/epub+zip',
@@ -55,10 +49,7 @@ export function createMockEpubFile(
 /**
  * Create a mock MP3 file.
  */
-export function createMockMp3File(
-  name = 'chapter-01.mp3',
-  sizeKb = 500
-): File {
+export function createMockMp3File(name = 'chapter-01.mp3', sizeKb = 500): File {
   const buffer = new ArrayBuffer(sizeKb * 1024)
   return createMockFile(buffer, name, {
     type: 'audio/mpeg',
@@ -68,10 +59,7 @@ export function createMockMp3File(
 /**
  * Create a mock image file (for cover art testing).
  */
-export function createMockImageFile(
-  name = 'cover.jpg',
-  sizeKb = 20
-): File {
+export function createMockImageFile(name = 'cover.jpg', sizeKb = 20): File {
   const buffer = new ArrayBuffer(sizeKb * 1024)
   return createMockFile(buffer, name, {
     type: 'image/jpeg',
@@ -119,10 +107,7 @@ export function mockCacheApi(): {
         return cached ? cached.clone() : undefined
       },
       delete: async (key: string) => cache.delete(key),
-      keys: async () =>
-        [...cache.keys()].map(
-          (k) => new Request(k)
-        ),
+      keys: async () => [...cache.keys()].map(k => new Request(k)),
     }),
     delete: async () => true,
     has: async () => true,

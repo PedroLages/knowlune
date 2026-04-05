@@ -1236,7 +1236,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-101: backlog
   101-1-audiobookshelf-service-and-data-foundation: done
-  101-2-server-connection-and-authentication-ui: ready-for-dev
+  101-2-server-connection-and-authentication-ui: done
   101-3-library-browsing-and-catalog-sync: ready-for-dev
   101-4-streaming-playback: ready-for-dev
   101-5-audio-bookmarks-and-learning-loop: ready-for-dev

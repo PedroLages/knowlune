@@ -11,7 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, Globe, Plus, WifiOff, Target } from 'lucide-react'
+import { BookOpen, Globe, Headphones, Plus, WifiOff, Target } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
@@ -23,6 +23,7 @@ import { BookMetadataEditor } from '@/app/components/library/BookMetadataEditor'
 import { LibraryFilters } from '@/app/components/library/LibraryFilters'
 import { ReadingGoalSettings } from '@/app/components/library/ReadingGoalSettings'
 import { OpdsCatalogSettings } from '@/app/components/library/OpdsCatalogSettings'
+import { AudiobookshelfSettings } from '@/app/components/library/AudiobookshelfSettings'
 import { OpdsBrowser } from '@/app/components/library/OpdsBrowser'
 import { DailyGoalRing } from '@/app/components/library/DailyGoalRing'
 import { YearlyGoalProgress } from '@/app/components/library/YearlyGoalProgress'
@@ -41,6 +42,7 @@ export function Library() {
   const [editingBook, setEditingBook] = useState<Book | null>(null)
   const [goalsOpen, setGoalsOpen] = useState(false)
   const [catalogsOpen, setCatalogsOpen] = useState(false)
+  const [absSettingsOpen, setAbsSettingsOpen] = useState(false)
   const [browserOpen, setBrowserOpen] = useState(false)
   const [browserCatalogId, setBrowserCatalogId] = useState<string | undefined>()
   const books = useBookStore(s => s.books)
@@ -148,6 +150,17 @@ export function Library() {
                 Browse Catalog
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setAbsSettingsOpen(true)}
+              className="size-11 rounded-xl"
+              aria-label="Audiobookshelf settings"
+              title="Audiobookshelf"
+              data-testid="abs-settings-trigger"
+            >
+              <Headphones className="size-5" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -275,6 +288,7 @@ export function Library() {
       />
 
       <ReadingGoalSettings open={goalsOpen} onOpenChange={setGoalsOpen} />
+      <AudiobookshelfSettings open={absSettingsOpen} onOpenChange={setAbsSettingsOpen} />
       <OpdsCatalogSettings
         open={catalogsOpen}
         onOpenChange={setCatalogsOpen}
