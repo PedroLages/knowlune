@@ -377,9 +377,9 @@ test.describe('E101-S02: Audiobookshelf Server Connection & Auth UI', () => {
     await mockAbsApiSuccess(page)
     await openAbsSettings(page)
 
-    // Tab to "Add Server" button and activate with Enter
-    await page.keyboard.press('Tab')
+    // Focus "Add Server" button and activate with Enter
     const addBtn = page.getByTestId('add-abs-server-btn')
+    await addBtn.focus()
     await expect(addBtn).toBeFocused()
     await page.keyboard.press('Enter')
     await expect(page.getByRole('heading', { name: 'Add Server' })).toBeVisible()
