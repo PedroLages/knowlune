@@ -66,10 +66,10 @@ export function HighlightedLessonTitle({ text, query }: { text: string; query: s
 // ---------------------------------------------------------------------------
 
 interface FolderNode {
-  name: string            // display name (e.g., "02-02 How To Use The BTE")
-  path: string            // full path key for expanded state (e.g., "07-BTE/02-02 How To Use The BTE")
-  items: MaterialGroup[]  // items directly in this folder (not in subfolders)
-  children: FolderNode[]  // sorted subfolders
+  name: string // display name (e.g., "02-02 How To Use The BTE")
+  path: string // full path key for expanded state (e.g., "07-BTE/02-02 How To Use The BTE")
+  items: MaterialGroup[] // items directly in this folder (not in subfolders)
+  children: FolderNode[] // sorted subfolders
 }
 
 /** Extract the directory portion of a path (everything before the filename). */
@@ -197,16 +197,19 @@ function LessonLink({
         <p className="text-sm truncate">
           <HighlightedLessonTitle text={lesson.title} query={searchQuery} />
         </p>
-        <div className={cn('flex items-center gap-1.5 mt-0.5', isActive ? 'text-brand-soft-foreground/70' : 'text-muted-foreground')}>
+        <div
+          className={cn(
+            'flex items-center gap-1.5 mt-0.5',
+            isActive ? 'text-brand-soft-foreground/70' : 'text-muted-foreground'
+          )}
+        >
           {lesson.type === 'pdf' ? (
             <FileText className="size-3" aria-hidden="true" />
           ) : (
             <Video className="size-3" aria-hidden="true" />
           )}
           {lesson.duration != null && lesson.duration > 0 && (
-            <span className="text-xs">
-              {formatLessonDuration(lesson.duration)}
-            </span>
+            <span className="text-xs">{formatLessonDuration(lesson.duration)}</span>
           )}
           {materialCount > 0 && onFocusMaterials && (
             <button
@@ -405,11 +408,12 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
 
   // Filter out root-level PDFs (course-level books/manuals) — accessible via Materials tab
   const displayGroups = useMemo(
-    () => materialGroups.filter(g => {
-      if (g.primary.type !== 'pdf') return true
-      const path = (g.primary.sourceMetadata?.path as string) ?? ''
-      return getDirPath(path) !== ''
-    }),
+    () =>
+      materialGroups.filter(g => {
+        if (g.primary.type !== 'pdf') return true
+        const path = (g.primary.sourceMetadata?.path as string) ?? ''
+        return getDirPath(path) !== ''
+      }),
     [materialGroups]
   )
 
@@ -429,21 +433,22 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
   // Build nested folder tree
   const folderTree = useMemo(() => buildFolderTree(filteredGroups), [filteredGroups])
   const rootItems = useMemo(
-    () => filteredGroups.filter(g => getDirPath((g.primary.sourceMetadata?.path as string) ?? '') === ''),
+    () =>
+      filteredGroups.filter(
+        g => getDirPath((g.primary.sourceMetadata?.path as string) ?? '') === ''
+      ),
     [filteredGroups]
   )
-  const hasMultipleFolders = folderTree.length > 1 || (folderTree.length === 1 && rootItems.length > 0) || folderTree.length > 0
+  const hasMultipleFolders =
+    folderTree.length > 1 ||
+    (folderTree.length === 1 && rootItems.length > 0) ||
+    folderTree.length > 0
 
   // Auto-expand ancestor folders containing the active lesson
-  const activePaths = useMemo(
-    () => getAncestorPaths(folderTree, lessonId),
-    [folderTree, lessonId]
-  )
+  const activePaths = useMemo(() => getAncestorPaths(folderTree, lessonId), [folderTree, lessonId])
 
   // Controlled expanded-folders state using full path keys
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    () => new Set(activePaths)
-  )
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => new Set(activePaths))
 
   // When active lesson changes folder, auto-expand the full chain
   useEffect(() => {
@@ -587,7 +592,6 @@ export function LessonsTab({ courseId, lessonId, adapter, onFocusMaterials }: Le
           )
         })
       )}
-
     </div>
   )
 }

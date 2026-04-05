@@ -13,9 +13,7 @@ import type { LessonItem } from '../courseAdapter'
 // Factories
 // ---------------------------------------------------------------------------
 
-function makeLesson(
-  overrides: Partial<LessonItem> & { title: string }
-): LessonItem {
+function makeLesson(overrides: Partial<LessonItem> & { title: string }): LessonItem {
   return {
     id: overrides.id ?? crypto.randomUUID(),
     title: overrides.title,
@@ -194,10 +192,7 @@ describe('matchMaterialsToLessons', () => {
   })
 
   it('does NOT match by prefix when multiple videos share prefix', () => {
-    const videos = [
-      makeVideo('01-01 Intro.mp4', 1),
-      makeVideo('01-02 Setup.mp4', 2),
-    ]
+    const videos = [makeVideo('01-01 Intro.mp4', 1), makeVideo('01-02 Setup.mp4', 2)]
     // This PDF has prefix "01" but does NOT match "01-01" or "01-02" prefix
     // Since its prefix is just "01" and there are 2 videos with prefix "01-01"/"01-02",
     // the prefixes differ so Tier 3 won't match
@@ -247,14 +242,8 @@ describe('matchMaterialsToLessons', () => {
   })
 
   it('sorts groups by primary lesson order', () => {
-    const videos = [
-      makeVideo('02-Advanced.mp4', 2),
-      makeVideo('01-Intro.mp4', 1),
-    ]
-    const pdfs = [
-      makePdf('02-Advanced.pdf', 2),
-      makePdf('01-Intro.pdf', 1),
-    ]
+    const videos = [makeVideo('02-Advanced.mp4', 2), makeVideo('01-Intro.mp4', 1)]
+    const pdfs = [makePdf('02-Advanced.pdf', 2), makePdf('01-Intro.pdf', 1)]
 
     const groups = matchMaterialsToLessons(videos, pdfs)
 
@@ -358,10 +347,7 @@ describe('matchMaterialsToLessons', () => {
   })
 
   it('interleaves standalone PDFs by order among video groups', () => {
-    const videos = [
-      makeVideo('01-FNL Replay.mp4', 1),
-      makeVideo('03-Advanced.mp4', 3),
-    ]
+    const videos = [makeVideo('01-FNL Replay.mp4', 1), makeVideo('03-Advanced.mp4', 3)]
     const pdfs = [makePdf('02-Start Here.pdf', 2)]
 
     const groups = matchMaterialsToLessons(videos, pdfs)
@@ -397,14 +383,8 @@ describe('getCompanionMaterials', () => {
 
 describe('getCompanionPdfIds', () => {
   it('collects all companion PDF IDs', () => {
-    const videos = [
-      makeVideo('01-Intro.mp4', 1),
-      makeVideo('02-Setup.mp4', 2),
-    ]
-    const pdfs = [
-      makePdf('01-Intro.pdf', 1),
-      makePdf('02-Setup.pdf', 2),
-    ]
+    const videos = [makeVideo('01-Intro.mp4', 1), makeVideo('02-Setup.mp4', 2)]
+    const pdfs = [makePdf('01-Intro.pdf', 1), makePdf('02-Setup.pdf', 2)]
 
     const groups = matchMaterialsToLessons(videos, pdfs)
     const ids = getCompanionPdfIds(groups)

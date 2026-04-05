@@ -8,11 +8,10 @@ import {
 } from '../cryptoKeyStore'
 
 async function generateTestKey(extractable = false): Promise<CryptoKey> {
-  return crypto.subtle.generateKey(
-    { name: 'AES-GCM', length: 256 },
-    extractable,
-    ['encrypt', 'decrypt']
-  )
+  return crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, extractable, [
+    'encrypt',
+    'decrypt',
+  ])
 }
 
 beforeEach(async () => {

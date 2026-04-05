@@ -1,8 +1,5 @@
 import { cn } from '@/app/components/ui/utils'
-import {
-  SETTINGS_CATEGORIES,
-  type SettingsCategorySlug,
-} from './settingsCategories'
+import { SETTINGS_CATEGORIES, type SettingsCategorySlug } from './settingsCategories'
 
 interface SettingsNavPillsProps {
   activeCategory: SettingsCategorySlug
@@ -32,9 +29,7 @@ export function SettingsNavPills({
               key={category.slug}
               role="tab"
               aria-selected={isActive}
-              aria-label={
-                isModified ? `${category.label} (modified)` : category.label
-              }
+              aria-label={isModified ? `${category.label} (modified)` : category.label}
               onClick={() => onCategoryChange(category.slug)}
               className={cn(
                 'flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap',

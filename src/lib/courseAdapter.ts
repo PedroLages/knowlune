@@ -24,10 +24,10 @@ export type { MaterialGroup } from './lessonMaterialMatcher'
 /** Convert a raw filename into a human-readable title. */
 export function humanizeFilename(filename: string): string {
   return filename
-    .replace(/\.\w+$/, '')          // strip extension
-    .replace(/^\d+[-_.]\s*/, '')    // strip leading numeric prefix (e.g. "01-")
-    .replace(/[_]/g, ' ')          // underscores to spaces
-    .replace(/\s+/g, ' ')          // collapse whitespace
+    .replace(/\.\w+$/, '') // strip extension
+    .replace(/^\d+[-_.]\s*/, '') // strip leading numeric prefix (e.g. "01-")
+    .replace(/[_]/g, ' ') // underscores to spaces
+    .replace(/\s+/g, ' ') // collapse whitespace
     .trim()
 }
 
@@ -137,10 +137,7 @@ export class LocalCourseAdapter implements CourseAdapter {
 
   async getGroupedLessons(): Promise<MaterialGroup[]> {
     if (this.cachedGroups) return this.cachedGroups
-    const groups = matchMaterialsToLessons(
-      this.buildVideoLessons(),
-      this.buildPdfLessons()
-    )
+    const groups = matchMaterialsToLessons(this.buildVideoLessons(), this.buildPdfLessons())
     this.cachedGroups = groups
     return groups
   }

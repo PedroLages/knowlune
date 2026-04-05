@@ -198,90 +198,90 @@ export function LessonList({
 
   return (
     <TooltipProvider delayDuration={300}>
-    <div>
-      {/* Search/filter input */}
-      {showSearch && (
-        <div data-testid="content-search-container" className="relative mb-4">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
-            aria-hidden="true"
-          />
-          <Input
-            data-testid="content-search-input"
-            type="search"
-            placeholder="Search videos and PDFs…"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="pl-9 pr-9 rounded-xl"
-            aria-label="Filter course content by filename"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              data-testid="content-search-clear"
-              onClick={handleClearSearch}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Clear search"
-            >
-              <X className="size-4" />
-            </button>
-          )}
-        </div>
-      )}
-
-      <ul
-        ref={contentListRef}
-        data-testid="course-content-list"
-        aria-label="Course content"
-        className="flex flex-col gap-0.5"
-      >
-        {isNetworkSource
-          ? renderYouTubeGroups(
-              groupedContent,
-              courseId,
-              progressMap,
-              hasMultipleGroups,
-              searchQuery
-            )
-          : renderLocalGroups(
-              groupedContent,
-              courseId,
-              fileStatuses,
-              progressMap,
-              hasMultipleGroups,
-              searchQuery
+      <div>
+        {/* Search/filter input */}
+        {showSearch && (
+          <div data-testid="content-search-container" className="relative mb-4">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
+              aria-hidden="true"
+            />
+            <Input
+              data-testid="content-search-input"
+              type="search"
+              placeholder="Search videos and PDFs…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-9 pr-9 rounded-xl"
+              aria-label="Filter course content by filename"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                data-testid="content-search-clear"
+                onClick={handleClearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Clear search"
+              >
+                <X className="size-4" />
+              </button>
             )}
+          </div>
+        )}
 
-        {/* Ungrouped PDFs (PDFs without folder paths in local courses) */}
-        {/* PDFs with folder paths are now rendered inside their folder groups */}
+        <ul
+          ref={contentListRef}
+          data-testid="course-content-list"
+          aria-label="Course content"
+          className="flex flex-col gap-0.5"
+        >
+          {isNetworkSource
+            ? renderYouTubeGroups(
+                groupedContent,
+                courseId,
+                progressMap,
+                hasMultipleGroups,
+                searchQuery
+              )
+            : renderLocalGroups(
+                groupedContent,
+                courseId,
+                fileStatuses,
+                progressMap,
+                hasMultipleGroups,
+                searchQuery
+              )}
 
-        {/* Empty state: no matches from search filter */}
-        {searchQuery && !hasResults && (
-          <li
-            data-testid="content-search-empty"
-            className="flex flex-col items-center gap-3 text-sm text-muted-foreground text-center py-12"
-          >
-            <Search className="size-8 text-muted-foreground/50" aria-hidden="true" />
-            <p>No videos or PDFs match your search</p>
-            <Button
-              variant="outline"
-              size="sm"
-              data-testid="content-search-clear-empty"
-              onClick={handleClearSearch}
+          {/* Ungrouped PDFs (PDFs without folder paths in local courses) */}
+          {/* PDFs with folder paths are now rendered inside their folder groups */}
+
+          {/* Empty state: no matches from search filter */}
+          {searchQuery && !hasResults && (
+            <li
+              data-testid="content-search-empty"
+              className="flex flex-col items-center gap-3 text-sm text-muted-foreground text-center py-12"
             >
-              Clear search
-            </Button>
-          </li>
-        )}
+              <Search className="size-8 text-muted-foreground/50" aria-hidden="true" />
+              <p>No videos or PDFs match your search</p>
+              <Button
+                variant="outline"
+                size="sm"
+                data-testid="content-search-clear-empty"
+                onClick={handleClearSearch}
+              >
+                Clear search
+              </Button>
+            </li>
+          )}
 
-        {/* Empty state: course has no content at all */}
-        {!searchQuery && videos.length === 0 && pdfs.length === 0 && (
-          <li className="text-sm text-muted-foreground text-center py-8">
-            No content found in this course.
-          </li>
-        )}
-      </ul>
-    </div>
+          {/* Empty state: course has no content at all */}
+          {!searchQuery && videos.length === 0 && pdfs.length === 0 && (
+            <li className="text-sm text-muted-foreground text-center py-8">
+              No content found in this course.
+            </li>
+          )}
+        </ul>
+      </div>
     </TooltipProvider>
   )
 }
@@ -544,7 +544,9 @@ function renderLocalGroups(
         <Collapsible defaultOpen>
           <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm font-medium text-foreground group/folder">
             <FolderOpen className="size-4 text-muted-foreground shrink-0" aria-hidden="true" />
-            <span className="flex-1 text-left">{group.title ? humanizeFilename(group.title) : 'General'}</span>
+            <span className="flex-1 text-left">
+              {group.title ? humanizeFilename(group.title) : 'General'}
+            </span>
             <span className="text-xs text-muted-foreground truncate">
               {formatFolderCount(group.videos.length, group.pdfs.length)}
               {totalDuration > 0 && ` · ${formatDuration(totalDuration)}`}

@@ -13,7 +13,10 @@ test.describe('Library page — E83-S03', () => {
     await page.goto('/')
     await page.evaluate(() => {
       localStorage.setItem('knowlune-sidebar-v1', 'false')
-      localStorage.setItem('knowlune-onboarding-v1', JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true }))
+      localStorage.setItem(
+        'knowlune-onboarding-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
+      )
     })
     await page.goto('/library')
 
@@ -31,7 +34,10 @@ test.describe('Library page — E83-S03', () => {
     await page.goto('/')
     await page.evaluate(() => {
       localStorage.setItem('knowlune-sidebar-v1', 'false')
-      localStorage.setItem('knowlune-onboarding-v1', JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true }))
+      localStorage.setItem(
+        'knowlune-onboarding-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
+      )
     })
     await page.goto('/library')
 

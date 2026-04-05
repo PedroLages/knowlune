@@ -328,7 +328,9 @@ export function UnifiedLessonPlayer() {
         ref={videoContainerRef}
         className={cn(
           'relative mb-3 w-full overflow-hidden',
-          !state.isPdf && !isTheater && 'aspect-video max-h-[65svh] xl:max-h-[72svh] 2xl:max-h-[78svh]',
+          !state.isPdf &&
+            !isTheater &&
+            'aspect-video max-h-[65svh] xl:max-h-[72svh] 2xl:max-h-[78svh]',
           !state.isPdf && isTheater && 'h-[calc(100svh-1rem)]'
         )}
       >
@@ -355,7 +357,10 @@ export function UnifiedLessonPlayer() {
       </div>
 
       {/* Lesson title — below video, matching YouTube/Udemy/Coursera pattern */}
-      <h1 className="text-lg font-semibold mt-3 mb-1 truncate text-center" data-testid="lesson-title">
+      <h1
+        className="text-lg font-semibold mt-3 mb-1 truncate text-center"
+        data-testid="lesson-title"
+      >
         {state.lessonTitle.replace(/\.\w{2,4}$/, '')}
       </h1>
 
@@ -579,7 +584,12 @@ export function UnifiedLessonPlayer() {
               <p className="text-xs text-muted-foreground">Course Content</p>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto">
-              <LessonsTab courseId={courseId!} lessonId={lessonId!} adapter={adapter} onFocusMaterials={state.handleFocusMaterials} />
+              <LessonsTab
+                courseId={courseId!}
+                lessonId={lessonId!}
+                adapter={adapter}
+                onFocusMaterials={state.handleFocusMaterials}
+              />
             </div>
           </div>
         </div>
@@ -643,7 +653,12 @@ export function UnifiedLessonPlayer() {
                 {course?.name ?? 'Course Content'}
               </SheetTitle>
               <div className="flex-1 min-h-0 overflow-y-auto">
-                <LessonsTab courseId={courseId!} lessonId={lessonId!} adapter={adapter} onFocusMaterials={state.handleFocusMaterials} />
+                <LessonsTab
+                  courseId={courseId!}
+                  lessonId={lessonId!}
+                  adapter={adapter}
+                  onFocusMaterials={state.handleFocusMaterials}
+                />
               </div>
             </SheetContent>
           </Sheet>

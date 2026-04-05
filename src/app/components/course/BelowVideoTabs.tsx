@@ -72,7 +72,6 @@ export function BelowVideoTabs({
     if (focusTab) {
       setActiveTab(focusTab)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusTab, focusTabKey])
 
   // Auto-switch away from notes tab when desktop notes panel is open

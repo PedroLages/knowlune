@@ -403,10 +403,7 @@ describe('aiConfiguration.ts', () => {
     })
 
     it('returns true when budgetMode is set', () => {
-      localStorage.setItem(
-        'ai-configuration',
-        JSON.stringify({ ...DEFAULTS, budgetMode: true })
-      )
+      localStorage.setItem('ai-configuration', JSON.stringify({ ...DEFAULTS, budgetMode: true }))
       expect(isBudgetMode()).toBe(true)
     })
 
@@ -438,10 +435,7 @@ describe('aiConfiguration.ts', () => {
 
   describe('resolveFeatureModel with budget mode', () => {
     it('returns free model for Tier 2 defaults when budget mode is on', () => {
-      localStorage.setItem(
-        'ai-configuration',
-        JSON.stringify({ ...DEFAULTS, budgetMode: true })
-      )
+      localStorage.setItem('ai-configuration', JSON.stringify({ ...DEFAULTS, budgetMode: true }))
       // FEATURE_DEFAULTS.videoSummary defaults to anthropic/claude-haiku-4-5
       // Anthropic has no free models, so it should stay as-is (no free fallback)
       const resolved = resolveFeatureModel('videoSummary')

@@ -30,11 +30,7 @@ export function SettingsSearch({ open, onOpenChange, onNavigate }: SettingsSearc
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput
-        placeholder="Search settings..."
-        value={query}
-        onValueChange={setQuery}
-      />
+      <CommandInput placeholder="Search settings..." value={query} onValueChange={setQuery} />
       <CommandList>
         <CommandEmpty>No settings found.</CommandEmpty>
         <CommandGroup heading="Settings">

@@ -275,9 +275,7 @@ export function ProfileSection() {
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => handleReapplyAgeDefaults(settings.ageRange!)}
-                    >
+                    <AlertDialogAction onClick={() => handleReapplyAgeDefaults(settings.ageRange!)}>
                       Re-apply Defaults
                     </AlertDialogAction>
                   </AlertDialogFooter>

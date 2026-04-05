@@ -1,12 +1,4 @@
-import {
-  Shield,
-  User,
-  Palette,
-  GraduationCap,
-  Bell,
-  Plug,
-  type LucideIcon,
-} from 'lucide-react'
+import { Shield, User, Palette, GraduationCap, Bell, Plug, type LucideIcon } from 'lucide-react'
 
 export type SettingsCategorySlug =
   | 'account'

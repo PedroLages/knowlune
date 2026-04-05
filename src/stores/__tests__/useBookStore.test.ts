@@ -254,8 +254,12 @@ describe('getFilteredBooks', () => {
 describe('getAllTags', () => {
   it('returns sorted unique tags', async () => {
     await act(async () => {
-      await useBookStore.getState().importBook(makeBook({ id: 't1', tags: ['react', 'js'] }) as never)
-      await useBookStore.getState().importBook(makeBook({ id: 't2', tags: ['js', 'node'] }) as never)
+      await useBookStore
+        .getState()
+        .importBook(makeBook({ id: 't1', tags: ['react', 'js'] }) as never)
+      await useBookStore
+        .getState()
+        .importBook(makeBook({ id: 't2', tags: ['js', 'node'] }) as never)
     })
 
     expect(useBookStore.getState().getAllTags()).toEqual(['js', 'node', 'react'])

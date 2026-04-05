@@ -10,7 +10,10 @@
 import { test, expect } from '../../support/fixtures'
 import { FIXED_DATE } from '../../utils/test-time'
 import { seedIndexedDBStore } from '../../support/helpers/seed-helpers'
-import { createDueFlashcard, createFutureFlashcard } from '../../support/fixtures/factories/flashcard-factory'
+import {
+  createDueFlashcard,
+  createFutureFlashcard,
+} from '../../support/fixtures/factories/flashcard-factory'
 
 const DB_NAME = 'ElearningDB'
 
@@ -38,8 +41,7 @@ function makeSchedule(overrides: Record<string, unknown> = {}) {
   }
 }
 
-test.describe('E50-S06: Today\'s Study Plan Widget', () => {
-
+test.describe("E50-S06: Today's Study Plan Widget", () => {
   test('AC5: empty state when no schedules or due cards', async ({ page }) => {
     // Mock date to FIXED_DATE (Wednesday)
     await page.addInitScript((fixedDate: string) => {
@@ -50,7 +52,9 @@ test.describe('E50-S06: Today\'s Study Plan Widget', () => {
           if (args.length === 0) super(fixed)
           else super(...(args as [unknown]))
         }
-        static override now() { return fixed }
+        static override now() {
+          return fixed
+        }
       }
       // eslint-disable-next-line no-global-assign
       globalThis.Date = MockDate as unknown as DateConstructor
@@ -74,7 +78,9 @@ test.describe('E50-S06: Today\'s Study Plan Widget', () => {
           if (args.length === 0) super(fixed)
           else super(...(args as [unknown]))
         }
-        static override now() { return fixed }
+        static override now() {
+          return fixed
+        }
       }
       globalThis.Date = MockDate as unknown as DateConstructor
     }, FIXED_DATE)
@@ -84,8 +90,18 @@ test.describe('E50-S06: Today\'s Study Plan Widget', () => {
 
     // Seed two Wednesday study blocks (later time first to verify sort)
     await seedIndexedDBStore(page, DB_NAME, 'studySchedules', [
-      makeSchedule({ id: 'sched-afternoon', title: 'Afternoon React', startTime: '14:00', durationMinutes: 45 }),
-      makeSchedule({ id: 'sched-morning', title: 'Morning TypeScript', startTime: '08:30', durationMinutes: 60 }),
+      makeSchedule({
+        id: 'sched-afternoon',
+        title: 'Afternoon React',
+        startTime: '14:00',
+        durationMinutes: 45,
+      }),
+      makeSchedule({
+        id: 'sched-morning',
+        title: 'Morning TypeScript',
+        startTime: '08:30',
+        durationMinutes: 60,
+      }),
     ])
 
     // Reload so Zustand picks up seeded data
@@ -115,15 +131,20 @@ test.describe('E50-S06: Today\'s Study Plan Widget', () => {
           if (args.length === 0) super(fixed)
           else super(...(args as [unknown]))
         }
-        static override now() { return fixed }
+        static override now() {
+          return fixed
+        }
       }
       globalThis.Date = MockDate as unknown as DateConstructor
     }, FIXED_DATE)
     // Dismiss WelcomeWizard + OnboardingOverlay so they don't cover widget
-    await page.addInitScript(([wizardVal, onboardingVal]: string[]) => {
-      localStorage.setItem('knowlune-welcome-wizard-v1', wizardVal)
-      localStorage.setItem('knowlune-onboarding-v1', onboardingVal)
-    }, [WIZARD_DISMISSED, ONBOARDING_DISMISSED])
+    await page.addInitScript(
+      ([wizardVal, onboardingVal]: string[]) => {
+        localStorage.setItem('knowlune-welcome-wizard-v1', wizardVal)
+        localStorage.setItem('knowlune-onboarding-v1', onboardingVal)
+      },
+      [WIZARD_DISMISSED, ONBOARDING_DISMISSED]
+    )
 
     await page.goto('/')
     await page.waitForLoadState('networkidle')
@@ -135,7 +156,12 @@ test.describe('E50-S06: Today\'s Study Plan Widget', () => {
       createDueFlashcard({ id: 'fc-due-3' }),
       createFutureFlashcard({ id: 'fc-future-1' }),
     ]
-    await seedIndexedDBStore(page, DB_NAME, 'flashcards', flashcards as unknown as Record<string, unknown>[])
+    await seedIndexedDBStore(
+      page,
+      DB_NAME,
+      'flashcards',
+      flashcards as unknown as Record<string, unknown>[]
+    )
 
     await page.reload({ waitUntil: 'networkidle' })
 
@@ -158,15 +184,20 @@ test.describe('E50-S06: Today\'s Study Plan Widget', () => {
           if (args.length === 0) super(fixed)
           else super(...(args as [unknown]))
         }
-        static override now() { return fixed }
+        static override now() {
+          return fixed
+        }
       }
       globalThis.Date = MockDate as unknown as DateConstructor
     }, FIXED_DATE)
     // Dismiss WelcomeWizard + OnboardingOverlay so Start button is clickable
-    await page.addInitScript(([wizardVal, onboardingVal]: string[]) => {
-      localStorage.setItem('knowlune-welcome-wizard-v1', wizardVal)
-      localStorage.setItem('knowlune-onboarding-v1', onboardingVal)
-    }, [WIZARD_DISMISSED, ONBOARDING_DISMISSED])
+    await page.addInitScript(
+      ([wizardVal, onboardingVal]: string[]) => {
+        localStorage.setItem('knowlune-welcome-wizard-v1', wizardVal)
+        localStorage.setItem('knowlune-onboarding-v1', onboardingVal)
+      },
+      [WIZARD_DISMISSED, ONBOARDING_DISMISSED]
+    )
 
     await page.goto('/')
     await page.waitForLoadState('networkidle')

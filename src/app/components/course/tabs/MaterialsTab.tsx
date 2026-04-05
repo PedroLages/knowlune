@@ -201,7 +201,11 @@ function PdfSection({ pdf, courseId, isOpen, onToggle }: PdfSectionProps) {
   }, [pdf.fileHandle])
 
   return (
-    <Collapsible open={isOpen} onOpenChange={open => onToggle(pdf.id, open)} data-testid="materials-entry">
+    <Collapsible
+      open={isOpen}
+      onOpenChange={open => onToggle(pdf.id, open)}
+      data-testid="materials-entry"
+    >
       <CollapsibleTrigger asChild>
         <button
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
@@ -230,7 +234,10 @@ function PdfSection({ pdf, courseId, isOpen, onToggle }: PdfSectionProps) {
           {/* Loading state */}
           {blobLoading && (
             <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border bg-muted p-8 text-center">
-              <Loader2 className="size-6 text-muted-foreground motion-safe:animate-spin" aria-hidden="true" />
+              <Loader2
+                className="size-6 text-muted-foreground motion-safe:animate-spin"
+                aria-hidden="true"
+              />
               <p className="text-sm text-muted-foreground">Loading PDF...</p>
             </div>
           )}
@@ -355,9 +362,7 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
     return (
       <div className="p-3 space-y-1" data-testid="materials-tab">
         <div className="flex items-center justify-between mb-2 px-1">
-          <p className="text-xs text-muted-foreground">
-            All course materials ({allPdfs.length})
-          </p>
+          <p className="text-xs text-muted-foreground">All course materials ({allPdfs.length})</p>
           <Button
             variant="ghost"
             size="sm"
@@ -368,7 +373,13 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
           </Button>
         </div>
         {allPdfs.map(pdf => (
-          <PdfSection key={pdf.id} pdf={pdf} courseId={courseId} isOpen={openPdfId === pdf.id} onToggle={handlePdfToggle} />
+          <PdfSection
+            key={pdf.id}
+            pdf={pdf}
+            courseId={courseId}
+            isOpen={openPdfId === pdf.id}
+            onToggle={handlePdfToggle}
+          />
         ))}
       </div>
     )
@@ -383,11 +394,7 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
           description="This lesson has no companion PDF documents"
         />
         <div className="flex justify-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAll(true)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setShowAll(true)}>
             View all course materials ({allPdfs.length})
           </Button>
         </div>
@@ -413,7 +420,13 @@ export function MaterialsTab({ courseId, lessonId, adapter }: MaterialsTabProps)
         )}
       </div>
       {companionPdfs.map(pdf => (
-        <PdfSection key={pdf.id} pdf={pdf} courseId={courseId} isOpen={openPdfId === pdf.id} onToggle={handlePdfToggle} />
+        <PdfSection
+          key={pdf.id}
+          pdf={pdf}
+          courseId={courseId}
+          isOpen={openPdfId === pdf.id}
+          onToggle={handlePdfToggle}
+        />
       ))}
     </div>
   )

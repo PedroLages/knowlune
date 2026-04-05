@@ -170,9 +170,7 @@ export function Library() {
       )}
 
       {/* Storage indicator — only when books exist */}
-      {books.length > 0 && (
-        <StorageIndicator bookCount={books.length} refreshKey={books.length} />
-      )}
+      {books.length > 0 && <StorageIndicator bookCount={books.length} refreshKey={books.length} />}
 
       <BookImportDialog
         open={importOpen}

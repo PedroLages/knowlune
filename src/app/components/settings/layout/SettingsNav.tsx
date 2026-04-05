@@ -1,9 +1,6 @@
 import { cn } from '@/app/components/ui/utils'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
-import {
-  SETTINGS_CATEGORIES,
-  type SettingsCategorySlug,
-} from './settingsCategories'
+import { SETTINGS_CATEGORIES, type SettingsCategorySlug } from './settingsCategories'
 
 interface SettingsNavProps {
   activeCategory: SettingsCategorySlug
@@ -31,11 +28,7 @@ export function SettingsNav({
                   <button
                     onClick={() => onCategoryChange(category.slug)}
                     aria-current={isActive ? 'page' : undefined}
-                    aria-label={
-                      isModified
-                        ? `${category.label} (modified)`
-                        : category.label
-                    }
+                    aria-label={isModified ? `${category.label} (modified)` : category.label}
                     className={cn(
                       'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left',
                       'transition-all duration-200 min-h-[44px]',

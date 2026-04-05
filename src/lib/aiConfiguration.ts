@@ -169,7 +169,8 @@ async function testViaModelProxy(provider: string, key: string): Promise<boolean
     if (res.status === 429) throw new Error('Rate limited — key is valid but quota exceeded')
     throw new Error(`Connection failed (${res.status})`)
   } catch (e) {
-    if (e instanceof Error && (e.message.startsWith('Invalid') || e.message.startsWith('Rate'))) throw e
+    if (e instanceof Error && (e.message.startsWith('Invalid') || e.message.startsWith('Rate')))
+      throw e
     console.warn(`${provider} connection test failed:`, e)
     return false
   }
@@ -206,7 +207,8 @@ export const AI_PROVIDERS: Record<AIProviderId, AIProvider> = {
         if (res.status === 429) throw new Error('Rate limited — key is valid but quota exceeded')
         throw new Error(`Connection failed (${res.status})`)
       } catch (e) {
-        if (e instanceof Error && (e.message.startsWith('Invalid') || e.message.startsWith('Rate'))) throw e
+        if (e instanceof Error && (e.message.startsWith('Invalid') || e.message.startsWith('Rate')))
+          throw e
         console.warn('Anthropic connection test failed:', e)
         return false
       }

@@ -44,7 +44,7 @@ export function useWhisperTranscription(): UseWhisperTranscriptionReturn {
 
       try {
         const provider = await getWhisperProvider()
-        const result = await provider.transcribe(audio, lang, (p) => {
+        const result = await provider.transcribe(audio, lang, p => {
           if (!abortRef.current) setProgress(p)
         })
         return result
@@ -58,7 +58,7 @@ export function useWhisperTranscription(): UseWhisperTranscriptionReturn {
         setProgress(null)
       }
     },
-    [],
+    []
   )
 
   return {

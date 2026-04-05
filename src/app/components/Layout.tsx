@@ -479,7 +479,9 @@ export function Layout() {
       )}
 
       {/* Main Content */}
-      <div className={`flex-1 flex flex-col min-w-0 ${isLessonPlayerRoute ? 'overflow-auto' : 'overflow-hidden'}`}>
+      <div
+        className={`flex-1 flex flex-col min-w-0 ${isLessonPlayerRoute ? 'overflow-auto' : 'overflow-hidden'}`}
+      >
         {/* Header */}
         <header
           data-theater-hide

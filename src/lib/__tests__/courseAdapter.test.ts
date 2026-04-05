@@ -409,9 +409,7 @@ describe('LocalCourseAdapter.getGroupedLessons()', () => {
 
 describe('LocalCourseAdapter.getLessons() companion exclusion', () => {
   it('excludes companion PDFs that are matched to videos', async () => {
-    const videos = [
-      makeVideo({ id: 'v1', order: 1, filename: '01-Intro.mp4' }),
-    ]
+    const videos = [makeVideo({ id: 'v1', order: 1, filename: '01-Intro.mp4' })]
     const pdfs = [
       makePdf({ id: 'p1', filename: '01-Intro.pdf', pageCount: 5 }),
       makePdf({ id: 'p2', filename: 'Resources.pdf', pageCount: 20 }),

@@ -482,16 +482,11 @@ export function AIConfigurationSettings() {
         <div
           className={cn(
             'flex items-center justify-between rounded-lg border p-3',
-            settings.budgetMode
-              ? 'border-success/30 bg-success/5'
-              : 'border-border'
+            settings.budgetMode ? 'border-success/30 bg-success/5' : 'border-border'
           )}
         >
           <div className="space-y-0.5">
-            <Label
-              htmlFor="budget-mode"
-              className="text-sm font-medium cursor-pointer"
-            >
+            <Label htmlFor="budget-mode" className="text-sm font-medium cursor-pointer">
               Free Models Only
             </Label>
             <p className="text-xs text-muted-foreground">
@@ -509,7 +504,9 @@ export function AIConfigurationSettings() {
                 toast.error('Failed to update budget mode')
               })
               setSettings(prev => ({ ...prev, budgetMode: checked }))
-              toast.success(checked ? 'Budget mode enabled — using free models only' : 'Budget mode disabled')
+              toast.success(
+                checked ? 'Budget mode enabled — using free models only' : 'Budget mode disabled'
+              )
             }}
             data-testid="budget-mode-toggle"
             aria-label="Enable free models only mode"

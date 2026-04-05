@@ -335,10 +335,10 @@ issues:
     severity: high
     discovered_by: E83-review
     discovered_on: 2026-04-05
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Trivial fix: add scripts/ to ESLint ignorePatterns or add shebang comment support."
+    fixed_by: chore-trivial-fixes-2026-04-05
+    notes: "Fixed: added scripts/**/*.js to ESLint ignorePatterns."
 
   - id: KI-027
     type: lint
@@ -347,10 +347,10 @@ issues:
     severity: high
     discovered_by: E83-review
     discovered_on: 2026-04-05
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Trivial fix: install/configure eslint-plugin-react-hooks or remove the disable comment."
+    fixed_by: chore-trivial-fixes-2026-04-05
+    notes: "Fixed: removed dead eslint-disable comment — rule not installed, dependency array is correct."
 
   - id: KI-028
     type: code
@@ -395,10 +395,10 @@ issues:
     severity: low
     discovered_by: E83-review
     discovered_on: 2026-04-05
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Trivial fix: run npx prettier --write on affected files. Accumulates noise in every review."
+    fixed_by: chore-trivial-fixes-2026-04-05
+    notes: "Fixed: ran prettier --write on all src/ and tests/ files."
 
   - id: KI-032
     type: code
@@ -407,10 +407,10 @@ issues:
     severity: low
     discovered_by: E83-review
     discovered_on: 2026-04-05
-    status: open
+    status: wont-fix
     scheduled_for: null
     fixed_by: null
-    notes: "Trivial fix: annotate with silent-catch-ok or surface errors via console.warn."
+    notes: "All 4 catch blocks already have // silent-catch-ok annotations. Warnings are expected at warn severity."
 
   - id: KI-033
     type: lint

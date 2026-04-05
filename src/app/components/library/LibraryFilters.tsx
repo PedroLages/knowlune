@@ -71,7 +71,11 @@ export function LibraryFilters() {
         </div>
 
         {/* View toggle */}
-        <div className="flex items-center rounded-lg border border-border/50 p-0.5 flex-shrink-0" role="toolbar" aria-label="View toggle">
+        <div
+          className="flex items-center rounded-lg border border-border/50 p-0.5 flex-shrink-0"
+          role="toolbar"
+          aria-label="View toggle"
+        >
           <button
             onClick={() => setLibraryView('grid')}
             className={cn(
@@ -105,34 +109,34 @@ export function LibraryFilters() {
       <div className="relative">
         {/* Right fade indicator for horizontal scroll */}
         <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 sm:hidden" />
-      <div
-        className="flex gap-2 overflow-x-auto pb-1 -mb-1 scrollbar-none"
-        role="tablist"
-        aria-label="Filter by reading status"
-      >
-        {STATUS_PILLS.map(pill => {
-          const isActive = activeStatus === pill.value
-          const count = counts[pill.value] || 0
-          return (
-            <button
-              key={pill.value}
-              role="tab"
-              aria-selected={isActive}
-              onClick={() => setFilter('status', pill.value)}
-              className={cn(
-                'whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors min-h-[36px] flex-shrink-0',
-                isActive
-                  ? 'bg-brand text-brand-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              )}
-              data-testid={`filter-pill-${pill.value}`}
-            >
-              {pill.label}
-              <span className="ml-1.5 text-xs opacity-80">({count})</span>
-            </button>
-          )
-        })}
-      </div>
+        <div
+          className="flex gap-2 overflow-x-auto pb-1 -mb-1 scrollbar-none"
+          role="tablist"
+          aria-label="Filter by reading status"
+        >
+          {STATUS_PILLS.map(pill => {
+            const isActive = activeStatus === pill.value
+            const count = counts[pill.value] || 0
+            return (
+              <button
+                key={pill.value}
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setFilter('status', pill.value)}
+                className={cn(
+                  'whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors min-h-[36px] flex-shrink-0',
+                  isActive
+                    ? 'bg-brand text-brand-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                )}
+                data-testid={`filter-pill-${pill.value}`}
+              >
+                {pill.label}
+                <span className="ml-1.5 text-xs opacity-80">({count})</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
     </div>
   )

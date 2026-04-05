@@ -331,25 +331,27 @@ export function CourseOverview() {
     )
   }
 
-  const ctaLabel = ctaVariant === 'start'
-    ? 'Start Course'
-    : ctaVariant === 'continue' && ctaLessonTitle
-      ? `Resume: ${ctaLessonTitle}`
-      : ctaVariant === 'continue'
-        ? 'Continue Learning'
-        : ctaVariant === 'review'
-          ? 'Review Course'
-          : null
+  const ctaLabel =
+    ctaVariant === 'start'
+      ? 'Start Course'
+      : ctaVariant === 'continue' && ctaLessonTitle
+        ? `Resume: ${ctaLessonTitle}`
+        : ctaVariant === 'continue'
+          ? 'Continue Learning'
+          : ctaVariant === 'review'
+            ? 'Review Course'
+            : null
 
-  const overallPercent = videos.length > 0
-    ? Math.round((completedCount / videos.length) * 100)
-    : 0
+  const overallPercent = videos.length > 0 ? Math.round((completedCount / videos.length) * 100) : 0
 
   const totalLessons = videos.length + pdfs.length
   const authorName = adapterAuthorInfo?.name ?? authorData?.name
 
   return (
-    <div data-testid="course-overview-page" className="w-full min-h-screen pb-20 bg-surface-sunken rounded-2xl overflow-hidden">
+    <div
+      data-testid="course-overview-page"
+      className="w-full min-h-screen pb-20 bg-surface-sunken rounded-2xl overflow-hidden"
+    >
       {/* Cinematic Hero Banner */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -363,7 +365,8 @@ export function CourseOverview() {
           className="absolute inset-0"
           // eslint-disable-next-line react-best-practices/no-inline-styles -- radial gradient requires inline style
           style={{
-            background: 'radial-gradient(ellipse at center, var(--accent-violet-muted), transparent 70%)',
+            background:
+              'radial-gradient(ellipse at center, var(--accent-violet-muted), transparent 70%)',
           }}
         />
         {/* Dot pattern texture */}
@@ -385,8 +388,8 @@ export function CourseOverview() {
           >
             {course.name}
           </motion.h1>
-          {authorName && (
-            authorData?.id ? (
+          {authorName &&
+            (authorData?.id ? (
               <Link
                 to={`/authors/${authorData.id}`}
                 className="text-lg text-muted-foreground font-light hover:text-foreground transition-colors inline-block"
@@ -395,8 +398,7 @@ export function CourseOverview() {
               </Link>
             ) : (
               <p className="text-lg text-muted-foreground font-light">By {authorName}</p>
-            )
-          )}
+            ))}
 
           {ctaLabel && ctaLessonId && (
             <motion.div
@@ -478,7 +480,9 @@ export function CourseOverview() {
           <div className="flex items-center gap-3 px-4">
             <PlayCircle className="size-5 text-accent-violet" aria-hidden="true" />
             <div>
-              <div className="text-lg font-bold text-foreground leading-none">{overallPercent}%</div>
+              <div className="text-lg font-bold text-foreground leading-none">
+                {overallPercent}%
+              </div>
               <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-1">
                 Completed
               </div>
@@ -491,7 +495,9 @@ export function CourseOverview() {
               <div className="flex items-center gap-3 px-4">
                 <FileText className="size-5 text-accent-violet" aria-hidden="true" />
                 <div>
-                  <div className="text-lg font-bold text-foreground leading-none">{pdfs.length}</div>
+                  <div className="text-lg font-bold text-foreground leading-none">
+                    {pdfs.length}
+                  </div>
                   <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-1">
                     Resources
                   </div>
@@ -526,166 +532,173 @@ export function CourseOverview() {
             {(() => {
               let moduleNum = 0
               return groupedContent.map((group, groupIndex) => {
-              if (group.videos.length === 0) return null
-              moduleNum++
-              const status = moduleStatuses[groupIndex]
-              const groupTitle =
-                group.title ||
-                (groupedContent.length > 1 ? `Section ${moduleNum}` : 'All Lessons')
-              const groupLessonCount = group.videos.length
-              const groupCompletedCount = group.videos.filter(
-                v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= COMPLETION_THRESHOLD
-              ).length
-              const groupDuration = group.videos.reduce((s, v) => s + (v.duration || 0), 0)
-              const isExpanded = expandedModules.has(groupIndex)
+                if (group.videos.length === 0) return null
+                moduleNum++
+                const status = moduleStatuses[groupIndex]
+                const groupTitle =
+                  group.title ||
+                  (groupedContent.length > 1 ? `Section ${moduleNum}` : 'All Lessons')
+                const groupLessonCount = group.videos.length
+                const groupCompletedCount = group.videos.filter(
+                  v => (progressMap.get(v.id)?.completionPercentage ?? 0) >= COMPLETION_THRESHOLD
+                ).length
+                const groupDuration = group.videos.reduce((s, v) => s + (v.duration || 0), 0)
+                const isExpanded = expandedModules.has(groupIndex)
 
-              return (
-                <div key={`${group.title}-${groupIndex}`} className="relative pl-8 group/module">
-                  {/* Timeline dot */}
-                  <div
-                    className={cn(
-                      'absolute -left-[13px] top-1 size-6 rounded-full border-4 border-background flex items-center justify-center transition-colors duration-300',
-                      status === 'completed' && 'bg-success shadow-[0_0_8px_var(--success)]',
-                      status === 'active' && 'bg-accent-violet shadow-[0_0_12px_var(--accent-violet)]',
-                      status === 'upcoming' && 'bg-muted-foreground/30'
-                    )}
-                  >
-                    {status === 'completed' && (
-                      <CheckCircle2 className="size-3 text-success-foreground" aria-hidden="true" />
-                    )}
-                  </div>
-
-                  {/* Module card */}
-                  <div
-                    className={cn(
-                      'rounded-2xl border transition-all overflow-hidden',
-                      status === 'active' && 'bg-card border-accent-violet/30 shadow-[0_0_20px_var(--accent-violet-muted)]',
-                      status === 'completed' && 'bg-card/30 border-success/15 hover:border-success/30',
-                      status === 'upcoming' && 'bg-card/30 border-muted-foreground/8 hover:border-muted-foreground/20'
-                    )}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleModule(groupIndex)}
-                      aria-expanded={isExpanded}
-                      className="w-full text-left p-6"
+                return (
+                  <div key={`${group.title}-${groupIndex}`} className="relative pl-8 group/module">
+                    {/* Timeline dot */}
+                    <div
+                      className={cn(
+                        'absolute -left-[13px] top-1 size-6 rounded-full border-4 border-background flex items-center justify-center transition-colors duration-300',
+                        status === 'completed' && 'bg-success shadow-[0_0_8px_var(--success)]',
+                        status === 'active' &&
+                          'bg-accent-violet shadow-[0_0_12px_var(--accent-violet)]',
+                        status === 'upcoming' && 'bg-muted-foreground/30'
+                      )}
                     >
-                      <div className="flex justify-between items-start mb-2">
-                        <h3
-                          className={cn(
-                            'text-lg font-semibold',
-                            status === 'active' && 'text-foreground',
-                            status === 'completed' && 'text-foreground/60',
-                            status === 'upcoming' && 'text-foreground/80'
-                          )}
-                        >
-                          {groupTitle}
-                        </h3>
-                        <span className="text-[10px] font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
-                          Module {moduleNum}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <BookOpen className="size-3.5" aria-hidden="true" />
-                            {groupCompletedCount} / {groupLessonCount}{' '}
-                            {groupLessonCount === 1 ? 'lesson' : 'lessons'}
-                          </span>
-                          {groupDuration > 0 && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="size-3.5" aria-hidden="true" />
-                              {formatDuration(groupDuration)}
-                            </span>
-                          )}
-                        </div>
-                        <ChevronDown
-                          className={cn(
-                            'size-5 text-muted-foreground transition-transform duration-200',
-                            isExpanded && 'rotate-180'
-                          )}
+                      {status === 'completed' && (
+                        <CheckCircle2
+                          className="size-3 text-success-foreground"
                           aria-hidden="true"
                         />
-                      </div>
-
-                      {/* Micro progress bar — hidden when no progress */}
-                      {groupCompletedCount > 0 && (
-                      <div className="w-full h-1 bg-muted rounded-full mt-4 overflow-hidden">
-                        <div
-                          className={cn(
-                            'h-full transition-all duration-500',
-                            status === 'completed' ? 'bg-success' : 'bg-accent-violet'
-                          )}
-                          // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic width requires inline style
-                          style={{
-                            width: `${(groupCompletedCount / groupLessonCount) * 100}%`,
-                          }}
-                        />
-                      </div>
                       )}
-                    </button>
+                    </div>
 
-                    {/* Expanded lesson list */}
-                    {isExpanded && (
-                      <div className="bg-surface-sunken border-t-2 border-muted-foreground/40 p-2">
-                        <div className="max-h-[400px] overflow-y-auto space-y-0.5 pr-1">
-                          {group.videos.map(video => {
-                            const prog = progressMap.get(video.id)
-                            const percent = prog?.completionPercentage ?? 0
-                            const isCompleted = percent >= COMPLETION_THRESHOLD
-
-                            return (
-                              <Link
-                                key={video.id}
-                                to={`/courses/${courseId}/lessons/${video.id}`}
-                                className={cn(
-                                  'flex items-center gap-3 px-4 py-2.5 min-h-[44px] rounded-xl transition-colors group/lesson',
-                                  isCompleted
-                                    ? 'bg-success/5 hover:bg-success/10'
-                                    : 'hover:bg-muted/50'
-                                )}
-                                data-testid={`curriculum-lesson-${video.id}`}
-                              >
-                                {isCompleted ? (
-                                  <CheckCircle2
-                                    className="size-5 text-success flex-shrink-0"
-                                    aria-hidden="true"
-                                  />
-                                ) : (
-                                  <Video
-                                    className="size-5 text-muted-foreground flex-shrink-0"
-                                    aria-hidden="true"
-                                  />
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  <p
-                                    className={cn(
-                                      'text-sm font-medium truncate transition-colors',
-                                      isCompleted
-                                        ? 'text-success-foreground'
-                                        : 'text-foreground/80 group-hover/lesson:text-foreground'
-                                    )}
-                                  >
-                                    {stripExtension(video.filename)}
-                                  </p>
-                                  {video.duration > 0 && (
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                      <PlayCircle className="size-3" aria-hidden="true" />
-                                      {formatDuration(video.duration)}
-                                    </p>
-                                  )}
-                                </div>
-                              </Link>
-                            )
-                          })}
+                    {/* Module card */}
+                    <div
+                      className={cn(
+                        'rounded-2xl border transition-all overflow-hidden',
+                        status === 'active' &&
+                          'bg-card border-accent-violet/30 shadow-[0_0_20px_var(--accent-violet-muted)]',
+                        status === 'completed' &&
+                          'bg-card/30 border-success/15 hover:border-success/30',
+                        status === 'upcoming' &&
+                          'bg-card/30 border-muted-foreground/8 hover:border-muted-foreground/20'
+                      )}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => toggleModule(groupIndex)}
+                        aria-expanded={isExpanded}
+                        className="w-full text-left p-6"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <h3
+                            className={cn(
+                              'text-lg font-semibold',
+                              status === 'active' && 'text-foreground',
+                              status === 'completed' && 'text-foreground/60',
+                              status === 'upcoming' && 'text-foreground/80'
+                            )}
+                          >
+                            {groupTitle}
+                          </h3>
+                          <span className="text-[10px] font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
+                            Module {moduleNum}
+                          </span>
                         </div>
-                      </div>
-                    )}
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <BookOpen className="size-3.5" aria-hidden="true" />
+                              {groupCompletedCount} / {groupLessonCount}{' '}
+                              {groupLessonCount === 1 ? 'lesson' : 'lessons'}
+                            </span>
+                            {groupDuration > 0 && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="size-3.5" aria-hidden="true" />
+                                {formatDuration(groupDuration)}
+                              </span>
+                            )}
+                          </div>
+                          <ChevronDown
+                            className={cn(
+                              'size-5 text-muted-foreground transition-transform duration-200',
+                              isExpanded && 'rotate-180'
+                            )}
+                            aria-hidden="true"
+                          />
+                        </div>
+
+                        {/* Micro progress bar — hidden when no progress */}
+                        {groupCompletedCount > 0 && (
+                          <div className="w-full h-1 bg-muted rounded-full mt-4 overflow-hidden">
+                            <div
+                              className={cn(
+                                'h-full transition-all duration-500',
+                                status === 'completed' ? 'bg-success' : 'bg-accent-violet'
+                              )}
+                              // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic width requires inline style
+                              style={{
+                                width: `${(groupCompletedCount / groupLessonCount) * 100}%`,
+                              }}
+                            />
+                          </div>
+                        )}
+                      </button>
+
+                      {/* Expanded lesson list */}
+                      {isExpanded && (
+                        <div className="bg-surface-sunken border-t-2 border-muted-foreground/40 p-2">
+                          <div className="max-h-[400px] overflow-y-auto space-y-0.5 pr-1">
+                            {group.videos.map(video => {
+                              const prog = progressMap.get(video.id)
+                              const percent = prog?.completionPercentage ?? 0
+                              const isCompleted = percent >= COMPLETION_THRESHOLD
+
+                              return (
+                                <Link
+                                  key={video.id}
+                                  to={`/courses/${courseId}/lessons/${video.id}`}
+                                  className={cn(
+                                    'flex items-center gap-3 px-4 py-2.5 min-h-[44px] rounded-xl transition-colors group/lesson',
+                                    isCompleted
+                                      ? 'bg-success/5 hover:bg-success/10'
+                                      : 'hover:bg-muted/50'
+                                  )}
+                                  data-testid={`curriculum-lesson-${video.id}`}
+                                >
+                                  {isCompleted ? (
+                                    <CheckCircle2
+                                      className="size-5 text-success flex-shrink-0"
+                                      aria-hidden="true"
+                                    />
+                                  ) : (
+                                    <Video
+                                      className="size-5 text-muted-foreground flex-shrink-0"
+                                      aria-hidden="true"
+                                    />
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <p
+                                      className={cn(
+                                        'text-sm font-medium truncate transition-colors',
+                                        isCompleted
+                                          ? 'text-success-foreground'
+                                          : 'text-foreground/80 group-hover/lesson:text-foreground'
+                                      )}
+                                    >
+                                      {stripExtension(video.filename)}
+                                    </p>
+                                    {video.duration > 0 && (
+                                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                        <PlayCircle className="size-3" aria-hidden="true" />
+                                        {formatDuration(video.duration)}
+                                      </p>
+                                    )}
+                                  </div>
+                                </Link>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            })
+                )
+              })
             })()}
           </div>
         </motion.div>
@@ -704,7 +717,9 @@ export function CourseOverview() {
                 <svg className="size-28 -rotate-90" viewBox="0 0 100 100" aria-hidden="true">
                   {/* Track */}
                   <circle
-                    cx="50" cy="50" r="42"
+                    cx="50"
+                    cy="50"
+                    r="42"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="8"
@@ -712,7 +727,9 @@ export function CourseOverview() {
                   />
                   {/* Progress */}
                   <circle
-                    cx="50" cy="50" r="42"
+                    cx="50"
+                    cy="50"
+                    r="42"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="8"

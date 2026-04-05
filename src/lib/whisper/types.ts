@@ -46,7 +46,7 @@ export interface WhisperProvider {
   transcribe(
     audio: Blob,
     lang?: string,
-    onProgress?: (progress: WhisperProgress) => void,
+    onProgress?: (progress: WhisperProgress) => void
   ): Promise<WhisperTranscription>
 }
 

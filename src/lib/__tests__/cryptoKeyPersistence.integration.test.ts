@@ -35,9 +35,8 @@ vi.stubGlobal('dispatchEvent', vi.fn())
 
 // Import AFTER mocks are set up
 const { saveProviderApiKey, getDecryptedApiKeyForProvider } = await import('../aiConfiguration')
-const { saveYouTubeConfiguration, getDecryptedYouTubeApiKey } = await import(
-  '../youtubeConfiguration'
-)
+const { saveYouTubeConfiguration, getDecryptedYouTubeApiKey } =
+  await import('../youtubeConfiguration')
 
 beforeEach(async () => {
   _resetKeyCache()

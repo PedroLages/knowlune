@@ -138,10 +138,7 @@ const defaultGroups: MaterialGroup[] = [
   },
 ]
 
-function renderMaterials(
-  lessonId = 'video-1',
-  groups: MaterialGroup[] = defaultGroups
-) {
+function renderMaterials(lessonId = 'video-1', groups: MaterialGroup[] = defaultGroups) {
   const adapter = makeMockAdapter(groups)
   return render(
     <MemoryRouter>
@@ -290,9 +287,7 @@ describe('MaterialsTab', () => {
           order: 1,
           duration: 300,
         },
-        materials: [
-          { id: 'pdf-single', title: 'OnePager.pdf', type: 'pdf', order: 1 },
-        ],
+        materials: [{ id: 'pdf-single', title: 'OnePager.pdf', type: 'pdf', order: 1 }],
       },
     ]
     mockToArray.mockResolvedValue(singlePagePdfs)
@@ -303,5 +298,4 @@ describe('MaterialsTab', () => {
     // Ensure it does NOT say "1 pages"
     expect(screen.queryByText('1 pages')).not.toBeInTheDocument()
   })
-
 })

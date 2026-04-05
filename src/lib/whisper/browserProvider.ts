@@ -78,9 +78,7 @@ export class BrowserWhisperProvider implements WhisperProvider {
   }
 
   /** Decode audio Blob to mono Float32Array at 16kHz (Whisper's expected format) */
-  private async decodeAudio(
-    blob: Blob
-  ): Promise<{ audioData: Float32Array; sampleRate: number }> {
+  private async decodeAudio(blob: Blob): Promise<{ audioData: Float32Array; sampleRate: number }> {
     const audioContext = new AudioContext({ sampleRate: 16000 })
     try {
       const arrayBuffer = await blob.arrayBuffer()
@@ -105,14 +103,10 @@ export class BrowserWhisperProvider implements WhisperProvider {
   }
 
   /** Convert transcription segments to WebVTT format */
-  private segmentsToVTT(
-    segments: Array<{ start: number; end: number; text: string }>
-  ): string {
+  private segmentsToVTT(segments: Array<{ start: number; end: number; text: string }>): string {
     const lines = ['WEBVTT', '']
     for (const seg of segments) {
-      lines.push(
-        this.formatTimestamp(seg.start) + ' --> ' + this.formatTimestamp(seg.end)
-      )
+      lines.push(this.formatTimestamp(seg.start) + ' --> ' + this.formatTimestamp(seg.end))
       lines.push(seg.text.trim())
       lines.push('')
     }
@@ -129,10 +123,9 @@ export class BrowserWhisperProvider implements WhisperProvider {
 
   private getOrCreateWorker(): Worker {
     if (!this.worker) {
-      this.worker = new Worker(
-        new URL('../../ai/workers/whisper.worker.ts', import.meta.url),
-        { type: 'module' }
-      )
+      this.worker = new Worker(new URL('../../ai/workers/whisper.worker.ts', import.meta.url), {
+        type: 'module',
+      })
     }
     return this.worker
   }

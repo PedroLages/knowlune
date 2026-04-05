@@ -27,21 +27,14 @@ export function AppearanceSection() {
             </div>
             <div>
               <h2 className="text-lg font-display leading-none">Appearance</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                Choose your preferred theme
-              </p>
+              <p className="text-sm text-muted-foreground mt-1">Choose your preferred theme</p>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-6">
           <div>
             <Label>Theme</Label>
-            <RadioGroup
-              value={theme}
-              onValueChange={setTheme}
-              aria-label="Theme"
-              className="mt-4"
-            >
+            <RadioGroup value={theme} onValueChange={setTheme} aria-label="Theme" className="mt-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <label
                   className={cn(
@@ -117,9 +110,7 @@ export function AppearanceSection() {
             </div>
             <div>
               <h2 className="text-lg font-display leading-none">Navigation</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                Control sidebar menu visibility
-              </p>
+              <p className="text-sm text-muted-foreground mt-1">Control sidebar menu visibility</p>
             </div>
           </div>
         </CardHeader>

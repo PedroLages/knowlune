@@ -74,11 +74,7 @@ function ScanProgressIndicator() {
         <Loader2 className="size-4 text-brand animate-spin shrink-0" aria-hidden="true" />
         <span className="text-sm font-medium truncate">{current.courseName}</span>
       </div>
-      <Progress
-        value={percent ?? 0}
-        className="h-1.5"
-        aria-label="Scan progress"
-      />
+      <Progress value={percent ?? 0} className="h-1.5" aria-label="Scan progress" />
       <p className="text-xs text-muted-foreground">
         {isScanning && (totalFiles === null || totalFiles === 0)
           ? `Scanning folder\u2026 ${processed} of ? files processed`

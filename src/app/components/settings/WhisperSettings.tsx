@@ -22,16 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/app/components/ui/tooltip'
-import {
-  Mic,
-  Info,
-  CheckCircle2,
-  AlertTriangle,
-  Loader2,
-  Server,
-  Cpu,
-  Cloud,
-} from 'lucide-react'
+import { Mic, Info, CheckCircle2, AlertTriangle, Loader2, Server, Cpu, Cloud } from 'lucide-react'
 import {
   getWhisperConfig,
   saveWhisperConfig,
@@ -39,14 +30,8 @@ import {
   type WhisperConfig,
   type WhisperProviderId,
 } from '@/lib/whisper'
-import {
-  getConfiguredProviderIds,
-  type AIProviderId,
-} from '@/lib/aiConfiguration'
-import {
-  getYouTubeConfiguration,
-  saveYouTubeConfiguration,
-} from '@/lib/youtubeConfiguration'
+import { getConfiguredProviderIds, type AIProviderId } from '@/lib/aiConfiguration'
+import { getYouTubeConfiguration, saveYouTubeConfiguration } from '@/lib/youtubeConfiguration'
 import { isAllowedProxyUrl, getProxyUrlRejectionReason } from '@/lib/ssrfProtection'
 import { cn } from '@/app/components/ui/utils'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
@@ -174,10 +159,7 @@ export function WhisperSettings() {
   function validate(): boolean {
     const errors: Record<string, string> = {}
 
-    if (
-      (config.provider === 'self-hosted') &&
-      serverUrl.trim()
-    ) {
+    if (config.provider === 'self-hosted' && serverUrl.trim()) {
       if (!isAllowedProxyUrl(serverUrl.trim())) {
         const reason = getProxyUrlRejectionReason(serverUrl.trim())
         errors.serverUrl = reason ?? 'Invalid URL'
@@ -428,10 +410,7 @@ export function WhisperSettings() {
                   <div key={providerId} className="flex items-center gap-2 text-sm">
                     {hasKey ? (
                       <>
-                        <CheckCircle2
-                          className="size-4 text-success shrink-0"
-                          aria-hidden="true"
-                        />
+                        <CheckCircle2 className="size-4 text-success shrink-0" aria-hidden="true" />
                         <span className="text-success">
                           {providerName} key detected — ready for Whisper
                         </span>

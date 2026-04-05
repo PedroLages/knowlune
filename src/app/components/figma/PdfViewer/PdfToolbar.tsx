@@ -91,7 +91,14 @@ async function handlePrint(src: string) {
     const url = URL.createObjectURL(pdfBlob)
     const w = window.open(url, '_blank')
     if (w) {
-      w.addEventListener('afterprint', () => { w.close(); URL.revokeObjectURL(url) }, { once: true })
+      w.addEventListener(
+        'afterprint',
+        () => {
+          w.close()
+          URL.revokeObjectURL(url)
+        },
+        { once: true }
+      )
       w.addEventListener('load', () => setTimeout(() => w.print(), 300), { once: true })
     }
   } catch {

@@ -30,9 +30,7 @@ export function saveWhisperConfig(config: Partial<WhisperConfig>): WhisperConfig
 }
 
 /** Lazily resolve the active Whisper provider */
-export async function getWhisperProvider(
-  providerId?: WhisperProviderId,
-): Promise<WhisperProvider> {
+export async function getWhisperProvider(providerId?: WhisperProviderId): Promise<WhisperProvider> {
   const config = getWhisperConfig()
   const id = providerId ?? config.provider
 

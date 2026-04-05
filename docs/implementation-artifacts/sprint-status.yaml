@@ -987,7 +987,7 @@ development_status:
   83-6-book-deletion-with-opfs-cleanup: done
   83-7-storage-indicator: done
   83-8-pwa-offline-shell-for-library: done
-  epic-83-retrospective: optional
+  epic-83-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 84: EPUB Reader and Navigation

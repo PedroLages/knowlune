@@ -59,14 +59,10 @@ export function parseFilenameComponents(filename: string): FilenameComponents {
 
   // Section prefix: first numeric segment only (e.g. "01" from "01-01")
   // Used for fallback matching when PDFs use "01-Title" but videos use "01-01- Title"
-  const sectionPrefix = numericPrefix
-    ? numericPrefix.split(/[-_.]/)[0]
-    : null
+  const sectionPrefix = numericPrefix ? numericPrefix.split(/[-_.]/)[0] : null
 
   // Get the remainder after the prefix
-  const remainder = numericPrefix
-    ? stripped.slice(numericPrefix.length)
-    : stripped
+  const remainder = numericPrefix ? stripped.slice(numericPrefix.length) : stripped
 
   // Normalize: lowercase, replace separators with spaces, collapse whitespace
   const stem = remainder
@@ -129,10 +125,7 @@ const SIMILARITY_THRESHOLD = 0.5
  * Returns a list of MaterialGroup objects where each video (or standalone PDF)
  * is a primary lesson with zero or more companion materials.
  */
-export function matchMaterialsToLessons(
-  videos: LessonItem[],
-  pdfs: LessonItem[]
-): MaterialGroup[] {
+export function matchMaterialsToLessons(videos: LessonItem[], pdfs: LessonItem[]): MaterialGroup[] {
   if (pdfs.length === 0) {
     return videos.map(v => ({ primary: v, materials: [] }))
   }
@@ -160,10 +153,7 @@ export function matchMaterialsToLessons(
     if (matchedPdfIds.has(pp.item.id)) continue
 
     for (const vp of videoParsed) {
-      if (
-        pp.components.stem.length > 0 &&
-        pp.components.stem === vp.components.stem
-      ) {
+      if (pp.components.stem.length > 0 && pp.components.stem === vp.components.stem) {
         videoMaterials.get(vp.item.id)!.push(pp.item)
         matchedPdfIds.add(pp.item.id)
         break
@@ -257,9 +247,7 @@ export function matchMaterialsToLessons(
   const groups: MaterialGroup[] = videoParsed
     .map(vp => ({
       primary: vp.item,
-      materials: videoMaterials.get(vp.item.id)!.sort((a, b) =>
-        a.title.localeCompare(b.title)
-      ),
+      materials: videoMaterials.get(vp.item.id)!.sort((a, b) => a.title.localeCompare(b.title)),
     }))
     .sort((a, b) => a.primary.order - b.primary.order)
 
@@ -302,10 +290,7 @@ function mergeByOrder(a: MaterialGroup[], b: MaterialGroup[]): MaterialGroup[] {
 /**
  * Find companion materials for a specific lesson within pre-computed groups.
  */
-export function getCompanionMaterials(
-  lessonId: string,
-  groups: MaterialGroup[]
-): LessonItem[] {
+export function getCompanionMaterials(lessonId: string, groups: MaterialGroup[]): LessonItem[] {
   const group = groups.find(g => g.primary.id === lessonId)
   return group?.materials ?? []
 }

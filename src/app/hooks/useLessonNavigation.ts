@@ -62,9 +62,7 @@ export function useLessonNavigation(
 
   // Navigate to the immediate next/previous lesson regardless of type (video or PDF).
   const nextLesson =
-    currentIndex >= 0 && currentIndex < lessons.length - 1
-      ? lessons[currentIndex + 1]
-      : null
+    currentIndex >= 0 && currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null
 
   const prevLesson = currentIndex > 0 ? lessons[currentIndex - 1] : null
 

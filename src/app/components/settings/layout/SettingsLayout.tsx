@@ -87,11 +87,7 @@ export function SettingsLayout({ modifiedCategories, onSearchOpen }: SettingsLay
           <div className="flex-1 max-w-2xl">
             {/* Category heading */}
             <div className="mb-6">
-              <h2
-                className="text-xl font-display"
-                tabIndex={-1}
-                id={`settings-${activeCategory}`}
-              >
+              <h2 className="text-xl font-display" tabIndex={-1} id={`settings-${activeCategory}`}>
                 {activeMeta.label}
               </h2>
               <p className="text-sm text-muted-foreground mt-1">{activeMeta.description}</p>
@@ -109,11 +105,7 @@ export function SettingsLayout({ modifiedCategories, onSearchOpen }: SettingsLay
           />
           <div className="mt-6">
             <div className="mb-4">
-              <h2
-                className="text-lg font-display"
-                tabIndex={-1}
-                id={`settings-${activeCategory}`}
-              >
+              <h2 className="text-lg font-display" tabIndex={-1} id={`settings-${activeCategory}`}>
                 {activeMeta.label}
               </h2>
               <p className="text-xs text-muted-foreground mt-1">{activeMeta.description}</p>

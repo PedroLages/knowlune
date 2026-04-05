@@ -87,9 +87,7 @@ test.describe('YouTubeLessonPlayer — Rendering', () => {
 
     // THEN: Player content area is visible with correct title below video
     await expect(page.getByTestId('youtube-lesson-player-content')).toBeVisible()
-    await expect(page.getByTestId('lesson-title')).toContainText(
-      'Getting Started with TypeScript'
-    )
+    await expect(page.getByTestId('lesson-title')).toContainText('Getting Started with TypeScript')
   })
 
   test('should display course name in back-link toolbar', async ({ page }) => {
@@ -298,9 +296,7 @@ test.describe('YouTubeLessonPlayer — Offline', () => {
     await goToLesson(page, 'yt-lesson-course', 'yt-lesson-vid-01')
 
     // THEN: Lesson title and completion toggle still render
-    await expect(page.getByTestId('lesson-title')).toContainText(
-      'Getting Started with TypeScript'
-    )
+    await expect(page.getByTestId('lesson-title')).toContainText('Getting Started with TypeScript')
     await expect(page.getByTestId('completion-toggle')).toBeVisible()
 
     // Cleanup

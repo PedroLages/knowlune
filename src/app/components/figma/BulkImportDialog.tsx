@@ -811,9 +811,7 @@ export function BulkImportDialog({
                       {/* Collapsed header */}
                       <button
                         type="button"
-                        onClick={() =>
-                          setExpandedCourseId(isExpanded ? null : course.id)
-                        }
+                        onClick={() => setExpandedCourseId(isExpanded ? null : course.id)}
                         className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-accent transition-colors"
                       >
                         <FolderOpen
@@ -889,15 +887,12 @@ export function BulkImportDialog({
                                 {course.images.slice(0, 8).map(img => {
                                   const url = courseImages.get(img.path)
                                   if (!url) return null
-                                  const isSelected =
-                                    override?.coverImageHandle === img.fileHandle
+                                  const isSelected = override?.coverImageHandle === img.fileHandle
                                   return (
                                     <button
                                       key={img.path}
                                       type="button"
-                                      onClick={() =>
-                                        handleSelectCover(course.id, img)
-                                      }
+                                      onClick={() => handleSelectCover(course.id, img)}
                                       className={`relative aspect-video rounded-lg overflow-hidden border-2 transition-colors ${
                                         isSelected
                                           ? 'border-brand ring-1 ring-brand/30'
@@ -943,8 +938,7 @@ export function BulkImportDialog({
                 className="rounded-xl"
                 data-testid="bulk-confirm-import-btn"
               >
-                Import {scannedCourses.size}{' '}
-                {scannedCourses.size === 1 ? 'Course' : 'Courses'}
+                Import {scannedCourses.size} {scannedCourses.size === 1 ? 'Course' : 'Courses'}
               </Button>
             </DialogFooter>
           </>
