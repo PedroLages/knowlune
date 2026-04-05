@@ -34,6 +34,8 @@ import { ReaderFooter } from '@/app/components/reader/ReaderFooter'
 import { ReaderErrorBoundary } from '@/app/components/reader/ReaderErrorBoundary'
 import { TableOfContents } from '@/app/components/reader/TableOfContents'
 import { ReaderSettingsPanel } from '@/app/components/reader/ReaderSettingsPanel'
+import { TtsControlBar } from '@/app/components/reader/TtsControlBar'
+import { useTts } from '@/app/hooks/useTts'
 import { db } from '@/db/schema'
 import type { ContentPosition } from '@/data/types'
 
@@ -92,6 +94,20 @@ export function BookReader() {
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const blobUrlRef = useRef<string | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // TTS read-aloud integration (E84-S05)
+  const {
+    isTtsAvailable,
+    isTtsPlaying,
+    isTtsPaused,
+    ttsRate,
+    ttsCurrentChunk,
+    ttsTotalChunks,
+    startTts,
+    stopTts,
+    setTtsRate,
+    toggleTts,
+  } = useTts(renditionRef)
 
   // Load books if not yet loaded
   useEffect(() => {
@@ -388,6 +404,7 @@ export function BookReader() {
         visible={headerVisible}
         onTocOpen={() => setTocOpen(true)}
         onSettingsOpen={() => setSettingsOpen(true)}
+        onReadAloud={isTtsAvailable ? startTts : undefined}
       />
 
       {/* Main content area */}
@@ -446,6 +463,20 @@ export function BookReader() {
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />
+
+      {/* TTS Read-Aloud control bar (E84-S05) — shown when TTS is active */}
+      {(isTtsPlaying || isTtsPaused) && (
+        <TtsControlBar
+          isPlaying={isTtsPlaying}
+          currentChunk={ttsCurrentChunk}
+          totalChunks={ttsTotalChunks}
+          rate={ttsRate}
+          theme={theme}
+          onPlayPause={toggleTts}
+          onStop={stopTts}
+          onRateChange={setTtsRate}
+        />
+      )}
     </div>
   )
 }
