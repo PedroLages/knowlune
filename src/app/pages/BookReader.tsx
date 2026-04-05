@@ -39,6 +39,7 @@ import { HighlightLayer } from '@/app/components/reader/HighlightLayer'
 import { HighlightListPanel } from '@/app/components/reader/HighlightListPanel'
 import { ClozeFlashcardCreator } from '@/app/components/reader/ClozeFlashcardCreator'
 import { useTts } from '@/app/hooks/useTts'
+import { useReadingSession } from '@/app/hooks/useReadingSession'
 import { db } from '@/db/schema'
 import type { ContentPosition } from '@/data/types'
 
@@ -97,6 +98,8 @@ export function BookReader() {
   const [clozeHighlightId, setClozeHighlightId] = useState<string | undefined>(undefined)
   const [clozeOpen, setClozeOpen] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
+  // Set to true once EPUB renders successfully — triggers reading session start (E85-S06)
+  const [isEpubReady, setIsEpubReady] = useState(false)
   const [toc, setToc] = useState<NavItem[]>([])
   const [currentHref, setCurrentHref] = useState<string | undefined>(undefined)
   const [currentPage, setCurrentPage] = useState<number | undefined>(undefined)
@@ -106,6 +109,9 @@ export function BookReader() {
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const blobUrlRef = useRef<string | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Reading session tracking and streak integration (E85-S06)
+  useReadingSession({ bookId: bookId ?? '', isReady: isEpubReady })
 
   // TTS read-aloud integration (E84-S05)
   const {
@@ -376,6 +382,8 @@ export function BookReader() {
   const handleRenditionReady = useCallback(
     (rendition: Rendition) => {
       renditionRef.current = rendition
+      // Signal that EPUB rendered successfully — starts reading session timer (E85-S06)
+      setIsEpubReady(true)
 
       // Generate locations for page count estimation (async, non-blocking)
       // epub.js generates ~1000 chars per "page" by default

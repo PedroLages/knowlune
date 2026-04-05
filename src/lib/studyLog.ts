@@ -13,7 +13,8 @@ export interface StudyAction {
     | 'course_started'
     | 'pdf_progress'
     | 'quiz_complete'
-  courseId: string
+    | 'book_read' // Reading session ended with >= 30s duration (E85-S06)
+  courseId: string // For book_read: use bookId as courseId sentinel
   lessonId?: string
   timestamp: string
   metadata?: Record<string, unknown>
@@ -213,7 +214,11 @@ function calculateStreakFromDate(
 function studyDaysFromLog(log: StudyAction[]): string[] {
   const days = new Set<string>()
   for (const a of log) {
-    if (a.type === 'lesson_complete' || a.type === 'quiz_complete') {
+    if (
+      a.type === 'lesson_complete' ||
+      a.type === 'quiz_complete' ||
+      a.type === 'book_read' // Book reading sessions count toward streak (E85-S06)
+    ) {
       days.add(toLocalDateString(new Date(a.timestamp)))
     }
   }
@@ -317,7 +322,11 @@ function activityFromLog(
   // O(n): build count map in single pass
   const countMap = new Map<string, number>()
   for (const a of log) {
-    if (a.type === 'lesson_complete' || a.type === 'quiz_complete') {
+    if (
+      a.type === 'lesson_complete' ||
+      a.type === 'quiz_complete' ||
+      a.type === 'book_read' // Count book reading toward daily activity (E85-S06)
+    ) {
       const d = toLocalDateString(new Date(a.timestamp))
       countMap.set(d, (countMap.get(d) ?? 0) + 1)
     }
