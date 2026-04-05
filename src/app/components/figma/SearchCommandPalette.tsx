@@ -24,9 +24,15 @@ import {
 } from '@/app/components/ui/command'
 import { Badge } from '@/app/components/ui/badge'
 import { useCourseStore } from '@/stores/useCourseStore'
+import { useBookStore } from '@/stores/useBookStore'
 import type { Course } from '@/data/types'
 import { searchNotesWithContext, type NoteSearchResult } from '@/lib/noteSearch'
 import { truncateSnippet, highlightMatches, buildHighlightPatterns } from '@/lib/searchUtils'
+import { db } from '@/db/schema'
+import {
+  HighlightSearchResult,
+  type HighlightSearchResultData,
+} from '@/app/components/search/HighlightSearchResult'
 
 interface SearchItem {
   id: string
@@ -159,16 +165,18 @@ interface SearchCommandPaletteProps {
 export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPaletteProps) {
   const navigate = useNavigate()
   const allCourses = useCourseStore(s => s.courses)
+  const allBooks = useBookStore(s => s.books)
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [noteResults, setNoteResults] = useState<NoteSearchResult[]>([])
+  const [highlightResults, setHighlightResults] = useState<HighlightSearchResultData[]>([])
 
   const searchIndex = useMemo(() => buildSearchIndex(allCourses), [allCourses])
 
   const commandFilter = useCallback((value: string, search: string) => {
-    // Note items are managed by MiniSearch — always show them
-    if (value.startsWith('note:')) return 1
+    // Note and highlight items are managed by async search — always show them
+    if (value.startsWith('note:') || value.startsWith('highlight:')) return 1
     // Default filtering for pages/courses/lessons
     if (!search) return 1
     return value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
@@ -184,6 +192,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
       setSearchQuery('')
       setDebouncedQuery('')
       setNoteResults([])
+      setHighlightResults([])
     }
   }, [open])
 
@@ -203,6 +212,42 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
     }
     setNoteResults(searchNotesWithContext(debouncedQuery))
   }, [debouncedQuery])
+
+  // Search book highlights on debounced query (E86-S03)
+  useEffect(() => {
+    const q = debouncedQuery.trim().toLowerCase()
+    if (!q) {
+      setHighlightResults([])
+      return
+    }
+
+    let ignore = false
+    db.bookHighlights
+      .filter(h => h.text.toLowerCase().includes(q))
+      .limit(5)
+      .toArray()
+      .then(matches => {
+        if (ignore) return
+        const results: HighlightSearchResultData[] = matches.map(h => {
+          const book = allBooks.find(b => b.id === h.bookId)
+          return {
+            id: h.id,
+            text: h.text,
+            bookId: h.bookId,
+            bookTitle: book?.title ?? 'Unknown Book',
+            color: h.color,
+            chapterHref: h.chapterHref,
+            cfiRange: h.cfiRange,
+          }
+        })
+        setHighlightResults(results)
+      })
+      .catch(() => {
+        // silent-catch-ok: highlight search failure degrades gracefully (no results shown)
+        if (!ignore) setHighlightResults([])
+      })
+    return () => { ignore = true }
+  }, [debouncedQuery, allBooks])
 
   const handleOpenChange = (newOpen: boolean) => {
     onOpenChange(newOpen)
@@ -225,12 +270,21 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
     navigate(path)
   }
 
+  // Navigate to highlight in EPUB reader (E86-S03)
+  const handleHighlightSelect = (result: HighlightSearchResultData) => {
+    handleOpenChange(false)
+    const params = new URLSearchParams()
+    params.set('sourceHighlightId', result.id)
+    navigate(`/library/${result.bookId}/read?${params.toString()}`)
+  }
+
   // Group items
   const pages = searchIndex.filter(item => item.group === 'Pages')
   const courses = searchIndex.filter(item => item.group === 'Courses')
   const lessons = searchIndex.filter(item => item.group === 'Lessons')
 
   const hasNoteResults = noteResults.length > 0
+  const hasHighlightResults = highlightResults.length > 0
   const hasActiveQuery = debouncedQuery.trim().length > 0
 
   return (
@@ -238,11 +292,11 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
       open={open}
       onOpenChange={handleOpenChange}
       title="Search"
-      description="Search for pages, courses, lessons, and notes"
+      description="Search for pages, courses, lessons, notes, and book highlights"
       filter={commandFilter}
     >
       <CommandInput
-        placeholder="Search pages, courses, lessons, notes..."
+        placeholder="Search pages, courses, lessons, notes, highlights..."
         onValueChange={setSearchQuery}
       />
       <CommandList>
@@ -283,6 +337,21 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
                     </div>
                   )}
                 </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {hasHighlightResults && (
+          <CommandGroup heading="Book Highlights">
+            {highlightResults.map(result => (
+              <CommandItem
+                key={result.id}
+                value={`highlight:${result.id}`}
+                onSelect={() => handleHighlightSelect(result)}
+                data-testid={`highlight-search-result-${result.id}`}
+              >
+                <HighlightSearchResult result={result} patterns={highlightPatterns} />
               </CommandItem>
             ))}
           </CommandGroup>
