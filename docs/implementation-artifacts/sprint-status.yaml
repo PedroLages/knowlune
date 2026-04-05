@@ -978,12 +978,12 @@ development_status:
   # Source: epics-books-audiobooks-library.md
   # EPUB import, OPFS storage, library grid/list, search/filter, metadata
   # ──────────────────────────────────────────────────
-  epic-83: in-progress
+  epic-83: done
   83-1-opfs-storage-service-and-book-data-model: done
   83-2-epub-import-with-metadata-extraction: done
-  83-3-library-grid-and-list-views: ready-for-dev
+  83-3-library-grid-and-list-views: done
   83-4-library-search-filter-and-status-management: done
-  83-5-book-metadata-editor: ready-for-dev
+  83-5-book-metadata-editor: done
   83-6-book-deletion-with-opfs-cleanup: done
   83-7-storage-indicator: done
   83-8-pwa-offline-shell-for-library: done
