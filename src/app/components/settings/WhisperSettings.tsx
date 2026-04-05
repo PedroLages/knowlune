@@ -208,10 +208,11 @@ export function WhisperSettings() {
     setTestResult(null)
 
     try {
-      const healthUrl = url.replace(/\/+$/, '') + '/api/whisper/health'
-      const response = await fetch(healthUrl, {
+      const response = await fetch('/api/whisper/health', {
         method: 'POST',
-        signal: AbortSignal.timeout(10000),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serverUrl: url.replace(/\/+$/, '') }),
+        signal: AbortSignal.timeout(10_000),
       })
 
       if (response.ok) {
