@@ -9,7 +9,7 @@ Last Updated: 2026-04-05
 |-------|--------|--------|---------------|--------------|
 | E83-S01 | queued | — | — | — |
 | E83-S02 | queued | — | — | — |
-| E83-S03 | queued | — | — | — |
+| E83-S03 | done | pending | 2 | 10 |
 | E83-S04 | queued | — | — | — |
 | E83-S05 | queued | — | — | — |
 | E83-S06 | queued | — | — | — |
@@ -45,15 +45,21 @@ _(none yet)_
 ---
 
 ### E83-S03: Library Grid and List Views
-**Status:** queued
+**Status:** done
+**Completed:** 2026-04-05
 #### Errors
-_(none yet)_
+_(none)_
 #### Review Findings
-_(none yet)_
+- Round 1: 1 HIGH (unused import), 4 MEDIUM (design tokens, drag-drop, non-determinism, prettier), 3 LOW, 1 NIT
+- Round 2: 1 MEDIUM (E2E onboarding seed), 1 LOW — both resolved in final commit
 #### Fixes Applied
-_(none yet)_
+- Removed unused `importBook` import
+- Fixed hardcoded `text-white` → design tokens (`text-brand-foreground`, `text-success-foreground`, etc.)
+- Drag-drop now passes `droppedFile` via `initialFile` prop to BookImportDialog
+- `relativeTime()` accepts optional `now` param for deterministic tests
+- Added onboarding seed to E2E test evaluate blocks
 #### Notes
-_(none yet)_
+- All 9 ACs implemented. React.memo + lazy images for performance.
 
 ---
 
