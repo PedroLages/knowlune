@@ -14,10 +14,10 @@
  * - AC10: Status badges use icon + text for all three states
  * - AC11: Keyboard navigation works for all form elements
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
-import { seedIndexedDBStore } from '../support/helpers/seed-helpers'
-import { FIXED_DATE } from '../utils/test-time'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
+import { seedIndexedDBStore } from '../../support/helpers/seed-helpers'
+import { FIXED_DATE } from '../../utils/test-time'
 
 const DB_NAME = 'ElearningDB'
 
