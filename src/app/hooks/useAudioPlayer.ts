@@ -1,12 +1,13 @@
 /**
- * useAudioPlayer — manages a single HTML5 <audio> element for audiobook playback.
+ * useAudioPlayer — manages a singleton HTML5 <audio> element for audiobook playback.
  *
  * Features:
+ * - Singleton audio element (module-level) — survives React route changes
  * - OPFS-backed MP3 loading via OpfsStorageService → URL.createObjectURL()
  * - requestAnimationFrame loop for smooth scrubber updates
  * - Cross-chapter skip (forward 30s, back 15s)
  * - Auto-rewind 5s when resuming after a pause > 30 seconds
- * - Playback rate control
+ * - Playback rate control with preservesPitch
  *
  * @module useAudioPlayer
  * @since E87-S02
@@ -32,13 +33,42 @@ export function formatAudioTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+/**
+ * Module-level singleton HTMLAudioElement — created once, survives route changes.
+ * Lazy-initialized on first hook call (SSR-safe, avoids creating Audio in tests).
+ */
+let _sharedAudio: HTMLAudioElement | null = null
+let _sharedObjectUrl: string | null = null
+
+function getSharedAudio(): HTMLAudioElement {
+  if (!_sharedAudio) {
+    _sharedAudio = new Audio()
+  }
+  return _sharedAudio
+}
+
+function revokeSharedObjectUrl() {
+  if (_sharedObjectUrl) {
+    URL.revokeObjectURL(_sharedObjectUrl)
+    _sharedObjectUrl = null
+  }
+}
+
+/**
+ * A stable React.RefObject-compatible wrapper around the singleton audio element.
+ * Pass this to useSleepTimer for direct volume manipulation (fade-out).
+ */
+export const sharedAudioRef: React.RefObject<HTMLAudioElement | null> = {
+  get current() { return _sharedAudio },
+}
+
 export interface UseAudioPlayerReturn {
   isPlaying: boolean
   currentTime: number
   duration: number
   currentChapterIndex: number
   isLoading: boolean
-  /** Ref to the underlying HTMLAudioElement — for direct volume control (sleep timer fade-out) */
+  /** Stable ref to the singleton HTMLAudioElement — for direct volume control (sleep timer fade-out) */
   audioRef: React.RefObject<HTMLAudioElement | null>
   play: () => void
   pause: () => void
@@ -50,9 +80,8 @@ export interface UseAudioPlayerReturn {
 }
 
 export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  // rafRef is per-hook-instance (can't be module-level since multiple hook calls could exist)
   const rafRef = useRef<number | null>(null)
-  const objectUrlRef = useRef<string | null>(null)
   const pausedAtRef = useRef<number | null>(null) // timestamp of last pause (for auto-rewind)
   const [isLoading, setIsLoading] = useState(false)
   const [localCurrentTime, setLocalCurrentTime] = useState(0)
@@ -61,18 +90,10 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
   const { currentChapterIndex, isPlaying, playbackRate, setIsPlaying, setCurrentTime, setCurrentChapterIndex } =
     useAudioPlayerStore()
 
-  /** Revoke current object URL to prevent memory leaks */
-  const revokeObjectUrl = useCallback(() => {
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current)
-      objectUrlRef.current = null
-    }
-  }, [])
-
   /** Start the rAF loop to update currentTime */
   const startRafLoop = useCallback(() => {
     const tick = () => {
-      const audio = audioRef.current
+      const audio = _sharedAudio
       if (!audio) return
       setLocalCurrentTime(audio.currentTime)
       setCurrentTime(audio.currentTime)
@@ -89,10 +110,9 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
     }
   }, [])
 
-  /** Initialize the audio element once */
+  /** Attach event listeners to the singleton audio element */
   useEffect(() => {
-    const audio = new Audio()
-    audioRef.current = audio
+    const audio = getSharedAudio()
 
     const handleEnded = () => {
       // Auto-advance to next chapter
@@ -113,19 +133,27 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
     audio.addEventListener('ended', handleEnded)
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
 
+    // Restore current position from singleton state (when remounting after navigation)
+    if (audio.currentTime > 0) {
+      setLocalCurrentTime(audio.currentTime)
+      setLocalDuration(audio.duration || 0)
+    }
+    // Restart rAF loop if already playing when component mounts (e.g. returning from another page)
+    if (!audio.paused) {
+      startRafLoop()
+    }
+
     return () => {
       audio.removeEventListener('ended', handleEnded)
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
-      audio.pause()
-      revokeObjectUrl()
+      // Do NOT pause or destroy — singleton must survive route changes
       stopRafLoop()
-      audioRef.current = null
     }
-  }, []) // intentionally run once on mount — audio element lifecycle
+  }, []) // intentionally run once on mount — event listener lifecycle
 
   /** Sync playback rate when it changes in the store */
   useEffect(() => {
-    const audio = audioRef.current
+    const audio = _sharedAudio
     if (audio) {
       audio.playbackRate = playbackRate
       // preservesPitch prevents chipmunk effect — Chrome 86+, Firefox 101+, Safari 15.4+
@@ -136,8 +164,8 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
 
   const loadChapterInternal = useCallback(
     async (index: number, autoPlay = false) => {
-      const audio = audioRef.current
-      if (!audio || !book) return
+      const audio = getSharedAudio()
+      if (!book) return
 
       const chapters = book.chapters
       if (index < 0 || index >= chapters.length) return
@@ -159,9 +187,9 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
           return
         }
 
-        revokeObjectUrl()
+        revokeSharedObjectUrl()
         const url = URL.createObjectURL(file)
-        objectUrlRef.current = url
+        _sharedObjectUrl = url
 
         audio.src = url
         audio.playbackRate = playbackRate
@@ -183,11 +211,11 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
         setIsLoading(false)
       }
     },
-    [book, playbackRate, revokeObjectUrl, startRafLoop, stopRafLoop, setIsPlaying, setCurrentChapterIndex]
+    [book, playbackRate, startRafLoop, stopRafLoop, setIsPlaying, setCurrentChapterIndex]
   )
 
   const play = useCallback(async () => {
-    const audio = audioRef.current
+    const audio = _sharedAudio
     if (!audio) return
 
     // Auto-rewind if paused for > 30s
@@ -207,7 +235,7 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
   }, [setIsPlaying, startRafLoop])
 
   const pause = useCallback(() => {
-    const audio = audioRef.current
+    const audio = _sharedAudio
     if (!audio) return
     audio.pause()
     pausedAtRef.current = Date.now()
@@ -225,7 +253,7 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
 
   const seekTo = useCallback(
     (seconds: number) => {
-      const audio = audioRef.current
+      const audio = _sharedAudio
       if (!audio) return
       audio.currentTime = Math.max(0, Math.min(seconds, localDuration))
       setLocalCurrentTime(audio.currentTime)
@@ -236,7 +264,7 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
 
   const skipForward = useCallback(
     async (seconds = 30) => {
-      const audio = audioRef.current
+      const audio = _sharedAudio
       if (!audio || !book) return
       const newTime = audio.currentTime + seconds
       if (newTime <= localDuration) {
@@ -247,8 +275,7 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
         const nextIndex = currentChapterIndex + 1
         if (nextIndex < book.chapters.length) {
           await loadChapterInternal(nextIndex, isPlaying)
-          const nextAudio = audioRef.current
-          if (nextAudio) nextAudio.currentTime = Math.min(remainingTime, nextAudio.duration || 0)
+          if (_sharedAudio) _sharedAudio.currentTime = Math.min(remainingTime, _sharedAudio.duration || 0)
         }
       }
     },
@@ -257,7 +284,7 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
 
   const skipBack = useCallback(
     async (seconds = 15) => {
-      const audio = audioRef.current
+      const audio = _sharedAudio
       if (!audio || !book) return
       const newTime = audio.currentTime - seconds
       if (newTime >= 0) {
@@ -268,9 +295,8 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
         if (prevIndex >= 0) {
           const remaining = Math.abs(newTime)
           await loadChapterInternal(prevIndex, isPlaying)
-          const prevAudio = audioRef.current
-          if (prevAudio && prevAudio.duration) {
-            prevAudio.currentTime = Math.max(0, prevAudio.duration - remaining)
+          if (_sharedAudio && _sharedAudio.duration) {
+            _sharedAudio.currentTime = Math.max(0, _sharedAudio.duration - remaining)
           }
         }
         // At first chapter start — do nothing
@@ -292,7 +318,7 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
     duration: localDuration,
     currentChapterIndex,
     isLoading,
-    audioRef,
+    audioRef: sharedAudioRef,
     play,
     pause,
     toggle,
