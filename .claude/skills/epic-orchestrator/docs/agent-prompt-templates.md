@@ -18,6 +18,8 @@ STEP 1: Run `/start-story {STORY_ID}` which will:
 - Generate implementation plan
 - Enter plan mode for your approval
 
+STEP 1.5: Verify branch — run `git branch --show-current` and confirm it matches the expected `feature/{STORY_ID_LOWER}-*` pattern. If not, STOP and report the mismatch.
+
 STEP 2: After the plan is ready, EXIT plan mode and implement it fully:
 - Write all code, components, and tests
 - Follow project conventions: design tokens (never hardcode colors), accessibility (WCAG AA), Tailwind CSS v4
@@ -37,7 +39,11 @@ STEP 3: Return a brief summary:
 ## Review Agent
 
 ```
+STEP 0: Activate `/auto-answer autopilot` to handle any interactive questions autonomously without blocking.
+
 Run `/review-story {STORY_ID}` on the current branch.
+
+NOTE: OpenAI and GLM adversarial reviews are enabled via `.claude/settings.json` env block. Ensure `/review-story` dispatches both when API keys are available.
 
 KNOWN ISSUES (already tracked in docs/known-issues.yaml — do NOT re-flag these):
 {KNOWN_ISSUES_SUMMARY}
@@ -103,6 +109,10 @@ IMPORTANT: Report ALL issues at every severity level. Classify each into one of 
 ## Fix Agent
 
 ```
+STEP 0: Activate `/auto-answer autopilot` to handle any interactive questions autonomously without blocking.
+
+STEP 0.5: Verify branch — run `git branch --show-current` and confirm it matches the expected `feature/{STORY_ID_LOWER}-*` pattern. If not, STOP and report the mismatch.
+
 You are fixing ALL STORY-RELATED review issues for story {STORY_ID}. Fix EVERY issue listed below — no exceptions, regardless of severity.
 
 Note: Pre-existing issues (in files not changed by this story) are excluded — they will be reported separately.
@@ -161,6 +171,8 @@ RETURN:
 ## Sprint Status Agent
 
 ```
+Activate `/auto-answer autopilot` to handle any interactive questions autonomously without blocking.
+
 Run `/sprint-status` to verify all stories in Epic {EPIC_NUMBER} are marked as `done`.
 
 Check for:
@@ -179,6 +191,8 @@ RETURN:
 ## Testarch Trace Agent
 
 ```
+Activate `/auto-answer autopilot` to handle any interactive questions autonomously without blocking.
+
 Run `/testarch-trace` for Epic {EPIC_NUMBER}: {EPIC_NAME}.
 
 Generate a requirements-to-tests traceability matrix covering:
@@ -198,6 +212,8 @@ RETURN:
 ## Testarch NFR Agent
 
 ```
+Activate `/auto-answer autopilot` to handle any interactive questions autonomously without blocking.
+
 Run `/testarch-nfr` for Epic {EPIC_NUMBER}: {EPIC_NAME}.
 
 Assess non-functional requirements:
@@ -217,6 +233,8 @@ RETURN:
 ## Trace Fix Agent (Coverage Gaps)
 
 ```
+Activate `/auto-answer autopilot` to handle any interactive questions autonomously without blocking.
+
 You are fixing test coverage gaps identified by `/testarch-trace` for Epic {EPIC_NUMBER}: {EPIC_NAME}.
 
 COVERAGE GAPS TO FIX:
@@ -244,6 +262,8 @@ RETURN:
 ## NFR Fix Agent (Non-Functional Issues)
 
 ```
+Activate `/auto-answer autopilot` to handle any interactive questions autonomously without blocking.
+
 You are fixing non-functional requirement issues identified by `/testarch-nfr` for Epic {EPIC_NUMBER}: {EPIC_NAME}.
 
 NFR ISSUES TO FIX (code-level only — architectural issues are excluded):
@@ -271,6 +291,8 @@ RETURN:
 ## Adversarial Review Agent
 
 ```
+Activate `/auto-answer autopilot` to handle any interactive questions autonomously without blocking.
+
 Run `/review-adversarial` for Epic {EPIC_NUMBER}: {EPIC_NAME}.
 
 Perform a cynical, skeptical review of the epic's scope and implementation.
@@ -323,6 +345,8 @@ RETURN:
 ## Report Agent
 
 ```
+Activate `/auto-answer autopilot` to handle any interactive questions autonomously without blocking.
+
 Create a comprehensive epic completion report for Epic {EPIC_NUMBER}: {EPIC_NAME}.
 
 GATHER INFORMATION FROM:

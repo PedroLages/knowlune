@@ -4,6 +4,10 @@
 
 After all stories are shipped and merged, run post-epic validation commands in order. Each command runs in a **fresh sub-agent**. These validate the epic's quality, coverage, and capture lessons learned.
 
+**All 5 post-epic commands are mandatory** — sprint-status, testarch-trace, testarch-nfr, adversarial review, and retrospective. Fix any blocking issues (trace gaps, NFR failures) before generating the final report.
+
+**Exception:** `/review-adversarial` is optional — only dispatched when the user explicitly requests it or the epic orchestrator is invoked with adversarial review enabled.
+
 Commands with gate decisions (`/testarch-trace`, `/testarch-nfr`) include a **fix-then-revalidate cycle** — aligned with [BMad TEA's official guidance](https://bmad-code-org.github.io/bmad-method-test-architecture-enterprise/how-to/workflows/run-trace/).
 
 ## Command Sequence
@@ -88,11 +92,13 @@ digraph trace_cycle {
 - Max 2 fix rounds. If still `CONCERNS` after 2 rounds → accept and log remaining issues
 - `FAIL` that persists → log as critical issue in final report
 
-### 5. Adversarial Review (Sub-Agent) — Report Only
+### 5. Adversarial Review (Sub-Agent) — Optional, Report Only
 
 **Prompt**: Use Adversarial Review Agent template from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**. **Use `model: "sonnet"`**.
 
 **Purpose**: Cynical critique of epic scope and implementation. Identifies at least 10 issues.
+
+**Optional** — only dispatched when the user explicitly requests it or the epic is invoked with adversarial review enabled. Skip by default.
 
 **No fix cycle** — findings are informational. They represent opinions and scope critiques, not pass/fail gates.
 
@@ -112,7 +118,7 @@ digraph trace_cycle {
 - Draw from actual implementation experience
 - Be honest and constructive
 
-**Coordinator after**: Output completion banner with retro document path and key action items.
+**Coordinator after**: Output completion banner with retro document path and key action items. Mark `epic-{N}-retrospective: done` in `sprint-status.yaml`.
 
 ### 7. Known Issues Register Update (Coordinator Directly)
 

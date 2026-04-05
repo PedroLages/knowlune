@@ -42,7 +42,7 @@ digraph review_loop {
 
 ## Round N: Review Agent
 
-Spawn a **new general-purpose sub-agent** with the Review Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`** to keep review output (build, lint, test, agent reports) out of the main conversation. **Use `model: "sonnet"`** — orchestrates review agents that have their own model settings.
+Spawn a **new general-purpose sub-agent** with the Review Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Run FOREGROUND** (do NOT use `run_in_background: true`) — the coordinator blocks until completion anyway, and foreground simplifies coordination. **Use `model: "opus"`** — the review agent orchestrates 6+ sub-agents (design, code, testing, performance, security, QA) and needs deep reasoning plus large context to avoid running out of context.
 
 Before dispatch, output the status banner:
 ```
@@ -130,9 +130,15 @@ After each review/fix round, update the persistent tracking file (`docs/implemen
 - Non-issues identified
 - Any errors encountered
 
+**Commit tracking file after each round** to protect against session crashes:
+```bash
+git add docs/implementation-artifacts/epic-{N}-tracking-*.md
+git commit -m "chore: update epic tracking after {STORY_ID} review round {R}"
+```
+
 ## If Story-Related Issues Found: Fix Agent
 
-Spawn a **new general-purpose sub-agent** with the Fix Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**. **Use `model: "sonnet"`** — targeted fixes, not creative work.
+Spawn a **new general-purpose sub-agent** with the Fix Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Run FOREGROUND** (do NOT use `run_in_background: true`). **Use `model: "sonnet"`** — targeted fixes, not creative work.
 
 Before dispatch, output the status banner:
 ```

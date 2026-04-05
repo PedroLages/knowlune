@@ -29,7 +29,8 @@ Execute an entire epic autonomously — `/start-story` through implementation, `
 4. **TodoWrite is the state machine** — all progress tracked there
 5. **Template prompts** — fill variables from [docs/agent-prompt-templates.md](docs/agent-prompt-templates.md)
 6. **Fresh agent per task** — never reuse agents across rounds or stories
-7. **Use `/auto-answer autopilot`** — sub-agents invoking interactive skills (`/start-story`, `/finish-story`, `/retrospective`) must activate auto-answer to prevent blocking on Q&A
+7. **Use `/auto-answer autopilot`** — include in EVERY sub-agent prompt to prevent blocking on Q&A
+8. **Coordinator never invokes skills** — the coordinator must NEVER call `/auto-answer`, `/start-story`, `/review-story`, `/finish-story`, or any other skill directly. Only dispatched sub-agents activate skills
 
 ### Quality Standard
 
@@ -39,9 +40,11 @@ Execute an entire epic autonomously — `/start-story` through implementation, `
 
 Sub-agents generate heavy tool call output (bash, read, edit, glob...) that floods the conversation. The orchestrator must provide a **scannable, high-level experience** so the user always knows what's happening without drowning in noise.
 
-### Rule 1: Background Agents
+### Rule 1: Foreground for Sequential, Background for Parallel
 
-**Always dispatch sub-agents with `run_in_background: true`**. This keeps intermediate tool calls out of the main conversation view. The orchestrator is notified when each agent completes and extracts only the structured return data.
+**Story, Review, Fix, and Finish agents run FOREGROUND** (do NOT use `run_in_background: true`). The coordinator blocks until each completes — there's no parallelism benefit from background dispatch, and foreground simplifies coordination.
+
+**Only parallel post-epic commands and the Report Agent use `run_in_background: true`** — these can overlap and the coordinator has other work while waiting.
 
 ### Rule 2: Status Banners
 
@@ -156,7 +159,7 @@ digraph epic_flow {
 | Agent | Purpose | Model | Fresh Per | Returns |
 |-------|---------|-------|-----------|---------|
 | **Story** | `/start-story` + implement | **opus** | Story | Summary, files changed |
-| **Review** | `/review-story` | sonnet | Round | Verdict, issue list by severity |
+| **Review** | `/review-story` | **opus** | Round | Verdict, issue list by severity |
 | **Fix** | Fix all review findings | sonnet | Round | Fix count, unfixed items |
 | **Finish** | `/finish-story` + PR | sonnet | Story | PR URL, branch |
 | **Sprint Status** | `/sprint-status` | sonnet | Epic | Status summary |
