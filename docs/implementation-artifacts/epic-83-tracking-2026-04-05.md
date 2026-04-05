@@ -11,7 +11,7 @@ Last Updated: 2026-04-05
 | E83-S02 | queued | — | — | — |
 | E83-S03 | done | pending | 2 | 10 |
 | E83-S04 | queued | — | — | — |
-| E83-S05 | queued | — | — | — |
+| E83-S05 | done | pending | 1 | 3 |
 | E83-S06 | queued | — | — | — |
 | E83-S07 | queued | — | — | — |
 | E83-S08 | queued | — | — | — |
@@ -77,15 +77,18 @@ _(none yet)_
 ---
 
 ### E83-S05: Book Metadata Editor
-**Status:** queued
+**Status:** done
+**Completed:** 2026-04-05
 #### Errors
-_(none yet)_
+_(none)_
 #### Review Findings
-_(none yet)_
+- Round 1: 2 MEDIUM (toJpeg() no onerror handler, non-null assertions), 1 LOW (image error handling in E2E), multiple NITs (sub-component extraction, Prettier formatting)
 #### Fixes Applied
-_(none yet)_
+- Added `img.onerror` reject handler to prevent indefinite hang on image load failure
+- Fixed non-null assertions in `toJpeg()` with proper null guards
+- Added image error handling in E2E tests; extracted `CoverPreview` and `TagInput` sub-components
 #### Notes
-_(none yet)_
+- All 9 ACs implemented. Cover re-fetch, custom upload, genre selection, tag autocomplete with keyboard navigation.
 
 ---
 

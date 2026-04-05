@@ -38,7 +38,10 @@ interface BookStoreState {
   setFilters: (filters: BookFilters) => void
   setFilter: (key: keyof BookFilters, value: string | undefined) => void
   getFilteredBooks: () => Book[]
-  updateBookMetadata: (bookId: string, updates: Partial<Pick<Book, 'title' | 'author' | 'isbn' | 'description' | 'tags' | 'coverUrl'>>) => Promise<void>
+  updateBookMetadata: (
+    bookId: string,
+    updates: Partial<Pick<Book, 'title' | 'author' | 'isbn' | 'description' | 'tags' | 'coverUrl'>>
+  ) => Promise<void>
   getAllTags: () => string[]
   getBookCountByStatus: () => Record<'all' | BookStatus, number>
 }
@@ -143,9 +146,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     if (filters.search) {
       const q = filters.search.toLowerCase()
       result = result.filter(
-        b =>
-          b.title.toLowerCase().includes(q) ||
-          b.author.toLowerCase().includes(q)
+        b => b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q)
       )
     }
     return result
