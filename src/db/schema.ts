@@ -33,6 +33,7 @@ import type {
   StudySchedule,
   Book,
   BookHighlight,
+  AudioBookmark,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA } from './checkpoint'
@@ -76,6 +77,7 @@ export type ElearningDatabase = Dexie & {
   books: EntityTable<Book, 'id'>
   bookHighlights: EntityTable<BookHighlight, 'id'>
   bookFiles: Table<{ bookId: string; filename: string; blob: Blob }> // OPFS fallback
+  audioBookmarks: EntityTable<AudioBookmark, 'id'>
 }
 
 /**
@@ -1249,6 +1251,12 @@ function _declareLegacyMigrations(database: Dexie): void {
     books: 'id, title, author, format, status, createdAt, lastOpenedAt',
     bookHighlights: 'id, bookId, color, flashcardId, createdAt',
     bookFiles: '[bookId+filename], bookId',
+  })
+  // v38: Audiobook support (E87-S01)
+  // - New audioBookmarks table for bookmarks within audiobook chapters
+  // - Indexes on bookId, chapterIndex, timestamp, createdAt
+  database.version(38).stores({
+    audioBookmarks: 'id, bookId, chapterIndex, timestamp, createdAt',
   })
 } // end _declareLegacyMigrations
 
