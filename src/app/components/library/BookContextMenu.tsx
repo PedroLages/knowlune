@@ -2,12 +2,14 @@
  * Context menu wrapper for book cards — right-click (desktop) / long-press (mobile).
  *
  * Provides Edit, Change Status (submenu), and Delete actions.
+ * Delete requires confirmation via AlertDialog to prevent accidental data loss.
+ * Includes a "..." button for touch devices where right-click is unavailable.
  *
  * @since E83-S04
  */
 
-import type { ReactNode } from 'react'
-import { Check } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import { Check, MoreVertical } from 'lucide-react'
 import type { Book, BookStatus } from '@/data/types'
 import { useBookStore } from '@/stores/useBookStore'
 import {
@@ -20,6 +22,26 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/app/components/ui/context-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/app/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@/app/components/ui/dropdown-menu'
 
 const STATUS_OPTIONS: { value: BookStatus; label: string }[] = [
   { value: 'unread', label: 'Want to Read' },
@@ -36,47 +58,124 @@ interface BookContextMenuProps {
 export function BookContextMenu({ book, children }: BookContextMenuProps) {
   const updateBookStatus = useBookStore(s => s.updateBookStatus)
   const deleteBook = useBookStore(s => s.deleteBook)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+
+  const handleDelete = () => {
+    setConfirmDeleteOpen(true)
+  }
+
+  const handleConfirmDelete = () => {
+    deleteBook(book.id)
+    setConfirmDeleteOpen(false)
+  }
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger>{children}</ContextMenuTrigger>
-      <ContextMenuContent className="w-48">
-        <ContextMenuItem
-          disabled
-          data-testid="context-menu-edit"
-        >
-          Edit
-        </ContextMenuItem>
-        <ContextMenuSub>
-          <ContextMenuSubTrigger data-testid="context-menu-change-status">
-            Change Status
-          </ContextMenuSubTrigger>
-          <ContextMenuSubContent className="w-44">
-            {STATUS_OPTIONS.map(opt => (
-              <ContextMenuItem
-                key={opt.value}
-                onClick={() => updateBookStatus(book.id, opt.value)}
-                data-testid={`context-menu-status-${opt.value}`}
-              >
-                <span className="flex items-center gap-2">
-                  {book.status === opt.value && <Check className="h-3.5 w-3.5" />}
-                  <span className={book.status === opt.value ? 'font-medium' : ''}>
-                    {opt.label}
-                  </span>
-                </span>
-              </ContextMenuItem>
-            ))}
-          </ContextMenuSubContent>
-        </ContextMenuSub>
-        <ContextMenuSeparator />
-        <ContextMenuItem
-          className="text-destructive focus:text-destructive"
-          onClick={() => deleteBook(book.id)}
-          data-testid="context-menu-delete"
-        >
-          Delete
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
+    <>
+      <div className="group relative">
+        <ContextMenu>
+          <ContextMenuTrigger>{children}</ContextMenuTrigger>
+          <ContextMenuContent className="w-48">
+            <ContextMenuItem
+              disabled
+              data-testid="context-menu-edit"
+            >
+              Edit
+            </ContextMenuItem>
+            <ContextMenuSub>
+              <ContextMenuSubTrigger data-testid="context-menu-change-status">
+                Change Status
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent className="w-44">
+                {STATUS_OPTIONS.map(opt => (
+                  <ContextMenuItem
+                    key={opt.value}
+                    onClick={() => updateBookStatus(book.id, opt.value)}
+                    data-testid={`context-menu-status-${opt.value}`}
+                  >
+                    <span className="flex items-center gap-2">
+                      {book.status === opt.value && <Check className="h-3.5 w-3.5" />}
+                      <span className={book.status === opt.value ? 'font-medium' : ''}>
+                        {opt.label}
+                      </span>
+                    </span>
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={handleDelete}
+              data-testid="context-menu-delete"
+            >
+              Delete
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+
+        {/* Touch-friendly trigger — visible on hover/focus for touch devices */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="absolute top-1 right-1 z-10 rounded-md p-1.5 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity min-h-[36px] min-w-[36px] flex items-center justify-center touch-manipulation sm:min-h-[44px] sm:min-w-[44px]"
+              aria-label={`More actions for ${book.title}`}
+              data-testid="book-more-actions"
+            >
+              <MoreVertical className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-48">
+            <DropdownMenuItem disabled>Edit</DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Change Status</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-44">
+                {STATUS_OPTIONS.map(opt => (
+                  <DropdownMenuItem
+                    key={opt.value}
+                    onClick={() => updateBookStatus(book.id, opt.value)}
+                  >
+                    <span className="flex items-center gap-2">
+                      {book.status === opt.value && <Check className="h-3.5 w-3.5" />}
+                      <span className={book.status === opt.value ? 'font-medium' : ''}>
+                        {opt.label}
+                      </span>
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={handleDelete}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete book?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete &ldquo;{book.title}&rdquo; and all its highlights. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="confirm-delete-book"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

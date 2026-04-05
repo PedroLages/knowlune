@@ -10,7 +10,7 @@
  * @modified E83-S04 — search, status filter pills, context menus
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, Plus } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
@@ -27,9 +27,12 @@ export function Library() {
   const books = useBookStore(s => s.books)
   const libraryView = useBookStore(s => s.libraryView)
   const getFilteredBooks = useBookStore(s => s.getFilteredBooks)
+  const filters = useBookStore(s => s.filters)
+  const setFilters = useBookStore(s => s.setFilters)
   const loadBooks = useBookStore(s => s.loadBooks)
 
-  const filteredBooks = getFilteredBooks()
+  // Memoize filtered books to avoid new array on every render
+  const filteredBooks = useMemo(() => getFilteredBooks(), [getFilteredBooks, books, filters])
 
   // Load books on mount
   useEffect(() => {
@@ -134,8 +137,16 @@ export function Library() {
 
       {/* No results message */}
       {books.length > 0 && filteredBooks.length === 0 && (
-        <div className="flex flex-col items-center gap-2 py-12">
+        <div className="flex flex-col items-center gap-3 py-12">
           <p className="text-muted-foreground">No books match your filters.</p>
+          <Button
+            variant="outline"
+            onClick={() => setFilters({})}
+            className="min-h-[44px]"
+            data-testid="clear-filters"
+          >
+            Clear filters
+          </Button>
         </div>
       )}
 

@@ -7,7 +7,7 @@
  * @since E83-S04
  */
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { LayoutGrid, List, Search } from 'lucide-react'
 import { Input } from '@/app/components/ui/input'
 import { useBookStore } from '@/stores/useBookStore'
@@ -34,17 +34,24 @@ export function LibraryFilters() {
 
   // Debounced search
   const [searchValue, setSearchValue] = useState(filters.search || '')
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleSearch = useCallback(
     (value: string) => {
       setSearchValue(value)
-      clearTimeout(timerRef.current)
+      if (timerRef.current) clearTimeout(timerRef.current)
       timerRef.current = setTimeout(() => {
         setFilter('search', value || undefined)
       }, 300)
     },
     [setFilter]
   )
+
+  // Clean up debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [])
 
   return (
     <div className="flex flex-col gap-3">
@@ -94,8 +101,11 @@ export function LibraryFilters() {
       </div>
 
       {/* Status filter pills */}
+      <div className="relative">
+        {/* Right fade indicator for horizontal scroll */}
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 sm:hidden" />
       <div
-        className="flex gap-2 overflow-x-auto pb-1 -mb-1"
+        className="flex gap-2 overflow-x-auto pb-1 -mb-1 scrollbar-none"
         role="tablist"
         aria-label="Filter by reading status"
       >
@@ -123,6 +133,7 @@ export function LibraryFilters() {
             </button>
           )
         })}
+      </div>
       </div>
     </div>
   )
