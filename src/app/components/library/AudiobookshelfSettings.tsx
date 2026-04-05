@@ -153,9 +153,7 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
     })
 
     // Auto-select all libraries if none were previously selected
-    setSelectedLibraryIds(prev =>
-      prev.length === 0 ? libResult.data.map(lib => lib.id) : prev
-    )
+    setSelectedLibraryIds(prev => (prev.length === 0 ? libResult.data.map(lib => lib.id) : prev))
 
     setIsTesting(false)
   }, [url, apiKey, existingApiKey])
