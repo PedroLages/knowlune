@@ -995,7 +995,7 @@ development_status:
   # epub.js reader, page/chapter navigation, themes, position persistence
   # Depends on: E83 (Book Library)
   # ──────────────────────────────────────────────────
-  epic-84: in-progress
+  epic-84: done
   84-1-epub-reader-with-epubjs-integration: done
   84-2-page-navigation-and-table-of-contents: done
   84-3-reading-themes-and-font-controls: done
