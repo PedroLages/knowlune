@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, Plus } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
+import { StorageIndicator } from '@/app/components/library/StorageIndicator'
 import { BookCard } from '@/app/components/library/BookCard'
 import { BookListItem } from '@/app/components/library/BookListItem'
 import { BookContextMenu } from '@/app/components/library/BookContextMenu'
@@ -151,6 +152,11 @@ export function Library() {
             Clear filters
           </Button>
         </div>
+      )}
+
+      {/* Storage indicator — only when books exist */}
+      {books.length > 0 && (
+        <StorageIndicator bookCount={books.length} refreshKey={books.length} />
       )}
 
       <BookImportDialog
