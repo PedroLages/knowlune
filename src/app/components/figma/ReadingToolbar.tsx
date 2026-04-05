@@ -25,12 +25,13 @@ import { cn } from '@/app/components/ui/utils'
 
 const FONT_SIZE_LEVELS = [1, 1.25, 1.5, 2] as const
 const LINE_HEIGHT_LEVELS = [1.5, 1.75, 2.0] as const
-const THEMES = ['auto', 'sepia', 'hc'] as const
+const THEMES = ['auto', 'sepia', 'gray', 'hc'] as const
 type ReadingTheme = (typeof THEMES)[number]
 
 const THEME_LABELS: Record<ReadingTheme, string> = {
   auto: 'Auto',
   sepia: 'Sepia',
+  gray: 'Gray',
   hc: 'High Contrast',
 }
 
@@ -75,6 +76,7 @@ function fontSizeToNumber(s: string | undefined): number | undefined {
 function mapTheme(t: string | undefined): ReadingTheme | undefined {
   if (t === 'auto') return 'auto'
   if (t === 'sepia') return 'sepia'
+  if (t === 'gray') return 'gray'
   if (t === 'high-contrast') return 'hc'
   return undefined
 }
@@ -139,8 +141,9 @@ function applyLineHeight(lh: number): void {
 
 function applyTheme(theme: ReadingTheme): void {
   const root = document.documentElement
-  root.classList.remove('reading-sepia', 'reading-hc')
+  root.classList.remove('reading-sepia', 'reading-gray', 'reading-hc')
   if (theme === 'sepia') root.classList.add('reading-sepia')
+  if (theme === 'gray') root.classList.add('reading-gray')
   if (theme === 'hc') root.classList.add('reading-hc')
 }
 
@@ -177,7 +180,7 @@ export function ReadingToolbar() {
     return () => {
       document.documentElement.style.removeProperty('--reading-font-size')
       document.documentElement.style.removeProperty('--reading-line-height')
-      document.documentElement.classList.remove('reading-sepia', 'reading-hc', 'reading-dyslexia')
+      document.documentElement.classList.remove('reading-sepia', 'reading-gray', 'reading-hc', 'reading-dyslexia')
     }
   }, [])
 

@@ -17,7 +17,7 @@ export function AppearanceSection() {
 
   return (
     <div className="space-y-8">
-      {/* Theme Mode */}
+      {/* 1. Theme Mode */}
       <section>
         <h4 className="px-1 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
           Theme Mode
@@ -111,7 +111,29 @@ export function AppearanceSection() {
         </div>
       </section>
 
-      {/* Navigation */}
+      {/* 2. Reading Themes + Reading Mode (circles, font size, line height) */}
+      <ReadingFocusModesSection
+        settings={settings}
+        onSettingsChange={updates => updateAndPersist(updates)}
+      />
+
+      {/* 3. Text Size */}
+      <section>
+        <h4 className="px-1 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
+          Text Size
+        </h4>
+        <div className="bg-card rounded-xl shadow-sm p-6" data-testid="font-size-section">
+          <FontSizePicker
+            value={settings.fontSize ?? 'medium'}
+            onChange={(size: FontSize) => {
+              updateAndPersist({ fontSize: size })
+              toastSuccess.saved('Font size')
+            }}
+          />
+        </div>
+      </section>
+
+      {/* 4. Navigation */}
       <section>
         <h4 className="px-1 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
           Navigation
@@ -136,30 +158,8 @@ export function AppearanceSection() {
         </div>
       </section>
 
-      {/* Font Size */}
-      <section>
-        <h4 className="px-1 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
-          Text Size
-        </h4>
-        <div className="bg-card rounded-xl shadow-sm p-6" data-testid="font-size-section">
-          <FontSizePicker
-            value={settings.fontSize ?? 'medium'}
-            onChange={(size: FontSize) => {
-              updateAndPersist({ fontSize: size })
-              toastSuccess.saved('Font size')
-            }}
-          />
-        </div>
-      </section>
-
-      {/* Display & Accessibility */}
+      {/* 5. Display & Accessibility */}
       <DisplayAccessibilitySection
-        settings={settings}
-        onSettingsChange={updates => updateAndPersist(updates)}
-      />
-
-      {/* Reading & Focus Modes */}
-      <ReadingFocusModesSection
         settings={settings}
         onSettingsChange={updates => updateAndPersist(updates)}
       />

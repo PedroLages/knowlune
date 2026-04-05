@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Appearance Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            background: #e3e2e7;
+            height: 6px;
+            border-radius: 999px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            margin-top: -10px;
+            background-color: #ffffff;
+            height: 26px;
+            width: 26px;
+            border-radius: 50%;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.12), 0 3px 1px rgba(0,0,0,0.04);
+            border: 0.5px solid rgba(0,0,0,0.04);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#7c2e00",
+                        "secondary-container": "#a1befd",
+                        "surface-dim": "#dad9df",
+                        "primary-container": "#0070eb",
+                        "error-container": "#ffdad6",
+                        "primary": "#0058bc",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary": "#9e3d00",
+                        "secondary": "#405e96",
+                        "secondary-fixed": "#d8e2ff",
+                        "tertiary-fixed-dim": "#ffb595",
+                        "on-primary-fixed": "#001a41",
+                        "on-primary-container": "#fefcff",
+                        "primary-fixed": "#d8e2ff",
+                        "surface": "#faf9fe",
+                        "surface-container": "#eeedf3",
+                        "surface-variant": "#e3e2e7",
+                        "tertiary-container": "#c64f00",
+                        "on-secondary-fixed-variant": "#26467d",
+                        "on-tertiary-fixed": "#351000",
+                        "tertiary-fixed": "#ffdbcc",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-container": "#fffbff",
+                        "on-error": "#ffffff",
+                        "surface-bright": "#faf9fe",
+                        "inverse-on-surface": "#f1f0f5",
+                        "on-secondary": "#ffffff",
+                        "background": "#faf9fe",
+                        "on-background": "#1a1b1f",
+                        "on-surface-variant": "#414755",
+                        "surface-tint": "#005bc1",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed": "#001a41",
+                        "on-secondary-container": "#2d4c83",
+                        "outline": "#717786",
+                        "inverse-surface": "#2f3034",
+                        "on-primary-fixed-variant": "#004493",
+                        "surface-container-high": "#e9e7ed",
+                        "primary-fixed-dim": "#adc6ff",
+                        "inverse-primary": "#adc6ff",
+                        "outline-variant": "#c1c6d7",
+                        "surface-container-highest": "#e3e2e7",
+                        "error": "#ba1a1a",
+                        "surface-container-low": "#f4f3f8",
+                        "on-surface": "#1a1b1f"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            }
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top Navigation Anchor -->
+<header class="fixed top-0 w-full z-50 bg-slate-50/70 backdrop-blur-xl transition-colors duration-150">
+<div class="flex items-center justify-between px-6 h-16 w-full max-w-2xl mx-auto">
+<h1 class="font-['Inter'] font-semibold text-lg tracking-tight text-slate-900">Settings</h1>
+<div class="flex items-center gap-4">
+<button class="hover:bg-slate-200/50 p-2 rounded-full transition-colors active:scale-95 duration-150 flex items-center justify-center">
+<span class="material-symbols-outlined text-blue-600">close</span>
+</button>
+</div>
+</div>
+</header>
+<main class="pt-24 pb-12 px-4 max-w-2xl mx-auto">
+<!-- Title -->
+<div class="mb-8">
+<h2 class="text-3xl font-extrabold tracking-tight text-on-surface">Appearance</h2>
+</div>
+<!-- Group 1: Appearance Mode -->
+<section class="mb-10">
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm">
+<h3 class="text-sm font-semibold text-on-surface-variant uppercase tracking-wider mb-6 px-1">Theme Mode</h3>
+<div class="grid grid-cols-3 gap-4">
+<!-- System -->
+<div class="flex flex-col items-center gap-3 group cursor-pointer">
+<div class="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-surface-container border-2 border-transparent hover:border-primary/20 transition-all ring-offset-2 ring-primary">
+<div class="absolute inset-0 flex flex-col">
+<div class="h-1/2 bg-[#F2F2F7]"></div>
+<div class="h-1/2 bg-[#1C1C1E]"></div>
+</div>
+<!-- Mock UI -->
+<div class="absolute inset-0 p-3 flex flex-col gap-2">
+<div class="h-2 w-12 bg-outline-variant/30 rounded-full"></div>
+<div class="h-4 w-full bg-outline-variant/20 rounded-lg"></div>
+<div class="h-4 w-2/3 bg-outline-variant/20 rounded-lg"></div>
+</div>
+</div>
+<span class="text-sm font-medium">System</span>
+</div>
+<!-- Light -->
+<div class="flex flex-col items-center gap-3 group cursor-pointer">
+<div class="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-[#F2F2F7] border-2 border-primary transition-all">
+<!-- Mock UI -->
+<div class="absolute inset-0 p-3 flex flex-col gap-2">
+<div class="h-2 w-12 bg-slate-300 rounded-full"></div>
+<div class="h-4 w-full bg-slate-200 rounded-lg"></div>
+<div class="h-4 w-2/3 bg-slate-200 rounded-lg"></div>
+</div>
+<div class="absolute top-2 right-2 h-5 w-5 bg-primary rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[14px]" style="font-variation-settings: 'wght' 700;">check</span>
+</div>
+</div>
+<span class="text-sm font-medium">Light</span>
+</div>
+<!-- Dark -->
+<div class="flex flex-col items-center gap-3 group cursor-pointer">
+<div class="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-[#1C1C1E] border-2 border-transparent hover:border-primary/20 transition-all">
+<!-- Mock UI -->
+<div class="absolute inset-0 p-3 flex flex-col gap-2">
+<div class="h-2 w-12 bg-slate-700 rounded-full"></div>
+<div class="h-4 w-full bg-slate-800 rounded-lg"></div>
+<div class="h-4 w-2/3 bg-slate-800 rounded-lg"></div>
+</div>
+</div>
+<span class="text-sm font-medium">Dark</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Group 2: Reading Mode Themes -->
+<section class="mb-10">
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm">
+<h3 class="text-sm font-semibold text-on-surface-variant uppercase tracking-wider mb-6 px-1">Reading Themes</h3>
+<div class="flex flex-wrap gap-4">
+<button class="flex flex-col items-center gap-2">
+<div class="w-14 h-14 rounded-full border-2 border-primary bg-white ring-2 ring-primary/10"></div>
+<span class="text-xs font-medium text-on-surface-variant">White</span>
+</button>
+<button class="flex flex-col items-center gap-2">
+<div class="w-14 h-14 rounded-full border border-outline-variant bg-[#F4ECD8]"></div>
+<span class="text-xs font-medium text-on-surface-variant">Sepia</span>
+</button>
+<button class="flex flex-col items-center gap-2">
+<div class="w-14 h-14 rounded-full border border-outline-variant bg-[#E5E5E5]"></div>
+<span class="text-xs font-medium text-on-surface-variant">Gray</span>
+</button>
+<button class="flex flex-col items-center gap-2">
+<div class="w-14 h-14 rounded-full border border-outline-variant bg-[#2C2C2E]"></div>
+<span class="text-xs font-medium text-on-surface-variant">Dark</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Group 3: Font Size -->
+<section class="mb-10">
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm">
+<h3 class="text-sm font-semibold text-on-surface-variant uppercase tracking-wider mb-6 px-1">Text Size</h3>
+<div class="flex items-center gap-6 mb-8 px-2">
+<span class="text-sm font-medium text-on-surface-variant">A</span>
+<input class="flex-1 accent-primary" max="10" min="1" type="range" value="5"/>
+<span class="text-2xl font-medium text-on-surface">A</span>
+</div>
+<div class="bg-surface-container-low rounded-lg p-6 text-center">
+<p class="text-on-surface leading-relaxed text-lg">
+                        This is a preview of how the reading experience will look. Adjust the slider above to find the size that feels most comfortable for your eyes during long study sessions.
+                    </p>
+</div>
+</div>
+</section>
+<!-- Group 4: Accessibility -->
+<section class="mb-10">
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
+<h3 class="text-sm font-semibold text-on-surface-variant uppercase tracking-wider mt-6 mb-2 px-6">Accessibility</h3>
+<div class="divide-y-0">
+<!-- Row 1 -->
+<div class="flex items-center justify-between px-6 py-4 hover:bg-surface-container-low transition-colors group">
+<div class="flex flex-col">
+<span class="font-medium text-on-surface">High Contrast</span>
+<span class="text-xs text-on-surface-variant">Increases color contrast for UI elements</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Row 2 -->
+<div class="flex items-center justify-between px-6 py-4 hover:bg-surface-container-low transition-colors group">
+<div class="flex flex-col">
+<span class="font-medium text-on-surface">Reduce Motion</span>
+<span class="text-xs text-on-surface-variant">Minimizes animations and transitions</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Row 3 -->
+<div class="flex items-center justify-between px-6 py-4 hover:bg-surface-container-low transition-colors group">
+<div class="flex flex-col">
+<span class="font-medium text-on-surface">Bold Text</span>
+<span class="text-xs text-on-surface-variant">Makes all interface text thicker</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Row 4 -->
+<div class="flex items-center justify-between px-6 py-4 hover:bg-surface-container-low transition-colors group">
+<div class="flex flex-col">
+<span class="font-medium text-on-surface">Underline Links</span>
+<span class="text-xs text-on-surface-variant">Always shows underlines for interactive text</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</div>
+</section>
+<!-- Reset Button -->
+<div class="flex justify-center mt-12">
+<button class="px-8 py-3 bg-surface-container-high text-primary font-semibold rounded-full hover:bg-surface-container-highest active:scale-95 transition-all">
+                Reset to Default Settings
+            </button>
+</div>
+</main>
+<!-- Footer Decorative Spacing -->
+<footer class="h-24"></footer>
+</body></html>

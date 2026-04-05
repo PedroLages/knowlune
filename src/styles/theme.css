@@ -605,6 +605,12 @@ html.spacious {
     --foreground: oklch(0.25 0.02 60);
   }
 
+  /* Reading mode: Gray theme */
+  html.reading-mode.reading-gray {
+    --background: oklch(0.92 0 0);
+    --foreground: oklch(0.2 0 0);
+  }
+
   /* Reading mode: High Contrast theme (E65-S02) */
   html.reading-mode.reading-hc {
     --background: oklch(0 0 0);

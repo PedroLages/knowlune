@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface": "#f9f9fe",
+                    "surface-variant": "#dce3f0",
+                    "primary-dim": "#004faa",
+                    "surface-container": "#ebeef7",
+                    "on-tertiary-fixed": "#37354f",
+                    "on-secondary-fixed-variant": "#5a5b61",
+                    "primary": "#005bc1",
+                    "secondary-container": "#e2e2e9",
+                    "tertiary": "#5f5c78",
+                    "primary-fixed": "#d8e2ff",
+                    "tertiary-fixed-dim": "#cac6e6",
+                    "on-primary-container": "#004ea8",
+                    "on-secondary-fixed": "#3e3f45",
+                    "inverse-surface": "#0c0e12",
+                    "outline": "#747b86",
+                    "on-secondary-container": "#505157",
+                    "secondary-dim": "#515359",
+                    "on-surface": "#2c333d",
+                    "surface-container-highest": "#dce3f0",
+                    "surface-container-low": "#f2f3fa",
+                    "secondary-fixed-dim": "#d4d4db",
+                    "on-primary": "#f7f7ff",
+                    "on-background": "#2c333d",
+                    "on-secondary": "#f9f8ff",
+                    "on-surface-variant": "#595f6a",
+                    "surface-tint": "#005bc1",
+                    "on-tertiary": "#fcf7ff",
+                    "tertiary-container": "#d8d3f4",
+                    "tertiary-fixed": "#d8d3f4",
+                    "on-tertiary-fixed-variant": "#54516d",
+                    "on-error-container": "#752121",
+                    "error-container": "#fe8983",
+                    "surface-container-lowest": "#ffffff",
+                    "primary-container": "#d8e2ff",
+                    "surface-dim": "#d3dae9",
+                    "secondary": "#5d5f65",
+                    "error-dim": "#4e0309",
+                    "secondary-fixed": "#e2e2e9",
+                    "tertiary-dim": "#53506b",
+                    "on-primary-fixed": "#003d85",
+                    "on-primary-fixed-variant": "#0058bb",
+                    "surface-container-high": "#e4e8f3",
+                    "primary-fixed-dim": "#c2d4ff",
+                    "inverse-primary": "#4b8eff",
+                    "outline-variant": "#acb2bf",
+                    "error": "#9f403d",
+                    "on-tertiary-container": "#4a4863",
+                    "on-error": "#fff7f6",
+                    "inverse-on-surface": "#9c9da1",
+                    "surface-bright": "#f9f9fe",
+                    "background": "#f9f9fe"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #dce3f0; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #acb2bf; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<div class="flex h-screen overflow-hidden">
+<!-- SideNavBar: Logic from JSON -->
+<aside class="flex flex-col h-full py-6 h-screen w-64 border-r-0 bg-[#ebeef7] dark:bg-slate-900 font-['Inter'] font-medium text-sm tracking-tight">
+<div class="px-6 mb-8">
+<h1 class="text-lg font-bold text-[#2c333d] dark:text-slate-100">Settings</h1>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant/60 font-bold mt-1">Precision Workspace</p>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Learning Tab - ACTIVE -->
+<a class="flex items-center px-4 py-2.5 bg-white dark:bg-slate-800 text-[#007AFF] shadow-sm rounded-lg mx-2 transition-transform duration-200 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined mr-3 text-[20px]" data-icon="menu_book">menu_book</span>
+<span>Learning</span>
+</a>
+<!-- Notifications Tab -->
+<a class="flex items-center px-4 py-2.5 text-[#595f6a] dark:text-slate-400 hover:text-[#2c333d] mx-2 hover:bg-[#f9f9fe]/50 dark:hover:bg-slate-800/50 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3 text-[20px]" data-icon="notifications">notifications</span>
+<span>Notifications</span>
+</a>
+<!-- Integrations Tab -->
+<a class="flex items-center px-4 py-2.5 text-[#595f6a] dark:text-slate-400 hover:text-[#2c333d] mx-2 hover:bg-[#f9f9fe]/50 dark:hover:bg-slate-800/50 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3 text-[20px]" data-icon="extension">extension</span>
+<span>Integrations</span>
+</a>
+</nav>
+<div class="px-4 mt-auto">
+<div class="p-4 rounded-xl bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm border border-white/20">
+<div class="flex items-center gap-3">
+<img alt="User Profile" class="w-8 h-8 rounded-full" data-alt="professional portrait of a creative professional in a clean minimalist studio setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBMKMAJq9d4J1f8TqQPWMLn_O4ir_ELaxmZHDHVx3WrdmuQSSKI7c3_PUkmO0UOTjCaznvjiOI4zbEQ4hHij89GPxzhvfoB1ZZ057KDB4u1H5Z4PwQlKkOKSW-tXDTysgHuURiRskf6IfbtlLoc5o3ouTxSdWtfwK5wbXqDhlaBHedfLn8dvtbkIRyYpYnuwr1DMEU2MKSBxt96JfRG5Ch3antWYwg_TYjOgGuN8ewNLBnZbAnKA62-C1_Nl4hgElQpVtwK895ai4I"/>
+<div>
+<p class="text-xs font-bold">Alex Chen</p>
+<p class="text-[10px] text-on-surface-variant">Pro Architect</p>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col min-w-0 bg-surface overflow-y-auto">
+<!-- TopNavBar: Logic from JSON -->
+<header class="sticky top-0 z-40 flex justify-between items-center px-8 py-4 w-full bg-[#f9f9fe]/80 dark:bg-slate-950/80 backdrop-blur-xl">
+<h2 class="font-['Inter'] font-bold text-2xl tracking-[-0.02em] text-[#2c333d] dark:text-white">Settings</h2>
+<div class="flex items-center gap-6">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="pl-10 pr-4 py-1.5 rounded-full bg-surface-container border-none text-sm focus:ring-2 focus:ring-[#007AFF]/20 transition-all w-64" placeholder="Search settings..." type="text"/>
+</div>
+<button class="text-[#595f6a] hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<div class="px-8 pb-12 space-y-8 max-w-4xl">
+<!-- Learning Section (Bento Inspired Inset Groups) -->
+<section>
+<h3 class="text-sm font-bold text-on-surface-variant/70 uppercase tracking-widest mb-3 ml-2">Learning Experience</h3>
+<div class="bg-surface-container-low rounded-xl overflow-hidden">
+<!-- Quiz Row -->
+<div class="flex items-center justify-between px-6 py-4 bg-surface-container-lowest transition-colors hover:bg-surface-container-low/30">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]" data-icon="quiz">quiz</span>
+</div>
+<div>
+<h4 class="text-[14px] font-semibold text-on-surface">Active Quizzes</h4>
+<p class="text-xs text-on-surface-variant">Weekly assessment reminders</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="h-[1px] mx-6 bg-outline-variant opacity-20"></div>
+<!-- Focus Mode Row -->
+<div class="flex items-center justify-between px-6 py-4 bg-surface-container-lowest transition-colors hover:bg-surface-container-low/30">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[20px]" data-icon="center_focus_strong">center_focus_strong</span>
+</div>
+<div>
+<h4 class="text-[14px] font-semibold text-on-surface">Focus Mode</h4>
+<p class="text-xs text-on-surface-variant">Disable distractions while reading</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="h-[1px] mx-6 bg-outline-variant opacity-20"></div>
+<!-- Whisper AI Dropdown -->
+<div class="flex items-center justify-between px-6 py-4 bg-surface-container-lowest transition-colors hover:bg-surface-container-low/30">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[20px]" data-icon="record_voice_over">record_voice_over</span>
+</div>
+<div>
+<h4 class="text-[14px] font-semibold text-on-surface">Whisper AI Analysis</h4>
+<p class="text-xs text-on-surface-variant">Select processing intensity</p>
+</div>
+</div>
+<select class="bg-surface-container text-[13px] border-none rounded-lg py-1 pl-3 pr-8 text-on-surface font-medium focus:ring-0 cursor-pointer">
+<option>Light (Fast)</option>
+<option selected="">Standard</option>
+<option>Deep Core</option>
+</select>
+</div>
+</div>
+<!-- Pomodoro Stepper (Special Component) -->
+<div class="mt-4 p-6 bg-surface-container rounded-xl flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-error-container/20 flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-[24px]" data-icon="timer">timer</span>
+</div>
+<div>
+<h4 class="text-[15px] font-bold text-on-surface">Pomodoro Timer</h4>
+<p class="text-xs text-on-surface-variant">Duration for focus sessions</p>
+</div>
+</div>
+<div class="flex items-center bg-surface-container-lowest rounded-full p-1 shadow-sm border border-outline-variant/10">
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="remove">remove</span>
+</button>
+<span class="px-4 text-sm font-bold text-on-surface min-w-[3rem] text-center">25m</span>
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Notifications Section -->
+<section>
+<h3 class="text-sm font-bold text-on-surface-variant/70 uppercase tracking-widest mb-3 ml-2">Communication &amp; Alerts</h3>
+<div class="bg-surface-container-low rounded-xl overflow-hidden">
+<!-- Dynamic Toggles -->
+<div class="space-y-[1px]">
+<div class="flex items-center justify-between px-6 py-4 bg-surface-container-lowest">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-secondary text-[20px]" data-icon="mail">mail</span>
+<span class="text-[14px] font-medium">Email Digests</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-10 h-5 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="flex items-center justify-between px-6 py-4 bg-surface-container-lowest">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-secondary text-[20px]" data-icon="smartphone">smartphone</span>
+<span class="text-[14px] font-medium">Push Notifications</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-10 h-5 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+<!-- Time Picker Section -->
+<div class="p-6 bg-surface-container-low/50">
+<div class="flex items-center justify-between">
+<div>
+<h4 class="text-[14px] font-semibold text-on-surface">Scheduled Quiet Hours</h4>
+<p class="text-xs text-on-surface-variant">Suppress all alerts during this window</p>
+</div>
+<div class="flex gap-2">
+<input class="bg-surface-container-lowest border-none rounded-lg text-xs font-bold py-1 px-3 focus:ring-2 focus:ring-primary/20" type="time" value="22:00"/>
+<span class="text-on-surface-variant self-center">to</span>
+<input class="bg-surface-container-lowest border-none rounded-lg text-xs font-bold py-1 px-3 focus:ring-2 focus:ring-primary/20" type="time" value="07:00"/>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Integrations / System Section -->
+<section>
+<h3 class="text-sm font-bold text-on-surface-variant/70 uppercase tracking-widest mb-3 ml-2">System Resources</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Storage Card -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/10 shadow-sm">
+<div class="flex items-center justify-between mb-4">
+<h4 class="text-[14px] font-bold">App Usage Storage</h4>
+<span class="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">85% Used</span>
+</div>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden mb-3">
+<div class="h-full bg-gradient-to-r from-primary to-primary-dim w-[85%]"></div>
+</div>
+<div class="flex justify-between text-[11px] text-on-surface-variant font-medium">
+<span>12.4 GB used</span>
+<span>15.0 GB total</span>
+</div>
+</div>
+<!-- Integrations Grid -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/10 shadow-sm">
+<h4 class="text-[14px] font-bold mb-4">Export Data</h4>
+<div class="grid grid-cols-2 gap-2">
+<button class="flex items-center justify-center gap-2 py-2 px-3 bg-surface-container hover:bg-surface-container-high transition-colors rounded-full text-[12px] font-bold text-on-surface">
+<span class="material-symbols-outlined text-sm" data-icon="description">description</span>
+                                    PDF Report
+                                </button>
+<button class="flex items-center justify-center gap-2 py-2 px-3 bg-surface-container hover:bg-surface-container-high transition-colors rounded-full text-[12px] font-bold text-on-surface">
+<span class="material-symbols-outlined text-sm" data-icon="table_chart">table_chart</span>
+                                    CSV Logs
+                                </button>
+<button class="flex items-center justify-center gap-2 py-2 px-3 bg-surface-container hover:bg-surface-container-high transition-colors rounded-full text-[12px] font-bold text-on-surface">
+<span class="material-symbols-outlined text-sm" data-icon="cloud_download">cloud_download</span>
+                                    JSON Sync
+                                </button>
+<button class="flex items-center justify-center gap-2 py-2 px-3 bg-primary-container text-on-primary-container hover:opacity-90 transition-opacity rounded-full text-[12px] font-bold">
+<span class="material-symbols-outlined text-sm" data-icon="backup">backup</span>
+                                    Backup
+                                </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer Action -->
+<div class="flex justify-end gap-3 pt-4 border-t border-outline-variant/10">
+<button class="px-6 py-2 rounded-full text-[13px] font-bold text-on-surface-variant hover:text-on-surface transition-colors">Discard Changes</button>
+<button class="px-8 py-2 rounded-full bg-gradient-to-br from-primary to-primary-dim text-white text-[13px] font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform">Apply Settings</button>
+</div>
+</div>
+</main>
+</div>
+</body></html>

@@ -1,8 +1,6 @@
-import { Eye, RotateCcw } from 'lucide-react'
-import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
+import { RotateCcw } from 'lucide-react'
 import { Button, buttonVariants } from '@/app/components/ui/button'
 import { Switch } from '@/app/components/ui/switch'
-import { Separator } from '@/app/components/ui/separator'
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
 import { Label } from '@/app/components/ui/label'
 import {
@@ -40,27 +38,20 @@ export function DisplayAccessibilitySection({
   }
 
   return (
-    <Card>
-      <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
-        <div className="flex items-center gap-3">
-          <div className="rounded-full bg-brand-soft p-2">
-            <Eye className="size-5 text-brand" aria-hidden="true" />
-          </div>
-          <div>
-            <h2 className="text-lg font-display leading-none">Display & Accessibility</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Customize how content looks and moves
-            </p>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-6" data-testid="display-accessibility-section">
+    <section>
+      <h4 className="px-1 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
+        Accessibility
+      </h4>
+      <div
+        className="bg-card rounded-xl shadow-sm overflow-hidden"
+        data-testid="display-accessibility-section"
+      >
         {/* Accessibility Font */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="p-4 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors">
           <div>
             <p className="text-sm font-medium">Accessibility Font</p>
             <p className="text-xs text-muted-foreground">
-              Use Atkinson Hyperlegible for improved readability (dyslexia, low vision)
+              Use Atkinson Hyperlegible for improved readability
             </p>
           </div>
           <Switch
@@ -73,7 +64,7 @@ export function DisplayAccessibilitySection({
         {/* Font preview panel — shown when accessibility font is enabled */}
         {settings.accessibilityFont && (
           <div
-            className="animate-in fade-in-0 slide-in-from-top-1 mt-3 rounded-xl border border-border/50 bg-surface-sunken/30 p-4 duration-200"
+            className="animate-in fade-in-0 slide-in-from-top-1 mx-4 mb-4 rounded-xl border border-border/50 bg-muted/30 p-4 duration-200"
             data-testid="accessibility-font-preview"
           >
             <p className="text-base">The quick brown fox jumps over the lazy dog</p>
@@ -84,10 +75,10 @@ export function DisplayAccessibilitySection({
           </div>
         )}
 
-        <Separator className="my-4" />
+        <div className="h-px mx-4 bg-border/50" />
 
         {/* Spacious Mode */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="p-4 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors">
           <div>
             <p className="text-sm font-medium">Spacious Mode</p>
             <p className="text-xs text-muted-foreground">
@@ -105,11 +96,11 @@ export function DisplayAccessibilitySection({
           />
         </div>
 
-        <Separator className="my-4" />
+        <div className="h-px mx-4 bg-border/50" />
 
         {/* Motion Preference */}
-        <div className="flex flex-col gap-2">
-          <div>
+        <div className="p-4">
+          <div className="mb-3">
             <p className="text-sm font-medium">Motion Preference</p>
             <p className="text-xs text-muted-foreground">
               Control whether animations play on the page
@@ -121,7 +112,7 @@ export function DisplayAccessibilitySection({
               onSettingsChange({ reduceMotion: value as ReduceMotion })
             }
             aria-label="Motion preference"
-            className="mt-1 flex flex-col gap-2"
+            className="flex flex-col gap-2"
           >
             {(
               [
@@ -160,19 +151,19 @@ export function DisplayAccessibilitySection({
             ))}
           </RadioGroup>
         </div>
+      </div>
 
-        <Separator className="my-4" />
-
-        {/* Reset to Defaults */}
+      {/* Reset to Defaults */}
+      <div className="flex justify-center mt-6">
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
               variant="ghost"
-              className="min-h-[44px] w-full gap-2 sm:w-auto"
+              className="min-h-[44px] gap-2 rounded-full px-6 text-muted-foreground hover:text-foreground"
               aria-label="Reset display settings to defaults"
             >
               <RotateCcw className="size-4" />
-              Reset display settings to defaults
+              Reset to Default Settings
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent className="rounded-2xl">
@@ -194,7 +185,7 @@ export function DisplayAccessibilitySection({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   )
 }

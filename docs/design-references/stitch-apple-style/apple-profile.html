@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Profile Settings | Scholastic Atelier</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-bright": "#f9f9fe",
+                    "background": "#f9f9fe",
+                    "surface": "#f9f9fe",
+                    "tertiary-fixed-dim": "#ea8900",
+                    "secondary-fixed": "#e3e2e7",
+                    "surface-tint": "#5f5e60",
+                    "inverse-primary": "#ffffff",
+                    "surface-container-highest": "#dce3f0",
+                    "tertiary": "#8d5000",
+                    "inverse-surface": "#0c0e12",
+                    "on-error-container": "#742410",
+                    "surface-container-low": "#f2f3fa",
+                    "surface-container-high": "#e4e8f3",
+                    "outline-variant": "#acb2bf",
+                    "primary-fixed-dim": "#d6d4d6",
+                    "on-secondary": "#f9f8fe",
+                    "secondary-fixed-dim": "#d5d4d9",
+                    "on-primary": "#faf7f9",
+                    "error-container": "#fe8b70",
+                    "primary-container": "#e4e2e4",
+                    "on-tertiary-fixed-variant": "#542e00",
+                    "surface-variant": "#dce3f0",
+                    "secondary-container": "#e3e2e7",
+                    "outline": "#747b86",
+                    "on-primary-fixed-variant": "#5c5b5d",
+                    "on-tertiary": "#fff7f4",
+                    "on-primary-fixed": "#3f3f41",
+                    "primary": "#5f5e60",
+                    "error": "#9e422c",
+                    "tertiary-fixed": "#fe9400",
+                    "surface-dim": "#d3dae9",
+                    "surface-container-lowest": "#ffffff",
+                    "on-background": "#2c333d",
+                    "secondary": "#5e5f63",
+                    "on-secondary-container": "#515156",
+                    "on-secondary-fixed-variant": "#5b5b60",
+                    "on-surface-variant": "#595f6a",
+                    "on-tertiary-fixed": "#231000",
+                    "tertiary-dim": "#7c4600",
+                    "on-primary-container": "#525153",
+                    "primary-dim": "#535254",
+                    "surface-container": "#ebeef7",
+                    "error-dim": "#5c1202",
+                    "secondary-dim": "#525357",
+                    "tertiary-container": "#fe9400",
+                    "on-error": "#fff7f6",
+                    "primary-fixed": "#e4e2e4",
+                    "on-surface": "#2c333d",
+                    "on-tertiary-container": "#482600",
+                    "inverse-on-surface": "#9c9da1",
+                    "on-secondary-fixed": "#3e3f43"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hairline-divider {
+            border-bottom-width: 1px;
+            border-color: rgba(172, 178, 191, 0.15);
+        }
+        body {
+            background-color: #f9f9fe;
+            -webkit-font-smoothing: antialiased;
+        }
+    </style>
+</head>
+<body class="font-body text-on-surface">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#f9f9fe]/80 backdrop-blur-xl transition-opacity duration-200">
+<div class="flex justify-between items-center px-6 py-4 max-w-screen-xl mx-auto">
+<h1 class="text-lg font-semibold tracking-tight text-[#2c333d]">Scholastic Atelier</h1>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-[#5f5e60] hover:opacity-80 transition-opacity">settings</button>
+</div>
+</div>
+</header>
+<main class="pt-24 pb-32 max-w-2xl mx-auto px-4">
+<!-- Profile Signature Section -->
+<section class="flex flex-col items-center mb-12">
+<div class="relative mt-8">
+<div class="w-24 h-24 rounded-full overflow-hidden ring-4 ring-surface-container-highest">
+<img alt="Profile Picture" class="w-full h-full object-cover" data-alt="Close-up portrait of a thoughtful student in a light-filled library setting, warm golden tones, shallow depth of field" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCcStSgmbum24ykg1XoXwB9KEKTM8Tp1BevlbACtuuMrSvA3S0ZU1FTLhWs_QoK5DCYwTPNAxYto1cDzPAlMHwKQPHKoy1EMKrM0VDqJSelFHtWl21bxECSqoCBPdAwLoK4LuDKol7kZhxhDDugZ5En1urBPVyzBwWJWNBagxu1hmCF4v9LjBeiV_he6jjgEwwTtgvuVWh26qK1kawQzk0IQB26i0afc0AbvaenVX2NFzgvkB03QY9ZtPX7bck-cEM3wsNMusJXDYE"/>
+</div>
+<button class="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-tertiary-container flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95">
+<span class="material-symbols-outlined text-on-tertiary-container text-sm" style="font-variation-settings: 'FILL' 1;">photo_camera</span>
+</button>
+</div>
+<h2 class="mt-6 text-2xl font-bold tracking-tight text-on-surface">Profile Settings</h2>
+<p class="text-on-surface-variant text-sm mt-1">Manage your digital atelier identity</p>
+</section>
+<!-- Form Sections -->
+<form class="space-y-8">
+<!-- Basic Information Group -->
+<div>
+<h3 class="ml-4 mb-2 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Account Details</h3>
+<div class="bg-surface-container-lowest rounded-xl shadow-[0px_12px_32px_rgba(44,51,61,0.04)] overflow-hidden">
+<div class="px-5 py-4 hairline-divider flex flex-col gap-1">
+<label class="text-[0.6875rem] font-bold text-tertiary uppercase tracking-tight">Display Name</label>
+<input class="w-full bg-transparent border-none p-0 text-on-surface focus:ring-0 text-base placeholder:text-outline-variant" placeholder="Enter your name" type="text" value="Julian Vance"/>
+</div>
+<div class="px-5 py-4 flex flex-col gap-1">
+<label class="text-[0.6875rem] font-bold text-on-surface-variant uppercase tracking-tight">Email Address</label>
+<input class="w-full bg-transparent border-none p-0 text-surface-dim focus:ring-0 text-base cursor-not-allowed" disabled="" type="email" value="julian.v@atelier.edu"/>
+</div>
+</div>
+</div>
+<!-- Bio Group -->
+<div>
+<h3 class="ml-4 mb-2 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">About You</h3>
+<div class="bg-surface-container-lowest rounded-xl shadow-[0px_12px_32px_rgba(44,51,61,0.04)] overflow-hidden">
+<div class="px-5 py-4 flex flex-col gap-1">
+<label class="text-[0.6875rem] font-bold text-on-surface-variant uppercase tracking-tight">Bio</label>
+<textarea class="w-full bg-transparent border-none p-0 text-on-surface focus:ring-0 text-base resize-none leading-relaxed placeholder:text-outline-variant" placeholder="Share your learning journey..." rows="4">An aspiring curator of digital experiences, currently focusing on the intersection of classical philosophy and modern design systems. Always learning.</textarea>
+</div>
+</div>
+</div>
+<!-- Preferences Group -->
+<div>
+<h3 class="ml-4 mb-2 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Preferences</h3>
+<div class="bg-surface-container-lowest rounded-xl shadow-[0px_12px_32px_rgba(44,51,61,0.04)] overflow-hidden">
+<div class="px-5 py-4 hairline-divider flex justify-between items-center">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">visibility</span>
+<span class="text-base text-on-surface">Public Profile</span>
+</div>
+<div class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-high rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-tertiary"></div>
+</div>
+</div>
+<div class="px-5 py-4 flex justify-between items-center">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">notifications</span>
+<span class="text-base text-on-surface">Study Reminders</span>
+</div>
+<div class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-high rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-tertiary"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Area -->
+<div class="mt-12 flex flex-col items-center gap-4">
+<button class="w-full py-4 bg-primary text-on-primary rounded-xl font-semibold shadow-[0px_12px_32px_rgba(44,51,61,0.06)] hover:bg-primary-dim transition-all active:scale-[0.98]" type="submit">
+                    Save All Changes
+                </button>
+<button class="text-sm font-medium text-error hover:opacity-80 transition-opacity" type="button">
+                    Deactivate Account
+                </button>
+</div>
+</form>
+</main>
+<!-- BottomNavBar (Active: Profile) -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center pb-safe pt-2 px-4 bg-[#f9f9fe]/80 backdrop-blur-xl z-50 border-t border-[#acb2bf]/15 shadow-[0px_-2px_10px_rgba(0,0,0,0.02)]">
+<a class="flex flex-col items-center justify-center text-[#595f6a] hover:text-[#5f5e60] transition-transform scale-95 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1">menu_book</span>
+<span class="text-[11px] font-medium font-['Inter']">Curriculum</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#595f6a] hover:text-[#5f5e60] transition-transform scale-95 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1">local_library</span>
+<span class="text-[11px] font-medium font-['Inter']">Library</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#595f6a] hover:text-[#5f5e60] transition-transform scale-95 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1">auto_graph</span>
+<span class="text-[11px] font-medium font-['Inter']">Growth</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#8d5000] transition-transform scale-95 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="text-[11px] font-medium font-['Inter']">Profile</span>
+</a>
+</nav>
+</body></html>

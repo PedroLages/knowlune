@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Knowlune - Account Settings</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-fixed-variant": "#7b2f00",
+                      "inverse-surface": "#2f3130",
+                      "secondary-fixed-dim": "#c3c0ff",
+                      "on-tertiary-fixed": "#351000",
+                      "surface-container-high": "#e8e8e7",
+                      "inverse-primary": "#c3c0ff",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "surface-dim": "#dadad9",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "on-primary-container": "#dad7ff",
+                      "primary": "#3525cd",
+                      "secondary-fixed": "#e2dfff",
+                      "on-secondary": "#ffffff",
+                      "surface": "#f9f9f8",
+                      "on-primary-fixed": "#0f0069",
+                      "on-surface-variant": "#464555",
+                      "error-container": "#ffdad6",
+                      "on-error-container": "#93000a",
+                      "tertiary-container": "#a44100",
+                      "surface-tint": "#4d44e3",
+                      "on-secondary-fixed-variant": "#413f82",
+                      "inverse-on-surface": "#f1f1f0",
+                      "secondary": "#58579b",
+                      "surface-bright": "#f9f9f8",
+                      "primary-fixed": "#e2dfff",
+                      "outline-variant": "#c7c4d8",
+                      "surface-container-highest": "#e2e2e2",
+                      "on-surface": "#1a1c1c",
+                      "on-background": "#1a1c1c",
+                      "error": "#ba1a1a",
+                      "on-secondary-container": "#454386",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary-container": "#ffd2be",
+                      "secondary-container": "#b6b4ff",
+                      "tertiary-fixed-dim": "#ffb695",
+                      "on-tertiary": "#ffffff",
+                      "outline": "#777587",
+                      "surface-container": "#eeeeed",
+                      "surface-variant": "#e2e2e2",
+                      "surface-container-low": "#f3f4f3",
+                      "tertiary-fixed": "#ffdbcc",
+                      "background": "#f9f9f8",
+                      "on-error": "#ffffff",
+                      "primary-container": "#4f46e5",
+                      "on-primary": "#ffffff",
+                      "tertiary": "#7e3000",
+                      "on-secondary-fixed": "#140f54"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "fontFamily": {
+                      "headline": ["Manrope"],
+                      "body": ["Inter"],
+                      "label": ["Inter"]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FAFAF9;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .nav-icon-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+        }
+        .apple-shadow {
+            box-shadow: 0 4px 20px -2px rgba(26, 28, 28, 0.06);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- Top Navigation Anchor -->
+<header class="flex justify-between items-center w-full px-8 py-4 ml-64 max-w-[calc(100%-16rem)] bg-[#FAFAF9]/80 backdrop-blur-xl docked full-width top-0 sticky z-50 shadow-sm shadow-stone-200/50">
+<div class="flex items-center gap-6">
+<h1 class="font-headline font-black tracking-tight text-lg text-primary-container">Knowlune</h1>
+<nav class="hidden md:flex items-center gap-8 text-sm font-semibold">
+<a class="text-primary-container border-b-2 border-primary-container pb-1" href="#">Dashboard</a>
+<a class="text-stone-500 hover:text-stone-900 transition-colors" href="#">Courses</a>
+<a class="text-stone-500 hover:text-stone-900 transition-colors" href="#">Resources</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-stone-500 hover:text-stone-900 cursor-pointer">help</span>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-stone-200">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="Professional headshot of a student in a bright studio setting with a clean minimalist background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDw_9JJwkz_xnCBsOcUoGAzb49OpM6Qqheyb1mm4dtczMYGQr6KbqlOP3630Y_XYLcfO427C-l_Y4aPRkR2BsAgZkOyP7umFJKfKLfyNlslv4H75TRt79b2z1OF46n6rAzfWkU0MTgknI6PDxf9Ef58EkNr83W5mWlu8k_xUu8dcE8JDT6_Of5qrj_KfUPdkeldoVdjVAcfcJubjg-hA-NEcOnAgOveZGzEcbvRpGo7UKG3x3ZA0pmfWbyjgSzh8P1emxeDCT9D1hg"/>
+</div>
+</div>
+</header>
+<!-- Sidebar Component (Shared Component Anchor) -->
+<aside class="fixed left-0 top-0 h-full flex flex-col p-4 h-screen w-64 bg-[#f3f4f3] dark:bg-stone-900 font-headline text-sm tracking-wide font-semibold">
+<div class="flex items-center gap-3 px-4 py-6 mb-4">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-primary-container flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+</div>
+<div>
+<div class="text-xl font-bold text-stone-900 dark:text-stone-100">Knowlune</div>
+<div class="text-[10px] uppercase tracking-widest text-stone-500">Premium Learning</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Account (Active) -->
+<a class="flex items-center gap-3 px-3 py-2 bg-[#4F46E5] text-white rounded-xl shadow-lg shadow-indigo-500/20 group active:scale-95 duration-150 transition-all" href="#">
+<div class="nav-icon-badge bg-white/20">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">person</span>
+</div>
+<span>Account</span>
+</a>
+<!-- Other Tabs -->
+<a class="flex items-center gap-3 px-3 py-2 text-stone-600 dark:text-stone-400 hover:bg-[#e7e7e6] dark:hover:bg-stone-800 rounded-xl transition-all group" href="#">
+<div class="nav-icon-badge bg-secondary-container/30">
+<span class="material-symbols-outlined text-[18px] text-primary">palette</span>
+</div>
+<span>Appearance</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-stone-600 dark:text-stone-400 hover:bg-[#e7e7e6] dark:hover:bg-stone-800 rounded-xl transition-all group" href="#">
+<div class="nav-icon-badge bg-secondary-container/30">
+<span class="material-symbols-outlined text-[18px] text-primary">notifications</span>
+</div>
+<span>Notifications</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-stone-600 dark:text-stone-400 hover:bg-[#e7e7e6] dark:hover:bg-stone-800 rounded-xl transition-all group" href="#">
+<div class="nav-icon-badge bg-secondary-container/30">
+<span class="material-symbols-outlined text-[18px] text-primary">security</span>
+</div>
+<span>Security</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-stone-600 dark:text-stone-400 hover:bg-[#e7e7e6] dark:hover:bg-stone-800 rounded-xl transition-all group" href="#">
+<div class="nav-icon-badge bg-secondary-container/30">
+<span class="material-symbols-outlined text-[18px] text-primary">payments</span>
+</div>
+<span>Billing</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-stone-600 dark:text-stone-400 hover:bg-[#e7e7e6] dark:hover:bg-stone-800 rounded-xl transition-all group" href="#">
+<div class="nav-icon-badge bg-secondary-container/30">
+<span class="material-symbols-outlined text-[18px] text-primary">help_center</span>
+</div>
+<span>Support</span>
+</a>
+</nav>
+<div class="pt-4 mt-4 border-t border-stone-200/50 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-stone-600 dark:text-stone-400 hover:bg-[#e7e7e6] dark:hover:bg-stone-800 rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-stone-600 dark:text-stone-400 hover:bg-[#e7e7e6] dark:hover:bg-stone-800 rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+<span>Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 p-10 max-w-4xl min-h-screen">
+<header class="mb-10">
+<h2 class="text-3xl font-headline font-extrabold text-on-surface tracking-tight mb-2">Account</h2>
+<p class="text-stone-500 font-body">Manage your profile, subscription, and security settings.</p>
+</header>
+<div class="space-y-8">
+<!-- Profile Section (Header-style visual) -->
+<section class="flex items-center gap-6 mb-12">
+<div class="relative group">
+<div class="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-primary to-primary-container shadow-xl">
+<img alt="User profile" class="w-full h-full rounded-full object-cover border-4 border-surface" data-alt="Close up portrait of a young professional woman with a warm friendly expression and soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCASP0NgjobfGotxcIpVvedku0qsgSGqCCiz9bKfxcOI5JGoShF8Twu5lvE--yqQCeW0eSWEZBH6OaeJgQB4828v6hbTI-eeI2NH0g-VEQkMjjzC6BKTskeSQEArXf3OWXR5o_skPhcQlrz4Boi6SEoUggIuHvG5HY1TrHr7LKXq_29QGtSG2YRnr8RFaCbmQ2OASGcTSfkN4H7waDro0y4tFECgNh6NyxQxpZHYBVWpt0osCKW2_B2ltc6wJjZBzJChHMGH2lddQA"/>
+</div>
+<button class="absolute bottom-0 right-0 w-8 h-8 bg-surface shadow-md rounded-full flex items-center justify-center text-primary-container hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-sm">edit</span>
+</button>
+</div>
+<div>
+<h3 class="text-2xl font-headline font-bold text-on-surface">Alex Thompson</h3>
+<p class="text-stone-500 text-sm font-medium">alex.thompson@knowlune.edu</p>
+</div>
+</section>
+<!-- Subscription Status: Grouped Inset Rows -->
+<section>
+<h4 class="px-1 text-xs font-bold text-stone-400 uppercase tracking-widest mb-3 font-label">Subscription Status</h4>
+<div class="bg-surface-container-lowest apple-shadow rounded-xl overflow-hidden">
+<div class="p-4 flex justify-between items-center hover:bg-surface-bright transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<div>
+<p class="text-sm font-semibold text-on-surface">Premium Plan</p>
+<p class="text-xs text-stone-500">Full access to all masterclasses and resources</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-sm font-medium text-on-surface">Active</p>
+<p class="text-xs text-stone-500">Renews May 12, 2026</p>
+</div>
+</div>
+<div class="h-[1px] mx-4 bg-stone-100"></div>
+<div class="p-4 flex justify-between items-center hover:bg-surface-bright transition-colors cursor-pointer group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center">
+<span class="material-symbols-outlined text-stone-400">credit_card</span>
+</div>
+<div>
+<p class="text-sm font-semibold text-on-surface">Payment Method</p>
+<p class="text-xs text-stone-500">Visa ending in •••• 4242</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-stone-300 group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- Sign-in Options: Grouped Inset Rows -->
+<section>
+<h4 class="px-1 text-xs font-bold text-stone-400 uppercase tracking-widest mb-3 font-label">Sign-in &amp; Access</h4>
+<div class="bg-surface-container-lowest apple-shadow rounded-xl overflow-hidden">
+<div class="p-4 flex justify-between items-center hover:bg-surface-bright transition-colors cursor-pointer group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center">
+<span class="material-symbols-outlined text-stone-400">lock</span>
+</div>
+<p class="text-sm font-semibold text-on-surface">Change Password</p>
+</div>
+<span class="material-symbols-outlined text-stone-300 group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+<div class="h-[1px] mx-4 bg-stone-100"></div>
+<div class="p-4 flex justify-between items-center hover:bg-surface-bright transition-colors cursor-pointer group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center">
+<span class="material-symbols-outlined text-stone-400">devices</span>
+</div>
+<p class="text-sm font-semibold text-on-surface">Active Sessions</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="bg-secondary-container/50 text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">3 Active</span>
+<span class="material-symbols-outlined text-stone-300 group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Security: Grouped Inset Rows -->
+<section>
+<h4 class="px-1 text-xs font-bold text-stone-400 uppercase tracking-widest mb-3 font-label">Security Features</h4>
+<div class="bg-surface-container-lowest apple-shadow rounded-xl overflow-hidden">
+<div class="p-4 flex justify-between items-center hover:bg-surface-bright transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center">
+<span class="material-symbols-outlined text-stone-400">shield_lock</span>
+</div>
+<div>
+<p class="text-sm font-semibold text-on-surface">Two-factor Authentication</p>
+<p class="text-xs text-stone-500">Protect your account with an extra security layer</p>
+</div>
+</div>
+<!-- Toggle Switch -->
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</section>
+<!-- Danger Zone -->
+<section>
+<h4 class="px-1 text-xs font-bold text-stone-400 uppercase tracking-widest mb-3 font-label">Danger Zone</h4>
+<div class="bg-surface-container-lowest apple-shadow rounded-xl overflow-hidden">
+<button class="w-full p-4 flex justify-between items-center hover:bg-error-container/20 transition-colors group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-error-container flex items-center justify-center">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">delete_forever</span>
+</div>
+<div class="text-left">
+<p class="text-sm font-semibold text-error">Delete Account</p>
+<p class="text-xs text-stone-500">Permanently remove all your progress and data</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-error/30 group-hover:translate-x-1 transition-transform">chevron_right</span>
+</button>
+</div>
+</section>
+</div>
+<!-- Footer / Signature -->
+<footer class="mt-20 py-8 text-center">
+<div class="flex flex-col items-center gap-4">
+<div class="flex gap-8 text-xs font-medium text-stone-400">
+<a class="hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="hover:text-primary transition-colors" href="#">Terms of Service</a>
+<a class="hover:text-primary transition-colors" href="#">Cookie Settings</a>
+</div>
+<p class="text-[10px] text-stone-400 font-bold tracking-widest uppercase">© 2024 Knowlune Premium Learning</p>
+</div>
+</footer>
+</main>
+<!-- Progress Frost Overlay -->
+<div class="fixed top-0 right-0 left-64 h-1 bg-surface-container-low z-[60] overflow-hidden">
+<div class="h-full bg-gradient-to-r from-primary to-primary-container w-[75%] shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
+</div>
+</body></html>

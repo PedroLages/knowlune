@@ -5,10 +5,8 @@
  * @see E65-S05
  */
 
-import { BookOpen } from 'lucide-react'
-import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
+import { cn } from '@/app/components/ui/utils'
 import { Switch } from '@/app/components/ui/switch'
-import { Separator } from '@/app/components/ui/separator'
 import { Label } from '@/app/components/ui/label'
 import {
   Select,
@@ -37,10 +35,11 @@ const LINE_HEIGHT_OPTIONS: { value: ReadingLineHeight; label: string }[] = [
   { value: 2.0, label: '2.0' },
 ]
 
-const THEME_OPTIONS: { value: ReadingTheme; label: string }[] = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'sepia', label: 'Sepia' },
-  { value: 'high-contrast', label: 'High Contrast' },
+const THEME_CIRCLES: { value: ReadingTheme; label: string; bg: string; border: string }[] = [
+  { value: 'auto', label: 'White', bg: 'bg-[#ffffff]', border: 'border-[#d4d4d4]' },
+  { value: 'sepia', label: 'Sepia', bg: 'bg-[#f4ecd8]', border: 'border-[#e0d5b8]' },
+  { value: 'gray', label: 'Gray', bg: 'bg-[#e5e5e5]', border: 'border-[#cccccc]' },
+  { value: 'high-contrast', label: 'Dark', bg: 'bg-[#2c2c2e]', border: 'border-[#2c2c2e]' },
 ]
 
 export function ReadingFocusModesSection({
@@ -48,25 +47,16 @@ export function ReadingFocusModesSection({
   onSettingsChange,
 }: ReadingFocusModesSectionProps) {
   return (
-    <Card>
-      <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
-        <div className="flex items-center gap-3">
-          <div className="rounded-full bg-brand-soft p-2">
-            <BookOpen className="size-5 text-brand" aria-hidden="true" />
-          </div>
-          <div>
-            <h2 className="text-lg font-display leading-none">Reading & Focus Modes</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Configure default settings for reading and focus modes
-            </p>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-6" data-testid="reading-focus-modes-section">
-        {/* Reading Mode Defaults */}
-        <div className="flex flex-col gap-4">
-          <p className="text-sm font-medium">Reading Mode Defaults</p>
-
+    <>
+      {/* Reading Mode Defaults */}
+      <section>
+        <h4 className="px-1 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
+          Reading Mode
+        </h4>
+        <div
+          className="bg-card rounded-xl shadow-sm overflow-hidden p-4 lg:p-6"
+          data-testid="reading-focus-modes-section"
+        >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Font Size */}
             <div className="flex flex-col gap-1.5">
@@ -117,43 +107,54 @@ export function ReadingFocusModesSection({
             </div>
           </div>
 
-          {/* Theme — full width */}
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="reading-theme" className="text-xs text-muted-foreground">
-              Theme
-            </Label>
-            <Select
-              value={settings.readingTheme ?? 'auto'}
-              onValueChange={(value: string) =>
-                onSettingsChange({ readingTheme: value as ReadingTheme })
-              }
+          {/* Reading Theme Circles */}
+          <div className="mt-6">
+            <Label className="text-xs text-muted-foreground mb-3 block">Reading Theme</Label>
+            <div
+              className="flex flex-wrap gap-6"
+              role="radiogroup"
+              aria-label="Reading theme"
             >
-              <SelectTrigger
-                id="reading-theme"
-                className="min-h-[44px] sm:max-w-[calc(50%-0.5rem)]"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {THEME_OPTIONS.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              {THEME_CIRCLES.map(opt => {
+                const isSelected = (settings.readingTheme ?? 'auto') === opt.value
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    onClick={() => onSettingsChange({ readingTheme: opt.value })}
+                    className="flex flex-col items-center gap-2 group"
+                  >
+                    <div
+                      className={cn(
+                        'size-14 rounded-full border-2 transition-all',
+                        opt.bg,
+                        isSelected
+                          ? 'border-brand ring-2 ring-brand/10'
+                          : `${opt.border} group-hover:border-brand/50`
+                      )}
+                    />
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {opt.label}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
+      </section>
 
-        <Separator className="my-4" />
-
-        {/* Focus Mode Auto-Activation */}
-        <div className="flex flex-col gap-4">
-          <p className="text-sm font-medium">Focus Mode</p>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      {/* Focus Mode Auto-Activation */}
+      <section>
+        <h4 className="px-1 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
+          Focus Mode
+        </h4>
+        <div className="bg-card rounded-xl shadow-sm overflow-hidden">
+          <div className="p-4 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors">
             <div>
-              <p className="text-sm">Auto-activate for quizzes</p>
+              <p className="text-sm font-medium">Auto-activate for quizzes</p>
               <p className="text-xs text-muted-foreground">
                 Automatically enter focus mode when starting a quiz
               </p>
@@ -165,9 +166,11 @@ export function ReadingFocusModesSection({
             />
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="h-px mx-4 bg-border/50" />
+
+          <div className="p-4 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors">
             <div>
-              <p className="text-sm">Auto-activate for flashcards</p>
+              <p className="text-sm font-medium">Auto-activate for flashcards</p>
               <p className="text-xs text-muted-foreground">
                 Automatically enter focus mode when reviewing flashcards
               </p>
@@ -181,7 +184,7 @@ export function ReadingFocusModesSection({
             />
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </section>
+    </>
   )
 }

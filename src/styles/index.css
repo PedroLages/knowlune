@@ -338,3 +338,51 @@ html.reduce-motion .reduced-motion-fade {
 .focus-mode-critical-toast {
   z-index: 60 !important;
 }
+
+/* ── Apple-style range slider (Settings font size picker) ── */
+.apple-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  height: 26px;
+}
+
+.apple-slider::-webkit-slider-runnable-track {
+  background: var(--muted);
+  height: 6px;
+  border-radius: 999px;
+}
+
+.apple-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -10px;
+  background-color: var(--card);
+  height: 26px;
+  width: 26px;
+  border-radius: 50%;
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.12),
+    0 3px 1px rgba(0, 0, 0, 0.04);
+  border: 0.5px solid rgba(0, 0, 0, 0.04);
+}
+
+/* Firefox */
+.apple-slider::-moz-range-track {
+  background: var(--muted);
+  height: 6px;
+  border-radius: 999px;
+  border: none;
+}
+
+.apple-slider::-moz-range-thumb {
+  background-color: var(--card);
+  height: 26px;
+  width: 26px;
+  border-radius: 50%;
+  border: none;
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.12),
+    0 3px 1px rgba(0, 0, 0, 0.04);
+}
