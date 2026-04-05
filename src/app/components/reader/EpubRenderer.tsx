@@ -2,14 +2,16 @@
  * EpubRenderer — wraps react-reader's EpubView for EPUB content display.
  *
  * Responsibilities:
- * - Renders EPUB content via ReactReader (epub.js wrapper)
- * - Applies reading theme via rendition.themes.override()
+ * - Renders EPUB content via EpubView (epub.js wrapper)
+ * - Applies reading theme via rendition.themes.default()
  * - Exposes rendition ref for navigation/highlights in later stories
  * - Manages interaction zones: left (prev), center (toggle UI), right (next)
+ * - Swipe gesture detection (50px threshold)
+ * - Keyboard navigation (Left/Right/Space) — wired in BookReader
  *
  * @module EpubRenderer
  */
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
 import { EpubView } from 'react-reader'
 import type { Rendition } from 'epubjs'
 import type { NavItem } from 'epubjs'
@@ -21,6 +23,9 @@ const READER_THEME_STYLES: Record<string, { background: string; color: string }>
   sepia: { background: '#F4ECD8', color: '#3a2a1a' },
   dark: { background: '#1a1a1a', color: '#d4d4d4' },
 }
+
+/** Minimum horizontal swipe distance to trigger page turn */
+const SWIPE_THRESHOLD_PX = 50
 
 interface EpubRendererProps {
   /** Blob URL or ArrayBuffer for the EPUB file */
@@ -48,6 +53,12 @@ export function EpubRenderer({
   const lineHeight = useReaderStore(s => s.lineHeight)
   const toggleHeader = useReaderStore(s => s.toggleHeader)
   const renditionRef = useRef<Rendition | null>(null)
+
+  // Page turn direction for animation class
+  const [pageTurnDirection, setPageTurnDirection] = useState<'left' | 'right' | null>(null)
+
+  // Swipe tracking
+  const swipeTouchStart = useRef<{ x: number; y: number } | null>(null)
 
   /** Apply current theme + font settings to epub.js rendition */
   const applyTheme = useCallback(
@@ -91,8 +102,68 @@ export function EpubRenderer({
     }
   }, [applyTheme])
 
+  /** Navigate to previous page */
+  const navigatePrev = useCallback(() => {
+    if (!renditionRef.current) return
+    setPageTurnDirection('right')
+    renditionRef.current.prev().catch(() => {
+      // silent-catch-ok: at first page, prev() is a no-op
+    })
+    setTimeout(() => setPageTurnDirection(null), 250)
+  }, [])
+
+  /** Navigate to next page */
+  const navigateNext = useCallback(() => {
+    if (!renditionRef.current) return
+    setPageTurnDirection('left')
+    renditionRef.current.next().catch(() => {
+      // silent-catch-ok: at last page, next() is a no-op
+    })
+    setTimeout(() => setPageTurnDirection(null), 250)
+  }, [])
+
+  /** Touch start — record start position for swipe detection */
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0]
+    swipeTouchStart.current = { x: touch.clientX, y: touch.clientY }
+  }, [])
+
+  /** Touch end — detect horizontal swipe and navigate */
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (!swipeTouchStart.current) return
+      const touch = e.changedTouches[0]
+      const dx = touch.clientX - swipeTouchStart.current.x
+      const dy = touch.clientY - swipeTouchStart.current.y
+      swipeTouchStart.current = null
+
+      // Only horizontal swipes (|dx| > threshold AND |dx| > |dy| to avoid vertical scroll conflicts)
+      if (Math.abs(dx) < SWIPE_THRESHOLD_PX || Math.abs(dx) <= Math.abs(dy)) return
+
+      if (dx < 0) {
+        navigateNext() // Swipe left → next page
+      } else {
+        navigatePrev() // Swipe right → prev page
+      }
+    },
+    [navigateNext, navigatePrev]
+  )
+
+  // Animation class for page turn direction (respects prefers-reduced-motion)
+  const animationClass =
+    pageTurnDirection === 'left'
+      ? 'motion-safe:animate-[slide-left_200ms_ease-out]'
+      : pageTurnDirection === 'right'
+        ? 'motion-safe:animate-[slide-right_200ms_ease-out]'
+        : ''
+
   return (
-    <div className="relative h-full w-full" data-testid="epub-renderer">
+    <div
+      className={`relative h-full w-full ${animationClass}`}
+      data-testid="epub-renderer"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* epub.js content via react-reader EpubView */}
       <EpubView
         url={url}
@@ -115,10 +186,13 @@ export function EpubRenderer({
       />
 
       {/* Interaction zones overlaid on epub content */}
-      {/* Left zone (prev) — 33% — handled by E84-S02 */}
+      {/* Left zone (prev) — 33% */}
       <div
         className="absolute inset-y-0 left-0 w-[33%] cursor-pointer"
-        aria-hidden="true"
+        onClick={navigatePrev}
+        role="button"
+        tabIndex={-1}
+        aria-label="Previous page"
         data-reader-zone="prev"
       />
 
@@ -126,16 +200,24 @@ export function EpubRenderer({
       <div
         className="absolute inset-y-0 left-[33%] w-[34%] cursor-pointer"
         onClick={toggleHeader}
-        aria-hidden="true"
+        role="button"
+        tabIndex={-1}
+        aria-label="Toggle reader controls"
         data-reader-zone="toggle"
       />
 
-      {/* Right zone (next) — 33% — handled by E84-S02 */}
+      {/* Right zone (next) — 33% */}
       <div
         className="absolute inset-y-0 right-0 w-[33%] cursor-pointer"
-        aria-hidden="true"
+        onClick={navigateNext}
+        role="button"
+        tabIndex={-1}
+        aria-label="Next page"
         data-reader-zone="next"
       />
+
+      {/* Live region for page change announcements (accessibility) */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only" id="reader-page-announce" />
     </div>
   )
 }
