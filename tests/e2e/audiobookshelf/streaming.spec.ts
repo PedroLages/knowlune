@@ -230,10 +230,12 @@ test.describe('E101-S04: Streaming Playback', () => {
 
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
 
-    // Chapter titles from ABS metadata should be visible in the chapter list
-    await expect(page.getByText('Chapter 1: Introduction')).toBeVisible()
-    await expect(page.getByText('Chapter 2: Deep Dive')).toBeVisible()
-    await expect(page.getByText('Chapter 3: Conclusion')).toBeVisible()
+    // Chapter titles from ABS metadata should be visible in the chapter list.
+    // Use role-based locators to target the chapter list buttons specifically
+    // (the header subtitle also contains the current chapter title text).
+    await expect(page.getByRole('button', { name: /Chapter 1: Introduction/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Chapter 2: Deep Dive/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Chapter 3: Conclusion/ })).toBeVisible()
   })
 
   test('AC2: stream URL contains token query parameter with encoded API key', async ({
@@ -269,16 +271,16 @@ test.describe('E101-S04: Streaming Playback', () => {
     // (OPFS unavailable), the assertion still passes — which is correct.
     // Use waitForFunction with a short circuit: resolve as soon as we can
     // confirm the src is either empty or a non-ABS value.
+    // Wait for the renderer to be stable, then read whatever audio src is set.
+    // Return a wrapper object so empty string "" is still truthy for waitForFunction.
     const audioSrc = await page.waitForFunction(
       () => {
         const src = (window as Window & { __TEST_AUDIO_SRC__?: string }).__TEST_AUDIO_SRC__ ?? ''
-        // Resolve once we know for sure it's not an ABS URL, or it's still empty
-        // after the renderer has mounted (audiobook-reader visible).
         const readerMounted = !!document.querySelector('[data-testid="audiobook-reader"]')
-        return readerMounted ? src : null
+        return readerMounted ? { value: src } : null
       },
       { timeout: 5000 }
-    ).then(handle => handle.jsonValue())
+    ).then(handle => handle.jsonValue() as Promise<{ value: string }>).then(r => r.value)
 
     // Local books should use blob: URL from OPFS, not an ABS stream URL
     // (or empty src if OPFS file doesn't exist in test environment)
