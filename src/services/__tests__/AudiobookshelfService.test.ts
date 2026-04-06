@@ -576,8 +576,9 @@ describe('AudiobookshelfService.updateProgress', () => {
 
 describe('AudiobookshelfService.fetchCollections', () => {
   it('returns array of collections on success', async () => {
+    // ABS GET /api/collections returns { collections: [...] }, not paginated
     const mockResponse = {
-      results: [
+      collections: [
         {
           id: 'c1',
           libraryId: 'lib-1',
@@ -595,9 +596,6 @@ describe('AudiobookshelfService.fetchCollections', () => {
           books: [{ id: 'b3', media: { metadata: { title: 'Sapiens' } } }],
         },
       ],
-      total: 2,
-      page: 0,
-      limit: 10,
     }
     vi.stubGlobal('fetch', mockFetchJson(mockResponse))
 

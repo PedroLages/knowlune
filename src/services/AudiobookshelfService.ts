@@ -384,17 +384,18 @@ export async function fetchSeriesForLibrary(
 export async function fetchCollections(
   url: string,
   apiKey: string,
-  options?: { page?: number; limit?: number }
+  _options?: { page?: number; limit?: number }
 ): Promise<AbsResult<{ results: AbsCollection[]; total: number }>> {
-  const params = new URLSearchParams({
-    page: String(options?.page ?? 0),
-    limit: String(options?.limit ?? 50),
-  })
-  return absApiFetch<{ results: AbsCollection[]; total: number }>(
+  // GET /api/collections returns { collections: [...] } (no pagination).
+  // We normalize to { results, total } for consistency with other paginated endpoints.
+  const result = await absApiFetch<{ collections: AbsCollection[] }>(
     url,
     apiKey,
-    `/api/collections?${params}`
+    '/api/collections'
   )
+  if (!result.ok) return result
+  const collections = result.data.collections ?? []
+  return { ok: true, data: { results: collections, total: collections.length } }
 }
 
 // ─── Socket.IO via Native WebSocket (Engine.IO Protocol) ───────────────────

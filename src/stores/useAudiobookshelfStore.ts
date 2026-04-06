@@ -232,38 +232,17 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
 
     set({ isLoadingCollections: true })
     try {
-      const allCollections: import('@/data/types').AbsCollection[] = []
-      let page = 0
-      const limit = 50
-
-      // Fetch first page to get total
-      const firstResult = await AudiobookshelfService.fetchCollections(server.url, server.apiKey, {
-        page,
-        limit,
-      })
-      if (!firstResult.ok) {
+      // GET /api/collections returns all collections in a single response (no pagination)
+      const result = await AudiobookshelfService.fetchCollections(server.url, server.apiKey)
+      if (!result.ok) {
         // silent-catch-ok — collections are supplementary, don't toast on rate-limit or transient errors
-        console.warn('[AudiobookshelfStore] Failed to load collections:', firstResult.error)
+        console.warn('[AudiobookshelfStore] Failed to load collections:', result.error)
         set({ isLoadingCollections: false })
         return
       }
 
-      allCollections.push(...firstResult.data.results)
-      const total = firstResult.data.total
-
-      // Fetch remaining pages
-      while ((page + 1) * limit < total) {
-        page++
-        const nextResult = await AudiobookshelfService.fetchCollections(server.url, server.apiKey, {
-          page,
-          limit,
-        })
-        if (!nextResult.ok) break
-        allCollections.push(...nextResult.data.results)
-      }
-
       set({
-        collections: allCollections,
+        collections: result.data.results,
         collectionsLoaded: { ...get().collectionsLoaded, [serverId]: true },
         isLoadingCollections: false,
       })
