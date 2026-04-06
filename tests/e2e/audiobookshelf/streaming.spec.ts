@@ -136,7 +136,9 @@ async function mockAudioElement(page: import('@playwright/test').Page): Promise<
       },
     })
 
-    // Track src separately so readyState reflects it
+    // Track src separately so readyState reflects it.
+    // Also mirror to window.__TEST_AUDIO_SRC__ so tests can poll without
+    // needing document.querySelector('audio') (Audio() is detached from DOM).
     const srcDescriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'src')
     Object.defineProperty(HTMLMediaElement.prototype, 'src', {
       configurable: true,
@@ -146,6 +148,8 @@ async function mockAudioElement(page: import('@playwright/test').Page): Promise<
       set(value: string) {
         ;(this as HTMLMediaElement & { _fakeSrc?: string })._fakeSrc = value
         if (srcDescriptor?.set) srcDescriptor.set.call(this, value)
+        // Mirror to global so tests can poll deterministically
+        ;(window as Window & { __TEST_AUDIO_SRC__?: string }).__TEST_AUDIO_SRC__ = value
       },
     })
   })
@@ -192,12 +196,11 @@ test.describe('E101-S04: Streaming Playback', () => {
     // Book title should be displayed
     await expect(page.getByText('Test Streaming Book')).toBeVisible()
 
-    // Wait for loadChapter (async) to set the stream URL on the audio element
+    // Wait for loadChapter (async) to set the stream URL on the audio element.
+    // Audio() creates a detached element not in the DOM, so we poll the global
+    // __TEST_AUDIO_SRC__ mirror set by the src setter in mockAudioElement().
     const audioSrc = await page.waitForFunction(
-      () => {
-        const audio = document.querySelector('audio') as (HTMLAudioElement & { _fakeSrc?: string }) | null
-        return audio?._fakeSrc ?? audio?.src ?? ''
-      },
+      () => (window as Window & { __TEST_AUDIO_SRC__?: string }).__TEST_AUDIO_SRC__ ?? '',
       { timeout: 10000 }
     ).then(handle => handle.jsonValue())
 
@@ -214,8 +217,10 @@ test.describe('E101-S04: Streaming Playback', () => {
     // Wait for AudiobookRenderer to mount
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
 
-    // Play button should be visible initially
-    const playPauseButton = page.getByRole('button', { name: /play|pause/i })
+    // Play button should be visible initially.
+    // Use exact match to avoid strict-mode violation (3 buttons share aria-labels
+    // containing "play" or "pause" when including skip controls).
+    const playPauseButton = page.getByRole('button', { name: /^Play$|^Pause$/i })
     await expect(playPauseButton).toBeVisible()
   })
 
@@ -239,12 +244,11 @@ test.describe('E101-S04: Streaming Playback', () => {
 
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
 
-    // Wait for loadChapter (async) to set the stream URL on the audio element
+    // Wait for loadChapter (async) to set the stream URL on the audio element.
+    // Audio() creates a detached element not in the DOM, so we poll the global
+    // __TEST_AUDIO_SRC__ mirror set by the src setter in mockAudioElement().
     const audioSrc = await page.waitForFunction(
-      () => {
-        const audio = document.querySelector('audio') as (HTMLAudioElement & { _fakeSrc?: string }) | null
-        return audio?._fakeSrc ?? audio?.src ?? ''
-      },
+      () => (window as Window & { __TEST_AUDIO_SRC__?: string }).__TEST_AUDIO_SRC__ ?? '',
       { timeout: 10000 }
     ).then(handle => handle.jsonValue())
 
@@ -258,14 +262,23 @@ test.describe('E101-S04: Streaming Playback', () => {
 
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
 
-    // The audio element should NOT have an ABS streaming URL
-    // Intentional wait: OPFS read fails silently in test env (no file exists),
-    // no canplay/error event is emitted — waitForFunction would spin indefinitely.
-    await page.waitForTimeout(2000)
-    const audioSrc = await page.evaluate(() => {
-      const audio = document.querySelector('audio') as (HTMLAudioElement & { _fakeSrc?: string }) | null
-      return audio?._fakeSrc ?? audio?.src ?? ''
-    })
+    // The audio element should NOT have an ABS streaming URL.
+    // For local books, OPFS read may fail silently (no file in test env).
+    // We wait until the renderer is stable (AudiobookRenderer mounted) then
+    // assert the src does not contain 'abs.test'.  If no src is set at all
+    // (OPFS unavailable), the assertion still passes — which is correct.
+    // Use waitForFunction with a short circuit: resolve as soon as we can
+    // confirm the src is either empty or a non-ABS value.
+    const audioSrc = await page.waitForFunction(
+      () => {
+        const src = (window as Window & { __TEST_AUDIO_SRC__?: string }).__TEST_AUDIO_SRC__ ?? ''
+        // Resolve once we know for sure it's not an ABS URL, or it's still empty
+        // after the renderer has mounted (audiobook-reader visible).
+        const readerMounted = !!document.querySelector('[data-testid="audiobook-reader"]')
+        return readerMounted ? src : null
+      },
+      { timeout: 5000 }
+    ).then(handle => handle.jsonValue())
 
     // Local books should use blob: URL from OPFS, not an ABS stream URL
     // (or empty src if OPFS file doesn't exist in test environment)

@@ -124,20 +124,26 @@ export function AudiobookRenderer({
   // Restore position on mount for remote books (session resume).
   // We track whether the initial load has been observed — once isLoading
   // transitions from true→false we do the seek. A ref prevents repeated seeks.
+  //
+  // `book.currentPosition.seconds` is captured once into a ref on mount so that
+  // later playback-driven position updates don't re-trigger the effect and cause
+  // an infinite seek loop (position changes → effect re-runs → seeks → position changes…).
   const sessionResumeSeekDoneRef = useRef(false)
+  const savedSecondsRef = useRef<number | null>(
+    book.source.type === 'remote' && book.currentPosition?.type === 'time'
+      ? book.currentPosition.seconds
+      : null
+  )
   useEffect(() => {
-    if (
-      book.source.type !== 'remote' ||
-      book.currentPosition?.type !== 'time' ||
-      book.currentPosition.seconds <= 0
-    ) {
+    const savedSeconds = savedSecondsRef.current
+    if (book.source.type !== 'remote' || savedSeconds === null || savedSeconds <= 0) {
       return
     }
     if (!isLoading && !sessionResumeSeekDoneRef.current) {
       sessionResumeSeekDoneRef.current = true
-      seekTo(book.currentPosition.seconds)
+      seekTo(savedSeconds)
     }
-  }, [isLoading, book.id]) // Re-runs whenever isLoading changes; book.id guards remount
+  }, [isLoading, book.id, seekTo]) // book.id guards remount; seekTo is stable (useCallback)
 
   // Media Session API — OS-level lock screen / Bluetooth headset controls (E87-S05)
   useMediaSession({
