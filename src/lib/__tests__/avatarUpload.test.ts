@@ -1,9 +1,11 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   validateImageFile,
   getAvatarColor,
   getDefaultCropRegion,
   blobToFile,
+  fileToDataUrl,
+  compressAvatar,
   MAX_FILE_SIZE,
   MAX_COMPRESSED_SIZE,
   AVATAR_DIMENSIONS,
@@ -183,5 +185,39 @@ describe('blobToFile', () => {
     expect(file.name).toBe('avatar.webp')
     expect(file.type).toBe('image/webp')
     expect(file.size).toBe(blob.size)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// fileToDataUrl
+// ---------------------------------------------------------------------------
+
+describe('fileToDataUrl', () => {
+  it('converts a file to a data URL string', async () => {
+    const file = new File(['hello'], 'test.txt', { type: 'text/plain' })
+    const url = await fileToDataUrl(file)
+    expect(url).toMatch(/^data:text\/plain;base64,/)
+  })
+
+  it('converts a blob to a data URL string', async () => {
+    const blob = new Blob(['content'], { type: 'application/octet-stream' })
+    const url = await fileToDataUrl(blob)
+    expect(url).toMatch(/^data:/)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// compressAvatar (validation layer only — canvas/image require real browser)
+// ---------------------------------------------------------------------------
+
+describe('compressAvatar', () => {
+  it('throws for unsupported format', async () => {
+    const file = makeFile('image/gif', 1024)
+    await expect(compressAvatar(file)).rejects.toThrow('Unsupported format')
+  })
+
+  it('throws for file exceeding size limit', async () => {
+    const file = makeFile('image/jpeg', MAX_FILE_SIZE + 1)
+    await expect(compressAvatar(file)).rejects.toThrow('exceeds maximum')
   })
 })

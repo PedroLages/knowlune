@@ -139,6 +139,104 @@ describe('IndexedDB fallback mode', () => {
 })
 
 // ---------------------------------------------------------------------------
+// OPFS mode (real OPFS APIs available)
+// ---------------------------------------------------------------------------
+
+describe('OPFS mode', () => {
+  let mockWritable: { write: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> }
+  let mockFileHandle: {
+    getFile: ReturnType<typeof vi.fn>
+    createWritable: ReturnType<typeof vi.fn>
+  }
+  let mockBookDir: {
+    getFileHandle: ReturnType<typeof vi.fn>
+  }
+  let mockBooksDir: {
+    getDirectoryHandle: ReturnType<typeof vi.fn>
+    removeEntry: ReturnType<typeof vi.fn>
+  }
+  let mockKnowluneDir: { getDirectoryHandle: ReturnType<typeof vi.fn> }
+  let mockRoot: { getDirectoryHandle: ReturnType<typeof vi.fn> }
+
+  beforeEach(() => {
+    mockWritable = { write: vi.fn(), close: vi.fn() }
+    mockFileHandle = {
+      getFile: vi.fn().mockResolvedValue(new File(['content'], 'book.epub')),
+      createWritable: vi.fn().mockResolvedValue(mockWritable),
+    }
+    mockBookDir = {
+      getFileHandle: vi.fn().mockResolvedValue(mockFileHandle),
+    }
+    mockBooksDir = {
+      getDirectoryHandle: vi.fn().mockResolvedValue(mockBookDir),
+      removeEntry: vi.fn(),
+    }
+    mockKnowluneDir = {
+      getDirectoryHandle: vi.fn().mockResolvedValue(mockBooksDir),
+    }
+    mockRoot = {
+      getDirectoryHandle: vi.fn().mockResolvedValue(mockKnowluneDir),
+    }
+
+    vi.stubGlobal('navigator', {
+      storage: {
+        getDirectory: vi.fn().mockResolvedValue(mockRoot),
+        estimate: vi.fn().mockResolvedValue({ usage: 0, quota: 0 }),
+      },
+    })
+  })
+
+  it('storeBookFile returns OPFS path', async () => {
+    const file = new File(['content'], 'book.epub', { type: 'application/epub+zip' })
+    const path = await opfsStorageService.storeBookFile('book-1', file)
+
+    expect(path).toBe('/knowlune/books/book-1/book.epub')
+    expect(mockWritable.write).toHaveBeenCalledWith(file)
+    expect(mockWritable.close).toHaveBeenCalled()
+  })
+
+  it('storeCoverFile returns OPFS path', async () => {
+    const blob = new Blob(['image'], { type: 'image/jpeg' })
+    const path = await opfsStorageService.storeCoverFile('book-1', blob)
+
+    expect(path).toBe('/knowlune/books/book-1/cover.jpg')
+    expect(mockWritable.write).toHaveBeenCalled()
+  })
+
+  it('deleteBookFiles calls removeEntry with recursive', async () => {
+    await opfsStorageService.deleteBookFiles('book-1')
+    expect(mockBooksDir.removeEntry).toHaveBeenCalledWith('book-1', { recursive: true })
+  })
+
+  it('deleteBookFiles handles missing directory gracefully', async () => {
+    mockBooksDir.removeEntry.mockRejectedValue(new Error('Not found'))
+    await expect(opfsStorageService.deleteBookFiles('missing')).resolves.toBeUndefined()
+  })
+
+  it('readBookFile returns file from OPFS path', async () => {
+    const file = await opfsStorageService.readBookFile(
+      '/knowlune/books/book-1/book.epub',
+      'book-1'
+    )
+    expect(file).not.toBeNull()
+  })
+
+  it('readBookFile returns null for invalid path', async () => {
+    const file = await opfsStorageService.readBookFile('/short', 'book-1')
+    expect(file).toBeNull()
+  })
+
+  it('readBookFile returns null when file not found', async () => {
+    mockRoot.getDirectoryHandle.mockRejectedValue(new Error('Not found'))
+    const file = await opfsStorageService.readBookFile(
+      '/knowlune/books/book-1/book.epub',
+      'book-1'
+    )
+    expect(file).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
 // getStorageEstimate
 // ---------------------------------------------------------------------------
 
