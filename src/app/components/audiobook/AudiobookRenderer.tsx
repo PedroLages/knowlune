@@ -108,7 +108,7 @@ export function AudiobookRenderer({
   // Session tracking for streak counting and Reports (E87-S06)
   useAudioListeningSession({ bookId: book.id, isPlaying })
 
-  /** Persist current playback position to Dexie for session resume (E101-S04) */
+  /** Persist current playback position and progress to Dexie (E101-S04, E101-S06) */
   const savePosition = useCallback(() => {
     const audio = sharedAudioRef.current
     if (!audio || !isFinite(audio.currentTime) || audio.currentTime === 0) return
@@ -116,25 +116,40 @@ export function AudiobookRenderer({
     const position = { type: 'time' as const, seconds: audio.currentTime }
     const now = new Date().toISOString()
 
+    // Calculate progress percentage from totalDuration (E101-S06: FR31/FR32)
+    const totalDur = book.totalDuration ?? 0
+    const progress = totalDur > 0 ? Math.min(100, Math.round((audio.currentTime / totalDur) * 100)) : undefined
+
     // Optimistic store update
     useBookStore.setState(state => ({
       books: state.books.map(b =>
-        b.id === book.id ? { ...b, currentPosition: position, lastOpenedAt: now } : b
+        b.id === book.id
+          ? { ...b, currentPosition: position, lastOpenedAt: now, ...(progress !== undefined && { progress }) }
+          : b
       ),
     }))
 
     // Persist to Dexie — non-critical, never disrupt playback UX
     // silent-catch-ok: position will be re-saved on next pause (non-fatal)
+    const dexieUpdate: Record<string, unknown> = { currentPosition: position, lastOpenedAt: now }
+    if (progress !== undefined) dexieUpdate.progress = progress
     db.books
-      .update(book.id, { currentPosition: position, lastOpenedAt: now })
+      .update(book.id, dexieUpdate)
       .catch(err => console.error('[AudiobookRenderer] Failed to save position:', err))
-  }, [book.id])
+  }, [book.id, book.totalDuration])
 
   // Save position when playback pauses
   useEffect(() => {
     if (!isPlaying) {
       savePosition()
     }
+  }, [isPlaying, savePosition])
+
+  // Debounced periodic progress save during playback (every 5s) — E101-S06
+  useEffect(() => {
+    if (!isPlaying) return
+    const interval = setInterval(savePosition, 5000)
+    return () => clearInterval(interval)
   }, [isPlaying, savePosition])
 
   // Save position on unmount (navigating away) and mark as deliberate stop

@@ -125,8 +125,12 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
             </span>
           )}
           {book.totalPages && book.format !== 'audiobook' && <span>{book.totalPages} pages</span>}
-          {book.format === 'audiobook' && book.totalDuration && (
-            <span>{Math.floor(book.totalDuration / 60)} min</span>
+          {book.format === 'audiobook' && book.totalDuration != null && book.totalDuration > 0 && (
+            <span>
+              {book.currentPosition?.type === 'time'
+                ? `${Math.floor(Math.max(0, book.totalDuration - book.currentPosition.seconds) / 60)} min left`
+                : `${Math.floor(book.totalDuration / 60)} min`}
+            </span>
           )}
         </div>
       </div>
