@@ -178,20 +178,14 @@ async function seedData(
 
   const books = [EPUB_BOOK, ABS_AUDIOBOOK, STANDALONE_AUDIOBOOK]
   await seedIndexedDBStore(page, DB_NAME, 'books', books as unknown as Record<string, unknown>[])
-  await seedIndexedDBStore(
-    page,
-    DB_NAME,
-    'audiobookshelfServers',
-    [ABS_SERVER] as unknown as Record<string, unknown>[]
-  )
+  await seedIndexedDBStore(page, DB_NAME, 'audiobookshelfServers', [
+    ABS_SERVER,
+  ] as unknown as Record<string, unknown>[])
 
   if (withMapping) {
-    await seedIndexedDBStore(
-      page,
-      DB_NAME,
-      'chapterMappings',
-      [CHAPTER_MAPPING] as unknown as Record<string, unknown>[]
-    )
+    await seedIndexedDBStore(page, DB_NAME, 'chapterMappings', [
+      CHAPTER_MAPPING,
+    ] as unknown as Record<string, unknown>[])
   }
 }
 

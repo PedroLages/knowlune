@@ -589,9 +589,7 @@ export function BookReader() {
             bookmarksOpen={audiobookBookmarksOpen}
             onBookmarksClose={() => setAudiobookBookmarksOpen(false)}
             onSwitchToReading={
-              hasMapping
-                ? (chapterIndex: number) => switchToFormat(chapterIndex)
-                : undefined
+              hasMapping ? (chapterIndex: number) => switchToFormat(chapterIndex) : undefined
             }
             initialChapterIndex={
               startChapterIndex !== null
