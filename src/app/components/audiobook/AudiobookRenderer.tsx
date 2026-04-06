@@ -19,6 +19,8 @@ import { useSleepTimer, consumeSleepTimerEndedFlag } from '@/app/hooks/useSleepT
 import { useMediaSession } from '@/app/hooks/useMediaSession'
 import { useAudioListeningSession } from '@/app/hooks/useAudioListeningSession'
 import { useAudiobookshelfProgressSync } from '@/app/hooks/useAudiobookshelfProgressSync'
+import { useAudiobookshelfSocket } from '@/app/hooks/useAudiobookshelfSocket'
+import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 import { SpeedControl } from './SpeedControl'
 import { SleepTimer } from './SleepTimer'
 import { ChapterList } from './ChapterList'
@@ -111,6 +113,25 @@ export function AudiobookRenderer({
 
   // Bidirectional progress sync with Audiobookshelf (E102-S01)
   useAudiobookshelfProgressSync({ book, isPlaying, currentTime, seekTo })
+
+  // Real-time Socket.IO sync with Audiobookshelf (E102-S04)
+  // Upgrades REST polling to live push/pull when socket is available
+  // Ensure ABS servers are loaded (BookReader is outside Layout, so Library page may not have mounted)
+  const loadAbsServers = useAudiobookshelfStore(s => s.loadServers)
+  useEffect(() => {
+    loadAbsServers()
+  }, [loadAbsServers])
+  // Reactive selector — subscribes to store so server is available after Dexie hydration
+  const absServer = useAudiobookshelfStore(state =>
+    book.absServerId ? state.getServerById(book.absServerId) : undefined
+  )
+  useAudiobookshelfSocket({
+    server: absServer ?? null, // undefined → null: hook treats both as "no server"
+    activeItemId: book.absItemId ?? null,
+    book,
+    currentTime,
+    isPlaying,
+  })
 
   /** Persist current playback position and progress to Dexie (E101-S04, E101-S06) */
   const savePosition = useCallback(() => {

@@ -69,3 +69,4 @@ __pycache__/
 scripts/auto-story-run-*.md
 .claude/scheduled_tasks.lock
 .claude/settings.json
+library-snapshot.yml
