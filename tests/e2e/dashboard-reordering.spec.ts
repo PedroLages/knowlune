@@ -12,12 +12,17 @@ import { test, expect } from '../support/fixtures'
 import { goToOverview } from '../support/helpers/navigation'
 import { FIXED_DATE } from '../utils/test-time'
 
+// Matches DEFAULT_ORDER in src/lib/dashboardOrder.ts (updated when new sections were added).
+// Note: 'skill-proficiency' is in DEFAULT_ORDER but only renders when skillProficiencyData exists,
+// so it is excluded here (no quiz data in tests). Count is 9 rendered sections.
 const DEFAULT_SECTION_ORDER = [
   'section-recommended-next',
   'section-metrics-strip',
+  'section-quiz-performance',
   'section-engagement-zone',
   'section-study-history',
   'section-study-schedule',
+  'section-todays-study-plan',
   'section-insight-action',
   'section-course-gallery',
 ]
@@ -140,10 +145,11 @@ test.describe('Dashboard Reordering (E21-S06)', () => {
     // Close customizer
     await page.getByTestId('customize-dashboard-toggle').click()
 
-    // Verify default section order is restored
+    // Verify default section order is restored (9 rendered sections — skill-proficiency
+    // requires quiz data to render, which is absent in tests)
     const sections = page.locator('[data-testid^="section-"]')
     const count = await sections.count()
-    expect(count).toBe(7)
+    expect(count).toBe(9)
 
     const testIds: string[] = []
     for (let i = 0; i < count; i++) {
@@ -270,10 +276,13 @@ test.describe('Dashboard Reordering (E21-S06)', () => {
     await page.reload()
     await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
 
-    // Verify sections render in the exact manually-specified order
+    // Verify sections render in the exact manually-specified order.
+    // getOrderConfig() appends any missing DEFAULT_ORDER sections to the end,
+    // so count will be higher than 7 (3 newly-added sections appended).
+    // skill-proficiency doesn't render without quiz data, so total is 9.
     const sections = page.locator('[data-testid^="section-"]')
     const count = await sections.count()
-    expect(count).toBe(7)
+    expect(count).toBe(9)
 
     const testIds: string[] = []
     for (let i = 0; i < count; i++) {
@@ -281,8 +290,9 @@ test.describe('Dashboard Reordering (E21-S06)', () => {
       if (testId) testIds.push(testId)
     }
 
+    // The first 7 sections must be in the manually-specified order
     const expectedOrder = manualOrder.map(id => `section-${id}`)
-    expect(testIds).toEqual(expectedOrder)
+    expect(testIds.slice(0, manualOrder.length)).toEqual(expectedOrder)
   })
 
   test('should show reset button only when manually ordered', async ({ page, localStorage }) => {
@@ -359,8 +369,8 @@ test.describe('Dashboard Reordering (E21-S06)', () => {
     const sortableItem = page.getByTestId('section-row-recommended-next')
     await expect(sortableItem).toHaveAttribute('aria-roledescription', 'sortable')
 
-    // Verify all drag handles exist with descriptive ARIA labels (9 sections total)
+    // Verify all drag handles exist with descriptive ARIA labels (10 sections in current DEFAULT_ORDER)
     const handles = panel.locator('button[aria-label^="Drag to reorder"]')
-    await expect(handles).toHaveCount(9)
+    await expect(handles).toHaveCount(10)
   })
 })

@@ -21,6 +21,11 @@ export async function navigateAndWait(page: Page, path: string): Promise<void> {
         'knowlune-onboarding-v1',
         JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
       )
+      // Dismiss WelcomeWizard (uses a different storage key than onboarding)
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+      )
     }
   })
   await page.goto(path)
