@@ -171,7 +171,7 @@ export function AudiobookshelfServerForm({
         <div
           className={`flex items-start gap-2 rounded-xl p-3 text-sm ${
             testResult.ok
-              ? 'bg-success-soft text-success-foreground'
+              ? 'bg-success-soft text-success'
               : 'bg-destructive/10 text-destructive'
           }`}
           role="status"
