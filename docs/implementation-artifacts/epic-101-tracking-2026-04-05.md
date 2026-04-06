@@ -9,7 +9,7 @@ Last Updated: 2026-04-05
 |-------|--------|--------|---------------|--------------|
 | E101-S01 | done | #261 | 2 | 7 |
 | E101-S02 | done | #262 | 1 | 4 |
-| E101-S03 | finishing | — | 2 | 14 |
+| E101-S03 | done | #263 | 2 | 14 |
 | E101-S04 | queued | — | — | — |
 | E101-S05 | queued | — | — | — |
 | E101-S06 | queued | — | — | — |
@@ -44,7 +44,7 @@ _(none yet)_
 ---
 
 ### E101-S03: Library Browsing & Catalog Sync
-**Status:** finishing
+**Status:** done (PR #263)
 #### Errors
 _(none)_
 #### Review Findings
