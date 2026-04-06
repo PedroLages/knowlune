@@ -53,14 +53,26 @@ export function useAudiobookshelfSync() {
       >
       const narratorNames = rawNarrators.map(n => (typeof n === 'string' ? n : n.name))
 
-      // Map chapters
-      const chapters: BookChapter[] = (absItem.media.chapters ?? []).map((ch, index) => ({
-        id: ch.id,
-        bookId,
-        title: ch.title,
-        order: index,
-        position: { type: 'time' as const, seconds: ch.start },
-      }))
+      // Map chapters — if ABS returns none, synthesize a single chapter so the player can stream
+      const absChapters = absItem.media.chapters ?? []
+      const chapters: BookChapter[] =
+        absChapters.length > 0
+          ? absChapters.map((ch, index) => ({
+              id: ch.id,
+              bookId,
+              title: ch.title,
+              order: index,
+              position: { type: 'time' as const, seconds: ch.start },
+            }))
+          : [
+              {
+                id: `${bookId}-ch0`,
+                bookId,
+                title: 'Chapter 1',
+                order: 0,
+                position: { type: 'time' as const, seconds: 0 },
+              },
+            ]
 
       // Author names
       const authorNames = (absItem.media.metadata.authors ?? []).map(a => a.name).join(', ')
