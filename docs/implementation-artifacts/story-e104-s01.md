@@ -91,4 +91,7 @@ _(pending)_
 
 ## Challenges and Lessons Learned
 
-_(to be filled in before /review-story)_
+- **Chapter mapping integration**: Converting `Book.chapters` to the `EpubChapterInput[]` / `AudioChapterInput[]` types required by `computeChapterMapping()` needed careful type guards, since chapters from IndexedDB may have missing or undefined fields. Defensive fallbacks for `title` and `lengthMs` prevent runtime errors.
+- **Optimistic unlink pattern**: The `unlinkBooks` action mirrors `linkBooks` with optimistic UI update + atomic Dexie transaction + rollback on failure. Keeping both actions structurally identical reduces cognitive overhead when debugging sync issues.
+- **Confidence threshold UX**: Two thresholds coexist — `DEFAULT_CONFIDENCE_THRESHOLD` (0.70, from chapterMatcher) and the auto-save threshold (0.85). The dialog uses 0.85 as the gate for skipping manual review, which is intentionally stricter than the matcher's minimum. This distinction should be documented in the component for future maintainers.
+- **Context menu mounting**: `LinkFormatsDialog` is mounted inside `BookContextMenu` to share the same book reference. This avoids prop-drilling through layout but means the dialog state resets when the context menu closes — addressed by keeping dialog open state independent of menu open state.
