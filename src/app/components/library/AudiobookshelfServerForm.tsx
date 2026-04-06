@@ -114,7 +114,7 @@ export function AudiobookshelfServerForm({
       {/* HTTP security warning */}
       {showHttpWarning && (
         <div
-          className="flex items-start gap-2 rounded-xl p-3 text-sm bg-warning/10 text-warning-foreground"
+          className="flex items-start gap-2 rounded-xl p-3 text-sm bg-warning/10 text-warning"
           role="alert"
           data-testid="abs-http-warning"
         >
@@ -192,9 +192,11 @@ export function AudiobookshelfServerForm({
         <details className="text-xs text-muted-foreground mt-0" data-testid="abs-cors-troubleshoot">
           <summary className="cursor-pointer hover:text-foreground">Troubleshooting</summary>
           <p className="mt-1">
-            In Audiobookshelf &rarr; Settings &rarr; Security, add{' '}
-            <code className="bg-muted px-1 py-0.5 rounded">{window.location.origin}</code> to
-            Allowed Origins.
+            Your browser is blocking the cross-origin request. Ensure your reverse proxy
+            (e.g. Traefik, Nginx, Caddy) sends{' '}
+            <code className="bg-muted px-1 py-0.5 rounded">Access-Control-Allow-Origin</code>{' '}
+            headers for{' '}
+            <code className="bg-muted px-1 py-0.5 rounded">{window.location.origin}</code>.
           </p>
         </details>
       )}

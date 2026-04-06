@@ -32,7 +32,11 @@ export type AbsResult<T> = { ok: true; data: T } | { ok: false; error: string; s
 
 /**
  * Shared fetch wrapper for all ABS API calls.
- * Adds Bearer auth, AbortController timeout, and maps errors to user-friendly messages.
+ *
+ * Routes through the Express backend proxy (`/api/abs/proxy/...`) to avoid
+ * browser CORS restrictions. The real ABS server URL and API key are sent
+ * via X-ABS-URL and X-ABS-Token headers — the proxy forwards them to the
+ * user's ABS server and relays the response.
  */
 async function absApiFetch<T>(
   baseUrl: string,
@@ -46,7 +50,8 @@ async function absApiFetch<T>(
   try {
     const hasBody = options?.body !== undefined
     const headers: Record<string, string> = {
-      Authorization: `Bearer ${apiKey}`,
+      'X-ABS-URL': baseUrl.replace(/\/+$/, ''),
+      'X-ABS-Token': apiKey,
       ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     }
 
@@ -60,8 +65,7 @@ async function absApiFetch<T>(
       fetchOptions.body = JSON.stringify(options!.body)
     }
 
-    const normalizedBase = baseUrl.replace(/\/+$/, '')
-    const response = await fetch(`${normalizedBase}${path}`, fetchOptions)
+    const response = await fetch(`/api/abs/proxy${path}`, fetchOptions)
     clearTimeout(timeoutId)
 
     if (response.status === 401) {
@@ -95,7 +99,7 @@ async function absApiFetch<T>(
     if (err instanceof TypeError) {
       return {
         ok: false,
-        error: 'Could not connect to server. Check the URL and CORS settings.',
+        error: 'Could not connect to server. Check the URL and try again.',
       }
     }
     return { ok: false, error: 'Could not connect to server. Check the URL and try again.' }
@@ -112,9 +116,15 @@ export async function testConnection(
   url: string,
   apiKey: string
 ): Promise<AbsResult<{ serverVersion: string; warning?: string }>> {
-  const result = await absApiFetch<{ success: boolean; version: string }>(url, apiKey, '/api/ping')
+  // /ping returns {success:true} without version; POST /api/authorize returns user + server version
+  const result = await absApiFetch<{ user: { id: string }; serverSettings?: { version?: string } }>(
+    url,
+    apiKey,
+    '/api/authorize',
+    { method: 'POST' }
+  )
   if (!result.ok) return result
-  const version = result.data.version
+  const version = result.data.serverSettings?.version ?? 'unknown'
   const [major, minor] = version.split('.').map(Number)
   const warning =
     major < 2 || (major === 2 && minor < 26)
@@ -186,24 +196,25 @@ export async function fetchChapters(
 }
 
 /**
- * Get the direct streaming URL for an audiobook item.
- * Uses query parameter authentication (required for HTML5 <audio> elements
- * which cannot send custom Authorization headers).
+ * Get the streaming URL for an audiobook item via the backend proxy.
+ * Routes through Express to avoid CORS. The proxy forwards to the real ABS URL.
  *
  * Pure function — no fetch call.
  */
 export function getStreamUrl(baseUrl: string, itemId: string, apiKey: string): string {
-  const normalizedBase = baseUrl.replace(/\/+$/, '')
-  return `${normalizedBase}/api/items/${encodeURIComponent(itemId)}/play?token=${encodeURIComponent(apiKey)}`
+  return `/api/abs/proxy/api/items/${encodeURIComponent(itemId)}/play?token=${encodeURIComponent(apiKey)}&_absUrl=${encodeURIComponent(baseUrl)}&_absToken=${encodeURIComponent(apiKey)}`
 }
 
 /**
- * Get the cover image URL for a library item.
+ * Get the cover image URL for a library item via the backend proxy.
+ * Routes through Express to avoid CORS.
+ *
  * Pure function — no fetch call.
  */
-export function getCoverUrl(baseUrl: string, itemId: string): string {
-  const normalizedBase = baseUrl.replace(/\/+$/, '')
-  return `${normalizedBase}/api/items/${encodeURIComponent(itemId)}/cover`
+export function getCoverUrl(baseUrl: string, itemId: string, apiKey?: string): string {
+  const params = new URLSearchParams({ _absUrl: baseUrl })
+  if (apiKey) params.set('_absToken', apiKey)
+  return `/api/abs/proxy/api/items/${encodeURIComponent(itemId)}/cover?${params}`
 }
 
 /**

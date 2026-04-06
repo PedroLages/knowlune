@@ -65,8 +65,8 @@ export function useAudiobookshelfSync() {
       // Author names
       const authorNames = (absItem.media.metadata.authors ?? []).map(a => a.name).join(', ')
 
-      // Cover URL with token auth (img elements can't send Authorization header)
-      const coverUrl = `${AudiobookshelfService.getCoverUrl(server.url, absItem.id)}?token=${encodeURIComponent(server.apiKey)}`
+      // Cover URL — routed through backend proxy (handles auth + CORS)
+      const coverUrl = AudiobookshelfService.getCoverUrl(server.url, absItem.id, server.apiKey)
 
       // Duration: prefer metadata.duration, fallback to media.duration (newer ABS versions)
       const duration = absItem.media.metadata.duration || absItem.media.duration || undefined

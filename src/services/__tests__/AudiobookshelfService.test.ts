@@ -4,13 +4,19 @@ import {
   fetchLibraries,
   fetchLibraryItems,
   fetchItem,
+  fetchChapters,
   getStreamUrl,
   getCoverUrl,
   searchLibrary,
   fetchProgress,
   updateProgress,
   fetchCollections,
+  fetchSeriesForLibrary,
+  connectSocket,
+  onProgressUpdate,
+  pushProgressViaSocket,
   isInsecureUrl,
+  type AbsSocketConnection,
 } from '@/services/AudiobookshelfService'
 
 // ── Constants ──────────────────────────────────────────────────────
@@ -52,8 +58,11 @@ afterEach(() => {
 // ── testConnection ─────────────────────────────────────────────────
 
 describe('AudiobookshelfService.testConnection', () => {
-  it('returns serverVersion on successful ping', async () => {
-    vi.stubGlobal('fetch', mockFetchJson({ success: true, version: '2.27.0' }))
+  it('returns serverVersion on successful authorize', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchJson({ user: { id: 'u1' }, serverSettings: { version: '2.27.0' } })
+    )
 
     const result = await testConnection(TEST_URL, TEST_API_KEY)
 
@@ -63,14 +72,16 @@ describe('AudiobookshelfService.testConnection', () => {
     }
   })
 
-  it('sends Bearer authorization header', async () => {
-    const fetchMock = mockFetchJson({ success: true, version: '2.27.0' })
+  it('sends ABS URL and token via proxy headers', async () => {
+    const fetchMock = mockFetchJson({ user: { id: 'u1' }, serverSettings: { version: '2.27.0' } })
     vi.stubGlobal('fetch', fetchMock)
 
     await testConnection(TEST_URL, TEST_API_KEY)
 
-    const [, options] = fetchMock.mock.calls[0]
-    expect(options.headers.Authorization).toBe(`Bearer ${TEST_API_KEY}`)
+    const [url, options] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/abs/proxy/api/authorize')
+    expect(options.headers['X-ABS-URL']).toBe(TEST_URL)
+    expect(options.headers['X-ABS-Token']).toBe(TEST_API_KEY)
   })
 
   it('returns auth error for 401 response', async () => {
@@ -84,14 +95,14 @@ describe('AudiobookshelfService.testConnection', () => {
     }
   })
 
-  it('returns CORS error for TypeError from fetch', async () => {
+  it('returns connection error for TypeError from fetch', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
 
     const result = await testConnection(TEST_URL, TEST_API_KEY)
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error).toBe('Could not connect to server. Check the URL and CORS settings.')
+      expect(result.error).toBe('Could not connect to server. Check the URL and try again.')
     }
   })
 
@@ -254,7 +265,7 @@ describe('AudiobookshelfService.fetchLibraryItems', () => {
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error).toBe('Could not connect to server. Check the URL and CORS settings.')
+      expect(result.error).toBe('Could not connect to server. Check the URL and try again.')
     }
   })
 })
@@ -291,10 +302,13 @@ describe('AudiobookshelfService.fetchItem', () => {
 // ── getStreamUrl ───────────────────────────────────────────────────
 
 describe('AudiobookshelfService.getStreamUrl', () => {
-  it('returns correctly formatted stream URL with token parameter', () => {
+  it('returns proxy-based stream URL with token and ABS params', () => {
     const url = getStreamUrl(TEST_URL, 'item-1', TEST_API_KEY)
 
-    expect(url).toBe(`${TEST_URL}/api/items/item-1/play?token=${encodeURIComponent(TEST_API_KEY)}`)
+    expect(url).toContain('/api/abs/proxy/api/items/item-1/play')
+    expect(url).toContain(`token=${encodeURIComponent(TEST_API_KEY)}`)
+    expect(url).toContain(`_absUrl=${encodeURIComponent(TEST_URL)}`)
+    expect(url).toContain(`_absToken=${encodeURIComponent(TEST_API_KEY)}`)
   })
 
   it('encodes special characters in API key', () => {
@@ -309,10 +323,12 @@ describe('AudiobookshelfService.getStreamUrl', () => {
 // ── getCoverUrl ────────────────────────────────────────────────────
 
 describe('AudiobookshelfService.getCoverUrl', () => {
-  it('returns correctly formatted cover URL', () => {
-    const url = getCoverUrl(TEST_URL, 'item-1')
+  it('returns proxy-based cover URL with ABS params', () => {
+    const url = getCoverUrl(TEST_URL, 'item-1', TEST_API_KEY)
 
-    expect(url).toBe(`${TEST_URL}/api/items/item-1/cover`)
+    expect(url).toContain('/api/abs/proxy/api/items/item-1/cover')
+    expect(url).toContain(`_absUrl=${encodeURIComponent(TEST_URL)}`)
+    expect(url).toContain(`_absToken=${encodeURIComponent(TEST_API_KEY)}`)
   })
 })
 
@@ -487,7 +503,7 @@ describe('AudiobookshelfService.updateProgress', () => {
   })
 })
 
-// ── fetchCollections ────��─────────────────────────────────────────
+// ── fetchCollections ───────────────────────────────────────────────
 
 describe('AudiobookshelfService.fetchCollections', () => {
   it('returns array of collections on success', async () => {
@@ -520,10 +536,10 @@ describe('AudiobookshelfService.fetchCollections', () => {
 
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.data).toHaveLength(2)
-      expect(result.data[0].name).toBe('Philosophy')
-      expect(result.data[0].books).toHaveLength(2)
-      expect(result.data[1].name).toBe('History')
+      expect(result.data.results).toHaveLength(2)
+      expect(result.data.results[0].name).toBe('Philosophy')
+      expect(result.data.results[0].books).toHaveLength(2)
+      expect(result.data.results[1].name).toBe('History')
     }
   })
 
@@ -545,12 +561,12 @@ describe('AudiobookshelfService.fetchCollections', () => {
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error).toBe('Could not connect to server. Check the URL and CORS settings.')
+      expect(result.error).toBe('Could not connect to server. Check the URL and try again.')
     }
   })
 })
 
-// ── isInsecureUrl ──────────────────────────���───────────────────────
+// ── isInsecureUrl ────────────────────────────────────────────────────
 
 describe('AudiobookshelfService.isInsecureUrl', () => {
   it('returns true for HTTP URLs', () => {
@@ -563,5 +579,338 @@ describe('AudiobookshelfService.isInsecureUrl', () => {
 
   it('returns false for invalid URLs', () => {
     expect(isInsecureUrl('not-a-url')).toBe(false)
+  })
+})
+
+// ── fetchChapters ─────────────────────────────────────────────────
+
+describe('AudiobookshelfService.fetchChapters', () => {
+  it('extracts chapters from item response', async () => {
+    const mockItem = {
+      id: 'item-1',
+      ino: 'ino-1',
+      media: {
+        metadata: { title: 'Test', authors: [], narrators: [], duration: 100, numChapters: 2 },
+        chapters: [
+          { id: 'ch1', title: 'Chapter 1', start: 0, end: 50 },
+          { id: 'ch2', title: 'Chapter 2', start: 50, end: 100 },
+        ],
+      },
+    }
+    vi.stubGlobal('fetch', mockFetchJson(mockItem))
+
+    const result = await fetchChapters(TEST_URL, TEST_API_KEY, 'item-1')
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data.chapters).toHaveLength(2)
+      expect(result.data.chapters[0].title).toBe('Chapter 1')
+    }
+  })
+
+  it('returns empty chapters array when item has no chapters', async () => {
+    const mockItem = {
+      id: 'item-1',
+      ino: 'ino-1',
+      media: {
+        metadata: { title: 'Test', authors: [], narrators: [], duration: 100, numChapters: 0 },
+      },
+    }
+    vi.stubGlobal('fetch', mockFetchJson(mockItem))
+
+    const result = await fetchChapters(TEST_URL, TEST_API_KEY, 'item-1')
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data.chapters).toEqual([])
+    }
+  })
+
+  it('propagates errors from fetchItem', async () => {
+    vi.stubGlobal('fetch', mockFetchStatus(401))
+
+    const result = await fetchChapters(TEST_URL, TEST_API_KEY, 'item-1')
+    expect(result.ok).toBe(false)
+  })
+})
+
+// ── fetchSeriesForLibrary ─────────────────────────────────────────
+
+describe('AudiobookshelfService.fetchSeriesForLibrary', () => {
+  it('returns series results on success', async () => {
+    const mockResponse = {
+      results: [{ id: 's1', name: 'Lord of the Rings', books: [] }],
+      total: 1,
+    }
+    vi.stubGlobal('fetch', mockFetchJson(mockResponse))
+
+    const result = await fetchSeriesForLibrary(TEST_URL, TEST_API_KEY, 'lib-1')
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data.results).toHaveLength(1)
+      expect(result.data.results[0].name).toBe('Lord of the Rings')
+    }
+  })
+
+  it('includes sort=name in request URL', async () => {
+    const fetchMock = mockFetchJson({ results: [], total: 0 })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await fetchSeriesForLibrary(TEST_URL, TEST_API_KEY, 'lib-1')
+
+    const [url] = fetchMock.mock.calls[0]
+    expect(url).toContain('sort=name')
+  })
+})
+
+// ── testConnection version warning ────────────────────────────────
+
+describe('AudiobookshelfService.testConnection version warning', () => {
+  it('includes warning for server version below 2.26.0', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchJson({ user: { id: 'u1' }, serverSettings: { version: '2.25.0' } })
+    )
+
+    const result = await testConnection(TEST_URL, TEST_API_KEY)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data.warning).toContain('below v2.26.0')
+    }
+  })
+
+  it('no warning for server version >= 2.26.0', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchJson({ user: { id: 'u1' }, serverSettings: { version: '2.26.0' } })
+    )
+
+    const result = await testConnection(TEST_URL, TEST_API_KEY)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data.warning).toBeUndefined()
+    }
+  })
+})
+
+// ── connectSocket ─────────────────────────────────────────────────
+
+describe('AudiobookshelfService.connectSocket', () => {
+  // We capture the created ws instance by intercepting the constructor
+  let createdWs: Record<string, unknown>
+
+  beforeEach(() => {
+    const mockSend = vi.fn()
+    const mockClose = vi.fn()
+
+    vi.stubGlobal(
+      'WebSocket',
+      vi.fn(function (this: Record<string, unknown>) {
+        this.send = mockSend
+        this.close = mockClose
+        this.readyState = 1
+        this.addEventListener = vi.fn()
+        this.removeEventListener = vi.fn()
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        createdWs = this
+      })
+    )
+    ;(WebSocket as unknown as { OPEN: number }).OPEN = 1
+  })
+
+  it('creates WebSocket with correct URL format', () => {
+    connectSocket(TEST_URL, TEST_API_KEY)
+    expect(WebSocket).toHaveBeenCalledWith(
+      expect.stringContaining('ws://abs.local:13378/socket.io/')
+    )
+  })
+
+  it('includes token in WebSocket URL', () => {
+    connectSocket(TEST_URL, TEST_API_KEY)
+    expect(WebSocket).toHaveBeenCalledWith(expect.stringContaining(`token=${TEST_API_KEY}`))
+  })
+
+  it('returns connection handle with disconnect method', () => {
+    const conn = connectSocket(TEST_URL, TEST_API_KEY)
+    expect(conn.disconnect).toBeInstanceOf(Function)
+    expect(conn.isConnected).toBe(false)
+  })
+
+  it('sends Socket.IO connect packet on Engine.IO open', () => {
+    connectSocket(TEST_URL, TEST_API_KEY)
+    const handler = createdWs.onmessage as (e: { data: string }) => void
+    handler({ data: '0{"pingInterval":25000,"pingTimeout":20000}' })
+    expect(createdWs.send).toHaveBeenCalledWith(expect.stringContaining('40'))
+  })
+
+  it('marks connected on Socket.IO ack', () => {
+    const onReady = vi.fn()
+    const conn = connectSocket(TEST_URL, TEST_API_KEY, { onReady })
+
+    const handler = createdWs.onmessage as (e: { data: string }) => void
+    handler({ data: '0{"pingInterval":25000}' })
+    handler({ data: '40' })
+
+    expect(conn.isConnected).toBe(true)
+    expect(onReady).toHaveBeenCalled()
+  })
+
+  it('responds to server ping with pong', () => {
+    connectSocket(TEST_URL, TEST_API_KEY)
+    const handler = createdWs.onmessage as (e: { data: string }) => void
+    handler({ data: '2' })
+    expect(createdWs.send).toHaveBeenCalledWith('3')
+  })
+
+  it('disconnect closes WebSocket', () => {
+    const conn = connectSocket(TEST_URL, TEST_API_KEY)
+    conn.disconnect()
+    expect(createdWs.close).toHaveBeenCalled()
+  })
+
+  it('calls onDisconnect when connected socket closes', () => {
+    const onDisconnect = vi.fn()
+    const conn = connectSocket(TEST_URL, TEST_API_KEY, { onDisconnect })
+
+    const handler = createdWs.onmessage as (e: { data: string }) => void
+    handler({ data: '0{"pingInterval":25000}' })
+    handler({ data: '40' })
+    expect(conn.isConnected).toBe(true)
+
+    // Simulate close
+    ;(createdWs.onclose as () => void)()
+    expect(onDisconnect).toHaveBeenCalled()
+    expect(conn.isConnected).toBe(false)
+  })
+
+  it('handles WebSocket constructor failure gracefully', () => {
+    vi.stubGlobal(
+      'WebSocket',
+      vi.fn(() => {
+        throw new Error('Invalid URL')
+      })
+    )
+    const conn = connectSocket('invalid://url', TEST_API_KEY)
+    expect(conn.isConnected).toBe(false)
+  })
+})
+
+// ── pushProgressViaSocket ─────────────────────────────────────────
+
+describe('AudiobookshelfService.pushProgressViaSocket', () => {
+  it('sends Socket.IO event packet when connected', () => {
+    const mockWs = { send: vi.fn(), readyState: 1 }
+    const conn: AbsSocketConnection = {
+      ws: mockWs as unknown as WebSocket,
+      isConnected: true,
+      disconnect: vi.fn(),
+    }
+    ;(WebSocket as unknown as { OPEN: number }).OPEN = 1
+
+    pushProgressViaSocket(conn, 'item-1', {
+      currentTime: 100,
+      duration: 3600,
+      progress: 0.028,
+      isFinished: false,
+    })
+
+    expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('42'))
+    expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('update_media_progress'))
+  })
+
+  it('does nothing when not connected', () => {
+    const mockWs = { send: vi.fn(), readyState: 1 }
+    const conn: AbsSocketConnection = {
+      ws: mockWs as unknown as WebSocket,
+      isConnected: false,
+      disconnect: vi.fn(),
+    }
+
+    pushProgressViaSocket(conn, 'item-1', {
+      currentTime: 100,
+      duration: 3600,
+      progress: 0.028,
+      isFinished: false,
+    })
+
+    expect(mockWs.send).not.toHaveBeenCalled()
+  })
+})
+
+// ── onProgressUpdate ──────────────────────────────────────────────
+
+describe('AudiobookshelfService.onProgressUpdate', () => {
+  it('registers and invokes handler for progress events', () => {
+    const addEventListener = vi.fn()
+    const conn: AbsSocketConnection = {
+      ws: { addEventListener, removeEventListener: vi.fn() } as unknown as WebSocket,
+      isConnected: true,
+      disconnect: vi.fn(),
+    }
+
+    const handler = vi.fn()
+    onProgressUpdate(conn, handler)
+
+    expect(addEventListener).toHaveBeenCalledWith('message', expect.any(Function))
+
+    // Simulate a progress event
+    const listener = addEventListener.mock.calls[0][1]
+    listener({
+      data: '42["user_media_progress_updated",{"data":{"libraryItemId":"item-1","currentTime":100,"duration":3600,"progress":0.028,"isFinished":false}}]',
+    })
+
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        libraryItemId: 'item-1',
+        currentTime: 100,
+      })
+    )
+  })
+
+  it('returns unsubscribe function', () => {
+    const removeEventListener = vi.fn()
+    const conn: AbsSocketConnection = {
+      ws: { addEventListener: vi.fn(), removeEventListener } as unknown as WebSocket,
+      isConnected: true,
+      disconnect: vi.fn(),
+    }
+
+    const unsub = onProgressUpdate(conn, vi.fn())
+    unsub()
+
+    expect(removeEventListener).toHaveBeenCalledWith('message', expect.any(Function))
+  })
+
+  it('ignores non-progress events', () => {
+    const addEventListener = vi.fn()
+    const conn: AbsSocketConnection = {
+      ws: { addEventListener, removeEventListener: vi.fn() } as unknown as WebSocket,
+      isConnected: true,
+      disconnect: vi.fn(),
+    }
+
+    const handler = vi.fn()
+    onProgressUpdate(conn, handler)
+
+    const listener = addEventListener.mock.calls[0][1]
+    listener({ data: '42["some_other_event",{}]' })
+
+    expect(handler).not.toHaveBeenCalled()
+  })
+
+  it('ignores non-Socket.IO messages', () => {
+    const addEventListener = vi.fn()
+    const conn: AbsSocketConnection = {
+      ws: { addEventListener, removeEventListener: vi.fn() } as unknown as WebSocket,
+      isConnected: true,
+      disconnect: vi.fn(),
+    }
+
+    const handler = vi.fn()
+    onProgressUpdate(conn, handler)
+
+    const listener = addEventListener.mock.calls[0][1]
+    listener({ data: '3' }) // pong
+    listener({ data: '0{"pingInterval":25000}' }) // open
+
+    expect(handler).not.toHaveBeenCalled()
   })
 })

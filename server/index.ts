@@ -155,6 +155,162 @@ app.get('/api/ai/ollama/health', async (req, res) => {
 })
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Audiobookshelf Proxy — bypasses browser CORS by proxying through Express.
+// No JWT required: the user's own ABS API key authenticates against their server.
+// Rate limited to prevent abuse (10 req/min — catalog browsing, not streaming).
+// ──────────────────────────────────────────────────────────────────────────────
+
+const ABS_TIMEOUT_MS = 15_000
+
+const absRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too Many Requests',
+})
+
+/**
+ * GET /api/abs/ping — test ABS connection (lightweight, no auth chain)
+ */
+app.get('/api/abs/ping', absRateLimit, async (req, res) => {
+  const absUrl = req.headers['x-abs-url'] as string
+  const absToken = req.headers['x-abs-token'] as string
+
+  if (!absUrl || !absToken) {
+    res.status(400).json({ error: 'X-ABS-URL and X-ABS-Token headers are required' })
+    return
+  }
+
+  if (!isAllowedOllamaUrl(absUrl)) {
+    res.status(403).json({ error: 'Server URL targets a disallowed address' })
+    return
+  }
+
+  try {
+    const normalizedUrl = absUrl.replace(/\/+$/, '')
+    const response = await fetch(`${normalizedUrl}/ping`, {
+      headers: { Authorization: `Bearer ${absToken}`, 'User-Agent': 'Knowlune/1.0' },
+      signal: AbortSignal.timeout(ABS_TIMEOUT_MS),
+    })
+
+    if (!response.ok) {
+      res.status(response.status).json({ error: `Server returned ${response.status}` })
+      return
+    }
+
+    const data = await response.text()
+    res.setHeader('Content-Type', 'application/json')
+    res.send(data)
+  } catch (error) {
+    // silent-catch-ok — returns structured error to client
+    console.error('[/api/abs/ping]', (error as Error).message)
+    if ((error as Error).name === 'AbortError' || (error as Error).name === 'TimeoutError') {
+      res.status(504).json({ error: 'Server timed out' })
+      return
+    }
+    const msg = (error as Error).message
+    if (msg.includes('fetch failed') || msg.includes('ECONNREFUSED')) {
+      res.status(502).json({ error: 'Cannot reach server. Check the URL.' })
+      return
+    }
+    res.status(500).json({ error: msg })
+  }
+})
+
+/**
+ * ALL /api/abs/proxy/* — generic ABS API proxy.
+ * Forwards any request to the user's ABS server, relaying method, headers, and body.
+ * The ABS server URL and API token are passed via X-ABS-URL / X-ABS-Token headers,
+ * or via _absUrl / _absToken query params (for <img>/<audio> tags that can't set headers).
+ */
+app.use('/api/abs/proxy', absRateLimit, async (req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => {
+  const absUrl = (req.headers['x-abs-url'] as string) || (req.query._absUrl as string)
+  const absToken = (req.headers['x-abs-token'] as string) || (req.query._absToken as string)
+
+  if (!absUrl || !absToken) {
+    res.status(400).json({ error: 'ABS server URL and token are required (headers or query params)' })
+    return
+  }
+
+  if (!isAllowedOllamaUrl(absUrl)) {
+    res.status(403).json({ error: 'Server URL targets a disallowed address' })
+    return
+  }
+
+  // req.path is relative to the mount point (/api/abs/proxy)
+  const absPath = req.path || '/'
+  const normalizedUrl = absUrl.replace(/\/+$/, '')
+
+  // Forward original query params (minus our internal _absUrl/_absToken)
+  const forwardParams = new URLSearchParams(req.query as Record<string, string>)
+  forwardParams.delete('_absUrl')
+  forwardParams.delete('_absToken')
+  const qs = forwardParams.toString()
+  const targetUrl = `${normalizedUrl}${absPath}${qs ? `?${qs}` : ''}`
+
+  try {
+    const hasBody = req.method !== 'GET' && req.method !== 'HEAD' && req.body != null
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${absToken}`,
+      'User-Agent': 'Knowlune/1.0',
+      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+    }
+
+    const fetchOptions: RequestInit = {
+      method: req.method,
+      headers,
+      signal: AbortSignal.timeout(ABS_TIMEOUT_MS),
+    }
+
+    if (hasBody) {
+      fetchOptions.body = JSON.stringify(req.body)
+    }
+
+    const response = await fetch(targetUrl, fetchOptions)
+
+    // Relay status and content-type
+    const contentType = response.headers.get('content-type')
+    if (contentType) {
+      res.setHeader('Content-Type', contentType)
+    }
+
+    // For binary responses (covers, streams), pipe the body directly
+    if (contentType && !contentType.includes('application/json') && response.body) {
+      res.status(response.status)
+      const reader = response.body.getReader()
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          res.write(Buffer.from(value))
+        }
+      } finally {
+        res.end()
+      }
+      return
+    }
+
+    // For JSON responses, relay the text
+    const text = await response.text()
+    res.status(response.status).send(text)
+  } catch (error) {
+    // silent-catch-ok — returns structured error to client
+    console.error('[/api/abs/proxy]', (error as Error).message)
+    if ((error as Error).name === 'AbortError' || (error as Error).name === 'TimeoutError') {
+      res.status(504).json({ error: 'Server timed out' })
+      return
+    }
+    const msg = (error as Error).message
+    if (msg.includes('fetch failed') || msg.includes('ECONNREFUSED')) {
+      res.status(502).json({ error: 'Cannot reach server. Check the URL.' })
+      return
+    }
+    res.status(500).json({ error: msg })
+  }
+})
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Calendar feed route — token-authenticated, no JWT required (E50-S02)
 // MUST BE BEFORE JWT MIDDLEWARE — calendar uses token-in-URL auth model
 // Rate limited separately since it bypasses the main middleware chain.

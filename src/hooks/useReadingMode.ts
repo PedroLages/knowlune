@@ -66,11 +66,11 @@ export function useReadingMode(isLessonPage: boolean) {
     announce('Reading mode deactivated.')
   }, [isReadingMode, announce])
 
-  // Keyboard shortcut: Cmd+Shift+R / Ctrl+Shift+R to toggle, Escape to exit
+  // Keyboard shortcut: Cmd+Option+R / Ctrl+Alt+R to toggle, Escape to exit
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd+Shift+R or Ctrl+Shift+R
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'r') {
+      // Cmd+Option+R (Mac) or Ctrl+Alt+R (Win/Linux) — avoids Cmd+Shift+R browser hard refresh conflict
+      if ((e.metaKey || e.ctrlKey) && e.altKey && e.key.toLowerCase() === 'r') {
         e.preventDefault()
         toggleReadingMode()
         return

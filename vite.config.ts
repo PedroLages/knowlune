@@ -574,9 +574,11 @@ export default defineConfig({
     // ├─────────────────────────────────────────────────────────────┤
     // │ Proxied to Express :3001 (if running):                     │
     // │   /api/ai/* (non-Ollama)  — Anthropic, OpenAI, Groq, etc. │
+    // │   /api/abs/*              — Audiobookshelf proxy           │
     // └─────────────────────────────────────────────────────────────┘
     proxy: {
       '/api/ai': { target: 'http://localhost:3001', changeOrigin: true },
+      '/api/abs': { target: 'http://localhost:3001', changeOrigin: true },
     },
     headers: {
       // XSS Protection
