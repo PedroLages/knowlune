@@ -8,7 +8,7 @@ Last Updated: 2026-04-06
 | Story | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|--------|--------|---------------|--------------|
 | E103-S01 | done | #271 | 1 | 4 |
-| E103-S02 | finishing | — | 2 | 3 |
+| E103-S02 | done | #272 | 2 | 3 |
 | E103-S03 | queued | — | — | — |
 
 ## Story Details
@@ -27,7 +27,7 @@ _(none)_
 ---
 
 ### E103-S02: Format Switching UI
-**Status:** finishing
+**Status:** done (PR #272)
 #### Errors
 _(none)_
 #### Review Findings
