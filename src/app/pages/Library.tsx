@@ -10,7 +10,7 @@
  * @modified E83-S04 — search, status filter pills, context menus
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { BookOpen, Globe, Headphones, Loader2, Plus, WifiOff, Target } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
@@ -96,9 +96,10 @@ export function Library() {
     }
   }, [absServers, syncCatalog])
 
-  // Memoize filtered books — deps are books + filters which Zustand updates on every change,
-  // so the memo is invalidated whenever the underlying data changes.
-  const filteredBooks = useMemo(() => getFilteredBooks(), [getFilteredBooks, books, filters])
+  // Call getFilteredBooks() directly on each render — it reads from Zustand's get() internally.
+  // useMemo caused stale closure issues because getFilteredBooks is a stable function reference
+  // in Zustand, causing the memo to return cached empty arrays even after books loaded.
+  const filteredBooks = getFilteredBooks()
 
   // Load books on mount
   useEffect(() => {

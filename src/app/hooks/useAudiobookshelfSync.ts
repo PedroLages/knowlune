@@ -122,13 +122,20 @@ export function useAudiobookshelfSync() {
 
         // Separate fulfilled (with ok/error) from rejected (network-level failures)
         const fulfilled = settled
-          .filter((s): s is PromiseFulfilledResult<Awaited<ReturnType<typeof AudiobookshelfService.fetchLibraryItems>>> => s.status === 'fulfilled')
+          .filter(
+            (
+              s
+            ): s is PromiseFulfilledResult<
+              Awaited<ReturnType<typeof AudiobookshelfService.fetchLibraryItems>>
+            > => s.status === 'fulfilled'
+          )
           .map(s => s.value)
         const rejected = settled.filter(s => s.status === 'rejected')
 
         // If ALL requests failed, handle as server error
         if (fulfilled.length === 0) {
-          const reason = rejected[0] && 'reason' in rejected[0] ? String(rejected[0].reason) : 'Unknown error'
+          const reason =
+            rejected[0] && 'reason' in rejected[0] ? String(rejected[0].reason) : 'Unknown error'
           await updateServer(server.id, { status: 'offline' })
           toast.warning('Audiobookshelf server is offline. Showing cached library.')
           setState(prev => ({ ...prev, isSyncing: false, syncError: reason }))
