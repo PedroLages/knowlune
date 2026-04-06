@@ -2,9 +2,40 @@
  * Tests for text utility functions
  */
 import { describe, it, expect } from 'vitest'
-import { stripHtml } from '../textUtils'
+import { getInitials, stripHtml } from '../textUtils'
 
 describe('textUtils', () => {
+  describe('getInitials', () => {
+    it('extracts first letter of each word, max 2', () => {
+      expect(getInitials('John Doe')).toBe('JD')
+    })
+
+    it('returns single initial for single-word name', () => {
+      expect(getInitials('Alice')).toBe('A')
+    })
+
+    it('takes only first two words for three-word names', () => {
+      expect(getInitials('John Michael Doe')).toBe('JM')
+    })
+
+    it('uppercases initials', () => {
+      expect(getInitials('jane doe')).toBe('JD')
+    })
+
+    it('returns empty string for empty input', () => {
+      expect(getInitials('')).toBe('')
+    })
+
+    it('returns empty string for non-string input', () => {
+      expect(getInitials(null as unknown as string)).toBe('')
+      expect(getInitials(undefined as unknown as string)).toBe('')
+    })
+
+    it('trims whitespace and handles multiple spaces', () => {
+      expect(getInitials('  Bob    Smith  ')).toBe('BS')
+    })
+  })
+
   describe('stripHtml', () => {
     it('should remove HTML tags', () => {
       expect(stripHtml('<p>Hello</p>')).toBe('Hello')

@@ -626,11 +626,9 @@ export default defineConfig({
         'src/app/components/ui/**', // shadcn/ui vendor components (third-party)
       ],
       thresholds: {
-        // Threshold lowered from 70% to 55% (KI-029).
-        // Actual coverage is ~57% — the 70% target was aspirational and set before
-        // many new stores/hooks were added without test coverage. A dedicated coverage
-        // improvement epic (E105 follow-up) will bring this back toward 70%.
-        lines: 55,
+        // Raised from 55% to 60% by E106 (added ~400 unit tests).
+        // 70% target requires component-level tests for .tsx files — see KI-036.
+        lines: 60,
       },
     },
     projects: [{

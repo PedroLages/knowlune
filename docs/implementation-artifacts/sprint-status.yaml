@@ -1294,10 +1294,10 @@ development_status:
   # Close coverage gap from 57% to 70%+ (KI-036)
   # Depends on: E105
   # ──────────────────────────────────────────────────
-  epic-106: in-progress
+  epic-106: done
   106-1-store-coverage: done
   106-2-lib-service-coverage: done
-  106-3-hook-coverage-threshold-raise: ready-for-dev
+  106-3-hook-coverage-threshold-raise: done
 
   # ──────────────────────────────────────────────────
   # Epic 107: Fix Books/Library Core Bugs
