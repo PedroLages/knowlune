@@ -651,10 +651,15 @@ export interface ReadingGoal {
 
 export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'orange'
 
+/** Authentication for remote content sources */
+export type RemoteAuth =
+  | { username: string; password: string } // OPDS Basic Auth (E88)
+  | { bearer: string } // ABS Bearer token (E101)
+
 /** Where the file content lives */
 export type ContentSource =
   | { type: 'local'; opfsPath: string }
-  | { type: 'remote'; url: string; auth?: { username: string; password: string } }
+  | { type: 'remote'; url: string; auth?: RemoteAuth }
   | { type: 'fileHandle'; handle: FileSystemFileHandle }
 
 /** Position within a book */
