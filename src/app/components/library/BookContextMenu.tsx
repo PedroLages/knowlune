@@ -9,9 +9,10 @@
  */
 
 import { useState, type ReactNode } from 'react'
-import { Check, MoreVertical } from 'lucide-react'
+import { Check, MoreVertical, ArrowRightLeft } from 'lucide-react'
 import type { Book, BookStatus } from '@/data/types'
 import { useBookStore } from '@/stores/useBookStore'
+import { LinkFormatsDialog } from './LinkFormatsDialog'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -93,6 +94,7 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
   const updateBookStatus = useBookStore(s => s.updateBookStatus)
   const deleteBook = useBookStore(s => s.deleteBook)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false)
 
   const handleDelete = () => {
     setConfirmDeleteOpen(true)
@@ -115,6 +117,14 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
           <ContextMenuContent className="w-48">
             <ContextMenuItem onClick={onEdit} data-testid="context-menu-edit">
               Edit
+            </ContextMenuItem>
+            <ContextMenuItem
+              onClick={() => setLinkDialogOpen(true)}
+              data-testid="context-menu-link-format"
+              className="flex items-center gap-2"
+            >
+              <ArrowRightLeft className="h-3.5 w-3.5" aria-hidden="true" />
+              {book.linkedBookId ? 'Linked Format…' : 'Link Format…'}
             </ContextMenuItem>
             <ContextMenuSub>
               <ContextMenuSubTrigger data-testid="context-menu-change-status">
@@ -152,6 +162,14 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-48">
             <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setLinkDialogOpen(true)}
+              data-testid="dropdown-menu-link-format"
+              className="flex items-center gap-2"
+            >
+              <ArrowRightLeft className="h-3.5 w-3.5" aria-hidden="true" />
+              {book.linkedBookId ? 'Linked Format…' : 'Link Format…'}
+            </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>Change Status</DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="w-44">
@@ -172,6 +190,9 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Link Formats dialog */}
+      <LinkFormatsDialog book={book} open={linkDialogOpen} onOpenChange={setLinkDialogOpen} />
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
