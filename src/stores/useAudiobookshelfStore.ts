@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import type { AudiobookshelfServer, AbsSeries, AbsCollection } from '@/data/types'
 import { db } from '@/db/schema'
 import * as AudiobookshelfService from '@/services/AudiobookshelfService'
+import { useBookStore } from '@/stores/useBookStore'
 
 /** Queued progress sync item — in-memory only (session-scoped, lost on refresh) */
 export interface SyncQueueItem {
@@ -105,8 +106,22 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
 
   removeServer: async (id: string) => {
     try {
+      // Remove all books associated with this server from Dexie and memory
+      const absBooks = await db.books.where('absServerId').equals(id).toArray()
+      if (absBooks.length > 0) {
+        await db.books.bulkDelete(absBooks.map(b => b.id))
+      }
       await db.audiobookshelfServers.delete(id)
-      set(state => ({ servers: state.servers.filter(s => s.id !== id) }))
+      set(state => ({
+        servers: state.servers.filter(s => s.id !== id),
+        // Clear collections/series for this server
+        collections: state.collections.filter(c => c.libraryId !== id),
+        collectionsLoaded: { ...state.collectionsLoaded, [id]: false },
+        seriesLoaded: { ...state.seriesLoaded, [id]: false },
+      }))
+      // Refresh the book store so the UI reflects the deletion
+      await useBookStore.getState().loadBooks()
+      toast.success(`Server removed along with ${absBooks.length} synced books`)
     } catch (err) {
       console.error('[AudiobookshelfStore] Failed to remove server:', err)
       toast.error('Failed to remove Audiobookshelf server.')
@@ -176,7 +191,8 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
         { page, limit }
       )
       if (!firstResult.ok) {
-        toast.error(`Failed to load series: ${firstResult.error}`)
+        // silent-catch-ok — series is supplementary, don't toast on rate-limit or transient errors
+        console.warn('[AudiobookshelfStore] Failed to load series:', firstResult.error)
         set({ isLoadingSeries: false })
         return
       }
@@ -203,8 +219,8 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
         isLoadingSeries: false,
       })
     } catch (err) {
-      console.error('[AudiobookshelfStore] Failed to load series:', err)
-      toast.error('Failed to load series from Audiobookshelf.')
+      // silent-catch-ok — series is supplementary, don't toast on rate-limit or transient errors
+      console.warn('[AudiobookshelfStore] Failed to load series:', err)
       set({ isLoadingSeries: false })
     }
   },
@@ -226,7 +242,8 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
         limit,
       })
       if (!firstResult.ok) {
-        toast.error(`Failed to load collections: ${firstResult.error}`)
+        // silent-catch-ok — collections are supplementary, don't toast on rate-limit or transient errors
+        console.warn('[AudiobookshelfStore] Failed to load collections:', firstResult.error)
         set({ isLoadingCollections: false })
         return
       }
@@ -251,8 +268,8 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
         isLoadingCollections: false,
       })
     } catch (err) {
-      console.error('[AudiobookshelfStore] Failed to load collections:', err)
-      toast.error('Failed to load collections from Audiobookshelf.')
+      // silent-catch-ok — collections are supplementary, don't toast on rate-limit or transient errors
+      console.warn('[AudiobookshelfStore] Failed to load collections:', err)
       set({ isLoadingCollections: false })
     }
   },
