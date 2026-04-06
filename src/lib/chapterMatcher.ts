@@ -37,7 +37,7 @@ export interface AudioChapterInput {
 export function normalizeChapterTitle(title: string): string {
   return title
     .toLowerCase()
-    .replace(/^[\d\s.:\-–]+/, '')
+    .replace(/^[\d\s.:\-\u2013\u2014]+/, '')
     .replace(/\s+/g, ' ')
     .trim()
 }
