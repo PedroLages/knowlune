@@ -675,6 +675,7 @@ export interface Book {
   id: string // UUID v4
   title: string
   author: string
+  narrator?: string // Audiobook narrator (E101-S03)
   format: BookFormat
   status: BookStatus
   coverUrl?: string

@@ -71,7 +71,11 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
   return (
     <div
       role="link"
-      aria-label={`${book.title} by ${book.author}, ${book.progress}% complete`}
+      aria-label={
+        book.narrator
+          ? `Book: ${book.title} by ${book.author}, narrated by ${book.narrator}, ${book.progress}% complete`
+          : `${book.title} by ${book.author}, ${book.progress}% complete`
+      }
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={handleKeyDown}

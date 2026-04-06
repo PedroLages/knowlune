@@ -11,7 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, Globe, Headphones, Plus, WifiOff, Target } from 'lucide-react'
+import { BookOpen, Globe, Headphones, Loader2, Plus, WifiOff, Target } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
@@ -21,6 +21,7 @@ import { BookListItem } from '@/app/components/library/BookListItem'
 import { BookContextMenu } from '@/app/components/library/BookContextMenu'
 import { BookMetadataEditor } from '@/app/components/library/BookMetadataEditor'
 import { LibraryFilters } from '@/app/components/library/LibraryFilters'
+import { LibrarySourceTabs } from '@/app/components/library/LibrarySourceTabs'
 import { ReadingGoalSettings } from '@/app/components/library/ReadingGoalSettings'
 import { OpdsCatalogSettings } from '@/app/components/library/OpdsCatalogSettings'
 import { AudiobookshelfSettings } from '@/app/components/library/AudiobookshelfSettings'
@@ -29,7 +30,9 @@ import { DailyGoalRing } from '@/app/components/library/DailyGoalRing'
 import { YearlyGoalProgress } from '@/app/components/library/YearlyGoalProgress'
 import { useBookStore } from '@/stores/useBookStore'
 import { useOpdsCatalogStore } from '@/stores/useOpdsCatalogStore'
+import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 import { useReadingGoalStore } from '@/stores/useReadingGoalStore'
+import { useAudiobookshelfSync } from '@/app/hooks/useAudiobookshelfSync'
 import { appEventBus } from '@/lib/eventBus'
 import type { Book } from '@/data/types'
 import { cn } from '@/app/components/ui/utils'
@@ -55,6 +58,12 @@ export function Library() {
   const opdsCatalogs = useOpdsCatalogStore(s => s.catalogs)
   const loadCatalogs = useOpdsCatalogStore(s => s.loadCatalogs)
 
+  // Audiobookshelf sync (E101-S03)
+  const absServers = useAudiobookshelfStore(s => s.servers)
+  const loadAbsServers = useAudiobookshelfStore(s => s.loadServers)
+  const { isSyncing: isAbsSyncing, syncCatalog, loadNextPage, pagination } =
+    useAudiobookshelfSync()
+
   const loadGoal = useReadingGoalStore(s => s.loadGoal)
   const goal = useReadingGoalStore(s => s.goal)
   const checkYearlyGoalReached = useReadingGoalStore(s => s.checkYearlyGoalReached)
@@ -68,6 +77,21 @@ export function Library() {
   useEffect(() => {
     loadCatalogs()
   }, [loadCatalogs])
+
+  // Load ABS servers on mount (E101-S03)
+  useEffect(() => {
+    loadAbsServers()
+  }, [loadAbsServers])
+
+  // Trigger ABS catalog sync when servers are loaded (E101-S03)
+  // Background sync — does NOT block Library render
+  const hasSynced = useRef(false)
+  useEffect(() => {
+    if (absServers.length > 0 && !hasSynced.current) {
+      hasSynced.current = true
+      absServers.forEach(server => syncCatalog(server))
+    }
+  }, [absServers, syncCatalog])
 
   // Memoize filtered books to avoid new array on every render
   const filteredBooks = useMemo(() => getFilteredBooks(), [getFilteredBooks, books, filters])
@@ -227,6 +251,17 @@ export function Library() {
         </div>
       )}
 
+      {/* Source filter tabs — only show when ABS servers configured (E101-S03) */}
+      {books.length > 0 && <LibrarySourceTabs />}
+
+      {/* Syncing indicator (E101-S03) */}
+      {isAbsSyncing && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="abs-syncing-indicator">
+          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          Syncing Audiobookshelf library...
+        </div>
+      )}
+
       {/* Filters — only show when books exist */}
       {books.length > 0 && <LibraryFilters />}
 
@@ -250,6 +285,16 @@ export function Library() {
             </BookContextMenu>
           ))}
         </div>
+      )}
+
+      {/* Infinite scroll sentinel for ABS pagination (E101-S03) */}
+      {filters.source === 'audiobookshelf' && absServers.length > 0 && (
+        <AbsPaginationSentinel
+          servers={absServers}
+          pagination={pagination}
+          loadNextPage={loadNextPage}
+          isSyncing={isAbsSyncing}
+        />
       )}
 
       {/* No results message */}
@@ -305,6 +350,75 @@ export function Library() {
         }}
         initialCatalogId={browserCatalogId}
       />
+    </div>
+  )
+}
+
+/**
+ * Infinite scroll sentinel for ABS pagination.
+ * Uses IntersectionObserver to trigger loadNextPage when visible.
+ */
+function AbsPaginationSentinel({
+  servers,
+  pagination,
+  loadNextPage,
+  isSyncing,
+}: {
+  servers: import('@/data/types').AudiobookshelfServer[]
+  pagination: Record<string, { currentPage: number; totalItems: number }>
+  loadNextPage: (server: import('@/data/types').AudiobookshelfServer) => Promise<void>
+  isSyncing: boolean
+}) {
+  const sentinelRef = useRef<HTMLDivElement>(null)
+
+  // Check if any server has more pages to load
+  const hasMorePages = servers.some(server => {
+    const pag = pagination[server.id]
+    if (!pag) return false
+    return (pag.currentPage + 1) * 50 < pag.totalItems
+  })
+
+  useEffect(() => {
+    if (!hasMorePages || isSyncing || !sentinelRef.current) return
+
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0]?.isIntersecting) {
+          for (const server of servers) {
+            const pag = pagination[server.id]
+            if (pag && (pag.currentPage + 1) * 50 < pag.totalItems) {
+              loadNextPage(server)
+            }
+          }
+        }
+      },
+      { rootMargin: '200px' }
+    )
+
+    observer.observe(sentinelRef.current)
+    return () => observer.disconnect()
+  }, [hasMorePages, isSyncing, servers, pagination, loadNextPage])
+
+  if (!hasMorePages) return null
+
+  return (
+    <div ref={sentinelRef} data-testid="abs-pagination-sentinel">
+      {isSyncing && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-[24px] border border-border/50 overflow-hidden"
+            >
+              <div className="aspect-[2/3] bg-muted animate-pulse" />
+              <div className="p-3 space-y-2">
+                <div className="h-4 bg-muted animate-pulse rounded" />
+                <div className="h-3 w-2/3 bg-muted animate-pulse rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
