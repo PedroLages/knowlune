@@ -1298,6 +1298,7 @@ development_status:
   106-1-store-coverage: done
   106-2-lib-service-coverage: done
   106-3-hook-coverage-threshold-raise: done
+  epic-106-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 107: Fix Books/Library Core Bugs
