@@ -115,12 +115,10 @@ async function seedBookmarkData(page: import('@playwright/test').Page): Promise<
   })
 
   await page.goto('/')
-  await seedIndexedDBStore(
-    page,
-    DB_NAME,
-    'books',
-    [ABS_AUDIOBOOK] as unknown as Record<string, unknown>[]
-  )
+  await seedIndexedDBStore(page, DB_NAME, 'books', [ABS_AUDIOBOOK] as unknown as Record<
+    string,
+    unknown
+  >[])
 }
 
 test.describe('E101-S05: Audio Bookmarks', () => {

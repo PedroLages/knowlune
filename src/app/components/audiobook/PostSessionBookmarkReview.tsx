@@ -100,18 +100,15 @@ export function PostSessionBookmarkReview({
     }
   }, [])
 
-  const handleCreateFlashcard = useCallback(
-    (bookmark: AudioBookmark) => {
-      const note = (editingNotesRef.current[bookmark.id] ?? '').trim()
-      if (!note) {
-        setNoteRequiredId(bookmark.id)
-        return
-      }
-      setClozeText(note)
-      setClozeOpen(true)
-    },
-    []
-  )
+  const handleCreateFlashcard = useCallback((bookmark: AudioBookmark) => {
+    const note = (editingNotesRef.current[bookmark.id] ?? '').trim()
+    if (!note) {
+      setNoteRequiredId(bookmark.id)
+      return
+    }
+    setClozeText(note)
+    setClozeOpen(true)
+  }, [])
 
   const handleClozeClose = useCallback(() => {
     setClozeOpen(false)

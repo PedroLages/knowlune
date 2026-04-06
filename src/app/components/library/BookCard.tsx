@@ -12,6 +12,18 @@ import { BookOpen, Cloud, Headphones } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { BookStatusBadge } from './BookStatusBadge'
 
+/** Find the current chapter title based on playback position in seconds */
+function findCurrentChapterTitle(chapters: Book['chapters'], posSeconds: number): string {
+  return (
+    chapters.find(
+      (_ch, i, arr) =>
+        posSeconds >= (_ch.position.type === 'time' ? _ch.position.seconds : 0) &&
+        (i === arr.length - 1 ||
+          posSeconds < (arr[i + 1].position.type === 'time' ? arr[i + 1].position.seconds : Infinity))
+    )?.title ?? 'Chapter 1'
+  )
+}
+
 /** Format seconds to "Xh Ym" display */
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600)
@@ -116,9 +128,26 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
           </div>
           <span className="text-[10px] text-muted-foreground tabular-nums">{book.progress}%</span>
         </div>
+        {/* Audiobook: current chapter + time remaining (E101-S06: FR32) */}
+        {book.format === 'audiobook' &&
+          book.chapters.length > 0 &&
+          book.currentPosition?.type === 'time' && (
+            <p
+              className="text-[10px] text-muted-foreground truncate"
+              data-testid={`chapter-${book.id}`}
+            >
+              {book.currentPosition!.type === 'time'
+                ? findCurrentChapterTitle(book.chapters, book.currentPosition!.seconds)
+                : 'Chapter 1'}
+            </p>
+          )}
         {book.totalDuration != null && book.totalDuration > 0 && (
           <p className="text-[10px] text-muted-foreground" data-testid={`duration-${book.id}`}>
-            {formatDuration(book.totalDuration)}
+            {book.format === 'audiobook' && book.currentPosition?.type === 'time'
+              ? (book.progress != null && book.progress >= 99) || book.currentPosition.seconds >= book.totalDuration
+                ? 'Completed'
+                : `${formatDuration(Math.max(0, book.totalDuration - book.currentPosition.seconds))} left`
+              : formatDuration(book.totalDuration)}
           </p>
         )}
       </div>

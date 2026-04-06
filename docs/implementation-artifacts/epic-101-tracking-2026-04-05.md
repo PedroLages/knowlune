@@ -12,7 +12,7 @@ Last Updated: 2026-04-05
 | E101-S03 | done | #263 | 2 | 14 |
 | E101-S04 | done | #264 | 3 | 13 |
 | E101-S05 | done | #265 | 3 | 8 |
-| E101-S06 | queued | — | — | — |
+| E101-S06 | finishing | — | 1 | 4 |
 
 ## Story Details
 
@@ -95,15 +95,16 @@ _(none)_
 ---
 
 ### E101-S06: Progress Tracking & Streaks
-**Status:** queued
+**Status:** finishing
 #### Errors
-_(none yet)_
+_(none)_
 #### Review Findings
-_(none yet)_
+- R1: PASS — 4 issues (1 MEDIUM readability, 3 LOW completed state) + 2 NON-ISSUES (GLM)
 #### Fixes Applied
-_(none yet)_
+- R1: DexiePositionUpdate type alias, findCurrentChapterTitle helper, "Completed" state for 100% progress
 #### Notes
-_(none yet)_
+- Progress persistence, chapter/time display, debounced interval save
+- Prior session/streak infrastructure already working from E87
 
 ---
 

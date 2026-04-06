@@ -147,8 +147,9 @@ async function mockAudioElement(page: import('@playwright/test').Page): Promise<
       },
       set(value: string) {
         ;(this as HTMLMediaElement & { _fakeSrc?: string })._fakeSrc = value
-        if (srcDescriptor?.set) srcDescriptor.set.call(this, value)
-        // Mirror to global so tests can poll deterministically
+        if (srcDescriptor?.set)
+          srcDescriptor.set.call(this, value)
+          // Mirror to global so tests can poll deterministically
         ;(window as Window & { __TEST_AUDIO_SRC__?: string }).__TEST_AUDIO_SRC__ = value
       },
     })
@@ -174,12 +175,10 @@ async function seedStreamingData(page: import('@playwright/test').Page): Promise
   await seedIndexedDBStore(page, DB_NAME, 'audiobookshelfServers', [
     ABS_SERVER,
   ] as unknown as Record<string, unknown>[])
-  await seedIndexedDBStore(
-    page,
-    DB_NAME,
-    'books',
-    [ABS_AUDIOBOOK, LOCAL_AUDIOBOOK] as unknown as Record<string, unknown>[]
-  )
+  await seedIndexedDBStore(page, DB_NAME, 'books', [
+    ABS_AUDIOBOOK,
+    LOCAL_AUDIOBOOK,
+  ] as unknown as Record<string, unknown>[])
 }
 
 test.describe('E101-S04: Streaming Playback', () => {
@@ -199,10 +198,12 @@ test.describe('E101-S04: Streaming Playback', () => {
     // Wait for loadChapter (async) to set the stream URL on the audio element.
     // Audio() creates a detached element not in the DOM, so we poll the global
     // __TEST_AUDIO_SRC__ mirror set by the src setter in mockAudioElement().
-    const audioSrc = await page.waitForFunction(
-      () => (window as Window & { __TEST_AUDIO_SRC__?: string }).__TEST_AUDIO_SRC__ ?? '',
-      { timeout: 10000 }
-    ).then(handle => handle.jsonValue())
+    const audioSrc = await page
+      .waitForFunction(
+        () => (window as Window & { __TEST_AUDIO_SRC__?: string }).__TEST_AUDIO_SRC__ ?? '',
+        { timeout: 10000 }
+      )
+      .then(handle => handle.jsonValue())
 
     // The audio src should contain the ABS streaming endpoint with token
     expect(audioSrc).toContain('abs.test:13378')
@@ -238,9 +239,7 @@ test.describe('E101-S04: Streaming Playback', () => {
     await expect(page.getByRole('button', { name: /Chapter 3: Conclusion/ })).toBeVisible()
   })
 
-  test('AC2: stream URL contains token query parameter with encoded API key', async ({
-    page,
-  }) => {
+  test('AC2: stream URL contains token query parameter with encoded API key', async ({ page }) => {
     await seedStreamingData(page)
     await page.goto(`/library/${ABS_AUDIOBOOK.id}/read`)
 
@@ -249,10 +248,12 @@ test.describe('E101-S04: Streaming Playback', () => {
     // Wait for loadChapter (async) to set the stream URL on the audio element.
     // Audio() creates a detached element not in the DOM, so we poll the global
     // __TEST_AUDIO_SRC__ mirror set by the src setter in mockAudioElement().
-    const audioSrc = await page.waitForFunction(
-      () => (window as Window & { __TEST_AUDIO_SRC__?: string }).__TEST_AUDIO_SRC__ ?? '',
-      { timeout: 10000 }
-    ).then(handle => handle.jsonValue())
+    const audioSrc = await page
+      .waitForFunction(
+        () => (window as Window & { __TEST_AUDIO_SRC__?: string }).__TEST_AUDIO_SRC__ ?? '',
+        { timeout: 10000 }
+      )
+      .then(handle => handle.jsonValue())
 
     // Token should be URL-encoded in the query parameter
     expect(audioSrc).toContain(`token=${encodeURIComponent('test-api-key-abc')}`)
@@ -273,14 +274,17 @@ test.describe('E101-S04: Streaming Playback', () => {
     // confirm the src is either empty or a non-ABS value.
     // Wait for the renderer to be stable, then read whatever audio src is set.
     // Return a wrapper object so empty string "" is still truthy for waitForFunction.
-    const audioSrc = await page.waitForFunction(
-      () => {
-        const src = (window as Window & { __TEST_AUDIO_SRC__?: string }).__TEST_AUDIO_SRC__ ?? ''
-        const readerMounted = !!document.querySelector('[data-testid="audiobook-reader"]')
-        return readerMounted ? { value: src } : null
-      },
-      { timeout: 5000 }
-    ).then(handle => handle.jsonValue() as Promise<{ value: string }>).then(r => r.value)
+    const audioSrc = await page
+      .waitForFunction(
+        () => {
+          const src = (window as Window & { __TEST_AUDIO_SRC__?: string }).__TEST_AUDIO_SRC__ ?? ''
+          const readerMounted = !!document.querySelector('[data-testid="audiobook-reader"]')
+          return readerMounted ? { value: src } : null
+        },
+        { timeout: 5000 }
+      )
+      .then(handle => handle.jsonValue() as Promise<{ value: string }>)
+      .then(r => r.value)
 
     // Local books should use blob: URL from OPFS, not an ABS stream URL
     // (or empty src if OPFS file doesn't exist in test environment)
