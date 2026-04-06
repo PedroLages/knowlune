@@ -56,15 +56,16 @@ _(none)_
 ---
 
 ### E102-S04: Socket.IO Real-Time
-**Status:** queued
+**Status:** reviewing (R2)
 #### Errors
-_(none yet)_
+_(none)_
 #### Review Findings
-_(none yet)_
+- R1: BLOCKED — 3 BLOCKER (E2E failures), 1 HIGH (non-reactive getState)
 #### Fixes Applied
-_(none yet)_
+- R1: reactive store selector, loadAbsServers effect, correct route URL, deterministic waits, ws null type
 #### Notes
-_(none yet)_
+- Native WebSocket with Engine.IO protocol (zero deps), LWW conflict resolution
+- Root cause: getState() raced with Dexie hydration + wrong route path in tests
 
 ---
 
