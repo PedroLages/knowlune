@@ -22,9 +22,16 @@ interface BookmarkButtonProps {
   bookId: string
   chapterIndex: number
   currentTime: number
+  /** Called after a bookmark is successfully persisted to Dexie, with the new bookmark's ID */
+  onBookmarkCreated?: (id: string) => void
 }
 
-export function BookmarkButton({ bookId, chapterIndex, currentTime }: BookmarkButtonProps) {
+export function BookmarkButton({
+  bookId,
+  chapterIndex,
+  currentTime,
+  onBookmarkCreated,
+}: BookmarkButtonProps) {
   const [showNote, setShowNote] = useState(false)
   const [note, setNote] = useState('')
   const [pendingId, setPendingId] = useState<string | null>(null)
@@ -46,6 +53,7 @@ export function BookmarkButton({ bookId, chapterIndex, currentTime }: BookmarkBu
       setNote('')
       setShowNote(true)
       setTimeout(() => inputRef.current?.focus(), 50)
+      onBookmarkCreated?.(id)
       toast(`Bookmark saved at ${formatAudioTime(record.timestamp)}`, { duration: 2500 })
     } catch {
       // silent-catch-ok: surfaced via toast
