@@ -15,6 +15,7 @@ import type {
   AbsItem,
   AbsSearchResult,
   AbsProgress,
+  AbsSeries,
 } from '@/data/types'
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -23,9 +24,7 @@ const FETCH_TIMEOUT_MS = 10_000
 
 // ─── Result Type ────────────────────────────────────────────────────────────
 
-export type AbsResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: string; status?: number }
+export type AbsResult<T> = { ok: true; data: T } | { ok: false; error: string; status?: number }
 
 // ─── Internal Helper ────────────────────────────────────────────────────────
 
@@ -239,6 +238,30 @@ export async function updateProgress(
     method: 'PATCH',
     body: progress,
   })
+}
+
+/**
+ * Fetch paginated series from a library.
+ * Calls GET /api/libraries/{libraryId}/series.
+ *
+ * @since E102-S02
+ */
+export async function fetchSeriesForLibrary(
+  url: string,
+  apiKey: string,
+  libraryId: string,
+  options?: { page?: number; limit?: number }
+): Promise<AbsResult<{ results: AbsSeries[]; total: number }>> {
+  const params = new URLSearchParams({
+    page: String(options?.page ?? 0),
+    limit: String(options?.limit ?? 50),
+    sort: 'name',
+  })
+  return absApiFetch<{ results: AbsSeries[]; total: number }>(
+    url,
+    apiKey,
+    `/api/libraries/${encodeURIComponent(libraryId)}/series?${params}`
+  )
 }
 
 /**

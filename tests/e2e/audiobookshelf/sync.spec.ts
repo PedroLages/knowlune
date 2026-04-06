@@ -168,9 +168,7 @@ test.describe('E102-S01: Bidirectional Progress Sync', () => {
       })
     )
     // Mock streaming endpoint (404 is fine — no real server)
-    await page.route(`${ABS_URL}/api/items/**`, route =>
-      route.fulfill({ status: 404, body: '' })
-    )
+    await page.route(`${ABS_URL}/api/items/**`, route => route.fulfill({ status: 404, body: '' }))
 
     await seedSyncData(page)
 
@@ -201,9 +199,7 @@ test.describe('E102-S01: Bidirectional Progress Sync', () => {
     )
     // Mock PATCH /api/me/progress/{itemId} (push local → ABS)
     let patchCalled = false
-    await page.route(`${ABS_URL}/api/items/**`, route =>
-      route.fulfill({ status: 404, body: '' })
-    )
+    await page.route(`${ABS_URL}/api/items/**`, route => route.fulfill({ status: 404, body: '' }))
     await page.route(`${ABS_URL}/api/me/progress/**`, async route => {
       if (route.request().method() === 'PATCH') {
         patchCalled = true
@@ -236,9 +232,7 @@ test.describe('E102-S01: Bidirectional Progress Sync', () => {
     await page.route(`${ABS_URL}/api/me/progress/**`, route =>
       route.fulfill({ status: 404, body: '' })
     )
-    await page.route(`${ABS_URL}/api/items/**`, route =>
-      route.fulfill({ status: 404, body: '' })
-    )
+    await page.route(`${ABS_URL}/api/items/**`, route => route.fulfill({ status: 404, body: '' }))
 
     await seedSyncData(page)
 

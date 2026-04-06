@@ -793,6 +793,37 @@ export interface AbsLibraryItem {
 /** Full item has the same shape as AbsLibraryItem — extended in E102+ if needed */
 export type AbsItem = AbsLibraryItem
 
+// ─── ABS Series Types (E102-S02) ─────────────────────────────────────────────
+
+/** A book within a series, including its sequence position */
+export interface AbsSeriesBook {
+  id: string // ABS item ID
+  sequence: string | null // e.g. "1", "2", "2.5" — may be null if unset
+  media: {
+    metadata: {
+      title: string
+      authors?: Array<{ id: string; name: string }>
+      narrators?: string[]
+      duration?: number
+      description?: string
+    }
+    coverPath?: string
+  }
+}
+
+/** A series from ABS with its books in order */
+export interface AbsSeries {
+  id: string
+  name: string
+  nameIgnorePrefix: string
+  nameIgnorePrefixSort?: string
+  type: 'series'
+  books: AbsSeriesBook[]
+  totalDuration: number
+  addedAt: number
+  updatedAt: number
+}
+
 export interface AbsSearchResult {
   book: AbsLibraryItem[]
 }
