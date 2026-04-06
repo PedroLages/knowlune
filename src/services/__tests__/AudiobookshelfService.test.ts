@@ -369,7 +369,7 @@ describe('AudiobookshelfService.fetchProgress', () => {
       duration: 39600,
       progress: 0.091,
       isFinished: false,
-      updatedAt: 1712345678000,
+      lastUpdate: 1712345678000,
     }
     vi.stubGlobal('fetch', mockFetchJson(mockProgress))
 

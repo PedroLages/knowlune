@@ -100,7 +100,7 @@ export function useAudiobookshelfProgressSync({
       }
 
       const localSeconds = book.currentPosition?.type === 'time' ? book.currentPosition.seconds : 0
-      const resolution = resolveConflict(absProgress.updatedAt, book.lastOpenedAt, localSeconds)
+      const resolution = resolveConflict(absProgress.lastUpdate, book.lastOpenedAt, localSeconds)
 
       if (resolution === 'use-abs') {
         // ABS is ahead — update local book and seek audio

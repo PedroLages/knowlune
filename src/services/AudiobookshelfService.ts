@@ -23,7 +23,9 @@ const FETCH_TIMEOUT_MS = 10_000
 
 // ─── Result Type ────────────────────────────────────────────────────────────
 
-export type AbsResult<T> = { ok: true; data: T } | { ok: false; error: string }
+export type AbsResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string; status?: number }
 
 // ─── Internal Helper ────────────────────────────────────────────────────────
 
@@ -62,13 +64,17 @@ async function absApiFetch<T>(
     clearTimeout(timeoutId)
 
     if (response.status === 401) {
-      return { ok: false, error: 'Authentication failed. Check your API key.' }
+      return { ok: false, error: 'Authentication failed. Check your API key.', status: 401 }
     }
     if (response.status === 403) {
-      return { ok: false, error: 'Access denied. Your API key may lack permissions.' }
+      return { ok: false, error: 'Access denied. Your API key may lack permissions.', status: 403 }
     }
     if (!response.ok) {
-      return { ok: false, error: `Server error (${response.status}). Try again later.` }
+      return {
+        ok: false,
+        error: `Server error (${response.status}). Try again later.`,
+        status: response.status,
+      }
     }
 
     // Handle empty response bodies (e.g., PATCH 200 with no content)
@@ -210,7 +216,7 @@ export async function fetchProgress(
     `/api/me/progress/${encodeURIComponent(itemId)}`
   )
   // 404 = no progress yet — return null data, not an error
-  if (!result.ok && result.error.includes('(404)')) {
+  if (!result.ok && result.status === 404) {
     return { ok: true, data: null }
   }
   return result

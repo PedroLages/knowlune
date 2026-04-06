@@ -804,7 +804,7 @@ export interface AbsProgress {
   duration: number // seconds
   progress: number // 0-1
   isFinished: boolean
-  updatedAt: number // Unix timestamp ms (ABS field name: lastUpdate)
+  lastUpdate: number // Unix timestamp ms — ABS API field name (not `updatedAt`)
 }
 
 export interface YouTubeCourseChapter {

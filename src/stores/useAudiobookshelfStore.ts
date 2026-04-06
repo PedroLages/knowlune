@@ -76,7 +76,7 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
         // Fire-and-forget — silent, never blocks the updateServer caller
         get()
           .flushSyncQueue()
-          .catch(() => {})
+          .catch(() => {}) // silent-catch-ok: flush is best-effort, failures stay in queue
       }
     } catch (err) {
       console.error('[AudiobookshelfStore] Failed to update server:', err)
