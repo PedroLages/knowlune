@@ -21,7 +21,7 @@ import { execFile as execFileCb } from 'child_process'
 import { promisify } from 'util'
 import { mkdtemp, rm, readFile, stat } from 'fs/promises'
 import { tmpdir } from 'os'
-import { join, basename } from 'path'
+import { join } from 'path'
 import { isAllowedProxyUrl } from './src/lib/ssrfProtection'
 
 const execFile = promisify(execFileCb)

@@ -111,10 +111,16 @@ async function absApiFetch<T>(
 export async function testConnection(
   url: string,
   apiKey: string
-): Promise<AbsResult<{ serverVersion: string }>> {
+): Promise<AbsResult<{ serverVersion: string; warning?: string }>> {
   const result = await absApiFetch<{ success: boolean; version: string }>(url, apiKey, '/api/ping')
   if (!result.ok) return result
-  return { ok: true, data: { serverVersion: result.data.version } }
+  const version = result.data.version
+  const [major, minor] = version.split('.').map(Number)
+  const warning =
+    major < 2 || (major === 2 && minor < 26)
+      ? `Server version ${version} is below v2.26.0. Some features (Socket.IO sync) may not work correctly.`
+      : undefined
+  return { ok: true, data: { serverVersion: version, warning } }
 }
 
 /**
@@ -292,15 +298,18 @@ export async function fetchSeriesForLibrary(
  */
 export async function fetchCollections(
   url: string,
-  apiKey: string
-): Promise<AbsResult<AbsCollection[]>> {
-  const result = await absApiFetch<{ results: AbsCollection[]; total: number }>(
+  apiKey: string,
+  options?: { page?: number; limit?: number }
+): Promise<AbsResult<{ results: AbsCollection[]; total: number }>> {
+  const params = new URLSearchParams({
+    page: String(options?.page ?? 0),
+    limit: String(options?.limit ?? 50),
+  })
+  return absApiFetch<{ results: AbsCollection[]; total: number }>(
     url,
     apiKey,
-    '/api/collections'
+    `/api/collections?${params}`
   )
-  if (!result.ok) return result
-  return { ok: true, data: result.data.results }
 }
 
 // ─── Socket.IO via Native WebSocket (Engine.IO Protocol) ───────────────────
@@ -309,8 +318,25 @@ export async function fetchCollections(
 // (NFR5: zero new npm deps), we speak the Engine.IO wire protocol directly:
 //   - Transport: WebSocket upgrade via /socket.io/?EIO=4&transport=websocket
 //   - Auth: Bearer token sent as query param (same as ABS Socket.IO client)
-//   - Packet types: 0=open, 2=ping, 3=pong, 4=message; Socket.IO wraps messages
-//     as "4" prefix + JSON. Event packets are "42" + JSON array ["event", payload].
+//
+// Engine.IO packet type prefixes (first character of each WebSocket frame):
+//   0 = open    — server sends JSON config {sid, pingInterval, pingTimeout}
+//   1 = close   — graceful shutdown
+//   2 = ping    — server sends "2", client must respond "3" (pong)
+//   3 = pong    — client response to server ping
+//   4 = message — payload follows; Socket.IO frames are wrapped inside type 4
+//
+// Socket.IO subtypes (second character, only when first char is "4"):
+//   0 = CONNECT      — "40" = connect to default namespace; "40{...}" = connect ack
+//   1 = DISCONNECT   — "41" = disconnect from namespace
+//   2 = EVENT         — "42" + JSON array ["eventName", payload]
+//
+// Example wire frame: 42["user_media_progress_updated",{...}]
+//   "4" = Engine.IO message type, "2" = Socket.IO EVENT subtype,
+//   followed by JSON array with event name and payload.
+//
+// Heartbeat cycle: server sends "2" (ping) every pingInterval ms,
+// client must respond "3" (pong) before pingTimeout ms or connection drops.
 //
 // Reference: https://github.com/socketio/engine.io-protocol
 // ABS events: https://github.com/advplyr/audiobookshelf (server/SocketAuthority.js)

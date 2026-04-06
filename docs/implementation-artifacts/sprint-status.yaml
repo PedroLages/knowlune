@@ -1266,4 +1266,23 @@ development_status:
   103-1-chapter-title-matching-engine: done
   103-2-format-switching-ui: done
   103-3-dual-position-tracking: done
-  epic-103-retrospective: optional
+  epic-103-retrospective: done
+
+  # ──────────────────────────────────────────────────
+  # Epic 104: Link Formats UI — Book Pairing Entry Point
+  # Source: epics-post-e101-e103-followup.md
+  # Missing UI for Whispersync book pairing (linkBooks, computeChapterMapping)
+  # Depends on: E103
+  # ──────────────────────────────────────────────────
+  epic-104: in-progress
+  104-1-link-formats-dialog: done
+
+  # ──────────────────────────────────────────────────
+  # Epic 105: Test Debt Cleanup
+  # Source: epics-post-e101-e103-followup.md
+  # Fix 58 failing tests (KI-016..KI-025), restore 70% coverage (KI-029)
+  # Depends on: none
+  # ──────────────────────────────────────────────────
+  epic-105: backlog
+  105-1-unit-test-fixes: ready-for-dev
+  105-2-e2e-test-fixes-and-coverage: ready-for-dev

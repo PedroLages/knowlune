@@ -33,7 +33,7 @@ interface UseAbsProgressSyncOptions {
  * Resolve conflict between ABS progress and local book position.
  * Uses latest-timestamp-wins strategy.
  */
-function resolveConflict(
+export function resolveConflict(
   absUpdatedAt: number,
   localLastOpenedAt: string | undefined,
   localCurrentSeconds: number
@@ -144,7 +144,7 @@ export function useAudiobookshelfProgressSync({
         }
       }
     })()
-  }, [book.id]) // eslint-disable-line react-hooks/exhaustive-deps -- intentionally runs once per book
+  }, [book.id]) // eslint-disable-line -- intentionally runs once per book
 
   // ─── Push-on-session-end: sync when playback pauses ───
   const pushProgress = useCallback(() => {

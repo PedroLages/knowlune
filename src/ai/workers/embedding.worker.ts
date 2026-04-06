@@ -76,6 +76,11 @@ let embeddingPipeline: any = null
 
 async function initializePipeline() {
   if (!embeddingPipeline) {
+    // Skip model fetch when offline — will retry when connection resumes
+    if (!navigator.onLine) {
+      throw new Error('Offline — skipping model download. Will retry when connection resumes.')
+    }
+
     console.log('[EmbeddingWorker] Loading model: all-MiniLM-L6-v2')
 
     try {

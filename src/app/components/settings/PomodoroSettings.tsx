@@ -5,8 +5,6 @@
 
 import { useState } from 'react'
 import { Timer, Volume2, Play, Minus, Plus } from 'lucide-react'
-import { cn } from '@/app/components/ui/utils'
-import { Label } from '@/app/components/ui/label'
 import { Switch } from '@/app/components/ui/switch'
 import { Button } from '@/app/components/ui/button'
 import {

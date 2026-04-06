@@ -39,6 +39,34 @@ Each factory accepts overrides for test-specific scenarios:
 const customCourse = createCourse({ title: 'Custom Title', duration: 120 })
 ```
 
+## Audio Element Lifecycle Cleanup
+
+When a component creates `new Audio()` elements in `useEffect`, the cleanup function **must** remove all event listeners attached in the effect body. Without this:
+- React's `act()` warnings fire in test teardown
+- State updates leak into unmounted components
+- Memory leaks from orphaned Audio objects with active listeners
+
+**Pattern:**
+```typescript
+useEffect(() => {
+  const audio = new Audio(src)
+  const handleTimeUpdate = () => setCurrentTime(audio.currentTime)
+  const handleEnded = () => setIsPlaying(false)
+  
+  audio.addEventListener('timeupdate', handleTimeUpdate)
+  audio.addEventListener('ended', handleEnded)
+  
+  return () => {
+    audio.removeEventListener('timeupdate', handleTimeUpdate)
+    audio.removeEventListener('ended', handleEnded)
+    audio.pause()
+    audio.src = ''  // Release network resources
+  }
+}, [src])
+```
+
+**Case study**: E101-S05 — Audiobook player tests had act() warnings because Audio event listeners survived component unmount.
+
 ## References
 
 For detailed patterns, see:

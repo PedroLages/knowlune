@@ -163,6 +163,8 @@ export function useAudiobookshelfSync() {
           if (!result.ok) continue
           totalItems += result.data.total
           for (const absItem of result.data.results) {
+            // Skip non-book media types (e.g. podcasts) — only audiobooks should be imported
+            if (absItem.mediaType && absItem.mediaType !== 'book') continue
             allMappedBooks.push(mapAbsItemToBook(absItem, server))
           }
         }

@@ -49,6 +49,7 @@ interface BookStoreState {
     progress: number
   ) => Promise<void>
   linkBooks: (bookIdA: string, bookIdB: string) => Promise<void>
+  unlinkBooks: (bookIdA: string, bookIdB: string) => Promise<void>
   upsertAbsBook: (book: Book) => Promise<void>
   bulkUpsertAbsBooks: (books: Book[]) => Promise<void>
   getAllTags: () => string[]
@@ -283,6 +284,43 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
         }),
       }))
       toast.error('Failed to link book formats')
+    }
+  },
+
+  unlinkBooks: async (bookIdA, bookIdB) => {
+    const now = new Date().toISOString()
+    // Capture previous state for targeted rollback
+    const prevBookA = get().books.find(b => b.id === bookIdA)
+    const prevBookB = get().books.find(b => b.id === bookIdB)
+    // Optimistic update: clear linkedBookId on both books
+    set(state => ({
+      books: state.books.map(b => {
+        if (b.id === bookIdA) return { ...b, linkedBookId: undefined, updatedAt: now }
+        if (b.id === bookIdB) return { ...b, linkedBookId: undefined, updatedAt: now }
+        return b
+      }),
+    }))
+    try {
+      // Intentional: atomic transaction so both sides of the link are cleared together
+      await db.transaction('rw', db.books, async () => {
+        await db.books.update(bookIdA, { linkedBookId: undefined, updatedAt: now } as Parameters<
+          typeof db.books.update
+        >[1])
+        await db.books.update(bookIdB, { linkedBookId: undefined, updatedAt: now } as Parameters<
+          typeof db.books.update
+        >[1])
+      })
+    } catch (err) {
+      console.error('[BookStore] Failed to unlink books:', err)
+      // Rollback only the affected books using captured previous state
+      set(state => ({
+        books: state.books.map(b => {
+          if (b.id === bookIdA && prevBookA) return prevBookA
+          if (b.id === bookIdB && prevBookB) return prevBookB
+          return b
+        }),
+      }))
+      toast.error('Failed to unlink book formats')
     }
   },
 

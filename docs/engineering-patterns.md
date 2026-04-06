@@ -384,3 +384,15 @@ function handleSwitch() {
 **Why not useState**: Setting state triggers a re-render; refs don't. For guards on one-time actions that cause unmount, the ref approach is simpler and avoids a superfluous render cycle.
 
 **Case study**: E103-S02 — initial implementation used `setTimeout` to reset the ref after a delay. R1 review correctly identified this as unnecessary — the guard clears automatically when the component unmounts.
+
+## WebSocket CSP Allowlist
+
+The Content Security Policy includes `ws: wss:` wildcards for WebSocket connections. This is **intentional** for Audiobookshelf integration — ABS servers run on user-configured LAN addresses (varying hosts and ports), making a fixed CSP allowlist impractical.
+
+**Security context:** This is acceptable because:
+
+1. Knowlune is a local-first PWA — no server-side rendering or shared hosting
+2. WebSocket connections are only initiated by user-configured ABS server URLs
+3. All ABS connections require API key authentication
+
+**Reference:** E102-S04 (Socket.IO via native WebSocket)

@@ -51,6 +51,8 @@ Before requesting `/review-story`, verify:
 - [ ] E2E afterEach cleanup uses `await` (not fire-and-forget)
 - [ ] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
 - [ ] CRUD completeness: For any entity this story touches, verify Create/Read/Update/Delete paths all exist and have tests
+- [ ] At every non-obvious code site (AbortController, timer cleanup, catch blocks), add `// Intentional: <reason>` comment
+- [ ] For every `useEffect` or async callback that reads Zustand state: confirm it reads from `get()` inside the callback, not from outer render scope (stale closure risk)
 - [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
 - [ ] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md § CSP Configuration)
 

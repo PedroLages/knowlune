@@ -186,6 +186,6 @@ export function useAudiobookshelfSocket({
   }, [isPlaying, activeItemId])
 
   return {
-    isSocketConnected: connectionRef.current?.isConnected ?? false,
+    isSocketConnected: isConnectedRef.current,
   }
 }

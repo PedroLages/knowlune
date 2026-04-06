@@ -225,6 +225,43 @@ test.describe('E102-S01: Bidirectional Progress Sync', () => {
     await expect(page.getByText(ABS_BOOK.title, { exact: false })).toBeVisible()
   })
 
+  test('AC4: pushes local progress to ABS when local is ahead (PATCH call)', async ({ page }) => {
+    // Track PATCH calls to the ABS progress endpoint
+    let patchCalled = false
+    let patchBody: Record<string, unknown> | null = null
+
+    // Must register the PATCH-aware route BEFORE the GET-only route
+    await page.route(`${ABS_URL}/api/me/progress/**`, async route => {
+      if (route.request().method() === 'PATCH') {
+        patchCalled = true
+        patchBody = route.request().postDataJSON()
+        await route.fulfill({ status: 200, body: '{}' })
+      } else {
+        // GET returns ABS behind local (local 1800s > ABS 900s)
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(ABS_PROGRESS_BEHIND),
+        })
+      }
+    })
+    await page.route(`${ABS_URL}/api/items/**`, route => route.fulfill({ status: 404, body: '' }))
+
+    await seedSyncData(page)
+    await page.goto(`/library/book/${ABS_BOOK.id}`)
+    await page.waitForLoadState('domcontentloaded')
+
+    // Wait for async fetch-on-open + push cycle to complete
+    await page.waitForTimeout(2000) // hard-wait-ok: waiting for async fire-and-forget sync push
+
+    // Verify PATCH was called with local progress (1800s)
+    expect(patchCalled).toBe(true)
+    expect(patchBody).not.toBeNull()
+    expect(patchBody!.currentTime).toBe(1800)
+    expect(patchBody!.duration).toBe(3600)
+    expect(patchBody!.progress).toBe(0.5)
+  })
+
   test('AC3: Offline graceful degradation — 404 progress treated as no-prior-progress', async ({
     page,
   }) => {
