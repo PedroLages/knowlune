@@ -9,7 +9,7 @@
  * @module AudiobookRenderer
  * @since E87-S02
  */
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useCallback, useState, useRef } from 'react'
 import { Play, Pause, SkipBack, SkipForward, BookOpen } from 'lucide-react'
 import { toast } from 'sonner'
 import { Slider } from '@/app/components/ui/slider'
@@ -121,19 +121,23 @@ export function AudiobookRenderer({
     }
   }, [savePosition])
 
-  // Restore position on mount for remote books (session resume)
+  // Restore position on mount for remote books (session resume).
+  // We track whether the initial load has been observed — once isLoading
+  // transitions from true→false we do the seek. A ref prevents repeated seeks.
+  const sessionResumeSeekDoneRef = useRef(false)
   useEffect(() => {
     if (
-      book.source.type === 'remote' &&
-      book.currentPosition?.type === 'time' &&
-      book.currentPosition.seconds > 0
+      book.source.type !== 'remote' ||
+      book.currentPosition?.type !== 'time' ||
+      book.currentPosition.seconds <= 0
     ) {
-      const savedSeconds = book.currentPosition.seconds
-      // Wait for initial chapter load to finish, then seek to saved position
-      const timeout = setTimeout(() => seekTo(savedSeconds), 500)
-      return () => clearTimeout(timeout)
+      return
     }
-  }, [book.id]) // Only on mount (book.id is stable)
+    if (!isLoading && !sessionResumeSeekDoneRef.current) {
+      sessionResumeSeekDoneRef.current = true
+      seekTo(book.currentPosition.seconds)
+    }
+  }, [isLoading, book.id]) // Re-runs whenever isLoading changes; book.id guards remount
 
   // Media Session API — OS-level lock screen / Bluetooth headset controls (E87-S05)
   useMediaSession({

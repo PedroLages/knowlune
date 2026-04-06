@@ -280,60 +280,74 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
         const apiKey = auth && 'bearer' in auth ? auth.bearer : ''
 
         if (!absItemId || !apiKey) {
-          toast.error('Cannot stream: missing server configuration')
+          // Provide a specific message: missing item ID vs missing Bearer token
+          const reason = !absItemId ? 'missing ABS item ID' : 'missing Bearer token (Basic auth not supported)'
+          toast.error(`Cannot stream: ${reason}`)
           return
         }
 
-        // Only reload stream if this is a different book
-        if (_loadedBookId !== book.id) {
-          setIsLoading(true)
-          audio.pause()
-          stopRafLoop()
+        try {
+          // Only reload stream if this is a different book
+          if (_loadedBookId !== book.id) {
+            setIsLoading(true)
+            audio.pause()
+            stopRafLoop()
 
-          revokeSharedObjectUrl()
-          const streamUrl = getStreamUrl(book.source.url, absItemId, apiKey)
-          audio.src = streamUrl
-          audio.playbackRate = playbackRate
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ;(audio as any).preservesPitch = true
-          _loadedBookId = book.id
+            // No object URL to revoke for remote streams — skip revokeSharedObjectUrl()
+            const streamUrl = getStreamUrl(book.source.url, absItemId, apiKey)
+            audio.src = streamUrl
+            audio.playbackRate = playbackRate
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(audio as any).preservesPitch = true
 
-          // Wait for enough data to seek and play
-          await new Promise<void>((resolve, reject) => {
-            const onCanPlay = () => {
-              audio.removeEventListener('canplay', onCanPlay)
-              audio.removeEventListener('error', onError)
-              resolve()
-            }
-            const onError = () => {
-              audio.removeEventListener('canplay', onCanPlay)
-              audio.removeEventListener('error', onError)
-              reject(new Error('Failed to load stream'))
-            }
-            if (audio.readyState >= 3) {
-              resolve()
-            } else {
-              audio.addEventListener('canplay', onCanPlay)
-              audio.addEventListener('error', onError)
-              audio.load()
-            }
-          })
+            // Wait for enough data to seek and play — set _loadedBookId only on success
+            await new Promise<void>((resolve, reject) => {
+              const onCanPlay = () => {
+                audio.removeEventListener('canplay', onCanPlay)
+                audio.removeEventListener('error', onError)
+                resolve()
+              }
+              const onError = () => {
+                audio.removeEventListener('canplay', onCanPlay)
+                audio.removeEventListener('error', onError)
+                reject(new Error('Failed to load stream'))
+              }
+              if (audio.readyState >= 3) {
+                resolve()
+              } else {
+                audio.addEventListener('canplay', onCanPlay)
+                audio.addEventListener('error', onError)
+                audio.load()
+              }
+            })
+
+            // Mark as loaded only after stream is ready — prevents stale ID on retry
+            _loadedBookId = book.id
+          }
+
+          // Seek to chapter start time
+          const startTime = getChapterStartTime(chapters[index])
+          audio.currentTime = startTime
+          setLocalCurrentTime(startTime)
+          setLocalDuration(audio.duration)
+          setCurrentChapterIndex(index)
+          setCurrentTime(startTime)
+
+          if (autoPlay) {
+            await audio.play()
+            setIsPlaying(true)
+            startRafLoop()
+          }
+          setIsLoading(false)
+        } catch (err) {
+          // Stream load or autoplay failed — reset state so retry forces a reload
+          _loadedBookId = null
+          audio.src = ''
+          setIsLoading(false)
+          setIsPlaying(false)
+          const message = err instanceof Error ? err.message : 'Streaming failed'
+          toast.error(message)
         }
-
-        // Seek to chapter start time
-        const startTime = getChapterStartTime(chapters[index])
-        audio.currentTime = startTime
-        setLocalCurrentTime(startTime)
-        setLocalDuration(audio.duration)
-        setCurrentChapterIndex(index)
-        setCurrentTime(startTime)
-
-        if (autoPlay) {
-          await audio.play()
-          setIsPlaying(true)
-          startRafLoop()
-        }
-        setIsLoading(false)
         return
       }
 

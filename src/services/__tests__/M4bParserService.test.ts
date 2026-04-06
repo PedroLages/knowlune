@@ -271,11 +271,11 @@ describe('isSingleFileAudiobook — 6.2: single-file detection', () => {
     expect(isSingleFileAudiobook(book)).toBe(false)
   })
 
-  it('returns false for a remote source book', () => {
+  it('returns true for a remote source book (ABS streams seek-based like single file)', () => {
     const book = makeAudiobookBook({
       source: { type: 'remote', url: 'https://example.com/book.m4b' },
     })
-    expect(isSingleFileAudiobook(book)).toBe(false)
+    expect(isSingleFileAudiobook(book)).toBe(true)
   })
 
   it('returns false for a local MP3-based audiobook (multi-file)', () => {

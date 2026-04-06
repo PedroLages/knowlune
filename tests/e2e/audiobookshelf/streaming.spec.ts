@@ -98,7 +98,63 @@ const LOCAL_AUDIOBOOK = {
   updatedAt: FIXED_DATE,
 }
 
+/**
+ * Mock the HTML5 Audio element so that:
+ * - Setting `audio.src` immediately triggers `canplay` (headless has no real audio pipeline)
+ * - `audio.play()` returns a resolved promise (prevents UnhandledPromiseRejection on autoplay policy)
+ * - `audio.readyState` reports HAVE_ENOUGH_DATA so the canplay guard in loadChapter resolves immediately
+ *
+ * Must be called via `page.addInitScript` before navigation so the mock is in place
+ * when the React app first runs.
+ */
+async function mockAudioElement(page: import('@playwright/test').Page): Promise<void> {
+  await page.addInitScript(() => {
+    // Stub play() to avoid autoplay-policy rejections in headless
+    Object.defineProperty(HTMLMediaElement.prototype, 'play', {
+      configurable: true,
+      value: function () {
+        return Promise.resolve()
+      },
+    })
+
+    // Stub load() to immediately fire `canplay` so async promises resolve
+    const originalLoad = HTMLMediaElement.prototype.load
+    HTMLMediaElement.prototype.load = function () {
+      originalLoad.call(this)
+      // Dispatch canplay asynchronously so event listeners are registered first
+      Promise.resolve().then(() => {
+        this.dispatchEvent(new Event('canplay'))
+      })
+    }
+
+    // Stub readyState to HAVE_ENOUGH_DATA (4) so the guard `audio.readyState >= 3` resolves
+    Object.defineProperty(HTMLMediaElement.prototype, 'readyState', {
+      configurable: true,
+      get() {
+        // Return 4 (HAVE_ENOUGH_DATA) whenever an src is set
+        return (this as HTMLMediaElement & { _fakeSrc?: string })._fakeSrc ? 4 : 0
+      },
+    })
+
+    // Track src separately so readyState reflects it
+    const srcDescriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'src')
+    Object.defineProperty(HTMLMediaElement.prototype, 'src', {
+      configurable: true,
+      get() {
+        return (this as HTMLMediaElement & { _fakeSrc?: string })._fakeSrc ?? ''
+      },
+      set(value: string) {
+        ;(this as HTMLMediaElement & { _fakeSrc?: string })._fakeSrc = value
+        if (srcDescriptor?.set) srcDescriptor.set.call(this, value)
+      },
+    })
+  })
+}
+
 async function seedStreamingData(page: import('@playwright/test').Page): Promise<void> {
+  // Mock audio element before any navigation so it's in place when React mounts
+  await mockAudioElement(page)
+
   await page.addInitScript(() => {
     localStorage.setItem(
       'knowlune-onboarding-v1',
@@ -136,11 +192,14 @@ test.describe('E101-S04: Streaming Playback', () => {
     // Book title should be displayed
     await expect(page.getByText('Test Streaming Book')).toBeVisible()
 
-    // Verify the audio element's src contains the correct stream URL with token
-    const audioSrc = await page.evaluate(() => {
-      const audio = document.querySelector('audio')
-      return audio?.src ?? ''
-    })
+    // Wait for loadChapter (async) to set the stream URL on the audio element
+    const audioSrc = await page.waitForFunction(
+      () => {
+        const audio = document.querySelector('audio') as (HTMLAudioElement & { _fakeSrc?: string }) | null
+        return audio?._fakeSrc ?? audio?.src ?? ''
+      },
+      { timeout: 10000 }
+    ).then(handle => handle.jsonValue())
 
     // The audio src should contain the ABS streaming endpoint with token
     expect(audioSrc).toContain('abs.test:13378')
@@ -180,11 +239,14 @@ test.describe('E101-S04: Streaming Playback', () => {
 
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
 
-    // Check the audio element's src for token
-    const audioSrc = await page.evaluate(() => {
-      const audio = document.querySelector('audio')
-      return audio?.src ?? ''
-    })
+    // Wait for loadChapter (async) to set the stream URL on the audio element
+    const audioSrc = await page.waitForFunction(
+      () => {
+        const audio = document.querySelector('audio') as (HTMLAudioElement & { _fakeSrc?: string }) | null
+        return audio?._fakeSrc ?? audio?.src ?? ''
+      },
+      { timeout: 10000 }
+    ).then(handle => handle.jsonValue())
 
     // Token should be URL-encoded in the query parameter
     expect(audioSrc).toContain(`token=${encodeURIComponent('test-api-key-abc')}`)
@@ -197,9 +259,12 @@ test.describe('E101-S04: Streaming Playback', () => {
     await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
 
     // The audio element should NOT have an ABS streaming URL
+    // Intentional wait: OPFS read fails silently in test env (no file exists),
+    // no canplay/error event is emitted — waitForFunction would spin indefinitely.
+    await page.waitForTimeout(2000)
     const audioSrc = await page.evaluate(() => {
-      const audio = document.querySelector('audio')
-      return audio?.src ?? ''
+      const audio = document.querySelector('audio') as (HTMLAudioElement & { _fakeSrc?: string }) | null
+      return audio?._fakeSrc ?? audio?.src ?? ''
     })
 
     // Local books should use blob: URL from OPFS, not an ABS stream URL
