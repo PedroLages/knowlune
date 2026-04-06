@@ -8,7 +8,7 @@ Last Updated: 2026-04-06
 | Story | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|--------|--------|---------------|--------------|
 | E106-S01 | done | [#277](https://github.com/PedroLages/knowlune/pull/277) | 2 | 5 |
-| E106-S02 | queued | — | — | — |
+| E106-S02 | done | — | 2 | 10 |
 | E106-S03 | queued | — | — | — |
 
 ## Story Details
@@ -35,15 +35,28 @@ GLM adversarial review ran. OpenAI Codex skipped (API error exit code 2).
 ---
 
 ### E106-S02: Lib & Service Coverage — Utilities and Services
-**Status:** queued
+**Status:** done
 #### Errors
-_(none yet)_
+_(none)_
 #### Review Findings
-_(none yet)_
+**Round 1:** ISSUES FOUND — 4 HIGH, 5 MEDIUM, 1 NIT (10 story-related)
+- [HIGH] AudiobookshelfService.test.ts: 6 test failures (pre-proxy API assertions vs post-proxy reality)
+- [HIGH] AudiobookshelfService.test.ts:696: ESLint no-this-alias error
+- [HIGH] 8 TS6133 unused imports/vars across 4 test files
+- [HIGH] dashboardOrder.test.ts:167: TS2352 cast needs intermediate `as unknown`
+- [MEDIUM] OpfsStorageService.test.ts:24: unused db import
+- [MEDIUM] ReadingStatsService.test.ts:32: unused toLocalDateString import
+- [MEDIUM] dataPruning.test.ts:6-7: unused type imports
+- [MEDIUM] dataPruning.test.ts:151,162: db vars declared but never asserted
+- [MEDIUM] avatarUpload.test.ts:1: unused vi import
+- [NIT] AudiobookshelfService.test.ts:496: Unicode mojibake in comment
+
+**Round 2:** PASS — All R1 findings addressed. No story-related issues remain.
+- Pre-existing LOW: server/index.ts unused `next` param, stale rate limit comment, dead ping route
 #### Fixes Applied
-_(none yet)_
+10 findings fixed in R1 fix commit (60ae196d). All test files pass.
 #### Notes
-_(none yet)_
+207 tests across 10 files. Coverage 57% → 60.3%. 3 spec'd files didn't exist (guidGenerator, autoResolver, obfuscationPiercing) — substituted notificationPiercing. avatarUpload capped at 35% due to jsdom canvas limitations.
 
 ---
 

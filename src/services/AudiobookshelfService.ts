@@ -116,9 +116,15 @@ export async function testConnection(
   url: string,
   apiKey: string
 ): Promise<AbsResult<{ serverVersion: string; warning?: string }>> {
-  const result = await absApiFetch<{ success: boolean; version: string }>(url, apiKey, '/api/ping')
+  // /ping returns {success:true} without version; POST /api/authorize returns user + server version
+  const result = await absApiFetch<{ user: { id: string }; serverSettings?: { version?: string } }>(
+    url,
+    apiKey,
+    '/api/authorize',
+    { method: 'POST' }
+  )
   if (!result.ok) return result
-  const version = result.data.version
+  const version = result.data.serverSettings?.version ?? 'unknown'
   const [major, minor] = version.split('.').map(Number)
   const warning =
     major < 2 || (major === 2 && minor < 26)

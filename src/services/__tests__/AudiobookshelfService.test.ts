@@ -58,8 +58,11 @@ afterEach(() => {
 // ── testConnection ─────────────────────────────────────────────────
 
 describe('AudiobookshelfService.testConnection', () => {
-  it('returns serverVersion on successful ping', async () => {
-    vi.stubGlobal('fetch', mockFetchJson({ success: true, version: '2.27.0' }))
+  it('returns serverVersion on successful authorize', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchJson({ user: { id: 'u1' }, serverSettings: { version: '2.27.0' } })
+    )
 
     const result = await testConnection(TEST_URL, TEST_API_KEY)
 
@@ -70,13 +73,13 @@ describe('AudiobookshelfService.testConnection', () => {
   })
 
   it('sends ABS URL and token via proxy headers', async () => {
-    const fetchMock = mockFetchJson({ success: true, version: '2.27.0' })
+    const fetchMock = mockFetchJson({ user: { id: 'u1' }, serverSettings: { version: '2.27.0' } })
     vi.stubGlobal('fetch', fetchMock)
 
     await testConnection(TEST_URL, TEST_API_KEY)
 
     const [url, options] = fetchMock.mock.calls[0]
-    expect(url).toBe('/api/abs/proxy/api/ping')
+    expect(url).toBe('/api/abs/proxy/api/authorize')
     expect(options.headers['X-ABS-URL']).toBe(TEST_URL)
     expect(options.headers['X-ABS-Token']).toBe(TEST_API_KEY)
   })
@@ -662,7 +665,10 @@ describe('AudiobookshelfService.fetchSeriesForLibrary', () => {
 
 describe('AudiobookshelfService.testConnection version warning', () => {
   it('includes warning for server version below 2.26.0', async () => {
-    vi.stubGlobal('fetch', mockFetchJson({ success: true, version: '2.25.0' }))
+    vi.stubGlobal(
+      'fetch',
+      mockFetchJson({ user: { id: 'u1' }, serverSettings: { version: '2.25.0' } })
+    )
 
     const result = await testConnection(TEST_URL, TEST_API_KEY)
     expect(result.ok).toBe(true)
@@ -672,7 +678,10 @@ describe('AudiobookshelfService.testConnection version warning', () => {
   })
 
   it('no warning for server version >= 2.26.0', async () => {
-    vi.stubGlobal('fetch', mockFetchJson({ success: true, version: '2.26.0' }))
+    vi.stubGlobal(
+      'fetch',
+      mockFetchJson({ user: { id: 'u1' }, serverSettings: { version: '2.26.0' } })
+    )
 
     const result = await testConnection(TEST_URL, TEST_API_KEY)
     expect(result.ok).toBe(true)

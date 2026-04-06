@@ -189,8 +189,8 @@ app.get('/api/abs/ping', absRateLimit, async (req, res) => {
 
   try {
     const normalizedUrl = absUrl.replace(/\/+$/, '')
-    const response = await fetch(`${normalizedUrl}/api/ping`, {
-      headers: { Authorization: `Bearer ${absToken}` },
+    const response = await fetch(`${normalizedUrl}/ping`, {
+      headers: { Authorization: `Bearer ${absToken}`, 'User-Agent': 'Knowlune/1.0' },
       signal: AbortSignal.timeout(ABS_TIMEOUT_MS),
     })
 
@@ -253,6 +253,7 @@ app.use('/api/abs/proxy', absRateLimit, async (req: import('express').Request, r
     const hasBody = req.method !== 'GET' && req.method !== 'HEAD' && req.body != null
     const headers: Record<string, string> = {
       Authorization: `Bearer ${absToken}`,
+      'User-Agent': 'Knowlune/1.0',
       ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     }
 

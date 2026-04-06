@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-04  # E99 epic created (Course Display View Modes)
+last_updated: 2026-04-06  # E107-E115 epics created (Books/Library Audit & Enhancement)
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -1296,5 +1296,115 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-106: in-progress
   106-1-store-coverage: done
-  106-2-lib-service-coverage: in-progress
+  106-2-lib-service-coverage: done
   106-3-hook-coverage-threshold-raise: ready-for-dev
+
+  # ──────────────────────────────────────────────────
+  # Epic 107: Fix Books/Library Core Bugs
+  # Source: epics-books-library-audit.md
+  # Fix 9 bugs from manual audit: cover images, EPUB rendering, TOC, About Book, themes, mini-player, audiobook restart
+  # Depends on: none (fixes existing E83-E104 implementation)
+  # ──────────────────────────────────────────────────
+  epic-107: backlog
+  107-1-fix-cover-image-display: backlog
+  107-2-fix-epub-reader-rendering: backlog
+  107-3-fix-toc-loading-and-fallback: backlog
+  107-4-wire-about-book-dialog: backlog
+  107-5-sync-reader-themes: backlog
+  107-6-fix-mini-player-interactivity: backlog
+  107-7-fix-m4b-cover-preview: backlog
+  epic-107-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 108: Books/Library UX Improvements
+  # Source: epics-books-library-audit.md
+  # Bulk import, format badges, keyboard shortcuts, audiobook settings, genre detection, pages/day goals
+  # Depends on: E107
+  # ──────────────────────────────────────────────────
+  epic-108: backlog
+  108-1-bulk-epub-import: backlog
+  108-2-format-badges-and-delete: backlog
+  108-3-keyboard-shortcuts: backlog
+  108-4-audiobook-settings-panel: backlog
+  108-5-genre-detection-and-pages-goal: backlog
+  epic-108-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 109: Knowledge Pipeline — Highlights, Vocabulary, Export
+  # Source: epics-books-library-audit.md
+  # Vocabulary builder, daily highlight review, highlight export, annotation summary, cross-book search
+  # Depends on: E107
+  # ──────────────────────────────────────────────────
+  epic-109: backlog
+  109-1-vocabulary-builder: backlog
+  109-2-daily-highlight-review: backlog
+  109-3-highlight-export: backlog
+  109-4-annotation-summary-view: backlog
+  109-5-cross-book-search: backlog
+  epic-109-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 110: Library Organization — Shelves, Series, Queue
+  # Source: epics-books-library-audit.md
+  # Smart shelves, series grouping, reading queue
+  # Depends on: E107
+  # ──────────────────────────────────────────────────
+  epic-110: backlog
+  110-1-smart-shelves: backlog
+  110-2-series-grouping: backlog
+  110-3-reading-queue: backlog
+  epic-110-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 111: Audiobook Experience — Clips, Silence, Memory
+  # Source: epics-books-library-audit.md
+  # Audio clips, skip silence, per-book speed memory, end-of-chapter sleep timer
+  # Depends on: E107
+  # ──────────────────────────────────────────────────
+  epic-111: backlog
+  111-1-audio-clips: backlog
+  111-2-skip-silence-and-speed-memory: backlog
+  111-3-sleep-timer-end-of-chapter: backlog
+  epic-111-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 112: Reading Analytics & Reports
+  # Source: epics-books-library-audit.md
+  # Reading speed, ETA, time-of-day patterns, genre distribution, reading reports
+  # Depends on: E107
+  # ──────────────────────────────────────────────────
+  epic-112: backlog
+  112-1-reading-speed-eta-patterns: backlog
+  112-2-genre-distribution-and-reports: backlog
+  epic-112-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 113: Book Reviews & Ratings
+  # Source: epics-books-library-audit.md
+  # Star ratings (1-5, half-star), personal reviews with markdown
+  # Depends on: E107
+  # ──────────────────────────────────────────────────
+  epic-113: backlog
+  113-1-star-ratings-and-reviews: backlog
+  epic-113-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 114: Reader Accessibility & Comfort
+  # Source: epics-books-library-audit.md
+  # Reading ruler, letter/word spacing, continuous scroll mode
+  # Depends on: E107
+  # ──────────────────────────────────────────────────
+  epic-114: backlog
+  114-1-reading-ruler-and-spacing: backlog
+  114-2-continuous-scroll-mode: backlog
+  epic-114-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 115: Custom Reading Challenges
+  # Source: epics-books-library-audit.md
+  # User-defined reading challenges with progress tracking
+  # Depends on: E107
+  # ──────────────────────────────────────────────────
+  epic-115: backlog
+  115-1-custom-reading-challenges: backlog
+  epic-115-retrospective: optional
