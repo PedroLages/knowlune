@@ -865,6 +865,32 @@ export interface AbsProgress {
   lastUpdate: number // Unix timestamp ms — ABS API field name (not `updatedAt`)
 }
 
+// ─── Chapter Matching (E103-S01) ────────────────────────────────────────────
+
+/** Chapter from ABS chapters API response */
+export interface AbsChapter {
+  id: string
+  start: number // seconds
+  end: number // seconds
+  title: string
+}
+
+/** One matched pair from the matching engine (in-memory, not stored directly) */
+export interface ChapterMapping {
+  epubChapterHref: string // EPUB spine href (e.g., "chapter01.xhtml")
+  audioChapterIndex: number // 0-based index into ABS chapters array
+  confidence: number // 0–1, 1.0 = manual
+}
+
+/** Dexie record wrapping a complete mapping */
+export interface ChapterMappingRecord {
+  epubBookId: string // FK to Book.id (format: 'epub')
+  audioBookId: string // FK to Book.id (format: 'audiobook')
+  mappings: ChapterMapping[]
+  computedAt: string // ISO 8601
+  updatedAt: string // ISO 8601
+}
+
 export interface YouTubeCourseChapter {
   id: string // PK — UUID
   courseId: string // FK to ImportedCourse.id

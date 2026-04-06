@@ -82,6 +82,7 @@ export type ElearningDatabase = Dexie & {
   audioBookmarks: EntityTable<AudioBookmark, 'id'>
   opdsCatalogs: EntityTable<OpdsCatalog, 'id'>
   audiobookshelfServers: EntityTable<AudiobookshelfServer, 'id'>
+  chapterMappings: Table<import('@/data/types').ChapterMappingRecord> // compound PK: [epubBookId+audioBookId]
 }
 
 /**
@@ -1271,6 +1272,11 @@ function _declareLegacyMigrations(database: Dexie): void {
   // - New audiobookshelfServers table for ABS server URL, API key, and sync status
   database.version(40).stores({
     audiobookshelfServers: 'id, name, url, status, lastSyncedAt',
+  })
+  // v41: Chapter mapping engine (E103-S01)
+  // - New chapterMappings table for EPUB↔audiobook chapter alignment
+  database.version(41).stores({
+    chapterMappings: '[epubBookId+audioBookId], epubBookId, audioBookId',
   })
 } // end _declareLegacyMigrations
 
