@@ -490,7 +490,8 @@ export function pushProgressViaSocket(
   itemId: string,
   progress: { currentTime: number; duration: number; progress: number; isFinished: boolean }
 ): void {
-  if (!connection.isConnected || !connection.ws || connection.ws.readyState !== WebSocket.OPEN) return
+  if (!connection.isConnected || !connection.ws || connection.ws.readyState !== WebSocket.OPEN)
+    return
 
   // Socket.IO event packet: "42" + JSON array
   const packet = JSON.stringify([

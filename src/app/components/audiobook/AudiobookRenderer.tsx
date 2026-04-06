@@ -122,11 +122,11 @@ export function AudiobookRenderer({
     loadAbsServers()
   }, [loadAbsServers])
   // Reactive selector — subscribes to store so server is available after Dexie hydration
-  const absServer = useAudiobookshelfStore(
-    state => book.absServerId ? state.getServerById(book.absServerId) : undefined
+  const absServer = useAudiobookshelfStore(state =>
+    book.absServerId ? state.getServerById(book.absServerId) : undefined
   )
   useAudiobookshelfSocket({
-    server: absServer ?? null,  // undefined → null: hook treats both as "no server"
+    server: absServer ?? null, // undefined → null: hook treats both as "no server"
     activeItemId: book.absItemId ?? null,
     book,
     currentTime,
