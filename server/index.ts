@@ -277,7 +277,15 @@ app.use('/api/abs/proxy', absRateLimit, async (req: import('express').Request, r
       fetchOptions.body = JSON.stringify(req.body)
     }
 
-    const response = await fetch(targetUrl, fetchOptions)
+    let response = await fetch(targetUrl, fetchOptions)
+
+    // Retry once on 429 (Cloudflare rate-limit) with Retry-After or 3s backoff
+    if (response.status === 429) {
+      const retryAfter = parseInt(response.headers.get('retry-after') || '3', 10)
+      const delay = Math.min(retryAfter, 10) * 1000 // Cap at 10s
+      await new Promise(r => setTimeout(r, delay))
+      response = await fetch(targetUrl, { ...fetchOptions, signal: AbortSignal.timeout(timeout) })
+    }
 
     // Relay essential response headers for streaming and content delivery
     const headersToForward = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'content-disposition']
