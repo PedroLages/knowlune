@@ -17,9 +17,10 @@ import { opfsStorageService } from '@/services/OpfsStorageService'
 import { appEventBus } from '@/lib/eventBus'
 import { unlockSidebarItem } from '@/app/hooks/useProgressiveDisclosure'
 
-interface BookFilters {
+export interface BookFilters {
   status?: BookStatus | 'all'
   search?: string
+  source?: 'all' | 'local' | 'audiobookshelf'
 }
 
 interface BookStoreState {
@@ -42,6 +43,8 @@ interface BookStoreState {
     bookId: string,
     updates: Partial<Pick<Book, 'title' | 'author' | 'isbn' | 'description' | 'tags' | 'coverUrl'>>
   ) => Promise<void>
+  upsertAbsBook: (book: Book) => Promise<void>
+  bulkUpsertAbsBooks: (books: Book[]) => Promise<void>
   getAllTags: () => string[]
   getBookCountByStatus: () => Record<'all' | BookStatus, number>
 }
@@ -155,20 +158,36 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     set(state => ({
       filters: {
         ...state.filters,
-        [key]: key === 'status' && value === 'all' ? undefined : value,
+        // 'all' is the UI sentinel meaning "no filter" — store as undefined so
+        // getFilteredBooks() doesn't need to special-case it
+        [key]: value === 'all' ? undefined : value,
       },
     })),
 
   getFilteredBooks: () => {
     const { books, filters } = get()
     let result = books
+
+    // Source filter (applied first)
+    if (filters.source === 'audiobookshelf') {
+      result = result.filter(b => b.source.type === 'remote' && !!b.absServerId)
+    } else if (filters.source === 'local') {
+      result = result.filter(b => b.source.type === 'local' || b.source.type === 'fileHandle')
+    }
+
+    // Status filter
     if (filters.status && filters.status !== 'all') {
       result = result.filter(b => b.status === filters.status)
     }
+
+    // Search filter (includes narrator)
     if (filters.search) {
       const q = filters.search.toLowerCase()
       result = result.filter(
-        b => b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q)
+        b =>
+          b.title.toLowerCase().includes(q) ||
+          b.author.toLowerCase().includes(q) ||
+          (b.narrator?.toLowerCase().includes(q) ?? false)
       )
     }
     return result
@@ -196,6 +215,78 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     }
   },
 
+  upsertAbsBook: async (book: Book) => {
+    try {
+      // Build Map for O(1) lookup instead of linear scan
+      const absKeyMap = new Map<string, Book>()
+      for (const b of get().books) {
+        if (b.absServerId && b.absItemId) {
+          absKeyMap.set(`${b.absServerId}:${b.absItemId}`, b)
+        }
+      }
+      const existing = absKeyMap.get(`${book.absServerId}:${book.absItemId}`)
+      const merged: Book = existing
+        ? {
+            ...book,
+            id: existing.id,
+            status: existing.status,
+            progress: existing.progress,
+            currentPosition: existing.currentPosition,
+            lastOpenedAt: existing.lastOpenedAt,
+            createdAt: existing.createdAt,
+            updatedAt: new Date().toISOString(),
+          }
+        : book
+
+      await db.books.put(merged)
+      set(state => ({
+        books: [...state.books.filter(b => b.id !== merged.id), merged],
+      }))
+    } catch {
+      toast.error('Failed to sync audiobook from server')
+    }
+  },
+
+  bulkUpsertAbsBooks: async (newBooks: Book[]) => {
+    if (newBooks.length === 0) return
+    try {
+      // Build Map<absServerId:absItemId, Book> for O(1) dedup lookup
+      const absKeyMap = new Map<string, Book>()
+      for (const b of get().books) {
+        if (b.absServerId && b.absItemId) {
+          absKeyMap.set(`${b.absServerId}:${b.absItemId}`, b)
+        }
+      }
+
+      const mergedBooks: Book[] = newBooks.map(book => {
+        const existing = absKeyMap.get(`${book.absServerId}:${book.absItemId}`)
+        return existing
+          ? {
+              ...book,
+              id: existing.id,
+              status: existing.status,
+              progress: existing.progress,
+              currentPosition: existing.currentPosition,
+              lastOpenedAt: existing.lastOpenedAt,
+              createdAt: existing.createdAt,
+              updatedAt: new Date().toISOString(),
+            }
+          : book
+      })
+
+      // Single bulk IDB write instead of N individual puts
+      await db.books.bulkPut(mergedBooks)
+
+      // Single state update instead of N re-renders
+      const mergedIds = new Set(mergedBooks.map(b => b.id))
+      set(state => ({
+        books: [...state.books.filter(b => !mergedIds.has(b.id)), ...mergedBooks],
+      }))
+    } catch {
+      toast.error('Failed to sync audiobooks from server')
+    }
+  },
+
   getAllTags: () => {
     const { books } = get()
     const tagSet = new Set<string>()
@@ -206,9 +297,16 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
   },
 
   getBookCountByStatus: () => {
-    const { books } = get()
-    const counts: Record<string, number> = { all: books.length }
-    for (const b of books) {
+    const { books, filters } = get()
+    // Respect current source filter when computing status counts
+    let filtered = books
+    if (filters.source === 'audiobookshelf') {
+      filtered = filtered.filter(b => b.source.type === 'remote' && !!b.absServerId)
+    } else if (filters.source === 'local') {
+      filtered = filtered.filter(b => b.source.type === 'local' || b.source.type === 'fileHandle')
+    }
+    const counts: Record<string, number> = { all: filtered.length }
+    for (const b of filtered) {
       counts[b.status] = (counts[b.status] || 0) + 1
     }
     return counts as Record<'all' | BookStatus, number>

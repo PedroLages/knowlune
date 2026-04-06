@@ -7,9 +7,9 @@ Last Updated: 2026-04-05
 
 | Story | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|--------|--------|---------------|--------------|
-| E101-S01 | queued | — | — | — |
-| E101-S02 | queued | — | — | — |
-| E101-S03 | queued | — | — | — |
+| E101-S01 | done | #261 | 2 | 7 |
+| E101-S02 | done | #262 | 1 | 4 |
+| E101-S03 | finishing | — | 2 | 14 |
 | E101-S04 | queued | — | — | — |
 | E101-S05 | queued | — | — | — |
 | E101-S06 | queued | — | — | — |
@@ -44,15 +44,19 @@ _(none yet)_
 ---
 
 ### E101-S03: Library Browsing & Catalog Sync
-**Status:** queued
+**Status:** finishing
 #### Errors
-_(none yet)_
+_(none)_
 #### Review Findings
-_(none yet)_
+- R1: 12 issues (3 HIGH, 5 MEDIUM, 2 LOW, 2 NIT)
+- R2: PASS (1 BLOCKER + 1 LOW found and fixed during review)
 #### Fixes Applied
-_(none yet)_
+- R1 fix: paginationRef (stale closure), bulkPut batch upsert, Map O(1) lookup, syncedServerIds Set, Promise.allSettled, console.error in catch, isLoadingRef guard, media.duration fallback, ARIA labels, AC6/AC7 tests, source filter comment, useMemo
+- R2 fix: removed stale useMemo (root cause of E2E failures), BookCard ARIA prefix
 #### Notes
-_(none yet)_
+- useAudiobookshelfSync hook, LibrarySourceTabs, IntersectionObserver pagination
+- No .tsx design changes → design review confirmed R1 fixes only
+- 1 NON-ISSUE: GLM crypto.randomUUID() false positive (PWA requires secure context)
 
 ---
 

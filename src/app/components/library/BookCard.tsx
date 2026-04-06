@@ -12,6 +12,14 @@ import { BookOpen, Cloud, Headphones } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { BookStatusBadge } from './BookStatusBadge'
 
+/** Format seconds to "Xh Ym" display */
+function formatDuration(seconds: number): string {
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
+}
+
 interface BookCardProps {
   book: Book
 }
@@ -36,7 +44,11 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
   return (
     <div
       role="link"
-      aria-label={`${book.title} by ${book.author}, ${book.progress}% complete`}
+      aria-label={
+        book.narrator
+          ? `Book: ${book.title} by ${book.author}, narrated by ${book.narrator}, ${book.progress}% complete`
+          : `Book: ${book.title} by ${book.author}, ${book.progress}% complete`
+      }
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
@@ -90,6 +102,9 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
           {book.title}
         </p>
         <p className="text-xs text-muted-foreground truncate">{book.author}</p>
+        {book.narrator && (
+          <p className="text-xs text-muted-foreground/70 truncate">Narrated by {book.narrator}</p>
+        )}
 
         {/* Progress bar */}
         <div className="flex items-center gap-2 mt-1">
@@ -101,6 +116,11 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
           </div>
           <span className="text-[10px] text-muted-foreground tabular-nums">{book.progress}%</span>
         </div>
+        {book.totalDuration != null && book.totalDuration > 0 && (
+          <p className="text-[10px] text-muted-foreground" data-testid={`duration-${book.id}`}>
+            {formatDuration(book.totalDuration)}
+          </p>
+        )}
       </div>
     </div>
   )
