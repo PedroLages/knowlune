@@ -195,11 +195,85 @@ export async function fetchChapters(
   return { ok: true, data: { chapters } }
 }
 
+// ─── Playback Session API ──────────────────────────────────────────────────
+
+/** Response from POST /api/items/{id}/play — creates a playback session */
+export interface AbsPlaybackSession {
+  id: string
+  audioTracks: Array<{
+    contentUrl: string
+    duration: number
+    mimeType: string
+  }>
+}
+
 /**
- * Get the streaming URL for an audiobook item via the backend proxy.
- * Routes through Express to avoid CORS. The proxy forwards to the real ABS URL.
+ * Create a playback session for an audiobook item.
+ * POST /api/items/{itemId}/play — returns audio track URLs for streaming.
+ *
+ * `forceDirectPlay: true` tells ABS to serve files directly (no HLS transcoding),
+ * which produces URLs the HTML5 <audio> element can play natively.
+ */
+export async function createPlaybackSession(
+  baseUrl: string,
+  apiKey: string,
+  itemId: string
+): Promise<AbsResult<AbsPlaybackSession>> {
+  return absApiFetch<AbsPlaybackSession>(
+    baseUrl,
+    apiKey,
+    `/api/items/${encodeURIComponent(itemId)}/play`,
+    {
+      method: 'POST',
+      body: {
+        deviceInfo: { clientName: 'Knowlune', clientVersion: '1.0' },
+        forceDirectPlay: true,
+        forceTranscode: false,
+      },
+    }
+  )
+}
+
+/**
+ * Construct a proxied streaming URL from a playback session's contentUrl.
+ * The contentUrl from ABS is a relative path like `/s/item/{id}/book.m4b`.
  *
  * Pure function — no fetch call.
+ */
+export function getStreamUrlFromSession(
+  baseUrl: string,
+  apiKey: string,
+  contentUrl: string
+): string {
+  const path = contentUrl.startsWith('http') ? new URL(contentUrl).pathname : contentUrl
+  const params = new URLSearchParams({
+    token: apiKey,
+    _absUrl: baseUrl.replace(/\/+$/, ''),
+    _absToken: apiKey,
+  })
+  return `/api/abs/proxy${path}?${params}`
+}
+
+/**
+ * Close a playback session. Fire-and-forget — ABS auto-expires idle sessions
+ * after ~30 minutes, so missing this call is not critical.
+ */
+export async function closePlaybackSession(
+  baseUrl: string,
+  apiKey: string,
+  sessionId: string
+): Promise<AbsResult<void>> {
+  return absApiFetch<void>(
+    baseUrl,
+    apiKey,
+    `/api/session/${encodeURIComponent(sessionId)}/close`,
+    { method: 'POST' }
+  )
+}
+
+/**
+ * @deprecated Use createPlaybackSession + getStreamUrlFromSession instead.
+ * Kept for backward compatibility during migration.
  */
 export function getStreamUrl(baseUrl: string, itemId: string, apiKey: string): string {
   return `/api/abs/proxy/api/items/${encodeURIComponent(itemId)}/play?token=${encodeURIComponent(apiKey)}&_absUrl=${encodeURIComponent(baseUrl)}&_absToken=${encodeURIComponent(apiKey)}`

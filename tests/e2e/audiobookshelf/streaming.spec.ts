@@ -156,6 +156,30 @@ async function mockAudioElement(page: import('@playwright/test').Page): Promise<
   })
 }
 
+/** Mock the POST /api/items/{id}/play endpoint to return a playback session */
+async function mockPlaybackSession(page: import('@playwright/test').Page): Promise<void> {
+  await page.route('**/api/abs/proxy/api/items/*/play', async route => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'mock-session-1',
+          audioTracks: [
+            {
+              contentUrl: '/s/item/abs-item-1/book.m4b',
+              duration: 1800,
+              mimeType: 'audio/mp4',
+            },
+          ],
+        }),
+      })
+    } else {
+      await route.continue()
+    }
+  })
+}
+
 async function seedStreamingData(page: import('@playwright/test').Page): Promise<void> {
   // Mock audio element before any navigation so it's in place when React mounts
   await mockAudioElement(page)
@@ -179,6 +203,17 @@ async function seedStreamingData(page: import('@playwright/test').Page): Promise
     ABS_AUDIOBOOK,
     LOCAL_AUDIOBOOK,
   ] as unknown as Record<string, unknown>[])
+
+  // Mock ABS playback session endpoints (must be set before navigating to book reader)
+  await mockPlaybackSession(page)
+  // Mock session close (fire-and-forget from player cleanup)
+  await page.route('**/api/abs/proxy/api/session/*/close', async route => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+  })
+  // Mock the actual stream URL (audio element mock handles canplay, but prevent network errors)
+  await page.route('**/api/abs/proxy/s/item/**', async route => {
+    await route.fulfill({ status: 200, contentType: 'audio/mp4', body: '' })
+  })
 }
 
 test.describe('E101-S04: Streaming Playback', () => {
@@ -205,9 +240,9 @@ test.describe('E101-S04: Streaming Playback', () => {
       )
       .then(handle => handle.jsonValue())
 
-    // The audio src should contain the ABS streaming endpoint with token
-    expect(audioSrc).toContain('abs.test:13378')
-    expect(audioSrc).toContain('abs-item-1')
+    // The audio src should contain the proxied stream URL from the playback session
+    expect(audioSrc).toContain('/api/abs/proxy/s/item/abs-item-1/book.m4b')
+    expect(audioSrc).toContain('_absUrl=')
     expect(audioSrc).toContain('token=')
   })
 

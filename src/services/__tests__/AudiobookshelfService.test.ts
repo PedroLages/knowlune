@@ -6,6 +6,9 @@ import {
   fetchItem,
   fetchChapters,
   getStreamUrl,
+  createPlaybackSession,
+  getStreamUrlFromSession,
+  closePlaybackSession,
   getCoverUrl,
   searchLibrary,
   fetchProgress,
@@ -317,6 +320,72 @@ describe('AudiobookshelfService.getStreamUrl', () => {
 
     expect(url).toContain(`token=${encodeURIComponent(specialKey)}`)
     expect(url).not.toContain(' ')
+  })
+})
+
+// ── createPlaybackSession ─────────────────────────────────────────
+
+describe('AudiobookshelfService.createPlaybackSession', () => {
+  it('sends POST to /api/items/{id}/play with correct body', async () => {
+    const mockSession = {
+      id: 'session-1',
+      audioTracks: [
+        { contentUrl: '/s/item/item-1/book.m4b', duration: 1800, mimeType: 'audio/mp4' },
+      ],
+    }
+    globalThis.fetch = mockFetchJson(mockSession)
+
+    const result = await createPlaybackSession(TEST_URL, TEST_API_KEY, 'item-1')
+
+    expect(globalThis.fetch).toHaveBeenCalledOnce()
+    const [url, options] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
+    expect(url).toBe('/api/abs/proxy/api/items/item-1/play')
+    expect(options.method).toBe('POST')
+    const body = JSON.parse(options.body)
+    expect(body.forceDirectPlay).toBe(true)
+    expect(body.deviceInfo.clientName).toBe('Knowlune')
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data.audioTracks[0].contentUrl).toBe('/s/item/item-1/book.m4b')
+    }
+  })
+})
+
+// ── getStreamUrlFromSession ───────────────────────────────────────
+
+describe('AudiobookshelfService.getStreamUrlFromSession', () => {
+  it('constructs proxied URL from relative contentUrl', () => {
+    const url = getStreamUrlFromSession(TEST_URL, TEST_API_KEY, '/s/item/item-1/book.m4b')
+
+    expect(url).toContain('/api/abs/proxy/s/item/item-1/book.m4b')
+    expect(url).toContain(`_absUrl=${encodeURIComponent(TEST_URL)}`)
+    expect(url).toContain(`_absToken=${encodeURIComponent(TEST_API_KEY)}`)
+  })
+
+  it('extracts pathname from absolute contentUrl', () => {
+    const url = getStreamUrlFromSession(
+      TEST_URL,
+      TEST_API_KEY,
+      'http://abs.local:13378/s/item/item-1/book.m4b'
+    )
+
+    expect(url).toContain('/api/abs/proxy/s/item/item-1/book.m4b')
+    expect(url).not.toContain('http://abs.local')
+  })
+})
+
+// ── closePlaybackSession ──────────────────────────────────────────
+
+describe('AudiobookshelfService.closePlaybackSession', () => {
+  it('sends POST to /api/session/{id}/close', async () => {
+    globalThis.fetch = mockFetchJson(undefined)
+
+    await closePlaybackSession(TEST_URL, TEST_API_KEY, 'session-1')
+
+    expect(globalThis.fetch).toHaveBeenCalledOnce()
+    const [url, options] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
+    expect(url).toBe('/api/abs/proxy/api/session/session-1/close')
+    expect(options.method).toBe('POST')
   })
 })
 

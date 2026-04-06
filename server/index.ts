@@ -161,10 +161,11 @@ app.get('/api/ai/ollama/health', async (req, res) => {
 // ──────────────────────────────────────────────────────────────────────────────
 
 const ABS_TIMEOUT_MS = 15_000
+const ABS_STREAM_TIMEOUT_MS = 120_000 // 2 minutes for streaming requests (audio files)
 
 const absRateLimit = rateLimit({
   windowMs: 60 * 1000,
-  max: 60,
+  max: 120, // Higher limit: audio streaming makes many Range requests during seeking
   standardHeaders: true,
   legacyHeaders: false,
   message: 'Too Many Requests',
@@ -257,10 +258,19 @@ app.use('/api/abs/proxy', absRateLimit, async (req: import('express').Request, r
       ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     }
 
+    // Forward Range header for audio streaming (HTML5 <audio> seeking)
+    if (req.headers['range']) {
+      headers['Range'] = req.headers['range'] as string
+    }
+
+    // Use longer timeout for streaming paths (audio files can be large)
+    const isStreamingRequest = absPath.startsWith('/s/') || absPath.includes('/stream/')
+    const timeout = isStreamingRequest ? ABS_STREAM_TIMEOUT_MS : ABS_TIMEOUT_MS
+
     const fetchOptions: RequestInit = {
       method: req.method,
       headers,
-      signal: AbortSignal.timeout(ABS_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeout),
     }
 
     if (hasBody) {
@@ -269,11 +279,13 @@ app.use('/api/abs/proxy', absRateLimit, async (req: import('express').Request, r
 
     const response = await fetch(targetUrl, fetchOptions)
 
-    // Relay status and content-type
-    const contentType = response.headers.get('content-type')
-    if (contentType) {
-      res.setHeader('Content-Type', contentType)
+    // Relay essential response headers for streaming and content delivery
+    const headersToForward = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'content-disposition']
+    for (const header of headersToForward) {
+      const value = response.headers.get(header)
+      if (value) res.setHeader(header, value)
     }
+    const contentType = response.headers.get('content-type')
 
     // For binary responses (covers, streams), pipe the body directly
     if (contentType && !contentType.includes('application/json') && response.body) {

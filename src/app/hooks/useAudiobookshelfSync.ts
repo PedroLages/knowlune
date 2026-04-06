@@ -84,7 +84,8 @@ export function useAudiobookshelfSync() {
         chapters,
         source: {
           type: 'remote',
-          url: `${server.url.replace(/\/+$/, '')}/api/items/${absItem.id}`,
+          url: server.url.replace(/\/+$/, ''),
+          auth: { bearer: server.apiKey },
         },
         totalDuration: duration,
         progress: 0,

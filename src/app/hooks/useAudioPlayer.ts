@@ -20,8 +20,13 @@ import type React from 'react'
 import { toast } from 'sonner'
 import type { Book } from '@/data/types'
 import { opfsStorageService } from '@/services/OpfsStorageService'
-import { getStreamUrl } from '@/services/AudiobookshelfService'
+import {
+  createPlaybackSession,
+  getStreamUrlFromSession,
+  closePlaybackSession,
+} from '@/services/AudiobookshelfService'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
+import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 
 const AUTO_REWIND_THRESHOLD_MS = 30_000 // 30 seconds
 const AUTO_REWIND_SECONDS = 5 // seconds to rewind on resume
@@ -64,6 +69,10 @@ let _sharedAudio: HTMLAudioElement | null = null
 let _sharedObjectUrl: string | null = null
 /** Track which book is loaded in the singleton audio to avoid re-loading the same M4B file */
 let _loadedBookId: string | null = null
+/** Track active ABS playback session for cleanup */
+let _activeSessionId: string | null = null
+let _activeSessionBaseUrl: string | null = null
+let _activeSessionApiKey: string | null = null
 
 function getSharedAudio(): HTMLAudioElement {
   if (!_sharedAudio) {
@@ -212,6 +221,12 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
       audio.removeEventListener('error', handleError)
       // Do NOT pause or destroy — singleton must survive route changes
       stopRafLoop()
+      // Close active ABS playback session on unmount
+      if (_activeSessionId && _activeSessionBaseUrl && _activeSessionApiKey) {
+        // silent-catch-ok — fire-and-forget: ABS auto-expires idle sessions after 30min
+        closePlaybackSession(_activeSessionBaseUrl, _activeSessionApiKey, _activeSessionId).catch(() => {})
+        _activeSessionId = null
+      }
     }
   }, []) // intentionally run once on mount — event listener lifecycle
 
@@ -273,14 +288,18 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
       const chapters = book.chapters
       if (index < 0 || index >= chapters.length) return
 
-      // ─── Remote streaming mode (ABS): set direct URL, no OPFS ───
+      // ─── Remote streaming mode (ABS): session-based streaming via proxy ───
       if (book.source.type === 'remote') {
         const absItemId = book.absItemId
         const auth = book.source.auth
-        const apiKey = auth && 'bearer' in auth ? auth.bearer : ''
+        let apiKey = auth && 'bearer' in auth ? auth.bearer : ''
+        // Fallback: look up API key from server store for books synced before auth was persisted
+        if (!apiKey && book.absServerId) {
+          const server = useAudiobookshelfStore.getState().getServerById(book.absServerId)
+          apiKey = server?.apiKey ?? ''
+        }
 
         if (!absItemId || !apiKey) {
-          // Provide a specific message: missing item ID vs missing Bearer token
           const reason = !absItemId
             ? 'missing ABS item ID'
             : 'missing Bearer token (Basic auth not supported)'
@@ -295,8 +314,32 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
             audio.pause()
             stopRafLoop()
 
-            // No object URL to revoke for remote streams — skip revokeSharedObjectUrl()
-            const streamUrl = getStreamUrl(book.source.url, absItemId, apiKey)
+            const baseUrl = book.source.url.replace(/\/+$/, '')
+
+            // Create ABS playback session to get the actual streaming content URL
+            const sessionResult = await createPlaybackSession(baseUrl, apiKey, absItemId)
+            if (!sessionResult.ok) {
+              setIsLoading(false)
+              toast.error(`Stream failed: ${sessionResult.error}`)
+              return
+            }
+            const session = sessionResult.data
+            if (!session.audioTracks?.length) {
+              setIsLoading(false)
+              toast.error('No audio tracks available for this book')
+              return
+            }
+
+            // Close any previous session (fire-and-forget — ABS auto-expires after 30min)
+            if (_activeSessionId && _activeSessionBaseUrl && _activeSessionApiKey) {
+              // silent-catch-ok — non-critical cleanup, ABS auto-expires idle sessions
+              closePlaybackSession(_activeSessionBaseUrl, _activeSessionApiKey, _activeSessionId).catch(() => {})
+            }
+            _activeSessionId = session.id
+            _activeSessionBaseUrl = baseUrl
+            _activeSessionApiKey = apiKey
+
+            const streamUrl = getStreamUrlFromSession(baseUrl, apiKey, session.audioTracks[0].contentUrl)
             audio.src = streamUrl
             audio.playbackRate = playbackRate
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -344,6 +387,7 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
         } catch (err) {
           // Stream load or autoplay failed — reset state so retry forces a reload
           _loadedBookId = null
+          _activeSessionId = null
           audio.src = ''
           setIsLoading(false)
           setIsPlaying(false)
