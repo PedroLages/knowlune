@@ -300,7 +300,7 @@ export async function fetchCollections(
 /** Handle returned by connectSocket — caller owns lifecycle via disconnect(). */
 export interface AbsSocketConnection {
   /** Underlying WebSocket (for testing/inspection only — use provided methods) */
-  ws: WebSocket
+  ws: WebSocket | null
   /** Whether the Engine.IO handshake completed and socket is ready */
   isConnected: boolean
   /** Gracefully close the connection */
@@ -337,7 +337,7 @@ export function connectSocket(
   const wsUrl = `${normalizedBase}/socket.io/?EIO=4&transport=websocket&token=${encodeURIComponent(apiKey)}`
 
   const connection: AbsSocketConnection = {
-    ws: null as unknown as WebSocket,
+    ws: null,
     isConnected: false,
     disconnect: () => {
       connection.isConnected = false
@@ -475,8 +475,8 @@ export function onProgressUpdate(
     }
   }
 
-  connection.ws.addEventListener('message', listener)
-  return () => connection.ws.removeEventListener('message', listener)
+  connection.ws?.addEventListener('message', listener)
+  return () => connection.ws?.removeEventListener('message', listener)
 }
 
 /**
@@ -490,7 +490,7 @@ export function pushProgressViaSocket(
   itemId: string,
   progress: { currentTime: number; duration: number; progress: number; isFinished: boolean }
 ): void {
-  if (!connection.isConnected || connection.ws.readyState !== WebSocket.OPEN) return
+  if (!connection.isConnected || !connection.ws || connection.ws.readyState !== WebSocket.OPEN) return
 
   // Socket.IO event packet: "42" + JSON array
   const packet = JSON.stringify([

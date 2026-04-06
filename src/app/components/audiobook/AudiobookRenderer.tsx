@@ -116,11 +116,17 @@ export function AudiobookRenderer({
 
   // Real-time Socket.IO sync with Audiobookshelf (E102-S04)
   // Upgrades REST polling to live push/pull when socket is available
-  const absServer = book.absServerId
-    ? useAudiobookshelfStore.getState().getServerById(book.absServerId)
-    : null
+  // Ensure ABS servers are loaded (BookReader is outside Layout, so Library page may not have mounted)
+  const loadAbsServers = useAudiobookshelfStore(s => s.loadServers)
+  useEffect(() => {
+    loadAbsServers()
+  }, [loadAbsServers])
+  // Reactive selector — subscribes to store so server is available after Dexie hydration
+  const absServer = useAudiobookshelfStore(
+    state => book.absServerId ? state.getServerById(book.absServerId) : undefined
+  )
   useAudiobookshelfSocket({
-    server: absServer ?? null,
+    server: absServer ?? null,  // undefined → null: hook treats both as "no server"
     activeItemId: book.absItemId ?? null,
     book,
     currentTime,
