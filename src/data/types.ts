@@ -781,6 +781,7 @@ export interface AbsLibraryItem {
     }
     coverPath?: string
     chapters: Array<{ id: string; title: string; start: number; end: number }>
+    duration?: number // seconds — newer ABS versions place duration here instead of metadata
   }
 }
 

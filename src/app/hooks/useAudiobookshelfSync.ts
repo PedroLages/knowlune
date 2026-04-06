@@ -9,7 +9,7 @@
  * @since E101-S03
  */
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, type MutableRefObject } from 'react'
 import { toast } from 'sonner'
 import type { AudiobookshelfServer, AbsLibraryItem, Book, BookChapter } from '@/data/types'
 import * as AudiobookshelfService from '@/services/AudiobookshelfService'
@@ -30,11 +30,15 @@ export function useAudiobookshelfSync() {
     pagination: {},
   })
 
-  const upsertAbsBook = useBookStore(s => s.upsertAbsBook)
+  const bulkUpsertAbsBooks = useBookStore(s => s.bulkUpsertAbsBooks)
   const updateServer = useAudiobookshelfStore(s => s.updateServer)
 
   // Ref to prevent duplicate syncs for the same server
   const syncingServers = useRef(new Set<string>())
+
+  // Ref to hold latest pagination state — avoids stale closure in loadNextPage
+  const paginationRef: MutableRefObject<SyncState['pagination']> = useRef(state.pagination)
+  paginationRef.current = state.pagination
 
   /**
    * Map an ABS library item to a Book record.
@@ -64,8 +68,8 @@ export function useAudiobookshelfSync() {
       // Cover URL with token auth (img elements can't send Authorization header)
       const coverUrl = `${AudiobookshelfService.getCoverUrl(server.url, absItem.id)}?token=${encodeURIComponent(server.apiKey)}`
 
-      // Duration from metadata
-      const duration = absItem.media.metadata.duration || undefined
+      // Duration: prefer metadata.duration, fallback to media.duration (newer ABS versions)
+      const duration = absItem.media.metadata.duration || absItem.media.duration || undefined
 
       return {
         id: bookId,
@@ -106,7 +110,8 @@ export function useAudiobookshelfSync() {
 
       try {
         // Fetch all selected libraries in parallel (NFR1: sub-1s on LAN)
-        const results = await Promise.all(
+        // Use allSettled so one failing library doesn't discard successful ones
+        const settled = await Promise.allSettled(
           server.libraryIds.map(libId =>
             AudiobookshelfService.fetchLibraryItems(server.url, server.apiKey, libId, {
               page,
@@ -115,10 +120,24 @@ export function useAudiobookshelfSync() {
           )
         )
 
-        // Check for failures
-        const failedResult = results.find(r => !r.ok)
+        // Separate fulfilled (with ok/error) from rejected (network-level failures)
+        const fulfilled = settled
+          .filter((s): s is PromiseFulfilledResult<Awaited<ReturnType<typeof AudiobookshelfService.fetchLibraryItems>>> => s.status === 'fulfilled')
+          .map(s => s.value)
+        const rejected = settled.filter(s => s.status === 'rejected')
+
+        // If ALL requests failed, handle as server error
+        if (fulfilled.length === 0) {
+          const reason = rejected[0] && 'reason' in rejected[0] ? String(rejected[0].reason) : 'Unknown error'
+          await updateServer(server.id, { status: 'offline' })
+          toast.warning('Audiobookshelf server is offline. Showing cached library.')
+          setState(prev => ({ ...prev, isSyncing: false, syncError: reason }))
+          return
+        }
+
+        // Check for auth/connection failures in fulfilled results
+        const failedResult = fulfilled.find(r => !r.ok)
         if (failedResult && !failedResult.ok) {
-          // Determine if network error vs auth error
           const error = failedResult.error
           if (error.includes('Authentication') || error.includes('Access denied')) {
             await updateServer(server.id, { status: 'auth-failed' })
@@ -130,16 +149,19 @@ export function useAudiobookshelfSync() {
           return
         }
 
-        // Process successful results
+        // Process successful results — batch all books for a single IDB write
         let totalItems = 0
-        for (const result of results) {
+        const allMappedBooks: Book[] = []
+        for (const result of fulfilled) {
           if (!result.ok) continue
           totalItems += result.data.total
           for (const absItem of result.data.results) {
-            const book = mapAbsItemToBook(absItem, server)
-            await upsertAbsBook(book)
+            allMappedBooks.push(mapAbsItemToBook(absItem, server))
           }
         }
+
+        // Single bulk upsert: 1 IDB write + 1 state update instead of N
+        await bulkUpsertAbsBooks(allMappedBooks)
 
         // Update pagination state
         setState(prev => ({
@@ -156,8 +178,8 @@ export function useAudiobookshelfSync() {
           status: 'connected',
           lastSyncedAt: new Date().toISOString(),
         })
-      } catch {
-        // eslint-disable-next-line error-handling/no-silent-catch -- handled via toast below
+      } catch (err) {
+        console.error('[useAudiobookshelfSync] Unexpected sync error:', err)
         toast.error('Failed to sync Audiobookshelf catalog.')
         setState(prev => ({
           ...prev,
@@ -168,21 +190,22 @@ export function useAudiobookshelfSync() {
         syncingServers.current.delete(server.id)
       }
     },
-    [mapAbsItemToBook, upsertAbsBook, updateServer]
+    [mapAbsItemToBook, bulkUpsertAbsBooks, updateServer]
   )
 
   /**
    * Load the next page of items for a server (infinite scroll pagination).
+   * Reads from paginationRef to avoid stale closure over state.pagination.
    */
   const loadNextPage = useCallback(
     async (server: AudiobookshelfServer) => {
-      const pag = state.pagination[server.id]
+      const pag = paginationRef.current[server.id]
       if (!pag) return
       const nextPage = pag.currentPage + 1
       if (nextPage * 50 >= pag.totalItems) return // No more pages
       await syncCatalog(server, nextPage)
     },
-    [state.pagination, syncCatalog]
+    [syncCatalog]
   )
 
   return {

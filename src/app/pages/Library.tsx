@@ -10,7 +10,7 @@
  * @modified E83-S04 — search, status filter pills, context menus
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, Globe, Headphones, Loader2, Plus, WifiOff, Target } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
@@ -84,18 +84,21 @@ export function Library() {
 
   // Trigger ABS catalog sync when servers are loaded (E101-S03)
   // Background sync — does NOT block Library render
-  const hasSynced = useRef(false)
+  // Track server IDs so adding a new server triggers re-sync without requiring remount
+  const syncedServerIds = useRef(new Set<string>())
   useEffect(() => {
-    if (absServers.length > 0 && !hasSynced.current) {
-      hasSynced.current = true
-      absServers.forEach(server => syncCatalog(server))
+    const newServers = absServers.filter(s => !syncedServerIds.current.has(s.id))
+    if (newServers.length > 0) {
+      for (const server of newServers) {
+        syncedServerIds.current.add(server.id)
+      }
+      newServers.forEach(server => syncCatalog(server))
     }
   }, [absServers, syncCatalog])
 
-  // Filtered books — calls getFilteredBooks() on every render since Zustand's get()
-  // always returns current state. useMemo was removed because the memo deps (books, filters)
-  // could become stale relative to the internal get() call, causing 0-result renders.
-  const filteredBooks = getFilteredBooks()
+  // Memoize filtered books — deps are books + filters which Zustand updates on every change,
+  // so the memo is invalidated whenever the underlying data changes.
+  const filteredBooks = useMemo(() => getFilteredBooks(), [getFilteredBooks, books, filters])
 
   // Load books on mount
   useEffect(() => {
@@ -374,6 +377,8 @@ function AbsPaginationSentinel({
   isSyncing: boolean
 }) {
   const sentinelRef = useRef<HTMLDivElement>(null)
+  // Guard against rapid-fire IntersectionObserver callbacks
+  const isLoadingRef = useRef(false)
 
   // Check if any server has more pages to load
   const hasMorePages = servers.some(server => {
@@ -387,13 +392,18 @@ function AbsPaginationSentinel({
 
     const observer = new IntersectionObserver(
       entries => {
-        if (entries[0]?.isIntersecting) {
+        if (entries[0]?.isIntersecting && !isLoadingRef.current) {
+          isLoadingRef.current = true
+          const promises: Promise<void>[] = []
           for (const server of servers) {
             const pag = pagination[server.id]
             if (pag && (pag.currentPage + 1) * 50 < pag.totalItems) {
-              loadNextPage(server)
+              promises.push(loadNextPage(server))
             }
           }
+          Promise.all(promises).finally(() => {
+            isLoadingRef.current = false
+          })
         }
       },
       { rootMargin: '200px' }

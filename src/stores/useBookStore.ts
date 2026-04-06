@@ -44,6 +44,7 @@ interface BookStoreState {
     updates: Partial<Pick<Book, 'title' | 'author' | 'isbn' | 'description' | 'tags' | 'coverUrl'>>
   ) => Promise<void>
   upsertAbsBook: (book: Book) => Promise<void>
+  bulkUpsertAbsBooks: (books: Book[]) => Promise<void>
   getAllTags: () => string[]
   getBookCountByStatus: () => Record<'all' | BookStatus, number>
 }
@@ -157,10 +158,9 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     set(state => ({
       filters: {
         ...state.filters,
-        [key]:
-          (key === 'status' && value === 'all') || (key === 'source' && value === 'all')
-            ? undefined
-            : value,
+        // 'all' is the UI sentinel meaning "no filter" — store as undefined so
+        // getFilteredBooks() doesn't need to special-case it
+        [key]: value === 'all' ? undefined : value,
       },
     })),
 
@@ -217,9 +217,14 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
 
   upsertAbsBook: async (book: Book) => {
     try {
-      const existing = get().books.find(
-        b => b.absServerId === book.absServerId && b.absItemId === book.absItemId
-      )
+      // Build Map for O(1) lookup instead of linear scan
+      const absKeyMap = new Map<string, Book>()
+      for (const b of get().books) {
+        if (b.absServerId && b.absItemId) {
+          absKeyMap.set(`${b.absServerId}:${b.absItemId}`, b)
+        }
+      }
+      const existing = absKeyMap.get(`${book.absServerId}:${book.absItemId}`)
       const merged: Book = existing
         ? {
             ...book,
@@ -239,6 +244,46 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       }))
     } catch {
       toast.error('Failed to sync audiobook from server')
+    }
+  },
+
+  bulkUpsertAbsBooks: async (newBooks: Book[]) => {
+    if (newBooks.length === 0) return
+    try {
+      // Build Map<absServerId:absItemId, Book> for O(1) dedup lookup
+      const absKeyMap = new Map<string, Book>()
+      for (const b of get().books) {
+        if (b.absServerId && b.absItemId) {
+          absKeyMap.set(`${b.absServerId}:${b.absItemId}`, b)
+        }
+      }
+
+      const mergedBooks: Book[] = newBooks.map(book => {
+        const existing = absKeyMap.get(`${book.absServerId}:${book.absItemId}`)
+        return existing
+          ? {
+              ...book,
+              id: existing.id,
+              status: existing.status,
+              progress: existing.progress,
+              currentPosition: existing.currentPosition,
+              lastOpenedAt: existing.lastOpenedAt,
+              createdAt: existing.createdAt,
+              updatedAt: new Date().toISOString(),
+            }
+          : book
+      })
+
+      // Single bulk IDB write instead of N individual puts
+      await db.books.bulkPut(mergedBooks)
+
+      // Single state update instead of N re-renders
+      const mergedIds = new Set(mergedBooks.map(b => b.id))
+      set(state => ({
+        books: [...state.books.filter(b => !mergedIds.has(b.id)), ...mergedBooks],
+      }))
+    } catch {
+      toast.error('Failed to sync audiobooks from server')
     }
   },
 

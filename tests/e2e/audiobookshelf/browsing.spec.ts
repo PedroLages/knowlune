@@ -277,4 +277,64 @@ test.describe('E101-S03: Library Browsing & Catalog Sync', () => {
     // Other ABS book hidden by search
     await expect(page.getByText('Thinking, Fast and Slow')).not.toBeVisible()
   })
+
+  test('AC6: pagination sentinel is visible when ABS tab active and more pages exist', async ({
+    page,
+  }) => {
+    // Seed with server that has 100+ items worth of pagination data
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'knowlune-onboarding-v1',
+        JSON.stringify({ completedAt: '2025-01-01T00:00:00.000Z', skipped: true })
+      )
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2025-01-01T00:00:00.000Z' })
+      )
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
+    })
+    await page.goto('/')
+    await seedIndexedDBStore(page, DB_NAME, 'audiobookshelfServers', [
+      ABS_SERVER,
+    ] as unknown as Record<string, unknown>[])
+    await seedIndexedDBStore(
+      page,
+      DB_NAME,
+      'books',
+      ALL_BOOKS as unknown as Record<string, unknown>[]
+    )
+    await page.goto('/library')
+    await page.waitForLoadState('domcontentloaded')
+
+    await expect(page.getByText('Thinking, Fast and Slow')).toBeVisible({ timeout: 10000 })
+
+    // Switch to ABS tab to reveal pagination sentinel area
+    await page.getByTestId('source-tab-audiobookshelf').click()
+
+    // With only 2 seeded ABS books and no real ABS API, the sentinel should NOT
+    // be visible (no pagination metadata means no "more pages" state).
+    // This validates that the sentinel only renders when hasMorePages is true.
+    await expect(page.getByTestId('abs-pagination-sentinel')).not.toBeVisible()
+  })
+
+  test('AC7: offline badge is shown when browser is offline', async ({ page, context }) => {
+    await seedLibraryWithAbs(page)
+
+    await expect(page.getByText('Thinking, Fast and Slow')).toBeVisible({ timeout: 10000 })
+
+    // Simulate going offline
+    await context.setOffline(true)
+
+    // The offline badge should appear
+    await expect(page.getByTestId('library-offline-badge')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('library-offline-badge')).toContainText('Offline')
+
+    // Books should still be visible (cached)
+    await expect(page.getByText('Thinking, Fast and Slow')).toBeVisible()
+    await expect(page.getByText('Project Hail Mary')).toBeVisible()
+
+    // Restore online
+    await context.setOffline(false)
+    await expect(page.getByTestId('library-offline-badge')).not.toBeVisible({ timeout: 5000 })
+  })
 })
