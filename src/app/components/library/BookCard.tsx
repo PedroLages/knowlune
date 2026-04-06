@@ -124,17 +124,20 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
               className="text-[10px] text-muted-foreground truncate"
               data-testid={`chapter-${book.id}`}
             >
-              {book.chapters.find(
-                (_ch, i, arr) =>
-                  book.currentPosition!.type === 'time' &&
-                  book.currentPosition!.seconds >=
-                    (_ch.position.type === 'time' ? _ch.position.seconds : 0) &&
-                  (i === arr.length - 1 ||
-                    book.currentPosition!.seconds <
-                      (arr[i + 1].position.type === 'time'
-                        ? arr[i + 1].position.seconds
-                        : Infinity))
-              )?.title ?? `Chapter 1`}
+              {(() => {
+                const pos = book.currentPosition!
+                if (pos.type !== 'time') return 'Chapter 1'
+                return book.chapters.find(
+                  (_ch, i, arr) =>
+                    pos.seconds >=
+                      (_ch.position.type === 'time' ? _ch.position.seconds : 0) &&
+                    (i === arr.length - 1 ||
+                      (() => {
+                        const next = arr[i + 1].position
+                        return pos.seconds < (next.type === 'time' ? next.seconds : Infinity)
+                      })())
+                )?.title ?? 'Chapter 1'
+              })()}
             </p>
           )}
         {book.totalDuration != null && book.totalDuration > 0 && (

@@ -137,10 +137,10 @@ export function AudiobookRenderer({
 
     // Persist to Dexie — non-critical, never disrupt playback UX
     // silent-catch-ok: position will be re-saved on next pause (non-fatal)
-    const dexieUpdate: Record<string, unknown> = { currentPosition: position, lastOpenedAt: now }
+    const dexieUpdate: Partial<Pick<Book, 'currentPosition' | 'lastOpenedAt' | 'progress'>> = { currentPosition: position, lastOpenedAt: now }
     if (progress !== undefined) dexieUpdate.progress = progress
     db.books
-      .update(book.id, dexieUpdate)
+      .update(book.id, dexieUpdate as Parameters<typeof db.books.update>[1])
       .catch(err => console.error('[AudiobookRenderer] Failed to save position:', err))
   }, [book.id, book.totalDuration])
 
