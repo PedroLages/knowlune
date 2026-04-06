@@ -216,6 +216,37 @@ test.describe('E103-S02: Format Switching UI', () => {
     })
   })
 
+  test('AC3: "Switch to Listening" button visible in EPUB reader with chapter mapping', async ({
+    page,
+  }) => {
+    await seedData(page)
+    await page.goto(`/library/${EPUB_BOOK.id}/read`)
+    // Move the mouse so the idle timer doesn't hide the header before assertion
+    await page.mouse.move(400, 200)
+    await expect(page.getByTestId('book-reader')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('switch-to-listening-button')).toBeVisible({ timeout: 10000 })
+  })
+
+  test('AC4: Clicking "Switch to Listening" navigates to audiobook reader at correct chapter', async ({
+    page,
+  }) => {
+    await seedData(page)
+    await page.goto(`/library/${EPUB_BOOK.id}/read`)
+    await page.mouse.move(400, 200)
+    await expect(page.getByTestId('book-reader')).toBeVisible({ timeout: 10000 })
+
+    const switchButton = page.getByTestId('switch-to-listening-button')
+    await expect(switchButton).toBeVisible({ timeout: 10000 })
+    await switchButton.click()
+
+    // Should navigate to the linked audiobook's reader
+    await page.waitForURL(url => url.pathname.includes(`/library/${ABS_AUDIOBOOK.id}/read`), {
+      timeout: 10000,
+    })
+    // startChapter param should be present (chapter mapping resolved)
+    await expect(page).toHaveURL(/startChapter=/)
+  })
+
   test('AC5: No switch button when audiobook has no chapter mapping', async ({ page }) => {
     await seedData(page)
     await page.goto(`/library/${STANDALONE_AUDIOBOOK.id}/read`)

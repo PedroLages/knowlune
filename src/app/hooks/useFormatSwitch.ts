@@ -103,11 +103,8 @@ export function useFormatSwitch(
       targetIndex = Math.max(0, targetIndex)
 
       navigate(`/library/${linkedBook.id}/read?startChapter=${targetIndex}`, { replace: false })
-
-      // Reset switching guard after navigation completes
-      setTimeout(() => {
-        switchingRef.current = false
-      }, 500)
+      // switchingRef.current is NOT reset here — the component unmounts on navigation,
+      // so the guard is automatically cleared. No setTimeout needed.
     },
     [mapping, linkedBook, format, navigate]
   )

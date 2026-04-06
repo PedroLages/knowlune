@@ -364,6 +364,45 @@ export function BookReader() {
     [bookId]
   )
 
+  /**
+   * Immediately flush the current EPUB position to Dexie — used before navigating
+   * away (e.g., format switch) to ensure position is persisted before unmount.
+   * Cancels any pending debounced save first (AC4 / E103-S02).
+   */
+  const saveEpubPositionNow = useCallback(() => {
+    if (!bookId || !renditionRef.current) return
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
+    try {
+      const loc = renditionRef.current.currentLocation()
+      if (loc && typeof loc === 'object' && 'start' in loc) {
+        const start = (loc as { start?: { cfi?: string; percentage?: number } }).start
+        if (start?.cfi) {
+          const position: ContentPosition = { type: 'cfi', value: start.cfi }
+          const progressInt = typeof start.percentage === 'number' ? Math.round(start.percentage * 100) : undefined
+          useBookStore.setState(state => ({
+            books: state.books.map(b =>
+              b.id === bookId
+                ? { ...b, currentPosition: position, ...(progressInt !== undefined && { progress: progressInt }) }
+                : b
+            ),
+          }))
+          // silent-catch-ok: pre-navigation save failure is non-fatal (position saved on next open)
+          db.books
+            .update(bookId, {
+              currentPosition: position,
+              ...(progressInt !== undefined && { progress: progressInt }),
+            })
+            .catch(err => console.error('[BookReader] Pre-navigation EPUB save failed:', err))
+        }
+      }
+    } catch {
+      // silent-catch-ok: rendition may not have location yet
+    }
+  }, [bookId])
+
   /** CFI location change — update store position + progress + current chapter */
   const handleLocationChanged = useCallback(
     (cfi: string) => {
@@ -621,6 +660,8 @@ export function BookReader() {
         onSwitchToListening={
           hasMapping && book?.format === 'epub'
             ? () => {
+                // Save EPUB position immediately before navigating (AC4 / E103-S02)
+                saveEpubPositionNow()
                 // Derive current EPUB chapter index from TOC + currentHref
                 const epubChapterIndex = currentHref
                   ? toc.findIndex(item => item.href.split('#')[0] === currentHref.split('#')[0])
