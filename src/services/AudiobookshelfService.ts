@@ -24,9 +24,7 @@ const FETCH_TIMEOUT_MS = 10_000
 
 // ─── Result Type ────────────────────────────────────────────────────────────
 
-export type AbsResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: string; status?: number }
+export type AbsResult<T> = { ok: true; data: T } | { ok: false; error: string; status?: number }
 
 // ─── Internal Helper ────────────────────────────────────────────────────────
 

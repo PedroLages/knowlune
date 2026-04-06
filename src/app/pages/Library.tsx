@@ -11,7 +11,17 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BookOpen, Globe, Grid3X3, Headphones, List, Loader2, Plus, WifiOff, Target } from 'lucide-react'
+import {
+  BookOpen,
+  Globe,
+  Grid3X3,
+  Headphones,
+  List,
+  Loader2,
+  Plus,
+  WifiOff,
+  Target,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
@@ -356,26 +366,30 @@ export function Library() {
       )}
 
       {/* Grid view */}
-      {books.length > 0 && libraryView === 'grid' && !(filters.source === 'audiobookshelf' && absViewMode === 'series') && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {filteredBooks.map(book => (
-            <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
-              <BookCard book={book} />
-            </BookContextMenu>
-          ))}
-        </div>
-      )}
+      {books.length > 0 &&
+        libraryView === 'grid' &&
+        !(filters.source === 'audiobookshelf' && absViewMode === 'series') && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filteredBooks.map(book => (
+              <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
+                <BookCard book={book} />
+              </BookContextMenu>
+            ))}
+          </div>
+        )}
 
       {/* List view */}
-      {books.length > 0 && libraryView === 'list' && !(filters.source === 'audiobookshelf' && absViewMode === 'series') && (
-        <div className="flex flex-col divide-y divide-border/50">
-          {filteredBooks.map(book => (
-            <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
-              <BookListItem book={book} />
-            </BookContextMenu>
-          ))}
-        </div>
-      )}
+      {books.length > 0 &&
+        libraryView === 'list' &&
+        !(filters.source === 'audiobookshelf' && absViewMode === 'series') && (
+          <div className="flex flex-col divide-y divide-border/50">
+            {filteredBooks.map(book => (
+              <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
+                <BookListItem book={book} />
+              </BookContextMenu>
+            ))}
+          </div>
+        )}
 
       {/* Infinite scroll sentinel for ABS pagination (E101-S03) */}
       {filters.source === 'audiobookshelf' && absServers.length > 0 && (
