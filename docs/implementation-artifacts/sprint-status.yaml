@@ -1249,8 +1249,8 @@ development_status:
   # Bidirectional progress sync, series browsing, collections, Socket.IO real-time
   # Depends on: E101
   # ──────────────────────────────────────────────────
-  epic-102: backlog
-  102-1-bidirectional-progress-sync: ready-for-dev
+  epic-102: in-progress
+  102-1-bidirectional-progress-sync: done
   102-2-series-browsing: ready-for-dev
   102-3-collections: ready-for-dev
   102-4-socket-io-real-time-sync: ready-for-dev

@@ -128,7 +128,8 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
           {book.format === 'audiobook' && book.totalDuration != null && book.totalDuration > 0 && (
             <span>
               {book.currentPosition?.type === 'time'
-                ? (book.progress != null && book.progress >= 99) || book.currentPosition.seconds >= book.totalDuration
+                ? (book.progress != null && book.progress >= 99) ||
+                  book.currentPosition.seconds >= book.totalDuration
                   ? 'Completed'
                   : `${Math.floor(Math.max(0, book.totalDuration - book.currentPosition.seconds) / 60)} min left`
                 : `${Math.floor(book.totalDuration / 60)} min`}
