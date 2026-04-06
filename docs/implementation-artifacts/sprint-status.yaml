@@ -1253,7 +1253,7 @@ development_status:
   102-1-bidirectional-progress-sync: done
   102-2-series-browsing: done
   102-3-collections: done
-  102-4-socket-io-real-time-sync: ready-for-dev
+  102-4-socket-io-real-time-sync: done
   epic-102-retrospective: optional
 
   # ──────────────────────────────────────────────────
