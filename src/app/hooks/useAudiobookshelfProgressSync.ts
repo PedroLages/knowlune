@@ -33,7 +33,7 @@ interface UseAbsProgressSyncOptions {
  * Resolve conflict between ABS progress and local book position.
  * Uses latest-timestamp-wins strategy.
  */
-function resolveConflict(
+export function resolveConflict(
   absUpdatedAt: number,
   localLastOpenedAt: string | undefined,
   localCurrentSeconds: number
