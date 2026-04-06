@@ -61,15 +61,17 @@ _(none)_
 ---
 
 ### E101-S04: Streaming Playback
-**Status:** queued
+**Status:** reviewing (R2)
 #### Errors
-_(none yet)_
+_(none)_
 #### Review Findings
-_(none yet)_
+- R1: 8 issues (3 HIGH, 3 MEDIUM, 1 LOW, 1 NIT) + 2 NON-ISSUES (GLM false positives)
 #### Fixes Applied
-_(none yet)_
+- R1 fix: _loadedBookId after canplay, try/catch for streaming, improved error messages, session-resume seek via isLoading effect, E2E mockAudioElement, unit test expectation update, removed no-op revoke
 #### Notes
-_(none yet)_
+- 1 FALSE POSITIVE: savePosition stale closure (book.id already in useCallback deps)
+- ABS streaming via token auth, chapter seek, position persistence
+- Has .tsx changes → full review scope
 
 ---
 
