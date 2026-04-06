@@ -17,6 +17,7 @@ import type {
   AbsProgress,
   AbsSeries,
   AbsCollection,
+  AbsChapter,
 } from '@/data/types'
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -158,6 +159,24 @@ export async function fetchItem(
   itemId: string
 ): Promise<AbsResult<AbsItem>> {
   return absApiFetch<AbsItem>(url, apiKey, `/api/items/${encodeURIComponent(itemId)}`)
+}
+
+/**
+ * Fetch chapter list for an audiobook item.
+ * Calls GET /api/items/{itemId} and extracts chapters from media metadata.
+ *
+ * @since E103-S01
+ */
+export async function fetchChapters(
+  url: string,
+  apiKey: string,
+  itemId: string
+): Promise<AbsResult<{ chapters: AbsChapter[] }>> {
+  const result = await fetchItem(url, apiKey, itemId)
+  if (!result.ok) return result
+  // ABS embeds chapters in media.chapters on the item response
+  const chapters: AbsChapter[] = result.data.media.chapters ?? []
+  return { ok: true, data: { chapters } }
 }
 
 /**

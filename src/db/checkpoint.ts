@@ -20,14 +20,14 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 40
+export const CHECKPOINT_VERSION = 41
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
  * This is the result of applying all migrations v1–v38 on a fresh database.
  *
  * IMPORTANT: This must exactly match the schema produced by running all
- * 40 incremental migrations. The unit test `schema-checkpoint.test.ts`
+ * 41 incremental migrations. The unit test `schema-checkpoint.test.ts`
  * enforces this invariant.
  *
  * Note: `courses` table was dropped in v30 (E89-S01) — dead regular course system removed.
@@ -38,6 +38,7 @@ export const CHECKPOINT_VERSION = 40
  * v38 (E87-S01): audioBookmarks table for audiobook chapter bookmarks.
  * v39 (E88-S01): opdsCatalogs table for OPDS catalog connections.
  * v40 (E101-S01): audiobookshelfServers table for ABS server connections.
+ * v41 (E103-S01): chapterMappings table for EPUB↔audiobook chapter alignment.
  */
 export const CHECKPOINT_SCHEMA: Record<string, string> = {
   importedCourses: 'id, name, importedAt, status, *tags, source',
@@ -78,4 +79,5 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   audioBookmarks: 'id, bookId, chapterIndex, timestamp, createdAt',
   opdsCatalogs: 'id, name, url, createdAt',
   audiobookshelfServers: 'id, name, url, status, lastSyncedAt',
+  chapterMappings: '[epubBookId+audioBookId], epubBookId, audioBookId',
 }

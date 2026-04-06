@@ -210,7 +210,8 @@ test.describe('E102-S04: Socket.IO Real-Time Sync', () => {
     // Wait until the socket.io WebSocket is created (polls until store hydration + socket connect)
     await page.waitForFunction(
       () => {
-        const instances = (window as unknown as Record<string, { url: string }[]>).__wsMockInstances ?? []
+        const instances =
+          (window as unknown as Record<string, { url: string }[]>).__wsMockInstances ?? []
         return instances.some((ws: { url: string }) => ws.url.includes('socket.io'))
       },
       { timeout: 5000 }
