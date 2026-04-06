@@ -773,6 +773,7 @@ export interface AbsLibrary {
 export interface AbsLibraryItem {
   id: string
   ino: string // inode — used in streaming URLs
+  mediaType?: string // 'book' | 'podcast' — present when library contains mixed media
   media: {
     metadata: {
       title: string
