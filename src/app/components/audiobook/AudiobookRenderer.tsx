@@ -23,6 +23,7 @@ import { SleepTimer } from './SleepTimer'
 import { ChapterList } from './ChapterList'
 import { BookmarkButton } from './BookmarkButton'
 import { BookmarkListPanel } from './BookmarkListPanel'
+import { PostSessionBookmarkReview } from './PostSessionBookmarkReview'
 import { useBookStore } from '@/stores/useBookStore'
 import { db } from '@/db/schema'
 import { sharedAudioRef } from '@/app/hooks/useAudioPlayer'
@@ -58,6 +59,23 @@ export function AudiobookRenderer({
 
   const setCurrentBook = useAudioPlayerStore(s => s.setCurrentBook)
   const { activeOption, badgeText, setTimer, cancelTimer } = useSleepTimer()
+  // Post-session bookmark review
+  const [postSessionOpen, setPostSessionOpen] = useState(false)
+  const [sessionBookmarkCount, setSessionBookmarkCount] = useState(0)
+  const prevIsPlayingRef = useRef(false)
+
+  // Trigger post-session review when playback stops with bookmarks
+  useEffect(() => {
+    if (prevIsPlayingRef.current && !isPlaying && sessionBookmarkCount > 0) {
+      setPostSessionOpen(true)
+    }
+    prevIsPlayingRef.current = isPlaying
+  }, [isPlaying, sessionBookmarkCount])
+
+  const handleBookmarkCreated = useCallback(() => {
+    setSessionBookmarkCount(c => c + 1)
+  }, [])
+
   // bookmarksOpen can be controlled externally (from BookReader header) or internally
   const [bookmarksOpenInternal, setBookmarksOpenInternal] = useState(false)
   const bookmarksOpen = bookmarksOpenProp ?? bookmarksOpenInternal
@@ -269,11 +287,23 @@ export function AudiobookRenderer({
       {/* Secondary Controls: Speed | Bookmark | Sleep Timer */}
       <div className="flex items-center gap-2">
         <SpeedControl />
-        <BookmarkButton
-          bookId={book.id}
-          chapterIndex={currentChapterIndex}
-          currentTime={currentTime}
-        />
+        <div className="relative">
+          <BookmarkButton
+            bookId={book.id}
+            chapterIndex={currentChapterIndex}
+            currentTime={currentTime}
+            onBookmarkCreated={handleBookmarkCreated}
+          />
+          {sessionBookmarkCount > 0 && (
+            <span
+              className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-brand text-brand-foreground text-[10px] font-semibold px-1 pointer-events-none"
+              aria-label={`${sessionBookmarkCount} bookmark${sessionBookmarkCount !== 1 ? 's' : ''} this session`}
+              data-testid="bookmark-count-badge"
+            >
+              {sessionBookmarkCount}
+            </span>
+          )}
+        </div>
         <SleepTimer
           activeOption={activeOption}
           badgeText={badgeText}
@@ -301,6 +331,14 @@ export function AudiobookRenderer({
         bookId={book.id}
         chapters={book.chapters}
         onSeek={handleBookmarkSeek}
+      />
+
+      {/* Post-session bookmark review panel (E101-S05) */}
+      <PostSessionBookmarkReview
+        open={postSessionOpen}
+        onClose={() => setPostSessionOpen(false)}
+        bookId={book.id}
+        chapters={book.chapters}
       />
     </div>
   )
