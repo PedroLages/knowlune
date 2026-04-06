@@ -8,8 +8,8 @@ Last Updated: 2026-04-06
 | Story | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|--------|--------|---------------|--------------|
 | E106-S01 | done | [#277](https://github.com/PedroLages/knowlune/pull/277) | 2 | 5 |
-| E106-S02 | done | — | 2 | 10 |
-| E106-S03 | queued | — | — | — |
+| E106-S02 | done | [#278](https://github.com/PedroLages/knowlune/pull/278) | 2 | 10 |
+| E106-S03 | done | [#279](https://github.com/PedroLages/knowlune/pull/279) | 2 | 2 |
 
 ## Story Details
 
