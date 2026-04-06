@@ -255,7 +255,8 @@ test.describe('E102-S02: Series Browsing', () => {
 
       const originalFetch = window.fetch.bind(window)
       window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+        const url =
+          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
         if (url.includes('abs.test')) {
           if (url.includes('/api/libraries/') && url.includes('/series')) {
             // Empty series response — tests the empty state UI
