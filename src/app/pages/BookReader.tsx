@@ -41,6 +41,7 @@ import { HighlightListPanel } from '@/app/components/reader/HighlightListPanel'
 import { ClozeFlashcardCreator } from '@/app/components/reader/ClozeFlashcardCreator'
 import { useTts } from '@/app/hooks/useTts'
 import { useReadingSession } from '@/app/hooks/useReadingSession'
+import { useFormatSwitch } from '@/app/hooks/useFormatSwitch'
 import { appEventBus } from '@/lib/eventBus'
 import { useReadingGoalStore } from '@/stores/useReadingGoalStore'
 import { getTimeReadToday } from '@/services/ReadingStatsService'
@@ -169,6 +170,9 @@ export function BookReader() {
 
   // Find book in store
   const book = books.find(b => b.id === bookId)
+
+  // Format switching: EPUB ↔ audiobook via chapter mapping (E103-S02)
+  const { hasMapping, switchToFormat } = useFormatSwitch(bookId, book?.format)
 
   // Update lastOpenedAt when reader opens (once book is found)
   useEffect(() => {
@@ -492,6 +496,42 @@ export function BookReader() {
   // Derived: whether there is a cached fallback available (E88-S03)
   const hasCachedFallback = remoteEpubError?.hasCachedVersion ?? false
 
+  // Read ?startChapter param for format switching (E103-S02)
+  const startChapterParam = searchParams.get('startChapter')
+  const startChapterIndex = startChapterParam !== null ? parseInt(startChapterParam, 10) : null
+
+  // Clear ?startChapter from URL after reading it (prevent stale params on refresh)
+  useEffect(() => {
+    if (startChapterParam !== null) {
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('startChapter')
+      const newSearch = newParams.toString()
+      navigate(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`, { replace: true })
+    }
+  }, []) // Run once on mount only
+
+  // For EPUB: navigate to startChapter's TOC href after TOC is loaded (E103-S02)
+  const startChapterAppliedRef = useRef(false)
+  useEffect(() => {
+    if (
+      startChapterIndex === null ||
+      startChapterAppliedRef.current ||
+      toc.length === 0 ||
+      !renditionRef.current ||
+      book?.format !== 'epub'
+    )
+      return
+
+    const idx = Math.max(0, Math.min(startChapterIndex, toc.length - 1))
+    const targetHref = toc[idx]?.href
+    if (targetHref) {
+      startChapterAppliedRef.current = true
+      renditionRef.current.display(targetHref).catch(() => {
+        // silent-catch-ok: chapter navigation failure falls back to current position
+      })
+    }
+  }, [startChapterIndex, toc, book?.format])
+
   // Derive initial CFI: prefer highlight back-navigation CFI (E85-S05) over saved position
   const initialCfi =
     highlightCfi ?? (book?.currentPosition?.type === 'cfi' ? book.currentPosition.value : null)
@@ -548,6 +588,16 @@ export function BookReader() {
             book={book}
             bookmarksOpen={audiobookBookmarksOpen}
             onBookmarksClose={() => setAudiobookBookmarksOpen(false)}
+            onSwitchToReading={
+              hasMapping
+                ? (chapterIndex: number) => switchToFormat(chapterIndex)
+                : undefined
+            }
+            initialChapterIndex={
+              startChapterIndex !== null
+                ? Math.max(0, Math.min(startChapterIndex, book.chapters.length - 1))
+                : undefined
+            }
           />
         </Suspense>
       </div>
@@ -570,6 +620,17 @@ export function BookReader() {
         onSettingsOpen={() => setSettingsOpen(true)}
         onHighlightsOpen={() => setHighlightsOpen(true)}
         onReadAloud={isTtsAvailable ? startTts : undefined}
+        onSwitchToListening={
+          hasMapping && book?.format === 'epub'
+            ? () => {
+                // Derive current EPUB chapter index from TOC + currentHref
+                const epubChapterIndex = currentHref
+                  ? toc.findIndex(item => item.href.split('#')[0] === currentHref.split('#')[0])
+                  : -1
+                switchToFormat(Math.max(0, epubChapterIndex))
+              }
+            : undefined
+        }
       />
 
       {/* Main content area */}
