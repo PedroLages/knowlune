@@ -6,7 +6,8 @@ started: 2026-04-06
 completed:
 reviewed: in-progress
 review_started: 2026-04-06
-review_gates_passed: []
+review_scope: full
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, glm-code-review, openai-code-review-skipped]
 burn_in_validated: false
 ---
 
