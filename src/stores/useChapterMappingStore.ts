@@ -66,9 +66,7 @@ export const useChapterMappingStore = create<ChapterMappingStoreState>((set, get
   },
 
   getMapping: (epubBookId, audioBookId) => {
-    return get().mappings.find(
-      m => m.epubBookId === epubBookId && m.audioBookId === audioBookId
-    )
+    return get().mappings.find(m => m.epubBookId === epubBookId && m.audioBookId === audioBookId)
   },
 
   deleteMapping: async (epubBookId, audioBookId) => {

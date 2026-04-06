@@ -94,7 +94,9 @@ export function jaroWinklerSimilarity(a: string, b: string): number {
   const jaro = jaroSimilarity(a, b)
   const prefixLen = Math.min(
     4,
-    [...a].findIndex((c, i) => c !== b[i]) === -1 ? Math.min(a.length, b.length) : [...a].findIndex((c, i) => c !== b[i])
+    [...a].findIndex((c, i) => c !== b[i]) === -1
+      ? Math.min(a.length, b.length)
+      : [...a].findIndex((c, i) => c !== b[i])
   )
   const p = 0.1 // standard Winkler scaling factor
   return jaro + prefixLen * p * (1 - jaro)
@@ -215,7 +217,9 @@ export function computeChapterMapping(
 
   // Sort by EPUB chapter order (original index)
   const hrefOrder = new Map(epubChapters.map((c, i) => [c.href, i]))
-  mappings.sort((a, b) => (hrefOrder.get(a.epubChapterHref) ?? 0) - (hrefOrder.get(b.epubChapterHref) ?? 0))
+  mappings.sort(
+    (a, b) => (hrefOrder.get(a.epubChapterHref) ?? 0) - (hrefOrder.get(b.epubChapterHref) ?? 0)
+  )
 
   return mappings
 }

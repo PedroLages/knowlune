@@ -172,15 +172,11 @@ export async function fetchChapters(
   apiKey: string,
   itemId: string
 ): Promise<AbsResult<{ chapters: AbsChapter[] }>> {
-  const result = await absApiFetch<AbsItem>(
-    url,
-    apiKey,
-    `/api/items/${encodeURIComponent(itemId)}`
-  )
+  const result = await absApiFetch<AbsItem>(url, apiKey, `/api/items/${encodeURIComponent(itemId)}`)
   if (!result.ok) return result
   // ABS embeds chapters in media.chapters on the item response
   const chapters: AbsChapter[] =
-    (result.data as Record<string, unknown> & { media?: { chapters?: AbsChapter[] } }).media
+    (result.data as unknown as Record<string, unknown> & { media?: { chapters?: AbsChapter[] } }).media
       ?.chapters ?? []
   return { ok: true, data: { chapters } }
 }

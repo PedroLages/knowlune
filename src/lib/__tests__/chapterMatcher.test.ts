@@ -142,9 +142,7 @@ describe('computeChapterMapping', () => {
   })
 
   it('handles stripped-number normalization', () => {
-    const epub: EpubChapterInput[] = [
-      { href: 'ch1.xhtml', label: 'Chapter 1: The Hero' },
-    ]
+    const epub: EpubChapterInput[] = [{ href: 'ch1.xhtml', label: 'Chapter 1: The Hero' }]
     const audio: AudioChapterInput[] = [{ title: 'Chapter 1: The Hero' }]
 
     const result = computeChapterMapping(epub, audio)
@@ -153,9 +151,7 @@ describe('computeChapterMapping', () => {
   })
 
   it('respects threshold — below-threshold pairs excluded', () => {
-    const epub: EpubChapterInput[] = [
-      { href: 'ch1.xhtml', label: 'Completely Different Title' },
-    ]
+    const epub: EpubChapterInput[] = [{ href: 'ch1.xhtml', label: 'Completely Different Title' }]
     const audio: AudioChapterInput[] = [{ title: 'Something Else Entirely' }]
 
     const result = computeChapterMapping(epub, audio, 0.9)
@@ -165,9 +161,7 @@ describe('computeChapterMapping', () => {
   it('falls back to Levenshtein when JW fails', () => {
     // These titles differ enough that JW might not match at 0.7
     // but Levenshtein should catch "I" vs "1" type differences
-    const epub: EpubChapterInput[] = [
-      { href: 'ch1.xhtml', label: 'The Adventure Begins Now' },
-    ]
+    const epub: EpubChapterInput[] = [{ href: 'ch1.xhtml', label: 'The Adventure Begins Now' }]
     const audio: AudioChapterInput[] = [{ title: 'The Adventure Begins' }]
 
     const result = computeChapterMapping(epub, audio, 0.7)
@@ -180,10 +174,7 @@ describe('computeChapterMapping', () => {
       { href: 'ch1.xhtml', label: 'The Beginning' },
       { href: 'ch2.xhtml', label: '2. A Slightly Different Middle Section' },
     ]
-    const audio: AudioChapterInput[] = [
-      { title: 'The Beginning' },
-      { title: 'The Middle' },
-    ]
+    const audio: AudioChapterInput[] = [{ title: 'The Beginning' }, { title: 'The Middle' }]
 
     const result = computeChapterMapping(epub, audio)
     // First should be exact match (confidence 1.0)
