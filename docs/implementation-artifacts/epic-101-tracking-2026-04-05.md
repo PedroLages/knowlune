@@ -12,7 +12,7 @@ Last Updated: 2026-04-05
 | E101-S03 | done | #263 | 2 | 14 |
 | E101-S04 | done | #264 | 3 | 13 |
 | E101-S05 | done | #265 | 3 | 8 |
-| E101-S06 | finishing | — | 1 | 4 |
+| E101-S06 | done | #266 | 1 | 4 |
 
 ## Story Details
 
@@ -95,7 +95,7 @@ _(none)_
 ---
 
 ### E101-S06: Progress Tracking & Streaks
-**Status:** finishing
+**Status:** done (PR #266)
 #### Errors
 _(none)_
 #### Review Findings
