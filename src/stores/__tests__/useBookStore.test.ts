@@ -282,15 +282,13 @@ describe('getBookCountByStatus', () => {
 
   it('respects source filter when computing counts', async () => {
     await act(async () => {
-      await useBookStore
-        .getState()
-        .importBook(
-          makeBook({
-            id: 'lc1',
-            status: 'reading',
-            source: { type: 'local', opfsPath: '' },
-          }) as never
-        )
+      await useBookStore.getState().importBook(
+        makeBook({
+          id: 'lc1',
+          status: 'reading',
+          source: { type: 'local', opfsPath: '' },
+        }) as never
+      )
       await useBookStore.getState().importBook(
         makeBook({
           id: 'rc1',
