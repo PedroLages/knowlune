@@ -13,12 +13,14 @@
  * @module useAudioPlayer
  * @since E87-S02
  * @modified E88-S04 — single-file M4B playback mode
+ * @modified E101-S04 — remote ABS streaming support
  */
 import { useEffect, useRef, useCallback, useState } from 'react'
 import type React from 'react'
 import { toast } from 'sonner'
 import type { Book } from '@/data/types'
 import { opfsStorageService } from '@/services/OpfsStorageService'
+import { getStreamUrl } from '@/services/AudiobookshelfService'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
 
 const AUTO_REWIND_THRESHOLD_MS = 30_000 // 30 seconds
@@ -36,11 +38,14 @@ export function formatAudioTime(seconds: number): string {
 }
 
 /**
- * Detect single-file audiobook (M4B) vs multi-file (MP3 folder).
+ * Detect single-file audiobook (M4B or remote ABS) vs multi-file (MP3 folder).
  * M4B books store a single `book.m4b` file; chapters reference offsets within it.
+ * ABS remote books always stream as a single file — chapter nav seeks within the stream.
  */
 export function isSingleFileAudiobook(book: Book): boolean {
   if (book.format !== 'audiobook') return false
+  // ABS remote books always stream as a single file (seek-based chapter nav)
+  if (book.source.type === 'remote') return true
   if (book.source.type !== 'local') return false
   return book.source.opfsPath.endsWith('book.m4b') || book.source.opfsPath.endsWith('.m4b')
 }
@@ -178,8 +183,18 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
       setLocalDuration(audio.duration)
     }
 
+    /** Handle streaming errors — show toast for remote books, pause playback */
+    const handleError = () => {
+      if (bookRef.current?.source.type === 'remote') {
+        setIsPlaying(false)
+        stopRafLoop()
+        toast.error('Lost connection to server. Check your network.')
+      }
+    }
+
     audio.addEventListener('ended', handleEnded)
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
+    audio.addEventListener('error', handleError)
 
     // Restore current position from singleton state (when remounting after navigation)
     if (audio.currentTime > 0) {
@@ -194,6 +209,7 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
     return () => {
       audio.removeEventListener('ended', handleEnded)
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      audio.removeEventListener('error', handleError)
       // Do NOT pause or destroy — singleton must survive route changes
       stopRafLoop()
     }
@@ -256,6 +272,84 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
 
       const chapters = book.chapters
       if (index < 0 || index >= chapters.length) return
+
+      // ─── Remote streaming mode (ABS): set direct URL, no OPFS ───
+      if (book.source.type === 'remote') {
+        const absItemId = book.absItemId
+        const auth = book.source.auth
+        const apiKey = auth && 'bearer' in auth ? auth.bearer : ''
+
+        if (!absItemId || !apiKey) {
+          // Provide a specific message: missing item ID vs missing Bearer token
+          const reason = !absItemId ? 'missing ABS item ID' : 'missing Bearer token (Basic auth not supported)'
+          toast.error(`Cannot stream: ${reason}`)
+          return
+        }
+
+        try {
+          // Only reload stream if this is a different book
+          if (_loadedBookId !== book.id) {
+            setIsLoading(true)
+            audio.pause()
+            stopRafLoop()
+
+            // No object URL to revoke for remote streams — skip revokeSharedObjectUrl()
+            const streamUrl = getStreamUrl(book.source.url, absItemId, apiKey)
+            audio.src = streamUrl
+            audio.playbackRate = playbackRate
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(audio as any).preservesPitch = true
+
+            // Wait for enough data to seek and play — set _loadedBookId only on success
+            await new Promise<void>((resolve, reject) => {
+              const onCanPlay = () => {
+                audio.removeEventListener('canplay', onCanPlay)
+                audio.removeEventListener('error', onError)
+                resolve()
+              }
+              const onError = () => {
+                audio.removeEventListener('canplay', onCanPlay)
+                audio.removeEventListener('error', onError)
+                reject(new Error('Failed to load stream'))
+              }
+              if (audio.readyState >= 3) {
+                resolve()
+              } else {
+                audio.addEventListener('canplay', onCanPlay)
+                audio.addEventListener('error', onError)
+                audio.load()
+              }
+            })
+
+            // Mark as loaded only after stream is ready — prevents stale ID on retry
+            _loadedBookId = book.id
+          }
+
+          // Seek to chapter start time
+          const startTime = getChapterStartTime(chapters[index])
+          audio.currentTime = startTime
+          setLocalCurrentTime(startTime)
+          setLocalDuration(audio.duration)
+          setCurrentChapterIndex(index)
+          setCurrentTime(startTime)
+
+          if (autoPlay) {
+            await audio.play()
+            setIsPlaying(true)
+            startRafLoop()
+          }
+          setIsLoading(false)
+        } catch (err) {
+          // Stream load or autoplay failed — reset state so retry forces a reload
+          _loadedBookId = null
+          audio.src = ''
+          setIsLoading(false)
+          setIsPlaying(false)
+          const message = err instanceof Error ? err.message : 'Streaming failed'
+          toast.error(message)
+        }
+        return
+      }
 
       // ─── Single-file mode (M4B): seek within loaded file ───
       if (singleFile) {

@@ -93,7 +93,7 @@ class BookContentService {
       }
 
       const headers: Record<string, string> = {}
-      if (source.auth?.username) {
+      if (source.auth && 'username' in source.auth) {
         // Issue 2: Warn if credentials are sent over plain HTTP (RFC 7617 security)
         if (/^http:\/\//i.test(source.url)) {
           console.warn(
