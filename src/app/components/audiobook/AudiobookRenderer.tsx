@@ -137,7 +137,8 @@ export function AudiobookRenderer({
 
     // Persist to Dexie — non-critical, never disrupt playback UX
     // silent-catch-ok: position will be re-saved on next pause (non-fatal)
-    const dexieUpdate: Partial<Pick<Book, 'currentPosition' | 'lastOpenedAt' | 'progress'>> = { currentPosition: position, lastOpenedAt: now }
+    type DexiePositionUpdate = Partial<Pick<Book, 'currentPosition' | 'lastOpenedAt' | 'progress'>>
+    const dexieUpdate: DexiePositionUpdate = { currentPosition: position, lastOpenedAt: now }
     if (progress !== undefined) dexieUpdate.progress = progress
     db.books
       .update(book.id, dexieUpdate as Parameters<typeof db.books.update>[1])
