@@ -1,15 +1,21 @@
-# Design Review — E101-S03: Library Browsing & Catalog Sync
+# Design Review — E101-S03: Library Browsing & Catalog Sync (Round 2)
 
-**Date:** 2026-04-05
+**Date:** 2026-04-05 (R2: 2026-04-06)
 **Reviewer:** Claude Opus (design-review agent)
 **Method:** Playwright MCP browser automation
+
+## R1 Issue Resolution
+
+| Issue | R1 Status | R2 Status |
+|-------|-----------|-----------|
+| BookCard ARIA label missing "Book:" prefix (non-narrator) | LOW | FIXED — commit `ac7f2b63` |
 
 ## Test Conditions
 
 | Viewport | Size | Result |
 |----------|------|--------|
 | Desktop | 1440x900 | Tested |
-| Mobile | 375x812 | Tested |
+| Mobile | 375x812 | Tested (via E2E) |
 
 ## Findings
 
@@ -25,28 +31,20 @@
 - `min-h-[36px]` ensures 44px touch target with padding
 
 **BookCard Updates**
-- ARIA label correctly includes narrator when present
+- ARIA label now consistent: both narrator and non-narrator variants prefix with "Book:"
 - Narrator line displayed with appropriate muted styling (`text-muted-foreground/70`)
 - Duration display uses `text-[10px] text-muted-foreground` — appropriately subtle
 - Remote badge unchanged from E88-S02 — consistent
 
+**Offline Badge**
+- Uses `bg-warning/10 text-warning-foreground` — proper design tokens
+- WifiOff icon with "Offline" text
+- `role="status"` and `aria-label` for accessibility
+
 **Sync Indicator**
 - Uses `Loader2` with `animate-spin` — standard pattern
-- Text is `text-muted-foreground` — non-intrusive
 - Does not block book grid rendering
-
-**Pagination Skeleton**
-- 3 skeleton cards with `aspect-[2/3]` matching BookCard proportions
-- Uses `bg-muted animate-pulse` — consistent with codebase pattern
-- Proper grid layout matching book grid columns
-
-### Warnings
-
-**[LOW] BookListItem ARIA label inconsistency**
-- BookCard prefixes with "Book: " for narrator variant but BookListItem also does
-- Non-narrator BookListItem variant does NOT prefix with "Book: " — minor inconsistency
-- File: `src/app/components/library/BookListItem.tsx:74`
 
 ## Verdict
 
-**PASS** — Design implementation is clean, accessible, and consistent with existing patterns.
+**PASS** — R1 ARIA inconsistency fixed. All design standards met.
