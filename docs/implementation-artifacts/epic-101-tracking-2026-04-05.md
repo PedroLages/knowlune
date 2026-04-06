@@ -112,12 +112,12 @@ _(none)_
 
 | Command | Status | Result | Notes |
 |---------|--------|--------|-------|
-| Sprint Status | pending | — | — |
-| Mark Epic Done | pending | — | — |
-| Testarch Trace | pending | — | — |
-| Testarch NFR | pending | — | — |
-| Adversarial Review | pending | — | — |
-| Retrospective | pending | — | — |
+| Sprint Status | done | All 6 stories done | — |
+| Mark Epic Done | done | epic-101: done | — |
+| Testarch Trace | done | PASS (85%, P0=100%) | testarch-trace-2026-04-06-epic-101.md |
+| Testarch NFR | done | CONCERNS (18P/7C/0F) | nfr-assessment-2026-04-06-e101.md |
+| Adversarial Review | done | 16 findings (6 critical) | adversarial-review-2026-04-06-E101.md |
+| Retrospective | done | 5 action items | epic-101-retro-2026-04-06.md |
 
 ## Non-Issues (False Positives)
 _(none yet)_
