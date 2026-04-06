@@ -79,15 +79,16 @@ _(none)_
 ---
 
 ### E101-S05: Audio Bookmarks & Learning Loop
-**Status:** queued
+**Status:** reviewing (R2)
 #### Errors
-_(none yet)_
+_(none)_
 #### Review Findings
-_(none yet)_
+- R1: 6 issues (1 MEDIUM, 3 LOW, 2 NIT) + 1 NON-ISSUE (GLM false positive)
 #### Fixes Applied
-_(none yet)_
+- R1: editingNotesRef for stable useCallback, sessionBookmarkIds Set + filtering, deliberateStopRef, 44px touch target, E2E bookmarks.spec.ts
 #### Notes
-_(none yet)_
+- PostSessionBookmarkReview Sheet, bookmark badge, flashcard creation flow
+- Has .tsx changes → full review scope
 
 ---
 
