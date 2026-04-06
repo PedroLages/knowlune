@@ -41,6 +41,7 @@ import { HighlightListPanel } from '@/app/components/reader/HighlightListPanel'
 import { ClozeFlashcardCreator } from '@/app/components/reader/ClozeFlashcardCreator'
 import { useTts } from '@/app/hooks/useTts'
 import { useReadingSession } from '@/app/hooks/useReadingSession'
+import { useFormatSwitch } from '@/app/hooks/useFormatSwitch'
 import { appEventBus } from '@/lib/eventBus'
 import { useReadingGoalStore } from '@/stores/useReadingGoalStore'
 import { getTimeReadToday } from '@/services/ReadingStatsService'
@@ -169,6 +170,9 @@ export function BookReader() {
 
   // Find book in store
   const book = books.find(b => b.id === bookId)
+
+  // Format switching: EPUB ↔ audiobook via chapter mapping (E103-S02)
+  const { hasMapping, switchToFormat } = useFormatSwitch(bookId, book?.format)
 
   // Update lastOpenedAt when reader opens (once book is found)
   useEffect(() => {
@@ -360,6 +364,50 @@ export function BookReader() {
     [bookId]
   )
 
+  /**
+   * Immediately flush the current EPUB position to Dexie — used before navigating
+   * away (e.g., format switch) to ensure position is persisted before unmount.
+   * Cancels any pending debounced save first (AC4 / E103-S02).
+   */
+  const saveEpubPositionNow = useCallback(() => {
+    if (!bookId || !renditionRef.current) return
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
+    try {
+      const loc = renditionRef.current.currentLocation()
+      if (loc && typeof loc === 'object' && 'start' in loc) {
+        const start = (loc as { start?: { cfi?: string; percentage?: number } }).start
+        if (start?.cfi) {
+          const position: ContentPosition = { type: 'cfi', value: start.cfi }
+          const progressInt =
+            typeof start.percentage === 'number' ? Math.round(start.percentage * 100) : undefined
+          useBookStore.setState(state => ({
+            books: state.books.map(b =>
+              b.id === bookId
+                ? {
+                    ...b,
+                    currentPosition: position,
+                    ...(progressInt !== undefined && { progress: progressInt }),
+                  }
+                : b
+            ),
+          }))
+          // silent-catch-ok: pre-navigation save failure is non-fatal (position saved on next open)
+          db.books
+            .update(bookId, {
+              currentPosition: position,
+              ...(progressInt !== undefined && { progress: progressInt }),
+            })
+            .catch(err => console.error('[BookReader] Pre-navigation EPUB save failed:', err))
+        }
+      }
+    } catch {
+      // silent-catch-ok: rendition may not have location yet
+    }
+  }, [bookId])
+
   /** CFI location change — update store position + progress + current chapter */
   const handleLocationChanged = useCallback(
     (cfi: string) => {
@@ -492,6 +540,42 @@ export function BookReader() {
   // Derived: whether there is a cached fallback available (E88-S03)
   const hasCachedFallback = remoteEpubError?.hasCachedVersion ?? false
 
+  // Read ?startChapter param for format switching (E103-S02)
+  const startChapterParam = searchParams.get('startChapter')
+  const startChapterIndex = startChapterParam !== null ? parseInt(startChapterParam, 10) : null
+
+  // Clear ?startChapter from URL after reading it (prevent stale params on refresh)
+  useEffect(() => {
+    if (startChapterParam !== null) {
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('startChapter')
+      const newSearch = newParams.toString()
+      navigate(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`, { replace: true })
+    }
+  }, []) // Run once on mount only
+
+  // For EPUB: navigate to startChapter's TOC href after TOC is loaded (E103-S02)
+  const startChapterAppliedRef = useRef(false)
+  useEffect(() => {
+    if (
+      startChapterIndex === null ||
+      startChapterAppliedRef.current ||
+      toc.length === 0 ||
+      !renditionRef.current ||
+      book?.format !== 'epub'
+    )
+      return
+
+    const idx = Math.max(0, Math.min(startChapterIndex, toc.length - 1))
+    const targetHref = toc[idx]?.href
+    if (targetHref) {
+      startChapterAppliedRef.current = true
+      renditionRef.current.display(targetHref).catch(() => {
+        // silent-catch-ok: chapter navigation failure falls back to current position
+      })
+    }
+  }, [startChapterIndex, toc, book?.format])
+
   // Derive initial CFI: prefer highlight back-navigation CFI (E85-S05) over saved position
   const initialCfi =
     highlightCfi ?? (book?.currentPosition?.type === 'cfi' ? book.currentPosition.value : null)
@@ -548,6 +632,14 @@ export function BookReader() {
             book={book}
             bookmarksOpen={audiobookBookmarksOpen}
             onBookmarksClose={() => setAudiobookBookmarksOpen(false)}
+            onSwitchToReading={
+              hasMapping ? (chapterIndex: number) => switchToFormat(chapterIndex) : undefined
+            }
+            initialChapterIndex={
+              startChapterIndex !== null
+                ? Math.max(0, Math.min(startChapterIndex, book.chapters.length - 1))
+                : undefined
+            }
           />
         </Suspense>
       </div>
@@ -570,6 +662,19 @@ export function BookReader() {
         onSettingsOpen={() => setSettingsOpen(true)}
         onHighlightsOpen={() => setHighlightsOpen(true)}
         onReadAloud={isTtsAvailable ? startTts : undefined}
+        onSwitchToListening={
+          hasMapping && book?.format === 'epub'
+            ? () => {
+                // Save EPUB position immediately before navigating (AC4 / E103-S02)
+                saveEpubPositionNow()
+                // Derive current EPUB chapter index from TOC + currentHref
+                const epubChapterIndex = currentHref
+                  ? toc.findIndex(item => item.href.split('#')[0] === currentHref.split('#')[0])
+                  : -1
+                switchToFormat(Math.max(0, epubChapterIndex))
+              }
+            : undefined
+        }
       />
 
       {/* Main content area */}

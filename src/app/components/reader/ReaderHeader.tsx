@@ -8,7 +8,7 @@
  *
  * @module ReaderHeader
  */
-import { ArrowLeft, MoreHorizontal, Volume2 } from 'lucide-react'
+import { ArrowLeft, Headphones, MoreHorizontal, Volume2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Button } from '@/app/components/ui/button'
 import {
@@ -42,6 +42,8 @@ interface ReaderHeaderProps {
   onHighlightsOpen?: () => void
   /** Called when Read Aloud menu item is clicked. Hidden if undefined (TTS not available). */
   onReadAloud?: () => void
+  /** When provided, renders a "Switch to Listening" button. Wired by BookReader when a chapter mapping exists (E103-S02). */
+  onSwitchToListening?: () => void
 }
 
 export function ReaderHeader({
@@ -53,6 +55,7 @@ export function ReaderHeader({
   onSettingsOpen,
   onHighlightsOpen,
   onReadAloud,
+  onSwitchToListening,
 }: ReaderHeaderProps) {
   const navigate = useNavigate()
 
@@ -99,6 +102,26 @@ export function ReaderHeader({
           </p>
         )}
       </div>
+
+      {/* Switch to Listening — only when a chapter mapping exists (E103-S02) */}
+      {onSwitchToListening && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onSwitchToListening}
+          aria-label="Switch to listening"
+          title="Switch to listening"
+          className={cn(
+            'min-h-[44px] min-w-[44px] gap-1.5',
+            HEADER_TEXT[theme],
+            'hover:bg-black/10'
+          )}
+          data-testid="switch-to-listening-button"
+        >
+          <Headphones className="size-4" aria-hidden="true" />
+          <span className="hidden sm:inline text-xs">Listen</span>
+        </Button>
+      )}
 
       {/* Menu button */}
       <DropdownMenu>

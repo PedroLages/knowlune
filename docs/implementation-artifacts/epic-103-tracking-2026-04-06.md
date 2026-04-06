@@ -8,7 +8,7 @@ Last Updated: 2026-04-06
 | Story | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|--------|--------|---------------|--------------|
 | E103-S01 | done | #271 | 1 | 4 |
-| E103-S02 | queued | — | — | — |
+| E103-S02 | finishing | — | 2 | 3 |
 | E103-S03 | queued | — | — | — |
 
 ## Story Details
@@ -27,15 +27,15 @@ _(none)_
 ---
 
 ### E103-S02: Format Switching UI
-**Status:** queued
+**Status:** finishing
 #### Errors
-_(none yet)_
+_(none)_
 #### Review Findings
-_(none yet)_
+- R1: 3 issues (2 HIGH position save + E2E, 1 MEDIUM setTimeout)
 #### Fixes Applied
-_(none yet)_
+- R1: savePosition before switch, saveEpubPositionNow flush, removed setTimeout, AC3+AC4 E2E tests
 #### Notes
-_(none yet)_
+- useFormatSwitch hook, startChapter query param, Dexie live query for mappings
 
 ---
 

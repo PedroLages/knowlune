@@ -12,6 +12,7 @@
 import { useEffect, useCallback, useState, useRef } from 'react'
 import { Play, Pause, SkipBack, SkipForward, BookOpen } from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from '@/app/components/ui/button'
 import { Slider } from '@/app/components/ui/slider'
 import { useAudioPlayer, formatAudioTime } from '@/app/hooks/useAudioPlayer'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
@@ -37,12 +38,18 @@ interface AudiobookRendererProps {
   /** Controlled from BookReader header to open the bookmark panel */
   bookmarksOpen?: boolean
   onBookmarksClose?: () => void
+  /** When provided, renders a "Switch to Reading" button. Called with current chapter index. Wired by BookReader when a chapter mapping exists (E103-S02). */
+  onSwitchToReading?: (currentChapterIndex: number) => void
+  /** Initial chapter index to load on mount (E103-S02 format switching). Defaults to 0. */
+  initialChapterIndex?: number
 }
 
 export function AudiobookRenderer({
   book,
   bookmarksOpen: bookmarksOpenProp,
   onBookmarksClose,
+  onSwitchToReading,
+  initialChapterIndex = 0,
 }: AudiobookRendererProps) {
   const {
     isPlaying,
@@ -95,7 +102,7 @@ export function AudiobookRenderer({
   // Register this book as the active audiobook and load the first chapter
   useEffect(() => {
     setCurrentBook(book.id)
-    loadChapter(0, false)
+    loadChapter(initialChapterIndex, false)
   }, [book.id]) // book.id is stable after mount; loadChapter/setCurrentBook identity stable
 
   // Check for post-sleep toast on mount
@@ -290,6 +297,26 @@ export function AudiobookRenderer({
         </p>
         {book.author && <p className="text-xs text-muted-foreground">{book.author}</p>}
       </div>
+
+      {/* Switch to Reading — only when a chapter mapping exists (E103-S02) */}
+      {onSwitchToReading && (
+        <Button
+          variant="brand-outline"
+          size="sm"
+          onClick={() => {
+            // Save position before navigating away (AC2 / E103-S02)
+            savePosition()
+            onSwitchToReading?.(currentChapterIndex)
+          }}
+          aria-label="Switch to reading"
+          title="Switch to reading"
+          className="min-h-[44px] min-w-[44px]"
+          data-testid="switch-to-reading-button"
+        >
+          <BookOpen className="size-4 mr-2" aria-hidden="true" />
+          Switch to Reading
+        </Button>
+      )}
 
       {/* Progress Scrubber */}
       <div className="w-full space-y-2 px-2">
