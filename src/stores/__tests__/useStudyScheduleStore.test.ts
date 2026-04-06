@@ -244,8 +244,16 @@ describe('deleteSchedule', () => {
 
 describe('getSchedulesForDay', () => {
   it('returns schedules that include the given day', () => {
-    const s1 = makeSchedule({ id: 's1', days: ['monday', 'wednesday'] as DayOfWeek[], enabled: true })
-    const s2 = makeSchedule({ id: 's2', days: ['tuesday', 'thursday'] as DayOfWeek[], enabled: true })
+    const s1 = makeSchedule({
+      id: 's1',
+      days: ['monday', 'wednesday'] as DayOfWeek[],
+      enabled: true,
+    })
+    const s2 = makeSchedule({
+      id: 's2',
+      days: ['tuesday', 'thursday'] as DayOfWeek[],
+      enabled: true,
+    })
     const s3 = makeSchedule({ id: 's3', days: ['monday'] as DayOfWeek[], enabled: true })
     useStudyScheduleStore.setState({ schedules: [s1, s2, s3] })
 

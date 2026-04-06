@@ -285,18 +285,20 @@ describe('getBookCountByStatus', () => {
       await useBookStore
         .getState()
         .importBook(
-          makeBook({ id: 'lc1', status: 'reading', source: { type: 'local', opfsPath: '' } }) as never
-        )
-      await useBookStore
-        .getState()
-        .importBook(
           makeBook({
-            id: 'rc1',
+            id: 'lc1',
             status: 'reading',
-            source: { type: 'remote', url: 'http://abs' },
-            absServerId: 'srv-1',
+            source: { type: 'local', opfsPath: '' },
           }) as never
         )
+      await useBookStore.getState().importBook(
+        makeBook({
+          id: 'rc1',
+          status: 'reading',
+          source: { type: 'remote', url: 'http://abs' },
+          absServerId: 'srv-1',
+        }) as never
+      )
     })
 
     useBookStore.getState().setFilter('source', 'local')
@@ -346,11 +348,9 @@ describe('updateBookPosition', () => {
     })
 
     await act(async () => {
-      await useBookStore.getState().updateBookPosition(
-        'pos-1',
-        { type: 'page', pageNumber: 50 },
-        50
-      )
+      await useBookStore
+        .getState()
+        .updateBookPosition('pos-1', { type: 'page', pageNumber: 50 }, 50)
     })
 
     const book = useBookStore.getState().books[0]
@@ -364,11 +364,9 @@ describe('updateBookPosition', () => {
     })
 
     await act(async () => {
-      await useBookStore.getState().updateBookPosition(
-        'pos-2',
-        { type: 'cfi', value: 'epubcfi(/6/2)' },
-        25
-      )
+      await useBookStore
+        .getState()
+        .updateBookPosition('pos-2', { type: 'cfi', value: 'epubcfi(/6/2)' }, 25)
     })
 
     const { db } = await import('@/db/schema')
@@ -517,18 +515,14 @@ describe('getFilteredBooks — source filter', () => {
     await act(async () => {
       await useBookStore
         .getState()
-        .importBook(
-          makeBook({ id: 'sf-1', source: { type: 'local', opfsPath: '' } }) as never
-        )
-      await useBookStore
-        .getState()
-        .importBook(
-          makeBook({
-            id: 'sf-2',
-            source: { type: 'remote', url: 'http://abs' },
-            absServerId: 'srv-1',
-          }) as never
-        )
+        .importBook(makeBook({ id: 'sf-1', source: { type: 'local', opfsPath: '' } }) as never)
+      await useBookStore.getState().importBook(
+        makeBook({
+          id: 'sf-2',
+          source: { type: 'remote', url: 'http://abs' },
+          absServerId: 'srv-1',
+        }) as never
+      )
     })
 
     useBookStore.getState().setFilter('source', 'audiobookshelf')
@@ -541,18 +535,14 @@ describe('getFilteredBooks — source filter', () => {
     await act(async () => {
       await useBookStore
         .getState()
-        .importBook(
-          makeBook({ id: 'lf-1', source: { type: 'local', opfsPath: '' } }) as never
-        )
-      await useBookStore
-        .getState()
-        .importBook(
-          makeBook({
-            id: 'lf-2',
-            source: { type: 'remote', url: 'http://abs' },
-            absServerId: 'srv-1',
-          }) as never
-        )
+        .importBook(makeBook({ id: 'lf-1', source: { type: 'local', opfsPath: '' } }) as never)
+      await useBookStore.getState().importBook(
+        makeBook({
+          id: 'lf-2',
+          source: { type: 'remote', url: 'http://abs' },
+          absServerId: 'srv-1',
+        }) as never
+      )
     })
 
     useBookStore.getState().setFilter('source', 'local')

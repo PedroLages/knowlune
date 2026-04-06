@@ -7,7 +7,7 @@
  *
  * @since E106-S01
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 import type { AudiobookshelfServer } from '@/data/types'
 
@@ -32,9 +32,18 @@ vi.mock('@/db/schema', () => ({
 
 import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 import { db } from '@/db/schema'
+import type { MockInstance } from 'vitest'
 
-// Access mocked db for assertions
-const mockDb = vi.mocked(db)
+// Cast mocked db methods to MockInstance to access Vitest mock APIs.
+// vi.mocked() doesn't help here because Dexie table types don't reflect mock methods.
+const mockDb = db as unknown as {
+  audiobookshelfServers: {
+    toArray: MockInstance
+    add: MockInstance
+    update: MockInstance
+    delete: MockInstance
+  }
+}
 
 function makeServer(overrides: Partial<AudiobookshelfServer> = {}): AudiobookshelfServer {
   return {
@@ -130,9 +139,9 @@ describe('addServer', () => {
   it('throws on DB failure', async () => {
     mockDb.audiobookshelfServers.add.mockRejectedValueOnce(new Error('Add fail'))
 
-    await expect(
-      useAudiobookshelfStore.getState().addServer(makeServer())
-    ).rejects.toThrow('Add fail')
+    await expect(useAudiobookshelfStore.getState().addServer(makeServer())).rejects.toThrow(
+      'Add fail'
+    )
 
     expect(useAudiobookshelfStore.getState().servers).toHaveLength(0)
   })
@@ -239,7 +248,16 @@ describe('loadSeries', () => {
       ok: true,
       data: {
         results: [
-          { id: 'series-1', name: 'Test Series', books: [], addedAt: 0, updatedAt: 0, description: '' },
+          {
+            id: 'series-1',
+            name: 'Test Series',
+            nameIgnorePrefix: 'Test Series',
+            type: 'series' as const,
+            books: [],
+            totalDuration: 0,
+            addedAt: 0,
+            updatedAt: 0,
+          },
         ],
         total: 1,
       },
@@ -297,10 +315,12 @@ describe('loadSeries', () => {
           results: Array.from({ length: 50 }, (_, i) => ({
             id: `s-${i}`,
             name: `Series ${i}`,
+            nameIgnorePrefix: `Series ${i}`,
+            type: 'series' as const,
             books: [],
+            totalDuration: 0,
             addedAt: 0,
             updatedAt: 0,
-            description: '',
           })),
           total: 75,
         },
@@ -311,10 +331,12 @@ describe('loadSeries', () => {
           results: Array.from({ length: 25 }, (_, i) => ({
             id: `s-${50 + i}`,
             name: `Series ${50 + i}`,
+            nameIgnorePrefix: `Series ${50 + i}`,
+            type: 'series' as const,
             books: [],
+            totalDuration: 0,
             addedAt: 0,
             updatedAt: 0,
-            description: '',
           })),
           total: 75,
         },

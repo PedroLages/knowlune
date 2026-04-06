@@ -10,8 +10,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Dexie from 'dexie'
 import type { NotificationType } from '@/data/types'
 
-const FIXED_DATE = new Date('2026-03-23T10:00:00.000Z')
-
 // Mock persistWithRetry to just execute the operation directly
 vi.mock('@/lib/persistWithRetry', () => ({
   persistWithRetry: vi.fn(async (op: () => Promise<void>) => op()),
@@ -131,7 +129,9 @@ describe('setTypeEnabled', () => {
     await useNotificationPrefsStore.getState().init()
     const before = { ...useNotificationPrefsStore.getState().prefs }
 
-    await useNotificationPrefsStore.getState().setTypeEnabled('unknown-type' as NotificationType, false)
+    await useNotificationPrefsStore
+      .getState()
+      .setTypeEnabled('unknown-type' as NotificationType, false)
 
     // No change
     expect(useNotificationPrefsStore.getState().prefs.courseComplete).toBe(before.courseComplete)
@@ -211,9 +211,9 @@ describe('isTypeEnabled', () => {
   })
 
   it('returns true for unknown type (safe default)', () => {
-    expect(
-      useNotificationPrefsStore.getState().isTypeEnabled('unknown' as NotificationType)
-    ).toBe(true)
+    expect(useNotificationPrefsStore.getState().isTypeEnabled('unknown' as NotificationType)).toBe(
+      true
+    )
   })
 })
 
