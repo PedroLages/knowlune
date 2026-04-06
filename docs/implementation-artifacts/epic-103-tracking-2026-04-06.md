@@ -7,22 +7,22 @@ Last Updated: 2026-04-06
 
 | Story | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|--------|--------|---------------|--------------|
-| E103-S01 | queued | — | — | — |
+| E103-S01 | finishing | — | 1 | 4 |
 | E103-S02 | queued | — | — | — |
 | E103-S03 | queued | — | — | — |
 
 ## Story Details
 
 ### E103-S01: Chapter Matching Engine
-**Status:** queued
+**Status:** finishing
 #### Errors
-_(none yet)_
+_(none)_
 #### Review Findings
-_(none yet)_
+- R1: PASS — 3 MEDIUM (DRY fetchChapters, fragile cast, book.destroy), 2 LOW (aria-live, normalize spec mismatch)
 #### Fixes Applied
-_(none yet)_
+- R1: reuse fetchItem(), book.destroy() in finally, aria-live="polite". 1 NON-ISSUE (normalize behavior correct per tests)
 #### Notes
-_(none yet)_
+- Jaro-Winkler + Levenshtein, Dexie v41, ChapterMappingEditor, 25 unit tests
 
 ---
 
