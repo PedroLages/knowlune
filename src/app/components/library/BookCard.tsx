@@ -47,7 +47,7 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
       aria-label={
         book.narrator
           ? `Book: ${book.title} by ${book.author}, narrated by ${book.narrator}, ${book.progress}% complete`
-          : `${book.title} by ${book.author}, ${book.progress}% complete`
+          : `Book: ${book.title} by ${book.author}, ${book.progress}% complete`
       }
       tabIndex={0}
       onClick={handleClick}
