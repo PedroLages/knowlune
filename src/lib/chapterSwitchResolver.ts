@@ -125,7 +125,10 @@ function findCurrentAudioChapterIndex(book: Book): number | null {
 /**
  * Get the start position for a given audio chapter index.
  */
-function resolveAudioChapterPosition(audioBook: Book, chapterIndex: number): ContentPosition | null {
+function resolveAudioChapterPosition(
+  audioBook: Book,
+  chapterIndex: number
+): ContentPosition | null {
   if (chapterIndex < 0 || chapterIndex >= audioBook.chapters.length) return null
   const chapter = audioBook.chapters[chapterIndex]
   if (chapter.position.type === 'time') {

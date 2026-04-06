@@ -23,9 +23,27 @@ function makeEpubBook(overrides: Partial<Book> = {}): Book {
     status: 'reading',
     tags: [],
     chapters: [
-      { id: 'ch01.xhtml', bookId: 'epub-1', title: 'Chapter 1', order: 0, position: { type: 'cfi', value: '/2/4/1' } },
-      { id: 'ch02.xhtml', bookId: 'epub-1', title: 'Chapter 2', order: 1, position: { type: 'cfi', value: '/2/4/2' } },
-      { id: 'ch03.xhtml', bookId: 'epub-1', title: 'Chapter 3', order: 2, position: { type: 'cfi', value: '/2/4/3' } },
+      {
+        id: 'ch01.xhtml',
+        bookId: 'epub-1',
+        title: 'Chapter 1',
+        order: 0,
+        position: { type: 'cfi', value: '/2/4/1' },
+      },
+      {
+        id: 'ch02.xhtml',
+        bookId: 'epub-1',
+        title: 'Chapter 2',
+        order: 1,
+        position: { type: 'cfi', value: '/2/4/2' },
+      },
+      {
+        id: 'ch03.xhtml',
+        bookId: 'epub-1',
+        title: 'Chapter 3',
+        order: 2,
+        position: { type: 'cfi', value: '/2/4/3' },
+      },
     ],
     source: { type: 'local', opfsPath: '/test.epub' },
     currentPosition: { type: 'cfi', value: '/2/4/2' },
@@ -44,9 +62,27 @@ function makeAudioBook(overrides: Partial<Book> = {}): Book {
     status: 'reading',
     tags: [],
     chapters: [
-      { id: 'ach-0', bookId: 'audio-1', title: 'Chapter 1', order: 0, position: { type: 'time', seconds: 0 } },
-      { id: 'ach-1', bookId: 'audio-1', title: 'Chapter 2', order: 1, position: { type: 'time', seconds: 3600 } },
-      { id: 'ach-2', bookId: 'audio-1', title: 'Chapter 3', order: 2, position: { type: 'time', seconds: 7200 } },
+      {
+        id: 'ach-0',
+        bookId: 'audio-1',
+        title: 'Chapter 1',
+        order: 0,
+        position: { type: 'time', seconds: 0 },
+      },
+      {
+        id: 'ach-1',
+        bookId: 'audio-1',
+        title: 'Chapter 2',
+        order: 1,
+        position: { type: 'time', seconds: 3600 },
+      },
+      {
+        id: 'ach-2',
+        bookId: 'audio-1',
+        title: 'Chapter 3',
+        order: 2,
+        position: { type: 'time', seconds: 7200 },
+      },
     ],
     source: { type: 'local', opfsPath: '/test.m4b' },
     currentPosition: { type: 'time', seconds: 4000 },
@@ -63,7 +99,7 @@ function makeMapping(overrides: Partial<ChapterMappingRecord> = {}): ChapterMapp
     audioBookId: 'audio-1',
     mappings: [
       { epubChapterHref: 'ch01.xhtml', audioChapterIndex: 0, confidence: 0.95 },
-      { epubChapterHref: 'ch02.xhtml', audioChapterIndex: 1, confidence: 0.90 },
+      { epubChapterHref: 'ch02.xhtml', audioChapterIndex: 1, confidence: 0.9 },
       { epubChapterHref: 'ch03.xhtml', audioChapterIndex: 2, confidence: 0.85 },
     ],
     computedAt: '2026-01-01T00:00:00Z',
@@ -118,7 +154,13 @@ describe('resolveAudioPositionFromEpub', () => {
     const epub = makeEpubBook({
       currentPosition: { type: 'cfi', value: '/2/4/99' },
       chapters: [
-        { id: 'ch99.xhtml', bookId: 'epub-1', title: 'Chapter 99', order: 0, position: { type: 'cfi', value: '/2/4/99' } },
+        {
+          id: 'ch99.xhtml',
+          bookId: 'epub-1',
+          title: 'Chapter 99',
+          order: 0,
+          position: { type: 'cfi', value: '/2/4/99' },
+        },
       ],
     })
     const audio = makeAudioBook()

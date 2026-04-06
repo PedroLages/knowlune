@@ -254,8 +254,12 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       }),
     }))
     try {
-      await db.books.update(bookIdA, { linkedBookId: bookIdB, updatedAt: now } as Parameters<typeof db.books.update>[1])
-      await db.books.update(bookIdB, { linkedBookId: bookIdA, updatedAt: now } as Parameters<typeof db.books.update>[1])
+      await db.books.update(bookIdA, { linkedBookId: bookIdB, updatedAt: now } as Parameters<
+        typeof db.books.update
+      >[1])
+      await db.books.update(bookIdB, { linkedBookId: bookIdA, updatedAt: now } as Parameters<
+        typeof db.books.update
+      >[1])
     } catch (err) {
       console.error('[BookStore] Failed to link books:', err)
       const books = await db.books.toArray()

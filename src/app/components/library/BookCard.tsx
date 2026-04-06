@@ -20,7 +20,10 @@ function findCurrentChapterTitle(chapters: Book['chapters'], posSeconds: number)
         posSeconds >= (_ch.position.type === 'time' ? _ch.position.seconds : 0) &&
         (i === arr.length - 1 ||
           posSeconds <
-            (arr[i + 1].position.type === 'time' ? arr[i + 1].position.seconds : Infinity))
+            (() => {
+              const nextPos = arr[i + 1].position
+              return nextPos.type === 'time' ? nextPos.seconds : Infinity
+            })())
     )?.title ?? 'Chapter 1'
   )
 }
