@@ -7,14 +7,14 @@ Last Updated: 2026-04-06
 
 | Story | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|--------|--------|---------------|--------------|
-| E103-S01 | finishing | — | 1 | 4 |
+| E103-S01 | done | #271 | 1 | 4 |
 | E103-S02 | queued | — | — | — |
 | E103-S03 | queued | — | — | — |
 
 ## Story Details
 
 ### E103-S01: Chapter Matching Engine
-**Status:** finishing
+**Status:** done (PR #271)
 #### Errors
 _(none)_
 #### Review Findings
