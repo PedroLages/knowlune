@@ -448,6 +448,7 @@ function serveLocalMedia(): Plugin {
     }
   };
 }
+
 /**
  * Vite plugin that removes `upgrade-insecure-requests` and `block-all-mixed-content`
  * CSP directives from index.html during E2E test runs (PLAYWRIGHT_TEST=1).
