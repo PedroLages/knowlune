@@ -27,15 +27,15 @@ _(none)_
 ---
 
 ### E103-S02: Format Switching UI
-**Status:** queued
+**Status:** reviewing (R2)
 #### Errors
-_(none yet)_
+_(none)_
 #### Review Findings
-_(none yet)_
+- R1: 3 issues (2 HIGH position save + E2E, 1 MEDIUM setTimeout)
 #### Fixes Applied
-_(none yet)_
+- R1: savePosition before switch, saveEpubPositionNow flush, removed setTimeout, AC3+AC4 E2E tests
 #### Notes
-_(none yet)_
+- useFormatSwitch hook, startChapter query param, Dexie live query for mappings
 
 ---
 
