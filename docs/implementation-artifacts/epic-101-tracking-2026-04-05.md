@@ -11,7 +11,7 @@ Last Updated: 2026-04-05
 | E101-S02 | done | #262 | 1 | 4 |
 | E101-S03 | done | #263 | 2 | 14 |
 | E101-S04 | done | #264 | 3 | 13 |
-| E101-S05 | queued | — | — | — |
+| E101-S05 | finishing | — | 3 | 8 |
 | E101-S06 | queued | — | — | — |
 
 ## Story Details
@@ -79,16 +79,18 @@ _(none)_
 ---
 
 ### E101-S05: Audio Bookmarks & Learning Loop
-**Status:** reviewing (R2)
+**Status:** finishing
 #### Errors
 _(none)_
 #### Review Findings
-- R1: 6 issues (1 MEDIUM, 3 LOW, 2 NIT) + 1 NON-ISSUE (GLM false positive)
+- R1: 6 issues (1 MEDIUM, 3 LOW, 2 NIT) + 1 NON-ISSUE
+- R2: 2 issues (1 BLOCKER incomplete rename, 1 LOW unused var)
+- R3: PASS (zero issues)
 #### Fixes Applied
-- R1: editingNotesRef for stable useCallback, sessionBookmarkIds Set + filtering, deliberateStopRef, 44px touch target, E2E bookmarks.spec.ts
+- R1: editingNotesRef, sessionBookmarkIds Set + filtering, deliberateStopRef, 44px touch target, E2E tests
+- R2: sessionBookmarkCount→sessionBookmarkIds.size (3 refs), removed unused var
 #### Notes
-- PostSessionBookmarkReview Sheet, bookmark badge, flashcard creation flow
-- Has .tsx changes → full review scope
+- Total: 8 fixed, 1 NON-ISSUE. Trend: 6→2→0
 
 ---
 
