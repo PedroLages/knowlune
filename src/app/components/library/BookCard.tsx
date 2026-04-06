@@ -117,17 +117,26 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
           <span className="text-[10px] text-muted-foreground tabular-nums">{book.progress}%</span>
         </div>
         {/* Audiobook: current chapter + time remaining (E101-S06: FR32) */}
-        {book.format === 'audiobook' && book.chapters.length > 0 && book.currentPosition?.type === 'time' && (
-          <p className="text-[10px] text-muted-foreground truncate" data-testid={`chapter-${book.id}`}>
-            {book.chapters.find(
-              (_ch, i, arr) =>
-                book.currentPosition!.type === 'time' &&
-                book.currentPosition!.seconds >= (_ch.position.type === 'time' ? _ch.position.seconds : 0) &&
-                (i === arr.length - 1 ||
-                  book.currentPosition!.seconds < (arr[i + 1].position.type === 'time' ? arr[i + 1].position.seconds : Infinity))
-            )?.title ?? `Chapter 1`}
-          </p>
-        )}
+        {book.format === 'audiobook' &&
+          book.chapters.length > 0 &&
+          book.currentPosition?.type === 'time' && (
+            <p
+              className="text-[10px] text-muted-foreground truncate"
+              data-testid={`chapter-${book.id}`}
+            >
+              {book.chapters.find(
+                (_ch, i, arr) =>
+                  book.currentPosition!.type === 'time' &&
+                  book.currentPosition!.seconds >=
+                    (_ch.position.type === 'time' ? _ch.position.seconds : 0) &&
+                  (i === arr.length - 1 ||
+                    book.currentPosition!.seconds <
+                      (arr[i + 1].position.type === 'time'
+                        ? arr[i + 1].position.seconds
+                        : Infinity))
+              )?.title ?? `Chapter 1`}
+            </p>
+          )}
         {book.totalDuration != null && book.totalDuration > 0 && (
           <p className="text-[10px] text-muted-foreground" data-testid={`duration-${book.id}`}>
             {book.format === 'audiobook' && book.currentPosition?.type === 'time'

@@ -118,13 +118,19 @@ export function AudiobookRenderer({
 
     // Calculate progress percentage from totalDuration (E101-S06: FR31/FR32)
     const totalDur = book.totalDuration ?? 0
-    const progress = totalDur > 0 ? Math.min(100, Math.round((audio.currentTime / totalDur) * 100)) : undefined
+    const progress =
+      totalDur > 0 ? Math.min(100, Math.round((audio.currentTime / totalDur) * 100)) : undefined
 
     // Optimistic store update
     useBookStore.setState(state => ({
       books: state.books.map(b =>
         b.id === book.id
-          ? { ...b, currentPosition: position, lastOpenedAt: now, ...(progress !== undefined && { progress }) }
+          ? {
+              ...b,
+              currentPosition: position,
+              lastOpenedAt: now,
+              ...(progress !== undefined && { progress }),
+            }
           : b
       ),
     }))

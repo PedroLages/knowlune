@@ -112,12 +112,10 @@ async function seedProgressData(page: import('@playwright/test').Page): Promise<
   await seedIndexedDBStore(page, DB_NAME, 'audiobookshelfServers', [
     ABS_SERVER,
   ] as unknown as Record<string, unknown>[])
-  await seedIndexedDBStore(
-    page,
-    DB_NAME,
-    'books',
-    [ABS_BOOK_WITH_PROGRESS, ABS_BOOK_NO_PROGRESS] as unknown as Record<string, unknown>[]
-  )
+  await seedIndexedDBStore(page, DB_NAME, 'books', [
+    ABS_BOOK_WITH_PROGRESS,
+    ABS_BOOK_NO_PROGRESS,
+  ] as unknown as Record<string, unknown>[])
 }
 
 test.describe('E101-S06: Progress Tracking & Streaks', () => {
@@ -175,9 +173,9 @@ test.describe('E101-S06: Progress Tracking & Streaks', () => {
     await seedProgressData(page)
 
     // Verify Dexie has the progress data (simulating what happens after playback saves)
-    const bookRecord = await page.evaluate(async (bookId) => {
+    const bookRecord = await page.evaluate(async bookId => {
       const request = indexedDB.open('ElearningDB')
-      return new Promise<Record<string, unknown> | null>((resolve) => {
+      return new Promise<Record<string, unknown> | null>(resolve => {
         request.onsuccess = () => {
           const db = request.result
           const tx = db.transaction('books', 'readonly')
@@ -203,7 +201,7 @@ test.describe('E101-S06: Progress Tracking & Streaks', () => {
 
     // Track all network requests to ABS server
     const absRequests: string[] = []
-    page.on('request', (request) => {
+    page.on('request', request => {
       if (request.url().includes('abs.test')) {
         absRequests.push(request.url())
       }

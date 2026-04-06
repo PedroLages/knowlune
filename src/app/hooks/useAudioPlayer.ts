@@ -281,7 +281,9 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
 
         if (!absItemId || !apiKey) {
           // Provide a specific message: missing item ID vs missing Bearer token
-          const reason = !absItemId ? 'missing ABS item ID' : 'missing Bearer token (Basic auth not supported)'
+          const reason = !absItemId
+            ? 'missing ABS item ID'
+            : 'missing Bearer token (Basic auth not supported)'
           toast.error(`Cannot stream: ${reason}`)
           return
         }
