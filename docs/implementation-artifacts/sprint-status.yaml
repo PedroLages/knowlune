@@ -1283,6 +1283,6 @@ development_status:
   # Fix 58 failing tests (KI-016..KI-025), restore 70% coverage (KI-029)
   # Depends on: none
   # ──────────────────────────────────────────────────
-  epic-105: backlog
-  105-1-unit-test-fixes: ready-for-dev
+  epic-105: in-progress
+  105-1-unit-test-fixes: done
   105-2-e2e-test-fixes-and-coverage: ready-for-dev

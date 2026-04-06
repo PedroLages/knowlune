@@ -278,8 +278,8 @@ describe('Courses page', () => {
       renderCourses()
 
       const statusButtons = screen.getAllByTestId('status-filter-button')
-      // Click the "Completed" filter (second button)
-      await user.click(statusButtons[1])
+      // Click the "Completed" filter (third button — order: not-started, active, completed, paused)
+      await user.click(statusButtons[2])
 
       expect(screen.queryByText('Active Course')).not.toBeInTheDocument()
       expect(screen.getByText('Completed Course')).toBeInTheDocument()
@@ -303,7 +303,7 @@ describe('Courses page', () => {
       renderCourses()
 
       const statusButtons = screen.getAllByTestId('status-filter-button')
-      await user.click(statusButtons[0]) // Select Active
+      await user.click(statusButtons[1]) // Select Active (index 1 — order: not-started, active, completed, paused)
 
       expect(screen.queryByText('Completed Course')).not.toBeInTheDocument()
 
@@ -336,9 +336,9 @@ describe('Courses page', () => {
       const user = userEvent.setup()
       renderCourses()
 
-      // Select "Active" status filter
+      // Select "Active" status filter (index 1 — order: not-started, active, completed, paused)
       const statusButtons = screen.getAllByTestId('status-filter-button')
-      await user.click(statusButtons[0])
+      await user.click(statusButtons[1])
 
       // Should show both Active courses (Active Course + Active Beta Course)
       expect(screen.getByText('Active Course')).toBeInTheDocument()
