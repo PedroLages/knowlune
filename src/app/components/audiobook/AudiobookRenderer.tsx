@@ -304,10 +304,10 @@ export function AudiobookRenderer({
           variant="brand-outline"
           size="sm"
           onClick={() => {
-              // Save position before navigating away (AC2 / E103-S02)
-              savePosition()
-              onSwitchToReading?.(currentChapterIndex)
-            }}
+            // Save position before navigating away (AC2 / E103-S02)
+            savePosition()
+            onSwitchToReading?.(currentChapterIndex)
+          }}
           aria-label="Switch to reading"
           title="Switch to reading"
           className="min-h-[44px] min-w-[44px]"

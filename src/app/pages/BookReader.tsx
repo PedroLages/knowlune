@@ -381,11 +381,16 @@ export function BookReader() {
         const start = (loc as { start?: { cfi?: string; percentage?: number } }).start
         if (start?.cfi) {
           const position: ContentPosition = { type: 'cfi', value: start.cfi }
-          const progressInt = typeof start.percentage === 'number' ? Math.round(start.percentage * 100) : undefined
+          const progressInt =
+            typeof start.percentage === 'number' ? Math.round(start.percentage * 100) : undefined
           useBookStore.setState(state => ({
             books: state.books.map(b =>
               b.id === bookId
-                ? { ...b, currentPosition: position, ...(progressInt !== undefined && { progress: progressInt }) }
+                ? {
+                    ...b,
+                    currentPosition: position,
+                    ...(progressInt !== undefined && { progress: progressInt }),
+                  }
                 : b
             ),
           }))
