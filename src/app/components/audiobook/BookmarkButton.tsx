@@ -22,8 +22,8 @@ interface BookmarkButtonProps {
   bookId: string
   chapterIndex: number
   currentTime: number
-  /** Called after a bookmark is successfully persisted to Dexie */
-  onBookmarkCreated?: () => void
+  /** Called after a bookmark is successfully persisted to Dexie, with the new bookmark's ID */
+  onBookmarkCreated?: (id: string) => void
 }
 
 export function BookmarkButton({
@@ -53,7 +53,7 @@ export function BookmarkButton({
       setNote('')
       setShowNote(true)
       setTimeout(() => inputRef.current?.focus(), 50)
-      onBookmarkCreated?.()
+      onBookmarkCreated?.(id)
       toast(`Bookmark saved at ${formatAudioTime(record.timestamp)}`, { duration: 2500 })
     } catch {
       // silent-catch-ok: surfaced via toast

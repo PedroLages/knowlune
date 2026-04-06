@@ -1,12 +1,13 @@
 /**
  * PostSessionBookmarkReview — bottom Sheet that opens after playback stops
- * when bookmarks were created during the session. Shows all bookmarks with
- * note editing and flashcard creation via ClozeFlashcardCreator.
+ * when bookmarks were created during the session. Shows only bookmarks created
+ * during the current session (filtered by sessionBookmarkIds), with note editing
+ * and flashcard creation via ClozeFlashcardCreator.
  *
  * @module PostSessionBookmarkReview
  * @since E101-S05
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { X, Bookmark, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet'
@@ -21,6 +22,8 @@ interface PostSessionBookmarkReviewProps {
   onClose: () => void
   bookId: string
   chapters: { title?: string }[]
+  /** IDs of bookmarks created during the current session. If provided, only these are shown. */
+  sessionBookmarkIds?: ReadonlySet<string>
 }
 
 export function PostSessionBookmarkReview({
@@ -28,6 +31,7 @@ export function PostSessionBookmarkReview({
   onClose,
   bookId,
   chapters,
+  sessionBookmarkIds,
 }: PostSessionBookmarkReviewProps) {
   const [bookmarks, setBookmarks] = useState<AudioBookmark[]>([])
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({})
@@ -35,7 +39,14 @@ export function PostSessionBookmarkReview({
   const [clozeText, setClozeText] = useState('')
   const [noteRequiredId, setNoteRequiredId] = useState<string | null>(null)
 
-  // Load bookmarks when panel opens
+  // Ref so handleNoteSave always reads the latest editingNotes without being
+  // recreated on every keystroke (avoids textarea losing focus on re-render).
+  const editingNotesRef = useRef(editingNotes)
+  useEffect(() => {
+    editingNotesRef.current = editingNotes
+  })
+
+  // Load bookmarks when panel opens, filtered to session bookmarks when IDs are provided
   useEffect(() => {
     if (!open) return
     let cancelled = false
@@ -46,10 +57,15 @@ export function PostSessionBookmarkReview({
       .sortBy('timestamp')
       .then(results => {
         if (!cancelled) {
-          setBookmarks(results)
+          // Filter to session bookmarks only when IDs are provided
+          const filtered =
+            sessionBookmarkIds && sessionBookmarkIds.size > 0
+              ? results.filter(bm => sessionBookmarkIds.has(bm.id))
+              : results
+          setBookmarks(filtered)
           // Initialize editing notes from existing values
           const notes: Record<string, string> = {}
-          for (const bm of results) {
+          for (const bm of filtered) {
             notes[bm.id] = bm.note ?? ''
           }
           setEditingNotes(notes)
@@ -62,33 +78,31 @@ export function PostSessionBookmarkReview({
     return () => {
       cancelled = true
     }
-  }, [open, bookId])
+  }, [open, bookId, sessionBookmarkIds])
 
   const handleNoteChange = useCallback((id: string, value: string) => {
     setEditingNotes(prev => ({ ...prev, [id]: value }))
     setNoteRequiredId(null)
   }, [])
 
-  const handleNoteSave = useCallback(
-    async (id: string) => {
-      const trimmed = (editingNotes[id] ?? '').trim()
-      try {
-        await db.audioBookmarks.update(id, { note: trimmed || undefined })
-        // Update local state to reflect saved note
-        setBookmarks(prev =>
-          prev.map(bm => (bm.id === id ? { ...bm, note: trimmed || undefined } : bm))
-        )
-      } catch {
-        // silent-catch-ok: surfaced via toast
-        toast.error('Failed to save note')
-      }
-    },
-    [editingNotes]
-  )
+  // Uses ref to always read latest notes without recreating on every keystroke
+  const handleNoteSave = useCallback(async (id: string) => {
+    const trimmed = (editingNotesRef.current[id] ?? '').trim()
+    try {
+      await db.audioBookmarks.update(id, { note: trimmed || undefined })
+      // Update local state to reflect saved note
+      setBookmarks(prev =>
+        prev.map(bm => (bm.id === id ? { ...bm, note: trimmed || undefined } : bm))
+      )
+    } catch {
+      // silent-catch-ok: surfaced via toast
+      toast.error('Failed to save note')
+    }
+  }, [])
 
   const handleCreateFlashcard = useCallback(
     (bookmark: AudioBookmark) => {
-      const note = (editingNotes[bookmark.id] ?? '').trim()
+      const note = (editingNotesRef.current[bookmark.id] ?? '').trim()
       if (!note) {
         setNoteRequiredId(bookmark.id)
         return
@@ -96,7 +110,7 @@ export function PostSessionBookmarkReview({
       setClozeText(note)
       setClozeOpen(true)
     },
-    [editingNotes]
+    []
   )
 
   const handleClozeClose = useCallback(() => {
@@ -126,7 +140,7 @@ export function PostSessionBookmarkReview({
               <button
                 onClick={onClose}
                 aria-label="Close bookmark review"
-                className="text-muted-foreground hover:text-foreground"
+                className="flex items-center justify-center min-w-11 min-h-11 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
               >
                 <X className="size-4" aria-hidden="true" />
               </button>

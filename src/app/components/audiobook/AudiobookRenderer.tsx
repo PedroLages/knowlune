@@ -61,19 +61,24 @@ export function AudiobookRenderer({
   const { activeOption, badgeText, setTimer, cancelTimer } = useSleepTimer()
   // Post-session bookmark review
   const [postSessionOpen, setPostSessionOpen] = useState(false)
-  const [sessionBookmarkCount, setSessionBookmarkCount] = useState(0)
+  const [sessionBookmarkIds, setSessionBookmarkIds] = useState<ReadonlySet<string>>(new Set())
   const prevIsPlayingRef = useRef(false)
+  // Set to true when the user explicitly ends the session (unmount or audio reaches end).
+  // Simple pauses should not open the post-session review.
+  const deliberateStopRef = useRef(false)
 
-  // Trigger post-session review when playback stops with bookmarks
+  // Trigger post-session review only on deliberate stop, not every pause
   useEffect(() => {
-    if (prevIsPlayingRef.current && !isPlaying && sessionBookmarkCount > 0) {
+    const wasPlaying = prevIsPlayingRef.current
+    prevIsPlayingRef.current = isPlaying
+    if (wasPlaying && !isPlaying && deliberateStopRef.current && sessionBookmarkIds.size > 0) {
+      deliberateStopRef.current = false
       setPostSessionOpen(true)
     }
-    prevIsPlayingRef.current = isPlaying
-  }, [isPlaying, sessionBookmarkCount])
+  }, [isPlaying, sessionBookmarkIds.size])
 
-  const handleBookmarkCreated = useCallback(() => {
-    setSessionBookmarkCount(c => c + 1)
+  const handleBookmarkCreated = useCallback((bookmarkId: string) => {
+    setSessionBookmarkIds(prev => new Set([...prev, bookmarkId]))
   }, [])
 
   // bookmarksOpen can be controlled externally (from BookReader header) or internally
@@ -132,12 +137,26 @@ export function AudiobookRenderer({
     }
   }, [isPlaying, savePosition])
 
-  // Save position on unmount (navigating away)
+  // Save position on unmount (navigating away) and mark as deliberate stop
   useEffect(() => {
     return () => {
+      deliberateStopRef.current = true
       savePosition()
     }
   }, [savePosition])
+
+  // Mark as deliberate stop when audio track naturally ends (last chapter finished)
+  useEffect(() => {
+    const audio = sharedAudioRef.current
+    if (!audio) return
+    const handleEnded = () => {
+      deliberateStopRef.current = true
+    }
+    audio.addEventListener('ended', handleEnded)
+    return () => {
+      audio.removeEventListener('ended', handleEnded)
+    }
+  }, [])
 
   // Restore position on mount for remote books (session resume).
   // We track whether the initial load has been observed — once isLoading
@@ -336,9 +355,14 @@ export function AudiobookRenderer({
       {/* Post-session bookmark review panel (E101-S05) */}
       <PostSessionBookmarkReview
         open={postSessionOpen}
-        onClose={() => setPostSessionOpen(false)}
+        onClose={() => {
+          setPostSessionOpen(false)
+          // Reset session tracking so a new session starts clean
+          setSessionBookmarkIds(new Set())
+        }}
         bookId={book.id}
         chapters={book.chapters}
+        sessionBookmarkIds={sessionBookmarkIds}
       />
     </div>
   )
