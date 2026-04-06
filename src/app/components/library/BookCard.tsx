@@ -71,8 +71,8 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
       className="rounded-[24px] bg-card border border-border/50 overflow-hidden shadow-sm hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       data-testid={`book-card-${book.id}`}
     >
-      {/* Cover */}
-      <div className="relative aspect-[2/3] overflow-hidden">
+      {/* Cover — audiobooks use square aspect (album art), books use portrait */}
+      <div className={`relative overflow-hidden ${book.format === 'audiobook' ? 'aspect-square' : 'aspect-[2/3]'}`}>
         {book.coverUrl ? (
           <img
             src={book.coverUrl}

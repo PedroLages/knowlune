@@ -47,11 +47,16 @@ export function useAudiobookshelfSync() {
     (absItem: AbsLibraryItem, server: AudiobookshelfServer): Book => {
       const bookId = crypto.randomUUID()
 
-      // Handle narrators — typed as string[] but runtime may return {name: string}[] from newer ABS versions
+      // Handle narrators — ABS list endpoint returns `narratorName` (string), not `narrators` (array)
       const rawNarrators = (absItem.media.metadata.narrators ?? []) as Array<
         string | { name: string }
       >
-      const narratorNames = rawNarrators.map(n => (typeof n === 'string' ? n : n.name))
+      const narratorNames =
+        rawNarrators.length > 0
+          ? rawNarrators.map(n => (typeof n === 'string' ? n : n.name))
+          : ((absItem.media.metadata as Record<string, unknown>).narratorName as string)
+              ?.split(', ')
+              .filter(Boolean) ?? []
 
       // Map chapters — if ABS returns none, synthesize a single chapter so the player can stream
       const absChapters = absItem.media.chapters ?? []
@@ -74,8 +79,12 @@ export function useAudiobookshelfSync() {
               },
             ]
 
-      // Author names
-      const authorNames = (absItem.media.metadata.authors ?? []).map(a => a.name).join(', ')
+      // Author names — ABS list endpoint returns `authorName` (string), not `authors` (array)
+      const authorsArray = absItem.media.metadata.authors ?? []
+      const authorNames =
+        authorsArray.length > 0
+          ? authorsArray.map(a => a.name).join(', ')
+          : ((absItem.media.metadata as Record<string, unknown>).authorName as string) ?? ''
 
       // Cover URL — routed through backend proxy (handles auth + CORS)
       const coverUrl = AudiobookshelfService.getCoverUrl(server.url, absItem.id, server.apiKey)

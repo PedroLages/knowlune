@@ -146,9 +146,10 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
     }
 
     const libCount = libResult.data.length
+    const libNames = libResult.data.map(l => l.name).join(', ')
     setTestResult({
       ok: true,
-      message: `Connected — ABS v${connResult.data.serverVersion}, ${libCount} ${libCount === 1 ? 'library' : 'libraries'} found`,
+      message: `Connected — v${connResult.data.serverVersion} · ${libCount === 1 ? libNames : `${libCount} libraries: ${libNames}`}`,
       libraries: libResult.data,
     })
 
