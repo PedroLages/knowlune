@@ -824,6 +824,33 @@ export interface AbsSeries {
   updatedAt: number
 }
 
+// ─── ABS Collection Types (E102-S03) ────────────────────────────────────────
+
+/** A book item within a collection */
+export interface AbsCollectionItem {
+  id: string // ABS item ID — matches Book.absItemId
+  media: {
+    metadata: {
+      title: string
+      authorName?: string
+      authors?: Array<{ id: string; name: string }>
+      narrators?: string[]
+      duration?: number
+      description?: string
+    }
+    coverPath?: string
+  }
+}
+
+/** An ABS collection with embedded book items */
+export interface AbsCollection {
+  id: string
+  libraryId: string
+  name: string
+  description?: string
+  books: AbsCollectionItem[]
+}
+
 export interface AbsSearchResult {
   book: AbsLibraryItem[]
 }

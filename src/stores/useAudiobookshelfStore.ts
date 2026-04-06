@@ -11,7 +11,7 @@
 
 import { create } from 'zustand'
 import { toast } from 'sonner'
-import type { AudiobookshelfServer, AbsSeries } from '@/data/types'
+import type { AudiobookshelfServer, AbsSeries, AbsCollection } from '@/data/types'
 import { db } from '@/db/schema'
 import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 
@@ -33,6 +33,11 @@ interface AudiobookshelfStoreState {
   isLoadingSeries: boolean
   seriesLoaded: boolean
 
+  // Collections browsing (E102-S03) — in-memory only, not persisted to Dexie
+  collections: AbsCollection[]
+  isLoadingCollections: boolean
+  collectionsLoaded: boolean
+
   loadServers: () => Promise<void>
   addServer: (server: AudiobookshelfServer) => Promise<void>
   updateServer: (id: string, updates: Partial<Omit<AudiobookshelfServer, 'id'>>) => Promise<void>
@@ -41,6 +46,7 @@ interface AudiobookshelfStoreState {
   enqueueSyncItem: (item: Omit<SyncQueueItem, 'enqueuedAt'>) => void
   flushSyncQueue: () => Promise<void>
   loadSeries: (serverId: string, libraryId: string) => Promise<void>
+  loadCollections: (serverId: string) => Promise<void>
 }
 
 export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get) => ({
@@ -50,6 +56,9 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
   series: [],
   isLoadingSeries: false,
   seriesLoaded: false,
+  collections: [],
+  isLoadingCollections: false,
+  collectionsLoaded: false,
 
   loadServers: async () => {
     if (get().isLoaded) return
@@ -193,6 +202,28 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       console.error('[AudiobookshelfStore] Failed to load series:', err)
       toast.error('Failed to load series from Audiobookshelf.')
       set({ isLoadingSeries: false })
+    }
+  },
+
+  loadCollections: async (serverId: string) => {
+    if (get().collectionsLoaded) return
+    const server = get().servers.find(s => s.id === serverId)
+    if (!server) return
+
+    set({ isLoadingCollections: true })
+    try {
+      const result = await AudiobookshelfService.fetchCollections(server.url, server.apiKey)
+      if (!result.ok) {
+        toast.error(`Failed to load collections: ${result.error}`)
+        set({ isLoadingCollections: false })
+        return
+      }
+
+      set({ collections: result.data, collectionsLoaded: true, isLoadingCollections: false })
+    } catch (err) {
+      console.error('[AudiobookshelfStore] Failed to load collections:', err)
+      toast.error('Failed to load collections from Audiobookshelf.')
+      set({ isLoadingCollections: false })
     }
   },
 }))

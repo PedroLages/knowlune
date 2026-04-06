@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   BookOpen,
+  FolderOpen,
   Globe,
   Grid3X3,
   Headphones,
@@ -26,6 +27,7 @@ import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
 import { SeriesCard } from '@/app/components/library/SeriesCard'
+import { CollectionsView } from '@/app/components/library/CollectionsView'
 import { StorageIndicator } from '@/app/components/library/StorageIndicator'
 import { BookCard } from '@/app/components/library/BookCard'
 import { BookListItem } from '@/app/components/library/BookListItem'
@@ -74,11 +76,12 @@ export function Library() {
   const loadAbsServers = useAudiobookshelfStore(s => s.loadServers)
   const { isSyncing: isAbsSyncing, syncCatalog, loadNextPage, pagination } = useAudiobookshelfSync()
 
-  // Series browsing (E102-S02)
-  const [absViewMode, setAbsViewMode] = useState<'grid' | 'series'>('grid')
+  // Series & Collections browsing (E102-S02, E102-S03)
+  const [absViewMode, setAbsViewMode] = useState<'grid' | 'series' | 'collections'>('grid')
   const absSeries = useAudiobookshelfStore(s => s.series)
   const isLoadingSeries = useAudiobookshelfStore(s => s.isLoadingSeries)
   const loadSeries = useAudiobookshelfStore(s => s.loadSeries)
+  const loadCollections = useAudiobookshelfStore(s => s.loadCollections)
 
   const loadGoal = useReadingGoalStore(s => s.loadGoal)
   const goal = useReadingGoalStore(s => s.goal)
@@ -321,6 +324,28 @@ export function Library() {
             <List className="size-3.5" aria-hidden="true" />
             Series
           </button>
+          <button
+            role="tab"
+            aria-selected={absViewMode === 'collections'}
+            onClick={() => {
+              setAbsViewMode('collections')
+              // Lazy-load collections on first selection
+              const connectedServer = absServers.find(s => s.status === 'connected')
+              if (connectedServer) {
+                loadCollections(connectedServer.id)
+              }
+            }}
+            className={cn(
+              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
+              absViewMode === 'collections'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+            data-testid="abs-view-collections"
+          >
+            <FolderOpen className="size-3.5" aria-hidden="true" />
+            Collections
+          </button>
         </div>
       )}
 
@@ -365,10 +390,18 @@ export function Library() {
         </div>
       )}
 
+      {/* Collections view (E102-S03) — replaces grid when active */}
+      {books.length > 0 && filters.source === 'audiobookshelf' && absViewMode === 'collections' && (
+        <CollectionsView />
+      )}
+
       {/* Grid view */}
       {books.length > 0 &&
         libraryView === 'grid' &&
-        !(filters.source === 'audiobookshelf' && absViewMode === 'series') && (
+        !(
+          filters.source === 'audiobookshelf' &&
+          (absViewMode === 'series' || absViewMode === 'collections')
+        ) && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {filteredBooks.map(book => (
               <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
@@ -381,7 +414,10 @@ export function Library() {
       {/* List view */}
       {books.length > 0 &&
         libraryView === 'list' &&
-        !(filters.source === 'audiobookshelf' && absViewMode === 'series') && (
+        !(
+          filters.source === 'audiobookshelf' &&
+          (absViewMode === 'series' || absViewMode === 'collections')
+        ) && (
           <div className="flex flex-col divide-y divide-border/50">
             {filteredBooks.map(book => (
               <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
