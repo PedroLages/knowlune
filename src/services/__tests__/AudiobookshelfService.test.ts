@@ -69,14 +69,16 @@ describe('AudiobookshelfService.testConnection', () => {
     }
   })
 
-  it('sends Bearer authorization header', async () => {
+  it('sends ABS URL and token via proxy headers', async () => {
     const fetchMock = mockFetchJson({ success: true, version: '2.27.0' })
     vi.stubGlobal('fetch', fetchMock)
 
     await testConnection(TEST_URL, TEST_API_KEY)
 
-    const [, options] = fetchMock.mock.calls[0]
-    expect(options.headers.Authorization).toBe(`Bearer ${TEST_API_KEY}`)
+    const [url, options] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/abs/proxy/api/ping')
+    expect(options.headers['X-ABS-URL']).toBe(TEST_URL)
+    expect(options.headers['X-ABS-Token']).toBe(TEST_API_KEY)
   })
 
   it('returns auth error for 401 response', async () => {
@@ -90,14 +92,14 @@ describe('AudiobookshelfService.testConnection', () => {
     }
   })
 
-  it('returns CORS error for TypeError from fetch', async () => {
+  it('returns connection error for TypeError from fetch', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
 
     const result = await testConnection(TEST_URL, TEST_API_KEY)
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error).toBe('Could not connect to server. Check the URL and CORS settings.')
+      expect(result.error).toBe('Could not connect to server. Check the URL and try again.')
     }
   })
 
@@ -260,7 +262,7 @@ describe('AudiobookshelfService.fetchLibraryItems', () => {
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error).toBe('Could not connect to server. Check the URL and CORS settings.')
+      expect(result.error).toBe('Could not connect to server. Check the URL and try again.')
     }
   })
 })
@@ -297,10 +299,13 @@ describe('AudiobookshelfService.fetchItem', () => {
 // ── getStreamUrl ───────────────────────────────────────────────────
 
 describe('AudiobookshelfService.getStreamUrl', () => {
-  it('returns correctly formatted stream URL with token parameter', () => {
+  it('returns proxy-based stream URL with token and ABS params', () => {
     const url = getStreamUrl(TEST_URL, 'item-1', TEST_API_KEY)
 
-    expect(url).toBe(`${TEST_URL}/api/items/item-1/play?token=${encodeURIComponent(TEST_API_KEY)}`)
+    expect(url).toContain('/api/abs/proxy/api/items/item-1/play')
+    expect(url).toContain(`token=${encodeURIComponent(TEST_API_KEY)}`)
+    expect(url).toContain(`_absUrl=${encodeURIComponent(TEST_URL)}`)
+    expect(url).toContain(`_absToken=${encodeURIComponent(TEST_API_KEY)}`)
   })
 
   it('encodes special characters in API key', () => {
@@ -315,10 +320,12 @@ describe('AudiobookshelfService.getStreamUrl', () => {
 // ── getCoverUrl ────────────────────────────────────────────────────
 
 describe('AudiobookshelfService.getCoverUrl', () => {
-  it('returns correctly formatted cover URL', () => {
-    const url = getCoverUrl(TEST_URL, 'item-1')
+  it('returns proxy-based cover URL with ABS params', () => {
+    const url = getCoverUrl(TEST_URL, 'item-1', TEST_API_KEY)
 
-    expect(url).toBe(`${TEST_URL}/api/items/item-1/cover`)
+    expect(url).toContain('/api/abs/proxy/api/items/item-1/cover')
+    expect(url).toContain(`_absUrl=${encodeURIComponent(TEST_URL)}`)
+    expect(url).toContain(`_absToken=${encodeURIComponent(TEST_API_KEY)}`)
   })
 })
 
@@ -551,7 +558,7 @@ describe('AudiobookshelfService.fetchCollections', () => {
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error).toBe('Could not connect to server. Check the URL and CORS settings.')
+      expect(result.error).toBe('Could not connect to server. Check the URL and try again.')
     }
   })
 })

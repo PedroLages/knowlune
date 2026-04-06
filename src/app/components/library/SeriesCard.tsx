@@ -69,7 +69,7 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
   // Get cover URL from first book
   const server = servers.find(s => s.status === 'connected')
   const firstBookId = sortedBooks[0]?.id
-  const coverUrl = server && firstBookId ? getCoverUrl(server.url, firstBookId) : null
+  const coverUrl = server && firstBookId ? getCoverUrl(server.url, firstBookId, server.apiKey) : null
 
   const toggleExpanded = () => setIsExpanded(prev => !prev)
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -161,7 +161,7 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
                 <div className="size-8 flex-shrink-0 rounded bg-muted flex items-center justify-center overflow-hidden">
                   {server ? (
                     <img
-                      src={getCoverUrl(server.url, absBook.id)}
+                      src={getCoverUrl(server.url, absBook.id, server.apiKey)}
                       alt={`Cover of ${title}`}
                       loading="lazy"
                       className="h-full w-full object-cover"

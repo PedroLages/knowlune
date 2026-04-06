@@ -384,7 +384,7 @@ export function Layout() {
     if (isLessonRoute) return // Handled by useReadingMode in UnifiedLessonPlayer
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'r') {
+      if ((e.metaKey || e.ctrlKey) && e.altKey && e.key.toLowerCase() === 'r') {
         e.preventDefault()
         toast.info('Reading mode is available on lesson pages')
       }
