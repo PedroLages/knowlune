@@ -11,10 +11,11 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BookOpen, Globe, Headphones, Loader2, Plus, WifiOff, Target } from 'lucide-react'
+import { BookOpen, Globe, Grid3X3, Headphones, List, Loader2, Plus, WifiOff, Target } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
+import { SeriesCard } from '@/app/components/library/SeriesCard'
 import { StorageIndicator } from '@/app/components/library/StorageIndicator'
 import { BookCard } from '@/app/components/library/BookCard'
 import { BookListItem } from '@/app/components/library/BookListItem'
@@ -62,6 +63,12 @@ export function Library() {
   const absServers = useAudiobookshelfStore(s => s.servers)
   const loadAbsServers = useAudiobookshelfStore(s => s.loadServers)
   const { isSyncing: isAbsSyncing, syncCatalog, loadNextPage, pagination } = useAudiobookshelfSync()
+
+  // Series browsing (E102-S02)
+  const [absViewMode, setAbsViewMode] = useState<'grid' | 'series'>('grid')
+  const absSeries = useAudiobookshelfStore(s => s.series)
+  const isLoadingSeries = useAudiobookshelfStore(s => s.isLoadingSeries)
+  const loadSeries = useAudiobookshelfStore(s => s.loadSeries)
 
   const loadGoal = useReadingGoalStore(s => s.loadGoal)
   const goal = useReadingGoalStore(s => s.goal)
@@ -259,6 +266,54 @@ export function Library() {
       {/* Source filter tabs — only show when ABS servers configured (E101-S03) */}
       {books.length > 0 && <LibrarySourceTabs />}
 
+      {/* ABS view mode toggle: Grid / Series — only when ABS source is selected (E102-S02) */}
+      {books.length > 0 && filters.source === 'audiobookshelf' && absServers.length > 0 && (
+        <div
+          className="flex gap-1 rounded-lg bg-muted p-1 w-fit"
+          role="tablist"
+          aria-label="Audiobookshelf view mode"
+          data-testid="abs-view-toggle"
+        >
+          <button
+            role="tab"
+            aria-selected={absViewMode === 'grid'}
+            onClick={() => setAbsViewMode('grid')}
+            className={cn(
+              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
+              absViewMode === 'grid'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+            data-testid="abs-view-grid"
+          >
+            <Grid3X3 className="size-3.5" aria-hidden="true" />
+            Grid
+          </button>
+          <button
+            role="tab"
+            aria-selected={absViewMode === 'series'}
+            onClick={() => {
+              setAbsViewMode('series')
+              // Lazy-load series on first selection
+              const connectedServer = absServers.find(s => s.status === 'connected')
+              if (connectedServer && connectedServer.libraryIds.length > 0) {
+                loadSeries(connectedServer.id, connectedServer.libraryIds[0])
+              }
+            }}
+            className={cn(
+              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
+              absViewMode === 'series'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+            data-testid="abs-view-series"
+          >
+            <List className="size-3.5" aria-hidden="true" />
+            Series
+          </button>
+        </div>
+      )}
+
       {/* Syncing indicator (E101-S03) */}
       {isAbsSyncing && (
         <div
@@ -273,8 +328,35 @@ export function Library() {
       {/* Filters — only show when books exist */}
       {books.length > 0 && <LibraryFilters />}
 
+      {/* Series view (E102-S02) — replaces grid when active */}
+      {books.length > 0 && filters.source === 'audiobookshelf' && absViewMode === 'series' && (
+        <div data-testid="series-view">
+          {isLoadingSeries && (
+            <div className="flex flex-col gap-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-16 rounded-2xl bg-muted animate-pulse" />
+              ))}
+            </div>
+          )}
+          {!isLoadingSeries && absSeries.length === 0 && (
+            <div className="flex flex-col items-center gap-3 py-12">
+              <p className="text-muted-foreground" data-testid="series-empty-state">
+                No series found in this library.
+              </p>
+            </div>
+          )}
+          {!isLoadingSeries && absSeries.length > 0 && (
+            <div className="flex flex-col gap-3">
+              {absSeries.map(s => (
+                <SeriesCard key={s.id} series={s} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Grid view */}
-      {books.length > 0 && libraryView === 'grid' && (
+      {books.length > 0 && libraryView === 'grid' && !(filters.source === 'audiobookshelf' && absViewMode === 'series') && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {filteredBooks.map(book => (
             <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
@@ -285,7 +367,7 @@ export function Library() {
       )}
 
       {/* List view */}
-      {books.length > 0 && libraryView === 'list' && (
+      {books.length > 0 && libraryView === 'list' && !(filters.source === 'audiobookshelf' && absViewMode === 'series') && (
         <div className="flex flex-col divide-y divide-border/50">
           {filteredBooks.map(book => (
             <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>

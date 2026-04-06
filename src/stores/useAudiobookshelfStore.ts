@@ -11,7 +11,7 @@
 
 import { create } from 'zustand'
 import { toast } from 'sonner'
-import type { AudiobookshelfServer } from '@/data/types'
+import type { AudiobookshelfServer, AbsSeries } from '@/data/types'
 import { db } from '@/db/schema'
 import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 
@@ -28,6 +28,11 @@ interface AudiobookshelfStoreState {
   isLoaded: boolean
   pendingSyncQueue: SyncQueueItem[]
 
+  // Series browsing (E102-S02) — in-memory only, not persisted to Dexie
+  series: AbsSeries[]
+  isLoadingSeries: boolean
+  seriesLoaded: boolean
+
   loadServers: () => Promise<void>
   addServer: (server: AudiobookshelfServer) => Promise<void>
   updateServer: (id: string, updates: Partial<Omit<AudiobookshelfServer, 'id'>>) => Promise<void>
@@ -35,12 +40,16 @@ interface AudiobookshelfStoreState {
   getServerById: (id: string) => AudiobookshelfServer | undefined
   enqueueSyncItem: (item: Omit<SyncQueueItem, 'enqueuedAt'>) => void
   flushSyncQueue: () => Promise<void>
+  loadSeries: (serverId: string, libraryId: string) => Promise<void>
 }
 
 export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get) => ({
   servers: [],
   isLoaded: false,
   pendingSyncQueue: [],
+  series: [],
+  isLoadingSeries: false,
+  seriesLoaded: false,
 
   loadServers: async () => {
     if (get().isLoaded) return
@@ -137,5 +146,53 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
     }
 
     set({ pendingSyncQueue: remaining })
+  },
+
+  loadSeries: async (serverId: string, libraryId: string) => {
+    if (get().seriesLoaded) return
+    const server = get().servers.find(s => s.id === serverId)
+    if (!server) return
+
+    set({ isLoadingSeries: true })
+    try {
+      const allSeries: import('@/data/types').AbsSeries[] = []
+      let page = 0
+      const limit = 50
+
+      // Fetch first page to get total
+      const firstResult = await AudiobookshelfService.fetchSeriesForLibrary(
+        server.url,
+        server.apiKey,
+        libraryId,
+        { page, limit }
+      )
+      if (!firstResult.ok) {
+        toast.error(`Failed to load series: ${firstResult.error}`)
+        set({ isLoadingSeries: false })
+        return
+      }
+
+      allSeries.push(...firstResult.data.results)
+      const total = firstResult.data.total
+
+      // Fetch remaining pages
+      while ((page + 1) * limit < total) {
+        page++
+        const nextResult = await AudiobookshelfService.fetchSeriesForLibrary(
+          server.url,
+          server.apiKey,
+          libraryId,
+          { page, limit }
+        )
+        if (!nextResult.ok) break
+        allSeries.push(...nextResult.data.results)
+      }
+
+      set({ series: allSeries, seriesLoaded: true, isLoadingSeries: false })
+    } catch (err) {
+      console.error('[AudiobookshelfStore] Failed to load series:', err)
+      toast.error('Failed to load series from Audiobookshelf.')
+      set({ isLoadingSeries: false })
+    }
   },
 }))
