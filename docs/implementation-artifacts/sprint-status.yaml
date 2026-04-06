@@ -1262,7 +1262,7 @@ development_status:
   # Chapter title matching, format switching UI, dual position tracking
   # Depends on: E101, E84 (EPUB reader)
   # ──────────────────────────────────────────────────
-  epic-103: backlog
+  epic-103: done
   103-1-chapter-title-matching-engine: done
   103-2-format-switching-ui: done
   103-3-dual-position-tracking: done
