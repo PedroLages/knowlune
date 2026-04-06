@@ -49,7 +49,8 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
   }, [sortedBooks, allBooks])
 
   const completed = useMemo(
-    () => Array.from(bookMap.values()).filter(b => b.status === 'finished' || b.progress >= 100).length,
+    () =>
+      Array.from(bookMap.values()).filter(b => b.status === 'finished' || b.progress >= 100).length,
     [bookMap]
   )
   const total = series.books.length
@@ -141,7 +142,8 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
           {sortedBooks.map(absBook => {
             const localBook = bookMap.get(absBook.id)
             const isNextUnfinished = absBook.id === nextUnfinishedId
-            const isFinished = localBook && (localBook.status === 'finished' || localBook.progress >= 100)
+            const isFinished =
+              localBook && (localBook.status === 'finished' || localBook.progress >= 100)
             const progress = localBook?.progress ?? 0
             const title = absBook.media.metadata.title
 
@@ -180,7 +182,9 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
                     <p
                       className={cn(
                         'text-sm truncate',
-                        isNextUnfinished ? 'font-medium text-brand-soft-foreground' : 'text-foreground'
+                        isNextUnfinished
+                          ? 'font-medium text-brand-soft-foreground'
+                          : 'text-foreground'
                       )}
                     >
                       {title}
@@ -189,6 +193,7 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
                   {/* Progress bar */}
                   <div className="flex items-center gap-2 mt-1">
                     <div className="h-1 flex-1 rounded-full bg-muted overflow-hidden max-w-[120px]">
+                      {/* eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic progress width cannot be expressed with pure Tailwind */}
                       <div
                         className="h-full rounded-full bg-brand transition-all"
                         style={{ width: `${progress}%` }}

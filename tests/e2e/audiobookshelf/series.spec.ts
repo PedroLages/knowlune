@@ -118,7 +118,10 @@ const MOCK_SERIES_RESPONSE = {
 }
 
 async function seedAndNavigate(page: import('@playwright/test').Page): Promise<void> {
-  await page.addInitScript(() => {
+  // Override window.fetch before any navigation so cross-origin ABS requests are intercepted.
+  // page.route() does not reliably intercept cross-origin fetches in Chromium — using
+  // addInitScript window.fetch override (established pattern for ABS mocking in this project).
+  await page.addInitScript((mockSeriesResponse: unknown) => {
     localStorage.setItem(
       'knowlune-onboarding-v1',
       JSON.stringify({ completedAt: '2025-01-01T00:00:00.000Z', skipped: true })
@@ -128,16 +131,34 @@ async function seedAndNavigate(page: import('@playwright/test').Page): Promise<v
       JSON.stringify({ completedAt: '2025-01-01T00:00:00.000Z' })
     )
     localStorage.setItem('knowlune-sidebar-v1', 'false')
-  })
 
-  // Intercept ABS series API calls
-  await page.route('**/api/libraries/*/series*', route => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(MOCK_SERIES_RESPONSE),
-    })
-  })
+    const originalFetch = window.fetch.bind(window)
+    window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+      if (url.includes('abs.test')) {
+        if (url.includes('/api/libraries/') && url.includes('/series')) {
+          // Mock series endpoint — the main target of these tests
+          return Promise.resolve(
+            new Response(JSON.stringify(mockSeriesResponse), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            })
+          )
+        }
+        if (url.includes('/api/libraries/') && url.includes('/items')) {
+          // Mock items endpoint so syncCatalog does not fail and mark server 'offline'.
+          // An empty results list is sufficient — books are already seeded in IDB.
+          return Promise.resolve(
+            new Response(JSON.stringify({ results: [], total: 0 }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            })
+          )
+        }
+      }
+      return originalFetch(input, init)
+    }
+  }, MOCK_SERIES_RESPONSE)
 
   await page.goto('/')
   await seedIndexedDBStore(page, DB_NAME, 'audiobookshelfServers', [
@@ -220,6 +241,7 @@ test.describe('E102-S02: Series Browsing', () => {
   })
 
   test('empty series state shows message', async ({ page }) => {
+    // Override window.fetch before any navigation (same cross-origin pattern as seedAndNavigate)
     await page.addInitScript(() => {
       localStorage.setItem(
         'knowlune-onboarding-v1',
@@ -230,15 +252,32 @@ test.describe('E102-S02: Series Browsing', () => {
         JSON.stringify({ completedAt: '2025-01-01T00:00:00.000Z' })
       )
       localStorage.setItem('knowlune-sidebar-v1', 'false')
-    })
 
-    // Return empty series
-    await page.route('**/api/libraries/*/series*', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ results: [], total: 0, page: 0, limit: 50 }),
-      })
+      const originalFetch = window.fetch.bind(window)
+      window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+        if (url.includes('abs.test')) {
+          if (url.includes('/api/libraries/') && url.includes('/series')) {
+            // Empty series response — tests the empty state UI
+            return Promise.resolve(
+              new Response(JSON.stringify({ results: [], total: 0, page: 0, limit: 50 }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+              })
+            )
+          }
+          if (url.includes('/api/libraries/') && url.includes('/items')) {
+            // Mock items endpoint so syncCatalog does not mark server 'offline'
+            return Promise.resolve(
+              new Response(JSON.stringify({ results: [], total: 0 }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+              })
+            )
+          }
+        }
+        return originalFetch(input, init)
+      }
     })
 
     await page.goto('/')
