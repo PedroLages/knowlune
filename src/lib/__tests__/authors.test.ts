@@ -124,12 +124,13 @@ describe('authors', () => {
 
   describe('getAuthorForCourse', () => {
     it('returns author when found', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockAuthorStoreGetState.mockReturnValue({
         isLoaded: true,
         isLoading: false,
         loadAuthors: vi.fn(),
         getAuthorById: vi.fn(() => ({ id: 'a1', name: 'Author', photoUrl: '/photo.jpg' })),
-      })
+      } as any)
 
       const result = getAuthorForCourse({ authorId: 'a1' } as never)
       expect(result).toEqual({ id: 'a1', name: 'Author', avatar: '/photo.jpg' })
@@ -167,12 +168,13 @@ describe('authors', () => {
     })
 
     it('returns author when found', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockAuthorStoreGetState.mockReturnValue({
         isLoaded: true,
         isLoading: false,
         loadAuthors: vi.fn(),
-        getAuthorById: vi.fn(() => ({ id: 'a1', name: 'Author', photoUrl: null })),
-      })
+        getAuthorById: vi.fn(() => ({ id: 'a1', name: 'Author', photoUrl: null as string | null })),
+      } as any)
 
       const result = getAuthorForImportedCourse('a1')
       expect(result).toEqual({ id: 'a1', name: 'Author', avatar: '' })

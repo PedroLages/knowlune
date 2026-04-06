@@ -45,7 +45,7 @@ vi.mock('@/lib/ollamaHealthCheck', () => ({
 vi.mock('@/db', () => ({
   db: {
     quizzes: {
-      where: (...args: unknown[]) => mockQuizzesWhere(...args),
+      where: (...args: unknown[]) => mockQuizzesWhere(...(args as [])),
     },
   },
 }))
@@ -89,8 +89,8 @@ describe('useQuizGeneration', () => {
   it('sets ollamaAvailable=false when provider is not ollama', async () => {
     mockIsAIAvailable.mockReturnValue(true)
     mockGetAIConfiguration.mockReturnValue({
-      provider: 'openai',
-      ollamaSettings: null,
+      provider: 'openai' as const,
+      ollamaSettings: undefined as unknown as { serverUrl: string; directConnection: boolean },
     })
 
     const { result } = renderHook(() => useQuizGeneration('lesson-1', 'course-1'))
@@ -140,11 +140,12 @@ describe('useQuizGeneration', () => {
       createdAt: '2026-01-01T00:00:00Z',
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockQuizzesWhere.mockReturnValue({
       equals: vi.fn(() => ({
         toArray: vi.fn(() => Promise.resolve([mockQuiz])),
       })),
-    })
+    } as any)
 
     const { result } = renderHook(() => useQuizGeneration('lesson-1', 'course-1'))
 
@@ -193,11 +194,12 @@ describe('useQuizGeneration', () => {
       error: null,
     })
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockQuizzesWhere.mockReturnValue({
       equals: vi.fn(() => ({
         toArray: vi.fn(() => Promise.resolve([mockQuiz])),
       })),
-    })
+    } as any)
 
     const { result } = renderHook(() => useQuizGeneration('lesson-1', 'course-1'))
 

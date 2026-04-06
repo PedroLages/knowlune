@@ -39,7 +39,8 @@ describe('media', () => {
   describe('getResourceUrl', () => {
     it('extracts URL from resource filePath', () => {
       const resource = { filePath: `${COURSES_ROOT}/Module 1/lesson.mp4` }
-      const url = getResourceUrl(resource as { filePath: string })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const url = getResourceUrl(resource as any)
       expect(url).toBe('/media/Module 1/lesson.mp4')
     })
   })

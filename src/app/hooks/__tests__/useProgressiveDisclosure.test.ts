@@ -92,8 +92,8 @@ describe('useProgressiveDisclosure', () => {
       {
         label: 'Main',
         items: [
-          { label: 'Home', path: '/', disclosureKey: undefined },
-          { label: 'Authors', path: '/authors', disclosureKey: 'course-imported' as DisclosureKey },
+          { name: 'Home', path: '/', disclosureKey: undefined },
+          { name: 'Authors', path: '/authors', disclosureKey: 'course-imported' as DisclosureKey },
         ],
       },
     ]
@@ -101,7 +101,7 @@ describe('useProgressiveDisclosure', () => {
     const filtered = result.current.filterGroups(groups as never[])
     expect(filtered).toHaveLength(1)
     expect(filtered[0].items).toHaveLength(1)
-    expect(filtered[0].items[0].label).toBe('Home')
+    expect(filtered[0].items[0].name).toBe('Home')
   })
 
   it('filterGroups removes empty groups', () => {

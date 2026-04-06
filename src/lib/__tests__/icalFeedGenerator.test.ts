@@ -40,6 +40,9 @@ describe('icalFeedGenerator', () => {
       recurrence: 'daily',
       days: [],
       reminderMinutes: 15,
+      timezone: 'UTC',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
     }
 
     it('generates valid iCal output', () => {

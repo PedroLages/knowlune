@@ -20,7 +20,7 @@ const { mockDb, mockGetVideoMetadataBatch } = vi.hoisted(() => ({
 
 vi.mock('@/db', () => ({ db: mockDb }))
 vi.mock('@/lib/youtubeApi', () => ({
-  getVideoMetadataBatch: (...args: unknown[]) => mockGetVideoMetadataBatch(...args),
+  getVideoMetadataBatch: (...args: unknown[]) => mockGetVideoMetadataBatch(...(args as [])),
 }))
 
 import {
@@ -69,11 +69,12 @@ describe('youtubeMetadataRefresh', () => {
 
     it('filters to stale youtube courses', async () => {
       const staleDate = new Date(Date.now() - STALE_THRESHOLD_MS - 1).toISOString()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockDb.importedCourses.toArray.mockResolvedValue([
         { id: '1', source: 'youtube', lastRefreshedAt: staleDate },
         { id: '2', source: 'youtube', lastRefreshedAt: new Date().toISOString() },
         { id: '3', source: 'local' },
-      ])
+      ] as any)
 
       const result = await getStaleCourses()
       expect(result).toHaveLength(1)
@@ -102,11 +103,12 @@ describe('youtubeMetadataRefresh', () => {
       const videos = [
         { id: 'v1', youtubeVideoId: 'yt1', filename: 'Old Title', duration: 100 },
       ]
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockDb.importedVideos.where.mockReturnValue({
         equals: vi.fn(() => ({
           toArray: vi.fn(() => Promise.resolve(videos)),
         })),
-      })
+      } as any)
 
       const metadata = new Map([
         ['yt1', { ok: true, data: { title: 'New Title', duration: 200, thumbnailUrl: null, description: null, chapters: [] } }],
@@ -122,11 +124,12 @@ describe('youtubeMetadataRefresh', () => {
       const videos = [
         { id: 'v1', youtubeVideoId: 'yt1', filename: 'Title' },
       ]
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockDb.importedVideos.where.mockReturnValue({
         equals: vi.fn(() => ({
           toArray: vi.fn(() => Promise.resolve(videos)),
         })),
-      })
+      } as any)
 
       const metadata = new Map([
         ['yt1', { ok: false, code: 'NOT_FOUND' }],
@@ -147,9 +150,10 @@ describe('youtubeMetadataRefresh', () => {
 
     it('processes stale courses', async () => {
       const staleDate = new Date(Date.now() - STALE_THRESHOLD_MS - 1).toISOString()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockDb.importedCourses.toArray.mockResolvedValue([
         { id: '1', source: 'youtube', lastRefreshedAt: staleDate },
-      ])
+      ] as any)
       mockDb.importedVideos.where.mockReturnValue({
         equals: vi.fn(() => ({
           toArray: vi.fn(() => Promise.resolve([])),

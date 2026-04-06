@@ -3,7 +3,7 @@ import { renderHook, act } from '@testing-library/react'
 
 const { mockGetSettings } = vi.hoisted(() => ({
   mockGetSettings: vi.fn(() => ({
-    fontSize: 'medium' as const,
+    fontSize: 'medium' as 'small' | 'medium' | 'large' | 'extra-large',
   })),
 }))
 
@@ -21,7 +21,7 @@ import { useFontScale } from '../useFontScale'
 
 describe('useFontScale', () => {
   beforeEach(() => {
-    mockGetSettings.mockReturnValue({ fontSize: 'medium' })
+    mockGetSettings.mockReturnValue({ fontSize: 'medium' as const })
   })
 
   afterEach(() => {
@@ -35,7 +35,7 @@ describe('useFontScale', () => {
   })
 
   it('applies correct px for different font sizes', () => {
-    mockGetSettings.mockReturnValue({ fontSize: 'large' })
+    mockGetSettings.mockReturnValue({ fontSize: 'large' as const })
     renderHook(() => useFontScale())
     expect(document.documentElement.style.getPropertyValue('--font-size')).toBe('18px')
   })
@@ -43,7 +43,7 @@ describe('useFontScale', () => {
   it('responds to settingsUpdated event', () => {
     renderHook(() => useFontScale())
 
-    mockGetSettings.mockReturnValue({ fontSize: 'small' })
+    mockGetSettings.mockReturnValue({ fontSize: 'small' as const })
     act(() => {
       window.dispatchEvent(new Event('settingsUpdated'))
     })
@@ -61,7 +61,7 @@ describe('useFontScale', () => {
   })
 
   it('defaults to 16px when fontSize is undefined', () => {
-    mockGetSettings.mockReturnValue({})
+    mockGetSettings.mockReturnValue({} as { fontSize: 'medium' })
     renderHook(() => useFontScale())
     expect(document.documentElement.style.getPropertyValue('--font-size')).toBe('16px')
   })

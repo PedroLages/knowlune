@@ -29,12 +29,12 @@ describe('pkmExport', () => {
 
   it('returns empty array when no data exists across all sources', async () => {
     const result = await exportPkmBundle()
-    expect(result).toEqual([])
+    expect(result.files).toEqual([])
   })
 
   it('does not include README.md when no data exists', async () => {
     const result = await exportPkmBundle()
-    const readmeFile = result.find(f => f.name === 'README.md')
+    const readmeFile = result.files.find(f => f.name === 'README.md')
     expect(readmeFile).toBeUndefined()
   })
 
@@ -42,7 +42,7 @@ describe('pkmExport', () => {
     mockExportNotesAsMarkdown.mockResolvedValue([{ name: 'my-note.md', content: '# Note' }])
 
     const result = await exportPkmBundle()
-    const noteFile = result.find(f => f.name === 'notes/my-note.md')
+    const noteFile = result.files.find(f => f.name === 'notes/my-note.md')
     expect(noteFile).toBeDefined()
     expect(noteFile!.content).toBe('# Note')
   })
@@ -53,7 +53,7 @@ describe('pkmExport', () => {
     ])
 
     const result = await exportPkmBundle()
-    const fcFile = result.find(f => f.name === 'flashcards/React/what-is-react.md')
+    const fcFile = result.files.find(f => f.name === 'flashcards/React/what-is-react.md')
     expect(fcFile).toBeDefined()
   })
 
@@ -63,7 +63,7 @@ describe('pkmExport', () => {
     ])
 
     const result = await exportPkmBundle()
-    const bmFile = result.find(f => f.name === 'bookmarks/Course/bookmarks.md')
+    const bmFile = result.files.find(f => f.name === 'bookmarks/Course/bookmarks.md')
     expect(bmFile).toBeDefined()
   })
 
@@ -82,21 +82,21 @@ describe('pkmExport', () => {
     const result = await exportPkmBundle()
 
     // notes/ folder files
-    expect(result.find(f => f.name === 'notes/note-1.md')).toBeDefined()
-    expect(result.find(f => f.name === 'notes/note-2.md')).toBeDefined()
+    expect(result.files.find(f => f.name === 'notes/note-1.md')).toBeDefined()
+    expect(result.files.find(f => f.name === 'notes/note-2.md')).toBeDefined()
     // flashcards/ folder
-    expect(result.find(f => f.name === 'flashcards/Course/fc.md')).toBeDefined()
+    expect(result.files.find(f => f.name === 'flashcards/Course/fc.md')).toBeDefined()
     // bookmarks/ folder
-    expect(result.find(f => f.name === 'bookmarks/Course/bookmarks.md')).toBeDefined()
+    expect(result.files.find(f => f.name === 'bookmarks/Course/bookmarks.md')).toBeDefined()
     // README at root
-    expect(result.find(f => f.name === 'README.md')).toBeDefined()
+    expect(result.files.find(f => f.name === 'README.md')).toBeDefined()
   })
 
   it('includes README.md in ZIP when data exists', async () => {
     mockExportNotesAsMarkdown.mockResolvedValue([{ name: 'note.md', content: '# Note' }])
 
     const result = await exportPkmBundle()
-    const readme = result.find(f => f.name === 'README.md')
+    const readme = result.files.find(f => f.name === 'README.md')
     expect(readme).toBeDefined()
     expect(readme!.content).toContain('# Knowlune PKM Export')
     expect(readme!.content).toContain('notes/')
@@ -117,7 +117,7 @@ describe('pkmExport', () => {
     mockExportBookmarksAsMarkdown.mockResolvedValue([{ name: 'bookmarks/C/bm.md', content: '' }])
 
     const result = await exportPkmBundle()
-    const readme = result.find(f => f.name === 'README.md')!
+    const readme = result.files.find(f => f.name === 'README.md')!
 
     expect(readme.content).toContain('| notes/ | 3 |')
     expect(readme.content).toContain('| flashcards/ | 2 |')
@@ -132,7 +132,7 @@ describe('pkmExport', () => {
 
     const result = await exportPkmBundle()
     // 2 data files + 1 README
-    expect(result).toHaveLength(3)
+    expect(result.files).toHaveLength(3)
   })
 
   describe('partial export resilience (C4 hotfix)', () => {
@@ -148,11 +148,11 @@ describe('pkmExport', () => {
       const result = await exportPkmBundle()
 
       // Should still have flashcard and bookmark files + README
-      expect(result.find(f => f.name === 'flashcards/C/fc.md')).toBeDefined()
-      expect(result.find(f => f.name === 'bookmarks/C/bm.md')).toBeDefined()
-      expect(result.find(f => f.name === 'README.md')).toBeDefined()
+      expect(result.files.find(f => f.name === 'flashcards/C/fc.md')).toBeDefined()
+      expect(result.files.find(f => f.name === 'bookmarks/C/bm.md')).toBeDefined()
+      expect(result.files.find(f => f.name === 'README.md')).toBeDefined()
       // No note files
-      expect(result.find(f => f.name.startsWith('notes/'))).toBeUndefined()
+      expect(result.files.find(f => f.name.startsWith('notes/'))).toBeUndefined()
     })
 
     it('continues exporting when flashcards sub-exporter fails', async () => {
@@ -164,9 +164,9 @@ describe('pkmExport', () => {
 
       const result = await exportPkmBundle()
 
-      expect(result.find(f => f.name === 'notes/note.md')).toBeDefined()
-      expect(result.find(f => f.name === 'bookmarks/C/bm.md')).toBeDefined()
-      expect(result.find(f => f.name.startsWith('flashcards/'))).toBeUndefined()
+      expect(result.files.find(f => f.name === 'notes/note.md')).toBeDefined()
+      expect(result.files.find(f => f.name === 'bookmarks/C/bm.md')).toBeDefined()
+      expect(result.files.find(f => f.name.startsWith('flashcards/'))).toBeUndefined()
     })
 
     it('continues exporting when bookmarks sub-exporter fails', async () => {
@@ -178,9 +178,9 @@ describe('pkmExport', () => {
 
       const result = await exportPkmBundle()
 
-      expect(result.find(f => f.name === 'notes/note.md')).toBeDefined()
-      expect(result.find(f => f.name === 'flashcards/C/fc.md')).toBeDefined()
-      expect(result.find(f => f.name.startsWith('bookmarks/'))).toBeUndefined()
+      expect(result.files.find(f => f.name === 'notes/note.md')).toBeDefined()
+      expect(result.files.find(f => f.name === 'flashcards/C/fc.md')).toBeDefined()
+      expect(result.files.find(f => f.name.startsWith('bookmarks/'))).toBeUndefined()
     })
 
     it('includes error warnings in README when sub-exporter fails', async () => {
@@ -191,7 +191,7 @@ describe('pkmExport', () => {
       mockExportBookmarksAsMarkdown.mockResolvedValue([])
 
       const result = await exportPkmBundle()
-      const readme = result.find(f => f.name === 'README.md')
+      const readme = result.files.find(f => f.name === 'README.md')
 
       expect(readme).toBeDefined()
       expect(readme!.content).toContain('Export Warnings')
@@ -204,7 +204,7 @@ describe('pkmExport', () => {
       mockExportBookmarksAsMarkdown.mockRejectedValue(new Error('fail'))
 
       const result = await exportPkmBundle()
-      expect(result).toEqual([])
+      expect(result.files).toEqual([])
     })
   })
 

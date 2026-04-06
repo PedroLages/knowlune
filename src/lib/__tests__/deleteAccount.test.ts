@@ -109,7 +109,8 @@ describe('deleteAccount module', () => {
 
   describe('sessionRequiresReauth', () => {
     it('returns true when session is null', () => {
-      mockGetState.mockReturnValue({ session: null, user: null, signOut: vi.fn() })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      mockGetState.mockReturnValue({ session: null, user: null, signOut: vi.fn() } as any)
       expect(sessionRequiresReauth()).toBe(true)
     })
 
@@ -118,6 +119,7 @@ describe('deleteAccount module', () => {
     })
 
     it('returns true for expired session (iat > 5 minutes ago)', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockGetState.mockReturnValue({
         session: {
           access_token: makeExpiredToken(),
@@ -125,11 +127,12 @@ describe('deleteAccount module', () => {
         },
         user: { id: 'user-1', email: 'test@example.com' },
         signOut: vi.fn(),
-      })
+      } as any)
       expect(sessionRequiresReauth()).toBe(true)
     })
 
     it('returns true when token has no iat', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockGetState.mockReturnValue({
         session: {
           access_token: 'header.' + btoa(JSON.stringify({})) + '.sig',
@@ -137,16 +140,17 @@ describe('deleteAccount module', () => {
         },
         user: { id: 'user-1' },
         signOut: vi.fn(),
-      })
+      } as any)
       expect(sessionRequiresReauth()).toBe(true)
     })
 
     it('returns true for malformed JWT', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockGetState.mockReturnValue({
         session: { access_token: 'invalid', token_type: 'bearer' },
         user: { id: 'user-1' },
         signOut: vi.fn(),
-      })
+      } as any)
       expect(sessionRequiresReauth()).toBe(true)
     })
   })
@@ -183,7 +187,8 @@ describe('deleteAccount module', () => {
     })
 
     it('returns null when no user', async () => {
-      mockGetState.mockReturnValue({ session: null, user: null, signOut: vi.fn() })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      mockGetState.mockReturnValue({ session: null, user: null, signOut: vi.fn() } as any)
       const data = await getAccountData()
       expect(data).toBeNull()
     })
@@ -206,13 +211,15 @@ describe('deleteAccount module', () => {
     })
 
     it('returns error when session is null', async () => {
-      mockGetState.mockReturnValue({ session: null, user: null, signOut: vi.fn() })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      mockGetState.mockReturnValue({ session: null, user: null, signOut: vi.fn() } as any)
       const result = await deleteAccount()
       expect(result.success).toBe(false)
       expect(result.error).toContain('signed in')
     })
 
     it('returns error when session requires reauth', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockGetState.mockReturnValue({
         session: {
           access_token: makeExpiredToken(),
@@ -220,7 +227,7 @@ describe('deleteAccount module', () => {
         },
         user: { id: 'user-1', email: 'test@example.com' },
         signOut: vi.fn(),
-      })
+      } as any)
       const result = await deleteAccount()
       expect(result.success).toBe(false)
       expect(result.error).toContain('password')
@@ -284,7 +291,8 @@ describe('deleteAccount module', () => {
     })
 
     it('returns error when no session', async () => {
-      mockGetState.mockReturnValue({ session: null, user: null, signOut: vi.fn() })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      mockGetState.mockReturnValue({ session: null, user: null, signOut: vi.fn() } as any)
       const result = await cancelAccountDeletion()
       expect(result.error).toContain('signed in')
     })

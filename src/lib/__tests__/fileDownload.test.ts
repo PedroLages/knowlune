@@ -13,8 +13,10 @@ describe('fileDownload', () => {
     mockRevokeObjectURL = vi.fn()
 
     // Mock URL methods
-    globalThis.URL.createObjectURL = mockCreateObjectURL
-    globalThis.URL.revokeObjectURL = mockRevokeObjectURL
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    globalThis.URL.createObjectURL = mockCreateObjectURL as any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    globalThis.URL.revokeObjectURL = mockRevokeObjectURL as any
 
     // Mock createElement to return a clickable element
     vi.spyOn(document, 'createElement').mockReturnValue({

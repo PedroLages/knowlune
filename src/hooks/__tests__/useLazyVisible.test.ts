@@ -21,7 +21,7 @@ describe('useLazyVisible', () => {
 
     // Attach a real element to ref
     const div = document.createElement('div')
-    const { result } = renderHook(() => {
+    renderHook(() => {
       const [ref, visible] = useLazyVisible()
       // Simulate ref assignment
       if (ref.current !== div) {
