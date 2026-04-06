@@ -11,7 +11,7 @@ Last Updated: 2026-04-05
 | E101-S02 | done | #262 | 1 | 4 |
 | E101-S03 | done | #263 | 2 | 14 |
 | E101-S04 | done | #264 | 3 | 13 |
-| E101-S05 | finishing | — | 3 | 8 |
+| E101-S05 | done | #265 | 3 | 8 |
 | E101-S06 | queued | — | — | — |
 
 ## Story Details
@@ -79,7 +79,7 @@ _(none)_
 ---
 
 ### E101-S05: Audio Bookmarks & Learning Loop
-**Status:** finishing
+**Status:** done (PR #265)
 #### Errors
 _(none)_
 #### Review Findings
