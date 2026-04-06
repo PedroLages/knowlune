@@ -9,7 +9,7 @@ Last Updated: 2026-04-06
 |-------|--------|--------|---------------|--------------|
 | E102-S01 | done | #267 | 2 | 5 |
 | E102-S02 | done | #268 | 2 | 2 |
-| E102-S03 | queued | — | — | — |
+| E102-S03 | finishing | — | 1 | 2 |
 | E102-S04 | queued | — | — | — |
 
 ## Story Details
@@ -43,15 +43,15 @@ _(none)_
 ---
 
 ### E102-S03: Collections
-**Status:** queued
+**Status:** finishing
 #### Errors
-_(none yet)_
+_(none)_
 #### Review Findings
-_(none yet)_
+- R1: PASS — 2 MEDIUM (O(n*m) lookup, missing E2E spec)
 #### Fixes Applied
-_(none yet)_
+- R1: Map<string,Book> O(1) lookup, collections.spec.ts with 4 E2E tests
 #### Notes
-_(none yet)_
+- CollectionCard accordion, CollectionsView, Grid/Series/Collections toggle
 
 ---
 
