@@ -1294,7 +1294,7 @@ development_status:
   # Close coverage gap from 57% to 70%+ (KI-036)
   # Depends on: E105
   # ──────────────────────────────────────────────────
-  epic-106: backlog
-  106-1-store-coverage: ready-for-dev
+  epic-106: in-progress
+  106-1-store-coverage: done
   106-2-lib-service-coverage: ready-for-dev
   106-3-hook-coverage-threshold-raise: ready-for-dev
