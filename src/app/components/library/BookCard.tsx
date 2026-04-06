@@ -8,7 +8,7 @@
 
 import { memo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { BookOpen, Cloud, Headphones } from 'lucide-react'
+import { BookOpen, Cloud, Headphones, ArrowRightLeft } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { BookStatusBadge } from './BookStatusBadge'
 
@@ -150,6 +150,16 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
                 ? 'Completed'
                 : `${formatDuration(Math.max(0, book.totalDuration - book.currentPosition.seconds))} left`
               : formatDuration(book.totalDuration)}
+          </p>
+        )}
+        {/* "Also available as" badge for linked dual-format books (E103-S03) */}
+        {book.linkedBookId && (
+          <p
+            className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5"
+            data-testid={`linked-format-badge-${book.id}`}
+          >
+            <ArrowRightLeft className="size-3 shrink-0" aria-hidden="true" />
+            {book.format === 'audiobook' ? 'Also available as EPUB' : 'Also available as audiobook'}
           </p>
         )}
       </div>
