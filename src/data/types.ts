@@ -701,6 +701,7 @@ export interface Book {
   finishedAt?: string // ISO 8601 — set when status transitions to 'finished'
   absServerId?: string // FK to AudiobookshelfServer.id (if sourced from ABS)
   absItemId?: string // ABS item ID for dedup on re-sync
+  linkedBookId?: string // FK to paired format's Book.id (E103-S03 dual-format linking)
 }
 
 export interface BookHighlight {

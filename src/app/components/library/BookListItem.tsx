@@ -8,7 +8,7 @@
 
 import { memo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { BookOpen, Cloud, Headphones } from 'lucide-react'
+import { ArrowRightLeft, BookOpen, Cloud, Headphones } from 'lucide-react'
 import type { Book, BookStatus } from '@/data/types'
 import { BookStatusBadge } from './BookStatusBadge'
 import {
@@ -122,6 +122,15 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
             >
               <Cloud className="size-3" aria-hidden="true" />
               Remote
+            </span>
+          )}
+          {book.linkedBookId && (
+            <span
+              className="flex items-center gap-0.5"
+              data-testid={`linked-format-badge-${book.id}`}
+            >
+              <ArrowRightLeft className="size-3" aria-hidden="true" />
+              {book.format === 'audiobook' ? 'Also as EPUB' : 'Also as audiobook'}
             </span>
           )}
           {book.totalPages && book.format !== 'audiobook' && <span>{book.totalPages} pages</span>}
