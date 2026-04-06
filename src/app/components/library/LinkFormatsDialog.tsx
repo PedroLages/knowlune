@@ -267,7 +267,7 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
         await linkBooks(book.id, selectedBook.id)
         // TODO E103-S01: persist finalMappings to ChapterMappingRecord table when that store action exists
         // finalMappings intentionally unused until the ChapterMappingRecord store action is implemented
-        void (finalMappings)
+        void finalMappings
         onOpenChange(false)
       } catch (err) {
         console.error('[LinkFormatsDialog] linkBooks failed:', err)
@@ -307,9 +307,7 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
 
   // Resolve epub/audio roles for the editor view (avoids IIFE inside JSX)
   const editorBooks =
-    selectedBook && mappings !== null
-      ? resolveEpubAudio(book, selectedBook)
-      : null
+    selectedBook && mappings !== null ? resolveEpubAudio(book, selectedBook) : null
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
