@@ -61,8 +61,7 @@ export function Library() {
   // Audiobookshelf sync (E101-S03)
   const absServers = useAudiobookshelfStore(s => s.servers)
   const loadAbsServers = useAudiobookshelfStore(s => s.loadServers)
-  const { isSyncing: isAbsSyncing, syncCatalog, loadNextPage, pagination } =
-    useAudiobookshelfSync()
+  const { isSyncing: isAbsSyncing, syncCatalog, loadNextPage, pagination } = useAudiobookshelfSync()
 
   const loadGoal = useReadingGoalStore(s => s.loadGoal)
   const goal = useReadingGoalStore(s => s.goal)
@@ -258,7 +257,10 @@ export function Library() {
 
       {/* Syncing indicator (E101-S03) */}
       {isAbsSyncing && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="abs-syncing-indicator">
+        <div
+          className="flex items-center gap-2 text-sm text-muted-foreground"
+          data-testid="abs-syncing-indicator"
+        >
           <Loader2 className="size-4 animate-spin" aria-hidden="true" />
           Syncing Audiobookshelf library...
         </div>
@@ -408,10 +410,7 @@ function AbsPaginationSentinel({
       {isSyncing && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={i}
-              className="rounded-[24px] border border-border/50 overflow-hidden"
-            >
+            <div key={i} className="rounded-[24px] border border-border/50 overflow-hidden">
               <div className="aspect-[2/3] bg-muted animate-pulse" />
               <div className="p-3 space-y-2">
                 <div className="h-4 bg-muted animate-pulse rounded" />

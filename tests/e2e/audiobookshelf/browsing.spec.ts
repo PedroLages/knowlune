@@ -101,12 +101,9 @@ async function seedLibraryWithAbs(page: import('@playwright/test').Page): Promis
   })
   // First navigation: opens IDB so we can seed
   await page.goto('/')
-  await seedIndexedDBStore(
-    page,
-    DB_NAME,
-    'audiobookshelfServers',
-    [ABS_SERVER] as unknown as Record<string, unknown>[]
-  )
+  await seedIndexedDBStore(page, DB_NAME, 'audiobookshelfServers', [
+    ABS_SERVER,
+  ] as unknown as Record<string, unknown>[])
   await seedIndexedDBStore(
     page,
     DB_NAME,
@@ -159,9 +156,7 @@ test.describe('E101-S03: Library Browsing & Catalog Sync', () => {
     await expect(page.getByTestId('source-tab-audiobookshelf')).not.toBeVisible()
   })
 
-  test('clicking "Audiobookshelf" tab filters to show only remote ABS books', async ({
-    page,
-  }) => {
+  test('clicking "Audiobookshelf" tab filters to show only remote ABS books', async ({ page }) => {
     await seedLibraryWithAbs(page)
 
     await expect(page.getByText('Thinking, Fast and Slow')).toBeVisible({ timeout: 8000 })

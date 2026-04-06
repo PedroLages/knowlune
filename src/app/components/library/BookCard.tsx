@@ -103,9 +103,7 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
         </p>
         <p className="text-xs text-muted-foreground truncate">{book.author}</p>
         {book.narrator && (
-          <p className="text-xs text-muted-foreground/70 truncate">
-            Narrated by {book.narrator}
-          </p>
+          <p className="text-xs text-muted-foreground/70 truncate">Narrated by {book.narrator}</p>
         )}
 
         {/* Progress bar */}

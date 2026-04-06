@@ -44,10 +44,10 @@ export function useAudiobookshelfSync() {
       const bookId = crypto.randomUUID()
 
       // Handle narrators — typed as string[] but runtime may return {name: string}[] from newer ABS versions
-      const rawNarrators = (absItem.media.metadata.narrators ?? []) as Array<string | { name: string }>
-      const narratorNames = rawNarrators.map(n =>
-        typeof n === 'string' ? n : n.name
-      )
+      const rawNarrators = (absItem.media.metadata.narrators ?? []) as Array<
+        string | { name: string }
+      >
+      const narratorNames = rawNarrators.map(n => (typeof n === 'string' ? n : n.name))
 
       // Map chapters
       const chapters: BookChapter[] = (absItem.media.chapters ?? []).map((ch, index) => ({
@@ -78,7 +78,10 @@ export function useAudiobookshelfSync() {
         description: absItem.media.metadata.description,
         tags: [],
         chapters,
-        source: { type: 'remote', url: `${server.url.replace(/\/+$/, '')}/api/items/${absItem.id}` },
+        source: {
+          type: 'remote',
+          url: `${server.url.replace(/\/+$/, '')}/api/items/${absItem.id}`,
+        },
         totalDuration: duration,
         progress: 0,
         isbn: absItem.media.metadata.isbn,
