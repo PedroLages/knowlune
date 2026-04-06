@@ -10,7 +10,7 @@ Last Updated: 2026-04-05
 | E101-S01 | done | #261 | 2 | 7 |
 | E101-S02 | done | #262 | 1 | 4 |
 | E101-S03 | done | #263 | 2 | 14 |
-| E101-S04 | queued | — | — | — |
+| E101-S04 | finishing | — | 3 | 13 |
 | E101-S05 | queued | — | — | — |
 | E101-S06 | queued | — | — | — |
 
@@ -61,17 +61,20 @@ _(none)_
 ---
 
 ### E101-S04: Streaming Playback
-**Status:** reviewing (R2)
+**Status:** finishing
 #### Errors
 _(none)_
 #### Review Findings
 - R1: 8 issues (3 HIGH, 3 MEDIUM, 1 LOW, 1 NIT) + 2 NON-ISSUES (GLM false positives)
+- R2: 4 issues (1 HIGH, 2 MEDIUM, 1 LOW)
+- R3: PASS (2 LOW found and fixed during review)
 #### Fixes Applied
-- R1 fix: _loadedBookId after canplay, try/catch for streaming, improved error messages, session-resume seek via isLoading effect, E2E mockAudioElement, unit test expectation update, removed no-op revoke
+- R1: _loadedBookId after canplay, try/catch, error messages, session-resume seek effect, E2E mockAudioElement, unit test update, removed no-op revoke
+- R2: __TEST_AUDIO_SRC__ for detached audio, strict locator, savedSecondsRef, deterministic wait
+- R3: AC7 strict locator, AC3 waitForFunction falsy fix
 #### Notes
-- 1 FALSE POSITIVE: savePosition stale closure (book.id already in useCallback deps)
-- ABS streaming via token auth, chapter seek, position persistence
-- Has .tsx changes → full review scope
+- Total issues: 13 fixed, 1 false positive (stale closure), 2 NON-ISSUES (GLM)
+- Trend: 8→4→2 (converging to zero)
 
 ---
 
