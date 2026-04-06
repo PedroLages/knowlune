@@ -1275,7 +1275,7 @@ development_status:
   # Depends on: E103
   # ──────────────────────────────────────────────────
   epic-104: backlog
-  104-1-link-formats-dialog: backlog
+  104-1-link-formats-dialog: ready-for-dev
 
   # ──────────────────────────────────────────────────
   # Epic 105: Test Debt Cleanup
@@ -1284,5 +1284,5 @@ development_status:
   # Depends on: none
   # ──────────────────────────────────────────────────
   epic-105: backlog
-  105-1-unit-test-fixes: backlog
-  105-2-e2e-test-fixes-and-coverage: backlog
+  105-1-unit-test-fixes: ready-for-dev
+  105-2-e2e-test-fixes-and-coverage: ready-for-dev
