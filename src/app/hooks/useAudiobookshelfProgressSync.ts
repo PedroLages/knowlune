@@ -68,9 +68,7 @@ export function useAudiobookshelfProgressSync({
     hasFetchedRef.current = true
 
     const server = useAudiobookshelfStore.getState().getServerById(book.absServerId)
-    if (!server) return
-
-    // Fire-and-forget — never block book opening
+    if (!server) return // Fire-and-forget — never block book opening
     ;(async () => {
       const result = await AudiobookshelfService.fetchProgress(
         server.url,
@@ -101,8 +99,7 @@ export function useAudiobookshelfProgressSync({
         return
       }
 
-      const localSeconds =
-        book.currentPosition?.type === 'time' ? book.currentPosition.seconds : 0
+      const localSeconds = book.currentPosition?.type === 'time' ? book.currentPosition.seconds : 0
       const resolution = resolveConflict(absProgress.updatedAt, book.lastOpenedAt, localSeconds)
 
       if (resolution === 'use-abs') {
@@ -130,9 +127,7 @@ export function useAudiobookshelfProgressSync({
             progress: progressPct,
             lastOpenedAt: now,
           } as Parameters<typeof db.books.update>[1])
-          .catch(err =>
-            console.error('[useAbsProgressSync] Failed to persist ABS position:', err)
-          )
+          .catch(err => console.error('[useAbsProgressSync] Failed to persist ABS position:', err))
 
         // Seek audio to ABS position
         seekTo(absProgress.currentTime)

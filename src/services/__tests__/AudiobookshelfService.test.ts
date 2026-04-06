@@ -443,10 +443,7 @@ describe('AudiobookshelfService.fetchProgress', () => {
 describe('AudiobookshelfService.updateProgress', () => {
   it('sends PATCH request with progress body', async () => {
     // PATCH returns 200 with empty body
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(new Response('', { status: 200 }))
-    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 200 })))
 
     const progress = {
       currentTime: 7200,

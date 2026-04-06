@@ -19,7 +19,8 @@ function findCurrentChapterTitle(chapters: Book['chapters'], posSeconds: number)
       (_ch, i, arr) =>
         posSeconds >= (_ch.position.type === 'time' ? _ch.position.seconds : 0) &&
         (i === arr.length - 1 ||
-          posSeconds < (arr[i + 1].position.type === 'time' ? arr[i + 1].position.seconds : Infinity))
+          posSeconds <
+            (arr[i + 1].position.type === 'time' ? arr[i + 1].position.seconds : Infinity))
     )?.title ?? 'Chapter 1'
   )
 }
@@ -144,7 +145,8 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
         {book.totalDuration != null && book.totalDuration > 0 && (
           <p className="text-[10px] text-muted-foreground" data-testid={`duration-${book.id}`}>
             {book.format === 'audiobook' && book.currentPosition?.type === 'time'
-              ? (book.progress != null && book.progress >= 99) || book.currentPosition.seconds >= book.totalDuration
+              ? (book.progress != null && book.progress >= 99) ||
+                book.currentPosition.seconds >= book.totalDuration
                 ? 'Completed'
                 : `${formatDuration(Math.max(0, book.totalDuration - book.currentPosition.seconds))} left`
               : formatDuration(book.totalDuration)}

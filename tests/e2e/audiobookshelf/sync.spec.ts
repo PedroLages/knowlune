@@ -89,9 +89,10 @@ async function seedSyncData(page: import('@playwright/test').Page): Promise<void
   await seedIndexedDBStore(page, DB_NAME, 'audiobookshelfServers', [
     ABS_SERVER,
   ] as unknown as Record<string, unknown>[])
-  await seedIndexedDBStore(page, DB_NAME, 'books', [
-    ABS_BOOK,
-  ] as unknown as Record<string, unknown>[])
+  await seedIndexedDBStore(page, DB_NAME, 'books', [ABS_BOOK] as unknown as Record<
+    string,
+    unknown
+  >[])
 }
 
 test.describe('E102-S01: Bidirectional Progress Sync', () => {

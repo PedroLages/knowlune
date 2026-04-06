@@ -74,7 +74,9 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       // Flush pending sync queue when server transitions to 'connected' (E102-S01)
       if (updates.status === 'connected' && get().pendingSyncQueue.length > 0) {
         // Fire-and-forget — silent, never blocks the updateServer caller
-        get().flushSyncQueue().catch(() => {})
+        get()
+          .flushSyncQueue()
+          .catch(() => {})
       }
     } catch (err) {
       console.error('[AudiobookshelfStore] Failed to update server:', err)
