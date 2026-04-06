@@ -22,13 +22,17 @@ export interface EpubTocItem {
  */
 export async function extractEpubChapters(fileArrayBuffer: ArrayBuffer): Promise<EpubTocItem[]> {
   const book = ePub(fileArrayBuffer)
-  await book.ready
+  try {
+    await book.ready
 
-  const toc = book.navigation.toc
-  if (!toc || toc.length === 0) return []
+    const toc = book.navigation.toc
+    if (!toc || toc.length === 0) return []
 
-  return toc.map(item => ({
-    href: item.href,
-    label: item.label.trim(),
-  }))
+    return toc.map(item => ({
+      href: item.href,
+      label: item.label.trim(),
+    }))
+  } finally {
+    book.destroy()
+  }
 }

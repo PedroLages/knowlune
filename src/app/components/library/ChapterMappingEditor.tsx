@@ -102,7 +102,7 @@ export function ChapterMappingEditor({
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h3 className="text-lg font-semibold text-foreground">Chapter Mapping</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground" aria-live="polite">
             {matchedCount} of {totalEpub} chapters matched
           </p>
         </div>
