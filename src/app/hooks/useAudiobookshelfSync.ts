@@ -130,64 +130,46 @@ export function useAudiobookshelfSync() {
 
       setState(prev => ({ ...prev, isSyncing: true, syncError: null }))
 
+      const LIMIT = 50
+
       try {
-        // Fetch all selected libraries in parallel (NFR1: sub-1s on LAN)
-        // Use allSettled so one failing library doesn't discard successful ones
-        const settled = await Promise.allSettled(
-          server.libraryIds.map(libId =>
-            AudiobookshelfService.fetchLibraryItems(server.url, server.apiKey, libId, {
-              page,
-              limit: 50,
-            })
-          )
-        )
-
-        // Separate fulfilled (with ok/error) from rejected (network-level failures)
-        const fulfilled = settled
-          .filter(
-            (
-              s
-            ): s is PromiseFulfilledResult<
-              Awaited<ReturnType<typeof AudiobookshelfService.fetchLibraryItems>>
-            > => s.status === 'fulfilled'
-          )
-          .map(s => s.value)
-        const rejected = settled.filter(s => s.status === 'rejected')
-
-        // If ALL requests failed, handle as server error
-        if (fulfilled.length === 0) {
-          const reason =
-            rejected[0] && 'reason' in rejected[0] ? String(rejected[0].reason) : 'Unknown error'
-          await updateServer(server.id, { status: 'offline' })
-          toast.warning('Audiobookshelf server is offline. Showing cached library.')
-          setState(prev => ({ ...prev, isSyncing: false, syncError: reason }))
-          return
-        }
-
-        // Check for auth/connection failures in fulfilled results
-        const failedResult = fulfilled.find(r => !r.ok)
-        if (failedResult && !failedResult.ok) {
-          const error = failedResult.error
-          if (error.includes('Authentication') || error.includes('Access denied')) {
-            await updateServer(server.id, { status: 'auth-failed' })
-          } else {
-            await updateServer(server.id, { status: 'offline' })
-            toast.warning('Audiobookshelf server is offline. Showing cached library.')
-          }
-          setState(prev => ({ ...prev, isSyncing: false, syncError: error }))
-          return
-        }
-
-        // Process successful results — batch all books for a single IDB write
-        let totalItems = 0
+        // Fetch ALL pages for each selected library (not just page 0)
         const allMappedBooks: Book[] = []
-        for (const result of fulfilled) {
-          if (!result.ok) continue
-          totalItems += result.data.total
-          for (const absItem of result.data.results) {
-            // Skip non-book media types (e.g. podcasts) — only audiobooks should be imported
-            if (absItem.mediaType && absItem.mediaType !== 'book') continue
-            allMappedBooks.push(mapAbsItemToBook(absItem, server))
+        let totalItems = 0
+
+        for (const libId of server.libraryIds) {
+          let currentPage = page
+          let hasMore = true
+
+          while (hasMore) {
+            const result = await AudiobookshelfService.fetchLibraryItems(
+              server.url,
+              server.apiKey,
+              libId,
+              { page: currentPage, limit: LIMIT }
+            )
+
+            if (!result.ok) {
+              const error = result.error
+              if (error.includes('Authentication') || error.includes('Access denied')) {
+                await updateServer(server.id, { status: 'auth-failed' })
+              } else {
+                await updateServer(server.id, { status: 'offline' })
+                toast.warning('Audiobookshelf server is offline. Showing cached library.')
+              }
+              setState(prev => ({ ...prev, isSyncing: false, syncError: error }))
+              return
+            }
+
+            totalItems = result.data.total
+            for (const absItem of result.data.results) {
+              if (absItem.mediaType && absItem.mediaType !== 'book') continue
+              allMappedBooks.push(mapAbsItemToBook(absItem, server))
+            }
+
+            // Check if there are more pages
+            hasMore = (currentPage + 1) * LIMIT < result.data.total
+            currentPage++
           }
         }
 
@@ -200,7 +182,7 @@ export function useAudiobookshelfSync() {
           isSyncing: false,
           pagination: {
             ...prev.pagination,
-            [server.id]: { currentPage: page, totalItems },
+            [server.id]: { currentPage: 0, totalItems },
           },
         }))
 
@@ -209,6 +191,13 @@ export function useAudiobookshelfSync() {
           status: 'connected',
           lastSyncedAt: new Date().toISOString(),
         })
+
+        // Auto-load collections and series after catalog sync
+        const { loadCollections, loadSeries } = useAudiobookshelfStore.getState()
+        for (const libId of server.libraryIds) {
+          loadSeries(server.id, libId)
+        }
+        loadCollections(server.id)
       } catch (err) {
         console.error('[useAudiobookshelfSync] Unexpected sync error:', err)
         toast.error('Failed to sync Audiobookshelf catalog.')
