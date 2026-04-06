@@ -215,10 +215,10 @@ issues:
     severity: medium
     discovered_by: production-readiness-audit
     discovered_on: 2026-03-26
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "All 28 tests in this file fail. Tests cover folder selection, course naming, tag management, image grid, AI suggestions, and description fields. Likely caused by component refactoring without corresponding test updates. Related to KI-010 (import wizard E2E waiver)."
+    fixed_by: E105-S01
+    notes: "Pre-verified as already passing before E105-S01 started — tests had been fixed by an earlier epic without the KI being updated. Marked resolved during E105 investigation."
 
   - id: KI-017
     type: test
@@ -227,10 +227,10 @@ issues:
     severity: medium
     discovered_by: production-readiness-audit
     discovered_on: 2026-03-26
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Regression from KI-001 fix scope — 11 tests still failing covering empty state display, imported course rendering, sorting, grid layout, and status filtering with topic filter AND-semantics. May need additional mock updates."
+    fixed_by: E105-S01
+    notes: "Root cause: StatusFilter component added a 'not-started' filter at index 0, shifting all button indices by +1. Fix: updated 3 test indices in Courses.test.tsx. The other 10 tests in the file were already passing."
 
   - id: KI-018
     type: test
@@ -239,10 +239,10 @@ issues:
     severity: medium
     discovered_by: production-readiness-audit
     discovered_on: 2026-03-26
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "loadFlashcards and error state tests failing. Likely stale IDB mock setup after store refactoring."
+    fixed_by: E105-S01
+    notes: "Pre-verified as already passing before E105-S01 started — tests had been fixed by an earlier epic without the KI being updated. Marked resolved during E105 investigation."
 
   - id: KI-019
     type: test
@@ -251,10 +251,10 @@ issues:
     severity: medium
     discovered_by: production-readiness-audit
     discovered_on: 2026-03-26
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "loadReviews, rateNote happy path (2 tests), and rollback on persistence failure all failing. Likely stale mock setup."
+    fixed_by: E105-S01
+    notes: "Pre-verified as already passing before E105-S01 started — tests had been fixed by an earlier epic without the KI being updated. Marked resolved during E105 investigation."
 
   - id: KI-020
     type: test
@@ -263,10 +263,10 @@ issues:
     severity: medium
     discovered_by: production-readiness-audit
     discovered_on: 2026-03-26
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Initial state, startSession, and pauseSession tests failing. Likely stale mock setup after store changes."
+    fixed_by: E105-S01
+    notes: "Pre-verified as already passing before E105-S01 started — tests had been fixed by an earlier epic without the KI being updated. Marked resolved during E105 investigation."
 
   - id: KI-021
     type: test
@@ -447,3 +447,15 @@ issues:
     scheduled_for: null
     fixed_by: null
     notes: "Pre-existing from E88-S01. Not introduced by E88-S02."
+
+  - id: KI-036
+    type: test
+    summary: "Unit test coverage at 55% — 15pp gap to 70% target (~60-80 unit tests needed)"
+    file: "vitest.config.ts"
+    severity: medium
+    discovered_by: E105-S02
+    discovered_on: 2026-04-06
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Coverage threshold was pragmatically lowered from 70% to 55% in E105-S02 (KI-029) because new stores/hooks added in E87-E103 lacked tests. Actual coverage ~57%. Filing this KI per the E105 retro — coverage threshold reductions must always be paired with a tracking entry. Requires ~60-80 new unit tests to reach 70%. Schedule for a dedicated coverage improvement epic."
