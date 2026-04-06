@@ -313,13 +313,13 @@ export function AudiobookRenderer({
             currentTime={currentTime}
             onBookmarkCreated={handleBookmarkCreated}
           />
-          {sessionBookmarkCount > 0 && (
+          {sessionBookmarkIds.size > 0 && (
             <span
               className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-brand text-brand-foreground text-[10px] font-semibold px-1 pointer-events-none"
-              aria-label={`${sessionBookmarkCount} bookmark${sessionBookmarkCount !== 1 ? 's' : ''} this session`}
+              aria-label={`${sessionBookmarkIds.size} bookmark${sessionBookmarkIds.size !== 1 ? 's' : ''} this session`}
               data-testid="bookmark-count-badge"
             >
-              {sessionBookmarkCount}
+              {sessionBookmarkIds.size}
             </span>
           )}
         </div>

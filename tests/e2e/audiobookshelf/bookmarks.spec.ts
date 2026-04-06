@@ -173,7 +173,6 @@ test.describe('E101-S05: Audio Bookmarks', () => {
         audioElements[0].dispatchEvent(new Event('ended'))
       } else {
         // Audio() is detached; dispatch on any audio-like mock via prototype
-        const event = new Event('ended')
         ;(HTMLMediaElement.prototype as unknown as { _testEnded?: () => void })._testEnded?.()
         // Fallback: dispatch ended globally for the singleton audio
         window.dispatchEvent(new CustomEvent('__test_audio_ended__'))
