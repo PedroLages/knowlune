@@ -4,8 +4,8 @@ story_name: "Link Formats Dialog — Book Pairing Entry Point"
 status: in-progress
 started: 2026-04-06
 completed:
-reviewed: false
-review_started:
+reviewed: in-progress
+review_started: 2026-04-06
 review_gates_passed: []
 burn_in_validated: false
 ---

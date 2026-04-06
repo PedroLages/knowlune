@@ -197,7 +197,11 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
         allSeries.push(...nextResult.data.results)
       }
 
-      set({ series: allSeries, seriesLoaded: { ...get().seriesLoaded, [serverId]: true }, isLoadingSeries: false })
+      set({
+        series: allSeries,
+        seriesLoaded: { ...get().seriesLoaded, [serverId]: true },
+        isLoadingSeries: false,
+      })
     } catch (err) {
       console.error('[AudiobookshelfStore] Failed to load series:', err)
       toast.error('Failed to load series from Audiobookshelf.')
@@ -217,11 +221,10 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       const limit = 50
 
       // Fetch first page to get total
-      const firstResult = await AudiobookshelfService.fetchCollections(
-        server.url,
-        server.apiKey,
-        { page, limit }
-      )
+      const firstResult = await AudiobookshelfService.fetchCollections(server.url, server.apiKey, {
+        page,
+        limit,
+      })
       if (!firstResult.ok) {
         toast.error(`Failed to load collections: ${firstResult.error}`)
         set({ isLoadingCollections: false })
@@ -234,16 +237,19 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       // Fetch remaining pages
       while ((page + 1) * limit < total) {
         page++
-        const nextResult = await AudiobookshelfService.fetchCollections(
-          server.url,
-          server.apiKey,
-          { page, limit }
-        )
+        const nextResult = await AudiobookshelfService.fetchCollections(server.url, server.apiKey, {
+          page,
+          limit,
+        })
         if (!nextResult.ok) break
         allCollections.push(...nextResult.data.results)
       }
 
-      set({ collections: allCollections, collectionsLoaded: { ...get().collectionsLoaded, [serverId]: true }, isLoadingCollections: false })
+      set({
+        collections: allCollections,
+        collectionsLoaded: { ...get().collectionsLoaded, [serverId]: true },
+        isLoadingCollections: false,
+      })
     } catch (err) {
       console.error('[AudiobookshelfStore] Failed to load collections:', err)
       toast.error('Failed to load collections from Audiobookshelf.')

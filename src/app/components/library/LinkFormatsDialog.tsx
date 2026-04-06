@@ -11,10 +11,21 @@
  */
 
 import { useState, useMemo, useCallback } from 'react'
-import { BookOpen, Headphones, ArrowRightLeft, CheckCircle2, AlertCircle, Link2Off } from 'lucide-react'
+import {
+  BookOpen,
+  Headphones,
+  ArrowRightLeft,
+  CheckCircle2,
+  AlertCircle,
+  Link2Off,
+} from 'lucide-react'
 import type { Book, ChapterMapping } from '@/data/types'
 import { useBookStore } from '@/stores/useBookStore'
-import { computeChapterMapping, type EpubChapterInput, type AudioChapterInput } from '@/lib/chapterMatcher'
+import {
+  computeChapterMapping,
+  type EpubChapterInput,
+  type AudioChapterInput,
+} from '@/lib/chapterMatcher'
 import {
   Dialog,
   DialogContent,
@@ -60,9 +71,7 @@ function BookPickerCard({
       className={cn(
         'flex items-center gap-3 w-full rounded-xl border p-3 text-left transition-colors min-h-[44px]',
         'hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
-        selected
-          ? 'border-brand bg-brand-soft'
-          : 'border-border bg-card'
+        selected ? 'border-brand bg-brand-soft' : 'border-border bg-card'
       )}
     >
       {/* Thumbnail */}
@@ -86,7 +95,12 @@ function BookPickerCard({
 
       {/* Info */}
       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-        <p className={cn('text-sm font-medium truncate', selected ? 'text-brand-soft-foreground' : 'text-foreground')}>
+        <p
+          className={cn(
+            'text-sm font-medium truncate',
+            selected ? 'text-brand-soft-foreground' : 'text-foreground'
+          )}
+        >
           {book.title}
         </p>
         <p className="text-xs text-muted-foreground truncate">{book.author}</p>
@@ -96,9 +110,7 @@ function BookPickerCard({
       </div>
 
       {/* Checkmark when selected */}
-      {selected && (
-        <CheckCircle2 className="size-5 text-brand flex-shrink-0" aria-hidden="true" />
-      )}
+      {selected && <CheckCircle2 className="size-5 text-brand flex-shrink-0" aria-hidden="true" />}
     </button>
   )
 }
@@ -180,13 +192,7 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
 
   /** Candidate books: opposite format, not already linked. */
   const candidates = useMemo(
-    () =>
-      books.filter(
-        b =>
-          b.format === targetFormat &&
-          !b.linkedBookId &&
-          b.id !== book.id
-      ),
+    () => books.filter(b => b.format === targetFormat && !b.linkedBookId && b.id !== book.id),
     [books, targetFormat, book.id]
   )
 
@@ -218,17 +224,12 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
     const epubBook = book.format === 'epub' ? book : selectedBook
     const audioBook = book.format === 'audiobook' ? book : selectedBook
 
-    const computed = computeChapterMapping(
-      toEpubInputs(epubBook),
-      toAudioInputs(audioBook)
-    )
+    const computed = computeChapterMapping(toEpubInputs(epubBook), toAudioInputs(audioBook))
     setMappings(computed)
 
     // Compute average confidence
     const avg =
-      computed.length > 0
-        ? computed.reduce((sum, m) => sum + m.confidence, 0) / computed.length
-        : 0
+      computed.length > 0 ? computed.reduce((sum, m) => sum + m.confidence, 0) / computed.length : 0
 
     if (avg >= HIGH_CONFIDENCE_THRESHOLD) {
       setView('confirm')
@@ -306,7 +307,10 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-muted rounded-lg">
                         {book.format === 'audiobook' ? (
-                          <Headphones className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                          <Headphones
+                            className="h-4 w-4 text-muted-foreground"
+                            aria-hidden="true"
+                          />
                         ) : (
                           <BookOpen className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                         )}
@@ -315,7 +319,9 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{book.title}</p>
-                    <p className="text-xs text-muted-foreground">{book.format === 'audiobook' ? 'Audiobook' : book.format.toUpperCase()}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {book.format === 'audiobook' ? 'Audiobook' : book.format.toUpperCase()}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -334,20 +340,36 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
                   <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3">
                     <div className="size-10 flex-shrink-0 rounded-lg overflow-hidden">
                       {linkedBook.coverUrl ? (
-                        <img src={linkedBook.coverUrl} alt="" className="h-full w-full object-cover" />
+                        <img
+                          src={linkedBook.coverUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-muted rounded-lg">
                           {linkedBook.format === 'audiobook' ? (
-                            <Headphones className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                            <Headphones
+                              className="h-4 w-4 text-muted-foreground"
+                              aria-hidden="true"
+                            />
                           ) : (
-                            <BookOpen className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                            <BookOpen
+                              className="h-4 w-4 text-muted-foreground"
+                              aria-hidden="true"
+                            />
                           )}
                         </div>
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{linkedBook.title}</p>
-                      <p className="text-xs text-muted-foreground">{linkedBook.format === 'audiobook' ? 'Audiobook' : linkedBook.format.toUpperCase()}</p>
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {linkedBook.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {linkedBook.format === 'audiobook'
+                          ? 'Audiobook'
+                          : linkedBook.format.toUpperCase()}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -355,7 +377,11 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
             </div>
 
             <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)} className="min-h-[44px]">
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="min-h-[44px]"
+              >
                 Close
               </Button>
               <Button
@@ -379,8 +405,7 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
                 Link Formats
               </DialogTitle>
               <DialogDescription id="link-formats-desc">
-                Choose a{' '}
-                {targetFormat === 'audiobook' ? 'audiobook' : 'EPUB'} to pair with{' '}
+                Choose a {targetFormat === 'audiobook' ? 'audiobook' : 'EPUB'} to pair with{' '}
                 <strong className="text-foreground">{book.title}</strong> for Whispersync.
               </DialogDescription>
             </DialogHeader>
@@ -389,11 +414,12 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
               <div className="py-8 text-center space-y-2">
                 <AlertCircle className="size-8 text-muted-foreground mx-auto" aria-hidden="true" />
                 <p className="text-sm text-muted-foreground">
-                  No unlinked{' '}
-                  {targetFormat === 'audiobook' ? 'audiobooks' : 'EPUBs'} found in your library.
+                  No unlinked {targetFormat === 'audiobook' ? 'audiobooks' : 'EPUBs'} found in your
+                  library.
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Import the {targetFormat === 'audiobook' ? 'audiobook' : 'EPUB'} edition first, then link them here.
+                  Import the {targetFormat === 'audiobook' ? 'audiobook' : 'EPUB'} edition first,
+                  then link them here.
                 </p>
               </div>
             ) : (
@@ -415,7 +441,11 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
             )}
 
             <DialogFooter className="gap-2 pt-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)} className="min-h-[44px]">
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="min-h-[44px]"
+              >
                 Cancel
               </Button>
               {alreadyLinked && (
@@ -494,19 +524,21 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
             </DialogHeader>
 
             <ScrollArea className="max-h-[50vh]">
-              {selectedBook && mappings !== null && (() => {
-                const epubBook = book.format === 'epub' ? book : selectedBook
-                const audioBook = book.format === 'audiobook' ? book : selectedBook
-                return (
-                  <ChapterMappingEditor
-                    epubChapters={toEpubInputs(epubBook)}
-                    audioChapters={toAudioInputs(audioBook)}
-                    initialMappings={mappings}
-                    onSave={finalMappings => handleSave(finalMappings)}
-                    onCancel={() => setView('select')}
-                  />
-                )
-              })()}
+              {selectedBook &&
+                mappings !== null &&
+                (() => {
+                  const epubBook = book.format === 'epub' ? book : selectedBook
+                  const audioBook = book.format === 'audiobook' ? book : selectedBook
+                  return (
+                    <ChapterMappingEditor
+                      epubChapters={toEpubInputs(epubBook)}
+                      audioChapters={toAudioInputs(audioBook)}
+                      initialMappings={mappings}
+                      onSave={finalMappings => handleSave(finalMappings)}
+                      onCancel={() => setView('select')}
+                    />
+                  )
+                })()}
             </ScrollArea>
             {/* ChapterMappingEditor renders its own Save/Cancel buttons */}
           </>

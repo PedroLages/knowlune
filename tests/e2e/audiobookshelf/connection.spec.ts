@@ -31,9 +31,7 @@ const PING_RESPONSE = {
 }
 
 const LIBRARIES_RESPONSE = {
-  libraries: [
-    { id: 'lib-1', name: 'Audiobooks', mediaType: 'book' },
-  ],
+  libraries: [{ id: 'lib-1', name: 'Audiobooks', mediaType: 'book' }],
 }
 
 async function seedOnboarding(page: import('@playwright/test').Page): Promise<void> {
@@ -67,9 +65,7 @@ async function openAbsSettings(page: import('@playwright/test').Page): Promise<v
 }
 
 test.describe('ABS Server Connection', () => {
-  test('Add server — fill form, test connection, save, verify server in list', async ({
-    page,
-  }) => {
+  test('Add server — fill form, test connection, save, verify server in list', async ({ page }) => {
     // Mock ABS ping and libraries endpoints
     await page.route(`${ABS_URL}/api/ping`, route =>
       route.fulfill({
@@ -134,9 +130,7 @@ test.describe('ABS Server Connection', () => {
     await expect(page.getByText('No servers connected yet.')).toBeVisible()
   })
 
-  test('CORS error handling — mock CORS failure, verify user-friendly error', async ({
-    page,
-  }) => {
+  test('CORS error handling — mock CORS failure, verify user-friendly error', async ({ page }) => {
     // Mock ping to simulate a CORS/network failure
     await page.route(`${ABS_URL}/api/ping`, route => route.abort('failed'))
 
@@ -160,9 +154,7 @@ test.describe('ABS Server Connection', () => {
     await expect(page.getByTestId('abs-cors-troubleshoot')).toBeVisible()
   })
 
-  test('Reconnect after failure — mock offline then online, verify recovery', async ({
-    page,
-  }) => {
+  test('Reconnect after failure — mock offline then online, verify recovery', async ({ page }) => {
     // Start with all requests failing
     let shouldFail = true
     await page.route(`${ABS_URL}/api/ping`, route => {

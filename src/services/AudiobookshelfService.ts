@@ -116,9 +116,10 @@ export async function testConnection(
   if (!result.ok) return result
   const version = result.data.version
   const [major, minor] = version.split('.').map(Number)
-  const warning = (major < 2 || (major === 2 && minor < 26))
-    ? `Server version ${version} is below v2.26.0. Some features (Socket.IO sync) may not work correctly.`
-    : undefined
+  const warning =
+    major < 2 || (major === 2 && minor < 26)
+      ? `Server version ${version} is below v2.26.0. Some features (Socket.IO sync) may not work correctly.`
+      : undefined
   return { ok: true, data: { serverVersion: version, warning } }
 }
 

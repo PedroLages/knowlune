@@ -351,9 +351,13 @@ test.describe('E102-S04: Socket.IO Real-Time Sync', () => {
 
     // Simulate socket disconnect — close the mock WebSocket
     await page.evaluate(() => {
-      const instances = (
-        window as unknown as Record<string, Array<{ url: string; readyState: number; close: () => void }>>
-      ).__wsMockInstances ?? []
+      const instances =
+        (
+          window as unknown as Record<
+            string,
+            Array<{ url: string; readyState: number; close: () => void }>
+          >
+        ).__wsMockInstances ?? []
       const absSocket = instances.find(
         ws => ws.url.includes('socket.io') && ws.readyState === 1 /* OPEN */
       )
