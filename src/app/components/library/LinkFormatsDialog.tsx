@@ -10,7 +10,7 @@
  * @since E104-S01
  */
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import {
   BookOpen,
   Headphones,
@@ -38,6 +38,7 @@ import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { cn } from '@/app/components/ui/utils'
+import { toast } from 'sonner'
 import { ChapterMappingEditor } from './ChapterMappingEditor'
 
 /** Confidence threshold above which mappings auto-save after confirmation. */
@@ -170,6 +171,7 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [mappings, setMappings] = useState<ChapterMapping[] | null>(null)
   const [saving, setSaving] = useState(false)
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   /** Reset to initial state when dialog closes. */
   const handleOpenChange = useCallback(
@@ -179,8 +181,14 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
         setSelectedId(null)
         setMappings(null)
         setSaving(false)
-        // Intentional: reset to 'select' after closing so re-opening starts fresh
-        setTimeout(() => setView('select'), 300)
+        // Cancel any pending reset before scheduling a new one to avoid stale callbacks on rapid re-open
+        if (resetTimerRef.current !== null) {
+          clearTimeout(resetTimerRef.current)
+        }
+        resetTimerRef.current = setTimeout(() => {
+          resetTimerRef.current = null
+          setView('select')
+        }, 300)
       }
       onOpenChange(next)
     },
@@ -217,12 +225,24 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
     }))
   }
 
+  /** Determine which book is epub and which is audio from a pair. */
+  function resolveEpubAudio(bookA: Book, bookB: Book): { epubBook: Book; audioBook: Book } {
+    return bookA.format === 'epub'
+      ? { epubBook: bookA, audioBook: bookB }
+      : { epubBook: bookB, audioBook: bookA }
+  }
+
   /** Compute mappings and advance to the correct next view. */
   const handlePairPressed = useCallback(() => {
-    if (!selectedBook) return
+    // Read selectedId from state and resolve against a fresh books snapshot
+    // to avoid stale closure on selectedBook derived during the previous render
+    const currentSelectedId = selectedId
+    if (!currentSelectedId) return
+    const freshBooks = useBookStore.getState().books
+    const freshSelected = freshBooks.find(b => b.id === currentSelectedId)
+    if (!freshSelected) return
 
-    const epubBook = book.format === 'epub' ? book : selectedBook
-    const audioBook = book.format === 'audiobook' ? book : selectedBook
+    const { epubBook, audioBook } = resolveEpubAudio(book, freshSelected)
 
     const computed = computeChapterMapping(toEpubInputs(epubBook), toAudioInputs(audioBook))
     setMappings(computed)
@@ -236,7 +256,7 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
     } else {
       setView('editor')
     }
-  }, [book, selectedBook])
+  }, [book, selectedId])
 
   /** Save the pairing with whichever mappings we have. */
   const handleSave = useCallback(
@@ -246,8 +266,12 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
       try {
         await linkBooks(book.id, selectedBook.id)
         // TODO E103-S01: persist finalMappings to ChapterMappingRecord table when that store action exists
-        void finalMappings // accepted for future use
+        // finalMappings intentionally unused until the ChapterMappingRecord store action is implemented
+        void (finalMappings)
         onOpenChange(false)
+      } catch (err) {
+        console.error('[LinkFormatsDialog] linkBooks failed:', err)
+        toast.error('Failed to link formats. Please try again.')
       } finally {
         setSaving(false)
       }
@@ -262,6 +286,9 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
     try {
       await unlinkBooks(book.id, book.linkedBookId)
       onOpenChange(false)
+    } catch (err) {
+      console.error('[LinkFormatsDialog] unlinkBooks failed:', err)
+      toast.error('Failed to unlink formats. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -277,6 +304,12 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
     if (!mappings || mappings.length === 0) return 0
     return mappings.reduce((sum, m) => sum + m.confidence, 0) / mappings.length
   }, [mappings])
+
+  // Resolve epub/audio roles for the editor view (avoids IIFE inside JSX)
+  const editorBooks =
+    selectedBook && mappings !== null
+      ? resolveEpubAudio(book, selectedBook)
+      : null
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -524,21 +557,15 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
             </DialogHeader>
 
             <ScrollArea className="max-h-[50vh]">
-              {selectedBook &&
-                mappings !== null &&
-                (() => {
-                  const epubBook = book.format === 'epub' ? book : selectedBook
-                  const audioBook = book.format === 'audiobook' ? book : selectedBook
-                  return (
-                    <ChapterMappingEditor
-                      epubChapters={toEpubInputs(epubBook)}
-                      audioChapters={toAudioInputs(audioBook)}
-                      initialMappings={mappings}
-                      onSave={finalMappings => handleSave(finalMappings)}
-                      onCancel={() => setView('select')}
-                    />
-                  )
-                })()}
+              {editorBooks && mappings !== null && (
+                <ChapterMappingEditor
+                  epubChapters={toEpubInputs(editorBooks.epubBook)}
+                  audioChapters={toAudioInputs(editorBooks.audioBook)}
+                  initialMappings={mappings}
+                  onSave={finalMappings => handleSave(finalMappings)}
+                  onCancel={() => setView('select')}
+                />
+              )}
             </ScrollArea>
             {/* ChapterMappingEditor renders its own Save/Cancel buttons */}
           </>
