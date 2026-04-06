@@ -223,6 +223,8 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
 
   updateBookPosition: async (bookId, position, progress) => {
     const now = new Date().toISOString()
+    // Capture previous state for targeted rollback
+    const prevBook = get().books.find(b => b.id === bookId)
     // Optimistic Zustand update
     set(state => ({
       books: state.books.map(b =>
@@ -237,14 +239,21 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       } as Parameters<typeof db.books.update>[1])
     } catch (err) {
       console.error('[BookStore] Failed to update position:', err)
-      const books = await db.books.toArray()
-      set({ books })
+      // Rollback only the affected book using captured previous state
+      if (prevBook) {
+        set(state => ({
+          books: state.books.map(b => (b.id === bookId ? prevBook : b)),
+        }))
+      }
       toast.error('Failed to save reading position')
     }
   },
 
   linkBooks: async (bookIdA, bookIdB) => {
     const now = new Date().toISOString()
+    // Capture previous state for targeted rollback
+    const prevBookA = get().books.find(b => b.id === bookIdA)
+    const prevBookB = get().books.find(b => b.id === bookIdB)
     // Optimistic update: set linkedBookId on both books
     set(state => ({
       books: state.books.map(b => {
@@ -254,16 +263,25 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       }),
     }))
     try {
-      await db.books.update(bookIdA, { linkedBookId: bookIdB, updatedAt: now } as Parameters<
-        typeof db.books.update
-      >[1])
-      await db.books.update(bookIdB, { linkedBookId: bookIdA, updatedAt: now } as Parameters<
-        typeof db.books.update
-      >[1])
+      // Wrap both updates in a single transaction for atomicity
+      await db.transaction('rw', db.books, async () => {
+        await db.books.update(bookIdA, { linkedBookId: bookIdB, updatedAt: now } as Parameters<
+          typeof db.books.update
+        >[1])
+        await db.books.update(bookIdB, { linkedBookId: bookIdA, updatedAt: now } as Parameters<
+          typeof db.books.update
+        >[1])
+      })
     } catch (err) {
       console.error('[BookStore] Failed to link books:', err)
-      const books = await db.books.toArray()
-      set({ books })
+      // Rollback only the affected books using captured previous state
+      set(state => ({
+        books: state.books.map(b => {
+          if (b.id === bookIdA && prevBookA) return prevBookA
+          if (b.id === bookIdB && prevBookB) return prevBookB
+          return b
+        }),
+      }))
       toast.error('Failed to link book formats')
     }
   },

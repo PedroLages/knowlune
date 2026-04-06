@@ -78,9 +78,11 @@ export function resolveEpubPositionFromAudio(
 /**
  * Determine the current EPUB chapter href from the book's position and chapters.
  *
- * EPUB CFIs encode the spine position, but for our purposes we match against
- * BookChapter entries which have CFI-based positions. We find the chapter
- * whose CFI is closest to (but not exceeding) the current position.
+ * Uses chapter `order` (index) for reliable comparison. We find the chapter with
+ * the highest order whose start CFI matches the current CFI prefix, falling back
+ * to the chapter whose start CFI appears as a prefix of the current position CFI.
+ *
+ * CFI string comparison is NOT used — EPUBs do not guarantee lexicographic CFI order.
  */
 function findCurrentEpubChapterHref(book: Book): string | null {
   if (!book.currentPosition || book.currentPosition.type !== 'cfi') return null
@@ -88,13 +90,26 @@ function findCurrentEpubChapterHref(book: Book): string | null {
 
   const currentCfi = book.currentPosition.value
 
-  // BookChapter IDs typically contain the chapter href (e.g., "chapter01.xhtml")
-  // Find the last chapter whose CFI is <= current CFI (string comparison works for CFIs
-  // within the same spine as they share prefix structure)
-  let bestChapter = book.chapters[0]
-  for (const ch of book.chapters) {
-    if (ch.position.type === 'cfi' && ch.position.value <= currentCfi) {
+  // Sort chapters by order ascending to process in spine order
+  const sorted = [...book.chapters].sort((a, b) => a.order - b.order)
+
+  // Find the last chapter (by order) whose start CFI appears in the current CFI prefix.
+  // A chapter is "active" when the current CFI starts with or equals the chapter's CFI.
+  let bestChapter = sorted[0]
+  for (const ch of sorted) {
+    if (ch.position.type === 'cfi' && currentCfi.startsWith(ch.position.value)) {
       bestChapter = ch
+    }
+  }
+
+  // Fallback: if no chapter CFI is a prefix, pick the chapter with the highest order
+  // that is still <= current chapter by exact CFI match
+  if (bestChapter === sorted[0]) {
+    for (const ch of sorted) {
+      if (ch.position.type === 'cfi' && ch.position.value === currentCfi) {
+        bestChapter = ch
+        break
+      }
     }
   }
 
@@ -119,7 +134,7 @@ function findCurrentAudioChapterIndex(book: Book): number | null {
     }
   }
 
-  return 0 // Default to first chapter
+  return null // No time-based chapter contains the current position
 }
 
 /**

@@ -214,7 +214,7 @@ describe('resolveEpubPositionFromAudio', () => {
     expect(result).toBeNull()
   })
 
-  it('returns null when no current position', () => {
+  it('returns first mapped chapter when audio has no current position', () => {
     const audio = makeAudioBook({ currentPosition: undefined })
     const epub = makeEpubBook()
     const mapping = makeMapping()
