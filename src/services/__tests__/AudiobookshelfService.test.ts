@@ -9,6 +9,7 @@ import {
   searchLibrary,
   fetchProgress,
   updateProgress,
+  fetchCollections,
   isInsecureUrl,
 } from '@/services/AudiobookshelfService'
 
@@ -486,7 +487,70 @@ describe('AudiobookshelfService.updateProgress', () => {
   })
 })
 
-// ── isInsecureUrl ──────────────────────────────────────────────────
+// ── fetchCollections ────��─────────────────────────────────────────
+
+describe('AudiobookshelfService.fetchCollections', () => {
+  it('returns array of collections on success', async () => {
+    const mockResponse = {
+      results: [
+        {
+          id: 'c1',
+          libraryId: 'lib-1',
+          name: 'Philosophy',
+          description: 'Philosophy books',
+          books: [
+            { id: 'b1', media: { metadata: { title: 'Meditations' } } },
+            { id: 'b2', media: { metadata: { title: 'Republic' } } },
+          ],
+        },
+        {
+          id: 'c2',
+          libraryId: 'lib-1',
+          name: 'History',
+          books: [{ id: 'b3', media: { metadata: { title: 'Sapiens' } } }],
+        },
+      ],
+      total: 2,
+      page: 0,
+      limit: 10,
+    }
+    vi.stubGlobal('fetch', mockFetchJson(mockResponse))
+
+    const result = await fetchCollections(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data).toHaveLength(2)
+      expect(result.data[0].name).toBe('Philosophy')
+      expect(result.data[0].books).toHaveLength(2)
+      expect(result.data[1].name).toBe('History')
+    }
+  })
+
+  it('returns auth error for 401 response', async () => {
+    vi.stubGlobal('fetch', mockFetchStatus(401))
+
+    const result = await fetchCollections(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBe('Authentication failed. Check your API key.')
+    }
+  })
+
+  it('returns CORS error for network failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+
+    const result = await fetchCollections(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBe('Could not connect to server. Check the URL and CORS settings.')
+    }
+  })
+})
+
+// ── isInsecureUrl ──────────────────────────���───────────────────────
 
 describe('AudiobookshelfService.isInsecureUrl', () => {
   it('returns true for HTTP URLs', () => {

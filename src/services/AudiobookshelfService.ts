@@ -16,6 +16,7 @@ import type {
   AbsSearchResult,
   AbsProgress,
   AbsSeries,
+  AbsCollection,
 } from '@/data/types'
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -262,6 +263,25 @@ export async function fetchSeriesForLibrary(
     apiKey,
     `/api/libraries/${encodeURIComponent(libraryId)}/series?${params}`
   )
+}
+
+/**
+ * Fetch all collections from the server.
+ * Calls GET /api/collections.
+ *
+ * @since E102-S03
+ */
+export async function fetchCollections(
+  url: string,
+  apiKey: string
+): Promise<AbsResult<AbsCollection[]>> {
+  const result = await absApiFetch<{ results: AbsCollection[]; total: number }>(
+    url,
+    apiKey,
+    '/api/collections'
+  )
+  if (!result.ok) return result
+  return { ok: true, data: result.data.results }
 }
 
 /**
