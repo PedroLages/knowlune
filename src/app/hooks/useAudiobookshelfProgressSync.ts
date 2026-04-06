@@ -144,7 +144,7 @@ export function useAudiobookshelfProgressSync({
         }
       }
     })()
-  }, [book.id]) // eslint-disable-line react-hooks/exhaustive-deps -- intentionally runs once per book
+  }, [book.id]) // eslint-disable-line -- intentionally runs once per book
 
   // ─── Push-on-session-end: sync when playback pauses ───
   const pushProgress = useCallback(() => {

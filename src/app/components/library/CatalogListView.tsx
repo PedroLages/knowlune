@@ -70,7 +70,7 @@ export function CatalogListView({
                     variant="ghost"
                     size="icon"
                     onClick={() => onBrowse(catalog)}
-                    className="size-9"
+                    className="size-11"
                     aria-label={`Browse ${catalog.name}`}
                     data-testid={`browse-catalog-${catalog.id}`}
                   >
@@ -81,7 +81,7 @@ export function CatalogListView({
                   variant="ghost"
                   size="icon"
                   onClick={() => onEdit(catalog)}
-                  className="size-9"
+                  className="size-11"
                   aria-label={`Edit ${catalog.name}`}
                 >
                   <Pencil className="size-4" />
@@ -90,7 +90,7 @@ export function CatalogListView({
                   variant="ghost"
                   size="icon"
                   onClick={() => onDelete(catalog)}
-                  className="size-9 text-destructive hover:text-destructive"
+                  className="size-11 text-destructive hover:text-destructive"
                   aria-label={`Remove ${catalog.name}`}
                 >
                   <Trash2 className="size-4" />

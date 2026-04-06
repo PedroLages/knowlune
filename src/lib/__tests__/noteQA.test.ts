@@ -408,6 +408,7 @@ describe('noteQA', () => {
       const notes: RetrievedNote[] = [makeRetrievedNote()]
 
       mockStreamCompletion.mockImplementation(async function* () {
+        yield '' // satisfy require-yield before throwing
         throw new TypeError('Network failure')
       })
 
