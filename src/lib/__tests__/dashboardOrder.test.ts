@@ -163,8 +163,8 @@ describe('getOrderConfig', () => {
 
   it('removes stale sections from saved config', () => {
     const stale = {
-      order: [...DEFAULT_ORDER, 'nonexistent-section'] as DashboardSectionId[],
-      pinnedSections: ['nonexistent-section'] as DashboardSectionId[],
+      order: [...DEFAULT_ORDER, 'nonexistent-section'] as unknown as DashboardSectionId[],
+      pinnedSections: ['nonexistent-section'] as unknown as DashboardSectionId[],
       isManuallyOrdered: false,
     }
     mockStorage['dashboard-section-order'] = JSON.stringify(stale)

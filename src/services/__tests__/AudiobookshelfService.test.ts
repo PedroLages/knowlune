@@ -500,7 +500,7 @@ describe('AudiobookshelfService.updateProgress', () => {
   })
 })
 
-// ── fetchCollections ────��─────────────────────────────────────────
+// ── fetchCollections ───────────────────────────────────────────────
 
 describe('AudiobookshelfService.fetchCollections', () => {
   it('returns array of collections on success', async () => {
@@ -563,7 +563,7 @@ describe('AudiobookshelfService.fetchCollections', () => {
   })
 })
 
-// ── isInsecureUrl ──────────────────────────���───────────────────────
+// ── isInsecureUrl ────────────────────────────────────────────────────
 
 describe('AudiobookshelfService.isInsecureUrl', () => {
   it('returns true for HTTP URLs', () => {
@@ -700,6 +700,7 @@ describe('AudiobookshelfService.connectSocket', () => {
         this.readyState = 1
         this.addEventListener = vi.fn()
         this.removeEventListener = vi.fn()
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         createdWs = this
       })
     )

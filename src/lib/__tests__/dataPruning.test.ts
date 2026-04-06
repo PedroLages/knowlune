@@ -3,8 +3,6 @@ import {
   getRetentionSettings,
   saveRetentionSettings,
   TTL_OPTIONS,
-  type DataRetentionSettings,
-  type PruneResult,
 } from '@/lib/dataPruning'
 
 // ---------------------------------------------------------------------------
@@ -148,7 +146,6 @@ describe('runDataPruning', () => {
   it('skips pruning when TTL is 0 (keep forever)', async () => {
     saveRetentionSettings({ studySessionsTTL: 0, aiUsageEventsTTL: 0 })
     const { runDataPruning } = await import('@/lib/dataPruning')
-    const { db } = await import('@/db')
 
     const result = await runDataPruning()
 
@@ -159,7 +156,6 @@ describe('runDataPruning', () => {
   it('skips orphaned embeddings when disabled', async () => {
     saveRetentionSettings({ pruneOrphanedEmbeddings: false })
     const { runDataPruning } = await import('@/lib/dataPruning')
-    const { db } = await import('@/db')
 
     const result = await runDataPruning()
     expect(result.embeddingsPruned).toBe(0)

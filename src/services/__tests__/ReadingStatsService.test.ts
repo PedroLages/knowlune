@@ -29,7 +29,6 @@ vi.mock('@/lib/studyLog', () => ({
 }))
 
 import { db } from '@/db/schema'
-import { toLocalDateString } from '@/lib/studyLog'
 
 beforeEach(() => {
   vi.useFakeTimers()
