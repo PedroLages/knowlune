@@ -9,7 +9,7 @@ Last Updated: 2026-04-06
 |-------|--------|--------|---------------|--------------|
 | E103-S01 | done | #271 | 1 | 4 |
 | E103-S02 | done | #272 | 2 | 3 |
-| E103-S03 | reviewing (R2) | — | — | — |
+| E103-S03 | finishing | — | 2 | 5 |
 
 ## Story Details
 
@@ -40,15 +40,16 @@ _(none)_
 ---
 
 ### E103-S03: Dual Position Tracking
-**Status:** reviewing (R2)
+**Status:** finishing
 #### Errors
 _(none)_
 #### Review Findings
-- R1: 6 issues (1 BLOCKER atomic linkBooks, 1 HIGH CFI ordering, 2 MEDIUM, 1 LOW, 1 NIT)
+- R1: 6 issues (1 BLOCKER, 1 HIGH, 2 MEDIUM, 1 LOW, 1 NIT)
+- R2: PASS (zero issues)
 #### Fixes Applied
 - R1: db.transaction for linkBooks, chapter-order lookup, null return, targeted rollback, test name fix
 #### Notes
-- chapterSwitchResolver, linkedBookId, linked-format badges, 12 unit tests
+- chapterSwitchResolver, linkedBookId, linked-format badges, 12 unit tests. Trend: 6→0
 
 ---
 
