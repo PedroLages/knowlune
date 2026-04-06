@@ -150,15 +150,20 @@ export function useAudiobookshelfSync() {
             )
 
             if (!result.ok) {
-              const error = result.error
-              if (error.includes('Authentication') || error.includes('Access denied')) {
-                await updateServer(server.id, { status: 'auth-failed' })
-              } else {
-                await updateServer(server.id, { status: 'offline' })
-                toast.warning('Audiobookshelf server is offline. Showing cached library.')
+              // First page failure = server issue. Later pages = might be transient, save what we have.
+              if (currentPage === 0) {
+                const error = result.error
+                if (error.includes('Authentication') || error.includes('Access denied')) {
+                  await updateServer(server.id, { status: 'auth-failed' })
+                } else {
+                  await updateServer(server.id, { status: 'offline' })
+                  toast.warning('Audiobookshelf server is offline. Showing cached library.')
+                }
+                setState(prev => ({ ...prev, isSyncing: false, syncError: error }))
+                return
               }
-              setState(prev => ({ ...prev, isSyncing: false, syncError: error }))
-              return
+              // Later page failed — stop paginating but keep what we have
+              break
             }
 
             totalItems = result.data.total
@@ -170,6 +175,9 @@ export function useAudiobookshelfSync() {
             // Check if there are more pages
             hasMore = (currentPage + 1) * LIMIT < result.data.total
             currentPage++
+
+            // Brief pause between pages to avoid Cloudflare rate-limiting
+            if (hasMore) await new Promise(r => setTimeout(r, 200))
           }
         }
 
