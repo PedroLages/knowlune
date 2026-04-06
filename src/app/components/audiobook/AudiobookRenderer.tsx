@@ -18,6 +18,7 @@ import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
 import { useSleepTimer, consumeSleepTimerEndedFlag } from '@/app/hooks/useSleepTimer'
 import { useMediaSession } from '@/app/hooks/useMediaSession'
 import { useAudioListeningSession } from '@/app/hooks/useAudioListeningSession'
+import { useAudiobookshelfProgressSync } from '@/app/hooks/useAudiobookshelfProgressSync'
 import { SpeedControl } from './SpeedControl'
 import { SleepTimer } from './SleepTimer'
 import { ChapterList } from './ChapterList'
@@ -107,6 +108,9 @@ export function AudiobookRenderer({
 
   // Session tracking for streak counting and Reports (E87-S06)
   useAudioListeningSession({ bookId: book.id, isPlaying })
+
+  // Bidirectional progress sync with Audiobookshelf (E102-S01)
+  useAudiobookshelfProgressSync({ book, isPlaying, currentTime, seekTo })
 
   /** Persist current playback position and progress to Dexie (E101-S04, E101-S06) */
   const savePosition = useCallback(() => {

@@ -377,8 +377,63 @@ describe('AudiobookshelfService.fetchProgress', () => {
 
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.data.currentTime).toBe(3600)
-      expect(result.data.progress).toBe(0.091)
+      expect(result.data!.currentTime).toBe(3600)
+      expect(result.data!.progress).toBe(0.091)
+    }
+  })
+
+  it('returns null data for 404 (no progress yet)', async () => {
+    vi.stubGlobal('fetch', mockFetchStatus(404))
+
+    const result = await fetchProgress(TEST_URL, TEST_API_KEY, 'new-item')
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data).toBeNull()
+    }
+  })
+
+  it('returns auth error for 401 response', async () => {
+    vi.stubGlobal('fetch', mockFetchStatus(401))
+
+    const result = await fetchProgress(TEST_URL, TEST_API_KEY, 'item-1')
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBe('Authentication failed. Check your API key.')
+    }
+  })
+
+  it('returns CORS error for network failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+
+    const result = await fetchProgress(TEST_URL, TEST_API_KEY, 'item-1')
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toContain('Could not connect')
+    }
+  })
+
+  it('returns timeout error when request exceeds 10 seconds', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((_url: string, opts: RequestInit) => {
+        return new Promise<Response>((_resolve, reject) => {
+          opts.signal?.addEventListener('abort', () => {
+            reject(new DOMException('The operation was aborted', 'AbortError'))
+          })
+        })
+      })
+    )
+
+    const resultPromise = fetchProgress(TEST_URL, TEST_API_KEY, 'item-1')
+    await vi.advanceTimersByTimeAsync(10_001)
+    const result = await resultPromise
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBe('Connection timed out. Check the URL and try again.')
     }
   })
 })
@@ -387,15 +442,11 @@ describe('AudiobookshelfService.fetchProgress', () => {
 
 describe('AudiobookshelfService.updateProgress', () => {
   it('sends PATCH request with progress body', async () => {
-    const fetchMock = mockFetchJson({
-      id: 'prog-1',
-      currentTime: 7200,
-      duration: 39600,
-      progress: 0.182,
-      isFinished: false,
-      updatedAt: 1712345679000,
-    })
-    vi.stubGlobal('fetch', fetchMock)
+    // PATCH returns 200 with empty body
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response('', { status: 200 }))
+    )
 
     const progress = {
       currentTime: 7200,
@@ -407,9 +458,34 @@ describe('AudiobookshelfService.updateProgress', () => {
 
     expect(result.ok).toBe(true)
 
+    const fetchMock = vi.mocked(globalThis.fetch)
     const [, options] = fetchMock.mock.calls[0]
-    expect(options.method).toBe('PATCH')
-    expect(JSON.parse(options.body)).toEqual(progress)
+    expect(options!.method).toBe('PATCH')
+    expect(JSON.parse(options!.body as string)).toEqual(progress)
+  })
+
+  it('returns auth error for 401 response', async () => {
+    vi.stubGlobal('fetch', mockFetchStatus(401))
+
+    const progress = { currentTime: 100, duration: 3600, progress: 0.028, isFinished: false }
+    const result = await updateProgress(TEST_URL, TEST_API_KEY, 'item-1', progress)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBe('Authentication failed. Check your API key.')
+    }
+  })
+
+  it('returns CORS error for network failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+
+    const progress = { currentTime: 100, duration: 3600, progress: 0.028, isFinished: false }
+    const result = await updateProgress(TEST_URL, TEST_API_KEY, 'item-1', progress)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toContain('Could not connect')
+    }
   })
 })
 

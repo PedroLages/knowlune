@@ -71,7 +71,9 @@ async function absApiFetch<T>(
       return { ok: false, error: `Server error (${response.status}). Try again later.` }
     }
 
-    const data = (await response.json()) as T
+    // Handle empty response bodies (e.g., PATCH 200 with no content)
+    const text = await response.text()
+    const data = text ? (JSON.parse(text) as T) : (undefined as T)
     return { ok: true, data }
     // eslint-disable-next-line error-handling/no-silent-catch -- returns discriminated error result instead of throwing
   } catch (err: unknown) {
@@ -193,28 +195,41 @@ export async function searchLibrary(
 /**
  * Fetch user's listening progress for an item.
  * Calls GET /api/me/progress/{itemId}.
- * (Wired up for E102+ — stub now to establish API surface.)
+ * Returns null data on 404 (no progress yet — treat as position 0, not an error).
+ *
+ * @since E101-S01 (stub) → E102-S01 (wired, 404 handling)
  */
 export async function fetchProgress(
   url: string,
   apiKey: string,
   itemId: string
-): Promise<AbsResult<AbsProgress>> {
-  return absApiFetch<AbsProgress>(url, apiKey, `/api/me/progress/${encodeURIComponent(itemId)}`)
+): Promise<AbsResult<AbsProgress | null>> {
+  const result = await absApiFetch<AbsProgress>(
+    url,
+    apiKey,
+    `/api/me/progress/${encodeURIComponent(itemId)}`
+  )
+  // 404 = no progress yet — return null data, not an error
+  if (!result.ok && result.error.includes('(404)')) {
+    return { ok: true, data: null }
+  }
+  return result
 }
 
 /**
  * Update user's listening progress for an item.
  * Calls PATCH /api/me/progress/{itemId}.
- * (Wired up for E102+ — stub now to establish API surface.)
+ * Returns AbsResult<void> since PATCH returns 200 with empty body.
+ *
+ * @since E101-S01 (stub) → E102-S01 (wired)
  */
 export async function updateProgress(
   url: string,
   apiKey: string,
   itemId: string,
   progress: { currentTime: number; duration: number; progress: number; isFinished: boolean }
-): Promise<AbsResult<AbsProgress>> {
-  return absApiFetch<AbsProgress>(url, apiKey, `/api/me/progress/${encodeURIComponent(itemId)}`, {
+): Promise<AbsResult<void>> {
+  return absApiFetch<void>(url, apiKey, `/api/me/progress/${encodeURIComponent(itemId)}`, {
     method: 'PATCH',
     body: progress,
   })

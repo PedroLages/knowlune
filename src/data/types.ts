@@ -799,11 +799,12 @@ export interface AbsSearchResult {
 
 export interface AbsProgress {
   id: string
+  libraryItemId?: string // ABS library item ID
   currentTime: number // seconds
   duration: number // seconds
   progress: number // 0-1
   isFinished: boolean
-  updatedAt: number // Unix timestamp ms
+  updatedAt: number // Unix timestamp ms (ABS field name: lastUpdate)
 }
 
 export interface YouTubeCourseChapter {
