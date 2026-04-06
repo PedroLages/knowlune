@@ -13,6 +13,21 @@ import { FIXED_DATE, addMinutes } from '../utils/test-time'
  */
 test.describe('NFR35: Note export as Markdown', () => {
   test.beforeEach(async ({ page }) => {
+    // Dismiss WelcomeWizard and Onboarding overlays before first navigation so they
+    // don't block interactions with note cards. These localStorage keys must be set
+    // via addInitScript (runs before page script) rather than evaluate (after page loads).
+    await page.addInitScript(() => {
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
+      localStorage.setItem(
+        'knowlune-onboarding-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
+      )
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+      )
+    })
+
     // Navigate first to initialize IndexedDB
     await page.goto('/')
 

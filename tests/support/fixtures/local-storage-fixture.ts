@@ -53,6 +53,25 @@ async function clearAppStorage(page: Page): Promise<void> {
 
 export const test = base.extend<{ localStorage: LocalStorageHelper }>({
   localStorage: async ({ page }, use) => {
+    // Seed sidebar + onboarding dismissal via addInitScript so they are applied
+    // before every page.goto() within this test. This prevents the onboarding
+    // overlay and mobile sidebar Sheet from blocking test interactions.
+    // Tests that rely on the onboarding dialog being visible (e.g. onboarding.spec.ts)
+    // use page.addInitScript with __test_show_onboarding=1 BEFORE this fixture runs,
+    // which takes precedence via the navigateAndWait guard logic.
+    await page.addInitScript(() => {
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
+      localStorage.setItem(
+        'knowlune-onboarding-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
+      )
+      // Dismiss WelcomeWizard (uses a different storage key than onboarding)
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+      )
+    })
+
     const helper: LocalStorageHelper = {
       seed: async (key, data) => {
         await page.evaluate(
