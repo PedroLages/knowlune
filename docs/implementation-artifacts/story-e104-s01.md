@@ -1,10 +1,10 @@
 ---
 story_id: E104-S01
 story_name: "Link Formats Dialog — Book Pairing Entry Point"
-status: in-progress
+status: done
 started: 2026-04-06
-completed:
-reviewed: in-progress
+completed: 2026-04-06
+reviewed: true
 review_started: 2026-04-06
 review_scope: full
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, glm-code-review, openai-code-review-skipped]

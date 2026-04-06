@@ -1274,8 +1274,8 @@ development_status:
   # Missing UI for Whispersync book pairing (linkBooks, computeChapterMapping)
   # Depends on: E103
   # ──────────────────────────────────────────────────
-  epic-104: backlog
-  104-1-link-formats-dialog: ready-for-dev
+  epic-104: in-progress
+  104-1-link-formats-dialog: done
 
   # ──────────────────────────────────────────────────
   # Epic 105: Test Debt Cleanup
