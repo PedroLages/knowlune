@@ -348,3 +348,39 @@ Each Dexie schema migration consumes a version number (v30, v31, v32...). When s
 This prevents version collisions when multiple stories in the same epic touch the Dexie schema. Each story author sees the version they should use without reading the full migration chain.
 
 **Case study**: E60-S02 — S01 consumed v32 for `knowledgeDecay`, and S02's spec explicitly noted "use v33 for `recommendationMatch`", avoiding a version conflict.
+
+## Persist Before Navigate
+
+When switching contexts (format switching, navigation after save), always call persistence callbacks **before** `navigate()`. React Router navigation is synchronous — once `navigate()` fires, the current component unmounts and any pending async saves may be lost.
+
+```typescript
+// WRONG — position may be lost if component unmounts before save completes
+navigate(`/library/${linkedBook.id}/read`)
+savePosition()
+
+// CORRECT — save first, then navigate
+savePosition()
+navigate(`/library/${linkedBook.id}/read`)
+```
+
+**Case study**: E103-S02 — R1 review caught position-save called after `navigate()` in the format switch handler. The component unmounts on navigation, abandoning any pending Dexie writes.
+
+## Ref Guard for One-Shot Actions
+
+Use `useRef` (not `useState`) for navigation guards and other one-shot action locks. A ref update does not trigger a re-render cycle, and when the guarded action causes component unmount (navigation, modal close), the ref is automatically garbage-collected — no cleanup needed.
+
+```typescript
+const switchingRef = useRef(false)
+
+function handleSwitch() {
+  if (switchingRef.current) return   // guard: already switching
+  switchingRef.current = true
+  // switchingRef is NOT reset — component unmounts on navigation
+  // No setTimeout cleanup needed
+  navigate(targetUrl)
+}
+```
+
+**Why not useState**: Setting state triggers a re-render; refs don't. For guards on one-time actions that cause unmount, the ref approach is simpler and avoids a superfluous render cycle.
+
+**Case study**: E103-S02 — initial implementation used `setTimeout` to reset the ref after a delay. R1 review correctly identified this as unnecessary — the guard clears automatically when the component unmounts.
