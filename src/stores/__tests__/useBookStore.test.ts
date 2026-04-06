@@ -279,4 +279,319 @@ describe('getBookCountByStatus', () => {
     expect(counts.reading).toBe(2)
     expect(counts.finished).toBe(1)
   })
+
+  it('respects source filter when computing counts', async () => {
+    await act(async () => {
+      await useBookStore
+        .getState()
+        .importBook(
+          makeBook({ id: 'lc1', status: 'reading', source: { type: 'local', opfsPath: '' } }) as never
+        )
+      await useBookStore
+        .getState()
+        .importBook(
+          makeBook({
+            id: 'rc1',
+            status: 'reading',
+            source: { type: 'remote', url: 'http://abs' },
+            absServerId: 'srv-1',
+          }) as never
+        )
+    })
+
+    useBookStore.getState().setFilter('source', 'local')
+    const counts = useBookStore.getState().getBookCountByStatus()
+    expect(counts.all).toBe(1)
+    expect(counts.reading).toBe(1)
+  })
+})
+
+describe('loadBooks', () => {
+  it('loads books from Dexie and sets isLoaded', async () => {
+    const { db } = await import('@/db/schema')
+    const book = makeBook({ id: 'load-1', title: 'Loaded Book' })
+    await db.books.put(book as never)
+
+    await act(async () => {
+      await useBookStore.getState().loadBooks()
+    })
+
+    const state = useBookStore.getState()
+    expect(state.isLoaded).toBe(true)
+    expect(state.books).toHaveLength(1)
+    expect(state.books[0].title).toBe('Loaded Book')
+  })
+
+  it('skips loading if already loaded', async () => {
+    const { db } = await import('@/db/schema')
+    await db.books.put(makeBook({ id: 'skip-1' }) as never)
+
+    await act(async () => {
+      await useBookStore.getState().loadBooks()
+    })
+    const spy = vi.spyOn(db.books, 'toArray')
+
+    await act(async () => {
+      await useBookStore.getState().loadBooks()
+    })
+
+    expect(spy).not.toHaveBeenCalled()
+  })
+})
+
+describe('updateBookPosition', () => {
+  it('updates position and progress optimistically', async () => {
+    await act(async () => {
+      await useBookStore.getState().importBook(makeBook({ id: 'pos-1', progress: 0 }) as never)
+    })
+
+    await act(async () => {
+      await useBookStore.getState().updateBookPosition(
+        'pos-1',
+        { type: 'page', pageNumber: 50 },
+        50
+      )
+    })
+
+    const book = useBookStore.getState().books[0]
+    expect(book.progress).toBe(50)
+    expect(book.currentPosition).toEqual({ type: 'page', pageNumber: 50 })
+  })
+
+  it('persists position to Dexie', async () => {
+    await act(async () => {
+      await useBookStore.getState().importBook(makeBook({ id: 'pos-2' }) as never)
+    })
+
+    await act(async () => {
+      await useBookStore.getState().updateBookPosition(
+        'pos-2',
+        { type: 'cfi', value: 'epubcfi(/6/2)' },
+        25
+      )
+    })
+
+    const { db } = await import('@/db/schema')
+    const record = await db.books.get('pos-2')
+    expect(record?.progress).toBe(25)
+  })
+})
+
+describe('linkBooks', () => {
+  it('links two books bidirectionally', async () => {
+    await act(async () => {
+      await useBookStore.getState().importBook(makeBook({ id: 'link-a', title: 'EPUB' }) as never)
+      await useBookStore.getState().importBook(makeBook({ id: 'link-b', title: 'Audio' }) as never)
+    })
+
+    await act(async () => {
+      await useBookStore.getState().linkBooks('link-a', 'link-b')
+    })
+
+    const books = useBookStore.getState().books
+    const bookA = books.find(b => b.id === 'link-a')
+    const bookB = books.find(b => b.id === 'link-b')
+    expect(bookA?.linkedBookId).toBe('link-b')
+    expect(bookB?.linkedBookId).toBe('link-a')
+  })
+})
+
+describe('unlinkBooks', () => {
+  it('clears linkedBookId on both books', async () => {
+    await act(async () => {
+      await useBookStore.getState().importBook(makeBook({ id: 'unl-a' }) as never)
+      await useBookStore.getState().importBook(makeBook({ id: 'unl-b' }) as never)
+    })
+
+    await act(async () => {
+      await useBookStore.getState().linkBooks('unl-a', 'unl-b')
+    })
+    expect(useBookStore.getState().books.find(b => b.id === 'unl-a')?.linkedBookId).toBe('unl-b')
+
+    await act(async () => {
+      await useBookStore.getState().unlinkBooks('unl-a', 'unl-b')
+    })
+
+    const books = useBookStore.getState().books
+    expect(books.find(b => b.id === 'unl-a')?.linkedBookId).toBeUndefined()
+    expect(books.find(b => b.id === 'unl-b')?.linkedBookId).toBeUndefined()
+  })
+})
+
+describe('upsertAbsBook', () => {
+  it('adds new ABS book to store', async () => {
+    const absBook = makeBook({
+      id: 'abs-1',
+      title: 'ABS Book',
+      absServerId: 'srv-1',
+      absItemId: 'item-1',
+      source: { type: 'remote', url: 'http://abs/item/1' },
+    })
+
+    await act(async () => {
+      await useBookStore.getState().upsertAbsBook(absBook as never)
+    })
+
+    expect(useBookStore.getState().books).toHaveLength(1)
+    expect(useBookStore.getState().books[0].title).toBe('ABS Book')
+  })
+
+  it('merges with existing book preserving local state', async () => {
+    const existing = makeBook({
+      id: 'abs-2',
+      title: 'Old Title',
+      status: 'reading',
+      progress: 50,
+      absServerId: 'srv-1',
+      absItemId: 'item-2',
+      source: { type: 'remote', url: 'http://abs/item/2' },
+    })
+
+    await act(async () => {
+      await useBookStore.getState().importBook(existing as never)
+    })
+
+    const updated = makeBook({
+      id: 'new-id', // Different ID but same absServerId:absItemId
+      title: 'New Title from Server',
+      status: 'unread', // Should be overridden by existing
+      progress: 0, // Should be overridden by existing
+      absServerId: 'srv-1',
+      absItemId: 'item-2',
+      source: { type: 'remote', url: 'http://abs/item/2' },
+    })
+
+    await act(async () => {
+      await useBookStore.getState().upsertAbsBook(updated as never)
+    })
+
+    const books = useBookStore.getState().books
+    expect(books).toHaveLength(1)
+    // Title updated from server
+    expect(books[0].title).toBe('New Title from Server')
+    // Status and progress preserved from local
+    expect(books[0].status).toBe('reading')
+    expect(books[0].progress).toBe(50)
+    // ID preserved from existing
+    expect(books[0].id).toBe('abs-2')
+  })
+})
+
+describe('bulkUpsertAbsBooks', () => {
+  it('adds multiple ABS books at once', async () => {
+    const books = [
+      makeBook({
+        id: 'bulk-1',
+        title: 'Book 1',
+        absServerId: 'srv-1',
+        absItemId: 'bi-1',
+        source: { type: 'remote', url: 'http://abs/1' },
+      }),
+      makeBook({
+        id: 'bulk-2',
+        title: 'Book 2',
+        absServerId: 'srv-1',
+        absItemId: 'bi-2',
+        source: { type: 'remote', url: 'http://abs/2' },
+      }),
+    ]
+
+    await act(async () => {
+      await useBookStore.getState().bulkUpsertAbsBooks(books as never[])
+    })
+
+    expect(useBookStore.getState().books).toHaveLength(2)
+  })
+
+  it('is a no-op for empty array', async () => {
+    await act(async () => {
+      await useBookStore.getState().bulkUpsertAbsBooks([])
+    })
+
+    expect(useBookStore.getState().books).toHaveLength(0)
+  })
+})
+
+describe('getFilteredBooks — source filter', () => {
+  it('filters by audiobookshelf source', async () => {
+    await act(async () => {
+      await useBookStore
+        .getState()
+        .importBook(
+          makeBook({ id: 'sf-1', source: { type: 'local', opfsPath: '' } }) as never
+        )
+      await useBookStore
+        .getState()
+        .importBook(
+          makeBook({
+            id: 'sf-2',
+            source: { type: 'remote', url: 'http://abs' },
+            absServerId: 'srv-1',
+          }) as never
+        )
+    })
+
+    useBookStore.getState().setFilter('source', 'audiobookshelf')
+    const filtered = useBookStore.getState().getFilteredBooks()
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0].id).toBe('sf-2')
+  })
+
+  it('filters by local source', async () => {
+    await act(async () => {
+      await useBookStore
+        .getState()
+        .importBook(
+          makeBook({ id: 'lf-1', source: { type: 'local', opfsPath: '' } }) as never
+        )
+      await useBookStore
+        .getState()
+        .importBook(
+          makeBook({
+            id: 'lf-2',
+            source: { type: 'remote', url: 'http://abs' },
+            absServerId: 'srv-1',
+          }) as never
+        )
+    })
+
+    useBookStore.getState().setFilter('source', 'local')
+    const filtered = useBookStore.getState().getFilteredBooks()
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0].id).toBe('lf-1')
+  })
+
+  it('filters by search term matching narrator', async () => {
+    await act(async () => {
+      await useBookStore
+        .getState()
+        .importBook(makeBook({ id: 'n1', title: 'Book', narrator: 'John Smith' }) as never)
+      await useBookStore
+        .getState()
+        .importBook(makeBook({ id: 'n2', title: 'Book', narrator: 'Jane Doe' }) as never)
+    })
+
+    useBookStore.getState().setFilter('search', 'john')
+    const filtered = useBookStore.getState().getFilteredBooks()
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0].id).toBe('n1')
+  })
+})
+
+describe('setLibraryView', () => {
+  it('switches between grid and list', () => {
+    useBookStore.getState().setLibraryView('list')
+    expect(useBookStore.getState().libraryView).toBe('list')
+
+    useBookStore.getState().setLibraryView('grid')
+    expect(useBookStore.getState().libraryView).toBe('grid')
+  })
+})
+
+describe('setFilters', () => {
+  it('replaces all filters at once', () => {
+    useBookStore.getState().setFilters({ status: 'reading', search: 'test' })
+
+    expect(useBookStore.getState().filters).toEqual({ status: 'reading', search: 'test' })
+  })
 })
