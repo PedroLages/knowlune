@@ -29,11 +29,16 @@ export const CollectionCard = memo(function CollectionCard({ collection }: Colle
   const allBooks = useBookStore(s => s.books)
   const servers = useAudiobookshelfStore(s => s.servers)
 
-  // Map ABS collection books to local Book records
+  // Build O(1) lookup index from allBooks keyed by absItemId, then resolve
+  // collection books in a single pass — avoids O(n*m) with allBooks.find() per item.
   const bookMap = useMemo(() => {
+    const index = new Map<string, Book>()
+    for (const book of allBooks) {
+      if (book.absItemId) index.set(book.absItemId, book)
+    }
     const map = new Map<string, Book>()
     for (const absBook of collection.books) {
-      const local = allBooks.find(b => b.absItemId === absBook.id)
+      const local = index.get(absBook.id)
       if (local) map.set(absBook.id, local)
     }
     return map
@@ -165,7 +170,6 @@ export const CollectionCard = memo(function CollectionCard({ collection }: Colle
                   {localBook && (
                     <div className="flex items-center gap-2 mt-1">
                       <div className="h-1 flex-1 rounded-full bg-muted overflow-hidden max-w-[120px]">
-                        {/* eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic progress width cannot be expressed with pure Tailwind */}
                         <div
                           className="h-full rounded-full bg-brand transition-all"
                           style={{ width: `${progress}%` }}
