@@ -372,7 +372,6 @@ export function CourseOverview() {
         {/* Dot pattern texture */}
         <div
           className="absolute inset-0 opacity-[0.03]"
-          // eslint-disable-next-line react-best-practices/no-inline-styles -- SVG pattern and mask require inline style
           style={{
             backgroundImage: `url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9ImN1cnJlbnRDb2xvciIvPjwvc3ZnPg==")`,
             maskImage: 'linear-gradient(to bottom, white, transparent)',
@@ -442,7 +441,6 @@ export function CourseOverview() {
           {/* Progress line at top */}
           <div
             className="absolute top-0 left-0 h-1 bg-accent-violet shadow-[0_0_10px_var(--accent-violet)] transition-all duration-1000 ease-out"
-            // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic width
             style={{ width: `${overallPercent}%` }}
           />
 
@@ -630,7 +628,6 @@ export function CourseOverview() {
                                 'h-full transition-all duration-500',
                                 status === 'completed' ? 'bg-success' : 'bg-accent-violet'
                               )}
-                              // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic width requires inline style
                               style={{
                                 width: `${(groupCompletedCount / groupLessonCount) * 100}%`,
                               }}

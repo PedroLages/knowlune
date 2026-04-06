@@ -66,6 +66,7 @@ router.get('/:token.ics', async (req, res) => {
     timezone = tokenRow.timezone || 'UTC'
 
     // AC5: Update last_accessed_at (fire-and-forget is acceptable here)
+    // silent-catch-ok — server-side fire-and-forget, no UI to surface errors to
     supabase
       .from('calendar_tokens')
       .update({ last_accessed_at: new Date().toISOString() })
@@ -75,7 +76,6 @@ router.get('/:token.ics', async (req, res) => {
           console.error('[calendar] Failed to update last_accessed_at:', updateErr.message)
         }
       })
-      // silent-catch-ok — server-side fire-and-forget, no UI to surface errors to
       .catch((err: Error) => {
         console.error('[calendar] Unexpected error updating last_accessed_at:', err.message)
       })
@@ -102,7 +102,7 @@ router.get('/:token.ics', async (req, res) => {
       schedules = (data ?? []) as StudySchedule[]
     }
   } catch (err) {
-    // Graceful degradation per Task 3.12
+    // silent-catch-ok: graceful degradation per Task 3.12, returns feed with no events
     console.error('[calendar] Schedule query exception:', (err as Error).message)
   }
 

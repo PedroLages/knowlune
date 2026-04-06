@@ -80,6 +80,7 @@ export function createAuthMiddleware(config: AuthConfig) {
       req.user = payload
       next()
     } catch (error) {
+      // silent-catch-ok: server middleware, error surfaced as HTTP 401 response
       const message = error instanceof Error ? error.message : 'Token verification failed'
 
       // Distinguish between expired and invalid tokens

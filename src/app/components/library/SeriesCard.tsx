@@ -193,7 +193,6 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
                   {/* Progress bar */}
                   <div className="flex items-center gap-2 mt-1">
                     <div className="h-1 flex-1 rounded-full bg-muted overflow-hidden max-w-[120px]">
-                      {/* eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic progress width cannot be expressed with pure Tailwind */}
                       <div
                         className="h-full rounded-full bg-brand transition-all"
                         style={{ width: `${progress}%` }}

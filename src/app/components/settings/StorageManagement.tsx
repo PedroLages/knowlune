@@ -243,9 +243,9 @@ function CategoryBreakdownLegend({ overview }: { overview: StorageOverview }) {
             className="rounded-lg border border-border/50 bg-surface-elevated p-3"
           >
             <div className="flex items-center gap-2 mb-1">
-              {/* inline-style-ok — chart color CSS variable cannot be expressed as static Tailwind class */}
               <span
                 className="size-2.5 rounded-full flex-shrink-0"
+                // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic chart color from config
                 style={{
                   backgroundColor: chartConfig[cat.category as StorageCategory]?.color,
                 }}

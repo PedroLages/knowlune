@@ -69,6 +69,7 @@ export function TrailMap({ totalCourses, completedCount, currentIndex, className
   const completedPath = buildPartialPath(currentIndex >= 0 ? currentIndex : completedCount)
 
   return (
+    // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic height computed from waypoint positions
     <div className={cn('relative w-full', className)} style={{ height: viewHeight + 40 }}>
       <svg
         className="absolute inset-0 w-full h-full"
@@ -146,7 +147,7 @@ export function TrailMap({ totalCourses, completedCount, currentIndex, className
       </svg>
 
       {/* HTML overlay for icons (better rendering than SVG foreignObject) */}
-      <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
+      <div className="absolute inset-0 pointer-events-none">
         {waypoints.map((wp, i) => {
           const isCompleted = i < completedCount
           const isCurrent = i === currentIndex

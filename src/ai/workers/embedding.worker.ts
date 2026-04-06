@@ -65,15 +65,18 @@ async function generateMockEmbeddings(texts: string[]): Promise<Float32Array[]> 
 // PRODUCTION: Transformers.js Integration
 // ============================================================================
 
-import { pipeline, env } from '@xenova/transformers'
-
-// Disable local model cache (IndexedDB only)
-env.allowLocalModels = false
-env.backends.onnx.wasm.numThreads = 1 // CRITICAL: Limit to 1 thread per worker
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic pipeline type from @xenova/transformers
 let embeddingPipeline: any = null
 
+/**
+ * Lazy-initialise the Transformers.js pipeline on first embed request.
+ *
+ * Previous behaviour eagerly imported and configured @xenova/transformers at
+ * module scope, which produced ~8 console errors when the model wasn't cached
+ * or the network was unavailable (KI-028). Moving all side-effects here
+ * ensures the worker boots silently and only attempts a download when the
+ * caller actually needs embeddings.
+ */
 async function initializePipeline() {
   if (!embeddingPipeline) {
     // Skip model fetch when offline — will retry when connection resumes
@@ -84,6 +87,13 @@ async function initializePipeline() {
     console.log('[EmbeddingWorker] Loading model: all-MiniLM-L6-v2')
 
     try {
+      // Dynamic import keeps module-level evaluation side-effect-free
+      const { pipeline, env } = await import('@xenova/transformers')
+
+      // Configure environment before first pipeline() call
+      env.allowLocalModels = false
+      env.backends.onnx.wasm.numThreads = 1 // CRITICAL: Limit to 1 thread per worker
+
       embeddingPipeline = await pipeline(
         'feature-extraction',
         'Xenova/all-MiniLM-L6-v2' // 384-dim, 23MB model (defaults to WASM/CPU)
@@ -91,7 +101,8 @@ async function initializePipeline() {
 
       console.log('[EmbeddingWorker] Model loaded successfully')
     } catch (error) {
-      console.error('[EmbeddingWorker] Model load failed:', error)
+      // Single warning instead of multiple uncaught errors (KI-028)
+      console.warn('[EmbeddingWorker] Model unavailable — embeddings disabled until next attempt.', error)
       throw new Error('Unable to load AI model. Check your internet connection.')
     }
   }

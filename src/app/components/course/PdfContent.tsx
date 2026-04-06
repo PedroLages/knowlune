@@ -102,6 +102,7 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
           revokeObjectUrl(url)
         }
       } catch {
+        // silent-catch-ok: error surfaced to user via setFileError state
         if (!ignore) {
           setFileError('not-found')
           setBlobLoading(false)

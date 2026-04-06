@@ -179,6 +179,7 @@ export function createEntitlementMiddleware(config: EntitlementConfig) {
       req.entitlement = tier
       next()
     } catch (error) {
+      // silent-catch-ok: server middleware fail-safe, defaults to 'free' tier
       console.error('[entitlement] Failed to resolve entitlement:', (error as Error).message)
       // Fail-safe: default to 'free' — never grant premium on error
       req.entitlement = 'free'

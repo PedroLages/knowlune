@@ -37,6 +37,7 @@ export function useLessonNavigation(
     let ignore = false
     setLoading(true)
 
+    // silent-catch-ok: background data load, graceful degradation to empty list
     adapter
       .getLessons()
       .then(items => {

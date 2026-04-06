@@ -72,6 +72,7 @@ export function createRateLimiter(config?: RateLimiterConfig) {
 
       next()
     } catch (rateLimiterRes) {
+      // silent-catch-ok: rate-limiter-flexible throws RateLimiterRes when limit exceeded, surfaced as 429
       // rate-limiter-flexible throws a RateLimiterRes when limit is exceeded
       const rlRes = rateLimiterRes as { msBeforeNext: number; remainingPoints: number }
       const retryAfter = Math.ceil(rlRes.msBeforeNext / 1000)

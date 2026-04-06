@@ -272,6 +272,7 @@ function DeletedContentBanner({ count }: { count: number }) {
     try {
       return localStorage.getItem(BANNER_DISMISS_KEY) === 'true'
     } catch {
+      // silent-catch-ok: localStorage read for UI preference, defaults to false
       return false
     }
   })

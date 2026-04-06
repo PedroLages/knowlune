@@ -62,7 +62,7 @@ export function createOriginCheck(config: OriginCheckConfig) {
           return
         }
       } catch {
-        // Invalid Referer URL — fall through to rejection
+        // silent-catch-ok: invalid Referer URL, fall through to rejection
       }
     }
 

@@ -26,6 +26,7 @@ export function useHasQuiz(lessonId: string | undefined): {
     let ignore = false
     setLoading(true)
 
+    // silent-catch-ok: background data check, graceful degradation to no quiz
     db.quizzes
       .where('lessonId')
       .equals(lessonId)

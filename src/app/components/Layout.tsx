@@ -282,6 +282,7 @@ export function Layout() {
       }
       return true
     } catch {
+      // silent-catch-ok: corrupted localStorage, reset and use default
       console.warn('Corrupted sidebar state in localStorage, resetting to default')
       localStorage.removeItem('eduvi-sidebar-v1')
       localStorage.removeItem('knowlune-sidebar-v1')
@@ -314,6 +315,7 @@ export function Layout() {
       }
       return false
     } catch {
+      // silent-catch-ok: corrupted localStorage, reset and use default
       console.warn('Corrupted sidebar collapsed state in localStorage, resetting to default')
       localStorage.removeItem('eduvi-sidebar-collapsed-v1')
       localStorage.removeItem('knowlune-sidebar-collapsed-v1')
@@ -417,7 +419,7 @@ export function Layout() {
           if (prefs.showQualityScore === false) return
         }
       } catch {
-        /* use default (show) */
+        // silent-catch-ok: localStorage read for UI preference, use default (show)
       }
 
       const detail = (e as CustomEvent<QualityScoreResult>).detail

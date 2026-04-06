@@ -120,7 +120,7 @@ export function useAudiobookshelfProgressSync({
           ),
         }))
 
-        // Persist to Dexie — non-critical
+        // silent-catch-ok: Dexie persist is non-critical, ABS is source of truth
         db.books
           .update(book.id, {
             currentPosition: position,
@@ -144,7 +144,7 @@ export function useAudiobookshelfProgressSync({
         }
       }
     })()
-  }, [book.id]) // eslint-disable-line -- intentionally runs once per book
+  }, [book.id])
 
   // ─── Push-on-session-end: sync when playback pauses ───
   const pushProgress = useCallback(() => {

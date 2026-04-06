@@ -44,6 +44,7 @@ export function PathProgressRing({
   return (
     <div
       className={cn('relative inline-flex items-center justify-center', className)}
+      // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic size from config prop
       style={{ width: config.size, height: config.size }}
       role="progressbar"
       aria-valuenow={Math.round(percentage)}

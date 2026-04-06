@@ -355,14 +355,14 @@ issues:
   - id: KI-028
     type: code
     summary: "8 console errors from EmbeddingWorker model fetch failures on page load"
-    file: "src/workers/EmbeddingWorker.ts"
+    file: "src/ai/workers/embedding.worker.ts"
     severity: medium
     discovered_by: E83-review
     discovered_on: 2026-04-05
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "AI model preload fails when offline or model not cached. Not a bug per se — but noisy in dev console and E2E test logs."
+    fixed_by: chore-ki-cleanup-2026-04-06
+    notes: "Fixed: converted to lazy dynamic import — model loads on first embed request, not on worker startup. Single console.warn on failure instead of 8 uncaught errors."
 
   - id: KI-029
     type: test
@@ -383,10 +383,10 @@ issues:
     severity: medium
     discovered_by: E83-review
     discovered_on: 2026-04-05
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Overlaps KI-026/KI-027 but includes additional errors in server/ files and test specs."
+    fixed_by: chore-trivial-fixes-2026-04-05
+    notes: "Verified 2026-04-06: 0 ESLint errors across src/ and server/. Overlapping fixes from KI-026/KI-027 resolved all errors."
 
   - id: KI-031
     type: lint
@@ -414,7 +414,7 @@ issues:
 
   - id: KI-033
     type: lint
-    summary: "110+ ESLint warnings across codebase (component size, hard waits, silent catches, unused vars)"
+    summary: "55 ESLint warnings across codebase (mostly component-size, a few inline styles)"
     file: "various"
     severity: low
     discovered_by: E83-review
@@ -422,7 +422,7 @@ issues:
     status: open
     scheduled_for: null
     fixed_by: null
-    notes: "Accumulated tech debt. Not blocking but adds noise to every lint run. Incremental cleanup recommended."
+    notes: "Reduced from 110+ to 55 warnings (2026-04-06). Fixed: 15 silent-catch, 6 unused eslint-disables, 4 inline styles. Remaining 55 are mostly component-size warnings (37 above 500-line error threshold, 17 above 300-line warn threshold) plus 1 server warning. Component-size fixes require architectural refactoring — defer to dedicated initiative."
 
   - id: KI-034
     type: security
@@ -443,10 +443,10 @@ issues:
     severity: low
     discovered_by: E88-S02-R2
     discovered_on: 2026-04-05
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Pre-existing from E88-S01. Not introduced by E88-S02."
+    fixed_by: E88-S02
+    notes: "Verified 2026-04-06: all 3 buttons now use size-11 (44px). Fixed during E88-S02 implementation."
 
   - id: KI-036
     type: test
