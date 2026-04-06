@@ -398,7 +398,10 @@ export function Library() {
       {/* Grid view */}
       {books.length > 0 &&
         libraryView === 'grid' &&
-        !(filters.source === 'audiobookshelf' && (absViewMode === 'series' || absViewMode === 'collections')) && (
+        !(
+          filters.source === 'audiobookshelf' &&
+          (absViewMode === 'series' || absViewMode === 'collections')
+        ) && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {filteredBooks.map(book => (
               <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
@@ -411,7 +414,10 @@ export function Library() {
       {/* List view */}
       {books.length > 0 &&
         libraryView === 'list' &&
-        !(filters.source === 'audiobookshelf' && (absViewMode === 'series' || absViewMode === 'collections')) && (
+        !(
+          filters.source === 'audiobookshelf' &&
+          (absViewMode === 'series' || absViewMode === 'collections')
+        ) && (
           <div className="flex flex-col divide-y divide-border/50">
             {filteredBooks.map(book => (
               <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
