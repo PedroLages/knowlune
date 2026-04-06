@@ -26,7 +26,12 @@ interface BookmarkButtonProps {
   onBookmarkCreated?: () => void
 }
 
-export function BookmarkButton({ bookId, chapterIndex, currentTime, onBookmarkCreated }: BookmarkButtonProps) {
+export function BookmarkButton({
+  bookId,
+  chapterIndex,
+  currentTime,
+  onBookmarkCreated,
+}: BookmarkButtonProps) {
   const [showNote, setShowNote] = useState(false)
   const [note, setNote] = useState('')
   const [pendingId, setPendingId] = useState<string | null>(null)
