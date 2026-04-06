@@ -365,7 +365,10 @@ export function connectSocket(
       // Engine.IO open packet: "0{...}"
       if (data.startsWith('0{')) {
         try {
-          const config = JSON.parse(data.slice(1)) as { pingInterval?: number; pingTimeout?: number }
+          const config = JSON.parse(data.slice(1)) as {
+            pingInterval?: number
+            pingTimeout?: number
+          }
           pingIntervalMs = config.pingInterval ?? 25_000
         } catch {
           // silent-catch-ok: use default ping interval
