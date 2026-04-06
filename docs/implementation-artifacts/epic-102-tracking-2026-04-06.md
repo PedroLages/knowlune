@@ -8,7 +8,7 @@ Last Updated: 2026-04-06
 | Story | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|--------|--------|---------------|--------------|
 | E102-S01 | done | #267 | 2 | 5 |
-| E102-S02 | finishing | — | 2 | 2 |
+| E102-S02 | done | #268 | 2 | 2 |
 | E102-S03 | queued | — | — | — |
 | E102-S04 | queued | — | — | — |
 
@@ -29,7 +29,7 @@ _(none)_
 ---
 
 ### E102-S02: Series Browsing
-**Status:** finishing
+**Status:** done (PR #268)
 #### Errors
 _(none)_
 #### Review Findings
