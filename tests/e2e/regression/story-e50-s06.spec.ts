@@ -56,7 +56,7 @@ test.describe("E50-S06: Today's Study Plan Widget", () => {
           return fixed
         }
       }
-       
+
       globalThis.Date = MockDate as unknown as DateConstructor
     }, FIXED_DATE)
 

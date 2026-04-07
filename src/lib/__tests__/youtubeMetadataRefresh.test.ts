@@ -69,7 +69,7 @@ describe('youtubeMetadataRefresh', () => {
 
     it('filters to stale youtube courses', async () => {
       const staleDate = new Date(Date.now() - STALE_THRESHOLD_MS - 1).toISOString()
-       
+
       mockDb.importedCourses.toArray.mockResolvedValue([
         { id: '1', source: 'youtube', lastRefreshedAt: staleDate },
         { id: '2', source: 'youtube', lastRefreshedAt: new Date().toISOString() },
@@ -101,7 +101,7 @@ describe('youtubeMetadataRefresh', () => {
 
     it('updates videos with fresh metadata', async () => {
       const videos = [{ id: 'v1', youtubeVideoId: 'yt1', filename: 'Old Title', duration: 100 }]
-       
+
       mockDb.importedVideos.where.mockReturnValue({
         equals: vi.fn(() => ({
           toArray: vi.fn(() => Promise.resolve(videos)),
@@ -132,7 +132,7 @@ describe('youtubeMetadataRefresh', () => {
 
     it('marks removed videos', async () => {
       const videos = [{ id: 'v1', youtubeVideoId: 'yt1', filename: 'Title' }]
-       
+
       mockDb.importedVideos.where.mockReturnValue({
         equals: vi.fn(() => ({
           toArray: vi.fn(() => Promise.resolve(videos)),
@@ -156,7 +156,7 @@ describe('youtubeMetadataRefresh', () => {
 
     it('processes stale courses', async () => {
       const staleDate = new Date(Date.now() - STALE_THRESHOLD_MS - 1).toISOString()
-       
+
       mockDb.importedCourses.toArray.mockResolvedValue([
         { id: '1', source: 'youtube', lastRefreshedAt: staleDate },
       ] as any)

@@ -136,7 +136,6 @@ describe('authors', () => {
 
   describe('getAuthorForCourse', () => {
     it('returns author when found', () => {
-       
       mockAuthorStoreGetState.mockReturnValue({
         isLoaded: true,
         isLoading: false,
@@ -180,7 +179,6 @@ describe('authors', () => {
     })
 
     it('returns author when found', () => {
-       
       mockAuthorStoreGetState.mockReturnValue({
         isLoaded: true,
         isLoading: false,
