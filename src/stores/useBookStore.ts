@@ -17,10 +17,15 @@ import { opfsStorageService } from '@/services/OpfsStorageService'
 import { appEventBus } from '@/lib/eventBus'
 import { unlockSidebarItem } from '@/app/hooks/useProgressiveDisclosure'
 
+export type SortOption = 'recent' | 'title-asc' | 'author-asc' | 'progress' | 'duration'
+
 export interface BookFilters {
   status?: BookStatus | 'all'
   search?: string
   source?: 'all' | 'local' | 'audiobookshelf'
+  sort?: SortOption
+  format?: string[] // multi-select format filter (e.g. ['audiobook', 'epub'])
+  authors?: string[] // multi-select author filter
 }
 
 interface BookStoreState {
@@ -53,6 +58,7 @@ interface BookStoreState {
   upsertAbsBook: (book: Book) => Promise<void>
   bulkUpsertAbsBooks: (books: Book[]) => Promise<void>
   getAllTags: () => string[]
+  getAllAuthors: () => string[]
   getBookCountByStatus: () => Record<'all' | BookStatus, number>
 }
 
@@ -197,6 +203,39 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
           (b.narrator?.toLowerCase().includes(q) ?? false)
       )
     }
+
+    // Format filter
+    if (filters.format && filters.format.length > 0) {
+      result = result.filter(b => filters.format!.includes(b.format))
+    }
+
+    // Author filter
+    if (filters.authors && filters.authors.length > 0) {
+      const authorSet = new Set(filters.authors.map(a => a.toLowerCase()))
+      result = result.filter(b => authorSet.has(b.author.toLowerCase()))
+    }
+
+    // Sort
+    const sortKey = filters.sort || 'recent'
+    result = [...result].sort((a, b) => {
+      switch (sortKey) {
+        case 'title-asc':
+          return a.title.localeCompare(b.title)
+        case 'author-asc':
+          return a.author.localeCompare(b.author)
+        case 'progress':
+          return (b.progress ?? 0) - (a.progress ?? 0)
+        case 'duration':
+          return (b.totalDuration ?? 0) - (a.totalDuration ?? 0)
+        case 'recent':
+        default: {
+          const dateA = a.lastOpenedAt || a.createdAt || ''
+          const dateB = b.lastOpenedAt || b.createdAt || ''
+          return dateB.localeCompare(dateA)
+        }
+      }
+    })
+
     return result
   },
 
@@ -403,6 +442,20 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       for (const t of b.tags) tagSet.add(t)
     }
     return Array.from(tagSet).sort()
+  },
+
+  getAllAuthors: () => {
+    const { books } = get()
+    const authorSet = new Set<string>()
+    for (const b of books) {
+      if (!b.author) continue
+      // Split multi-author strings ("Author A, Author B" or "Author A & Author B")
+      for (const name of b.author.split(/,\s*|\s+&\s+/)) {
+        const trimmed = name.trim()
+        if (trimmed) authorSet.add(trimmed)
+      }
+    }
+    return Array.from(authorSet).sort()
   },
 
   getBookCountByStatus: () => {

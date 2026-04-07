@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router'
 import { BookOpen, ChevronDown, Headphones } from 'lucide-react'
 import type { AbsSeries, Book } from '@/data/types'
 import { Badge } from '@/app/components/ui/badge'
+import { CoverCollageGrid } from '@/app/components/library/CoverCollageGrid'
 import { useBookStore } from '@/stores/useBookStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 import { getCoverUrl } from '@/services/AudiobookshelfService'
@@ -83,7 +84,7 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
 
   return (
     <div
-      className="rounded-2xl border border-border/50 bg-card overflow-hidden shadow-sm"
+      className="rounded-2xl bg-card overflow-hidden shadow-card-ambient"
       data-testid={`series-card-${series.id}`}
     >
       {/* Collapsed header — always visible */}
@@ -97,21 +98,12 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
         className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset min-h-[64px]"
         data-testid={`series-toggle-${series.id}`}
       >
-        {/* Series cover */}
-        <div className="size-12 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
-          {coverUrl ? (
-            <img
-              src={coverUrl}
-              alt={`${series.name} series cover`}
-              loading="lazy"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <Headphones className="size-5 text-muted-foreground" aria-hidden="true" />
-            </div>
-          )}
-        </div>
+        {/* Series cover collage */}
+        <CoverCollageGrid
+          coverUrls={sortedBooks.slice(0, 4).map(b => server ? getCoverUrl(server.url, b.id, server.apiKey) : null)}
+          alt={`${series.name} series covers`}
+          className="size-14 flex-shrink-0"
+        />
 
         {/* Series info */}
         <div className="flex-1 min-w-0">
@@ -119,6 +111,12 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
           <p className="text-xs text-muted-foreground">
             {total} {total === 1 ? 'book' : 'books'} · {completed}/{total} complete
           </p>
+          <div className="h-1 w-full max-w-[120px] rounded-full bg-muted overflow-hidden mt-1">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-brand to-brand-hover transition-all"
+              style={{ width: `${total > 0 ? (completed / total) * 100 : 0}%` }}
+            />
+          </div>
         </div>
 
         {/* Expand chevron */}
@@ -136,7 +134,7 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
         <div
           id={panelId}
           role="list"
-          className="border-t border-border/50 divide-y divide-border/30"
+          className="flex flex-col gap-1 pt-2 pb-1"
           data-testid={`series-books-${series.id}`}
         >
           {sortedBooks.map(absBook => {
@@ -158,7 +156,7 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
                 data-testid={`series-book-${absBook.id}`}
               >
                 {/* Book icon or cover */}
-                <div className="size-8 flex-shrink-0 rounded bg-muted flex items-center justify-center overflow-hidden">
+                <div className="w-12 h-16 flex-shrink-0 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
                   {server ? (
                     <img
                       src={getCoverUrl(server.url, absBook.id, server.apiKey)}
@@ -175,8 +173,8 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     {absBook.sequence && (
-                      <span className="text-xs text-muted-foreground tabular-nums flex-shrink-0">
-                        #{absBook.sequence}
+                      <span className="text-xs font-bold text-muted-foreground tabular-nums w-6 flex-shrink-0">
+                        {String(absBook.sequence).padStart(2, '0')}
                       </span>
                     )}
                     <p

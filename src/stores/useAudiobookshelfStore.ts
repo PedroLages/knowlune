@@ -16,6 +16,9 @@ import { db } from '@/db/schema'
 import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 import { useBookStore } from '@/stores/useBookStore'
 
+/** TTL for supplementary data (collections, series) — 5 minutes */
+const SUPPLEMENTARY_CACHE_TTL = 5 * 60 * 1000
+
 /** Queued progress sync item — in-memory only (session-scoped, lost on refresh) */
 export interface SyncQueueItem {
   serverId: string
@@ -32,12 +35,12 @@ interface AudiobookshelfStoreState {
   // Series browsing (E102-S02) — in-memory only, not persisted to Dexie
   series: AbsSeries[]
   isLoadingSeries: boolean
-  seriesLoaded: Record<string, boolean>
+  seriesLoadedAt: Record<string, number> // timestamp-based TTL cache
 
   // Collections browsing (E102-S03) — in-memory only, not persisted to Dexie
   collections: AbsCollection[]
   isLoadingCollections: boolean
-  collectionsLoaded: Record<string, boolean>
+  collectionsLoadedAt: Record<string, number> // timestamp-based TTL cache
 
   loadServers: () => Promise<void>
   addServer: (server: AudiobookshelfServer) => Promise<void>
@@ -56,10 +59,10 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
   pendingSyncQueue: [],
   series: [],
   isLoadingSeries: false,
-  seriesLoaded: {},
+  seriesLoadedAt: {},
   collections: [],
   isLoadingCollections: false,
-  collectionsLoaded: {},
+  collectionsLoadedAt: {},
 
   loadServers: async () => {
     if (get().isLoaded) return
@@ -116,8 +119,8 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
         servers: state.servers.filter(s => s.id !== id),
         // Clear collections/series for this server
         collections: state.collections.filter(c => c.libraryId !== id),
-        collectionsLoaded: { ...state.collectionsLoaded, [id]: false },
-        seriesLoaded: { ...state.seriesLoaded, [id]: false },
+        collectionsLoadedAt: { ...state.collectionsLoadedAt, [id]: 0 },
+        seriesLoadedAt: { ...state.seriesLoadedAt, [id]: 0 },
       }))
       // Refresh the book store so the UI reflects the deletion
       await useBookStore.getState().loadBooks()
@@ -173,7 +176,11 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
   },
 
   loadSeries: async (serverId: string, libraryId: string) => {
-    if (get().seriesLoaded[serverId]) return
+    // TTL cache guard — skip if loaded within last 5 minutes
+    const loadedAt = get().seriesLoadedAt[serverId]
+    if (loadedAt && Date.now() - loadedAt < SUPPLEMENTARY_CACHE_TTL) return
+    // In-flight dedup — skip if already loading
+    if (get().isLoadingSeries) return
     const server = get().servers.find(s => s.id === serverId)
     if (!server) return
 
@@ -193,7 +200,8 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       if (!firstResult.ok) {
         // silent-catch-ok — series is supplementary, don't toast on rate-limit or transient errors
         console.warn('[AudiobookshelfStore] Failed to load series:', firstResult.error)
-        set({ isLoadingSeries: false })
+        // Cache failure to prevent retry hammering (wait TTL before retrying)
+        set({ isLoadingSeries: false, seriesLoadedAt: { ...get().seriesLoadedAt, [serverId]: Date.now() } })
         return
       }
 
@@ -215,18 +223,22 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
 
       set({
         series: allSeries,
-        seriesLoaded: { ...get().seriesLoaded, [serverId]: true },
+        seriesLoadedAt: { ...get().seriesLoadedAt, [serverId]: Date.now() },
         isLoadingSeries: false,
       })
     } catch (err) {
       // silent-catch-ok — series is supplementary, don't toast on rate-limit or transient errors
       console.warn('[AudiobookshelfStore] Failed to load series:', err)
-      set({ isLoadingSeries: false })
+      set({ isLoadingSeries: false, seriesLoadedAt: { ...get().seriesLoadedAt, [serverId]: Date.now() } })
     }
   },
 
   loadCollections: async (serverId: string) => {
-    if (get().collectionsLoaded[serverId]) return
+    // TTL cache guard — skip if loaded within last 5 minutes
+    const loadedAt = get().collectionsLoadedAt[serverId]
+    if (loadedAt && Date.now() - loadedAt < SUPPLEMENTARY_CACHE_TTL) return
+    // In-flight dedup — skip if already loading
+    if (get().isLoadingCollections) return
     const server = get().servers.find(s => s.id === serverId)
     if (!server) return
 
@@ -237,19 +249,19 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       if (!result.ok) {
         // silent-catch-ok — collections are supplementary, don't toast on rate-limit or transient errors
         console.warn('[AudiobookshelfStore] Failed to load collections:', result.error)
-        set({ isLoadingCollections: false })
+        set({ isLoadingCollections: false, collectionsLoadedAt: { ...get().collectionsLoadedAt, [serverId]: Date.now() } })
         return
       }
 
       set({
         collections: result.data.results,
-        collectionsLoaded: { ...get().collectionsLoaded, [serverId]: true },
+        collectionsLoadedAt: { ...get().collectionsLoadedAt, [serverId]: Date.now() },
         isLoadingCollections: false,
       })
     } catch (err) {
       // silent-catch-ok — collections are supplementary, don't toast on rate-limit or transient errors
       console.warn('[AudiobookshelfStore] Failed to load collections:', err)
-      set({ isLoadingCollections: false })
+      set({ isLoadingCollections: false, collectionsLoadedAt: { ...get().collectionsLoadedAt, [serverId]: Date.now() } })
     }
   },
 }))

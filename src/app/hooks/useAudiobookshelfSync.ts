@@ -200,15 +200,20 @@ export function useAudiobookshelfSync() {
           lastSyncedAt: new Date().toISOString(),
         })
 
-        // Auto-load collections and series after catalog sync (delayed to avoid Cloudflare 429)
+        toast.success(`Synced ${allMappedBooks.length} audiobooks`, { duration: 3000 })
+
+        // Auto-load collections and series after catalog sync (staggered to avoid Cloudflare 429)
         setTimeout(() => {
-          const { loadCollections, loadSeries } = useAudiobookshelfStore.getState()
+          const { loadSeries } = useAudiobookshelfStore.getState()
           for (const libId of server.libraryIds) {
             loadSeries(server.id, libId)
           }
-          // Stagger collections fetch after series
-          setTimeout(() => loadCollections(server.id), 2000)
-        }, 2000)
+        }, 3000)
+        // Collections fetched separately with longer delay
+        setTimeout(() => {
+          const { loadCollections } = useAudiobookshelfStore.getState()
+          loadCollections(server.id)
+        }, 6000)
       } catch (err) {
         console.error('[useAudiobookshelfSync] Unexpected sync error:', err)
         toast.error('Failed to sync Audiobookshelf catalog.')

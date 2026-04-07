@@ -271,9 +271,25 @@ export function AudiobookRenderer({
   }
 
   return (
-    <div className="flex flex-col items-center gap-8 p-6 max-w-lg mx-auto w-full min-h-[60vh] justify-center">
+    <>
+    {/* Blurred cover background */}
+    {book.coverUrl && (
+      <div
+        className="fixed inset-0 z-0 pointer-events-none"
+        style={{
+          backgroundImage: `url(${book.coverUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          filter: 'blur(80px) saturate(1.5)',
+          opacity: 0.4,
+          transform: 'scale(1.1)',
+        }}
+        aria-hidden="true"
+      />
+    )}
+    <div className="relative z-10 flex flex-col items-center gap-8 p-6 max-w-lg mx-auto w-full min-h-[60vh] justify-center">
       {/* Cover Art */}
-      <div className="w-full max-w-80 aspect-square rounded-[24px] overflow-hidden shadow-lg bg-muted flex items-center justify-center">
+      <div className="w-full max-w-80 aspect-square rounded-[24px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] bg-muted flex items-center justify-center">
         {book.coverUrl ? (
           <img
             src={book.coverUrl}
@@ -287,7 +303,7 @@ export function AudiobookRenderer({
 
       {/* Book & Chapter Title */}
       <div className="text-center space-y-1 w-full">
-        <h1 className="text-xl font-semibold text-foreground truncate px-4">{book.title}</h1>
+        <h1 className="text-2xl md:text-3xl font-semibold text-foreground truncate px-4">{book.title}</h1>
         <p className="text-sm text-muted-foreground truncate px-4">
           {currentChapter?.title ?? `Chapter ${currentChapterIndex + 1}`}
           {book.chapters.length > 1 && (
@@ -297,6 +313,11 @@ export function AudiobookRenderer({
           )}
         </p>
         {book.author && <p className="text-xs text-muted-foreground">{book.author}</p>}
+        {book.narrator && (
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">
+            Narrated by {book.narrator}
+          </p>
+        )}
       </div>
 
       {/* Switch to Reading — only when a chapter mapping exists (E103-S02) */}
@@ -379,7 +400,7 @@ export function AudiobookRenderer({
       </div>
 
       {/* Secondary Controls: Speed | Bookmark | Sleep Timer */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 bg-card/40 backdrop-blur-2xl rounded-full px-4 py-1.5 border border-white/20">
         <SpeedControl />
         <div className="relative">
           <BookmarkButton
@@ -440,5 +461,6 @@ export function AudiobookRenderer({
         sessionBookmarkIds={sessionBookmarkIds}
       />
     </div>
+    </>
   )
 }

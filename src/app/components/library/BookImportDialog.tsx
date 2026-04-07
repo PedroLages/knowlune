@@ -249,7 +249,7 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg" aria-label="Import book" data-testid="book-import-dialog">
+      <DialogContent className="max-w-lg rounded-2xl" aria-label="Import book" data-testid="book-import-dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-brand" />
@@ -264,15 +264,15 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
 
         {/* Mode switcher — only show when no file is in progress */}
         {!file && (
-          <div className="flex gap-2" role="tablist" aria-label="Import type">
+          <div className="flex gap-1 p-1 bg-muted rounded-full w-fit mx-auto" role="tablist" aria-label="Import type">
             <button
               role="tab"
               aria-selected={importMode === 'epub'}
               onClick={() => setImportMode('epub')}
-              className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-medium transition-colors min-h-[44px] ${
+              className={`flex items-center justify-center gap-1.5 rounded-full px-5 py-2 text-sm font-medium transition-all min-h-[40px] ${
                 importMode === 'epub'
-                  ? 'border-brand bg-brand-soft text-brand-soft-foreground'
-                  : 'border-border bg-surface-elevated text-muted-foreground hover:bg-surface-elevated/80'
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               <BookOpen className="size-4" aria-hidden="true" />
@@ -282,10 +282,10 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
               role="tab"
               aria-selected={importMode === 'audiobook'}
               onClick={() => setImportMode('audiobook')}
-              className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-medium transition-colors min-h-[44px] ${
+              className={`flex items-center justify-center gap-1.5 rounded-full px-5 py-2 text-sm font-medium transition-all min-h-[40px] ${
                 importMode === 'audiobook'
-                  ? 'border-brand bg-brand-soft text-brand-soft-foreground'
-                  : 'border-border bg-surface-elevated text-muted-foreground hover:bg-surface-elevated/80'
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
               data-testid="audiobook-import-tab"
             >

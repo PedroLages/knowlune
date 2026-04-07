@@ -246,50 +246,62 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="sm:max-w-lg"
+          className="max-w-3xl"
           aria-describedby="abs-settings-description"
           data-testid="abs-settings"
         >
           <DialogHeader>
-            <DialogTitle>{dialogTitle}</DialogTitle>
-            <DialogDescription id="abs-settings-description">{dialogDescription}</DialogDescription>
+            <DialogTitle>Audiobookshelf Servers</DialogTitle>
+            <DialogDescription id="abs-settings-description">
+              Connect to Audiobookshelf servers to browse and sync audiobooks.
+            </DialogDescription>
           </DialogHeader>
 
-          {mode === 'list' && (
-            <AudiobookshelfServerListView
-              servers={servers}
-              onAdd={handleOpenAdd}
-              onEdit={handleOpenEdit}
-              onDelete={setDeleteTarget}
-              onReauthenticate={handleOpenEdit}
-            />
-          )}
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Left: Server list (always visible) */}
+            <div className="flex-[3] min-w-0">
+              <AudiobookshelfServerListView
+                servers={servers}
+                onAdd={handleOpenAdd}
+                onEdit={handleOpenEdit}
+                onDelete={setDeleteTarget}
+                onReauthenticate={handleOpenEdit}
+              />
+            </div>
 
-          {(mode === 'add' || mode === 'edit') && (
-            <AudiobookshelfServerForm
-              name={name}
-              url={url}
-              apiKey={apiKey}
-              selectedLibraryIds={selectedLibraryIds}
-              isTesting={isTesting}
-              isSaving={isSaving}
-              testResult={testResult}
-              isEditMode={mode === 'edit'}
-              onNameChange={setName}
-              onUrlChange={v => {
-                setUrl(v)
-                setTestResult(null) // Reset test result when URL changes
-              }}
-              onApiKeyChange={v => {
-                setApiKey(v)
-                setTestResult(null) // Reset test result when API key changes
-              }}
-              onLibraryToggle={handleLibraryToggle}
-              onTest={handleTestConnection}
-              onSave={handleSave}
-              onBack={handleBack}
-            />
-          )}
+            {/* Right: Add/Edit form (always visible) */}
+            <div className="flex-[2] min-w-0">
+              {(mode === 'add' || mode === 'edit') ? (
+                <AudiobookshelfServerForm
+                  name={name}
+                  url={url}
+                  apiKey={apiKey}
+                  selectedLibraryIds={selectedLibraryIds}
+                  isTesting={isTesting}
+                  isSaving={isSaving}
+                  testResult={testResult}
+                  isEditMode={mode === 'edit'}
+                  onNameChange={setName}
+                  onUrlChange={v => {
+                    setUrl(v)
+                    setTestResult(null)
+                  }}
+                  onApiKeyChange={v => {
+                    setApiKey(v)
+                    setTestResult(null)
+                  }}
+                  onLibraryToggle={handleLibraryToggle}
+                  onTest={handleTestConnection}
+                  onSave={handleSave}
+                  onBack={handleBack}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                  <p className="text-sm">Select a server to edit, or add a new one.</p>
+                </div>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

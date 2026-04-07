@@ -68,6 +68,9 @@ const Notifications = React.lazy(() =>
   import('./pages/Notifications').then(m => ({ default: m.Notifications }))
 )
 const LibraryPage = React.lazy(() => import('./pages/Library').then(m => ({ default: m.Library })))
+const CollectionDetail = React.lazy(() =>
+  import('./pages/CollectionDetail').then(m => ({ default: m.CollectionDetail }))
+)
 const NotFound = React.lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })))
 const LegalLayout = React.lazy(() =>
   import('./pages/legal/LegalLayout').then(m => ({ default: m.LegalLayout }))
@@ -323,6 +326,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <LibraryPage />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'library/collection/:collectionId',
+        element: (
+          <SuspensePage>
+            <CollectionDetail />
           </SuspensePage>
         ),
       },

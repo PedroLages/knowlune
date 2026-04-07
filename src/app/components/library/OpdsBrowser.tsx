@@ -126,7 +126,7 @@ function NavigationCard({
   return (
     <button
       onClick={() => onNavigate(link.href, link.title)}
-      className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-4 text-left hover:bg-muted/50 hover:shadow-sm transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand min-h-[44px]"
+      className="flex items-center gap-3 rounded-xl bg-card p-4 text-left shadow-card-ambient hover:-translate-y-1 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand min-h-[44px]"
       data-testid={`opds-nav-link-${link.title.toLowerCase().replace(/\s+/g, '-')}`}
     >
       <Library className="size-5 text-muted-foreground shrink-0" aria-hidden="true" />
@@ -153,7 +153,7 @@ function OpdsBookCard({
 
   return (
     <div
-      className="flex flex-col rounded-[24px] bg-card border border-border/50 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+      className="flex flex-col rounded-[24px] bg-card overflow-hidden shadow-card-ambient hover:-translate-y-2 transition-all duration-300"
       data-testid={`opds-entry-${entry.id}`}
     >
       {/* Cover */}
@@ -234,7 +234,7 @@ function BreadcrumbTrail({
   if (breadcrumbs.length === 0) return null
 
   return (
-    <nav aria-label="Catalog breadcrumb" className="flex items-center gap-1 text-sm flex-wrap">
+    <nav aria-label="Catalog breadcrumb" className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest flex-wrap">
       {breadcrumbs.map((crumb, index) => (
         <span key={index} className="flex items-center gap-1">
           <button

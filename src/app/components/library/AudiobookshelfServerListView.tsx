@@ -8,7 +8,6 @@
 
 import { Headphones, Plus } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
-import { Separator } from '@/app/components/ui/separator'
 import type { AudiobookshelfServer } from '@/data/types'
 import { AudiobookshelfServerCard } from './AudiobookshelfServerCard'
 
@@ -41,7 +40,7 @@ export function AudiobookshelfServerListView({
 
       {servers.length > 0 && (
         <ul
-          className="flex flex-col divide-y divide-border/50"
+          className="flex flex-col gap-3"
           role="list"
           aria-label="Connected Audiobookshelf servers"
         >
@@ -56,8 +55,6 @@ export function AudiobookshelfServerListView({
           ))}
         </ul>
       )}
-
-      <Separator />
 
       <Button
         variant="brand-outline"

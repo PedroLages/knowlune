@@ -11,8 +11,10 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import {
   BookOpen,
+  CloudUpload,
   FolderOpen,
   Globe,
   Grid3X3,
@@ -20,6 +22,7 @@ import {
   List,
   Loader2,
   Plus,
+  RefreshCw,
   WifiOff,
   Target,
 } from 'lucide-react'
@@ -77,7 +80,18 @@ export function Library() {
   const { isSyncing: isAbsSyncing, syncCatalog, loadNextPage, pagination } = useAudiobookshelfSync()
 
   // Series & Collections browsing (E102-S02, E102-S03)
-  const [absViewMode, setAbsViewMode] = useState<'grid' | 'series' | 'collections'>('grid')
+  const [searchParams] = useSearchParams()
+  const initialView = searchParams.get('view')
+  const [absViewMode, setAbsViewMode] = useState<'grid' | 'series' | 'collections'>(
+    initialView === 'collections' ? 'collections' : initialView === 'series' ? 'series' : 'grid'
+  )
+
+  // When navigating back with ?view=collections, ensure ABS source is selected
+  useEffect(() => {
+    if ((initialView === 'collections' || initialView === 'series') && filters.source !== 'audiobookshelf') {
+      setFilters({ source: 'audiobookshelf' })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const absSeries = useAudiobookshelfStore(s => s.series)
   const isLoadingSeries = useAudiobookshelfStore(s => s.isLoadingSeries)
   const loadSeries = useAudiobookshelfStore(s => s.loadSeries)
@@ -115,6 +129,23 @@ export function Library() {
       newServers.forEach(server => syncCatalog(server))
     }
   }, [absServers, syncCatalog])
+
+  // Manual sync — clears TTL cache and re-triggers full catalog sync
+  const handleManualSync = useCallback(() => {
+    const store = useAudiobookshelfStore.getState()
+    // Clear TTL caches so series/collections re-fetch
+    useAudiobookshelfStore.setState({
+      seriesLoadedAt: {},
+      collectionsLoadedAt: {},
+    })
+    // Clear synced tracking so syncCatalog runs again
+    syncedServerIds.current.clear()
+    // Trigger sync for all connected servers
+    for (const server of store.servers) {
+      syncedServerIds.current.add(server.id)
+      syncCatalog(server)
+    }
+  }, [syncCatalog])
 
   // Call getFilteredBooks() directly on each render — it reads from Zustand's get() internally.
   // useMemo caused stale closure issues because getFilteredBooks is a stable function reference
@@ -199,6 +230,33 @@ export function Library() {
                 Browse Catalog
               </Button>
             )}
+            {absServers.length > 0 && (() => {
+              const connectedServer = absServers.find(s => s.status === 'connected')
+              const isOffline = absServers.some(s => s.status === 'offline')
+              const isAuthFailed = absServers.some(s => s.status === 'auth-failed')
+              return (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleManualSync}
+                  disabled={isAbsSyncing}
+                  className="size-11 rounded-xl relative"
+                  aria-label="Sync Audiobookshelf library"
+                  title={isAbsSyncing ? 'Syncing...' : connectedServer ? `Connected — last synced ${connectedServer.lastSyncedAt ? new Date(connectedServer.lastSyncedAt).toLocaleTimeString() : 'never'}` : 'Sync Library'}
+                  data-testid="abs-sync-trigger"
+                >
+                  <RefreshCw className={cn('size-5', isAbsSyncing && 'animate-spin')} />
+                  {/* Status dot */}
+                  <span className={cn(
+                    'absolute top-1 right-1 size-2.5 rounded-full border-2 border-background',
+                    isAbsSyncing ? 'bg-brand animate-pulse' :
+                    isAuthFailed ? 'bg-destructive' :
+                    isOffline ? 'bg-warning' :
+                    connectedServer ? 'bg-success' : 'bg-muted'
+                  )} />
+                </Button>
+              )
+            })()}
             <Button
               variant="ghost"
               size="icon"
@@ -248,32 +306,67 @@ export function Library() {
 
       {/* Empty state */}
       {books.length === 0 && (
-        <div
+        <section
           ref={dropRef}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={cn(
-            'flex flex-col items-center justify-center gap-4 py-24 rounded-[24px] border-2 border-dashed transition-colors',
-            isDragOver ? 'border-brand bg-brand-soft/20' : 'border-border/50'
-          )}
+          className="flex flex-col items-center justify-center gap-6 py-16 px-6"
         >
-          <BookOpen className="size-16 text-muted-foreground/40" />
-          <h2 className="text-lg font-medium text-foreground">Your library is empty</h2>
-          <p className="max-w-sm text-center text-muted-foreground">
-            Import your first book to get started. Drag and drop an EPUB file here, or click the
-            button below.
+          {/* Illustration card with glow */}
+          <div className="relative mb-4">
+            <div className="absolute inset-0 bg-brand/5 rounded-full blur-3xl scale-150" />
+            <div className="relative p-6 rounded-xl bg-card shadow-card-ambient border border-border/15">
+              <div className="w-48 h-64 sm:w-56 sm:h-72 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                  <BookOpen className="size-12" />
+                  <Headphones className="size-8" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <h2 className="text-2xl sm:text-3xl font-semibold text-foreground text-center leading-tight">
+            Your library is waiting to be filled.
+          </h2>
+          <p className="max-w-md text-center text-muted-foreground text-lg leading-relaxed">
+            Start your next journey by importing your favorite stories or connecting to your existing collection.
           </p>
-          <Button
-            variant="brand"
-            onClick={() => setImportOpen(true)}
-            className="min-h-[44px]"
-            data-testid="import-first-book-cta"
+
+          {/* Two CTAs */}
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <Button
+              onClick={() => setImportOpen(true)}
+              className="min-h-[44px] bg-gradient-to-br from-brand to-brand-hover text-brand-foreground px-6"
+              data-testid="import-first-book-cta"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Import Book
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setAbsSettingsOpen(true)}
+              className="min-h-[44px] border-border/15 px-6"
+              data-testid="connect-abs-cta"
+            >
+              <Headphones className="mr-2 h-4 w-4" />
+              Connect Audiobookshelf
+            </Button>
+          </div>
+
+          {/* Drop zone */}
+          <div
+            className={cn(
+              'w-full max-w-md p-6 border-2 border-dashed rounded-xl transition-colors cursor-pointer',
+              isDragOver ? 'border-brand bg-brand-soft/20' : 'border-border/30'
+            )}
           >
-            <Plus className="mr-2 h-4 w-4" />
-            Import Your First Book
-          </Button>
-        </div>
+            <div className="flex flex-col items-center gap-2">
+              <CloudUpload className="size-8 text-muted-foreground/60" />
+              <p className="text-sm text-muted-foreground font-medium">Or drag and drop your files here</p>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* Source filter tabs — only show when ABS servers configured (E101-S03) */}
@@ -402,7 +495,7 @@ export function Library() {
           filters.source === 'audiobookshelf' &&
           (absViewMode === 'series' || absViewMode === 'collections')
         ) && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {filteredBooks.map(book => (
               <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
                 <BookCard book={book} />
@@ -418,7 +511,7 @@ export function Library() {
           filters.source === 'audiobookshelf' &&
           (absViewMode === 'series' || absViewMode === 'collections')
         ) && (
-          <div className="flex flex-col divide-y divide-border/50">
+          <div className="flex flex-col gap-2">
             {filteredBooks.map(book => (
               <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
                 <BookListItem book={book} />
