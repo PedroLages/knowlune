@@ -59,17 +59,13 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
 
   const handleFormatToggle = (format: string) => {
     const current = activeFormats
-    const next = current.includes(format)
-      ? current.filter(f => f !== format)
-      : [...current, format]
+    const next = current.includes(format) ? current.filter(f => f !== format) : [...current, format]
     setFilter('format', next.length > 0 ? next : undefined)
   }
 
   const handleAuthorToggle = (author: string) => {
     const current = activeAuthors
-    const next = current.includes(author)
-      ? current.filter(a => a !== author)
-      : [...current, author]
+    const next = current.includes(author) ? current.filter(a => a !== author) : [...current, author]
     setFilter('authors', next.length > 0 ? next : undefined)
   }
 
@@ -232,9 +228,7 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
                     onCheckedChange={() => handleAuthorToggle(author)}
                     className="border-muted-foreground/30 data-[state=checked]:border-brand data-[state=checked]:bg-brand"
                   />
-                  <span className="text-sm font-medium text-foreground truncate">
-                    {author}
-                  </span>
+                  <span className="text-sm font-medium text-foreground truncate">{author}</span>
                 </label>
               ))}
               {filteredAuthors.length === 0 && (

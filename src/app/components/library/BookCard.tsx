@@ -121,20 +121,24 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
           </p>
           <p className="text-xs text-muted-foreground mt-1 truncate">{book.author}</p>
           {book.narrator && (
-            <p className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">
-              {book.narrator}
-            </p>
+            <p className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">{book.narrator}</p>
           )}
           {/* Chapter + time remaining when playing */}
           {book.chapters.length > 0 &&
             book.currentPosition?.type === 'time' &&
             (book.progress ?? 0) > 0 && (
-              <p className="text-[10px] text-muted-foreground mt-0.5 truncate" data-testid={`chapter-${book.id}`}>
+              <p
+                className="text-[10px] text-muted-foreground mt-0.5 truncate"
+                data-testid={`chapter-${book.id}`}
+              >
                 {findCurrentChapterTitle(book.chapters, book.currentPosition!.seconds)}
               </p>
             )}
           {book.totalDuration != null && book.totalDuration > 0 && (
-            <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center justify-center gap-1" data-testid={`duration-${book.id}`}>
+            <p
+              className="text-[10px] text-muted-foreground mt-0.5 flex items-center justify-center gap-1"
+              data-testid={`duration-${book.id}`}
+            >
               <Clock className="size-3" aria-hidden="true" />
               {book.currentPosition?.type === 'time'
                 ? (book.progress != null && book.progress >= 99) ||
@@ -188,10 +192,7 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
         </div>
         {/* Progress overlay at bottom of cover */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-foreground/10">
-          <div
-            className="h-full bg-brand transition-all"
-            style={{ width: `${book.progress}%` }}
-          />
+          <div className="h-full bg-brand transition-all" style={{ width: `${book.progress}%` }} />
         </div>
         {book.source.type === 'remote' && (
           <div

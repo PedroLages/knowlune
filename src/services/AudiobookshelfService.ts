@@ -263,12 +263,9 @@ export async function closePlaybackSession(
   apiKey: string,
   sessionId: string
 ): Promise<AbsResult<void>> {
-  return absApiFetch<void>(
-    baseUrl,
-    apiKey,
-    `/api/session/${encodeURIComponent(sessionId)}/close`,
-    { method: 'POST' }
-  )
+  return absApiFetch<void>(baseUrl, apiKey, `/api/session/${encodeURIComponent(sessionId)}/close`, {
+    method: 'POST',
+  })
 }
 
 /**

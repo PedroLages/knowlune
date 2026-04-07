@@ -249,7 +249,11 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg rounded-2xl" aria-label="Import book" data-testid="book-import-dialog">
+      <DialogContent
+        className="max-w-lg rounded-2xl"
+        aria-label="Import book"
+        data-testid="book-import-dialog"
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-brand" />
@@ -264,7 +268,11 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
 
         {/* Mode switcher — only show when no file is in progress */}
         {!file && (
-          <div className="flex gap-1 p-1 bg-muted rounded-full w-fit mx-auto" role="tablist" aria-label="Import type">
+          <div
+            className="flex gap-1 p-1 bg-muted rounded-full w-fit mx-auto"
+            role="tablist"
+            aria-label="Import type"
+          >
             <button
               role="tab"
               aria-selected={importMode === 'epub'}

@@ -306,7 +306,7 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
   const resolvedBookCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
   const resolvedLinkedCoverUrl = useBookCoverUrl({
     bookId: linkedBook?.id ?? '',
-    coverUrl: linkedBook?.coverUrl
+    coverUrl: linkedBook?.coverUrl,
   })
 
   // Compute confidence for confirm view
@@ -344,7 +344,11 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
                 <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3">
                   <div className="size-10 flex-shrink-0 rounded-lg overflow-hidden">
                     {resolvedBookCoverUrl ? (
-                      <img src={resolvedBookCoverUrl} alt="" className="h-full w-full object-cover" />
+                      <img
+                        src={resolvedBookCoverUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-muted rounded-lg">
                         {book.format === 'audiobook' ? (

@@ -51,9 +51,9 @@ export const CollectionCard = memo(function CollectionCard({
 
   const total = collection.books.length
   const server = servers.find(s => s.status === 'connected')
-  const coverUrls = collection.books.slice(0, 4).map(b =>
-    server ? getCoverUrl(server.url, b.id, server.apiKey) : null
-  )
+  const coverUrls = collection.books
+    .slice(0, 4)
+    .map(b => (server ? getCoverUrl(server.url, b.id, server.apiKey) : null))
 
   // ── Collapsed (compact vertical) ──────────────────────────────────────
   if (!expanded) {
@@ -80,7 +80,10 @@ export const CollectionCard = memo(function CollectionCard({
             <span className="text-sm font-medium text-muted-foreground">
               {total} {total === 1 ? 'Book' : 'Books'}
             </span>
-            <ArrowRight className="size-5 text-brand group-hover:translate-x-1.5 transition-transform duration-300" aria-hidden="true" />
+            <ArrowRight
+              className="size-5 text-brand group-hover:translate-x-1.5 transition-transform duration-300"
+              aria-hidden="true"
+            />
           </div>
         </div>
       </button>
@@ -134,10 +137,13 @@ export const CollectionCard = memo(function CollectionCard({
           {collection.books.slice(0, 3).map((absBook, i) => {
             const localBook = bookMap.get(absBook.id)
             const progress = localBook?.progress ?? 0
-            const isFinished = localBook && (localBook.status === 'finished' || localBook.progress >= 100)
+            const isFinished =
+              localBook && (localBook.status === 'finished' || localBook.progress >= 100)
             const title = absBook.media.metadata.title
-            const author = absBook.media.metadata.authorName ||
-              absBook.media.metadata.authors?.map(a => a.name).join(', ') || ''
+            const author =
+              absBook.media.metadata.authorName ||
+              absBook.media.metadata.authors?.map(a => a.name).join(', ') ||
+              ''
 
             return (
               <div
@@ -183,7 +189,9 @@ export const CollectionCard = memo(function CollectionCard({
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <span className={`text-xs font-bold ${progress > 0 ? 'text-brand' : 'text-muted-foreground'}`}>
+                  <span
+                    className={`text-xs font-bold ${progress > 0 ? 'text-brand' : 'text-muted-foreground'}`}
+                  >
                     {isFinished ? 'Done' : progress > 0 ? `${progress}%` : 'Unplayed'}
                   </span>
                 </div>

@@ -271,7 +271,7 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
 
             {/* Right: Add/Edit form (always visible) */}
             <div className="flex-[2] min-w-0">
-              {(mode === 'add' || mode === 'edit') ? (
+              {mode === 'add' || mode === 'edit' ? (
                 <AudiobookshelfServerForm
                   name={name}
                   url={url}

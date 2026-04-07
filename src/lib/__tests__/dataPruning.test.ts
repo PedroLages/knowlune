@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import {
-  getRetentionSettings,
-  saveRetentionSettings,
-  TTL_OPTIONS,
-} from '@/lib/dataPruning'
+import { getRetentionSettings, saveRetentionSettings, TTL_OPTIONS } from '@/lib/dataPruning'
 
 // ---------------------------------------------------------------------------
 // Mock Dexie db

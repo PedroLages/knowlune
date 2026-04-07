@@ -52,10 +52,13 @@ describe('handleFocusModeNotification', () => {
 
     const result = handleFocusModeNotification('review-due', 'Review Due', 'Session expiring')
     expect(result).toBe(true)
-    expect(toast.warning).toHaveBeenCalledWith('Review Due', expect.objectContaining({
-      description: 'Session expiring',
-      duration: 8000,
-    }))
+    expect(toast.warning).toHaveBeenCalledWith(
+      'Review Due',
+      expect.objectContaining({
+        description: 'Session expiring',
+        duration: 8000,
+      })
+    )
   })
 
   it('treats srs-due as critical', () => {

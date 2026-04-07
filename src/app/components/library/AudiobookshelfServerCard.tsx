@@ -101,15 +101,21 @@ export function AudiobookshelfServerCard({
       </div>
       {/* Status + metadata row */}
       <div className="flex items-center gap-4 text-xs">
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium ${status.badgeBg} ${status.className}`}>
+        <span
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium ${status.badgeBg} ${status.className}`}
+        >
           <span className={`w-1.5 h-1.5 rounded-full ${status.dotClass}`} />
           <span data-testid="abs-server-status">{status.label}</span>
         </span>
         {server.libraryIds.length > 0 && (
-          <span className="text-muted-foreground">{server.libraryIds.length} {server.libraryIds.length === 1 ? 'library' : 'libraries'}</span>
+          <span className="text-muted-foreground">
+            {server.libraryIds.length} {server.libraryIds.length === 1 ? 'library' : 'libraries'}
+          </span>
         )}
         {server.lastSyncedAt && (
-          <span className="text-muted-foreground">Synced {new Date(server.lastSyncedAt).toLocaleTimeString()}</span>
+          <span className="text-muted-foreground">
+            Synced {new Date(server.lastSyncedAt).toLocaleTimeString()}
+          </span>
         )}
       </div>
     </li>

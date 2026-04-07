@@ -51,7 +51,7 @@ export const CalendarHeatMap = memo(function CalendarHeatMap({
   }, [dayMap, today, weeks])
 
   // Group cells into columns (weeks), each with 7 rows (days)
-  const columns: typeof grid[] = []
+  const columns: (typeof grid)[] = []
   for (let w = 0; w < weeks; w++) {
     columns.push(grid.slice(w * 7, (w + 1) * 7))
   }
@@ -59,7 +59,11 @@ export const CalendarHeatMap = memo(function CalendarHeatMap({
   const activeDays = grid.filter(c => c.level > 0).length
 
   return (
-    <div className={cn('flex flex-col gap-2', className)} role="img" aria-label={`Reading activity: ${activeDays} active days in the last ${weeks} weeks`}>
+    <div
+      className={cn('flex flex-col gap-2', className)}
+      role="img"
+      aria-label={`Reading activity: ${activeDays} active days in the last ${weeks} weeks`}
+    >
       {/* Legend */}
       <div className="flex justify-between items-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">
         <span>Past {weeks} Weeks</span>
@@ -76,7 +80,10 @@ export const CalendarHeatMap = memo(function CalendarHeatMap({
         {/* Day labels */}
         <div className="flex flex-col gap-[3px] pr-1">
           {DAY_LABELS.map((label, i) => (
-            <div key={i} className="w-3 h-3 flex items-center justify-center text-[8px] text-muted-foreground">
+            <div
+              key={i}
+              className="w-3 h-3 flex items-center justify-center text-[8px] text-muted-foreground"
+            >
               {label}
             </div>
           ))}

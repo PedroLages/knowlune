@@ -1,9 +1,9 @@
 # Code Review Agent Memory
 
-## Recurring Anti-Pattern: Uncommitted Fixes (CRITICAL)
-- **10 consecutive stories** (E03-S02 through E05-S06) ship with fixes/implementation only in working tree
-- Root cause: Review findings applied locally but never committed before merge
-- Always check `git diff HEAD` for uncommitted changes as first review step
+## Recurring Anti-Pattern: Uncommitted Fixes (RESOLVED)
+- Was: 10 consecutive stories (E03-S02 through E05-S06) shipped with fixes in working tree only
+- Status: Pattern resolved since ~E07. Recent stories (E69-S01, E107-S01) have clean working trees.
+- Still worth a quick `git diff HEAD` check but no longer critical
 
 ## Recurring Code Quality Patterns
 - String interpolation for className instead of `cn()` -- recurring since E01-S03 (17+ instances through E18-S07)

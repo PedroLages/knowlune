@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { getResourceUrl, filePathToUrl, getVideoUrl, getPdfUrl, COURSES_ROOT, MEDIA_BASE } from '../media'
+import {
+  getResourceUrl,
+  filePathToUrl,
+  getVideoUrl,
+  getPdfUrl,
+  COURSES_ROOT,
+  MEDIA_BASE,
+} from '../media'
 
 describe('media', () => {
   it('exports COURSES_ROOT constant', () => {

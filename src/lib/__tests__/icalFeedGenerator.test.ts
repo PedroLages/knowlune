@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  mapDaysToRRule,
-  generateICalFeed,
-  generateSRSSummaryEvents,
-} from '../icalFeedGenerator'
+import { mapDaysToRRule, generateICalFeed, generateSRSSummaryEvents } from '../icalFeedGenerator'
 import type { StudySchedule } from '../../data/types'
 
 describe('icalFeedGenerator', () => {
@@ -22,8 +18,13 @@ describe('icalFeedGenerator', () => {
 
     it('maps all days of the week', () => {
       const allDays = [
-        'monday', 'tuesday', 'wednesday', 'thursday',
-        'friday', 'saturday', 'sunday',
+        'monday',
+        'tuesday',
+        'wednesday',
+        'thursday',
+        'friday',
+        'saturday',
+        'sunday',
       ] as const
       const result = mapDaysToRRule([...allDays])
       expect(result).toBe('MO,TU,WE,TH,FR,SA,SU')
@@ -93,10 +94,7 @@ describe('icalFeedGenerator', () => {
     })
 
     it('handles multiple schedules', () => {
-      const schedules = [
-        baseSchedule,
-        { ...baseSchedule, id: 'sched-2', title: 'Evening Review' },
-      ]
+      const schedules = [baseSchedule, { ...baseSchedule, id: 'sched-2', title: 'Evening Review' }]
       const result = generateICalFeed(schedules, 'UTC')
       expect(result).toContain('Morning Study')
       expect(result).toContain('Evening Review')

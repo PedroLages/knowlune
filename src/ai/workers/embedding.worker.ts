@@ -102,7 +102,10 @@ async function initializePipeline() {
       console.log('[EmbeddingWorker] Model loaded successfully')
     } catch (error) {
       // Single warning instead of multiple uncaught errors (KI-028)
-      console.warn('[EmbeddingWorker] Model unavailable — embeddings disabled until next attempt.', error)
+      console.warn(
+        '[EmbeddingWorker] Model unavailable — embeddings disabled until next attempt.',
+        error
+      )
       throw new Error('Unable to load AI model. Check your internet connection.')
     }
   }

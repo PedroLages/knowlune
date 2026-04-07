@@ -420,3 +420,13 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - All 6 acceptance criteria verified with file:line evidence
 - Clean working tree confirmed
 - No new findings — implementation is clean
+
+## E107-S01: Fix Cover Image Display (Round 1)
+
+- No uncommitted implementation changes (positive -- pattern stable since E07+)
+- Zero blockers/high findings -- clean implementation
+- 1 Nit: Dead local variable `blobUrl` in useBookCoverUrl.ts (assigned but never read outside try block; ref update is what matters)
+- All 5 acceptance criteria verified and passing
+- Hook pattern well-designed: 5 consumers, correct blob URL lifecycle, proper isCancelled flag, silent-catch-ok justified
+- Tests cover: null/undefined URLs, external passthrough, OPFS resolution, URL change lifecycle, revocation, rejection handling
+- Positive: Correct blob URL lifecycle (useRef + cleanup), consistent pattern across all 5 consumers, engineering-patterns.md documentation, good unit test coverage

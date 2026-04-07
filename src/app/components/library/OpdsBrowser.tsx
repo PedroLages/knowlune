@@ -234,7 +234,10 @@ function BreadcrumbTrail({
   if (breadcrumbs.length === 0) return null
 
   return (
-    <nav aria-label="Catalog breadcrumb" className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest flex-wrap">
+    <nav
+      aria-label="Catalog breadcrumb"
+      className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest flex-wrap"
+    >
       {breadcrumbs.map((crumb, index) => (
         <span key={index} className="flex items-center gap-1">
           <button

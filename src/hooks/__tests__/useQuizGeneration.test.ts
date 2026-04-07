@@ -140,7 +140,7 @@ describe('useQuizGeneration', () => {
       createdAt: '2026-01-01T00:00:00Z',
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mockQuizzesWhere.mockReturnValue({
       equals: vi.fn(() => ({
         toArray: vi.fn(() => Promise.resolve([mockQuiz])),
@@ -194,7 +194,7 @@ describe('useQuizGeneration', () => {
       error: null,
     })
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mockQuizzesWhere.mockReturnValue({
       equals: vi.fn(() => ({
         toArray: vi.fn(() => Promise.resolve([mockQuiz])),
@@ -236,9 +236,7 @@ describe('useQuizGeneration', () => {
       await result.current.generate()
     })
 
-    expect(result.current.error).toBe(
-      'An unexpected error occurred during quiz generation.'
-    )
+    expect(result.current.error).toBe('An unexpected error occurred during quiz generation.')
     expect(mockToastError).toHaveBeenCalled()
   })
 

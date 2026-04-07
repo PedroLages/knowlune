@@ -35,11 +35,7 @@ export const ProgressRing = memo(function ProgressRing({
       role="img"
       aria-label={`${Math.round(percent)}% complete`}
     >
-      <svg
-        width={size}
-        height={size}
-        className="-rotate-90"
-      >
+      <svg width={size} height={size} className="-rotate-90">
         {/* Track */}
         <circle
           cx={size / 2}
@@ -67,9 +63,7 @@ export const ProgressRing = memo(function ProgressRing({
       </svg>
       {/* Center content */}
       {children && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          {children}
-        </div>
+        <div className="absolute inset-0 flex items-center justify-center">{children}</div>
       )}
     </div>
   )

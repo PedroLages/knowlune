@@ -88,7 +88,10 @@ export function Library() {
 
   // When navigating back with ?view=collections, ensure ABS source is selected
   useEffect(() => {
-    if ((initialView === 'collections' || initialView === 'series') && filters.source !== 'audiobookshelf') {
+    if (
+      (initialView === 'collections' || initialView === 'series') &&
+      filters.source !== 'audiobookshelf'
+    ) {
       setFilters({ source: 'audiobookshelf' })
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -230,33 +233,47 @@ export function Library() {
                 Browse Catalog
               </Button>
             )}
-            {absServers.length > 0 && (() => {
-              const connectedServer = absServers.find(s => s.status === 'connected')
-              const isOffline = absServers.some(s => s.status === 'offline')
-              const isAuthFailed = absServers.some(s => s.status === 'auth-failed')
-              return (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleManualSync}
-                  disabled={isAbsSyncing}
-                  className="size-11 rounded-xl relative"
-                  aria-label="Sync Audiobookshelf library"
-                  title={isAbsSyncing ? 'Syncing...' : connectedServer ? `Connected — last synced ${connectedServer.lastSyncedAt ? new Date(connectedServer.lastSyncedAt).toLocaleTimeString() : 'never'}` : 'Sync Library'}
-                  data-testid="abs-sync-trigger"
-                >
-                  <RefreshCw className={cn('size-5', isAbsSyncing && 'animate-spin')} />
-                  {/* Status dot */}
-                  <span className={cn(
-                    'absolute top-1 right-1 size-2.5 rounded-full border-2 border-background',
-                    isAbsSyncing ? 'bg-brand animate-pulse' :
-                    isAuthFailed ? 'bg-destructive' :
-                    isOffline ? 'bg-warning' :
-                    connectedServer ? 'bg-success' : 'bg-muted'
-                  )} />
-                </Button>
-              )
-            })()}
+            {absServers.length > 0 &&
+              (() => {
+                const connectedServer = absServers.find(s => s.status === 'connected')
+                const isOffline = absServers.some(s => s.status === 'offline')
+                const isAuthFailed = absServers.some(s => s.status === 'auth-failed')
+                return (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleManualSync}
+                    disabled={isAbsSyncing}
+                    className="size-11 rounded-xl relative"
+                    aria-label="Sync Audiobookshelf library"
+                    title={
+                      isAbsSyncing
+                        ? 'Syncing...'
+                        : connectedServer
+                          ? `Connected — last synced ${connectedServer.lastSyncedAt ? new Date(connectedServer.lastSyncedAt).toLocaleTimeString() : 'never'}`
+                          : 'Sync Library'
+                    }
+                    data-testid="abs-sync-trigger"
+                  >
+                    <RefreshCw className={cn('size-5', isAbsSyncing && 'animate-spin')} />
+                    {/* Status dot */}
+                    <span
+                      className={cn(
+                        'absolute top-1 right-1 size-2.5 rounded-full border-2 border-background',
+                        isAbsSyncing
+                          ? 'bg-brand animate-pulse'
+                          : isAuthFailed
+                            ? 'bg-destructive'
+                            : isOffline
+                              ? 'bg-warning'
+                              : connectedServer
+                                ? 'bg-success'
+                                : 'bg-muted'
+                      )}
+                    />
+                  </Button>
+                )
+              })()}
             <Button
               variant="ghost"
               size="icon"
@@ -330,7 +347,8 @@ export function Library() {
             Your library is waiting to be filled.
           </h2>
           <p className="max-w-md text-center text-muted-foreground text-lg leading-relaxed">
-            Start your next journey by importing your favorite stories or connecting to your existing collection.
+            Start your next journey by importing your favorite stories or connecting to your
+            existing collection.
           </p>
 
           {/* Two CTAs */}
@@ -363,7 +381,9 @@ export function Library() {
           >
             <div className="flex flex-col items-center gap-2">
               <CloudUpload className="size-8 text-muted-foreground/60" />
-              <p className="text-sm text-muted-foreground font-medium">Or drag and drop your files here</p>
+              <p className="text-sm text-muted-foreground font-medium">
+                Or drag and drop your files here
+              </p>
             </div>
           </div>
         </section>

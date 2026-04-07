@@ -109,9 +109,7 @@ describe('useProgressiveDisclosure', () => {
     const groups = [
       {
         label: 'AI',
-        items: [
-          { label: 'AI Path', path: '/ai', disclosureKey: 'ai-used' as DisclosureKey },
-        ],
+        items: [{ label: 'AI Path', path: '/ai', disclosureKey: 'ai-used' as DisclosureKey }],
       },
     ]
 
@@ -122,9 +120,7 @@ describe('useProgressiveDisclosure', () => {
   it('responds to sidebar-unlock custom event', () => {
     const { result } = renderHook(() => useProgressiveDisclosure())
     act(() => {
-      window.dispatchEvent(
-        new CustomEvent('sidebar-unlock', { detail: 'lesson-completed' })
-      )
+      window.dispatchEvent(new CustomEvent('sidebar-unlock', { detail: 'lesson-completed' }))
     })
     expect(result.current.unlocked.has('lesson-completed')).toBe(true)
   })

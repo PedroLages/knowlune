@@ -331,8 +331,14 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
               onCoverUpload={handleCoverUpload}
             />
             <div className="flex flex-wrap gap-2">
-              <Badge className="rounded-full">{book.format === 'audiobook' ? 'Audiobook' : book.format.toUpperCase()}</Badge>
-              {book.linkedBookId && <Badge variant="secondary" className="rounded-full">Linked Format</Badge>}
+              <Badge className="rounded-full">
+                {book.format === 'audiobook' ? 'Audiobook' : book.format.toUpperCase()}
+              </Badge>
+              {book.linkedBookId && (
+                <Badge variant="secondary" className="rounded-full">
+                  Linked Format
+                </Badge>
+              )}
             </div>
           </div>
 
@@ -340,7 +346,9 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
           <div className="w-full sm:w-3/5 space-y-4">
             {/* Title */}
             <div>
-              <Label htmlFor="edit-book-title" className={labelClass}>Title *</Label>
+              <Label htmlFor="edit-book-title" className={labelClass}>
+                Title *
+              </Label>
               <Input
                 id="edit-book-title"
                 value={title}
@@ -354,7 +362,9 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
 
             {/* Author */}
             <div>
-              <Label htmlFor="edit-book-author" className={labelClass}>Author *</Label>
+              <Label htmlFor="edit-book-author" className={labelClass}>
+                Author *
+              </Label>
               <Input
                 id="edit-book-author"
                 value={author}
@@ -368,7 +378,9 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
 
             {/* ISBN */}
             <div>
-              <Label htmlFor="edit-book-isbn" className={labelClass}>ISBN</Label>
+              <Label htmlFor="edit-book-isbn" className={labelClass}>
+                ISBN
+              </Label>
               <Input
                 id="edit-book-isbn"
                 value={isbn}
@@ -382,7 +394,9 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
 
             {/* Description */}
             <div>
-              <Label htmlFor="edit-book-description" className={labelClass}>Description</Label>
+              <Label htmlFor="edit-book-description" className={labelClass}>
+                Description
+              </Label>
               <Textarea
                 id="edit-book-description"
                 value={description}
@@ -397,9 +411,15 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
 
             {/* Genre */}
             <div>
-              <Label htmlFor="edit-book-genre" className={labelClass}>Genre</Label>
+              <Label htmlFor="edit-book-genre" className={labelClass}>
+                Genre
+              </Label>
               <Select value={genre} onValueChange={setGenre} disabled={isSaving}>
-                <SelectTrigger id="edit-book-genre" className={cn(ghostInputClass)} data-testid="edit-book-genre">
+                <SelectTrigger
+                  id="edit-book-genre"
+                  className={cn(ghostInputClass)}
+                  data-testid="edit-book-genre"
+                >
                   <SelectValue placeholder="Select genre" />
                 </SelectTrigger>
                 <SelectContent>

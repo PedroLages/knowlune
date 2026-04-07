@@ -38,7 +38,10 @@ export function CollectionsView() {
   // Loading skeletons
   if (isLoadingCollections) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8" data-testid="collections-loading">
+      <div
+        className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8"
+        data-testid="collections-loading"
+      >
         <div className="xl:col-span-2 h-64 rounded-xl bg-muted animate-pulse" />
         <div className="h-64 rounded-xl bg-muted animate-pulse" />
         <div className="h-64 rounded-xl bg-muted animate-pulse" />
@@ -64,10 +67,7 @@ export function CollectionsView() {
       data-testid="collections-view"
     >
       {collections.map(c => (
-        <div
-          key={c.id}
-          className={expandedId === c.id ? 'xl:col-span-2' : ''}
-        >
+        <div key={c.id} className={expandedId === c.id ? 'xl:col-span-2' : ''}>
           <CollectionCard
             collection={c}
             expanded={expandedId === c.id}

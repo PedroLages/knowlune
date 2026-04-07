@@ -70,7 +70,8 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
   // Get cover URL from first book
   const server = servers.find(s => s.status === 'connected')
   const firstBookId = sortedBooks[0]?.id
-  const coverUrl = server && firstBookId ? getCoverUrl(server.url, firstBookId, server.apiKey) : null
+  const coverUrl =
+    server && firstBookId ? getCoverUrl(server.url, firstBookId, server.apiKey) : null
 
   const toggleExpanded = () => setIsExpanded(prev => !prev)
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -100,7 +101,9 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
       >
         {/* Series cover collage */}
         <CoverCollageGrid
-          coverUrls={sortedBooks.slice(0, 4).map(b => server ? getCoverUrl(server.url, b.id, server.apiKey) : null)}
+          coverUrls={sortedBooks
+            .slice(0, 4)
+            .map(b => (server ? getCoverUrl(server.url, b.id, server.apiKey) : null))}
           alt={`${series.name} series covers`}
           className="size-14 flex-shrink-0"
         />

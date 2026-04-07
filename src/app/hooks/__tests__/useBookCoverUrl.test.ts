@@ -25,9 +25,7 @@ describe('useBookCoverUrl', () => {
   it('returns null when coverUrl is undefined', async () => {
     vi.mocked(opfsStorageService.getCoverUrl).mockResolvedValue(null)
 
-    const { result } = renderHook(() =>
-      useBookCoverUrl({ bookId: 'book-1', coverUrl: undefined })
-    )
+    const { result } = renderHook(() => useBookCoverUrl({ bookId: 'book-1', coverUrl: undefined }))
 
     await waitFor(() => {
       expect(result.current).toBe(null)
@@ -108,7 +106,7 @@ describe('useBookCoverUrl', () => {
     const { result, rerender } = renderHook(
       ({ bookId, coverUrl }) => useBookCoverUrl({ bookId, coverUrl }),
       {
-        initialProps: { bookId: 'book-1', coverUrl: 'opfs-cover://book-1' },
+        initialProps: { bookId: 'book-1', coverUrl: 'opfs-cover://book-1' as string | undefined },
       }
     )
 
@@ -136,7 +134,7 @@ describe('useBookCoverUrl', () => {
     const { result, rerender } = renderHook(
       ({ bookId, coverUrl }) => useBookCoverUrl({ bookId, coverUrl }),
       {
-        initialProps: { bookId: 'book-1', coverUrl: 'opfs-cover://book-1' },
+        initialProps: { bookId: 'book-1', coverUrl: 'opfs-cover://book-1' as string | undefined },
       }
     )
 
@@ -156,9 +154,7 @@ describe('useBookCoverUrl', () => {
   })
 
   it('handles rejection from OpfsStorageService gracefully', async () => {
-    vi.mocked(opfsStorageService.getCoverUrl).mockRejectedValue(
-      new Error('Storage error')
-    )
+    vi.mocked(opfsStorageService.getCoverUrl).mockRejectedValue(new Error('Storage error'))
 
     const { result } = renderHook(() =>
       useBookCoverUrl({ bookId: 'book-1', coverUrl: 'opfs-cover://book-1' })

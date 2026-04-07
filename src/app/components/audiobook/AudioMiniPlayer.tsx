@@ -35,7 +35,10 @@ export function AudioMiniPlayer() {
 
   const books = useBookStore(s => s.books)
   const book = books.find(b => b.id === currentBookId) ?? null
-  const resolvedCoverUrl = useBookCoverUrl({ bookId: currentBookId ?? '', coverUrl: book?.coverUrl })
+  const resolvedCoverUrl = useBookCoverUrl({
+    bookId: currentBookId ?? '',
+    coverUrl: book?.coverUrl,
+  })
 
   // Hide when no book or when on the full player page
   const isOnPlayerPage = pathname.includes(`/library/${currentBookId}/read`)

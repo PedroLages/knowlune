@@ -100,9 +100,11 @@ describe('IndexedDB fallback mode', () => {
     const { db: mockDb } = await import('@/db/schema')
     vi.mocked(mockDb.bookFiles.where).mockReturnValue({
       equals: vi.fn().mockReturnValue({
-        toArray: vi.fn().mockResolvedValue([
-          { bookId: 'book-1', filename: 'book.epub', blob: new Blob(['data']) },
-        ]),
+        toArray: vi
+          .fn()
+          .mockResolvedValue([
+            { bookId: 'book-1', filename: 'book.epub', blob: new Blob(['data']) },
+          ]),
         delete: vi.fn(),
         filter: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }),
       }),
@@ -212,10 +214,7 @@ describe('OPFS mode', () => {
   })
 
   it('readBookFile returns file from OPFS path', async () => {
-    const file = await opfsStorageService.readBookFile(
-      '/knowlune/books/book-1/book.epub',
-      'book-1'
-    )
+    const file = await opfsStorageService.readBookFile('/knowlune/books/book-1/book.epub', 'book-1')
     expect(file).not.toBeNull()
   })
 
@@ -226,10 +225,7 @@ describe('OPFS mode', () => {
 
   it('readBookFile returns null when file not found', async () => {
     mockRoot.getDirectoryHandle.mockRejectedValue(new Error('Not found'))
-    const file = await opfsStorageService.readBookFile(
-      '/knowlune/books/book-1/book.epub',
-      'book-1'
-    )
+    const file = await opfsStorageService.readBookFile('/knowlune/books/book-1/book.epub', 'book-1')
     expect(file).toBeNull()
   })
 })
