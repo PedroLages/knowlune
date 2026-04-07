@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router'
 import { BookOpen, Cloud, Headphones, ArrowRightLeft, Clock } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { BookStatusBadge } from './BookStatusBadge'
+import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 
 /** Find the current chapter title based on playback position in seconds */
 function findCurrentChapterTitle(chapters: Book['chapters'], posSeconds: number): string {
@@ -46,6 +47,7 @@ interface BookCardProps {
 
 export const BookCard = memo(function BookCard({ book }: BookCardProps) {
   const navigate = useNavigate()
+  const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
 
   const readerPath =
     book.format === 'epub' || book.format === 'audiobook'
@@ -78,9 +80,9 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
       >
         {/* Square cover */}
         <div className="relative aspect-square rounded-2xl overflow-hidden shadow-card-ambient group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_var(--shadow-brand)] transition-all duration-300">
-          {book.coverUrl ? (
+          {resolvedCoverUrl ? (
             <img
-              src={book.coverUrl}
+              src={resolvedCoverUrl}
               alt={`Cover of ${book.title}`}
               loading="lazy"
               className="h-full w-full object-cover"
@@ -169,9 +171,9 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
     >
       {/* Cover — portrait */}
       <div className="relative overflow-hidden aspect-[2/3]">
-        {book.coverUrl ? (
+        {resolvedCoverUrl ? (
           <img
-            src={book.coverUrl}
+            src={resolvedCoverUrl}
             alt={`Cover of ${book.title}`}
             loading="lazy"
             className="h-full w-full object-cover"

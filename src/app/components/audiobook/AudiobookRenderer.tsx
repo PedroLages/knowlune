@@ -31,6 +31,7 @@ import { PostSessionBookmarkReview } from './PostSessionBookmarkReview'
 import { useBookStore } from '@/stores/useBookStore'
 import { db } from '@/db/schema'
 import { sharedAudioRef } from '@/app/hooks/useAudioPlayer'
+import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import type { Book } from '@/data/types'
 
 interface AudiobookRendererProps {
@@ -68,6 +69,7 @@ export function AudiobookRenderer({
   } = useAudioPlayer(book)
 
   const setCurrentBook = useAudioPlayerStore(s => s.setCurrentBook)
+  const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
   const { activeOption, badgeText, setTimer, cancelTimer } = useSleepTimer()
   // Post-session bookmark review
   const [postSessionOpen, setPostSessionOpen] = useState(false)
@@ -242,7 +244,7 @@ export function AudiobookRenderer({
     title: currentChapterTitle,
     artist: book.author,
     album: book.title,
-    artworkUrl: book.coverUrl ?? undefined,
+    artworkUrl: resolvedCoverUrl ?? undefined,
     isPlaying,
     onPlay: play,
     onPause: pause,
@@ -273,11 +275,11 @@ export function AudiobookRenderer({
   return (
     <>
     {/* Blurred cover background */}
-    {book.coverUrl && (
+    {resolvedCoverUrl && (
       <div
         className="fixed inset-0 z-0 pointer-events-none"
         style={{
-          backgroundImage: `url(${book.coverUrl})`,
+          backgroundImage: `url(${resolvedCoverUrl})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           filter: 'blur(80px) saturate(1.5)',
@@ -290,9 +292,9 @@ export function AudiobookRenderer({
     <div className="relative z-10 flex flex-col items-center gap-8 p-6 max-w-lg mx-auto w-full min-h-[60vh] justify-center">
       {/* Cover Art */}
       <div className="w-full max-w-80 aspect-square rounded-[24px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] bg-muted flex items-center justify-center">
-        {book.coverUrl ? (
+        {resolvedCoverUrl ? (
           <img
-            src={book.coverUrl}
+            src={resolvedCoverUrl}
             alt={`Cover of ${book.title}`}
             className="h-full w-full object-cover"
           />

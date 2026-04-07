@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/app/components/ui/select'
 import { useBookStore } from '@/stores/useBookStore'
+import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 
 interface BookListItemProps {
   book: Book
@@ -49,6 +50,7 @@ const STATUS_OPTIONS: { value: BookStatus; label: string }[] = [
 export const BookListItem = memo(function BookListItem({ book }: BookListItemProps) {
   const navigate = useNavigate()
   const updateBookStatus = useBookStore(s => s.updateBookStatus)
+  const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
 
   // E84/E87: EPUB and audiobook books open the reader; other formats stay on library detail (future)
   const readerPath =
@@ -85,9 +87,9 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
     >
       {/* Thumbnail */}
       <div className="size-16 flex-shrink-0 rounded-lg overflow-hidden">
-        {book.coverUrl ? (
+        {resolvedCoverUrl ? (
           <img
-            src={book.coverUrl}
+            src={resolvedCoverUrl}
             alt={`Cover of ${book.title}`}
             loading="lazy"
             className="h-full w-full object-cover"

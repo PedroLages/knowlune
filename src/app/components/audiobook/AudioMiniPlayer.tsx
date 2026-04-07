@@ -20,6 +20,7 @@ import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
 import { useBookStore } from '@/stores/useBookStore'
 import { sharedAudioRef } from '@/app/hooks/useAudioPlayer'
 import { formatAudioTime } from '@/app/hooks/useAudioPlayer'
+import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 
 export function AudioMiniPlayer() {
   const navigate = useNavigate()
@@ -34,6 +35,7 @@ export function AudioMiniPlayer() {
 
   const books = useBookStore(s => s.books)
   const book = books.find(b => b.id === currentBookId) ?? null
+  const resolvedCoverUrl = useBookCoverUrl({ bookId: currentBookId ?? '', coverUrl: book?.coverUrl })
 
   // Hide when no book or when on the full player page
   const isOnPlayerPage = pathname.includes(`/library/${currentBookId}/read`)
@@ -102,9 +104,9 @@ export function AudioMiniPlayer() {
           className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-muted flex items-center justify-center shadow-md"
           aria-label="Open full player"
         >
-          {book.coverUrl ? (
+          {resolvedCoverUrl ? (
             <img
-              src={book.coverUrl}
+              src={resolvedCoverUrl}
               alt={`Cover of ${book.title}`}
               className="h-full w-full object-cover"
             />

@@ -40,6 +40,7 @@ import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { cn } from '@/app/components/ui/utils'
 import { toast } from 'sonner'
 import { ChapterMappingEditor } from './ChapterMappingEditor'
+import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 
 /** Confidence threshold above which mappings auto-save after confirmation. */
 const HIGH_CONFIDENCE_THRESHOLD = 0.85
@@ -64,6 +65,8 @@ function BookPickerCard({
   selected: boolean
   onClick: () => void
 }) {
+  const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
+
   return (
     <button
       type="button"
@@ -77,9 +80,9 @@ function BookPickerCard({
     >
       {/* Thumbnail */}
       <div className="size-12 flex-shrink-0 rounded-lg overflow-hidden">
-        {book.coverUrl ? (
+        {resolvedCoverUrl ? (
           <img
-            src={book.coverUrl}
+            src={resolvedCoverUrl}
             alt={`Cover of ${book.title}`}
             className="h-full w-full object-cover"
           />
