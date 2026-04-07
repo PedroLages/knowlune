@@ -54,24 +54,27 @@ Skip if resuming AND `code-review-testing` in `review_gates_passed` AND report f
 
 Task({
   subagent_type: "design-review",
-  prompt: "Review story E##-S## changes. Affected routes: [mapped from files]. Focus on: [ACs that involve UI]. Git diff summary: [key changes].",
+  run_in_background: true,
+  prompt: "Review story E##-S## changes. Affected routes: [mapped from files]. Focus on: [ACs that involve UI]. Git diff summary: [key changes]. Return only: STATUS (PASS/WARNINGS/FAIL), blocker count, high count, report file path.",
   description: "Design review E##-S##"
 })
 
 Task({
   subagent_type: "code-review",
+  run_in_background: true,
   prompt: "Review story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes.
 
 Test anti-patterns detected (step g validation):
 [Insert validation findings if any LOW severity issues were found, or 'No anti-patterns detected' if clean]
 
-Focus on architecture, security, correctness, silent failures, test anti-patterns (section 5.5), and Knowlune stack patterns. Score each finding with confidence (0-100).",
+Focus on architecture, security, correctness, silent failures, test anti-patterns (section 5.5), and Knowlune stack patterns. Score each finding with confidence (0-100). Return only: STATUS (PASS/WARNINGS/FAIL), blocker count, high count, total findings, report file path.",
   description: "Code review E##-S##"
 })
 
 Task({
   subagent_type: "code-review-testing",
-  prompt: "Review test coverage for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes. Map every acceptance criterion to its tests. Review test quality, isolation, and edge case coverage. Score each finding with confidence (0-100).",
+  run_in_background: true,
+  prompt: "Review test coverage for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes. Map every acceptance criterion to its tests. Review test quality, isolation, and edge case coverage. Score each finding with confidence (0-100). Return only: STATUS, AC coverage ratio, blocker count, high count, report file path.",
   description: "Test coverage review E##-S##"
 })
 ```
@@ -80,21 +83,23 @@ Task({
 
 ## Result Handling
 
-**As each agent returns**:
+**As each background agent completes** (silent — no visible output):
 
-1. Mark its todo → `completed`
-2. Validate the result:
-   - Check for errors in agent output
-   - Verify report file exists
-   - Ensure report has required severity sections
-3. If agent fails:
-   - Warn the user with specific error message
+1. TodoWrite: mark its todo → `completed`
+2. Parse the agent's minimal return (STATUS, counts, report path)
+3. If agent failed:
+   - Note in internal failure list (surfaced in consolidated report only — no immediate user output)
    - Do NOT add its gate to `review_gates_passed`
-   - Note failure in consolidated report
 4. If agent succeeds:
-   - Save report to appropriate location (see below)
-   - Parse severity sections (Blockers, High, Medium, Low/Nits)
+   - Verify report file exists at expected location
    - Add gate to `review_gates_passed`
+
+**After ALL agents complete** (batch collection):
+
+1. Read each report file from disk
+2. Parse severity sections (Blockers, High, Medium, Low/Nits)
+3. Run deduplication with consensus scoring (see below)
+4. Proceed to consolidated report
 
 ## Report Locations
 
