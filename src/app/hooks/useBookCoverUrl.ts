@@ -44,6 +44,7 @@ export function useBookCoverUrl({ bookId, coverUrl }: UseBookCoverUrlOptions): s
 
   useEffect(() => {
     let isCancelled = false
+    let effectBlobUrl: string | null = null
 
     const resolveCoverUrl = async () => {
       // No cover URL
@@ -61,10 +62,10 @@ export function useBookCoverUrl({ bookId, coverUrl }: UseBookCoverUrlOptions): s
       // Custom storage protocol - resolve via OpfsStorageService
       // Both opfs:// and opfs-cover:// resolve to the same blob URL
       try {
-        const url = await opfsStorageService.getCoverUrl(bookId)
+        effectBlobUrl = await opfsStorageService.getCoverUrl(bookId)
         if (!isCancelled) {
-          setResolvedUrl(url)
-          previousUrlRef.current = url
+          setResolvedUrl(effectBlobUrl)
+          previousUrlRef.current = effectBlobUrl
         }
       } catch {
         // silent-catch-ok: Resolution failed - show no cover (not an error condition)
@@ -74,10 +75,15 @@ export function useBookCoverUrl({ bookId, coverUrl }: UseBookCoverUrlOptions): s
 
     resolveCoverUrl()
 
-    // Cleanup: revoke previous blob URL when coverUrl changes or component unmounts
+    // Cleanup: revoke blob URLs when coverUrl changes or component unmounts.
+    // effectBlobUrl catches URLs created by cancelled effects (rapid re-renders),
+    // previousUrlRef catches the actively-displayed URL.
     return () => {
       isCancelled = true
-      if (previousUrlRef.current && previousUrlRef.current.startsWith('blob:')) {
+      if (effectBlobUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(effectBlobUrl)
+      }
+      if (previousUrlRef.current?.startsWith('blob:')) {
         URL.revokeObjectURL(previousUrlRef.current)
         previousUrlRef.current = null
       }
