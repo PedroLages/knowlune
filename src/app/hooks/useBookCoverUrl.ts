@@ -44,7 +44,6 @@ export function useBookCoverUrl({ bookId, coverUrl }: UseBookCoverUrlOptions): s
 
   useEffect(() => {
     let isCancelled = false
-    let blobUrl: string | null = null
 
     const resolveCoverUrl = async () => {
       // No cover URL
@@ -62,10 +61,10 @@ export function useBookCoverUrl({ bookId, coverUrl }: UseBookCoverUrlOptions): s
       // Custom storage protocol - resolve via OpfsStorageService
       // Both opfs:// and opfs-cover:// resolve to the same blob URL
       try {
-        blobUrl = await opfsStorageService.getCoverUrl(bookId)
+        const url = await opfsStorageService.getCoverUrl(bookId)
         if (!isCancelled) {
-          setResolvedUrl(blobUrl)
-          previousUrlRef.current = blobUrl
+          setResolvedUrl(url)
+          previousUrlRef.current = url
         }
       } catch {
         // silent-catch-ok: Resolution failed - show no cover (not an error condition)
