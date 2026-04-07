@@ -302,6 +302,13 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
   const alreadyLinked = !!book.linkedBookId
   const linkedBook = alreadyLinked ? books.find(b => b.id === book.linkedBookId) : null
 
+  // Resolve cover URLs (handles opfs:// and opfs-cover:// protocols)
+  const resolvedBookCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
+  const resolvedLinkedCoverUrl = useBookCoverUrl({
+    bookId: linkedBook?.id ?? '',
+    coverUrl: linkedBook?.coverUrl
+  })
+
   // Compute confidence for confirm view
   const avgConfidence = useMemo(() => {
     if (!mappings || mappings.length === 0) return 0
@@ -336,8 +343,8 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
                 </p>
                 <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3">
                   <div className="size-10 flex-shrink-0 rounded-lg overflow-hidden">
-                    {book.coverUrl ? (
-                      <img src={book.coverUrl} alt="" className="h-full w-full object-cover" />
+                    {resolvedBookCoverUrl ? (
+                      <img src={resolvedBookCoverUrl} alt="" className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-muted rounded-lg">
                         {book.format === 'audiobook' ? (
@@ -373,9 +380,9 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
                   </p>
                   <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3">
                     <div className="size-10 flex-shrink-0 rounded-lg overflow-hidden">
-                      {linkedBook.coverUrl ? (
+                      {resolvedLinkedCoverUrl ? (
                         <img
-                          src={linkedBook.coverUrl}
+                          src={resolvedLinkedCoverUrl}
                           alt=""
                           className="h-full w-full object-cover"
                         />

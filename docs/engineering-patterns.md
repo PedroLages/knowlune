@@ -396,3 +396,103 @@ The Content Security Policy includes `ws: wss:` wildcards for WebSocket connecti
 3. All ABS connections require API key authentication
 
 **Reference:** E102-S04 (Socket.IO via native WebSocket)
+
+## Resource URL Resolution Hooks
+
+When working with stored resources that use custom protocols (e.g., OPFS with `opfs://` identifiers), use a React hook to resolve URLs to displayable blob URLs with automatic lifecycle management.
+
+**Why this pattern:**
+
+1. **Custom protocols can't be used directly**: `opfs://` and `opfs-cover://` identifiers are meaningful to the storage service but not to the browser. An `<img src="opfs://book123">` won't load — the browser doesn't understand the protocol.
+
+2. **Blob URLs require cleanup**: Converting stored files to blob URLs via `URL.createObjectURL()` creates a reference that must be revoked with `URL.revokeObjectURL()` to prevent memory leaks.
+
+3. **Reusability**: Any future resource that needs blob URL resolution (audio files, document previews, etc.) can follow this pattern.
+
+**Template for resource URL hooks:**
+
+```typescript
+// src/app/hooks/useBookCoverUrl.ts (reference implementation)
+import { useEffect, useState, useRef } from 'react'
+
+interface UseResourceUrlOptions {
+  resourceId: string
+  url: string | undefined
+}
+
+export function useResourceUrl({ resourceId, url }: UseResourceUrlOptions): string | null {
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null)
+  const previousUrlRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    let isCancelled = false
+    let blobUrl: string | null = null
+
+    const resolveUrl = async () => {
+      // No URL provided
+      if (!url) {
+        if (!isCancelled) setResolvedUrl(null)
+        return
+      }
+
+      // External URL - use directly
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        if (!isCancelled) setResolvedUrl(url)
+        return
+      }
+
+      // Custom storage protocol - resolve via service
+      try {
+        blobUrl = await storageService.getUrl(resourceId)
+        if (!isCancelled) {
+          setResolvedUrl(blobUrl)
+          previousUrlRef.current = blobUrl
+        }
+      } catch {
+        if (!isCancelled) setResolvedUrl(null)
+      }
+    }
+
+    resolveUrl()
+
+    // Cleanup: revoke blob URL when URL changes or component unmounts
+    return () => {
+      isCancelled = true
+      if (previousUrlRef.current && previousUrlRef.current.startsWith('blob:')) {
+        URL.revokeObjectURL(previousUrlRef.current)
+        previousUrlRef.current = null
+      }
+    }
+  }, [resourceId, url])
+
+  return resolvedUrl
+}
+```
+
+**Usage example:**
+
+```typescript
+// In your component
+const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
+
+if (resolvedCoverUrl) {
+  return <img src={resolvedCoverUrl} alt="Cover" />
+}
+return <div className="placeholder">No cover</div>
+```
+
+**Key implementation details:**
+
+- Use `useRef` to track the previous blob URL for cleanup
+- Always revoke the previous URL when creating a new one (prevents leaks)
+- Use an `isCancelled` flag to prevent state updates after unmount
+- Handle both external URLs (passthrough) and custom storage protocols
+- Return `null` for missing URLs to allow graceful fallbacks
+
+**Custom storage protocols supported:**
+
+- `opfs://path` — Origin Private File System file
+- `opfs-cover://bookId` — OPFS-stored cover image
+- Future: `opfs-audio://`, `opfs-doc://`, etc.
+
+**Reference:** E107-S01 (useBookCoverUrl hook)
