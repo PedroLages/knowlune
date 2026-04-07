@@ -224,7 +224,7 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
                 data-testid="author-search-input"
               />
             </div>
-            <div className="max-h-[240px] overflow-y-auto pr-1 space-y-3">
+            <div className="overflow-y-auto pr-1 space-y-3">
               {filteredAuthors.map(author => (
                 <label key={author} className="flex items-center gap-3 cursor-pointer group">
                   <Checkbox
