@@ -68,7 +68,7 @@ export function useBookCoverUrl({ bookId, coverUrl }: UseBookCoverUrlOptions): s
           previousUrlRef.current = blobUrl
         }
       } catch {
-        // Resolution failed - show no cover
+        // silent-catch-ok: Resolution failed - show no cover (not an error condition)
         if (!isCancelled) setResolvedUrl(null)
       }
     }
