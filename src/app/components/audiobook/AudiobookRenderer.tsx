@@ -244,7 +244,10 @@ export function AudiobookRenderer({
     title: currentChapterTitle,
     artist: book.author,
     album: book.title,
-    artworkUrl: resolvedCoverUrl ?? undefined,
+    artworkUrl:
+      resolvedCoverUrl && /^(blob:|https?:|data:image\/)/.test(resolvedCoverUrl)
+        ? resolvedCoverUrl
+        : undefined,
     isPlaying,
     onPlay: play,
     onPause: pause,
