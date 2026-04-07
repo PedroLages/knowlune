@@ -471,3 +471,15 @@ issues:
     scheduled_for: null
     fixed_by: null
     notes: "Pre-existing config issue — eslint-disable comment references react-hooks/exhaustive-deps but the rule is not installed. Likely need to add eslint-plugin-react-hooks to dependencies or update eslint.config.js."
+
+  - id: KI-038
+    type: lint
+    summary: "react-hooks/exhaustive-deps rule not found — ESLint config references missing plugin (same as KI-037)"
+    file: "src/app/pages/Library.tsx:97"
+    severity: medium
+    discovered_by: E107-S01
+    discovered_on: 2026-04-08
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Same root cause as KI-037 — pre-existing eslint-disable comment references missing react-hooks/exhaustive-deps rule. Fix both together in one chore commit."
