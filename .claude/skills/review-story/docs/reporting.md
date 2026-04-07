@@ -123,17 +123,16 @@ Report: ${BASE_PATH}/docs/reviews/code/code-review-testing-{date}-{id}.md
 
 **Verdict: PASS** — Story is ready to ship.
 
-### Next Step
+**High-priority findings** (N): [1-line each, only if N > 0 — omit section if 0]
 
-Run `/finish-story` to create the PR (lightweight — reviews already done).
-
-Reports saved:
-- `${BASE_PATH}/docs/reviews/design/design-review-{date}-{id}.md`
-- `${BASE_PATH}/docs/reviews/code/code-review-{date}-{id}.md`
-- `${BASE_PATH}/docs/reviews/code/code-review-testing-{date}-{id}.md`
+Full report: `docs/reviews/consolidated-review-{date}-{story-id}.md`
+Next: `/finish-story`
 
 ---
 ```
+
+**Save consolidated report to file**: `${BASE_PATH}/docs/reviews/consolidated-review-{YYYY-MM-DD}-{story-id}.md`
+This file contains the full report including medium/nit findings. The in-conversation output shows only the gate table, verdict, and high-priority findings.
 
 ### BLOCKED Template (Blockers Found)
 
