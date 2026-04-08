@@ -44,6 +44,8 @@ interface ReaderHeaderProps {
   onReadAloud?: () => void
   /** When provided, renders a "Switch to Listening" button. Wired by BookReader when a chapter mapping exists (E103-S02). */
   onSwitchToListening?: () => void
+  /** Reading progress (0-1) for chapter name fallback — displays as percentage when chapter is unavailable */
+  readingProgress?: number
 }
 
 export function ReaderHeader({
@@ -56,8 +58,12 @@ export function ReaderHeader({
   onHighlightsOpen,
   onReadAloud,
   onSwitchToListening,
+  readingProgress,
 }: ReaderHeaderProps) {
   const navigate = useNavigate()
+
+  // Chapter display: use chapter name when available, fall back to progress percentage
+  const chapterDisplay = currentChapter ?? (readingProgress !== undefined ? `${Math.round(readingProgress * 100)}%` : undefined)
 
   return (
     <header
@@ -92,13 +98,13 @@ export function ReaderHeader({
         >
           {title}
         </p>
-        {currentChapter && (
+        {chapterDisplay && (
           <p
             className="text-xs opacity-60 truncate leading-tight"
-            title={currentChapter}
+            title={chapterDisplay}
             data-testid="reader-chapter-title"
           >
-            {currentChapter}
+            {chapterDisplay}
           </p>
         )}
       </div>

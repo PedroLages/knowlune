@@ -1,14 +1,35 @@
 # Implementation Plan: E107-S03 Fix TOC Loading and Fallback
 
 **Story:** E107-S03 — Fix TOC Loading and Fallback
+**Epic:** E107 — Fix Books/Library Core Bugs
 **Started:** 2026-04-09
 **Status:** ready-for-dev
+**Complexity:** LOW
 
 ---
 
 ## Overview
 
-This story addresses TOC (Table of Contents) loading issues in the EPUB reader. Currently, there's no loading state for TOC, and no proper fallback when TOC is unavailable or fails to load.
+This bug fix adds reliable TOC loading states, empty state messaging, timeout fallbacks, and chapter tracking fallback (progress percentage) to the EPUB reader. The goal is to provide confident navigation without broken/missing UI when TOC is unavailable.
+
+---
+
+## Acceptance Criteria
+
+- **AC-1**: TOC loading state is tracked and displayed in the TableOfContents panel
+- **AC-2**: Empty TOC displays a user-friendly message in the TableOfContents panel
+- **AC-3**: TOC that fails to load or times out gracefully falls back to empty state
+- **AC-4**: Chapter tracking in BookReader works even when TOC is unavailable (progress percentage fallback)
+- **AC-5**: TableOfContents panel button remains enabled but shows empty state when TOC is unavailable
+
+---
+
+## Dependencies
+
+✅ **E107-S01** (Fix Cover Image Display) — DONE  
+✅ **E107-S02** (Fix EPUB Reader Rendering) — DONE
+
+**No external dependencies** — builds on existing E83-E104 implementation.
 
 ## Current State Analysis
 
@@ -227,11 +248,34 @@ test('TOC shows loading indicator initially', async ({ page }) => {
 3. **Rapid TOC open/close**: Loading state should persist correctly across panel open/close cycles
 4. **Remote EPUB loading**: TOC may load slower than local EPUBs — timeout accommodates network latency
 
-## Dependencies
+## Existing Patterns Reference
 
-- **React**: useState, useEffect, useCallback hooks
-- **lucide-react**: Loader2 icon for loading state
-- **epubjs**: NavItem type already in use
+| Pattern | Location | Reference |
+|---------|----------|-----------|
+| Timeout with cleanup | BookReader.tsx | Lines 276-296 (idleTimerRef pattern) |
+| Loading spinner | EpubRenderer.tsx | Lines 243-250 (loadingView) |
+| Progress calculation | ReaderFooter.tsx | Line 42 (`Math.round(progress * 100)`) |
+| Empty state base | TableOfContents.tsx | Lines 112-115 (enhance, don't replace) |
+| Conditional chapter | ReaderHeader.tsx | Lines 95-103 (add else branch) |
+
+## Design Guidance
+
+See [E107-S03 Design Guidance](./E107-S03-design-guidance.md) for:
+- Loading state design (spinner matching EpubRenderer)
+- Empty state design (icon + two-tier messaging)
+- Chapter tracking fallback (progress percentage display)
+- Component props updates
+- Accessibility checklist
+- Visual QA checklist
+
+## Package Dependencies
+
+- **React**: useState, useEffect, useCallback hooks (already in use)
+- **lucide-react**: BookOpen icon (already imported for empty state)
+- **epubjs**: NavItem type (already in use)
+- **shadcn/ui**: Sheet, ScrollArea components (already in use)
+
+**No new dependencies required.**
 
 ## Risks and Mitigations
 

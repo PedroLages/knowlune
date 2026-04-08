@@ -117,6 +117,7 @@ export function BookReader() {
   // Set to true once EPUB renders successfully — triggers reading session start (E85-S06)
   const [isEpubReady, setIsEpubReady] = useState(false)
   const [toc, setToc] = useState<NavItem[]>([])
+  const [isTocLoading, setIsTocLoading] = useState(true)
   const [currentHref, setCurrentHref] = useState<string | undefined>(undefined)
   const [currentPage, setCurrentPage] = useState<number | undefined>(undefined)
   const [totalPages, setTotalPages] = useState<number | undefined>(undefined)
@@ -125,6 +126,17 @@ export function BookReader() {
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const blobUrlRef = useRef<string | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Timeout effect for TOC loading — fallback to empty state after 5 seconds
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (isTocLoading) {
+        setIsTocLoading(false)
+      }
+    }, 5000) // 5 second timeout
+
+    return () => clearTimeout(timeoutId)
+  }, [isTocLoading])
 
   // Reading session tracking and streak integration (E85-S06)
   useReadingSession({ bookId: bookId ?? '', isReady: isEpubReady })
@@ -218,6 +230,7 @@ export function BookReader() {
 
     let cancelled = false
     setIsLoadingContent(true)
+    setIsTocLoading(true) // Reset TOC loading state when loading new content
     setLoadError(null)
     setRemoteEpubError(null)
 
@@ -461,10 +474,11 @@ export function BookReader() {
     return null
   }
 
-  /** TOC loaded — store TOC and set initial chapter name */
+  /** TOC loaded — store TOC, clear loading state, and set initial chapter name */
   const handleTocLoaded = useCallback(
     (loadedToc: NavItem[]) => {
       setToc(loadedToc)
+      setIsTocLoading(false)
       if (loadedToc.length > 0 && !currentChapter) {
         setCurrentChapter(loadedToc[0].label)
       }
@@ -675,6 +689,7 @@ export function BookReader() {
               }
             : undefined
         }
+        readingProgress={readingProgress}
       />
 
       {/* Main content area */}
@@ -746,6 +761,7 @@ export function BookReader() {
         toc={toc}
         currentHref={currentHref}
         rendition={renditionRef.current}
+        isLoading={isTocLoading}
       />
 
       {/* Reading Settings panel (E84-S03) */}
