@@ -11,18 +11,34 @@
  *
  * @module EpubRenderer
  */
-import { useRef, useEffect, useCallback, useState } from 'react'
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { EpubView } from 'react-reader'
 import type { Rendition } from 'epubjs'
 import type { NavItem } from 'epubjs'
 import { useReaderStore } from '@/stores/useReaderStore'
 
-/** Reader theme backgrounds applied to the EPUB iframe */
+/**
+ * Reader theme backgrounds applied to the EPUB iframe body via epub.js rendition.themes.default().
+ *
+ * NOTE: These are intentionally hardcoded hex values, not design tokens.
+ * epub.js injects these into an isolated iframe where CSS custom properties
+ * from the host document are not inherited. Design tokens (CSS vars) would
+ * resolve to empty strings inside the iframe, breaking theming entirely.
+ */
 const READER_THEME_STYLES: Record<string, { background: string; color: string }> = {
   light: { background: '#FAF5EE', color: '#1a1a1a' },
   sepia: { background: '#F4ECD8', color: '#3a2a1a' },
   dark: { background: '#1a1a1a', color: '#d4d4d4' },
 }
+
+/**
+ * Container background Tailwind classes derived from READER_THEME_STYLES backgrounds (Bug 2 fix).
+ * The container bg must match the iframe bg to prevent color flash at page edges.
+ * Uses Tailwind's arbitrary value syntax since these are epub-specific colors, not design tokens.
+ */
+const READER_CONTAINER_BG: Record<string, string> = Object.fromEntries(
+  Object.entries(READER_THEME_STYLES).map(([key, { background }]) => [key, `bg-[${background}]`])
+)
 
 /** Minimum horizontal swipe distance to trigger page turn */
 const SWIPE_THRESHOLD_PX = 50
@@ -53,12 +69,19 @@ export function EpubRenderer({
   const lineHeight = useReaderStore(s => s.lineHeight)
   const toggleHeader = useReaderStore(s => s.toggleHeader)
   const renditionRef = useRef<Rendition | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+
+  // Track when rendition is ready for ResizeObserver binding
+  const [renditionReady, setRenditionReady] = useState(false)
 
   // Page turn direction for animation class
   const [pageTurnDirection, setPageTurnDirection] = useState<'left' | 'right' | null>(null)
 
   // Swipe tracking
   const swipeTouchStart = useRef<{ x: number; y: number } | null>(null)
+
+  // Timer ref for page turn animation reset (cleared on unmount to avoid setState after unmount)
+  const pageTurnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   /** Apply current theme + font settings to epub.js rendition */
   const applyTheme = useCallback(
@@ -90,6 +113,7 @@ export function EpubRenderer({
     (rendition: Rendition) => {
       renditionRef.current = rendition
       applyTheme(rendition)
+      setRenditionReady(true)
       onRenditionReady?.(rendition)
     },
     [applyTheme, onRenditionReady]
@@ -102,6 +126,34 @@ export function EpubRenderer({
     }
   }, [applyTheme])
 
+  /** Clear page turn animation timer on unmount to avoid setState after unmount */
+  useEffect(() => {
+    return () => {
+      if (pageTurnTimerRef.current !== null) {
+        clearTimeout(pageTurnTimerRef.current)
+      }
+    }
+  }, [])
+
+  /** Resize epub.js rendition when container dimensions change (Bug 1 fix — AC-1, AC-2) */
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container || !renditionReady) return
+
+    const observer = new ResizeObserver(entries => {
+      const entry = entries[0]
+      if (!entry) return
+      const { width, height } = entry.contentRect
+      // Read from ref in callback to avoid capturing stale rendition at setup time
+      if (width > 0 && height > 0 && renditionRef.current) {
+        renditionRef.current.resize(width, height)
+      }
+    })
+
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [renditionReady])
+
   /** Navigate to previous page */
   const navigatePrev = useCallback(() => {
     if (!renditionRef.current) return
@@ -109,7 +161,8 @@ export function EpubRenderer({
     renditionRef.current.prev().catch(() => {
       // silent-catch-ok: at first page, prev() is a no-op
     })
-    setTimeout(() => setPageTurnDirection(null), 250)
+    if (pageTurnTimerRef.current !== null) clearTimeout(pageTurnTimerRef.current)
+    pageTurnTimerRef.current = setTimeout(() => setPageTurnDirection(null), 250)
   }, [])
 
   /** Navigate to next page */
@@ -119,7 +172,8 @@ export function EpubRenderer({
     renditionRef.current.next().catch(() => {
       // silent-catch-ok: at last page, next() is a no-op
     })
-    setTimeout(() => setPageTurnDirection(null), 250)
+    if (pageTurnTimerRef.current !== null) clearTimeout(pageTurnTimerRef.current)
+    pageTurnTimerRef.current = setTimeout(() => setPageTurnDirection(null), 250)
   }, [])
 
   /** Touch start — record start position for swipe detection */
@@ -157,9 +211,23 @@ export function EpubRenderer({
         ? 'motion-safe:animate-[slide-right_200ms_ease-out]'
         : ''
 
+  // Container background matching the active reader theme (Bug 2 fix — AC-3)
+  const containerBg = READER_CONTAINER_BG[theme] ?? READER_CONTAINER_BG.light
+
+  // Memoize epubOptions to prevent unnecessary re-renders (Bug 3 fix — AC-4)
+  const epubOptions = useMemo(
+    () => ({
+      spread: 'none' as const, // Force single-page layout on all screen widths (AC-4)
+      flow: 'paginated' as const, // Explicit paginated flow for clarity
+      allowPopups: false,
+    }),
+    []
+  )
+
   return (
     <div
-      className={`relative h-full w-full ${animationClass}`}
+      ref={containerRef}
+      className={`relative h-full w-full ${containerBg} ${animationClass}`}
       data-testid="epub-renderer"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
@@ -171,10 +239,7 @@ export function EpubRenderer({
         locationChanged={onLocationChanged}
         tocChanged={onTocLoaded}
         getRendition={handleGetRendition}
-        epubOptions={{
-          // Use default (non-continuous) manager for performance (AC1 NFR1)
-          allowPopups: false,
-        }}
+        epubOptions={epubOptions}
         loadingView={
           <div className="flex h-full items-center justify-center">
             <div
@@ -185,36 +250,40 @@ export function EpubRenderer({
         }
       />
 
-      {/* Interaction zones overlaid on epub content */}
-      {/* Left zone (prev) — 33% */}
-      <div
-        className="absolute inset-y-0 left-0 w-[33%] cursor-pointer"
-        onClick={navigatePrev}
-        role="button"
-        tabIndex={-1}
-        aria-label="Previous page"
-        data-reader-zone="prev"
-      />
+      {/* Interaction zones overlaid on epub content (Bug 4 fix — AC-5)
+          Container uses pointer-events-none so epub.js iframe receives scroll/select events.
+          Individual zones use pointer-events-auto to capture tap/click for navigation. */}
+      <div className="pointer-events-none absolute inset-0 z-10">
+        {/* Left zone (prev) — 33% */}
+        <div
+          className="pointer-events-auto absolute inset-y-0 left-0 w-[33%] cursor-pointer"
+          onClick={navigatePrev}
+          role="button"
+          tabIndex={-1}
+          aria-label="Previous page"
+          data-reader-zone="prev"
+        />
 
-      {/* Center zone (34%) — toggle header/footer visibility */}
-      <div
-        className="absolute inset-y-0 left-[33%] w-[34%] cursor-pointer"
-        onClick={toggleHeader}
-        role="button"
-        tabIndex={-1}
-        aria-label="Toggle reader controls"
-        data-reader-zone="toggle"
-      />
+        {/* Center zone (34%) — toggle header/footer visibility */}
+        <div
+          className="pointer-events-auto absolute inset-y-0 left-[33%] w-[34%] cursor-pointer"
+          onClick={toggleHeader}
+          role="button"
+          tabIndex={-1}
+          aria-label="Toggle reader controls"
+          data-reader-zone="toggle"
+        />
 
-      {/* Right zone (next) — 33% */}
-      <div
-        className="absolute inset-y-0 right-0 w-[33%] cursor-pointer"
-        onClick={navigateNext}
-        role="button"
-        tabIndex={-1}
-        aria-label="Next page"
-        data-reader-zone="next"
-      />
+        {/* Right zone (next) — 33% */}
+        <div
+          className="pointer-events-auto absolute inset-y-0 right-0 w-[33%] cursor-pointer"
+          onClick={navigateNext}
+          role="button"
+          tabIndex={-1}
+          aria-label="Next page"
+          data-reader-zone="next"
+        />
+      </div>
 
       {/* Live region for page change announcements (accessibility) */}
       <div aria-live="polite" aria-atomic="true" className="sr-only" id="reader-page-announce" />

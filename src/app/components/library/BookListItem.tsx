@@ -93,7 +93,9 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
             alt={`Cover of ${book.title}`}
             loading="lazy"
             className="h-full w-full object-cover"
-            onError={(e) => { e.currentTarget.style.display = 'none' }}
+            onError={e => {
+              e.currentTarget.style.display = 'none'
+            }}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-muted rounded-lg">

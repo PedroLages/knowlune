@@ -253,9 +253,7 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
         >
           <DialogHeader>
             <DialogTitle>{dialogTitle}</DialogTitle>
-            <DialogDescription id="abs-settings-description">
-              {dialogDescription}
-            </DialogDescription>
+            <DialogDescription id="abs-settings-description">{dialogDescription}</DialogDescription>
           </DialogHeader>
 
           <div className="max-h-[70vh] overflow-y-auto">

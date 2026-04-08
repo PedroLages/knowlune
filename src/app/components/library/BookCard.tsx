@@ -86,7 +86,9 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
               alt={`Cover of ${book.title}`}
               loading="lazy"
               className="h-full w-full object-cover"
-              onError={(e) => { e.currentTarget.style.display = 'none' }}
+              onError={e => {
+                e.currentTarget.style.display = 'none'
+              }}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-muted">
@@ -182,7 +184,9 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
             alt={`Cover of ${book.title}`}
             loading="lazy"
             className="h-full w-full object-cover"
-            onError={(e) => { e.currentTarget.style.display = 'none' }}
+            onError={e => {
+              e.currentTarget.style.display = 'none'
+            }}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-muted">
