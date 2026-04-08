@@ -562,59 +562,63 @@ Mark the first todo as `in_progress` and proceed:
    **Dispatch all non-skipped agents in a single message with `run_in_background: true`**:
 
    ```
-   // All dispatched in background — they run concurrently with minimal returns:
+   // All dispatched in background — they run concurrently with structured returns:
+   //
+   // STRUCTURED RETURN FORMAT (all agents):
+   //   STATUS: PASS|WARNINGS|FAIL
+   //   FINDINGS:
+   //     BLOCKER: [1-line description — file:line]
+   //     HIGH: [1-line description — file:line]
+   //     MEDIUM: [1-line description — file:line]
+   //   COUNTS: blockers=N, high=N, medium=N, total=N
+   //   REPORT: <full path to saved report>
 
    Task({
      subagent_type: "design-review",
      run_in_background: true,
-     prompt: "Review story E##-S## changes. Affected routes: [mapped from files]. Focus on: [ACs that involve UI]. Git diff summary: [key changes]. Return only: STATUS (PASS/WARNINGS/FAIL), blocker count, high count, report file path.",
+     prompt: "Story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Routes: [mapped from files]. ACs with UI: [list]. Save report to ${BASE_PATH}/docs/reviews/design/design-review-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per finding with severity: description — file:line), COUNTS, REPORT path.",
      description: "Design review E##-S##"
    })
 
    Task({
      subagent_type: "code-review",
      run_in_background: true,
-     prompt: "Review story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes.
-
-Test anti-patterns detected (step h validation):
-[Insert validation findings if any LOW severity issues were found, or 'No anti-patterns detected' if clean]
-
-Focus on architecture, security, correctness, silent failures, test anti-patterns (section 5.5), and Knowlune stack patterns. Score each finding with confidence (0-100). Return only: STATUS (PASS/WARNINGS/FAIL), blocker count, high count, total findings, report file path.",
+     prompt: "Story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Test anti-patterns: [findings or 'None']. Save report to ${BASE_PATH}/docs/reviews/code/code-review-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per finding with severity: description — file:line), COUNTS, REPORT path.",
      description: "Code review E##-S##"
    })
 
    Task({
      subagent_type: "code-review-testing",
      run_in_background: true,
-     prompt: "Review test coverage for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes. Map every acceptance criterion to its tests. Review test quality, isolation, and edge case coverage. Score each finding with confidence (0-100). Return only: STATUS, AC coverage ratio, blocker count, high count, report file path.",
+     prompt: "Story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Save report to ${BASE_PATH}/docs/reviews/code/code-review-testing-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per finding with severity: description — file:line), COUNTS (include ac_coverage=N/M), REPORT path.",
      description: "Test coverage review E##-S##"
    })
 
    Task({
      subagent_type: "general-purpose",
      run_in_background: true,
-     prompt: "Use the bmad-review-edge-case-hunter skill on story E##-S##. Run `git diff main...HEAD` to get the changed code. Pass the diff as the content to review. After the skill completes, format the JSON findings into a markdown report saved to ${BASE_PATH}/docs/reviews/code/edge-case-review-{YYYY-MM-DD}-{story-id}.md using this format:\n\n## Edge Case Review — E##-S## ({YYYY-MM-DD})\n\n### Unhandled Edge Cases\n\nFor each finding:\n**[location]** — `[trigger_condition]`\n> Consequence: [potential_consequence]\n> Guard: `[guard_snippet]`\n\n---\n**Total:** N unhandled edge cases found. Return only: STATUS, edge case count, report file path.",
+     prompt: "Use the bmad-review-edge-case-hunter skill on story E##-S##. Run `git diff main...HEAD` for the diff. Save report to ${BASE_PATH}/docs/reviews/code/edge-case-review-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per edge case with HIGH: description — file:line), COUNTS, REPORT path.",
      description: "Edge case review E##-S##"
    })
 
    Task({
      subagent_type: "performance-benchmark",
      run_in_background: true,
-     prompt: "Benchmark performance for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Dev server running at http://localhost:5173. Baseline at ${BASE_PATH}/docs/reviews/performance/baseline.json. Write report to ${BASE_PATH}/docs/reviews/performance/performance-benchmark-{YYYY-MM-DD}-{story-id}.md. Return only: STATUS (PASS/WARNING/REGRESSION), regression count, report file path.",
+     prompt: "Story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Dev server: http://localhost:5173. Baseline: ${BASE_PATH}/docs/reviews/performance/baseline.json. Save report to ${BASE_PATH}/docs/reviews/performance/performance-benchmark-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per regression/warning with severity: description — route), COUNTS, REPORT path.",
      description: "Performance benchmark E##-S##"
    })
 
    Task({
      subagent_type: "security-review",
      run_in_background: true,
-     prompt: "Security review for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changed files. Stack: React 19 + TypeScript, Vite 6, Dexie.js (IndexedDB), Zustand, BYOK AI keys, YouTube embeds, File System Access API. Config files to audit: .mcp.json (MCP servers), .claude/settings.json (hooks), .claude/hooks/ (hook scripts). Always run Phase 8 lightweight checks (8.1, 8.2, 8.5). Write report to ${BASE_PATH}/docs/reviews/security/security-review-{YYYY-MM-DD}-{story-id}.md. Return only: STATUS, phases executed, blocker count, high count, report file path.",
+     prompt: "Story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Always run Phase 8 lightweight checks (8.1, 8.2, 8.5). Save report to ${BASE_PATH}/docs/reviews/security/security-review-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per finding with severity: description — file:line), COUNTS (include phases=N/8), REPORT path.",
      description: "Security review E##-S##"
    })
 
    Task({
      subagent_type: "exploratory-qa",
      run_in_background: true,
-     prompt: "Exploratory QA for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Dev server at http://localhost:5173. Test affected routes functionally — click buttons, fill forms, check console errors. Write report to ${BASE_PATH}/docs/reviews/qa/exploratory-qa-{YYYY-MM-DD}-{story-id}.md. Return only: STATUS, health score, bug count, report file path.",
+     prompt: "Story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Dev server: http://localhost:5173. Save report to ${BASE_PATH}/docs/reviews/qa/exploratory-qa-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per bug with severity: description — route), COUNTS (include health=N/100), REPORT path.",
      description: "Exploratory QA E##-S##"
    })
 
@@ -622,7 +626,7 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
    Task({
      subagent_type: "openai-code-review",
      run_in_background: true,
-     prompt: "Adversarial code review via OpenAI API for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run: bash scripts/external-code-review.sh --provider openai --story-id {story-id} --output ${BASE_PATH}/docs/reviews/code/openai-code-review-{YYYY-MM-DD}-{story-id}.md. Return only: STATUS, finding count, report file path.",
+     prompt: "Story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run: bash scripts/external-code-review.sh --provider openai --story-id {story-id} --output ${BASE_PATH}/docs/reviews/code/openai-code-review-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per finding with severity: description — file:line), COUNTS, REPORT path.",
      description: "OpenAI adversarial review E##-S##"
    })
 
@@ -630,7 +634,7 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
    Task({
      subagent_type: "glm-code-review",
      run_in_background: true,
-     prompt: "Adversarial code review via GLM for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run: bash scripts/external-code-review.sh --provider glm --story-id {story-id} --output ${BASE_PATH}/docs/reviews/code/glm-code-review-{YYYY-MM-DD}-{story-id}.md. Return only: STATUS, finding count, report file path.",
+     prompt: "Story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run: bash scripts/external-code-review.sh --provider glm --story-id {story-id} --output ${BASE_PATH}/docs/reviews/code/glm-code-review-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per finding with severity: description — file:line), COUNTS, REPORT path.",
      description: "GLM adversarial review E##-S##"
    })
    ```
@@ -639,14 +643,16 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
 
    **As each background agent completes** (silent — no visible output):
    - TodoWrite: mark its todo → `completed`
-   - Parse the agent's minimal return (STATUS, counts, report path)
+   - Parse the agent's structured return (STATUS, FINDINGS, COUNTS, REPORT path)
    - If agent failed: note in internal failure list (surfaced in final report only)
-   - If successful: verify report file exists, update `review_gates_passed`
+   - If successful: verify report file exists, store parsed findings, update `review_gates_passed`
    - **Do NOT output any text to the user** — no per-agent completion messages
 
    **After ALL agents complete** (batch collection):
-   - Read each report file from disk to parse findings by severity
-   - Run deduplication with multi-model consensus scoring (unchanged logic below)
+   - Extract findings from structured agent returns (STATUS/FINDINGS/COUNTS/REPORT)
+   - Do NOT read full report files — they exist on disk for user reference only
+   - **Fallback**: If an agent return lacks the structured FINDINGS section, read that agent's report file from disk to extract findings (graceful degradation)
+   - Run deduplication with multi-model consensus scoring using extracted findings (logic below)
    - Proceed to Step 8 (merge test quality findings) and Step 9 (consolidated report)
 
    **Report locations**:
@@ -660,9 +666,9 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
    - `${BASE_PATH}/docs/reviews/code/openai-code-review-{YYYY-MM-DD}-{story-id}.md` (if dispatched)
    - `${BASE_PATH}/docs/reviews/code/glm-code-review-{YYYY-MM-DD}-{story-id}.md` (if dispatched)
 
-   **Deduplicate with multi-model consensus scoring**:
+   **Deduplicate with multi-model consensus scoring** (using structured agent returns):
 
-   All code review sources participate in consensus: code-review (Claude), code-review-testing (Claude), security-review (Claude), openai-code-review (OpenAI), glm-code-review (GLM).
+   Use the file:line references from each agent's FINDINGS section to match across agents. All code review sources participate in consensus: code-review (Claude), code-review-testing (Claude), security-review (Claude), openai-code-review (OpenAI), glm-code-review (GLM).
 
    When multiple sources flag the same file:line (within 5-line proximity):
    - **2 sources agree** → boost severity by one level (Nit→Medium, Medium→High, High→Blocker). Tag as `[Consensus: 2 — source1 + source2]`

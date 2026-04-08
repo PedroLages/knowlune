@@ -18,13 +18,11 @@ vi.mock('@/services/OpfsStorageService', () => ({
 
 describe('useBookCoverUrl', () => {
   beforeEach(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
   })
 
   it('returns null when coverUrl is undefined', async () => {
-    vi.mocked(opfsStorageService.getCoverUrl).mockResolvedValue(null)
-
     const { result } = renderHook(() => useBookCoverUrl({ bookId: 'book-1', coverUrl: undefined }))
 
     await waitFor(() => {
@@ -165,5 +163,69 @@ describe('useBookCoverUrl', () => {
     })
 
     expect(opfsStorageService.getCoverUrl).toHaveBeenCalledWith('book-1')
+  })
+
+  it('returns null when coverUrl is empty string', async () => {
+    const { result } = renderHook(() => useBookCoverUrl({ bookId: 'book-1', coverUrl: '' }))
+
+    await waitFor(() => {
+      expect(result.current).toBe(null)
+    })
+
+    expect(opfsStorageService.getCoverUrl).not.toHaveBeenCalled()
+  })
+
+  it('returns null for malformed protocol (ftp://)', async () => {
+    const { result } = renderHook(() =>
+      useBookCoverUrl({ bookId: 'book-1', coverUrl: 'ftp://example.com/cover.jpg' })
+    )
+
+    await waitFor(() => {
+      expect(result.current).toBe(null)
+    })
+
+    expect(opfsStorageService.getCoverUrl).not.toHaveBeenCalled()
+  })
+
+  it('returns null for javascript: protocol', async () => {
+    const { result } = renderHook(() =>
+      useBookCoverUrl({ bookId: 'book-1', coverUrl: 'javascript:alert(1)' })
+    )
+
+    await waitFor(() => {
+      expect(result.current).toBe(null)
+    })
+
+    expect(opfsStorageService.getCoverUrl).not.toHaveBeenCalled()
+  })
+
+  it('passes through data:image/ URIs directly', async () => {
+    const dataUri = 'data:image/png;base64,iVBORw0KGgo='
+
+    const { result } = renderHook(() =>
+      useBookCoverUrl({ bookId: 'book-1', coverUrl: dataUri })
+    )
+
+    await waitFor(() => {
+      expect(result.current).toBe(dataUri)
+    })
+
+    expect(opfsStorageService.getCoverUrl).not.toHaveBeenCalled()
+  })
+
+  it('does not revoke non-blob URLs on unmount', async () => {
+    const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+
+    const { result, unmount } = renderHook(() =>
+      useBookCoverUrl({ bookId: 'book-1', coverUrl: 'https://example.com/cover.jpg' })
+    )
+
+    await waitFor(() => {
+      expect(result.current).toBe('https://example.com/cover.jpg')
+    })
+
+    unmount()
+
+    expect(revokeSpy).not.toHaveBeenCalled()
   })
 })

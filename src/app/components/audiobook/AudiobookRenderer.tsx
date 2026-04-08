@@ -300,6 +300,7 @@ export function AudiobookRenderer({
               src={resolvedCoverUrl}
               alt={`Cover of ${book.title}`}
               className="h-full w-full object-cover"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
             />
           ) : (
             <BookOpen className="size-24 text-muted-foreground/40" aria-hidden="true" />

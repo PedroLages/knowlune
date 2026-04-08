@@ -271,4 +271,7 @@ Issues found: [N] | Blockers: [N] | High: [N] | Medium: [N] | Nits: [N]
 Confidence: avg [##] | >= 90: [N] | 70-89: [N] | < 70: [N]
 ```
 
-Your final reply must contain the markdown report and nothing else.
+**Output behavior:**
+1. Always save the full markdown report to the file path provided in the dispatch prompt.
+2. If the dispatch prompt specifies a structured return format (e.g., STATUS/FINDINGS/COUNTS/REPORT), use that format as your final reply instead of the full report.
+3. If no structured format is requested, your final reply must contain the markdown report and nothing else.

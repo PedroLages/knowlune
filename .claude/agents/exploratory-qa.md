@@ -204,7 +204,7 @@ For each bug found, document:
 
 ## Report Format
 
-Write the report to the path specified in the dispatch prompt.
+Write the report to the path specified in the dispatch prompt. If the dispatch prompt specifies a structured return format (e.g., STATUS/FINDINGS/COUNTS/REPORT), use that format as your final reply instead of the full report.
 
 ```markdown
 ## Exploratory QA Report: {story-id} — {story-name}

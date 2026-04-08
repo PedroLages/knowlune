@@ -15,7 +15,7 @@
  * @since E107-S01
  */
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { opfsStorageService } from '@/services/OpfsStorageService'
 
 interface UseBookCoverUrlOptions {
@@ -40,7 +40,6 @@ interface UseBookCoverUrlOptions {
  */
 export function useBookCoverUrl({ bookId, coverUrl }: UseBookCoverUrlOptions): string | null {
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null)
-  const previousUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
     let isCancelled = false
@@ -53,8 +52,20 @@ export function useBookCoverUrl({ bookId, coverUrl }: UseBookCoverUrlOptions): s
         return
       }
 
+      // Guard: reject unrecognized protocols (ftp://, file://, javascript:, etc.)
+      if (!/^(https?:|opfs:|opfs-cover:|data:image\/)/.test(coverUrl)) {
+        if (!isCancelled) setResolvedUrl(null)
+        return
+      }
+
       // External URL (http/https) - use directly
       if (coverUrl.startsWith('http://') || coverUrl.startsWith('https://')) {
+        if (!isCancelled) setResolvedUrl(coverUrl)
+        return
+      }
+
+      // Data URI - use directly (no blob URL lifecycle needed)
+      if (coverUrl.startsWith('data:image/')) {
         if (!isCancelled) setResolvedUrl(coverUrl)
         return
       }
@@ -65,7 +76,6 @@ export function useBookCoverUrl({ bookId, coverUrl }: UseBookCoverUrlOptions): s
         effectBlobUrl = await opfsStorageService.getCoverUrl(bookId)
         if (!isCancelled) {
           setResolvedUrl(effectBlobUrl)
-          previousUrlRef.current = effectBlobUrl
         }
       } catch {
         // silent-catch-ok: Resolution failed - show no cover (not an error condition)
@@ -75,17 +85,11 @@ export function useBookCoverUrl({ bookId, coverUrl }: UseBookCoverUrlOptions): s
 
     resolveCoverUrl()
 
-    // Cleanup: revoke blob URLs when coverUrl changes or component unmounts.
-    // effectBlobUrl catches URLs created by cancelled effects (rapid re-renders),
-    // previousUrlRef catches the actively-displayed URL.
+    // Cleanup: revoke this effect's blob URL when coverUrl changes or component unmounts.
     return () => {
       isCancelled = true
       if (effectBlobUrl?.startsWith('blob:')) {
         URL.revokeObjectURL(effectBlobUrl)
-      }
-      if (previousUrlRef.current?.startsWith('blob:')) {
-        URL.revokeObjectURL(previousUrlRef.current)
-        previousUrlRef.current = null
       }
     }
   }, [bookId, coverUrl])

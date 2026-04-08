@@ -1,45 +1,45 @@
 {
-  "captured_at": "2026-04-07",
-  "commit": "4d071815",
+  "captured_at": "2026-04-08",
+  "commit": "be94764276632a710d3ed54d5a3c5cc814c4fe6f",
   "bundle": {
     "total_js_bytes": 8590193,
     "total_css_bytes": 252595,
     "chunks": {
       "Library": {
-        "raw": 187210,
-        "file": "Library-CKlygpbW.js"
+        "raw": 187180,
+        "file": "Library-CFVa6BUl.js"
       }
     }
   },
   "page_metrics": {
     "/": {
-      "ttfb": 8,
-      "dom_interactive": 27,
-      "dom_complete": 142,
-      "load_complete": 142,
-      "fcp": 222,
-      "lcp": null,
-      "cls": 0,
-      "tbt": 0,
-      "resource_count": 250,
-      "js_resource_count": 248,
-      "css_resource_count": 1,
-      "total_transfer_bytes": 60600,
-      "samples": 3
-    },
-    "/library": {
-      "ttfb": 3,
-      "dom_interactive": 9,
-      "dom_complete": 115,
-      "load_complete": 115,
+      "ttfb": 2,
+      "dom_interactive": 8,
+      "dom_complete": 117,
+      "load_complete": 118,
       "fcp": 190,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
-      "resource_count": 242,
+      "resource_count": 250,
+      "js_resource_count": 249,
+      "css_resource_count": 2,
+      "total_transfer_bytes": 60300,
+      "samples": 3
+    },
+    "/library": {
+      "ttfb": 5,
+      "dom_interactive": 15,
+      "dom_complete": 123,
+      "load_complete": 123,
+      "fcp": 186,
+      "lcp": null,
+      "cls": 0,
+      "tbt": 0,
+      "resource_count": 241,
       "js_resource_count": 240,
-      "css_resource_count": 1,
-      "total_transfer_bytes": 61200,
+      "css_resource_count": 2,
+      "total_transfer_bytes": 60900,
       "samples": 3
     },
     "/settings": {

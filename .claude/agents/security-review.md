@@ -271,7 +271,7 @@ When a REAL secret or critical vulnerability is found in the diff, follow this p
 
 ## Report Format
 
-Write the report to the path specified in the dispatch prompt.
+Write the report to the path specified in the dispatch prompt. If the dispatch prompt specifies a structured return format (e.g., STATUS/FINDINGS/COUNTS/REPORT), use that format as your final reply instead of the full report.
 
 ```markdown
 ## Security Review: {story-id} — {story-name}
