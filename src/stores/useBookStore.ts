@@ -42,7 +42,7 @@ interface BookStoreState {
   setSelectedBookId: (id: string | null) => void
   setLibraryView: (view: 'grid' | 'list') => void
   setFilters: (filters: BookFilters) => void
-  setFilter: (key: keyof BookFilters, value: string | undefined) => void
+  setFilter: (key: keyof BookFilters, value: string | string[] | undefined) => void
   getFilteredBooks: () => Book[]
   updateBookMetadata: (
     bookId: string,

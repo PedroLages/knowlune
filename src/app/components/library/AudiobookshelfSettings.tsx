@@ -233,15 +233,6 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
     toastSuccess.saved('Server removed')
   }, [deleteTarget, removeServer])
 
-  const dialogTitle =
-    mode === 'list' ? 'Audiobookshelf Servers' : mode === 'add' ? 'Add Server' : 'Edit Server'
-  const dialogDescription =
-    mode === 'list'
-      ? 'Connect to Audiobookshelf servers to browse and sync audiobooks.'
-      : mode === 'add'
-        ? 'Enter your Audiobookshelf server URL and API key.'
-        : 'Update server connection details.'
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>

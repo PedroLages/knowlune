@@ -54,7 +54,6 @@ export function AudiobookshelfServerCard({
   onReauthenticate,
 }: AudiobookshelfServerCardProps) {
   const status = STATUS_CONFIG[server.status]
-  const StatusIcon = status.icon
 
   return (
     <li

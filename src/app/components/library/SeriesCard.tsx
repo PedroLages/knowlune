@@ -9,7 +9,7 @@
 
 import { memo, useState, useMemo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { BookOpen, ChevronDown, Headphones } from 'lucide-react'
+import { BookOpen, ChevronDown } from 'lucide-react'
 import type { AbsSeries, Book } from '@/data/types'
 import { Badge } from '@/app/components/ui/badge'
 import { CoverCollageGrid } from '@/app/components/library/CoverCollageGrid'
@@ -67,11 +67,8 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
     return null
   }, [sortedBooks, bookMap])
 
-  // Get cover URL from first book
+  // Get connected server for cover URLs
   const server = servers.find(s => s.status === 'connected')
-  const firstBookId = sortedBooks[0]?.id
-  const coverUrl =
-    server && firstBookId ? getCoverUrl(server.url, firstBookId, server.apiKey) : null
 
   const toggleExpanded = () => setIsExpanded(prev => !prev)
   const handleKeyDown = (e: KeyboardEvent) => {

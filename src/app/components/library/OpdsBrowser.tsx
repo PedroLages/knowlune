@@ -85,14 +85,20 @@ function getBookFormat(entry: OpdsEntry): 'epub' | 'pdf' | 'audiobook' {
 
 /** Check if a book from this OPDS entry already exists in the library */
 function isAlreadyInLibrary(entry: OpdsEntry, books: Book[]): boolean {
-  return books.some(
-    b =>
-      // Check by OPDS ID match in source URL
-      (b.source.type === 'remote' && entry.acquisitionLinks.some(l => b.source.url === l.href)) ||
-      // Fallback: title + author match (case-insensitive)
-      (b.title.toLowerCase() === entry.title.toLowerCase() &&
-        b.author.toLowerCase() === entry.author.toLowerCase())
-  )
+  return books.some(b => {
+    // Check by OPDS ID match in source URL
+    if (b.source.type === 'remote') {
+      const sourceUrl = (b.source as { type: 'remote'; url: string }).url
+      if (entry.acquisitionLinks.some(l => sourceUrl === l.href)) {
+        return true
+      }
+    }
+    // Fallback: title + author match (case-insensitive)
+    return (
+      b.title.toLowerCase() === entry.title.toLowerCase() &&
+      b.author.toLowerCase() === entry.author.toLowerCase()
+    )
+  })
 }
 
 // ─── Skeleton Loader ──────────────────────────────────────────────────────────
