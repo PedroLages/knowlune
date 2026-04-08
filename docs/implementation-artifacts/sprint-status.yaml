@@ -1307,7 +1307,7 @@ development_status:
   # Depends on: none (fixes existing E83-E104 implementation)
   # ──────────────────────────────────────────────────
   epic-107: in-progress
-  107-1-fix-cover-image-display: in-progress
+  107-1-fix-cover-image-display: done
   107-2-fix-epub-reader-rendering: backlog
   107-3-fix-toc-loading-and-fallback: backlog
   107-4-wire-about-book-dialog: backlog
