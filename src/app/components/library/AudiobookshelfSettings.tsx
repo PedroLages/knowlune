@@ -91,7 +91,7 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
   const handleOpenAdd = useCallback(() => {
     resetForm()
     setMode('add')
-  }, [resetForm])
+  }, [])
 
   const handleOpenEdit = useCallback(
     (server: AudiobookshelfServer) => {
@@ -233,24 +233,57 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
     toastSuccess.saved('Server removed')
   }, [deleteTarget, removeServer])
 
+  // Dynamic dialog title and description based on mode
+  const dialogTitle =
+    mode === 'list' ? 'Audiobookshelf Servers' : mode === 'add' ? 'Add Server' : 'Edit Server'
+  const dialogDescription =
+    mode === 'list'
+      ? 'Connect to Audiobookshelf servers to browse and sync audiobooks.'
+      : mode === 'add'
+        ? 'Enter your Audiobookshelf server URL and API key.'
+        : 'Update server connection details.'
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="max-w-3xl"
+          className="sm:max-w-lg"
           aria-describedby="abs-settings-description"
           data-testid="abs-settings"
         >
           <DialogHeader>
-            <DialogTitle>Audiobookshelf Servers</DialogTitle>
+            <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription id="abs-settings-description">
-              Connect to Audiobookshelf servers to browse and sync audiobooks.
+              {dialogDescription}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Left: Server list (always visible) */}
-            <div className="flex-[3] min-w-0">
+          <div className="max-h-[70vh] overflow-y-auto">
+            {mode === 'add' || mode === 'edit' ? (
+              <AudiobookshelfServerForm
+                name={name}
+                url={url}
+                apiKey={apiKey}
+                selectedLibraryIds={selectedLibraryIds}
+                isTesting={isTesting}
+                isSaving={isSaving}
+                testResult={testResult}
+                isEditMode={mode === 'edit'}
+                onNameChange={setName}
+                onUrlChange={v => {
+                  setUrl(v)
+                  setTestResult(null)
+                }}
+                onApiKeyChange={v => {
+                  setApiKey(v)
+                  setTestResult(null)
+                }}
+                onLibraryToggle={handleLibraryToggle}
+                onTest={handleTestConnection}
+                onSave={handleSave}
+                onBack={handleBack}
+              />
+            ) : (
               <AudiobookshelfServerListView
                 servers={servers}
                 onAdd={handleOpenAdd}
@@ -258,40 +291,7 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
                 onDelete={setDeleteTarget}
                 onReauthenticate={handleOpenEdit}
               />
-            </div>
-
-            {/* Right: Add/Edit form (always visible) */}
-            <div className="flex-[2] min-w-0">
-              {mode === 'add' || mode === 'edit' ? (
-                <AudiobookshelfServerForm
-                  name={name}
-                  url={url}
-                  apiKey={apiKey}
-                  selectedLibraryIds={selectedLibraryIds}
-                  isTesting={isTesting}
-                  isSaving={isSaving}
-                  testResult={testResult}
-                  isEditMode={mode === 'edit'}
-                  onNameChange={setName}
-                  onUrlChange={v => {
-                    setUrl(v)
-                    setTestResult(null)
-                  }}
-                  onApiKeyChange={v => {
-                    setApiKey(v)
-                    setTestResult(null)
-                  }}
-                  onLibraryToggle={handleLibraryToggle}
-                  onTest={handleTestConnection}
-                  onSave={handleSave}
-                  onBack={handleBack}
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                  <p className="text-sm">Select a server to edit, or add a new one.</p>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
