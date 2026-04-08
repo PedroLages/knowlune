@@ -124,9 +124,7 @@ export function Library() {
   // Track server IDs so adding a new server triggers re-sync without requiring remount
   const syncedServerIds = useRef(new Set<string>())
   useEffect(() => {
-    const newServers = absServers.filter(
-      s => !syncedServerIds.current.has(s.id) && !s.lastSyncedAt
-    )
+    const newServers = absServers.filter(s => !syncedServerIds.current.has(s.id) && !s.lastSyncedAt)
     if (newServers.length > 0) {
       for (const server of newServers) {
         syncedServerIds.current.add(server.id)

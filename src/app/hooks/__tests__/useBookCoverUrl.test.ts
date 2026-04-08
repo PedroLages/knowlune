@@ -202,9 +202,7 @@ describe('useBookCoverUrl', () => {
   it('passes through data:image/ URIs directly', async () => {
     const dataUri = 'data:image/png;base64,iVBORw0KGgo='
 
-    const { result } = renderHook(() =>
-      useBookCoverUrl({ bookId: 'book-1', coverUrl: dataUri })
-    )
+    const { result } = renderHook(() => useBookCoverUrl({ bookId: 'book-1', coverUrl: dataUri }))
 
     await waitFor(() => {
       expect(result.current).toBe(dataUri)
