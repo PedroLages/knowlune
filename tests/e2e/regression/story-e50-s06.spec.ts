@@ -56,7 +56,7 @@ test.describe("E50-S06: Today's Study Plan Widget", () => {
           return fixed
         }
       }
-      // eslint-disable-next-line no-global-assign
+
       globalThis.Date = MockDate as unknown as DateConstructor
     }, FIXED_DATE)
 

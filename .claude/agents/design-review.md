@@ -359,3 +359,8 @@ Compile all findings into a structured report:
 - **Prioritized**: Clear severity triage so developers know what matters most
 - **Positive Opening**: Always start with what works well
 - **Specific**: File paths, line numbers, exact selectors, reproduction steps
+
+**Output behavior:**
+1. Always save the full markdown report to the file path provided in the dispatch prompt.
+2. If the dispatch prompt specifies a structured return format (e.g., STATUS/FINDINGS/COUNTS/REPORT), use that format as your final reply instead of the full report.
+3. If no structured format is requested, your final reply must contain the full design review report and nothing else.

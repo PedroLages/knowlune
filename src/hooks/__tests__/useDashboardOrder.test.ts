@@ -80,7 +80,11 @@ describe('useDashboardOrder', () => {
   })
 
   it('handleReorder sets manual order', () => {
-    const newOrder = ['quiz-performance', 'recommended-next', 'metrics-strip'] as DashboardSectionId[]
+    const newOrder = [
+      'quiz-performance',
+      'recommended-next',
+      'metrics-strip',
+    ] as DashboardSectionId[]
     const { result } = renderHook(() => useDashboardOrder())
     act(() => {
       result.current.handleReorder(newOrder)

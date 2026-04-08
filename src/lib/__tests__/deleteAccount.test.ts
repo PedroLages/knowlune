@@ -119,7 +119,6 @@ describe('deleteAccount module', () => {
     })
 
     it('returns true for expired session (iat > 5 minutes ago)', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockGetState.mockReturnValue({
         session: {
           access_token: makeExpiredToken(),
@@ -132,7 +131,6 @@ describe('deleteAccount module', () => {
     })
 
     it('returns true when token has no iat', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockGetState.mockReturnValue({
         session: {
           access_token: 'header.' + btoa(JSON.stringify({})) + '.sig',
@@ -145,7 +143,6 @@ describe('deleteAccount module', () => {
     })
 
     it('returns true for malformed JWT', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockGetState.mockReturnValue({
         session: { access_token: 'invalid', token_type: 'bearer' },
         user: { id: 'user-1' },
@@ -219,7 +216,6 @@ describe('deleteAccount module', () => {
     })
 
     it('returns error when session requires reauth', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockGetState.mockReturnValue({
         session: {
           access_token: makeExpiredToken(),

@@ -201,7 +201,10 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
         // silent-catch-ok — series is supplementary, don't toast on rate-limit or transient errors
         console.warn('[AudiobookshelfStore] Failed to load series:', firstResult.error)
         // Cache failure to prevent retry hammering (wait TTL before retrying)
-        set({ isLoadingSeries: false, seriesLoadedAt: { ...get().seriesLoadedAt, [serverId]: Date.now() } })
+        set({
+          isLoadingSeries: false,
+          seriesLoadedAt: { ...get().seriesLoadedAt, [serverId]: Date.now() },
+        })
         return
       }
 
@@ -229,7 +232,10 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
     } catch (err) {
       // silent-catch-ok — series is supplementary, don't toast on rate-limit or transient errors
       console.warn('[AudiobookshelfStore] Failed to load series:', err)
-      set({ isLoadingSeries: false, seriesLoadedAt: { ...get().seriesLoadedAt, [serverId]: Date.now() } })
+      set({
+        isLoadingSeries: false,
+        seriesLoadedAt: { ...get().seriesLoadedAt, [serverId]: Date.now() },
+      })
     }
   },
 
@@ -249,7 +255,10 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       if (!result.ok) {
         // silent-catch-ok — collections are supplementary, don't toast on rate-limit or transient errors
         console.warn('[AudiobookshelfStore] Failed to load collections:', result.error)
-        set({ isLoadingCollections: false, collectionsLoadedAt: { ...get().collectionsLoadedAt, [serverId]: Date.now() } })
+        set({
+          isLoadingCollections: false,
+          collectionsLoadedAt: { ...get().collectionsLoadedAt, [serverId]: Date.now() },
+        })
         return
       }
 
@@ -261,7 +270,10 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
     } catch (err) {
       // silent-catch-ok — collections are supplementary, don't toast on rate-limit or transient errors
       console.warn('[AudiobookshelfStore] Failed to load collections:', err)
-      set({ isLoadingCollections: false, collectionsLoadedAt: { ...get().collectionsLoadedAt, [serverId]: Date.now() } })
+      set({
+        isLoadingCollections: false,
+        collectionsLoadedAt: { ...get().collectionsLoadedAt, [serverId]: Date.now() },
+      })
     }
   },
 }))

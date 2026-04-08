@@ -224,7 +224,9 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
       // Close active ABS playback session on unmount
       if (_activeSessionId && _activeSessionBaseUrl && _activeSessionApiKey) {
         // silent-catch-ok — fire-and-forget: ABS auto-expires idle sessions after 30min
-        closePlaybackSession(_activeSessionBaseUrl, _activeSessionApiKey, _activeSessionId).catch(() => {})
+        closePlaybackSession(_activeSessionBaseUrl, _activeSessionApiKey, _activeSessionId).catch(
+          () => {}
+        )
         _activeSessionId = null
       }
     }
@@ -333,13 +335,21 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
             // Close any previous session (fire-and-forget — ABS auto-expires after 30min)
             if (_activeSessionId && _activeSessionBaseUrl && _activeSessionApiKey) {
               // silent-catch-ok — non-critical cleanup, ABS auto-expires idle sessions
-              closePlaybackSession(_activeSessionBaseUrl, _activeSessionApiKey, _activeSessionId).catch(() => {})
+              closePlaybackSession(
+                _activeSessionBaseUrl,
+                _activeSessionApiKey,
+                _activeSessionId
+              ).catch(() => {})
             }
             _activeSessionId = session.id
             _activeSessionBaseUrl = baseUrl
             _activeSessionApiKey = apiKey
 
-            const streamUrl = getStreamUrlFromSession(baseUrl, apiKey, session.audioTracks[0].contentUrl)
+            const streamUrl = getStreamUrlFromSession(
+              baseUrl,
+              apiKey,
+              session.audioTracks[0].contentUrl
+            )
             audio.src = streamUrl
             audio.playbackRate = playbackRate
             // eslint-disable-next-line @typescript-eslint/no-explicit-any

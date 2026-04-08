@@ -31,6 +31,7 @@ import { PostSessionBookmarkReview } from './PostSessionBookmarkReview'
 import { useBookStore } from '@/stores/useBookStore'
 import { db } from '@/db/schema'
 import { sharedAudioRef } from '@/app/hooks/useAudioPlayer'
+import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import type { Book } from '@/data/types'
 
 interface AudiobookRendererProps {
@@ -68,6 +69,7 @@ export function AudiobookRenderer({
   } = useAudioPlayer(book)
 
   const setCurrentBook = useAudioPlayerStore(s => s.setCurrentBook)
+  const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
   const { activeOption, badgeText, setTimer, cancelTimer } = useSleepTimer()
   // Post-session bookmark review
   const [postSessionOpen, setPostSessionOpen] = useState(false)
@@ -242,7 +244,10 @@ export function AudiobookRenderer({
     title: currentChapterTitle,
     artist: book.author,
     album: book.title,
-    artworkUrl: book.coverUrl ?? undefined,
+    artworkUrl:
+      resolvedCoverUrl && /^(blob:|https?:|data:image\/)/.test(resolvedCoverUrl)
+        ? resolvedCoverUrl
+        : undefined,
     isPlaying,
     onPlay: play,
     onPause: pause,
@@ -272,195 +277,198 @@ export function AudiobookRenderer({
 
   return (
     <>
-    {/* Blurred cover background */}
-    {book.coverUrl && (
-      <div
-        className="fixed inset-0 z-0 pointer-events-none"
-        style={{
-          backgroundImage: `url(${book.coverUrl})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          filter: 'blur(80px) saturate(1.5)',
-          opacity: 0.4,
-          transform: 'scale(1.1)',
-        }}
-        aria-hidden="true"
-      />
-    )}
-    <div className="relative z-10 flex flex-col items-center gap-8 p-6 max-w-lg mx-auto w-full min-h-[60vh] justify-center">
-      {/* Cover Art */}
-      <div className="w-full max-w-80 aspect-square rounded-[24px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] bg-muted flex items-center justify-center">
-        {book.coverUrl ? (
-          <img
-            src={book.coverUrl}
-            alt={`Cover of ${book.title}`}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <BookOpen className="size-24 text-muted-foreground/40" aria-hidden="true" />
-        )}
-      </div>
-
-      {/* Book & Chapter Title */}
-      <div className="text-center space-y-1 w-full">
-        <h1 className="text-2xl md:text-3xl font-semibold text-foreground truncate px-4">{book.title}</h1>
-        <p className="text-sm text-muted-foreground truncate px-4">
-          {currentChapter?.title ?? `Chapter ${currentChapterIndex + 1}`}
-          {book.chapters.length > 1 && (
-            <span className="ml-2 text-xs">
-              ({currentChapterIndex + 1}/{book.chapters.length})
-            </span>
-          )}
-        </p>
-        {book.author && <p className="text-xs text-muted-foreground">{book.author}</p>}
-        {book.narrator && (
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">
-            Narrated by {book.narrator}
-          </p>
-        )}
-      </div>
-
-      {/* Switch to Reading — only when a chapter mapping exists (E103-S02) */}
-      {onSwitchToReading && (
-        <Button
-          variant="brand-outline"
-          size="sm"
-          onClick={() => {
-            // Save position before navigating away (AC2 / E103-S02)
-            savePosition()
-            onSwitchToReading?.(currentChapterIndex)
+      {/* Blurred cover background */}
+      {resolvedCoverUrl && (
+        <div
+          className="fixed inset-0 z-0 pointer-events-none"
+          style={{
+            backgroundImage: `url(${resolvedCoverUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'blur(80px) saturate(1.5)',
+            opacity: 0.4,
+            transform: 'scale(1.1)',
           }}
-          aria-label="Switch to reading"
-          title="Switch to reading"
-          className="min-h-[44px] min-w-[44px]"
-          data-testid="switch-to-reading-button"
-        >
-          <BookOpen className="size-4 mr-2" aria-hidden="true" />
-          Switch to Reading
-        </Button>
+          aria-hidden="true"
+        />
       )}
-
-      {/* Progress Scrubber */}
-      <div className="w-full space-y-2 px-2">
-        <Slider
-          value={[currentTime]}
-          min={0}
-          max={duration || 100}
-          step={1}
-          onValueChange={([val]) => seekTo(val)}
-          aria-label="Playback position"
-          disabled={isLoading || duration === 0}
-          className="w-full"
-        />
-        <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
-          <span>{formatAudioTime(currentTime)}</span>
-          <span>{formatAudioTime(duration)}</span>
-        </div>
-      </div>
-
-      {/* Playback Controls */}
-      <div className="flex items-center gap-8">
-        {/* Skip Back 15s */}
-        <button
-          onClick={() => skipBack(15)}
-          disabled={isLoading}
-          className="flex flex-col items-center gap-1 rounded-full p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 min-w-[48px] min-h-[48px] justify-center"
-          aria-label="Skip back 15 seconds"
-        >
-          <SkipBack className="size-6" aria-hidden="true" />
-          <span className="text-[10px] tabular-nums">15s</span>
-        </button>
-
-        {/* Play / Pause */}
-        <button
-          onClick={toggle}
-          disabled={isLoading}
-          className="flex size-16 items-center justify-center rounded-full bg-brand text-brand-foreground hover:bg-brand-hover transition-colors shadow-md disabled:opacity-40"
-          aria-label={isPlaying ? 'Pause' : 'Play'}
-        >
-          {isLoading ? (
-            <div className="size-8 animate-spin rounded-full border-2 border-brand-foreground border-t-transparent" />
-          ) : isPlaying ? (
-            <Pause className="size-8" aria-hidden="true" />
+      <div className="relative z-10 flex flex-col items-center gap-8 p-6 max-w-lg mx-auto w-full min-h-[60vh] justify-center">
+        {/* Cover Art */}
+        <div className="w-full max-w-80 aspect-square rounded-[24px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] bg-muted flex items-center justify-center">
+          {resolvedCoverUrl ? (
+            <img
+              src={resolvedCoverUrl}
+              alt={`Cover of ${book.title}`}
+              className="h-full w-full object-cover"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
           ) : (
-            <Play className="size-8 ml-1" aria-hidden="true" />
-          )}
-        </button>
-
-        {/* Skip Forward 30s */}
-        <button
-          onClick={() => skipForward(30)}
-          disabled={isLoading}
-          className="flex flex-col items-center gap-1 rounded-full p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 min-w-[48px] min-h-[48px] justify-center"
-          aria-label="Skip forward 30 seconds"
-        >
-          <SkipForward className="size-6" aria-hidden="true" />
-          <span className="text-[10px] tabular-nums">30s</span>
-        </button>
-      </div>
-
-      {/* Secondary Controls: Speed | Bookmark | Sleep Timer */}
-      <div className="flex items-center gap-2 bg-card/40 backdrop-blur-2xl rounded-full px-4 py-1.5 border border-white/20">
-        <SpeedControl />
-        <div className="relative">
-          <BookmarkButton
-            bookId={book.id}
-            chapterIndex={currentChapterIndex}
-            currentTime={currentTime}
-            onBookmarkCreated={handleBookmarkCreated}
-          />
-          {sessionBookmarkIds.size > 0 && (
-            <span
-              className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-brand text-brand-foreground text-[10px] font-semibold px-1 pointer-events-none"
-              aria-label={`${sessionBookmarkIds.size} bookmark${sessionBookmarkIds.size !== 1 ? 's' : ''} this session`}
-              data-testid="bookmark-count-badge"
-            >
-              {sessionBookmarkIds.size}
-            </span>
+            <BookOpen className="size-24 text-muted-foreground/40" aria-hidden="true" />
           )}
         </div>
-        <SleepTimer
-          activeOption={activeOption}
-          badgeText={badgeText}
-          onSelect={handleSleepTimerSelect}
+
+        {/* Book & Chapter Title */}
+        <div className="text-center space-y-1 w-full">
+          <h1 className="text-2xl md:text-3xl font-semibold text-foreground truncate px-4">
+            {book.title}
+          </h1>
+          <p className="text-sm text-muted-foreground truncate px-4">
+            {currentChapter?.title ?? `Chapter ${currentChapterIndex + 1}`}
+            {book.chapters.length > 1 && (
+              <span className="ml-2 text-xs">
+                ({currentChapterIndex + 1}/{book.chapters.length})
+              </span>
+            )}
+          </p>
+          {book.author && <p className="text-xs text-muted-foreground">{book.author}</p>}
+          {book.narrator && (
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              Narrated by {book.narrator}
+            </p>
+          )}
+        </div>
+
+        {/* Switch to Reading — only when a chapter mapping exists (E103-S02) */}
+        {onSwitchToReading && (
+          <Button
+            variant="brand-outline"
+            size="sm"
+            onClick={() => {
+              // Save position before navigating away (AC2 / E103-S02)
+              savePosition()
+              onSwitchToReading?.(currentChapterIndex)
+            }}
+            aria-label="Switch to reading"
+            title="Switch to reading"
+            className="min-h-[44px] min-w-[44px]"
+            data-testid="switch-to-reading-button"
+          >
+            <BookOpen className="size-4 mr-2" aria-hidden="true" />
+            Switch to Reading
+          </Button>
+        )}
+
+        {/* Progress Scrubber */}
+        <div className="w-full space-y-2 px-2">
+          <Slider
+            value={[currentTime]}
+            min={0}
+            max={duration || 100}
+            step={1}
+            onValueChange={([val]) => seekTo(val)}
+            aria-label="Playback position"
+            disabled={isLoading || duration === 0}
+            className="w-full"
+          />
+          <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
+            <span>{formatAudioTime(currentTime)}</span>
+            <span>{formatAudioTime(duration)}</span>
+          </div>
+        </div>
+
+        {/* Playback Controls */}
+        <div className="flex items-center gap-8">
+          {/* Skip Back 15s */}
+          <button
+            onClick={() => skipBack(15)}
+            disabled={isLoading}
+            className="flex flex-col items-center gap-1 rounded-full p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 min-w-[48px] min-h-[48px] justify-center"
+            aria-label="Skip back 15 seconds"
+          >
+            <SkipBack className="size-6" aria-hidden="true" />
+            <span className="text-[10px] tabular-nums">15s</span>
+          </button>
+
+          {/* Play / Pause */}
+          <button
+            onClick={toggle}
+            disabled={isLoading}
+            className="flex size-16 items-center justify-center rounded-full bg-brand text-brand-foreground hover:bg-brand-hover transition-colors shadow-md disabled:opacity-40"
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+          >
+            {isLoading ? (
+              <div className="size-8 animate-spin rounded-full border-2 border-brand-foreground border-t-transparent" />
+            ) : isPlaying ? (
+              <Pause className="size-8" aria-hidden="true" />
+            ) : (
+              <Play className="size-8 ml-1" aria-hidden="true" />
+            )}
+          </button>
+
+          {/* Skip Forward 30s */}
+          <button
+            onClick={() => skipForward(30)}
+            disabled={isLoading}
+            className="flex flex-col items-center gap-1 rounded-full p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 min-w-[48px] min-h-[48px] justify-center"
+            aria-label="Skip forward 30 seconds"
+          >
+            <SkipForward className="size-6" aria-hidden="true" />
+            <span className="text-[10px] tabular-nums">30s</span>
+          </button>
+        </div>
+
+        {/* Secondary Controls: Speed | Bookmark | Sleep Timer */}
+        <div className="flex items-center gap-2 bg-card/40 backdrop-blur-2xl rounded-full px-4 py-1.5 border border-white/20">
+          <SpeedControl />
+          <div className="relative">
+            <BookmarkButton
+              bookId={book.id}
+              chapterIndex={currentChapterIndex}
+              currentTime={currentTime}
+              onBookmarkCreated={handleBookmarkCreated}
+            />
+            {sessionBookmarkIds.size > 0 && (
+              <span
+                className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-brand text-brand-foreground text-[10px] font-semibold px-1 pointer-events-none"
+                aria-label={`${sessionBookmarkIds.size} bookmark${sessionBookmarkIds.size !== 1 ? 's' : ''} this session`}
+                data-testid="bookmark-count-badge"
+              >
+                {sessionBookmarkIds.size}
+              </span>
+            )}
+          </div>
+          <SleepTimer
+            activeOption={activeOption}
+            badgeText={badgeText}
+            onSelect={handleSleepTimerSelect}
+          />
+        </div>
+
+        {/* Progress percentage fallback */}
+        <p className="text-xs text-muted-foreground" aria-live="polite">
+          {Math.round(progressPercent)}% complete
+        </p>
+
+        {/* Chapter List — hidden for single-chapter audiobooks */}
+        <ChapterList
+          chapters={book.chapters}
+          currentChapterIndex={currentChapterIndex}
+          totalDuration={book.totalDuration}
+          onChapterSelect={index => loadChapter(index, isPlaying)}
+        />
+
+        {/* Bookmark List Panel — slides in from right */}
+        <BookmarkListPanel
+          open={bookmarksOpen}
+          onClose={handleBookmarksClose}
+          bookId={book.id}
+          chapters={book.chapters}
+          onSeek={handleBookmarkSeek}
+        />
+
+        {/* Post-session bookmark review panel (E101-S05) */}
+        <PostSessionBookmarkReview
+          open={postSessionOpen}
+          onClose={() => {
+            setPostSessionOpen(false)
+            // Reset session tracking so a new session starts clean
+            setSessionBookmarkIds(new Set())
+          }}
+          bookId={book.id}
+          chapters={book.chapters}
+          sessionBookmarkIds={sessionBookmarkIds}
         />
       </div>
-
-      {/* Progress percentage fallback */}
-      <p className="text-xs text-muted-foreground" aria-live="polite">
-        {Math.round(progressPercent)}% complete
-      </p>
-
-      {/* Chapter List — hidden for single-chapter audiobooks */}
-      <ChapterList
-        chapters={book.chapters}
-        currentChapterIndex={currentChapterIndex}
-        totalDuration={book.totalDuration}
-        onChapterSelect={index => loadChapter(index, isPlaying)}
-      />
-
-      {/* Bookmark List Panel — slides in from right */}
-      <BookmarkListPanel
-        open={bookmarksOpen}
-        onClose={handleBookmarksClose}
-        bookId={book.id}
-        chapters={book.chapters}
-        onSeek={handleBookmarkSeek}
-      />
-
-      {/* Post-session bookmark review panel (E101-S05) */}
-      <PostSessionBookmarkReview
-        open={postSessionOpen}
-        onClose={() => {
-          setPostSessionOpen(false)
-          // Reset session tracking so a new session starts clean
-          setSessionBookmarkIds(new Set())
-        }}
-        bookId={book.id}
-        chapters={book.chapters}
-        sessionBookmarkIds={sessionBookmarkIds}
-      />
-    </div>
     </>
   )
 }

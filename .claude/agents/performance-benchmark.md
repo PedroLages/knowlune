@@ -208,7 +208,7 @@ Add a "Fix Suggestions" subsection to the report (see report format below). Only
 
 ### Phase 5: Generate Report
 
-Write the report to the path provided in the prompt (format: `docs/reviews/performance/performance-benchmark-{date}-{story-id}.md`).
+Write the report to the path provided in the prompt (format: `docs/reviews/performance/performance-benchmark-{date}-{story-id}.md`). If the dispatch prompt specifies a structured return format (e.g., STATUS/FINDINGS/COUNTS/REPORT), use that format as your final reply instead of the full report.
 
 ## Report Format
 

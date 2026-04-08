@@ -14,10 +14,7 @@ describe('whisper', () => {
     })
 
     it('returns stored config merged with defaults', () => {
-      localStorage.setItem(
-        WHISPER_STORAGE_KEY,
-        JSON.stringify({ provider: 'groq' })
-      )
+      localStorage.setItem(WHISPER_STORAGE_KEY, JSON.stringify({ provider: 'groq' }))
       const config = getWhisperConfig()
       expect(config.provider).toBe('groq')
       expect(config.browserModel).toBe('tiny') // from defaults
@@ -79,9 +76,9 @@ describe('whisper', () => {
     })
 
     it('throws on unknown provider', async () => {
-      await expect(
-        getWhisperProvider('unknown' as never)
-      ).rejects.toThrow('Unknown Whisper provider: unknown')
+      await expect(getWhisperProvider('unknown' as never)).rejects.toThrow(
+        'Unknown Whisper provider: unknown'
+      )
     })
 
     it('uses config provider when none specified', async () => {

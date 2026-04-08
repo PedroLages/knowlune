@@ -65,9 +65,9 @@ export function CollectionDetail() {
   }
 
   const total = collection.books.length
-  const coverUrls = collection.books.slice(0, 4).map(b =>
-    server ? getCoverUrl(server.url, b.id, server.apiKey) : null
-  )
+  const coverUrls = collection.books
+    .slice(0, 4)
+    .map(b => (server ? getCoverUrl(server.url, b.id, server.apiKey) : null))
   const completedCount = collection.books.filter(b => {
     const local = bookMap.get(b.id)
     return local && (local.status === 'finished' || local.progress >= 100)
@@ -222,7 +222,9 @@ export function CollectionDetail() {
                 type="button"
                 onClick={() => setViewMode('grid')}
                 className={`p-1.5 rounded-md transition-colors ${
-                  viewMode === 'grid' ? 'bg-brand/10 text-brand' : 'text-muted-foreground hover:text-foreground'
+                  viewMode === 'grid'
+                    ? 'bg-brand/10 text-brand'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
                 aria-label="Grid view"
               >
@@ -232,7 +234,9 @@ export function CollectionDetail() {
                 type="button"
                 onClick={() => setViewMode('list')}
                 className={`p-1.5 rounded-md transition-colors ${
-                  viewMode === 'list' ? 'bg-brand/10 text-brand' : 'text-muted-foreground hover:text-foreground'
+                  viewMode === 'list'
+                    ? 'bg-brand/10 text-brand'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
                 aria-label="List view"
               >

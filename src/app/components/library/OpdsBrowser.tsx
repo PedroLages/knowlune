@@ -85,14 +85,20 @@ function getBookFormat(entry: OpdsEntry): 'epub' | 'pdf' | 'audiobook' {
 
 /** Check if a book from this OPDS entry already exists in the library */
 function isAlreadyInLibrary(entry: OpdsEntry, books: Book[]): boolean {
-  return books.some(
-    b =>
-      // Check by OPDS ID match in source URL
-      (b.source.type === 'remote' && entry.acquisitionLinks.some(l => b.source.url === l.href)) ||
-      // Fallback: title + author match (case-insensitive)
-      (b.title.toLowerCase() === entry.title.toLowerCase() &&
-        b.author.toLowerCase() === entry.author.toLowerCase())
-  )
+  return books.some(b => {
+    // Check by OPDS ID match in source URL
+    if (b.source.type === 'remote') {
+      const sourceUrl = (b.source as { type: 'remote'; url: string }).url
+      if (entry.acquisitionLinks.some(l => sourceUrl === l.href)) {
+        return true
+      }
+    }
+    // Fallback: title + author match (case-insensitive)
+    return (
+      b.title.toLowerCase() === entry.title.toLowerCase() &&
+      b.author.toLowerCase() === entry.author.toLowerCase()
+    )
+  })
 }
 
 // ─── Skeleton Loader ──────────────────────────────────────────────────────────
@@ -234,7 +240,10 @@ function BreadcrumbTrail({
   if (breadcrumbs.length === 0) return null
 
   return (
-    <nav aria-label="Catalog breadcrumb" className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest flex-wrap">
+    <nav
+      aria-label="Catalog breadcrumb"
+      className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest flex-wrap"
+    >
       {breadcrumbs.map((crumb, index) => (
         <span key={index} className="flex items-center gap-1">
           <button

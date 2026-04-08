@@ -54,9 +54,9 @@ export function useAudiobookshelfSync() {
       const narratorNames =
         rawNarrators.length > 0
           ? rawNarrators.map(n => (typeof n === 'string' ? n : n.name))
-          : ((absItem.media.metadata as Record<string, unknown>).narratorName as string)
+          : (((absItem.media.metadata as Record<string, unknown>).narratorName as string)
               ?.split(', ')
-              .filter(Boolean) ?? []
+              .filter(Boolean) ?? [])
 
       // Map chapters — if ABS returns none, synthesize a single chapter so the player can stream
       const absChapters = absItem.media.chapters ?? []
@@ -84,7 +84,7 @@ export function useAudiobookshelfSync() {
       const authorNames =
         authorsArray.length > 0
           ? authorsArray.map(a => a.name).join(', ')
-          : ((absItem.media.metadata as Record<string, unknown>).authorName as string) ?? ''
+          : (((absItem.media.metadata as Record<string, unknown>).authorName as string) ?? '')
 
       // Cover URL — routed through backend proxy (handles auth + CORS)
       const coverUrl = AudiobookshelfService.getCoverUrl(server.url, absItem.id, server.apiKey)

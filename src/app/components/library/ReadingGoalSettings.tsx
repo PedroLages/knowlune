@@ -44,7 +44,8 @@ export function ReadingGoalSettings({ open, onOpenChange }: ReadingGoalSettingsP
 
   const currentYear = new Date().getFullYear().toString()
   const finishedThisYear = useMemo(
-    () => books.filter(b => b.status === 'finished' && b.finishedAt?.startsWith(currentYear)).length,
+    () =>
+      books.filter(b => b.status === 'finished' && b.finishedAt?.startsWith(currentYear)).length,
     [books, currentYear]
   )
 
@@ -119,7 +120,9 @@ export function ReadingGoalSettings({ open, onOpenChange }: ReadingGoalSettingsP
             <div className="bg-card rounded-xl p-6 shadow-card-ambient space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-foreground">Daily Reading Goal</h3>
-                <span className="text-xs text-brand font-medium">{dailyTarget} {dailyType}</span>
+                <span className="text-xs text-brand font-medium">
+                  {dailyTarget} {dailyType}
+                </span>
               </div>
 
               {/* Type toggle */}
@@ -143,7 +146,11 @@ export function ReadingGoalSettings({ open, onOpenChange }: ReadingGoalSettingsP
               </div>
 
               {/* Selectable preset cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" role="group" aria-label="Daily goal presets">
+              <div
+                className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+                role="group"
+                aria-label="Daily goal presets"
+              >
                 {presets.map(value => (
                   <button
                     key={value}
@@ -158,7 +165,9 @@ export function ReadingGoalSettings({ open, onOpenChange }: ReadingGoalSettingsP
                   >
                     <Clock className="size-5 text-muted-foreground" aria-hidden="true" />
                     <span className="text-lg font-bold">{value}</span>
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{dailyType}</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                      {dailyType}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -235,7 +244,9 @@ export function ReadingGoalSettings({ open, onOpenChange }: ReadingGoalSettingsP
                   <Minus className="size-4" />
                 </Button>
                 <div className="flex-1 text-center">
-                  <Label htmlFor="yearly-goal-input" className="sr-only">Yearly book goal</Label>
+                  <Label htmlFor="yearly-goal-input" className="sr-only">
+                    Yearly book goal
+                  </Label>
                   <Input
                     id="yearly-goal-input"
                     type="number"

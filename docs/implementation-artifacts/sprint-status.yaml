@@ -1306,8 +1306,8 @@ development_status:
   # Fix 9 bugs from manual audit: cover images, EPUB rendering, TOC, About Book, themes, mini-player, audiobook restart
   # Depends on: none (fixes existing E83-E104 implementation)
   # ──────────────────────────────────────────────────
-  epic-107: backlog
-  107-1-fix-cover-image-display: backlog
+  epic-107: in-progress
+  107-1-fix-cover-image-display: done
   107-2-fix-epub-reader-rendering: backlog
   107-3-fix-toc-loading-and-fallback: backlog
   107-4-wire-about-book-dialog: backlog

@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router'
 import { BookOpen, Cloud, Headphones, ArrowRightLeft, Clock } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { BookStatusBadge } from './BookStatusBadge'
+import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 
 /** Find the current chapter title based on playback position in seconds */
 function findCurrentChapterTitle(chapters: Book['chapters'], posSeconds: number): string {
@@ -46,6 +47,7 @@ interface BookCardProps {
 
 export const BookCard = memo(function BookCard({ book }: BookCardProps) {
   const navigate = useNavigate()
+  const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
 
   const readerPath =
     book.format === 'epub' || book.format === 'audiobook'
@@ -78,12 +80,13 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
       >
         {/* Square cover */}
         <div className="relative aspect-square rounded-2xl overflow-hidden shadow-card-ambient group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_var(--shadow-brand)] transition-all duration-300">
-          {book.coverUrl ? (
+          {resolvedCoverUrl ? (
             <img
-              src={book.coverUrl}
+              src={resolvedCoverUrl}
               alt={`Cover of ${book.title}`}
               loading="lazy"
               className="h-full w-full object-cover"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-muted">
@@ -119,20 +122,24 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
           </p>
           <p className="text-xs text-muted-foreground mt-1 truncate">{book.author}</p>
           {book.narrator && (
-            <p className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">
-              {book.narrator}
-            </p>
+            <p className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">{book.narrator}</p>
           )}
           {/* Chapter + time remaining when playing */}
           {book.chapters.length > 0 &&
             book.currentPosition?.type === 'time' &&
             (book.progress ?? 0) > 0 && (
-              <p className="text-[10px] text-muted-foreground mt-0.5 truncate" data-testid={`chapter-${book.id}`}>
+              <p
+                className="text-[10px] text-muted-foreground mt-0.5 truncate"
+                data-testid={`chapter-${book.id}`}
+              >
                 {findCurrentChapterTitle(book.chapters, book.currentPosition!.seconds)}
               </p>
             )}
           {book.totalDuration != null && book.totalDuration > 0 && (
-            <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center justify-center gap-1" data-testid={`duration-${book.id}`}>
+            <p
+              className="text-[10px] text-muted-foreground mt-0.5 flex items-center justify-center gap-1"
+              data-testid={`duration-${book.id}`}
+            >
               <Clock className="size-3" aria-hidden="true" />
               {book.currentPosition?.type === 'time'
                 ? (book.progress != null && book.progress >= 99) ||
@@ -169,12 +176,13 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
     >
       {/* Cover — portrait */}
       <div className="relative overflow-hidden aspect-[2/3]">
-        {book.coverUrl ? (
+        {resolvedCoverUrl ? (
           <img
-            src={book.coverUrl}
+            src={resolvedCoverUrl}
             alt={`Cover of ${book.title}`}
             loading="lazy"
             className="h-full w-full object-cover"
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-muted">
@@ -186,10 +194,7 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
         </div>
         {/* Progress overlay at bottom of cover */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-foreground/10">
-          <div
-            className="h-full bg-brand transition-all"
-            style={{ width: `${book.progress}%` }}
-          />
+          <div className="h-full bg-brand transition-all" style={{ width: `${book.progress}%` }} />
         </div>
         {book.source.type === 'remote' && (
           <div

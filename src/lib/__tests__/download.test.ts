@@ -17,12 +17,8 @@ describe('downloadAsFile', () => {
       style: {},
     } as unknown as HTMLAnchorElement)
 
-    vi.spyOn(document.body, 'appendChild').mockImplementation(
-      (node) => node as HTMLAnchorElement
-    )
-    vi.spyOn(document.body, 'removeChild').mockImplementation(
-      (node) => node as HTMLAnchorElement
-    )
+    vi.spyOn(document.body, 'appendChild').mockImplementation(node => node as HTMLAnchorElement)
+    vi.spyOn(document.body, 'removeChild').mockImplementation(node => node as HTMLAnchorElement)
   })
 
   afterEach(() => {

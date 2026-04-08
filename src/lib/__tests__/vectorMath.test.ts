@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  cosineSimilarity,
-  normalizeVector,
-  dotProduct,
-  euclideanDistance,
-} from '@/lib/vectorMath'
+import { cosineSimilarity, normalizeVector, dotProduct, euclideanDistance } from '@/lib/vectorMath'
 
 // ---------------------------------------------------------------------------
 // cosineSimilarity

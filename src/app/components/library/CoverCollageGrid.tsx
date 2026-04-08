@@ -27,7 +27,10 @@ export const CoverCollageGrid = memo(function CoverCollageGrid({
 
   return (
     <div
-      className={cn('grid grid-cols-2 grid-rows-2 gap-2 overflow-hidden rounded-lg bg-card p-2', className)}
+      className={cn(
+        'grid grid-cols-2 grid-rows-2 gap-2 overflow-hidden rounded-lg bg-card p-2',
+        className
+      )}
       role="img"
       aria-label={alt}
     >
