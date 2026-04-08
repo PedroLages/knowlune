@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-08  # E107-S02 done
+last_updated: 2026-04-09  # E107-S03 story created
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -1309,7 +1309,7 @@ development_status:
   epic-107: in-progress
   107-1-fix-cover-image-display: done
   107-2-fix-epub-reader-rendering: done
-  107-3-fix-toc-loading-and-fallback: backlog
+  107-3-fix-toc-loading-and-fallback: ready-for-dev
   107-4-wire-about-book-dialog: backlog
   107-5-sync-reader-themes: backlog
   107-6-fix-mini-player-interactivity: backlog
