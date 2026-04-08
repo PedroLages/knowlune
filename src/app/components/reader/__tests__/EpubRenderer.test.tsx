@@ -126,9 +126,7 @@ describe('EpubRenderer', () => {
       const lastCallback = resizeObserverCallbacks[resizeObserverCallbacks.length - 1]
       if (lastCallback) {
         act(() => {
-          lastCallback([
-            { contentRect: { width: 800, height: 600 } } as ResizeObserverEntry,
-          ])
+          lastCallback([{ contentRect: { width: 800, height: 600 } } as ResizeObserverEntry])
         })
         expect(mockRendition.resize).toHaveBeenCalledWith(800, 600)
       }
@@ -146,9 +144,7 @@ describe('EpubRenderer', () => {
       const lastCallback = resizeObserverCallbacks[resizeObserverCallbacks.length - 1]
       if (lastCallback) {
         act(() => {
-          lastCallback([
-            { contentRect: { width: 0, height: 0 } } as ResizeObserverEntry,
-          ])
+          lastCallback([{ contentRect: { width: 0, height: 0 } } as ResizeObserverEntry])
         })
         expect(mockRendition.resize).not.toHaveBeenCalled()
       }
