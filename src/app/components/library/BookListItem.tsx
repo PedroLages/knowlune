@@ -8,8 +8,9 @@
 
 import { memo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { ArrowRightLeft, BookOpen, Cloud, Headphones } from 'lucide-react'
+import { ArrowRightLeft, BookOpen, Cloud, Headphones, Mic } from 'lucide-react'
 import type { Book, BookStatus } from '@/data/types'
+import { Badge } from '@/app/components/ui/badge'
 import { BookStatusBadge } from './BookStatusBadge'
 import {
   Select,
@@ -19,6 +20,7 @@ import {
   SelectValue,
 } from '@/app/components/ui/select'
 import { useBookStore } from '@/stores/useBookStore'
+import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 
 interface BookListItemProps {
   book: Book
@@ -48,6 +50,7 @@ const STATUS_OPTIONS: { value: BookStatus; label: string }[] = [
 export const BookListItem = memo(function BookListItem({ book }: BookListItemProps) {
   const navigate = useNavigate()
   const updateBookStatus = useBookStore(s => s.updateBookStatus)
+  const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
 
   // E84/E87: EPUB and audiobook books open the reader; other formats stay on library detail (future)
   const readerPath =
@@ -84,12 +87,13 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
     >
       {/* Thumbnail */}
       <div className="size-16 flex-shrink-0 rounded-lg overflow-hidden">
-        {book.coverUrl ? (
+        {resolvedCoverUrl ? (
           <img
-            src={book.coverUrl}
+            src={resolvedCoverUrl}
             alt={`Cover of ${book.title}`}
             loading="lazy"
             className="h-full w-full object-cover"
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-muted rounded-lg">
@@ -106,15 +110,16 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
         <p className="text-sm font-medium text-foreground truncate">{book.title}</p>
         <p className="text-xs text-muted-foreground truncate">{book.author}</p>
+        {book.narrator && (
+          <p className="flex items-center gap-1 text-xs text-muted-foreground/70 truncate">
+            <Mic className="size-3 shrink-0" aria-hidden="true" />
+            {book.narrator}
+          </p>
+        )}
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          {book.format === 'audiobook' ? (
-            <span className="flex items-center gap-1">
-              <Headphones className="size-3" aria-hidden="true" />
-              Audiobook
-            </span>
-          ) : (
-            <span className="uppercase">{book.format}</span>
-          )}
+          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 rounded uppercase">
+            {book.format === 'audiobook' ? 'Audio' : book.format.toUpperCase()}
+          </Badge>
           {book.source.type === 'remote' && (
             <span
               className="flex items-center gap-1 text-brand-soft-foreground"

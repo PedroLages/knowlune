@@ -170,9 +170,7 @@ export function AudiobookshelfServerForm({
       {testResult && (
         <div
           className={`flex items-start gap-2 rounded-xl p-3 text-sm ${
-            testResult.ok
-              ? 'bg-success-soft text-success'
-              : 'bg-destructive/10 text-destructive'
+            testResult.ok ? 'bg-success-soft text-success' : 'bg-destructive/10 text-destructive'
           }`}
           role="status"
           aria-live="polite"
@@ -192,8 +190,8 @@ export function AudiobookshelfServerForm({
         <details className="text-xs text-muted-foreground mt-0" data-testid="abs-cors-troubleshoot">
           <summary className="cursor-pointer hover:text-foreground">Troubleshooting</summary>
           <p className="mt-1">
-            Your browser is blocking the cross-origin request. Ensure your reverse proxy
-            (e.g. Traefik, Nginx, Caddy) sends{' '}
+            Your browser is blocking the cross-origin request. Ensure your reverse proxy (e.g.
+            Traefik, Nginx, Caddy) sends{' '}
             <code className="bg-muted px-1 py-0.5 rounded">Access-Control-Allow-Origin</code>{' '}
             headers for{' '}
             <code className="bg-muted px-1 py-0.5 rounded">{window.location.origin}</code>.

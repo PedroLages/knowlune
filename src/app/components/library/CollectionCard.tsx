@@ -1,36 +1,41 @@
 /**
- * Expandable collection card for the Collections view in the Library page.
+ * Collection card matching Stitch design — two visual modes:
  *
- * Collapsed: shows collection name, description excerpt, and book count.
- * Expanded: shows all books in the collection with progress and navigation.
+ * **Expanded**: horizontal split (cover collage LEFT, book list RIGHT),
+ *   spans 2 grid columns on xl+, includes gradient "Play Collection" CTA.
+ *   Book rows animate in with staggered fade+slide.
  *
- * Follows the same accordion-style expansion pattern as SeriesCard (E102-S02).
+ * **Collapsed**: compact vertical card (cover grid, name, count, arrow).
+ *   Hover lifts card with shadow intensification.
  *
  * @since E102-S03
+ * @modified Library Redesign — faithful Stitch implementation + animations
  */
 
-import { memo, useState, useMemo, type KeyboardEvent } from 'react'
+import { memo, useMemo } from 'react'
 import { useNavigate } from 'react-router'
-import { BookOpen, ChevronDown, Headphones } from 'lucide-react'
+import { BookOpen, Play, ArrowRight } from 'lucide-react'
 import type { AbsCollection, Book } from '@/data/types'
-import { Badge } from '@/app/components/ui/badge'
+import { CoverCollageGrid } from '@/app/components/library/CoverCollageGrid'
 import { useBookStore } from '@/stores/useBookStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 import { getCoverUrl } from '@/services/AudiobookshelfService'
-import { cn } from '@/app/components/ui/utils'
 
 interface CollectionCardProps {
   collection: AbsCollection
+  expanded?: boolean
+  onExpand?: () => void
 }
 
-export const CollectionCard = memo(function CollectionCard({ collection }: CollectionCardProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
+export const CollectionCard = memo(function CollectionCard({
+  collection,
+  expanded = false,
+  onExpand,
+}: CollectionCardProps) {
   const navigate = useNavigate()
   const allBooks = useBookStore(s => s.books)
   const servers = useAudiobookshelfStore(s => s.servers)
 
-  // Build O(1) lookup index from allBooks keyed by absItemId, then resolve
-  // collection books in a single pass — avoids O(n*m) with allBooks.find() per item.
   const bookMap = useMemo(() => {
     const index = new Map<string, Book>()
     for (const book of allBooks) {
@@ -45,162 +50,165 @@ export const CollectionCard = memo(function CollectionCard({ collection }: Colle
   }, [collection.books, allBooks])
 
   const total = collection.books.length
-
-  // Get cover URL from first book
   const server = servers.find(s => s.status === 'connected')
-  const firstBookId = collection.books[0]?.id
-  const coverUrl = server && firstBookId ? getCoverUrl(server.url, firstBookId, server.apiKey) : null
+  const coverUrls = collection.books
+    .slice(0, 4)
+    .map(b => (server ? getCoverUrl(server.url, b.id, server.apiKey) : null))
 
-  const toggleExpanded = () => setIsExpanded(prev => !prev)
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      toggleExpanded()
-    }
-  }
-
-  const panelId = `collection-panel-${collection.id}`
-
-  return (
-    <div
-      className="rounded-2xl border border-border/50 bg-card overflow-hidden shadow-sm"
-      data-testid={`collection-card-${collection.id}`}
-    >
-      {/* Collapsed header — always visible */}
+  // ── Collapsed (compact vertical) ──────────────────────────────────────
+  if (!expanded) {
+    return (
       <button
         type="button"
-        onClick={toggleExpanded}
-        onKeyDown={handleKeyDown}
-        aria-expanded={isExpanded}
-        aria-controls={panelId}
+        onClick={onExpand}
+        className="bg-card rounded-xl p-6 shadow-card-ambient flex flex-col gap-6 hover:-translate-y-2 hover:shadow-xl transition-all duration-300 ease-out cursor-pointer group text-left w-full animate-in fade-in slide-in-from-bottom-4 duration-500"
+        data-testid={`collection-card-${collection.id}`}
         aria-label={`${collection.name} collection, ${total} ${total === 1 ? 'audiobook' : 'audiobooks'}`}
-        className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset min-h-[64px]"
-        data-testid={`collection-toggle-${collection.id}`}
       >
-        {/* Collection cover */}
-        <div className="size-12 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
-          {coverUrl ? (
-            <img
-              src={coverUrl}
-              alt={`${collection.name} collection cover`}
-              loading="lazy"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <Headphones className="size-5 text-muted-foreground" aria-hidden="true" />
-            </div>
-          )}
+        <div className="overflow-hidden rounded-lg">
+          <CoverCollageGrid
+            coverUrls={coverUrls}
+            alt={`${collection.name} collection covers`}
+            className="w-full shadow-card-ambient"
+          />
         </div>
-
-        {/* Collection info */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground truncate">{collection.name}</p>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
-              {total} {total === 1 ? 'audiobook' : 'audiobooks'}
+        <div>
+          <h2 className="text-2xl font-bold text-foreground group-hover:text-brand transition-colors duration-200">
+            {collection.name}
+          </h2>
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-sm font-medium text-muted-foreground">
+              {total} {total === 1 ? 'Book' : 'Books'}
             </span>
+            <ArrowRight
+              className="size-5 text-brand group-hover:translate-x-1.5 transition-transform duration-300"
+              aria-hidden="true"
+            />
           </div>
+        </div>
+      </button>
+    )
+  }
+
+  // ── Expanded (horizontal split) ───────────────────────────────────────
+  return (
+    <div
+      className="bg-card rounded-xl shadow-card-ambient overflow-hidden p-8 flex flex-col md:flex-row gap-10 animate-in fade-in zoom-in-95 duration-400"
+      data-testid={`collection-card-${collection.id}`}
+    >
+      {/* Left: Cover collage + collection info + CTA */}
+      <div className="md:w-1/3 flex-shrink-0 animate-in slide-in-from-left-6 duration-500">
+        <div className="overflow-hidden rounded-lg">
+          <CoverCollageGrid
+            coverUrls={coverUrls}
+            alt={`${collection.name} collection covers`}
+            className="w-full aspect-[3/4] shadow-card-ambient"
+          />
+        </div>
+        <div className="mt-6">
+          <h2 className="text-3xl font-bold text-foreground leading-tight">{collection.name}</h2>
+          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5 font-medium">
+            <BookOpen className="size-4" aria-hidden="true" />
+            {total} {total === 1 ? 'Book' : 'Books'}
+          </p>
           {collection.description && (
-            <p className="text-xs text-muted-foreground truncate mt-0.5">
+            <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
               {collection.description}
             </p>
           )}
+          <button
+            type="button"
+            onClick={() => navigate(`/library/collection/${collection.id}`)}
+            className="mt-6 w-full py-4 bg-gradient-to-r from-brand to-brand-hover text-brand-foreground font-bold rounded-full shadow-lg shadow-brand/20 flex items-center justify-center gap-2 hover:scale-[1.03] hover:shadow-xl hover:shadow-brand/30 active:scale-[0.98] transition-all duration-200"
+            data-testid={`collection-play-${collection.id}`}
+          >
+            <Play className="size-5" style={{ fill: 'currentColor' }} aria-hidden="true" />
+            Play Collection
+          </button>
         </div>
+      </div>
 
-        {/* Item count badge */}
-        <Badge
-          variant="secondary"
-          className="flex-shrink-0 text-xs"
-          data-testid={`collection-count-${collection.id}`}
-        >
-          {total}
-        </Badge>
-
-        {/* Expand chevron */}
-        <ChevronDown
-          className={cn(
-            'size-5 text-muted-foreground transition-transform flex-shrink-0',
-            isExpanded && 'rotate-180'
-          )}
-          aria-hidden="true"
-        />
-      </button>
-
-      {/* Expanded book list */}
-      {isExpanded && (
-        <div
-          id={panelId}
-          role="list"
-          className="border-t border-border/50 divide-y divide-border/30"
-          data-testid={`collection-books-${collection.id}`}
-        >
-          {collection.books.map(absBook => {
+      {/* Right: Book list */}
+      <div className="flex-grow animate-in slide-in-from-right-6 duration-500 fill-mode-both delay-150">
+        <h3 className="font-bold text-lg mb-6 border-b border-border/30 pb-4">
+          Inside this Collection
+        </h3>
+        <div className="space-y-6">
+          {collection.books.slice(0, 3).map((absBook, i) => {
             const localBook = bookMap.get(absBook.id)
             const progress = localBook?.progress ?? 0
             const isFinished =
               localBook && (localBook.status === 'finished' || localBook.progress >= 100)
             const title = absBook.media.metadata.title
+            const author =
+              absBook.media.metadata.authorName ||
+              absBook.media.metadata.authors?.map(a => a.name).join(', ') ||
+              ''
 
             return (
               <div
                 key={absBook.id}
-                role="listitem"
-                className="flex items-center gap-3 px-4 py-3 transition-colors"
-                data-testid={`collection-book-${absBook.id}`}
+                className="flex items-center gap-4 group cursor-pointer rounded-lg p-2 -m-2 hover:bg-muted/30 transition-all duration-200 animate-in fade-in slide-in-from-bottom-3 fill-mode-both"
+                style={{ animationDelay: `${200 + i * 100}ms` }}
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  if (localBook) navigate(`/library/${localBook.id}/read`)
+                }}
+                onKeyDown={e => {
+                  if ((e.key === 'Enter' || e.key === ' ') && localBook) {
+                    e.preventDefault()
+                    navigate(`/library/${localBook.id}/read`)
+                  }
+                }}
               >
-                {/* Book cover */}
-                <div className="size-8 flex-shrink-0 rounded bg-muted flex items-center justify-center overflow-hidden">
+                <div className="w-16 h-20 flex-shrink-0 rounded-md overflow-hidden bg-muted shadow-sm group-hover:shadow-md transition-shadow duration-200">
                   {server ? (
                     <img
                       src={getCoverUrl(server.url, absBook.id, server.apiKey)}
                       alt={`Cover of ${title}`}
                       loading="lazy"
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
                   ) : (
-                    <BookOpen className="size-4 text-muted-foreground" aria-hidden="true" />
-                  )}
-                </div>
-
-                {/* Book info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground truncate">{title}</p>
-                  {/* Progress bar */}
-                  {localBook && (
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="h-1 flex-1 rounded-full bg-muted overflow-hidden max-w-[120px]">
-                        <div
-                          className="h-full rounded-full bg-brand transition-all"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                      <span className="text-[10px] text-muted-foreground tabular-nums">
-                        {isFinished ? 'Done' : `${progress}%`}
-                      </span>
+                    <div className="flex h-full w-full items-center justify-center">
+                      <BookOpen className="size-4 text-muted-foreground" aria-hidden="true" />
                     </div>
                   )}
                 </div>
-
-                {/* Navigate to book */}
-                {localBook && (
-                  <button
-                    type="button"
-                    onClick={e => {
-                      e.stopPropagation()
-                      navigate(`/library/${localBook.id}/read`)
-                    }}
-                    className="text-xs text-brand hover:underline flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                    aria-label={`Open ${title}`}
+                <div className="flex-grow min-w-0">
+                  <h4 className="text-sm font-bold text-foreground leading-tight group-hover:text-brand transition-colors duration-200 truncate">
+                    {title}
+                  </h4>
+                  {author && <p className="text-sm text-muted-foreground truncate">{author}</p>}
+                  <div className="mt-2 w-full h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-brand transition-all duration-700 ease-out"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <span
+                    className={`text-xs font-bold ${progress > 0 ? 'text-brand' : 'text-muted-foreground'}`}
                   >
-                    Open
-                  </button>
-                )}
+                    {isFinished ? 'Done' : progress > 0 ? `${progress}%` : 'Unplayed'}
+                  </span>
+                </div>
               </div>
             )
           })}
         </div>
-      )}
+        {total > 3 && (
+          <button
+            type="button"
+            onClick={() => navigate(`/library/collection/${collection.id}`)}
+            className="mt-6 text-sm font-medium text-brand hover:underline hover:translate-x-1 transition-all duration-200"
+          >
+            +{total - 3} more &middot; View All
+          </button>
+        )}
+      </div>
     </div>
   )
 })

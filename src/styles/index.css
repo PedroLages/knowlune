@@ -302,6 +302,9 @@
     0 2px 8px rgba(0, 0, 0, 0.04),
     0 8px 24px var(--shadow-gold);
 }
+@utility shadow-card-ambient {
+  box-shadow: 0 10px 30px var(--shadow-brand);
+}
 
 @media (prefers-reduced-motion: reduce) {
   *,

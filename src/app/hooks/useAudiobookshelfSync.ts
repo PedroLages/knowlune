@@ -54,9 +54,9 @@ export function useAudiobookshelfSync() {
       const narratorNames =
         rawNarrators.length > 0
           ? rawNarrators.map(n => (typeof n === 'string' ? n : n.name))
-          : ((absItem.media.metadata as Record<string, unknown>).narratorName as string)
+          : (((absItem.media.metadata as Record<string, unknown>).narratorName as string)
               ?.split(', ')
-              .filter(Boolean) ?? []
+              .filter(Boolean) ?? [])
 
       // Map chapters — if ABS returns none, synthesize a single chapter so the player can stream
       const absChapters = absItem.media.chapters ?? []
@@ -84,7 +84,7 @@ export function useAudiobookshelfSync() {
       const authorNames =
         authorsArray.length > 0
           ? authorsArray.map(a => a.name).join(', ')
-          : ((absItem.media.metadata as Record<string, unknown>).authorName as string) ?? ''
+          : (((absItem.media.metadata as Record<string, unknown>).authorName as string) ?? '')
 
       // Cover URL — routed through backend proxy (handles auth + CORS)
       const coverUrl = AudiobookshelfService.getCoverUrl(server.url, absItem.id, server.apiKey)
@@ -200,15 +200,20 @@ export function useAudiobookshelfSync() {
           lastSyncedAt: new Date().toISOString(),
         })
 
-        // Auto-load collections and series after catalog sync (delayed to avoid Cloudflare 429)
+        toast.success(`Synced ${allMappedBooks.length} audiobooks`, { duration: 3000 })
+
+        // Auto-load collections and series after catalog sync (staggered to avoid Cloudflare 429)
         setTimeout(() => {
-          const { loadCollections, loadSeries } = useAudiobookshelfStore.getState()
+          const { loadSeries } = useAudiobookshelfStore.getState()
           for (const libId of server.libraryIds) {
             loadSeries(server.id, libId)
           }
-          // Stagger collections fetch after series
-          setTimeout(() => loadCollections(server.id), 2000)
-        }, 2000)
+        }, 3000)
+        // Collections fetched separately with longer delay
+        setTimeout(() => {
+          const { loadCollections } = useAudiobookshelfStore.getState()
+          loadCollections(server.id)
+        }, 6000)
       } catch (err) {
         console.error('[useAudiobookshelfSync] Unexpected sync error:', err)
         toast.error('Failed to sync Audiobookshelf catalog.')

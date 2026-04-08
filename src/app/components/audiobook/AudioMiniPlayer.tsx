@@ -20,6 +20,7 @@ import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
 import { useBookStore } from '@/stores/useBookStore'
 import { sharedAudioRef } from '@/app/hooks/useAudioPlayer'
 import { formatAudioTime } from '@/app/hooks/useAudioPlayer'
+import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 
 export function AudioMiniPlayer() {
   const navigate = useNavigate()
@@ -34,6 +35,10 @@ export function AudioMiniPlayer() {
 
   const books = useBookStore(s => s.books)
   const book = books.find(b => b.id === currentBookId) ?? null
+  const resolvedCoverUrl = useBookCoverUrl({
+    bookId: currentBookId ?? '',
+    coverUrl: currentBookId ? book?.coverUrl : undefined,
+  })
 
   // Hide when no book or when on the full player page
   const isOnPlayerPage = pathname.includes(`/library/${currentBookId}/read`)
@@ -80,13 +85,13 @@ export function AudioMiniPlayer() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border shadow-lg"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-card/70 backdrop-blur-[32px] shadow-[0_-12px_40px_-5px_rgba(27,28,21,0.08)]"
       data-testid="audio-mini-player"
       role="complementary"
       aria-label="Audiobook mini-player"
     >
-      {/* Thin progress bar */}
-      <div className="h-0.5 w-full bg-muted">
+      {/* Progress bar */}
+      <div className="h-[3px] w-full bg-muted absolute top-0 left-0 right-0">
         <div
           className="h-full bg-brand transition-none"
           style={{ width: `${progressPercent}%` }}
@@ -95,18 +100,19 @@ export function AudioMiniPlayer() {
       </div>
 
       {/* Controls row */}
-      <div className="flex h-16 items-center gap-3 px-4">
+      <div className="flex h-20 items-center gap-3 px-4">
         {/* Cover thumbnail */}
         <button
           onClick={handleExpand}
-          className="flex-shrink-0 size-10 rounded-lg overflow-hidden bg-muted flex items-center justify-center"
+          className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-muted flex items-center justify-center shadow-md"
           aria-label="Open full player"
         >
-          {book.coverUrl ? (
+          {resolvedCoverUrl ? (
             <img
-              src={book.coverUrl}
+              src={resolvedCoverUrl}
               alt={`Cover of ${book.title}`}
               className="h-full w-full object-cover"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
             />
           ) : (
             <BookOpen className="size-5 text-muted-foreground" aria-hidden="true" />
@@ -132,7 +138,7 @@ export function AudioMiniPlayer() {
         {/* Play / Pause */}
         <button
           onClick={handlePlayPause}
-          className="flex-shrink-0 flex size-10 items-center justify-center rounded-full bg-brand text-brand-foreground hover:bg-brand-hover transition-colors"
+          className="flex-shrink-0 flex w-12 h-12 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-hover text-brand-foreground shadow-lg transition-all"
           aria-label={isPlaying ? 'Pause' : 'Play'}
         >
           {isPlaying ? (

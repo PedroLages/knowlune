@@ -459,3 +459,27 @@ issues:
     scheduled_for: null
     fixed_by: E106-S03
     notes: "E106 added ~400 unit tests across S01-S03, raising coverage from 57% to 60%. Threshold raised from 55% to 60%. The original 70% target is not achievable through unit tests alone — 6000+ uncovered statements are in .tsx component/page files that require React Testing Library component rendering, not renderHook. A future component testing epic could close the remaining gap."
+
+  - id: KI-037
+    type: lint
+    summary: "react-hooks/exhaustive-deps rule not found — ESLint config references missing plugin"
+    file: "src/app/pages/MyClass.tsx:97"
+    severity: medium
+    discovered_by: E107-S01
+    discovered_on: 2026-04-07
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Pre-existing config issue — eslint-disable comment references react-hooks/exhaustive-deps but the rule is not installed. Likely need to add eslint-plugin-react-hooks to dependencies or update eslint.config.js."
+
+  - id: KI-038
+    type: lint
+    summary: "react-hooks/exhaustive-deps rule not found — ESLint config references missing plugin (same as KI-037)"
+    file: "src/app/pages/Library.tsx:97"
+    severity: medium
+    discovered_by: E107-S01
+    discovered_on: 2026-04-08
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Same root cause as KI-037 — pre-existing eslint-disable comment references missing react-hooks/exhaustive-deps rule. Fix both together in one chore commit."

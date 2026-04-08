@@ -2,7 +2,13 @@ import { describe, it, expect, vi } from 'vitest'
 
 const { mockCourseStoreGetState, mockAuthorStoreGetState } = vi.hoisted(() => ({
   mockCourseStoreGetState: vi.fn(() => ({
-    courses: [] as Array<{ authorId: string; totalLessons: number; estimatedHours: number; totalVideos: number; category: string }>,
+    courses: [] as Array<{
+      authorId: string
+      totalLessons: number
+      estimatedHours: number
+      totalVideos: number
+      category: string
+    }>,
   })),
   mockAuthorStoreGetState: vi.fn(() => ({
     isLoaded: true,
@@ -91,7 +97,13 @@ describe('authors', () => {
       mockCourseStoreGetState.mockReturnValue({
         courses: [
           { authorId: 'a1', totalLessons: 10, estimatedHours: 5, totalVideos: 8, category: 'Math' },
-          { authorId: 'a1', totalLessons: 5, estimatedHours: 3, totalVideos: 4, category: 'Science' },
+          {
+            authorId: 'a1',
+            totalLessons: 5,
+            estimatedHours: 3,
+            totalVideos: 4,
+            category: 'Science',
+          },
         ],
       })
 
@@ -124,7 +136,6 @@ describe('authors', () => {
 
   describe('getAuthorForCourse', () => {
     it('returns author when found', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockAuthorStoreGetState.mockReturnValue({
         isLoaded: true,
         isLoading: false,
@@ -168,7 +179,6 @@ describe('authors', () => {
     })
 
     it('returns author when found', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockAuthorStoreGetState.mockReturnValue({
         isLoaded: true,
         isLoading: false,

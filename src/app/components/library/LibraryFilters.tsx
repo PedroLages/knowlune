@@ -8,8 +8,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { LayoutGrid, List, Search } from 'lucide-react'
+import { LayoutGrid, List, Search, SlidersHorizontal, X } from 'lucide-react'
 import { Input } from '@/app/components/ui/input'
+import { Button } from '@/app/components/ui/button'
+import { FilterSidebar } from '@/app/components/library/FilterSidebar'
 import { useBookStore } from '@/stores/useBookStore'
 import { cn } from '@/app/components/ui/utils'
 import type { BookStatus } from '@/data/types'
@@ -32,6 +34,29 @@ export function LibraryFilters() {
 
   const counts = useMemo(() => getBookCountByStatus(), [books, getBookCountByStatus])
   const activeStatus = filters.status || 'all'
+
+  // Filter sidebar state
+  const [filterOpen, setFilterOpen] = useState(false)
+  const activeFilterCount =
+    ((filters.format?.length ?? 0) > 0 ? 1 : 0) +
+    ((filters.authors?.length ?? 0) > 0 ? 1 : 0) +
+    (filters.sort && filters.sort !== 'recent' ? 1 : 0)
+
+  // Active filter chips for dismissal
+  const activeChips: { key: string; label: string }[] = []
+  if (filters.sort && filters.sort !== 'recent')
+    activeChips.push({ key: 'sort', label: `Sort: ${filters.sort}` })
+  if (filters.format?.length)
+    activeChips.push({ key: 'format', label: `Format: ${filters.format.join(', ')}` })
+  if (filters.authors?.length)
+    activeChips.push({
+      key: 'authors',
+      label: `${filters.authors.length} author${filters.authors.length > 1 ? 's' : ''}`,
+    })
+
+  const removeChip = (key: string) => {
+    setFilter(key as 'sort' | 'format' | 'authors', undefined)
+  }
 
   // Debounced search
   const [searchValue, setSearchValue] = useState(filters.search || '')
@@ -103,7 +128,41 @@ export function LibraryFilters() {
             <List className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Filter button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setFilterOpen(true)}
+          className="size-11 rounded-xl relative flex-shrink-0"
+          aria-label="Open filters"
+          data-testid="filter-sidebar-trigger"
+        >
+          <SlidersHorizontal className="size-5" />
+          {activeFilterCount > 0 && (
+            <span className="absolute -top-1 -right-1 size-4 rounded-full bg-brand text-brand-foreground text-[10px] flex items-center justify-center">
+              {activeFilterCount}
+            </span>
+          )}
+        </Button>
       </div>
+
+      {/* Active filter chips */}
+      {activeChips.length > 0 && (
+        <div className="flex gap-2 flex-wrap">
+          {activeChips.map(chip => (
+            <button
+              key={chip.key}
+              onClick={() => removeChip(chip.key)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-brand-soft text-brand-soft-foreground text-xs font-medium transition-colors hover:bg-brand-soft/80"
+              aria-label={`Remove ${chip.label} filter`}
+            >
+              {chip.label}
+              <X className="size-3" />
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Status filter pills */}
       <div className="relative">
@@ -138,6 +197,9 @@ export function LibraryFilters() {
           })}
         </div>
       </div>
+
+      {/* Filter sidebar */}
+      <FilterSidebar open={filterOpen} onOpenChange={setFilterOpen} />
     </div>
   )
 }

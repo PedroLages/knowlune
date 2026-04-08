@@ -58,6 +58,23 @@ The orchestrator should NOT:
 - Retain raw build/lint/test output beyond error messages
 - Read large files for exploration (dispatch Explore agents instead)
 - Perform review reasoning (agents handle this)
+- **Output text when individual agents complete** — no "X review complete" messages
+
+### Output Discipline
+
+During the review agent phase (Step 7), the user sees exactly 3 things:
+
+1. **Pre-dispatch banner** (once, before agent dispatch):
+   ```
+   Running N reviews in background... (design, code, testing, edge-case, performance, security, QA)
+   ```
+
+2. **Silent collection** — as each background agent completes:
+   - TodoWrite: mark todo → completed (user sees checkmarks as progress)
+   - Parse agent's minimal return, update `review_gates_passed`
+   - **Do NOT output any text to the user** — no "X review complete", no finding summaries
+
+3. **Final consolidated report** (Step 11) — the ONLY visible output after the banner
 
 ## Steps
 
@@ -521,12 +538,12 @@ Mark the first todo as `in_progress` and proceed:
    - **Performance benchmark**: Skip page metrics if (a) resuming AND `performance-benchmark` in `review_gates_passed` AND report file exists, OR (b) lightweight review (<50 lines, no UI/src changes). If skipping for lightweight review, add `performance-benchmark-skipped` to gates.
    - **Security review**: Skip if resuming AND `security-review` in `review_gates_passed` AND report file exists. Never has a `-skipped` variant — always runs (secrets scan is always relevant).
    - **Exploratory QA**: Skip if (a) resuming AND `exploratory-qa` in `review_gates_passed` AND report file exists, OR (b) no UI changes (`HAS_UI_CHANGES=false`). If skipping for no UI changes, add `exploratory-qa-skipped` to gates.
-   - **OpenAI code review**: Skip if (a) Codex CLI not installed (`which codex` fails) OR `OPENAI_API_KEY` not set, OR (b) resuming AND `openai-code-review` in `review_gates_passed` AND report file exists, OR (c) lightweight review. If skipping for no CLI/key, add `openai-code-review-skipped` to gates.
+   - **OpenAI code review**: Skip if (a) `OPENAI_API_KEY` not set, OR (b) resuming AND `openai-code-review` in `review_gates_passed` AND report file exists, OR (c) lightweight review. If skipping for no key, add `openai-code-review-skipped` to gates.
    - **GLM code review**: Skip if (a) `ZAI_API_KEY` not set, OR (b) resuming AND `glm-code-review` in `review_gates_passed` AND report file exists, OR (c) lightweight review. If skipping for no key, add `glm-code-review-skipped` to gates.
 
    **External model availability check** (run before dispatch):
    ```bash
-   CODEX_AVAILABLE=$(which codex >/dev/null 2>&1 && printenv OPENAI_API_KEY >/dev/null 2>&1 && echo "yes" || echo "no")
+   OPENAI_AVAILABLE=$(printenv OPENAI_API_KEY >/dev/null 2>&1 && echo "yes" || echo "no")
    ZAI_AVAILABLE=$(printenv ZAI_API_KEY >/dev/null 2>&1 && echo "yes" || echo "no")
    ```
 
@@ -537,80 +554,106 @@ Mark the first todo as `in_progress` and proceed:
 
    **TodoWrite**: Mark all non-skipped agent todos → `in_progress` simultaneously.
 
-   **Dispatch all non-skipped agents in a single message**:
+   **Output the pre-dispatch banner** (the ONLY visible output before the final report):
+   ```
+   Running N reviews in background... (design, code, testing, edge-case, performance, security, QA)
+   ```
+
+   **Dispatch all non-skipped agents in a single message with `run_in_background: true`**:
 
    ```
-   // All dispatched together — they run concurrently:
+   // All dispatched in background — they run concurrently with structured returns:
+   //
+   // STRUCTURED RETURN FORMAT (all agents):
+   //   STATUS: PASS|WARNINGS|FAIL
+   //   FINDINGS:
+   //     BLOCKER: [1-line description — file:line]
+   //     HIGH: [1-line description — file:line]
+   //     MEDIUM: [1-line description — file:line]
+   //   COUNTS: blockers=N, high=N, medium=N, total=N
+   //   REPORT: <full path to saved report>
 
    Task({
      subagent_type: "design-review",
-     prompt: "Review story E##-S## changes. Affected routes: [mapped from files]. Focus on: [ACs that involve UI]. Git diff summary: [key changes].",
+     run_in_background: true,
+     prompt: "Story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Routes: [mapped from files]. ACs with UI: [list]. Save report to ${BASE_PATH}/docs/reviews/design/design-review-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per finding with severity: description — file:line), COUNTS, REPORT path.",
      description: "Design review E##-S##"
    })
 
    Task({
      subagent_type: "code-review",
-     prompt: "Review story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes.
-
-Test anti-patterns detected (step h validation):
-[Insert validation findings if any LOW severity issues were found, or 'No anti-patterns detected' if clean]
-
-Focus on architecture, security, correctness, silent failures, test anti-patterns (section 5.5), and Knowlune stack patterns. Score each finding with confidence (0-100).",
+     run_in_background: true,
+     prompt: "Story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Test anti-patterns: [findings or 'None']. Save report to ${BASE_PATH}/docs/reviews/code/code-review-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per finding with severity: description — file:line), COUNTS, REPORT path.",
      description: "Code review E##-S##"
    })
 
    Task({
      subagent_type: "code-review-testing",
-     prompt: "Review test coverage for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes. Map every acceptance criterion to its tests. Review test quality, isolation, and edge case coverage. Score each finding with confidence (0-100).",
+     run_in_background: true,
+     prompt: "Story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Save report to ${BASE_PATH}/docs/reviews/code/code-review-testing-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per finding with severity: description — file:line), COUNTS (include ac_coverage=N/M), REPORT path.",
      description: "Test coverage review E##-S##"
    })
 
    Task({
      subagent_type: "general-purpose",
-     prompt: "Use the bmad-review-edge-case-hunter skill on story E##-S##. Run `git diff main...HEAD` to get the changed code. Pass the diff as the content to review. After the skill completes, format the JSON findings into a markdown report saved to ${BASE_PATH}/docs/reviews/code/edge-case-review-{YYYY-MM-DD}-{story-id}.md using this format:\n\n## Edge Case Review — E##-S## ({YYYY-MM-DD})\n\n### Unhandled Edge Cases\n\nFor each finding:\n**[location]** — `[trigger_condition]`\n> Consequence: [potential_consequence]\n> Guard: `[guard_snippet]`\n\n---\n**Total:** N unhandled edge cases found.",
+     run_in_background: true,
+     prompt: "Use the bmad-review-edge-case-hunter skill on story E##-S##. Run `git diff main...HEAD` for the diff. Save report to ${BASE_PATH}/docs/reviews/code/edge-case-review-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per edge case with HIGH: description — file:line), COUNTS, REPORT path.",
      description: "Edge case review E##-S##"
    })
 
    Task({
      subagent_type: "performance-benchmark",
-     prompt: "Benchmark performance for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Dev server running at http://localhost:5173. Baseline at ${BASE_PATH}/docs/reviews/performance/baseline.json. Write report to ${BASE_PATH}/docs/reviews/performance/performance-benchmark-{YYYY-MM-DD}-{story-id}.md.",
+     run_in_background: true,
+     prompt: "Story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Dev server: http://localhost:5173. Baseline: ${BASE_PATH}/docs/reviews/performance/baseline.json. Save report to ${BASE_PATH}/docs/reviews/performance/performance-benchmark-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per regression/warning with severity: description — route), COUNTS, REPORT path.",
      description: "Performance benchmark E##-S##"
    })
 
    Task({
      subagent_type: "security-review",
-     prompt: "Security review for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changed files. Stack: React 19 + TypeScript, Vite 6, Dexie.js (IndexedDB), Zustand, BYOK AI keys, YouTube embeds, File System Access API. Config files to audit: .mcp.json (MCP servers), .claude/settings.json (hooks), .claude/hooks/ (hook scripts). Always run Phase 8 lightweight checks (8.1, 8.2, 8.5). Write report to ${BASE_PATH}/docs/reviews/security/security-review-{YYYY-MM-DD}-{story-id}.md.",
+     run_in_background: true,
+     prompt: "Story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Always run Phase 8 lightweight checks (8.1, 8.2, 8.5). Save report to ${BASE_PATH}/docs/reviews/security/security-review-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per finding with severity: description — file:line), COUNTS (include phases=N/8), REPORT path.",
      description: "Security review E##-S##"
    })
 
    Task({
      subagent_type: "exploratory-qa",
-     prompt: "Exploratory QA for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Dev server at http://localhost:5173. Test affected routes functionally — click buttons, fill forms, check console errors. Write report to ${BASE_PATH}/docs/reviews/qa/exploratory-qa-{YYYY-MM-DD}-{story-id}.md.",
+     run_in_background: true,
+     prompt: "Story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Dev server: http://localhost:5173. Save report to ${BASE_PATH}/docs/reviews/qa/exploratory-qa-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per bug with severity: description — route), COUNTS (include health=N/100), REPORT path.",
      description: "Exploratory QA E##-S##"
    })
 
-   // Only dispatched if CODEX_AVAILABLE == "yes":
+   // Only dispatched if OPENAI_AVAILABLE == "yes":
    Task({
      subagent_type: "openai-code-review",
-     prompt: "Adversarial code review via OpenAI Codex for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run: bash scripts/external-code-review.sh --provider openai --story-id {story-id} --output ${BASE_PATH}/docs/reviews/code/openai-code-review-{YYYY-MM-DD}-{story-id}.md",
+     run_in_background: true,
+     prompt: "Story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run: bash scripts/external-code-review.sh --provider openai --story-id {story-id} --output ${BASE_PATH}/docs/reviews/code/openai-code-review-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per finding with severity: description — file:line), COUNTS, REPORT path.",
      description: "OpenAI adversarial review E##-S##"
    })
 
    // Only dispatched if ZAI_AVAILABLE == "yes":
    Task({
      subagent_type: "glm-code-review",
-     prompt: "Adversarial code review via GLM for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run: bash scripts/external-code-review.sh --provider glm --story-id {story-id} --output ${BASE_PATH}/docs/reviews/code/glm-code-review-{YYYY-MM-DD}-{story-id}.md",
+     run_in_background: true,
+     prompt: "Story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run: bash scripts/external-code-review.sh --provider glm --story-id {story-id} --output ${BASE_PATH}/docs/reviews/code/glm-code-review-{YYYY-MM-DD}-{story-id}.md. Return structured format: STATUS, FINDINGS (one line per finding with severity: description — file:line), COUNTS, REPORT path.",
      description: "GLM adversarial review E##-S##"
    })
    ```
 
    **Note**: The code-review agent has selective WebFetch access for deprecated APIs, security issues, and framework bugs. It will use this sparingly (max 1-2 fetches) for high-severity findings only. This may add 10-30s to code review time but provides authoritative fix guidance.
 
-   **As each agent returns**:
-   - Mark its todo → `completed`
-   - Validate the result (check for errors, empty reports, missing severity sections)
-   - If an agent fails: warn the user, do NOT add its gate to `review_gates_passed`, note in consolidated report
-   - If successful: save report, parse severity, update `review_gates_passed`
+   **As each background agent completes** (silent — no visible output):
+   - TodoWrite: mark its todo → `completed`
+   - Parse the agent's structured return (STATUS, FINDINGS, COUNTS, REPORT path)
+   - If agent failed: note in internal failure list (surfaced in final report only)
+   - If successful: verify report file exists, store parsed findings, update `review_gates_passed`
+   - **Do NOT output any text to the user** — no per-agent completion messages
+
+   **After ALL agents complete** (batch collection):
+   - Extract findings from structured agent returns (STATUS/FINDINGS/COUNTS/REPORT)
+   - Do NOT read full report files — they exist on disk for user reference only
+   - **Fallback**: If an agent return lacks the structured FINDINGS section, read that agent's report file from disk to extract findings (graceful degradation)
+   - Run deduplication with multi-model consensus scoring using extracted findings (logic below)
+   - Proceed to Step 8 (merge test quality findings) and Step 9 (consolidated report)
 
    **Report locations**:
    - `${BASE_PATH}/docs/reviews/design/design-review-{YYYY-MM-DD}-{story-id}.md`
@@ -623,9 +666,9 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
    - `${BASE_PATH}/docs/reviews/code/openai-code-review-{YYYY-MM-DD}-{story-id}.md` (if dispatched)
    - `${BASE_PATH}/docs/reviews/code/glm-code-review-{YYYY-MM-DD}-{story-id}.md` (if dispatched)
 
-   **Deduplicate with multi-model consensus scoring**:
+   **Deduplicate with multi-model consensus scoring** (using structured agent returns):
 
-   All code review sources participate in consensus: code-review (Claude), code-review-testing (Claude), security-review (Claude), openai-code-review (OpenAI), glm-code-review (GLM).
+   Use the file:line references from each agent's FINDINGS section to match across agents. All code review sources participate in consensus: code-review (Claude), code-review-testing (Claude), security-review (Claude), openai-code-review (OpenAI), glm-code-review (GLM).
 
    When multiple sources flag the same file:line (within 5-line proximity):
    - **2 sources agree** → boost severity by one level (Nit→Medium, Medium→High, High→Blocker). Tag as `[Consensus: 2 — source1 + source2]`
@@ -763,17 +806,15 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
 
     **Verdict: PASS** — Story is ready to ship.
 
-    ### Next Step
+    **High-priority findings** (N): [1-line each, only if N > 0 — omit section if 0]
 
-    Run `/finish-story` to create the PR (lightweight — reviews already done).
-
-    Reports saved:
-    - `${BASE_PATH}/docs/reviews/design/design-review-{date}-{id}.md`
-    - `${BASE_PATH}/docs/reviews/code/code-review-{date}-{id}.md`
-    - `${BASE_PATH}/docs/reviews/code/code-review-testing-{date}-{id}.md`
+    Full report: `docs/reviews/consolidated-review-{date}-{story-id}.md`
+    Next: `/finish-story`
 
     ---
     ```
+
+    **Save consolidated report to file**: Write the full consolidated report (including medium/nit findings) to `${BASE_PATH}/docs/reviews/consolidated-review-{YYYY-MM-DD}-{story-id}.md`. The in-conversation output shows only the gate table, verdict, and high-priority findings.
 
     **If BLOCKED (blockers found)**:
 

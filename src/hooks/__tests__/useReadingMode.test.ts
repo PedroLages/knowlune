@@ -70,9 +70,7 @@ describe('useReadingMode', () => {
     act(() => {
       result.current.toggleReadingMode()
     })
-    expect(mockAnnounce).toHaveBeenCalledWith(
-      'Reading mode activated. Press Escape to exit.'
-    )
+    expect(mockAnnounce).toHaveBeenCalledWith('Reading mode activated. Press Escape to exit.')
 
     act(() => {
       result.current.toggleReadingMode()
@@ -110,9 +108,7 @@ describe('useReadingMode', () => {
     expect(result.current.isReadingMode).toBe(true)
 
     act(() => {
-      window.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'Escape' })
-      )
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     })
     expect(result.current.isReadingMode).toBe(false)
   })

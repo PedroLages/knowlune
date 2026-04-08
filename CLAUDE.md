@@ -136,6 +136,24 @@ When I make a mistake due to missing context:
 - `.claude/rules/*.md`: No limit, but prefer splitting large files
 - Use path-specific frontmatter in rules to control when they load
 
+## Session Compacting
+
+When compacting conversations, produce a short handoff with these sections:
+
+1. **Goal** — What we're working toward
+2. **Current plan** — Implementation approach
+3. **Files changed** — What was modified and why
+4. **Commands run and results** — What succeeded or failed
+5. **Open issues / blockers** — Bugs or obstacles
+6. **TODOs** — Remaining tasks
+7. **Next step** — Immediate action
+
+**Exclude:**
+- Chatter and conversational filler
+- Repeated exploration cycles
+- Abandoned ideas that no longer matter
+- Large logs or command output (unless still relevant)
+
 ## References
 
 **Official Documentation:**

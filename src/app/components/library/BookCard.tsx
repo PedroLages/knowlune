@@ -1,16 +1,21 @@
 /**
  * Grid-view book card with cover, title, author, progress, and status badge.
  *
+ * Audiobooks: clean square cover with centered metadata below (album art style).
+ * EPUBs/other: portrait cover in a card with metadata section.
+ *
  * Navigates to /library/{bookId} on click. Keyboard accessible via Tab/Enter.
  *
  * @since E83-S03
+ * @modified Library Redesign — audiobook-style square covers
  */
 
 import { memo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { BookOpen, Cloud, Headphones, ArrowRightLeft } from 'lucide-react'
+import { BookOpen, Cloud, Headphones, ArrowRightLeft, Clock } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { BookStatusBadge } from './BookStatusBadge'
+import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 
 /** Find the current chapter title based on playback position in seconds */
 function findCurrentChapterTitle(chapters: Book['chapters'], posSeconds: number): string {
@@ -42,8 +47,8 @@ interface BookCardProps {
 
 export const BookCard = memo(function BookCard({ book }: BookCardProps) {
   const navigate = useNavigate()
+  const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
 
-  // E84/E87: EPUB and audiobook books open the reader; other formats stay on library detail (future)
   const readerPath =
     book.format === 'epub' || book.format === 'audiobook'
       ? `/library/${book.id}/read`
@@ -57,50 +62,140 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
     }
   }
 
+  // ── Audiobook: square cover + centered metadata below ─────────────────
+  if (book.format === 'audiobook') {
+    return (
+      <div
+        role="link"
+        aria-label={
+          book.narrator
+            ? `Audiobook: ${book.title} by ${book.author}, narrated by ${book.narrator}, ${book.progress}% complete`
+            : `Audiobook: ${book.title} by ${book.author}, ${book.progress}% complete`
+        }
+        tabIndex={0}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        className="group cursor-pointer focus-visible:outline-none"
+        data-testid={`book-card-${book.id}`}
+      >
+        {/* Square cover */}
+        <div className="relative aspect-square rounded-2xl overflow-hidden shadow-card-ambient group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_var(--shadow-brand)] transition-all duration-300">
+          {resolvedCoverUrl ? (
+            <img
+              src={resolvedCoverUrl}
+              alt={`Cover of ${book.title}`}
+              loading="lazy"
+              className="h-full w-full object-cover"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-muted">
+              <Headphones className="size-8 text-muted-foreground" />
+            </div>
+          )}
+          {/* Status badge */}
+          <div className="absolute top-2 right-2">
+            <BookStatusBadge status={book.status} />
+          </div>
+          {/* Progress bar overlaid at bottom of cover */}
+          <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-foreground/10">
+            <div
+              className="h-full bg-brand rounded-full transition-all"
+              style={{ width: `${book.progress ?? 0}%` }}
+            />
+          </div>
+          {/* Remote badge */}
+          {book.source.type === 'remote' && (
+            <div
+              className="absolute top-2 left-2 flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[10px] text-brand-soft-foreground backdrop-blur-sm"
+              data-testid={`remote-badge-${book.id}`}
+            >
+              <Cloud className="size-3" aria-hidden="true" />
+              Remote
+            </div>
+          )}
+        </div>
+        {/* Metadata below cover */}
+        <div className="mt-3 px-1 text-center">
+          <p className="text-sm font-bold text-foreground leading-tight line-clamp-2 group-hover:text-brand transition-colors">
+            {book.title}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 truncate">{book.author}</p>
+          {book.narrator && (
+            <p className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">{book.narrator}</p>
+          )}
+          {/* Chapter + time remaining when playing */}
+          {book.chapters.length > 0 &&
+            book.currentPosition?.type === 'time' &&
+            (book.progress ?? 0) > 0 && (
+              <p
+                className="text-[10px] text-muted-foreground mt-0.5 truncate"
+                data-testid={`chapter-${book.id}`}
+              >
+                {findCurrentChapterTitle(book.chapters, book.currentPosition!.seconds)}
+              </p>
+            )}
+          {book.totalDuration != null && book.totalDuration > 0 && (
+            <p
+              className="text-[10px] text-muted-foreground mt-0.5 flex items-center justify-center gap-1"
+              data-testid={`duration-${book.id}`}
+            >
+              <Clock className="size-3" aria-hidden="true" />
+              {book.currentPosition?.type === 'time'
+                ? (book.progress != null && book.progress >= 99) ||
+                  book.currentPosition.seconds >= book.totalDuration
+                  ? 'Completed'
+                  : `${formatDuration(Math.max(0, book.totalDuration - book.currentPosition.seconds))} left`
+                : formatDuration(book.totalDuration)}
+            </p>
+          )}
+          {book.linkedBookId && (
+            <p
+              className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground mt-0.5"
+              data-testid={`linked-format-badge-${book.id}`}
+            >
+              <ArrowRightLeft className="size-3 shrink-0" aria-hidden="true" />
+              Also as EPUB
+            </p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── EPUB / other formats: portrait card layout ────────────────────────
   return (
     <div
       role="link"
-      aria-label={
-        book.narrator
-          ? `Book: ${book.title} by ${book.author}, narrated by ${book.narrator}, ${book.progress}% complete`
-          : `Book: ${book.title} by ${book.author}, ${book.progress}% complete`
-      }
+      aria-label={`Book: ${book.title} by ${book.author}, ${book.progress}% complete`}
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className="rounded-[24px] bg-card border border-border/50 overflow-hidden shadow-sm hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      className="rounded-[24px] bg-card overflow-hidden shadow-card-ambient hover:-translate-y-2 transition-all duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       data-testid={`book-card-${book.id}`}
     >
-      {/* Cover — audiobooks use square aspect (album art), books use portrait */}
-      <div className={`relative overflow-hidden ${book.format === 'audiobook' ? 'aspect-square' : 'aspect-[2/3]'}`}>
-        {book.coverUrl ? (
+      {/* Cover — portrait */}
+      <div className="relative overflow-hidden aspect-[2/3]">
+        {resolvedCoverUrl ? (
           <img
-            src={book.coverUrl}
+            src={resolvedCoverUrl}
             alt={`Cover of ${book.title}`}
             loading="lazy"
             className="h-full w-full object-cover"
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-muted">
-            {book.format === 'audiobook' ? (
-              <Headphones className="h-8 w-8 text-muted-foreground" />
-            ) : (
-              <BookOpen className="h-8 w-8 text-muted-foreground" />
-            )}
+            <BookOpen className="h-8 w-8 text-muted-foreground" />
           </div>
         )}
-        {/* Status badge overlay */}
         <div className="absolute top-2 right-2">
           <BookStatusBadge status={book.status} />
         </div>
-        {/* Audiobook format badge */}
-        {book.format === 'audiobook' && (
-          <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-muted/90 px-2 py-0.5 text-[10px] text-muted-foreground backdrop-blur-sm">
-            <Headphones className="size-3" aria-hidden="true" />
-            Audio
-          </div>
-        )}
-        {/* Remote source badge (E88-S02) */}
+        {/* Progress overlay at bottom of cover */}
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-foreground/10">
+          <div className="h-full bg-brand transition-all" style={{ width: `${book.progress}%` }} />
+        </div>
         {book.source.type === 'remote' && (
           <div
             className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[10px] text-brand-soft-foreground backdrop-blur-sm"
@@ -113,56 +208,23 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
       </div>
 
       {/* Info */}
-      <div className="flex flex-col gap-1.5 p-3">
+      <div className="flex flex-col gap-1 p-3 h-[120px]">
         <p className="text-sm font-medium text-foreground line-clamp-2 leading-tight">
           {book.title}
         </p>
         <p className="text-xs text-muted-foreground truncate">{book.author}</p>
-        {book.narrator && (
-          <p className="text-xs text-muted-foreground/70 truncate">Narrated by {book.narrator}</p>
-        )}
-
-        {/* Progress bar */}
-        <div className="flex items-center gap-2 mt-1">
-          <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
-            <div
-              className="h-full rounded-full bg-brand transition-all"
-              style={{ width: `${book.progress}%` }}
-            />
-          </div>
-          <span className="text-[10px] text-muted-foreground tabular-nums">{book.progress}%</span>
-        </div>
-        {/* Audiobook: current chapter + time remaining (E101-S06: FR32) */}
-        {book.format === 'audiobook' &&
-          book.chapters.length > 0 &&
-          book.currentPosition?.type === 'time' && (
-            <p
-              className="text-[10px] text-muted-foreground truncate"
-              data-testid={`chapter-${book.id}`}
-            >
-              {book.currentPosition!.type === 'time'
-                ? findCurrentChapterTitle(book.chapters, book.currentPosition!.seconds)
-                : 'Chapter 1'}
-            </p>
-          )}
         {book.totalDuration != null && book.totalDuration > 0 && (
           <p className="text-[10px] text-muted-foreground" data-testid={`duration-${book.id}`}>
-            {book.format === 'audiobook' && book.currentPosition?.type === 'time'
-              ? (book.progress != null && book.progress >= 99) ||
-                book.currentPosition.seconds >= book.totalDuration
-                ? 'Completed'
-                : `${formatDuration(Math.max(0, book.totalDuration - book.currentPosition.seconds))} left`
-              : formatDuration(book.totalDuration)}
+            {formatDuration(book.totalDuration)}
           </p>
         )}
-        {/* "Also available as" badge for linked dual-format books (E103-S03) */}
         {book.linkedBookId && (
           <p
             className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5"
             data-testid={`linked-format-badge-${book.id}`}
           >
             <ArrowRightLeft className="size-3 shrink-0" aria-hidden="true" />
-            {book.format === 'audiobook' ? 'Also available as EPUB' : 'Also available as audiobook'}
+            Also available as audiobook
           </p>
         )}
       </div>

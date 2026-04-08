@@ -21,9 +21,9 @@ import { cn } from '@/app/components/ui/utils'
 import type { ReaderTheme } from '@/stores/useReaderStore'
 
 const HEADER_BG: Record<ReaderTheme, string> = {
-  light: 'bg-[#FAF5EE]/95',
-  sepia: 'bg-[#F4ECD8]/95',
-  dark: 'bg-[#1a1a1a]/95',
+  light: 'bg-[#FAF5EE]/60',
+  sepia: 'bg-[#F4ECD8]/60',
+  dark: 'bg-[#1a1a1a]/60',
 }
 
 const HEADER_TEXT: Record<ReaderTheme, string> = {
@@ -63,7 +63,7 @@ export function ReaderHeader({
     <header
       className={cn(
         'fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 h-12',
-        'backdrop-blur-sm border-b border-black/10 transition-all duration-200',
+        'backdrop-blur-3xl transition-all duration-200',
         HEADER_BG[theme],
         HEADER_TEXT[theme],
         visible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'

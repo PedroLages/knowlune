@@ -25,16 +25,25 @@ const STATUS_CONFIG = {
     icon: CheckCircle2,
     label: 'Connected',
     className: 'text-success',
+    borderClass: 'border-l-success',
+    dotClass: 'bg-success',
+    badgeBg: 'bg-success/10',
   },
   offline: {
     icon: CloudOff,
     label: 'Offline',
     className: 'text-warning-foreground',
+    borderClass: 'border-l-warning',
+    dotClass: 'bg-warning',
+    badgeBg: 'bg-warning/10',
   },
   'auth-failed': {
     icon: AlertTriangle,
     label: 'Auth Failed',
     className: 'text-destructive',
+    borderClass: 'border-l-destructive',
+    dotClass: 'bg-destructive',
+    badgeBg: 'bg-destructive/10',
   },
 } as const
 
@@ -45,56 +54,68 @@ export function AudiobookshelfServerCard({
   onReauthenticate,
 }: AudiobookshelfServerCardProps) {
   const status = STATUS_CONFIG[server.status]
-  const StatusIcon = status.icon
 
   return (
     <li
-      className="flex items-center justify-between gap-3 py-3"
+      className={`rounded-xl bg-card p-4 shadow-card-ambient border-l-4 ${status.borderClass} flex flex-col gap-3`}
       data-testid={`abs-server-item-${server.id}`}
     >
-      <div className="flex flex-col min-w-0">
-        <span className="text-sm font-medium text-foreground truncate">{server.name}</span>
-        <span className="text-xs text-muted-foreground truncate">{server.url}</span>
-        <div className="flex items-center gap-1.5 mt-1">
-          <StatusIcon className={`size-3.5 ${status.className}`} aria-hidden="true" />
-          <span
-            className={`text-xs font-medium ${status.className}`}
-            data-testid="abs-server-status"
+      {/* Header: name + actions */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-bold text-foreground truncate">{server.name}</span>
+          <span className="text-xs text-muted-foreground truncate">{server.url}</span>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {server.status === 'auth-failed' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onReauthenticate(server)}
+              className="min-h-[44px] text-xs"
+              data-testid="abs-reauthenticate-btn"
+            >
+              Re-auth
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onEdit(server)}
+            className="size-9"
+            aria-label={`Edit ${server.name}`}
           >
-            {status.label}
-          </span>
+            <Pencil className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDelete(server)}
+            className="size-9 text-destructive hover:text-destructive"
+            aria-label={`Remove ${server.name}`}
+          >
+            <Trash2 className="size-4" />
+          </Button>
         </div>
       </div>
-      <div className="flex items-center gap-1 shrink-0">
-        {server.status === 'auth-failed' && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onReauthenticate(server)}
-            className="min-h-[44px] text-xs"
-            data-testid="abs-reauthenticate-btn"
-          >
-            Re-authenticate
-          </Button>
+      {/* Status + metadata row */}
+      <div className="flex items-center gap-4 text-xs">
+        <span
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium ${status.badgeBg} ${status.className}`}
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${status.dotClass}`} />
+          <span data-testid="abs-server-status">{status.label}</span>
+        </span>
+        {server.libraryIds.length > 0 && (
+          <span className="text-muted-foreground">
+            {server.libraryIds.length} {server.libraryIds.length === 1 ? 'library' : 'libraries'}
+          </span>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onEdit(server)}
-          className="size-9"
-          aria-label={`Edit ${server.name}`}
-        >
-          <Pencil className="size-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onDelete(server)}
-          className="size-9 text-destructive hover:text-destructive"
-          aria-label={`Remove ${server.name}`}
-        >
-          <Trash2 className="size-4" />
-        </Button>
+        {server.lastSyncedAt && (
+          <span className="text-muted-foreground">
+            Synced {new Date(server.lastSyncedAt).toLocaleTimeString()}
+          </span>
+        )}
       </div>
     </li>
   )

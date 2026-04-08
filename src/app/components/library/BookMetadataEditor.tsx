@@ -29,12 +29,15 @@ import {
   SelectValue,
 } from '@/app/components/ui/select'
 import type { Book } from '@/data/types'
+import { Badge } from '@/app/components/ui/badge'
 import { useBookStore } from '@/stores/useBookStore'
 import { fetchOpenLibraryMetadata, fetchCoverImage } from '@/services/OpenLibraryService'
 import { opfsStorageService } from '@/services/OpfsStorageService'
 import { GENRES } from './BookDetailsForm'
 import { EditorCoverSection } from './EditorCoverSection'
 import { EditorTagSection } from './EditorTagSection'
+import { ghostInputClass, labelClass } from './designConstants'
+import { cn } from '@/app/components/ui/utils'
 
 interface BookMetadataEditorProps {
   book: Book | null
@@ -303,7 +306,7 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
       }}
     >
       <DialogContent
-        className="max-w-lg"
+        className="max-w-4xl"
         aria-label="Edit book details"
         data-testid="book-metadata-editor"
       >
@@ -315,137 +318,170 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
           <DialogDescription>Update the metadata for &ldquo;{book.title}&rdquo;.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Cover section */}
-          <EditorCoverSection
-            coverPreviewUrl={coverPreviewUrl}
-            title={title}
-            isFetchingCover={isFetchingCover}
-            isSaving={isSaving}
-            fileInputRef={fileInputRef}
-            onRefetchCover={handleRefetchCover}
-            onCoverUpload={handleCoverUpload}
-          />
-
-          {/* Title */}
-          <div>
-            <Label htmlFor="edit-book-title">Title *</Label>
-            <Input
-              id="edit-book-title"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="Book title"
-              disabled={isSaving}
-              data-testid="edit-book-title"
+        <div className="flex flex-col sm:flex-row gap-6">
+          {/* Left column: Cover + format badges */}
+          <div className="w-full sm:w-2/5 flex flex-col gap-3">
+            <EditorCoverSection
+              coverPreviewUrl={coverPreviewUrl}
+              title={title}
+              isFetchingCover={isFetchingCover}
+              isSaving={isSaving}
+              fileInputRef={fileInputRef}
+              onRefetchCover={handleRefetchCover}
+              onCoverUpload={handleCoverUpload}
             />
-          </div>
-
-          {/* Author */}
-          <div>
-            <Label htmlFor="edit-book-author">Author *</Label>
-            <Input
-              id="edit-book-author"
-              value={author}
-              onChange={e => setAuthor(e.target.value)}
-              placeholder="Author name"
-              disabled={isSaving}
-              data-testid="edit-book-author"
-            />
-          </div>
-
-          {/* ISBN */}
-          <div>
-            <Label htmlFor="edit-book-isbn">ISBN</Label>
-            <Input
-              id="edit-book-isbn"
-              value={isbn}
-              onChange={e => setIsbn(e.target.value)}
-              placeholder="ISBN (optional)"
-              disabled={isSaving}
-              data-testid="edit-book-isbn"
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <Label htmlFor="edit-book-description">Description</Label>
-            <Textarea
-              id="edit-book-description"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Brief description (optional)"
-              rows={3}
-              disabled={isSaving}
-              data-testid="edit-book-description"
-            />
-          </div>
-
-          {/* Genre */}
-          <div>
-            <Label htmlFor="edit-book-genre">Genre</Label>
-            <Select value={genre} onValueChange={setGenre} disabled={isSaving}>
-              <SelectTrigger id="edit-book-genre" data-testid="edit-book-genre">
-                <SelectValue placeholder="Select genre" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE_GENRE}>None</SelectItem>
-                {GENRES.map(g => (
-                  <SelectItem key={g} value={g}>
-                    {g}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Tags */}
-          <EditorTagSection
-            tags={tags}
-            tagInput={tagInput}
-            showTagSuggestions={showTagSuggestions}
-            tagSuggestions={tagSuggestions}
-            isSaving={isSaving}
-            tagInputRef={tagInputRef}
-            onTagInputChange={v => {
-              setTagInput(v)
-              setShowTagSuggestions(true)
-            }}
-            onTagKeyDown={handleTagKeyDown}
-            onFocus={() => setShowTagSuggestions(true)}
-            onBlur={() => {
-              setTimeout(() => setShowTagSuggestions(false), 200)
-            }}
-            onAddTag={addTag}
-            onRemoveTag={removeTag}
-          />
-
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              variant="outline"
-              onClick={handleClose}
-              disabled={isSaving}
-              className="min-h-[44px]"
-              data-testid="editor-cancel-button"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="brand"
-              onClick={handleSave}
-              disabled={isSaving || !canSave}
-              className="min-h-[44px]"
-              data-testid="editor-save-button"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save'
+            <div className="flex flex-wrap gap-2">
+              <Badge className="rounded-full">
+                {book.format === 'audiobook' ? 'Audiobook' : book.format.toUpperCase()}
+              </Badge>
+              {book.linkedBookId && (
+                <Badge variant="secondary" className="rounded-full">
+                  Linked Format
+                </Badge>
               )}
-            </Button>
+            </div>
+          </div>
+
+          {/* Right column: Form fields */}
+          <div className="w-full sm:w-3/5 space-y-4">
+            {/* Title */}
+            <div>
+              <Label htmlFor="edit-book-title" className={labelClass}>
+                Title *
+              </Label>
+              <Input
+                id="edit-book-title"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                placeholder="Book title"
+                disabled={isSaving}
+                className={cn(ghostInputClass)}
+                data-testid="edit-book-title"
+              />
+            </div>
+
+            {/* Author */}
+            <div>
+              <Label htmlFor="edit-book-author" className={labelClass}>
+                Author *
+              </Label>
+              <Input
+                id="edit-book-author"
+                value={author}
+                onChange={e => setAuthor(e.target.value)}
+                placeholder="Author name"
+                disabled={isSaving}
+                className={cn(ghostInputClass)}
+                data-testid="edit-book-author"
+              />
+            </div>
+
+            {/* ISBN */}
+            <div>
+              <Label htmlFor="edit-book-isbn" className={labelClass}>
+                ISBN
+              </Label>
+              <Input
+                id="edit-book-isbn"
+                value={isbn}
+                onChange={e => setIsbn(e.target.value)}
+                placeholder="ISBN (optional)"
+                disabled={isSaving}
+                className={cn(ghostInputClass)}
+                data-testid="edit-book-isbn"
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <Label htmlFor="edit-book-description" className={labelClass}>
+                Description
+              </Label>
+              <Textarea
+                id="edit-book-description"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder="Brief description (optional)"
+                rows={3}
+                disabled={isSaving}
+                className={cn(ghostInputClass)}
+                data-testid="edit-book-description"
+              />
+            </div>
+
+            {/* Genre */}
+            <div>
+              <Label htmlFor="edit-book-genre" className={labelClass}>
+                Genre
+              </Label>
+              <Select value={genre} onValueChange={setGenre} disabled={isSaving}>
+                <SelectTrigger
+                  id="edit-book-genre"
+                  className={cn(ghostInputClass)}
+                  data-testid="edit-book-genre"
+                >
+                  <SelectValue placeholder="Select genre" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_GENRE}>None</SelectItem>
+                  {GENRES.map(g => (
+                    <SelectItem key={g} value={g}>
+                      {g}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Tags */}
+            <EditorTagSection
+              tags={tags}
+              tagInput={tagInput}
+              showTagSuggestions={showTagSuggestions}
+              tagSuggestions={tagSuggestions}
+              isSaving={isSaving}
+              tagInputRef={tagInputRef}
+              onTagInputChange={v => {
+                setTagInput(v)
+                setShowTagSuggestions(true)
+              }}
+              onTagKeyDown={handleTagKeyDown}
+              onFocus={() => setShowTagSuggestions(true)}
+              onBlur={() => {
+                setTimeout(() => setShowTagSuggestions(false), 200)
+              }}
+              onAddTag={addTag}
+              onRemoveTag={removeTag}
+            />
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                variant="ghost"
+                onClick={handleClose}
+                disabled={isSaving}
+                className="min-h-[44px]"
+                data-testid="editor-cancel-button"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="brand"
+                onClick={handleSave}
+                disabled={isSaving || !canSave}
+                className="min-h-[44px] rounded-full px-6"
+                data-testid="editor-save-button"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

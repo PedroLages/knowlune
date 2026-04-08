@@ -2,7 +2,7 @@
 
 ###############################################################################
 # External Code Review Script
-# Calls OpenAI (Codex CLI) or GLM (z.ai API) for adversarial code review.
+# Calls OpenAI (Chat Completions API) or GLM (z.ai API) for adversarial code review.
 # Used by .claude/agents/openai-code-review.md and glm-code-review.md
 #
 # Usage:
@@ -28,6 +28,10 @@ MAX_DIFF_LINES="${MAX_DIFF_LINES:-2000}"
 MAX_RETRIES=2
 RETRY_DELAY=5
 TIMEOUT=120
+
+# OpenAI model configuration
+OPENAI_MODEL="${OPENAI_MODEL:-gpt-4.1}"
+OPENAI_API_URL="${OPENAI_API_URL:-https://api.openai.com/v1/chat/completions}"
 
 # GLM model configuration
 GLM_MODEL="${GLM_MODEL:-glm-5.1}"
@@ -57,7 +61,7 @@ usage() {
     echo "Usage: $0 --provider {openai|glm} --story-id E##-S## --output report.md"
     echo ""
     echo "Options:"
-    echo "  --provider    API provider: openai (Codex CLI) or glm (z.ai API)"
+    echo "  --provider    API provider: openai (Chat Completions API) or glm (z.ai API)"
     echo "  --story-id    Story identifier (e.g., E60-S01)"
     echo "  --output      Path to write the markdown report"
     echo ""
@@ -65,6 +69,8 @@ usage() {
     echo "  OPENAI_API_KEY   Required for --provider openai"
     echo "  ZAI_API_KEY      Required for --provider glm"
     echo "  MAX_DIFF_LINES   Max diff lines to send (default: 2000)"
+    echo "  OPENAI_MODEL     OpenAI model name (default: gpt-4.1)"
+    echo "  OPENAI_API_URL   OpenAI API endpoint (default: https://api.openai.com/v1/chat/completions)"
     echo "  GLM_MODEL        GLM model name (default: glm-5.1)"
     echo "  GLM_API_URL      GLM API endpoint (default: https://api.z.ai/api/anthropic/v1/messages)"
     exit 1
@@ -140,24 +146,71 @@ Issues found: [N] | Blockers: [N] | High: [N] | Medium: [N] | Nits: [N]"
 ###############################################################################
 
 run_openai() {
-    # Check Codex CLI availability
-    if ! command -v codex &>/dev/null; then
-        skip_exit "Codex CLI not installed (npm install -g @openai/codex)"
-    fi
-
     # Check API key
     if [[ -z "${OPENAI_API_KEY:-}" ]]; then
         skip_exit "OPENAI_API_KEY not set"
     fi
 
-    print_info "Running OpenAI Codex adversarial review for ${STORY_ID}..."
+    # Check jq availability
+    if ! command -v jq &>/dev/null; then
+        error_exit "jq is required for OpenAI provider (brew install jq)"
+    fi
 
-    local codex_prompt="Review the code changes on the current branch compared to main. ${REVIEW_PROMPT}
+    print_info "Running OpenAI (${OPENAI_MODEL}) adversarial review for ${STORY_ID}..."
 
-Story: ${STORY_ID}"
+    # Get diff, truncate if needed
+    local diff_content
+    diff_content=$(git diff main...HEAD 2>/dev/null || echo "")
+
+    if [[ -z "$diff_content" ]]; then
+        skip_exit "No diff found between main and HEAD"
+    fi
+
+    local diff_lines
+    diff_lines=$(echo "$diff_content" | wc -l | tr -d ' ')
+
+    if [[ $diff_lines -gt $MAX_DIFF_LINES ]]; then
+        print_warn "Diff truncated from ${diff_lines} to ${MAX_DIFF_LINES} lines"
+        diff_content=$(echo "$diff_content" | head -n "$MAX_DIFF_LINES")
+        diff_content="${diff_content}
+
+... [TRUNCATED: ${diff_lines} total lines, showing first ${MAX_DIFF_LINES}]"
+    fi
+
+    # Get story context (first 100 lines of story file if it exists)
+    local story_context=""
+    local story_file
+    story_file=$(find docs/implementation-artifacts -name "*${STORY_ID,,}*" -o -name "*$(echo "$STORY_ID" | tr '[:upper:]' '[:lower:]' | tr '-' '-')*" 2>/dev/null | head -1)
+    if [[ -n "$story_file" && -f "$story_file" ]]; then
+        story_context=$(head -100 "$story_file")
+    fi
+
+    # Build user message
+    local user_message="Story: ${STORY_ID}
+${story_context:+
+Story context:
+${story_context}
+}
+Code diff (git diff main...HEAD):
+${diff_content}"
+
+    # Construct JSON payload with jq (OpenAI Chat Completions format)
+    local payload
+    payload=$(jq -n \
+        --arg model "$OPENAI_MODEL" \
+        --arg system "$REVIEW_PROMPT" \
+        --arg user_msg "$user_message" \
+        '{
+            model: $model,
+            max_tokens: 4096,
+            messages: [
+                { role: "system", content: $system },
+                { role: "user", content: $user_msg }
+            ]
+        }')
 
     local attempt=0
-    local output=""
+    local response=""
 
     while [[ $attempt -le $MAX_RETRIES ]]; do
         if [[ $attempt -gt 0 ]]; then
@@ -165,26 +218,55 @@ Story: ${STORY_ID}"
             sleep $RETRY_DELAY
         fi
 
-        # Run Codex CLI in non-interactive mode
         set +e
-        output=$(timeout "${TIMEOUT}s" codex exec "$codex_prompt" --base main 2>&1)
+        response=$(curl -s --max-time "$TIMEOUT" \
+            -H "Authorization: Bearer ${OPENAI_API_KEY}" \
+            -H "Content-Type: application/json" \
+            "$OPENAI_API_URL" \
+            -d "$payload" 2>&1)
         local exit_code=$?
         set -e
 
-        if [[ $exit_code -eq 0 && -n "$output" ]]; then
-            print_success "Codex review completed"
-            echo "$output"
-            return 0
-        elif [[ $exit_code -eq 124 ]]; then
-            print_warn "Codex timed out (${TIMEOUT}s)"
-        else
-            print_warn "Codex exited with code ${exit_code}"
+        if [[ $exit_code -ne 0 ]]; then
+            print_warn "curl failed with exit code ${exit_code}"
+            ((attempt++))
+            continue
         fi
 
-        ((attempt++))
+        # Check for API errors
+        local error_message
+        error_message=$(echo "$response" | jq -r '.error.message // empty' 2>/dev/null)
+
+        if [[ -n "$error_message" ]]; then
+            local error_type
+            error_type=$(echo "$response" | jq -r '.error.type // "unknown"' 2>/dev/null)
+            print_warn "API error: ${error_type} — ${error_message}"
+
+            # Retry on rate limits and server errors
+            if [[ "$error_type" == "rate_limit_error" || "$error_type" == "server_error" || "$error_type" == "overloaded_error" ]]; then
+                ((attempt++))
+                continue
+            else
+                error_exit "OpenAI API error: ${error_type} — ${error_message}"
+            fi
+        fi
+
+        # Extract content from OpenAI Chat Completions response
+        local review_text
+        review_text=$(echo "$response" | jq -r '.choices[0].message.content // empty' 2>/dev/null)
+
+        if [[ -n "$review_text" ]]; then
+            print_success "OpenAI review completed"
+            echo "$review_text"
+            return 0
+        else
+            print_warn "Empty response from OpenAI API"
+            ((attempt++))
+            continue
+        fi
     done
 
-    error_exit "Codex CLI failed after ${MAX_RETRIES} retries"
+    error_exit "OpenAI API failed after ${MAX_RETRIES} retries"
 }
 
 ###############################################################################

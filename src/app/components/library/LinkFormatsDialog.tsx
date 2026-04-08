@@ -40,6 +40,7 @@ import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { cn } from '@/app/components/ui/utils'
 import { toast } from 'sonner'
 import { ChapterMappingEditor } from './ChapterMappingEditor'
+import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 
 /** Confidence threshold above which mappings auto-save after confirmation. */
 const HIGH_CONFIDENCE_THRESHOLD = 0.85
@@ -64,6 +65,8 @@ function BookPickerCard({
   selected: boolean
   onClick: () => void
 }) {
+  const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
+
   return (
     <button
       type="button"
@@ -77,9 +80,9 @@ function BookPickerCard({
     >
       {/* Thumbnail */}
       <div className="size-12 flex-shrink-0 rounded-lg overflow-hidden">
-        {book.coverUrl ? (
+        {resolvedCoverUrl ? (
           <img
-            src={book.coverUrl}
+            src={resolvedCoverUrl}
             alt={`Cover of ${book.title}`}
             className="h-full w-full object-cover"
           />
@@ -299,6 +302,13 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
   const alreadyLinked = !!book.linkedBookId
   const linkedBook = alreadyLinked ? books.find(b => b.id === book.linkedBookId) : null
 
+  // Resolve cover URLs (handles opfs:// and opfs-cover:// protocols)
+  const resolvedBookCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
+  const resolvedLinkedCoverUrl = useBookCoverUrl({
+    bookId: linkedBook?.id ?? '',
+    coverUrl: linkedBook?.coverUrl,
+  })
+
   // Compute confidence for confirm view
   const avgConfidence = useMemo(() => {
     if (!mappings || mappings.length === 0) return 0
@@ -333,8 +343,12 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
                 </p>
                 <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3">
                   <div className="size-10 flex-shrink-0 rounded-lg overflow-hidden">
-                    {book.coverUrl ? (
-                      <img src={book.coverUrl} alt="" className="h-full w-full object-cover" />
+                    {resolvedBookCoverUrl ? (
+                      <img
+                        src={resolvedBookCoverUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-muted rounded-lg">
                         {book.format === 'audiobook' ? (
@@ -370,9 +384,9 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
                   </p>
                   <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3">
                     <div className="size-10 flex-shrink-0 rounded-lg overflow-hidden">
-                      {linkedBook.coverUrl ? (
+                      {resolvedLinkedCoverUrl ? (
                         <img
-                          src={linkedBook.coverUrl}
+                          src={resolvedLinkedCoverUrl}
                           alt=""
                           className="h-full w-full object-cover"
                         />

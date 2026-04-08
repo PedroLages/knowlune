@@ -1,9 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import {
-  setFocusModeActive,
-  setFocusModeInactive,
-  isFocusModeActive,
-} from '../focusModeState'
+import { setFocusModeActive, setFocusModeInactive, isFocusModeActive } from '../focusModeState'
 
 describe('focusModeState', () => {
   beforeEach(() => {
