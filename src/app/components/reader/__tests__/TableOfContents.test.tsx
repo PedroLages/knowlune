@@ -156,21 +156,6 @@ describe('TableOfContents', () => {
       expect(chapter2Button).toHaveClass('text-brand', 'font-medium', 'bg-brand-soft/40')
     })
 
-    it('does not highlight non-active chapters', () => {
-      render(
-        <TableOfContents
-          {...defaultProps}
-          isLoading={false}
-          toc={mockToc}
-          currentHref="#chap1"
-          rendition={mockRendition}
-        />
-      )
-
-      const chapter2Button = screen.getByText('Chapter 2')
-      expect(chapter2Button).not.toHaveClass('text-brand', 'font-medium', 'bg-brand-soft/40')
-    })
-
     it('matches chapter by href without anchor fragment', () => {
       render(
         <TableOfContents

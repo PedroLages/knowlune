@@ -63,7 +63,8 @@ export function ReaderHeader({
   const navigate = useNavigate()
 
   // Chapter display: use chapter name when available, fall back to progress percentage
-  const chapterDisplay = currentChapter ?? (readingProgress !== undefined ? `${Math.round(readingProgress * 100)}%` : undefined)
+  // Treat empty string as unavailable (should show progress percentage instead)
+  const chapterDisplay = currentChapter || (readingProgress !== undefined ? `${Math.round(readingProgress * 100)}%` : undefined)
 
   return (
     <header
