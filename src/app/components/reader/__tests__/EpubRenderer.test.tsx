@@ -23,17 +23,19 @@ vi.mock('react-reader', () => ({
   },
 }))
 
-// Mock the reader store
-const mockToggleHeader = vi.fn()
+// Mutable store state — allows individual tests to override theme/settings
+const mockStoreState: Record<string, unknown> = {
+  theme: 'light',
+  fontSize: 100,
+  fontFamily: 'default',
+  lineHeight: 1.6,
+  toggleHeader: vi.fn(),
+}
+const mockToggleHeader = mockStoreState.toggleHeader as ReturnType<typeof vi.fn>
+
 vi.mock('@/stores/useReaderStore', () => ({
   useReaderStore: (selector: (s: Record<string, unknown>) => unknown) =>
-    selector({
-      theme: 'light',
-      fontSize: 100,
-      fontFamily: 'default',
-      lineHeight: 1.6,
-      toggleHeader: mockToggleHeader,
-    }),
+    selector(mockStoreState),
 }))
 
 // Mock Rendition
@@ -89,9 +91,16 @@ describe('EpubRenderer', () => {
     globalThis.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver
     mockEpubViewProps.mockClear()
     mockToggleHeader.mockClear()
+    // Reset store to defaults
+    mockStoreState.theme = 'light'
+    mockStoreState.fontSize = 100
+    mockStoreState.fontFamily = 'default'
+    mockStoreState.lineHeight = 1.6
+    vi.useFakeTimers()
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -174,6 +183,20 @@ describe('EpubRenderer', () => {
       const container = screen.getByTestId('epub-renderer')
       expect(container.className).toContain('bg-[#FAF5EE]')
     })
+
+    it('applies sepia theme background to container', () => {
+      mockStoreState.theme = 'sepia'
+      render(<EpubRenderer {...defaultProps} />)
+      const container = screen.getByTestId('epub-renderer')
+      expect(container.className).toContain('bg-[#F4ECD8]')
+    })
+
+    it('applies dark theme background to container', () => {
+      mockStoreState.theme = 'dark'
+      render(<EpubRenderer {...defaultProps} />)
+      const container = screen.getByTestId('epub-renderer')
+      expect(container.className).toContain('bg-[#1a1a1a]')
+    })
   })
 
   describe('Bug 3 — Single-page spread (AC-4)', () => {
@@ -249,6 +272,194 @@ describe('EpubRenderer', () => {
           'line-height': '1.6',
         }),
       })
+    })
+
+    it('re-applies theme when settings change (sepia)', () => {
+      const { rerender } = render(<EpubRenderer {...defaultProps} />)
+
+      const mockRendition = createMockRendition()
+      const epubViewCall = mockEpubViewProps.mock.calls[0][0]
+      act(() => {
+        epubViewCall.getRendition(mockRendition)
+      })
+
+      // Clear call count from initial applyTheme
+      mockRendition.themes.default.mockClear()
+
+      // Simulate store theme changing to sepia
+      mockStoreState.theme = 'sepia'
+      rerender(<EpubRenderer {...defaultProps} />)
+
+      expect(mockRendition.themes.default).toHaveBeenCalledWith({
+        body: expect.objectContaining({
+          background: '#F4ECD8',
+          color: '#3a2a1a',
+        }),
+      })
+    })
+
+    it('re-applies theme when settings change (dark)', () => {
+      const { rerender } = render(<EpubRenderer {...defaultProps} />)
+
+      const mockRendition = createMockRendition()
+      const epubViewCall = mockEpubViewProps.mock.calls[0][0]
+      act(() => {
+        epubViewCall.getRendition(mockRendition)
+      })
+
+      mockRendition.themes.default.mockClear()
+
+      mockStoreState.theme = 'dark'
+      rerender(<EpubRenderer {...defaultProps} />)
+
+      expect(mockRendition.themes.default).toHaveBeenCalledWith({
+        body: expect.objectContaining({
+          background: '#1a1a1a',
+          color: '#d4d4d4',
+        }),
+      })
+    })
+  })
+
+  describe('Navigation — navigatePrev / navigateNext', () => {
+    function setupRendition() {
+      render(<EpubRenderer {...defaultProps} />)
+      const mockRendition = createMockRendition()
+      const epubViewCall = mockEpubViewProps.mock.calls[0][0]
+      act(() => {
+        epubViewCall.getRendition(mockRendition)
+      })
+      return mockRendition
+    }
+
+    it('clicking prev zone calls rendition.prev()', () => {
+      const mockRendition = setupRendition()
+      const prevZone = screen.getByLabelText('Previous page')
+      fireEvent.click(prevZone)
+      expect(mockRendition.prev).toHaveBeenCalledTimes(1)
+    })
+
+    it('clicking next zone calls rendition.next()', () => {
+      const mockRendition = setupRendition()
+      const nextZone = screen.getByLabelText('Next page')
+      fireEvent.click(nextZone)
+      expect(mockRendition.next).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not call rendition.prev() if rendition is not ready', () => {
+      const mockRendition = createMockRendition()
+      render(<EpubRenderer {...defaultProps} />)
+      // Do NOT call getRendition — renditionRef stays null
+      const prevZone = screen.getByLabelText('Previous page')
+      fireEvent.click(prevZone)
+      expect(mockRendition.prev).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Page turn animation class', () => {
+    function setupRendition() {
+      render(<EpubRenderer {...defaultProps} />)
+      const mockRendition = createMockRendition()
+      const epubViewCall = mockEpubViewProps.mock.calls[0][0]
+      act(() => {
+        epubViewCall.getRendition(mockRendition)
+      })
+      return mockRendition
+    }
+
+    it('adds right animation class when navigating prev', () => {
+      setupRendition()
+      const container = screen.getByTestId('epub-renderer')
+      const prevZone = screen.getByLabelText('Previous page')
+
+      act(() => {
+        fireEvent.click(prevZone)
+      })
+
+      expect(container.className).toContain('slide-right')
+    })
+
+    it('adds left animation class when navigating next', () => {
+      setupRendition()
+      const container = screen.getByTestId('epub-renderer')
+      const nextZone = screen.getByLabelText('Next page')
+
+      act(() => {
+        fireEvent.click(nextZone)
+      })
+
+      expect(container.className).toContain('slide-left')
+    })
+
+    it('clears animation class after 250ms timer', () => {
+      setupRendition()
+      const container = screen.getByTestId('epub-renderer')
+      const nextZone = screen.getByLabelText('Next page')
+
+      act(() => {
+        fireEvent.click(nextZone)
+      })
+
+      expect(container.className).toContain('slide-left')
+
+      act(() => {
+        vi.advanceTimersByTime(250)
+      })
+
+      expect(container.className).not.toContain('slide-left')
+    })
+  })
+
+  describe('Swipe gesture navigation', () => {
+    function setupRendition() {
+      render(<EpubRenderer {...defaultProps} />)
+      const mockRendition = createMockRendition()
+      const epubViewCall = mockEpubViewProps.mock.calls[0][0]
+      act(() => {
+        epubViewCall.getRendition(mockRendition)
+      })
+      return mockRendition
+    }
+
+    function swipe(container: HTMLElement, dx: number, dy = 0) {
+      fireEvent.touchStart(container, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      })
+      fireEvent.touchEnd(container, {
+        changedTouches: [{ clientX: 100 + dx, clientY: 100 + dy }],
+      })
+    }
+
+    it('swipe left (dx < -50) navigates to next page', () => {
+      const mockRendition = setupRendition()
+      const container = screen.getByTestId('epub-renderer')
+      swipe(container, -60)
+      expect(mockRendition.next).toHaveBeenCalledTimes(1)
+      expect(mockRendition.prev).not.toHaveBeenCalled()
+    })
+
+    it('swipe right (dx > 50) navigates to previous page', () => {
+      const mockRendition = setupRendition()
+      const container = screen.getByTestId('epub-renderer')
+      swipe(container, 60)
+      expect(mockRendition.prev).toHaveBeenCalledTimes(1)
+      expect(mockRendition.next).not.toHaveBeenCalled()
+    })
+
+    it('swipe shorter than threshold (< 50px) does not navigate', () => {
+      const mockRendition = setupRendition()
+      const container = screen.getByTestId('epub-renderer')
+      swipe(container, -30)
+      expect(mockRendition.next).not.toHaveBeenCalled()
+      expect(mockRendition.prev).not.toHaveBeenCalled()
+    })
+
+    it('vertical swipe does not navigate (|dy| >= |dx|)', () => {
+      const mockRendition = setupRendition()
+      const container = screen.getByTestId('epub-renderer')
+      swipe(container, -60, -80) // More vertical than horizontal
+      expect(mockRendition.next).not.toHaveBeenCalled()
+      expect(mockRendition.prev).not.toHaveBeenCalled()
     })
   })
 

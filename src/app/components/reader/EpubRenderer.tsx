@@ -17,19 +17,28 @@ import type { Rendition } from 'epubjs'
 import type { NavItem } from 'epubjs'
 import { useReaderStore } from '@/stores/useReaderStore'
 
-/** Reader theme backgrounds applied to the EPUB iframe */
+/**
+ * Reader theme backgrounds applied to the EPUB iframe body via epub.js rendition.themes.default().
+ *
+ * NOTE: These are intentionally hardcoded hex values, not design tokens.
+ * epub.js injects these into an isolated iframe where CSS custom properties
+ * from the host document are not inherited. Design tokens (CSS vars) would
+ * resolve to empty strings inside the iframe, breaking theming entirely.
+ */
 const READER_THEME_STYLES: Record<string, { background: string; color: string }> = {
   light: { background: '#FAF5EE', color: '#1a1a1a' },
   sepia: { background: '#F4ECD8', color: '#3a2a1a' },
   dark: { background: '#1a1a1a', color: '#d4d4d4' },
 }
 
-/** Container background classes matching EPUB iframe theme backgrounds (Bug 2 fix) */
-const READER_CONTAINER_BG: Record<string, string> = {
-  light: 'bg-[#FAF5EE]',
-  sepia: 'bg-[#F4ECD8]',
-  dark: 'bg-[#1a1a1a]',
-}
+/**
+ * Container background Tailwind classes derived from READER_THEME_STYLES backgrounds (Bug 2 fix).
+ * The container bg must match the iframe bg to prevent color flash at page edges.
+ * Uses Tailwind's arbitrary value syntax since these are epub-specific colors, not design tokens.
+ */
+const READER_CONTAINER_BG: Record<string, string> = Object.fromEntries(
+  Object.entries(READER_THEME_STYLES).map(([key, { background }]) => [key, `bg-[${background}]`])
+)
 
 /** Minimum horizontal swipe distance to trigger page turn */
 const SWIPE_THRESHOLD_PX = 50
@@ -70,6 +79,9 @@ export function EpubRenderer({
 
   // Swipe tracking
   const swipeTouchStart = useRef<{ x: number; y: number } | null>(null)
+
+  // Timer ref for page turn animation reset (cleared on unmount to avoid setState after unmount)
+  const pageTurnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   /** Apply current theme + font settings to epub.js rendition */
   const applyTheme = useCallback(
@@ -114,18 +126,27 @@ export function EpubRenderer({
     }
   }, [applyTheme])
 
+  /** Clear page turn animation timer on unmount to avoid setState after unmount */
+  useEffect(() => {
+    return () => {
+      if (pageTurnTimerRef.current !== null) {
+        clearTimeout(pageTurnTimerRef.current)
+      }
+    }
+  }, [])
+
   /** Resize epub.js rendition when container dimensions change (Bug 1 fix — AC-1, AC-2) */
   useEffect(() => {
     const container = containerRef.current
-    const rendition = renditionRef.current
-    if (!container || !rendition || !renditionReady) return
+    if (!container || !renditionReady) return
 
     const observer = new ResizeObserver(entries => {
       const entry = entries[0]
       if (!entry) return
       const { width, height } = entry.contentRect
-      if (width > 0 && height > 0) {
-        rendition.resize(width, height)
+      // Read from ref in callback to avoid capturing stale rendition at setup time
+      if (width > 0 && height > 0 && renditionRef.current) {
+        renditionRef.current.resize(width, height)
       }
     })
 
@@ -140,7 +161,8 @@ export function EpubRenderer({
     renditionRef.current.prev().catch(() => {
       // silent-catch-ok: at first page, prev() is a no-op
     })
-    setTimeout(() => setPageTurnDirection(null), 250)
+    if (pageTurnTimerRef.current !== null) clearTimeout(pageTurnTimerRef.current)
+    pageTurnTimerRef.current = setTimeout(() => setPageTurnDirection(null), 250)
   }, [])
 
   /** Navigate to next page */
@@ -150,7 +172,8 @@ export function EpubRenderer({
     renditionRef.current.next().catch(() => {
       // silent-catch-ok: at last page, next() is a no-op
     })
-    setTimeout(() => setPageTurnDirection(null), 250)
+    if (pageTurnTimerRef.current !== null) clearTimeout(pageTurnTimerRef.current)
+    pageTurnTimerRef.current = setTimeout(() => setPageTurnDirection(null), 250)
   }, [])
 
   /** Touch start — record start position for swipe detection */
