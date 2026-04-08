@@ -34,8 +34,7 @@ const mockStoreState: Record<string, unknown> = {
 const mockToggleHeader = mockStoreState.toggleHeader as ReturnType<typeof vi.fn>
 
 vi.mock('@/stores/useReaderStore', () => ({
-  useReaderStore: (selector: (s: Record<string, unknown>) => unknown) =>
-    selector(mockStoreState),
+  useReaderStore: (selector: (s: Record<string, unknown>) => unknown) => selector(mockStoreState),
 }))
 
 // Mock Rendition
