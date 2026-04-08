@@ -496,3 +496,64 @@ return <div className="placeholder">No cover</div>
 - Future: `opfs-audio://`, `opfs-doc://`, etc.
 
 **Reference:** E107-S01 (useBookCoverUrl hook)
+
+## Custom Protocol Validation at Browser API Boundaries
+
+Custom protocols like `opfs://` and `opfs-cover://` are meaningful inside the app but break silently when passed to native browser APIs (Media Session API, `fetch()`, History API, etc.).
+
+Before passing any URL to a native browser API, validate its scheme:
+
+```typescript
+// Only pass safe schemes to navigator.mediaSession
+if (/^(blob:|https?:|data:image\/)/.test(artworkUrl)) {
+  navigator.mediaSession.metadata = new MediaMetadata({ artwork: [...] })
+}
+```
+
+**Why it fails silently:** Browser APIs accept invalid URLs without throwing — they just don't load the resource. There's no error to catch.
+
+**Where this applies:** Media Session API artwork, `fetch()`, `<audio src>`, `<video src>`, History API URLs. Any API that takes a URL string.
+
+**Case study:** E107-S01 — `book.coverUrl` (containing `opfs://`) was passed directly to `navigator.mediaSession.metadata.artwork`, causing the cover to never appear in OS media controls.
+
+## Async Effect Two-Phase Resource Cleanup
+
+Async effects that create disposable resources (blob URLs, file handles, streams) need two independent cleanup targets, not one:
+
+1. **Effect-local resource** (`effectBlobUrl`): the URL/handle resolved by the current effect run. Revoke if the effect is cancelled before the component renders the new value.
+2. **Previous displayed resource** (`previousUrlRef`): the URL/handle currently shown. Revoke when the component renders a replacement (or unmounts).
+
+Single-phase cleanup (only on unmount) misses the rapid-re-render race: a new effect starts, the old one is cancelled, but the new effect's resource is never revoked if *that* effect is also cancelled.
+
+```typescript
+const previousUrlRef = useRef<string | null>(null)
+
+useEffect(() => {
+  let isCancelled = false
+  let effectBlobUrl: string | null = null
+
+  async function resolve() {
+    const url = await getResourceUrl(resourceId)
+    if (isCancelled) {
+      // Cancel path: revoke the resource this effect created
+      if (url) URL.revokeObjectURL(url)
+      return
+    }
+    effectBlobUrl = url
+    setResolvedUrl(url)
+    // Revoke the previously displayed resource
+    if (previousUrlRef.current) URL.revokeObjectURL(previousUrlRef.current)
+    previousUrlRef.current = url
+  }
+
+  resolve()
+
+  return () => {
+    isCancelled = true
+    // Unmount path: revoke the resource this effect created
+    if (effectBlobUrl) URL.revokeObjectURL(effectBlobUrl)
+  }
+}, [resourceId])
+```
+
+**Case study:** E107-S01 — `useBookCoverUrl` initial implementation used single-phase cleanup, leaking blob URLs on rapid cover prop changes. Fixed in `231c8d5f`.
