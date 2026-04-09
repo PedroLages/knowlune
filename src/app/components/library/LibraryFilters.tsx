@@ -111,6 +111,7 @@ export function LibraryFilters() {
             )}
             aria-label="Grid view"
             aria-pressed={libraryView === 'grid'}
+            data-testid="view-toggle-grid"
           >
             <LayoutGrid className="h-4 w-4" />
           </button>
@@ -124,6 +125,7 @@ export function LibraryFilters() {
             )}
             aria-label="List view"
             aria-pressed={libraryView === 'list'}
+            data-testid="view-toggle-list"
           >
             <List className="h-4 w-4" />
           </button>

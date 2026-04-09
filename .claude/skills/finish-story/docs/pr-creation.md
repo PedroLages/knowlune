@@ -28,6 +28,9 @@ gh pr create \
 | Design review          | passed / N warnings         |
 | Code review            | passed / N warnings         |
 | Code review (testing)  | N/N ACs covered / N warnings |
+| Performance benchmark  | passed / N warnings / skipped |
+| Security review        | passed / N warnings         |
+| Exploratory QA         | passed / N warnings / skipped |
 
 ## Test Plan
 
@@ -100,6 +103,7 @@ Before constructing the PR body, extract HIGH findings from review reports to po
 ${BASE_PATH}/docs/reviews/code/code-review-*-{story-id}.md       → [code-review]
 ${BASE_PATH}/docs/reviews/design/design-review-*-{story-id}.md   → [design-review]
 ${BASE_PATH}/docs/reviews/code/code-review-testing-*-{story-id}.md → [code-review-testing]
+${BASE_PATH}/docs/reviews/security/security-review-*-{story-id}.md → [security-review]
 ```
 
 **Step 2 — extract HIGH section from each report** (same approach `validate-blockers.sh` uses for blockers):
@@ -131,7 +135,7 @@ Check these before running `gh pr create`:
 
 1. **All gates passed or skipped**
    ```bash
-   # Verify review_gates_passed has all 9 canonical gates
+   # Verify review_gates_passed has all 12 canonical gates
    grep "review_gates_passed:" ${STORY_FILE}
    ```
 
@@ -182,6 +186,9 @@ Check these before running `gh pr create`:
 | Design review          | passed                      |
 | Code review            | passed                      |
 | Code review (testing)  | 5/5 ACs covered             |
+| Performance benchmark  | passed                      |
+| Security review        | passed                      |
+| Exploratory QA         | skipped                     |
 
 ## Test Plan
 

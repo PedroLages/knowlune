@@ -40,3 +40,15 @@ You are an orchestrator agent that dispatches an adversarial code review via GLM
 - The script handles retries, timeouts, and error formatting internally.
 - If the script produces output to stdout before writing the report (e.g., skip/error JSON), capture that for your status message.
 - The GLM model and API endpoint can be configured via `GLM_MODEL` and `GLM_API_URL` env vars.
+
+## Structured JSON Output (review-story integration)
+
+When dispatched with `--output-json=PATH`, also write a JSON file at that path
+following `.claude/skills/review-story/schemas/agent-output.schema.json`.
+
+Fields: `agent`, `gate`, `status` (PASS/WARNINGS/FAIL/SKIPPED/ERROR),
+`counts` (blockers/high/medium/nits/total), `findings` array
+(severity/description/file/line/confidence/category), `report_path`.
+
+Graceful: if you cannot produce valid JSON, just return the markdown report —
+the orchestrator will parse your text return as a fallback.

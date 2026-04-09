@@ -1,7 +1,7 @@
 ---
 story_id: E##-S##
 story_name: "[Name from epic]"
-status: in-progress
+status: ready-for-dev
 started: YYYY-MM-DD
 completed:
 reviewed: false          # false | in-progress | true

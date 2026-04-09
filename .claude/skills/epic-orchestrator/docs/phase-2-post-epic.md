@@ -4,9 +4,7 @@
 
 After all stories are shipped and merged, run post-epic validation commands in order. Each command runs in a **fresh sub-agent**. These validate the epic's quality, coverage, and capture lessons learned.
 
-**All 5 post-epic commands are mandatory** — sprint-status, testarch-trace, testarch-nfr, adversarial review, and retrospective. Fix any blocking issues (trace gaps, NFR failures) before generating the final report.
-
-**Exception:** `/review-adversarial` is optional — only dispatched when the user explicitly requests it or the epic orchestrator is invoked with adversarial review enabled.
+**4 post-epic commands are mandatory** (sprint-status, testarch-trace, testarch-nfr, retrospective). Adversarial review is optional — only dispatched when the user explicitly requests it or the epic orchestrator is invoked with adversarial review enabled. Fix any blocking issues (trace gaps, NFR failures) before generating the final report.
 
 Commands with gate decisions (`/testarch-trace`, `/testarch-nfr`) include a **fix-then-revalidate cycle** — aligned with [BMad TEA's official guidance](https://bmad-code-org.github.io/bmad-method-test-architecture-enterprise/how-to/workflows/run-trace/).
 

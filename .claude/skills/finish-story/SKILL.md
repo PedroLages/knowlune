@@ -115,7 +115,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
      - Treat as comprehensive mode — run blocker cross-check + lightweight validation (step 5).
    - **If agent reviews incomplete**:
      - Inform the user: "Review was interrupted before completion. Running full review inline."
-     - Run the full review pipeline with resumption — same as `/review-story` steps 3-7 (respecting `review_gates_passed` to skip completed agent reviews). Dispatch all non-skipped review agents (design-review, code-review, code-review-testing) **in a single message** for maximum parallelism.
+     - Run the full review pipeline with resumption — same as `/review-story` steps 3-7 (respecting `review_gates_passed` to skip completed agent reviews). Dispatch all non-skipped review agents (design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa) **in a single message** for maximum parallelism.
      - If **Blockers** found → STOP with fix instructions.
      - If no blockers → continue to step 6.
 
@@ -128,7 +128,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    - **Lessons Learned Gate**: Check for placeholder text (documented in streamlined-mode.md)
    - Run pre-checks via `./scripts/workflow/run-prechecks.sh --mode=full`
    - Run burn-in validation if applicable (E2E spec exists, tests passed, not already validated)
-   - Dispatch all review agents in parallel (design-review, code-review, code-review-testing)
+   - Dispatch all review agents in parallel (design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa)
    - If **Blockers** found → STOP with fix instructions
    - If no blockers → set `reviewed: true`, continue to step 6
 
@@ -158,10 +158,11 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    **All gates present** → Continue to step 7.
 
 7. **Update story file**:
-   - Set `status: done` and `completed: YYYY-MM-DD` in frontmatter.
    - Set `reviewed: true` if not already.
+   - **DO NOT** set `status: done` yet — this happens AFTER merge.
 
-8. **Update sprint status**: In `${BASE_PATH}/docs/implementation-artifacts/sprint-status.yaml`, set story → `done`.
+8. **Update sprint status**: In `${BASE_PATH}/docs/implementation-artifacts/sprint-status.yaml`, set story → `review`.
+   - **DO NOT** set to `done` yet — this happens AFTER merge.
    **Merge conflict prevention**: Before editing, pull the latest version from main to avoid stale statuses for other stories:
    ```bash
    git checkout main -- docs/implementation-artifacts/sprint-status.yaml
@@ -233,7 +234,16 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 
    If merge fails (e.g., branch protection rules), inform the user and fall back to manual merge.
 
-   After successful merge:
+   **After successful merge**, update story and sprint status to `done`:
+   - Update story file: Set `status: done` and `completed: YYYY-MM-DD` in frontmatter.
+   - Update sprint status: In `${BASE_PATH}/docs/implementation-artifacts/sprint-status.yaml`, set story → `done`.
+   - Commit the status updates:
+     ```bash
+     git add docs/implementation-artifacts/{key}.md docs/implementation-artifacts/sprint-status.yaml
+     git commit -m "chore: mark E##-S## done"
+     ```
+
+   Then proceed with cleanup:
    - Detect if running in a worktree: Check if `$(git rev-parse --show-toplevel)` contains `-worktrees/`.
    - **If in worktree**: Run `worktree-cleanup "${STORY_KEY}"`, switch to main workspace, checkout main, pull.
      **See:** [docs/worktree-cleanup.md](docs/worktree-cleanup.md) for complete worktree cleanup logic.
@@ -259,6 +269,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    - Inform the user:
      ```
      👍 Keeping branch active.
+     Story remains in `review` state.
 
      You can:
      • Make additional changes and commit them
@@ -269,6 +280,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
      Worktree location: {worktree-path}
      ```
    - **STOP here**. Exit workflow. User will re-run `/finish-story` later.
+   - **IMPORTANT**: Story and sprint status remain `review` (not `done`) since merge hasn't happened yet.
 
 13c. **Doc sync** (optional, non-blocking): After successful merge (step 13a), dispatch the `doc-sync` agent in the background to check documentation consistency:
 
@@ -419,6 +431,9 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    | Design review          | passed / N warnings         |
    | Code review            | passed / N warnings         |
    | Code review (testing)  | N/N ACs covered / N warnings |
+   | Performance benchmark  | passed / N warnings / skipped |
+   | Security review        | passed / N warnings         |
+   | Exploratory QA         | passed / N warnings / skipped |
 
    - Mode: Comprehensive / Streamlined
    - Branch: `feature/e##-s##-slug`

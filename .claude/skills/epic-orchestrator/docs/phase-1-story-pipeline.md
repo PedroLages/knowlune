@@ -29,7 +29,7 @@ The agent will:
 3. Commit with descriptive messages
 4. Return summary of what was built
 
-**Coordinator after**: Output completion banner with agent's summary, update TodoWrite, note the summary in tracking table, print progress dashboard. **Update tracking file**: story status → implementing, add key files list.
+**Coordinator after**: Output completion banner with agent's summary, update TodoWrite, note the summary in tracking table, print progress dashboard. **Update tracking file**: story status → in-progress, add key files list.
 
 ### Step 2: Review Loop
 
@@ -47,15 +47,16 @@ Before dispatching the Review Agent, the coordinator checks `git diff --name-onl
 
 | Files Changed | Skip | Reason |
 |--------------|------|--------|
-| Only `.md`, `.yaml`, `.json` (no `.tsx`, `.ts`, `.css`) | Design review, Exploratory QA | No UI to test |
-| Only test files (`tests/**`) | Design review, Exploratory QA | No production UI changes |
-| Only `.ts` (no `.tsx`) | Design review (keep Exploratory QA) | No visual components, but behavior may affect routes |
+| Only `.md`, `.yaml`, `.json` (no `.tsx`, `.ts`, `.css`) | Design review, Exploratory QA, Performance benchmark | No UI to test |
+| Only test files (`tests/**`) | Design review, Exploratory QA, Performance benchmark | No production UI changes |
+| Only `.ts` (no `.tsx`) | Design review (keep Exploratory QA + Performance benchmark) | No visual components, but behavior may affect routes |
 
 Pass the skip list to the Review Agent prompt:
 ```
 SKIP THESE REVIEW AGENTS (no relevant changes):
 - design-review (no .tsx/.css changes)
 - exploratory-qa (no UI changes)
+- performance-benchmark (lightweight review or no UI changes)
 ```
 
 The Review Agent still runs ALL pre-checks (build, lint, type-check, tests) regardless — only the agent swarm is scoped.
@@ -78,7 +79,7 @@ The agent will:
 4. Commit, push, create PR
 5. Return PR URL
 
-**Coordinator after**: Output completion banner with PR URL, update tracking table, print progress dashboard. **Update tracking file**: PR URL, story status → finishing.
+**Coordinator after**: Output completion banner with PR URL, update tracking table, print progress dashboard. **Update tracking file**: PR URL, story status → review.
 
 ### Step 4: Merge + Sync (Coordinator Directly)
 
@@ -130,8 +131,14 @@ Since we merge each PR before starting the next story:
 
 ## When a Story is Already In-Progress
 
-If Phase 0 detected a story with `in-progress` status:
+If Phase 0 detected a story with `ready-for-dev` or `in-progress` status:
 - The story branch already exists
 - `/start-story` will detect this and resume (idempotent)
 - The Story Agent should note that it's resuming, not starting fresh
 - Review and finish proceed normally
+
+**Lifecycle context**: The orchestrator tracking file uses these BMAD lifecycle states:
+- `ready-for-dev`: Story setup complete, ready for implementation
+- `in-progress`: Implementation in progress (active development)
+- `review`: Code review and quality gates in progress
+- `done`: Story complete and merged to main

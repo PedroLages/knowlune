@@ -284,3 +284,15 @@ Note: Metrics collected on Vite dev server — detect regressions only, not abso
 4. **Read-only** — do not modify application code, only collect metrics and write reports
 5. **Route mapping** — always map files to routes, don't test routes unrelated to the diff
 6. **Screenshot evidence** — take at least one screenshot per tested route
+
+## Structured JSON Output (review-story integration)
+
+When dispatched with `--output-json=PATH`, also write a JSON file at that path
+following `.claude/skills/review-story/schemas/agent-output.schema.json`.
+
+Fields: `agent`, `gate`, `status` (PASS/WARNINGS/FAIL/SKIPPED/ERROR),
+`counts` (blockers/high/medium/nits/total), `findings` array
+(severity/description/file/line/confidence/category), `report_path`.
+
+Graceful: if you cannot produce valid JSON, just return the markdown report —
+the orchestrator will parse your text return as a fallback.

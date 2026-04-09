@@ -17,7 +17,7 @@ The coordinator must handle failures gracefully — fix what's fixable, park wha
 | **Issues persist after 3 rounds** | Same issues across 3+ rounds | Coordinator decides: spawn 4th round with explicit instructions, or park story |
 | **Merge conflict with main** | `git merge main` reports conflicts during Step 5 | Coordinator spawns Conflict Resolution Agent, or resolves directly if simple |
 | **PR merge fails** | `gh pr merge` returns error | Check for branch protection rules, required checks. Retry or use `--admin` flag |
-| **Dev server won't start** | Port 5173 not responding after kill + restart | `lsof -ti:5173 | xargs kill -9`, retry. If still fails, review runs without design review (adds `design-review-skipped` gate) |
+| **Dev server won't start** | Port 5173 not responding after kill + restart | `lsof -ti:5173 | xargs kill -9`, retry. If still fails, review runs skipping all dev-server-dependent gates. Per `review-story/config/gates.json`, dev-server-dependent gates are: e2e-tests, design-review, performance-benchmark, exploratory-qa. Each gets its `-skipped` variant added to `review_gates_passed`. |
 | **Sub-agent runs out of context** | Agent returns truncated or incomplete output | Spawn continuation agent with summary of what was done. For Story Agents, this means summarizing what was already implemented |
 | **Post-epic command fails** | Sub-agent returns error | Retry once. If still fails, note in final report as incomplete |
 | **Coordinator session interrupted** | Tracking file exists but epic incomplete | Next `/epic-orchestrator` invocation detects tracking file in Phase 0 Step 0 and resumes from last completed story |

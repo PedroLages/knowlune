@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "producer": "review-story",
+  "updated_at": "2026-04-09",
+  "gates": [
+    {
+      "name": "build",
+      "phase": "pre-check",
+      "required": true,
+      "skip_suffix": null,
+      "skip_condition": null,
+      "agent": null,
+      "report_path_template": null,
+      "dev_server_required": false,
+      "description": "Production build succeeds via npm run build"
+    },
+    {
+      "name": "lint",
+      "phase": "pre-check",
+      "required": true,
+      "skip_suffix": "lint-skipped",
+      "skip_condition": "no lint script in package.json",
+      "agent": null,
+      "report_path_template": null,
+      "dev_server_required": false,
+      "description": "ESLint passes with no errors (auto-fix applied)"
+    },
+    {
+      "name": "type-check",
+      "phase": "pre-check",
+      "required": true,
+      "skip_suffix": null,
+      "skip_condition": null,
+      "agent": null,
+      "report_path_template": null,
+      "dev_server_required": false,
+      "description": "TypeScript type checking passes via tsc --noEmit"
+    },
+    {
+      "name": "format-check",
+      "phase": "pre-check",
+      "required": true,
+      "skip_suffix": null,
+      "skip_condition": null,
+      "agent": null,
+      "report_path_template": null,
+      "dev_server_required": false,
+      "description": "Prettier formatting check passes"
+    },
+    {
+      "name": "unit-tests",
+      "phase": "pre-check",
+      "required": true,
+      "skip_suffix": "unit-tests-skipped",
+      "skip_condition": "no test files matching **/*.test.ts or **/*.spec.ts",
+      "agent": null,
+      "report_path_template": null,
+      "dev_server_required": false,
+      "description": "Unit tests pass via npm run test:unit"
+    },
+    {
+      "name": "e2e-tests",
+      "phase": "pre-check",
+      "required": true,
+      "skip_suffix": "e2e-tests-skipped",
+      "skip_condition": "no e2e spec for current story",
+      "agent": null,
+      "report_path_template": null,
+      "dev_server_required": true,
+      "description": "E2E tests pass (Chromium smoke + story-specific specs)"
+    },
+    {
+      "name": "design-review",
+      "phase": "agent",
+      "required": true,
+      "skip_suffix": "design-review-skipped",
+      "skip_condition": "no files matching src/app/(pages|components)/*.tsx in diff",
+      "agent": "design-review",
+      "report_path_template": "docs/reviews/design/design-review-{date}-{story-id}.md",
+      "dev_server_required": true,
+      "description": "UI/UX review via Playwright MCP (accessibility, responsive, design consistency)"
+    },
+    {
+      "name": "code-review",
+      "phase": "agent",
+      "required": true,
+      "skip_suffix": null,
+      "skip_condition": null,
+      "agent": "code-review",
+      "report_path_template": "docs/reviews/code/code-review-{date}-{story-id}.md",
+      "dev_server_required": false,
+      "description": "Adversarial code review (architecture, security, silent failures)"
+    },
+    {
+      "name": "code-review-testing",
+      "phase": "agent",
+      "required": true,
+      "skip_suffix": null,
+      "skip_condition": null,
+      "agent": "code-review-testing",
+      "report_path_template": "docs/reviews/code/code-review-testing-{date}-{story-id}.md",
+      "dev_server_required": false,
+      "description": "Test coverage analysis (AC mapping, edge cases, test quality)"
+    },
+    {
+      "name": "performance-benchmark",
+      "phase": "agent",
+      "required": true,
+      "skip_suffix": "performance-benchmark-skipped",
+      "skip_condition": "lightweight review (no UI changes or <10 lines changed)",
+      "agent": "performance-benchmark",
+      "report_path_template": "docs/reviews/performance/performance-benchmark-{date}-{story-id}.md",
+      "dev_server_required": true,
+      "description": "Real browser metrics (TTFB, FCP, LCP, DOM Complete) via Playwright MCP"
+    },
+    {
+      "name": "security-review",
+      "phase": "agent",
+      "required": true,
+      "skip_suffix": null,
+      "skip_condition": null,
+      "agent": "security-review",
+      "report_path_template": "docs/reviews/security/security-review-{date}-{story-id}.md",
+      "dev_server_required": false,
+      "description": "OWASP Top 10, secrets scan, STRIDE, attack surface (diff-scoped)"
+    },
+    {
+      "name": "exploratory-qa",
+      "phase": "agent",
+      "required": true,
+      "skip_suffix": "exploratory-qa-skipped",
+      "skip_condition": "no files matching src/app/(pages|components)/*.tsx in diff",
+      "agent": "exploratory-qa",
+      "report_path_template": "docs/reviews/qa/exploratory-qa-{date}-{story-id}.md",
+      "dev_server_required": true,
+      "description": "Functional QA via Playwright MCP (buttons, forms, flows, console errors)"
+    },
+    {
+      "name": "techdebt-scan",
+      "phase": "optional",
+      "required": false,
+      "skip_suffix": "techdebt-scan-skipped",
+      "skip_condition": "user declines or no duplicates found",
+      "agent": "techdebt",
+      "report_path_template": null,
+      "dev_server_required": false,
+      "description": "Deduplication scan via /techdebt Phase 1-2"
+    },
+    {
+      "name": "openai-code-review",
+      "phase": "external",
+      "required": false,
+      "skip_suffix": "openai-code-review-skipped",
+      "skip_condition": "no OPENAI_API_KEY or Codex CLI not installed",
+      "agent": "openai-code-review",
+      "report_path_template": "docs/reviews/code/openai-code-review-{date}-{story-id}.md",
+      "dev_server_required": false,
+      "description": "Adversarial review via OpenAI Codex CLI (cross-model consensus)"
+    },
+    {
+      "name": "glm-code-review",
+      "phase": "external",
+      "required": false,
+      "skip_suffix": "glm-code-review-skipped",
+      "skip_condition": "no ZAI_API_KEY",
+      "agent": "glm-code-review",
+      "report_path_template": "docs/reviews/code/glm-code-review-{date}-{story-id}.md",
+      "dev_server_required": false,
+      "description": "Adversarial review via GLM/z.ai GLM-5.1 (cross-model consensus)"
+    },
+    {
+      "name": "burn-in",
+      "phase": "optional",
+      "required": false,
+      "skip_suffix": "burn-in-skipped",
+      "skip_condition": "no test anti-patterns detected or user declines",
+      "agent": null,
+      "report_path_template": null,
+      "dev_server_required": true,
+      "description": "10-iteration E2E burn-in for flakiness validation"
+    }
+  ],
+  "required_for_reviewed_true": [
+    "build",
+    "lint",
+    "type-check",
+    "format-check",
+    "unit-tests",
+    "e2e-tests",
+    "design-review",
+    "code-review",
+    "code-review-testing",
+    "performance-benchmark",
+    "security-review",
+    "exploratory-qa"
+  ],
+  "legacy_gates": ["web-design-guidelines"]
+}

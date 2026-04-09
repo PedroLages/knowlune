@@ -437,3 +437,25 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Hook pattern well-designed: 5 consumers, correct blob URL lifecycle, proper isCancelled flag, silent-catch-ok justified
 - Tests cover: null/undefined URLs, external passthrough, OPFS resolution, URL change lifecycle, revocation, rejection handling
 - Positive: Correct blob URL lifecycle (useRef + cleanup), consistent pattern across all 5 consumers, engineering-patterns.md documentation, good unit test coverage
+
+## E107-S03: Fix TOC Loading and Fallback (Round 1)
+
+- No uncommitted changes (positive)
+- H1 `[AI Smell]`: main.tsx test-mode code runs unconditionally in production -- exposes `__enableBookContentTestMode__` on window in prod, any script can activate mock EPUB. Gate behind `import.meta.env.DEV`.
+- H2 `[AI Smell]`: BookContentService.ts imports `createMinimalEpub` from `__tests__/` directory statically -- pulls JSZip into production bundle despite being devDependency. Use dynamic import inside `isTestMode()` branch.
+- M1: AC-1 E2E test declares `loadingIndicator` locator but never asserts on it -- test passes regardless of loading state. Unit tests cover this.
+- M2: Multiple `waitForTimeout()` calls in E2E tests without justification comments (per test-patterns ESLint rule)
+- Nit: `BookContentService.setTestMode()` static method never called (dead code)
+- Nit: `__TEST_TOC_TIMEOUT__` window flag set in E2E but never read by app code
+- Positive: Clean timeout pattern with correct dependency array and cleanup, proper test-mode flag gating, comprehensive unit tests (8 ReaderHeader + 9 TableOfContents), correct chapter display fallback logic
+
+## E107-S04: Wire About Book Dialog (Round 1)
+
+- 3 BLOCKERS, all test-related:
+  - B1: `libraryPage` fixture does not exist in project -- tests cannot register (only `localStorage` and `indexedDB` fixtures exist)
+  - B2: `data-testid="about-book-author"` only on truthy branch; AC-3 test selects it for falsy case (element won't exist)
+  - B3: `data-testid="about-book-description"` only on truthy branch; AC-3 test selects it for falsy case (element won't exist)
+- H1: `Book.author` is required `string`, not optional -- falsy check only catches empty string, "Unknown author" branch unlikely to fire with real data
+- M1: `formatFileSize` defined inside component body (recreated every render) -- should be hoisted to module scope
+- Pattern: `data-testid` on conditional branches -- testids must exist on ALL branches for tests to find elements. Affects: AboutBookDialog.tsx
+- Positive: Clean component architecture following LinkFormatsDialog pattern, thorough fallback handling for all optional fields, consistent menu integration in both ContextMenu and DropdownMenu
