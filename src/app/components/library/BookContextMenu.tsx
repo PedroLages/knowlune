@@ -9,10 +9,11 @@
  */
 
 import { useState, type ReactNode } from 'react'
-import { Check, MoreVertical, ArrowRightLeft } from 'lucide-react'
+import { Check, MoreVertical, ArrowRightLeft, BookOpen } from 'lucide-react'
 import type { Book, BookStatus } from '@/data/types'
 import { useBookStore } from '@/stores/useBookStore'
 import { LinkFormatsDialog } from './LinkFormatsDialog'
+import { AboutBookDialog } from './AboutBookDialog'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -95,6 +96,7 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
   const deleteBook = useBookStore(s => s.deleteBook)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
+  const [aboutDialogOpen, setAboutDialogOpen] = useState(false)
 
   const handleDelete = () => {
     setConfirmDeleteOpen(true)
@@ -138,6 +140,12 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
                 />
               </ContextMenuSubContent>
             </ContextMenuSub>
+            <ContextMenuItem
+              onClick={() => setAboutDialogOpen(true)}
+              data-testid="context-menu-about-book"
+            >
+              About Book
+            </ContextMenuItem>
             <ContextMenuSeparator />
             <ContextMenuItem
               className="text-destructive focus:text-destructive"
@@ -180,6 +188,12 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
                 />
               </DropdownMenuSubContent>
             </DropdownMenuSub>
+            <DropdownMenuItem
+              onClick={() => setAboutDialogOpen(true)}
+              data-testid="dropdown-menu-about-book"
+            >
+              About Book
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
@@ -193,6 +207,9 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
 
       {/* Link Formats dialog */}
       <LinkFormatsDialog book={book} open={linkDialogOpen} onOpenChange={setLinkDialogOpen} />
+
+      {/* About Book dialog */}
+      <AboutBookDialog book={book} open={aboutDialogOpen} onOpenChange={setAboutDialogOpen} />
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
