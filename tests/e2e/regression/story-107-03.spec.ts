@@ -9,8 +9,8 @@
  * - AC-5: TableOfContents panel button in ReaderHeader remains enabled but shows empty state when TOC is unavailable
  */
 import { test, expect, type Page } from '@playwright/test'
-import { FIXED_DATE } from '../utils/test-time'
-import { seedBooks } from '../support/helpers/indexeddb-seed'
+import { FIXED_DATE } from '../../utils/test-time'
+import { seedBooks } from '../../support/helpers/indexeddb-seed'
 
 // Test book with no TOC (simulating empty navigation)
 const TEST_BOOK_NO_TOC = {
