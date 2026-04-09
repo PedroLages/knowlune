@@ -28,6 +28,7 @@ Output JSON fields:
     skip_count           - Number of agents being skipped
     dev_server_needed    - true if any dispatched agent requires the dev server
 """
+from __future__ import annotations
 
 import argparse
 import json
@@ -78,11 +79,12 @@ def evaluate_skip(
     skip_suffix = gate.get("skip_suffix")
     skip_condition = gate.get("skip_condition") or ""
 
-    # Resumption skip: gate already done in this run
-    if resuming and name in gates_already_passed:
-        # Check for the base gate or its -skipped variant
-        if name in gates_already_passed or (skip_suffix and skip_suffix in gates_already_passed):
-            return True, f"already completed in current run (resuming)"
+    # Resumption skip: gate already done in this run (base name OR -skipped variant)
+    if resuming and (
+        name in gates_already_passed
+        or (skip_suffix and skip_suffix in gates_already_passed)
+    ):
+        return True, "already completed in current run (resuming)"
 
     # Condition-based skip
     if "no files matching src/app/(pages|components)/*.tsx in diff" in skip_condition:

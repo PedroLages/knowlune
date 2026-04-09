@@ -216,7 +216,7 @@ log_info "Verdict: $VERDICT (blockers: $BLOCKER_COUNT)"
 
 if [ -f "$RUN_STATE" ]; then
   TMP_STATE=$(mktemp)
-  python3 -c "
+  if python3 -c "
 import json
 with open('$RUN_STATE') as f:
     state = json.load(f)
@@ -224,8 +224,13 @@ state['verdict'] = '$VERDICT'
 state['status'] = 'completed' if '$VERDICT' == 'PASS' else 'blocked'
 with open('$TMP_STATE', 'w') as f:
     json.dump(state, f, indent=2)
-" 2>/dev/null && mv "$TMP_STATE" "$RUN_STATE" || rm -f "$TMP_STATE"
-  log_success "Run state updated with verdict"
+" 2>/dev/null; then
+    mv "$TMP_STATE" "$RUN_STATE"
+    log_success "Run state updated with verdict"
+  else
+    rm -f "$TMP_STATE"
+    log_warning "Could not patch run state with verdict (non-fatal)"
+  fi
 fi
 
 # ── 7. Sync story frontmatter ─────────────────────────────────────────────────

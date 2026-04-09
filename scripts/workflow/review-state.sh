@@ -172,22 +172,22 @@ TODAY=$(date +%Y-%m-%d)
 update_frontmatter_field() {
   local file="$1" key="$2" value="$3"
   if grep -q "^${key}:" "$file"; then
-    # macOS-compatible sed in-place
+    # Field exists — update in place (macOS-compatible)
     sed -i '' "s|^${key}:.*|${key}: ${value}|" "$file"
   else
-    # Insert before closing --- of frontmatter
-    sed -i '' "/^---$/{
-      /^---$/!d
-    }" "$file" 2>/dev/null || true
-    # Append before second ---
-    python3 -c "
+    # Field missing — insert before closing --- of frontmatter
+    if ! python3 -c "
 import sys, re
 content = open('$file').read()
 m = re.match(r'^(---\n.*?\n)(---\n)', content, re.DOTALL)
-if m:
-    new_content = m.group(1) + '${key}: ${value}\n' + m.group(2) + content[m.end():]
-    open('$file', 'w').write(new_content)
-" 2>/dev/null || true
+if not m:
+    sys.exit(1)
+new_content = m.group(1) + '${key}: ${value}\n' + m.group(2) + content[m.end():]
+open('$file', 'w').write(new_content)
+"; then
+      log_error "Failed to insert '${key}' into frontmatter of ${file}"
+      exit 1
+    fi
   fi
 }
 

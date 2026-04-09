@@ -206,7 +206,7 @@ if run_check "build" "${LOG_DIR:+${LOG_DIR}/build.log}" npm run build; then
   if [ -f "${BASE_PATH}/docs/reviews/performance/baseline.json" ]; then
     BUNDLE_OUTPUT=$(bash "${BASE_PATH}/scripts/workflow/analyze-bundle.sh" \
       --dist-dir="${BASE_PATH}/dist" \
-      --baseline="${BASE_PATH}/docs/reviews/performance/baseline.json" 2>&2)
+      --baseline="${BASE_PATH}/docs/reviews/performance/baseline.json" 2>&1)
     BUNDLE_EXIT=$?
 
     if [ $BUNDLE_EXIT -eq 0 ]; then
