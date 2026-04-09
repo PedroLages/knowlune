@@ -196,6 +196,11 @@ export async function seedAuthors(page: Page, authors: Record<string, unknown>[]
   await seedIndexedDBStore(page, DB_NAME, 'authors', authors)
 }
 
+/** Seed books into the books store. */
+export async function seedBooks(page: Page, books: Record<string, unknown>[]): Promise<void> {
+  await seedIndexedDBStore(page, DB_NAME, 'books', books)
+}
+
 /** Seed review records into the reviewRecords store. */
 export async function seedReviewRecords(
   page: Page,

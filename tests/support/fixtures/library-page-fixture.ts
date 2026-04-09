@@ -31,7 +31,8 @@ export const test = base.extend<{
         page.locator('[data-testid="view-toggle-list"]').click(),
 
       openBookCardContextMenu: async (index: number) => {
-        const card = page.locator('[data-testid="book-card"]').nth(index)
+        // BookCard uses data-testid="book-card-{id}", so we use prefix matching
+        const card = page.locator('[data-testid^="book-card-"]').nth(index)
         await card.click({ button: 'right' })
       },
 

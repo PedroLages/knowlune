@@ -10,9 +10,65 @@
  */
 
 import { test, expect } from '../support/fixtures'
+import { seedBooks } from '../support/helpers/seed-helpers'
+import { FIXED_DATE } from '../../utils/test-time'
 
 test.describe('E107-S04: About Book Dialog', () => {
-  test.beforeEach(async ({ libraryPage }) => {
+  test.beforeEach(async ({ libraryPage, page }) => {
+    // Navigate to library page first
+    await page.goto('/')
+
+    // Seed test books - one complete EPUB, one missing metadata, one audiobook
+    await seedBooks(page, [
+      {
+        id: 'test-book-1-epub-complete',
+        title: 'The Great Gatsby',
+        author: 'F. Scott Fitzgerald',
+        format: 'epub',
+        status: 'reading',
+        description: 'A story of the mysteriously wealthy Jay Gatsby and his love for Daisy Buchanan.',
+        isbn: '978-0-7432-7356-5',
+        tags: ['Classic', 'Fiction'],
+        fileSize: 450000,
+        progress: 45,
+        chapters: [],
+        source: { type: 'local' },
+        createdAt: FIXED_DATE,
+        updatedAt: FIXED_DATE
+      },
+      {
+        id: 'test-book-2-missing-metadata',
+        title: 'Untitled Book',
+        author: '', // Missing author
+        format: 'epub',
+        status: 'unread',
+        description: '', // Missing description
+        isbn: '', // Missing ISBN
+        tags: [],
+        progress: 0,
+        chapters: [],
+        source: { type: 'local' },
+        createdAt: FIXED_DATE
+      },
+      {
+        id: 'test-book-3-audiobook',
+        title: 'The Hobbit',
+        author: 'J.R.R. Tolkien',
+        narrator: 'Rob Inglis',
+        format: 'audiobook',
+        status: 'reading',
+        description: 'Bilbo Baggins, a hobbit enjoying his quiet life, is swept into an epic quest.',
+        isbn: '978-0-2611-0221-4',
+        tags: ['Fantasy', 'Adventure'],
+        fileSize: 250000000,
+        totalDuration: 68400, // 19 hours
+        progress: 60,
+        chapters: [],
+        source: { type: 'local' },
+        createdAt: FIXED_DATE
+      }
+    ])
+
     // Navigate to library page
     await libraryPage.goto()
   })
@@ -165,7 +221,7 @@ test.describe('E107-S04: About Book Dialog', () => {
     // Verify focus returns to menu item or button that triggered it
     // Note: After Escape, the context menu may also be closed, so we check
     // that focus is returned to a sensible element in the book card
-    const bookCard = page.locator('[data-testid="book-card"]').first()
+    const bookCard = page.locator('[data-testid^="book-card-"]').first()
     await expect(bookCard).toContainFocus()
   })
 })
