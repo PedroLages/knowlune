@@ -9,7 +9,7 @@
  * - AC-5: Dialog works for both EPUB and audiobook formats
  */
 
-import { test, expect } from '../fixtures/library-fixture'
+import { test, expect } from '../support/fixtures'
 
 test.describe('E107-S04: About Book Dialog', () => {
   test.beforeEach(async ({ libraryPage }) => {
