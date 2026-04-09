@@ -25,19 +25,21 @@ Gates must use the exact names from `config/gates.json`. The `-skipped` suffix i
 
 ## Resumption Detection
 
-**Check if this is a resumed review:**
+**Handled automatically by `review-state.sh`** — call once at the start of SKILL.md Step 1:
 
-- If `reviewed: in-progress` and `review_gates_passed` is non-empty:
-  - Inform the user: "Resuming interrupted review. Previously passed gates: [list]. Re-running pre-checks (code may have changed), then skipping already-completed agent reviews."
-  - Set `resuming = true` and note which gates passed.
-- If `reviewed: true`:
-  - Inform the user: "Story already reviewed. Re-running full review to validate current state."
-  - Reset: set `reviewed: in-progress`, clear `review_gates_passed`, update `review_started`.
-- If `reviewed: false` (fresh review):
-- Set `reviewed: in-progress`, `review_started: YYYY-MM-DD`, `review_gates_passed: []` in story frontmatter.
+```bash
+INIT=$(bash scripts/workflow/review-state.sh --story-id=$STORY_ID --base-path=$BASE_PATH)
+RESUMING=$(echo "$INIT" | jq -r '.resuming')          # true/false
+GATES_PASSED=$(echo "$INIT" | jq -r '.gates_already_passed | join(",")')
+```
 
-**State Inputs**: `reviewed` field, `review_gates_passed` array from story frontmatter
-**State Outputs**: `resuming` flag, reset review state if `reviewed: true`
+The script handles all three cases:
+- `reviewed: false` → init fresh review, sync sprint-status to `review`
+- `reviewed: in-progress` (non-empty gates) → resume, inform user of previously passed gates
+- `reviewed: true` → reset to `in-progress`, clear gates (sprint-status left as-is)
+
+**State Inputs**: `reviewed` field, `review_gates_passed` array from story frontmatter (or checkpoint)
+**State Outputs**: `resuming` flag, normalized state, JSON result for orchestrator
 
 ## Gate Validation
 
@@ -61,7 +63,15 @@ python3 scripts/workflow/validate-gates.py \
 
 ## State Management
 
-**Use the `checkpoint.sh` script** to save/restore review state between sessions:
+**Use `review-state.sh`** for init/resume (replaces manual checkpoint orchestration):
+
+```bash
+INIT=$(bash scripts/workflow/review-state.sh \
+  ${STORY_ID:+--story-id=$STORY_ID} --base-path=$BASE_PATH)
+# Returns JSON with: story_id, story_file, base_path, resuming, gates_already_passed, log_dir
+```
+
+**Use the `checkpoint.sh` script** directly only for intermediate gate saves:
 
 ```bash
 # Save state

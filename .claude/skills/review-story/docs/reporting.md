@@ -33,6 +33,9 @@ python3 scripts/workflow/generate-report.py \
 
 The generated report includes:
 
+> **Persona scope**: Agent persona names (Ava, Victor, etc.) appear ONLY in the per-agent
+> section headers below — never in findings text, gate table rows, or the completion output templates.
+
 ```markdown
 ## Review Summary: E##-S## — [Story Name]
 
@@ -45,27 +48,27 @@ The generated report includes:
 - Unit tests: [pass/fail/skipped] ([N] tests)
 - E2E tests: [pass/fail/skipped] ([N] tests)
 
-### Design Review
+### Design Review (Ava)
 [Summary or "Skipped — no UI changes" or "Reused from previous run — [path]"]
 Report: docs/reviews/design/design-review-{date}-{id}.md
 
-### Code Review (Architecture)
+### Code Review — Architecture (Victor)
 [Summary with finding counts by severity or "Reused from previous run — [path]"]
 Report: docs/reviews/code/code-review-{date}-{id}.md
 
-### Code Review (Testing)
+### Code Review — Testing (Mina)
 [AC coverage summary: N/N ACs covered, N gaps. Finding counts by severity or "Reused from previous run — [path]"]
 Report: docs/reviews/code/code-review-testing-{date}-{id}.md
 
-### Performance Benchmark
+### Performance Benchmark (Leo)
 [Summary with TTFB, FCP, LCP metrics or "Skipped — lightweight review" or "Reused from previous run — [path]"]
 Report: docs/reviews/performance/performance-benchmark-{date}-{id}.md
 
-### Security Review
+### Security Review (Nadia)
 [Summary with OWASP findings or "Reused from previous run — [path]"]
 Report: docs/reviews/security/security-review-{date}-{id}.md
 
-### Exploratory QA
+### Exploratory QA (Sofia)
 [Summary or "Skipped — no UI changes" or "Reused from previous run — [path]"]
 Report: docs/reviews/qa/exploratory-qa-{date}-{id}.md
 

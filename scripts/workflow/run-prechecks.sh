@@ -4,7 +4,7 @@
 # Unified pre-check script for /review-story and /finish-story workflows
 #
 # Usage:
-#   ./run-prechecks.sh [--mode=MODE] [--story-id=ID] [--base-path=PATH]
+#   ./run-prechecks.sh [--mode=MODE] [--story-id=ID] [--base-path=PATH] [--log-dir=PATH]
 #
 # Modes:
 #   full         - Full pre-checks (default): build, lint, type-check, format, tests, validation
@@ -13,6 +13,7 @@
 # Options:
 #   --story-id=E##-S##    Story ID (e.g., E01-S03) for E2E test filtering
 #   --base-path=PATH      Base path for worktree support (defaults to git root)
+#   --log-dir=PATH        Write gate output to disk instead of stderr (enables silent mode)
 #   --skip-commit-check   Skip the pre-review commit gate (for lightweight mode)
 #
 # Exit codes:
@@ -37,6 +38,7 @@ NC='\033[0m' # No Color
 MODE="full"
 STORY_ID=""
 BASE_PATH=$(git rev-parse --show-toplevel)
+LOG_DIR=""
 SKIP_COMMIT_CHECK=false
 
 # Parse arguments
@@ -50,6 +52,9 @@ for arg in "$@"; do
       ;;
     --base-path=*)
       BASE_PATH="${arg#*=}"
+      ;;
+    --log-dir=*)
+      LOG_DIR="${arg#*=}"
       ;;
     --skip-commit-check)
       SKIP_COMMIT_CHECK=true
@@ -103,11 +108,39 @@ log_section() {
   echo -e "\n${BLUE}━━━ $1 ━━━${NC}" >&2
 }
 
+# Run a command and route output: to a log file (if provided) or stderr (fallback).
+# Usage: run_check "gate-name" "/path/to/gate.log" cmd [args...]
+# Pass empty string as log_file to use stderr (backward-compatible mode).
+run_check() {
+  local name="$1" log_file="$2"
+  shift 2
+  local rc=0
+  if [ -n "$log_file" ]; then
+    mkdir -p "$(dirname "$log_file")"
+    "$@" >"$log_file" 2>&1 || rc=$?
+  else
+    "$@" >&2 2>&1 || rc=$?
+  fi
+  return $rc
+}
+
 # Output JSON results
 output_results() {
   local exit_code=$1
 
-  # Build JSON object
+  # Build log_paths block (null when no LOG_DIR)
+  local log_paths_block='"log_paths": null'
+  if [ -n "${LOG_DIR:-}" ]; then
+    log_paths_block='"log_paths": {
+    "build": "'"${LOG_DIR}/build.log"'",
+    "lint": "'"${LOG_DIR}/lint.log"'",
+    "type-check": "'"${LOG_DIR}/type-check.log"'",
+    "format-check": "'"${LOG_DIR}/format-check.log"'",
+    "unit-tests": "'"${LOG_DIR}/unit-tests.log"'",
+    "e2e-tests": "'"${LOG_DIR}/e2e-tests.log"'"
+  }'
+  fi
+
   cat <<EOF
 {
   "success": $([ "$exit_code" -eq 0 ] && echo "true" || echo "false"),
@@ -127,7 +160,8 @@ output_results() {
     "lint": $LINT_AUTO_FIXED,
     "format": $FORMAT_AUTO_FIXED
   },
-  "test_pattern_findings": "$TEST_PATTERN_FINDINGS"
+  "test_pattern_findings": "$TEST_PATTERN_FINDINGS",
+  $log_paths_block
 }
 EOF
 }
@@ -162,7 +196,7 @@ fi
 # Build
 log_section "Build Check"
 
-if npm run build >&2 2>&1; then
+if run_check "build" "${LOG_DIR:+${LOG_DIR}/build.log}" npm run build; then
   GATES[build]="passed"
   log_success "Build passed"
 
@@ -209,7 +243,7 @@ fi
 # Lint
 log_section "Lint Check"
 
-if npm run lint >&2 2>&1; then
+if run_check "lint" "${LOG_DIR:+${LOG_DIR}/lint.log}" npm run lint; then
   GATES[lint]="passed"
   log_success "Lint passed"
 else
@@ -221,12 +255,12 @@ else
     log_warning "Lint errors found — attempting auto-fix"
 
     # Auto-fix
-    if npx eslint . --fix >&2 2>&1; then
+    if run_check "lint-fix" "${LOG_DIR:+${LOG_DIR}/lint.log}" npx eslint . --fix; then
       LINT_AUTO_FIXED=1
       log_info "Auto-fixed ESLint issues"
 
       # Re-run to verify
-      if npm run lint >&2 2>&1; then
+      if run_check "lint" "${LOG_DIR:+${LOG_DIR}/lint.log}" npm run lint; then
         GATES[lint]="passed"
         log_success "Lint passed after auto-fix"
       else
@@ -247,7 +281,7 @@ fi
 # Type check
 log_section "Type Check"
 
-if npx tsc --noEmit >&2 2>&1; then
+if run_check "type-check" "${LOG_DIR:+${LOG_DIR}/type-check.log}" npx tsc --noEmit; then
   GATES[type-check]="passed"
   log_success "Type check passed"
 else
@@ -263,7 +297,7 @@ else
   else
     # Auto-fix attempt would go here (simplified for now)
     # Re-run type check
-    if npx tsc --noEmit >&2 2>&1; then
+    if run_check "type-check" "${LOG_DIR:+${LOG_DIR}/type-check.log}" npx tsc --noEmit; then
       GATES[type-check]="passed"
       log_success "Type check passed"
     else
@@ -278,19 +312,19 @@ fi
 # Format check
 log_section "Format Check"
 
-if npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}" >&2 2>&1; then
+if run_check "format-check" "${LOG_DIR:+${LOG_DIR}/format-check.log}" npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"; then
   GATES[format-check]="passed"
   log_success "Format check passed"
 else
   log_warning "Formatting issues found — auto-fixing"
 
   # Auto-fix
-  if npx prettier --write "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}" >&2 2>&1; then
+  if run_check "format-fix" "${LOG_DIR:+${LOG_DIR}/format-check.log}" npx prettier --write "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"; then
     FORMAT_AUTO_FIXED=1
     log_info "Auto-formatted files with Prettier"
 
     # Re-run to verify
-    if npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}" >&2 2>&1; then
+    if run_check "format-check" "${LOG_DIR:+${LOG_DIR}/format-check.log}" npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"; then
       GATES[format-check]="passed"
       log_success "Format check passed after auto-fix"
     else
@@ -311,7 +345,7 @@ fi
 log_section "Unit Tests"
 
 if npm run | grep -q "test:unit"; then
-  if npm run test:unit -- --run >&2 2>&1; then
+  if run_check "unit-tests" "${LOG_DIR:+${LOG_DIR}/unit-tests.log}" npm run test:unit -- --run; then
     GATES[unit-tests]="passed"
     log_success "Unit tests passed"
   else
@@ -347,7 +381,7 @@ if [ -n "$STORY_ID_LOWER" ]; then
 fi
 
 # Run E2E tests
-if npx playwright test "${SMOKE_SPECS[@]}" --project=chromium >&2 2>&1; then
+if run_check "e2e-tests" "${LOG_DIR:+${LOG_DIR}/e2e-tests.log}" npx playwright test "${SMOKE_SPECS[@]}" --project=chromium; then
   GATES[e2e-tests]="passed"
   log_success "E2E tests passed"
 else
@@ -361,7 +395,7 @@ fi
 if [ "$MODE" = "full" ] && [ -f "$STORY_SPEC" ]; then
   log_section "Test Pattern Validation"
 
-  if node scripts/validate-test-patterns.js "$STORY_SPEC" >&2 2>&1; then
+  if run_check "test-patterns" "${LOG_DIR:+${LOG_DIR}/test-patterns.log}" node scripts/validate-test-patterns.js "$STORY_SPEC"; then
     log_success "No test anti-patterns detected"
     TEST_PATTERN_FINDINGS="clean"
   else
