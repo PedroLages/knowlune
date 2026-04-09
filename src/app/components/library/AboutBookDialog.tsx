@@ -49,6 +49,7 @@ export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogPro
         day: 'numeric',
       })
     } catch {
+      // silent-catch-ok: Invalid date format returns fallback placeholder
       return '—'
     }
   }

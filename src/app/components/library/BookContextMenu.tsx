@@ -9,7 +9,7 @@
  */
 
 import { useState, type ReactNode } from 'react'
-import { Check, MoreVertical, ArrowRightLeft, BookOpen } from 'lucide-react'
+import { Check, MoreVertical, ArrowRightLeft } from 'lucide-react'
 import type { Book, BookStatus } from '@/data/types'
 import { useBookStore } from '@/stores/useBookStore'
 import { LinkFormatsDialog } from './LinkFormatsDialog'
