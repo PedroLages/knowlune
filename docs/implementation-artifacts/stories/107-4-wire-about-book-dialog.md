@@ -4,8 +4,8 @@ story_name: "Wire About Book Dialog"
 status: ready-for-dev
 started: 2026-04-09
 completed:
-reviewed: false
-review_started:
+reviewed: in-progress
+review_started: 2026-04-09 # Auto-set by review-story
 review_gates_passed: []
 burn_in_validated: false
 ---
