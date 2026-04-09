@@ -265,3 +265,11 @@ export async function seedQuizAttempts(
 ): Promise<void> {
   await seedIndexedDBStore(page, 'ElearningDB', 'quizAttempts', attempts)
 }
+
+/**
+ * Seeds the books object store in ElearningDB.
+ * Convenience wrapper around seedIndexedDBStore.
+ */
+export async function seedBooks(page: Page, books: Record<string, unknown>[]): Promise<void> {
+  await seedIndexedDBStore(page, 'ElearningDB', 'books', books)
+}

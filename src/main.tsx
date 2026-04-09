@@ -3,6 +3,19 @@ import { createRoot } from 'react-dom/client'
 import App from './app/App.tsx'
 import './styles/index.css'
 
+// E2E TEST SUPPORT: Expose test mode control for E2E tests
+// Tests can call window.__enableBookContentTestMode__() to enable mock EPUB loading
+if (typeof window !== 'undefined') {
+  // Dynamically import to avoid bundling in production
+  import('./services/BookContentService').then(({ enableTestMode }) => {
+    ;(window as any).__enableBookContentTestMode__ = enableTestMode
+    // Auto-enable if flag was set before module load
+    if ((window as any).__BOOK_CONTENT_TEST_MODE__) {
+      enableTestMode()
+    }
+  })
+}
+
 // Initialize Sentry error reporting (graceful no-op when DSN is not configured)
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN
 if (sentryDsn) {
