@@ -60,9 +60,9 @@ test.describe('E107-S04: About Book Dialog', () => {
     // Verify description is displayed
     await expect(page.locator('[data-testid="about-book-description"]')).toBeVisible()
 
-    // Verify metadata fields are displayed
-    await expect(page.locator('[data-testid="about-book-format"]')).toBeVisible()
-    await expect(page.locator('[data-testid="about-book-isbn"]')).toBeVisible()
+    // Verify metadata fields are displayed with actual values
+    await expect(page.locator('[data-testid="about-book-format"]')).toContainText(/EPUB|Audiobook/)
+    await expect(page.locator('[data-testid="about-book-isbn"]')).toHaveText(/[\d-]+/)
     await expect(page.locator('[data-testid="about-book-tags"]')).toBeVisible()
   })
 
@@ -141,7 +141,7 @@ test.describe('E107-S04: About Book Dialog', () => {
     await libraryPage.openAboutBookDialog(0)
 
     // Click overlay (outside dialog)
-    const overlay = page.locator('[data-state="open"]').locator('..').first()
+    const overlay = page.locator('[data-radix-overlay]').first()
     await overlay.click({ position: { x: 10, y: 10 } })
 
     // Verify dialog is closed
@@ -166,6 +166,6 @@ test.describe('E107-S04: About Book Dialog', () => {
     // Note: After Escape, the context menu may also be closed, so we check
     // that focus is returned to a sensible element in the book card
     const bookCard = page.locator('[data-testid="book-card"]').first()
-    await expect(bookCard).toBeFocused()
+    await expect(bookCard).toContainFocus()
   })
 })

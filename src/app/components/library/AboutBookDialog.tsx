@@ -28,16 +28,19 @@ interface AboutBookDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+/**
+ * Format file size for display
+ * @param bytes - File size in bytes
+ * @returns Formatted string (e.g., "1.5 MB" or "500 KB")
+ */
+function formatFileSize(bytes?: number): string {
+  if (!bytes) return '—'
+  const mb = bytes / (1024 * 1024)
+  return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`
+}
+
 export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogProps) {
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
-
-  // Format file size for display
-  const formatFileSize = (bytes?: number): string => {
-    if (!bytes) return '—'
-    const mb = bytes / (1024 * 1024)
-    return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`
-  }
-
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -92,7 +95,7 @@ export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogPro
                   {book.author}
                 </p>
               ) : (
-                <p className="text-base font-medium text-muted-foreground italic">
+                <p className="text-base font-medium text-muted-foreground italic" data-testid="about-book-author">
                   Unknown author
                 </p>
               )}
@@ -121,7 +124,9 @@ export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogPro
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Description
               </p>
-              <p className="text-sm text-muted-foreground italic">No description available</p>
+              <p className="text-sm text-muted-foreground italic" data-testid="about-book-description">
+                No description available
+              </p>
             </div>
           )}
 

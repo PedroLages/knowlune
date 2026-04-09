@@ -679,7 +679,7 @@ export interface BookChapter {
 export interface Book {
   id: string // UUID v4
   title: string
-  author: string
+  author?: string // E107-S04: Authors can be missing (defensive fallback in AboutBookDialog)
   narrator?: string // Audiobook narrator (E101-S03)
   format: BookFormat
   status: BookStatus
