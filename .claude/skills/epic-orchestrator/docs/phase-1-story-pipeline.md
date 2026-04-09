@@ -47,15 +47,16 @@ Before dispatching the Review Agent, the coordinator checks `git diff --name-onl
 
 | Files Changed | Skip | Reason |
 |--------------|------|--------|
-| Only `.md`, `.yaml`, `.json` (no `.tsx`, `.ts`, `.css`) | Design review, Exploratory QA | No UI to test |
-| Only test files (`tests/**`) | Design review, Exploratory QA | No production UI changes |
-| Only `.ts` (no `.tsx`) | Design review (keep Exploratory QA) | No visual components, but behavior may affect routes |
+| Only `.md`, `.yaml`, `.json` (no `.tsx`, `.ts`, `.css`) | Design review, Exploratory QA, Performance benchmark | No UI to test |
+| Only test files (`tests/**`) | Design review, Exploratory QA, Performance benchmark | No production UI changes |
+| Only `.ts` (no `.tsx`) | Design review (keep Exploratory QA + Performance benchmark) | No visual components, but behavior may affect routes |
 
 Pass the skip list to the Review Agent prompt:
 ```
 SKIP THESE REVIEW AGENTS (no relevant changes):
 - design-review (no .tsx/.css changes)
 - exploratory-qa (no UI changes)
+- performance-benchmark (lightweight review or no UI changes)
 ```
 
 The Review Agent still runs ALL pre-checks (build, lint, type-check, tests) regardless — only the agent swarm is scoped.

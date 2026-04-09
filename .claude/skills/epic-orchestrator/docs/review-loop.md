@@ -42,7 +42,7 @@ digraph review_loop {
 
 ## Round N: Review Agent
 
-Spawn a **new general-purpose sub-agent** with the Review Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`** to keep review output (build, lint, test, agent reports) out of the coordinator's context window. **Use `model: "opus"`** — the review agent orchestrates 6+ sub-agents (design, code, testing, performance, security, QA) and needs deep reasoning plus large context to avoid running out of context.
+Spawn a **new general-purpose sub-agent** with the Review Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`** to keep review output (build, lint, test, agent reports) out of the coordinator's context window. **Use `model: "opus"`** — the review agent orchestrates the 6 required agent gates (design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa) and needs deep reasoning plus large context to avoid running out of context.
 
 Before dispatch, output the status banner:
 ```
@@ -51,11 +51,7 @@ STEP 2/4: Reviewing {STORY_ID} — Round {N}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-The review agent runs `/review-story {STORY_ID}` which executes:
-1. Pre-checks (build, lint, type-check, format, unit tests, E2E tests)
-2. Design review agent (Playwright MCP — needs dev server on 5173)
-3. Code review agent (architecture, security, silent failures)
-4. Code review testing agent (AC coverage, test quality)
+The review agent runs `/review-story {STORY_ID}` which executes pre-checks (build, lint, type-check, format-check, unit-tests, e2e-tests) followed by 6 agent gates (design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa) per the canonical gate definitions in `review-story/config/gates.json`.
 
 The review agent returns a structured summary:
 ```

@@ -51,11 +51,9 @@ KNOWN ISSUES (already tracked in docs/known-issues.yaml — do NOT re-flag these
 If a pre-existing issue matches one of the above known issues (same file or same category
 of problem), classify it as KNOWN, not PRE-EXISTING. This prevents duplicate reporting.
 
-This runs the full quality gate pipeline:
-- Pre-checks: build, lint (auto-fix), type-check, format (auto-fix), unit tests, E2E tests
-- Design review: Playwright MCP browser testing (mobile/tablet/desktop)
-- Code review: architecture, security, silent failures
-- Code review testing: AC coverage, test quality, edge cases
+This runs the full quality gate pipeline from `review-story/config/gates.json` — pre-checks (build, lint (auto-fix), type-check, format (auto-fix), unit-tests, e2e-tests) followed by agent gates (design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa).
+
+Gates may be skipped based on canonical skip conditions (no UI changes → design-review-skipped, exploratory-qa-skipped; lightweight diff → performance-benchmark-skipped; no E2E spec → e2e-tests-skipped).
 
 BEFORE reviewing, run this to identify which files the story changed:
   git diff --name-only main...HEAD
@@ -96,6 +94,9 @@ REPORT PATHS:
 - Design: [path or "skipped"]
 - Code: [path]
 - Testing: [path]
+- Performance: [path or "skipped"]
+- Security: [path]
+- QA: [path or "skipped"]
 
 IMPORTANT: Report ALL issues at every severity level. Classify each into one of four tiers:
 - STORY-RELATED: in files changed by this story — will be fixed now
@@ -151,12 +152,13 @@ RETURN:
 Run `/finish-story {STORY_ID}`.
 
 This will:
-1. Validate all 9 review gates passed
-2. Update story file: status → done, completed → today's date
-3. Update sprint-status.yaml: story → done
+1. Validate all 12 canonical review gates passed (from `review-story/config/gates.json` `required_for_reviewed_true`)
+2. Update story file: reviewed → true. DO NOT set status → done yet.
+3. Update sprint-status.yaml: story → review. DO NOT set to done yet — done only after PR merge.
 4. Commit changes
 5. Push branch to remote
 6. Create PR with description
+7. After PR is created and merged: update story status → done, sprint-status → done, set completed date
 
 Activate `/auto-answer autopilot` before running /finish-story to handle any interactive questions automatically.
 
