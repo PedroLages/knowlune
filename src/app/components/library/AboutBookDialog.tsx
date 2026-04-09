@@ -38,21 +38,6 @@ export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogPro
     return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`
   }
 
-  // Format publish date for display
-  const formatPublishDate = (dateStr?: string): string => {
-    if (!dateStr) return '—'
-    try {
-      const date = new Date(dateStr)
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
-    } catch {
-      // silent-catch-ok: Invalid date format returns fallback placeholder
-      return '—'
-    }
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -150,12 +135,6 @@ export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogPro
               <span className="text-muted-foreground">Format</span>
               <span className="font-medium text-card-foreground">
                 {book.format === 'audiobook' ? 'Audiobook' : book.format.toUpperCase()}
-              </span>
-
-              {/* Publish Date */}
-              <span className="text-muted-foreground">Published</span>
-              <span className="font-medium text-card-foreground" data-testid="about-book-publish-date">
-                {formatPublishDate(book.publishDate)}
               </span>
 
               {/* ISBN */}
