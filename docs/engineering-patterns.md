@@ -13,18 +13,22 @@ test.afterEach(async ({ page, indexedDB }) => {
 })
 
 // Or wrap raw IDB in a Promise
-await page.evaluate(() =>
-  new Promise<void>((resolve, reject) => {
-    const req = indexedDB.open('ElearningDB')
-    req.onsuccess = () => {
-      const idb = req.result
-      const tx = idb.transaction('storeName', 'readwrite')
-      const clearReq = tx.objectStore('storeName').clear()
-      clearReq.onsuccess = () => { idb.close(); resolve() }
-      clearReq.onerror = () => reject(clearReq.error)
-    }
-    req.onerror = () => reject(req.error)
-  })
+await page.evaluate(
+  () =>
+    new Promise<void>((resolve, reject) => {
+      const req = indexedDB.open('ElearningDB')
+      req.onsuccess = () => {
+        const idb = req.result
+        const tx = idb.transaction('storeName', 'readwrite')
+        const clearReq = tx.objectStore('storeName').clear()
+        clearReq.onsuccess = () => {
+          idb.close()
+          resolve()
+        }
+        clearReq.onerror = () => reject(clearReq.error)
+      }
+      req.onerror = () => reject(req.error)
+    })
 )
 ```
 
@@ -91,7 +95,9 @@ useEffect(() => {
   fetchData().then(data => {
     if (!ignore) setState(data)
   })
-  return () => { ignore = true }
+  return () => {
+    ignore = true
+  }
 }, [])
 ```
 
@@ -99,11 +105,57 @@ For effects with timers or event listeners, clean those up too:
 
 ```typescript
 useEffect(() => {
-  const handler = () => { /* ... */ }
+  const handler = () => {
+    /* ... */
+  }
   window.addEventListener('event-name', handler)
   return () => window.removeEventListener('event-name', handler)
 }, [deps])
 ```
+
+## Timeout Pattern for Unreliable Callbacks
+
+When using third-party library callbacks that may not fire reliably (e.g., `tocChanged` from epub.js, MediaRecorder `ondataavailable`, File System Access API events), pair the callback with a timeout effect to set a fallback state. This prevents indefinite loading states.
+
+**Why needed:** Some third-party library callbacks may not fire due to:
+
+- Missing or corrupt data in the source (e.g., EPUB with no navigation)
+- Library bugs or edge cases
+- Race conditions in library initialization
+
+**Pattern:**
+
+```typescript
+useEffect(() => {
+  // Callback sets success state
+  const handleCallback = () => {
+    setIsLoading(false)
+    setData(loadedData)
+  }
+
+  thirdPartyLibrary.onCallback(handleCallback)
+
+  // Timeout sets fallback state if callback never fires
+  const timeoutId = setTimeout(() => {
+    if (isLoading) {
+      setIsLoading(false) // Fallback to empty/error state
+    }
+  }, TIMEOUT_MS)
+
+  return () => {
+    clearTimeout(timeoutId)
+    thirdPartyLibrary.offCallback(handleCallback)
+  }
+}, [isLoading])
+```
+
+**Key points:**
+
+- Check current state before setting fallback (avoid overwriting successful loads)
+- Clean up both timeout and callback listener in effect cleanup
+- Choose timeout duration based on expected operation time (5s for TOC, 30s for network, etc.)
+
+**Case study:** E107-S03 — `tocChanged` callback from `react-reader` may not fire for EPUBs with no navigation or corrupt TOC data. A 5-second timeout prevents infinite loading spinner while allowing legitimate slow EPUBs to load.
 
 ## Error Handling
 
@@ -134,6 +186,7 @@ When choosing between implementation approaches of varying complexity, **default
 5. **When research scores differ by <15%**, choose the lower-risk/simpler option
 
 **Case Study — Epic 9 Vector Search:**
+
 - Custom HNSW (complex): 700+ lines, 6.2% recall, 3 hours invested, 0 progress
 - Brute force k-NN (simple): 200 lines, 100% recall, 10.27ms @ 10K vectors (10x under budget)
 - Lesson: Brute force should have been the starting point. HNSW was premature optimization.
@@ -142,6 +195,7 @@ When choosing between implementation approaches of varying complexity, **default
 When building the simple approach, document the specific conditions that would trigger migration to a more complex solution. Example: "If >50K vectors OR >200ms latency → evaluate EdgeVec library."
 
 **Anti-patterns:**
+
 - Building complex solutions before proving the simple one is insufficient
 - Choosing higher-scored research options when the score gap is small but complexity gap is large
 - Continuing to fix a failing complex approach instead of pivoting to a simpler one (sunk cost)
@@ -151,12 +205,14 @@ When building the simple approach, document the specific conditions that would t
 When planning an epic that covers both infrastructure/foundation work AND feature work built on that foundation, consider splitting into two epics.
 
 **Split when:**
+
 - The epic has 3+ "foundation" stories (data layer, config, API setup, worker architecture) AND 3+ "feature" stories that depend on them
 - Infrastructure stories need to stabilize before feature stories can begin productively
 - Different skill sets or review criteria apply to infrastructure vs. features
 - The combined epic would exceed 8 stories
 
 **Don't split when:**
+
 - Infrastructure is just 1-2 small stories (setup/config)
 - Features can be developed incrementally alongside infrastructure
 - The total scope is ≤6 stories
@@ -164,6 +220,7 @@ When planning an epic that covers both infrastructure/foundation work AND featur
 **Naming convention:** Use letter suffix for the feature epic (e.g., Epic 9 = infrastructure, Epic 9B = features).
 
 **Case Study — Epic 9/9B:**
+
 - Epic 9 (3 stories): AI provider config, web workers, embedding pipeline — all foundation
 - Epic 9B (6 stories): Video summary, Q&A, learning paths, gap detection, note org, analytics — all features
 - Result: Clean dependency boundary, infrastructure stabilized before features started
@@ -186,6 +243,7 @@ const runAutoAnalysis = async (courseId: string) => {
 ```
 
 **Rules:**
+
 - Wrap all background/analytics operations in try/catch
 - Log the error for debugging (console.error with component prefix)
 - Show a non-blocking toast notification (never a modal or alert)
@@ -199,6 +257,7 @@ Content Security Policy violations fail **silently** in the browser but **clearl
 **Rule:** Configure CSP allowlists in infrastructure stories **before** any feature story that calls external APIs.
 
 **Checklist for external API stories:**
+
 1. Add API domain to `connect-src` in CSP meta tag or header
 2. Verify in both browser console (check for CSP violation warnings) and E2E tests
 3. Document the CSP change in the story's implementation notes
@@ -237,6 +296,7 @@ catch (error) {
 ```
 
 **Exceptions** (where silent catch is acceptable):
+
 - `beforeunload` handlers (no UI available)
 - Background telemetry/analytics (fire-and-forget pattern — see "Fire-and-Forget Error Boundaries" above)
 - Cleanup/dispose functions where failure is inconsequential
@@ -246,12 +306,14 @@ catch (error) {
 Before writing task breakdowns for a new story, audit the codebase for pre-existing code that's relevant. In Epic 13, 3 of 6 stories (50%) discovered that significant functionality already existed, making task lists overestimate effort.
 
 **Audit checklist:**
+
 1. Search stores (`src/stores/`) for actions/selectors related to the story's domain
 2. Search types (`src/types/`) for interfaces the story needs
 3. Search components (`src/app/components/`) for UI primitives that can be reused
 4. Check if the story's primary data flow is already wired
 
 **Case Study — Epic 13:**
+
 - E13-S03 (Pause/Resume): ~80% already built in E12-S03 (Zustand persist) and E13-S01 (resume button)
 - E13-S05 (Shuffle): Fisher-Yates was already inline in `useQuizStore.ts` — story became an extraction refactor
 - E13-S01 (Navigation): `goToNextQuestion`/`goToPrevQuestion` already existed in the store
@@ -261,6 +323,7 @@ Before writing task breakdowns for a new story, audit the codebase for pre-exist
 Only commit to retro action items that can be enforced automatically (ESLint rules, git hooks, review gates). Items requiring voluntary initiative without enforcement should be labeled "aspirational" and deprioritized.
 
 **Evidence (Epics 11-13):**
+
 - Automated items (ESLint design-token rule, review gates): ~100% compliance
 - Documentation-only items (conventions, pattern docs): <20% follow-through
 - Items with enforcement attached (contrast fix blocking a story): 100% completion
@@ -287,21 +350,25 @@ This means a partially correct answer returns `isCorrect: false` but `pointsEarn
 Recurring ARIA mistakes from Epic 14 retrospective. Check every item when building question or quiz UI.
 
 **Structure:**
+
 - [ ] `<fieldset>` + `<legend>` wraps each question group
 - [ ] `<legend>` uses `aria-labelledby` pointing to question text element
 - [ ] No redundant `role="group"` on `<fieldset>` (it's implicit)
 
 **ARIA associations:**
+
 - [ ] `aria-describedby` links inputs to hint/instruction text
 - [ ] `aria-live="polite"` on dynamically updating content (counters, timers, validation status)
 - [ ] `aria-invalid` + `aria-errormessage` on inputs with validation errors
 
 **Interaction:**
+
 - [ ] RadioGroup: Arrow keys navigate options (Radix default — don't override)
 - [ ] Checkboxes: Tab key moves between options (not arrow keys)
 - [ ] Focus indicators: `ring-2 ring-ring ring-offset-2` on all interactive elements
 
 **Touch & sizing:**
+
 - [ ] Touch targets ≥44px (`min-h-12` on clickable elements)
 - [ ] Label text clickable (wraps or `htmlFor` on associated input)
 
@@ -310,11 +377,13 @@ Recurring ARIA mistakes from Epic 14 retrospective. Check every item when buildi
 When and how to skip review gates during `/review-story`:
 
 **Acceptable skip conditions:**
+
 - Documentation-only changes (no .tsx/.ts/.css)
 - Test-only changes (no production source)
 - Emergency hotfixes (document reason in PR)
 
 **Skip procedure:**
+
 1. Document the skipped gate(s) in the story's lessons learned
 2. Add `skip-review: [gate-name]` label on the PR
 3. Note the reason in the epic tracking file
@@ -341,6 +410,7 @@ Each Dexie schema migration consumes a version number (v30, v31, v32...). When s
 
 ```markdown
 ### Critical Guardrails (in story spec)
+
 - Dexie migration: use v33 (v32 consumed by E60-S01 for knowledgeDecay)
 - Next available version after this story: v34
 ```
@@ -373,7 +443,7 @@ Use `useRef` (not `useState`) for navigation guards and other one-shot action lo
 const switchingRef = useRef(false)
 
 function handleSwitch() {
-  if (switchingRef.current) return   // guard: already switching
+  if (switchingRef.current) return // guard: already switching
   switchingRef.current = true
   // switchingRef is NOT reset — component unmounts on navigation
   // No setTimeout cleanup needed
@@ -523,7 +593,7 @@ Async effects that create disposable resources (blob URLs, file handles, streams
 1. **Effect-local resource** (`effectBlobUrl`): the URL/handle resolved by the current effect run. Revoke if the effect is cancelled before the component renders the new value.
 2. **Previous displayed resource** (`previousUrlRef`): the URL/handle currently shown. Revoke when the component renders a replacement (or unmounts).
 
-Single-phase cleanup (only on unmount) misses the rapid-re-render race: a new effect starts, the old one is cancelled, but the new effect's resource is never revoked if *that* effect is also cancelled.
+Single-phase cleanup (only on unmount) misses the rapid-re-render race: a new effect starts, the old one is cancelled, but the new effect's resource is never revoked if _that_ effect is also cancelled.
 
 ```typescript
 const previousUrlRef = useRef<string | null>(null)
