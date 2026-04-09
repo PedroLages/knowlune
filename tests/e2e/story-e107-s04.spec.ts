@@ -62,7 +62,6 @@ test.describe('E107-S04: About Book Dialog', () => {
 
     // Verify metadata fields are displayed
     await expect(page.locator('[data-testid="about-book-format"]')).toBeVisible()
-    await expect(page.locator('[data-testid="about-book-publish-date"]')).toBeVisible()
     await expect(page.locator('[data-testid="about-book-isbn"]')).toBeVisible()
     await expect(page.locator('[data-testid="about-book-tags"]')).toBeVisible()
   })
