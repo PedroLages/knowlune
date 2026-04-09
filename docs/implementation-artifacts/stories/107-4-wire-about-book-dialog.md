@@ -328,3 +328,14 @@ Before requesting `/review-story`, verify:
 - [ ] At every non-obvious code site, add `// Intentional: <reason>` comment
 - [ ] For every `useEffect` or async callback that reads Zustand state: confirm it reads from `get()` inside the callback
 - [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
+
+## Challenges and Lessons Learned
+
+### Data Model Alignment
+The original story plan listed `publishDate` as an available field in the Book interface, but this field doesn't exist in the actual type definition (`src/data/types.ts`). This was discovered during TypeScript compilation. **Resolution:** Removed the publishDate field from the AboutBookDialog component and updated the E2E test to match the actual available fields (format, ISBN, fileSize). This highlights the importance of verifying field availability against the actual type definition rather than relying on story documentation.
+
+### Lint Hygiene
+Two minor lint warnings were caught during pre-checks: an unused import (`BookOpen`) and a catch block without visible feedback. Both were quickly addressed with a `// silent-catch-ok` comment and import cleanup. Keeping the codebase lint-clean at the story level prevents accumulation of tech debt.
+
+### Dialog Pattern Consistency
+Following the existing `LinkFormatsDialog` pattern proved valuable for consistent state management, menu item placement, and keyboard interaction handling. The shadcn/ui Dialog component includes built-in accessibility features (focus trap, ARIA attributes) that reduced custom implementation effort.
