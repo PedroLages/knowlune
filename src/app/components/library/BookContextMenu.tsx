@@ -8,12 +8,14 @@
  * @since E83-S04
  */
 
-import { useState, type ReactNode } from 'react'
+import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { Check, MoreVertical, ArrowRightLeft } from 'lucide-react'
 import type { Book, BookStatus } from '@/data/types'
 import { useBookStore } from '@/stores/useBookStore'
 import { LinkFormatsDialog } from './LinkFormatsDialog'
-import { AboutBookDialog } from './AboutBookDialog'
+
+// Lazy-load AboutBookDialog to defer ~5.5KB until dialog opens
+const AboutBookDialog = lazy(() => import('./AboutBookDialog'))
 import {
   ContextMenu,
   ContextMenuContent,
@@ -209,7 +211,9 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
       <LinkFormatsDialog book={book} open={linkDialogOpen} onOpenChange={setLinkDialogOpen} />
 
       {/* About Book dialog */}
-      <AboutBookDialog book={book} open={aboutDialogOpen} onOpenChange={setAboutDialogOpen} />
+      <Suspense fallback={null}>
+        <AboutBookDialog book={book} open={aboutDialogOpen} onOpenChange={setAboutDialogOpen} />
+      </Suspense>
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>

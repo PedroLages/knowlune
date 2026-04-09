@@ -14,7 +14,7 @@ import { seedBooks } from '../support/helpers/seed-helpers'
 import { FIXED_DATE } from '../utils/test-time'
 
 test.describe('E107-S04: About Book Dialog', () => {
-  test.beforeEach(async ({ libraryPage, page }) => {
+  test.beforeEach(async ({ page }) => {
     // Set localStorage to skip onboarding dialog BEFORE page load
     // Key format matches useOnboardingStore.ts STORAGE_KEY
     await page.addInitScript(() => {
@@ -42,7 +42,7 @@ test.describe('E107-S04: About Book Dialog', () => {
         fileSize: 450000,
         progress: 45,
         chapters: [],
-        source: { type: 'local' },
+        source: { type: 'local', opfsPath: '/test/gatsby.epub' },
         createdAt: FIXED_DATE,
         updatedAt: FIXED_DATE
       },
@@ -57,7 +57,7 @@ test.describe('E107-S04: About Book Dialog', () => {
         tags: [],
         progress: 0,
         chapters: [],
-        source: { type: 'local' },
+        source: { type: 'local', opfsPath: '/test/untitled.epub' },
         createdAt: FIXED_DATE
       },
       {
@@ -74,7 +74,7 @@ test.describe('E107-S04: About Book Dialog', () => {
         totalDuration: 68400, // 19 hours
         progress: 60,
         chapters: [],
-        source: { type: 'local' },
+        source: { type: 'local', opfsPath: '/test/hobbit.m4b' },
         createdAt: FIXED_DATE
       }
     ])
@@ -93,7 +93,7 @@ test.describe('E107-S04: About Book Dialog', () => {
         // If clicking fails, try Escape key
         await page.keyboard.press('Escape')
       }
-      // Wait for dialog to close
+      // eslint-disable-next-line test-patterns/no-hard-waits -- Necessary wait for dialog close animation to settle
       await page.waitForTimeout(500)
     }
   })

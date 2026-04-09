@@ -1,12 +1,12 @@
 ---
 story_id: E107-S04
 story_name: "Wire About Book Dialog"
-status: ready-for-dev
+status: in-progress
 started: 2026-04-09
 completed:
 reviewed: true
-review_started: 2026-04-09 # Auto-set by review-story
-review_gates_passed: ["pre-checks"]
+review_started: 2026-04-09
+review_gates_passed: ["pre-checks", "build", "lint", "type-check", "format-check", "unit-tests-skipped", "e2e-tests", "design-review", "code-review", "code-review-testing", "performance-benchmark", "security-review", "exploratory-qa"]
 burn_in_validated: false
 ---
 

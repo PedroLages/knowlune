@@ -1,354 +1,220 @@
-# Test Coverage Review: E107-S04 — Wire About Book Dialog
+## Test Coverage Review: E107-S04 — Wire About Book Dialog
 
-## Executive Summary
+### AC Coverage Summary
 
-**Status:** CRITICAL BLOCKER
+**Acceptance Criteria Coverage:** 5/5 ACs tested (**100%**)
 
-**Acceptance Criteria Coverage:** 0/5 ACs tested (0%)
-
-**Coverage Gate:** BLOCKER (<80%)
-
-The E2E test file exists but is completely non-functional due to missing test infrastructure (`libraryPage` fixture and helper methods). Zero acceptance criteria can be verified because the tests cannot execute.
-
-## AC Coverage Summary
-
-**Acceptance Criteria Coverage:** 0/5 ACs tested (**0%**)
-
-**Coverage Gate Status:** BLOCKER (<80% - minimum required)
+**🚨 COVERAGE GATE:** ✅ PASS (≥80%)
 
 ### AC Coverage Table
 
 | AC# | Description | Unit Test | E2E Test | Verdict |
 |-----|-------------|-----------|----------|---------|
-| 1   | About Book dialog accessible from BookCard and BookListItem context menu | None | tests/e2e/story-e107-s04.spec.ts:20-48 (BROKEN - missing libraryPage fixture) | Gap |
-| 2   | Dialog displays book metadata (title, author, description, ISBN, tags, format) | None | tests/e2e/story-e107-s04.spec.ts:50-67 (BROKEN - missing helpers) | Gap |
-| 3   | Dialog handles missing metadata gracefully with fallback text | None | tests/e2e/story-e107-s04.spec.ts:69-83 (BROKEN - missing helpers) | Gap |
-| 4   | Dialog accessible (keyboard navigation, ARIA labels, focus trap) | None | tests/e2e/story-e107-s04.spec.ts:85-118 (BROKEN - missing helpers) | Gap |
-| 5   | Dialog works for EPUB and audiobook formats | None | tests/e2e/story-e107-s04.spec.ts:120-137 (BROKEN - missing helpers) | Gap |
+| 1   | About Book dialog accessible from BookCard and BookListItem context menu | None | tests/e2e/story-e107-s04.spec.ts:101-129 | Covered |
+| 2   | Dialog displays book metadata (title, author, description, ISBN, tags, format) | None | tests/e2e/story-e107-s04.spec.ts:131-148 | Covered |
+| 3   | Dialog handles missing metadata gracefully with fallback text | None | tests/e2e/story-e107-s04.spec.ts:150-164 | Covered |
+| 4   | Dialog accessible (keyboard nav, ARIA labels, focus trap) | None | tests/e2e/story-e107-s04.spec.ts:166-199 | Covered |
+| 5   | Dialog works for EPUB and audiobook formats | None | tests/e2e/story-e107-s04.spec.ts:201-218 | Covered |
 
-**Coverage:** 0/5 ACs fully covered | 5 gaps | 0 partial
+**Coverage**: 5/5 ACs fully covered | 0 gaps | 0 partial
 
-## Critical Findings
+### Test Quality Findings
 
-### Blockers
+#### Blockers (untested ACs)
+None — all acceptance criteria have test coverage.
 
-1. **[tests/e2e/story-e107-s04.spec.ts:15] (confidence: 100)**: Test file references non-existent `libraryPage` fixture. The fixture is imported from `tests/support/fixtures` but no such fixture exists in the codebase. All 10 tests fail with "unknown parameter 'libraryPage'" error.
+#### High Priority
+None — all critical behaviors are tested.
 
-   **Impact:** All E2E tests are completely non-functional. Zero ACs can be verified.
+#### Medium
 
-   **Evidence:**
-   ```
-   beforeEach hook has unknown parameter "libraryPage".
-      at e2e/story-e107-s04.spec.ts:15
-   ```
+**[tests/e2e/story-e107-s04.spec.ts:251] (confidence: 75)**: Weak assertion in focus return test. The test checks `await expect(bookCard).toContainFocus()` but this is a broad assertion that would pass even if focus returned to the wrong element within the book card. 
 
-   **Fix Required:** Create `libraryPage` fixture in `tests/support/fixtures/` with methods:
-   - `goto()` - Navigate to library page
-   - `openBookCardContextMenu(index)` - Open context menu on book card
-   - `openBookListItemContextMenu(index)` - Open context menu on list item
-   - `openAboutBookDialog(index)` - Helper to open dialog
-   - `switchToListView()` - Toggle list view
+**Fix**: Add a more specific assertion targeting the actual trigger button or menu item:
+```typescript
+// Before opening dialog, store reference to context menu trigger
+const contextMenuTrigger = page.locator('[data-testid="book-more-actions"]').first()
+await contextMenuTrigger.focus()
 
-2. **[tests/e2e/story-e107-s04.spec.ts:22-24] (confidence: 100)**: Test calls `libraryPage.openBookCardContextMenu(0)` but this method doesn't exist anywhere in the codebase. Cannot verify AC-1 (dialog accessible from BookCard).
+// Open dialog, close it, then verify
+await page.keyboard.press('Escape')
+await expect(contextMenuTrigger).toBeFocused()
+```
 
-3. **[tests/e2e/story-e107-s04.spec.ts:37-40] (confidence: 100)**: Test calls `libraryPage.switchToListView()` and `libraryPage.openBookListItemContextMenu(0)` but these methods don't exist. Cannot verify AC-1 for BookListItem.
+**[tests/e2e/story-e107-s04.spec.ts:96] (confidence: 70)**: Hard wait with justification comment. Line 96 uses `waitForTimeout(500)` with a comment explaining it's for dialog close animation. While justified, this is still a potential source of flakiness.
 
-4. **[tests/e2e/story-e107-s04.spec.ts:52] (confidence: 100)**: Test calls `libraryPage.openAboutBookDialog(0)` helper method that doesn't exist. Tests for AC-2, AC-3, AC-4, AC-5 all depend on this helper.
+**Fix**: Consider using a more deterministic wait pattern:
+```typescript
+// Wait for dialog to be fully removed from DOM instead
+await expect(dialog).not.toBeAttached({ timeout: 2000 })
+```
 
-5. **[AC-2: Missing publishDate field] (confidence: 95)**: Story AC-2 specifies "Dialog displays book metadata (title, author, description, publish date, ISBN, tags, format)" but the Book type in `src/data/types.ts:679-705` does NOT have a `publishDate` field. The implementation correctly omits it (see lessons learned in story file), but the AC and tests are inconsistent with reality.
+**[tests/e2e/story-e107-s04.spec.ts:103] (confidence: 65)**: Test assumes book card ordering without verifying. The test opens the context menu for book at index 0, but doesn't verify which book it is before testing.
 
-   **Current state:** Tests verify `about-book-format`, `about-book-isbn`, `about-book-tags` but NOT publishDate (which doesn't exist).
+**Fix**: Add a verification step to ensure the correct book is being tested:
+```typescript
+// Open context menu and verify we're testing the right book
+await libraryPage.openBookCardContextMenu(0)
+await expect(page.locator('[data-testid="context-menu-about-book"]')).toBeVisible()
+// Could also verify the book title in the dialog matches expected book
+```
 
-   **Recommendation:** Update AC-2 in story file to remove "publish date" since the field doesn't exist in the Book type.
+#### Nits
 
-## High Priority Findings
+**[tests/e2e/story-e107-s04.spec.ts:32] (confidence: 50)**: Test data setup is inline and verbose. Consider extracting to a factory function for better maintainability.
 
-### Test Quality Issues
+**Suggestion**: Create a `createTestBook()` factory in `tests/support/fixtures/factories/book-factory.ts`:
+```typescript
+import { createTestBook } from '@/tests/support/fixtures/factories'
 
-1. **[tests/e2e/story-e107-s04.spec.ts:28-32] (confidence: 90)**: Weak assertion for dialog open. Test only checks `[role="dialog"]` is visible and has correct role attribute. Doesn't verify dialog contains expected content (title, author, etc.).
+// In test
+await seedBooks(page, [
+  createTestBook({ id: 'test-book-1', title: 'The Great Gatsby', format: 'epub' }),
+  createTestBook({ id: 'test-book-2', title: 'Untitled Book', author: '' }), // Missing metadata
+  createTestBook({ id: 'test-book-3', title: 'The Hobbit', format: 'audiobook' })
+])
+```
 
-   **Current:**
+**[tests/e2e/story-e107-s04.spec.ts:201] (confidence: 45)**: Comment "Assuming first book is EPUB" is defensive. Tests should be explicit about data setup.
+
+**Suggestion**: Either name test data clearly (`epub-complete-book`) or verify format in assertion:
+```typescript
+// Either rename seed data or add verification
+const format = page.locator('[data-testid="about-book-format"]')
+await expect(format).toContainText('EPUB')
+```
+
+### Edge Cases to Consider
+
+**Untested scenarios from implementation analysis:**
+
+1. **Empty tags array (tested implicitly)**: The implementation renders `null` when `book.tags` is empty or missing. The test at line 147 checks for tags visibility but doesn't specifically test the empty case. This is low risk since the implementation uses safe rendering (`{book.tags && book.tags.length > 0 ? ... : null}`).
+
+2. **Cover image fallback behavior (partially tested)**: Tests verify the dialog opens and shows content, but don't explicitly test the cover fallback icons (Headphones for audiobooks, BookOpen for EPUBs). The implementation has this logic at lines 76-84, but E2E tests don't verify the fallback icons appear when `coverUrl` is missing.
+
+   **Suggested test**: Add a test for missing cover URL:
    ```typescript
-   await expect(dialog).toBeVisible()
-   await expect(dialog).toHaveAttribute('role', 'dialog')
-   ```
-
-   **Would pass even if:** Dialog opens but is completely empty (shell only).
-
-   **Fix:** Add content assertion:
-   ```typescript
-   await expect(dialog).toBeVisible()
-   await expect(page.locator('[data-testid="about-book-title"]')).toBeVisible()
-   ```
-
-2. **[tests/e2e/story-e107-s04.spec.ts:64-66] (confidence: 85)**: AC-2 test verifies elements exist but doesn't verify their content. Test checks metadata fields are "displayed" but never asserts WHAT values they show.
-
-   **Current:**
-   ```typescript
-   await expect(page.locator('[data-testid="about-book-format"]')).toBeVisible()
-   await expect(page.locator('[data-testid="about-book-isbn"]')).toBeVisible()
-   await expect(page.locator('[data-testid="about-book-tags"]')).toBeVisible()
-   ```
-
-   **Would pass even if:** Metadata shows "—", "N/A", or wrong values.
-
-   **Fix:** Verify actual content:
-   ```typescript
-   await expect(page.locator('[data-testid="about-book-format"]')).toContainText('EPUB')
-   await expect(page.locator('[data-testid="about-book-isbn"]')).toHaveText(/[\d-]+/)
-   ```
-
-3. **[tests/e2e/story-e107-s04.spec.ts:69-83] (confidence: 90)**: AC-3 test assumes second test book (index 1) has incomplete metadata, but no test data seeding is visible. Test relies on opaque fixture behavior without guaranteeing test data state.
-
-   **Risk:** Test passes/fails randomly depending on whatever data exists in the database.
-
-   **Fix:** Explicitly seed test data with known incomplete book:
-   ```typescript
-   test.beforeEach(async ({ page }) => {
-     await seedBook({ id: 'test-incomplete', author: null, description: null })
+   test('AC-2: Shows fallback icon when cover image missing', async ({ libraryPage, page }) => {
+     // Seed book without coverUrl
+     await seedBooks(page, [{
+       id: 'no-cover-book',
+       title: 'No Cover Book',
+       format: 'audiobook',
+       coverUrl: undefined, // No cover
+       // ... other required fields
+     }])
+     
+     await libraryPage.openAboutBookDialog(0)
+     
+     // Verify fallback icon is shown
+     await expect(page.locator('[data-testid="about-book-cover"]')).not.toBeVisible()
+     // Check for Headphones icon in the cover container
+     const coverContainer = page.locator('.w-32.h-48.bg-muted')
+     await expect(coverContainer.locator('svg')).toHaveAttribute('data-lucide', 'headphones')
    })
    ```
 
-4. **[tests/e2e/story-e107-s04.spec.ts:91-98] (confidence: 85)**: AC-4 keyboard navigation test has weak assertion. After pressing Tab, test checks focused element has a `data-testid` attribute, not which element is focused.
+3. **File size formatting edge cases (untested)**: The `formatFileSize` function (lines 36-40) handles different size ranges, but tests don't verify:
+   - Zero bytes → returns "—"
+   - Small files (< 1 MB) → returns "XXX KB"
+   - Large files (≥ 1 MB) → returns "X.X MB"
+   
+   **Suggested test**: Add unit tests for `formatFileSize` utility function in a separate test file (e.g., `tests/unit/utils/formatFileSize.test.ts`).
 
-   **Current:**
-   ```typescript
-   const focusedElement = await page.evaluate(() => 
-     document.activeElement?.getAttribute('data-testid')
-   )
-   expect(focusedElement).toBeTruthy()
-   ```
+4. **Long text truncation (untested)**: The title has `truncate` class (line 90), and description may be long. Tests don't verify that very long titles/descriptions are handled gracefully without breaking layout.
 
-   **Would pass even if:** Focus moves to ANY element with data-testid, not necessarily the correct next element in tab order.
+5. **Narrator field for audiobooks (untested)**: The Book type includes `narrator` field for audiobooks (line 683 of types.ts), but the AboutBookDialog implementation doesn't display it. This is actually an implementation gap, not a test gap — the dialog should show narrator for audiobooks but currently doesn't.
 
-   **Fix:** Verify specific element:
-   ```typescript
-   await expect(page.locator('[data-testid="about-book-title"]')).toBeFocused()
-   ```
+6. **Concurrent dialog interactions (untested)**: What happens if user:
+   - Rapidly clicks "About Book" multiple times?
+   - Opens dialog, switches away, switches back?
+   - Opens dialog from keyboard vs mouse?
 
-5. **[tests/e2e/story-e107-s04.spec.ts:152-169] (confidence: 85)**: Focus return test assumes focus returns to book card after Escape, but assertion is weak. Test checks book card is focused, but focus could have started there.
+   These are low-risk given Radix UI's built-in protections, but could be tested for robustness.
 
-   **Current:**
-   ```typescript
-   const bookCard = page.locator('[data-testid="book-card"]').first()
-   await expect(bookCard).toBeFocused()
-   ```
+### Test Isolation Assessment
 
-   **Would pass even if:** Focus was never on the menu item that triggered the dialog.
+**Excellent isolation practices observed:**
+- ✅ Uses `beforeEach` for clean state setup (lines 17-99)
+- ✅ Seeds localStorage via `addInitScript` before navigation (lines 20-26)
+- ✅ Navigates to page before seeding IndexedDB (avoids `about:blank` SecurityError)
+- ✅ Seeds fresh test data per test (no shared state)
+- ✅ Attempts to close stray dialogs from previous test runs (lines 86-98)
 
-   **Fix:** Store reference to triggering element first, verify it receives focus back:
-   ```typescript
-   const trigger = page.locator('[data-testid="context-menu-about-book"]')
-   await trigger.click()
-   await page.keyboard.press('Escape')
-   await expect(trigger).toBeFocused()
-   ```
+**Minor concerns:**
+- ⚠️ The dialog cleanup logic (lines 86-98) is defensive but indicates potential state leakage between tests. This is acceptable as a safety measure, but ideally tests shouldn't leave dialogs open.
 
-### Missing Test Scenarios
+### Selector Quality Assessment
 
-1. **[Missing test] (confidence: 90)**: No test verifies dialog closes on overlay click (clicking outside dialog). Line 139-150 has a test but it's BROKEN due to missing fixture. This is an important user interaction.
+**Strong selector practices:**
+- ✅ Uses `data-testid` attributes for all interactive elements (context-menu-about-book, dropdown-menu-about-book, about-book-title, etc.)
+- ✅ Uses ARIA roles where appropriate (`[role="dialog"]`)
+- ✅ Avoids brittle CSS class selectors
+- ✅ Follows consistent naming convention (kebab-case, descriptive)
 
-2. **[Missing test] (confidence: 85)**: No test for edge case where ALL metadata is missing (no title, author, description, ISBN, tags). AC-3 tests partial missing data but not complete absence.
+**Excellent**: Test selectors would survive most CSS refactors since they target behavior, not implementation.
 
-3. **[Missing test] (confidence: 80)**: No test for long description truncation or overflow behavior. Description could be 1000+ characters; test should verify UI handles it gracefully.
+### Factory & Fixture Usage
 
-4. **[Missing test] (confidence: 80)**: No test for tags display with many tags (10+). Test should verify badges wrap correctly and don't overflow container.
+**Good use of fixtures:**
+- ✅ Uses `libraryPage` fixture for reusable interactions (openBookCardContextMenu, switchToListView, etc.)
+- ✅ Uses `seedBooks` helper for data seeding
+- ✅ Uses `FIXED_DATE` from test-time utilities (deterministic time)
 
-5. **[Missing test] (confidence: 85)**: No accessibility audit with axe-core. Story file Task 6 explicitly requires "No a11y violations in dialog" but no automated a11y test exists.
+**Improvement opportunity:**
+- ⚠️ Test data is inline (lines 32-80) — could benefit from factory functions for better maintainability
 
-6. **[Missing test] (confidence: 75)**: No test verifies format badge shows correct colors (bg-brand-soft, text-brand-soft-foreground). Visual regression testing needed.
+### Assertion Quality Assessment
 
-7. **[Missing test] (confidence: 80)**: No responsive behavior test at mobile viewport (375px). Story design guidance specifies mobile-specific layout but test doesn't verify it.
+**Strong assertion practices:**
+- ✅ Tests verify actual content, not just visibility (`toContainText`, `toHaveText`)
+- ✅ Uses negative assertions where appropriate (`not.toBeVisible`)
+- ✅ Checks specific data-testid attributes for element presence
+- ✅ Verifies ARIA attributes (`toHaveAttribute('aria-labelledby')`)
 
-### Data Integrity Issues
+**One weak assertion identified:**
+- ⚠️ Line 251: `toContainFocus()` on bookCard is too broad — should target the specific trigger element
 
-1. **[AC-5 test] (confidence: 90)**: Tests assume first book is EPUB and third book is audiobook, but no explicit test data setup. Comments say "Assuming first book is EPUB" - this is fragile.
+### Deterministic Time Handling
 
-   **Fix:** Explicitly create test books:
-   ```typescript
-   test.beforeEach(async ({ page }) => {
-     await seedBooks([
-       createBook({ format: 'epub', id: 'test-epub' }),
-       createBook({ format: 'audiobook', id: 'test-audio' })
-     ])
-   })
-   ```
+**Excellent practices:**
+- ✅ Uses `FIXED_DATE` from `tests/utils/test-time.ts` (line 14, imported)
+- ✅ All seeded books use `FIXED_DATE` for createdAt timestamps
+- ✅ No `Date.now()` or `new Date()` calls in test code
+- ✅ No arbitrary `waitForTimeout()` calls (except one justified case with comment)
 
-2. **[Test isolation] (confidence: 85)**: Tests rely on "first book", "second book", "third book" without ensuring consistent test data across test runs. Tests could pass locally but fail in CI if database state differs.
+### Test Type Appropriateness
 
-## Medium Priority Findings
+**Appropriate E2E coverage for all ACs:**
+- ✅ AC-1 (UI interaction from context menu): E2E is correct choice
+- ✅ AC-2 (Visual metadata display): E2E verifies rendering
+- ✅ AC-3 (Fallback text for missing data): E2E tests user-facing behavior
+- ✅ AC-4 (Accessibility - keyboard/ARIA): E2E essential for a11y verification
+- ✅ AC-5 (Format-specific display): E2E correct for visual differences
 
-### Selector Quality
+**Unit tests not required**: The AboutBookDialog component is primarily a presentational component with minimal logic. The only pure function is `formatFileSize`, which could benefit from unit tests for edge cases (see Edge Cases section).
 
-1. **[tests/e2e/story-e107-s04.spec.ts:144-145] (confidence: 70)**: Overlay click selector is fragile. Uses `locator('[data-state="open"]').locator('..').first()` which depends on DOM structure and could break with component refactors.
+### Overall Assessment
 
-   **Fix:** Use more stable selector:
-   ```typescript
-   const overlay = page.locator('[data-testid="about-book-dialog"]').locator('..')
-   ```
+**Test Quality Grade: A- (92/100)**
 
-2. **[Implementation] (confidence: 70)**: AboutBookDialog implementation has good testid coverage but is missing testid on close button. Test line 116 looks for `[aria-label="Close dialog"]` which is good (ARIA attribute), but adding testid would be more stable for E2E.
+**Strengths:**
+- Complete AC coverage (5/5)
+- Excellent selector quality (data-testid throughout)
+- Good test isolation and cleanup practices
+- Deterministic time handling
+- Accessibility testing included (keyboard nav, ARIA attributes, focus management)
+- Tests both EPUB and audiobook formats
+- Tests missing metadata fallbacks
 
-### Assertion Completeness
+**Areas for improvement:**
+- Add unit tests for `formatFileSize` utility function (edge cases)
+- Consider extracting test data to factory functions
+- Add explicit test for cover image fallback behavior
+- Strengthen focus return test with more specific assertion
+- Consider testing long text truncation behavior
 
-1. **[tests/e2e/story-e107-s04.spec.ts:76-77] (confidence: 70)**: AC-3 test checks for "Unknown author" text but doesn't verify styling. Story design guidance says fallback should be italic and muted-foreground. Test doesn't verify CSS classes.
-
-2. **[tests/e2e/story-e107-s04.spec.ts:80-82] (confidence: 70)**: Similar issue for "No description" fallback. Test verifies text but not styling.
-
-### Test Documentation
-
-1. **[tests/e2e/story-e107-s04.spec.ts:1-10] (confidence: 65)**: Good AC documentation in file header, but missing test data requirements. Comment should document what test data must exist (e.g., "Requires 3 books: EPUB with complete metadata, book with missing author/description, audiobook").
-
-## Edge Cases to Consider
-
-Based on implementation analysis of `AboutBookDialog.tsx`:
-
-1. **Cover image load failure**: No test for when cover URL exists but image fails to load (404, network error). Fallback icon should appear.
-
-2. **Empty tags array**: Implementation checks `{book.tags && book.tags.length > 0}` but no test verifies tags section is hidden when empty.
-
-3. **Zero file size**: `formatFileSize(0)` returns "—" (handled), but no test verifies this edge case.
-
-4. **Very large file size**: No test for file sizes in GB range (formatting should show "X.X GB").
-
-5. **Special characters in metadata**: No test for ISBN with dashes, spaces, or special characters in title/author that could break rendering.
-
-6. **Concurrent dialog opens**: No test for rapid clicking of "About Book" multiple times. Could cause duplicate dialogs or state corruption.
-
-7. **Dialog open during navigation**: No test for opening dialog then navigating away. Should close cleanly without errors.
-
-8. **Narrator field (audiobook)**: Book type has `narrator` field but AboutBookDialog doesn't display it. Intentional exclusion? If so, should be documented.
-
-## Test Infrastructure Gaps
-
-### Missing Fixtures
-
-The following fixtures must be created before tests can run:
-
-1. **Library Page Fixture** (`tests/support/fixtures/library-page-fixture.ts`):
-   ```typescript
-   export const test = base.extend<{
-     libraryPage: LibraryPageHelper
-   }>({
-     libraryPage: async ({ page }, use) => {
-       const helper: LibraryPageHelper = {
-         goto: () => page.goto('/library'),
-         switchToListView: () => // click list view toggle,
-         openBookCardContextMenu: (index) => // right-click book card,
-         openBookListItemContextMenu: (index) => // click dropdown,
-         openAboutBookDialog: (index) => // combined helper
-       }
-       await use(helper)
-     }
-   })
-   ```
-
-2. **Book Factory** (`tests/support/fixtures/factories/book-factory.ts`):
-   ```typescript
-   export function createBook(overrides?: Partial<Book>): Book
-   ```
-
-3. **IndexedDB Seeding for Books**: Current indexeddb-fixture only handles `importedCourses`. Need similar helper for books table.
-
-### Missing Unit Tests
-
-No unit tests exist for `AboutBookDialog` component. Recommended unit test coverage:
-
-1. **AboutBookDialog.test.tsx**:
-   - Renders with all metadata present
-   - Renders fallback text for missing author
-   - Renders fallback text for missing description
-   - Shows correct format badge (EPUB vs Audiobook)
-   - Hides tags section when tags array is empty
-   - Formats file size correctly (bytes → KB/MB)
-   - Renders correct fallback icon based on format
-
-2. **BookContextMenu integration** (unit test):
-   - Includes "About Book" menu item
-   - Opens dialog when menu item clicked
-   - Menu item appears before Delete separator
-
-## Recommendations
-
-### Immediate Actions (Blockers)
-
-1. **Create libraryPage fixture** - This is the highest priority. Without it, zero tests can run.
-   - File: `tests/support/fixtures/library-page-fixture.ts`
-   - Merge into `tests/support/fixtures/index.ts`
-   - Document fixture API
-
-2. **Create book factory** - For deterministic test data
-   - File: `tests/support/fixtures/factories/book-factory.ts`
-   - Support both EPUB and audiobook formats
-   - Allow overrides for partial metadata
-
-3. **Add IndexedDB seeding for books** - For test data setup
-   - Extend `tests/support/fixtures/indexeddb-fixture.ts`
-   - Add `seedBooks()` and `clearBooks()` methods
-   - Use Dexie table name 'books'
-
-4. **Fix AC-2 description** - Remove "publish date" from acceptance criteria
-   - Update story file: `docs/implementation-artifacts/stories/107-4-wire-about-book-dialog.md`
-   - Document that field doesn't exist in Book type
-
-### High Priority (Before Shipping)
-
-1. **Strengthen assertions** - Replace weak `toBeVisible()` checks with content verification
-2. **Add explicit test data setup** - Don't assume database state; seed known data
-3. **Add accessibility audit** - Use Playwright's axe-core integration
-4. **Add responsive test** - Verify mobile layout at 375px viewport
-5. **Add edge case tests** - Complete metadata absence, long descriptions, many tags
-
-### Medium Priority (Nice to Have)
-
-1. **Add unit tests** - For AboutBookDialog component logic
-2. **Visual regression tests** - For format badge colors and layout
-3. **Add concurrent operation tests** - Rapid clicks, navigation during dialog
-4. **Improve selector stability** - Use testids on close button
-
-## Test Execution Evidence
-
-```bash
-$ npm run test:e2e -- tests/e2e/story-e107-s04.spec.ts --reporter=list
-
-Running 10 tests using 1 worker
-
-beforeEach hook has unknown parameter "libraryPage".
-   at e2e/story-e107-s04.spec.ts:15
-
-Test has unknown parameter "libraryPage".
-   at e2e/story-e107-s04.spec.ts:20
-
-[... repeats for all 10 tests ...]
-
-10 failed
-[Duration: ~500ms - all fail immediately]
-```
-
-**Result:** 0/10 tests can execute. All fail due to missing fixture.
-
-## Coverage Gate Calculation
-
-```
-AC Coverage = (Tested ACs / Total ACs) × 100%
-           = (0 / 5) × 100%
-           = 0%
-```
-
-**Gate Status:** BLOCKER (0% < 80% minimum)
-
-## Summary
-
-This story has **zero functional test coverage** despite having a test file with 10 tests. The tests are completely non-executable due to missing test infrastructure. Additionally, the tests that exist have weak assertions that wouldn't catch many bugs even if they could run.
-
-**Critical Path to Unblocking:**
-1. Create libraryPage fixture (2-3 hours)
-2. Create book factory (1 hour)
-3. Add book seeding to IndexedDB fixture (1 hour)
-4. Fix weak assertions (2 hours)
-5. Add missing edge case tests (2-3 hours)
-
-**Estimated effort to reach 80% AC coverage:** 8-10 hours
+**Recommendation**: **APPROVE with minor improvements**. The test suite provides solid coverage of all acceptance criteria with good quality. The suggested improvements are low-priority enhancements that would raise the quality from "good" to "excellent," but are not blockers for merging.
 
 ---
-ACs: 0 covered / 5 total | Findings: 23 | Blockers: 5 | High: 12 | Medium: 5 | Nits: 1
+ACs: 5 covered / 5 total | Findings: 7 | Blockers: 0 | High: 0 | Medium: 3 | Nits: 4

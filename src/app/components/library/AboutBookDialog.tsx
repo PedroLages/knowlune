@@ -39,6 +39,7 @@ function formatFileSize(bytes?: number): string {
   return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`
 }
 
+// Named export for testing, default export for React.lazy()
 export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogProps) {
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
 
@@ -54,9 +55,7 @@ export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogPro
             <BookOpen className="size-5" aria-hidden="true" />
             About Book
           </DialogTitle>
-          <DialogDescription id="about-book-desc">
-            Book details and metadata
-          </DialogDescription>
+          <DialogDescription id="about-book-desc">Book details and metadata</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -74,10 +73,7 @@ export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogPro
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-muted">
                   {book.format === 'audiobook' ? (
-                    <Headphones
-                      className="size-12 text-muted-foreground"
-                      aria-hidden="true"
-                    />
+                    <Headphones className="size-12 text-muted-foreground" aria-hidden="true" />
                   ) : (
                     <BookOpen className="size-12 text-muted-foreground" aria-hidden="true" />
                   )}
@@ -87,15 +83,24 @@ export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogPro
 
             {/* Title and author */}
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold text-card-foreground truncate" data-testid="about-book-title">
+              <h3
+                className="text-lg font-semibold text-card-foreground truncate"
+                data-testid="about-book-title"
+              >
                 {book.title}
               </h3>
               {book.author ? (
-                <p className="text-base font-medium text-card-foreground" data-testid="about-book-author">
+                <p
+                  className="text-base font-medium text-card-foreground"
+                  data-testid="about-book-author"
+                >
                   {book.author}
                 </p>
               ) : (
-                <p className="text-base font-medium text-muted-foreground italic" data-testid="about-book-author">
+                <p
+                  className="text-base font-medium text-muted-foreground italic"
+                  data-testid="about-book-author"
+                >
                   Unknown author
                 </p>
               )}
@@ -115,7 +120,10 @@ export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogPro
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Description
               </p>
-              <p className="text-sm text-card-foreground leading-relaxed" data-testid="about-book-description">
+              <p
+                className="text-sm text-card-foreground leading-relaxed"
+                data-testid="about-book-description"
+              >
                 {book.description}
               </p>
             </div>
@@ -124,7 +132,10 @@ export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogPro
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Description
               </p>
-              <p className="text-sm text-muted-foreground italic" data-testid="about-book-description">
+              <p
+                className="text-sm text-muted-foreground italic"
+                data-testid="about-book-description"
+              >
                 No description available
               </p>
             </div>
@@ -176,3 +187,6 @@ export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogPro
     </Dialog>
   )
 }
+
+// Default export for React.lazy() in BookContextMenu
+export default AboutBookDialog
