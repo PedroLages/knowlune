@@ -115,7 +115,9 @@ export function TableOfContents({
           {isLoading ? (
             <div className="flex items-center justify-center py-8" data-testid="toc-loading">
               <Loader2 className="size-6 animate-spin text-muted-foreground" aria-hidden="true" />
-              <span className="ml-2 text-sm text-muted-foreground">Loading table of contents...</span>
+              <span className="ml-2 text-sm text-muted-foreground">
+                Loading table of contents...
+              </span>
             </div>
           ) : toc.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">

@@ -129,7 +129,12 @@ describe('TableOfContents', () => {
     it('does not call rendition.display() when rendition is null', () => {
       const nullRendition = null as unknown as Rendition
       render(
-        <TableOfContents {...defaultProps} isLoading={false} toc={mockToc} rendition={nullRendition} />
+        <TableOfContents
+          {...defaultProps}
+          isLoading={false}
+          toc={mockToc}
+          rendition={nullRendition}
+        />
       )
 
       const chapter1Button = screen.getByText('Chapter 1')
@@ -176,9 +181,7 @@ describe('TableOfContents', () => {
   describe('Panel Controls', () => {
     it('calls onClose() when close button is clicked', () => {
       const mockOnClose = vi.fn()
-      render(
-        <TableOfContents {...defaultProps} isLoading={false} toc={[]} onClose={mockOnClose} />
-      )
+      render(<TableOfContents {...defaultProps} isLoading={false} toc={[]} onClose={mockOnClose} />)
 
       const closeButton = screen.getByRole('button', { name: /close table of contents/i })
       fireEvent.click(closeButton)

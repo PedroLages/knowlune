@@ -66,7 +66,10 @@ class BookContentService {
    * Check if test mode is enabled via window flag (for E2E tests)
    */
   private isTestMode(): boolean {
-    return TEST_MODE || typeof window !== 'undefined' && (window as any).__BOOK_CONTENT_TEST_MODE__ === true
+    return (
+      TEST_MODE ||
+      (typeof window !== 'undefined' && (window as any).__BOOK_CONTENT_TEST_MODE__ === true)
+    )
   }
 
   /**

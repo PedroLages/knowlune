@@ -18,27 +18,27 @@ import JSZip from 'jszip'
  * - OEBPS/chapter1.xhtml, chapter2.xhtml, chapter3.xhtml (sample content)
  */
 export async function createMinimalEpub(): Promise<ArrayBuffer> {
-	const zip = new JSZip()
+  const zip = new JSZip()
 
-	// 1. mimetype file (must be uncompressed and first in the ZIP)
-	zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' })
+  // 1. mimetype file (must be uncompressed and first in the ZIP)
+  zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' })
 
-	// 2. META-INF/container.xml (points to the rootfile)
-	zip.file(
-		'META-INF/container.xml',
-		`<?xml version="1.0" encoding="UTF-8"?>
+  // 2. META-INF/container.xml (points to the rootfile)
+  zip.file(
+    'META-INF/container.xml',
+    `<?xml version="1.0" encoding="UTF-8"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
   <rootfiles>
     <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
   </rootfiles>
 </container>`
-	)
+  )
 
-	// 3. OEBPS/content.opf (metadata, manifest, spine)
-	// EPUB 3.0 requires nav.xhtml in manifest with properties="nav"
-	zip.file(
-		'OEBPS/content.opf',
-		`<?xml version="1.0" encoding="UTF-8"?>
+  // 3. OEBPS/content.opf (metadata, manifest, spine)
+  // EPUB 3.0 requires nav.xhtml in manifest with properties="nav"
+  zip.file(
+    'OEBPS/content.opf',
+    `<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="en">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
     <dc:title>Test EPUB for E2E</dc:title>
@@ -60,12 +60,12 @@ export async function createMinimalEpub(): Promise<ArrayBuffer> {
     <itemref idref="chapter3"/>
   </spine>
 </package>`
-	)
+  )
 
-	// 4. OEBPS/nav.xhtml (EPUB 3.0 navigation - this is what epub.js reads)
-	zip.file(
-		'OEBPS/nav.xhtml',
-		`<?xml version="1.0" encoding="UTF-8"?>
+  // 4. OEBPS/nav.xhtml (EPUB 3.0 navigation - this is what epub.js reads)
+  zip.file(
+    'OEBPS/nav.xhtml',
+    `<?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
 <head>
   <title>Navigation</title>
@@ -82,12 +82,12 @@ export async function createMinimalEpub(): Promise<ArrayBuffer> {
   </nav>
 </body>
 </html>`
-	)
+  )
 
-	// 5. OEBPS/toc.ncx (navigation for EPUB 2.0 compatibility)
-	zip.file(
-		'OEBPS/toc.ncx',
-		`<?xml version="1.0" encoding="UTF-8"?>
+  // 5. OEBPS/toc.ncx (navigation for EPUB 2.0 compatibility)
+  zip.file(
+    'OEBPS/toc.ncx',
+    `<?xml version="1.0" encoding="UTF-8"?>
 <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
   <head>
     <meta name="dtb:uid" content="test-e2e-epub-123"/>
@@ -119,12 +119,12 @@ export async function createMinimalEpub(): Promise<ArrayBuffer> {
     </navPoint>
   </navMap>
 </ncx>`
-	)
+  )
 
-	// 6. OEBPS/chapter1.xhtml (actual content)
-	zip.file(
-		'OEBPS/chapter1.xhtml',
-		`<?xml version="1.0" encoding="UTF-8"?>
+  // 6. OEBPS/chapter1.xhtml (actual content)
+  zip.file(
+    'OEBPS/chapter1.xhtml',
+    `<?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <title>Chapter 1</title>
@@ -136,12 +136,12 @@ export async function createMinimalEpub(): Promise<ArrayBuffer> {
   <p>It contains enough content to allow epub.js to initialize and load TOC.</p>
 </body>
 </html>`
-	)
+  )
 
-	// 7. OEBPS/chapter2.xhtml
-	zip.file(
-		'OEBPS/chapter2.xhtml',
-		`<?xml version="1.0" encoding="UTF-8"?>
+  // 7. OEBPS/chapter2.xhtml
+  zip.file(
+    'OEBPS/chapter2.xhtml',
+    `<?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <title>Chapter 2</title>
@@ -153,12 +153,12 @@ export async function createMinimalEpub(): Promise<ArrayBuffer> {
   <p>It provides additional content for testing TOC navigation.</p>
 </body>
 </html>`
-	)
+  )
 
-	// 8. OEBPS/chapter3.xhtml
-	zip.file(
-		'OEBPS/chapter3.xhtml',
-		`<?xml version="1.0" encoding="UTF-8"?>
+  // 8. OEBPS/chapter3.xhtml
+  zip.file(
+    'OEBPS/chapter3.xhtml',
+    `<?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <title>Chapter 3</title>
@@ -170,9 +170,9 @@ export async function createMinimalEpub(): Promise<ArrayBuffer> {
   <p>It completes the TOC structure with three chapters.</p>
 </body>
 </html>`
-	)
+  )
 
-	// Generate the ZIP file as ArrayBuffer
-	const blob = await zip.generateAsync({ type: 'arraybuffer' })
-	return blob as ArrayBuffer
+  // Generate the ZIP file as ArrayBuffer
+  const blob = await zip.generateAsync({ type: 'arraybuffer' })
+  return blob as ArrayBuffer
 }
