@@ -1,6 +1,6 @@
 {
   "captured_at": "2026-04-09",
-  "commit": "37d42cb9",
+  "commit": "d2edacb4fcd4ecacefa49b629e54459dc0e7d9c1",
   "bundle": {
     "total_js_bytes": 9728000,
     "total_css_bytes": 288000,
@@ -14,33 +14,87 @@
   "page_metrics": {
     "/": {
       "ttfb": 3,
-      "dom_interactive": 9,
-      "dom_complete": 118,
-      "load_complete": 118,
-      "fcp": 195,
-      "lcp": null,
+      "dom_interactive": 12,
+      "dom_complete": 125,
+      "load_complete": 125,
+      "fcp": 207,
+      "lcp": 0,
       "cls": 0,
       "tbt": 0,
       "resource_count": 250,
       "js_resource_count": 249,
-      "css_resource_count": 2,
-      "total_transfer_bytes": 60000,
-      "samples": 3
+      "css_resource_count": 1,
+      "total_transfer_bytes": 60300,
+      "samples": 3,
+      "largest_resources": [
+        {
+          "name": "@sentry_react.js?v=3ac5ad39",
+          "size": 1923645,
+          "duration": 35
+        },
+        {
+          "name": "lucide-react.js?v=3ac5ad39",
+          "size": 1047716,
+          "duration": 21
+        },
+        {
+          "name": "react-dom_client.js?v=3ac5ad39",
+          "size": 1005907,
+          "duration": 33
+        },
+        {
+          "name": "react-day-picker.js?v=3ac5ad39",
+          "size": 806475,
+          "duration": 22
+        },
+        {
+          "name": "@supabase_supabase-js.js?v=3ac5ad39",
+          "size": 577648,
+          "duration": 28
+        }
+      ]
     },
     "/library": {
-      "ttfb": 2,
-      "dom_interactive": 7,
-      "dom_complete": 131,
-      "load_complete": 131,
-      "fcp": 198,
-      "lcp": null,
+      "ttfb": 4,
+      "dom_interactive": 11,
+      "dom_complete": 115,
+      "load_complete": 115,
+      "fcp": 192,
+      "lcp": 0,
       "cls": 0,
       "tbt": 0,
-      "resource_count": 244,
-      "js_resource_count": 243,
-      "css_resource_count": 2,
+      "resource_count": 243,
+      "js_resource_count": 242,
+      "css_resource_count": 1,
       "total_transfer_bytes": 61500,
-      "samples": 3
+      "samples": 3,
+      "largest_resources": [
+        {
+          "name": "chunk-MJOJEP4H.js?v=3ac5ad39",
+          "size": 850283,
+          "duration": 7
+        },
+        {
+          "name": "Library.tsx?t=1775738218466",
+          "size": 123158,
+          "duration": 2
+        },
+        {
+          "name": "LinkFormatsDialog.tsx",
+          "size": 98201,
+          "duration": 17
+        },
+        {
+          "name": "OpdsBrowser.tsx",
+          "size": 93591,
+          "duration": 22
+        },
+        {
+          "name": "AudiobookImportFlow.tsx",
+          "size": 84244,
+          "duration": 23
+        }
+      ]
     },
     "/settings": {
       "ttfb": 4,

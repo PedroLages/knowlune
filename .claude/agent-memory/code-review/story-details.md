@@ -448,3 +448,14 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Nit: `BookContentService.setTestMode()` static method never called (dead code)
 - Nit: `__TEST_TOC_TIMEOUT__` window flag set in E2E but never read by app code
 - Positive: Clean timeout pattern with correct dependency array and cleanup, proper test-mode flag gating, comprehensive unit tests (8 ReaderHeader + 9 TableOfContents), correct chapter display fallback logic
+
+## E107-S04: Wire About Book Dialog (Round 1)
+
+- 3 BLOCKERS, all test-related:
+  - B1: `libraryPage` fixture does not exist in project -- tests cannot register (only `localStorage` and `indexedDB` fixtures exist)
+  - B2: `data-testid="about-book-author"` only on truthy branch; AC-3 test selects it for falsy case (element won't exist)
+  - B3: `data-testid="about-book-description"` only on truthy branch; AC-3 test selects it for falsy case (element won't exist)
+- H1: `Book.author` is required `string`, not optional -- falsy check only catches empty string, "Unknown author" branch unlikely to fire with real data
+- M1: `formatFileSize` defined inside component body (recreated every render) -- should be hoisted to module scope
+- Pattern: `data-testid` on conditional branches -- testids must exist on ALL branches for tests to find elements. Affects: AboutBookDialog.tsx
+- Positive: Clean component architecture following LinkFormatsDialog pattern, thorough fallback handling for all optional fields, consistent menu integration in both ContextMenu and DropdownMenu
