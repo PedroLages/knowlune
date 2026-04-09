@@ -1,0 +1,157 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ReviewAgentOutput",
+  "description": "Structured output from a review-story agent. Agents write this when dispatched with --output-json=PATH.",
+  "type": "object",
+  "required": ["schema_version", "producer", "created_at", "story_id", "agent", "gate", "status", "counts", "findings"],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version for forward compatibility"
+    },
+    "producer": {
+      "type": "string",
+      "description": "Name of the agent that produced this output",
+      "examples": ["code-review", "design-review", "security-review"]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this output was generated"
+    },
+    "story_id": {
+      "type": "string",
+      "pattern": "^E\\d+-S\\d+$",
+      "description": "Story identifier (e.g., E01-S03)"
+    },
+    "agent": {
+      "type": "string",
+      "description": "Agent name matching the gate's agent field in gates.json"
+    },
+    "gate": {
+      "type": "string",
+      "description": "Gate name this agent satisfies (from gates.json)"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["PASS", "WARNINGS", "FAIL", "SKIPPED", "ERROR"],
+      "description": "Overall gate status. PASS=no issues, WARNINGS=medium/low only, FAIL=blockers found, SKIPPED=intentionally skipped, ERROR=agent crashed"
+    },
+    "counts": {
+      "type": "object",
+      "required": ["blockers", "high", "medium", "nits", "total"],
+      "properties": {
+        "blockers": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Issues that must be fixed before shipping"
+        },
+        "high": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Important issues that should be addressed"
+        },
+        "medium": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Notable issues that could be addressed"
+        },
+        "nits": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minor style/formatting suggestions"
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total findings count"
+        },
+        "ac_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Optional: acceptance criteria coverage percentage (0-100)"
+        },
+        "health_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Optional: overall health score (0-100)"
+        },
+        "phases_completed": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Optional: list of review phases completed by the agent"
+        }
+      },
+      "additionalProperties": false
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "description"],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["BLOCKER", "HIGH", "MEDIUM", "LOW", "NIT", "INFO"],
+            "description": "Finding severity level"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the finding"
+          },
+          "file": {
+            "type": ["string", "null"],
+            "description": "File path relative to project root"
+          },
+          "line": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "description": "Line number in the file (1-based)"
+          },
+          "end_line": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "description": "End line for multi-line findings (1-based)"
+          },
+          "confidence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 80,
+            "description": "Agent's confidence in this finding (0-100)"
+          },
+          "category": {
+            "type": ["string", "null"],
+            "description": "Finding category (e.g., security, accessibility, performance, architecture)"
+          },
+          "suggestion": {
+            "type": ["string", "null"],
+            "description": "Suggested fix or improvement"
+          },
+          "model_source": {
+            "type": ["string", "null"],
+            "description": "For external model agents: which model produced this finding"
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Array of individual findings from the agent"
+    },
+    "report_path": {
+      "type": ["string", "null"],
+      "description": "Path to the full markdown report (if generated)"
+    },
+    "skip_reason": {
+      "type": ["string", "null"],
+      "description": "Reason the agent was skipped (only when status=SKIPPED)"
+    },
+    "error_message": {
+      "type": ["string", "null"],
+      "description": "Error details (only when status=ERROR)"
+    }
+  },
+  "additionalProperties": false
+}

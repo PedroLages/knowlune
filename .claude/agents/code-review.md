@@ -275,3 +275,15 @@ Confidence: avg [##] | >= 90: [N] | 70-89: [N] | < 70: [N]
 1. Always save the full markdown report to the file path provided in the dispatch prompt.
 2. If the dispatch prompt specifies a structured return format (e.g., STATUS/FINDINGS/COUNTS/REPORT), use that format as your final reply instead of the full report.
 3. If no structured format is requested, your final reply must contain the markdown report and nothing else.
+
+## Structured JSON Output (review-story integration)
+
+When dispatched with `--output-json=PATH`, also write a JSON file at that path
+following `.claude/skills/review-story/schemas/agent-output.schema.json`.
+
+Fields: `agent`, `gate`, `status` (PASS/WARNINGS/FAIL/SKIPPED/ERROR),
+`counts` (blockers/high/medium/nits/total), `findings` array
+(severity/description/file/line/confidence/category), `report_path`.
+
+Graceful: if you cannot produce valid JSON, just return the markdown report —
+the orchestrator will parse your text return as a fallback.

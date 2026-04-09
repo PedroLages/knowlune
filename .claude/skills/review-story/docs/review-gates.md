@@ -2,23 +2,25 @@
 
 This module defines the canonical gate names, resumption detection logic, and gate validation rules for the review workflow.
 
+## Single Source of Truth
+
+**All gate definitions are now in `config/gates.json`** — this is the authoritative source for:
+- Canonical gate names (no variants)
+- Required vs optional gates
+- Skip conditions and skip suffixes
+- Agent mappings and report path templates
+- Dev server requirements
+
+See: [config/gates.json](../config/gates.json)
+
 ## Canonical Gate Names
 
-All gates must use these exact names in `review_gates_passed`. No variants (e.g., `test` instead of `unit-tests`).
+Gates must use the exact names from `config/gates.json`. The `-skipped` suffix indicates the gate was intentionally skipped (e.g., no lint script, no test files, no UI changes). Both the base name and `-skipped` variant satisfy the requirement.
 
-| Gate | When added | Required for `reviewed: true` |
-|------|-----------|-------------------------------|
-| `build` | Pre-checks pass | Yes |
-| `lint` | Pre-checks pass (or skipped if no script) | Yes (or `lint-skipped`) |
-| `type-check` | Pre-checks pass | Yes |
-| `format-check` | Pre-checks pass | Yes |
-| `unit-tests` | Pre-checks pass (or skipped if no tests) | Yes (or `unit-tests-skipped`) |
-| `e2e-tests` | Pre-checks pass (or skipped if no tests) | Yes (or `e2e-tests-skipped`) |
-| `design-review` | Design review agent completes | Yes (or `design-review-skipped` if no UI changes) |
-| `code-review` | Code review agent completes | Yes |
-| `code-review-testing` | Test coverage agent completes | Yes |
-
-The `-skipped` suffix indicates the gate was intentionally skipped (no lint script, no test files, no UI changes). Both the base name and `-skipped` variant satisfy the requirement.
+**Required for `reviewed: true`** (from `config/gates.json`):
+- `build`, `lint`, `type-check`, `format-check`
+- `unit-tests`, `e2e-tests`
+- `design-review`, `code-review`, `code-review-testing`
 
 ## Resumption Detection
 
@@ -31,22 +33,46 @@ The `-skipped` suffix indicates the gate was intentionally skipped (no lint scri
   - Inform the user: "Story already reviewed. Re-running full review to validate current state."
   - Reset: set `reviewed: in-progress`, clear `review_gates_passed`, update `review_started`.
 - If `reviewed: false` (fresh review):
-  - Set `reviewed: in-progress`, `review_started: YYYY-MM-DD`, `review_gates_passed: []` in story frontmatter.
+- Set `reviewed: in-progress`, `review_started: YYYY-MM-DD`, `review_gates_passed: []` in story frontmatter.
 
 **State Inputs**: `reviewed` field, `review_gates_passed` array from story frontmatter
 **State Outputs**: `resuming` flag, reset review state if `reviewed: true`
 
 ## Gate Validation
 
-**Validate all required gates** before marking `reviewed: true`. Check that `review_gates_passed` contains one entry (base or `-skipped` variant) for each of the 9 canonical gates: `build`, `lint`, `type-check`, `format-check`, `unit-tests`, `e2e-tests`, `design-review`, `code-review`, `code-review-testing`. Ignore any legacy `web-design-guidelines` entries from older stories.
+**Use the `validate-gates.py` script** to validate all required gates before marking `reviewed: true`:
 
-- **All gates present**: Set `reviewed: true`. Set `review_gates_passed` to the full list. Append review summary to `## Design Review Feedback` and `## Code Review Feedback` sections.
-- **Missing gates**: Do NOT set `reviewed: true`. Keep `reviewed: in-progress`. Warn the user:
-  ```
-  Cannot mark as reviewed — missing gates: [list].
-  [For each missing gate, explain why it's missing and how to fix.]
-  Re-run /review-story after fixing.
-  ```
+```bash
+python3 scripts/workflow/validate-gates.py \
+  --gates-config=.claude/skills/review-story/config/gates.json \
+  --run-state=.claude/state/review-story/review-run-{STORY_ID}.json
+```
 
-**State Inputs**: `review_gates_passed` array
-**State Outputs**: `reviewed: true` (if all gates pass) or warning message (if gates missing)
+**Returns JSON with:**
+
+- `valid`: true if all required gates present (base or `-skipped` variant)
+- `missing_gates`: array of gate names not found
+- `present_gates`: array of gate names found
+- `can_mark_reviewed`: true if `valid` is true
+
+**State Inputs**: `review_gates_passed` array, `gates.json` config
+**State Outputs**: `reviewed: true` (if valid) or warning message (if gates missing)
+
+## State Management
+
+**Use the `checkpoint.sh` script** to save/restore review state between sessions:
+
+```bash
+# Save state
+bash scripts/workflow/checkpoint.sh save --story-id=E01-S03 --story-file=PATH
+
+# Restore state
+bash scripts/workflow/checkpoint.sh restore --story-id=E01-S03
+```
+
+**State file:** `.claude/state/review-story/review-run-{STORY_ID}.json`
+
+- Stores `gates_passed_list`, `gates` object with statuses, `verdict`, `events` audit trail
+- Syncs to/from story frontmatter on save/restore
+
+See: [schemas/review-run.schema.json](../schemas/review-run.schema.json)

@@ -1,0 +1,136 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ReviewRunState",
+  "description": "Runtime state for a single review-story run. Stored in .claude/state/review-story/review-run-{STORY_ID}.json",
+  "type": "object",
+  "required": ["schema_version", "producer", "created_at", "story_id", "status", "gates", "gates_passed_list"],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version for forward compatibility"
+    },
+    "producer": {
+      "type": "string",
+      "const": "review-story",
+      "description": "System that produced this state file"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this review run was initialized"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of last state update"
+    },
+    "story_id": {
+      "type": "string",
+      "pattern": "^E\\d+-S\\d+$",
+      "description": "Story identifier (e.g., E01-S03)"
+    },
+    "story_file": {
+      "type": "string",
+      "description": "Path to the story markdown file"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["in-progress", "completed", "blocked"],
+      "description": "Current review run status"
+    },
+    "gates": {
+      "type": "object",
+      "description": "Map of gate name to its current status",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["pending", "passed", "failed", "skipped", "running"],
+            "description": "Gate status"
+          },
+          "skip_reason": {
+            "type": ["string", "null"],
+            "description": "Reason for skip (when status=skipped)"
+          },
+          "agent_output_path": {
+            "type": ["string", "null"],
+            "description": "Path to agent JSON output file"
+          },
+          "report_path": {
+            "type": ["string", "null"],
+            "description": "Path to full markdown report"
+          },
+          "timestamp": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "When this gate was completed"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "gates_passed_list": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Flat array of passed/skipped gate names for frontmatter sync"
+    },
+    "precheck_results": {
+      "type": ["object", "null"],
+      "description": "Output from run-prechecks.sh",
+      "properties": {
+        "build": {"type": "object"},
+        "lint": {"type": "object"},
+        "type_check": {"type": "object"},
+        "format_check": {"type": "object"},
+        "unit_tests": {"type": "object"},
+        "e2e_tests": {"type": "object"},
+        "bundle_analysis": {"type": "object"}
+      },
+      "additionalProperties": true
+    },
+    "bundle_path": {
+      "type": ["string", "null"],
+      "description": "Path to the review bundle JSON"
+    },
+    "agent_results_dir": {
+      "type": "string",
+      "description": "Directory containing agent JSON outputs"
+    },
+    "next_step": {
+      "type": ["string", "null"],
+      "description": "Hint for resumption: what to do next after compaction/interruption"
+    },
+    "verdict": {
+      "type": ["string", "null"],
+      "enum": ["PASS", "BLOCKED", null],
+      "description": "Final verdict after all gates validated"
+    },
+    "has_ui_changes": {
+      "type": "boolean",
+      "description": "Whether the diff contains UI file changes"
+    },
+    "review_type": {
+      "type": "string",
+      "enum": ["full", "lightweight"],
+      "description": "Review scope based on change size"
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["event", "at"],
+        "properties": {
+          "event": {"type": "string"},
+          "at": {"type": "string", "format": "date-time"},
+          "detail": {"type": ["string", "null"]}
+        },
+        "additionalProperties": false
+      },
+      "description": "Audit trail of significant events (start, compact, resume, etc.)"
+    }
+  },
+  "additionalProperties": false
+}

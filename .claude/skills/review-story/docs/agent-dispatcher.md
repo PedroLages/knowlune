@@ -1,6 +1,6 @@
 # Review Agent Dispatcher
 
-This module orchestrates the parallel dispatch of review agents (design-review, code-review, code-review-testing) with skip logic and pre-dispatch health checks.
+This module orchestrates the parallel dispatch of review agents with skip logic and pre-dispatch health checks.
 
 ## Overview
 
@@ -11,23 +11,37 @@ After pre-checks pass, dispatch ALL applicable review agents **in a single messa
 
 ## Pre-Dispatch Checks
 
-**Determine which agents to dispatch by checking skip conditions:**
+**Determine which agents to dispatch** by checking `config/gates.json` for skip conditions:
 
 ### Design Review Skip Conditions
 
-Skip if **ANY** of:
-- (a) Resuming AND `design-review` in `review_gates_passed` AND report file exists at `${BASE_PATH}/docs/reviews/design/design-review-*-{story-id}.md`
-- (b) No UI changes detected (no changes in `src/app/` from `git diff --name-only main...HEAD`)
+From `gates.json`:
 
-**If skipping for no UI changes**: Add `design-review-skipped` to `review_gates_passed`
+- `skip_condition`: "no files matching src/app/(pages|components)/*.tsx in diff"
+- `skip_suffix`: "design-review-skipped"
+
+Skip if **ANY** of:
+
+- Resuming AND `design-review` in `review_gates_passed` AND report file exists
+- No UI changes detected (per skip condition in gates.json)
 
 ### Code Review Skip Conditions
 
-Skip if resuming AND `code-review` in `review_gates_passed` AND report file exists at `${BASE_PATH}/docs/reviews/code/code-review-*-{story-id}.md`
+From `gates.json`:
+
+- `skip_condition`: null (never auto-skips)
+- `skip_suffix`: null
+
+Skip only if resuming AND already completed.
 
 ### Code Review Testing Skip Conditions
 
-Skip if resuming AND `code-review-testing` in `review_gates_passed` AND report file exists at `${BASE_PATH}/docs/reviews/code/code-review-testing-*-{story-id}.md`
+From `gates.json`:
+
+- `skip_condition`: null (never auto-skips)
+- `skip_suffix`: null
+
+Skip only if resuming AND already completed.
 
 ## Design Review Pre-Requisite
 
@@ -41,11 +55,17 @@ Skip if resuming AND `code-review-testing` in `review_gates_passed` AND report f
 3. If still unreachable:
    - Warn the user: "Dev server unreachable. Design review cannot run."
    - Do NOT add `design-review` to gates
-   - Continue dispatching other agents (code-review, code-review-testing)
+   - Continue dispatching other agents
 
 ## Parallel Agent Dispatch
 
 **TodoWrite**: Mark all non-skipped agent todos → `in_progress` simultaneously.
+
+**Generate review bundle** for agents:
+
+```bash
+BUNDLE_PATH=$(bash scripts/workflow/make-review-bundle.sh --story-id=$STORY_ID --base-path=$BASE_PATH --output=-)
+```
 
 **Dispatch all non-skipped agents in a single message:**
 
@@ -55,82 +75,105 @@ Skip if resuming AND `code-review-testing` in `review_gates_passed` AND report f
 Task({
   subagent_type: "design-review",
   run_in_background: true,
-  prompt: "Review story E##-S## changes. Affected routes: [mapped from files]. Focus on: [ACs that involve UI]. Git diff summary: [key changes]. Return only: STATUS (PASS/WARNINGS/FAIL), blocker count, high count, report file path.",
-  description: "Design review E##-S##"
+  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to docs/reviews/design/design-review-{date}-{story-id}.md. Return structured format: STATUS, FINDINGS, COUNTS, REPORT path.",
+  description: "Design review $STORY_ID"
 })
 
 Task({
   subagent_type: "code-review",
   run_in_background: true,
-  prompt: "Review story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes.
-
-Test anti-patterns detected (step g validation):
-[Insert validation findings if any LOW severity issues were found, or 'No anti-patterns detected' if clean]
-
-Focus on architecture, security, correctness, silent failures, test anti-patterns (section 5.5), and Knowlune stack patterns. Score each finding with confidence (0-100). Return only: STATUS (PASS/WARNINGS/FAIL), blocker count, high count, total findings, report file path.",
-  description: "Code review E##-S##"
+  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Test patterns: $TEST_PATTERN_FINDINGS. Save report to docs/reviews/code/code-review-{date}-{story-id}.md. Return structured format.",
+  description: "Code review $STORY_ID"
 })
 
 Task({
   subagent_type: "code-review-testing",
   run_in_background: true,
-  prompt: "Review test coverage for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes. Map every acceptance criterion to its tests. Review test quality, isolation, and edge case coverage. Score each finding with confidence (0-100). Return only: STATUS, AC coverage ratio, blocker count, high count, report file path.",
-  description: "Test coverage review E##-S##"
+  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to docs/reviews/code/code-review-testing-{date}-{story-id}.md. Return structured format.",
+  description: "Test coverage review $STORY_ID"
 })
 ```
 
-**Note**: The code-review agent has selective WebFetch access for deprecated APIs, security issues, and framework bugs. It will use this sparingly (max 1-2 fetches) for high-severity findings only. This may add 10-30s to code review time but provides authoritative fix guidance.
+## Agent Return Format
+
+**All agents must return structured JSON** (see [schemas/agent-output.schema.json](../schemas/agent-output.schema.json)):
+
+```json
+{
+  "schema_version": 1,
+  "producer": "agent-name",
+  "created_at": "2026-04-09T12:00:00Z",
+  "story_id": "E01-S03",
+  "agent": "code-review",
+  "gate": "code-review",
+  "status": "PASS|WARNINGS|FAIL|SKIPPED|ERROR",
+  "counts": {
+    "blocker": 0,
+    "high": 2,
+    "medium": 5,
+    "low": 3
+  },
+  "findings": [...],
+  "report_path": "docs/reviews/code/code-review-2026-04-09-E01-S03.md"
+}
+```
 
 ## Result Handling
 
 **As each background agent completes** (silent — no visible output):
 
 1. TodoWrite: mark its todo → `completed`
-2. Parse the agent's minimal return (STATUS, counts, report path)
-3. If agent failed:
-   - Note in internal failure list (surfaced in consolidated report only — no immediate user output)
+2. Parse the agent's structured JSON return
+3. Store agent output to `.claude/state/review-story/agent-results/{agent-name}.json`
+4. If agent failed:
+   - Note in internal failure list (surfaced in consolidated report)
    - Do NOT add its gate to `review_gates_passed`
-4. If agent succeeds:
+5. If agent succeeds:
    - Verify report file exists at expected location
    - Add gate to `review_gates_passed`
 
 **After ALL agents complete** (batch collection):
 
-1. Read each report file from disk
-2. Parse severity sections (Blockers, High, Medium, Low/Nits)
-3. Run deduplication with consensus scoring (see below)
-4. Proceed to consolidated report
+1. Run merge script to consolidate findings:
+
+```bash
+python3 scripts/workflow/merge-agent-results.py \
+  --agent-results-dir=.claude/state/review-story/agent-results/ \
+  --output=.claude/state/review-story/consolidated-findings-$STORY_ID.json
+```
+
+2. Proceed to consolidated report generation
 
 ## Report Locations
 
-**Design review:**
-`${BASE_PATH}/docs/reviews/design/design-review-{YYYY-MM-DD}-{story-id}.md`
+**All report path templates are in `config/gates.json`:**
 
-**Code review:**
-`${BASE_PATH}/docs/reviews/code/code-review-{YYYY-MM-DD}-{story-id}.md`
-
-**Test coverage review:**
-`${BASE_PATH}/docs/reviews/code/code-review-testing-{YYYY-MM-DD}-{story-id}.md`
+- Design review: `docs/reviews/design/design-review-{date}-{story-id}.md`
+- Code review: `docs/reviews/code/code-review-{date}-{story-id}.md`
+- Test coverage: `docs/reviews/code/code-review-testing-{date}-{story-id}.md`
 
 ## Finding Deduplication with Consensus Scoring
 
-**If 2+ agents flag the same file:line:**
-- Keep the finding with the higher confidence score
-- **Boost severity by one level** (Nit→Medium, Medium→High, High→Blocker) — independent agents converging on the same location is stronger signal than a single detection
-- Tag as `[Consensus: N agents]` in the consolidated report
-- Prefix with source agents (e.g., "[code-review + code-review-testing]")
+**The `merge-agent-results.py` script handles deduplication:**
+
+- Proximity match: same file:line within 5-line window
+- Consensus boost: +10 confidence score (NOT severity boost)
+- Cross-architecture bonus: additional +10 for agents with different perspectives (e.g., code-review + security-review)
+- Sort order: (severity_rank, -consensus_score)
 
 **Example:**
+
 ```
 Finding: Hardcoded color in StatsCard.tsx:42
 Source: code-review (confidence: 95), code-review-testing (confidence: 78)
-Original Severity: HIGH → Boosted to: BLOCKER [Consensus: 2 agents]
-Keeping: code-review finding (higher confidence)
+Consensus score: 95 + 10 = 105
+Keeping: code-review finding (higher base confidence)
 ```
 
 ## State Updates
 
 After all agents complete:
+
 - `review_gates_passed`: Updated with `design-review` (or `design-review-skipped`), `code-review`, `code-review-testing`
-- Report files saved to `${BASE_PATH}/docs/reviews/`
-- Findings deduplicated and ready for consolidated report
+- Agent JSON outputs saved to `.claude/state/review-story/agent-results/`
+- Consolidated findings JSON created for report generation

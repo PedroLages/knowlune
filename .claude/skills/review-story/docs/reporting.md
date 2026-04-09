@@ -9,15 +9,29 @@ After all agents complete, consolidate findings into a single severity-triaged r
 **State Inputs**: All agent report paths, `review_gates_passed` array
 **State Outputs**: `blocker_count` integer, `verdict` (PASS/BLOCKED), consolidated report markdown
 
-## Test Quality Findings Merge
+## Report Generation
 
-The `code-review-testing` agent replaces the previous inline test quality checks. Extract its AC Coverage Table and test quality findings for the consolidated report. No additional inline checks needed — the agent handles test isolation, selector quality, factory usage, and AC coverage.
+**Use the `generate-report.py` script** for template-driven report generation:
 
-**TodoWrite**: Mark "Consolidate findings and verdict" → `in_progress`.
+```bash
+python3 scripts/workflow/generate-report.py \
+  --findings=.claude/state/review-story/consolidated-findings-$STORY_ID.json \
+  --run-state=.claude/state/review-story/review-run-$STORY_ID.json \
+  --gates-config=.claude/skills/review-story/config/gates.json \
+  --output=docs/reviews/consolidated-review-{date}-$STORY_ID.md
+```
+
+**Input files:**
+
+- `consolidated-findings-$STORY_ID.json`: Output from `merge-agent-results.py` with deduplicated findings
+- `review-run-$STORY_ID.json`: Runtime state from `checkpoint.sh` with gate statuses
+- `gates.json`: Canonical gate definitions for validation
+
+**Output:** Severity-triaged markdown report with all agent sections.
 
 ## Consolidated Report Structure
 
-Combine all findings into a single severity-triaged view:
+The generated report includes:
 
 ```markdown
 ## Review Summary: E##-S## — [Story Name]
@@ -33,15 +47,15 @@ Combine all findings into a single severity-triaged view:
 
 ### Design Review
 [Summary or "Skipped — no UI changes" or "Reused from previous run — [path]"]
-Report: ${BASE_PATH}/docs/reviews/design/design-review-{date}-{id}.md
+Report: docs/reviews/design/design-review-{date}-{id}.md
 
 ### Code Review (Architecture)
 [Summary with finding counts by severity or "Reused from previous run — [path]"]
-Report: ${BASE_PATH}/docs/reviews/code/code-review-{date}-{id}.md
+Report: docs/reviews/code/code-review-{date}-{id}.md
 
 ### Code Review (Testing)
 [AC coverage summary: N/N ACs covered, N gaps. Finding counts by severity or "Reused from previous run — [path]"]
-Report: ${BASE_PATH}/docs/reviews/code/code-review-testing-{date}-{id}.md
+Report: docs/reviews/code/code-review-testing-{date}-{id}.md
 
 ### Consolidated Findings
 
@@ -131,7 +145,7 @@ Next: `/finish-story`
 ---
 ```
 
-**Save consolidated report to file**: `${BASE_PATH}/docs/reviews/consolidated-review-{YYYY-MM-DD}-{story-id}.md`
+**Save consolidated report to file**: `docs/reviews/consolidated-review-{YYYY-MM-DD}-{story-id}.md`
 This file contains the full report including medium/nit findings. The in-conversation output shows only the gate table, verdict, and high-priority findings.
 
 ### BLOCKED Template (Blockers Found)
@@ -157,30 +171,39 @@ Re-run `/review-story` to validate fixes. Pre-checks will re-run; completed agen
 
 ## Gate Validation Before Marking Reviewed
 
-**Validate all required gates** before marking `reviewed: true`. Check that `review_gates_passed` contains one entry (base or `-skipped` variant) for each of the 9 canonical gates: `build`, `lint`, `type-check`, `format-check`, `unit-tests`, `e2e-tests`, `design-review`, `code-review`, `code-review-testing`. Ignore any legacy `web-design-guidelines` entries from older stories.
+**Use the `validate-gates.py` script** to validate all required gates before marking `reviewed: true`:
+
+```bash
+python3 scripts/workflow/validate-gates.py \
+  --gates-config=.claude/skills/review-story/config/gates.json \
+  --run-state=.claude/state/review-story/review-run-$STORY_ID.json
+```
+
+**Returns JSON with:**
+
+- `valid`: true if all required gates present (base or `-skipped` variant)
+- `missing_gates`: array of gate names not found
+- `present_gates`: array of gate names found
+- `can_mark_reviewed`: true if `valid` is true
 
 **If all gates present:**
+
 - Set `reviewed: true`
 - Set `review_gates_passed` to the full list
 - Append review summary to `## Design Review Feedback` and `## Code Review Feedback` sections in story file
 
 **If gates missing:**
+
 - Do NOT set `reviewed: true`
 - Keep `reviewed: in-progress`
-- Warn the user:
-  ```
-  Cannot mark as reviewed — missing gates: [list].
-  [For each missing gate, explain why it's missing and how to fix.]
-  Re-run /review-story after fixing.
-  ```
-
-**TodoWrite**: Mark "Consolidate findings and verdict" → `completed`.
+- Warn the user with missing gates and fix instructions
 
 ## State Outputs
 
 After consolidation:
+
 - `blocker_count`: Integer count of BLOCKER findings
 - `verdict`: "PASS" or "BLOCKED"
-- Consolidated report: Markdown string with all findings triaged by severity
+- Consolidated report: Markdown file with all findings triaged by severity
 - Story frontmatter updated: `reviewed: true` (if all gates pass)
 - Review feedback appended to story file sections

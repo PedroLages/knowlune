@@ -73,3 +73,8 @@ library-snapshot.yml
 
 # Claude Code local settings (may contain API tokens)
 .claude/settings.local.json
+
+# Review story runtime state (ephemeral)
+.claude/state/review-story/review-run-*.json
+.claude/state/review-story/review-bundle-*.json
+.claude/state/review-story/agent-results/*.json

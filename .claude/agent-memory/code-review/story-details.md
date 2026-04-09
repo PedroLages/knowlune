@@ -437,3 +437,14 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Hook pattern well-designed: 5 consumers, correct blob URL lifecycle, proper isCancelled flag, silent-catch-ok justified
 - Tests cover: null/undefined URLs, external passthrough, OPFS resolution, URL change lifecycle, revocation, rejection handling
 - Positive: Correct blob URL lifecycle (useRef + cleanup), consistent pattern across all 5 consumers, engineering-patterns.md documentation, good unit test coverage
+
+## E107-S03: Fix TOC Loading and Fallback (Round 1)
+
+- No uncommitted changes (positive)
+- H1 `[AI Smell]`: main.tsx test-mode code runs unconditionally in production -- exposes `__enableBookContentTestMode__` on window in prod, any script can activate mock EPUB. Gate behind `import.meta.env.DEV`.
+- H2 `[AI Smell]`: BookContentService.ts imports `createMinimalEpub` from `__tests__/` directory statically -- pulls JSZip into production bundle despite being devDependency. Use dynamic import inside `isTestMode()` branch.
+- M1: AC-1 E2E test declares `loadingIndicator` locator but never asserts on it -- test passes regardless of loading state. Unit tests cover this.
+- M2: Multiple `waitForTimeout()` calls in E2E tests without justification comments (per test-patterns ESLint rule)
+- Nit: `BookContentService.setTestMode()` static method never called (dead code)
+- Nit: `__TEST_TOC_TIMEOUT__` window flag set in E2E but never read by app code
+- Positive: Clean timeout pattern with correct dependency array and cleanup, proper test-mode flag gating, comprehensive unit tests (8 ReaderHeader + 9 TableOfContents), correct chapter display fallback logic

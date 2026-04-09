@@ -267,3 +267,15 @@ Health: {N}/100 | Bugs: {N} | Blockers: {N} | ACs: {N}/{N} verified
 4. **Severity matters** — be honest about impact, don't inflate or deflate.
 5. **Report only** — NEVER modify application code. Your job is to find and document, not fix.
 6. **Stay in your lane** — visual design issues belong to the design-review agent. If it looks wrong but works correctly, skip it.
+
+## Structured JSON Output (review-story integration)
+
+When dispatched with `--output-json=PATH`, also write a JSON file at that path
+following `.claude/skills/review-story/schemas/agent-output.schema.json`.
+
+Fields: `agent`, `gate`, `status` (PASS/WARNINGS/FAIL/SKIPPED/ERROR),
+`counts` (blockers/high/medium/nits/total), `findings` array
+(severity/description/file/line/confidence/category), `report_path`.
+
+Graceful: if you cannot produce valid JSON, just return the markdown report —
+the orchestrator will parse your text return as a fallback.
