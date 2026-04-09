@@ -338,4 +338,10 @@ The original story plan listed `publishDate` as an available field in the Book i
 Two minor lint warnings were caught during pre-checks: an unused import (`BookOpen`) and a catch block without visible feedback. Both were quickly addressed with a `// silent-catch-ok` comment and import cleanup. Keeping the codebase lint-clean at the story level prevents accumulation of tech debt.
 
 ### Dialog Pattern Consistency
+
 Following the existing `LinkFormatsDialog` pattern proved valuable for consistent state management, menu item placement, and keyboard interaction handling. The shadcn/ui Dialog component includes built-in accessibility features (focus trap, ARIA attributes) that reduced custom implementation effort.
+
+### Performance Optimization via Lazy Loading
+
+The performance benchmark revealed HIGH regressions (FCP +77%, DOM Complete +106%) due to the ~5.5KB AboutBookDialog being loaded in the main bundle. **Resolution:** Implemented `React.lazy()` with `<Suspense>` to defer loading until the dialog opens. This required adding a default export (`export default AboutBookDialog`) while preserving the named export for testing. Key pattern: use both exports (`export function X` + `export default X`) to satisfy both React.lazy() (default) and test imports (named). This eliminated the regression while maintaining testability.
+
