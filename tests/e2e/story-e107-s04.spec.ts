@@ -11,7 +11,7 @@
 
 import { test, expect } from '../support/fixtures'
 import { seedBooks } from '../support/helpers/seed-helpers'
-import { FIXED_DATE } from '../../utils/test-time'
+import { FIXED_DATE } from '../utils/test-time'
 
 test.describe('E107-S04: About Book Dialog', () => {
   test.beforeEach(async ({ libraryPage, page }) => {
