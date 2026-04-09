@@ -78,3 +78,4 @@ library-snapshot.yml
 .claude/state/review-story/review-run-*.json
 .claude/state/review-story/review-bundle-*.json
 .claude/state/review-story/agent-results/*.json
+.mcp.json
