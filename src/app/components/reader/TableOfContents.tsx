@@ -8,7 +8,7 @@
  */
 import type { NavItem } from 'epubjs'
 import type { Rendition } from 'epubjs'
-import { BookOpen, X } from 'lucide-react'
+import { BookOpen, Loader2, X } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
@@ -21,6 +21,8 @@ interface TableOfContentsProps {
   /** Current CFI or href for active chapter detection */
   currentHref?: string
   rendition: Rendition | null
+  /** Loading state for TOC — shows spinner when true */
+  isLoading?: boolean
 }
 
 interface TocItemProps {
@@ -80,6 +82,7 @@ export function TableOfContents({
   toc,
   currentHref,
   rendition,
+  isLoading = false,
 }: TableOfContentsProps) {
   const handleNavigate = (href: string) => {
     if (!rendition) return
@@ -109,7 +112,14 @@ export function TableOfContents({
         </SheetHeader>
 
         <ScrollArea className="flex-1 px-2 py-2">
-          {toc.length === 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8" data-testid="toc-loading">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" aria-hidden="true" />
+              <span className="ml-2 text-sm text-muted-foreground">
+                Loading table of contents...
+              </span>
+            </div>
+          ) : toc.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               No table of contents available
             </p>

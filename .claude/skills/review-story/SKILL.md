@@ -236,10 +236,10 @@ Mark the first todo as `in_progress` and proceed:
          - Output: "Build failed — auto-recovery unsuccessful after 3 attempts. Remaining errors: [agent's escalation report]"
 
       If the build passes on the first run (no errors), continue normally.
-   f. `npm run test:unit -- --run` — STOP on failure. If no unit test script or no test files, note and continue.
+   f. `npm run test:unit:ci` — STOP on failure. If no unit test script or no test files, note and continue.
    g. E2E tests — run smoke specs + current story's spec on Chromium only:
       ```
-      npx playwright test ${BASE_PATH}/tests/e2e/navigation.spec.ts ${BASE_PATH}/tests/e2e/overview.spec.ts ${BASE_PATH}/tests/e2e/courses.spec.ts ${BASE_PATH}/tests/e2e/story-{id}.spec.ts --project=chromium
+      npx playwright test ${BASE_PATH}/tests/e2e/navigation.spec.ts ${BASE_PATH}/tests/e2e/overview.spec.ts ${BASE_PATH}/tests/e2e/courses.spec.ts ${BASE_PATH}/tests/e2e/story-{id}.spec.ts --project=chromium 2>&1 | bash scripts/filter-test-output.sh
       ```
       If the current story has no spec file in `${BASE_PATH}/tests/e2e/`, run smoke specs only. STOP on failure. Do NOT run `tests/design-review.spec.ts` or `${BASE_PATH}/tests/e2e/regression/` specs here — those are separate.
 

@@ -14,10 +14,29 @@
  */
 import type { Book, ContentSource } from '@/data/types'
 import { opfsStorageService } from './OpfsStorageService'
+import { createMinimalEpub } from './__tests__/minimalEpub'
 
 const CACHE_NAME = 'knowlune-epub-cache'
 const MAX_CACHED_BOOKS = 10
 const FETCH_TIMEOUT_MS = 30_000
+
+/**
+ * Test mode flag - when enabled, returns a minimal mock EPUB instead of reading from storage.
+ * Set via `enableTestMode()` before running E2E tests.
+ *
+ * @since E107-S03 - E2E testing infrastructure
+ */
+let TEST_MODE = false
+
+/**
+ * Enable test mode for E2E testing. When enabled, getEpubContent returns a minimal mock EPUB.
+ *
+ * @since E107-S03 - E2E testing infrastructure
+ */
+export function enableTestMode(): void {
+  TEST_MODE = true
+  console.log('[BookContentService] Test mode enabled - using mock EPUB for E2E tests')
+}
 
 /** Error subclass for remote EPUB fetch failures with structured metadata. */
 export class RemoteEpubError extends Error {
@@ -33,17 +52,44 @@ export class RemoteEpubError extends Error {
 
 class BookContentService {
   /**
+   * Enable or disable test mode. When enabled, getEpubContent returns a minimal mock EPUB.
+   *
+   * @param enabled - true to enable test mode, false to disable
+   *
+   * @since E107-S03 - E2E testing infrastructure
+   */
+  static setTestMode(enabled: boolean): void {
+    TEST_MODE = enabled
+  }
+
+  /**
+   * Check if test mode is enabled via window flag (for E2E tests)
+   */
+  private isTestMode(): boolean {
+    return (
+      TEST_MODE ||
+      (typeof window !== 'undefined' && (window as any).__BOOK_CONTENT_TEST_MODE__ === true)
+    )
+  }
+
+  /**
    * Get the EPUB content for a book as an ArrayBuffer.
    *
    * Source priority:
-   * 1. OPFS local path (most common after import)
-   * 2. File handle (drag-and-drop / file picker)
-   * 3. Remote URL with auth + caching (OPDS catalogs)
+   * 1. TEST_MODE - returns minimal mock EPUB for E2E testing
+   * 2. OPFS local path (most common after import)
+   * 3. File handle (drag-and-drop / file picker)
+   * 4. Remote URL with auth + caching (OPDS catalogs)
    *
    * @throws Error if book format is not EPUB or content cannot be read
    * @throws RemoteEpubError for remote fetch failures (with structured code)
    */
   async getEpubContent(book: Book): Promise<ArrayBuffer> {
+    // TEST_MODE: Return minimal EPUB for E2E testing
+    if (this.isTestMode()) {
+      return createMinimalEpub()
+    }
+
     if (book.format !== 'epub') {
       throw new Error(
         `BookContentService: book "${book.id}" is not an EPUB (format: ${book.format})`
