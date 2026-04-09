@@ -25,7 +25,7 @@ Possible causes:
 
 What would you like to do?
 
-1. Update status to in-progress (Recommended)
+1. Update status to ready-for-dev (Recommended)
    - Assumes work was started, sprint-status.yaml is stale
    - Updates status in sprint-status.yaml
    - Continues as resumed story (allows dirty tree)
@@ -67,14 +67,19 @@ What would you like to do?
    - Useful if you deleted branch to start over
 ```
 
-## If status=in-progress AND branch exists → RESUMED STORY
+## If status=ready-for-dev AND branch exists → RESUMED STORY
 
-- This is the happy path for resuming work
+- This is the happy path for resuming work after `/start-story` completed
 - Inform the user and continue to step 3 resumption check
 
-## If status ≠ backlog AND status ≠ in-progress
+## If status=in-progress AND branch exists → RESUMED STORY (IMPLEMENTATION PHASE)
 
-- Warn user of unexpected status (e.g., `done`, `blocked`, `ready-for-dev`)
+- This is the expected state when actively implementing a story
+- Inform the user and continue to step 3 resumption check
+
+## If status ≠ backlog AND status ≠ ready-for-dev AND status ≠ in-progress
+
+- Warn user of unexpected status (e.g., `done`, `blocked`, `review`)
 - Suggest manual review of sprint-status.yaml
 - Proceed with caution (allow workflow to continue)
 

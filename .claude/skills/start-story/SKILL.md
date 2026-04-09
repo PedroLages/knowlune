@@ -93,9 +93,9 @@ Mark the first todo as `in_progress` and proceed:
 
 1. **Look up story** in `docs/planning-artifacts/epics.md`. Extract name, description, acceptance criteria, dependencies, technical notes. If `$ARGUMENTS` is empty, read `docs/implementation-artifacts/sprint-status.yaml` and find the first `backlog` story, then confirm with the user via AskUserQuestion.
 
-2. **Check status** in `docs/implementation-artifacts/sprint-status.yaml`. Warn if not `backlog` or `ready-for-dev`.
+2. **Check status** in `docs/implementation-artifacts/sprint-status.yaml`. Warn if not `backlog`, `ready-for-dev`, or `in-progress`.
    - **ID normalization**: `E01-S03` → strip leading zeros → key `1-3-organize-courses-by-topic`.
-   - If status is already `in-progress`: this is a **resumed start**. Inform the user and skip to the resumption check in step 3.
+   - If status is already `in-progress` or `ready-for-dev`: this is a **resumed start**. Inform the user and skip to the resumption check in step 3.
 
    **TodoWrite**: Mark "Look up story and validate sprint status" → `completed`.
 
@@ -105,7 +105,7 @@ Mark the first todo as `in_progress` and proceed:
 4. **Enforce clean working tree** (unless resuming):
 
    First, check if this is a resumed start:
-   - If story status in sprint-status.yaml is already `in-progress` AND branch exists: **ALLOW** dirty tree (user is continuing work on this story)
+   - If story status in sprint-status.yaml is already `ready-for-dev` or `in-progress` AND branch exists: **ALLOW** dirty tree (user is continuing work on this story)
    - Otherwise (new story): **REQUIRE** clean tree
 
    For new stories:
@@ -130,7 +130,7 @@ Mark the first todo as `in_progress` and proceed:
    ```
    STOP — do NOT create branch or story file.
 
-   For resumed stories (status already `in-progress`):
+   For resumed stories (status already `ready-for-dev` or `in-progress`):
    Allow uncommitted changes — user is continuing work on this story.
 
 5. **Create branch** (idempotent):
@@ -143,13 +143,13 @@ Mark the first todo as `in_progress` and proceed:
 6. **Create story file** (idempotent):
    - Check if `docs/implementation-artifacts/{key}.md` already exists.
    - **File exists**: Skip creation. Inform user: "Story file already exists, keeping it."
-   - **File does not exist**: Create using the template at `docs/implementation-artifacts/story-template.md`. Populate frontmatter (`story_id`, `story_name`, `status: in-progress`, `started: YYYY-MM-DD`, `reviewed: false`, `review_started:`, `review_gates_passed: []`) and fill in Story, Acceptance Criteria, and Tasks from the epic.
+   - **File does not exist**: Create using the template at `docs/implementation-artifacts/story-template.md`. Populate frontmatter (`story_id`, `story_name`, `status: ready-for-dev`, `started: YYYY-MM-DD`, `reviewed: false`, `review_started:`, `review_gates_passed: []`) and fill in Story, Acceptance Criteria, and Tasks from the epic.
 
    **TodoWrite**: Mark "Set up branch and story file" → `in_progress`.
 
 6b. **Load session checkpoint** (resumption only — skip for new stories):
 
-   If this is a **resumed start** (status was already `in-progress` from Step 2):
+   If this is a **resumed start** (status was already `ready-for-dev` or `in-progress` from Step 2):
 
    Check if checkpoint file exists:
    ```bash
@@ -180,8 +180,8 @@ Mark the first todo as `in_progress` and proceed:
 
 7. **Update sprint status** (idempotent):
    - Check current status in `docs/implementation-artifacts/sprint-status.yaml`.
-   - **Already `in-progress`**: Skip update. Inform user: "Sprint status already in-progress."
-   - **Not `in-progress`**: Set story → `in-progress`. If this is the first story in the epic, set epic → `in-progress`.
+   - **Already `ready-for-dev` or `in-progress`**: Skip update. Inform user: "Sprint status already {current-status}."
+   - **Not `ready-for-dev` or `in-progress`**: Set story → `ready-for-dev`. If this is the first story in the epic, set epic → `in-progress`.
 
    **TodoWrite**: Mark "Set up branch and story file" → `completed`.
 
@@ -508,7 +508,7 @@ Mark the first todo as `in_progress` and proceed:
     | Worktree         | [Path to worktree / "Main workspace"]    |
     | Branch           | `feature/e##-s##-slug`                    |
     | Story file       | `docs/implementation-artifacts/{key}.md`  |
-    | Sprint status    | Updated to `in-progress`                  |
+    | Sprint status    | Updated to `ready-for-dev`                |
     | ATDD tests       | [Created N tests / Skipped]               |
     | Web research     | [Researched: {technologies} / Skipped (no signals) / Declined] |
     | Initial commit   | `chore: start story E##-S##`              |

@@ -29,7 +29,7 @@ The agent will:
 3. Commit with descriptive messages
 4. Return summary of what was built
 
-**Coordinator after**: Output completion banner with agent's summary, update TodoWrite, note the summary in tracking table, print progress dashboard. **Update tracking file**: story status → implementing, add key files list.
+**Coordinator after**: Output completion banner with agent's summary, update TodoWrite, note the summary in tracking table, print progress dashboard. **Update tracking file**: story status → in-progress, add key files list.
 
 ### Step 2: Review Loop
 
@@ -78,7 +78,7 @@ The agent will:
 4. Commit, push, create PR
 5. Return PR URL
 
-**Coordinator after**: Output completion banner with PR URL, update tracking table, print progress dashboard. **Update tracking file**: PR URL, story status → finishing.
+**Coordinator after**: Output completion banner with PR URL, update tracking table, print progress dashboard. **Update tracking file**: PR URL, story status → review.
 
 ### Step 4: Merge + Sync (Coordinator Directly)
 
@@ -130,8 +130,14 @@ Since we merge each PR before starting the next story:
 
 ## When a Story is Already In-Progress
 
-If Phase 0 detected a story with `in-progress` status:
+If Phase 0 detected a story with `ready-for-dev` or `in-progress` status:
 - The story branch already exists
 - `/start-story` will detect this and resume (idempotent)
 - The Story Agent should note that it's resuming, not starting fresh
 - Review and finish proceed normally
+
+**Lifecycle context**: The orchestrator tracking file uses these BMAD lifecycle states:
+- `ready-for-dev`: Story setup complete, ready for implementation
+- `in-progress`: Implementation in progress (active development)
+- `review`: Code review and quality gates in progress
+- `done`: Story complete and merged to main

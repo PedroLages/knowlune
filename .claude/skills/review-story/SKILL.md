@@ -116,6 +116,7 @@ fi
   - Reset: set `reviewed=in-progress`, clear `review_gates_passed`, update `review_started`
 - If `reviewed: false`:
   - Set `reviewed=in-progress`, `review_started=YYYY-MM-DD`, `review_gates_passed=[]` in story frontmatter
+  - **Update sprint-status to `review`** in `${BASE_PATH}/docs/implementation-artifacts/sprint-status.yaml`
 
 **Save state and mark todo completed**:
 
