@@ -115,7 +115,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
      - Treat as comprehensive mode — run blocker cross-check + lightweight validation (step 5).
    - **If agent reviews incomplete**:
      - Inform the user: "Review was interrupted before completion. Running full review inline."
-     - Run the full review pipeline with resumption — same as `/review-story` steps 3-7 (respecting `review_gates_passed` to skip completed agent reviews). Dispatch all non-skipped review agents (design-review, code-review, code-review-testing) **in a single message** for maximum parallelism.
+     - Run the full review pipeline with resumption — same as `/review-story` steps 3-7 (respecting `review_gates_passed` to skip completed agent reviews). Dispatch all non-skipped review agents (design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa) **in a single message** for maximum parallelism.
      - If **Blockers** found → STOP with fix instructions.
      - If no blockers → continue to step 6.
 
@@ -128,7 +128,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    - **Lessons Learned Gate**: Check for placeholder text (documented in streamlined-mode.md)
    - Run pre-checks via `./scripts/workflow/run-prechecks.sh --mode=full`
    - Run burn-in validation if applicable (E2E spec exists, tests passed, not already validated)
-   - Dispatch all review agents in parallel (design-review, code-review, code-review-testing)
+   - Dispatch all review agents in parallel (design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa)
    - If **Blockers** found → STOP with fix instructions
    - If no blockers → set `reviewed: true`, continue to step 6
 
@@ -431,6 +431,9 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    | Design review          | passed / N warnings         |
    | Code review            | passed / N warnings         |
    | Code review (testing)  | N/N ACs covered / N warnings |
+   | Performance benchmark  | passed / N warnings / skipped |
+   | Security review        | passed / N warnings         |
+   | Exploratory QA         | passed / N warnings / skipped |
 
    - Mode: Comprehensive / Streamlined
    - Branch: `feature/e##-s##-slug`

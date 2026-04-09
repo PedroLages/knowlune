@@ -92,6 +92,27 @@ Task({
   prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to docs/reviews/code/code-review-testing-{date}-{story-id}.md. Return structured format.",
   description: "Test coverage review $STORY_ID"
 })
+
+Task({
+  subagent_type: "performance-benchmark",
+  run_in_background: true,
+  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to docs/reviews/performance/performance-benchmark-{date}-{story-id}.md. Return structured format.",
+  description: "Performance benchmark $STORY_ID"
+})
+
+Task({
+  subagent_type: "security-review",
+  run_in_background: true,
+  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to docs/reviews/security/security-review-{date}-{story-id}.md. Return structured format.",
+  description: "Security review $STORY_ID"
+})
+
+Task({
+  subagent_type: "exploratory-qa",
+  run_in_background: true,
+  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to docs/reviews/qa/exploratory-qa-{date}-{story-id}.md. Return structured format.",
+  description: "Exploratory QA $STORY_ID"
+})
 ```
 
 ## Agent Return Format
@@ -151,6 +172,9 @@ python3 scripts/workflow/merge-agent-results.py \
 - Design review: `docs/reviews/design/design-review-{date}-{story-id}.md`
 - Code review: `docs/reviews/code/code-review-{date}-{story-id}.md`
 - Test coverage: `docs/reviews/code/code-review-testing-{date}-{story-id}.md`
+- Performance benchmark: `docs/reviews/performance/performance-benchmark-{date}-{story-id}.md`
+- Security review: `docs/reviews/security/security-review-{date}-{story-id}.md`
+- Exploratory QA: `docs/reviews/qa/exploratory-qa-{date}-{story-id}.md`
 
 ## Finding Deduplication with Consensus Scoring
 
@@ -174,6 +198,6 @@ Keeping: code-review finding (higher base confidence)
 
 After all agents complete:
 
-- `review_gates_passed`: Updated with `design-review` (or `design-review-skipped`), `code-review`, `code-review-testing`
+- `review_gates_passed`: Updated with `design-review` (or `design-review-skipped`), `code-review`, `code-review-testing`, `performance-benchmark` (or `performance-benchmark-skipped`), `security-review`, `exploratory-qa` (or `exploratory-qa-skipped`)
 - Agent JSON outputs saved to `.claude/state/review-story/agent-results/`
 - Consolidated findings JSON created for report generation

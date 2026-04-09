@@ -17,10 +17,11 @@ See: [config/gates.json](../config/gates.json)
 
 Gates must use the exact names from `config/gates.json`. The `-skipped` suffix indicates the gate was intentionally skipped (e.g., no lint script, no test files, no UI changes). Both the base name and `-skipped` variant satisfy the requirement.
 
-**Required for `reviewed: true`** (from `config/gates.json`):
+**Required for `reviewed: true`** (12 gates from `config/gates.json`):
 - `build`, `lint`, `type-check`, `format-check`
 - `unit-tests`, `e2e-tests`
 - `design-review`, `code-review`, `code-review-testing`
+- `performance-benchmark`, `security-review`, `exploratory-qa`
 
 ## Resumption Detection
 

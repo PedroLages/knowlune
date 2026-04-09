@@ -93,8 +93,15 @@ fi
 ```bash
 STATE_JSON=$(bash scripts/workflow/checkpoint.sh restore --story-id=$STORY_ID --base-path=$BASE_PATH 2>/dev/null)
 if [ -n "$STATE_JSON" ]; then
-  # Parse state from JSON
-  REVIEWED=$(echo "$STATE_JSON" | jq -r '.status')
+  # Parse runtime state and normalize to frontmatter reviewed value
+  # Runtime status: in-progress | completed | blocked
+  # Frontmatter reviewed: false | in-progress | true
+  RUN_STATUS=$(echo "$STATE_JSON" | jq -r '.status')
+  case "$RUN_STATUS" in
+    "completed") REVIEWED="true" ;;
+    "in-progress"|"blocked") REVIEWED="in-progress" ;;
+    *) REVIEWED="false" ;;
+  esac
   GATES_PASSED=$(echo "$STATE_JSON" | jq -r '.gates_passed_list[]')
   STORY_FILE=$(echo "$STATE_JSON" | jq -r '.story_file')
 else

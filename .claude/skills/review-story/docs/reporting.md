@@ -57,6 +57,18 @@ Report: docs/reviews/code/code-review-{date}-{id}.md
 [AC coverage summary: N/N ACs covered, N gaps. Finding counts by severity or "Reused from previous run — [path]"]
 Report: docs/reviews/code/code-review-testing-{date}-{id}.md
 
+### Performance Benchmark
+[Summary with TTFB, FCP, LCP metrics or "Skipped — lightweight review" or "Reused from previous run — [path]"]
+Report: docs/reviews/performance/performance-benchmark-{date}-{id}.md
+
+### Security Review
+[Summary with OWASP findings or "Reused from previous run — [path]"]
+Report: docs/reviews/security/security-review-{date}-{id}.md
+
+### Exploratory QA
+[Summary or "Skipped — no UI changes" or "Reused from previous run — [path]"]
+Report: docs/reviews/qa/exploratory-qa-{date}-{id}.md
+
 ### Consolidated Findings
 
 #### Blockers (must fix)
@@ -134,6 +146,9 @@ Report: docs/reviews/code/code-review-testing-{date}-{id}.md
 | Design review         | [pass/N warnings/skipped] |
 | Code review           | [pass/N warnings]         |
 | Code review (testing) | [N/N ACs covered/N warnings] |
+| Performance benchmark | [pass/N warnings/skipped] |
+| Security review       | [pass/N warnings]         |
+| Exploratory QA        | [pass/N warnings/skipped] |
 
 **Verdict: PASS** — Story is ready to ship.
 
