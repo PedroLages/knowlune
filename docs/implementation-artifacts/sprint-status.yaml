@@ -1309,7 +1309,7 @@ development_status:
   epic-107: in-progress
   107-1-fix-cover-image-display: done
   107-2-fix-epub-reader-rendering: done
-  107-3-fix-toc-loading-and-fallback: in-progress
+  107-3-fix-toc-loading-and-fallback: done
   107-4-wire-about-book-dialog: backlog
   107-5-sync-reader-themes: backlog
   107-6-fix-mini-player-interactivity: backlog
