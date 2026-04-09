@@ -94,11 +94,12 @@ async function openBookReader(
   // Navigate to book reader (correct route: library/:bookId/read)
   await page.goto(`/library/${book.id}/read`)
 
-  // Dismiss any open dialogs (onboarding, etc.) that might interfere
+  // Intentional hard wait: dialog animations need time to render before dismissal
   await page.waitForTimeout(500)
   const backdrop = page.locator('[data-slot="dialog-overlay"]').first()
   if (await backdrop.isVisible({ timeout: 1000 }).catch(() => false)) {
     await page.keyboard.press('Escape')
+    // Intentional hard wait: dialog close animation
     await page.waitForTimeout(200)
   }
 }
@@ -117,6 +118,7 @@ async function openTocPanel(page: Page): Promise<void> {
   const backdrop = page.locator('[data-slot="dialog-overlay"]').first()
   if (await backdrop.isVisible({ timeout: 500 }).catch(() => false)) {
     await page.keyboard.press('Escape')
+    // Intentional hard wait: dialog close animation
     await page.waitForTimeout(200)
   }
 
@@ -141,14 +143,8 @@ test.describe('E107-S03: Fix TOC Loading and Fallback', () => {
     // Open TOC panel via menu
     await openTocPanel(page)
 
-    // Loading indicator should be visible initially
-    const loadingIndicator = page
-      .getByTestId('toc-loading')
-      .or(page.getByRole('status', { name: /loading/i }))
-      .or(page.locator('.animate-spin'))
-
-    // Note: In practice, loading state may resolve very quickly
-    // This test verifies the loading state element exists
+    // Note: Loading state may resolve quickly — unit tests cover the loading→loaded transition.
+    // E2E verifies the TOC panel renders and shows content after loading completes.
     await expect(page.getByTestId('toc-panel')).toBeVisible({ timeout: 8000 })
   })
 
@@ -167,19 +163,13 @@ test.describe('E107-S03: Fix TOC Loading and Fallback', () => {
   test('AC-3: TOC timeout falls back to empty state gracefully', async ({
     page,
   }) => {
-    // Simulate timeout scenario by mocking slow TOC loading
-    await page.addInitScript(() => {
-      // Mock a delayed tocChanged callback that never fires
-      ;(window as any).__TEST_TOC_TIMEOUT__ = true
-    })
-
     await openBookReader(page, TEST_BOOK_NO_TOC)
 
     // Open TOC panel via menu
     await openTocPanel(page)
 
-    // After reasonable time, should fall back to empty state (not stuck loading)
-    await page.waitForTimeout(6000) // Wait for 5-second timeout + buffer
+    // Intentional hard wait: must wait for 5-second TOC timeout to expire before checking fallback state
+    await page.waitForTimeout(6000)
 
     const emptyMessage = page.getByText('No table of contents available')
 
@@ -273,15 +263,15 @@ test.describe('E107-S03: Edge Cases', () => {
   test('Handles rapid TOC panel open/close without errors', async ({ page }) => {
     await openBookReader(page, TEST_BOOK_NO_TOC)
 
-    const menuButton = page.getByTestId('reader-menu-button')
-
     // Rapidly open and close the panel multiple times
     for (let i = 0; i < 5; i++) {
       await openTocPanel(page)
+      // Intentional hard wait: panel open animation before close
       await page.waitForTimeout(100)
 
       // Close via ESC key (simpler and more reliable)
       await page.keyboard.press('Escape')
+      // Intentional hard wait: panel close animation before next iteration
       await page.waitForTimeout(100)
     }
 
@@ -301,6 +291,7 @@ test.describe('E107-S03: Edge Cases', () => {
     // While TOC is loading, navigate to different locations
     for (let i = 0; i < 3; i++) {
       await page.keyboard.press('ArrowRight')
+      // Intentional hard wait: epub.js navigation rendering between keystrokes
       await page.waitForTimeout(50)
     }
 

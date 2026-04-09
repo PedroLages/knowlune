@@ -3,10 +3,10 @@ import { createRoot } from 'react-dom/client'
 import App from './app/App.tsx'
 import './styles/index.css'
 
-// E2E TEST SUPPORT: Expose test mode control for E2E tests
+// E2E TEST SUPPORT: Expose test mode control for E2E tests (dev only)
 // Tests can call window.__enableBookContentTestMode__() to enable mock EPUB loading
-if (typeof window !== 'undefined') {
-  // Dynamically import to avoid bundling in production
+// Gated behind import.meta.env.DEV — Vite tree-shakes this entire block from production builds
+if (import.meta.env.DEV && typeof window !== 'undefined') {
   import('./services/BookContentService').then(({ enableTestMode }) => {
     ;(window as any).__enableBookContentTestMode__ = enableTestMode
     // Auto-enable if flag was set before module load

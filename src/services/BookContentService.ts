@@ -14,7 +14,6 @@
  */
 import type { Book, ContentSource } from '@/data/types'
 import { opfsStorageService } from './OpfsStorageService'
-import { createMinimalEpub } from './__tests__/minimalEpub'
 
 const CACHE_NAME = 'knowlune-epub-cache'
 const MAX_CACHED_BOOKS = 10
@@ -52,17 +51,6 @@ export class RemoteEpubError extends Error {
 
 class BookContentService {
   /**
-   * Enable or disable test mode. When enabled, getEpubContent returns a minimal mock EPUB.
-   *
-   * @param enabled - true to enable test mode, false to disable
-   *
-   * @since E107-S03 - E2E testing infrastructure
-   */
-  static setTestMode(enabled: boolean): void {
-    TEST_MODE = enabled
-  }
-
-  /**
    * Check if test mode is enabled via window flag (for E2E tests)
    */
   private isTestMode(): boolean {
@@ -85,8 +73,9 @@ class BookContentService {
    * @throws RemoteEpubError for remote fetch failures (with structured code)
    */
   async getEpubContent(book: Book): Promise<ArrayBuffer> {
-    // TEST_MODE: Return minimal EPUB for E2E testing
+    // TEST_MODE: Return minimal EPUB for E2E testing (dynamic import avoids bundling JSZip in production)
     if (this.isTestMode()) {
+      const { createMinimalEpub } = await import('./__tests__/minimalEpub')
       return createMinimalEpub()
     }
 
