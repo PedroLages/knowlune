@@ -1310,7 +1310,7 @@ development_status:
   107-1-fix-cover-image-display: done
   107-2-fix-epub-reader-rendering: done
   107-3-fix-toc-loading-and-fallback: done
-  107-4-wire-about-book-dialog: review
+  107-4-wire-about-book-dialog: done
   107-5-sync-reader-themes: backlog
   107-6-fix-mini-player-interactivity: backlog
   107-7-fix-m4b-cover-preview: backlog

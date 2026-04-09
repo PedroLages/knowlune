@@ -1,9 +1,9 @@
 ---
 story_id: E107-S04
 story_name: "Wire About Book Dialog"
-status: in-progress
+status: done
 started: 2026-04-09
-completed:
+completed: 2026-04-09
 reviewed: true
 review_started: 2026-04-09
 review_gates_passed: ["pre-checks", "build", "lint", "type-check", "format-check", "unit-tests-skipped", "e2e-tests", "design-review", "code-review", "code-review-testing", "performance-benchmark", "security-review", "exploratory-qa"]
