@@ -15,8 +15,18 @@ import { FIXED_DATE } from '../utils/test-time'
 
 test.describe('E107-S04: About Book Dialog', () => {
   test.beforeEach(async ({ libraryPage, page }) => {
-    // Navigate to library page first
-    await page.goto('/')
+    // Set localStorage to skip onboarding dialog BEFORE page load
+    // Key format matches useOnboardingStore.ts STORAGE_KEY
+    await page.addInitScript(() => {
+      const onboardingData = {
+        completedAt: new Date('2025-01-01').toISOString(),
+        skipped: true
+      }
+      localStorage.setItem('knowlune-onboarding-v1', JSON.stringify(onboardingData))
+    })
+
+    // Navigate to library page directly
+    await page.goto('/library')
 
     // Seed test books - one complete EPUB, one missing metadata, one audiobook
     await seedBooks(page, [
@@ -69,8 +79,23 @@ test.describe('E107-S04: About Book Dialog', () => {
       }
     ])
 
-    // Navigate to library page
-    await libraryPage.goto()
+    // Reload page to pick up seeded data
+    await page.reload({ waitUntil: 'domcontentloaded' })
+
+    // Close any open dialogs (overlay may be present from previous test state)
+    const openOverlay = page.locator('[data-slot="dialog-overlay"][data-state="open"]')
+    const overlayCount = await openOverlay.count()
+    if (overlayCount > 0) {
+      // Click overlay to close the dialog, or press Escape
+      try {
+        await openOverlay.first().click({ timeout: 2000 })
+      } catch {
+        // If clicking fails, try Escape key
+        await page.keyboard.press('Escape')
+      }
+      // Wait for dialog to close
+      await page.waitForTimeout(500)
+    }
   })
 
   test('AC-1: Opens About Book dialog from BookCard context menu', async ({ libraryPage, page }) => {
