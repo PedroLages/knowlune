@@ -603,3 +603,99 @@ issues:
     scheduled_for: null
     fixed_by: null
     notes: "R3 NIT deferred. Definition field should be a Textarea to allow multi-line vocabulary definitions. Minor UX improvement."
+
+  - id: KI-049
+    type: feature
+    summary: "'Spaced repetition' in HighlightReview is actually a priority queue — no SM-2 scheduling, no intervals"
+    file: src/app/pages/HighlightReview.tsx
+    severity: high
+    discovered_by: E109-adversarial
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Adversarial F01. loadDailyHighlights() sorts by lastReviewedAt and caps at 20 — this is a queue, not spaced repetition. No interval computation, no ease factor, no next-review date scheduling. Either rename the feature ('Daily Review Queue') or implement real scheduling (SM-2 or similar). lastReviewedAt is recorded but only used for sort order."
+
+  - id: KI-050
+    type: feature
+    summary: "Vocabulary flashcard review serves all non-mastered items every session — no lastReviewedAt scheduling"
+    file: src/stores/useVocabularyStore.ts
+    severity: high
+    discovered_by: E109-adversarial
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Adversarial F02. getReviewableItems() returns items.filter(i => i.masteryLevel < 3) — every non-mastered word, every session. lastReviewedAt field exists on VocabularyItem but is not queried. A user with 200 vocabulary items at mastery level 1 is served all 200 every session. Add lastReviewedAt-based interval filtering or cap the session set."
+
+  - id: KI-051
+    type: performance
+    summary: "SearchAnnotations loads full DB (up to 500 highlights + 500 vocabulary) on mount before user types"
+    file: src/app/pages/SearchAnnotations.tsx
+    severity: high
+    discovered_by: E109-adversarial
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Adversarial F03. Partially mitigated with .limit(500) cap post-NFR, but cap is arbitrary — a user with 501 highlights silently misses results. useMemo filter runs synchronously on every keystroke. Fix: add useDeferredValue(query) before useMemo, and document the 500-item threshold explicitly. NFR HIGH finding."
+
+  - id: KI-052
+    type: accessibility
+    summary: "HighlightExportDialog modal={false} breaks focus trap — keyboard users can tab out of open dialog"
+    file: src/app/components/highlights/HighlightExportDialog.tsx
+    severity: high
+    discovered_by: E109-adversarial
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Adversarial F04. Non-modal dialog does not trap focus per WCAG 2.1 SC 1.3.1. Keyboard users can tab into background content while export dialog is open. No documented rationale for modal={false}. Fix: remove modal={false} to restore default focus trapping behavior."
+
+  - id: KI-053
+    type: reliability
+    summary: "AnnotationSummary load() has no try/catch — Dexie error causes infinite skeleton with no recovery"
+    file: src/app/pages/AnnotationSummary.tsx:108
+    severity: high
+    discovered_by: E109-nfr
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "NFR HIGH finding. If Dexie query throws, loading state stays true indefinitely. User sees infinite skeleton with no error message or recovery path. Fix: add try/catch with setLoading(false) and toast.error('Failed to load annotations. Please refresh.'). 15-minute fix."
+
+  - id: KI-054
+    type: ux
+    summary: "AnnotationSummary back button hardcodes navigate('/library') instead of navigate(-1)"
+    file: src/app/pages/AnnotationSummary.tsx
+    severity: medium
+    discovered_by: E109-adversarial
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Adversarial finding #7. User arriving from cross-book search (/search-annotations) clicks back and is sent to /library root instead of returning to search. Fix: replace navigate('/library') with navigate(-1) in handleBack."
+
+  - id: KI-055
+    type: test
+    summary: "E109-S01 data-dependent vocabulary flows (edit, delete, undo, mastery) have zero E2E coverage"
+    file: tests/e2e/
+    severity: medium
+    discovered_by: E109-adversarial
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Adversarial finding #12. S01 story notes explicitly deferred these flows to follow-up stories. The flashcard review mode, inline editing, delete-with-undo, and mastery advancement are the four core interactive behaviors of vocabulary — all untested at E2E level. Schedule in E110 or a dedicated chore story before next vocabulary refactor."
+
+  - id: KI-056
+    type: ux
+    summary: "Daily Highlight Review and Cross-Book Search have no sidebar navigation entries"
+    file: src/app/config/navigation.ts
+    severity: low
+    discovered_by: E109-adversarial
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Adversarial finding #17. Vocabulary (/vocabulary) has a sidebar entry added in S01. HighlightReview (/highlight-review) and SearchAnnotations (/search-annotations) are only reachable via direct URL or internal links. Inconsistent IA — evaluate whether to add sidebar entries or provide in-page navigation from Vocabulary page."

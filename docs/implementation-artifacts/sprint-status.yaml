@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-11  # E107 marked done — all 7 stories shipped
+last_updated: 2026-04-11  # E109 marked done — all 5 stories shipped
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -1336,13 +1336,13 @@ development_status:
   # Vocabulary builder, daily highlight review, highlight export, annotation summary, cross-book search
   # Depends on: E107
   # ──────────────────────────────────────────────────
-  epic-109: in-progress
+  epic-109: done
   109-1-vocabulary-builder: done
-  109-2-daily-highlight-review: review
-  109-3-highlight-export: review
+  109-2-daily-highlight-review: done
+  109-3-highlight-export: done
   109-4-annotation-summary-view: done
   109-5-cross-book-search: done
-  epic-109-retrospective: optional
+  epic-109-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 110: Library Organization — Shelves, Series, Queue
