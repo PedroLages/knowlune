@@ -100,7 +100,13 @@ STORY_ID_LOWER=$(echo "$STORY_ID" | tr '[:upper:]' '[:lower:]')
 # ── 3. Locate story file ─────────────────────────────────────────────────────
 
 STORY_FILE=$(find "${BASE_PATH}/docs/implementation-artifacts" \
-  -maxdepth 1 -name "*${STORY_ID_LOWER}*.md" 2>/dev/null | head -1 || true)
+  -maxdepth 2 -name "${STORY_ID}.md" 2>/dev/null | head -1 || true)
+
+# Fallback: case-insensitive search with story ID pattern
+if [ -z "$STORY_FILE" ]; then
+  STORY_FILE=$(find "${BASE_PATH}/docs/implementation-artifacts" \
+    -maxdepth 2 -iname "*${STORY_ID_LOWER}*.md" 2>/dev/null | head -1 || true)
+fi
 
 if [ -z "$STORY_FILE" ]; then
   log_error "Story file not found for $STORY_ID in ${BASE_PATH}/docs/implementation-artifacts"

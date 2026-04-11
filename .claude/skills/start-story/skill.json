@@ -1,6 +1,6 @@
 {
   "name": "start-story",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Automates story setup: feature branch (with optional git worktree), sprint tracking, ATDD test suggestion, design guidance, contextual research, and plan mode entry",
   "author": "Knowlune Team",
   "arguments": {
@@ -18,6 +18,16 @@
   "minModelCapability": "sonnet",
   "estimatedDuration": "3-5 minutes",
   "changelog": [
+    {
+      "version": "3.0.0",
+      "date": "2026-04-11",
+      "changes": [
+        "Dual-model routing: main session runs on Sonnet, planning dispatched to Opus Plan agent",
+        "Replaced EnterPlanMode/ExitPlanMode with Agent(subagent_type: Plan, model: opus) + AskUserQuestion approval flow",
+        "Added explicit model: sonnet to all Explore and web research agent dispatches",
+        "Plan refinement loop: up to 2 rounds via re-dispatch with user feedback"
+      ]
+    },
     {
       "version": "2.0.0",
       "date": "2026-03-14",
@@ -37,7 +47,7 @@
         "Branch creation and story file setup",
         "ATDD test suggestion based on acceptance criteria",
         "Parallel research agents (story context, code patterns, test patterns)",
-        "Plan mode entry with ExitPlanMode integration",
+        "Plan mode entry with ExitPlanMode integration (replaced by Opus Plan agent in v3.0.0)",
         "Idempotent recovery support"
       ]
     }

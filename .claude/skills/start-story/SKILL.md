@@ -323,13 +323,13 @@ Mark the first todo as `in_progress` and proceed:
 
    **TodoWrite**: Mark "Suggest design guidance" → `completed`. Mark all 3 research agent todos → `in_progress` simultaneously.
 
-9. **Launch 3 parallel Explore agents** via Task tool (dispatch all in a single message).
+9. **Launch 3 parallel Explore agents** via Task tool (dispatch all in a single message). Use `model: "sonnet"` for all three — Opus is reserved for the Plan agent in Step 10.
 
    **Important**: Feed each agent the specific ACs and affected file paths from Step 1, not generic search mandates. Targeted context produces 40% fewer errors and 55% faster task completion (Anthropic 2026 Agentic Coding report).
 
-   - **Agent 1 — Story context**: Read story ACs, dependencies, related stories in `docs/planning-artifacts/epics.md`. Check if dependent stories are `done` in sprint-status. **Provide**: the exact AC text and dependency list from Step 1.
-   - **Agent 2 — Existing code audit + patterns**: Search affected source directories (`src/app/pages/`, `src/app/components/`, `src/stores/`, `src/db/`, `src/lib/`) for relevant patterns, types, and utilities. **Provide**: the specific ACs and task descriptions so the agent searches for exact matches (e.g., "AC says 'persist quiz results' — find existing Dexie.js quiz stores"). **Important: explicitly identify pre-existing code that already implements parts of the story** — search for store actions, type definitions, and components that overlap with the story's tasks. Report what already exists vs. what needs building. (See `docs/engineering-patterns.md` § "Inventory Existing Code Before Story Planning".)
-   - **Agent 3 — Test patterns + UX specs**: Read test patterns from `tests/` and `tests/support/`, plus UX design specs from `docs/planning-artifacts/ux-design-specification.md` for relevant sections. **Provide**: the affected route(s) from the route map so the agent finds existing E2E tests for those specific pages.
+   - **Agent 1 — Story context** (`model: "sonnet"`): Read story ACs, dependencies, related stories in `docs/planning-artifacts/epics.md`. Check if dependent stories are `done` in sprint-status. **Provide**: the exact AC text and dependency list from Step 1.
+   - **Agent 2 — Existing code audit + patterns** (`model: "sonnet"`): Search affected source directories (`src/app/pages/`, `src/app/components/`, `src/stores/`, `src/db/`, `src/lib/`) for relevant patterns, types, and utilities. **Provide**: the specific ACs and task descriptions so the agent searches for exact matches (e.g., "AC says 'persist quiz results' — find existing Dexie.js quiz stores"). **Important: explicitly identify pre-existing code that already implements parts of the story** — search for store actions, type definitions, and components that overlap with the story's tasks. Report what already exists vs. what needs building. (See `docs/engineering-patterns.md` § "Inventory Existing Code Before Story Planning".)
+   - **Agent 3 — Test patterns + UX specs** (`model: "sonnet"`): Read test patterns from `tests/` and `tests/support/`, plus UX design specs from `docs/planning-artifacts/ux-design-specification.md` for relevant sections. **Provide**: the affected route(s) from the route map so the agent finds existing E2E tests for those specific pages.
 
    As each agent returns, mark its corresponding todo → `completed`. Wait for all 3 to complete before proceeding.
 
@@ -400,10 +400,10 @@ Mark the first todo as `in_progress` and proceed:
 
    **If user declines (or no signals):** Mark todo `completed`. Proceed to step 10.
 
-   **If user accepts:** Dispatch a single `general-purpose` agent via Task tool with WebSearch and WebFetch access:
+   **If user accepts:** Dispatch a single `general-purpose` agent (`model: "sonnet"`) via Task tool with WebSearch and WebFetch access:
 
    ```
-   Task(general-purpose):
+   Task(general-purpose, model: "sonnet"):
    "Research the following external dependencies/technologies for story E##-S##:
    - {detected signals list}
 
@@ -436,23 +436,86 @@ Mark the first todo as `in_progress` and proceed:
 
    **TodoWrite**: Mark "Web research (if external deps detected)" → `completed`. Mark "Enter plan mode" → `in_progress`.
 
-10. **Enter plan mode** with gathered context. Combine research from all 3 agents into a plan. Include:
-    - Story overview and ACs
-    - Dependencies and their status
-    - Relevant existing patterns to follow
-    - Suggested implementation approach
-    - UX design references (if applicable)
-    - Web research findings (if Step 9c produced results): version constraints, breaking changes, security notes
-    - **Risk Assessment** (include when complexity estimate is HIGH):
-      - What could go wrong? (identify top 2-3 risks)
-      - What is the rollback plan? (can changes be reverted cleanly?)
-      - What existing patterns apply? (reference `docs/engineering-patterns.md`)
-      - Are there dependencies between this story and others in the sprint?
-    - Note: during implementation, make granular commits after each small task as save points
+10. **Generate implementation plan via Opus Plan agent** (`model: "opus"`).
 
-   **TodoWrite**: Mark "Enter plan mode" → `completed`. Mark "Link plan, commit, and output" → `in_progress`.
+    The orchestrator (Sonnet) assembles all gathered context into a structured prompt and dispatches a Plan agent on Opus for higher-quality architectural reasoning. Do NOT use `EnterPlanMode` — the plan is generated by the agent and written by the orchestrator.
 
-11. **Optional elicitation** (complex stories only): After `ExitPlanMode` returns (plan approved), check if the story warrants a refinement pass using `bmad-advanced-elicitation`.
+    **10a. Assemble context prompt**: Combine the following into a single agent prompt:
+
+    ```
+    Agent(subagent_type: "Plan", model: "opus"):
+
+    "You are planning the implementation of story {STORY_ID} — {STORY_NAME} for the Knowlune project.
+
+    ## Story
+    {story overview, ACs, dependencies from Step 1}
+
+    ## Research Findings
+
+    ### Story Context
+    {summary from Explore agent 1}
+
+    ### Existing Code & Patterns
+    {summary from Explore agent 2}
+
+    ### Test & UX Patterns
+    {summary from Explore agent 3}
+
+    ### Design Guidance
+    {from Step 8b, if generated — otherwise omit this section}
+
+    ### Web Research
+    {from Step 9c, if generated — otherwise omit this section}
+
+    ## Complexity
+    {estimate and red flags from Step 9b}
+
+    ## Constraints
+    - Follow existing patterns from docs/engineering-patterns.md
+    - Use design tokens from src/styles/theme.css (never hardcoded Tailwind colors)
+    - Reuse existing utilities and components identified in research
+    - Plan granular commits after each small task as save points
+    - shadcn/ui components in src/app/components/ui/, custom in src/app/components/figma/
+    - Zustand stores in src/stores/, Dexie.js DB in src/db/
+
+    ## Instructions
+    Produce a detailed implementation plan with:
+    1. **Context** section: why this change is needed, what problem it solves
+    2. **Implementation steps** (ordered): specific file paths to create/modify, which existing code to reuse
+    3. For each step: what to create/modify, what to reuse, estimated scope
+    4. **Verification** section: how to test end-to-end (dev server, E2E tests, manual checks)
+    5. **Risk assessment** (include when complexity is HIGH): top 2-3 risks, rollback plan, pattern references
+
+    Output the plan in markdown format, ready to be saved as-is to a file."
+    ```
+
+    **10b. Write plan file**: When the agent returns, write the plan to `docs/implementation-artifacts/plans/{plan-filename}.md`. The filename should follow the pattern: `plan-{story-id-lower}-{slugified-story-name}.md` (e.g., `plan-e107-s05-sync-reader-themes.md`).
+
+    **10c. User approval** (via `AskUserQuestion`): Display a summary and ask for approval:
+
+    ```
+    Plan generated (Opus) and saved to:
+    docs/implementation-artifacts/plans/{plan-filename}.md
+
+    Summary:
+    - {2-4 line summary of the plan's approach}
+    - {N} implementation steps
+    - Estimated scope: {files to create/modify count}
+
+    Options:
+    - "Approve" — proceed with this plan
+    - "Changes needed: {your feedback}" — I'll refine with your feedback
+    ```
+
+    **10d. Refinement loop** (if user requests changes):
+    - Dispatch a new Plan agent (`model: "opus"`) with the original context + user feedback + the previous plan
+    - Overwrite the plan file with the refined version
+    - Ask for approval again via `AskUserQuestion`
+    - Maximum 2 refinement rounds. After round 2, save as-is and append user's unresolved notes to the plan file under a `## Open Questions` section.
+
+    **TodoWrite**: Mark "Enter plan mode" → `completed`. Mark "Link plan, commit, and output" → `in_progress`.
+
+11. **Optional elicitation** (complex stories only): After the user approves the plan (Step 10c), check if the story warrants a refinement pass using `bmad-advanced-elicitation`.
 
     Offer elicitation when ANY of:
     - Story has 4+ tasks in the plan
@@ -465,7 +528,7 @@ Mark the first todo as `in_progress` and proceed:
     If yes → invoke `bmad-advanced-elicitation` skill, passing the plan content as context. Incorporate any meaningful changes into the saved plan file.
     If no (or story does not meet criteria) → skip, proceed to Step 12.
 
-12. **Link plan to story file**: After `ExitPlanMode` returns (plan approved), save the plan to `docs/implementation-artifacts/plans/{plan-filename}.md`, then append an `## Implementation Plan` section to the story file so the developer can find the plan in a later session. If the section already exists, skip.
+12. **Link plan to story file**: After the user approves the plan (Step 10c), append an `## Implementation Plan` section to the story file so the developer can find the plan in a later session. The plan file was already written in Step 10b. If the section already exists, skip.
 
     Format:
     ```markdown
