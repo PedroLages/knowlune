@@ -232,6 +232,9 @@ class PhaseConfig:
             raise ValueError(f"Invalid effort '{self.effort}', must be one of {VALID_EFFORTS}")
         if self.model and self.model not in VALID_MODELS:
             raise ValueError(f"Invalid model '{self.model}', must be one of {VALID_MODELS}")
+        # SDK rejects identical model and fallback — clear fallback if same
+        if self.fallback_model and self.fallback_model == self.model:
+            self.fallback_model = None
 
 
 class StoryError(Exception):
@@ -1887,10 +1890,8 @@ def ensure_clean_tree(story: StoryInfo, next_phase: str) -> None:
     log.info(f"  Auto-committed {len(meaningful)} file(s) before {next_phase}")
 
 
-def verify_start(story: StoryInfo) -> list[str]:
-    """Check START phase artifacts exist on disk."""
-    failures: list[str] = []
-
+def _find_feature_branch(story: StoryInfo) -> str | None:
+    """Return the full branch name for a story, or None if not found."""
     epic_n, epic_suffix = parse_epic_num(story.epic_num)
     story_n = int(story.story_num)
     branch_prefix = f"feature/e{epic_n:02d}{epic_suffix}-s{story_n:02d}"
@@ -1898,30 +1899,62 @@ def verify_start(story: StoryInfo) -> list[str]:
         ["git", "branch", "--list", f"{branch_prefix}*"],
         capture_output=True, text=True, cwd=PROJECT_DIR,
     )
-    if not result.stdout.strip():
-        failures.append(f"Branch matching {branch_prefix}* not created")
+    branches = result.stdout.strip().splitlines()
+    return branches[0].strip().lstrip("* ") if branches else None
 
-    story_files = list(
-        (PROJECT_DIR / "docs" / "implementation-artifacts").glob(f"{story.yaml_key}*")
-    )
-    if not story_files:
-        failures.append(f"Story file not created for {story.yaml_key}")
 
-    plans = list(
-        (PROJECT_DIR / "docs" / "implementation-artifacts" / "plans").glob(f"*")
+def _git_ls_tree_match(branch: str, directory: str, pattern: str) -> bool:
+    """Check if any file in a directory on a branch matches a pattern (case-insensitive)."""
+    result = subprocess.run(
+        ["git", "ls-tree", "--name-only", branch, f"{directory}/"],
+        capture_output=True, text=True, cwd=PROJECT_DIR,
     )
-    has_plan = any(
-        story.yaml_key in p.name or story.key.lower() in p.name.lower()
-        for p in plans
+    if result.returncode != 0:
+        return False
+    pattern_lower = pattern.lower()
+    return any(pattern_lower in line.lower() for line in result.stdout.splitlines())
+
+
+def verify_start(story: StoryInfo) -> list[str]:
+    """Check START phase artifacts exist — checks feature branch via git, not filesystem."""
+    failures: list[str] = []
+
+    branch = _find_feature_branch(story)
+    if not branch:
+        failures.append("Feature branch not created")
+        return failures
+
+    has_story_file = (
+        _git_ls_tree_match(branch, "docs/implementation-artifacts", story.yaml_key)
+        or _git_ls_tree_match(branch, "docs/implementation-artifacts/stories", story.key)
+    )
+    if not has_story_file:
+        failures.append(f"Story file not found for {story.yaml_key} or {story.key}")
+
+    has_plan = (
+        _git_ls_tree_match(branch, "docs/implementation-artifacts/plans", story.yaml_key)
+        or _git_ls_tree_match(branch, "docs/implementation-artifacts/plans", story.key)
     )
     if not has_plan:
-        failures.append("No plan file created")
+        failures.append("No plan file found on branch")
 
     data = load_sprint_status()
     dev_status = data.get("development_status", {})
     status = str(dev_status.get(story.yaml_key, "")).strip()
-    if status not in ("in-progress", "done"):
-        failures.append(f"Sprint status is '{status}', expected 'in-progress'")
+    if status in ("backlog", ""):
+        result = subprocess.run(
+            ["git", "show", f"{branch}:docs/implementation-artifacts/sprint-status.yaml"],
+            capture_output=True, text=True, cwd=PROJECT_DIR,
+        )
+        if result.returncode == 0:
+            try:
+                branch_data = yaml.safe_load(result.stdout)
+                branch_dev = branch_data.get("development_status", {})
+                status = str(branch_dev.get(story.yaml_key, status)).strip()
+            except Exception:
+                pass
+    if status not in ("ready-for-dev", "in-progress", "done"):
+        failures.append(f"Sprint status is '{status}', expected 'ready-for-dev' or later")
 
     return failures
 
@@ -1956,12 +1989,15 @@ def verify_finish(story: StoryInfo) -> list[str]:
     story_files = list(
         (PROJECT_DIR / "docs" / "implementation-artifacts").glob(f"{story.yaml_key}*")
     )
+    story_files += list(
+        (PROJECT_DIR / "docs" / "implementation-artifacts" / "stories").glob(f"{story.key}*")
+    )
     if story_files:
         content = story_files[0].read_text()
         if "status: done" not in content and "status: \"done\"" not in content:
             failures.append("Story file not marked done")
     else:
-        failures.append(f"Story file not found for {story.yaml_key}")
+        failures.append(f"Story file not found for {story.yaml_key} or {story.key}")
 
     data = load_sprint_status()
     dev_status = data.get("development_status", {})
@@ -2098,30 +2134,46 @@ async def run_story(
             needs_agents=False, needs_playwright=False,
         )
 
-        # ── Session 1: START (fresh) ──
-        log.info(f"  ┌─ Planning: Creating branch and generating implementation plan...")
-        write_progress(story.key, "SESSION 1: START", "branch, story file, plan...")
-        try:
-            text, sid, cost = await run_session(
-                start_prompt(story), phase_turns(config, MAX_TURNS_START), BUDGET_SESSION_START, autonomous,
-                story_key=story.key, phase=start_phase,
-            )
-        except StoryError as e:
-            # max_turns hit returns is_error=True — check if plan was produced
-            log.warning(f"  START session ended with error: {e}")
+        # ── Resume detection: skip START if branch + plan already exist ──
+        existing_branch = _find_feature_branch(story)
+        start_already_done = False
+        if existing_branch:
             start_failures = verify_start(story)
             if not start_failures:
-                log.info("  START artifacts verified on disk — continuing to IMPLEMENT")
+                log.info(f"  ┌─ Planning: SKIPPED — branch '{existing_branch}' already has plan + story file")
+                write_progress(story.key, "SESSION 1: START", "skipped (resuming from previous run)")
+                subprocess.run(
+                    ["git", "checkout", existing_branch],
+                    capture_output=True, text=True, cwd=PROJECT_DIR,
+                )
                 text, sid, cost = "", None, 0.0
-            else:
-                raise  # real failure — no artifacts
+                start_already_done = True
+
+        # ── Session 1: START (fresh) — only if not resuming ──
+        if not start_already_done:
+            log.info(f"  ┌─ Planning: Creating branch and generating implementation plan...")
+            write_progress(story.key, "SESSION 1: START", "branch, story file, plan...")
+            try:
+                text, sid, cost = await run_session(
+                    start_prompt(story), phase_turns(config, MAX_TURNS_START), BUDGET_SESSION_START, autonomous,
+                    story_key=story.key, phase=start_phase,
+                )
+            except StoryError as e:
+                log.warning(f"  START session ended with error: {e}")
+                start_failures = verify_start(story)
+                if not start_failures:
+                    log.info("  START artifacts verified on branch — continuing to IMPLEMENT")
+                    text, sid, cost = "", None, 0.0
+                else:
+                    log.warning(f"  START verification failed: {start_failures}")
+                    raise
         result.cost_start = cost
         result.total_cost_usd += cost
         if sid:
             result.session_ids.append(sid)
         result.phase_reached = "start"
 
-        # Verify START artifacts on disk
+        # Verify START artifacts
         start_failures = verify_start(story)
         if start_failures:
             log.warning(f"  START verification: {', '.join(start_failures)}")
@@ -2144,12 +2196,22 @@ async def run_story(
             needs_agents=False, needs_playwright=False,
         )
 
-        text, sid, cost = await run_session(
-            implement_prompt(story),
-            phase_turns(config, MAX_TURNS_IMPLEMENT) if not config.legacy_mode else config.max_turns,
-            BUDGET_SESSION_IMPLEMENT,
-            autonomous, story_key=story.key, phase=impl_phase,
-        )
+        try:
+            text, sid, cost = await run_session(
+                implement_prompt(story),
+                phase_turns(config, MAX_TURNS_IMPLEMENT) if not config.legacy_mode else config.max_turns,
+                BUDGET_SESSION_IMPLEMENT,
+                autonomous, story_key=story.key, phase=impl_phase,
+            )
+        except StoryError as e:
+            log.warning(f"  IMPLEMENT session ended with error: {e}")
+            impl_failures = verify_implement(story)
+            if not impl_failures:
+                log.info("  IMPLEMENT artifacts verified on branch — continuing to REVIEW")
+                text, sid, cost = "", None, 0.0
+            else:
+                log.warning(f"  IMPLEMENT verification failed: {impl_failures}")
+                raise
 
         result.cost_implement = cost
         result.total_cost_usd += cost
