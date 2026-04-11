@@ -25,7 +25,8 @@ import { extractEpubMetadata } from '@/services/EpubMetadataService'
 import { fetchOpenLibraryMetadata, fetchCoverImage } from '@/services/OpenLibraryService'
 import { opfsStorageService } from '@/services/OpfsStorageService'
 import type { Book, BookStatus } from '@/data/types'
-import { BookDetailsForm, GENRES, type ImportPhase } from './BookDetailsForm'
+import { BookDetailsForm, type ImportPhase } from './BookDetailsForm'
+import { detectGenre } from '@/services/GenreDetectionService'
 import { AudiobookImportFlow } from './AudiobookImportFlow'
 import { useBulkImport } from '@/app/hooks/useBulkImport'
 
@@ -157,12 +158,10 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
           }
         }
 
-        // Auto-detect genre from subjects
+        // Auto-detect genre from subjects via keyword matching (E108-S05)
         if (olResult.subjects?.length) {
-          const matchedGenre = GENRES.find(g =>
-            olResult.subjects!.some(s => s.toLowerCase().includes(g.toLowerCase()))
-          )
-          if (matchedGenre) setGenre(matchedGenre)
+          const detected = detectGenre(olResult.subjects)
+          if (detected !== 'Other') setGenre(detected)
         }
 
         setPhase('idle')
@@ -258,6 +257,7 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
         format: 'epub',
         status,
         coverUrl,
+        genre: genre !== 'Other' ? genre : undefined, // E108-S05: dedicated genre field
         tags: genre !== 'Other' ? [genre] : [],
         chapters: [],
         source: { type: 'local', opfsPath: '' }, // importBook sets the real path

@@ -40,7 +40,8 @@ export function LibraryFilters() {
   const activeFilterCount =
     ((filters.format?.length ?? 0) > 0 ? 1 : 0) +
     ((filters.authors?.length ?? 0) > 0 ? 1 : 0) +
-    (filters.sort && filters.sort !== 'recent' ? 1 : 0)
+    (filters.sort && filters.sort !== 'recent' ? 1 : 0) +
+    (filters.genre ? 1 : 0)
 
   // Active filter chips for dismissal
   const activeChips: { key: string; label: string }[] = []
@@ -53,6 +54,8 @@ export function LibraryFilters() {
       key: 'authors',
       label: `${filters.authors.length} author${filters.authors.length > 1 ? 's' : ''}`,
     })
+  if (filters.genre)
+    activeChips.push({ key: 'genre', label: `Genre: ${filters.genre}` })
 
   const removeChip = (key: string) => {
     setFilter(key as 'sort' | 'format' | 'authors', undefined)

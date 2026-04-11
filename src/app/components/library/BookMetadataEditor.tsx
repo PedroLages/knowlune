@@ -128,9 +128,9 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
       setAuthor(book.author)
       setIsbn(book.isbn || '')
       setDescription(book.description || '')
-      // Detect genre from tags
-      const matchedGenre = book.tags.find(t => GENRES.includes(t))
-      setGenre(matchedGenre || NONE_GENRE)
+      // Use dedicated genre field if set, fall back to tag-based detection for legacy books
+      const bookGenre = book.genre || book.tags.find(t => GENRES.includes(t))
+      setGenre(bookGenre || NONE_GENRE)
       // Tags excluding the genre tag
       setTags(book.tags.filter(t => !GENRES.includes(t)))
       setNewCoverBlob(null)
@@ -271,6 +271,7 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
         author: author.trim(),
         isbn: isbn.trim() || undefined,
         description: description.trim() || undefined,
+        genre: genre !== NONE_GENRE ? genre : undefined, // E108-S05: persist genre field
         tags: finalTags,
         coverUrl,
       })

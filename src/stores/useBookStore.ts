@@ -26,6 +26,7 @@ export interface BookFilters {
   sort?: SortOption
   format?: string[] // multi-select format filter (e.g. ['audiobook', 'epub'])
   authors?: string[] // multi-select author filter
+  genre?: string // genre filter (E108-S05)
 }
 
 interface BookStoreState {
@@ -46,7 +47,7 @@ interface BookStoreState {
   getFilteredBooks: () => Book[]
   updateBookMetadata: (
     bookId: string,
-    updates: Partial<Pick<Book, 'title' | 'author' | 'isbn' | 'description' | 'tags' | 'coverUrl'>>
+    updates: Partial<Pick<Book, 'title' | 'author' | 'isbn' | 'description' | 'tags' | 'coverUrl' | 'genre'>>
   ) => Promise<void>
   updateBookPosition: (
     bookId: string,
@@ -213,6 +214,15 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     if (filters.authors && filters.authors.length > 0) {
       const authorSet = new Set(filters.authors.map(a => a.toLowerCase()))
       result = result.filter(b => authorSet.has(b.author.toLowerCase()))
+    }
+
+    // Genre filter (E108-S05)
+    if (filters.genre) {
+      if (filters.genre === 'Unset') {
+        result = result.filter(b => !b.genre)
+      } else {
+        result = result.filter(b => b.genre === filters.genre)
+      }
     }
 
     // Sort

@@ -685,6 +685,7 @@ export interface Book {
   status: BookStatus
   coverUrl?: string
   description?: string
+  genre?: string // Auto-detected or manually set genre (E108-S05)
   tags: string[]
   chapters: BookChapter[]
   source: ContentSource
