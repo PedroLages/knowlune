@@ -14,6 +14,16 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
       enableTestMode()
     }
   })
+
+  // Expose audio player store for E2E test control (mini-player state seeding)
+  import('./stores/useAudioPlayerStore').then(({ useAudioPlayerStore }) => {
+    ;(window as any).__audioPlayerStore__ = useAudioPlayerStore
+  })
+
+  // Expose book store for E2E test control
+  import('./stores/useBookStore').then(({ useBookStore }) => {
+    ;(window as any).__bookStore__ = useBookStore
+  })
 }
 
 // Initialize Sentry error reporting (graceful no-op when DSN is not configured)

@@ -483,3 +483,15 @@ issues:
     scheduled_for: null
     fixed_by: null
     notes: "Same root cause as KI-037 — pre-existing eslint-disable comment references missing react-hooks/exhaustive-deps rule. Fix both together in one chore commit."
+
+  - id: KI-039
+    type: edge-case
+    summary: "AudioMiniPlayer coverError state not reset when switching between books with identical cover URLs"
+    file: "src/app/components/audiobook/AudioMiniPlayer.tsx:49-51"
+    severity: low
+    discovered_by: E107-S06
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "useEffect resets coverError on resolvedCoverUrl change, but if two books share the same cover URL, switching won't reset the error. Fix: add currentBookId to dependency array. Extremely unlikely in practice."
