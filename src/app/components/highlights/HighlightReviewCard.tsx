@@ -2,11 +2,12 @@
  * HighlightReviewCard — Readwise-style quote card for daily highlight review.
  *
  * Shows: large italic quoted text, book title/author, chapter, user note,
- * dot position indicators, and action buttons (Open in Book, Create/Review Flashcard, Next).
+ * dot position indicators, rating buttons (keep/dismiss), and action buttons.
  *
  * @module HighlightReviewCard
+ * @since E86-S02 (created), E109-S02 (keep/dismiss rating)
  */
-import { BookOpen, Layers, ChevronRight } from 'lucide-react'
+import { BookOpen, Layers, ChevronRight, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Button } from '@/app/components/ui/button'
@@ -21,6 +22,8 @@ export interface HighlightReviewCardProps {
   totalCount: number
   onNext: () => void
   onFlashcard?: (highlight: BookHighlight) => void
+  onRate?: (highlightId: string, rating: 'keep' | 'dismiss') => void
+  currentRating?: 'keep' | 'dismiss'
 }
 
 export function HighlightReviewCard({
@@ -31,6 +34,8 @@ export function HighlightReviewCard({
   totalCount,
   onNext,
   onFlashcard,
+  onRate,
+  currentRating,
 }: HighlightReviewCardProps) {
   const navigate = useNavigate()
   const isLast = currentIndex === totalCount - 1
@@ -60,7 +65,7 @@ export function HighlightReviewCard({
             className="text-lg italic text-foreground leading-relaxed"
             data-testid="highlight-review-quote"
           >
-            &ldquo;{highlight.text}&rdquo;
+            &ldquo;{highlight.textAnchor}&rdquo;
           </blockquote>
 
           {/* Book metadata */}
@@ -92,6 +97,39 @@ export function HighlightReviewCard({
               >
                 {highlight.note}
               </p>
+            </div>
+          )}
+
+          {/* Rating buttons (E109-S02) */}
+          {onRate && (
+            <div
+              className="flex items-center justify-center gap-3 pt-2 border-t border-border/30"
+              data-testid="highlight-rating-controls"
+            >
+              <Button
+                variant={currentRating === 'dismiss' ? 'destructive' : 'outline'}
+                size="sm"
+                onClick={() => onRate(highlight.id, 'dismiss')}
+                className="gap-1.5"
+                aria-label="Dismiss highlight"
+                aria-pressed={currentRating === 'dismiss'}
+                data-testid="rating-dismiss-btn"
+              >
+                <ThumbsDown className="size-3.5" aria-hidden="true" />
+                Dismiss
+              </Button>
+              <Button
+                variant={currentRating === 'keep' ? 'brand' : 'outline'}
+                size="sm"
+                onClick={() => onRate(highlight.id, 'keep')}
+                className="gap-1.5"
+                aria-label="Keep highlight"
+                aria-pressed={currentRating === 'keep'}
+                data-testid="rating-keep-btn"
+              >
+                <ThumbsUp className="size-3.5" aria-hidden="true" />
+                Keep
+              </Button>
             </div>
           )}
         </CardContent>

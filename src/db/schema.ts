@@ -1285,6 +1285,11 @@ function _declareLegacyMigrations(database: Dexie): void {
   database.version(42).stores({
     vocabularyItems: 'id, bookId, masteryLevel, createdAt',
   })
+
+  // E109-S02: Daily Highlight Review — add lastReviewedAt index for spaced review
+  database.version(43).stores({
+    bookHighlights: 'id, bookId, color, flashcardId, createdAt, lastReviewedAt',
+  })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }

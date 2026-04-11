@@ -1,13 +1,14 @@
 /**
- * HighlightReview — daily highlight review page.
+ * HighlightReview — daily highlight review page with spaced-repetition rating.
  *
- * Loads 5 random highlights from the bookHighlights Dexie table,
- * joins with books for title/author, and presents them as Readwise-style
- * quote cards with navigation and action buttons.
+ * Loads highlights from the bookHighlights Dexie table, prioritizing
+ * unreviewed and least-recently-reviewed highlights. Users can rate
+ * each highlight as "keep" (resurface later) or "dismiss" (hide from future reviews).
  *
  * Route: /highlight-review
  *
  * @module HighlightReview
+ * @since E86-S02 (created), E109-S02 (spaced-repetition rating)
  */
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router'
@@ -30,15 +31,27 @@ import type { BookHighlight } from '@/data/types'
 
 const REVIEW_CARD_COUNT = 5
 
-/** Reservoir-sample N items from an array without sorting the whole array */
-function sampleN<T>(arr: T[], n: number): T[] {
-  if (arr.length <= n) return [...arr]
-  const result = arr.slice(0, n)
-  for (let i = n; i < arr.length; i++) {
-    const j = Math.floor(Math.random() * (i + 1))
-    if (j < n) result[j] = arr[i]
-  }
-  return result
+/**
+ * Selects highlights for daily review, prioritizing:
+ * 1. Never-reviewed highlights (no lastReviewedAt)
+ * 2. Least-recently-reviewed "keep" highlights
+ * 3. Excludes "dismiss"-rated highlights
+ */
+async function loadDailyHighlights(): Promise<BookHighlight[]> {
+  const all = await db.bookHighlights.toArray()
+
+  // Filter out dismissed highlights
+  const candidates = all.filter(h => h.reviewRating !== 'dismiss')
+
+  // Sort: unreviewed first, then by oldest lastReviewedAt
+  candidates.sort((a, b) => {
+    if (!a.lastReviewedAt && b.lastReviewedAt) return -1
+    if (a.lastReviewedAt && !b.lastReviewedAt) return 1
+    if (!a.lastReviewedAt && !b.lastReviewedAt) return 0
+    return (a.lastReviewedAt ?? '').localeCompare(b.lastReviewedAt ?? '')
+  })
+
+  return candidates.slice(0, REVIEW_CARD_COUNT)
 }
 
 export function HighlightReview() {
@@ -49,19 +62,18 @@ export function HighlightReview() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
+  const [ratings, setRatings] = useState<Record<string, 'keep' | 'dismiss'>>({})
 
   // Cloze flashcard creator state
   const [clozeOpen, setClozeOpen] = useState(false)
   const [clozeHighlight, setClozeHighlight] = useState<BookHighlight | null>(null)
 
-  // Load random highlights on mount
+  // Load highlights for daily review on mount
   useEffect(() => {
     let ignore = false
-    db.bookHighlights
-      .toArray()
-      .then(all => {
+    loadDailyHighlights()
+      .then(sampled => {
         if (ignore) return
-        const sampled = sampleN(all, REVIEW_CARD_COUNT)
         setHighlights(sampled)
         setIsLoading(false)
       })
@@ -75,6 +87,25 @@ export function HighlightReview() {
       ignore = true
     }
   }, [])
+
+  const handleRate = useCallback(
+    async (highlightId: string, rating: 'keep' | 'dismiss') => {
+      const now = new Date().toISOString()
+      setRatings(prev => ({ ...prev, [highlightId]: rating }))
+
+      try {
+        await db.bookHighlights.update(highlightId, {
+          reviewRating: rating,
+          lastReviewedAt: now,
+          updatedAt: now,
+        })
+      } catch (err) {
+        // silent-catch-ok: rating persistence failure is non-critical, UI state already updated
+        console.error('[HighlightReview] Failed to persist rating:', err)
+      }
+    },
+    []
+  )
 
   const handleNext = useCallback(() => {
     if (currentIndex >= highlights.length - 1) {
@@ -118,7 +149,10 @@ export function HighlightReview() {
 
   if (highlights.length === 0) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center px-6">
+      <div
+        className="flex min-h-[60vh] items-center justify-center px-6"
+        data-testid="highlight-review-empty"
+      >
         <Empty>
           <EmptyMedia>
             <BookOpen className="size-8 text-muted-foreground" />
@@ -141,13 +175,13 @@ export function HighlightReview() {
   }
 
   return (
-    <div className="mx-auto max-w-lg p-6 space-y-6">
+    <div className="mx-auto max-w-lg p-6 space-y-6" data-testid="highlight-review-page">
       {/* Header */}
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
           ← Back
         </Button>
-        <h1 className="text-base font-semibold">Highlight Review</h1>
+        <h1 className="text-base font-semibold">Daily Highlight Review</h1>
         <span className="text-sm tabular-nums text-muted-foreground">
           {currentIndex + 1} / {highlights.length}
         </span>
@@ -177,6 +211,8 @@ export function HighlightReview() {
                   setClozeHighlight(h)
                   setClozeOpen(true)
                 }}
+                onRate={handleRate}
+                currentRating={ratings[currentHighlight.id] ?? currentHighlight.reviewRating}
               />
             )}
           </motion.div>
@@ -216,7 +252,7 @@ export function HighlightReview() {
             setClozeOpen(false)
             setClozeHighlight(null)
           }}
-          text={clozeHighlight.text}
+          text={clozeHighlight.textAnchor}
           highlightId={clozeHighlight.id}
           bookId={clozeHighlight.bookId}
         />

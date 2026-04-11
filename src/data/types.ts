@@ -719,6 +719,10 @@ export interface BookHighlight {
   position: ContentPosition
   createdAt: string // ISO 8601
   updatedAt?: string // ISO 8601
+  /** Spaced-repetition review rating (E109-S02) */
+  reviewRating?: 'keep' | 'dismiss'
+  /** When this highlight was last reviewed in daily digest (E109-S02) */
+  lastReviewedAt?: string // ISO 8601
 }
 
 /** Vocabulary item saved from book reader text selection (E109-S01) */
