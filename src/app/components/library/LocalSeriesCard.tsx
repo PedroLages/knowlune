@@ -10,7 +10,7 @@
  * @since E110-S02
  */
 
-import { memo, useState } from 'react'
+import { memo, useId, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { BookOpen, ChevronDown } from 'lucide-react'
 import type { LocalSeriesGroup } from '@/data/types'
@@ -24,14 +24,17 @@ interface LocalSeriesCardProps {
 export const LocalSeriesCard = memo(function LocalSeriesCard({ group }: LocalSeriesCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const navigate = useNavigate()
+  const uid = useId()
 
   const toggleExpanded = () => setIsExpanded(prev => !prev)
 
-  const panelId = `local-series-panel-${group.name.replace(/\s+/g, '-').toLowerCase()}`
-  const cardId = `local-series-${group.name.replace(/\s+/g, '-').toLowerCase()}`
+  // useId() generates collision-safe IDs for ARIA attributes (aria-controls, id)
+  const panelId = `local-series-panel-${uid}`
+  // data-testid uses a readable slug (not used as HTML id, so collisions are harmless)
+  const testSlug = `local-series-${group.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`
 
   return (
-    <div className="rounded-2xl bg-card overflow-hidden shadow-card-ambient" data-testid={cardId}>
+    <div className="rounded-2xl bg-card overflow-hidden shadow-card-ambient" data-testid={testSlug}>
       {/* Collapsed header */}
       <button
         type="button"
@@ -40,7 +43,7 @@ export const LocalSeriesCard = memo(function LocalSeriesCard({ group }: LocalSer
         aria-controls={panelId}
         aria-label={`${group.name} series, ${group.completed} of ${group.total} books complete`}
         className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset min-h-[64px]"
-        data-testid={`${cardId}-toggle`}
+        data-testid={`${testSlug}-toggle`}
       >
         {/* Cover collage — show up to 4 book covers */}
         <div className="size-14 flex-shrink-0 grid grid-cols-2 grid-rows-2 gap-0.5 rounded-lg overflow-hidden bg-muted">
@@ -98,7 +101,7 @@ export const LocalSeriesCard = memo(function LocalSeriesCard({ group }: LocalSer
           id={panelId}
           role="list"
           className="flex flex-col gap-1 pt-2 pb-1"
-          data-testid={`${cardId}-books`}
+          data-testid={`${testSlug}-books`}
         >
           {group.books.map(book => {
             const isNextUnfinished = book.id === group.nextUnfinishedId

@@ -630,7 +630,11 @@ export function Library() {
 
       {/* Local series view (E110-S02) — replaces grid/list when active for non-ABS sources */}
       {books.length > 0 && filters.source !== 'audiobookshelf' && localSeriesView && (
-        <LocalSeriesView getBooksBySeries={getBooksBySeries} onEdit={setEditingBook} />
+        <LocalSeriesView
+          getBooksBySeries={getBooksBySeries}
+          onEdit={setEditingBook}
+          filteredBookIds={filteredBooks.map(b => b.id)}
+        />
       )}
 
       {/* Grid view */}

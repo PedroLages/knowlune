@@ -8,6 +8,7 @@
  * @since E110-S02
  */
 
+import { useMemo } from 'react'
 import { Layers } from 'lucide-react'
 import { LocalSeriesCard } from '@/app/components/library/LocalSeriesCard'
 import { BookContextMenu } from '@/app/components/library/BookContextMenu'
@@ -17,10 +18,18 @@ import type { Book, LocalSeriesGroup } from '@/data/types'
 interface LocalSeriesViewProps {
   getBooksBySeries: () => { groups: LocalSeriesGroup[]; ungrouped: Book[] }
   onEdit: (book: Book) => void
+  filteredBookIds: string[]
 }
 
-export function LocalSeriesView({ getBooksBySeries, onEdit }: LocalSeriesViewProps) {
-  const { groups, ungrouped } = getBooksBySeries()
+export function LocalSeriesView({
+  getBooksBySeries,
+  onEdit,
+  filteredBookIds,
+}: LocalSeriesViewProps) {
+  // filteredBookIds drives recomputation: when the filtered set changes, regroup.
+  // getBooksBySeries reads from Zustand state internally so it's intentionally
+  // omitted from deps — it's a stable store selector reference.
+  const { groups, ungrouped } = useMemo(() => getBooksBySeries(), [filteredBookIds])
 
   return (
     <div data-testid="local-series-view">
@@ -32,7 +41,7 @@ export function LocalSeriesView({ getBooksBySeries, onEdit }: LocalSeriesViewPro
         </div>
       )}
       {groups.length === 0 && ungrouped.length > 0 && (
-        <div className="flex flex-col items-center gap-3 py-12">
+        <div className="flex flex-col items-center gap-3 py-6">
           <Layers className="size-8 text-muted-foreground/50" aria-hidden="true" />
           <p className="text-muted-foreground" data-testid="local-series-no-series">
             No books have series metadata yet.
@@ -49,8 +58,8 @@ export function LocalSeriesView({ getBooksBySeries, onEdit }: LocalSeriesViewPro
           ))}
         </div>
       )}
-      {/* Ungrouped books — shown after series groups */}
-      {ungrouped.length > 0 && groups.length > 0 && (
+      {/* Ungrouped books — shown after series groups (always visible when ungrouped books exist) */}
+      {ungrouped.length > 0 && (
         <div className="mt-6">
           <h3
             className="text-sm font-medium text-muted-foreground mb-3"
