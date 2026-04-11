@@ -1322,10 +1322,10 @@ development_status:
   # Bulk import, format badges, keyboard shortcuts, audiobook settings, genre detection, pages/day goals
   # Depends on: E107
   # ──────────────────────────────────────────────────
-  epic-108: backlog
-  108-1-bulk-epub-import: review
+  epic-108: done
+  108-1-bulk-epub-import: done
   108-2-format-badges-and-delete: done
-  108-3-keyboard-shortcuts: review
+  108-3-keyboard-shortcuts: done
   108-4-audiobook-settings-panel: done
   108-5-genre-detection-and-pages-goal: done
   epic-108-retrospective: optional
