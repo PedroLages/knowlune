@@ -811,6 +811,8 @@ export function BookReader() {
           setClozeHighlightId(highlightId)
           setClozeOpen(true)
         }}
+        bookId={bookId}
+        bookTitle={book?.title}
       />
 
       {/* Highlight layer (E85-S01) — text selection events + highlight overlays */}

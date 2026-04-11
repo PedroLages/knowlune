@@ -7,13 +7,15 @@
  *
  * @module HighlightListPanel
  */
-import { StickyNote, Layers, Highlighter } from 'lucide-react'
+import { useState } from 'react'
+import { StickyNote, Layers, Highlighter, Download } from 'lucide-react'
 import type { Rendition } from 'epubjs'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { cn } from '@/app/components/ui/utils'
 import { useHighlightStore } from '@/stores/useHighlightStore'
+import { HighlightExportDialog } from '@/app/components/highlights/HighlightExportDialog'
 import type { BookHighlight, HighlightColor } from '@/data/types'
 
 const HIGHLIGHT_HEX: Record<HighlightColor, string> = {
@@ -113,6 +115,10 @@ interface HighlightListPanelProps {
   onClose: () => void
   rendition: Rendition | null
   onFlashcardRequest?: (text: string, highlightId?: string) => void
+  /** Current book ID for per-book export scoping */
+  bookId?: string
+  /** Current book title for export dialog label */
+  bookTitle?: string
 }
 
 export function HighlightListPanel({
@@ -120,7 +126,10 @@ export function HighlightListPanel({
   onClose,
   rendition,
   onFlashcardRequest,
+  bookId,
+  bookTitle,
 }: HighlightListPanelProps) {
+  const [exportOpen, setExportOpen] = useState(false)
   const highlights = useHighlightStore(s => s.highlights)
   const colorFilter = useHighlightStore(s => s.colorFilter)
   const setColorFilter = useHighlightStore(s => s.setColorFilter)
@@ -150,9 +159,22 @@ export function HighlightListPanel({
         data-testid="highlight-list-panel"
       >
         <SheetHeader className="px-4 py-3 border-b border-border/50">
-          <SheetTitle className="text-base font-semibold">
-            Highlights ({highlights.length})
-          </SheetTitle>
+          <div className="flex items-center justify-between">
+            <SheetTitle className="text-base font-semibold">
+              Highlights ({highlights.length})
+            </SheetTitle>
+            {highlights.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setExportOpen(true)}
+                aria-label="Export highlights"
+                data-testid="highlight-panel-export-btn"
+              >
+                <Download className="size-4" aria-hidden="true" />
+              </Button>
+            )}
+          </div>
         </SheetHeader>
 
         {/* Color filter pills */}
@@ -213,6 +235,14 @@ export function HighlightListPanel({
           </div>
         )}
       </SheetContent>
+
+      {/* Per-book export dialog (E109-S03) */}
+      <HighlightExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        bookId={bookId}
+        bookTitle={bookTitle}
+      />
     </Sheet>
   )
 }
