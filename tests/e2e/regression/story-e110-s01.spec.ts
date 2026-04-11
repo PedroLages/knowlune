@@ -5,10 +5,10 @@
  * and filtering by shelf in the library.
  */
 import { test, expect } from '@playwright/test'
-import { dismissOnboarding } from '../helpers/dismiss-onboarding'
-import { navigateAndWait } from '../support/helpers/navigation'
-import { seedBooks, seedShelves } from '../support/helpers/seed-helpers'
-import { FIXED_DATE } from '../utils/test-time'
+import { dismissOnboarding } from '../../helpers/dismiss-onboarding'
+import { navigateAndWait } from '../../support/helpers/navigation'
+import { seedBooks, seedShelves } from '../../support/helpers/seed-helpers'
+import { FIXED_DATE } from '../../utils/test-time'
 
 const TEST_BOOKS = [
   {
