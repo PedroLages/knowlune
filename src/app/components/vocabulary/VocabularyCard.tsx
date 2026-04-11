@@ -42,11 +42,11 @@ export function VocabularyCard({
             </p>
           )}
         </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity">
           <Button
             variant="ghost"
             size="icon"
-            className="size-8"
+            className="size-8 focus-visible:opacity-100"
             onClick={() => onEdit(item)}
             aria-label={`Edit ${item.word}`}
           >
@@ -55,7 +55,7 @@ export function VocabularyCard({
           <Button
             variant="ghost"
             size="icon"
-            className="size-8 text-destructive hover:text-destructive"
+            className="size-8 text-destructive hover:text-destructive focus-visible:opacity-100"
             onClick={() => onDelete(item.id)}
             aria-label={`Delete ${item.word}`}
           >
