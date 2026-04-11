@@ -16,6 +16,7 @@ import { LinkFormatsDialog } from './LinkFormatsDialog'
 
 // Lazy-load AboutBookDialog to defer ~5.5KB until dialog opens
 const AboutBookDialog = lazy(() => import('./AboutBookDialog'))
+import { toast } from 'sonner'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -105,8 +106,14 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
   }
 
   const handleConfirmDelete = async () => {
-    await deleteBook(book.id)
-    setConfirmDeleteOpen(false)
+    try {
+      await deleteBook(book.id)
+      setConfirmDeleteOpen(false)
+    } catch (err) {
+      // Intentional: surface deletion failure to user — don't swallow silently
+      toast.error('Failed to delete book. Please try again.')
+      console.error('[BookContextMenu] deleteBook failed:', err)
+    }
   }
 
   const handleStatusChange = (status: BookStatus) => {

@@ -39,8 +39,8 @@ interface FormatBadgeProps {
 
 export function FormatBadge({ format, className }: FormatBadgeProps) {
   const config = FORMAT_CONFIG[format]
-  // Intentional: type guard in case format is unexpected at runtime
-  if (!config) return null
+  // Intentional: type guard in case format is unexpected at runtime — render plain text fallback instead of null
+  if (!config) return <span>{format}</span>
 
   const Icon = config.icon
 
@@ -52,6 +52,7 @@ export function FormatBadge({ format, className }: FormatBadgeProps) {
         className
       )}
       aria-label={`${config.label} format`}
+      data-testid={`format-badge-${format}`}
     >
       <Icon className="size-3" aria-hidden="true" />
       {config.label}
