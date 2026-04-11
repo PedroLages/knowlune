@@ -11,7 +11,7 @@
  * @since E109-S04
  */
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router'
+import { useParams, useNavigate } from 'react-router'
 import {
   ArrowLeft,
   BookOpen,
@@ -23,7 +23,7 @@ import {
 import { db } from '@/db/schema'
 import { useBookStore } from '@/stores/useBookStore'
 import { Button } from '@/app/components/ui/button'
-import { Card, CardContent } from '@/app/components/ui/card'
+import { Card } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -35,6 +35,8 @@ import {
   EmptyDescription,
 } from '@/app/components/ui/empty'
 import { HighlightExportDialog } from '@/app/components/highlights/HighlightExportDialog'
+import { StatCard } from '@/app/components/annotations/StatCard'
+import { HighlightItem } from '@/app/components/annotations/HighlightItem'
 import type { Book, BookHighlight, HighlightColor } from '@/data/types'
 
 const HIGHLIGHT_HEX: Record<HighlightColor, string> = {
@@ -82,81 +84,6 @@ function groupByChapter(highlights: BookHighlight[]): ChapterGroup[] {
             ?.replace(/\.[^.]+$/, '') ?? key,
     highlights: items,
   }))
-}
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-}: {
-  label: string
-  value: number | string
-  icon: React.ComponentType<{ className?: string }>
-}) {
-  return (
-    <Card data-testid="annotation-stat-card">
-      <CardContent className="flex items-center gap-3 p-4">
-        <div className="rounded-lg bg-brand-soft p-2">
-          <Icon className="size-5 text-brand-soft-foreground" aria-hidden="true" />
-        </div>
-        <div>
-          <p className="text-2xl font-bold">{value}</p>
-          <p className="text-xs text-muted-foreground">{label}</p>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function HighlightItem({
-  highlight,
-  bookId,
-}: {
-  highlight: BookHighlight
-  bookId: string
-}) {
-  const colorHex = HIGHLIGHT_HEX[highlight.color]
-  const date = new Date(highlight.createdAt).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-
-  return (
-    <div
-      className="flex items-start gap-3 p-4 border-b border-border/50 hover:bg-muted/30 transition-colors"
-      data-testid="annotation-highlight-item"
-    >
-      <span
-        style={{ backgroundColor: colorHex }}
-        className="size-3 rounded-full mt-1.5 shrink-0"
-        aria-hidden="true"
-      />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm leading-relaxed">{highlight.textAnchor}</p>
-        {highlight.note && (
-          <div className="flex items-start gap-1.5 mt-2">
-            <StickyNote
-              className="size-3.5 text-muted-foreground mt-0.5 shrink-0"
-              aria-hidden="true"
-            />
-            <p className="text-xs text-muted-foreground italic">
-              {highlight.note}
-            </p>
-          </div>
-        )}
-        <p className="text-xs text-muted-foreground mt-1.5">{date}</p>
-      </div>
-      <Link
-        to={`/library/${bookId}/read${highlight.cfiRange ? `?cfi=${encodeURIComponent(highlight.cfiRange)}` : ''}`}
-        className="shrink-0 rounded-md p-1.5 hover:bg-muted/60 transition-colors text-muted-foreground hover:text-foreground"
-        aria-label={`Open in reader: ${highlight.textAnchor.substring(0, 40)}`}
-        data-testid="annotation-goto-reader"
-      >
-        <BookOpen className="size-4" aria-hidden="true" />
-      </Link>
-    </div>
-  )
 }
 
 export function AnnotationSummary() {

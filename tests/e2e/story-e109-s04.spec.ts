@@ -75,7 +75,7 @@ test.describe('Annotation Summary (E109-S04)', () => {
     // 5 total highlights
     const statCards = page.getByTestId('annotation-stat-card')
     await expect(statCards).toHaveCount(3)
-    await expect(page.getByText('5')).toBeVisible()
+    await expect(page.getByTestId('annotation-stats').getByText('5')).toBeVisible()
   })
 
   test('shows highlights grouped by chapter', async ({ page }) => {
