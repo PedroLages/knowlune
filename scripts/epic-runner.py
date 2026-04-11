@@ -313,11 +313,19 @@ def parse_args() -> RunConfig:
     for s in stories_raw:
         if re.match(r"^E\d+[a-z]?$", s, re.IGNORECASE) and "-S" not in s.upper():
             epic_stories = find_stories_for_epic(s)
-            if epic_stories:
-                log.info(f"Expanded {s} → {', '.join(epic_stories)}")
-                expanded.extend(epic_stories)
+            done_stories = find_done_stories_for_epic(s)
+            if epic_stories or done_stories:
+                total = len(epic_stories) + len(done_stories)
+                print(f"\n📋 Epic {s.upper()}: {total} stories total")
+                if done_stories:
+                    print(f"   ✅ Done ({len(done_stories)}): {', '.join(done_stories)}")
+                if epic_stories:
+                    print(f"   🔄 Pending ({len(epic_stories)}): {', '.join(epic_stories)}")
+                    expanded.extend(epic_stories)
+                else:
+                    print(f"   All stories complete!")
             else:
-                log.warning(f"No backlog stories found for {s}")
+                log.warning(f"No stories found for {s}")
         else:
             expanded.append(s)
     stories_raw = expanded
@@ -492,6 +500,36 @@ def find_stories_for_epic(epic_arg: str) -> list[str]:
         if yaml_key.startswith("epic-") or yaml_key.endswith("-retrospective"):
             continue
         if str(status) not in ("backlog", "in-progress"):
+            continue
+        parts = yaml_key.split("-")
+        if len(parts) >= 2:
+            try:
+                key_epic = re.match(r"(\d+)", parts[0])
+                if not key_epic or int(key_epic.group(1)) != epic_n:
+                    continue
+                story_n = int(parts[1])
+            except (ValueError, AttributeError):
+                continue
+            keys.append(f"E{epic_n:02d}{epic_suffix}-S{story_n:02d}")
+    return keys
+
+
+def find_done_stories_for_epic(epic_arg: str) -> list[str]:
+    """Find already-completed story keys for an epic."""
+    m = re.match(r"^E?(\d+)([a-z]?)$", epic_arg, re.IGNORECASE)
+    if not m:
+        return []
+    epic_n = int(m.group(1))
+    epic_suffix = m.group(2).lower()
+
+    data = load_sprint_status()
+    dev_status = data.get("development_status", {})
+
+    keys: list[str] = []
+    for yaml_key, status in dev_status.items():
+        if yaml_key.startswith("epic-") or yaml_key.endswith("-retrospective"):
+            continue
+        if str(status) != "done":
             continue
         parts = yaml_key.split("-")
         if len(parts) >= 2:
@@ -2061,6 +2099,7 @@ async def run_story(
         )
 
         # ── Session 1: START (fresh) ──
+        log.info(f"  ┌─ START: Creating branch, story file, and plan (max {phase_turns(config, MAX_TURNS_START)} turns, opus)")
         write_progress(story.key, "SESSION 1: START", "branch, story file, plan...")
         try:
             text, sid, cost = await run_session(
@@ -3058,6 +3097,9 @@ async def main() -> None:
             log.info(f"\n{'=' * 60}")
             log.info(f"[{i + 1}/{len(stories)}] {story.key} — {story.name}")
             log.info(f"{'=' * 60}")
+            log.info(f"  Status: {story.status} | Phases: START → IMPLEMENT → REVIEW → FINISH")
+            log.info(f"  Turn caps: START={MAX_TURNS_START}, IMPL={MAX_TURNS_IMPLEMENT}, "
+                     f"REVIEW={MAX_TURNS_REVIEW}, FIX={MAX_TURNS_FIX}, FINISH={MAX_TURNS_FINISH}")
 
             result = await run_story(story, config, epic_ctx)
             results.append(result)
