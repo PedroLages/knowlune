@@ -507,3 +507,63 @@ issues:
     scheduled_for: null
     fixed_by: null
     notes: "BookReader has its own addEventListener pattern while Library and AudiobookRenderer use the new useKeyboardShortcuts hook. Refactoring would require extending the hook's action signature to support async/promise-based actions (rendition.prev/next return promises). Low priority."
+
+  - id: KI-041
+    type: feature-completeness
+    summary: "skipSilence toggle persists to localStorage but has zero functional effect — no audio processor reads it"
+    file: "src/stores/useAudiobookPrefsStore.ts"
+    severity: medium
+    discovered_by: E108-adversarial
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Adversarial finding F03. The skipSilence boolean is stored and shown as 'Coming soon' in the settings UI. No audio processing code consumes it. The UI correctly marks it disabled; this KI tracks the underlying implementation gap for a future story using Web Audio API AnalyserNode."
+
+  - id: KI-042
+    type: type-safety
+    summary: "Book.genre typed as string instead of BookGenre — defeats type-safe genre filtering"
+    file: "src/data/types.ts"
+    severity: medium
+    discovered_by: E108-adversarial
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Adversarial finding F04. genre?: string should be genre?: BookGenre (imported from GenreDetectionService.ts). One-line fix with zero runtime impact; resolves compile-time safety for genre comparisons and future analytics."
+
+  - id: KI-043
+    type: test
+    summary: "E108-S01 bulk EPUB import has no E2E coverage — OPFS fixture infrastructure not yet available"
+    file: "tests/e2e/"
+    severity: medium
+    discovered_by: E108-adversarial
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Adversarial finding F02 (partial). S01 explicitly skipped E2E tests due to OPFS-backed import requiring EPUB fixture files. ACs 1, 2, and 5 (multi-file UI wiring, progress bar rendering, summary toast content) are untested at E2E level. Requires a fixture infrastructure story to resolve."
+
+  - id: KI-044
+    type: ux
+    summary: "usePagesReadToday uses a 2-min/page estimation heuristic — inaccurate for most reading speeds"
+    file: "src/app/hooks/usePagesReadToday.ts"
+    severity: low
+    discovered_by: E108-adversarial
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Adversarial finding F05. Pages count estimated as totalMinutes/2. Wildly wrong for graphic novels, academic text, audiobooks. Long-term fix: track actual page-change events (EPUB chapter transitions, PDF page turns). Short-term: expose estimation basis in UI ('~N pages estimated')."
+
+  - id: KI-045
+    type: ux
+    summary: "G+L chord shortcut for grid/list toggle lacks visual feedback and has mnemonic conflict"
+    file: "src/app/hooks/useKeyboardShortcuts.ts"
+    severity: low
+    discovered_by: E108-adversarial
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Adversarial finding F08. The 500ms chord window traps keyboard state without visual confirmation that 'G' was registered. Conflicts with Gmail-style chord muscle memory. Consider replacing with a single V key toggle or adding a status indicator for chord state."
