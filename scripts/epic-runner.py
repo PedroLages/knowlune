@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-auto-story.py — Automated epic/story development cycle for Knowlune.
+epic-runner.py — Automated epic/story development cycle for Knowlune.
 
 Follows the /epic-orchestrator systematic flow:
   Phase 0: SETUP     — epic selection, known issues load, tracking file creation
@@ -9,18 +9,18 @@ Follows the /epic-orchestrator systematic flow:
   Phase 3: REPORT    — completion report from tracking file + artifacts
 
 Usage:
-    python scripts/auto-story.py E07-S01              # single story
-    python scripts/auto-story.py E07-S01 E07-S02      # multiple stories
-    python scripts/auto-story.py --next 3              # next 3 backlog stories
-    python scripts/auto-story.py --supervised E07-S01  # pause for human approval
-    python scripts/auto-story.py --dry-run --next 5    # show plan without executing
-    python scripts/auto-story.py --autonomous E07-S01  # auto-approve everything
-    python scripts/auto-story.py --epic-only 15        # skip stories, run epic finish only
-    python scripts/auto-story.py --skip-epic-finish --next 3  # process stories, skip epic finish
-    python scripts/auto-story.py --skip-adversarial --epic-only 15  # epic finish without adversarial review
-    python scripts/auto-story.py --epic-only 15 --phase retrospective  # run only retrospective
-    python scripts/auto-story.py --epic-only 15 --phase testarch-trace testarch-nfr
-    python scripts/auto-story.py --legacy-mode --next 3  # disable all optimizations
+    python scripts/epic-runner.py E07-S01              # single story
+    python scripts/epic-runner.py E07-S01 E07-S02      # multiple stories
+    python scripts/epic-runner.py --next 3              # next 3 backlog stories
+    python scripts/epic-runner.py --supervised E07-S01  # pause for human approval
+    python scripts/epic-runner.py --dry-run --next 5    # show plan without executing
+    python scripts/epic-runner.py --autonomous E07-S01  # auto-approve everything
+    python scripts/epic-runner.py --epic-only 15        # skip stories, run epic finish only
+    python scripts/epic-runner.py --skip-epic-finish --next 3  # process stories, skip epic finish
+    python scripts/epic-runner.py --skip-adversarial --epic-only 15  # epic finish without adversarial review
+    python scripts/epic-runner.py --epic-only 15 --phase retrospective  # run only retrospective
+    python scripts/epic-runner.py --epic-only 15 --phase testarch-trace testarch-nfr
+    python scripts/epic-runner.py --legacy-mode --next 3  # disable all optimizations
 
 Requires: pip install claude-agent-sdk pyyaml
 """
@@ -54,7 +54,7 @@ from claude_agent_sdk.types import AgentDefinition, McpStdioServerConfig, TextBl
 # Section A: CLI & Config
 # ─────────────────────────────────────────────────
 
-log = logging.getLogger("auto-story")
+log = logging.getLogger("epic-runner")
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 SPRINT_STATUS = PROJECT_DIR / "docs" / "implementation-artifacts" / "sprint-status.yaml"
@@ -230,7 +230,7 @@ def parse_args() -> RunConfig:
     parser.add_argument("--max-review-rounds", type=int, default=3)
     parser.add_argument("--max-turns", type=int, default=100)
     parser.add_argument(
-        "--log-file", type=Path, default=PROJECT_DIR / "scripts" / "auto-story.log"
+        "--log-file", type=Path, default=PROJECT_DIR / "scripts" / "epic-runner.log"
     )
     parser.add_argument(
         "--skip-epic-finish", action="store_true",
@@ -1187,7 +1187,7 @@ def make_options(
     return ClaudeAgentOptions(**opts)
 
 
-PROGRESS_FILE = PROJECT_DIR / "scripts" / "auto-story-progress.log"
+PROGRESS_FILE = PROJECT_DIR / "scripts" / "epic-runner-progress.log"
 
 
 def write_progress(story_key: str, phase: str, detail: str = "") -> None:
@@ -1507,7 +1507,7 @@ def detect_review_skip_agents() -> str:
 _NOISE_FILES = {
     ".claude/scheduled_tasks.lock",
     "scripts/__pycache__/",
-    "scripts/auto-story-progress.log",
+    "scripts/epic-runner-progress.log",
     "scripts/dev-server.log",
 }
 
@@ -2610,12 +2610,12 @@ async def main() -> None:
 
     # Preflight
     check = subprocess.run(
-        ["git", "show", "main:scripts/auto-story.py"],
+        ["git", "show", "main:scripts/epic-runner.py"],
         capture_output=True, cwd=PROJECT_DIR,
     )
     if check.returncode != 0:
-        log.error("scripts/auto-story.py not found on main branch!")
-        log.error("Run: git checkout main && git add scripts/auto-story.py && git commit")
+        log.error("scripts/epic-runner.py not found on main branch!")
+        log.error("Run: git checkout main && git add scripts/epic-runner.py && git commit")
         sys.exit(1)
 
     # ── Phase 0: Setup ──
@@ -2683,7 +2683,7 @@ async def main() -> None:
     # Clear progress file
     PROGRESS_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(PROGRESS_FILE, "w") as f:
-        f.write(f"=== auto-story run: {datetime.now().isoformat()} ===\n")
+        f.write(f"=== epic-runner run: {datetime.now().isoformat()} ===\n")
         f.write(f"Epic: {primary_epic} ({epic_name})\n")
         f.write(f"Stories: {[s.key for s in stories]}\n")
         f.write(f"Mode: {config.mode}\n")
