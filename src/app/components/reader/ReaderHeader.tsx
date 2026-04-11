@@ -23,7 +23,7 @@ import { getReaderChromeClasses, useAppColorScheme } from './readerThemeConfig'
 
 interface ReaderHeaderProps {
   title: string
-  currentChapter: string
+  currentChapter?: string
   theme: ReaderTheme
   visible: boolean
   onTocOpen?: () => void
@@ -111,11 +111,7 @@ export function ReaderHeader({
           onClick={onSwitchToListening}
           aria-label="Switch to listening"
           title="Switch to listening"
-          className={cn(
-            'min-h-[44px] min-w-[44px] gap-1.5',
-            chrome.text,
-            'hover:bg-black/10'
-          )}
+          className={cn('min-h-[44px] min-w-[44px] gap-1.5', chrome.text, 'hover:bg-black/10')}
           data-testid="switch-to-listening-button"
         >
           <Headphones className="size-4" aria-hidden="true" />

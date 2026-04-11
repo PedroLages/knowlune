@@ -18,7 +18,8 @@ vi.mock('react-router', () => ({
 
 // Mock useAppColorScheme — default to 'professional'
 vi.mock('../readerThemeConfig', async () => {
-  const actual = await vi.importActual<typeof import('../readerThemeConfig')>('../readerThemeConfig')
+  const actual =
+    await vi.importActual<typeof import('../readerThemeConfig')>('../readerThemeConfig')
   return {
     ...actual,
     useAppColorScheme: () => 'professional',

@@ -40,7 +40,8 @@ vi.mock('@/stores/useReaderStore', () => ({
 // Mock useAppColorScheme — default to 'professional', tests can override via mockColorScheme
 let mockColorScheme = 'professional'
 vi.mock('../readerThemeConfig', async () => {
-  const actual = await vi.importActual<typeof import('../readerThemeConfig')>('../readerThemeConfig')
+  const actual =
+    await vi.importActual<typeof import('../readerThemeConfig')>('../readerThemeConfig')
   return {
     ...actual,
     useAppColorScheme: () => mockColorScheme,
