@@ -151,6 +151,8 @@ export const useReadingGoalStore = create<ReadingGoalState>((set, get) => ({
   checkPagesGoalMet: (pagesToday: number): boolean => {
     const { goal, streak } = get()
     if (!goal || goal.dailyType !== 'pages') return false
+    // A target of 0 is meaningless — avoid crediting streak for zero pages read
+    if (goal.dailyTarget <= 0) return false
 
     const today = todayIso()
     if (streak.lastMetDate === today) return false

@@ -100,6 +100,9 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
   const [isbn, setIsbn] = useState('')
   const [description, setDescription] = useState('')
   const [genre, setGenre] = useState(NONE_GENRE)
+  // Track whether the user explicitly changed the genre in this edit session.
+  // Prevents silently overwriting a legacy tag-based genre with undefined on save.
+  const [genreChanged, setGenreChanged] = useState(false)
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
   const [showTagSuggestions, setShowTagSuggestions] = useState(false)
@@ -131,6 +134,7 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
       // Use dedicated genre field if set, fall back to tag-based detection for legacy books
       const bookGenre = book.genre || book.tags.find(t => (GENRES as string[]).includes(t))
       setGenre(bookGenre ?? NONE_GENRE)
+      setGenreChanged(false) // reset change tracking when form opens
       // Tags excluding the genre tag
       setTags(book.tags.filter(t => !(GENRES as string[]).includes(t)))
       setNewCoverBlob(null)
@@ -256,8 +260,16 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
 
     setIsSaving(true)
     try {
+      // Determine the effective genre value for saving.
+      // If the user didn't explicitly change the genre, preserve the book's existing genre
+      // (including legacy tag-based genres) to avoid silently deleting it on save.
+      const effectiveGenre: string | undefined =
+        genreChanged
+          ? genre !== NONE_GENRE ? genre : undefined
+          : book.genre || book.tags.find(t => (GENRES as string[]).includes(t)) || undefined
+
       // Build tags: genre (if set) + user tags
-      const finalTags = genre !== NONE_GENRE ? [genre, ...tags] : [...tags]
+      const finalTags = effectiveGenre ? [effectiveGenre, ...tags] : [...tags]
 
       // Handle cover update
       let coverUrl = book.coverUrl
@@ -271,7 +283,7 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
         author: author.trim(),
         isbn: isbn.trim() || undefined,
         description: description.trim() || undefined,
-        genre: genre !== NONE_GENRE ? genre : undefined, // E108-S05: persist genre field
+        genre: effectiveGenre, // E108-S05: persist genre field, preserve if not changed
         tags: finalTags,
         coverUrl,
       })
@@ -415,7 +427,7 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
               <Label htmlFor="edit-book-genre" className={labelClass}>
                 Genre
               </Label>
-              <Select value={genre} onValueChange={setGenre} disabled={isSaving}>
+              <Select value={genre} onValueChange={v => { setGenre(v); setGenreChanged(true) }} disabled={isSaving}>
                 <SelectTrigger
                   id="edit-book-genre"
                   className={cn(ghostInputClass)}

@@ -34,6 +34,9 @@ const FORMAT_OPTIONS = [
   { value: 'epub', label: 'EPUB' },
 ]
 
+/** Sentinel value for books with no genre assigned. Used in filter UI and store. */
+export const UNSET_GENRE = 'Unset'
+
 export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
   const filters = useBookStore(s => s.filters)
   const setFilter = useBookStore(s => s.setFilter)
@@ -224,10 +227,10 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
             </h4>
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => handleGenreSelect('Unset')}
+                onClick={() => handleGenreSelect(UNSET_GENRE)}
                 className={cn(
                   'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-                  filters.genre === 'Unset'
+                  filters.genre === UNSET_GENRE
                     ? 'bg-brand text-brand-foreground'
                     : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 )}

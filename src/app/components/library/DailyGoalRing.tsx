@@ -47,7 +47,8 @@ export function DailyGoalRing({ className }: DailyGoalRingProps) {
   const current = isPageMode ? pagesToday : minutesToday
   const target = goal.dailyTarget
   const unit = isPageMode ? 'pages' : 'min'
-  const progress = Math.min(current / target, 1)
+  // Guard against division by zero — show empty ring when target is 0
+  const progress = target > 0 ? Math.min(current / target, 1) : 0
   const dashOffset = CIRCUMFERENCE * (1 - progress)
   const isGoalMet = current >= target
 

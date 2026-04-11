@@ -58,7 +58,7 @@ export function LibraryFilters() {
     activeChips.push({ key: 'genre', label: `Genre: ${filters.genre}` })
 
   const removeChip = (key: string) => {
-    setFilter(key as 'sort' | 'format' | 'authors', undefined)
+    setFilter(key as 'sort' | 'format' | 'authors' | 'genre', undefined)
   }
 
   // Debounced search

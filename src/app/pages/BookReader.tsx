@@ -45,6 +45,7 @@ import { useFormatSwitch } from '@/app/hooks/useFormatSwitch'
 import { appEventBus } from '@/lib/eventBus'
 import { useReadingGoalStore } from '@/stores/useReadingGoalStore'
 import { getTimeReadToday } from '@/services/ReadingStatsService'
+import { getPagesReadToday } from '@/app/hooks/usePagesReadToday'
 import { db } from '@/db/schema'
 import type { ContentPosition } from '@/data/types'
 
@@ -143,6 +144,7 @@ export function BookReader() {
 
   // Daily reading goal celebration — check after each session ends (E86-S05)
   const checkDailyGoalMet = useReadingGoalStore(s => s.checkDailyGoalMet)
+  const checkPagesGoalMet = useReadingGoalStore(s => s.checkPagesGoalMet)
   useEffect(() => {
     const unsub = appEventBus.on('reading:session-ended', async () => {
       try {
@@ -151,13 +153,20 @@ export function BookReader() {
         const isNewlyMet = checkDailyGoalMet(minutesToday)
         if (isNewlyMet) {
           toast.success('Daily reading goal reached! ✓', { duration: 4000 })
+          return
+        }
+        // E108-S05: also check pages goal for books (pages mode)
+        const pagesToday = await getPagesReadToday()
+        const isPagesGoalMet = checkPagesGoalMet(pagesToday)
+        if (isPagesGoalMet) {
+          toast.success('Daily reading goal reached! ✓', { duration: 4000 })
         }
       } catch {
         // silent-catch-ok: goal check failure should not affect reading UX
       }
     })
     return unsub
-  }, [checkDailyGoalMet])
+  }, [checkDailyGoalMet, checkPagesGoalMet])
 
   // TTS read-aloud integration (E84-S05)
   const {

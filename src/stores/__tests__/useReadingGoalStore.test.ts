@@ -266,6 +266,74 @@ describe('checkDailyGoalMet', () => {
   })
 })
 
+describe('checkPagesGoalMet', () => {
+  it('returns false when no goal is set', () => {
+    const result = useReadingGoalStore.getState().checkPagesGoalMet(30)
+    expect(result).toBe(false)
+  })
+
+  it('returns false when dailyType is minutes (not pages)', () => {
+    useReadingGoalStore.getState().saveGoal({
+      dailyType: 'minutes',
+      dailyTarget: 30,
+      yearlyBookTarget: 12,
+    })
+    const result = useReadingGoalStore.getState().checkPagesGoalMet(50)
+    expect(result).toBe(false)
+  })
+
+  it('returns false when target not met', () => {
+    useReadingGoalStore.getState().saveGoal({
+      dailyType: 'pages',
+      dailyTarget: 20,
+      yearlyBookTarget: 12,
+    })
+    const result = useReadingGoalStore.getState().checkPagesGoalMet(10)
+    expect(result).toBe(false)
+  })
+
+  it('returns false when dailyTarget is 0 (zero target edge case)', () => {
+    useReadingGoalStore.getState().saveGoal({
+      dailyType: 'pages',
+      dailyTarget: 0,
+      yearlyBookTarget: 12,
+    })
+    // A target of 0 is meaningless and must not credit the streak.
+    // Without an explicit guard, pagesToday(0) >= target(0) would be true and credit incorrectly.
+    const result = useReadingGoalStore.getState().checkPagesGoalMet(0)
+    expect(result).toBe(false)
+  })
+
+  it('returns true and starts streak when goal met for the first time', () => {
+    useReadingGoalStore.getState().saveGoal({
+      dailyType: 'pages',
+      dailyTarget: 20,
+      yearlyBookTarget: 12,
+    })
+
+    const result = useReadingGoalStore.getState().checkPagesGoalMet(20)
+
+    expect(result).toBe(true)
+    const streak = useReadingGoalStore.getState().streak
+    expect(streak.currentStreak).toBe(1)
+    expect(streak.longestStreak).toBe(1)
+    expect(streak.lastMetDate).toBe('2026-03-23')
+  })
+
+  it('returns false when already credited today', () => {
+    useReadingGoalStore.getState().saveGoal({
+      dailyType: 'pages',
+      dailyTarget: 20,
+      yearlyBookTarget: 12,
+    })
+
+    useReadingGoalStore.getState().checkPagesGoalMet(20) // First call
+    const result = useReadingGoalStore.getState().checkPagesGoalMet(40) // Second call same day
+
+    expect(result).toBe(false)
+  })
+})
+
 describe('checkYearlyGoalReached', () => {
   it('returns false when no goal is set', () => {
     const result = useReadingGoalStore.getState().checkYearlyGoalReached(5)
