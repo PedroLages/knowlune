@@ -675,3 +675,32 @@ if (!signal.aborted) setPhase('done')
 This pattern also applies to `try/catch` blocks where multiple catch paths could set conflicting states — always set the terminal state where the decision is made, not in a finally/post-block.
 
 **Case study:** E108-S01 — `useBulkImport` abort handling. Fixed in `f4fd82ee` after code review flagged the race.
+
+## Keyboard Shortcut Hooks: useRef for Zero-Render-Cost Registration
+
+When building keyboard shortcut hooks, store the shortcut map in a `useRef` (not state) and register a single `keydown` listener on `document`. This avoids re-registering the listener on every render when shortcuts change.
+
+```typescript
+const shortcutsRef = useRef(shortcuts);
+useEffect(() => { shortcutsRef.current = shortcuts; }, [shortcuts]);
+
+useEffect(() => {
+  const handler = (e: KeyboardEvent) => {
+    if (e.isComposing) return; // IME guard — prevents firing during CJK input
+    const active = document.activeElement;
+    if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return;
+    shortcutsRef.current.forEach(({ key, action }) => {
+      if (e.key === key) { e.preventDefault(); action(); }
+    });
+  };
+  document.addEventListener('keydown', handler);
+  return () => document.removeEventListener('keydown', handler);
+}, []); // Empty deps — handler reads from ref, never stale
+```
+
+Key guards to always include:
+- `e.isComposing` — prevents firing during IME composition (Japanese, Chinese, Korean)
+- `activeElement instanceof HTMLInput/Textarea` — prevents interference with typing
+- `contenteditable` check — `active?.closest('[contenteditable]')`
+
+**Case study:** E108-S03 — `useKeyboardShortcuts` hook in `src/app/hooks/useKeyboardShortcuts.ts`.
