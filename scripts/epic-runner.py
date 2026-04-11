@@ -95,6 +95,7 @@ class RunConfig:
     epic_phases: list[str] | None = None
     skip_epics: list[int] | None = None
     legacy_mode: bool = False
+    no_coordinator: bool = False
 
 
 @dataclass
@@ -131,6 +132,25 @@ class ReviewResult:
 
 
 @dataclass
+class CoordinatorDecision:
+    """Adaptive coordinator decision between review and fix rounds."""
+    action: str       # "fix" | "escalate" | "park" | "accept"
+    strategy: str     # hint injected into fix prompt
+    reason: str       # human-readable justification
+    raw_json: str = ""  # original text for debugging
+
+
+@dataclass
+class RoundEntry:
+    """One round of the review-fix loop, accumulated for coordinator context."""
+    round_num: int
+    verdict_summary: str   # "BLOCKED (3B 2H 1M 0L 0N)"
+    findings_brief: str    # truncated findings (~500 chars)
+    fix_applied: str       # "(applied)" or "(not yet fixed)"
+    delta: str             # "blockers 3->1, high 2->2"
+
+
+@dataclass
 class StoryResult:
     story: StoryInfo
     phase_reached: str = "init"
@@ -150,6 +170,8 @@ class StoryResult:
     pre_existing_issues: list[str] = field(default_factory=list)
     known_issues_matched: list[str] = field(default_factory=list)
     non_issues: list[str] = field(default_factory=list)
+    coordinator_decisions: list[str] = field(default_factory=list)
+    coordinator_cost_usd: float = 0.0
 
 
 @dataclass
@@ -258,6 +280,10 @@ def parse_args() -> RunConfig:
         "--legacy-mode", action="store_true",
         help="Disable all optimizations (no per-phase models, effort, session chaining)",
     )
+    parser.add_argument(
+        "--no-coordinator", action="store_true",
+        help="Disable adaptive coordinator between review and fix (use simple fix loop)",
+    )
 
     args = parser.parse_args()
 
@@ -293,6 +319,7 @@ def parse_args() -> RunConfig:
         epic_phases=args.epic_phases,
         skip_epics=args.skip_epics,
         legacy_mode=args.legacy_mode,
+        no_coordinator=args.no_coordinator,
     )
 
 
@@ -750,8 +777,15 @@ def review_prompt(story: StoryInfo, known_issues: str = "", skip_agents: str = "
     )
 
 
-def fix_prompt(story: StoryInfo, findings: str = "") -> str:
+def fix_prompt(story: StoryInfo, findings: str = "", strategy: str = "") -> str:
     """Fix Agent: fix ALL story-related review findings."""
+    strategy_section = ""
+    if strategy:
+        strategy_section = (
+            f"COORDINATOR STRATEGY HINT:\n"
+            f"{strategy}\n"
+            f"Follow this guidance when deciding HOW to fix each issue.\n\n"
+        )
     return (
         f"STEP 0: Activate `/auto-answer autopilot` to handle any interactive questions autonomously without blocking.\n\n"
         f"STEP 0.5: Verify branch — run `git branch --show-current` and confirm it matches "
@@ -762,6 +796,7 @@ def fix_prompt(story: StoryInfo, findings: str = "") -> str:
         f"they will be reported separately.\n\n"
         f"STORY-RELATED ISSUES TO FIX:\n"
         f"{findings or '(read review reports below)'}\n\n"
+        f"{strategy_section}"
         f"If no specific findings listed above, read the review reports for story {story.key} at:\n"
         f"  - docs/reviews/code/code-review-*-{story.key.lower()}.md\n"
         f"  - docs/reviews/code/code-review-testing-*-{story.key.lower()}.md\n"
@@ -784,6 +819,62 @@ def fix_prompt(story: StoryInfo, findings: str = "") -> str:
         f"- Total issues fixed: [N]\n"
         f"- Issues that could NOT be fixed (with explanation): [list or \"none\"]\n"
         f"- Files modified: [list]"
+    )
+
+
+def format_round_history(round_history: list[RoundEntry]) -> str:
+    """Format round history list into structured text for coordinator context."""
+    if not round_history:
+        return "(no prior rounds)"
+    lines = []
+    for entry in round_history:
+        lines.append(
+            f"Round {entry.round_num}:\n"
+            f"  Verdict: {entry.verdict_summary}\n"
+            f"  Findings: {entry.findings_brief}\n"
+            f"  Fix applied: {entry.fix_applied}\n"
+            f"  Delta: {entry.delta}"
+        )
+    return "\n\n".join(lines)
+
+
+def coordinator_prompt(
+    story: StoryInfo,
+    round_num: int,
+    max_rounds: int,
+    round_history: list[RoundEntry],
+    verdict: Verdict,
+) -> str:
+    """Coordinator prompt: analyze review history and decide next action."""
+    return (
+        f"You are the REVIEW COORDINATOR for story {story.key}, round {round_num} of {max_rounds}.\n\n"
+        f"Your job: analyze the review-fix history and decide the optimal next action.\n\n"
+        f"ROUND HISTORY:\n"
+        f"{format_round_history(round_history)}\n\n"
+        f"CURRENT REVIEW RESULT (round {round_num}):\n"
+        f"  Blockers: {verdict.blocker_count}\n"
+        f"  High: {verdict.high_count}\n"
+        f"  Medium: {verdict.medium_count}\n"
+        f"  Low: {verdict.low_count}\n"
+        f"  Nits: {verdict.nit_count}\n"
+        f"  Total story-related: {verdict.story_related_total}\n\n"
+        f"FINDINGS:\n"
+        f"{verdict.findings_text[:1500]}\n\n"
+        f"AVAILABLE ACTIONS:\n"
+        f'1. "fix" — Standard fix pass (sonnet). Use when issues are clear and progress is being made between rounds.\n'
+        f'2. "escalate" — Use opus for the fix. Use when: issues are architectural/cross-cutting, '
+        f"the same issues keep recurring (regression), or the fix requires understanding complex interactions.\n"
+        f'3. "park" — Abandon this story for now. ONLY allowed after round 2+. '
+        f"Use when: issues reveal fundamental design problems that cannot be fixed incrementally.\n"
+        f'4. "accept" — Ship with remaining issues. ONLY allowed when ALL remaining issues are LOW or NIT '
+        f"severity (zero blockers, zero high, zero medium).\n\n"
+        f"STRATEGY HINTS — when action is \"fix\" or \"escalate\", provide a concrete strategy:\n"
+        f"- Which issues to prioritize\n"
+        f"- What approach to take (e.g., \"refactor the hook before fixing individual call sites\")\n"
+        f"- What to watch out for (e.g., \"the previous fix broke X, avoid that pattern\")\n\n"
+        f"Respond with ONLY a JSON object (no markdown, no explanation outside the JSON):\n"
+        f'{{"action": "fix|escalate|park|accept", "strategy": "concrete guidance for the fix agent", '
+        f'"reason": "one-sentence justification"}}'
     )
 
 
@@ -1610,6 +1701,64 @@ def _extract_section_count(text: str, section_name: str) -> int:
     return int(m.group(1)) if m else 0
 
 
+def _validate_coordinator_decision(data: dict, raw: str) -> CoordinatorDecision:
+    """Validate parsed JSON into CoordinatorDecision."""
+    action = str(data.get("action", "fix")).lower()
+    if action not in ("fix", "escalate", "park", "accept"):
+        action = "fix"
+    return CoordinatorDecision(
+        action=action,
+        strategy=str(data.get("strategy", "")),
+        reason=str(data.get("reason", "")),
+        raw_json=raw,
+    )
+
+
+def parse_coordinator_decision(text: str) -> CoordinatorDecision:
+    """Parse coordinator JSON response with robust fallback."""
+    # Strip markdown fences
+    cleaned = re.sub(r"```json\s*", "", text)
+    cleaned = re.sub(r"```\s*", "", cleaned)
+    cleaned = cleaned.strip()
+
+    # Attempt 1: parse entire cleaned text as JSON
+    try:
+        data = json.loads(cleaned)
+        return _validate_coordinator_decision(data, cleaned)
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    # Attempt 2: find JSON object in text
+    m = re.search(r'\{[^{}]*"action"\s*:\s*"[^"]+?"[^{}]*\}', cleaned)
+    if m:
+        try:
+            data = json.loads(m.group(0))
+            return _validate_coordinator_decision(data, m.group(0))
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    # Attempt 3: regex extraction of key fields
+    action_m = re.search(r'"action"\s*:\s*"(fix|escalate|park|accept)"', text, re.IGNORECASE)
+    if action_m:
+        strategy_m = re.search(r'"strategy"\s*:\s*"([^"]*)"', text)
+        reason_m = re.search(r'"reason"\s*:\s*"([^"]*)"', text)
+        return CoordinatorDecision(
+            action=action_m.group(1).lower(),
+            strategy=strategy_m.group(1) if strategy_m else "",
+            reason=reason_m.group(1) if reason_m else "parsed from fragments",
+            raw_json=text[:500],
+        )
+
+    # Final fallback: default to fix
+    log.warning("  Coordinator output unparseable, defaulting to 'fix'")
+    return CoordinatorDecision(
+        action="fix",
+        strategy="",
+        reason="coordinator output unparseable — defaulting to fix",
+        raw_json=text[:500],
+    )
+
+
 def ensure_clean_tree(story: StoryInfo, next_phase: str) -> None:
     """Auto-commit any dirty files before the next phase."""
     result = subprocess.run(
@@ -1961,50 +2110,173 @@ async def run_story(
             if non_issues_section:
                 result.non_issues.append(non_issues_section)
 
-        # ── Fix loop ──
+        # ── Fix loop (with adaptive coordinator) ──
+        round_history: list[RoundEntry] = []
+        prev_verdict: Verdict | None = None
+
         for round_num in range(1, config.max_review_rounds + 1):
             if verdict.is_pass and verdict.story_related_total == 0:
                 write_progress(story.key, "REVIEW", f"PASSED on round {round_num}")
                 break
 
             rr.rounds = round_num
+
+            # Build round history entry
+            if round_num == 1:
+                round_history.append(RoundEntry(
+                    round_num=0,
+                    verdict_summary=(
+                        f"INITIAL REVIEW: "
+                        f"({verdict.blocker_count}B {verdict.high_count}H "
+                        f"{verdict.medium_count}M {verdict.low_count}L "
+                        f"{verdict.nit_count}N)"
+                    ),
+                    findings_brief=verdict.findings_text[:500],
+                    fix_applied="(not yet fixed)",
+                    delta="(initial)",
+                ))
+            elif prev_verdict is not None:
+                delta = (
+                    f"blockers {prev_verdict.blocker_count}->{verdict.blocker_count}, "
+                    f"high {prev_verdict.high_count}->{verdict.high_count}, "
+                    f"medium {prev_verdict.medium_count}->{verdict.medium_count}"
+                )
+                round_history.append(RoundEntry(
+                    round_num=round_num - 1,
+                    verdict_summary=(
+                        f"{'PASS' if prev_verdict.is_pass else 'BLOCKED'} "
+                        f"({prev_verdict.blocker_count}B {prev_verdict.high_count}H "
+                        f"{prev_verdict.medium_count}M {prev_verdict.low_count}L "
+                        f"{prev_verdict.nit_count}N)"
+                    ),
+                    findings_brief=prev_verdict.findings_text[:500],
+                    fix_applied="(applied)",
+                    delta=delta,
+                ))
+
             write_progress(
                 story.key, "REVIEW",
                 f"round {round_num}: {verdict.blocker_count}B {verdict.high_count}H "
                 f"{verdict.medium_count}M {verdict.low_count}L {verdict.nit_count}N",
             )
 
-            # Supervised: ask before fixing
+            # ── Coordinator call (adaptive decision) ──
+            coord_decision: CoordinatorDecision | None = None
+            fix_strategy = ""
+            fix_model = "sonnet"
+
+            use_coordinator = not config.legacy_mode and not config.no_coordinator
+
+            if use_coordinator:
+                coordinator_phase = PhaseConfig(
+                    model="sonnet", effort="low",
+                    needs_agents=False, needs_playwright=False,
+                )
+                write_progress(story.key, "COORDINATOR", f"round {round_num}: deciding next action...")
+                try:
+                    coord_text, _, coord_cost = await run_session(
+                        coordinator_prompt(story, round_num, config.max_review_rounds, round_history, verdict),
+                        max_turns=10, max_budget=0, autonomous=True,
+                        story_key=story.key, phase=coordinator_phase,
+                    )
+                    result.coordinator_cost_usd += coord_cost
+                    result.total_cost_usd += coord_cost
+
+                    coord_decision = parse_coordinator_decision(coord_text)
+
+                    # Enforce constraints in code (not just prompt)
+                    if coord_decision.action == "park" and round_num < 2:
+                        coord_decision.action = "fix"
+                        coord_decision.reason += " (park overridden: requires 2+ rounds)"
+                    if coord_decision.action == "accept" and (
+                        verdict.blocker_count > 0 or verdict.high_count > 0 or verdict.medium_count > 0
+                    ):
+                        coord_decision.action = "fix"
+                        coord_decision.reason += " (accept overridden: non-low issues remain)"
+
+                    result.coordinator_decisions.append(json.dumps({
+                        "round": round_num,
+                        "action": coord_decision.action,
+                        "strategy": coord_decision.strategy,
+                        "reason": coord_decision.reason,
+                    }))
+
+                    write_progress(story.key, "COORDINATOR",
+                        f"round {round_num}: action={coord_decision.action}, "
+                        f"reason={coord_decision.reason[:80]}")
+
+                except Exception as e:
+                    log.warning(f"  Coordinator failed ({e}), defaulting to fix")
+                    coord_decision = CoordinatorDecision(
+                        action="fix", strategy="", reason=f"coordinator error: {e}"
+                    )
+
+            # ── Handle coordinator decision ──
+            if coord_decision:
+                if coord_decision.action == "accept":
+                    write_progress(story.key, "COORDINATOR",
+                        f"ACCEPT: {coord_decision.reason}")
+                    log.info(f"  Coordinator: ACCEPT remaining "
+                             f"{verdict.low_count}L {verdict.nit_count}N issues")
+                    break
+
+                if coord_decision.action == "park":
+                    write_progress(story.key, "COORDINATOR",
+                        f"PARK: {coord_decision.reason}")
+                    raise StoryError(f"PARKED: {coord_decision.reason}")
+
+                if coord_decision.action == "escalate":
+                    fix_model = "opus"
+                    write_progress(story.key, "COORDINATOR",
+                        f"ESCALATE: using opus for fix round {round_num}")
+
+                fix_strategy = coord_decision.strategy
+
+            # Supervised: show decision and allow override
             if config.mode == "supervised":
                 print(f"\n{'=' * 60}")
                 print(f"REVIEW ROUND {round_num}: "
                       f"{verdict.blocker_count} BLOCKER, {verdict.high_count} HIGH, "
                       f"{verdict.medium_count} MEDIUM, {verdict.low_count} LOW")
+                if coord_decision:
+                    print(f"COORDINATOR: {coord_decision.action.upper()} — {coord_decision.reason}")
+                    if coord_decision.strategy:
+                        print(f"STRATEGY: {coord_decision.strategy[:200]}")
                 print(f"{'=' * 60}")
                 print(verdict.findings_text[:2000])
                 print()
-                action = input("Fix automatically? [y/n/skip]: ").strip().lower()
+                action = input("Fix automatically? [y/n/skip/override]: ").strip().lower()
                 if action == "n":
                     raise StoryError("User declined to fix blockers")
                 if action == "skip":
                     log.warning("Skipping blockers per user request")
                     break
+                if action == "override":
+                    override = input("Override action [fix/escalate/park/accept]: ").strip().lower()
+                    if override == "park":
+                        raise StoryError("PARKED: user override")
+                    if override == "accept":
+                        break
+                    if override == "escalate":
+                        fix_model = "opus"
+                    fix_strategy = input("Strategy hint (or enter to skip): ").strip()
 
-            # Fix session (fresh context — fixes ALL story-related severities)
+            # Fix session (fresh context)
             fix_phase = None if config.legacy_mode else PhaseConfig(
-                model="sonnet", effort="high", fallback_model="sonnet",
+                model=fix_model, effort="high", fallback_model="sonnet",
                 needs_agents=False, needs_playwright=False,
                 append_context=f"Story: {story.key}. Fixing review findings round {round_num}.",
             )
-            write_progress(story.key, "FIX", f"round {round_num}: fixing all findings...")
+            write_progress(story.key, "FIX", f"round {round_num}: fixing ({fix_model})...")
             _, _, fix_cost = await run_session(
-                fix_prompt(story, findings=verdict.story_related_findings),
+                fix_prompt(story, findings=verdict.story_related_findings, strategy=fix_strategy),
                 config.max_turns, BUDGET_SESSION_REVIEW,
                 autonomous, story_key=story.key, phase=fix_phase,
             )
             result.cost_review += fix_cost
             result.total_cost_usd += fix_cost
             rr.blockers_fixed += verdict.blocker_count
+            prev_verdict = verdict
 
             if round_num >= config.max_review_rounds:
                 raise StoryError(
@@ -2028,30 +2300,32 @@ async def run_story(
 
         # Handle stories that pass but still have non-blocker findings
         if verdict.is_pass and verdict.story_related_total > 0:
-            write_progress(story.key, "REVIEW",
-                f"PASSED (0 blockers), {verdict.story_related_total} remaining finding(s) — fixing in one pass")
-            should_fix = True
-            if config.mode == "supervised":
-                print(f"\n{'=' * 60}")
-                print(f"NON-BLOCKER FINDINGS: {verdict.story_related_total} total")
-                print(f"{'=' * 60}")
-                print(verdict.findings_text[:2000])
-                print()
-                should_fix = input("Fix non-blockers? [y/n]: ").strip().lower() == "y"
+            # With coordinator active, it handles accept decisions — skip redundant pass
+            if config.legacy_mode or config.no_coordinator:
+                write_progress(story.key, "REVIEW",
+                    f"PASSED (0 blockers), {verdict.story_related_total} remaining finding(s) — fixing in one pass")
+                should_fix = True
+                if config.mode == "supervised":
+                    print(f"\n{'=' * 60}")
+                    print(f"NON-BLOCKER FINDINGS: {verdict.story_related_total} total")
+                    print(f"{'=' * 60}")
+                    print(verdict.findings_text[:2000])
+                    print()
+                    should_fix = input("Fix non-blockers? [y/n]: ").strip().lower() == "y"
 
-            if should_fix:
-                fix_phase = None if config.legacy_mode else PhaseConfig(
-                    model="sonnet", effort="high", fallback_model="sonnet",
-                    needs_agents=False, needs_playwright=False,
-                )
-                write_progress(story.key, "FIX", "fixing non-blocker findings...")
-                _, _, fix_cost = await run_session(
-                    fix_prompt(story, findings=verdict.story_related_findings),
-                    config.max_turns, BUDGET_SESSION_REVIEW,
-                    autonomous, story_key=story.key, phase=fix_phase,
-                )
-                result.cost_review += fix_cost
-                result.total_cost_usd += fix_cost
+                if should_fix:
+                    fix_phase = None if config.legacy_mode else PhaseConfig(
+                        model="sonnet", effort="high", fallback_model="sonnet",
+                        needs_agents=False, needs_playwright=False,
+                    )
+                    write_progress(story.key, "FIX", "fixing non-blocker findings...")
+                    _, _, fix_cost = await run_session(
+                        fix_prompt(story, findings=verdict.story_related_findings),
+                        config.max_turns, BUDGET_SESSION_REVIEW,
+                        autonomous, story_key=story.key, phase=fix_phase,
+                    )
+                    result.cost_review += fix_cost
+                    result.total_cost_usd += fix_cost
 
         result.review_rounds = rr.rounds
         result.blockers_found = rr.blockers_found
@@ -2666,7 +2940,9 @@ async def main() -> None:
             print(f"  START:  opus, effort=high")
             print(f"  IMPL:   sonnet, effort=high (forked from START)")
             print(f"  REVIEW: sonnet, effort=medium")
-            print(f"  FIX:    sonnet, effort=high")
+            coord_status = "(DISABLED)" if config.no_coordinator else ""
+            print(f"  COORD:  sonnet, effort=low {coord_status}")
+            print(f"  FIX:    sonnet, effort=high (or opus on escalate)")
             print(f"  FINISH: sonnet, effort=low")
 
         if not config.skip_epic_finish:
@@ -2854,6 +3130,8 @@ def log_result(result: StoryResult, log_file: Path) -> None:
         "pre_existing_count": len(result.pre_existing_issues),
         "known_matched_count": len(result.known_issues_matched),
         "non_issues_count": len(result.non_issues),
+        "coordinator_decisions": result.coordinator_decisions,
+        "coordinator_cost_usd": round(result.coordinator_cost_usd, 2),
     }
     log_file.parent.mkdir(parents=True, exist_ok=True)
     with open(log_file, "a") as f:
