@@ -8,9 +8,9 @@
  * - AC-4: All three color schemes (Professional, Vibrant, Clean) render correctly in the reader
  */
 
-import { test, expect } from '../support/fixtures'
-import { seedBooks } from '../support/helpers/seed-helpers'
-import { FIXED_DATE } from '../utils/test-time'
+import { test, expect } from '../../support/fixtures'
+import { seedBooks } from '../../support/helpers/seed-helpers'
+import { FIXED_DATE } from '../../utils/test-time'
 
 const TEST_BOOK = {
   id: 'test-book-theme-sync',
