@@ -7,8 +7,8 @@
  * These tests focus on the vocabulary page itself.
  */
 import { test, expect } from '@playwright/test'
-import { dismissOnboarding } from '../helpers/dismiss-onboarding'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { dismissOnboarding } from '../../helpers/dismiss-onboarding'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 test.describe('Vocabulary Builder (E109-S01)', () => {
   test.beforeEach(async ({ page }) => {
