@@ -122,6 +122,8 @@ Phase 2 — Post-Epic:
 [ ] Testarch NFR
 [ ] Adversarial review
 [ ] Retrospective
+[ ] Comprehensive fix pass
+[ ] Gate check
 
 Phase 3:
 [ ] Final report
@@ -190,6 +192,9 @@ _(none yet)_
 | Testarch NFR | pending | — | — |
 | Adversarial Review | pending | — | — |
 | Retrospective | pending | — | — |
+| Fix Pass Planning | pending | — | — |
+| Fix Pass Execution | pending | — | — |
+| Gate Check | pending | — | — |
 
 ## Non-Issues (False Positives)
 _(none yet)_

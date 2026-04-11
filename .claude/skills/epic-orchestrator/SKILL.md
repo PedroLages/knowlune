@@ -96,7 +96,9 @@ digraph epic_flow {
   finish [label="Step 3: Finish Agent\n(/finish-story + PR)"];
   merge [label="Step 4: Merge + Sync\n(gh pr merge, no CI wait)"];
   more [label="More stories?" shape=diamond];
-  post [label="Phase 2: Post-Epic\n(sprint-status, trace, NFR,\nadversarial, retrospective)"];
+  post [label="Phase 2: Post-Epic Validation\n(hybrid parallel: trace+NFR || adversarial+retro)"];
+  fixpass [label="Phase 2C: Fix Pass\n(MANDATORY — opus plans,\nsonnet executes by group)"];
+  gate [label="Phase 2D: Gate Check\n(zero BLOCKER/HIGH/MEDIUM\nbuild+lint+test+tsc pass)"];
   report [label="Phase 3: Final Report"];
 
   phase0 -> extract;
@@ -110,7 +112,9 @@ digraph epic_flow {
   merge -> more;
   more -> story_start [label="yes (next story)"];
   more -> post [label="no"];
-  post -> report;
+  post -> fixpass;
+  fixpass -> gate;
+  gate -> report;
 }
 ```
 
@@ -135,12 +139,16 @@ digraph epic_flow {
 
 **All agent prompt templates:** [docs/agent-prompt-templates.md](docs/agent-prompt-templates.md)
 
-## Phase 2: Post-Epic Commands
+## Phase 2: Post-Epic Validation + Fix Pass
 
 **See:** [docs/phase-2-post-epic.md](docs/phase-2-post-epic.md) for:
-- Sequential: `/sprint-status` → mark epic done → `/testarch-trace` → `/testarch-nfr` → `/review-adversarial` → `/retrospective`
-- Supports parallel dispatch for independent commands — see phase-2-post-epic.md
-- Retrospective agent acts as Pedro (developer) in party mode dialogue
+- **Default: hybrid parallel/sequential** dispatch (Groups B1 → B2||B3 → Known Issues → Fix Pass → Gate)
+- Group B1 (sequential): Sprint Status → Mark Epic Done
+- Group B2 (sequential, concurrent with B3): Testarch Trace (+fix cycle) → Testarch NFR (+fix cycle)
+- Group B3 (parallel with B2): Adversarial Review + Retrospective
+- Known Issues Register Update (after B2+B3 complete)
+- **MANDATORY Fix Pass** — opus planner analyzes ALL findings, sonnet executors implement fixes
+- **Gate Check** — zero BLOCKER/HIGH/MEDIUM unresolved before next epic or Phase 3
 
 ## Phase 3: Final Report
 
@@ -165,6 +173,8 @@ digraph epic_flow {
 | **Trace Fix** | Write missing tests | sonnet | When trace finds gaps | Tests added, remaining gaps |
 | **NFR** | `/testarch-nfr` | sonnet | Epic (+revalidation) | NFR assessment |
 | **NFR Fix** | Fix code-level NFR issues | sonnet | When NFR finds fixable issues | Issues fixed |
+| **Fix Pass Planner** | Read all audit findings + code, produce fix plan | **opus** | After all audits complete | Structured fix plan with approach per finding |
+| **Fix Pass Executor** | Implement fixes from planner's instructions | sonnet | Per severity group/area | Fix count, remaining issues |
 | **Adversarial** | `/review-adversarial` | sonnet | Epic | Findings list |
 | **Retro** | `/retrospective` (as Pedro) | sonnet | Epic | Retro doc, lessons |
 | **Report** | Final completion report | sonnet | Epic | Report file path |
@@ -219,3 +229,5 @@ After full execution:
 5. Post-epic reports generated
 6. Completion report in `docs/implementation-artifacts/`
 7. Zero unfixed issues across all stories
+8. Fix pass completed — zero BLOCKER/HIGH/MEDIUM unresolved
+9. Gate check passed — build, lint, test, tsc all pass, git clean

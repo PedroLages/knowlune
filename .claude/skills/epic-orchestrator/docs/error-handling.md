@@ -20,6 +20,9 @@ The coordinator must handle failures gracefully — fix what's fixable, park wha
 | **Dev server won't start** | Port 5173 not responding after kill + restart | `lsof -ti:5173 | xargs kill -9`, retry. If still fails, review runs skipping all dev-server-dependent gates. Per `review-story/config/gates.json`, dev-server-dependent gates are: e2e-tests, design-review, performance-benchmark, exploratory-qa. Each gets its `-skipped` variant added to `review_gates_passed`. |
 | **Sub-agent runs out of context** | Agent returns truncated or incomplete output | Spawn continuation agent with summary of what was done. For Story Agents, this means summarizing what was already implemented |
 | **Post-epic command fails** | Sub-agent returns error | Retry once. If still fails, note in final report as incomplete |
+| **Fix pass planner fails** | Planning Agent (opus) returns error or incomplete plan | Retry once. If still fails, fall back to single-stage approach: coordinator triages findings by severity and dispatches execution agents directly with raw findings (less optimal but functional) |
+| **Fix pass executor fails** | Execution Agent (sonnet) returns error or incomplete fixes | Retry once with same group instructions. If still fails, note unfixed items in final report. Remaining BLOCKER/HIGH → blocks gate. Remaining MEDIUM → known-issues.yaml |
+| **Gate check fails** | Build/lint/test/tsc fails after fix pass | Dispatch targeted Execution Agent for the specific failure. Max 1 additional round. If still fails, the coordinator must decide: proceed with known risk (and document) or park the epic |
 | **Coordinator session interrupted** | Tracking file exists but epic incomplete | Next `/epic-orchestrator` invocation detects tracking file in Phase 0 Step 0 and resumes from last completed story |
 
 ## Parking a Story

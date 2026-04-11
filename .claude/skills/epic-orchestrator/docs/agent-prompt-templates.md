@@ -290,6 +290,107 @@ RETURN:
 
 ---
 
+## Fix Pass Planning Agent
+
+```
+Activate `/auto-answer autopilot` to handle any interactive questions autonomously without blocking.
+
+You are the FIX PASS PLANNER for Epic {EPIC_NUMBER}: {EPIC_NAME}.
+
+Your job is to READ and ANALYZE — do NOT modify any code. Produce a structured fix plan that execution agents will implement.
+
+AUDIT REPORTS TO READ:
+- Testarch Trace: {TRACE_REPORT_PATH}
+- Testarch NFR: {NFR_REPORT_PATH}
+- Adversarial Review: {ADVERSARIAL_REPORT_PATH} (or "not run")
+- Known Issues Register: docs/known-issues.yaml (for cross-reference — don't re-flag known issues)
+
+ALREADY FIXED (skip these — resolved in trace/NFR embedded fix cycles):
+{PASTE_ALREADY_FIXED_SUMMARY}
+
+INSTRUCTIONS:
+1. Read each audit report and extract ALL unresolved findings
+2. Cross-reference with known-issues.yaml — skip already-tracked items
+3. Cross-reference with the "already fixed" list — skip items resolved in trace/NFR cycles
+4. For each remaining finding, READ the source code at the specified location
+5. Determine the specific fix approach (not just "fix this" — explain HOW)
+6. Identify dependencies between fixes (e.g., fixing A in file X also resolves B)
+7. Group findings by file/area for efficient execution (not just severity)
+8. Triage LOW/NIT: mark as QUICK FIX (< 5 min, include approach) or DEFER (explain why)
+9. Identify false positives with clear reasoning
+
+RETURN a structured fix plan in this exact format:
+
+FIX PLAN FOR EPIC {EPIC_NUMBER}
+
+SUMMARY:
+- Total unresolved findings: [N]
+- BLOCKER: [N], HIGH: [N], MEDIUM: [N], LOW: [N], NIT: [N]
+- False positives identified: [N]
+- Dependencies found: [list or "none"]
+- Recommended execution groups: [N]
+
+GROUP 1: [area/theme] — [severity mix, e.g. "2 HIGH + 1 MEDIUM"]
+Files: [list of files this group touches]
+Findings:
+- [ID] [SEVERITY] [description] — file:line — FIX: [specific approach with enough detail for sonnet to implement]
+- [ID] [SEVERITY] [description] — file:line — FIX: [specific approach]
+Dependencies: [any ordering constraints within this group, or "none"]
+Estimated complexity: [simple / moderate / complex]
+
+GROUP 2: [area/theme] — [severity mix]
+...
+
+LOW/NIT TRIAGE:
+- [ID] [description] — file:line — QUICK FIX: [approach] (< 5 min)
+- [ID] [description] — file:line — DEFER: [reason] → known-issues.yaml
+
+FALSE POSITIVES:
+- [ID] [SEVERITY] [description] — REASON: [why this is not an actual issue]
+```
+
+---
+
+## Fix Pass Execution Agent
+
+```
+Activate `/auto-answer autopilot` to handle any interactive questions autonomously without blocking.
+
+You are implementing fixes from the Fix Pass Plan for Epic {EPIC_NUMBER}: {EPIC_NAME}.
+
+You have been assigned GROUP {GROUP_NUMBER}: {GROUP_THEME}
+
+DO NOT re-analyze or second-guess the plan — the planning agent (opus) already read the code and determined the approach. Follow the fix instructions precisely.
+
+FILES IN THIS GROUP:
+{PASTE_GROUP_FILES_LIST}
+
+FIXES TO IMPLEMENT:
+{PASTE_GROUP_FINDINGS_WITH_FIX_INSTRUCTIONS}
+
+INSTRUCTIONS:
+For each fix:
+1. Read the file at the specified location
+2. Implement the fix EXACTLY as described in the plan
+3. If the planned approach doesn't work (code has changed, approach is wrong), explain why and implement the best alternative
+4. Ensure the fix doesn't break related code
+
+After implementing all fixes in this group:
+1. Run `npm run build` — must pass
+2. Run `npm run lint` — must pass
+3. Commit:
+   git add [specific files]
+   git commit -m "fix(Epic {EPIC_NUMBER}): post-epic fixes — {GROUP_THEME}"
+
+RETURN:
+- Fixes implemented: [N] / [total in group]
+- Fixes that diverged from plan (with explanation): [list or "none"]
+- Fixes that could NOT be implemented (with explanation): [list or "none"]
+- Files modified: [list]
+```
+
+---
+
 ## Adversarial Review Agent
 
 ```
@@ -360,6 +461,7 @@ GATHER INFORMATION FROM:
 - Git log: git log main --oneline (recent merges)
 - Post-epic outputs: testarch-trace, testarch-nfr, adversarial review, retrospective
 - Known issues register: docs/known-issues.yaml (cross-reference deferred issues)
+- Fix pass tracking: from tracking file's Post-Epic Validation table (Fix Pass Planning, Fix Pass Execution, Gate Check rows)
 
 REPORT STRUCTURE:
 1. **Executive Summary** — Epic goal, outcome, date range
@@ -369,6 +471,7 @@ REPORT STRUCTURE:
    - **4a. Known Issues (Already Tracked)** — Pre-existing issues that matched entries in `docs/known-issues.yaml`. Reference by KI-NNN. These need no new action.
    - **4b. New Pre-Existing Issues** — Genuinely new issues NOT in `known-issues.yaml`. Listed with assigned KI-NNN (added to register in Phase 2), severity, description, file:line, and discovering story.
 5. **Post-Epic Validation** — Trace coverage, NFR assessment, adversarial findings summary
+5b. **Fix Pass Results** — Severity breakdown, fix counts, deferred items, false positives, gate check result
 6. **Lessons Learned** — Key insights from retrospective
 7. **Suggestions for Next Epic** — Actionable recommendations based on observed patterns:
    - Process improvements (e.g., "add error boundary boilerplate to /start-story template")

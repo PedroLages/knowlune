@@ -51,6 +51,16 @@ Items flagged by review agents that were verified as not actual problems. Listed
 - Testarch NFR: assessment summary, gate decision
 - Adversarial review: key findings count, critical issues
 
+### 5b. Fix Pass Results
+- Total findings triaged by planning agent: N (BLOCKER/HIGH/MEDIUM/LOW/NIT breakdown)
+- Findings fixed in comprehensive fix pass: N
+- Findings fixed in trace/NFR embedded cycles: N
+- Deferred to known-issues.yaml: N (LOW/NIT only)
+- Fix pass rounds needed: N (max 2)
+- False positives identified by planner: N
+- Execution groups dispatched: N
+- Gate check result: PASS/FAIL
+
 ### 6. Lessons Learned
 From retrospective:
 - Top insights
