@@ -28,6 +28,7 @@ export function AudioMiniPlayer() {
   const { pathname } = useLocation()
 
   const currentBookId = useAudioPlayerStore(s => s.currentBookId)
+  // Subscribed for render (icon + aria-label); handlePlayPause reads getState() to avoid stale closure
   const isPlaying = useAudioPlayerStore(s => s.isPlaying)
   const currentTime = useAudioPlayerStore(s => s.currentTime)
   const currentChapterIndex = useAudioPlayerStore(s => s.currentChapterIndex)
