@@ -82,7 +82,7 @@ def deduplicate_findings(all_findings):
     
     for file_path, findings in by_file.items():
         # Sort by line number
-        findings.sort(key=lambda f: f.get('line', 0))
+        findings.sort(key=lambda f: f.get('line') or 0)
         
         for finding in findings:
             line = finding.get('line')
@@ -96,8 +96,8 @@ def deduplicate_findings(all_findings):
                 continue
             
             # Find nearby findings (within 5 lines)
-            nearby = [f for f in findings 
-                     if abs(f.get('line', 0) - line) <= 5]
+            nearby = [f for f in findings
+                     if abs((f.get('line') or 0) - line) <= 5]
             
             # Merge nearby findings into consensus
             if len(nearby) > 1:
