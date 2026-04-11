@@ -221,7 +221,7 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
           <AlertDialogHeader>
             <AlertDialogTitle>Delete &ldquo;{book.title}&rdquo;?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the book and all its highlights. This action cannot be undone.
+              This will permanently remove the book, its highlights, and all locally stored files (OPFS). This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
