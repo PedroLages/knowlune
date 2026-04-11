@@ -1337,7 +1337,7 @@ development_status:
   # Depends on: E107
   # ──────────────────────────────────────────────────
   epic-109: backlog
-  109-1-vocabulary-builder: review
+  109-1-vocabulary-builder: done
   109-2-daily-highlight-review: backlog
   109-3-highlight-export: backlog
   109-4-annotation-summary-view: backlog
