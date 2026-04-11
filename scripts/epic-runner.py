@@ -76,6 +76,13 @@ SERVER_SHUTDOWN_TIMEOUT_SECS = 5
 PROGRESS_DOT_INTERVAL_CHARS = 2000
 PLAN_PREVIEW_CHARS = 3000
 
+# Per-phase max_turns caps (--max-turns overrides when lower)
+MAX_TURNS_START = 40       # planning is bounded
+MAX_TURNS_IMPLEMENT = 80   # implementation needs the most room
+MAX_TURNS_REVIEW = 60      # review pipeline is bounded
+MAX_TURNS_FIX = 60         # fixing is bounded
+MAX_TURNS_FINISH = 30      # finishing is quick
+
 VALID_EFFORTS = ("low", "medium", "high", "max")
 VALID_MODELS = ("sonnet", "opus", "opusplan")
 
@@ -96,6 +103,13 @@ class RunConfig:
     skip_epics: list[int] | None = None
     legacy_mode: bool = False
     no_coordinator: bool = False
+
+
+def phase_turns(config: RunConfig, phase_cap: int) -> int:
+    """Return effective max_turns for a phase, respecting global override."""
+    if config.legacy_mode:
+        return config.max_turns
+    return min(config.max_turns, phase_cap)
 
 
 @dataclass
@@ -671,9 +685,9 @@ def commit_tracking_file(epic_num: str, message: str) -> None:
 
 
 def start_prompt(story: StoryInfo) -> str:
-    """Story Agent: /start-story + implement plan."""
+    """Story Agent: /start-story ONLY — plan generation, no implementation."""
     return (
-        f"You are implementing story {story.key} for the Knowlune learning platform.\n\n"
+        f"You are planning story {story.key} for the Knowlune learning platform.\n\n"
         f"STEP 0: Activate `/auto-answer autopilot` to handle plan mode questions autonomously without blocking.\n\n"
         f"STEP 1: Run `/start-story {story.key}` which will:\n"
         f"- Create branch feature/{story.key.lower()}-{{slug}}\n"
@@ -683,34 +697,40 @@ def start_prompt(story: StoryInfo) -> str:
         f"- Enter plan mode for your approval\n\n"
         f"STEP 1.5: Verify branch — run `git branch --show-current` and confirm it matches "
         f"the expected `feature/{story.key.lower()}-*` pattern. If not, STOP and report the mismatch.\n\n"
-        f"STEP 2: After the plan is ready, EXIT plan mode and implement it fully:\n"
-        f"- Write all code, components, and tests\n"
-        f"- Follow project conventions: design tokens (never hardcode colors), accessibility (WCAG AA), Tailwind CSS v4\n"
+        f"STEP 2: After the plan is generated and approved, STOP. Do NOT implement anything.\n"
+        f"Your job in this session is ONLY to produce the plan. Implementation happens in a separate session.\n\n"
+        f"STEP 3: Return a brief summary:\n"
+        f"- Plan file location\n"
+        f"- Branch name created\n"
+        f"- Story file location\n"
+        f"- Number of plan tasks/phases"
+    )
+
+
+def implement_prompt(story: StoryInfo) -> str:
+    """Implementation instructions — self-contained session that reads plan from disk."""
+    return (
+        f"You are implementing story {story.key} for the Knowlune learning platform.\n\n"
+        f"STEP 0: Activate `/auto-answer autopilot` to handle any interactive questions autonomously without blocking.\n\n"
+        f"STEP 1: Read context from disk:\n"
+        f"- Read the implementation plan at docs/implementation-artifacts/plans/ (find the file matching {story.key.lower()})\n"
+        f"- Read the story file at docs/implementation-artifacts/stories/ (find the file matching {story.key})\n"
+        f"- The story file contains acceptance criteria and requirements\n"
+        f"- The plan contains the ordered tasks to implement\n\n"
+        f"STEP 2: Implement the plan fully:\n"
+        f"- Follow existing codebase patterns (Tailwind CSS v4, shadcn/ui, Zustand, Dexie)\n"
+        f"- Use the @/ import alias\n"
+        f"- Follow project conventions: design tokens (never hardcode colors), accessibility (WCAG AA)\n"
         f"- Use existing UI components from src/app/components/ui/\n"
-        f"- Commit with descriptive messages as you go\n"
+        f"- Make granular commits after each logical task (as save points)\n"
+        f"- Write unit tests for business logic\n"
+        f"- Write E2E test spec if the story has UI\n"
         f"- Run `npm run build` to verify before finishing\n\n"
         f"STEP 3: Return a brief summary:\n"
         f"- What was built (2-3 sentences)\n"
         f"- Key files created/modified (list)\n"
         f"- Any decisions or concerns\n"
-        f"- Total commits made"
-    )
-
-
-def implement_prompt(story: StoryInfo) -> str:
-    """Implementation instructions — reads plan from disk, no skill needed."""
-    return (
-        f"STEP 0: Activate `/auto-answer autopilot` to handle any interactive questions autonomously without blocking.\n\n"
-        f"Implement story {story.key} following the plan.\n"
-        f"Read the plan at docs/implementation-artifacts/plans/ (find the latest for this story).\n\n"
-        f"Key rules:\n"
-        f"- Follow existing codebase patterns (Tailwind, shadcn/ui, Zustand, Dexie)\n"
-        f"- Use the @/ import alias\n"
-        f"- Make granular commits after each logical task (as save points)\n"
-        f"- Write unit tests for business logic\n"
-        f"- Write E2E test spec if the story has UI\n"
-        f"- Run tests after implementation to verify\n"
-        f"- Commit all changes when complete\n\n"
+        f"- Total commits made\n\n"
         f"When finished, output: IMPLEMENTATION_COMPLETE"
     )
 
@@ -1993,20 +2013,18 @@ async def run_story(
         start_phase = None if config.legacy_mode else PhaseConfig(
             model="opus", effort="high", fallback_model="sonnet",
             needs_agents=False, needs_playwright=False,
-            append_context=f"Story: {story.key} ({story.name}). Planning phase only.",
         )
 
         # ── Session 1: START (fresh) ──
         write_progress(story.key, "SESSION 1: START", "branch, story file, plan...")
         text, sid, cost = await run_session(
-            start_prompt(story), config.max_turns, BUDGET_SESSION_START, autonomous,
+            start_prompt(story), phase_turns(config, MAX_TURNS_START), BUDGET_SESSION_START, autonomous,
             story_key=story.key, phase=start_phase,
         )
         result.cost_start = cost
         result.total_cost_usd += cost
         if sid:
             result.session_ids.append(sid)
-        start_session_id = sid
         result.phase_reached = "start"
 
         # Verify START artifacts on disk
@@ -2024,35 +2042,19 @@ async def run_story(
             if approval != "y":
                 raise StoryError("Plan rejected by user")
 
-        # ── Session 2: IMPLEMENT (fork from START for plan context) ──
+        # ── Session 2: IMPLEMENT (fresh — reads plan from disk) ──
         write_progress(story.key, "SESSION 2: IMPLEMENT", "coding feature...")
         impl_phase = None if config.legacy_mode else PhaseConfig(
             model="sonnet", effort="high", fallback_model="sonnet",
-            resume_session_id=start_session_id,
-            fork_session=True,
             needs_agents=False, needs_playwright=False,
-            append_context=f"Story: {story.key}. Implement the plan from the previous session.",
         )
 
-        if not config.legacy_mode:
-            try:
-                text, sid, cost = await run_session(
-                    implement_prompt(story), config.max_turns, BUDGET_SESSION_IMPLEMENT,
-                    autonomous, story_key=story.key, phase=impl_phase,
-                )
-            except Exception as e:
-                log.warning(f"  Session chaining failed ({e}), falling back to cold start")
-                impl_phase.resume_session_id = None
-                impl_phase.fork_session = False
-                text, sid, cost = await run_session(
-                    implement_prompt(story), config.max_turns, BUDGET_SESSION_IMPLEMENT,
-                    autonomous, story_key=story.key, phase=impl_phase,
-                )
-        else:
-            text, sid, cost = await run_session(
-                implement_prompt(story), config.max_turns, BUDGET_SESSION_IMPLEMENT,
-                autonomous, story_key=story.key,
-            )
+        text, sid, cost = await run_session(
+            implement_prompt(story),
+            phase_turns(config, MAX_TURNS_IMPLEMENT) if not config.legacy_mode else config.max_turns,
+            BUDGET_SESSION_IMPLEMENT,
+            autonomous, story_key=story.key, phase=impl_phase,
+        )
 
         result.cost_implement = cost
         result.total_cost_usd += cost
@@ -2085,7 +2087,7 @@ async def run_story(
         write_progress(story.key, "SESSION 3: REVIEW", "quality gates...")
         text, sid, cost = await run_session(
             review_prompt(story, known_issues=known_issues, skip_agents=skip_agents),
-            config.max_turns, BUDGET_SESSION_REVIEW,
+            phase_turns(config, MAX_TURNS_REVIEW), BUDGET_SESSION_REVIEW,
             autonomous, story_key=story.key, phase=review_phase,
         )
         result.cost_review = cost
@@ -2270,7 +2272,7 @@ async def run_story(
             write_progress(story.key, "FIX", f"round {round_num}: fixing ({fix_model})...")
             _, _, fix_cost = await run_session(
                 fix_prompt(story, findings=verdict.story_related_findings, strategy=fix_strategy),
-                config.max_turns, BUDGET_SESSION_REVIEW,
+                phase_turns(config, MAX_TURNS_FIX), BUDGET_SESSION_REVIEW,
                 autonomous, story_key=story.key, phase=fix_phase,
             )
             result.cost_review += fix_cost
@@ -2290,7 +2292,7 @@ async def run_story(
             write_progress(story.key, "RE-REVIEW", f"round {round_num + 1}...")
             text, _, rr_cost = await run_session(
                 review_prompt(story, known_issues=known_issues, skip_agents=skip_agents),
-                config.max_turns, BUDGET_SESSION_REVIEW,
+                phase_turns(config, MAX_TURNS_REVIEW), BUDGET_SESSION_REVIEW,
                 autonomous, story_key=story.key, phase=review_phase,
             )
             result.cost_review += rr_cost
@@ -2321,7 +2323,7 @@ async def run_story(
                     write_progress(story.key, "FIX", "fixing non-blocker findings...")
                     _, _, fix_cost = await run_session(
                         fix_prompt(story, findings=verdict.story_related_findings),
-                        config.max_turns, BUDGET_SESSION_REVIEW,
+                        phase_turns(config, MAX_TURNS_FIX), BUDGET_SESSION_REVIEW,
                         autonomous, story_key=story.key, phase=fix_phase,
                     )
                     result.cost_review += fix_cost
@@ -2344,7 +2346,7 @@ async def run_story(
 
         write_progress(story.key, "FINISH", "updating story, pushing, creating PR...")
         text, sid, cost = await run_session(
-            finish_prompt_text(story), config.max_turns, BUDGET_SESSION_REVIEW,
+            finish_prompt_text(story), phase_turns(config, MAX_TURNS_FINISH), BUDGET_SESSION_REVIEW,
             autonomous, story_key=story.key, phase=finish_phase,
         )
         result.cost_review += cost
@@ -2362,7 +2364,7 @@ async def run_story(
                 needs_agents=False, needs_playwright=False,
             )
             retry_text, _, retry_cost = await run_session(
-                finish_retry_prompt(story, missing), config.max_turns,
+                finish_retry_prompt(story, missing), phase_turns(config, MAX_TURNS_FINISH),
                 BUDGET_SESSION_REVIEW, autonomous,
                 story_key=story.key, phase=retry_phase,
             )
@@ -2938,12 +2940,15 @@ async def main() -> None:
         if not config.legacy_mode:
             print(f"\nOptimized model/effort per phase:")
             print(f"  START:  opus, effort=high")
-            print(f"  IMPL:   sonnet, effort=high (forked from START)")
+            print(f"  IMPL:   sonnet, effort=high (fresh session, reads plan from disk)")
             print(f"  REVIEW: sonnet, effort=medium")
             coord_status = "(DISABLED)" if config.no_coordinator else ""
             print(f"  COORD:  sonnet, effort=low {coord_status}")
             print(f"  FIX:    sonnet, effort=high (or opus on escalate)")
             print(f"  FINISH: sonnet, effort=low")
+            print(f"\nPer-phase turn caps (when --max-turns not set):")
+            print(f"  START={MAX_TURNS_START}, IMPL={MAX_TURNS_IMPLEMENT}, "
+                  f"REVIEW={MAX_TURNS_REVIEW}, FIX={MAX_TURNS_FIX}, FINISH={MAX_TURNS_FINISH}")
 
         if not config.skip_epic_finish:
             fake_results = [StoryResult(story=s, success=True) for s in stories]
