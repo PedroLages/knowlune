@@ -118,7 +118,7 @@ export function AnnotationSummary() {
         }
       } catch {
         if (!cancelled) {
-          toast.error('Failed to load annotations')
+          toast.error('Failed to load annotations. Please refresh.')
           setLoading(false)
         }
       }
@@ -154,7 +154,7 @@ export function AnnotationSummary() {
   )
 
   const handleBack = useCallback(() => {
-    navigate('/library')
+    navigate(-1)
   }, [navigate])
 
   if (!bookId) return null

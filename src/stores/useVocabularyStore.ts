@@ -132,6 +132,14 @@ export const useVocabularyStore = create<VocabularyStoreState>((set, get) => ({
   setReviewIndex: (index: number) => set({ reviewIndex: index }),
 
   getReviewableItems: () => {
-    return get().items.filter(i => i.masteryLevel < 3)
+    const FOUR_HOURS_MS = 4 * 60 * 60 * 1000
+    const cutoff = new Date(Date.now() - FOUR_HOURS_MS).toISOString()
+    return get()
+      .items.filter(
+        i =>
+          i.masteryLevel < 3 &&
+          (!i.lastReviewedAt || i.lastReviewedAt < cutoff)
+      )
+      .slice(0, 20)
   },
 }))

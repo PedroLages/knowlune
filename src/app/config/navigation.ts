@@ -2,6 +2,8 @@ import {
   LayoutDashboard,
   BookOpen,
   BookA,
+  Highlighter,
+  Search,
   GraduationCap,
   StickyNote,
   RotateCcw,
@@ -68,6 +70,8 @@ export const navigationGroups: NavigationGroup[] = [
       { name: 'Notes', path: '/notes', icon: StickyNote, disclosureKey: 'note-created' },
       { name: 'Flashcards', path: '/flashcards', icon: Layers },
       { name: 'Vocabulary', path: '/vocabulary', icon: BookA },
+      { name: 'Highlight Review', path: '/highlight-review', icon: Highlighter },
+      { name: 'Cross-Book Search', path: '/search-annotations', icon: Search },
       { name: 'Review', path: '/review', icon: RotateCcw, disclosureKey: 'review-used' },
       {
         name: 'Learning Path',

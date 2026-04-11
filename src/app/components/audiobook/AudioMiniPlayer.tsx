@@ -48,7 +48,7 @@ export function AudioMiniPlayer() {
   // Reset cover error when the resolved URL changes (i.e. book changes without unmount)
   useEffect(() => {
     setCoverError(false)
-  }, [resolvedCoverUrl])
+  }, [resolvedCoverUrl, currentBookId])
 
   // Hide when no book or when on the full player page
   const isOnPlayerPage = pathname.includes(`/library/${currentBookId}/read`)

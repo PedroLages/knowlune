@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/app/components/ui/select'
-import type { Book } from '@/data/types'
+import type { Book, BookGenre } from '@/data/types'
 import { Badge } from '@/app/components/ui/badge'
 import { useBookStore } from '@/stores/useBookStore'
 import { fetchOpenLibraryMetadata, fetchCoverImage } from '@/services/OpenLibraryService'
@@ -263,10 +263,10 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
       // Determine the effective genre value for saving.
       // If the user didn't explicitly change the genre, preserve the book's existing genre
       // (including legacy tag-based genres) to avoid silently deleting it on save.
-      const effectiveGenre: string | undefined =
+      const effectiveGenre: BookGenre | undefined =
         genreChanged
-          ? genre !== NONE_GENRE ? genre : undefined
-          : book.genre || book.tags.find(t => (GENRES as string[]).includes(t)) || undefined
+          ? genre !== NONE_GENRE ? (genre as BookGenre) : undefined
+          : book.genre || (book.tags.find(t => (GENRES as string[]).includes(t)) as BookGenre | undefined)
 
       // Build tags: genre (if set) + user tags
       const finalTags = effectiveGenre ? [effectiveGenre, ...tags] : [...tags]

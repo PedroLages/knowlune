@@ -1,14 +1,17 @@
 /**
- * HighlightReview — daily highlight review page with spaced-repetition rating.
+ * HighlightReview — daily highlight review page with priority-based rating.
  *
  * Loads highlights from the bookHighlights Dexie table, prioritizing
  * unreviewed and least-recently-reviewed highlights. Users can rate
  * each highlight as "keep" (resurface later) or "dismiss" (hide from future reviews).
  *
+ * Note: This uses a simple keep/dismiss priority system, not SM-2 or FSRS
+ * spaced repetition scheduling.
+ *
  * Route: /highlight-review
  *
  * @module HighlightReview
- * @since E86-S02 (created), E109-S02 (spaced-repetition rating)
+ * @since E86-S02 (created), E109-S02 (priority review rating)
  */
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router'

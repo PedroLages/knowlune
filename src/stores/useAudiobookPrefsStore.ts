@@ -16,7 +16,8 @@ export type SleepTimerDefault = 'off' | 15 | 30 | 45 | 60 | 'end-of-chapter'
 export interface AudiobookPrefs {
   /** Default playback speed for new sessions (0.5–3.0, 0.25 increments) */
   defaultSpeed: number
-  /** Skip silent sections during playback */
+  /** Skip silent sections during playback.
+   *  Persisted for future Web Audio API AnalyserNode implementation. UI shows "Coming soon". */
   skipSilence: boolean
   /** Default sleep timer duration for new sessions */
   defaultSleepTimer: SleepTimerDefault

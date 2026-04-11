@@ -8,6 +8,7 @@ import {
   DialogFooter,
 } from '@/app/components/ui/dialog'
 import { Input } from '@/app/components/ui/input'
+import { Textarea } from '@/app/components/ui/textarea'
 import type { VocabularyItem } from '@/data/types'
 
 export function EditDialog({
@@ -33,7 +34,7 @@ export function EditDialog({
             <label htmlFor="vocab-definition" className="text-sm font-medium text-foreground mb-1 block">
               Definition
             </label>
-            <Input
+            <Textarea
               id="vocab-definition"
               value={definition}
               onChange={e => setDefinition(e.target.value)}

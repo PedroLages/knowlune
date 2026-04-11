@@ -24,7 +24,7 @@ import { useBookStore } from '@/stores/useBookStore'
 import { extractEpubMetadata } from '@/services/EpubMetadataService'
 import { fetchOpenLibraryMetadata, fetchCoverImage } from '@/services/OpenLibraryService'
 import { opfsStorageService } from '@/services/OpfsStorageService'
-import type { Book, BookStatus } from '@/data/types'
+import type { Book, BookGenre, BookStatus } from '@/data/types'
 import { BookDetailsForm, type ImportPhase } from './BookDetailsForm'
 import { detectGenre } from '@/services/GenreDetectionService'
 import { AudiobookImportFlow } from './AudiobookImportFlow'
@@ -257,7 +257,7 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
         format: 'epub',
         status,
         coverUrl,
-        genre: genre !== 'Other' ? genre : undefined, // E108-S05: dedicated genre field
+        genre: genre !== 'Other' ? (genre as BookGenre) : undefined, // E108-S05: dedicated genre field
         tags: genre !== 'Other' ? [genre] : [],
         chapters: [],
         source: { type: 'local', opfsPath: '' }, // importBook sets the real path
