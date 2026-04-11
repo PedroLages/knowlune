@@ -13,6 +13,7 @@ import { Search, X } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet'
 import { Checkbox } from '@/app/components/ui/checkbox'
 import { useBookStore, type SortOption } from '@/stores/useBookStore'
+import { ALL_GENRES } from '@/services/GenreDetectionService'
 import { cn } from '@/app/components/ui/utils'
 
 interface FilterSidebarProps {
@@ -32,6 +33,9 @@ const FORMAT_OPTIONS = [
   { value: 'audiobook', label: 'Audiobook' },
   { value: 'epub', label: 'EPUB' },
 ]
+
+/** Sentinel value for books with no genre assigned. Used in filter UI and store. */
+export const UNSET_GENRE = 'Unset'
 
 export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
   const filters = useBookStore(s => s.filters)
@@ -69,6 +73,11 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
     setFilter('authors', next.length > 0 ? next : undefined)
   }
 
+  const handleGenreSelect = (genreValue: string) => {
+    // Toggle: if already selected, clear; otherwise set
+    setFilter('genre', filters.genre === genreValue ? undefined : genreValue)
+  }
+
   const handleClearAll = () => {
     setFilters({ status: filters.status, search: filters.search, source: filters.source })
   }
@@ -93,6 +102,12 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
     activeChips.push({
       label: author,
       onRemove: () => handleAuthorToggle(author),
+    })
+  }
+  if (filters.genre) {
+    activeChips.push({
+      label: `Genre: ${filters.genre}`,
+      onRemove: () => setFilter('genre', undefined),
     })
   }
 
@@ -201,6 +216,42 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
                   />
                   <span className="text-sm font-medium text-foreground">{opt.label}</span>
                 </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Genre (E108-S05) */}
+          <div className="mb-8">
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">
+              Genre
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => handleGenreSelect(UNSET_GENRE)}
+                className={cn(
+                  'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  filters.genre === UNSET_GENRE
+                    ? 'bg-brand text-brand-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                )}
+                data-testid="genre-filter-unset"
+              >
+                Unset
+              </button>
+              {ALL_GENRES.filter(g => g !== 'Other').map(g => (
+                <button
+                  key={g}
+                  onClick={() => handleGenreSelect(g)}
+                  className={cn(
+                    'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                    filters.genre === g
+                      ? 'bg-brand text-brand-foreground'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  )}
+                  data-testid={`genre-filter-${g.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  {g}
+                </button>
               ))}
             </div>
           </div>

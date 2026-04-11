@@ -15,7 +15,7 @@ import { extractEpubMetadata } from '@/services/EpubMetadataService'
 import { fetchOpenLibraryMetadata, fetchCoverImage } from '@/services/OpenLibraryService'
 import { opfsStorageService } from '@/services/OpfsStorageService'
 import type { Book } from '@/data/types'
-import { GENRES } from '@/app/components/library/BookDetailsForm'
+import { detectGenre } from '@/services/GenreDetectionService'
 
 export interface BulkImportResult {
   fileName: string
@@ -125,14 +125,8 @@ export function useBulkImport() {
             coverUrl = coverPath === 'indexeddb' ? `opfs-cover://${bookId}` : `opfs://${coverPath}`
           }
 
-          // Auto-detect genre
-          let genre = 'Other'
-          if (olResult.subjects?.length) {
-            const matchedGenre = GENRES.find(g =>
-              olResult.subjects!.some(s => s.toLowerCase().includes(g.toLowerCase()))
-            )
-            if (matchedGenre) genre = matchedGenre
-          }
+          // Auto-detect genre via keyword matching (E108-S05)
+          const genre = olResult.subjects?.length ? detectGenre(olResult.subjects) : 'Other'
 
           const book: Book = {
             id: bookId,
@@ -141,6 +135,7 @@ export function useBulkImport() {
             format: 'epub',
             status: 'unread',
             coverUrl,
+            genre: genre !== 'Other' ? genre : undefined, // E108-S05
             tags: genre !== 'Other' ? [genre] : [],
             chapters: [],
             source: { type: 'local', opfsPath: '' }, // Intentional: importBook sets the real path

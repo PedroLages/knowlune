@@ -26,6 +26,7 @@ export interface BookFilters {
   sort?: SortOption
   format?: string[] // multi-select format filter (e.g. ['audiobook', 'epub'])
   authors?: string[] // multi-select author filter
+  genre?: string // genre filter (E108-S05)
 }
 
 interface BookStoreState {
@@ -46,7 +47,7 @@ interface BookStoreState {
   getFilteredBooks: () => Book[]
   updateBookMetadata: (
     bookId: string,
-    updates: Partial<Pick<Book, 'title' | 'author' | 'isbn' | 'description' | 'tags' | 'coverUrl'>>
+    updates: Partial<Pick<Book, 'title' | 'author' | 'isbn' | 'description' | 'tags' | 'coverUrl' | 'genre'>>
   ) => Promise<void>
   updateBookPosition: (
     bookId: string,
@@ -199,7 +200,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       result = result.filter(
         b =>
           b.title.toLowerCase().includes(q) ||
-          b.author.toLowerCase().includes(q) ||
+          (b.author ?? '').toLowerCase().includes(q) ||
           (b.narrator?.toLowerCase().includes(q) ?? false)
       )
     }
@@ -212,7 +213,16 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     // Author filter
     if (filters.authors && filters.authors.length > 0) {
       const authorSet = new Set(filters.authors.map(a => a.toLowerCase()))
-      result = result.filter(b => authorSet.has(b.author.toLowerCase()))
+      result = result.filter(b => authorSet.has((b.author ?? '').toLowerCase()))
+    }
+
+    // Genre filter (E108-S05)
+    if (filters.genre) {
+      if (filters.genre === 'Unset') {
+        result = result.filter(b => !b.genre)
+      } else {
+        result = result.filter(b => b.genre === filters.genre)
+      }
     }
 
     // Sort
@@ -222,7 +232,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
         case 'title-asc':
           return a.title.localeCompare(b.title)
         case 'author-asc':
-          return a.author.localeCompare(b.author)
+          return (a.author ?? '').localeCompare(b.author ?? '')
         case 'progress':
           return (b.progress ?? 0) - (a.progress ?? 0)
         case 'duration':

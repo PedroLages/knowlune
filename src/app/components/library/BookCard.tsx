@@ -127,6 +127,9 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
             {book.title}
           </p>
           <p className="text-xs text-muted-foreground mt-1 truncate">{book.author}</p>
+          {book.genre && (
+            <p className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">{book.genre}</p>
+          )}
           {book.narrator && (
             <p className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">{book.narrator}</p>
           )}
@@ -225,6 +228,9 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
           {book.title}
         </p>
         <p className="text-xs text-muted-foreground truncate">{book.author}</p>
+        {book.genre && (
+          <p className="text-[11px] text-muted-foreground/70 truncate">{book.genre}</p>
+        )}
         {book.totalDuration != null && book.totalDuration > 0 && (
           <p className="text-[10px] text-muted-foreground" data-testid={`duration-${book.id}`}>
             {formatDuration(book.totalDuration)}

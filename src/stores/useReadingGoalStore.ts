@@ -43,6 +43,12 @@ interface ReadingGoalState {
    */
   checkDailyGoalMet: (minutesToday: number) => boolean
   /**
+   * Call after a reading session — if daily pages goal is met today and not already
+   * credited, increments the streak. Returns true if goal was newly met.
+   * @since E108-S05
+   */
+  checkPagesGoalMet: (pagesToday: number) => boolean
+  /**
    * Call when a book is finished — returns true if yearly goal is newly reached.
    */
   checkYearlyGoalReached: (booksFinishedThisYear: number) => boolean
@@ -126,6 +132,32 @@ export const useReadingGoalStore = create<ReadingGoalState>((set, get) => ({
     if (minutesToday < goal.dailyTarget) return false
 
     // Check if yesterday was the last met date (consecutive)
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const isConsecutive = streak.lastMetDate === yesterday.toISOString().slice(0, 10)
+
+    const newCurrent = isConsecutive ? streak.currentStreak + 1 : 1
+    const newLongest = Math.max(streak.longestStreak, newCurrent)
+    const newStreak: ReadingGoalStreak = {
+      currentStreak: newCurrent,
+      longestStreak: newLongest,
+      lastMetDate: today,
+    }
+    saveStreakToStorage(newStreak)
+    set({ streak: newStreak })
+    return true
+  },
+
+  checkPagesGoalMet: (pagesToday: number): boolean => {
+    const { goal, streak } = get()
+    if (!goal || goal.dailyType !== 'pages') return false
+    // A target of 0 is meaningless — avoid crediting streak for zero pages read
+    if (goal.dailyTarget <= 0) return false
+
+    const today = todayIso()
+    if (streak.lastMetDate === today) return false
+    if (pagesToday < goal.dailyTarget) return false
+
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
     const isConsecutive = streak.lastMetDate === yesterday.toISOString().slice(0, 10)

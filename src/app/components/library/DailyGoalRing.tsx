@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react'
 import { getTimeReadToday } from '@/services/ReadingStatsService'
 import { useReadingGoalStore } from '@/stores/useReadingGoalStore'
+import { usePagesReadToday } from '@/app/hooks/usePagesReadToday'
 import { cn } from '@/app/components/ui/utils'
 
 const RADIUS = 20
@@ -23,6 +24,7 @@ interface DailyGoalRingProps {
 export function DailyGoalRing({ className }: DailyGoalRingProps) {
   const goal = useReadingGoalStore(s => s.goal)
   const [minutesToday, setMinutesToday] = useState(0)
+  const pagesToday = usePagesReadToday()
 
   useEffect(() => {
     let ignore = false
@@ -39,23 +41,28 @@ export function DailyGoalRing({ className }: DailyGoalRingProps) {
     }
   }, [])
 
-  if (!goal || goal.dailyType !== 'minutes') return null
+  if (!goal) return null
 
-  const progress = Math.min(minutesToday / goal.dailyTarget, 1)
+  const isPageMode = goal.dailyType === 'pages'
+  const current = isPageMode ? pagesToday : minutesToday
+  const target = goal.dailyTarget
+  const unit = isPageMode ? 'pages' : 'min'
+  // Guard against division by zero — show empty ring when target is 0
+  const progress = target > 0 ? Math.min(current / target, 1) : 0
   const dashOffset = CIRCUMFERENCE * (1 - progress)
-  const isGoalMet = minutesToday >= goal.dailyTarget
+  const isGoalMet = current >= target
 
   return (
     <div
       className={cn('flex items-center gap-2', className)}
-      title={`${minutesToday}/${goal.dailyTarget} min read today`}
+      title={`${current}/${target} ${unit} read today`}
     >
       <svg
         width={SIZE}
         height={SIZE}
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         role="img"
-        aria-label={`Daily reading goal: ${minutesToday} of ${goal.dailyTarget} minutes`}
+        aria-label={`Daily reading goal: ${current} of ${target} ${unit}`}
       >
         {/* Track */}
         <circle
@@ -83,7 +90,7 @@ export function DailyGoalRing({ className }: DailyGoalRingProps) {
         />
       </svg>
       <span className="text-xs text-muted-foreground whitespace-nowrap">
-        {minutesToday}/{goal.dailyTarget} min
+        {current}/{target} {unit}
       </span>
     </div>
   )

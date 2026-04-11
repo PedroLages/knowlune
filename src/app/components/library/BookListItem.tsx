@@ -111,7 +111,10 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
       {/* Title + Author */}
       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
         <p className="text-sm font-medium text-foreground truncate">{book.title}</p>
-        <p className="text-xs text-muted-foreground truncate">{book.author}</p>
+        <p className="text-xs text-muted-foreground truncate">
+          {book.author}
+          {book.genre && <span className="text-muted-foreground/60"> · {book.genre}</span>}
+        </p>
         {book.narrator && (
           <p className="flex items-center gap-1 text-xs text-muted-foreground/70 truncate">
             <Mic className="size-3 shrink-0" aria-hidden="true" />
