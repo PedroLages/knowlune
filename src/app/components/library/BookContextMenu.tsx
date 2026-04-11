@@ -10,7 +10,14 @@
 
 import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
-import { Check, MoreVertical, ArrowRightLeft, Highlighter, Library, ListOrdered } from 'lucide-react'
+import {
+  Check,
+  MoreVertical,
+  ArrowRightLeft,
+  Highlighter,
+  Library,
+  ListOrdered,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import type { Book, BookStatus } from '@/data/types'
 import { useBookStore } from '@/stores/useBookStore'
@@ -188,21 +195,20 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
                 </span>
               </ContextMenuSubTrigger>
               <ContextMenuSubContent className="w-48">
-                {shelves
-                  .map(shelf => (
-                    <ContextMenuItem
-                      key={shelf.id}
-                      onClick={() => handleShelfToggle(shelf.id)}
-                      data-testid={`context-menu-shelf-${shelf.name.toLowerCase().replace(/\s+/g, '-')}`}
-                    >
-                      <span className="flex items-center gap-2">
-                        {isBookOnShelf(shelf.id) && <Check className="h-3.5 w-3.5" />}
-                        <span className={isBookOnShelf(shelf.id) ? 'font-medium' : ''}>
-                          {shelf.name}
-                        </span>
+                {shelves.map(shelf => (
+                  <ContextMenuItem
+                    key={shelf.id}
+                    onClick={() => handleShelfToggle(shelf.id)}
+                    data-testid={`context-menu-shelf-${shelf.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <span className="flex items-center gap-2">
+                      {isBookOnShelf(shelf.id) && <Check className="h-3.5 w-3.5" />}
+                      <span className={isBookOnShelf(shelf.id) ? 'font-medium' : ''}>
+                        {shelf.name}
                       </span>
-                    </ContextMenuItem>
-                  ))}
+                    </span>
+                  </ContextMenuItem>
+                ))}
               </ContextMenuSubContent>
             </ContextMenuSub>
             <ContextMenuItem
@@ -277,21 +283,20 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
                 </span>
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="w-48">
-                {shelves
-                  .map(shelf => (
-                    <DropdownMenuItem
-                      key={shelf.id}
-                      onClick={() => handleShelfToggle(shelf.id)}
-                      data-testid={`dropdown-shelf-${shelf.name.toLowerCase().replace(/\s+/g, '-')}`}
-                    >
-                      <span className="flex items-center gap-2">
-                        {isBookOnShelf(shelf.id) && <Check className="h-3.5 w-3.5" />}
-                        <span className={isBookOnShelf(shelf.id) ? 'font-medium' : ''}>
-                          {shelf.name}
-                        </span>
+                {shelves.map(shelf => (
+                  <DropdownMenuItem
+                    key={shelf.id}
+                    onClick={() => handleShelfToggle(shelf.id)}
+                    data-testid={`dropdown-shelf-${shelf.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <span className="flex items-center gap-2">
+                      {isBookOnShelf(shelf.id) && <Check className="h-3.5 w-3.5" />}
+                      <span className={isBookOnShelf(shelf.id) ? 'font-medium' : ''}>
+                        {shelf.name}
                       </span>
-                    </DropdownMenuItem>
-                  ))}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuSubContent>
             </DropdownMenuSub>
             <DropdownMenuItem
@@ -341,7 +346,8 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
           <AlertDialogHeader>
             <AlertDialogTitle>Delete &ldquo;{book.title}&rdquo;?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove the book, its highlights, and all locally stored files (OPFS). This action cannot be undone.
+              This will permanently remove the book, its highlights, and all locally stored files
+              (OPFS). This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

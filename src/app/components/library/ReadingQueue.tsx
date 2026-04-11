@@ -40,13 +40,7 @@ function QueueItemCover({ book }: { book: Book }) {
   const coverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
 
   if (coverUrl) {
-    return (
-      <img
-        src={coverUrl}
-        alt=""
-        className="h-14 w-10 shrink-0 rounded-md object-cover"
-      />
-    )
+    return <img src={coverUrl} alt="" className="h-14 w-10 shrink-0 rounded-md object-cover" />
   }
 
   return (
@@ -113,7 +107,6 @@ function SortableQueueItem({
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
             <div
               className="h-full rounded-full bg-brand transition-all"
-              // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic width
               style={{ width: `${Math.min(100, Math.max(0, book.progress))}%` }}
             />
           </div>
@@ -147,9 +140,7 @@ function QueueDragOverlay({ book }: { book: Book }) {
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{book.title}</p>
-        {book.author && (
-          <p className="truncate text-xs text-muted-foreground">{book.author}</p>
-        )}
+        {book.author && <p className="truncate text-xs text-muted-foreground">{book.author}</p>}
       </div>
     </div>
   )
@@ -205,7 +196,8 @@ export function ReadingQueue() {
       >
         <ListOrdered className="mx-auto mb-2 size-6 text-muted-foreground" aria-hidden="true" />
         <p className="text-sm text-muted-foreground">
-          Your reading queue is empty. Right-click a book and select &quot;Add to Queue&quot; to get started.
+          Your reading queue is empty. Right-click a book and select &quot;Add to Queue&quot; to get
+          started.
         </p>
       </div>
     )
@@ -227,10 +219,7 @@ export function ReadingQueue() {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext
-          items={validEntries.map(e => e.id)}
-          strategy={verticalListSortingStrategy}
-        >
+        <SortableContext items={validEntries.map(e => e.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-1.5" role="list" aria-label="Reading queue">
             {validEntries.map(entry => {
               const book = bookMap.get(entry.bookId)
@@ -248,9 +237,7 @@ export function ReadingQueue() {
           </div>
         </SortableContext>
 
-        <DragOverlay>
-          {activeBook ? <QueueDragOverlay book={activeBook} /> : null}
-        </DragOverlay>
+        <DragOverlay>{activeBook ? <QueueDragOverlay book={activeBook} /> : null}</DragOverlay>
       </DndContext>
     </div>
   )
