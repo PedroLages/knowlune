@@ -50,6 +50,8 @@ describe('ElearningDB schema', () => {
     // courses table dropped in v30 (E89-S01)
     expect(db.tables.map(t => t.name).sort()).toEqual([
       'aiUsageEvents',
+      'audioBookmarks',
+      'audiobookshelfServers',
       'authors',
       'bookFiles',
       'bookHighlights',
@@ -57,6 +59,7 @@ describe('ElearningDB schema', () => {
       'books',
       'careerPaths',
       'challenges',
+      'chapterMappings',
       'contentProgress',
       'courseEmbeddings',
       'courseReminders',
@@ -72,6 +75,7 @@ describe('ElearningDB schema', () => {
       'notes',
       'notificationPreferences',
       'notifications',
+      'opdsCatalogs',
       'pathEnrollments',
       'progress',
       'quizAttempts',
@@ -81,14 +85,15 @@ describe('ElearningDB schema', () => {
       'studySchedules',
       'studySessions',
       'videoCaptions',
+      'vocabularyItems',
       'youtubeChapters',
       'youtubeTranscripts',
       'youtubeVideoCache',
     ])
   })
 
-  it('should be at version 37', () => {
-    expect(db.verno).toBe(37)
+  it('should be at version 42', () => {
+    expect(db.verno).toBe(42)
   })
 
   it('should have entitlements table with userId as primary key', () => {

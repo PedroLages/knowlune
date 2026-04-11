@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { Button } from '@/app/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/app/components/ui/dialog'
 import { Input } from '@/app/components/ui/input'
 import type { VocabularyItem } from '@/data/types'
 
@@ -17,17 +23,12 @@ export function EditDialog({
   const [note, setNote] = useState(item.note ?? '')
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      role="dialog"
-      aria-label={`Edit vocabulary: ${item.word}`}
-      data-testid="vocab-edit-dialog"
-    >
-      <Card className="w-full max-w-md mx-4">
-        <CardHeader>
-          <CardTitle className="text-lg">Edit: {item.word}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <Dialog open onOpenChange={open => { if (!open) onCancel() }}>
+      <DialogContent data-testid="vocab-edit-dialog" className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-lg">Edit: {item.word}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
           <div>
             <label htmlFor="vocab-definition" className="text-sm font-medium text-foreground mb-1 block">
               Definition
@@ -52,16 +53,16 @@ export function EditDialog({
               data-testid="vocab-note-input"
             />
           </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button variant="brand" onClick={() => onSave(definition, note)}>
-              Save
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="brand" onClick={() => onSave(definition, note)}>
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

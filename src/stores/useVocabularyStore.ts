@@ -39,6 +39,8 @@ interface VocabularyStoreState {
   getReviewableItems: () => VocabularyItem[]
 }
 
+const now = () => new Date().toISOString()
+
 export const useVocabularyStore = create<VocabularyStoreState>((set, get) => ({
   items: [],
   isLoaded: false,
@@ -70,12 +72,17 @@ export const useVocabularyStore = create<VocabularyStoreState>((set, get) => ({
   },
 
   updateItem: async (id, updates) => {
-    const now = new Date().toISOString()
-    const fullUpdates = { ...updates, updatedAt: now }
+    const prev = get().items
+    const fullUpdates = { ...updates, updatedAt: now() }
     set(state => ({
       items: state.items.map(i => (i.id === id ? { ...i, ...fullUpdates } : i)),
     }))
-    await db.vocabularyItems.update(id, fullUpdates)
+    try {
+      await db.vocabularyItems.update(id, fullUpdates)
+    } catch {
+      set({ items: prev })
+      toast.error('Failed to update vocabulary item')
+    }
   },
 
   deleteItem: async (id: string) => {
@@ -92,22 +99,34 @@ export const useVocabularyStore = create<VocabularyStoreState>((set, get) => ({
   advanceMastery: async (id: string) => {
     const item = get().items.find(i => i.id === id)
     if (!item || item.masteryLevel >= 3) return
+    const prev = get().items
     const newLevel = Math.min(3, item.masteryLevel + 1) as 0 | 1 | 2 | 3
-    const now = new Date().toISOString()
-    const updates = { masteryLevel: newLevel, lastReviewedAt: now, updatedAt: now }
+    const timestamp = now()
+    const updates = { masteryLevel: newLevel, lastReviewedAt: timestamp, updatedAt: timestamp }
     set(state => ({
       items: state.items.map(i => (i.id === id ? { ...i, ...updates } : i)),
     }))
-    await db.vocabularyItems.update(id, updates)
+    try {
+      await db.vocabularyItems.update(id, updates)
+    } catch {
+      set({ items: prev })
+      toast.error('Failed to update mastery level')
+    }
   },
 
   resetMastery: async (id: string) => {
-    const now = new Date().toISOString()
-    const updates = { masteryLevel: 0 as const, lastReviewedAt: now, updatedAt: now }
+    const prev = get().items
+    const timestamp = now()
+    const updates = { masteryLevel: 0 as const, lastReviewedAt: timestamp, updatedAt: timestamp }
     set(state => ({
       items: state.items.map(i => (i.id === id ? { ...i, ...updates } : i)),
     }))
-    await db.vocabularyItems.update(id, updates)
+    try {
+      await db.vocabularyItems.update(id, updates)
+    } catch {
+      set({ items: prev })
+      toast.error('Failed to reset mastery level')
+    }
   },
 
   setReviewIndex: (index: number) => set({ reviewIndex: index }),
