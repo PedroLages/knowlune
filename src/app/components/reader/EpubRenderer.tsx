@@ -13,6 +13,7 @@
  */
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { EpubView } from 'react-reader'
+import { cn } from '@/app/components/ui/utils'
 import type { Rendition } from 'epubjs'
 import type { NavItem } from 'epubjs'
 import { useReaderStore } from '@/stores/useReaderStore'
@@ -211,7 +212,7 @@ export function EpubRenderer({
   return (
     <div
       ref={containerRef}
-      className={`relative h-full w-full ${containerBg} ${animationClass}`}
+      className={cn('relative h-full w-full', containerBg, animationClass)}
       data-testid="epub-renderer"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}

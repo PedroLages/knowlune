@@ -355,6 +355,38 @@ describe('EpubRenderer', () => {
         }),
       })
     })
+
+    it('re-applies theme when color scheme changes mid-render', () => {
+      mockColorScheme = 'professional'
+      const { rerender } = render(<EpubRenderer {...defaultProps} />)
+
+      const mockRendition = createMockRendition()
+      const epubViewCall = mockEpubViewProps.mock.calls[0][0]
+      act(() => {
+        epubViewCall.getRendition(mockRendition)
+      })
+
+      // Confirm initial professional colors
+      expect(mockRendition.themes.default).toHaveBeenCalledWith({
+        body: expect.objectContaining({
+          background: '#faf5ee',
+          color: '#1c1d2b',
+        }),
+      })
+
+      mockRendition.themes.default.mockClear()
+
+      // Switch color scheme to clean mid-render
+      mockColorScheme = 'clean'
+      rerender(<EpubRenderer {...defaultProps} />)
+
+      expect(mockRendition.themes.default).toHaveBeenCalledWith({
+        body: expect.objectContaining({
+          background: '#f9f9fe',
+          color: '#2c333d',
+        }),
+      })
+    })
   })
 
   describe('Navigation — navigatePrev / navigateNext', () => {

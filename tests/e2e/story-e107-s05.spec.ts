@@ -86,13 +86,10 @@ async function openReader(
   await page.goto(`/library/${TEST_BOOK.id}/read`)
 
   // Dismiss any dialogs
-  // Intentional hard wait: dialog animations need time before dismissal
-  await page.waitForTimeout(500)
   const backdrop = page.locator('[data-slot="dialog-overlay"]').first()
-  if (await backdrop.isVisible({ timeout: 1000 }).catch(() => false)) {
+  if (await backdrop.waitFor({ state: 'visible', timeout: 1500 }).then(() => true).catch(() => false)) {
     await page.keyboard.press('Escape')
-    // Intentional hard wait: dialog close animation
-    await page.waitForTimeout(200)
+    await backdrop.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {})
   }
 }
 
@@ -123,6 +120,14 @@ test.describe('E107-S05: Sync Reader Themes', () => {
     const container = page.getByTestId('epub-renderer')
     await expect(container).toBeVisible({ timeout: 5000 })
     await expect(container).toHaveClass(/bg-\[#f9f9fe\]/)
+  })
+
+  test('AC-4: Vibrant scheme uses same background as Professional (#faf5ee)', async ({ page }) => {
+    await openReader(page, { colorScheme: 'vibrant' })
+
+    const container = page.getByTestId('epub-renderer')
+    await expect(container).toBeVisible({ timeout: 5000 })
+    await expect(container).toHaveClass(/bg-\[#faf5ee\]/)
   })
 
   test('AC-1: sepia reader theme remains independent of app color scheme', async ({ page }) => {
@@ -196,5 +201,38 @@ test.describe('E107-S05: Sync Reader Themes', () => {
 
     // Container should now use Clean bg
     await expect(container).toHaveClass(/bg-\[#f9f9fe\]/, { timeout: 3000 })
+  })
+
+  test('AC-3: reader container has correct background on initial render (no flash)', async ({ page }) => {
+    // Set up Clean scheme via addInitScript (before navigation)
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'knowlune-onboarding-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
+      )
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+      )
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
+      const settings = JSON.parse(localStorage.getItem('app-settings') || '{}')
+      settings.colorScheme = 'clean'
+      localStorage.setItem('app-settings', JSON.stringify(settings))
+      ;(window as unknown as Record<string, unknown>).__BOOK_CONTENT_TEST_MODE__ = true
+    })
+
+    await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
+    await page.evaluate(() => {
+      const fn = (window as unknown as Record<string, () => void>).__enableBookContentTestMode__
+      if (typeof fn === 'function') fn()
+    })
+    await seedBooks(page, [TEST_BOOK])
+
+    // Navigate directly to reader — assert bg class appears immediately (no flash)
+    await page.goto(`/library/${TEST_BOOK.id}/read`)
+    const container = page.getByTestId('epub-renderer')
+    // Tight timeout: bg class must be present at first render, not after epub.js loads
+    await expect(container).toHaveClass(/bg-\[#f9f9fe\]/, { timeout: 2000 })
   })
 })

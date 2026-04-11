@@ -1,30 +1,34 @@
 {
-  "captured_at": "2026-04-09",
-  "commit": "c7651541",
+  "captured_at": "2026-04-11",
+  "commit": "0427384b",
   "bundle": {
     "total_js_bytes": 9728000,
     "total_css_bytes": 288000,
     "chunks": {
       "Library": {
-        "raw": 192650,
-        "file": "Library-B-mgmdli.js"
+        "raw": 187740,
+        "file": "Library-BAib0wfu.js"
+      },
+      "BookReader": {
+        "raw": 71096320,
+        "file": "BookReader-CZMr9Tui.js"
       }
     }
   },
   "page_metrics": {
     "/": {
-      "ttfb": 3,
-      "dom_interactive": 12,
-      "dom_complete": 125,
-      "load_complete": 125,
-      "fcp": 207,
-      "lcp": 0,
+      "ttfb": 2,
+      "dom_interactive": 74,
+      "dom_complete": 1830,
+      "load_complete": 1830,
+      "fcp": 2041,
+      "lcp": null,
       "cls": 0,
       "tbt": 0,
       "resource_count": 250,
       "js_resource_count": 249,
-      "css_resource_count": 1,
-      "total_transfer_bytes": 60300,
+      "css_resource_count": 2,
+      "total_transfer_bytes": 13426638,
       "samples": 3,
       "largest_resources": [
         {
@@ -35,22 +39,22 @@
         {
           "name": "lucide-react.js?v=3ac5ad39",
           "size": 1047716,
-          "duration": 21
+          "duration": 24
         },
         {
           "name": "react-dom_client.js?v=3ac5ad39",
           "size": 1005907,
-          "duration": 33
+          "duration": 47
         },
         {
           "name": "react-day-picker.js?v=3ac5ad39",
           "size": 806475,
-          "duration": 22
+          "duration": 28
         },
         {
           "name": "@supabase_supabase-js.js?v=3ac5ad39",
           "size": 577648,
-          "duration": 28
+          "duration": 30
         }
       ]
     },
@@ -142,19 +146,46 @@
       "samples": 3
     },
     "/library/:bookId/read": {
-      "ttfb": 3,
-      "dom_interactive": 9,
-      "dom_complete": 179,
-      "load_complete": 179,
-      "fcp": 381,
+      "ttfb": 2,
+      "dom_interactive": 48,
+      "dom_complete": 260,
+      "load_complete": 260,
+      "fcp": 477,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
-      "resource_count": 214,
-      "js_resource_count": 213,
+      "resource_count": 213,
+      "js_resource_count": 212,
       "css_resource_count": 2,
-      "total_transfer_bytes": 52800,
-      "samples": 3
+      "total_transfer_bytes": 11454328,
+      "samples": 3,
+      "largest_resources": [
+        {
+          "name": "@sentry_react.js?v=3ac5ad39",
+          "size": 1923645,
+          "duration": 21
+        },
+        {
+          "name": "lucide-react.js?v=3ac5ad39",
+          "size": 1047716,
+          "duration": 14
+        },
+        {
+          "name": "react-dom_client.js?v=3ac5ad39",
+          "size": 1005907,
+          "duration": 20
+        },
+        {
+          "name": "@supabase_supabase-js.js?v=3ac5ad39",
+          "size": 577648,
+          "duration": 23
+        },
+        {
+          "name": "radix-ui.js?v=3ac5ad39",
+          "size": 464288,
+          "duration": 18
+        }
+      ]
     }
   }
 }

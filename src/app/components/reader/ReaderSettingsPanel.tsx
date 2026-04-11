@@ -50,7 +50,8 @@ const FONT_FAMILIES: { value: ReaderFontFamily; label: string }[] = [
 
 const LINE_HEIGHTS: { value: number; label: string }[] = [
   { value: 1.2, label: 'Compact (1.2)' },
-  { value: 1.5, label: 'Normal (1.5)' },
+  { value: 1.5, label: 'Snug (1.5)' },
+  { value: 1.6, label: 'Normal (1.6)' },
   { value: 1.8, label: 'Relaxed (1.8)' },
   { value: 2.0, label: 'Spacious (2.0)' },
 ]
@@ -141,7 +142,7 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
               onClick={handleDecrease}
               disabled={fontSize <= FONT_SIZE_MIN}
               aria-label="Decrease font size"
-              className="size-9 shrink-0 text-muted-foreground font-bold text-base"
+              className="size-9 min-h-[44px] min-w-[44px] shrink-0 text-muted-foreground font-bold text-base"
               data-testid="font-size-decrease"
             >
               A-
@@ -165,7 +166,7 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
               onClick={handleIncrease}
               disabled={fontSize >= FONT_SIZE_MAX}
               aria-label="Increase font size"
-              className="size-9 shrink-0 text-muted-foreground font-bold text-base"
+              className="size-9 min-h-[44px] min-w-[44px] shrink-0 text-muted-foreground font-bold text-base"
               data-testid="font-size-increase"
             >
               A+

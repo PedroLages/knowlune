@@ -14,6 +14,14 @@ import type { ReaderTheme } from '@/stores/useReaderStore'
 
 export type ColorScheme = 'professional' | 'vibrant' | 'clean'
 
+const VALID_COLOR_SCHEMES = new Set<ColorScheme>(['professional', 'vibrant', 'clean'])
+
+function resolveColorScheme(raw: unknown): ColorScheme {
+  return typeof raw === 'string' && VALID_COLOR_SCHEMES.has(raw as ColorScheme)
+    ? (raw as ColorScheme)
+    : 'professional'
+}
+
 export interface ReaderColors {
   /** Resolved hex background for epub.js iframe injection */
   background: string
@@ -51,7 +59,8 @@ const THEME_COLORS: Record<ReaderTheme, Record<ColorScheme, ReaderColors>> = {
  * Returns resolved hex colors for a reader theme + app color scheme combination.
  */
 export function getReaderThemeColors(theme: ReaderTheme, colorScheme: ColorScheme): ReaderColors {
-  return THEME_COLORS[theme][colorScheme]
+  const safe = resolveColorScheme(colorScheme)
+  return THEME_COLORS[theme][safe]
 }
 
 /**
@@ -92,8 +101,16 @@ export function getReaderChromeClasses(
   colorScheme: ColorScheme
 ): ReaderChromeClasses {
   const colors = getReaderThemeColors(theme, colorScheme)
-  const bgClasses = BG_CLASSES[colors.background] ?? BG_CLASSES['#faf5ee']
-  const textClass = TEXT_CLASSES[colors.foreground] ?? TEXT_CLASSES['#1c1d2b']
+  let bgClasses = BG_CLASSES[colors.background]
+  if (!bgClasses) {
+    console.warn(`Unknown background hex "${colors.background}", falling back to Professional default (#faf5ee)`)
+    bgClasses = BG_CLASSES['#faf5ee']
+  }
+  let textClass = TEXT_CLASSES[colors.foreground]
+  if (!textClass) {
+    console.warn(`Unknown foreground hex "${colors.foreground}", falling back to Professional default (#1c1d2b)`)
+    textClass = TEXT_CLASSES['#1c1d2b']
+  }
   return { ...bgClasses, text: textClass }
 }
 
@@ -103,12 +120,12 @@ export function getReaderChromeClasses(
  */
 export function useAppColorScheme(): ColorScheme {
   const [scheme, setScheme] = useState<ColorScheme>(() => {
-    return (getSettings().colorScheme as ColorScheme) ?? 'professional'
+    return resolveColorScheme(getSettings().colorScheme)
   })
 
   useEffect(() => {
     const handler = () => {
-      setScheme((getSettings().colorScheme as ColorScheme) ?? 'professional')
+      setScheme(resolveColorScheme(getSettings().colorScheme))
     }
     window.addEventListener('settingsUpdated', handler)
     return () => window.removeEventListener('settingsUpdated', handler)

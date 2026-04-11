@@ -1,8 +1,7 @@
 /**
- * ReaderHeader unit tests — E107-S03 Fix TOC Loading and Fallback
+ * ReaderHeader unit tests
  *
- * Tests the chapter display fallback functionality:
- * - AC-4: Chapter tracking falls back to progress percentage when TOC unavailable
+ * Tests chapter display fallback, theme application, and visibility.
  */
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'

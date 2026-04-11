@@ -75,7 +75,7 @@ export function TtsControlBar({
         size="icon"
         onClick={onPlayPause}
         aria-label={isPlaying ? 'Pause reading' : 'Resume reading'}
-        className="size-8 shrink-0"
+        className="size-8 min-h-[44px] min-w-[44px] shrink-0"
         data-testid="tts-play-pause"
       >
         {isPlaying ? (
@@ -91,7 +91,7 @@ export function TtsControlBar({
         size="icon"
         onClick={onStop}
         aria-label="Stop reading"
-        className="size-8 shrink-0 hover:bg-black/10"
+        className="size-8 min-h-[44px] min-w-[44px] shrink-0 hover:bg-black/10"
         data-testid="tts-stop"
       >
         <Square className="size-4" aria-hidden="true" />
