@@ -89,37 +89,39 @@ test.describe('E108-S05: Genre Detection & Pages Goal', () => {
 
   test('AC-2: Genre filter narrows book list to matching books', async ({ page }) => {
     // Initially all 3 books visible
-    await expect(page.getByTestId('book-card')).toHaveCount(3)
+    await expect(page.locator('[data-testid^="book-card-"]')).toHaveCount(3)
 
     // Open filter sidebar and select Fiction genre
     await page.getByTestId('filter-sidebar-trigger').click()
+    await expect(page.getByTestId('filter-sidebar')).toBeVisible()
     await page.getByTestId('genre-filter-fiction').click()
 
     // Close sidebar (click outside or press escape)
     await page.keyboard.press('Escape')
 
     // Only fiction book should show
-    await expect(page.getByTestId('book-card')).toHaveCount(1)
+    await expect(page.locator('[data-testid^="book-card-"]')).toHaveCount(1)
     await expect(page.getByText('A Tale of Two Cities')).toBeVisible()
   })
 
   test('AC-2: Unset genre filter shows only books without genre', async ({ page }) => {
     // Open filter sidebar and select Unset
     await page.getByTestId('filter-sidebar-trigger').click()
+    await expect(page.getByTestId('filter-sidebar')).toBeVisible()
     await page.getByTestId('genre-filter-unset').click()
     await page.keyboard.press('Escape')
 
     // Only the no-genre book should show
-    await expect(page.getByTestId('book-card')).toHaveCount(1)
+    await expect(page.locator('[data-testid^="book-card-"]')).toHaveCount(1)
     await expect(page.getByText('Untitled Draft')).toBeVisible()
   })
 
   test('AC-3: Genre badge shown on book card when genre is set', async ({ page }) => {
     // Books with genre should show the genre label
-    const fictionCard = page.getByTestId('book-card').filter({ hasText: 'A Tale of Two Cities' })
+    const fictionCard = page.getByTestId('book-card-test-fiction-e108-s05')
     await expect(fictionCard.getByText('Fiction')).toBeVisible()
 
-    const scienceCard = page.getByTestId('book-card').filter({ hasText: 'A Brief History of Time' })
+    const scienceCard = page.getByTestId('book-card-test-science-e108-s05')
     await expect(scienceCard.getByText('Science')).toBeVisible()
   })
 
@@ -151,10 +153,11 @@ test.describe('E108-S05: Genre Detection & Pages Goal', () => {
   test('AC-1: Active genre filter chip appears in filter bar', async ({ page }) => {
     // Select a genre filter
     await page.getByTestId('filter-sidebar-trigger').click()
+    await expect(page.getByTestId('filter-sidebar')).toBeVisible()
     await page.getByTestId('genre-filter-science').click()
     await page.keyboard.press('Escape')
 
-    // Active filter chip should show
-    await expect(page.getByText(/Genre: Science/i)).toBeVisible()
+    // Active filter chip should show in the main content area (not the sidebar)
+    await expect(page.getByLabel(/Remove Genre: Science filter/i).first()).toBeVisible()
   })
 })

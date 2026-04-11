@@ -200,7 +200,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       result = result.filter(
         b =>
           b.title.toLowerCase().includes(q) ||
-          b.author.toLowerCase().includes(q) ||
+          (b.author ?? '').toLowerCase().includes(q) ||
           (b.narrator?.toLowerCase().includes(q) ?? false)
       )
     }
@@ -213,7 +213,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     // Author filter
     if (filters.authors && filters.authors.length > 0) {
       const authorSet = new Set(filters.authors.map(a => a.toLowerCase()))
-      result = result.filter(b => authorSet.has(b.author.toLowerCase()))
+      result = result.filter(b => authorSet.has((b.author ?? '').toLowerCase()))
     }
 
     // Genre filter (E108-S05)
@@ -232,7 +232,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
         case 'title-asc':
           return a.title.localeCompare(b.title)
         case 'author-asc':
-          return a.author.localeCompare(b.author)
+          return (a.author ?? '').localeCompare(b.author ?? '')
         case 'progress':
           return (b.progress ?? 0) - (a.progress ?? 0)
         case 'duration':

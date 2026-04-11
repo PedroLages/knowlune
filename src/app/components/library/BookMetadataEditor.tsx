@@ -128,7 +128,7 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
   useEffect(() => {
     if (book && open) {
       setTitle(book.title)
-      setAuthor(book.author)
+      setAuthor(book.author ?? '')
       setIsbn(book.isbn || '')
       setDescription(book.description || '')
       // Use dedicated genre field if set, fall back to tag-based detection for legacy books
