@@ -111,7 +111,7 @@ export function Vocabulary() {
 
   const handleDelete = useCallback(
     async (id: string) => {
-      const itemToDelete = items.find(i => i.id === id)
+      const itemToDelete = useVocabularyStore.getState().items.find(i => i.id === id)
       if (!itemToDelete) return
       await deleteItem(id)
       toast('Deleted', {
@@ -125,7 +125,7 @@ export function Vocabulary() {
         duration: 4000,
       })
     },
-    [deleteItem, addItem, items]
+    [deleteItem, addItem]
   )
 
   const handleCorrect = useCallback(async () => {

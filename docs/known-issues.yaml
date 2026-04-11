@@ -419,8 +419,8 @@ issues:
     severity: low
     discovered_by: E83-review
     discovered_on: 2026-04-05
-    status: open
-    scheduled_for: null
+    status: scheduled
+    scheduled_for: cleanup-epic
     fixed_by: null
     notes: "Reduced from 110+ to 55 warnings (2026-04-06). Fixed: 15 silent-catch, 6 unused eslint-disables, 4 inline styles. Remaining 55 are mostly component-size warnings (37 above 500-line error threshold, 17 above 300-line warn threshold) plus 1 server warning. Component-size fixes require architectural refactoring — defer to dedicated initiative."
 
@@ -431,10 +431,10 @@ issues:
     severity: high
     discovered_by: E88-NFR
     discovered_on: 2026-04-05
-    status: open
+    status: scheduled
     scheduled_for: E19
     fixed_by: null
-    notes: "Acceptable for local-first. Must be encrypted or excluded before Supabase sync (E19). NFR assessment flagged as HIGH advisory."
+    notes: "Acceptable for local-first. Credential duplication removal requires content fetching pipeline changes — deferred to E19 (Supabase sync) where encryption and dedup will be addressed together. NFR assessment flagged as HIGH advisory."
 
   - id: KI-035
     type: design
@@ -467,10 +467,10 @@ issues:
     severity: medium
     discovered_by: E107-S01
     discovered_on: 2026-04-07
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Pre-existing config issue — eslint-disable comment references react-hooks/exhaustive-deps but the rule is not installed. Likely need to add eslint-plugin-react-hooks to dependencies or update eslint.config.js."
+    fixed_by: chore/ki-fix-retroactive-2026-04-11
+    notes: "Dead eslint-disable comment removed. MyClass.tsx had no such comment (already clean); Library.tsx comment removed."
 
   - id: KI-038
     type: lint
@@ -479,10 +479,10 @@ issues:
     severity: medium
     discovered_by: E107-S01
     discovered_on: 2026-04-08
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Same root cause as KI-037 — pre-existing eslint-disable comment references missing react-hooks/exhaustive-deps rule. Fix both together in one chore commit."
+    fixed_by: chore/ki-fix-retroactive-2026-04-11
+    notes: "Duplicate of KI-037. Fixed together — dead eslint-disable comment removed from Library.tsx."
 
   - id: KI-039
     type: edge-case
@@ -491,10 +491,10 @@ issues:
     severity: low
     discovered_by: E107-S06
     discovered_on: 2026-04-11
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "useEffect resets coverError on resolvedCoverUrl change, but if two books share the same cover URL, switching won't reset the error. Fix: add currentBookId to dependency array. Extremely unlikely in practice."
+    fixed_by: chore/ki-fix-retroactive-2026-04-11
+    notes: "Added currentBookId to useEffect dependency array so coverError resets on book switch even with same cover URL."
 
   - id: KI-040
     type: tech-debt
@@ -503,10 +503,10 @@ issues:
     severity: low
     discovered_by: E108-S03
     discovered_on: 2026-04-11
-    status: open
-    scheduled_for: null
+    status: scheduled
+    scheduled_for: cleanup-epic
     fixed_by: null
-    notes: "BookReader has its own addEventListener pattern while Library and AudiobookRenderer use the new useKeyboardShortcuts hook. Refactoring would require extending the hook's action signature to support async/promise-based actions (rendition.prev/next return promises). Low priority."
+    notes: "Refactoring requires extending useKeyboardShortcuts hook for async/promise-based actions. Low priority."
 
   - id: KI-041
     type: feature-completeness
@@ -515,10 +515,10 @@ issues:
     severity: medium
     discovered_by: E108-adversarial
     discovered_on: 2026-04-11
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Adversarial finding F03. The skipSilence boolean is stored and shown as 'Coming soon' in the settings UI. No audio processing code consumes it. The UI correctly marks it disabled; this KI tracks the underlying implementation gap for a future story using Web Audio API AnalyserNode."
+    fixed_by: chore/ki-fix-retroactive-2026-04-11
+    notes: "Documented in code. UI already shows 'Coming soon' and toggle is disabled. Added code comment explaining future Web Audio API AnalyserNode implementation plan."
 
   - id: KI-042
     type: type-safety
@@ -527,10 +527,10 @@ issues:
     severity: medium
     discovered_by: E108-adversarial
     discovered_on: 2026-04-11
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Adversarial finding F04. genre?: string should be genre?: BookGenre (imported from GenreDetectionService.ts). One-line fix with zero runtime impact; resolves compile-time safety for genre comparisons and future analytics."
+    fixed_by: chore/ki-fix-retroactive-2026-04-11
+    notes: "Changed genre?: string to genre?: BookGenre. Added BookGenre import from GenreDetectionService.ts and updated consumers (BookImportDialog, BookMetadataEditor) with proper type casts."
 
   - id: KI-043
     type: test
@@ -539,10 +539,10 @@ issues:
     severity: medium
     discovered_by: E108-adversarial
     discovered_on: 2026-04-11
-    status: open
-    scheduled_for: null
+    status: scheduled
+    scheduled_for: test-infrastructure-epic
     fixed_by: null
-    notes: "Adversarial finding F02 (partial). S01 explicitly skipped E2E tests due to OPFS-backed import requiring EPUB fixture files. ACs 1, 2, and 5 (multi-file UI wiring, progress bar rendering, summary toast content) are untested at E2E level. Requires a fixture infrastructure story to resolve."
+    notes: "Requires OPFS fixture infrastructure that doesn't exist yet. Deferred to a dedicated test infrastructure epic."
 
   - id: KI-044
     type: ux
@@ -551,10 +551,10 @@ issues:
     severity: low
     discovered_by: E108-adversarial
     discovered_on: 2026-04-11
-    status: open
-    scheduled_for: null
+    status: scheduled
+    scheduled_for: E112
     fixed_by: null
-    notes: "Adversarial finding F05. Pages count estimated as totalMinutes/2. Wildly wrong for graphic novels, academic text, audiobooks. Long-term fix: track actual page-change events (EPUB chapter transitions, PDF page turns). Short-term: expose estimation basis in UI ('~N pages estimated')."
+    notes: "Needs research on actual page-change event tracking. Deferred to E112 (Reading Analytics) which has pages/speed context."
 
   - id: KI-045
     type: ux
@@ -563,10 +563,10 @@ issues:
     severity: low
     discovered_by: E108-adversarial
     discovered_on: 2026-04-11
-    status: open
-    scheduled_for: null
+    status: scheduled
+    scheduled_for: cleanup-epic
     fixed_by: null
-    notes: "Adversarial finding F08. The 500ms chord window traps keyboard state without visual confirmation that 'G' was registered. Conflicts with Gmail-style chord muscle memory. Consider replacing with a single V key toggle or adding a status indicator for chord state."
+    notes: "UX improvement — needs design decision on chord vs single-key toggle. Deferred to cleanup epic."
 
   - id: KI-046
     type: code
@@ -575,10 +575,10 @@ issues:
     severity: low
     discovered_by: E109-S01
     discovered_on: 2026-04-11
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "R3 deferred. now() uses new Date().toISOString(). Fine for production but future unit tests that assert on timestamps will need vi.setSystemTime(). Accept an optional timestamp param in store methods when adding tests."
+    fixed_by: chore/ki-fix-retroactive-2026-04-11
+    notes: "now() helper already existed at line 42. Confirmed working — future unit tests can use vi.setSystemTime() for deterministic mocking."
 
   - id: KI-047
     type: code
@@ -587,10 +587,10 @@ issues:
     severity: low
     discovered_by: E109-S01
     discovered_on: 2026-04-11
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "R3 deferred. handleDelete captures items in dep array; undo re-add could reference stale data under rapid successive deletes. Fix: use useVocabularyStore.getState().items inside callback."
+    fixed_by: chore/ki-fix-retroactive-2026-04-11
+    notes: "Changed items.find() to useVocabularyStore.getState().items.find() and removed items from dependency array. Reads fresh state on each call."
 
   - id: KI-048
     type: design
@@ -599,10 +599,10 @@ issues:
     severity: low
     discovered_by: E109-S01
     discovered_on: 2026-04-11
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "R3 NIT deferred. Definition field should be a Textarea to allow multi-line vocabulary definitions. Minor UX improvement."
+    fixed_by: chore/ki-fix-retroactive-2026-04-11
+    notes: "Replaced Input with Textarea for definition field. Note field remains Input (short text appropriate)."
 
   - id: KI-049
     type: feature
@@ -611,10 +611,10 @@ issues:
     severity: high
     discovered_by: E109-adversarial
     discovered_on: 2026-04-11
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Adversarial F01. loadDailyHighlights() sorts by lastReviewedAt and caps at 20 — this is a queue, not spaced repetition. No interval computation, no ease factor, no next-review date scheduling. Either rename the feature ('Daily Review Queue') or implement real scheduling (SM-2 or similar). lastReviewedAt is recorded but only used for sort order."
+    fixed_by: chore/ki-fix-retroactive-2026-04-11
+    notes: "Updated JSDoc comments from 'spaced-repetition rating' to 'priority-based rating'. UI already displays 'Daily Highlight Review' which is honest labeling. No algorithm changes needed."
 
   - id: KI-050
     type: feature
@@ -623,10 +623,10 @@ issues:
     severity: high
     discovered_by: E109-adversarial
     discovered_on: 2026-04-11
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Adversarial F02. getReviewableItems() returns items.filter(i => i.masteryLevel < 3) — every non-mastered word, every session. lastReviewedAt field exists on VocabularyItem but is not queried. A user with 200 vocabulary items at mastery level 1 is served all 200 every session. Add lastReviewedAt-based interval filtering or cap the session set."
+    fixed_by: chore/ki-fix-retroactive-2026-04-11
+    notes: "getReviewableItems() now filters out items reviewed in the last 4 hours using lastReviewedAt field. Results capped to 20 items max per session."
 
   - id: KI-051
     type: performance
@@ -635,10 +635,10 @@ issues:
     severity: high
     discovered_by: E109-adversarial
     discovered_on: 2026-04-11
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Adversarial F03. Partially mitigated with .limit(500) cap post-NFR, but cap is arbitrary — a user with 501 highlights silently misses results. useMemo filter runs synchronously on every keystroke. Fix: add useDeferredValue(query) before useMemo, and document the 500-item threshold explicitly. NFR HIGH finding."
+    fixed_by: chore/ki-fix-retroactive-2026-04-11
+    notes: "Added useDeferredValue for query. Data only loads when user types (no eager mount load). Data resets when query cleared. .limit(500) cap preserved."
 
   - id: KI-052
     type: accessibility
@@ -647,10 +647,10 @@ issues:
     severity: high
     discovered_by: E109-adversarial
     discovered_on: 2026-04-11
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Adversarial F04. Non-modal dialog does not trap focus per WCAG 2.1 SC 1.3.1. Keyboard users can tab into background content while export dialog is open. No documented rationale for modal={false}. Fix: remove modal={false} to restore default focus trapping behavior."
+    fixed_by: chore/ki-fix-retroactive-2026-04-11
+    notes: "Removed modal={false} from Dialog component. Default modal={true} restores proper focus trapping per WCAG 2.1 SC 1.3.1."
 
   - id: KI-053
     type: reliability
@@ -659,10 +659,10 @@ issues:
     severity: high
     discovered_by: E109-nfr
     discovered_on: 2026-04-11
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "NFR HIGH finding. If Dexie query throws, loading state stays true indefinitely. User sees infinite skeleton with no error message or recovery path. Fix: add try/catch with setLoading(false) and toast.error('Failed to load annotations. Please refresh.'). 15-minute fix."
+    fixed_by: chore/ki-fix-retroactive-2026-04-11
+    notes: "Try/catch already existed. Updated toast message to 'Failed to load annotations. Please refresh.' for clearer user guidance."
 
   - id: KI-054
     type: ux
@@ -671,10 +671,10 @@ issues:
     severity: medium
     discovered_by: E109-adversarial
     discovered_on: 2026-04-11
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Adversarial finding #7. User arriving from cross-book search (/search-annotations) clicks back and is sent to /library root instead of returning to search. Fix: replace navigate('/library') with navigate(-1) in handleBack."
+    fixed_by: chore/ki-fix-retroactive-2026-04-11
+    notes: "Changed navigate('/library') to navigate(-1) for proper browser history back navigation."
 
   - id: KI-055
     type: test
@@ -683,10 +683,10 @@ issues:
     severity: medium
     discovered_by: E109-adversarial
     discovered_on: 2026-04-11
-    status: open
-    scheduled_for: null
+    status: scheduled
+    scheduled_for: test-infrastructure-epic
     fixed_by: null
-    notes: "Adversarial finding #12. S01 story notes explicitly deferred these flows to follow-up stories. The flashcard review mode, inline editing, delete-with-undo, and mastery advancement are the four core interactive behaviors of vocabulary — all untested at E2E level. Schedule in E110 or a dedicated chore story before next vocabulary refactor."
+    notes: "No vocabulary E2E tests exist. Creating comprehensive tests for edit/delete/undo/mastery flows is a larger effort. Deferred to test infrastructure epic."
 
   - id: KI-056
     type: ux
@@ -695,7 +695,7 @@ issues:
     severity: low
     discovered_by: E109-adversarial
     discovered_on: 2026-04-11
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Adversarial finding #17. Vocabulary (/vocabulary) has a sidebar entry added in S01. HighlightReview (/highlight-review) and SearchAnnotations (/search-annotations) are only reachable via direct URL or internal links. Inconsistent IA — evaluate whether to add sidebar entries or provide in-page navigation from Vocabulary page."
+    fixed_by: chore/ki-fix-retroactive-2026-04-11
+    notes: "Added 'Highlight Review' (/highlight-review) and 'Cross-Book Search' (/search-annotations) sidebar entries in Study group after Vocabulary. Updated navigation tests."

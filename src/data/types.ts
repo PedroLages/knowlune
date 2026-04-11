@@ -637,6 +637,10 @@ export type BookFormat = 'epub' | 'pdf' | 'audiobook'
 
 export type BookStatus = 'unread' | 'reading' | 'finished' | 'abandoned'
 
+/** BookGenre — canonical definition in GenreDetectionService */
+import type { BookGenre } from '@/services/GenreDetectionService'
+export type { BookGenre }
+
 /** Virtual shelf for organizing books (E110-S01) */
 export interface Shelf {
   id: string // UUID v4
@@ -704,7 +708,7 @@ export interface Book {
   status: BookStatus
   coverUrl?: string
   description?: string
-  genre?: string // Auto-detected or manually set genre (E108-S05)
+  genre?: BookGenre // Auto-detected or manually set genre (E108-S05)
   tags: string[]
   chapters: BookChapter[]
   source: ContentSource
@@ -738,7 +742,7 @@ export interface BookHighlight {
   position: ContentPosition
   createdAt: string // ISO 8601
   updatedAt?: string // ISO 8601
-  /** Spaced-repetition review rating (E109-S02) */
+  /** Priority review rating — keep/dismiss triage, not spaced repetition (E109-S02) */
   reviewRating?: 'keep' | 'dismiss'
   /** When this highlight was last reviewed in daily digest (E109-S02) */
   lastReviewedAt?: string // ISO 8601

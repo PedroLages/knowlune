@@ -4,7 +4,7 @@
  * Full-text search across all highlights and vocabulary items.
  * Results are grouped by book with navigation to source locations.
  */
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useDeferredValue, useCallback, useRef } from 'react'
 import { useSearchParams, Link } from 'react-router'
 import { toast } from 'sonner'
 import { Search, BookOpen, Type, Highlighter, ChevronRight, X } from 'lucide-react'
@@ -63,8 +63,19 @@ export function SearchAnnotations() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
 
-  // Load all data from Dexie on mount
+  // Defer query so the input stays responsive while data loads
+  const deferredQuery = useDeferredValue(query)
+
+  // Only load data from Dexie when the user has typed something
   useEffect(() => {
+    if (!deferredQuery.trim()) {
+      setHighlights([])
+      setVocabulary([])
+      setBooks(new Map())
+      setIsLoaded(false)
+      return
+    }
+
     let cancelled = false
     async function load() {
       try {
@@ -87,7 +98,7 @@ export function SearchAnnotations() {
     }
     load()
     return () => { cancelled = true }
-  }, [])
+  }, [deferredQuery])
 
   // Sync query to URL with 300ms debounce to avoid polluting history
   const updateQuery = useCallback((value: string) => {
@@ -102,9 +113,9 @@ export function SearchAnnotations() {
     }, 300)
   }, [setSearchParams])
 
-  // Filter results
+  // Filter results using deferred query for smooth input
   const results = useMemo<SearchResult[]>(() => {
-    const q = query.trim().toLowerCase()
+    const q = deferredQuery.trim().toLowerCase()
     if (!q) return []
 
     const matched: SearchResult[] = []
@@ -131,7 +142,7 @@ export function SearchAnnotations() {
     }
 
     return matched
-  }, [query, filter, highlights, vocabulary, books])
+  }, [deferredQuery, filter, highlights, vocabulary, books])
 
   // Group by book
   const groupedResults = useMemo(() => {
@@ -205,13 +216,13 @@ export function SearchAnnotations() {
         <div className="text-center py-12" data-testid="load-error">
           <p className="text-destructive">{loadError}</p>
         </div>
-      ) : !isLoaded ? (
-        <p className="text-muted-foreground text-center py-8" role="status">Loading...</p>
       ) : !query.trim() ? (
         <div className="text-center py-12" data-testid="empty-state">
           <Search className="size-12 mx-auto mb-4 text-muted-foreground/50" />
           <p className="text-muted-foreground">Enter a search term to find highlights and vocabulary across all your books.</p>
         </div>
+      ) : query.trim() && !isLoaded ? (
+        <p className="text-muted-foreground text-center py-8" role="status">Loading...</p>
       ) : results.length === 0 ? (
         <div className="text-center py-12" data-testid="no-results">
           <p className="text-muted-foreground">No results found for &ldquo;{query}&rdquo;</p>

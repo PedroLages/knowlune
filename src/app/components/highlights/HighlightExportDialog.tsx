@@ -106,7 +106,7 @@ export function HighlightExportDialog({
   }, [format, bookId, onOpenChange])
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-md"
         data-testid="highlight-export-dialog"

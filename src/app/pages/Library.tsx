@@ -100,7 +100,7 @@ export function Library() {
     ) {
       setFilters({ source: 'audiobookshelf' })
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
   const absSeries = useAudiobookshelfStore(s => s.series)
   const isLoadingSeries = useAudiobookshelfStore(s => s.isLoadingSeries)
   const loadSeries = useAudiobookshelfStore(s => s.loadSeries)
