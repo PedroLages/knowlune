@@ -629,14 +629,10 @@ describe('getBooksBySeries', () => {
     await act(async () => {
       await useBookStore
         .getState()
-        .importBook(
-          makeBook({ id: 'nc-b', series: 'Letters', seriesSequence: 'beta' }) as never
-        )
+        .importBook(makeBook({ id: 'nc-b', series: 'Letters', seriesSequence: 'beta' }) as never)
       await useBookStore
         .getState()
-        .importBook(
-          makeBook({ id: 'nc-a', series: 'Letters', seriesSequence: 'alpha' }) as never
-        )
+        .importBook(makeBook({ id: 'nc-a', series: 'Letters', seriesSequence: 'alpha' }) as never)
     })
 
     const { groups } = useBookStore.getState().getBooksBySeries()
@@ -651,12 +647,8 @@ describe('getBooksBySeries', () => {
       await useBookStore
         .getState()
         .importBook(makeBook({ id: 'ug-1', series: 'MySeries' }) as never)
-      await useBookStore
-        .getState()
-        .importBook(makeBook({ id: 'ug-2' }) as never) // no series
-      await useBookStore
-        .getState()
-        .importBook(makeBook({ id: 'ug-3' }) as never) // no series
+      await useBookStore.getState().importBook(makeBook({ id: 'ug-2' }) as never) // no series
+      await useBookStore.getState().importBook(makeBook({ id: 'ug-3' }) as never) // no series
     })
 
     const { groups, ungrouped } = useBookStore.getState().getBooksBySeries()
