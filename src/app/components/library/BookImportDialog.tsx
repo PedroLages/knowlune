@@ -9,7 +9,7 @@
 
 // eslint-disable-next-line component-size/max-lines -- multi-mode import dialog (EPUB + audiobook); split would require prop-drilling the shared open/close state
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Upload, BookOpen, Headphones } from 'lucide-react'
+import { Upload, BookOpen, Headphones, X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -18,6 +18,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/app/components/ui/dialog'
+import { Progress } from '@/app/components/ui/progress'
+import { Button } from '@/app/components/ui/button'
 import { useBookStore } from '@/stores/useBookStore'
 import { extractEpubMetadata } from '@/services/EpubMetadataService'
 import { fetchOpenLibraryMetadata, fetchCoverImage } from '@/services/OpenLibraryService'
@@ -25,6 +27,7 @@ import { opfsStorageService } from '@/services/OpfsStorageService'
 import type { Book, BookStatus } from '@/data/types'
 import { BookDetailsForm, GENRES, type ImportPhase } from './BookDetailsForm'
 import { AudiobookImportFlow } from './AudiobookImportFlow'
+import { useBulkImport } from '@/app/hooks/useBulkImport'
 
 type ImportMode = 'epub' | 'audiobook'
 
@@ -37,6 +40,7 @@ interface BookImportDialogProps {
 
 export function BookImportDialog({ open, onOpenChange, initialFile }: BookImportDialogProps) {
   const importBook = useBookStore(s => s.importBook)
+  const bulkImport = useBulkImport()
 
   const [importMode, setImportMode] = useState<ImportMode>('epub')
   const [file, setFile] = useState<File | null>(null)
@@ -82,16 +86,19 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
     setPhase('idle')
     setIsDragActive(false)
     setImportMode('epub')
-  }, [setSafeCoverPreviewUrl])
+    bulkImport.reset()
+  }, [setSafeCoverPreviewUrl, bulkImport])
+
+  const isBulkImporting = bulkImport.phase === 'importing'
 
   const handleClose = useCallback(
     (nextOpen: boolean) => {
-      if (!nextOpen && !isImporting) {
+      if (!nextOpen && !isImporting && !isBulkImporting) {
         reset()
         onOpenChange(false)
       }
     },
-    [isImporting, onOpenChange, reset]
+    [isImporting, isBulkImporting, onOpenChange, reset]
   )
 
   const processFile = useCallback(
@@ -177,10 +184,20 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
     (e: React.DragEvent) => {
       e.preventDefault()
       setIsDragActive(false)
-      const droppedFile = e.dataTransfer.files[0]
-      if (droppedFile) processFile(droppedFile)
+      const droppedFiles = Array.from(e.dataTransfer.files)
+      if (droppedFiles.length > 1) {
+        // Bulk import mode — filter to EPUB files only
+        const epubFiles = droppedFiles.filter(f => f.name.toLowerCase().endsWith('.epub'))
+        if (epubFiles.length === 0) {
+          toast.error('No EPUB files found in selection')
+          return
+        }
+        bulkImport.startBulkImport(epubFiles)
+      } else if (droppedFiles[0]) {
+        processFile(droppedFiles[0])
+      }
     },
-    [processFile]
+    [processFile, bulkImport]
   )
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -195,10 +212,21 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
 
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const selectedFile = e.target.files?.[0]
-      if (selectedFile) processFile(selectedFile)
+      const selectedFiles = e.target.files
+      if (!selectedFiles || selectedFiles.length === 0) return
+
+      if (selectedFiles.length > 1) {
+        const epubFiles = Array.from(selectedFiles).filter(f => f.name.toLowerCase().endsWith('.epub'))
+        if (epubFiles.length === 0) {
+          toast.error('No EPUB files found in selection')
+          return
+        }
+        bulkImport.startBulkImport(epubFiles)
+      } else {
+        processFile(selectedFiles[0])
+      }
     },
-    [processFile]
+    [processFile, bulkImport]
   )
 
   const handleImport = useCallback(async () => {
@@ -320,8 +348,8 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
           />
         )}
 
-        {/* EPUB: Drop zone — shown when no file is selected */}
-        {importMode === 'epub' && !file && (
+        {/* EPUB: Drop zone — shown when no file is selected and not bulk importing */}
+        {importMode === 'epub' && !file && bulkImport.phase === 'idle' && (
           <div
             role="button"
             tabIndex={0}
@@ -343,12 +371,16 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
           >
             <Upload className="h-8 w-8 text-muted-foreground" />
             <p className="text-center text-sm text-muted-foreground">
-              Drop your EPUB file here or click to browse
+              Drop EPUB files here or click to browse
+            </p>
+            <p className="text-center text-xs text-muted-foreground/70">
+              Select multiple files for bulk import
             </p>
             <input
               ref={fileInputRef}
               type="file"
               accept=".epub"
+              multiple
               className="hidden"
               onChange={handleFileInput}
               data-testid="epub-file-input"
@@ -356,8 +388,77 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
           </div>
         )}
 
+        {/* EPUB: Bulk import progress — shown during bulk import */}
+        {importMode === 'epub' && (bulkImport.phase === 'importing' || bulkImport.phase === 'done' || bulkImport.phase === 'cancelled') && (
+          <div className="flex flex-col gap-4 py-2" data-testid="bulk-import-progress">
+            {bulkImport.phase === 'importing' && (
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground truncate max-w-[70%]" data-testid="bulk-import-current-file">
+                    {bulkImport.progress.currentFile}
+                  </span>
+                  <span className="text-muted-foreground tabular-nums" data-testid="bulk-import-count">
+                    {bulkImport.progress.current + 1} / {bulkImport.progress.total}
+                  </span>
+                </div>
+                <Progress
+                  value={((bulkImport.progress.current) / bulkImport.progress.total) * 100}
+                  className="h-2"
+                  aria-label={`Importing ${bulkImport.progress.current + 1} of ${bulkImport.progress.total} books`}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={bulkImport.cancel}
+                  className="self-end"
+                  data-testid="bulk-import-cancel"
+                >
+                  <X className="size-4 mr-1" aria-hidden="true" />
+                  Cancel
+                </Button>
+              </>
+            )}
+
+            {(bulkImport.phase === 'done' || bulkImport.phase === 'cancelled') && (
+              <div className="flex flex-col gap-3">
+                <Progress value={100} className="h-2" />
+                <p className="text-sm text-foreground font-medium" data-testid="bulk-import-summary">
+                  {bulkImport.phase === 'cancelled' ? 'Import cancelled. ' : ''}
+                  Imported {bulkImport.results.filter(r => r.status === 'success').length} of{' '}
+                  {bulkImport.progress.total} books
+                </p>
+                {bulkImport.results.some(r => r.status === 'error') && (
+                  <details className="text-sm">
+                    <summary className="cursor-pointer text-destructive">
+                      {bulkImport.results.filter(r => r.status === 'error').length} file(s) had errors
+                    </summary>
+                    <ul className="mt-2 space-y-1 text-muted-foreground">
+                      {bulkImport.results
+                        .filter(r => r.status === 'error')
+                        .map(r => (
+                          <li key={r.fileName} className="text-xs">
+                            <span className="font-medium">{r.fileName}</span>: {r.error}
+                          </li>
+                        ))}
+                    </ul>
+                  </details>
+                )}
+                <Button
+                  variant="brand"
+                  size="sm"
+                  onClick={() => handleClose(false)}
+                  className="self-end"
+                  data-testid="bulk-import-done"
+                >
+                  Done
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* EPUB: Book details — shown after file is selected */}
-        {importMode === 'epub' && file && (
+        {importMode === 'epub' && file && bulkImport.phase === 'idle' && (
           <BookDetailsForm
             file={file}
             title={title}
