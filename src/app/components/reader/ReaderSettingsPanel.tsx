@@ -27,41 +27,18 @@ import {
 import { cn } from '@/app/components/ui/utils'
 import { useReaderStore } from '@/stores/useReaderStore'
 import type { ReaderTheme, ReaderFontFamily } from '@/stores/useReaderStore'
+import { getReaderChromeClasses, useAppColorScheme } from './readerThemeConfig'
 
 interface ReaderSettingsPanelProps {
   open: boolean
   onClose: () => void
 }
 
-// Theme configuration
-const THEMES: {
-  id: ReaderTheme
-  label: string
-  icon: React.ReactNode
-  bg: string
-  text: string
-}[] = [
-  {
-    id: 'light',
-    label: 'Light',
-    icon: <Sun className="size-3.5" aria-hidden="true" />,
-    bg: 'bg-[#FAF5EE]',
-    text: 'text-[#1a1a1a]',
-  },
-  {
-    id: 'sepia',
-    label: 'Sepia',
-    icon: <BookOpen className="size-3.5" aria-hidden="true" />,
-    bg: 'bg-[#F4ECD8]',
-    text: 'text-[#5B4636]',
-  },
-  {
-    id: 'dark',
-    label: 'Dark',
-    icon: <Moon className="size-3.5" aria-hidden="true" />,
-    bg: 'bg-[#1a1a1a]',
-    text: 'text-[#d4d4d4]',
-  },
+// Theme metadata (icons/labels) — colors resolved dynamically from shared config
+const THEME_META: { id: ReaderTheme; label: string; icon: React.ReactNode }[] = [
+  { id: 'light', label: 'Light', icon: <Sun className="size-3.5" aria-hidden="true" /> },
+  { id: 'sepia', label: 'Sepia', icon: <BookOpen className="size-3.5" aria-hidden="true" /> },
+  { id: 'dark', label: 'Dark', icon: <Moon className="size-3.5" aria-hidden="true" /> },
 ]
 
 const FONT_FAMILIES: { value: ReaderFontFamily; label: string }[] = [
@@ -83,6 +60,7 @@ const FONT_SIZE_MAX = 200
 const FONT_SIZE_STEP = 10
 
 export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps) {
+  const colorScheme = useAppColorScheme()
   const theme = useReaderStore(s => s.theme)
   const setTheme = useReaderStore(s => s.setTheme)
   const fontSize = useReaderStore(s => s.fontSize)
@@ -121,25 +99,30 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
             Theme
           </p>
           <div role="radiogroup" aria-label="Reading theme" className="grid grid-cols-3 gap-2">
-            {THEMES.map(t => (
-              <button
-                key={t.id}
-                role="radio"
-                aria-checked={theme === t.id}
-                onClick={() => setTheme(t.id)}
-                data-testid={`theme-${t.id}`}
-                className={cn(
-                  'flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 transition-all',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
-                  t.bg,
-                  t.text,
-                  theme === t.id ? 'border-brand shadow-sm' : 'border-border/30 hover:border-border'
-                )}
-              >
-                {t.icon}
-                <span className="text-xs font-medium">{t.label}</span>
-              </button>
-            ))}
+            {THEME_META.map(t => {
+              const classes = getReaderChromeClasses(t.id, colorScheme)
+              return (
+                <button
+                  key={t.id}
+                  role="radio"
+                  aria-checked={theme === t.id}
+                  onClick={() => setTheme(t.id)}
+                  data-testid={`theme-${t.id}`}
+                  className={cn(
+                    'flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 transition-all',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                    classes.bg,
+                    classes.text,
+                    theme === t.id
+                      ? 'border-brand shadow-sm'
+                      : 'border-border/30 hover:border-border'
+                  )}
+                >
+                  {t.icon}
+                  <span className="text-xs font-medium">{t.label}</span>
+                </button>
+              )
+            })}
           </div>
         </section>
 
