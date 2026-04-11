@@ -495,3 +495,15 @@ issues:
     scheduled_for: null
     fixed_by: null
     notes: "useEffect resets coverError on resolvedCoverUrl change, but if two books share the same cover URL, switching won't reset the error. Fix: add currentBookId to dependency array. Extremely unlikely in practice."
+
+  - id: KI-040
+    type: tech-debt
+    summary: "BookReader uses raw useEffect for keyboard shortcuts instead of useKeyboardShortcuts hook"
+    file: "src/app/pages/BookReader.tsx:314"
+    severity: low
+    discovered_by: E108-S03
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "BookReader has its own addEventListener pattern while Library and AudiobookRenderer use the new useKeyboardShortcuts hook. Refactoring would require extending the hook's action signature to support async/promise-based actions (rendition.prev/next return promises). Low priority."
