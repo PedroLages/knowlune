@@ -3,13 +3,59 @@
  */
 
 import { test, expect } from '@playwright/test'
+import { dismissOnboarding } from '../helpers/dismiss-onboarding'
+import { seedBooks } from '../support/helpers/indexeddb-seed'
+import { FIXED_DATE } from '../utils/test-time'
+
+const TEST_BOOKS = [
+  {
+    id: 'series-book-1',
+    title: 'Foundation',
+    author: 'Isaac Asimov',
+    format: 'epub',
+    status: 'reading',
+    tags: [],
+    chapters: [],
+    source: { type: 'local', opfsPath: '/test' },
+    progress: 50,
+    series: 'Foundation',
+    seriesSequence: '1',
+    createdAt: FIXED_DATE,
+  },
+  {
+    id: 'series-book-2',
+    title: 'Foundation and Empire',
+    author: 'Isaac Asimov',
+    format: 'epub',
+    status: 'unread',
+    tags: [],
+    chapters: [],
+    source: { type: 'local', opfsPath: '/test2' },
+    progress: 0,
+    series: 'Foundation',
+    seriesSequence: '2',
+    createdAt: FIXED_DATE,
+  },
+  {
+    id: 'ungrouped-book',
+    title: 'Standalone Novel',
+    author: 'Jane Doe',
+    format: 'epub',
+    status: 'unread',
+    tags: [],
+    chapters: [],
+    source: { type: 'local', opfsPath: '/test3' },
+    progress: 0,
+    createdAt: FIXED_DATE,
+  },
+]
 
 test.beforeEach(async ({ page }) => {
-  // Seed sidebar state to prevent overlay blocking interactions
+  // Dismiss onboarding/welcome overlays to prevent pointer interception
+  await dismissOnboarding(page)
+  // Navigate to seed books into IndexedDB (requires a real URL, not about:blank)
   await page.goto('/')
-  await page.evaluate(() => {
-    localStorage.setItem('knowlune-sidebar-v1', 'false')
-  })
+  await seedBooks(page, TEST_BOOKS)
 })
 
 test('series view renders when switching to series tab', async ({ page }) => {
@@ -24,7 +70,7 @@ test('series view renders when switching to series tab', async ({ page }) => {
   await expect(page.locator('[data-testid="local-series-view"]')).toBeVisible()
 })
 
-test('series view shows empty state when no books with series data', async ({ page }) => {
+test('series view shows ungrouped books alongside series groups', async ({ page }) => {
   await page.goto('/library')
 
   const seriesTab = page.locator('[data-testid="local-view-series"]')
@@ -34,8 +80,7 @@ test('series view shows empty state when no books with series data', async ({ pa
   const seriesView = page.locator('[data-testid="local-series-view"]')
   await expect(seriesView).toBeVisible()
 
-  // With no books the view renders without crashing — either empty state or ungrouped section
-  // Both are valid: we just verify no JS errors and the container is present
+  // Verify no JS errors during render
   const consoleErrors: string[] = []
   page.on('console', msg => {
     if (msg.type() === 'error') consoleErrors.push(msg.text())
