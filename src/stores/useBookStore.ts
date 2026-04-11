@@ -11,7 +11,7 @@
 
 import { create } from 'zustand'
 import { toast } from 'sonner'
-import type { Book, BookStatus } from '@/data/types'
+import type { Book, BookStatus, LocalSeriesGroup } from '@/data/types'
 import { db } from '@/db/schema'
 import { opfsStorageService } from '@/services/OpfsStorageService'
 import { useShelfStore } from '@/stores/useShelfStore'
@@ -35,6 +35,7 @@ interface BookStoreState {
   books: Book[]
   selectedBookId: string | null
   libraryView: 'grid' | 'list'
+  localSeriesView: boolean
   filters: BookFilters
   isLoaded: boolean
 
@@ -44,12 +45,26 @@ interface BookStoreState {
   deleteBook: (bookId: string) => Promise<void>
   setSelectedBookId: (id: string | null) => void
   setLibraryView: (view: 'grid' | 'list') => void
+  setLocalSeriesView: (value: boolean) => void
   setFilters: (filters: BookFilters) => void
   setFilter: (key: keyof BookFilters, value: string | string[] | undefined) => void
   getFilteredBooks: () => Book[]
   updateBookMetadata: (
     bookId: string,
-    updates: Partial<Pick<Book, 'title' | 'author' | 'isbn' | 'description' | 'tags' | 'coverUrl' | 'genre'>>
+    updates: Partial<
+      Pick<
+        Book,
+        | 'title'
+        | 'author'
+        | 'isbn'
+        | 'description'
+        | 'tags'
+        | 'coverUrl'
+        | 'genre'
+        | 'series'
+        | 'seriesSequence'
+      >
+    >
   ) => Promise<void>
   updateBookPosition: (
     bookId: string,
@@ -63,12 +78,14 @@ interface BookStoreState {
   getAllTags: () => string[]
   getAllAuthors: () => string[]
   getBookCountByStatus: () => Record<'all' | BookStatus, number>
+  getBooksBySeries: () => { groups: LocalSeriesGroup[]; ungrouped: Book[] }
 }
 
 export const useBookStore = create<BookStoreState>((set, get) => ({
   books: [],
   selectedBookId: null,
   libraryView: 'grid',
+  localSeriesView: false,
   filters: {},
   isLoaded: false,
 
@@ -171,6 +188,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
 
   setSelectedBookId: (id: string | null) => set({ selectedBookId: id }),
   setLibraryView: (view: 'grid' | 'list') => set({ libraryView: view }),
+  setLocalSeriesView: (value: boolean) => set({ localSeriesView: value }),
   setFilters: (filters: BookFilters) => set({ filters }),
   setFilter: (key, value) =>
     set(state => ({
@@ -492,5 +510,62 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       counts[b.status] = (counts[b.status] || 0) + 1
     }
     return counts as Record<'all' | BookStatus, number>
+  },
+
+  getBooksBySeries: () => {
+    const filteredBooks = get().getFilteredBooks()
+    const seriesMap = new Map<string, Book[]>()
+    const ungrouped: Book[] = []
+
+    for (const book of filteredBooks) {
+      if (book.series) {
+        const existing = seriesMap.get(book.series)
+        if (existing) {
+          existing.push(book)
+        } else {
+          seriesMap.set(book.series, [book])
+        }
+      } else {
+        ungrouped.push(book)
+      }
+    }
+
+    const groups: LocalSeriesGroup[] = []
+    for (const [name, books] of seriesMap) {
+      // Sort by sequence number (null/missing or non-numeric go to end, then localeCompare)
+      const sorted = [...books].sort((a, b) => {
+        const rawA = a.seriesSequence != null ? parseFloat(a.seriesSequence) : NaN
+        const rawB = b.seriesSequence != null ? parseFloat(b.seriesSequence) : NaN
+        const seqA = isNaN(rawA) ? Infinity : rawA
+        const seqB = isNaN(rawB) ? Infinity : rawB
+        if (seqA !== seqB) return seqA - seqB
+        // Both non-numeric or equal numeric — fall back to localeCompare on raw string
+        return (a.seriesSequence ?? '').localeCompare(b.seriesSequence ?? '')
+      })
+
+      const completed = sorted.filter(b => b.status === 'finished' || b.progress >= 100).length
+
+      // Next unfinished: first in sequence order where not finished
+      let nextUnfinishedId: string | null = null
+      for (const b of sorted) {
+        if (b.status !== 'finished' && b.progress < 100) {
+          nextUnfinishedId = b.id
+          break
+        }
+      }
+
+      groups.push({
+        name,
+        books: sorted,
+        completed,
+        total: sorted.length,
+        nextUnfinishedId,
+      })
+    }
+
+    // Sort groups alphabetically by name
+    groups.sort((a, b) => a.name.localeCompare(b.name))
+
+    return { groups, ungrouped }
   },
 }))

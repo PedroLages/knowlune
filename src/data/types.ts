@@ -726,6 +726,8 @@ export interface Book {
   absServerId?: string // FK to AudiobookshelfServer.id (if sourced from ABS)
   absItemId?: string // ABS item ID for dedup on re-sync
   linkedBookId?: string // FK to paired format's Book.id (E103-S03 dual-format linking)
+  series?: string // Series name for grouping (E110-S02)
+  seriesSequence?: string // Position within series, e.g. "1", "2.5" (E110-S02)
 }
 
 export interface BookHighlight {
@@ -838,6 +840,17 @@ export interface AbsLibraryItem {
 
 /** Full item has the same shape as AbsLibraryItem — extended in E102+ if needed */
 export type AbsItem = AbsLibraryItem
+
+// ─── Local Series Group (E110-S02) ───────────────────────────────────────────
+
+/** A grouped series of local books, computed from Book.series metadata */
+export interface LocalSeriesGroup {
+  name: string // series name (used as key)
+  books: Book[] // books in this series, sorted by seriesSequence
+  completed: number // count of finished books
+  total: number // total books in series
+  nextUnfinishedId: string | null // ID of next book to read/listen
+}
 
 // ─── ABS Series Types (E102-S02) ─────────────────────────────────────────────
 

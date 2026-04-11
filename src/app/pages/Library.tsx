@@ -20,6 +20,7 @@ import {
   Globe,
   Grid3X3,
   Headphones,
+  Layers,
   Library as LibraryIcon,
   List,
   Loader2,
@@ -32,6 +33,7 @@ import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
 import { SeriesCard } from '@/app/components/library/SeriesCard'
+import { LocalSeriesView } from '@/app/components/library/LocalSeriesView'
 import { CollectionsView } from '@/app/components/library/CollectionsView'
 import { StorageIndicator } from '@/app/components/library/StorageIndicator'
 import { BookCard } from '@/app/components/library/BookCard'
@@ -72,6 +74,8 @@ export function Library() {
   const [browserCatalogId, setBrowserCatalogId] = useState<string | undefined>()
   const books = useBookStore(s => s.books)
   const libraryView = useBookStore(s => s.libraryView)
+  const localSeriesView = useBookStore(s => s.localSeriesView)
+  const setLocalSeriesView = useBookStore(s => s.setLocalSeriesView)
   const getFilteredBooks = useBookStore(s => s.getFilteredBooks)
   const filters = useBookStore(s => s.filters)
   const setFilters = useBookStore(s => s.setFilters)
@@ -91,6 +95,8 @@ export function Library() {
   const [absViewMode, setAbsViewMode] = useState<'grid' | 'series' | 'collections'>(
     initialView === 'collections' ? 'collections' : initialView === 'series' ? 'series' : 'grid'
   )
+
+  const getBooksBySeries = useBookStore(s => s.getBooksBySeries)
 
   // When navigating back with ?view=collections, ensure ABS source is selected
   useEffect(() => {
@@ -514,6 +520,68 @@ export function Library() {
         </div>
       )}
 
+      {/* Local/All series toggle (E110-S02) — when NOT in ABS source view */}
+      {books.length > 0 && filters.source !== 'audiobookshelf' && (
+        <div
+          className="flex gap-1 rounded-lg bg-muted p-1 w-fit"
+          role="tablist"
+          aria-label="Library view mode"
+          data-testid="local-view-toggle"
+        >
+          <button
+            role="tab"
+            aria-selected={!localSeriesView && libraryView === 'grid'}
+            onClick={() => {
+              setLocalSeriesView(false)
+              useBookStore.getState().setLibraryView('grid')
+            }}
+            className={cn(
+              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
+              !localSeriesView && libraryView === 'grid'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+            data-testid="local-view-grid"
+          >
+            <Grid3X3 className="size-3.5" aria-hidden="true" />
+            Grid
+          </button>
+          <button
+            role="tab"
+            aria-selected={!localSeriesView && libraryView === 'list'}
+            onClick={() => {
+              setLocalSeriesView(false)
+              useBookStore.getState().setLibraryView('list')
+            }}
+            className={cn(
+              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
+              !localSeriesView && libraryView === 'list'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+            data-testid="local-view-list"
+          >
+            <List className="size-3.5" aria-hidden="true" />
+            List
+          </button>
+          <button
+            role="tab"
+            aria-selected={localSeriesView}
+            onClick={() => setLocalSeriesView(true)}
+            className={cn(
+              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
+              localSeriesView
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+            data-testid="local-view-series"
+          >
+            <Layers className="size-3.5" aria-hidden="true" />
+            Series
+          </button>
+        </div>
+      )}
+
       {/* Syncing indicator (E101-S03) */}
       {isAbsSyncing && (
         <div
@@ -560,9 +628,19 @@ export function Library() {
         <CollectionsView />
       )}
 
+      {/* Local series view (E110-S02) — replaces grid/list when active for non-ABS sources */}
+      {books.length > 0 && filters.source !== 'audiobookshelf' && localSeriesView && (
+        <LocalSeriesView
+          getBooksBySeries={getBooksBySeries}
+          onEdit={setEditingBook}
+          filteredBookIds={filteredBooks.map(b => b.id)}
+        />
+      )}
+
       {/* Grid view */}
       {books.length > 0 &&
         libraryView === 'grid' &&
+        !localSeriesView &&
         !(
           filters.source === 'audiobookshelf' &&
           (absViewMode === 'series' || absViewMode === 'collections')
@@ -579,6 +657,7 @@ export function Library() {
       {/* List view */}
       {books.length > 0 &&
         libraryView === 'list' &&
+        !localSeriesView &&
         !(
           filters.source === 'audiobookshelf' &&
           (absViewMode === 'series' || absViewMode === 'collections')
@@ -602,8 +681,8 @@ export function Library() {
         />
       )}
 
-      {/* No results message */}
-      {books.length > 0 && filteredBooks.length === 0 && (
+      {/* No results message — hidden when local series view handles its own empty state */}
+      {books.length > 0 && filteredBooks.length === 0 && !localSeriesView && (
         <div className="flex flex-col items-center gap-3 py-12">
           <p className="text-muted-foreground">No books match your filters.</p>
           <Button

@@ -583,3 +583,118 @@ describe('setFilters', () => {
     expect(useBookStore.getState().filters).toEqual({ status: 'reading', search: 'test' })
   })
 })
+
+describe('getBooksBySeries', () => {
+  it('groups books by series name', async () => {
+    await act(async () => {
+      await useBookStore
+        .getState()
+        .importBook(makeBook({ id: 'gs-1', series: 'Dune', seriesSequence: '1' }) as never)
+      await useBookStore
+        .getState()
+        .importBook(makeBook({ id: 'gs-2', series: 'Dune', seriesSequence: '2' }) as never)
+      await useBookStore
+        .getState()
+        .importBook(makeBook({ id: 'gs-3', series: 'Foundation', seriesSequence: '1' }) as never)
+    })
+
+    const { groups, ungrouped } = useBookStore.getState().getBooksBySeries()
+
+    expect(groups).toHaveLength(2)
+    const duneGroup = groups.find(g => g.name === 'Dune')
+    expect(duneGroup?.books).toHaveLength(2)
+    expect(duneGroup?.total).toBe(2)
+    expect(ungrouped).toHaveLength(0)
+  })
+
+  it('sorts books within a series by numeric sequence', async () => {
+    await act(async () => {
+      await useBookStore
+        .getState()
+        .importBook(makeBook({ id: 'seq-3', series: 'TestSeries', seriesSequence: '3' }) as never)
+      await useBookStore
+        .getState()
+        .importBook(makeBook({ id: 'seq-1', series: 'TestSeries', seriesSequence: '1' }) as never)
+      await useBookStore
+        .getState()
+        .importBook(makeBook({ id: 'seq-2', series: 'TestSeries', seriesSequence: '2' }) as never)
+    })
+
+    const { groups } = useBookStore.getState().getBooksBySeries()
+    const [group] = groups
+    expect(group.books.map(b => b.id)).toEqual(['seq-1', 'seq-2', 'seq-3'])
+  })
+
+  it('falls back to localeCompare for non-numeric sequences', async () => {
+    await act(async () => {
+      await useBookStore
+        .getState()
+        .importBook(makeBook({ id: 'nc-b', series: 'Letters', seriesSequence: 'beta' }) as never)
+      await useBookStore
+        .getState()
+        .importBook(makeBook({ id: 'nc-a', series: 'Letters', seriesSequence: 'alpha' }) as never)
+    })
+
+    const { groups } = useBookStore.getState().getBooksBySeries()
+    const [group] = groups
+    // 'alpha' < 'beta' alphabetically
+    expect(group.books[0].id).toBe('nc-a')
+    expect(group.books[1].id).toBe('nc-b')
+  })
+
+  it('puts books without series into ungrouped', async () => {
+    await act(async () => {
+      await useBookStore
+        .getState()
+        .importBook(makeBook({ id: 'ug-1', series: 'MySeries' }) as never)
+      await useBookStore.getState().importBook(makeBook({ id: 'ug-2' }) as never) // no series
+      await useBookStore.getState().importBook(makeBook({ id: 'ug-3' }) as never) // no series
+    })
+
+    const { groups, ungrouped } = useBookStore.getState().getBooksBySeries()
+
+    expect(groups).toHaveLength(1)
+    expect(ungrouped).toHaveLength(2)
+    expect(ungrouped.map(b => b.id).sort()).toEqual(['ug-2', 'ug-3'])
+  })
+
+  it('computes completed count and nextUnfinishedId correctly', async () => {
+    await act(async () => {
+      await useBookStore.getState().importBook(
+        makeBook({
+          id: 'cu-1',
+          series: 'MySeries',
+          seriesSequence: '1',
+          status: 'finished',
+          progress: 100,
+        }) as never
+      )
+      await useBookStore.getState().importBook(
+        makeBook({
+          id: 'cu-2',
+          series: 'MySeries',
+          seriesSequence: '2',
+          status: 'reading',
+          progress: 40,
+        }) as never
+      )
+      await useBookStore.getState().importBook(
+        makeBook({
+          id: 'cu-3',
+          series: 'MySeries',
+          seriesSequence: '3',
+          status: 'unread',
+          progress: 0,
+        }) as never
+      )
+    })
+
+    const { groups } = useBookStore.getState().getBooksBySeries()
+    const [group] = groups
+
+    expect(group.completed).toBe(1)
+    expect(group.total).toBe(3)
+    // cu-1 is finished; cu-2 is next unfinished (first in sequence order)
+    expect(group.nextUnfinishedId).toBe('cu-2')
+  })
+})

@@ -1298,6 +1298,10 @@ function _declareLegacyMigrations(database: Dexie): void {
     shelves: 'id, name, isDefault, sortOrder, createdAt',
     bookShelves: 'id, bookId, shelfId, [bookId+shelfId], addedAt',
   })
+  // E110-S02: Series Grouping — add `series` index to books for grouping by series name
+  database.version(45).stores({
+    books: 'id, title, author, format, status, createdAt, lastOpenedAt, series',
+  })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }

@@ -699,3 +699,27 @@ issues:
     scheduled_for: null
     fixed_by: chore/ki-fix-retroactive-2026-04-11
     notes: "Added 'Highlight Review' (/highlight-review) and 'Cross-Book Search' (/search-annotations) sidebar entries in Study group after Vocabulary. Updated navigation tests."
+
+  - id: KI-057
+    type: typecheck
+    summary: "TypeScript errors in 10+ files (AudiobookRenderer, SearchCommandPalette, OpdsBrowser, HighlightLayer, SettingsPageContext, useTts, SearchAnnotations, etc.)"
+    file: "various"
+    severity: medium
+    discovered_by: E110-S02
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Pre-existing TS errors in files not touched by E110-S02. Discovered during R4 review."
+
+  - id: KI-058
+    type: test
+    summary: "29 unit test failures in pre-existing test files (courseAdapter, courseImport, pkmExport, settings, youtubeTranscriptPipeline, useAudiobookshelfStore)"
+    file: "various"
+    severity: medium
+    discovered_by: E110-S02
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Pre-existing unit test failures in files not touched by E110-S02. Identical count on main branch. Discovered during R4 review."

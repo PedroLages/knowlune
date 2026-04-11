@@ -55,6 +55,7 @@ describe('ElearningDB schema', () => {
       'authors',
       'bookFiles',
       'bookHighlights',
+      'bookShelves',
       'bookmarks',
       'books',
       'careerPaths',
@@ -82,6 +83,7 @@ describe('ElearningDB schema', () => {
       'quizzes',
       'reviewRecords',
       'screenshots',
+      'shelves',
       'studySchedules',
       'studySessions',
       'videoCaptions',
@@ -92,12 +94,17 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 42', () => {
-    expect(db.verno).toBe(42)
+  it('should be at version 45', () => {
+    expect(db.verno).toBe(45)
   })
 
   it('should have entitlements table with userId as primary key', () => {
     expect(db.entitlements.schema.primKey.name).toBe('userId')
+  })
+
+  it('should have series index on books table (v45)', () => {
+    const booksIndexNames = db.books.schema.indexes.map(i => i.name)
+    expect(booksIndexNames).toContain('series')
   })
 
   it('should preserve key indexes on existing v16 tables in v17 migration', async () => {

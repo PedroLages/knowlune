@@ -54,8 +54,7 @@ export function LibraryFilters() {
       key: 'authors',
       label: `${filters.authors.length} author${filters.authors.length > 1 ? 's' : ''}`,
     })
-  if (filters.genre)
-    activeChips.push({ key: 'genre', label: `Genre: ${filters.genre}` })
+  if (filters.genre) activeChips.push({ key: 'genre', label: `Genre: ${filters.genre}` })
 
   const removeChip = (key: string) => {
     setFilter(key as 'sort' | 'format' | 'authors' | 'genre', undefined)
@@ -98,41 +97,43 @@ export function LibraryFilters() {
           />
         </div>
 
-        {/* View toggle */}
-        <div
-          className="flex items-center rounded-lg border border-border/50 p-0.5 flex-shrink-0"
-          role="toolbar"
-          aria-label="View toggle"
-        >
-          <button
-            onClick={() => setLibraryView('grid')}
-            className={cn(
-              'rounded-md p-1.5 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center',
-              libraryView === 'grid'
-                ? 'bg-brand text-brand-foreground'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-            aria-label="Grid view"
-            aria-pressed={libraryView === 'grid'}
-            data-testid="view-toggle-grid"
+        {/* View toggle — hidden when the pill toggle above Library.tsx handles it (non-ABS source) */}
+        {filters.source === 'audiobookshelf' && (
+          <div
+            className="flex items-center rounded-lg border border-border/50 p-0.5 flex-shrink-0"
+            role="toolbar"
+            aria-label="View toggle"
           >
-            <LayoutGrid className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setLibraryView('list')}
-            className={cn(
-              'rounded-md p-1.5 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center',
-              libraryView === 'list'
-                ? 'bg-brand text-brand-foreground'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-            aria-label="List view"
-            aria-pressed={libraryView === 'list'}
-            data-testid="view-toggle-list"
-          >
-            <List className="h-4 w-4" />
-          </button>
-        </div>
+            <button
+              onClick={() => setLibraryView('grid')}
+              className={cn(
+                'rounded-md p-1.5 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center',
+                libraryView === 'grid'
+                  ? 'bg-brand text-brand-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              aria-label="Grid view"
+              aria-pressed={libraryView === 'grid'}
+              data-testid="view-toggle-grid"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setLibraryView('list')}
+              className={cn(
+                'rounded-md p-1.5 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center',
+                libraryView === 'list'
+                  ? 'bg-brand text-brand-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              aria-label="List view"
+              aria-pressed={libraryView === 'list'}
+              data-testid="view-toggle-list"
+            >
+              <List className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* Filter button */}
         <Button

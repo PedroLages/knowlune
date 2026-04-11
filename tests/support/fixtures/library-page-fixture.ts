@@ -28,7 +28,7 @@ export const test = base.extend<{
       goto: () => page.goto('/library'),
 
       switchToListView: () =>
-        page.locator('[data-testid="view-toggle-list"]').click(),
+        page.locator('[data-testid="local-view-list"]').click(),
 
       openBookCardContextMenu: async (index: number) => {
         // BookCard uses data-testid="book-card-{id}", so we use prefix matching

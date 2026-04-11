@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 42
+export const CHECKPOINT_VERSION = 45
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
@@ -39,6 +39,9 @@ export const CHECKPOINT_VERSION = 42
  * v39 (E88-S01): opdsCatalogs table for OPDS catalog connections.
  * v40 (E101-S01): audiobookshelfServers table for ABS server connections.
  * v41 (E103-S01): chapterMappings table for EPUB↔audiobook chapter alignment.
+ * v42 (E109-S01): vocabularyItems table for vocabulary tracking.
+ * v44 (E110-S01): shelves + bookShelves tables for Smart Shelves.
+ * v45 (E110-S02): series index added to books for series grouping.
  */
 export const CHECKPOINT_SCHEMA: Record<string, string> = {
   importedCourses: 'id, name, importedAt, status, *tags, source',
@@ -73,8 +76,8 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   notificationPreferences: 'id',
   courseEmbeddings: 'courseId',
   studySchedules: 'id, courseId, learningPathId, enabled',
-  books: 'id, title, author, format, status, createdAt, lastOpenedAt',
-  bookHighlights: 'id, bookId, color, flashcardId, createdAt',
+  books: 'id, title, author, format, status, createdAt, lastOpenedAt, series',
+  bookHighlights: 'id, bookId, color, flashcardId, createdAt, lastReviewedAt, reviewRating',
   bookFiles: '[bookId+filename], bookId',
   audioBookmarks: 'id, bookId, chapterIndex, timestamp, createdAt',
   opdsCatalogs: 'id, name, url, createdAt',
@@ -84,3 +87,8 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   shelves: 'id, name, isDefault, sortOrder, createdAt',
   bookShelves: 'id, bookId, shelfId, [bookId+shelfId], addedAt',
 }
+
+// v42 (E109-S01): vocabularyItems table added
+// v43 (E109-S02): (data-only migration, no schema change)
+// v44 (E110-S01): shelves + bookShelves tables added for Smart Shelves
+// v45 (E110-S02): series index added to books for series grouping
