@@ -221,7 +221,9 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
       if (!selectedFiles || selectedFiles.length === 0) return
 
       if (selectedFiles.length > 1) {
-        const epubFiles = Array.from(selectedFiles).filter(f => f.name.toLowerCase().endsWith('.epub'))
+        const epubFiles = Array.from(selectedFiles).filter(f =>
+          f.name.toLowerCase().endsWith('.epub')
+        )
         if (epubFiles.length === 0) {
           toast.error('No EPUB files found in selection')
           return
@@ -394,73 +396,86 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
         )}
 
         {/* EPUB: Bulk import progress — shown during bulk import */}
-        {importMode === 'epub' && (bulkImport.phase === 'importing' || bulkImport.phase === 'done' || bulkImport.phase === 'cancelled') && (
-          <div className="flex flex-col gap-4 py-2" data-testid="bulk-import-progress">
-            {bulkImport.phase === 'importing' && (
-              <>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground truncate max-w-[70%]" data-testid="bulk-import-current-file">
-                    {bulkImport.progress.currentFile}
-                  </span>
-                  <span className="text-muted-foreground tabular-nums" data-testid="bulk-import-count">
-                    {bulkImport.progress.current} / {bulkImport.progress.total}
-                  </span>
-                </div>
-                <Progress
-                  value={(bulkImport.progress.current / bulkImport.progress.total) * 100}
-                  className="h-2"
-                  aria-label={`Importing ${bulkImport.progress.current} of ${bulkImport.progress.total} books`}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={bulkCancel}
-                  className="self-end"
-                  data-testid="bulk-import-cancel"
-                >
-                  <X className="size-4 mr-1" aria-hidden="true" />
-                  Cancel
-                </Button>
-              </>
-            )}
+        {importMode === 'epub' &&
+          (bulkImport.phase === 'importing' ||
+            bulkImport.phase === 'done' ||
+            bulkImport.phase === 'cancelled') && (
+            <div className="flex flex-col gap-4 py-2" data-testid="bulk-import-progress">
+              {bulkImport.phase === 'importing' && (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span
+                      className="text-muted-foreground truncate max-w-[70%]"
+                      data-testid="bulk-import-current-file"
+                    >
+                      {bulkImport.progress.currentFile}
+                    </span>
+                    <span
+                      className="text-muted-foreground tabular-nums"
+                      data-testid="bulk-import-count"
+                    >
+                      {bulkImport.progress.current} / {bulkImport.progress.total}
+                    </span>
+                  </div>
+                  <Progress
+                    value={(bulkImport.progress.current / bulkImport.progress.total) * 100}
+                    className="h-2"
+                    aria-label={`Importing ${bulkImport.progress.current} of ${bulkImport.progress.total} books`}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={bulkCancel}
+                    className="self-end"
+                    data-testid="bulk-import-cancel"
+                  >
+                    <X className="size-4 mr-1" aria-hidden="true" />
+                    Cancel
+                  </Button>
+                </>
+              )}
 
-            {(bulkImport.phase === 'done' || bulkImport.phase === 'cancelled') && (
-              <div className="flex flex-col gap-3">
-                <Progress value={100} className="h-2" />
-                <p className="text-sm text-foreground font-medium" data-testid="bulk-import-summary">
-                  {bulkImport.phase === 'cancelled' ? 'Import cancelled. ' : ''}
-                  Imported {bulkImport.results.filter(r => r.status === 'success').length} of{' '}
-                  {bulkImport.progress.total} books
-                </p>
-                {bulkImport.results.some(r => r.status === 'error') && (
-                  <details className="text-sm">
-                    <summary className="cursor-pointer text-destructive">
-                      {bulkImport.results.filter(r => r.status === 'error').length} file(s) had errors
-                    </summary>
-                    <ul className="mt-2 space-y-1 text-muted-foreground">
-                      {bulkImport.results
-                        .filter(r => r.status === 'error')
-                        .map(r => (
-                          <li key={r.fileName} className="text-xs">
-                            <span className="font-medium">{r.fileName}</span>: {r.error}
-                          </li>
-                        ))}
-                    </ul>
-                  </details>
-                )}
-                <Button
-                  variant="brand"
-                  size="sm"
-                  onClick={() => handleClose(false)}
-                  className="self-end"
-                  data-testid="bulk-import-done"
-                >
-                  Done
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
+              {(bulkImport.phase === 'done' || bulkImport.phase === 'cancelled') && (
+                <div className="flex flex-col gap-3">
+                  <Progress value={100} className="h-2" />
+                  <p
+                    className="text-sm text-foreground font-medium"
+                    data-testid="bulk-import-summary"
+                  >
+                    {bulkImport.phase === 'cancelled' ? 'Import cancelled. ' : ''}
+                    Imported {bulkImport.results.filter(r => r.status === 'success').length} of{' '}
+                    {bulkImport.progress.total} books
+                  </p>
+                  {bulkImport.results.some(r => r.status === 'error') && (
+                    <details className="text-sm">
+                      <summary className="cursor-pointer text-destructive">
+                        {bulkImport.results.filter(r => r.status === 'error').length} file(s) had
+                        errors
+                      </summary>
+                      <ul className="mt-2 space-y-1 text-muted-foreground">
+                        {bulkImport.results
+                          .filter(r => r.status === 'error')
+                          .map(r => (
+                            <li key={r.fileName} className="text-xs">
+                              <span className="font-medium">{r.fileName}</span>: {r.error}
+                            </li>
+                          ))}
+                      </ul>
+                    </details>
+                  )}
+                  <Button
+                    variant="brand"
+                    size="sm"
+                    onClick={() => handleClose(false)}
+                    className="self-end"
+                    data-testid="bulk-import-done"
+                  >
+                    Done
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
 
         {/* EPUB: Book details — shown after file is selected */}
         {importMode === 'epub' && file && bulkImport.phase === 'idle' && (
