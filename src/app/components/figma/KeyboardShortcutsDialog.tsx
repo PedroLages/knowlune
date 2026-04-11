@@ -25,7 +25,7 @@ const shortcutGroups: ShortcutGroup[] = [
       { keys: ['Cmd', 'K'], description: 'Open search' },
       { keys: ['Cmd', 'B'], description: 'Toggle sidebar' },
       { keys: ['Cmd', ','], description: 'Go to Settings' },
-      { keys: ['Escape'], description: 'Close dialog / search' },
+      { keys: ['Escape'], description: 'Close dialog / search (also closes TOC, panels in reader)' },
     ],
   },
   {
@@ -52,7 +52,7 @@ const shortcutGroups: ShortcutGroup[] = [
     label: 'Audiobook Player',
     shortcuts: [
       { keys: ['Space'], description: 'Play / Pause' },
-      { keys: ['←'], description: 'Skip back 15s' },
+      { keys: ['←'], description: 'Skip back 30s' },
       { keys: ['→'], description: 'Skip forward 30s' },
       { keys: ['↑'], description: 'Volume up' },
       { keys: ['↓'], description: 'Volume down' },

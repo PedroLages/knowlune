@@ -68,7 +68,6 @@ export function Library() {
   const [browserCatalogId, setBrowserCatalogId] = useState<string | undefined>()
   const books = useBookStore(s => s.books)
   const libraryView = useBookStore(s => s.libraryView)
-  const setLibraryView = useBookStore(s => s.setLibraryView)
   const getFilteredBooks = useBookStore(s => s.getFilteredBooks)
   const filters = useBookStore(s => s.filters)
   const setFilters = useBookStore(s => s.setFilters)
@@ -129,7 +128,7 @@ export function Library() {
       description: 'Toggle grid/list view',
       action: () => {
         // Intentional: read from store inside action to avoid stale closure
-        const current = useBookStore.getState().libraryView
+        const { libraryView: current, setLibraryView } = useBookStore.getState()
         setLibraryView(current === 'grid' ? 'list' : 'grid')
       },
     },

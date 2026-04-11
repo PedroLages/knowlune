@@ -57,10 +57,10 @@ export function useKeyboardShortcuts(
       // Guard: skip during IME composition (e.g., Japanese/Chinese input)
       if (e.isComposing) return
 
-      // Guard: skip when text input is focused (AC-5)
+      // Guard: skip when text input, select, or contentEditable is focused (AC-5)
       const target = e.target as HTMLElement
       const tagName = target.tagName.toLowerCase()
-      if (tagName === 'input' || tagName === 'textarea' || target.isContentEditable) return
+      if (tagName === 'input' || tagName === 'textarea' || tagName === 'select' || target.isContentEditable) return
 
       const key = e.key.toLowerCase()
       const isMod = e.metaKey || e.ctrlKey

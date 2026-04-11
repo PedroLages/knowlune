@@ -312,9 +312,13 @@ export function BookReader() {
   // Keyboard navigation: Left/Right/Space for page turns, Escape → back
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't capture keyboard in inputs/textareas
+      // Guard: skip during IME composition (e.g., Japanese/Chinese input)
+      if (e.isComposing) return
+
+      // Guard: skip when text input, select, or contentEditable is focused (AC-5)
       const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return
+      if (target.isContentEditable) return
 
       const rendition = renditionRef.current
       if (!rendition) return
