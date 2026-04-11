@@ -10,10 +10,11 @@
  * @module HighlightReview
  * @since E86-S02 (created), E109-S02 (spaced-repetition rating)
  */
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { ChevronLeft, ChevronRight, BookOpen } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
+import { toast } from 'sonner'
 import { db } from '@/db/schema'
 import { useBookStore } from '@/stores/useBookStore'
 import { Button } from '@/app/components/ui/button'
@@ -29,19 +30,24 @@ import {
 } from '@/app/components/ui/empty'
 import type { BookHighlight } from '@/data/types'
 
-const REVIEW_CARD_COUNT = 5
+const REVIEW_CARD_COUNT = 20
 
 /**
  * Selects highlights for daily review, prioritizing:
  * 1. Never-reviewed highlights (no lastReviewedAt)
  * 2. Least-recently-reviewed "keep" highlights
  * 3. Excludes "dismiss"-rated highlights
+ *
+ * Uses Dexie index-based filtering to avoid loading all highlights into memory.
  */
 async function loadDailyHighlights(): Promise<BookHighlight[]> {
-  const all = await db.bookHighlights.toArray()
-
-  // Filter out dismissed highlights
-  const candidates = all.filter(h => h.reviewRating !== 'dismiss')
+  // Filter at the database level: exclude dismissed highlights
+  // and load at most REVIEW_CARD_COUNT * 4 to allow for client-side sort
+  const candidates = await db.bookHighlights
+    .where('reviewRating')
+    .notEqual('dismiss')
+    .limit(REVIEW_CARD_COUNT * 4)
+    .toArray()
 
   // Sort: unreviewed first, then by oldest lastReviewedAt
   candidates.sort((a, b) => {
@@ -88,10 +94,29 @@ export function HighlightReview() {
     }
   }, [])
 
+  // Ref used for rollback: stores previous highlights + ratings before optimistic update
+  const prevStateRef = useRef<{
+    highlights: BookHighlight[]
+    ratings: Record<string, 'keep' | 'dismiss'>
+  } | null>(null)
+
   const handleRate = useCallback(
     async (highlightId: string, rating: 'keep' | 'dismiss') => {
       const now = new Date().toISOString()
+
+      // Snapshot state for rollback
+      prevStateRef.current = { highlights, ratings }
+
+      // Optimistic update: record rating and remove dismissed cards immediately
       setRatings(prev => ({ ...prev, [highlightId]: rating }))
+      if (rating === 'dismiss') {
+        setHighlights(prev => {
+          const next = prev.filter(h => h.id !== highlightId)
+          // If the dismissed card was not the last one, keep current index; otherwise step back
+          setCurrentIndex(idx => Math.min(idx, Math.max(0, next.length - 1)))
+          return next
+        })
+      }
 
       try {
         await db.bookHighlights.update(highlightId, {
@@ -99,12 +124,19 @@ export function HighlightReview() {
           lastReviewedAt: now,
           updatedAt: now,
         })
+        prevStateRef.current = null
       } catch (err) {
-        // silent-catch-ok: rating persistence failure is non-critical, UI state already updated
         console.error('[HighlightReview] Failed to persist rating:', err)
+        // Rollback optimistic update
+        if (prevStateRef.current) {
+          setHighlights(prevStateRef.current.highlights)
+          setRatings(prevStateRef.current.ratings)
+          prevStateRef.current = null
+        }
+        toast.error('Failed to save rating. Please try again.')
       }
     },
-    []
+    [highlights, ratings]
   )
 
   const handleNext = useCallback(() => {

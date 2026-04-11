@@ -7,55 +7,32 @@
 import { test, expect } from '@playwright/test'
 import { dismissOnboarding } from '../helpers/dismiss-onboarding'
 import { navigateAndWait } from '../support/helpers/navigation'
+import { seedBooks, seedBookHighlights } from '../support/helpers/indexeddb-seed'
 import { FIXED_DATE } from '../utils/test-time'
 
 /** Seed highlight + book data into IndexedDB after app has initialized the schema */
 async function seedHighlights(page: import('@playwright/test').Page, count = 3) {
-  await page.evaluate(
-    ({ n, fixedDate }) => {
-      return new Promise<void>((resolve, reject) => {
-        const dbReq = indexedDB.open('ElearningDB')
-        dbReq.onerror = () => reject(dbReq.error)
-        dbReq.onsuccess = () => {
-          const idb = dbReq.result
-
-          // Seed a book first
-          try {
-            const bookTx = idb.transaction('books', 'readwrite')
-            bookTx.objectStore('books').put({
-              id: 'book-test-1',
-              title: 'Test Book',
-              author: 'Test Author',
-              format: 'epub',
-              status: 'reading',
-              progress: 50,
-              createdAt: fixedDate,
-            })
-            bookTx.oncomplete = () => {
-              // Then seed highlights
-              const tx = idb.transaction('bookHighlights', 'readwrite')
-              const store = tx.objectStore('bookHighlights')
-              for (let i = 0; i < n; i++) {
-                store.put({
-                  id: `highlight-${i}`,
-                  bookId: 'book-test-1',
-                  textAnchor: `Test highlight passage number ${i + 1}`,
-                  color: 'yellow',
-                  position: { type: 'epub-cfi', value: `/4/2/2[ch${i}]` },
-                  createdAt: fixedDate,
-                })
-              }
-              tx.oncomplete = () => resolve()
-              tx.onerror = () => reject(tx.error)
-            }
-            bookTx.onerror = () => reject(bookTx.error)
-          } catch (err) {
-            reject(err)
-          }
-        }
-      })
+  await seedBooks(page, [
+    {
+      id: 'book-test-1',
+      title: 'Test Book',
+      author: 'Test Author',
+      format: 'epub',
+      status: 'reading',
+      progress: 50,
+      createdAt: FIXED_DATE,
     },
-    { n: count, fixedDate: FIXED_DATE }
+  ])
+  await seedBookHighlights(
+    page,
+    Array.from({ length: count }, (_, i) => ({
+      id: `highlight-${i}`,
+      bookId: 'book-test-1',
+      textAnchor: `Test highlight passage number ${i + 1}`,
+      color: 'yellow',
+      position: { type: 'epub-cfi', value: `/4/2/2[ch${i}]` },
+      createdAt: FIXED_DATE,
+    }))
   )
 }
 
