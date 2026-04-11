@@ -36,6 +36,7 @@ import type {
   AudioBookmark,
   OpdsCatalog,
   AudiobookshelfServer,
+  VocabularyItem,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA } from './checkpoint'
@@ -83,6 +84,7 @@ export type ElearningDatabase = Dexie & {
   opdsCatalogs: EntityTable<OpdsCatalog, 'id'>
   audiobookshelfServers: EntityTable<AudiobookshelfServer, 'id'>
   chapterMappings: Table<import('@/data/types').ChapterMappingRecord> // compound PK: [epubBookId+audioBookId]
+  vocabularyItems: EntityTable<VocabularyItem, 'id'>
 }
 
 /**
@@ -1277,6 +1279,11 @@ function _declareLegacyMigrations(database: Dexie): void {
   // - New chapterMappings table for EPUB↔audiobook chapter alignment
   database.version(41).stores({
     chapterMappings: '[epubBookId+audioBookId], epubBookId, audioBookId',
+  })
+
+  // E109-S01: Vocabulary Builder — word/phrase saving from book reader
+  database.version(42).stores({
+    vocabularyItems: 'id, bookId, masteryLevel, createdAt',
   })
 } // end _declareLegacyMigrations
 

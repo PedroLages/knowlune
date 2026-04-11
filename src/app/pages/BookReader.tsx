@@ -37,6 +37,7 @@ import { TableOfContents } from '@/app/components/reader/TableOfContents'
 import { ReaderSettingsPanel } from '@/app/components/reader/ReaderSettingsPanel'
 import { TtsControlBar } from '@/app/components/reader/TtsControlBar'
 import { HighlightLayer } from '@/app/components/reader/HighlightLayer'
+import { useVocabularyStore } from '@/stores/useVocabularyStore'
 import { HighlightListPanel } from '@/app/components/reader/HighlightListPanel'
 import { ClozeFlashcardCreator } from '@/app/components/reader/ClozeFlashcardCreator'
 import { useTts } from '@/app/hooks/useTts'
@@ -823,6 +824,19 @@ export function BookReader() {
             setClozeText(text)
             setClozeHighlightId(highlightId)
             setClozeOpen(true)
+          }}
+          onVocabularyRequest={(text) => {
+            if (!bookId) return
+            const now = new Date().toISOString()
+            useVocabularyStore.getState().addItem({
+              id: crypto.randomUUID(),
+              bookId,
+              word: text.trim(),
+              masteryLevel: 0,
+              createdAt: now,
+              updatedAt: now,
+            })
+            toast.success(`"${text.trim().slice(0, 30)}" added to vocabulary`)
           }}
         />
       )}

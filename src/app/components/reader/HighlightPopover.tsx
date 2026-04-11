@@ -9,7 +9,7 @@
  *
  * @module HighlightPopover
  */
-import { X, StickyNote, Layers } from 'lucide-react'
+import { X, StickyNote, Layers, BookA } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 
 export interface HighlightPosition {
@@ -25,6 +25,7 @@ interface HighlightPopoverProps {
   onColorSelect: (color: 'yellow' | 'green' | 'blue' | 'pink') => void
   onNote: () => void
   onFlashcard: () => void
+  onVocabulary?: () => void
   onClose: () => void
 }
 
@@ -40,6 +41,7 @@ export function HighlightPopover({
   onColorSelect,
   onNote,
   onFlashcard,
+  onVocabulary,
   onClose,
 }: HighlightPopoverProps) {
   const isMobile = window.innerWidth < 640
@@ -90,6 +92,17 @@ export function HighlightPopover({
         >
           <Layers className="size-5" aria-hidden="true" />
         </button>
+
+        {onVocabulary && (
+          <button
+            onClick={onVocabulary}
+            aria-label="Add to vocabulary"
+            className="size-10 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            data-testid="highlight-vocabulary-button"
+          >
+            <BookA className="size-5" aria-hidden="true" />
+          </button>
+        )}
 
         <button
           onClick={onClose}
@@ -156,6 +169,17 @@ export function HighlightPopover({
       >
         <Layers className="size-4" aria-hidden="true" />
       </button>
+
+      {onVocabulary && (
+        <button
+          onClick={onVocabulary}
+          aria-label="Add to vocabulary"
+          className="size-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          data-testid="highlight-vocabulary-button"
+        >
+          <BookA className="size-4" aria-hidden="true" />
+        </button>
+      )}
 
       <button
         onClick={onClose}

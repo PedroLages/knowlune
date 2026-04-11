@@ -721,6 +721,22 @@ export interface BookHighlight {
   updatedAt?: string // ISO 8601
 }
 
+/** Vocabulary item saved from book reader text selection (E109-S01) */
+export interface VocabularyItem {
+  id: string // UUID v4
+  bookId: string // FK to Book.id
+  word: string // The selected word or phrase
+  context?: string // Surrounding sentence for context
+  definition?: string // User-provided or looked-up definition
+  note?: string // Optional user notes
+  highlightId?: string // FK to BookHighlight.id (if created from highlight)
+  /** Mastery level for spaced review: 0=new, 1=learning, 2=familiar, 3=mastered */
+  masteryLevel: 0 | 1 | 2 | 3
+  lastReviewedAt?: string // ISO 8601
+  createdAt: string // ISO 8601
+  updatedAt: string // ISO 8601
+}
+
 /** A bookmark within an audiobook chapter */
 export interface AudioBookmark {
   id: string // UUID v4

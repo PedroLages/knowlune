@@ -68,6 +68,7 @@ interface HighlightLayerProps {
   bookId: string
   currentHref?: string
   onFlashcardRequest?: (text: string, highlightId?: string) => void
+  onVocabularyRequest?: (text: string, context?: string) => void
   /** If set, briefly pulse this highlight after restore (E85-S05 back-navigation) */
   focusHighlightId?: string
 }
@@ -77,6 +78,7 @@ export function HighlightLayer({
   bookId,
   currentHref,
   onFlashcardRequest,
+  onVocabularyRequest,
   focusHighlightId,
 }: HighlightLayerProps) {
   const createHighlight = useHighlightStore(s => s.createHighlight)
@@ -332,6 +334,12 @@ export function HighlightLayer({
     onFlashcardRequest?.(selection.text)
   }, [selection, onFlashcardRequest])
 
+  const handleVocabulary = useCallback(() => {
+    if (!selection) return
+    setSelection(null)
+    onVocabularyRequest?.(selection.text)
+  }, [selection, onVocabularyRequest])
+
   /** Update an existing highlight (color + note) — remove+re-add annotation for color change */
   const handleMiniUpdate = useCallback(
     async (updates: Partial<Pick<BookHighlight, 'color' | 'note'>>) => {
@@ -432,6 +440,7 @@ export function HighlightLayer({
           onColorSelect={handleColorSelect}
           onNote={handleNote}
           onFlashcard={handleFlashcard}
+          onVocabulary={onVocabularyRequest ? handleVocabulary : undefined}
           onClose={handleClose}
         />
       )}
