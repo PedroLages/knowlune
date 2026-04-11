@@ -12,6 +12,7 @@
  */
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router'
+import { toast } from 'sonner'
 import {
   ArrowLeft,
   BookOpen,
@@ -106,13 +107,20 @@ export function AnnotationSummary() {
     let cancelled = false
 
     async function load() {
-      const data = await db.bookHighlights
-        .where('bookId')
-        .equals(bookId!)
-        .sortBy('createdAt')
-      if (!cancelled) {
-        setHighlights(data)
-        setLoading(false)
+      try {
+        const data = await db.bookHighlights
+          .where('bookId')
+          .equals(bookId!)
+          .sortBy('createdAt')
+        if (!cancelled) {
+          setHighlights(data)
+          setLoading(false)
+        }
+      } catch {
+        if (!cancelled) {
+          toast.error('Failed to load annotations')
+          setLoading(false)
+        }
       }
     }
 

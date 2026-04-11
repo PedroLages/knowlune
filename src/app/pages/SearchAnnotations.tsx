@@ -69,8 +69,8 @@ export function SearchAnnotations() {
     async function load() {
       try {
         const [allHighlights, allVocab, allBooks] = await Promise.all([
-          db.bookHighlights.toArray(),
-          db.vocabularyItems.toArray(),
+          db.bookHighlights.limit(500).toArray(),
+          db.vocabularyItems.limit(500).toArray(),
           db.books.toArray(),
         ])
         if (cancelled) return

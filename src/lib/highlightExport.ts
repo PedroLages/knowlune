@@ -128,20 +128,13 @@ export async function exportHighlightsAsObsidian(
     return { files: [], highlightCount: 0, bookCount: 0 }
   }
 
-  // Group highlights by bookId
-  const byBook = new Map<string, BookHighlight[]>()
-  for (const h of allHighlights) {
-    const existing = byBook.get(h.bookId) ?? []
-    existing.push(h)
-    byBook.set(h.bookId, existing)
-  }
+  // Group highlights by bookId using shared helper
+  const byBook = groupByBook(allHighlights)
 
   onProgress?.(20, 'Loading book metadata...')
 
   // Fetch books for all referenced bookIds
-  const bookIds = Array.from(byBook.keys())
-  const books = await db.books.where('id').anyOf(bookIds).toArray()
-  const bookMap = new Map<string, Book>(books.map(b => [b.id, b]))
+  const bookMap = await loadBookMap(Array.from(byBook.keys()))
 
   const files: Array<{ name: string; content: string }> = []
   const bookCount = byBook.size
@@ -184,14 +177,8 @@ export async function exportHighlightsAsObsidian(
       }
     }
 
-    // Sanitize title for safe filename
-    const safeName = title
-      .replace(/[^\w\s-]/g, '')
-      .trim()
-      .replace(/\s+/g, '-')
-      .slice(0, 60)
     files.push({
-      name: `book-highlights/${safeName}.md`,
+      name: `book-highlights/${safeFilename(title)}.md`,
       content: lines.join('\n'),
     })
 
