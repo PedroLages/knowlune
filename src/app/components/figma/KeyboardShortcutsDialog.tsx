@@ -52,7 +52,7 @@ const shortcutGroups: ShortcutGroup[] = [
     label: 'Audiobook Player',
     shortcuts: [
       { keys: ['Space'], description: 'Play / Pause' },
-      { keys: ['←'], description: 'Skip back 30s' },
+      { keys: ['←'], description: 'Skip back 15s' },
       { keys: ['→'], description: 'Skip forward 30s' },
       { keys: ['↑'], description: 'Volume up' },
       { keys: ['↓'], description: 'Volume down' },

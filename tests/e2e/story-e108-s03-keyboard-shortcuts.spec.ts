@@ -8,17 +8,43 @@
  */
 import { test, expect } from '../support/fixtures'
 import { navigateAndWait } from '../support/helpers/navigation'
+import { seedIndexedDBStore } from '../support/helpers/seed-helpers'
+import { FIXED_DATE } from '../utils/test-time'
 import { TIMEOUTS } from '../utils/constants'
 
+const DB_NAME = 'ElearningDB'
+
+const SEED_BOOK = [
+  {
+    id: 'e108-s03-book-1',
+    title: 'Test Book',
+    author: 'Test Author',
+    format: 'epub',
+    status: 'reading',
+    tags: [],
+    chapters: [],
+    source: { type: 'local', opfsPath: '' },
+    coverUrl: '',
+    progress: 0,
+    createdAt: FIXED_DATE,
+    updatedAt: FIXED_DATE,
+  },
+]
+
 async function goToLibrary(page: Parameters<typeof navigateAndWait>[0]) {
-  await page.addInitScript(() => {
+  // Navigate first (required before accessing storage)
+  await page.goto('/')
+  await page.evaluate(() => {
     localStorage.setItem('knowlune-sidebar-v1', 'false')
     localStorage.setItem(
       'knowlune-welcome-wizard-v1',
       JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
     )
   })
+  // Seed a book so search input and filters render
+  await seedIndexedDBStore(page, DB_NAME, 'books', SEED_BOOK as unknown as Record<string, unknown>[])
   await navigateAndWait(page, '/library')
+  await page.reload()
 }
 
 // ===========================================================================
@@ -71,8 +97,9 @@ test.describe('E108-S03 AC-2: Library shortcuts', () => {
 
     await page.keyboard.press('?')
 
-    // The dialog should appear with the keyboard shortcuts content
-    await expect(page.getByText('Keyboard Shortcuts')).toBeVisible({ timeout: TIMEOUTS.SHORT })
+    // The dialog should appear — target the heading to avoid strict mode violation
+    // (the row "Show keyboard shortcuts" also contains this text)
+    await expect(page.getByRole('heading', { name: 'Keyboard Shortcuts' })).toBeVisible({ timeout: TIMEOUTS.SHORT })
   })
 
   test('/ shortcut is suppressed when an input already has focus', async ({ page }) => {
