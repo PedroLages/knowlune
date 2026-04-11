@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 41
+export const CHECKPOINT_VERSION = 42
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
@@ -80,4 +80,5 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   opdsCatalogs: 'id, name, url, createdAt',
   audiobookshelfServers: 'id, name, url, status, lastSyncedAt',
   chapterMappings: '[epubBookId+audioBookId], epubBookId, audioBookId',
+  vocabularyItems: 'id, bookId, masteryLevel, createdAt',
 }

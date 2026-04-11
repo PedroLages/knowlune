@@ -97,6 +97,11 @@ const HighlightReview = React.lazy(() =>
   import('./pages/HighlightReview').then(m => ({ default: m.HighlightReview }))
 )
 
+// E109-S01: Vocabulary Builder — word list and flashcard-style review
+const Vocabulary = React.lazy(() =>
+  import('./pages/Vocabulary').then(m => ({ default: m.Vocabulary }))
+)
+
 function PageLoader() {
   return (
     <DelayedFallback>
@@ -514,6 +519,14 @@ export const router = createBrowserRouter([
             <PremiumFeaturePage {...PREMIUM_FEATURES.flashcards} icon={Layers}>
               <Flashcards />
             </PremiumFeaturePage>
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'vocabulary',
+        element: (
+          <SuspensePage>
+            <Vocabulary />
           </SuspensePage>
         ),
       },

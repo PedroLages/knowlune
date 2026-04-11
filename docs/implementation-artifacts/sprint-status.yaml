@@ -1328,7 +1328,7 @@ development_status:
   108-3-keyboard-shortcuts: done
   108-4-audiobook-settings-panel: done
   108-5-genre-detection-and-pages-goal: done
-  epic-108-retrospective: optional
+  epic-108-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 109: Knowledge Pipeline — Highlights, Vocabulary, Export
@@ -1337,7 +1337,7 @@ development_status:
   # Depends on: E107
   # ──────────────────────────────────────────────────
   epic-109: backlog
-  109-1-vocabulary-builder: backlog
+  109-1-vocabulary-builder: review
   109-2-daily-highlight-review: backlog
   109-3-highlight-export: backlog
   109-4-annotation-summary-view: backlog

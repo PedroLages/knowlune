@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   BookOpen,
+  BookA,
   GraduationCap,
   StickyNote,
   RotateCcw,
@@ -66,6 +67,7 @@ export const navigationGroups: NavigationGroup[] = [
       { name: 'My Courses', path: '/my-class', icon: BookOpen },
       { name: 'Notes', path: '/notes', icon: StickyNote, disclosureKey: 'note-created' },
       { name: 'Flashcards', path: '/flashcards', icon: Layers },
+      { name: 'Vocabulary', path: '/vocabulary', icon: BookA },
       { name: 'Review', path: '/review', icon: RotateCcw, disclosureKey: 'review-used' },
       {
         name: 'Learning Path',
