@@ -14,7 +14,7 @@
  * @since E87-S05
  * @updated E107-S06 — fix interactivity: type="button", focus styles, cover error, stale closure
  */
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Play, Pause, SkipBack, SkipForward, ChevronUp, BookOpen } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
@@ -43,6 +43,11 @@ export function AudioMiniPlayer() {
 
   // Track cover image load failures to show fallback icon (E107-S06: replaces inline style hack)
   const [coverError, setCoverError] = useState(false)
+
+  // Reset cover error when the resolved URL changes (i.e. book changes without unmount)
+  useEffect(() => {
+    setCoverError(false)
+  }, [resolvedCoverUrl])
 
   // Hide when no book or when on the full player page
   const isOnPlayerPage = pathname.includes(`/library/${currentBookId}/read`)
