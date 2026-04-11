@@ -7,9 +7,9 @@
  * - AC-6: On confirmation, book is removed from Dexie (and OPFS cleanup runs)
  * - AC-7: After deletion, book disappears from the library view immediately
  */
-import { test, expect } from '../support/fixtures'
-import { seedIndexedDBStore } from '../support/helpers/seed-helpers'
-import { FIXED_DATE } from '../utils/test-time'
+import { test, expect } from '../../support/fixtures'
+import { seedIndexedDBStore } from '../../support/helpers/seed-helpers'
+import { FIXED_DATE } from '../../utils/test-time'
 
 const DB_NAME = 'ElearningDB'
 
