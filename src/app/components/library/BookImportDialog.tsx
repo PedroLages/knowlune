@@ -41,6 +41,7 @@ interface BookImportDialogProps {
 export function BookImportDialog({ open, onOpenChange, initialFile }: BookImportDialogProps) {
   const importBook = useBookStore(s => s.importBook)
   const bulkImport = useBulkImport()
+  const { reset: bulkReset, startBulkImport, cancel: bulkCancel } = bulkImport
 
   const [importMode, setImportMode] = useState<ImportMode>('epub')
   const [file, setFile] = useState<File | null>(null)
@@ -86,8 +87,8 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
     setPhase('idle')
     setIsDragActive(false)
     setImportMode('epub')
-    bulkImport.reset()
-  }, [setSafeCoverPreviewUrl, bulkImport])
+    bulkReset()
+  }, [setSafeCoverPreviewUrl, bulkReset])
 
   const isBulkImporting = bulkImport.phase === 'importing'
 
@@ -192,12 +193,16 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
           toast.error('No EPUB files found in selection')
           return
         }
-        bulkImport.startBulkImport(epubFiles)
+        const skippedCount = droppedFiles.length - epubFiles.length
+        if (skippedCount > 0) {
+          toast.info(`${skippedCount} non-EPUB file${skippedCount > 1 ? 's' : ''} skipped`)
+        }
+        startBulkImport(epubFiles)
       } else if (droppedFiles[0]) {
         processFile(droppedFiles[0])
       }
     },
-    [processFile, bulkImport]
+    [processFile, startBulkImport]
   )
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -221,12 +226,12 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
           toast.error('No EPUB files found in selection')
           return
         }
-        bulkImport.startBulkImport(epubFiles)
+        startBulkImport(epubFiles)
       } else {
         processFile(selectedFiles[0])
       }
     },
-    [processFile, bulkImport]
+    [processFile, startBulkImport]
   )
 
   const handleImport = useCallback(async () => {
@@ -398,18 +403,18 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
                     {bulkImport.progress.currentFile}
                   </span>
                   <span className="text-muted-foreground tabular-nums" data-testid="bulk-import-count">
-                    {bulkImport.progress.current + 1} / {bulkImport.progress.total}
+                    {bulkImport.progress.current} / {bulkImport.progress.total}
                   </span>
                 </div>
                 <Progress
-                  value={((bulkImport.progress.current) / bulkImport.progress.total) * 100}
+                  value={(bulkImport.progress.current / bulkImport.progress.total) * 100}
                   className="h-2"
-                  aria-label={`Importing ${bulkImport.progress.current + 1} of ${bulkImport.progress.total} books`}
+                  aria-label={`Importing ${bulkImport.progress.current} of ${bulkImport.progress.total} books`}
                 />
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={bulkImport.cancel}
+                  onClick={bulkCancel}
                   className="self-end"
                   data-testid="bulk-import-cancel"
                 >

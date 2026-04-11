@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import { useBulkImport } from '../useBulkImport'
 
 // Mock dependencies
@@ -130,8 +130,6 @@ describe('useBulkImport', () => {
   })
 
   it('tracks progress accurately', async () => {
-    const progressSnapshots: Array<{ current: number; total: number }> = []
-
     // Capture progress during import
     mockImportBook.mockImplementation(async () => {
       // Intentional: small delay to let state updates flush

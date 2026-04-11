@@ -58,7 +58,7 @@ export function useBulkImport() {
       }
 
       const file = files[i]
-      setProgress({ current: i, total: files.length, currentFile: file.name })
+      setProgress({ current: i + 1, total: files.length, currentFile: file.name })
 
       try {
         // Validate file type
@@ -78,7 +78,7 @@ export function useBulkImport() {
         const metadata = await extractEpubMetadata(file)
 
         // Check abort between async operations
-        if (controller.signal.aborted) break
+        if (controller.signal.aborted) { setPhase('cancelled'); break }
 
         // Fetch Open Library metadata (best-effort)
         const olResult = await fetchOpenLibraryMetadata({
@@ -87,7 +87,7 @@ export function useBulkImport() {
           author: metadata.author,
         })
 
-        if (controller.signal.aborted) break
+        if (controller.signal.aborted) { setPhase('cancelled'); break }
 
         // Determine cover
         let coverBlob: Blob | null = metadata.coverBlob ?? null
@@ -96,7 +96,7 @@ export function useBulkImport() {
           if (fetched) coverBlob = fetched
         }
 
-        if (controller.signal.aborted) break
+        if (controller.signal.aborted) { setPhase('cancelled'); break }
 
         const bookId = crypto.randomUUID()
 
@@ -135,7 +135,7 @@ export function useBulkImport() {
 
         importResults.push({ fileName: file.name, status: 'success' })
       } catch (err) {
-        // Intentional: per-file error isolation — log and continue batch
+        // silent-catch-ok: per-file error isolation — errors collected in results array; summary toast fires at end
         const message = err instanceof Error ? err.message : 'Unknown error'
         importResults.push({ fileName: file.name, status: 'error', error: message })
       }
@@ -144,7 +144,9 @@ export function useBulkImport() {
     setResults(importResults)
     setProgress(prev => ({ ...prev, current: prev.total, currentFile: '' }))
 
-    if (!controller.signal.aborted) {
+    if (controller.signal.aborted) {
+      setPhase('cancelled')
+    } else {
       setPhase('done')
     }
 
