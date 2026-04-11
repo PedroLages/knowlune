@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-04-11",
+  "captured_at": "2026-04-12",
   "commit": "0427384b",
   "bundle": {
     "total_js_bytes": 9728000,
@@ -59,44 +59,44 @@
       ]
     },
     "/library": {
-      "ttfb": 13,
-      "dom_interactive": 28,
-      "dom_complete": 237,
-      "load_complete": 237,
-      "fcp": 340,
+      "ttfb": 15,
+      "dom_interactive": 35,
+      "dom_complete": 263,
+      "load_complete": 263,
+      "fcp": 366,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
-      "resource_count": 243,
-      "js_resource_count": 242,
-      "css_resource_count": 2,
-      "total_transfer_bytes": 61500,
+      "resource_count": 250,
+      "js_resource_count": 250,
+      "css_resource_count": 1,
+      "total_transfer_bytes": 62700,
       "samples": 3,
       "largest_resources": [
         {
-          "name": "@sentry_react.js?v=3ac5ad39",
-          "size": 1923645,
-          "duration": 21
+          "name": "client",
+          "size": 300,
+          "duration": 2
         },
         {
-          "name": "lucide-react.js?v=3ac5ad39",
-          "size": 1047716,
-          "duration": 23
+          "name": "reduce-motion-init.js",
+          "size": 300,
+          "duration": 2
         },
         {
-          "name": "react-dom_client.js?v=3ac5ad39",
-          "size": 1005907,
-          "duration": 33
+          "name": "main.tsx",
+          "size": 300,
+          "duration": 2
         },
         {
-          "name": "chunk-MJOJEP4H.js?v=3ac5ad39",
-          "size": 850283,
-          "duration": 29
+          "name": "@react-refresh",
+          "size": 300,
+          "duration": 2
         },
         {
-          "name": "@supabase_supabase-js.js?v=3ac5ad39",
-          "size": 577648,
-          "duration": 84
+          "name": "env.mjs",
+          "size": 300,
+          "duration": 2
         }
       ]
     },
@@ -186,6 +186,24 @@
           "duration": 18
         }
       ]
+    }
+  },
+  "bundle_sizes": {
+    "Library": {
+      "raw": 225460,
+      "file": "Library-DM83PKNd.js"
+    },
+    "index_js": {
+      "raw": 828320,
+      "file": "index-W2aGQuKM.js"
+    },
+    "index_css": {
+      "raw": 274610,
+      "file": "index-DxWN202Z.css"
+    },
+    "dexie": {
+      "raw": 96420,
+      "file": "dexie-D8hooWrS.js"
     }
   }
 }
