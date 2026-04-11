@@ -10,7 +10,7 @@
  * @since E110-S02
  */
 
-import { memo, useState, type KeyboardEvent } from 'react'
+import { memo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { BookOpen, ChevronDown } from 'lucide-react'
 import type { LocalSeriesGroup } from '@/data/types'
@@ -21,33 +21,21 @@ interface LocalSeriesCardProps {
   group: LocalSeriesGroup
 }
 
-export const LocalSeriesCard = memo(function LocalSeriesCard({
-  group,
-}: LocalSeriesCardProps) {
+export const LocalSeriesCard = memo(function LocalSeriesCard({ group }: LocalSeriesCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const navigate = useNavigate()
 
   const toggleExpanded = () => setIsExpanded(prev => !prev)
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      toggleExpanded()
-    }
-  }
 
   const panelId = `local-series-panel-${group.name.replace(/\s+/g, '-').toLowerCase()}`
   const cardId = `local-series-${group.name.replace(/\s+/g, '-').toLowerCase()}`
 
   return (
-    <div
-      className="rounded-2xl bg-card overflow-hidden shadow-card-ambient"
-      data-testid={cardId}
-    >
+    <div className="rounded-2xl bg-card overflow-hidden shadow-card-ambient" data-testid={cardId}>
       {/* Collapsed header */}
       <button
         type="button"
         onClick={toggleExpanded}
-        onKeyDown={handleKeyDown}
         aria-expanded={isExpanded}
         aria-controls={panelId}
         aria-label={`${group.name} series, ${group.completed} of ${group.total} books complete`}
@@ -57,7 +45,10 @@ export const LocalSeriesCard = memo(function LocalSeriesCard({
         {/* Cover collage — show up to 4 book covers */}
         <div className="size-14 flex-shrink-0 grid grid-cols-2 grid-rows-2 gap-0.5 rounded-lg overflow-hidden bg-muted">
           {group.books.slice(0, 4).map(book => (
-            <div key={book.id} className="w-full h-full bg-muted flex items-center justify-center overflow-hidden">
+            <div
+              key={book.id}
+              className="w-full h-full bg-muted flex items-center justify-center overflow-hidden"
+            >
               {book.coverUrl ? (
                 <img
                   src={book.coverUrl}
@@ -80,7 +71,8 @@ export const LocalSeriesCard = memo(function LocalSeriesCard({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground truncate">{group.name}</p>
           <p className="text-xs text-muted-foreground">
-            {group.total} {group.total === 1 ? 'book' : 'books'} · {group.completed}/{group.total} complete
+            {group.total} {group.total === 1 ? 'book' : 'books'} · {group.completed}/{group.total}{' '}
+            complete
           </p>
           <div className="h-1 w-full max-w-[120px] rounded-full bg-muted overflow-hidden mt-1">
             <div
