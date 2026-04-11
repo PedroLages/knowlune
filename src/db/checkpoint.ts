@@ -81,4 +81,6 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   audiobookshelfServers: 'id, name, url, status, lastSyncedAt',
   chapterMappings: '[epubBookId+audioBookId], epubBookId, audioBookId',
   vocabularyItems: 'id, bookId, masteryLevel, createdAt',
+  shelves: 'id, name, isDefault, sortOrder, createdAt',
+  bookShelves: 'id, bookId, shelfId, [bookId+shelfId], addedAt',
 }

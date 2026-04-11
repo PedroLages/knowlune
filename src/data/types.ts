@@ -637,6 +637,25 @@ export type BookFormat = 'epub' | 'pdf' | 'audiobook'
 
 export type BookStatus = 'unread' | 'reading' | 'finished' | 'abandoned'
 
+/** Virtual shelf for organizing books (E110-S01) */
+export interface Shelf {
+  id: string // UUID v4
+  name: string
+  icon?: string // Lucide icon name
+  isDefault: boolean // Default shelves cannot be deleted
+  sortOrder: number // Display order in sidebar
+  createdAt: string // ISO 8601
+  updatedAt?: string // ISO 8601
+}
+
+/** Many-to-many join: book <-> shelf (E110-S01) */
+export interface BookShelfEntry {
+  id: string // UUID v4
+  bookId: string // FK to Book.id
+  shelfId: string // FK to Shelf.id
+  addedAt: string // ISO 8601
+}
+
 /** User reading goals persisted in localStorage */
 export interface ReadingGoal {
   /** Whether daily goal is measured in minutes or pages */

@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import type { Book, BookStatus } from '@/data/types'
 import { db } from '@/db/schema'
 import { opfsStorageService } from '@/services/OpfsStorageService'
+import { useShelfStore } from '@/stores/useShelfStore'
 import { appEventBus } from '@/lib/eventBus'
 import { unlockSidebarItem } from '@/app/hooks/useProgressiveDisclosure'
 
@@ -27,6 +28,7 @@ export interface BookFilters {
   format?: string[] // multi-select format filter (e.g. ['audiobook', 'epub'])
   authors?: string[] // multi-select author filter
   genre?: string // genre filter (E108-S05)
+  shelfId?: string // shelf filter (E110-S01)
 }
 
 interface BookStoreState {
@@ -143,7 +145,8 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     }))
 
     try {
-      // Cascade deletion order: highlights → book record → OPFS files (best-effort)
+      // Cascade deletion order: shelf entries → highlights → book record → OPFS files (best-effort)
+      await useShelfStore.getState().removeAllBookEntries(bookId)
       await db.bookHighlights.where('bookId').equals(bookId).delete()
       await db.books.delete(bookId)
 
@@ -223,6 +226,12 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       } else {
         result = result.filter(b => b.genre === filters.genre)
       }
+    }
+
+    // Shelf filter (E110-S01)
+    if (filters.shelfId) {
+      const bookIds = new Set(useShelfStore.getState().getBooksOnShelf(filters.shelfId))
+      result = result.filter(b => bookIds.has(b.id))
     }
 
     // Sort

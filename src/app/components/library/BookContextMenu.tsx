@@ -10,10 +10,11 @@
 
 import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
-import { Check, MoreVertical, ArrowRightLeft, Highlighter } from 'lucide-react'
+import { Check, MoreVertical, ArrowRightLeft, Highlighter, Library } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Book, BookStatus } from '@/data/types'
 import { useBookStore } from '@/stores/useBookStore'
+import { useShelfStore } from '@/stores/useShelfStore'
 import { LinkFormatsDialog } from './LinkFormatsDialog'
 
 // Lazy-load AboutBookDialog to defer ~5.5KB until dialog opens
@@ -99,6 +100,10 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
   const navigate = useNavigate()
   const updateBookStatus = useBookStore(s => s.updateBookStatus)
   const deleteBook = useBookStore(s => s.deleteBook)
+  const shelves = useShelfStore(s => s.shelves)
+  const bookShelves = useShelfStore(s => s.bookShelves)
+  const addBookToShelf = useShelfStore(s => s.addBookToShelf)
+  const removeBookFromShelf = useShelfStore(s => s.removeBookFromShelf)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false)
@@ -120,6 +125,17 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
 
   const handleStatusChange = (status: BookStatus) => {
     updateBookStatus(book.id, status)
+  }
+
+  const isBookOnShelf = (shelfId: string) =>
+    bookShelves.some(bs => bs.bookId === book.id && bs.shelfId === shelfId)
+
+  const handleShelfToggle = (shelfId: string) => {
+    if (isBookOnShelf(shelfId)) {
+      removeBookFromShelf(book.id, shelfId)
+    } else {
+      addBookToShelf(book.id, shelfId)
+    }
   }
 
   return (
@@ -149,6 +165,32 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
                   onStatusChange={handleStatusChange}
                   MenuItem={ContextMenuItem}
                 />
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+            <ContextMenuSub>
+              <ContextMenuSubTrigger data-testid="context-menu-add-to-shelf">
+                <span className="flex items-center gap-2">
+                  <Library className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add to Shelf
+                </span>
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent className="w-48">
+                {shelves
+                  .sort((a, b) => a.sortOrder - b.sortOrder)
+                  .map(shelf => (
+                    <ContextMenuItem
+                      key={shelf.id}
+                      onClick={() => handleShelfToggle(shelf.id)}
+                      data-testid={`context-menu-shelf-${shelf.name.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      <span className="flex items-center gap-2">
+                        {isBookOnShelf(shelf.id) && <Check className="h-3.5 w-3.5" />}
+                        <span className={isBookOnShelf(shelf.id) ? 'font-medium' : ''}>
+                          {shelf.name}
+                        </span>
+                      </span>
+                    </ContextMenuItem>
+                  ))}
               </ContextMenuSubContent>
             </ContextMenuSub>
             <ContextMenuItem
@@ -205,6 +247,32 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
                   onStatusChange={handleStatusChange}
                   MenuItem={DropdownMenuItem}
                 />
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <span className="flex items-center gap-2">
+                  <Library className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add to Shelf
+                </span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-48">
+                {shelves
+                  .sort((a, b) => a.sortOrder - b.sortOrder)
+                  .map(shelf => (
+                    <DropdownMenuItem
+                      key={shelf.id}
+                      onClick={() => handleShelfToggle(shelf.id)}
+                      data-testid={`dropdown-shelf-${shelf.name.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      <span className="flex items-center gap-2">
+                        {isBookOnShelf(shelf.id) && <Check className="h-3.5 w-3.5" />}
+                        <span className={isBookOnShelf(shelf.id) ? 'font-medium' : ''}>
+                          {shelf.name}
+                        </span>
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
               </DropdownMenuSubContent>
             </DropdownMenuSub>
             <DropdownMenuItem

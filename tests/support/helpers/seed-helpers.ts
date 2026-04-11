@@ -201,6 +201,19 @@ export async function seedBooks(page: Page, books: Record<string, unknown>[]): P
   await seedIndexedDBStore(page, DB_NAME, 'books', books)
 }
 
+/** Seed shelves into the shelves store. */
+export async function seedShelves(page: Page, shelves: Record<string, unknown>[]): Promise<void> {
+  await seedIndexedDBStore(page, DB_NAME, 'shelves', shelves)
+}
+
+/** Seed book-shelf associations into the bookShelves store. */
+export async function seedBookShelves(
+  page: Page,
+  entries: Record<string, unknown>[]
+): Promise<void> {
+  await seedIndexedDBStore(page, DB_NAME, 'bookShelves', entries)
+}
+
 /** Seed review records into the reviewRecords store. */
 export async function seedReviewRecords(
   page: Page,

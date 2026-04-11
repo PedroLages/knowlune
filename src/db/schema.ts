@@ -85,6 +85,8 @@ export type ElearningDatabase = Dexie & {
   audiobookshelfServers: EntityTable<AudiobookshelfServer, 'id'>
   chapterMappings: Table<import('@/data/types').ChapterMappingRecord> // compound PK: [epubBookId+audioBookId]
   vocabularyItems: EntityTable<VocabularyItem, 'id'>
+  shelves: EntityTable<import('@/data/types').Shelf, 'id'>
+  bookShelves: EntityTable<import('@/data/types').BookShelfEntry, 'id'>
 }
 
 /**
@@ -1289,6 +1291,12 @@ function _declareLegacyMigrations(database: Dexie): void {
   // E109-S02: Daily Highlight Review — add lastReviewedAt + reviewRating indexes for spaced review
   database.version(43).stores({
     bookHighlights: 'id, bookId, color, flashcardId, createdAt, lastReviewedAt, reviewRating',
+  })
+
+  // E110-S01: Smart Shelves — shelves + bookShelves join table
+  database.version(44).stores({
+    shelves: 'id, name, isDefault, sortOrder, createdAt',
+    bookShelves: 'id, bookId, shelfId, [bookId+shelfId], addedAt',
   })
 } // end _declareLegacyMigrations
 
