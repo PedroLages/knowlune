@@ -156,13 +156,13 @@ test.describe('Reading Queue (E110-S03)', () => {
     await navigateAndWait(page, '/library')
 
     // Count badge should show 2
-    const section = page.getByTestId('reading-queue-section')
-    await expect(section.getByText('2')).toBeVisible()
+    const badge = page.getByTestId('reading-queue-count')
+    await expect(badge).toHaveText('2')
 
     // Remove one book
     await page.getByTestId('queue-remove-q-book-1').click()
 
     // Count badge should show 1
-    await expect(section.getByText('1')).toBeVisible()
+    await expect(badge).toHaveText('1')
   })
 })

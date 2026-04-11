@@ -208,7 +208,10 @@ export function ReadingQueue() {
       <div className="mb-2 flex items-center gap-2">
         <ListOrdered className="size-4 text-brand" aria-hidden="true" />
         <h3 className="text-sm font-semibold">Reading Queue</h3>
-        <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand-soft-foreground">
+        <span
+          className="rounded-full bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand-soft-foreground"
+          data-testid="reading-queue-count"
+        >
           {validEntries.length}
         </span>
       </div>
