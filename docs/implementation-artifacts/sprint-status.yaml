@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-09  # E107-S03 story created
+last_updated: 2026-04-11  # E107 marked done — all 7 stories shipped
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -1306,7 +1306,7 @@ development_status:
   # Fix 9 bugs from manual audit: cover images, EPUB rendering, TOC, About Book, themes, mini-player, audiobook restart
   # Depends on: none (fixes existing E83-E104 implementation)
   # ──────────────────────────────────────────────────
-  epic-107: in-progress
+  epic-107: done
   107-1-fix-cover-image-display: done
   107-2-fix-epub-reader-rendering: done
   107-3-fix-toc-loading-and-fallback: done
