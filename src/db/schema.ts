@@ -87,6 +87,7 @@ export type ElearningDatabase = Dexie & {
   vocabularyItems: EntityTable<VocabularyItem, 'id'>
   shelves: EntityTable<import('@/data/types').Shelf, 'id'>
   bookShelves: EntityTable<import('@/data/types').BookShelfEntry, 'id'>
+  readingQueue: EntityTable<import('@/data/types').ReadingQueueEntry, 'id'>
 }
 
 /**
@@ -1301,6 +1302,10 @@ function _declareLegacyMigrations(database: Dexie): void {
   // E110-S02: Series Grouping — add `series` index to books for grouping by series name
   database.version(45).stores({
     books: 'id, title, author, format, status, createdAt, lastOpenedAt, series',
+  })
+  // E110-S03: Reading Queue — ordered list of books to read next
+  database.version(46).stores({
+    readingQueue: 'id, bookId, sortOrder, addedAt',
   })
 } // end _declareLegacyMigrations
 
