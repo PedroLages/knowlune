@@ -3,7 +3,6 @@ name: review-story
 description: Use when running quality gates on a Knowlune story before shipping. Runs build/lint/tests, dispatches design review (Playwright MCP) and adversarial code review agents, generates consolidated report. Use after implementing a story to catch issues before /finish-story.
 argument-hint: "[E##-S##]"
 disable-model-invocation: true
-context: fork
 ---
 
 # Review Story
@@ -97,8 +96,7 @@ load/normalize, frontmatter update, sprint-status sync, and log directory creati
 STORY_ID="${ARGUMENTS:-}"  # from skill argument, or empty to derive from branch
 
 INIT=$(bash scripts/workflow/review-state.sh \
-  ${STORY_ID:+--story-id=$STORY_ID} \
-  2>/dev/null)
+  ${STORY_ID:+--story-id=$STORY_ID})
 
 STORY_ID=$(echo "$INIT" | jq -r '.story_id')
 STORY_FILE=$(echo "$INIT" | jq -r '.story_file')
