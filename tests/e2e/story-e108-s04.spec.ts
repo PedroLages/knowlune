@@ -33,12 +33,17 @@ const testAudiobook = {
 
 test.describe('E108-S04: Audiobook Settings Panel', () => {
   test.beforeEach(async ({ page }) => {
-    // Skip onboarding
+    // Dismiss all overlays (onboarding, welcome wizard, sidebar) before navigation
     await page.addInitScript(() => {
       localStorage.setItem(
         'knowlune-onboarding-v1',
-        JSON.stringify({ completedAt: new Date('2025-01-01').toISOString(), skipped: true })
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
       )
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+      )
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
 
     await page.goto('/library')
@@ -48,7 +53,7 @@ test.describe('E108-S04: Audiobook Settings Panel', () => {
 
   test('AC-1: Settings panel opens from audiobook player settings button', async ({ page }) => {
     // Navigate into the audiobook reader
-    await page.goto(`/reader/test-audiobook-e108-s04`)
+    await page.goto(`/library/test-audiobook-e108-s04/read`)
 
     // Open settings panel
     const settingsButton = page.getByTestId('audiobook-settings-button')
@@ -62,7 +67,7 @@ test.describe('E108-S04: Audiobook Settings Panel', () => {
   })
 
   test('AC-2: Speed preset buttons are rendered and clicking one persists preference', async ({ page }) => {
-    await page.goto(`/reader/test-audiobook-e108-s04`)
+    await page.goto(`/library/test-audiobook-e108-s04/read`)
 
     const settingsButton = page.getByTestId('audiobook-settings-button')
     await settingsButton.click()
@@ -87,7 +92,7 @@ test.describe('E108-S04: Audiobook Settings Panel', () => {
   })
 
   test('AC-3: Skip Silence toggle is visible and marked as coming soon', async ({ page }) => {
-    await page.goto(`/reader/test-audiobook-e108-s04`)
+    await page.goto(`/library/test-audiobook-e108-s04/read`)
 
     const settingsButton = page.getByTestId('audiobook-settings-button')
     await settingsButton.click()
@@ -105,7 +110,7 @@ test.describe('E108-S04: Audiobook Settings Panel', () => {
   })
 
   test('AC-4: Default sleep timer selection persists', async ({ page }) => {
-    await page.goto(`/reader/test-audiobook-e108-s04`)
+    await page.goto(`/library/test-audiobook-e108-s04/read`)
 
     const settingsButton = page.getByTestId('audiobook-settings-button')
     await settingsButton.click()
@@ -126,7 +131,7 @@ test.describe('E108-S04: Audiobook Settings Panel', () => {
   })
 
   test('AC-5: Auto-bookmark toggle persists preference', async ({ page }) => {
-    await page.goto(`/reader/test-audiobook-e108-s04`)
+    await page.goto(`/library/test-audiobook-e108-s04/read`)
 
     const settingsButton = page.getByTestId('audiobook-settings-button')
     await settingsButton.click()
@@ -147,7 +152,7 @@ test.describe('E108-S04: Audiobook Settings Panel', () => {
   })
 
   test('Settings panel closes on sheet dismiss', async ({ page }) => {
-    await page.goto(`/reader/test-audiobook-e108-s04`)
+    await page.goto(`/library/test-audiobook-e108-s04/read`)
 
     const settingsButton = page.getByTestId('audiobook-settings-button')
     await settingsButton.click()

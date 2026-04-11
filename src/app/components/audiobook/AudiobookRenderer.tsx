@@ -29,10 +29,8 @@ import { BookmarkButton } from './BookmarkButton'
 import { BookmarkListPanel } from './BookmarkListPanel'
 import { PostSessionBookmarkReview } from './PostSessionBookmarkReview'
 import { AudiobookSettingsPanel } from './AudiobookSettingsPanel'
-import { useAudiobookPrefsStore } from '@/stores/useAudiobookPrefsStore'
-import { useBookStore } from '@/stores/useBookStore'
-import { db } from '@/db/schema'
-import { sharedAudioRef } from '@/app/hooks/useAudioPlayer'
+import { useAudiobookPrefsEffects } from '@/app/hooks/useAudiobookPrefsEffects'
+import { useAudiobookPositionSync } from '@/app/hooks/useAudiobookPositionSync'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import { useKeyboardShortcuts } from '@/app/hooks/useKeyboardShortcuts'
 import type { Book } from '@/data/types'
@@ -105,79 +103,24 @@ export function AudiobookRenderer({
     onBookmarksClose?.()
   }
 
-  // Apply default speed from prefs on new session (AC-2, AC-7)
-  // Track the book ID for which default speed was already applied to avoid
-  // re-applying if the audio player store retains a rate from a previous book.
-  const defaultSpeedAppliedForBookRef = useRef<string | null>(null)
-  useEffect(() => {
-    // Only apply once per book — prevents stale store rate from a previous book
-    // incorrectly blocking the global default on a new book.
-    if (defaultSpeedAppliedForBookRef.current === book.id) return
-    defaultSpeedAppliedForBookRef.current = book.id
-    const defaultSpeed = useAudiobookPrefsStore.getState().defaultSpeed
-    if (defaultSpeed !== 1.0) {
-      useAudioPlayerStore.getState().setPlaybackRate(defaultSpeed)
-    }
-  }, [book.id])
-
-  // Auto-bookmark on stop (AC-5): create bookmark when playback stops if enabled
-  // lastAutoBookmarkTimeRef prevents duplicate bookmarks on rapid pause/play toggles
-  // by skipping if the last auto-bookmark was within 5 seconds of the current position.
-  const prevIsPlayingForBookmarkRef = useRef(false)
-  const lastAutoBookmarkTimeRef = useRef<number | null>(null)
-  useEffect(() => {
-    const wasPlaying = prevIsPlayingForBookmarkRef.current
-    prevIsPlayingForBookmarkRef.current = isPlaying
-    if (wasPlaying && !isPlaying) {
-      // Read from get() to avoid stale closure on autoBookmarkOnStop
-      const autoBookmark = useAudiobookPrefsStore.getState().autoBookmarkOnStop
-      if (autoBookmark && currentTime > 0) {
-        const last = lastAutoBookmarkTimeRef.current
-        if (last !== null && Math.abs(currentTime - last) < 5) {
-          // Within 5 seconds of last auto-bookmark — skip to avoid duplicates
-          return
-        }
-        lastAutoBookmarkTimeRef.current = currentTime
-        const bookmarkId = crypto.randomUUID()
-        db.audioBookmarks
-          .add({
-            id: bookmarkId,
-            bookId: book.id,
-            chapterIndex: currentChapterIndex,
-            timestamp: Math.floor(currentTime),
-            note: 'Auto-bookmark',
-            createdAt: new Date().toISOString(),
-          })
-          .then(() => {
-            handleBookmarkCreated(bookmarkId)
-          })
-          .catch(err => {
-            // silent-catch-ok: auto-bookmark is non-critical — log but don't disrupt UX
-            console.error('[AudiobookRenderer] Auto-bookmark failed:', err)
-          })
-      }
-    }
-  }, [isPlaying, currentTime, currentChapterIndex, book.id, handleBookmarkCreated])
+  // Prefs-driven side-effects: default speed, auto-bookmark on stop, auto sleep timer (E108-S04)
+  useAudiobookPrefsEffects({
+    bookId: book.id,
+    isPlaying,
+    currentTime,
+    currentChapterIndex,
+    audioRef,
+    onBookmarkCreated: handleBookmarkCreated,
+    activeOption,
+    setTimer,
+    pause,
+  })
 
   // Register this book as the active audiobook and load the first chapter
   useEffect(() => {
     setCurrentBook(book.id)
     loadChapter(initialChapterIndex, false)
   }, [book.id]) // book.id is stable after mount; loadChapter/setCurrentBook identity stable
-
-  // Auto-start sleep timer from default pref (AC-4 Task 5)
-  // Fires once per session when playback first begins, if a default is configured
-  // and no timer is already running.
-  const defaultSleepTimerAppliedRef = useRef(false)
-  useEffect(() => {
-    if (!isPlaying) return
-    if (defaultSleepTimerAppliedRef.current) return
-    defaultSleepTimerAppliedRef.current = true
-    const defaultTimer = useAudiobookPrefsStore.getState().defaultSleepTimer
-    if (defaultTimer !== 'off' && activeOption === null) {
-      setTimer(defaultTimer, audioRef, pause)
-    }
-  }, [isPlaying, activeOption, setTimer, audioRef, pause])
 
   // Check for post-sleep toast on mount
   useEffect(() => {
@@ -214,102 +157,14 @@ export function AudiobookRenderer({
     isPlaying,
   })
 
-  /** Persist current playback position and progress to Dexie (E101-S04, E101-S06) */
-  const savePosition = useCallback(() => {
-    const audio = sharedAudioRef.current
-    if (!audio || !isFinite(audio.currentTime) || audio.currentTime === 0) return
-
-    const position = { type: 'time' as const, seconds: audio.currentTime }
-    const now = new Date().toISOString()
-
-    // Calculate progress percentage from totalDuration (E101-S06: FR31/FR32)
-    const totalDur = book.totalDuration ?? 0
-    const progress =
-      totalDur > 0 ? Math.min(100, Math.round((audio.currentTime / totalDur) * 100)) : undefined
-
-    // Optimistic store update
-    useBookStore.setState(state => ({
-      books: state.books.map(b =>
-        b.id === book.id
-          ? {
-              ...b,
-              currentPosition: position,
-              lastOpenedAt: now,
-              ...(progress !== undefined && { progress }),
-            }
-          : b
-      ),
-    }))
-
-    // Persist to Dexie — non-critical, never disrupt playback UX
-    // silent-catch-ok: position will be re-saved on next pause (non-fatal)
-    type DexiePositionUpdate = Partial<Pick<Book, 'currentPosition' | 'lastOpenedAt' | 'progress'>>
-    const dexieUpdate: DexiePositionUpdate = { currentPosition: position, lastOpenedAt: now }
-    if (progress !== undefined) dexieUpdate.progress = progress
-    // silent-catch-ok: Dexie persist is non-critical, position re-saved on next pause
-    db.books
-      .update(book.id, dexieUpdate as Parameters<typeof db.books.update>[1])
-      .catch(err => console.error('[AudiobookRenderer] Failed to save position:', err))
-  }, [book.id, book.totalDuration])
-
-  // Save position when playback pauses
-  useEffect(() => {
-    if (!isPlaying) {
-      savePosition()
-    }
-  }, [isPlaying, savePosition])
-
-  // Debounced periodic progress save during playback (every 5s) — E101-S06
-  useEffect(() => {
-    if (!isPlaying) return
-    const interval = setInterval(savePosition, 5000)
-    return () => clearInterval(interval)
-  }, [isPlaying, savePosition])
-
-  // Save position on unmount (navigating away) and mark as deliberate stop
-  useEffect(() => {
-    return () => {
-      deliberateStopRef.current = true
-      savePosition()
-    }
-  }, [savePosition])
-
-  // Mark as deliberate stop when audio track naturally ends (last chapter finished)
-  useEffect(() => {
-    const audio = sharedAudioRef.current
-    if (!audio) return
-    const handleEnded = () => {
-      deliberateStopRef.current = true
-    }
-    audio.addEventListener('ended', handleEnded)
-    return () => {
-      audio.removeEventListener('ended', handleEnded)
-    }
-  }, [])
-
-  // Restore position on mount for remote books (session resume).
-  // We track whether the initial load has been observed — once isLoading
-  // transitions from true→false we do the seek. A ref prevents repeated seeks.
-  //
-  // `book.currentPosition.seconds` is captured once into a ref on mount so that
-  // later playback-driven position updates don't re-trigger the effect and cause
-  // an infinite seek loop (position changes → effect re-runs → seeks → position changes…).
-  const sessionResumeSeekDoneRef = useRef(false)
-  const savedSecondsRef = useRef<number | null>(
-    book.source.type === 'remote' && book.currentPosition?.type === 'time'
-      ? book.currentPosition.seconds
-      : null
-  )
-  useEffect(() => {
-    const savedSeconds = savedSecondsRef.current
-    if (book.source.type !== 'remote' || savedSeconds === null || savedSeconds <= 0) {
-      return
-    }
-    if (!isLoading && !sessionResumeSeekDoneRef.current) {
-      sessionResumeSeekDoneRef.current = true
-      seekTo(savedSeconds)
-    }
-  }, [isLoading, book.id, seekTo]) // book.id guards remount; seekTo is stable (useCallback)
+  // Position persistence and session-resume seek (E101-S04, E101-S06)
+  const { savePosition } = useAudiobookPositionSync({
+    book,
+    isPlaying,
+    isLoading,
+    seekTo,
+    deliberateStopRef,
+  })
 
   // Media Session API — OS-level lock screen / Bluetooth headset controls (E87-S05)
   useMediaSession({
