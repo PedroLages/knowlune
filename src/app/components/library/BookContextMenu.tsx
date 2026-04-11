@@ -10,6 +10,7 @@
 
 import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { Check, MoreVertical, ArrowRightLeft } from 'lucide-react'
+import { toast } from 'sonner'
 import type { Book, BookStatus } from '@/data/types'
 import { useBookStore } from '@/stores/useBookStore'
 import { LinkFormatsDialog } from './LinkFormatsDialog'
@@ -105,8 +106,14 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
   }
 
   const handleConfirmDelete = async () => {
-    await deleteBook(book.id)
-    setConfirmDeleteOpen(false)
+    try {
+      await deleteBook(book.id)
+      setConfirmDeleteOpen(false)
+    } catch (err) {
+      // Intentional: surface deletion failure to user — don't swallow silently
+      toast.error('Failed to delete book. Please try again.')
+      console.error('[BookContextMenu] deleteBook failed:', err)
+    }
   }
 
   const handleStatusChange = (status: BookStatus) => {
@@ -221,7 +228,7 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
           <AlertDialogHeader>
             <AlertDialogTitle>Delete &ldquo;{book.title}&rdquo;?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the book and all its highlights. This action cannot be undone.
+              This will permanently remove the book, its highlights, and all locally stored files (OPFS). This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

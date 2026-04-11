@@ -10,8 +10,8 @@ import { memo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { ArrowRightLeft, BookOpen, Cloud, Headphones, Mic } from 'lucide-react'
 import type { Book, BookStatus } from '@/data/types'
-import { Badge } from '@/app/components/ui/badge'
 import { BookStatusBadge } from './BookStatusBadge'
+import { FormatBadge } from './FormatBadge'
 import {
   Select,
   SelectContent,
@@ -119,9 +119,7 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
           </p>
         )}
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 rounded uppercase">
-            {book.format === 'audiobook' ? 'Audio' : book.format.toUpperCase()}
-          </Badge>
+          <FormatBadge format={book.format} />
           {book.source.type === 'remote' && (
             <span
               className="flex items-center gap-1 text-brand-soft-foreground"

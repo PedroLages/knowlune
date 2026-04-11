@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router'
 import { BookOpen, Cloud, Headphones, ArrowRightLeft, Clock } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { BookStatusBadge } from './BookStatusBadge'
+import { FormatBadge } from './FormatBadge'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 
 /** Find the current chapter title based on playback position in seconds */
@@ -106,16 +107,19 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
               style={{ width: `${book.progress ?? 0}%` }}
             />
           </div>
-          {/* Remote badge */}
-          {book.source.type === 'remote' && (
-            <div
-              className="absolute top-2 left-2 flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[10px] text-brand-soft-foreground backdrop-blur-sm"
-              data-testid={`remote-badge-${book.id}`}
-            >
-              <Cloud className="size-3" aria-hidden="true" />
-              Remote
-            </div>
-          )}
+          {/* Format + remote badges */}
+          <div className="absolute top-2 left-2 flex flex-col gap-1">
+            <FormatBadge format={book.format} className="backdrop-blur-sm" />
+            {book.source.type === 'remote' && (
+              <div
+                className="flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[10px] text-brand-soft-foreground backdrop-blur-sm"
+                data-testid={`remote-badge-${book.id}`}
+              >
+                <Cloud className="size-3" aria-hidden="true" />
+                Remote
+              </div>
+            )}
+          </div>
         </div>
         {/* Metadata below cover */}
         <div className="mt-3 px-1 text-center">
@@ -200,15 +204,19 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-foreground/10">
           <div className="h-full bg-brand transition-all" style={{ width: `${book.progress}%` }} />
         </div>
-        {book.source.type === 'remote' && (
-          <div
-            className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[10px] text-brand-soft-foreground backdrop-blur-sm"
-            data-testid={`remote-badge-${book.id}`}
-          >
-            <Cloud className="size-3" aria-hidden="true" />
-            Remote
-          </div>
-        )}
+        {/* Format + remote badges */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
+          <FormatBadge format={book.format} className="backdrop-blur-sm" />
+          {book.source.type === 'remote' && (
+            <div
+              className="flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[10px] text-brand-soft-foreground backdrop-blur-sm"
+              data-testid={`remote-badge-${book.id}`}
+            >
+              <Cloud className="size-3" aria-hidden="true" />
+              Remote
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Info */}
