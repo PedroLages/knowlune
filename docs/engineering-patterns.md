@@ -648,3 +648,30 @@ const bg = BG_CLASSES[hexColor] ?? 'bg-background'
 When you need arbitrary Tailwind values driven by runtime data, use a lookup map where every class string appears as a complete literal. This applies to `bg-[...]`, `text-[...]`, `border-[...]`, and any arbitrary value syntax.
 
 **Case study:** E107-S05 — Reader theme config uses `BG_CLASSES` and `TEXT_CLASSES` maps to bridge hex color values from `readerThemeConfig.ts` into scannable Tailwind classes.
+
+## AbortController: Set Terminal State at Decision Point
+
+When using `AbortController` to cancel a loop, set the terminal phase state at each abort checkpoint — not in a shared post-loop block. A post-loop block runs after `break` and can overwrite the cancelled state with `done` if the abort check fires too late.
+
+```typescript
+// ❌ RACE — post-loop block can overwrite 'cancelled' with 'done'
+for (const file of files) {
+  if (signal.aborted) break
+  await processFile(file)
+}
+setPhase('done') // runs even after abort break
+
+// ✅ CORRECT — terminal state set at the decision point
+for (const file of files) {
+  if (signal.aborted) {
+    setPhase('cancelled') // state locked before break
+    break
+  }
+  await processFile(file)
+}
+if (!signal.aborted) setPhase('done')
+```
+
+This pattern also applies to `try/catch` blocks where multiple catch paths could set conflicting states — always set the terminal state where the decision is made, not in a finally/post-block.
+
+**Case study:** E108-S01 — `useBulkImport` abort handling. Fixed in `f4fd82ee` after code review flagged the race.
