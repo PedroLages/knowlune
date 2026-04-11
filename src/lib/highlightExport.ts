@@ -68,11 +68,14 @@ function groupByBook(highlights: BookHighlight[]): Map<string, BookHighlight[]> 
 
 /** Sanitize a book title for use as a filename */
 function safeFilename(title: string): string {
-  return title
+  const sanitized = title
     .replace(/[^\w\s-]/g, '')
     .trim()
     .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
     .slice(0, 60)
+  return sanitized || 'highlights'
 }
 
 // ---------------------------------------------------------------------------
