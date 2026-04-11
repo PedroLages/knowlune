@@ -170,8 +170,19 @@ export function AudiobookImportFlow({
   const [progress, setProgress] = useState(0)
   const [progressLabel, setProgressLabel] = useState('')
   const [m4bParsed, setM4bParsed] = useState<M4bParsed | null>(null)
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null)
 
   const isImporting = phase === 'processing' || phase === 'storing'
+
+  // Create/revoke blob URL for M4B cover preview
+  useEffect(() => {
+    if (m4bParsed?.coverBlob) {
+      const url = URL.createObjectURL(m4bParsed.coverBlob)
+      setCoverPreviewUrl(url)
+      return () => URL.revokeObjectURL(url)
+    }
+    setCoverPreviewUrl(null)
+  }, [m4bParsed])
 
   /** Process an M4B file — lazy-loads music-metadata for chapter extraction */
   const processM4bFile = useCallback(async (file: File) => {
@@ -511,26 +522,47 @@ export function AudiobookImportFlow({
             </p>
           </div>
 
-          {/* Title */}
-          <div className="space-y-1.5">
-            <Label htmlFor="audiobook-title">Title</Label>
-            <Input
-              id="audiobook-title"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="Audiobook title"
-            />
-          </div>
+          {/* Cover preview + metadata fields */}
+          <div className="flex gap-4">
+            {/* Cover art preview */}
+            {coverPreviewUrl ? (
+              <img
+                src={coverPreviewUrl}
+                alt={`Cover art for ${title}`}
+                data-testid="m4b-cover-preview"
+                className="h-24 w-24 shrink-0 rounded-lg object-cover border border-border"
+              />
+            ) : (
+              <div
+                className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30"
+                aria-label="No cover art"
+                data-testid="m4b-cover-placeholder"
+              >
+                <Headphones className="h-8 w-8 text-muted-foreground" />
+              </div>
+            )}
 
-          {/* Author */}
-          <div className="space-y-1.5">
-            <Label htmlFor="audiobook-author">Author</Label>
-            <Input
-              id="audiobook-author"
-              value={author}
-              onChange={e => setAuthor(e.target.value)}
-              placeholder="Author name"
-            />
+            {/* Title + Author */}
+            <div className="flex flex-1 flex-col gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="audiobook-title">Title</Label>
+                <Input
+                  id="audiobook-title"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="Audiobook title"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="audiobook-author">Author</Label>
+                <Input
+                  id="audiobook-author"
+                  value={author}
+                  onChange={e => setAuthor(e.target.value)}
+                  placeholder="Author name"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Chapter list preview */}
