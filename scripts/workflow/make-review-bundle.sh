@@ -6,9 +6,14 @@
 # Usage:
 #   ./make-review-bundle.sh --story-id=E01-S03 --base-path=PATH --output=PATH
 #
-# Output:
-#   JSON bundle written to --output path (or stdout if --output=-)
-#   Human-readable progress to stderr
+# Stdout contract:
+#   --output=-    : full JSON bundle written to stdout
+#   --output=PATH : output file path only written to stdout (for orchestrator capture)
+#   All progress/status messages → stderr only
+#
+# Example (orchestrator capture):
+#   BUNDLE_PATH=$(bash scripts/workflow/make-review-bundle.sh --story-id=E01-S03 --base-path=$BASE_PATH)
+#   # BUNDLE_PATH now holds the file path, e.g. .claude/state/review-story/review-bundle-e01-s03.json
 
 set -euo pipefail
 
@@ -285,6 +290,7 @@ if [ "$OUTPUT" = "-" ]; then
 else
   echo "$BUNDLE" > "$OUTPUT"
   log_success "Bundle written to ${OUTPUT}"
+  echo "$OUTPUT"  # emit path to stdout for orchestrator capture
 fi
 
 # Summary

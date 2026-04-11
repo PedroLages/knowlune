@@ -1,7 +1,7 @@
 # Modularization Verification Report
 
-**Date**: 2026-03-14
-**Refactor**: review-story skill (497 → 178 lines, 64% reduction)
+**Date**: 2026-03-14 (original) / 2026-04-09 (structured-contracts refactor)
+**Refactor**: review-story skill (497 → 178 lines, 64% reduction) → further 178 → ~230 lines with context discipline + script contracts
 
 ## File Size Changes
 
@@ -17,7 +17,16 @@
 
 **Cognitive Load**: Single-screen orchestrator (178 LOC) vs multi-screen monolith (497 LOC)
 
-## Functional Verification (7 Test Scenarios)
+## New Scripts (2026-04-09 Refactor)
+
+| Script | Purpose | Replaces |
+|--------|---------|---------|
+| `review-state.sh` | Story ID resolution, worktree detect, state init/resume | ~70 lines of SKILL.md Step 1 |
+| `prepare-dispatch.py` | Skip logic evaluation, dispatch manifest | ~35 lines of SKILL.md Step 6 |
+| `finalize-review.sh` | Schema validation, merge, report, verdict, frontmatter sync | ~53 lines of SKILL.md Step 7 |
+| `ensure-dev-server.sh` | Dev server health check + startup | Inline curl/npm in SKILL.md |
+
+## Functional Verification (9 Test Scenarios)
 
 ### ✅ Scenario 1: Fresh Review (No Resumption)
 **Expected**: Full pre-checks → lessons gate → agents → report
@@ -134,6 +143,53 @@ Skip if **ANY** of:
 ```
 
 **Status**: ✅ PRESERVED
+
+---
+
+### ✅ Scenario 8: Context Discipline (No Inline Chatter)
+**Expected**: Between pre-dispatch banner and final summary, orchestrator emits nothing to user
+
+**Verification rules** (from SKILL.md Context Discipline section):
+```markdown
+NEVER emit:
+- Successful raw command output (build logs, lint output, passing test results)
+- Per-agent completion chatter ("Design review complete", "Code review finished")
+- Manual inline summaries of agent findings
+- Manual verdict text outside completion templates
+
+ONLY emit to user:
+1. Pre-dispatch banner (Step 6): one line listing dispatched agents
+2. Blocking failure output (Steps 2–5): raw output ONLY when gate fails
+3. AskUserQuestion prompts (Steps 3, 5): interactive decisions only
+4. Final summary (Step 8): completion template from reporting.md
+```
+
+**How to verify**: Run `/review-story` on a clean story. Between "Running N reviews in background..." and the final gate table, the only visible output should be agent completion notifications (from Claude Code's background task UI) — no orchestrator text.
+
+**Status**: ✅ CODIFIED IN SKILL.md (Context Discipline section)
+
+---
+
+### ✅ Scenario 9: Invalid Agent JSON (Contract Failure)
+**Expected**: One agent writes schema-invalid JSON → gate marked error, review continues, report notes failure
+
+**Logic Location**: `finalize-review.sh` steps 1 and 3
+```bash
+# Step 1: validate each agent JSON against agent-output.schema.json
+# Step 3: generate-report.py receives only valid agent results
+# Invalid agents appear in consolidated report as "agent contract failure"
+# finalize-review.sh outputs: { "invalid_agents": ["design-review"] }
+```
+
+**Orchestrator behavior** (SKILL.md Step 7):
+```bash
+INVALID_AGENTS=$(echo "$FINAL" | jq -r '.invalid_agents | join(", ")')
+# If non-empty, warn: "Agent contract failure: [list]. These reviews were excluded."
+```
+
+**No manual recovery**: Orchestrator does NOT attempt to re-parse agent prose. The invalid agent's gate is excluded from merge, appears as `ERROR` in consolidated report, and prevents PASS verdict (missing required gate → `can_mark_reviewed: false`).
+
+**Status**: ✅ CODIFIED IN finalize-review.sh + SKILL.md
 
 ---
 

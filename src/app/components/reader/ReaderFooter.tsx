@@ -8,18 +8,7 @@
  */
 import { cn } from '@/app/components/ui/utils'
 import type { ReaderTheme } from '@/stores/useReaderStore'
-
-const FOOTER_BG: Record<ReaderTheme, string> = {
-  light: 'bg-[#FAF5EE]/60',
-  sepia: 'bg-[#F4ECD8]/60',
-  dark: 'bg-[#1a1a1a]/60',
-}
-
-const FOOTER_TEXT: Record<ReaderTheme, string> = {
-  light: 'text-[#1a1a1a]',
-  sepia: 'text-[#3a2a1a]',
-  dark: 'text-[#d4d4d4]',
-}
+import { getReaderChromeClasses, useAppColorScheme } from './readerThemeConfig'
 
 interface ReaderFooterProps {
   /** Progress 0–1 */
@@ -39,6 +28,8 @@ export function ReaderFooter({
   currentPage,
   totalPages,
 }: ReaderFooterProps) {
+  const colorScheme = useAppColorScheme()
+  const chrome = getReaderChromeClasses(theme, colorScheme)
   const progressPercent = Math.round(progress * 100)
   const showPageIndicator = currentPage != null && totalPages != null && totalPages > 0
 
@@ -47,8 +38,8 @@ export function ReaderFooter({
       className={cn(
         'fixed bottom-0 left-0 right-0 z-50 px-4 py-2',
         'backdrop-blur-3xl transition-all duration-200',
-        FOOTER_BG[theme],
-        FOOTER_TEXT[theme],
+        chrome.bgOverlay,
+        chrome.text,
         visible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
       )}
       aria-hidden={!visible}

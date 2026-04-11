@@ -15,16 +15,19 @@ Pre-checks always run (even on resumed reviews) because they:
 
 ## Pre-Check Script Execution
 
-**Run unified pre-check script:**
+**Run unified pre-check script with `--log-dir` for silent mode:**
 
 ```bash
 ./scripts/workflow/run-prechecks.sh \
   --mode=full \
   --story-id=${STORY_ID} \
-  --base-path=${BASE_PATH}
+  --base-path=${BASE_PATH} \
+  --log-dir="${BASE_PATH}/${LOG_DIR}"
 ```
 
-**Script output:** JSON object with gate results, UI change detection, and test pattern findings.
+**`--log-dir` contract**: When provided, all gate output (build logs, lint output, test results) is written to disk files under `LOG_DIR/` instead of stderr. The orchestrator only sees errors on failure. Gate log paths are included in the JSON output under `log_paths`.
+
+**Script output:** JSON object with gate results, UI change detection, test pattern findings, and `log_paths` (if `--log-dir` was passed).
 
 **Parse results:**
 - Extract `gates` object → update `review_gates_passed` array

@@ -18,18 +18,7 @@ import {
 } from '@/app/components/ui/select'
 import { cn } from '@/app/components/ui/utils'
 import type { ReaderTheme } from '@/stores/useReaderStore'
-
-const BAR_BG: Record<ReaderTheme, string> = {
-  light: 'bg-[#FAF5EE]/98',
-  sepia: 'bg-[#F4ECD8]/98',
-  dark: 'bg-[#1a1a1a]/98',
-}
-
-const BAR_TEXT: Record<ReaderTheme, string> = {
-  light: 'text-[#1a1a1a]',
-  sepia: 'text-[#3a2a1a]',
-  dark: 'text-[#d4d4d4]',
-}
+import { getReaderChromeClasses, useAppColorScheme } from './readerThemeConfig'
 
 const SPEED_OPTIONS = [
   { value: '0.5', label: '0.5×' },
@@ -61,14 +50,17 @@ export function TtsControlBar({
   onStop,
   onRateChange,
 }: TtsControlBarProps) {
+  const colorScheme = useAppColorScheme()
+  const chrome = getReaderChromeClasses(theme, colorScheme)
+
   return (
     <div
       className={cn(
         'fixed bottom-12 left-0 right-0 z-40 px-4 py-2.5',
         'border-t border-black/10 backdrop-blur-sm shadow-lg',
         'flex items-center gap-3',
-        BAR_BG[theme],
-        BAR_TEXT[theme]
+        chrome.bgBar,
+        chrome.text
       )}
       role="toolbar"
       aria-label="Read aloud controls"
@@ -83,7 +75,7 @@ export function TtsControlBar({
         size="icon"
         onClick={onPlayPause}
         aria-label={isPlaying ? 'Pause reading' : 'Resume reading'}
-        className="size-8 shrink-0"
+        className="size-8 min-h-[44px] min-w-[44px] shrink-0"
         data-testid="tts-play-pause"
       >
         {isPlaying ? (
@@ -99,7 +91,7 @@ export function TtsControlBar({
         size="icon"
         onClick={onStop}
         aria-label="Stop reading"
-        className="size-8 shrink-0 hover:bg-black/10"
+        className="size-8 min-h-[44px] min-w-[44px] shrink-0 hover:bg-black/10"
         data-testid="tts-stop"
       >
         <Square className="size-4" aria-hidden="true" />

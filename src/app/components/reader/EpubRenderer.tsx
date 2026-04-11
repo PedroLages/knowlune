@@ -13,32 +13,15 @@
  */
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { EpubView } from 'react-reader'
+import { cn } from '@/app/components/ui/utils'
 import type { Rendition } from 'epubjs'
 import type { NavItem } from 'epubjs'
 import { useReaderStore } from '@/stores/useReaderStore'
-
-/**
- * Reader theme backgrounds applied to the EPUB iframe body via epub.js rendition.themes.default().
- *
- * NOTE: These are intentionally hardcoded hex values, not design tokens.
- * epub.js injects these into an isolated iframe where CSS custom properties
- * from the host document are not inherited. Design tokens (CSS vars) would
- * resolve to empty strings inside the iframe, breaking theming entirely.
- */
-const READER_THEME_STYLES: Record<string, { background: string; color: string }> = {
-  light: { background: '#FAF5EE', color: '#1a1a1a' },
-  sepia: { background: '#F4ECD8', color: '#3a2a1a' },
-  dark: { background: '#1a1a1a', color: '#d4d4d4' },
-}
-
-/**
- * Container background Tailwind classes derived from READER_THEME_STYLES backgrounds (Bug 2 fix).
- * The container bg must match the iframe bg to prevent color flash at page edges.
- * Uses Tailwind's arbitrary value syntax since these are epub-specific colors, not design tokens.
- */
-const READER_CONTAINER_BG: Record<string, string> = Object.fromEntries(
-  Object.entries(READER_THEME_STYLES).map(([key, { background }]) => [key, `bg-[${background}]`])
-)
+import {
+  getReaderThemeColors,
+  getReaderChromeClasses,
+  useAppColorScheme,
+} from './readerThemeConfig'
 
 /** Minimum horizontal swipe distance to trigger page turn */
 const SWIPE_THRESHOLD_PX = 50
@@ -68,6 +51,7 @@ export function EpubRenderer({
   const fontFamily = useReaderStore(s => s.fontFamily)
   const lineHeight = useReaderStore(s => s.lineHeight)
   const toggleHeader = useReaderStore(s => s.toggleHeader)
+  const colorScheme = useAppColorScheme()
   const renditionRef = useRef<Rendition | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
 
@@ -86,7 +70,7 @@ export function EpubRenderer({
   /** Apply current theme + font settings to epub.js rendition */
   const applyTheme = useCallback(
     (rendition: Rendition) => {
-      const themeStyles = READER_THEME_STYLES[theme] ?? READER_THEME_STYLES.light
+      const themeColors = getReaderThemeColors(theme, colorScheme)
       const fontFamilyMap: Record<string, string> = {
         default: 'inherit',
         serif: 'Georgia, "Times New Roman", serif',
@@ -97,15 +81,15 @@ export function EpubRenderer({
       // Apply theme via rendition.themes.default() which accepts a CSS rules object
       rendition.themes.default({
         body: {
-          background: themeStyles.background,
-          color: themeStyles.color,
+          background: themeColors.background,
+          color: themeColors.foreground,
           'font-size': `${fontSize}%`,
           'line-height': String(lineHeight),
           'font-family': fontFamilyMap[fontFamily] ?? 'inherit',
         },
       })
     },
-    [theme, fontSize, fontFamily, lineHeight]
+    [theme, colorScheme, fontSize, fontFamily, lineHeight]
   )
 
   /** Store rendition ref and apply initial theme */
@@ -211,8 +195,9 @@ export function EpubRenderer({
         ? 'motion-safe:animate-[slide-right_200ms_ease-out]'
         : ''
 
-  // Container background matching the active reader theme (Bug 2 fix — AC-3)
-  const containerBg = READER_CONTAINER_BG[theme] ?? READER_CONTAINER_BG.light
+  // Container background matching the active reader theme + app color scheme
+  const chromeClasses = getReaderChromeClasses(theme, colorScheme)
+  const containerBg = chromeClasses.bg
 
   // Memoize epubOptions to prevent unnecessary re-renders (Bug 3 fix — AC-4)
   const epubOptions = useMemo(
@@ -227,7 +212,7 @@ export function EpubRenderer({
   return (
     <div
       ref={containerRef}
-      className={`relative h-full w-full ${containerBg} ${animationClass}`}
+      className={cn('relative h-full w-full', containerBg, animationClass)}
       data-testid="epub-renderer"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}

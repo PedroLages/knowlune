@@ -36,6 +36,34 @@ The orchestrator should NOT:
 - Perform review reasoning (agents handle this)
 - **Output text when individual agents complete** — no "X review complete" messages
 
+## Context Discipline (Output Suppression)
+
+This skill runs in a forked context. To protect the user's conversation from context flood:
+
+**NEVER emit:**
+- Successful raw command output (build logs, lint output, passing test results)
+- Per-agent completion chatter ("Design review complete", "Code review finished")
+- Manual inline summaries of agent findings (consolidated report handles this)
+- Manual verdict text outside the completion templates in reporting.md
+- Progress narration ("Now running code review...", "Waiting for agents...")
+
+**ONLY emit to user:**
+1. **Pre-dispatch banner** (Step 6): one line listing dispatched agents
+2. **Blocking failure output** (Steps 2–5): raw output ONLY when a gate fails
+3. **AskUserQuestion prompts** (Steps 3, 5): interactive decisions only
+4. **Final summary** (Step 8): completion template from reporting.md
+
+**Error output rule:** Show raw command output ONLY on failure (`exit_code != 0`). On success, consume silently and update state.
+
+**No manual aggregation rule:** The orchestrator must NOT:
+- Parse agent prose or regex-scrape findings
+- Count blockers manually
+- Write or rewrite consolidated findings inline
+- Set `reviewed: true` before `validate-gates.py` passes (enforced by `finalize-review.sh`)
+- Produce multiple conflicting summaries
+
+Consolidation happens ONLY through `finalize-review.sh` → downstream scripts.
+
 ## Steps
 
 **Immediately create TodoWrite** to give the user full visibility:
@@ -61,84 +89,37 @@ Mark the first todo as `in_progress` and proceed:
 
 ### 1. Identify story and detect resumption
 
-Parse ID from `$ARGUMENTS` or from branch name (`git branch --show-current` → `feature/e01-s03-...` → `E01-S03`).
-
-**Detect worktree and resolve base path**:
-
-```bash
-CURRENT_BRANCH=$(git branch --show-current)
-CURRENT_ROOT=$(git rev-parse --show-toplevel)
-WORKTREE_PATH=$(git worktree list --porcelain 2>/dev/null | awk '
-  /^worktree / { path=$2 }
-  /^branch / {
-    if ($2 == "refs/heads/'"$CURRENT_BRANCH"'") {
-      print path
-      exit
-    }
-  }
-')
-
-if [ -n "$WORKTREE_PATH" ] && [ "$WORKTREE_PATH" != "$CURRENT_ROOT" ]; then
-  BASE_PATH="$WORKTREE_PATH"
-  echo "⚠️  Worktree detected — using $WORKTREE_PATH" >&2
-else
-  BASE_PATH="$CURRENT_ROOT"
-fi
-```
-
-**All file path references in subsequent steps must use `${BASE_PATH}/` prefix.**
-
-**Load/restore review state**:
+Call `review-state.sh` — it handles story ID resolution, worktree detection, state
+load/normalize, frontmatter update, sprint-status sync, and log directory creation:
 
 ```bash
-STATE_JSON=$(bash scripts/workflow/checkpoint.sh restore --story-id=$STORY_ID --base-path=$BASE_PATH 2>/dev/null)
-if [ -n "$STATE_JSON" ]; then
-  # Parse runtime state and normalize to frontmatter reviewed value
-  # Runtime status: in-progress | completed | blocked
-  # Frontmatter reviewed: false | in-progress | true
-  RUN_STATUS=$(echo "$STATE_JSON" | jq -r '.status')
-  case "$RUN_STATUS" in
-    "completed") REVIEWED="true" ;;
-    "in-progress"|"blocked") REVIEWED="in-progress" ;;
-    *) REVIEWED="false" ;;
-  esac
-  GATES_PASSED=$(echo "$STATE_JSON" | jq -r '.gates_passed_list[]')
-  STORY_FILE=$(echo "$STATE_JSON" | jq -r '.story_file')
-else
-  # Fallback: find story file and parse frontmatter
-  STORY_FILE=$(find "${BASE_PATH}/docs/implementation-artifacts" -name "*$(echo $STORY_ID | tr '[:upper:]' '[:lower:]')*.md" 2>/dev/null | head -1)
-  # Parse frontmatter fields using awk/grep
-  REVIEWED=$(awk '/^reviewed:/{print $2; exit}' "$STORY_FILE")
-  GATES_PASSED=$(awk '/^review_gates_passed:/{for(;i<=NF;i++)print $i; exit}' "$STORY_FILE | tr -d '[],' | grep -v '^$' || echo "")
-fi
+STORY_ID="${ARGUMENTS:-}"  # from skill argument, or empty to derive from branch
+
+INIT=$(bash scripts/workflow/review-state.sh \
+  ${STORY_ID:+--story-id=$STORY_ID})
+
+STORY_ID=$(echo "$INIT" | jq -r '.story_id')
+STORY_FILE=$(echo "$INIT" | jq -r '.story_file')
+BASE_PATH=$(echo "$INIT" | jq -r '.base_path')
+RESUMING=$(echo "$INIT" | jq -r '.resuming')
+GATES_PASSED=$(echo "$INIT" | jq -r '.gates_already_passed | join(",")')
+LOG_DIR=$(echo "$INIT" | jq -r '.log_dir')
 ```
 
-**Detect resumption and handle reset**:
-
-- If `reviewed: in-progress` and `review_gates_passed` non-empty:
-  - Inform: "Resuming interrupted review. Previously passed gates: [list]. Re-running pre-checks..."
-  - Set `resuming=true`
-- If `reviewed: true`:
-  - Inform: "Story already reviewed. Re-running full review."
-  - Reset: set `reviewed=in-progress`, clear `review_gates_passed`, update `review_started`
-- If `reviewed: false`:
-  - Set `reviewed=in-progress`, `review_started=YYYY-MM-DD`, `review_gates_passed=[]` in story frontmatter
-  - **Update sprint-status to `review`** in `${BASE_PATH}/docs/implementation-artifacts/sprint-status.yaml`
-
-**Save state and mark todo completed**:
-
-```bash
-bash scripts/workflow/checkpoint.sh save --story-id=$STORY_ID --story-file=$STORY_FILE --base-path=$BASE_PATH >/dev/null
-```
+If `resuming == true`: inform "Resuming interrupted review. Previously passed gates: [list]."
+If `previous_status == true`: inform "Story already reviewed — re-running full review."
 
 TodoWrite: Mark "Identify story and detect resumption" → `completed`. Mark "Pre-checks" → `in_progress`.
 
 ### 2. Pre-checks (via run-prechecks.sh)
 
-Run the unified pre-check script which handles build, lint, type-check, format, tests, and validation:
+Run the unified pre-check script which handles build, lint, type-check, format, tests, and validation.
+Passing `--log-dir` keeps all gate output on disk (silent mode) — orchestrator only sees errors:
 
 ```bash
-PRECHECK_OUTPUT=$(bash scripts/workflow/run-prechecks.sh --mode=full --story-id=$STORY_ID --base-path=$BASE_PATH)
+PRECHECK_OUTPUT=$(bash scripts/workflow/run-prechecks.sh \
+  --mode=full --story-id=$STORY_ID --base-path=$BASE_PATH \
+  --log-dir="${BASE_PATH}/${LOG_DIR}")
 PRECHECK_EXIT=$?
 ```
 
@@ -207,104 +188,82 @@ TodoWrite: Mark "Deduplication scan" → `completed`. Mark "Design review" → `
 
 ### 6. Review bundle and agent dispatch
 
-**Generate review bundle** (summary-first artifact for agents):
+**Generate review bundle** and build dispatch manifest in one sequence:
 
 ```bash
-BUNDLE_PATH=$(bash scripts/workflow/make-review-bundle.sh --story-id=$STORY_ID --base-path=$BASE_PATH --output=-)
-echo "$BUNDLE_PATH" | jq -r '.artifact_paths.bundle_path' > /tmp/bundle_path.txt
-BUNDLE_PATH=$(cat /tmp/bundle_path.txt)
+# Generate bundle (emits output path to stdout)
+BUNDLE_PATH=$(bash scripts/workflow/make-review-bundle.sh \
+  --story-id=$STORY_ID --base-path=$BASE_PATH)
+
+# Build dispatch manifest (evaluate skip logic, resolve paths)
+OPENAI_AVAILABLE=$([ -n "${OPENAI_API_KEY:-}" ] && echo "yes" || echo "no")
+ZAI_AVAILABLE=$([ -n "${ZAI_API_KEY:-}" ] && echo "yes" || echo "no")
+
+MANIFEST=$(python3 scripts/workflow/prepare-dispatch.py \
+  --story-id=$STORY_ID \
+  --base-path=$BASE_PATH \
+  --has-ui-changes=$HAS_UI_CHANGES \
+  --review-scope=full \
+  --gates-already-passed="$GATES_PASSED" \
+  --resuming=$RESUMING \
+  --gates-config=.claude/skills/review-story/config/gates.json)
+
+# Start dev server if any dispatched agent needs it
+DEV_SERVER_NEEDED=$(echo "$MANIFEST" | jq -r '.dev_server_needed')
+if [ "$DEV_SERVER_NEEDED" = "true" ]; then
+  DEV_STATUS=$(bash scripts/workflow/ensure-dev-server.sh --base-path=$BASE_PATH)
+  if [ "$(echo "$DEV_STATUS" | jq -r '.status')" != "running" ]; then
+    echo "⚠️  Dev server unreachable — design/performance/QA reviews will be skipped" >&2
+  fi
+fi
 ```
-
-**Pre-dispatch checks** (determine which agents to dispatch — same logic as original SKILL.md):
-
-```bash
-OPENAI_AVAILABLE=$(printenv OPENAI_API_KEY >/dev/null 2>&1 && echo "yes" || echo "no")
-ZAI_AVAILABLE=$(printenv ZAI_API_KEY >/dev/null 2>&1 && echo "yes" || echo "no")
-```
-
-**Check dev server** for design review: `curl -s -o /dev/null -w "%{http_code}" http://localhost:5173`. Start if needed.
 
 **Output pre-dispatch banner** (the ONLY visible output before final report):
 
 ```
-Running N reviews in background... (design, code, testing, performance, security, QA)
+Running N reviews in background... (list dispatched agents from manifest)
 ```
 
 **TodoWrite**: Mark all non-skipped agent todos → `in_progress` simultaneously.
 
-**Dispatch all non-skipped agents in a single message with `run_in_background: true`**:
+**Dispatch all agents with `dispatch: true` from manifest in a single message with `run_in_background: true`**.
 
+For each agent in `manifest.agents` where `dispatch == true`, dispatch:
 ```
-// Agents read bundle at $BUNDLE_PATH instead of inline context
-// STRUCTURED RETURN FORMAT: STATUS, FINDINGS, COUNTS, REPORT path
 Task({
-  subagent_type: "design-review",
+  subagent_type: "[agent.agent]",
   run_in_background: true,
-  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to docs/reviews/design/design-review-{date}-{story-id}.md. Return structured format: STATUS, FINDINGS, COUNTS, REPORT path.",
-  description: "Design review $STORY_ID"
+  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to [agent.report_path]. Write JSON result to [agent.output_json_path] following agent-output.schema.json. Keep session return to one confirmation line only.",
+  description: "[agent.gate] $STORY_ID"
 })
-
-Task({
-  subagent_type: "code-review",
-  run_in_background: true,
-  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Test patterns: $TEST_PATTERN_FINDINGS. Save report to docs/reviews/code/code-review-{date}-{story-id}.md. Return structured format.",
-  description: "Code review $STORY_ID"
-})
-
-// ... other agents (code-review-testing, performance-benchmark, security-review, exploratory-qa, openai-code-review if $OPENAI_AVAILABLE == "yes", glm-code-review if $ZAI_AVAILABLE == "yes")
 ```
+
+Also dispatch `openai-code-review` if `$OPENAI_AVAILABLE == "yes"` and `glm-code-review` if `$ZAI_AVAILABLE == "yes"` (these are in the manifest as `phase: external`).
 
 ### 7. Collect results and consolidate
 
 **After ALL agents complete** (batch collection):
 
-For each agent, parse structured return (STATUS/FINDINGS/COUNTS/REPORT). Store agent JSON outputs to `agent-results/` directory:
-
+For each completed agent, write its structured JSON return to the output_json_path from the manifest:
 ```bash
-# For each agent return, write JSON following agent-output.schema.json
-echo "$AGENT_RETURN" | jq '.' > .claude/state/review-story/agent-results/{agent-name}.json
+# Each agent writes its own JSON to output_json_path (agent-output.schema.json)
+# If an agent returns unstructured text, parse it as a fallback:
+echo "$AGENT_RETURN" | jq '.' > "${BASE_PATH}/.claude/state/review-story/agent-results/{gate}-${STORY_ID}.json"
 ```
 
-**Merge findings with consensus scoring**:
+Then call `finalize-review.sh` — it handles schema validation, merge, report generation, gate validation, verdict, and frontmatter sync:
 
 ```bash
-python3 scripts/workflow/merge-agent-results.py \
-  --agent-results-dir=.claude/state/review-story/agent-results/ \
-  --output=.claude/state/review-story/consolidated-findings-$STORY_ID.json
+FINAL=$(bash scripts/workflow/finalize-review.sh \
+  --story-id=$STORY_ID --base-path=$BASE_PATH)
+
+VERDICT=$(echo "$FINAL" | jq -r '.verdict')
+REPORT_PATH=$(echo "$FINAL" | jq -r '.report_path')
+SUMMARY=$(echo "$FINAL" | jq -r '.summary')
+INVALID_AGENTS=$(echo "$FINAL" | jq -r '.invalid_agents | join(", ")')
 ```
 
-**Generate final report**:
-
-```bash
-python3 scripts/workflow/generate-report.py \
-  --findings=.claude/state/review-story/consolidated-findings-$STORY_ID.json \
-  --run-state=.claude/state/review-story/review-run-$STORY_ID.json \
-  --gates-config=.claude/skills/review-story/config/gates.json \
-  --output=docs/reviews/consolidated-review-{date}-$STORY_ID.md
-```
-
-**Validate gates**:
-
-```bash
-VALIDATION=$(python3 scripts/workflow/validate-gates.py \
-  --gates-config=.claude/skills/review-story/config/gates.json \
-  --run-state=.claude/state/review-story/review-run-$STORY_ID.json)
-
-VALID=$(echo "$VALIDATION" | jq -r '.valid')
-CAN_MARK=$(echo "$VALIDATION" | jq -r '.can_mark_reviewed')
-```
-
-**Update state and story frontmatter**:
-
-```bash
-# Update review-run state with verdict
-jq --arg verdict "$(echo "$VALIDATION" | jq -r '.verdict')" '.verdict = $verdict' \
-  .claude/state/review-story/review-run-$STORY_ID.json > /tmp/state.json && \
-  mv /tmp/state.json .claude/state/review-story/review-run-$STORY_ID.json
-
-# Sync to story frontmatter (update reviewed field, review_gates_passed, etc.)
-# ... (parse updated gates_passed_list from state, write to story frontmatter using awk/sed)
-```
+If `invalid_agents` is non-empty, warn: "Agent contract failure: [list]. These reviews were excluded from the consolidated report."
 
 **TodoWrite**: Mark all agent todos and "Consolidate findings and verdict" → `completed`.
 

@@ -9,6 +9,23 @@ After pre-checks pass, dispatch ALL applicable review agents **in a single messa
 **State Inputs**: `HAS_UI_CHANGES`, `resuming` flag, `review_gates_passed` array, `test_pattern_findings` from pre-checks
 **State Outputs**: Agent report paths, updated `review_gates_passed` array
 
+## Persona Registry
+
+Each agent has a display name used in report section headers only (NOT in findings, gate tables, or completion templates):
+
+| Persona | Agent | Gate |
+|---------|-------|------|
+| Ava | design-review | design-review |
+| Victor | code-review | code-review |
+| Mina | code-review-testing | code-review-testing |
+| Leo | performance-benchmark | performance-benchmark |
+| Nadia | security-review | security-review |
+| Sofia | exploratory-qa | exploratory-qa |
+| Orion | openai-code-review | openai-code-review |
+| Kai | glm-code-review | glm-code-review |
+
+**Scope**: Persona names appear only in consolidated report section headers (e.g., `### Design Review (Ava)`). Never in findings text, gate table rows, or the PASS/BLOCKED completion output.
+
 ## Pre-Dispatch Checks
 
 **Determine which agents to dispatch** by checking `config/gates.json` for skip conditions:
@@ -67,53 +84,58 @@ Skip only if resuming AND already completed.
 BUNDLE_PATH=$(bash scripts/workflow/make-review-bundle.sh --story-id=$STORY_ID --base-path=$BASE_PATH --output=-)
 ```
 
-**Dispatch all non-skipped agents in a single message:**
+**Dispatch all agents where `dispatch: true` in manifest, in a single message.**
+
+The orchestrator reads `output_json_path` from each manifest entry and injects it into the prompt so agents know exactly where to write their structured JSON result:
 
 ```typescript
 // All dispatched together — they run concurrently:
+// Manifest entry shape: { gate, agent, dispatch, report_path, output_json_path, dev_server_required }
 
 Task({
-  subagent_type: "design-review",
+  subagent_type: "design-review",   // Ava
   run_in_background: true,
-  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to docs/reviews/design/design-review-{date}-{story-id}.md. Return structured format: STATUS, FINDINGS, COUNTS, REPORT path.",
-  description: "Design review $STORY_ID"
+  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to $REPORT_PATH. Write JSON result to $OUTPUT_JSON_PATH following agent-output.schema.json. Keep session return to one confirmation line only.",
+  description: "design-review $STORY_ID"
 })
 
 Task({
-  subagent_type: "code-review",
+  subagent_type: "code-review",     // Victor
   run_in_background: true,
-  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Test patterns: $TEST_PATTERN_FINDINGS. Save report to docs/reviews/code/code-review-{date}-{story-id}.md. Return structured format.",
-  description: "Code review $STORY_ID"
+  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Test patterns: $TEST_PATTERN_FINDINGS. Save report to $REPORT_PATH. Write JSON result to $OUTPUT_JSON_PATH following agent-output.schema.json. Keep session return to one confirmation line only.",
+  description: "code-review $STORY_ID"
 })
 
 Task({
-  subagent_type: "code-review-testing",
+  subagent_type: "code-review-testing",   // Mina
   run_in_background: true,
-  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to docs/reviews/code/code-review-testing-{date}-{story-id}.md. Return structured format.",
-  description: "Test coverage review $STORY_ID"
+  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to $REPORT_PATH. Write JSON result to $OUTPUT_JSON_PATH following agent-output.schema.json. Keep session return to one confirmation line only.",
+  description: "code-review-testing $STORY_ID"
 })
 
 Task({
-  subagent_type: "performance-benchmark",
+  subagent_type: "performance-benchmark",  // Leo
   run_in_background: true,
-  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to docs/reviews/performance/performance-benchmark-{date}-{story-id}.md. Return structured format.",
-  description: "Performance benchmark $STORY_ID"
+  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to $REPORT_PATH. Write JSON result to $OUTPUT_JSON_PATH following agent-output.schema.json. Keep session return to one confirmation line only.",
+  description: "performance-benchmark $STORY_ID"
 })
 
 Task({
-  subagent_type: "security-review",
+  subagent_type: "security-review",  // Nadia
   run_in_background: true,
-  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to docs/reviews/security/security-review-{date}-{story-id}.md. Return structured format.",
-  description: "Security review $STORY_ID"
+  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to $REPORT_PATH. Write JSON result to $OUTPUT_JSON_PATH following agent-output.schema.json. Keep session return to one confirmation line only.",
+  description: "security-review $STORY_ID"
 })
 
 Task({
-  subagent_type: "exploratory-qa",
+  subagent_type: "exploratory-qa",  // Sofia
   run_in_background: true,
-  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to docs/reviews/qa/exploratory-qa-{date}-{story-id}.md. Return structured format.",
-  description: "Exploratory QA $STORY_ID"
+  prompt: "Story $STORY_ID. Bundle: $BUNDLE_PATH. Save report to $REPORT_PATH. Write JSON result to $OUTPUT_JSON_PATH following agent-output.schema.json. Keep session return to one confirmation line only.",
+  description: "exploratory-qa $STORY_ID"
 })
 ```
+
+**Silent collection rule:** Do NOT output any text when an individual agent completes. Collect all results silently, then call `finalize-review.sh` once all agents are done.
 
 ## Agent Return Format
 
