@@ -1324,7 +1324,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-108: backlog
   108-1-bulk-epub-import: review
-  108-2-format-badges-and-delete: review
+  108-2-format-badges-and-delete: done
   108-3-keyboard-shortcuts: backlog
   108-4-audiobook-settings-panel: backlog
   108-5-genre-detection-and-pages-goal: backlog
