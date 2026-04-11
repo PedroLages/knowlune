@@ -77,11 +77,11 @@ PROGRESS_DOT_INTERVAL_CHARS = 2000
 PLAN_PREVIEW_CHARS = 3000
 
 # Per-phase max_turns caps (--max-turns overrides when lower)
-MAX_TURNS_START = 40       # planning is bounded
-MAX_TURNS_IMPLEMENT = 80   # implementation needs the most room
-MAX_TURNS_REVIEW = 60      # review pipeline is bounded
-MAX_TURNS_FIX = 60         # fixing is bounded
-MAX_TURNS_FINISH = 30      # finishing is quick
+MAX_TURNS_START = 60       # planning is bounded
+MAX_TURNS_IMPLEMENT = 150  # implementation needs the most room
+MAX_TURNS_REVIEW = 120     # review pipeline is bounded
+MAX_TURNS_FIX = 120        # fixing is bounded
+MAX_TURNS_FINISH = 50      # finishing is quick
 
 VALID_EFFORTS = ("low", "medium", "high", "max")
 VALID_MODELS = ("sonnet", "opus", "opusplan")
@@ -1620,16 +1620,22 @@ async def collect_response(
         elif isinstance(msg, ResultMessage):
             session_id = msg.session_id
             cost = msg.total_cost_usd or 0.0
+            stop_reason = getattr(msg, "stop_reason", None) or "?"
             write_progress(
                 story_key,
                 "SESSION_DONE",
-                f"cost=${cost:.2f}, turns={getattr(msg, 'num_turns', '?')}",
+                f"cost=${cost:.2f}, turns={getattr(msg, 'num_turns', '?')}, stop={stop_reason}",
             )
             if msg.result:
                 parts.append(msg.result)
             if msg.is_error:
-                write_progress(story_key, "SESSION_ERROR", msg.result or "unknown")
-                raise StoryError(f"Session error: {msg.result or 'unknown'}")
+                if msg.stop_reason == "max_turns":
+                    # Session hit turn limit but completed work — log warning, don't fail
+                    write_progress(story_key, "SESSION_WARN", f"max_turns reached ({getattr(msg, 'num_turns', '?')} turns) — treating as complete")
+                    log.warning(f"[{story_key}] Session hit max_turns limit — output collected, continuing")
+                else:
+                    write_progress(story_key, "SESSION_ERROR", msg.result or "unknown")
+                    raise StoryError(f"Session error: {msg.result or 'unknown'}")
 
     if stream:
         print()
