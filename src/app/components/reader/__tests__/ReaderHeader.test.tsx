@@ -16,6 +16,15 @@ vi.mock('react-router', () => ({
   useNavigate: () => mockNavigate,
 }))
 
+// Mock useAppColorScheme — default to 'professional'
+vi.mock('../readerThemeConfig', async () => {
+  const actual = await vi.importActual<typeof import('../readerThemeConfig')>('../readerThemeConfig')
+  return {
+    ...actual,
+    useAppColorScheme: () => 'professional',
+  }
+})
+
 const defaultProps = {
   title: 'Test Book',
   currentChapter: 'Chapter 1',
@@ -90,25 +99,25 @@ describe('ReaderHeader', () => {
   })
 
   describe('Theme application', () => {
-    it('applies light theme colors', () => {
+    it('applies light theme colors (professional)', () => {
       render(<ReaderHeader {...defaultProps} theme="light" />)
 
       const header = screen.getByTestId('reader-header')
-      expect(header).toHaveClass('bg-[#FAF5EE]/60', 'text-[#1a1a1a]')
+      expect(header).toHaveClass('bg-[#faf5ee]/60', 'text-[#1c1d2b]')
     })
 
     it('applies sepia theme colors', () => {
       render(<ReaderHeader {...defaultProps} theme="sepia" />)
 
       const header = screen.getByTestId('reader-header')
-      expect(header).toHaveClass('bg-[#F4ECD8]/60', 'text-[#3a2a1a]')
+      expect(header).toHaveClass('bg-[#f4ecd8]/60', 'text-[#3a2a1a]')
     })
 
     it('applies dark theme colors', () => {
       render(<ReaderHeader {...defaultProps} theme="dark" />)
 
       const header = screen.getByTestId('reader-header')
-      expect(header).toHaveClass('bg-[#1a1a1a]/60', 'text-[#d4d4d4]')
+      expect(header).toHaveClass('bg-[#1a1b26]/60', 'text-[#e8e9f0]')
     })
   })
 
