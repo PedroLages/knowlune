@@ -459,3 +459,10 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M1: `formatFileSize` defined inside component body (recreated every render) -- should be hoisted to module scope
 - Pattern: `data-testid` on conditional branches -- testids must exist on ALL branches for tests to find elements. Affects: AboutBookDialog.tsx
 - Positive: Clean component architecture following LinkFormatsDialog pattern, thorough fallback handling for all optional fields, consistent menu integration in both ContextMenu and DropdownMenu
+
+## E107-S04: Wire About Book Dialog (Round 2)
+
+- All Round 1 issues FIXED (5/5 resolved: B1-B3, H1, M1)
+- 0 blockers, 0 high, 1 medium, 1 nit
+- M1: Format display uses audiobook/non-audiobook binary but BookFormat includes 'pdf' -- informational, not blocking
+- Positive: Clean fix commits, solid test infrastructure with 3 book profiles, pure presentation component with no async ops
