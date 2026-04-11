@@ -1,0 +1,55 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - link "Skip to content" [ref=e4] [cursor=pointer]:
+        - /url: "#main-content"
+      - generic [ref=e5]:
+        - complementary "Sidebar" [ref=e6]:
+          - img "Knowlune" [ref=e8]
+          - navigation "Main navigation" [ref=e11]
+          - list [ref=e58]
+        - button "Expand sidebar":
+          - img
+      - generic [ref=e64]:
+        - banner [ref=e65]:
+          - search "Site search" [ref=e66]
+          - generic [ref=e72]
+        - main [ref=e80]:
+          - generic [ref=e90]
+    - region "Notifications alt+T"
+  - button "/agentation v2.3.1 Output Detail Standard React Components Hide Until Restart Marker Colour Purple Blue Cyan Green Yellow Orange Red Clear on copy/send Block page interactions Manage MCP & Webhooks Manage MCP & Webhooks MCP Connection MCP connection allows agents to receive and act on annotations. Learn more Webhooks Auto-Send The webhook URL will receive live annotation changes and annotation data." [ref=e82] [cursor=pointer]:
+    - img [ref=e84]
+    - generic:
+      - generic:
+        - button:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button [disabled]:
+          - img
+      - generic:
+        - button:
+          - img
+      - generic:
+        - button:
+          - img
+    - generic:
+      - generic:
+        - generic:
+          - generic
+          - generic
+          - generic
+          - generic
+          - generic
+        - generic:
+          - button "Manage MCP & Webhooks"
+          - generic
+          - generic
