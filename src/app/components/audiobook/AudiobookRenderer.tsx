@@ -10,7 +10,7 @@
  * @since E87-S02
  */
 import { useEffect, useCallback, useState, useRef } from 'react'
-import { Play, Pause, SkipBack, SkipForward, BookOpen } from 'lucide-react'
+import { Play, Pause, SkipBack, SkipForward, BookOpen, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { Slider } from '@/app/components/ui/slider'
@@ -28,6 +28,8 @@ import { ChapterList } from './ChapterList'
 import { BookmarkButton } from './BookmarkButton'
 import { BookmarkListPanel } from './BookmarkListPanel'
 import { PostSessionBookmarkReview } from './PostSessionBookmarkReview'
+import { AudiobookSettingsPanel } from './AudiobookSettingsPanel'
+import { useAudiobookPrefsStore } from '@/stores/useAudiobookPrefsStore'
 import { useBookStore } from '@/stores/useBookStore'
 import { db } from '@/db/schema'
 import { sharedAudioRef } from '@/app/hooks/useAudioPlayer'
@@ -69,6 +71,7 @@ export function AudiobookRenderer({
     pause,
   } = useAudioPlayer(book)
 
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const setCurrentBook = useAudioPlayerStore(s => s.setCurrentBook)
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
   const { activeOption, badgeText, setTimer, cancelTimer } = useSleepTimer()
@@ -101,6 +104,51 @@ export function AudiobookRenderer({
     setBookmarksOpenInternal(false)
     onBookmarksClose?.()
   }
+
+  // Apply default speed from prefs on new session (AC-2, AC-7)
+  // Only if no per-book speed override is already set in the audio player store.
+  // Intentional: read from get() inside effect to avoid stale closure
+  useEffect(() => {
+    const currentRate = useAudioPlayerStore.getState().playbackRate
+    // If the store still has the default 1.0 rate (no per-book override),
+    // apply the user's global default speed preference
+    if (currentRate === 1.0) {
+      const defaultSpeed = useAudiobookPrefsStore.getState().defaultSpeed
+      if (defaultSpeed !== 1.0) {
+        useAudioPlayerStore.getState().setPlaybackRate(defaultSpeed)
+      }
+    }
+  }, [book.id])
+
+  // Auto-bookmark on stop (AC-5): create bookmark when playback stops if enabled
+  const prevIsPlayingForBookmarkRef = useRef(false)
+  useEffect(() => {
+    const wasPlaying = prevIsPlayingForBookmarkRef.current
+    prevIsPlayingForBookmarkRef.current = isPlaying
+    if (wasPlaying && !isPlaying) {
+      // Intentional: read from get() to avoid stale closure on autoBookmarkOnStop
+      const autoBookmark = useAudiobookPrefsStore.getState().autoBookmarkOnStop
+      if (autoBookmark && currentTime > 0) {
+        const bookmarkId = crypto.randomUUID()
+        db.audioBookmarks
+          .add({
+            id: bookmarkId,
+            bookId: book.id,
+            chapterIndex: currentChapterIndex,
+            timestamp: Math.floor(currentTime),
+            note: 'Auto-bookmark',
+            createdAt: new Date().toISOString(),
+          })
+          .then(() => {
+            handleBookmarkCreated(bookmarkId)
+          })
+          .catch(err => {
+            // Intentional: auto-bookmark is non-critical — log but don't disrupt UX
+            console.error('[AudiobookRenderer] Auto-bookmark failed:', err)
+          })
+      }
+    }
+  }, [isPlaying, currentTime, currentChapterIndex, book.id, handleBookmarkCreated])
 
   // Register this book as the active audiobook and load the first chapter
   useEffect(() => {
@@ -494,6 +542,14 @@ export function AudiobookRenderer({
             badgeText={badgeText}
             onSelect={handleSleepTimerSelect}
           />
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="flex items-center justify-center rounded-full min-h-[44px] min-w-[44px] px-3 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Audiobook settings"
+            data-testid="audiobook-settings-button"
+          >
+            <Settings className="size-5" aria-hidden="true" />
+          </button>
         </div>
 
         {/* Progress percentage fallback */}
@@ -517,6 +573,9 @@ export function AudiobookRenderer({
           chapters={book.chapters}
           onSeek={handleBookmarkSeek}
         />
+
+        {/* Audiobook settings panel (E108-S04) */}
+        <AudiobookSettingsPanel open={settingsOpen} onOpenChange={setSettingsOpen} />
 
         {/* Post-session bookmark review panel (E101-S05) */}
         <PostSessionBookmarkReview
