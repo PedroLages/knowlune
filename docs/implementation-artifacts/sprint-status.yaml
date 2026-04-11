@@ -1351,7 +1351,7 @@ development_status:
   # Depends on: E107
   # ──────────────────────────────────────────────────
   epic-110: in-progress
-  110-1-smart-shelves: in-progress
+  110-1-smart-shelves: review
   110-2-series-grouping: backlog
   110-3-reading-queue: backlog
   epic-110-retrospective: optional
