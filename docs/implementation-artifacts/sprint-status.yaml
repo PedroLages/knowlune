@@ -1323,7 +1323,7 @@ development_status:
   # Depends on: E107
   # ──────────────────────────────────────────────────
   epic-108: backlog
-  108-1-bulk-epub-import: backlog
+  108-1-bulk-epub-import: review
   108-2-format-badges-and-delete: backlog
   108-3-keyboard-shortcuts: backlog
   108-4-audiobook-settings-panel: backlog
