@@ -273,3 +273,14 @@ export async function seedQuizAttempts(
 export async function seedBooks(page: Page, books: Record<string, unknown>[]): Promise<void> {
   await seedIndexedDBStore(page, 'ElearningDB', 'books', books)
 }
+
+/**
+ * Seeds the bookHighlights object store in ElearningDB.
+ * Convenience wrapper around seedIndexedDBStore.
+ */
+export async function seedBookHighlights(
+  page: Page,
+  highlights: Record<string, unknown>[]
+): Promise<void> {
+  await seedIndexedDBStore(page, 'ElearningDB', 'bookHighlights', highlights)
+}

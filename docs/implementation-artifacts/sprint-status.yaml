@@ -1336,9 +1336,9 @@ development_status:
   # Vocabulary builder, daily highlight review, highlight export, annotation summary, cross-book search
   # Depends on: E107
   # ──────────────────────────────────────────────────
-  epic-109: backlog
+  epic-109: in-progress
   109-1-vocabulary-builder: done
-  109-2-daily-highlight-review: backlog
+  109-2-daily-highlight-review: review
   109-3-highlight-export: backlog
   109-4-annotation-summary-view: backlog
   109-5-cross-book-search: backlog
