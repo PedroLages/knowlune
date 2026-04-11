@@ -9,6 +9,7 @@
  * @since E109-S01
  */
 import { create } from 'zustand'
+import { toast } from 'sonner'
 import type { VocabularyItem } from '@/data/types'
 import { db } from '@/db/schema'
 
@@ -64,6 +65,7 @@ export const useVocabularyStore = create<VocabularyStoreState>((set, get) => ({
     } catch {
       // Rollback optimistic update
       set(state => ({ items: state.items.filter(i => i.id !== item.id) }))
+      toast.error('Failed to save vocabulary item')
     }
   },
 
@@ -83,6 +85,7 @@ export const useVocabularyStore = create<VocabularyStoreState>((set, get) => ({
       await db.vocabularyItems.delete(id)
     } catch {
       set({ items: prev })
+      toast.error('Failed to delete vocabulary item')
     }
   },
 

@@ -16,20 +16,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   BookOpen,
-  Trash2,
   RotateCcw,
   ChevronLeft,
   ChevronRight,
-  CheckCircle2,
-  X,
-  Pencil,
 } from 'lucide-react'
 import { useVocabularyStore } from '@/stores/useVocabularyStore'
 import { useBookStore } from '@/stores/useBookStore'
 import { Button } from '@/app/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
-import { Badge } from '@/app/components/ui/badge'
-import { Input } from '@/app/components/ui/input'
+import { Card, CardContent } from '@/app/components/ui/card'
 import { Progress } from '@/app/components/ui/progress'
 import {
   Empty,
@@ -45,238 +39,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/app/components/ui/select'
-import { cn } from '@/app/components/ui/utils'
 import { toast } from 'sonner'
+import { VocabularyCard } from '@/app/components/vocabulary/VocabularyCard'
+import { ReviewCard } from '@/app/components/vocabulary/ReviewCard'
+import { EditDialog } from '@/app/components/vocabulary/EditDialog'
 import type { VocabularyItem } from '@/data/types'
 
 type ViewMode = 'list' | 'review'
-
-const MASTERY_LABELS: Record<number, string> = {
-  0: 'New',
-  1: 'Learning',
-  2: 'Familiar',
-  3: 'Mastered',
-}
-
-const MASTERY_COLORS: Record<number, string> = {
-  0: 'bg-muted text-muted-foreground',
-  1: 'bg-warning/15 text-warning',
-  2: 'bg-brand-soft text-brand-soft-foreground',
-  3: 'bg-success/15 text-success',
-}
-
-function MasteryBadge({ level }: { level: number }) {
-  return (
-    <Badge
-      variant="outline"
-      className={cn('text-xs font-medium', MASTERY_COLORS[level])}
-      data-testid="mastery-badge"
-    >
-      {MASTERY_LABELS[level]}
-    </Badge>
-  )
-}
-
-function VocabularyCard({
-  item,
-  bookTitle,
-  onEdit,
-  onDelete,
-}: {
-  item: VocabularyItem
-  bookTitle?: string
-  onEdit: (item: VocabularyItem) => void
-  onDelete: (id: string) => void
-}) {
-  return (
-    <Card className="group" data-testid="vocabulary-card">
-      <CardContent className="flex items-start gap-3 p-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-semibold text-foreground truncate" data-testid="vocab-word">
-              {item.word}
-            </span>
-            <MasteryBadge level={item.masteryLevel} />
-          </div>
-          {item.definition && (
-            <p className="text-sm text-muted-foreground mb-1" data-testid="vocab-definition">
-              {item.definition}
-            </p>
-          )}
-          {item.context && (
-            <p className="text-xs text-muted-foreground/70 italic truncate">
-              &ldquo;...{item.context}...&rdquo;
-            </p>
-          )}
-          {bookTitle && (
-            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-              <BookOpen className="size-3" aria-hidden="true" />
-              {bookTitle}
-            </p>
-          )}
-        </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8"
-            onClick={() => onEdit(item)}
-            aria-label={`Edit ${item.word}`}
-          >
-            <Pencil className="size-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 text-destructive hover:text-destructive"
-            onClick={() => onDelete(item.id)}
-            aria-label={`Delete ${item.word}`}
-          >
-            <Trash2 className="size-3.5" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function ReviewCard({
-  item,
-  flipped,
-  onFlip,
-  onCorrect,
-  onIncorrect,
-}: {
-  item: VocabularyItem
-  flipped: boolean
-  onFlip: () => void
-  onCorrect: () => void
-  onIncorrect: () => void
-}) {
-  return (
-    <div className="flex flex-col items-center gap-6" data-testid="review-card">
-      <button
-        type="button"
-        className={cn(
-          'w-full max-w-md min-h-[200px] rounded-2xl border-2 border-border',
-          'bg-card p-8 text-center transition-all duration-300 cursor-pointer',
-          'hover:border-brand/50 hover:shadow-md',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-        )}
-        onClick={onFlip}
-        aria-label={flipped ? 'Showing definition — click to show word' : 'Showing word — click to reveal definition'}
-        data-testid="review-flip-card"
-      >
-        {!flipped ? (
-          <div className="flex flex-col items-center gap-3">
-            <span className="text-2xl font-bold text-foreground">{item.word}</span>
-            {item.context && (
-              <p className="text-sm text-muted-foreground italic max-w-xs">
-                &ldquo;...{item.context}...&rdquo;
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground mt-2">Tap to reveal</p>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-3">
-            <span className="text-lg font-semibold text-foreground">{item.word}</span>
-            <div className="h-px w-16 bg-border" />
-            <p className="text-base text-muted-foreground">
-              {item.definition || 'No definition added yet'}
-            </p>
-            {item.note && (
-              <p className="text-sm text-muted-foreground/70 italic mt-1">{item.note}</p>
-            )}
-          </div>
-        )}
-      </button>
-
-      {flipped && (
-        <div className="flex gap-3" data-testid="review-actions">
-          <Button
-            variant="outline"
-            className="text-destructive border-destructive/30 hover:bg-destructive/10"
-            onClick={onIncorrect}
-            aria-label="Mark as incorrect"
-          >
-            <X className="size-4 mr-1.5" />
-            Again
-          </Button>
-          <Button
-            variant="brand"
-            onClick={onCorrect}
-            aria-label="Mark as correct"
-          >
-            <CheckCircle2 className="size-4 mr-1.5" />
-            Got it
-          </Button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function EditDialog({
-  item,
-  onSave,
-  onCancel,
-}: {
-  item: VocabularyItem
-  onSave: (definition: string, note: string) => void
-  onCancel: () => void
-}) {
-  const [definition, setDefinition] = useState(item.definition ?? '')
-  const [note, setNote] = useState(item.note ?? '')
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      role="dialog"
-      aria-label={`Edit vocabulary: ${item.word}`}
-      data-testid="vocab-edit-dialog"
-    >
-      <Card className="w-full max-w-md mx-4">
-        <CardHeader>
-          <CardTitle className="text-lg">Edit: {item.word}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label htmlFor="vocab-definition" className="text-sm font-medium text-foreground mb-1 block">
-              Definition
-            </label>
-            <Input
-              id="vocab-definition"
-              value={definition}
-              onChange={e => setDefinition(e.target.value)}
-              placeholder="Enter definition..."
-              data-testid="vocab-definition-input"
-            />
-          </div>
-          <div>
-            <label htmlFor="vocab-note" className="text-sm font-medium text-foreground mb-1 block">
-              Note
-            </label>
-            <Input
-              id="vocab-note"
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              placeholder="Optional note..."
-              data-testid="vocab-note-input"
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button variant="brand" onClick={() => onSave(definition, note)}>
-              Save
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
 
 export function Vocabulary() {
   const {
@@ -285,6 +54,7 @@ export function Vocabulary() {
     loadAllItems,
     updateItem,
     deleteItem,
+    addItem,
     advanceMastery,
     resetMastery,
     reviewIndex,
@@ -341,10 +111,21 @@ export function Vocabulary() {
 
   const handleDelete = useCallback(
     async (id: string) => {
+      const itemToDelete = items.find(i => i.id === id)
+      if (!itemToDelete) return
       await deleteItem(id)
-      toast.success('Vocabulary item deleted')
+      toast('Deleted', {
+        description: `"${itemToDelete.word}" removed`,
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            void addItem(itemToDelete)
+          },
+        },
+        duration: 4000,
+      })
     },
-    [deleteItem]
+    [deleteItem, addItem, items]
   )
 
   const handleCorrect = useCallback(async () => {
@@ -523,7 +304,7 @@ export function Vocabulary() {
       {/* Word List */}
       {filteredItems.length === 0 ? (
         <Empty data-testid="vocabulary-empty">
-          <EmptyMedia size="lg">
+          <EmptyMedia>
             <BookOpen className="size-10 text-muted-foreground" />
           </EmptyMedia>
           <EmptyHeader>
