@@ -19,18 +19,7 @@ import {
 } from '@/app/components/ui/dropdown-menu'
 import { cn } from '@/app/components/ui/utils'
 import type { ReaderTheme } from '@/stores/useReaderStore'
-
-const HEADER_BG: Record<ReaderTheme, string> = {
-  light: 'bg-[#FAF5EE]/60',
-  sepia: 'bg-[#F4ECD8]/60',
-  dark: 'bg-[#1a1a1a]/60',
-}
-
-const HEADER_TEXT: Record<ReaderTheme, string> = {
-  light: 'text-[#1a1a1a]',
-  sepia: 'text-[#3a2a1a]',
-  dark: 'text-[#d4d4d4]',
-}
+import { getReaderChromeClasses, useAppColorScheme } from './readerThemeConfig'
 
 interface ReaderHeaderProps {
   title: string
@@ -61,6 +50,8 @@ export function ReaderHeader({
   readingProgress,
 }: ReaderHeaderProps) {
   const navigate = useNavigate()
+  const colorScheme = useAppColorScheme()
+  const chrome = getReaderChromeClasses(theme, colorScheme)
 
   // Chapter display: use chapter name when available, fall back to progress percentage
   // Treat empty string as unavailable (should show progress percentage instead)
@@ -73,8 +64,8 @@ export function ReaderHeader({
       className={cn(
         'fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 h-12',
         'backdrop-blur-3xl transition-all duration-200',
-        HEADER_BG[theme],
-        HEADER_TEXT[theme],
+        chrome.bgOverlay,
+        chrome.text,
         visible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
       )}
       aria-hidden={!visible}
@@ -86,7 +77,7 @@ export function ReaderHeader({
         size="icon"
         onClick={() => navigate('/library')}
         aria-label="Back to library"
-        className={cn('min-h-[44px] min-w-[44px]', 'hover:bg-black/10', HEADER_TEXT[theme])}
+        className={cn('min-h-[44px] min-w-[44px]', 'hover:bg-black/10', chrome.text)}
         data-testid="reader-back-button"
       >
         <ArrowLeft className="size-5" />
@@ -122,7 +113,7 @@ export function ReaderHeader({
           title="Switch to listening"
           className={cn(
             'min-h-[44px] min-w-[44px] gap-1.5',
-            HEADER_TEXT[theme],
+            chrome.text,
             'hover:bg-black/10'
           )}
           data-testid="switch-to-listening-button"
@@ -139,7 +130,7 @@ export function ReaderHeader({
             variant="ghost"
             size="icon"
             aria-label="Reader menu"
-            className={cn('min-h-[44px] min-w-[44px]', 'hover:bg-black/10', HEADER_TEXT[theme])}
+            className={cn('min-h-[44px] min-w-[44px]', 'hover:bg-black/10', chrome.text)}
             data-testid="reader-menu-button"
           >
             <MoreHorizontal className="size-5" />
