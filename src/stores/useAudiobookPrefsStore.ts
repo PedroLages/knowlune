@@ -38,9 +38,8 @@ const defaults: AudiobookPrefs = {
   autoBookmarkOnStop: false,
 }
 
-const VALID_SPEEDS = new Set([
-  0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0,
-])
+export const VALID_SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0]
+const VALID_SPEEDS_SET = new Set(VALID_SPEEDS)
 
 const VALID_TIMERS = new Set<SleepTimerDefault>(['off', 15, 30, 45, 60, 'end-of-chapter'])
 
@@ -50,7 +49,7 @@ function loadPersistedPrefs(): AudiobookPrefs {
     if (raw) {
       const parsed = JSON.parse(raw)
       return {
-        defaultSpeed: VALID_SPEEDS.has(parsed.defaultSpeed)
+        defaultSpeed: VALID_SPEEDS_SET.has(parsed.defaultSpeed)
           ? parsed.defaultSpeed
           : defaults.defaultSpeed,
         skipSilence:
@@ -65,7 +64,7 @@ function loadPersistedPrefs(): AudiobookPrefs {
       }
     }
   } catch {
-    // Intentional: corrupted localStorage data — fall through to defaults
+    // silent-catch-ok: corrupted localStorage data — fall through to defaults
   }
   return { ...defaults }
 }
@@ -74,7 +73,7 @@ function persistPrefs(prefs: AudiobookPrefs) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs))
   } catch {
-    // Intentional: localStorage full or unavailable — non-blocking
+    // silent-catch-ok: localStorage full or unavailable — non-blocking
   }
 }
 
@@ -91,14 +90,16 @@ export const useAudiobookPrefsStore = create<AudiobookPrefsStore>((set, get) => 
   ...loadPersistedPrefs(),
 
   setDefaultSpeed: (speed: number) => {
-    const clamped = Math.max(0.5, Math.min(3.0, speed))
-    set({ defaultSpeed: clamped })
+    // Validate against known preset values to avoid persisting non-preset values
+    // that would reset to default on reload
+    const validated = VALID_SPEEDS_SET.has(speed) ? speed : defaults.defaultSpeed
+    set({ defaultSpeed: validated })
     persistPrefs(getPrefsFromState(get()))
   },
 
   toggleSkipSilence: () => {
     set(s => ({ skipSilence: !s.skipSilence }))
-    // Intentional: read from get() after set() to capture the toggled value
+    // Read from get() after set() to capture the toggled value
     persistPrefs(getPrefsFromState(get()))
   },
 

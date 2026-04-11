@@ -20,6 +20,7 @@ import { Label } from '@/app/components/ui/label'
 import { Separator } from '@/app/components/ui/separator'
 import {
   useAudiobookPrefsStore,
+  VALID_SPEEDS,
   type SleepTimerDefault,
 } from '@/stores/useAudiobookPrefsStore'
 
@@ -28,7 +29,8 @@ interface AudiobookSettingsPanelProps {
   onOpenChange: (open: boolean) => void
 }
 
-const SPEED_OPTIONS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0]
+/** Use the canonical speed list from the store to keep UI and validation in sync */
+const SPEED_OPTIONS = VALID_SPEEDS
 
 const SLEEP_TIMER_OPTIONS: { value: SleepTimerDefault; label: string }[] = [
   { value: 'off', label: 'Off' },
@@ -40,7 +42,7 @@ const SLEEP_TIMER_OPTIONS: { value: SleepTimerDefault; label: string }[] = [
 ]
 
 function formatSpeed(rate: number): string {
-  return `${rate % 1 === 0 ? rate.toFixed(1) : rate}x`
+  return `${Number.isInteger(rate) ? rate.toFixed(1) : rate}x`
 }
 
 export function AudiobookSettingsPanel({ open, onOpenChange }: AudiobookSettingsPanelProps) {
@@ -105,21 +107,26 @@ export function AudiobookSettingsPanel({ open, onOpenChange }: AudiobookSettings
               </div>
             </div>
 
-            <div className="mt-4 flex items-center justify-between">
+            <div className="mt-4 flex items-center justify-between opacity-60">
               <div>
                 <Label htmlFor="skip-silence" className="text-sm font-medium">
                   Skip Silence
+                  <span className="ml-2 text-[10px] font-normal uppercase tracking-wider text-muted-foreground bg-muted rounded px-1.5 py-0.5">
+                    Coming soon
+                  </span>
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Automatically skip silent sections during playback.
+                  Automatically skip silent sections during playback. Requires advanced audio
+                  analysis — not yet available.
                 </p>
               </div>
               <Switch
                 id="skip-silence"
                 checked={skipSilence}
                 onCheckedChange={toggleSkipSilence}
-                aria-label="Toggle skip silence"
+                aria-label="Toggle skip silence (coming soon)"
                 data-testid="skip-silence-toggle"
+                disabled
               />
             </div>
           </section>

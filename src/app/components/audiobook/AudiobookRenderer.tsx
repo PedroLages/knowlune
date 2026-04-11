@@ -106,29 +106,38 @@ export function AudiobookRenderer({
   }
 
   // Apply default speed from prefs on new session (AC-2, AC-7)
-  // Only if no per-book speed override is already set in the audio player store.
-  // Intentional: read from get() inside effect to avoid stale closure
+  // Track the book ID for which default speed was already applied to avoid
+  // re-applying if the audio player store retains a rate from a previous book.
+  const defaultSpeedAppliedForBookRef = useRef<string | null>(null)
   useEffect(() => {
-    const currentRate = useAudioPlayerStore.getState().playbackRate
-    // If the store still has the default 1.0 rate (no per-book override),
-    // apply the user's global default speed preference
-    if (currentRate === 1.0) {
-      const defaultSpeed = useAudiobookPrefsStore.getState().defaultSpeed
-      if (defaultSpeed !== 1.0) {
-        useAudioPlayerStore.getState().setPlaybackRate(defaultSpeed)
-      }
+    // Only apply once per book — prevents stale store rate from a previous book
+    // incorrectly blocking the global default on a new book.
+    if (defaultSpeedAppliedForBookRef.current === book.id) return
+    defaultSpeedAppliedForBookRef.current = book.id
+    const defaultSpeed = useAudiobookPrefsStore.getState().defaultSpeed
+    if (defaultSpeed !== 1.0) {
+      useAudioPlayerStore.getState().setPlaybackRate(defaultSpeed)
     }
   }, [book.id])
 
   // Auto-bookmark on stop (AC-5): create bookmark when playback stops if enabled
+  // lastAutoBookmarkTimeRef prevents duplicate bookmarks on rapid pause/play toggles
+  // by skipping if the last auto-bookmark was within 5 seconds of the current position.
   const prevIsPlayingForBookmarkRef = useRef(false)
+  const lastAutoBookmarkTimeRef = useRef<number | null>(null)
   useEffect(() => {
     const wasPlaying = prevIsPlayingForBookmarkRef.current
     prevIsPlayingForBookmarkRef.current = isPlaying
     if (wasPlaying && !isPlaying) {
-      // Intentional: read from get() to avoid stale closure on autoBookmarkOnStop
+      // Read from get() to avoid stale closure on autoBookmarkOnStop
       const autoBookmark = useAudiobookPrefsStore.getState().autoBookmarkOnStop
       if (autoBookmark && currentTime > 0) {
+        const last = lastAutoBookmarkTimeRef.current
+        if (last !== null && Math.abs(currentTime - last) < 5) {
+          // Within 5 seconds of last auto-bookmark — skip to avoid duplicates
+          return
+        }
+        lastAutoBookmarkTimeRef.current = currentTime
         const bookmarkId = crypto.randomUUID()
         db.audioBookmarks
           .add({
@@ -143,7 +152,7 @@ export function AudiobookRenderer({
             handleBookmarkCreated(bookmarkId)
           })
           .catch(err => {
-            // Intentional: auto-bookmark is non-critical — log but don't disrupt UX
+            // silent-catch-ok: auto-bookmark is non-critical — log but don't disrupt UX
             console.error('[AudiobookRenderer] Auto-bookmark failed:', err)
           })
       }
@@ -155,6 +164,20 @@ export function AudiobookRenderer({
     setCurrentBook(book.id)
     loadChapter(initialChapterIndex, false)
   }, [book.id]) // book.id is stable after mount; loadChapter/setCurrentBook identity stable
+
+  // Auto-start sleep timer from default pref (AC-4 Task 5)
+  // Fires once per session when playback first begins, if a default is configured
+  // and no timer is already running.
+  const defaultSleepTimerAppliedRef = useRef(false)
+  useEffect(() => {
+    if (!isPlaying) return
+    if (defaultSleepTimerAppliedRef.current) return
+    defaultSleepTimerAppliedRef.current = true
+    const defaultTimer = useAudiobookPrefsStore.getState().defaultSleepTimer
+    if (defaultTimer !== 'off' && activeOption === null) {
+      setTimer(defaultTimer, audioRef, pause)
+    }
+  }, [isPlaying, activeOption, setTimer, audioRef, pause])
 
   // Check for post-sleep toast on mount
   useEffect(() => {

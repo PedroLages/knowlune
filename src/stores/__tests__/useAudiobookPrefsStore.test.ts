@@ -29,12 +29,13 @@ describe('setDefaultSpeed', () => {
     expect(useAudiobookPrefsStore.getState().defaultSpeed).toBe(1.5)
   })
 
-  it('should clamp speed to valid range', () => {
+  it('should fall back to 1.0 for non-preset speed values', () => {
+    // Values not in VALID_SPEEDS preset list fall back to default (1.0)
     useAudiobookPrefsStore.getState().setDefaultSpeed(5.0)
-    expect(useAudiobookPrefsStore.getState().defaultSpeed).toBe(3.0)
+    expect(useAudiobookPrefsStore.getState().defaultSpeed).toBe(1.0)
 
     useAudiobookPrefsStore.getState().setDefaultSpeed(0.1)
-    expect(useAudiobookPrefsStore.getState().defaultSpeed).toBe(0.5)
+    expect(useAudiobookPrefsStore.getState().defaultSpeed).toBe(1.0)
   })
 
   it('should persist to localStorage', () => {
