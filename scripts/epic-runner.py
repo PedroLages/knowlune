@@ -2099,7 +2099,7 @@ async def run_story(
         )
 
         # ── Session 1: START (fresh) ──
-        log.info(f"  ┌─ START: Creating branch, story file, and plan (max {phase_turns(config, MAX_TURNS_START)} turns, opus)")
+        log.info(f"  ┌─ Planning: Creating branch and generating implementation plan...")
         write_progress(story.key, "SESSION 1: START", "branch, story file, plan...")
         try:
             text, sid, cost = await run_session(
@@ -2137,6 +2137,7 @@ async def run_story(
                 raise StoryError("Plan rejected by user")
 
         # ── Session 2: IMPLEMENT (fresh — reads plan from disk) ──
+        log.info(f"  ├─ Building: Implementing the plan (fresh session, reads plan from disk)")
         write_progress(story.key, "SESSION 2: IMPLEMENT", "coding feature...")
         impl_phase = None if config.legacy_mode else PhaseConfig(
             model="sonnet", effort="high", fallback_model="sonnet",
@@ -2178,6 +2179,7 @@ async def run_story(
         # Detect which agents to skip based on changed files
         skip_agents = "" if config.legacy_mode else detect_review_skip_agents()
 
+        log.info(f"  ├─ Reviewing: Running quality gates (build, lint, tests, design, code review)")
         write_progress(story.key, "SESSION 3: REVIEW", "quality gates...")
         text, sid, cost = await run_session(
             review_prompt(story, known_issues=known_issues, skip_agents=skip_agents),
@@ -2438,6 +2440,7 @@ async def run_story(
             needs_agents=False, needs_playwright=False,
         )
 
+        log.info(f"  └─ Shipping: Creating pull request and marking story done")
         write_progress(story.key, "FINISH", "updating story, pushing, creating PR...")
         text, sid, cost = await run_session(
             finish_prompt_text(story), phase_turns(config, MAX_TURNS_FINISH), BUDGET_SESSION_REVIEW,
@@ -3097,9 +3100,7 @@ async def main() -> None:
             log.info(f"\n{'=' * 60}")
             log.info(f"[{i + 1}/{len(stories)}] {story.key} — {story.name}")
             log.info(f"{'=' * 60}")
-            log.info(f"  Status: {story.status} | Phases: START → IMPLEMENT → REVIEW → FINISH")
-            log.info(f"  Turn caps: START={MAX_TURNS_START}, IMPL={MAX_TURNS_IMPLEMENT}, "
-                     f"REVIEW={MAX_TURNS_REVIEW}, FIX={MAX_TURNS_FIX}, FINISH={MAX_TURNS_FINISH}")
+            log.info(f"  Pipeline: Plan → Build → Review → Ship")
 
             result = await run_story(story, config, epic_ctx)
             results.append(result)
