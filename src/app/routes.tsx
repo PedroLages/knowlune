@@ -102,6 +102,11 @@ const Vocabulary = React.lazy(() =>
   import('./pages/Vocabulary').then(m => ({ default: m.Vocabulary }))
 )
 
+// E109-S04: Annotation Summary — per-book highlight/note summary view
+const AnnotationSummary = React.lazy(() =>
+  import('./pages/AnnotationSummary').then(m => ({ default: m.AnnotationSummary }))
+)
+
 function PageLoader() {
   return (
     <DelayedFallback>
@@ -347,6 +352,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <LibraryPage />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'library/:bookId/annotations',
+        element: (
+          <SuspensePage>
+            <AnnotationSummary />
           </SuspensePage>
         ),
       },
