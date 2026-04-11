@@ -60,10 +60,13 @@ test.describe('E108-S03 AC-2: Library shortcuts', () => {
   test('pressing / focuses the library search input', async ({ page }) => {
     await goToLibrary(page)
 
+    // Wait for the search input to be visible before pressing shortcut
+    const searchInput = page.getByPlaceholder(/search/i).first()
+    await expect(searchInput).toBeVisible({ timeout: TIMEOUTS.SHORT })
+
     await page.keyboard.press('/')
 
     // The search input should be focused after pressing /
-    const searchInput = page.getByPlaceholder(/search/i).first()
     await expect(searchInput).toBeFocused({ timeout: TIMEOUTS.SHORT })
   })
 
