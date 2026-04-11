@@ -31,7 +31,8 @@ export const PHASE_LABELS: Record<ImportPhase, string> = {
   error: 'Import failed',
 }
 
-export { ALL_GENRES as GENRES } from '@/services/GenreDetectionService'
+import { ALL_GENRES } from '@/services/GenreDetectionService'
+export const GENRES = ALL_GENRES
 
 export const STATUS_OPTIONS: { value: BookStatus; label: string }[] = [
   { value: 'unread', label: 'Want to Read' },

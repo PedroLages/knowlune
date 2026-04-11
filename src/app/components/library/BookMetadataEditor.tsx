@@ -129,10 +129,10 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
       setIsbn(book.isbn || '')
       setDescription(book.description || '')
       // Use dedicated genre field if set, fall back to tag-based detection for legacy books
-      const bookGenre = book.genre || book.tags.find(t => GENRES.includes(t))
-      setGenre(bookGenre || NONE_GENRE)
+      const bookGenre = book.genre || book.tags.find(t => (GENRES as string[]).includes(t))
+      setGenre(bookGenre ?? NONE_GENRE)
       // Tags excluding the genre tag
-      setTags(book.tags.filter(t => !GENRES.includes(t)))
+      setTags(book.tags.filter(t => !(GENRES as string[]).includes(t)))
       setNewCoverBlob(null)
       setTagInput('')
       setShowTagSuggestions(false)
@@ -193,7 +193,7 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
         t =>
           t.toLowerCase().includes(tagInput.toLowerCase()) &&
           !tags.includes(t) &&
-          !GENRES.includes(t)
+          !(GENRES as string[]).includes(t)
       )
     : []
 
