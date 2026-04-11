@@ -22,15 +22,22 @@ Completed in prior session. Story file archived to regression.
 ---
 
 ### E110-S02: Series Grouping
-**Status:** queued
+**Status:** review (R1)
 #### Errors
 _(none yet)_
 #### Review Findings
-_(none yet)_
+R1: 7 story-related (1 HIGH, 3 MEDIUM, 2 LOW, 1 NIT). 5 pre-existing (deferred). 3 GLM false positives.
+- [HIGH] Duplicate view toggle controls (pill + icon toolbar both control view mode)
+- [MEDIUM] parseFloat NaN in series sort for non-numeric sequences
+- [MEDIUM] Prettier formatting failures on 4 story files
+- [MEDIUM] Library.tsx 761 lines — exceeds 500-line threshold
+- [LOW] showLocalSeries state not persisted (loses series view on nav)
+- [LOW] Redundant onKeyDown on native button in LocalSeriesCard
+- [NIT] IIFE pattern in JSX render
 #### Fixes Applied
-_(none yet)_
+_(pending Fix Agent R1)_
 #### Notes
-Story file does NOT exist yet — /start-story agent will create from sprint-status.yaml + PRD context.
+Story file created by /start-story. Implemented: LocalSeriesCard.tsx (new), Library.tsx, BookMetadataEditor.tsx, useBookStore.ts, schema.ts (DB migration v45), types.ts, useAudiobookshelfSync.ts. 3 commits.
 
 ---
 
