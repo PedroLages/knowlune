@@ -275,6 +275,17 @@ export async function seedBooks(page: Page, books: Record<string, unknown>[]): P
 }
 
 /**
+ * Seeds the vocabularyItems object store in ElearningDB.
+ * Convenience wrapper around seedIndexedDBStore.
+ */
+export async function seedVocabularyItems(
+  page: Page,
+  items: Record<string, unknown>[]
+): Promise<void> {
+  await seedIndexedDBStore(page, 'ElearningDB', 'vocabularyItems', items)
+}
+
+/**
  * Seeds the bookHighlights object store in ElearningDB.
  * Convenience wrapper around seedIndexedDBStore.
  */

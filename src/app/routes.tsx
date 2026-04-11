@@ -107,6 +107,11 @@ const AnnotationSummary = React.lazy(() =>
   import('./pages/AnnotationSummary').then(m => ({ default: m.AnnotationSummary }))
 )
 
+// E109-S05: Cross-book Search — search highlights and vocabulary across all books
+const SearchAnnotations = React.lazy(() =>
+  import('./pages/SearchAnnotations').then(m => ({ default: m.SearchAnnotations }))
+)
+
 function PageLoader() {
   return (
     <DelayedFallback>
@@ -532,6 +537,14 @@ export const router = createBrowserRouter([
             <PremiumFeaturePage {...PREMIUM_FEATURES.flashcards} icon={Layers}>
               <Flashcards />
             </PremiumFeaturePage>
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'search-annotations',
+        element: (
+          <SuspensePage>
+            <SearchAnnotations />
           </SuspensePage>
         ),
       },
