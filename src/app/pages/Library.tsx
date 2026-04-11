@@ -20,6 +20,7 @@ import {
   Globe,
   Grid3X3,
   Headphones,
+  Library as LibraryIcon,
   List,
   Loader2,
   Plus,
@@ -39,6 +40,7 @@ import { BookContextMenu } from '@/app/components/library/BookContextMenu'
 import { BookMetadataEditor } from '@/app/components/library/BookMetadataEditor'
 import { LibraryFilters } from '@/app/components/library/LibraryFilters'
 import { LibrarySourceTabs } from '@/app/components/library/LibrarySourceTabs'
+import { ShelfManager } from '@/app/components/library/ShelfManager'
 import { ReadingGoalSettings } from '@/app/components/library/ReadingGoalSettings'
 import { OpdsCatalogSettings } from '@/app/components/library/OpdsCatalogSettings'
 import { AudiobookshelfSettings } from '@/app/components/library/AudiobookshelfSettings'
@@ -49,6 +51,7 @@ import { useBookStore } from '@/stores/useBookStore'
 import { useOpdsCatalogStore } from '@/stores/useOpdsCatalogStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 import { useReadingGoalStore } from '@/stores/useReadingGoalStore'
+import { useShelfStore } from '@/stores/useShelfStore'
 import { useAudiobookshelfSync } from '@/app/hooks/useAudiobookshelfSync'
 import { appEventBus } from '@/lib/eventBus'
 import type { Book } from '@/data/types'
@@ -63,6 +66,7 @@ export function Library() {
   const [editingBook, setEditingBook] = useState<Book | null>(null)
   const [goalsOpen, setGoalsOpen] = useState(false)
   const [catalogsOpen, setCatalogsOpen] = useState(false)
+  const [shelvesOpen, setShelvesOpen] = useState(false)
   const [absSettingsOpen, setAbsSettingsOpen] = useState(false)
   const [browserOpen, setBrowserOpen] = useState(false)
   const [browserCatalogId, setBrowserCatalogId] = useState<string | undefined>()
@@ -102,6 +106,8 @@ export function Library() {
   const loadSeries = useAudiobookshelfStore(s => s.loadSeries)
   const loadCollections = useAudiobookshelfStore(s => s.loadCollections)
 
+  const loadShelves = useShelfStore(s => s.loadShelves)
+
   const loadGoal = useReadingGoalStore(s => s.loadGoal)
   const goal = useReadingGoalStore(s => s.goal)
   const checkYearlyGoalReached = useReadingGoalStore(s => s.checkYearlyGoalReached)
@@ -133,6 +139,11 @@ export function Library() {
       },
     },
   ])
+
+  // Load shelves on mount (E110-S01)
+  useEffect(() => {
+    loadShelves()
+  }, [loadShelves])
 
   // Load goals from localStorage on mount (E86-S05)
   useEffect(() => {
@@ -325,6 +336,17 @@ export function Library() {
               data-testid="opds-catalog-settings-trigger"
             >
               <Globe className="size-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShelvesOpen(true)}
+              className="size-11 rounded-xl"
+              aria-label="Manage shelves"
+              title="Manage Shelves"
+              data-testid="manage-shelves-trigger"
+            >
+              <LibraryIcon className="size-5" />
             </Button>
             <Button
               variant="ghost"
@@ -615,6 +637,7 @@ export function Library() {
         }}
       />
 
+      <ShelfManager open={shelvesOpen} onOpenChange={setShelvesOpen} />
       <ReadingGoalSettings open={goalsOpen} onOpenChange={setGoalsOpen} />
       <AudiobookshelfSettings open={absSettingsOpen} onOpenChange={setAbsSettingsOpen} />
       <OpdsCatalogSettings
