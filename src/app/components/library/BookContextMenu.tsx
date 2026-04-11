@@ -9,7 +9,8 @@
  */
 
 import { lazy, Suspense, useState, type ReactNode } from 'react'
-import { Check, MoreVertical, ArrowRightLeft } from 'lucide-react'
+import { useNavigate } from 'react-router'
+import { Check, MoreVertical, ArrowRightLeft, Highlighter } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Book, BookStatus } from '@/data/types'
 import { useBookStore } from '@/stores/useBookStore'
@@ -95,6 +96,7 @@ interface BookContextMenuProps {
 }
 
 export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps) {
+  const navigate = useNavigate()
   const updateBookStatus = useBookStore(s => s.updateBookStatus)
   const deleteBook = useBookStore(s => s.deleteBook)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
@@ -150,6 +152,14 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
               </ContextMenuSubContent>
             </ContextMenuSub>
             <ContextMenuItem
+              onClick={() => navigate(`/library/${book.id}/annotations`)}
+              data-testid="context-menu-annotations"
+              className="flex items-center gap-2"
+            >
+              <Highlighter className="h-3.5 w-3.5" aria-hidden="true" />
+              View Annotations
+            </ContextMenuItem>
+            <ContextMenuItem
               onClick={() => setAboutDialogOpen(true)}
               data-testid="context-menu-about-book"
             >
@@ -197,6 +207,14 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
                 />
               </DropdownMenuSubContent>
             </DropdownMenuSub>
+            <DropdownMenuItem
+              onClick={() => navigate(`/library/${book.id}/annotations`)}
+              data-testid="dropdown-menu-annotations"
+              className="flex items-center gap-2"
+            >
+              <Highlighter className="h-3.5 w-3.5" aria-hidden="true" />
+              View Annotations
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setAboutDialogOpen(true)}
               data-testid="dropdown-menu-about-book"
