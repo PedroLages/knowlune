@@ -12,8 +12,9 @@
  *
  * @module AudioMiniPlayer
  * @since E87-S05
+ * @updated E107-S06 — fix interactivity: type="button", focus styles, cover error, stale closure
  */
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { Play, Pause, SkipBack, SkipForward, ChevronUp, BookOpen } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
@@ -40,6 +41,9 @@ export function AudioMiniPlayer() {
     coverUrl: currentBookId ? book?.coverUrl : undefined,
   })
 
+  // Track cover image load failures to show fallback icon (E107-S06: replaces inline style hack)
+  const [coverError, setCoverError] = useState(false)
+
   // Hide when no book or when on the full player page
   const isOnPlayerPage = pathname.includes(`/library/${currentBookId}/read`)
   if (!currentBookId || !book || isOnPlayerPage) return null
@@ -51,10 +55,12 @@ export function AudioMiniPlayer() {
   const duration = sharedAudioRef.current?.duration ?? 0
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
+  // E107-S06: Read isPlaying from store.getState() to avoid stale closure
   const handlePlayPause = useCallback(() => {
     const audio = sharedAudioRef.current
     if (!audio) return
-    if (isPlaying) {
+    const playing = useAudioPlayerStore.getState().isPlaying
+    if (playing) {
       audio.pause()
       setIsPlaying(false)
     } else {
@@ -65,7 +71,7 @@ export function AudioMiniPlayer() {
           // silent-catch-ok: play() rejection is handled gracefully
         })
     }
-  }, [isPlaying, setIsPlaying])
+  }, [setIsPlaying])
 
   const handleSkipBack = useCallback(() => {
     const audio = sharedAudioRef.current
@@ -103,18 +109,17 @@ export function AudioMiniPlayer() {
       <div className="flex h-20 items-center gap-3 px-4">
         {/* Cover thumbnail */}
         <button
+          type="button"
           onClick={handleExpand}
-          className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-muted flex items-center justify-center shadow-md"
+          className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-muted flex items-center justify-center shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label="Open full player"
         >
-          {resolvedCoverUrl ? (
+          {resolvedCoverUrl && !coverError ? (
             <img
               src={resolvedCoverUrl}
               alt={`Cover of ${book.title}`}
               className="h-full w-full object-cover"
-              onError={e => {
-                e.currentTarget.style.display = 'none'
-              }}
+              onError={() => setCoverError(true)}
             />
           ) : (
             <BookOpen className="size-5 text-muted-foreground" aria-hidden="true" />
@@ -123,8 +128,9 @@ export function AudioMiniPlayer() {
 
         {/* Title + Chapter — tap to expand on mobile */}
         <button
+          type="button"
           onClick={handleExpand}
-          className="flex flex-col items-start min-w-0 flex-1 text-left sm:hidden"
+          className="flex flex-col items-start min-w-0 flex-1 text-left sm:hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none rounded"
           aria-label="Open full player"
         >
           <span className="text-sm font-medium text-foreground truncate w-full">{book.title}</span>
@@ -139,8 +145,9 @@ export function AudioMiniPlayer() {
 
         {/* Play / Pause */}
         <button
+          type="button"
           onClick={handlePlayPause}
-          className="flex-shrink-0 flex w-12 h-12 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-hover text-brand-foreground shadow-lg transition-all"
+          className="flex-shrink-0 flex w-12 h-12 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-hover text-brand-foreground shadow-lg transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label={isPlaying ? 'Pause' : 'Play'}
         >
           {isPlaying ? (
@@ -152,15 +159,17 @@ export function AudioMiniPlayer() {
 
         {/* Skip controls — desktop only */}
         <button
+          type="button"
           onClick={handleSkipBack}
-          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label="Skip back 15 seconds"
         >
           <SkipBack className="size-5" aria-hidden="true" />
         </button>
         <button
+          type="button"
           onClick={handleSkipForward}
-          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label="Skip forward 30 seconds"
         >
           <SkipForward className="size-5" aria-hidden="true" />
@@ -173,8 +182,9 @@ export function AudioMiniPlayer() {
 
         {/* Expand button — desktop only */}
         <button
+          type="button"
           onClick={handleExpand}
-          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label="Open full player"
         >
           <ChevronUp className="size-5" aria-hidden="true" />

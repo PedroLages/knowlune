@@ -671,7 +671,7 @@ export function UnifiedLessonPlayer() {
           videoSrc={state.localVideoBlobUrl}
           currentTime={state.currentTime}
           isMainPlaying={state.isVideoPlaying}
-          isVisible={!state.isVideoVisible && state.isVideoPlaying && !state.isMiniPlayerDismissed}
+          isVisible={!state.isVideoVisible && !state.isMiniPlayerDismissed}
           onClose={miniPlayer.handleMiniPlayerClose}
           onPlayPause={miniPlayer.handleMiniPlayerPlayPause}
           onScrollToVideo={() => {
