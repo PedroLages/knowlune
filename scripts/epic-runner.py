@@ -2017,10 +2017,20 @@ async def run_story(
 
         # ── Session 1: START (fresh) ──
         write_progress(story.key, "SESSION 1: START", "branch, story file, plan...")
-        text, sid, cost = await run_session(
-            start_prompt(story), phase_turns(config, MAX_TURNS_START), BUDGET_SESSION_START, autonomous,
-            story_key=story.key, phase=start_phase,
-        )
+        try:
+            text, sid, cost = await run_session(
+                start_prompt(story), phase_turns(config, MAX_TURNS_START), BUDGET_SESSION_START, autonomous,
+                story_key=story.key, phase=start_phase,
+            )
+        except StoryError as e:
+            # max_turns hit returns is_error=True — check if plan was produced
+            log.warning(f"  START session ended with error: {e}")
+            start_failures = verify_start(story)
+            if not start_failures:
+                log.info("  START artifacts verified on disk — continuing to IMPLEMENT")
+                text, sid, cost = "", None, 0.0
+            else:
+                raise  # real failure — no artifacts
         result.cost_start = cost
         result.total_cost_usd += cost
         if sid:
