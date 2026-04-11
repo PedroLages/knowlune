@@ -307,6 +307,21 @@ def parse_args() -> RunConfig:
     mode = "autonomous" if args.autonomous else "supervised"
 
     stories_raw = list(args.stories or [])
+
+    # Expand epic-only args (e.g., "E110") into their backlog stories
+    expanded: list[str] = []
+    for s in stories_raw:
+        if re.match(r"^E\d+[a-z]?$", s, re.IGNORECASE) and "-S" not in s.upper():
+            epic_stories = find_stories_for_epic(s)
+            if epic_stories:
+                log.info(f"Expanded {s} → {', '.join(epic_stories)}")
+                expanded.extend(epic_stories)
+            else:
+                log.warning(f"No backlog stories found for {s}")
+        else:
+            expanded.append(s)
+    stories_raw = expanded
+
     if args.next:
         existing = {s.upper() for s in stories_raw}
         for key in find_next_backlog_keys(args.next + len(existing), args.skip_epics):
@@ -459,6 +474,36 @@ def detect_completed_epics(
             completed.append(epic_num)
 
     return completed
+
+
+def find_stories_for_epic(epic_arg: str) -> list[str]:
+    """Expand an epic ID (e.g., 'E110') into its backlog/in-progress story keys."""
+    m = re.match(r"^E?(\d+)([a-z]?)$", epic_arg, re.IGNORECASE)
+    if not m:
+        return []
+    epic_n = int(m.group(1))
+    epic_suffix = m.group(2).lower()
+
+    data = load_sprint_status()
+    dev_status = data.get("development_status", {})
+
+    keys: list[str] = []
+    for yaml_key, status in dev_status.items():
+        if yaml_key.startswith("epic-") or yaml_key.endswith("-retrospective"):
+            continue
+        if str(status) not in ("backlog", "in-progress"):
+            continue
+        parts = yaml_key.split("-")
+        if len(parts) >= 2:
+            try:
+                key_epic = re.match(r"(\d+)", parts[0])
+                if not key_epic or int(key_epic.group(1)) != epic_n:
+                    continue
+                story_n = int(parts[1])
+            except (ValueError, AttributeError):
+                continue
+            keys.append(f"E{epic_n:02d}{epic_suffix}-S{story_n:02d}")
+    return keys
 
 
 def find_next_backlog_keys(n: int, skip_epics: list[int] | None = None) -> list[str]:
