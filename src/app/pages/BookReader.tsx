@@ -333,6 +333,26 @@ export function BookReader() {
             // silent-catch-ok: at first page
           })
           break
+        case 't':
+        case 'T':
+          e.preventDefault()
+          setTocOpen(!useReaderStore.getState().tocOpen)
+          break
+        case 'h':
+        case 'H':
+          e.preventDefault()
+          setHighlightsOpen(prev => !prev)
+          break
+        case 'b':
+        case 'B':
+          e.preventDefault()
+          toast.info('EPUB bookmarks coming soon')
+          break
+        case 's':
+        case 'S':
+          e.preventDefault()
+          setSettingsOpen(!useReaderStore.getState().settingsOpen)
+          break
         case 'Escape':
           navigate('/library')
           break

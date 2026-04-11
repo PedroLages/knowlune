@@ -8,6 +8,7 @@
  * @modified E83-S02 — added import button and BookImportDialog
  * @modified E83-S03 — full grid/list views, BookCard, BookListItem, empty state redesign
  * @modified E83-S04 — search, status filter pills, context menus
+ * @modified E108-S03 — keyboard shortcuts (N=import, /=search, G+L=toggle view)
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -53,6 +54,7 @@ import { appEventBus } from '@/lib/eventBus'
 import type { Book } from '@/data/types'
 import { cn } from '@/app/components/ui/utils'
 import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
+import { useKeyboardShortcuts } from '@/app/hooks/useKeyboardShortcuts'
 
 export function Library() {
   const isOnline = useOnlineStatus()
@@ -66,6 +68,7 @@ export function Library() {
   const [browserCatalogId, setBrowserCatalogId] = useState<string | undefined>()
   const books = useBookStore(s => s.books)
   const libraryView = useBookStore(s => s.libraryView)
+  const setLibraryView = useBookStore(s => s.setLibraryView)
   const getFilteredBooks = useBookStore(s => s.getFilteredBooks)
   const filters = useBookStore(s => s.filters)
   const setFilters = useBookStore(s => s.setFilters)
@@ -103,6 +106,34 @@ export function Library() {
   const loadGoal = useReadingGoalStore(s => s.loadGoal)
   const goal = useReadingGoalStore(s => s.goal)
   const checkYearlyGoalReached = useReadingGoalStore(s => s.checkYearlyGoalReached)
+
+  // Library keyboard shortcuts (E108-S03)
+  useKeyboardShortcuts([
+    {
+      key: 'n',
+      description: 'Open import dialog',
+      action: () => setImportOpen(true),
+    },
+    {
+      key: '/',
+      description: 'Focus search',
+      action: () => {
+        const searchInput = document.querySelector<HTMLInputElement>(
+          '[data-testid="library-search-input"]'
+        )
+        if (searchInput) searchInput.focus()
+      },
+    },
+    {
+      key: ['g', 'l'],
+      description: 'Toggle grid/list view',
+      action: () => {
+        // Intentional: read from store inside action to avoid stale closure
+        const current = useBookStore.getState().libraryView
+        setLibraryView(current === 'grid' ? 'list' : 'grid')
+      },
+    },
+  ])
 
   // Load goals from localStorage on mount (E86-S05)
   useEffect(() => {

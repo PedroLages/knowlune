@@ -32,6 +32,7 @@ import { useBookStore } from '@/stores/useBookStore'
 import { db } from '@/db/schema'
 import { sharedAudioRef } from '@/app/hooks/useAudioPlayer'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
+import { useKeyboardShortcuts } from '@/app/hooks/useKeyboardShortcuts'
 import type { Book } from '@/data/types'
 
 interface AudiobookRendererProps {
@@ -257,6 +258,65 @@ export function AudiobookRenderer({
     onNextTrack: () =>
       loadChapter(Math.min(book.chapters.length - 1, currentChapterIndex + 1), isPlaying),
   })
+
+  // Audiobook keyboard shortcuts (E108-S03)
+  useKeyboardShortcuts([
+    {
+      key: ' ',
+      description: 'Play/Pause',
+      action: toggle,
+    },
+    {
+      key: 'arrowleft',
+      description: 'Skip back 15s',
+      action: () => skipBack(15),
+    },
+    {
+      key: 'arrowright',
+      description: 'Skip forward 30s',
+      action: () => skipForward(30),
+    },
+    {
+      key: 'arrowup',
+      description: 'Volume up',
+      action: () => {
+        const audio = audioRef.current
+        if (audio) audio.volume = Math.min(1, audio.volume + 0.1)
+      },
+    },
+    {
+      key: 'arrowdown',
+      description: 'Volume down',
+      action: () => {
+        const audio = audioRef.current
+        if (audio) audio.volume = Math.max(0, audio.volume - 0.1)
+      },
+    },
+    {
+      key: '[',
+      description: 'Decrease speed',
+      action: () => {
+        const current = useAudioPlayerStore.getState().playbackRate
+        useAudioPlayerStore.getState().setPlaybackRate(Math.max(0.25, current - 0.25))
+      },
+    },
+    {
+      key: ']',
+      description: 'Increase speed',
+      action: () => {
+        const current = useAudioPlayerStore.getState().playbackRate
+        useAudioPlayerStore.getState().setPlaybackRate(Math.min(3, current + 0.25))
+      },
+    },
+    {
+      key: 'm',
+      description: 'Toggle mute',
+      action: () => {
+        const audio = audioRef.current
+        if (audio) audio.muted = !audio.muted
+      },
+    },
+  ])
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
