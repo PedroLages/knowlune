@@ -45,13 +45,21 @@ const DELETE_TEST_BOOKS = [
 ]
 
 async function seedAndOpenLibrary(page: import('@playwright/test').Page): Promise<void> {
-  await page.goto('/')
-  await page.evaluate(() => {
+  // Set localStorage keys BEFORE navigation using addInitScript to prevent
+  // onboarding/welcome wizard overlays from blocking test interactions
+  await page.addInitScript(() => {
+    localStorage.setItem('knowlune-sidebar-v1', 'false')
     localStorage.setItem(
       'knowlune-onboarding-v1',
       JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
     )
+    localStorage.setItem(
+      'knowlune-welcome-wizard-v1',
+      JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+    )
   })
+  // Navigate once to a real URL so IndexedDB is accessible
+  await page.goto('/')
   await seedIndexedDBStore(
     page,
     DB_NAME,
@@ -59,7 +67,6 @@ async function seedAndOpenLibrary(page: import('@playwright/test').Page): Promis
     DELETE_TEST_BOOKS as unknown as Record<string, unknown>[]
   )
   await page.goto('/library')
-  await page.reload()
 }
 
 test.describe('E108-S02: Delete flow via context menu', () => {
@@ -83,9 +90,10 @@ test.describe('E108-S02: Delete flow via context menu', () => {
     await expect(page.getByTestId('context-menu-delete')).toBeVisible({ timeout: 3000 })
     await page.getByTestId('context-menu-delete').click()
 
-    // Dialog should be visible with the book title
-    await expect(page.getByRole('alertdialog')).toBeVisible({ timeout: 3000 })
-    await expect(page.getByText('Book To Delete')).toBeVisible()
+    // Dialog should be visible with the book title (use alertdialog scope to avoid strict mode violation)
+    const dialog = page.getByRole('alertdialog')
+    await expect(dialog).toBeVisible({ timeout: 3000 })
+    await expect(dialog.getByText('Book To Delete')).toBeVisible()
     // OPFS warning should be present (AC-5)
     await expect(page.getByText(/OPFS/i)).toBeVisible()
   })
@@ -126,19 +134,24 @@ test.describe('E108-S02: Delete flow via context menu', () => {
   })
 
   test('deleting the last book shows empty state', async ({ page }) => {
-    await page.goto('/')
-    await page.evaluate(() => {
+    // Set localStorage BEFORE navigation to prevent overlay blocking
+    await page.addInitScript(() => {
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
       localStorage.setItem(
         'knowlune-onboarding-v1',
         JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
       )
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+      )
     })
+    await page.goto('/')
     // Seed only one book
     await seedIndexedDBStore(page, DB_NAME, 'books', [
       DELETE_TEST_BOOKS[0],
     ] as unknown as Record<string, unknown>[])
     await page.goto('/library')
-    await page.reload()
 
     await expect(page.getByText('Book To Delete')).toBeVisible({ timeout: 8000 })
 
@@ -148,10 +161,7 @@ test.describe('E108-S02: Delete flow via context menu', () => {
     await page.getByTestId('confirm-delete-book').click()
 
     await expect(page.getByText('Book To Delete')).not.toBeVisible({ timeout: 5000 })
-    // Empty state should appear — any empty-state indicator
-    // The library renders an empty-state when no books are found
-    await expect(
-      page.getByText(/no books/i).or(page.getByText(/empty/i)).or(page.getByTestId('library-empty-state'))
-    ).toBeVisible({ timeout: 5000 })
+    // Empty state should appear — library shows "Your library is waiting to be filled." when no books exist
+    await expect(page.getByTestId('import-first-book-cta')).toBeVisible({ timeout: 5000 })
   })
 })

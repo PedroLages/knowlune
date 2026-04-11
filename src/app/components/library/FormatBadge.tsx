@@ -40,7 +40,7 @@ interface FormatBadgeProps {
 export function FormatBadge({ format, className }: FormatBadgeProps) {
   const config = FORMAT_CONFIG[format]
   // Intentional: type guard in case format is unexpected at runtime — render plain text fallback instead of null
-  if (!config) return <span>{format}</span>
+  if (!config) return <span aria-label={format} data-testid="format-badge-unknown">{format}</span>
 
   const Icon = config.icon
 

@@ -10,13 +10,13 @@
 
 import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { Check, MoreVertical, ArrowRightLeft } from 'lucide-react'
+import { toast } from 'sonner'
 import type { Book, BookStatus } from '@/data/types'
 import { useBookStore } from '@/stores/useBookStore'
 import { LinkFormatsDialog } from './LinkFormatsDialog'
 
 // Lazy-load AboutBookDialog to defer ~5.5KB until dialog opens
 const AboutBookDialog = lazy(() => import('./AboutBookDialog'))
-import { toast } from 'sonner'
 import {
   ContextMenu,
   ContextMenuContent,
