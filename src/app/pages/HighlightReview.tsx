@@ -12,7 +12,7 @@
  */
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router'
-import { ChevronLeft, ChevronRight, BookOpen } from 'lucide-react'
+import { ChevronLeft, ChevronRight, BookOpen, Download } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
 import { db } from '@/db/schema'
@@ -28,6 +28,7 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from '@/app/components/ui/empty'
+import { HighlightExportDialog } from '@/app/components/highlights/HighlightExportDialog'
 import type { BookHighlight } from '@/data/types'
 
 const REVIEW_CARD_COUNT = 20
@@ -69,6 +70,9 @@ export function HighlightReview() {
   const [isLoading, setIsLoading] = useState(true)
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
   const [ratings, setRatings] = useState<Record<string, 'keep' | 'dismiss'>>({})
+
+  // Export dialog state
+  const [exportOpen, setExportOpen] = useState(false)
 
   // Cloze flashcard creator state
   const [clozeOpen, setClozeOpen] = useState(false)
@@ -215,9 +219,20 @@ export function HighlightReview() {
           ← Back
         </Button>
         <h1 className="text-base font-semibold">Daily Highlight Review</h1>
-        <span className="text-sm tabular-nums text-muted-foreground">
-          {currentIndex + 1} / {highlights.length}
-        </span>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setExportOpen(true)}
+            aria-label="Export highlights"
+            data-testid="highlight-export-btn"
+          >
+            <Download className="size-4" aria-hidden="true" />
+          </Button>
+          <span className="text-sm tabular-nums text-muted-foreground">
+            {currentIndex + 1} / {highlights.length}
+          </span>
+        </div>
       </div>
 
       {/* Card with slide animation */}
@@ -290,6 +305,9 @@ export function HighlightReview() {
           bookId={clozeHighlight.bookId}
         />
       )}
+
+      {/* Highlight export dialog (E109-S03) */}
+      <HighlightExportDialog open={exportOpen} onOpenChange={setExportOpen} />
     </div>
   )
 }
