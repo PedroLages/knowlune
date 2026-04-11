@@ -81,6 +81,7 @@ describe('ElearningDB schema', () => {
       'progress',
       'quizAttempts',
       'quizzes',
+      'readingQueue',
       'reviewRecords',
       'screenshots',
       'shelves',
@@ -94,8 +95,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 45', () => {
-    expect(db.verno).toBe(45)
+  it('should be at version 46', () => {
+    expect(db.verno).toBe(46)
   })
 
   it('should have entitlements table with userId as primary key', () => {
