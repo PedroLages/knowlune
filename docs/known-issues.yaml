@@ -567,3 +567,39 @@ issues:
     scheduled_for: null
     fixed_by: null
     notes: "Adversarial finding F08. The 500ms chord window traps keyboard state without visual confirmation that 'G' was registered. Conflicts with Gmail-style chord muscle memory. Consider replacing with a single V key toggle or adding a status indicator for chord state."
+
+  - id: KI-046
+    type: code
+    summary: "useVocabularyStore now() helper — unit tests will need deterministic time mocking"
+    file: src/stores/useVocabularyStore.ts:42
+    severity: low
+    discovered_by: E109-S01
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "R3 deferred. now() uses new Date().toISOString(). Fine for production but future unit tests that assert on timestamps will need vi.setSystemTime(). Accept an optional timestamp param in store methods when adding tests."
+
+  - id: KI-047
+    type: code
+    summary: "Vocabulary.tsx handleDelete closure over items — stale closure risk in rapid-delete"
+    file: src/app/pages/Vocabulary.tsx:128
+    severity: low
+    discovered_by: E109-S01
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "R3 deferred. handleDelete captures items in dep array; undo re-add could reference stale data under rapid successive deletes. Fix: use useVocabularyStore.getState().items inside callback."
+
+  - id: KI-048
+    type: design
+    summary: "EditDialog uses Input for definition field — Textarea more appropriate for multi-line"
+    file: src/app/components/vocabulary/EditDialog.tsx:36
+    severity: low
+    discovered_by: E109-S01
+    discovered_on: 2026-04-11
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "R3 NIT deferred. Definition field should be a Textarea to allow multi-line vocabulary definitions. Minor UX improvement."
