@@ -11,7 +11,7 @@
 
 import { create } from 'zustand'
 import { toast } from 'sonner'
-import type { Book, BookStatus } from '@/data/types'
+import type { Book, BookStatus, LocalSeriesGroup } from '@/data/types'
 import { db } from '@/db/schema'
 import { opfsStorageService } from '@/services/OpfsStorageService'
 import { useShelfStore } from '@/stores/useShelfStore'
@@ -49,7 +49,7 @@ interface BookStoreState {
   getFilteredBooks: () => Book[]
   updateBookMetadata: (
     bookId: string,
-    updates: Partial<Pick<Book, 'title' | 'author' | 'isbn' | 'description' | 'tags' | 'coverUrl' | 'genre'>>
+    updates: Partial<Pick<Book, 'title' | 'author' | 'isbn' | 'description' | 'tags' | 'coverUrl' | 'genre' | 'series' | 'seriesSequence'>>
   ) => Promise<void>
   updateBookPosition: (
     bookId: string,
@@ -63,6 +63,7 @@ interface BookStoreState {
   getAllTags: () => string[]
   getAllAuthors: () => string[]
   getBookCountByStatus: () => Record<'all' | BookStatus, number>
+  getBooksBySeries: () => { groups: LocalSeriesGroup[]; ungrouped: Book[] }
 }
 
 export const useBookStore = create<BookStoreState>((set, get) => ({
@@ -492,5 +493,60 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       counts[b.status] = (counts[b.status] || 0) + 1
     }
     return counts as Record<'all' | BookStatus, number>
+  },
+
+  getBooksBySeries: () => {
+    const filteredBooks = get().getFilteredBooks()
+    const seriesMap = new Map<string, Book[]>()
+    const ungrouped: Book[] = []
+
+    for (const book of filteredBooks) {
+      if (book.series) {
+        const existing = seriesMap.get(book.series)
+        if (existing) {
+          existing.push(book)
+        } else {
+          seriesMap.set(book.series, [book])
+        }
+      } else {
+        ungrouped.push(book)
+      }
+    }
+
+    const groups: LocalSeriesGroup[] = []
+    for (const [name, books] of seriesMap) {
+      // Sort by sequence number (null/missing go to end)
+      const sorted = [...books].sort((a, b) => {
+        const seqA = a.seriesSequence != null ? parseFloat(a.seriesSequence) : Infinity
+        const seqB = b.seriesSequence != null ? parseFloat(b.seriesSequence) : Infinity
+        return seqA - seqB
+      })
+
+      const completed = sorted.filter(
+        b => b.status === 'finished' || b.progress >= 100
+      ).length
+
+      // Next unfinished: first in sequence order where not finished
+      let nextUnfinishedId: string | null = null
+      for (const b of sorted) {
+        if (b.status !== 'finished' && b.progress < 100) {
+          nextUnfinishedId = b.id
+          break
+        }
+      }
+
+      groups.push({
+        name,
+        books: sorted,
+        completed,
+        total: sorted.length,
+        nextUnfinishedId,
+      })
+    }
+
+    // Sort groups alphabetically by name
+    groups.sort((a, b) => a.name.localeCompare(b.name))
+
+    return { groups, ungrouped }
   },
 }))

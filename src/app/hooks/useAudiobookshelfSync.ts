@@ -114,6 +114,9 @@ export function useAudiobookshelfSync() {
         absServerId: server.id,
         absItemId: absItem.id,
         createdAt: new Date().toISOString(),
+        // E110-S02: Copy series metadata from ABS for local series grouping
+        series: absItem.media.metadata.series || undefined,
+        seriesSequence: absItem.media.metadata.seriesSequence || undefined,
       }
     },
     []

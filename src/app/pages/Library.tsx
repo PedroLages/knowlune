@@ -20,6 +20,7 @@ import {
   Globe,
   Grid3X3,
   Headphones,
+  Layers,
   Library as LibraryIcon,
   List,
   Loader2,
@@ -32,6 +33,7 @@ import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
 import { SeriesCard } from '@/app/components/library/SeriesCard'
+import { LocalSeriesCard } from '@/app/components/library/LocalSeriesCard'
 import { CollectionsView } from '@/app/components/library/CollectionsView'
 import { StorageIndicator } from '@/app/components/library/StorageIndicator'
 import { BookCard } from '@/app/components/library/BookCard'
@@ -91,6 +93,12 @@ export function Library() {
   const [absViewMode, setAbsViewMode] = useState<'grid' | 'series' | 'collections'>(
     initialView === 'collections' ? 'collections' : initialView === 'series' ? 'series' : 'grid'
   )
+
+  // Local series grouping (E110-S02) — separate from ABS view mode
+  const [showLocalSeries, setShowLocalSeries] = useState(
+    initialView === 'series' && !['audiobookshelf'].includes(searchParams.get('source') ?? '')
+  )
+  const getBooksBySeries = useBookStore(s => s.getBooksBySeries)
 
   // When navigating back with ?view=collections, ensure ABS source is selected
   useEffect(() => {
@@ -514,6 +522,68 @@ export function Library() {
         </div>
       )}
 
+      {/* Local/All series toggle (E110-S02) — when NOT in ABS source view */}
+      {books.length > 0 && filters.source !== 'audiobookshelf' && (
+        <div
+          className="flex gap-1 rounded-lg bg-muted p-1 w-fit"
+          role="tablist"
+          aria-label="Library view mode"
+          data-testid="local-view-toggle"
+        >
+          <button
+            role="tab"
+            aria-selected={!showLocalSeries && libraryView === 'grid'}
+            onClick={() => {
+              setShowLocalSeries(false)
+              useBookStore.getState().setLibraryView('grid')
+            }}
+            className={cn(
+              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
+              !showLocalSeries && libraryView === 'grid'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+            data-testid="local-view-grid"
+          >
+            <Grid3X3 className="size-3.5" aria-hidden="true" />
+            Grid
+          </button>
+          <button
+            role="tab"
+            aria-selected={!showLocalSeries && libraryView === 'list'}
+            onClick={() => {
+              setShowLocalSeries(false)
+              useBookStore.getState().setLibraryView('list')
+            }}
+            className={cn(
+              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
+              !showLocalSeries && libraryView === 'list'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+            data-testid="local-view-list"
+          >
+            <List className="size-3.5" aria-hidden="true" />
+            List
+          </button>
+          <button
+            role="tab"
+            aria-selected={showLocalSeries}
+            onClick={() => setShowLocalSeries(true)}
+            className={cn(
+              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
+              showLocalSeries
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+            data-testid="local-view-series"
+          >
+            <Layers className="size-3.5" aria-hidden="true" />
+            Series
+          </button>
+        </div>
+      )}
+
       {/* Syncing indicator (E101-S03) */}
       {isAbsSyncing && (
         <div
@@ -560,9 +630,59 @@ export function Library() {
         <CollectionsView />
       )}
 
+      {/* Local series view (E110-S02) — replaces grid/list when active for non-ABS sources */}
+      {books.length > 0 && filters.source !== 'audiobookshelf' && showLocalSeries && (() => {
+        const { groups, ungrouped } = getBooksBySeries()
+        return (
+          <div data-testid="local-series-view">
+            {groups.length === 0 && ungrouped.length === 0 && (
+              <div className="flex flex-col items-center gap-3 py-12">
+                <p className="text-muted-foreground" data-testid="local-series-empty-state">
+                  No books match your filters.
+                </p>
+              </div>
+            )}
+            {groups.length === 0 && ungrouped.length > 0 && (
+              <div className="flex flex-col items-center gap-3 py-12">
+                <Layers className="size-8 text-muted-foreground/50" aria-hidden="true" />
+                <p className="text-muted-foreground" data-testid="local-series-no-series">
+                  No books have series metadata yet.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Edit a book&apos;s details to assign it to a series.
+                </p>
+              </div>
+            )}
+            {groups.length > 0 && (
+              <div className="flex flex-col gap-3">
+                {groups.map(group => (
+                  <LocalSeriesCard key={group.name} group={group} />
+                ))}
+              </div>
+            )}
+            {/* Ungrouped books — shown after series groups */}
+            {ungrouped.length > 0 && groups.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3" data-testid="ungrouped-heading">
+                  Ungrouped ({ungrouped.length})
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                  {ungrouped.map(book => (
+                    <BookContextMenu key={book.id} book={book} onEdit={() => setEditingBook(book)}>
+                      <BookCard book={book} />
+                    </BookContextMenu>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
       {/* Grid view */}
       {books.length > 0 &&
         libraryView === 'grid' &&
+        !showLocalSeries &&
         !(
           filters.source === 'audiobookshelf' &&
           (absViewMode === 'series' || absViewMode === 'collections')
@@ -579,6 +699,7 @@ export function Library() {
       {/* List view */}
       {books.length > 0 &&
         libraryView === 'list' &&
+        !showLocalSeries &&
         !(
           filters.source === 'audiobookshelf' &&
           (absViewMode === 'series' || absViewMode === 'collections')
