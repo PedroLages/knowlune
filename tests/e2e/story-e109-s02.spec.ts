@@ -71,11 +71,11 @@ test.describe('Daily Highlight Review (E109-S02)', () => {
     await keepBtn.click()
     await expect(keepBtn).toHaveAttribute('aria-pressed', 'true')
 
-    // Click "Dismiss" button — should toggle
+    // Click "Dismiss" button — dismissed highlights are immediately removed from the list
     const dismissBtn = page.getByTestId('rating-dismiss-btn')
     await dismissBtn.click()
-    await expect(dismissBtn).toHaveAttribute('aria-pressed', 'true')
-    await expect(keepBtn).toHaveAttribute('aria-pressed', 'false')
+    // After dismiss the card is removed; counter should now show 1 / 1 (2 highlights - 1 dismissed)
+    await expect(page.getByText(/1 \/ 1/)).toBeVisible()
   })
 
   test('can navigate between highlight cards', async ({ page }) => {

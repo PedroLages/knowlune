@@ -41,12 +41,12 @@ const REVIEW_CARD_COUNT = 20
  * Uses Dexie index-based filtering to avoid loading all highlights into memory.
  */
 async function loadDailyHighlights(): Promise<BookHighlight[]> {
-  // Filter at the database level: exclude dismissed highlights
-  // and load at most REVIEW_CARD_COUNT * 4 to allow for client-side sort
+  // Full table scan with client-side filter: .where().notEqual() is unreliable
+  // across Dexie versions for sparse/nullable fields. Cap at 80 records for safety.
   const candidates = await db.bookHighlights
-    .where('reviewRating')
-    .notEqual('dismiss')
-    .limit(REVIEW_CARD_COUNT * 4)
+    .toCollection()
+    .filter(h => h.reviewRating !== 'dismiss')
+    .limit(80)
     .toArray()
 
   // Sort: unreviewed first, then by oldest lastReviewedAt
@@ -94,18 +94,23 @@ export function HighlightReview() {
     }
   }, [])
 
-  // Ref used for rollback: stores previous highlights + ratings before optimistic update
-  const prevStateRef = useRef<{
-    highlights: BookHighlight[]
-    ratings: Record<string, 'keep' | 'dismiss'>
-  } | null>(null)
+  // Always-current refs for rollback — avoid stale closure capture
+  const highlightsRef = useRef(highlights)
+  const ratingsRef = useRef(ratings)
+  useEffect(() => {
+    highlightsRef.current = highlights
+  }, [highlights])
+  useEffect(() => {
+    ratingsRef.current = ratings
+  }, [ratings])
 
   const handleRate = useCallback(
     async (highlightId: string, rating: 'keep' | 'dismiss') => {
       const now = new Date().toISOString()
 
-      // Snapshot state for rollback
-      prevStateRef.current = { highlights, ratings }
+      // Snapshot current state immediately inside the handler (not from closure)
+      const snapshotHighlights = highlightsRef.current
+      const snapshotRatings = ratingsRef.current
 
       // Optimistic update: record rating and remove dismissed cards immediately
       setRatings(prev => ({ ...prev, [highlightId]: rating }))
@@ -124,19 +129,15 @@ export function HighlightReview() {
           lastReviewedAt: now,
           updatedAt: now,
         })
-        prevStateRef.current = null
       } catch (err) {
         console.error('[HighlightReview] Failed to persist rating:', err)
-        // Rollback optimistic update
-        if (prevStateRef.current) {
-          setHighlights(prevStateRef.current.highlights)
-          setRatings(prevStateRef.current.ratings)
-          prevStateRef.current = null
-        }
+        // Rollback to snapshot captured before the optimistic update
+        setHighlights(snapshotHighlights)
+        setRatings(snapshotRatings)
         toast.error('Failed to save rating. Please try again.')
       }
     },
-    [highlights, ratings]
+    [] // no closure deps — reads state via refs
   )
 
   const handleNext = useCallback(() => {

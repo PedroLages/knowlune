@@ -1286,9 +1286,9 @@ function _declareLegacyMigrations(database: Dexie): void {
     vocabularyItems: 'id, bookId, masteryLevel, createdAt',
   })
 
-  // E109-S02: Daily Highlight Review — add lastReviewedAt index for spaced review
+  // E109-S02: Daily Highlight Review — add lastReviewedAt + reviewRating indexes for spaced review
   database.version(43).stores({
-    bookHighlights: 'id, bookId, color, flashcardId, createdAt, lastReviewedAt',
+    bookHighlights: 'id, bookId, color, flashcardId, createdAt, lastReviewedAt, reviewRating',
   })
 } // end _declareLegacyMigrations
 
