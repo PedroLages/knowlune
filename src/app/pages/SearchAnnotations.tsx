@@ -4,8 +4,9 @@
  * Full-text search across all highlights and vocabulary items.
  * Results are grouped by book with navigation to source locations.
  */
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams, Link } from 'react-router'
+import { toast } from 'sonner'
 import { Search, BookOpen, Type, Highlighter, ChevronRight, X } from 'lucide-react'
 import { Input } from '@/app/components/ui/input'
 import { Badge } from '@/app/components/ui/badge'
@@ -32,19 +33,20 @@ interface VocabularyResult {
 type SearchResult = HighlightResult | VocabularyResult
 
 /**
- * Highlights matching substring within text, returning React nodes.
+ * Highlights ALL matching occurrences within text, returning React nodes.
  */
 function highlightMatch(text: string, query: string): React.ReactNode {
   if (!query.trim()) return text
-  const lower = text.toLowerCase()
   const qLower = query.toLowerCase()
-  const idx = lower.indexOf(qLower)
-  if (idx === -1) return text
+  const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'))
+  if (parts.length === 1) return text
   return (
     <>
-      {text.slice(0, idx)}
-      <mark className="bg-warning/30 text-foreground rounded-sm px-0.5">{text.slice(idx, idx + query.length)}</mark>
-      {text.slice(idx + query.length)}
+      {parts.map((part, i) =>
+        part.toLowerCase() === qLower
+          ? <mark key={i} className="bg-warning/30 text-foreground rounded-sm px-0.5">{part}</mark>
+          : part
+      )}
     </>
   )
 }
@@ -58,34 +60,46 @@ export function SearchAnnotations() {
   const [vocabulary, setVocabulary] = useState<VocabularyItem[]>([])
   const [books, setBooks] = useState<Map<string, Book>>(new Map())
   const [isLoaded, setIsLoaded] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
 
   // Load all data from Dexie on mount
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const [allHighlights, allVocab, allBooks] = await Promise.all([
-        db.bookHighlights.toArray(),
-        db.vocabularyItems.toArray(),
-        db.books.toArray(),
-      ])
-      if (cancelled) return
-      setHighlights(allHighlights)
-      setVocabulary(allVocab)
-      setBooks(new Map(allBooks.map(b => [b.id, b])))
-      setIsLoaded(true)
+      try {
+        const [allHighlights, allVocab, allBooks] = await Promise.all([
+          db.bookHighlights.toArray(),
+          db.vocabularyItems.toArray(),
+          db.books.toArray(),
+        ])
+        if (cancelled) return
+        setHighlights(allHighlights)
+        setVocabulary(allVocab)
+        setBooks(new Map(allBooks.map(b => [b.id, b])))
+        setIsLoaded(true)
+      } catch (err) {
+        if (cancelled) return
+        const message = err instanceof Error ? err.message : 'Failed to load annotations'
+        setLoadError(message)
+        toast.error('Failed to load annotations. Please refresh the page.')
+      }
     }
     load()
     return () => { cancelled = true }
   }, [])
 
-  // Sync query to URL
+  // Sync query to URL with 300ms debounce to avoid polluting history
   const updateQuery = useCallback((value: string) => {
     setQuery(value)
-    if (value.trim()) {
-      setSearchParams({ q: value }, { replace: true })
-    } else {
-      setSearchParams({}, { replace: true })
-    }
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      if (value.trim()) {
+        setSearchParams({ q: value }, { replace: true })
+      } else {
+        setSearchParams({}, { replace: true })
+      }
+    }, 300)
   }, [setSearchParams])
 
   // Filter results
@@ -123,7 +137,7 @@ export function SearchAnnotations() {
   const groupedResults = useMemo(() => {
     const groups = new Map<string, { book: Book | undefined; results: SearchResult[] }>()
     for (const r of results) {
-      const bookId = r.kind === 'highlight' ? r.item.bookId : r.item.bookId
+      const bookId = r.item.bookId
       if (!groups.has(bookId)) {
         groups.set(bookId, { book: r.book, results: [] })
       }
@@ -187,7 +201,11 @@ export function SearchAnnotations() {
       </Tabs>
 
       {/* Results */}
-      {!isLoaded ? (
+      {loadError ? (
+        <div className="text-center py-12" data-testid="load-error">
+          <p className="text-destructive">{loadError}</p>
+        </div>
+      ) : !isLoaded ? (
         <p className="text-muted-foreground text-center py-8" role="status">Loading...</p>
       ) : !query.trim() ? (
         <div className="text-center py-12" data-testid="empty-state">
@@ -218,7 +236,7 @@ export function SearchAnnotations() {
                 </div>
                 <ul className="divide-y divide-border" role="list" aria-label={`Results from ${group.book?.title ?? 'Unknown Book'}`}>
                   {group.results.map(r => (
-                    <li key={r.kind === 'highlight' ? r.item.id : r.item.id} className="py-2.5 first:pt-0 last:pb-0">
+                    <li key={r.item.id} className="py-2.5 first:pt-0 last:pb-0">
                       {r.kind === 'highlight' ? (
                         <div className="flex items-start gap-3" data-testid="highlight-result">
                           <Highlighter className="size-4 mt-0.5 text-warning shrink-0" />
@@ -235,7 +253,7 @@ export function SearchAnnotations() {
                           <Link
                             to={`/library/${r.item.bookId}/read`}
                             className="shrink-0 text-muted-foreground hover:text-brand"
-                            aria-label={`Open in reader`}
+                            aria-label="Open in reader"
                           >
                             <ChevronRight className="size-4" />
                           </Link>
@@ -261,7 +279,7 @@ export function SearchAnnotations() {
                           <Link
                             to={`/library/${r.item.bookId}/read`}
                             className="shrink-0 text-muted-foreground hover:text-brand"
-                            aria-label={`Open in reader`}
+                            aria-label="Open in reader"
                           >
                             <ChevronRight className="size-4" />
                           </Link>
