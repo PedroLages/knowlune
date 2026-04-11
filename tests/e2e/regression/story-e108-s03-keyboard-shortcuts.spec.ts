@@ -6,11 +6,11 @@
  *   - AC-5: Shortcuts suppressed when input is focused
  *   - AC-1: ? opens the KeyboardShortcutsDialog
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
-import { seedIndexedDBStore } from '../support/helpers/seed-helpers'
-import { FIXED_DATE } from '../utils/test-time'
-import { TIMEOUTS } from '../utils/constants'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
+import { seedIndexedDBStore } from '../../support/helpers/seed-helpers'
+import { FIXED_DATE } from '../../utils/test-time'
+import { TIMEOUTS } from '../../utils/constants'
 
 const DB_NAME = 'ElearningDB'
 
