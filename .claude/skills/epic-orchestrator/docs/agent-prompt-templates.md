@@ -24,6 +24,7 @@ STEP 2: After the plan is ready, EXIT plan mode and implement it fully:
 - Write all code, components, and tests
 - Follow project conventions: design tokens (never hardcode colors), accessibility (WCAG AA), Tailwind CSS v4
 - Use existing UI components from src/app/components/ui/
+- **If you add a Dexie migration** (new version in schema.ts): ALSO update `src/db/checkpoint.ts` (CHECKPOINT_VERSION + schema), `src/db/__tests__/schema.test.ts` (expected version + tables/indexes), and `src/db/__tests__/schema-checkpoint.test.ts` (expected version + tables) to match. Failing to do this breaks schema tests at review time.
 - Commit with descriptive messages as you go
 - Run `npm run build` to verify before finishing
 
