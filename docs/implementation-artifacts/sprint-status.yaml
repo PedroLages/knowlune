@@ -1352,7 +1352,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-110: in-progress
   110-1-smart-shelves: done
-  110-2-series-grouping: review
+  110-2-series-grouping: done
   110-3-reading-queue: backlog
   epic-110-retrospective: optional
 

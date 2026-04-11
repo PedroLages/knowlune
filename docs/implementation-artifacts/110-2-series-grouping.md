@@ -1,9 +1,9 @@
 ---
 story_id: E110-S02
 story_name: "Series Grouping"
-status: in-progress
+status: done
 started: 2026-04-11
-completed:
+completed: 2026-04-11
 reviewed: true
 review_started: 2026-04-11
 review_gates_passed:
