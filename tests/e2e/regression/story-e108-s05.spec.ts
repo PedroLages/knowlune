@@ -9,9 +9,9 @@
  * - AC-5: Pages count updates after reading session
  */
 
-import { test, expect } from '../support/fixtures'
-import { seedBooks } from '../support/helpers/seed-helpers'
-import { FIXED_DATE } from '../utils/test-time'
+import { test, expect } from '../../support/fixtures'
+import { seedBooks } from '../../support/helpers/seed-helpers'
+import { FIXED_DATE } from '../../utils/test-time'
 
 const fictionBook = {
   id: 'test-fiction-e108-s05',
