@@ -627,3 +627,24 @@ useEffect(() => {
 ```
 
 **Case study:** E107-S01 — `useBookCoverUrl` initial implementation used single-phase cleanup, leaking blob URLs on rapid cover prop changes. Fixed in `231c8d5f`.
+
+## Tailwind v4 JIT: Arbitrary Values Must Be Literal Strings
+
+Tailwind's JIT scanner extracts class names from source files at build time using static analysis. Dynamically constructed class strings (template literals, string concatenation) are invisible to the scanner, producing missing styles at runtime with no build error.
+
+```typescript
+// ❌ BROKEN — Tailwind never sees this class
+const bg = `bg-[${hexColor}]`
+
+// ✅ WORKS — literal string is scannable
+const BG_CLASSES: Record<string, string> = {
+  '#faf5ee': 'bg-[#faf5ee]',
+  '#f9f9fe': 'bg-[#f9f9fe]',
+  '#1a1b26': 'bg-[#1a1b26]',
+}
+const bg = BG_CLASSES[hexColor] ?? 'bg-background'
+```
+
+When you need arbitrary Tailwind values driven by runtime data, use a lookup map where every class string appears as a complete literal. This applies to `bg-[...]`, `text-[...]`, `border-[...]`, and any arbitrary value syntax.
+
+**Case study:** E107-S05 — Reader theme config uses `BG_CLASSES` and `TEXT_CLASSES` maps to bridge hex color values from `readerThemeConfig.ts` into scannable Tailwind classes.
