@@ -723,8 +723,8 @@ export function Library() {
         />
       )}
 
-      {/* No results message */}
-      {books.length > 0 && filteredBooks.length === 0 && (
+      {/* No results message — hidden when local series view handles its own empty state */}
+      {books.length > 0 && filteredBooks.length === 0 && !showLocalSeries && (
         <div className="flex flex-col items-center gap-3 py-12">
           <p className="text-muted-foreground">No books match your filters.</p>
           <Button
