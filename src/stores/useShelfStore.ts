@@ -13,11 +13,14 @@ import { toast } from 'sonner'
 import type { Shelf, BookShelfEntry } from '@/data/types'
 import { db } from '@/db/schema'
 
-/** Default shelves created on first load */
-const DEFAULT_SHELVES: Omit<Shelf, 'id' | 'createdAt'>[] = [
-  { name: 'Favorites', icon: 'Heart', isDefault: true, sortOrder: 0 },
-  { name: 'Currently Reading', icon: 'BookOpen', isDefault: true, sortOrder: 1 },
-  { name: 'Want to Read', icon: 'Bookmark', isDefault: true, sortOrder: 2 },
+/** Returns current ISO timestamp — extracted for consistency and testability */
+const now = () => new Date().toISOString()
+
+/** Default shelves created on first load — fixed IDs for E2E test reliability */
+const DEFAULT_SHELVES: Shelf[] = [
+  { id: 'shelf-favorites', name: 'Favorites', icon: 'Heart', isDefault: true, sortOrder: 0, createdAt: '' },
+  { id: 'shelf-currently-reading', name: 'Currently Reading', icon: 'BookOpen', isDefault: true, sortOrder: 1, createdAt: '' },
+  { id: 'shelf-want-to-read', name: 'Want to Read', icon: 'Bookmark', isDefault: true, sortOrder: 2, createdAt: '' },
 ]
 
 interface ShelfStoreState {
@@ -34,6 +37,7 @@ interface ShelfStoreState {
   getShelvesForBook: (bookId: string) => Shelf[]
   getBooksOnShelf: (shelfId: string) => string[]
   removeAllBookEntries: (bookId: string) => Promise<void>
+  getSortedShelves: () => Shelf[]
 }
 
 export const useShelfStore = create<ShelfStoreState>((set, get) => ({
@@ -46,17 +50,14 @@ export const useShelfStore = create<ShelfStoreState>((set, get) => ({
 
     let shelves = await db.shelves.toArray()
 
-    // Seed default shelves on first load
-    if (shelves.length === 0) {
-      const now = new Date().toISOString()
-      const defaults: Shelf[] = DEFAULT_SHELVES.map((s, i) => ({
-        ...s,
-        id: crypto.randomUUID(),
-        createdAt: now,
-        sortOrder: i,
-      }))
-      await db.shelves.bulkPut(defaults)
-      shelves = defaults
+    // Seed default shelves on first load — use fixed IDs so tests can rely on them
+    const existingIds = new Set(shelves.map(s => s.id))
+    const missing = DEFAULT_SHELVES.filter(s => !existingIds.has(s.id))
+    if (missing.length > 0) {
+      const timestamp = now()
+      const toInsert = missing.map(s => ({ ...s, createdAt: s.createdAt || timestamp }))
+      await db.shelves.bulkPut(toInsert)
+      shelves = await db.shelves.toArray()
     }
 
     const bookShelves = await db.bookShelves.toArray()
@@ -82,7 +83,7 @@ export const useShelfStore = create<ShelfStoreState>((set, get) => ({
       name: trimmed,
       isDefault: false,
       sortOrder: maxOrder + 1,
-      createdAt: new Date().toISOString(),
+      createdAt: now(),
     }
 
     try {
@@ -121,17 +122,17 @@ export const useShelfStore = create<ShelfStoreState>((set, get) => ({
       return
     }
 
-    const now = new Date().toISOString()
+    const timestamp = now()
 
     // Optimistic update
     set(state => ({
       shelves: state.shelves.map(s =>
-        s.id === shelfId ? { ...s, name: trimmed, updatedAt: now } : s
+        s.id === shelfId ? { ...s, name: trimmed, updatedAt: timestamp } : s
       ),
     }))
 
     try {
-      await db.shelves.update(shelfId, { name: trimmed, updatedAt: now })
+      await db.shelves.update(shelfId, { name: trimmed, updatedAt: timestamp })
       toast.success(`Shelf renamed to "${trimmed}"`)
     } catch {
       const shelves = await db.shelves.toArray()
@@ -179,7 +180,7 @@ export const useShelfStore = create<ShelfStoreState>((set, get) => ({
       id: crypto.randomUUID(),
       bookId,
       shelfId,
-      addedAt: new Date().toISOString(),
+      addedAt: now(),
     }
 
     // Optimistic
@@ -242,6 +243,11 @@ export const useShelfStore = create<ShelfStoreState>((set, get) => ({
     } catch {
       const bookShelves = await db.bookShelves.toArray()
       set({ bookShelves })
+      toast.error('Failed to remove book from shelves')
     }
+  },
+
+  getSortedShelves: () => {
+    return [...get().shelves].sort((a, b) => a.sortOrder - b.sortOrder)
   },
 }))

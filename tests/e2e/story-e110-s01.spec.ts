@@ -7,7 +7,7 @@
 import { test, expect } from '@playwright/test'
 import { dismissOnboarding } from '../helpers/dismiss-onboarding'
 import { navigateAndWait } from '../support/helpers/navigation'
-import { seedBooks, seedShelves, seedBookShelves } from '../support/helpers/seed-helpers'
+import { seedBooks, seedShelves } from '../support/helpers/seed-helpers'
 import { FIXED_DATE } from '../utils/test-time'
 
 const TEST_BOOKS = [
@@ -135,13 +135,18 @@ test.describe('Smart Shelves (E110-S01)', () => {
     await expect(page.getByText('The Great Gatsby')).toBeVisible()
     await expect(page.getByText('Dune')).toBeVisible()
 
-    // Right-click on first book to open context menu
-    await page.getByText('The Great Gatsby').click({ button: 'right' })
-    await expect(page.getByTestId('context-menu-add-to-shelf')).toBeVisible()
-    await page.getByTestId('context-menu-add-to-shelf').hover()
+    // Open the "..." dropdown menu on the first book card
+    // (more reliable than right-click context menu in Playwright due to Radix ContextMenu pointer-leave closing)
+    const bookCard = page.getByTestId('book-card-book-1')
+    await bookCard.hover()
+    // book-more-actions is inside the BookContextMenu wrapper div, sibling to the card
+    await page.getByTestId('book-more-actions').first().click()
+    // DropdownMenuSubTrigger for shelf — hover then click sub-items
+    await page.getByRole('menuitem', { name: /add to shelf/i }).hover()
+    await expect(page.getByTestId('dropdown-shelf-favorites')).toBeVisible()
 
     // Click "Favorites" shelf
-    await page.getByTestId('context-menu-shelf-favorites').click()
+    await page.getByTestId('dropdown-shelf-favorites').click()
 
     // Now open filter sidebar and filter by Favorites shelf
     // The filter sidebar is opened via the filter button in LibraryFilters

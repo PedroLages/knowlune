@@ -36,7 +36,8 @@ interface ShelfManagerProps {
 }
 
 export function ShelfManager({ open, onOpenChange }: ShelfManagerProps) {
-  const shelves = useShelfStore(s => s.shelves)
+  const getSortedShelves = useShelfStore(s => s.getSortedShelves)
+  const shelves = getSortedShelves()
   const createShelf = useShelfStore(s => s.createShelf)
   const renameShelf = useShelfStore(s => s.renameShelf)
   const deleteShelf = useShelfStore(s => s.deleteShelf)
@@ -66,7 +67,7 @@ export function ShelfManager({ open, onOpenChange }: ShelfManagerProps) {
     }
   }
 
-  const sorted = [...shelves].sort((a, b) => a.sortOrder - b.sortOrder)
+  const sorted = shelves
   const shelfToDelete = shelves.find(s => s.id === deleteConfirmId)
 
   return (

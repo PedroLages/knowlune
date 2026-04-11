@@ -146,6 +146,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
 
     try {
       // Cascade deletion order: shelf entries → highlights → book record → OPFS files (best-effort)
+      // intentional cross-store cascade — shelf cleanup on book delete
       await useShelfStore.getState().removeAllBookEntries(bookId)
       await db.bookHighlights.where('bookId').equals(bookId).delete()
       await db.books.delete(bookId)

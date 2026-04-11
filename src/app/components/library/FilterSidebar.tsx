@@ -43,7 +43,8 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
   const setFilter = useBookStore(s => s.setFilter)
   const setFilters = useBookStore(s => s.setFilters)
   const getAllAuthors = useBookStore(s => s.getAllAuthors)
-  const shelves = useShelfStore(s => s.shelves)
+  const getSortedShelves = useShelfStore(s => s.getSortedShelves)
+  const shelves = getSortedShelves()
   const [authorSearch, setAuthorSearch] = useState('')
 
   const allAuthors = useMemo(() => getAllAuthors(), [getAllAuthors])
@@ -237,7 +238,6 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
               </h4>
               <div className="flex flex-wrap gap-2">
                 {shelves
-                  .sort((a, b) => a.sortOrder - b.sortOrder)
                   .map(shelf => (
                     <button
                       key={shelf.id}

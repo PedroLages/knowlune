@@ -100,7 +100,8 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
   const navigate = useNavigate()
   const updateBookStatus = useBookStore(s => s.updateBookStatus)
   const deleteBook = useBookStore(s => s.deleteBook)
-  const shelves = useShelfStore(s => s.shelves)
+  const getSortedShelves = useShelfStore(s => s.getSortedShelves)
+  const shelves = getSortedShelves()
   const bookShelves = useShelfStore(s => s.bookShelves)
   const addBookToShelf = useShelfStore(s => s.addBookToShelf)
   const removeBookFromShelf = useShelfStore(s => s.removeBookFromShelf)
@@ -176,7 +177,6 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
               </ContextMenuSubTrigger>
               <ContextMenuSubContent className="w-48">
                 {shelves
-                  .sort((a, b) => a.sortOrder - b.sortOrder)
                   .map(shelf => (
                     <ContextMenuItem
                       key={shelf.id}
@@ -258,7 +258,6 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="w-48">
                 {shelves
-                  .sort((a, b) => a.sortOrder - b.sortOrder)
                   .map(shelf => (
                     <DropdownMenuItem
                       key={shelf.id}
