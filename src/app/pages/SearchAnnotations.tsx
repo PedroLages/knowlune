@@ -61,7 +61,7 @@ export function SearchAnnotations() {
   const [books, setBooks] = useState<Map<string, Book>>(new Map())
   const [isLoaded, setIsLoaded] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // Defer query so the input stays responsive while data loads
   const deferredQuery = useDeferredValue(query)

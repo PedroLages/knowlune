@@ -41,7 +41,7 @@ function clearHighlight(doc: Document): void {
 /** Highlights a word at charIndex/charLength in the document's text */
 function highlightWord(
   doc: Document,
-  fullText: string,
+  _fullText: string,
   charIndex: number,
   charLength: number,
   chunkOffset: number
@@ -92,14 +92,14 @@ function highlightWord(
 /** Extracts the visible text content from the current epub.js page */
 function extractPageText(rendition: Rendition): string {
   try {
-    const contents = rendition.getContents()
+    const contents = rendition.getContents() as unknown as Array<{ document?: Document }>
     if (!contents || contents.length === 0) return ''
 
     // getContents() returns an array of Content objects, one per iframe
     const texts: string[] = []
     for (const content of contents) {
       // Access the document via the 'document' property (epub.js internal)
-      const doc = (content as unknown as { document?: Document }).document
+      const doc = content.document
       if (doc?.body) {
         texts.push(doc.body.textContent?.replace(/\s+/g, ' ').trim() ?? '')
       }
@@ -114,9 +114,9 @@ function extractPageText(rendition: Rendition): string {
 /** Returns the epub iframe document for DOM manipulation, or null if unavailable */
 function getEpubDocument(rendition: Rendition): Document | null {
   try {
-    const contents = rendition.getContents()
+    const contents = rendition.getContents() as unknown as Array<{ document?: Document }>
     if (!contents || contents.length === 0) return null
-    return (contents[0] as unknown as { document?: Document }).document ?? null
+    return contents[0].document ?? null
   } catch {
     // silent-catch-ok: content access can fail if rendition is in transition
     return null

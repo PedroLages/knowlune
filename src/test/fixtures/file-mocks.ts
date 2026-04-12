@@ -17,7 +17,7 @@ export function createMockFile(
 ): File {
   const blob =
     content instanceof ArrayBuffer || content instanceof Uint8Array
-      ? new Blob([content], { type: options?.type })
+      ? new Blob([content as BlobPart], { type: options?.type })
       : new Blob([content], { type: options?.type ?? 'text/plain' })
 
   return new File([blob], name, {

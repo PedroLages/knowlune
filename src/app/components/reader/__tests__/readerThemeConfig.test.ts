@@ -193,7 +193,7 @@ describe('useAppColorScheme', () => {
   })
 
   it('falls back to professional for invalid scheme from settings', () => {
-    mockGetSettings.mockReturnValue({ colorScheme: 'invalid-scheme' } as ReturnType<typeof getSettings>)
+    mockGetSettings.mockReturnValue({ colorScheme: 'invalid-scheme' } as unknown as ReturnType<typeof getSettings>)
     const { result } = renderHook(() => useAppColorScheme())
     expect(result.current).toBe('professional')
   })

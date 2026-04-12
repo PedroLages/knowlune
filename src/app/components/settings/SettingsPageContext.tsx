@@ -24,8 +24,8 @@ interface SettingsPageContextValue {
   updateAndPersist: (updates: Partial<AppSettings>) => void
 
   // Auth
-  user: ReturnType<typeof useAuthStore>['user']
-  authSignOut: ReturnType<typeof useAuthStore>['signOut']
+  user: import('@supabase/supabase-js').User | null
+  authSignOut: () => Promise<{ error?: string }>
   authDialogOpen: boolean
   setAuthDialogOpen: (open: boolean) => void
   authDialogMode: AuthMode

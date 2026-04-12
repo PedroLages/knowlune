@@ -73,10 +73,10 @@ beforeEach(() => {
     pendingSyncQueue: [],
     series: [],
     isLoadingSeries: false,
-    seriesLoaded: {},
+    seriesLoadedAt: {},
     collections: [],
     isLoadingCollections: false,
-    collectionsLoaded: {},
+    collectionsLoadedAt: {},
   })
 })
 
@@ -268,14 +268,14 @@ describe('loadSeries', () => {
     const state = useAudiobookshelfStore.getState()
     expect(state.series).toHaveLength(1)
     expect(state.series[0].name).toBe('Test Series')
-    expect(state.seriesLoaded['srv-1']).toBe(true)
+    expect(state.seriesLoadedAt['srv-1']).toBeGreaterThan(0)
     expect(state.isLoadingSeries).toBe(false)
   })
 
   it('skips if series already loaded for server', async () => {
     useAudiobookshelfStore.setState({
       servers: [makeServer()],
-      seriesLoaded: { 'srv-1': true },
+      seriesLoadedAt: { 'srv-1': Date.now() },
     })
 
     await useAudiobookshelfStore.getState().loadSeries('srv-1', 'lib-1')
@@ -368,13 +368,13 @@ describe('loadCollections', () => {
     const state = useAudiobookshelfStore.getState()
     expect(state.collections).toHaveLength(1)
     expect(state.collections[0].name).toBe('Favorites')
-    expect(state.collectionsLoaded['srv-1']).toBe(true)
+    expect(state.collectionsLoadedAt['srv-1']).toBeGreaterThan(0)
   })
 
   it('skips if collections already loaded', async () => {
     useAudiobookshelfStore.setState({
       servers: [makeServer()],
-      collectionsLoaded: { 'srv-1': true },
+      collectionsLoadedAt: { 'srv-1': Date.now() },
     })
 
     await useAudiobookshelfStore.getState().loadCollections('srv-1')

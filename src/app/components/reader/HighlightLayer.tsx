@@ -151,7 +151,7 @@ export function HighlightLayer({
     // Inject keyframe + flash class into the epub iframe document
     const injectPulse = () => {
       try {
-        const contents = rendition.getContents()[0] as unknown as { document?: Document }
+        const contents = (rendition.getContents() as unknown as Array<{ document?: Document }>)[0]
         const doc = contents?.document
         if (!doc) return
 
@@ -206,7 +206,7 @@ export function HighlightLayer({
         const range = sel.getRangeAt(0)
         const rect = range.getBoundingClientRect()
         // Convert iframe coordinates to window coordinates
-        const iframe = rendition.getContents()[0] as unknown as { iframe?: HTMLIFrameElement }
+        const iframe = (rendition.getContents() as unknown as Array<{ iframe?: HTMLIFrameElement }>)[0]
         const iframeRect = iframe.iframe?.getBoundingClientRect() ?? { top: 0, left: 0 }
         popoverPosition = {
           top: iframeRect.top + rect.top,
@@ -290,10 +290,9 @@ export function HighlightLayer({
 
       // Clear selection in epub iframe
       try {
-        const contents = rendition.getContents()
+        const contents = rendition.getContents() as unknown as Array<{ window?: Window }>
         for (const content of contents) {
-          const win = (content as unknown as { window?: Window }).window
-          win?.getSelection()?.removeAllRanges()
+          content.window?.getSelection()?.removeAllRanges()
         }
       } catch {
         // silent-catch-ok
@@ -308,7 +307,7 @@ export function HighlightLayer({
         // Rollback annotation if persist fails
         // silent-catch-ok: inner annotation removal failure is non-fatal
         try {
-          rendition.annotations.remove(selection.cfiRange)
+          rendition.annotations.remove(selection.cfiRange, 'highlight')
         } catch {
           /* silent-catch-ok */
         }
@@ -349,7 +348,7 @@ export function HighlightLayer({
       // If color changed, remove old annotation and re-add with new color
       if (updates.color && updates.color !== highlight.color && highlight.cfiRange) {
         try {
-          rendition.annotations.remove(highlight.cfiRange)
+          rendition.annotations.remove(highlight.cfiRange, 'highlight')
         } catch {
           // silent-catch-ok: annotation removal failure is non-fatal
         }
@@ -385,7 +384,7 @@ export function HighlightLayer({
     // Remove epub.js annotation
     if (highlight.cfiRange) {
       try {
-        rendition.annotations.remove(highlight.cfiRange)
+        rendition.annotations.remove(highlight.cfiRange, 'highlight')
       } catch {
         // silent-catch-ok: annotation removal failure is non-fatal
       }
@@ -399,10 +398,9 @@ export function HighlightLayer({
     // Clear selection in epub iframe
     if (rendition) {
       try {
-        const contents = rendition.getContents()
+        const contents = rendition.getContents() as unknown as Array<{ window?: Window }>
         for (const content of contents) {
-          const win = (content as unknown as { window?: Window }).window
-          win?.getSelection()?.removeAllRanges()
+          content.window?.getSelection()?.removeAllRanges()
         }
       } catch {
         /* silent-catch-ok */

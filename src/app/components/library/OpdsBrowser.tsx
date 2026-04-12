@@ -96,7 +96,7 @@ function isAlreadyInLibrary(entry: OpdsEntry, books: Book[]): boolean {
     // Fallback: title + author match (case-insensitive)
     return (
       b.title.toLowerCase() === entry.title.toLowerCase() &&
-      b.author.toLowerCase() === entry.author.toLowerCase()
+      b.author?.toLowerCase() === entry.author.toLowerCase()
     )
   })
 }

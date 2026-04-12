@@ -169,7 +169,7 @@ export function AudiobookRenderer({
   // Media Session API — OS-level lock screen / Bluetooth headset controls (E87-S05)
   useMediaSession({
     title: currentChapterTitle,
-    artist: book.author,
+    artist: book.author ?? '',
     album: book.title,
     artworkUrl:
       resolvedCoverUrl && /^(blob:|https?:|data:image\/)/.test(resolvedCoverUrl)

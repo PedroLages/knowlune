@@ -223,7 +223,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
 
     let ignore = false
     db.bookHighlights
-      .filter(h => h.text.toLowerCase().includes(q))
+      .filter(h => h.textAnchor.toLowerCase().includes(q))
       .limit(5)
       .toArray()
       .then(matches => {
@@ -232,7 +232,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
           const book = allBooks.find(b => b.id === h.bookId)
           return {
             id: h.id,
-            text: h.text,
+            text: h.textAnchor,
             bookId: h.bookId,
             bookTitle: book?.title ?? 'Unknown Book',
             color: h.color,

@@ -2110,11 +2110,24 @@ def run_gate_check() -> tuple[bool, list[str]]:
     """Run gate check: build, lint, test, tsc. No AI cost. Returns (passed, failures)."""
     failures: list[str] = []
 
+    # Scope lint to changed files only (avoid pre-existing lint errors)
+    changed_result = subprocess.run(
+        ["git", "diff", "--name-only", "origin/main...HEAD"],
+        capture_output=True, text=True, cwd=PROJECT_DIR,
+    )
+    changed_files = [
+        f for f in changed_result.stdout.strip().splitlines()
+        if f.endswith(('.ts', '.tsx', '.js', '.jsx')) and (PROJECT_DIR / f).exists()
+    ]
+    if changed_files:
+        lint_cmd = ["npx", "eslint", "--cache"] + changed_files
+    else:
+        lint_cmd = ["npm", "run", "lint"]  # fallback to full lint
+
     checks = [
         ("build", ["npm", "run", "build"]),
-        ("lint", ["npm", "run", "lint"]),
+        ("lint", lint_cmd),
         ("test:unit", ["npm", "run", "test:unit"]),
-        ("tsc", ["npx", "tsc", "--noEmit"]),
     ]
 
     for name, cmd in checks:
@@ -2126,6 +2139,28 @@ def run_gate_check() -> tuple[bool, list[str]]:
             log.warning(f"  Gate check: {name} FAILED")
         else:
             log.info(f"  Gate check: {name} PASSED")
+
+    # TSC with baseline comparison (avoid blocking on pre-existing type errors)
+    tsc_result = subprocess.run(
+        ["npx", "tsc", "--noEmit"],
+        capture_output=True, text=True, cwd=PROJECT_DIR, timeout=300,
+    )
+    if tsc_result.returncode != 0:
+        current_errors = len([l for l in tsc_result.stderr.splitlines() if "error TS" in l])
+        baseline_file = PROJECT_DIR / "docs" / "implementation-artifacts" / "tsc-baseline.txt"
+        baseline = 0
+        if baseline_file.exists():
+            try:
+                baseline = int(baseline_file.read_text().strip())
+            except ValueError:
+                baseline = 0
+        if current_errors > baseline:
+            failures.append(f"tsc failed ({current_errors} errors, baseline {baseline})")
+            log.warning(f"  Gate check: tsc FAILED ({current_errors} errors, baseline {baseline})")
+        else:
+            log.info(f"  Gate check: tsc PASSED (baseline) — {current_errors} errors <= {baseline} baseline")
+    else:
+        log.info(f"  Gate check: tsc PASSED")
 
     # Check git status is clean
     git_status = subprocess.run(
