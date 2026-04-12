@@ -78,6 +78,8 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
   const setWordSpacing = useReaderStore(s => s.setWordSpacing)
   const readingRulerEnabled = useReaderStore(s => s.readingRulerEnabled)
   const setReadingRulerEnabled = useReaderStore(s => s.setReadingRulerEnabled)
+  const scrollMode = useReaderStore(s => s.scrollMode)
+  const setScrollMode = useReaderStore(s => s.setScrollMode)
   const resetSettings = useReaderStore(s => s.resetSettings)
 
   const handleDecrease = () => {
@@ -300,6 +302,29 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             A guide line that follows your cursor to help track reading position
+          </p>
+        </section>
+
+        {/* Continuous Scroll Mode (E114-S02) */}
+        <section aria-labelledby="scroll-mode-label" className="mb-6">
+          <div className="flex items-center justify-between">
+            <Label
+              id="scroll-mode-label"
+              htmlFor="scroll-mode-switch"
+              className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+            >
+              Continuous Scroll
+            </Label>
+            <Switch
+              id="scroll-mode-switch"
+              checked={scrollMode}
+              onCheckedChange={setScrollMode}
+              aria-label="Toggle continuous scroll mode"
+              data-testid="scroll-mode-switch"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Scroll through content continuously instead of turning pages
           </p>
         </section>
 
