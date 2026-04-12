@@ -10,7 +10,7 @@
  * @since E87-S02
  */
 import { useEffect, useCallback, useState, useRef } from 'react'
-import { Play, Pause, SkipBack, SkipForward, BookOpen, Settings } from 'lucide-react'
+import { Play, Pause, SkipBack, SkipForward, BookOpen, Settings, Scissors } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/db/schema'
 import { Button } from '@/app/components/ui/button'
@@ -28,6 +28,8 @@ import { SleepTimer } from './SleepTimer'
 import { ChapterList } from './ChapterList'
 import { BookmarkButton } from './BookmarkButton'
 import { BookmarkListPanel } from './BookmarkListPanel'
+import { ClipButton } from './ClipButton'
+import { ClipListPanel } from './ClipListPanel'
 import { PostSessionBookmarkReview } from './PostSessionBookmarkReview'
 import { AudiobookSettingsPanel } from './AudiobookSettingsPanel'
 import { useAudiobookPrefsEffects } from '@/app/hooks/useAudiobookPrefsEffects'
@@ -74,6 +76,12 @@ export function AudiobookRenderer({
   } = useAudioPlayer(book)
 
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [clipsOpen, setClipsOpen] = useState(false)
+  /** Tracks the clip end boundary for clip-scoped playback (AC-4) */
+  const [activeClipEnd, setActiveClipEnd] = useState<{
+    chapterIndex: number
+    endTime: number
+  } | null>(null)
   const setCurrentBook = useAudioPlayerStore(s => s.setCurrentBook)
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
   const { activeOption, badgeText, setTimer, cancelTimer } = useSleepTimer()
@@ -294,6 +302,34 @@ export function AudiobookRenderer({
     setTimeout(() => seekTo(timestamp), 100)
   }
 
+  /** Play a clip: seek to startTime and auto-pause at endTime (AC-4) */
+  const handlePlayClip = useCallback(
+    async (chapterIndex: number, startTime: number, endTime: number) => {
+      setActiveClipEnd({ chapterIndex, endTime })
+      await loadChapter(chapterIndex, false)
+      // Intentional: short delay lets the audio element settle after chapter load
+      setTimeout(() => {
+        seekTo(startTime)
+        play()
+      }, 100)
+      setClipsOpen(false)
+    },
+    [loadChapter, seekTo, play]
+  )
+
+  // Clip-scoped playback: auto-pause when currentTime reaches clip endTime (AC-4)
+  // Tolerance of 0.1s accounts for timeupdate firing at ~4Hz — prevents missing the boundary
+  useEffect(() => {
+    if (!activeClipEnd) return
+    if (
+      currentChapterIndex === activeClipEnd.chapterIndex &&
+      currentTime >= activeClipEnd.endTime - 0.1
+    ) {
+      pause()
+      setActiveClipEnd(null)
+    }
+  }, [currentTime, currentChapterIndex, activeClipEnd, pause])
+
   return (
     <>
       {/* Blurred cover background */}
@@ -406,6 +442,7 @@ export function AudiobookRenderer({
             disabled={isLoading}
             className="flex size-16 items-center justify-center rounded-full bg-brand text-brand-foreground hover:bg-brand-hover transition-colors shadow-md disabled:opacity-40"
             aria-label={isPlaying ? 'Pause' : 'Play'}
+            data-testid={isPlaying ? 'audio-playing-indicator' : undefined}
           >
             {isLoading ? (
               <div className="size-8 animate-spin rounded-full border-2 border-brand-foreground border-t-transparent" />
@@ -455,6 +492,22 @@ export function AudiobookRenderer({
             badgeText={badgeText}
             onSelect={handleSleepTimerSelect}
           />
+          {/* Clip Button — two-phase start/end recording (E111-S01) */}
+          <ClipButton
+            bookId={book.id}
+            chapterId={currentChapter?.title ?? `chapter-${currentChapterIndex}`}
+            chapterIndex={currentChapterIndex}
+            currentTime={currentTime}
+          />
+          {/* Clips panel trigger */}
+          <button
+            onClick={() => setClipsOpen(true)}
+            className="flex items-center justify-center rounded-full min-h-[44px] min-w-[44px] px-3 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Clips"
+            data-testid="clips-panel-button"
+          >
+            <Scissors className="size-5" aria-hidden="true" />
+          </button>
           <button
             onClick={() => setSettingsOpen(true)}
             className="flex items-center justify-center rounded-full min-h-[44px] min-w-[44px] px-3 text-muted-foreground hover:text-foreground transition-colors"
@@ -489,6 +542,15 @@ export function AudiobookRenderer({
           chapters={book.chapters}
           onSeek={handleBookmarkSeek}
           onBookmarkDeleted={handleBookmarkDeleted}
+        />
+
+        {/* Clip List Panel — slides in from right (E111-S01) */}
+        <ClipListPanel
+          open={clipsOpen}
+          onClose={() => setClipsOpen(false)}
+          bookId={book.id}
+          chapters={book.chapters}
+          onPlayClip={handlePlayClip}
         />
 
         {/* Audiobook settings panel (E108-S04) */}
