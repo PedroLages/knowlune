@@ -24,6 +24,8 @@ interface BookmarkListPanelProps {
   bookId: string
   chapters: BookChapter[]
   onSeek: (chapterIndex: number, timestamp: number) => void
+  /** Called after a bookmark is deleted from Dexie, with the deleted bookmark's ID */
+  onBookmarkDeleted?: (id: string) => void
 }
 
 export function BookmarkListPanel({
@@ -32,6 +34,7 @@ export function BookmarkListPanel({
   bookId,
   chapters,
   onSeek,
+  onBookmarkDeleted,
 }: BookmarkListPanelProps) {
   const [bookmarks, setBookmarks] = useState<AudioBookmark[]>([])
 
@@ -60,6 +63,7 @@ export function BookmarkListPanel({
     try {
       await db.audioBookmarks.delete(id)
       setBookmarks(prev => prev.filter(b => b.id !== id))
+      onBookmarkDeleted?.(id)
     } catch {
       // silent-catch-ok: surfaced via toast
       toast.error('Failed to delete bookmark')

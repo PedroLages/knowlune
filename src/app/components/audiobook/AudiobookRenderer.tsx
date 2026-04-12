@@ -77,6 +77,7 @@ export function AudiobookRenderer({
   const [postSessionOpen, setPostSessionOpen] = useState(false)
   const [sessionBookmarkIds, setSessionBookmarkIds] = useState<ReadonlySet<string>>(new Set())
   const prevIsPlayingRef = useRef(false)
+  const bookmarkNoteContainerRef = useRef<HTMLDivElement>(null)
   // Set to true when the user explicitly ends the session (unmount or audio reaches end).
   // Simple pauses should not open the post-session review.
   const deliberateStopRef = useRef(false)
@@ -93,6 +94,14 @@ export function AudiobookRenderer({
 
   const handleBookmarkCreated = useCallback((bookmarkId: string) => {
     setSessionBookmarkIds(prev => new Set([...prev, bookmarkId]))
+  }, [])
+
+  const handleBookmarkDeleted = useCallback((bookmarkId: string) => {
+    setSessionBookmarkIds(prev => {
+      const next = new Set(prev)
+      next.delete(bookmarkId)
+      return next
+    })
   }, [])
 
   // bookmarksOpen can be controlled externally (from BookReader header) or internally
@@ -404,10 +413,12 @@ export function AudiobookRenderer({
               chapterIndex={currentChapterIndex}
               currentTime={currentTime}
               onBookmarkCreated={handleBookmarkCreated}
+              onBookmarkDeleted={handleBookmarkDeleted}
+              noteContainerRef={bookmarkNoteContainerRef}
             />
             {sessionBookmarkIds.size > 0 && (
               <span
-                className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-brand text-brand-foreground text-[10px] font-semibold px-1 pointer-events-none"
+                className="absolute top-0 right-0 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-brand text-brand-foreground text-[10px] font-semibold px-1 pointer-events-none"
                 aria-label={`${sessionBookmarkIds.size} bookmark${sessionBookmarkIds.size !== 1 ? 's' : ''} this session`}
                 data-testid="bookmark-count-badge"
               >
@@ -430,10 +441,13 @@ export function AudiobookRenderer({
           </button>
         </div>
 
-        {/* Progress percentage fallback */}
-        <p className="text-xs text-muted-foreground" aria-live="polite">
-          {Math.round(progressPercent)}% complete
-        </p>
+        {/* Bookmark note + progress — tighter spacing than the main gap-8 */}
+        <div className="-mt-4 flex flex-col items-center gap-3">
+          <div ref={bookmarkNoteContainerRef} />
+          <p className="text-xs text-muted-foreground" aria-live="polite">
+            {Math.round(progressPercent)}% complete
+          </p>
+        </div>
 
         {/* Chapter List — hidden for single-chapter audiobooks */}
         <ChapterList
@@ -450,6 +464,7 @@ export function AudiobookRenderer({
           bookId={book.id}
           chapters={book.chapters}
           onSeek={handleBookmarkSeek}
+          onBookmarkDeleted={handleBookmarkDeleted}
         />
 
         {/* Audiobook settings panel (E108-S04) */}
