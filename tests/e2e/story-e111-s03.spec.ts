@@ -70,9 +70,7 @@ test.describe('E111-S03: Sleep Timer End of Chapter', () => {
     await page.reload({ waitUntil: 'domcontentloaded' })
   })
 
-  test('AC-1/AC-3: EOC badge shows "EOC" when end-of-chapter mode is active', async ({
-    page,
-  }) => {
+  test('AC-1/AC-3: EOC badge shows "EOC" when end-of-chapter mode is active', async ({ page }) => {
     await page.goto(`/library/${BOOK_ID}/read`)
 
     const sleepTimerButton = page.getByTestId('sleep-timer-button')
