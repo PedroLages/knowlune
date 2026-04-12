@@ -51,8 +51,13 @@ from claude_agent_sdk import (
 from claude_agent_sdk.types import AgentDefinition, McpStdioServerConfig, TextBlock
 
 from epic_runner_ui import (
-    HAS_RICH, banner, console, cprint, coordinator_decision, epic_listing,
-    findings_panel, phase_header, rule, status_badge, story_table, summary_panel,
+    HAS_RICH, PhaseStatus, ReviewRoundDisplay, StoryProgress,
+    banner, console, cprint, coordinator_decision, create_spinner,
+    epic_finish_panel, epic_listing, error_panel_ctx, final_dashboard,
+    findings_panel, format_elapsed, log_line, phase_header,
+    phase_transition_bar, review_loop_panel, rule, session_complete,
+    status_badge, stop_spinner, story_header, story_table, summary_panel,
+    update_spinner,
 )
 
 # ─────────────────────────────────────────────────
@@ -1393,7 +1398,7 @@ def write_progress(story_key: str, phase: str, detail: str = "") -> None:
     line = f"[{ts}] [{story_key}] {phase}"
     if detail:
         line += f" — {detail}"
-    log.info(line)
+    log_line(line)
     with open(PROGRESS_FILE, "a") as f:
         f.write(line + "\n")
 
@@ -1593,13 +1598,15 @@ async def merge_epic_prs(
 
 
 async def collect_response(
-    client: ClaudeSDKClient, story_key: str = "", stream: bool = True
+    client: ClaudeSDKClient, story_key: str = "", stream: bool = True,
+    spinner: Any = None, phase_label: str = "",
 ) -> tuple[str, str | None, float]:
     """Collect all text from a response. Returns (full_text, session_id, cost)."""
     parts: list[str] = []
     session_id = None
     cost = 0.0
     char_count = 0
+    spinner_start = time.monotonic()
 
     async for msg in client.receive_response():
         if isinstance(msg, AssistantMessage):
@@ -1607,7 +1614,11 @@ async def collect_response(
                 if isinstance(block, TextBlock):
                     parts.append(block.text)
                     char_count += len(block.text)
-                    if stream:
+                    if stream and spinner and phase_label:
+                        if char_count % PROGRESS_DOT_INTERVAL_CHARS < len(block.text):
+                            elapsed = time.monotonic() - spinner_start
+                            update_spinner(spinner, phase_label, elapsed, cost)
+                    elif stream and not spinner:
                         if char_count % PROGRESS_DOT_INTERVAL_CHARS < len(block.text):
                             print(".", end="", flush=True)
                     for marker in [
@@ -1645,12 +1656,20 @@ async def collect_response(
 async def run_session(
     prompt: str, max_turns: int, max_budget: float, autonomous: bool,
     story_key: str = "", phase: PhaseConfig | None = None,
+    phase_label: str = "",
 ) -> tuple[str, str | None, float]:
     """Run a single SDK session and return (text, session_id, cost)."""
     options = make_options(max_turns, max_budget, autonomous, phase=phase)
-    async with ClaudeSDKClient(options=options) as client:
-        await client.query(prompt)
-        return await collect_response(client, story_key=story_key)
+    spinner = create_spinner(phase_label) if phase_label else None
+    try:
+        async with ClaudeSDKClient(options=options) as client:
+            await client.query(prompt)
+            return await collect_response(
+                client, story_key=story_key,
+                spinner=spinner, phase_label=phase_label,
+            )
+    finally:
+        stop_spinner(spinner)
 
 
 # ─────────────────────────────────────────────────
@@ -2241,13 +2260,21 @@ async def run_story(
             needs_agents=False, needs_playwright=False,
         )
 
+        # ── Story progress tracker ──
+        story_progress = StoryProgress(
+            key=story.key, name=story.name,
+            index=getattr(story, '_run_index', 0),
+            total=getattr(story, '_run_total', 1),
+            status="active",
+        )
+
         # ── Resume detection: skip START if branch + plan already exist ──
         existing_branch = _find_feature_branch(story)
         start_already_done = False
         if existing_branch:
             start_failures = verify_start(story)
             if not start_failures:
-                log.info(f"  ┌─ Planning: SKIPPED — branch '{existing_branch}' already has plan + story file")
+                story_progress.skip_phase("plan")
                 write_progress(story.key, "SESSION 1: START", "skipped (resuming from previous run)")
                 co = subprocess.run(
                     ["git", "checkout", existing_branch],
@@ -2262,12 +2289,13 @@ async def run_story(
 
         # ── Session 1: START (fresh) — only if not resuming ──
         if not start_already_done:
-            log.info(f"  ┌─ Planning: Creating branch and generating implementation plan...")
+            story_progress.start_phase("plan")
+            phase_transition_bar(story_progress, "plan", "Creating branch and generating implementation plan", story_progress.total_cost)
             write_progress(story.key, "SESSION 1: START", "branch, story file, plan...")
             try:
                 text, sid, cost = await run_session(
                     start_prompt(story), phase_turns(config, MAX_TURNS_START), BUDGET_SESSION_START, autonomous,
-                    story_key=story.key, phase=start_phase,
+                    story_key=story.key, phase=start_phase, phase_label="Planning",
                 )
             except StoryError as e:
                 log.warning(f"  START session ended with error: {e}")
@@ -2283,6 +2311,8 @@ async def run_story(
         if sid:
             result.session_ids.append(sid)
         result.phase_reached = "start"
+        story_progress.end_phase("plan", cost=cost)
+        session_complete("Plan", story_progress.get_phase("plan").elapsed_secs, cost)
 
         # Verify START artifacts
         start_failures = verify_start(story)
@@ -2301,7 +2331,8 @@ async def run_story(
         feature_branch = _find_feature_branch(story)
         if feature_branch:
             _assert_on_branch(feature_branch)
-        log.info(f"  ├─ Building: Implementing the plan (fresh session, reads plan from disk)")
+        story_progress.start_phase("build")
+        phase_transition_bar(story_progress, "build", "Implementing the plan (fresh session, reads plan from disk)", result.total_cost_usd)
         write_progress(story.key, "SESSION 2: IMPLEMENT", "coding feature...")
         impl_phase = None if config.legacy_mode else PhaseConfig(
             model="sonnet", effort="high", fallback_model="sonnet",
@@ -2314,6 +2345,7 @@ async def run_story(
                 phase_turns(config, MAX_TURNS_IMPLEMENT) if not config.legacy_mode else config.max_turns,
                 BUDGET_SESSION_IMPLEMENT,
                 autonomous, story_key=story.key, phase=impl_phase,
+                phase_label="Building",
             )
         except StoryError as e:
             log.warning(f"  IMPLEMENT session ended with error: {e}")
@@ -2330,6 +2362,8 @@ async def run_story(
         if sid:
             result.session_ids.append(sid)
         result.phase_reached = "implement"
+        story_progress.end_phase("build", cost=cost)
+        session_complete("Build", story_progress.get_phase("build").elapsed_secs, cost)
 
         # Verify implementation artifacts
         impl_failures = verify_implement(story)
@@ -2357,12 +2391,14 @@ async def run_story(
         # Detect which agents to skip based on changed files
         skip_agents = "" if config.legacy_mode else detect_review_skip_agents()
 
-        log.info(f"  ├─ Reviewing: Running quality gates (build, lint, tests, design, code review)")
+        story_progress.start_phase("review")
+        phase_transition_bar(story_progress, "review", "Running quality gates (build, lint, tests, design, code review)", result.total_cost_usd)
         write_progress(story.key, "SESSION 3: REVIEW", "quality gates...")
         text, sid, cost = await run_session(
             review_prompt(story, known_issues=known_issues, skip_agents=skip_agents),
             phase_turns(config, MAX_TURNS_REVIEW), BUDGET_SESSION_REVIEW,
             autonomous, story_key=story.key, phase=review_phase,
+            phase_label="Reviewing",
         )
         result.cost_review = cost
         result.total_cost_usd += cost
@@ -2371,6 +2407,7 @@ async def run_story(
 
         verdict = parse_verdict(text)
         rr = ReviewResult(rounds=1, blockers_found=verdict.blocker_count)
+        review_rounds_display: list[ReviewRoundDisplay] = []
 
         # Collect classified issues
         if verdict.pre_existing_total > 0:
@@ -2393,6 +2430,16 @@ async def run_story(
         for round_num in range(1, config.max_review_rounds + 1):
             if verdict.is_pass and verdict.story_related_total == 0:
                 write_progress(story.key, "REVIEW", f"PASSED on round {round_num}")
+                # Show final pass in review loop panel
+                review_rounds_display.append(ReviewRoundDisplay(
+                    round_num=round_num,
+                    verdict="PASS",
+                    counts=f"{verdict.blocker_count}B {verdict.high_count}H {verdict.medium_count}M {verdict.low_count}L {verdict.nit_count}N",
+                    action="accept",
+                    model="",
+                ))
+                if len(review_rounds_display) > 1:
+                    review_loop_panel(review_rounds_display)
                 break
 
             rr.rounds = round_num
@@ -2492,8 +2539,14 @@ async def run_story(
                 if coord_decision.action == "accept":
                     write_progress(story.key, "COORDINATOR",
                         f"ACCEPT: {coord_decision.reason}")
-                    log.info(f"  Coordinator: ACCEPT remaining "
-                             f"{verdict.low_count}L {verdict.nit_count}N issues")
+                    review_rounds_display.append(ReviewRoundDisplay(
+                        round_num=round_num,
+                        verdict="PASS" if verdict.is_pass else "BLOCKED",
+                        counts=f"{verdict.blocker_count}B {verdict.high_count}H {verdict.medium_count}M {verdict.low_count}L {verdict.nit_count}N",
+                        action="accept",
+                        model="",
+                    ))
+                    review_loop_panel(review_rounds_display)
                     break
 
                 if coord_decision.action == "park":
@@ -2544,11 +2597,23 @@ async def run_story(
                 needs_agents=False, needs_playwright=False,
                 append_context=f"Story: {story.key}. Fixing review findings round {round_num}.",
             )
+            # Record review round for visualization
+            coord_action = coord_decision.action if coord_decision else "fix"
+            review_rounds_display.append(ReviewRoundDisplay(
+                round_num=round_num,
+                verdict="PASS" if verdict.is_pass else "BLOCKED",
+                counts=f"{verdict.blocker_count}B {verdict.high_count}H {verdict.medium_count}M {verdict.low_count}L {verdict.nit_count}N",
+                action=coord_action,
+                model=fix_model,
+            ))
+            review_loop_panel(review_rounds_display)
+
             write_progress(story.key, "FIX", f"round {round_num}: fixing ({fix_model})...")
             _, _, fix_cost = await run_session(
                 fix_prompt(story, findings=verdict.story_related_findings, strategy=fix_strategy),
                 phase_turns(config, MAX_TURNS_FIX), BUDGET_SESSION_REVIEW,
                 autonomous, story_key=story.key, phase=fix_phase,
+                phase_label=f"Fixing R{round_num}",
             )
             result.cost_review += fix_cost
             result.total_cost_usd += fix_cost
@@ -2569,6 +2634,7 @@ async def run_story(
                 review_prompt(story, known_issues=known_issues, skip_agents=skip_agents),
                 phase_turns(config, MAX_TURNS_REVIEW), BUDGET_SESSION_REVIEW,
                 autonomous, story_key=story.key, phase=review_phase,
+                phase_label=f"Re-reviewing R{round_num + 1}",
             )
             result.cost_review += rr_cost
             result.total_cost_usd += rr_cost
@@ -2597,6 +2663,7 @@ async def run_story(
                         fix_prompt(story, findings=verdict.story_related_findings),
                         phase_turns(config, MAX_TURNS_FIX), BUDGET_SESSION_REVIEW,
                         autonomous, story_key=story.key, phase=fix_phase,
+                        phase_label="Fixing non-blockers",
                     )
                     result.cost_review += fix_cost
                     result.total_cost_usd += fix_cost
@@ -2620,11 +2687,16 @@ async def run_story(
             needs_agents=False, needs_playwright=False,
         )
 
-        log.info(f"  └─ Shipping: Creating pull request and marking story done")
+        story_progress.end_phase("review", cost=result.cost_review)
+        session_complete("Review", story_progress.get_phase("review").elapsed_secs, result.cost_review)
+
+        story_progress.start_phase("ship")
+        phase_transition_bar(story_progress, "ship", "Creating pull request and marking story done", result.total_cost_usd)
         write_progress(story.key, "FINISH", "updating story, pushing, creating PR...")
         text, sid, cost = await run_session(
             finish_prompt_text(story), phase_turns(config, MAX_TURNS_FINISH), BUDGET_SESSION_REVIEW,
             autonomous, story_key=story.key, phase=finish_phase,
+            phase_label="Shipping",
         )
         result.cost_review += cost
         result.total_cost_usd += cost
@@ -2696,14 +2768,36 @@ async def run_story(
             epic_ctx.all_known_matched.extend(result.known_issues_matched)
             epic_ctx.all_non_issues.extend(result.non_issues)
 
+        story_progress.end_phase("ship", cost=cost)
+        session_complete("Ship", story_progress.get_phase("ship").elapsed_secs, cost)
+        story_progress.status = "done"
         result.success = True
 
     except StoryError as e:
         result.error = str(e)
-        log.error(f"[{story.key}] Failed at {result.phase_reached}: {e}")
+        # Mark current phase as failed
+        for p in story_progress.phases:
+            if p.status == "active":
+                p.status = "failed"
+                if p.start_time:
+                    p.elapsed_secs = time.monotonic() - p.start_time
+        story_progress.status = "failed"
+        error_panel_ctx(
+            story.key, story.name, result.phase_reached,
+            str(e), time.monotonic() - start_time, result.total_cost_usd,
+        )
     except Exception as e:
         result.error = f"{type(e).__name__}: {e}"
-        log.error(f"[{story.key}] Unexpected error at {result.phase_reached}: {e}")
+        for p in story_progress.phases:
+            if p.status == "active":
+                p.status = "failed"
+                if p.start_time:
+                    p.elapsed_secs = time.monotonic() - p.start_time
+        story_progress.status = "failed"
+        error_panel_ctx(
+            story.key, story.name, result.phase_reached,
+            f"{type(e).__name__}: {e}", time.monotonic() - start_time, result.total_cost_usd,
+        )
     finally:
         _checkout_main_and_pull(force=True)
 
@@ -2758,6 +2852,7 @@ async def _run_single_epic_phase(
         text, _sid, cost = await run_session(
             prompt, config.max_turns, BUDGET_SESSION_EPIC_FINISH, autonomous,
             story_key=epic_key, phase=phase_cfg,
+            phase_label=f"Epic {phase_name}",
         )
     except StoryError as e:
         log.error(f"  [{epic_key}] {phase_name} session error: {e}")
@@ -3365,14 +3460,22 @@ async def main() -> None:
 
         # ── Phase 1: Story Pipeline ──
         results: list[StoryResult] = []
+        stories_status: list[str] = ["pending"] * len(stories)
         for i, story in enumerate(stories):
-            log.info(f"\n{'=' * 60}")
-            log.info(f"[{i + 1}/{len(stories)}] {story.key} — {story.name}")
-            log.info(f"{'=' * 60}")
-            log.info(f"  Pipeline: Plan → Build → Review → Ship")
+            stories_status[i] = "active"
+            # Attach run index/total for StoryProgress inside run_story
+            story._run_index = i  # type: ignore[attr-defined]
+            story._run_total = len(stories)  # type: ignore[attr-defined]
+
+            progress = StoryProgress(
+                key=story.key, name=story.name,
+                index=i, total=len(stories), status="active",
+            )
+            story_header(progress, stories_status)
 
             result = await run_story(story, config, epic_ctx)
             results.append(result)
+            stories_status[i] = "done" if result.success else "failed"
 
             log_result(result, config.log_file)
             print_progress(results, len(stories))
@@ -3387,14 +3490,13 @@ async def main() -> None:
 
         # Final summary
         banner("BATCH COMPLETE", "bold green")
-        story_table(results, len(stories))
+        coordinator_total = sum(r.coordinator_cost_usd for r in results)
+        final_dashboard(results, len(stories), coordinator_cost=coordinator_total)
 
         total_cost = sum(r.total_cost_usd for r in results)
         total_time = sum(r.duration_secs for r in results)
-        summary_panel("Totals", {
-            "Cost": f"${total_cost:.2f}",
-            "Time": f"{total_time / 60:.1f} min",
-            "Log": str(config.log_file),
+        summary_panel("Log", {
+            "File": str(config.log_file),
         })
 
         # ── Phase 2+3: End-of-Epic Processing ──
