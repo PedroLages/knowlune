@@ -134,7 +134,9 @@ export function EpubRenderer({
         rendition.resize(width, height)
       }
     }
-  }, [scrollMode])
+    // Re-apply theme after flow switch — some epub.js versions reset theme styles on flow change
+    applyTheme(rendition)
+  }, [scrollMode, applyTheme])
 
   /** Clear page turn animation timer on unmount to avoid setState after unmount */
   useEffect(() => {
@@ -238,7 +240,7 @@ export function EpubRenderer({
   return (
     <div
       ref={containerRef}
-      className={cn('relative h-full w-full', containerBg, animationClass, scrollMode && 'overflow-y-auto')}
+      className={cn('relative h-full w-full', containerBg, animationClass)}
       data-testid="epub-renderer"
       onTouchStart={scrollMode ? undefined : handleTouchStart}
       onTouchEnd={scrollMode ? undefined : handleTouchEnd}
@@ -261,10 +263,10 @@ export function EpubRenderer({
         }
       />
 
-      {/* Interaction zones — hidden in scroll mode where native scrolling replaces tap zones (E114-S02) */}
-      {!scrollMode && (
-        <div className="pointer-events-none absolute inset-0 z-10">
-          {/* Left zone (prev) — 33% */}
+      {/* Interaction zones — prev/next hidden in scroll mode (native scroll replaces), center toggle always present */}
+      <div className="pointer-events-none absolute inset-0 z-10">
+        {/* Left zone (prev) — 33%, paginated only */}
+        {!scrollMode && (
           <div
             className="pointer-events-auto absolute inset-y-0 left-0 w-[33%] cursor-pointer"
             onClick={navigatePrev}
@@ -273,18 +275,20 @@ export function EpubRenderer({
             aria-label="Previous page"
             data-reader-zone="prev"
           />
+        )}
 
-          {/* Center zone (34%) — toggle header/footer visibility */}
-          <div
-            className="pointer-events-auto absolute inset-y-0 left-[33%] w-[34%] cursor-pointer"
-            onClick={toggleHeader}
-            role="button"
-            tabIndex={-1}
-            aria-label="Toggle reader controls"
-            data-reader-zone="toggle"
-          />
+        {/* Center zone (34%) — toggle header/footer visibility, always active */}
+        <div
+          className="pointer-events-auto absolute inset-y-0 left-[33%] w-[34%] cursor-pointer"
+          onClick={toggleHeader}
+          role="button"
+          tabIndex={-1}
+          aria-label="Toggle reader controls"
+          data-reader-zone="toggle"
+        />
 
-          {/* Right zone (next) — 33% */}
+        {/* Right zone (next) — 33%, paginated only */}
+        {!scrollMode && (
           <div
             className="pointer-events-auto absolute inset-y-0 right-0 w-[33%] cursor-pointer"
             onClick={navigateNext}
@@ -293,8 +297,8 @@ export function EpubRenderer({
             aria-label="Next page"
             data-reader-zone="next"
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Live region for page change announcements (accessibility) */}
       <div aria-live="polite" aria-atomic="true" className="sr-only" id="reader-page-announce" />
