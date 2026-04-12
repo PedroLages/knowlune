@@ -222,9 +222,6 @@ export function YouTubeVideoContent({
         {/* Video info below player */}
         <div className="mt-3 space-y-2">
           <h1 className="text-lg font-semibold">{video.filename}</h1>
-          {video.description && (
-            <p className="text-sm text-muted-foreground line-clamp-3">{video.description}</p>
-          )}
           {currentStatus === 'completed' && (
             <Badge
               variant="secondary"
