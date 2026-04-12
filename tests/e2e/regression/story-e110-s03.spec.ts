@@ -6,9 +6,9 @@
  * on book completion.
  */
 import { test, expect } from '@playwright/test'
-import { navigateAndWait } from '../support/helpers/navigation'
-import { seedBooks, seedReadingQueue } from '../support/helpers/seed-helpers'
-import { FIXED_DATE } from '../utils/test-time'
+import { navigateAndWait } from '../../support/helpers/navigation'
+import { seedBooks, seedReadingQueue } from '../../support/helpers/seed-helpers'
+import { FIXED_DATE } from '../../utils/test-time'
 
 const BOOK_1 = {
   id: 'q-book-1',
