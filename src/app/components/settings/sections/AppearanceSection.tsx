@@ -4,6 +4,7 @@ import { Label } from '@/app/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
 import { Switch } from '@/app/components/ui/switch'
 import { FontSizePicker } from '@/app/components/settings/FontSizePicker'
+import { ColorSchemePicker } from '@/app/components/settings/ColorSchemePicker'
 import { DisplayAccessibilitySection } from '@/app/components/settings/DisplayAccessibilitySection'
 import { ReadingFocusModesSection } from '@/app/components/settings/ReadingFocusModesSection'
 import { useSettingsPage } from '@/app/components/settings/SettingsPageContext'
@@ -30,7 +31,7 @@ export function AppearanceSection() {
                 <RadioGroupItem value="system" className="sr-only" />
                 <div
                   className={cn(
-                    'relative w-full aspect-[4/5] rounded-xl overflow-hidden',
+                    'relative w-full aspect-[4/3] rounded-xl overflow-hidden',
                     'border-2 transition-all',
                     theme === 'system'
                       ? 'border-brand shadow-md shadow-brand/10'
@@ -61,7 +62,7 @@ export function AppearanceSection() {
                 <RadioGroupItem value="light" className="sr-only" />
                 <div
                   className={cn(
-                    'relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-[#e9e7e4]',
+                    'relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-[#e9e7e4]',
                     'border-2 transition-all',
                     theme === 'light'
                       ? 'border-brand shadow-md shadow-brand/10'
@@ -88,7 +89,7 @@ export function AppearanceSection() {
                 <RadioGroupItem value="dark" className="sr-only" />
                 <div
                   className={cn(
-                    'relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-[#1a1b26]',
+                    'relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-[#1a1b26]',
                     'border-2 transition-all',
                     theme === 'dark'
                       ? 'border-brand shadow-md shadow-brand/10'
@@ -114,7 +115,17 @@ export function AppearanceSection() {
         </div>
       </section>
 
-      {/* 2. Reading Themes + Reading Mode (circles, font size, line height) */}
+      {/* 2. Color Scheme */}
+      <section>
+        <h4 className="px-1 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
+          Color Scheme
+        </h4>
+        <div className="bg-card rounded-xl shadow-sm p-6">
+          <ColorSchemePicker />
+        </div>
+      </section>
+
+      {/* 3. Reading Themes + Reading Mode (circles, font size, line height) */}
       <ReadingFocusModesSection
         settings={settings}
         onSettingsChange={updates => updateAndPersist(updates)}
