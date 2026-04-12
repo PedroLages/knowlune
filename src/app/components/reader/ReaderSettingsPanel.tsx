@@ -270,7 +270,7 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
           <Slider
             min={0}
             max={0.5}
-            step={0.05}
+            step={0.02}
             value={[wordSpacing]}
             onValueChange={([val]) => setWordSpacing(val)}
             className="w-full"

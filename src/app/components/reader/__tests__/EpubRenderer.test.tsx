@@ -29,6 +29,9 @@ const mockStoreState: Record<string, unknown> = {
   fontSize: 100,
   fontFamily: 'default',
   lineHeight: 1.6,
+  letterSpacing: 0,
+  wordSpacing: 0,
+  scrollMode: false,
   toggleHeader: vi.fn(),
 }
 const mockToggleHeader = mockStoreState.toggleHeader as ReturnType<typeof vi.fn>
@@ -54,6 +57,7 @@ function createMockRendition() {
     resize: vi.fn(),
     prev: vi.fn().mockResolvedValue(undefined),
     next: vi.fn().mockResolvedValue(undefined),
+    flow: vi.fn(),
     themes: {
       default: vi.fn(),
     },
@@ -106,6 +110,9 @@ describe('EpubRenderer', () => {
     mockStoreState.fontSize = 100
     mockStoreState.fontFamily = 'default'
     mockStoreState.lineHeight = 1.6
+    mockStoreState.letterSpacing = 0
+    mockStoreState.wordSpacing = 0
+    mockStoreState.scrollMode = false
     mockColorScheme = 'professional'
     vi.useFakeTimers()
   })
@@ -545,6 +552,148 @@ describe('EpubRenderer', () => {
       expect(screen.getByLabelText('Previous page')).toBeInTheDocument()
       expect(screen.getByLabelText('Toggle reader controls')).toBeInTheDocument()
       expect(screen.getByLabelText('Next page')).toBeInTheDocument()
+    })
+  })
+
+  // ─── E114-S01: Letter/Word Spacing via rendition.themes.default() (AC-7, AC-8) ───
+
+  describe('E114-S01 — Letter/Word spacing applied to rendition (AC-7, AC-8)', () => {
+    function setupRenditionWithSpacing(letterSpacing: number, wordSpacing: number) {
+      mockStoreState.letterSpacing = letterSpacing
+      mockStoreState.wordSpacing = wordSpacing
+      render(<EpubRenderer {...defaultProps} />)
+      const mockRendition = createMockRendition()
+      const epubViewCall = mockEpubViewProps.mock.calls[0][0]
+      act(() => {
+        epubViewCall.getRendition(mockRendition)
+      })
+      return mockRendition
+    }
+
+    it('applies letter-spacing as em string when non-zero (AC-7)', () => {
+      const mockRendition = setupRenditionWithSpacing(0.1, 0)
+      expect(mockRendition.themes.default).toHaveBeenCalledWith({
+        body: expect.objectContaining({ 'letter-spacing': '0.1em' }),
+      })
+    })
+
+    it('applies word-spacing as em string when non-zero (AC-7)', () => {
+      const mockRendition = setupRenditionWithSpacing(0, 0.25)
+      expect(mockRendition.themes.default).toHaveBeenCalledWith({
+        body: expect.objectContaining({ 'word-spacing': '0.25em' }),
+      })
+    })
+
+    it('resets letter-spacing to "normal" when value is 0 (AC-8)', () => {
+      const mockRendition = setupRenditionWithSpacing(0, 0)
+      expect(mockRendition.themes.default).toHaveBeenCalledWith({
+        body: expect.objectContaining({ 'letter-spacing': 'normal' }),
+      })
+    })
+
+    it('resets word-spacing to "normal" when value is 0 (AC-8)', () => {
+      const mockRendition = setupRenditionWithSpacing(0, 0)
+      expect(mockRendition.themes.default).toHaveBeenCalledWith({
+        body: expect.objectContaining({ 'word-spacing': 'normal' }),
+      })
+    })
+
+    it('re-applies spacing when letterSpacing changes (AC-7)', () => {
+      const { rerender } = render(<EpubRenderer {...defaultProps} />)
+      const mockRendition = createMockRendition()
+      const epubViewCall = mockEpubViewProps.mock.calls[0][0]
+      act(() => { epubViewCall.getRendition(mockRendition) })
+      mockRendition.themes.default.mockClear()
+
+      mockStoreState.letterSpacing = 0.2
+      rerender(<EpubRenderer {...defaultProps} />)
+
+      expect(mockRendition.themes.default).toHaveBeenCalledWith({
+        body: expect.objectContaining({ 'letter-spacing': '0.2em' }),
+      })
+    })
+  })
+
+  // ─── E114-S02: Continuous Scroll Mode (AC-2, AC-3, AC-4, AC-5, AC-7, AC-8) ───
+
+  describe('E114-S02 — Continuous Scroll Mode (AC-2, AC-3, AC-4, AC-5)', () => {
+    it('passes flow: "scrolled-doc" in epubOptions when scrollMode is true (AC-2)', () => {
+      mockStoreState.scrollMode = true
+      render(<EpubRenderer {...defaultProps} />)
+
+      const passedProps = mockEpubViewProps.mock.calls[0][0]
+      expect(passedProps.epubOptions).toEqual(
+        expect.objectContaining({ flow: 'scrolled-doc' })
+      )
+    })
+
+    it('passes flow: "paginated" in epubOptions when scrollMode is false (AC-3)', () => {
+      mockStoreState.scrollMode = false
+      render(<EpubRenderer {...defaultProps} />)
+
+      const passedProps = mockEpubViewProps.mock.calls[0][0]
+      expect(passedProps.epubOptions).toEqual(
+        expect.objectContaining({ flow: 'paginated' })
+      )
+    })
+
+    it('hides prev/next tap zones when scrollMode is true (AC-4)', () => {
+      mockStoreState.scrollMode = true
+      render(<EpubRenderer {...defaultProps} />)
+
+      expect(screen.queryByLabelText('Previous page')).toBeNull()
+      expect(screen.queryByLabelText('Next page')).toBeNull()
+    })
+
+    it('shows prev/next tap zones when scrollMode is false (AC-3)', () => {
+      mockStoreState.scrollMode = false
+      render(<EpubRenderer {...defaultProps} />)
+
+      expect(screen.getByLabelText('Previous page')).toBeInTheDocument()
+      expect(screen.getByLabelText('Next page')).toBeInTheDocument()
+    })
+
+    it('center toggle zone remains visible in scroll mode (AC-5)', () => {
+      mockStoreState.scrollMode = true
+      render(<EpubRenderer {...defaultProps} />)
+
+      expect(screen.getByLabelText('Toggle reader controls')).toBeInTheDocument()
+    })
+
+    it('disables onTouchStart/onTouchEnd handlers in scroll mode (AC-4)', () => {
+      // In scroll mode, touch handlers are set to undefined so native scroll passes through.
+      // Verify a swipe does NOT navigate when scrollMode is true.
+      mockStoreState.scrollMode = true
+      render(<EpubRenderer {...defaultProps} />)
+      const mockRendition = createMockRendition()
+      const epubViewCall = mockEpubViewProps.mock.calls[0][0]
+      act(() => { epubViewCall.getRendition(mockRendition) })
+
+      const container = screen.getByTestId('epub-renderer')
+      // Simulate a left swipe — should not trigger navigation in scroll mode
+      fireEvent.touchStart(container, { touches: [{ clientX: 200, clientY: 100 }] })
+      fireEvent.touchEnd(container, { changedTouches: [{ clientX: 100, clientY: 100 }] })
+
+      expect(mockRendition.next).not.toHaveBeenCalled()
+    })
+
+    it('re-applies theme after flow change when scrollMode toggles (AC-7)', () => {
+      render(<EpubRenderer {...defaultProps} />)
+      const mockRendition = createMockRendition()
+      const epubViewCall = mockEpubViewProps.mock.calls[0][0]
+      act(() => { epubViewCall.getRendition(mockRendition) })
+      mockRendition.themes.default.mockClear()
+
+      // Simulate scrollMode changing
+      mockStoreState.scrollMode = true
+      const { rerender } = render(<EpubRenderer {...defaultProps} />)
+      const mockRendition2 = createMockRendition()
+      const epubViewCall2 = mockEpubViewProps.mock.calls[mockEpubViewProps.mock.calls.length - 1][0]
+      act(() => { epubViewCall2.getRendition(mockRendition2) })
+
+      // Theme must be applied (re-applies on rendition ready via handleGetRendition)
+      expect(mockRendition2.themes.default).toHaveBeenCalled()
+      rerender(<EpubRenderer {...defaultProps} />)
     })
   })
 })
