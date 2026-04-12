@@ -12,9 +12,9 @@
  * - AC-8: Accessibility — keyboard, ARIA labels, screen reader compatibility
  */
 
-import { test, expect } from '../support/fixtures'
-import { seedBooks } from '../support/helpers/seed-helpers'
-import { FIXED_DATE } from '../utils/test-time'
+import { test, expect } from '../../support/fixtures'
+import { seedBooks } from '../../support/helpers/seed-helpers'
+import { FIXED_DATE } from '../../utils/test-time'
 
 const AUDIOBOOK_PREFS_KEY = 'knowlune:audiobook-prefs-v1'
 
