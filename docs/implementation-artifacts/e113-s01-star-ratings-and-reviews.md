@@ -1,9 +1,9 @@
 ---
 story_id: E113-S01
 story_name: "Star Ratings & Reviews"
-status: in-progress
+status: done
 started: 2026-04-12
-completed:
+completed: 2026-04-12
 reviewed: true
 review_started: 2026-04-12
 review_gates_passed:
