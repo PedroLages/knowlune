@@ -134,6 +134,7 @@ export function useSilenceDetection({
     // Resume suspended context (browser may suspend before user gesture)
     // Intentional: AudioContext starts suspended — resume() re-activates it
     if (_audioCtx.state === 'suspended') {
+      // silent-catch-ok: resume failure is non-fatal — audio still plays, silence detection just won't activate
       _audioCtx.resume().catch(err => {
         console.error('[useSilenceDetection] Failed to resume AudioContext:', err)
       })
