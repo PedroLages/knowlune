@@ -378,7 +378,8 @@ export function UnifiedLessonPlayer() {
 
       {/* Lesson description/tags — only shown when there's actual content */}
       {state.lessonTypeResolved &&
-        ((state.lessonDescription && source !== 'youtube') || (state.lessonTags && state.lessonTags.length > 0)) && (
+        ((state.lessonDescription && source !== 'youtube') ||
+          (state.lessonTags && state.lessonTags.length > 0)) && (
           <div className="bg-card rounded-2xl shadow-sm p-5 mt-4">
             {state.lessonDescription && source !== 'youtube' && (
               <p className="text-sm text-muted-foreground leading-relaxed">

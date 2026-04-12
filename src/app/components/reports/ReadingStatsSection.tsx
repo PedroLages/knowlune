@@ -139,7 +139,9 @@ export function ReadingStatsSection() {
           <StatPill
             icon={<BookOpen className="size-3.5" aria-hidden="true" />}
             label="Avg Speed"
-            value={stats?.avgReadingSpeedPagesPerHour ? `${stats.avgReadingSpeedPagesPerHour} p/h` : '—'}
+            value={
+              stats?.avgReadingSpeedPagesPerHour ? `${stats.avgReadingSpeedPagesPerHour} p/h` : '—'
+            }
             data-testid="reading-stat-avg-speed"
           />
         </div>

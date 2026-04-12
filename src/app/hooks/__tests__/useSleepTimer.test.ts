@@ -206,12 +206,10 @@ describe('useSleepTimer', () => {
   it('cancelTimer during fade does not invoke onPause after cancellation', () => {
     // rAF that queues but does not immediately execute (simulates in-progress fade)
     const pendingCallbacks: FrameRequestCallback[] = []
-    const rafSpy = vi
-      .spyOn(window, 'requestAnimationFrame')
-      .mockImplementation(cb => {
-        pendingCallbacks.push(cb)
-        return pendingCallbacks.length
-      })
+    const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => {
+      pendingCallbacks.push(cb)
+      return pendingCallbacks.length
+    })
     const cafSpy = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {})
 
     const onPause = vi.fn()

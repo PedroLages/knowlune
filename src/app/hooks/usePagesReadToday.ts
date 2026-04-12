@@ -62,9 +62,7 @@ export async function getPagesReadToday(): Promise<number> {
 
   // Get user's actual reading speed (pages/hour) or fall back to 2 min/page heuristic
   const avgSpeedPagesPerHour = await computeAverageReadingSpeed()
-  const minPerPage = avgSpeedPagesPerHour
-    ? 60 / avgSpeedPagesPerHour
-    : FALLBACK_MIN_PER_PAGE
+  const minPerPage = avgSpeedPagesPerHour ? 60 / avgSpeedPagesPerHour : FALLBACK_MIN_PER_PAGE
 
   // Batch query: fetch ALL book study sessions for today in one Dexie query
   // courseId = '' is the sentinel for book sessions (set in useReadingSession.ts)

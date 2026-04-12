@@ -158,8 +158,14 @@ test.describe('E111-S01: Audio Clips', () => {
     await expect(secondClip.getByText(/1:00/)).toBeVisible()
 
     // Verify ordering — first clip's start time (10s) is before second clip's (60s)
-    const firstClipTime = await firstClip.getByText(/\d+:\d+/).first().textContent()
-    const secondClipTime = await secondClip.getByText(/\d+:\d+/).first().textContent()
+    const firstClipTime = await firstClip
+      .getByText(/\d+:\d+/)
+      .first()
+      .textContent()
+    const secondClipTime = await secondClip
+      .getByText(/\d+:\d+/)
+      .first()
+      .textContent()
     expect(firstClipTime).toBeTruthy()
     expect(secondClipTime).toBeTruthy()
     // Parse "M:SS" timestamps and verify ordering

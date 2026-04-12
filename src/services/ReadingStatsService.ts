@@ -133,7 +133,7 @@ export async function computeETA(
   // Insufficient data for ETA
   if (totalSeconds === 0 || sessionCount === 0) return null
 
-  const avgPagesPerDay = avgSpeedPagesPerHour * (totalSeconds / 3600) / (sessionCount / 7) // avg pages per day estimate
+  const avgPagesPerDay = (avgSpeedPagesPerHour * (totalSeconds / 3600)) / (sessionCount / 7) // avg pages per day estimate
   const remainingPages = Math.round((1 - (book.progress ?? 0) / 100) * book.totalPages)
 
   if (remainingPages <= 0) return null
@@ -179,9 +179,12 @@ export async function getTimeOfDayPattern(): Promise<TimeOfDayPattern | null> {
   const total = Object.values(buckets).reduce((sum, v) => sum + v, 0)
   if (total === 0) return null
 
-  const dominant = (
-    Object.entries(buckets).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null
-  ) as 'Morning' | 'Afternoon' | 'Evening' | 'Night' | null
+  const dominant = (Object.entries(buckets).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null) as
+    | 'Morning'
+    | 'Afternoon'
+    | 'Evening'
+    | 'Night'
+    | null
 
   return {
     buckets: Object.entries(buckets).map(([period, count]) => ({
@@ -256,12 +259,13 @@ export async function getBookStatusCounts(): Promise<{ inProgress: number; finis
  * Fetch all reading statistics in a single call.
  */
 export async function getReadingStats(): Promise<ReadingStats> {
-  const [timeReadTodayMinutes, readingTrend, { inProgress, finished }, avgSpeed] = await Promise.all([
-    getTimeReadToday(),
-    getReadingTimeTrend(14),
-    getBookStatusCounts(),
-    computeAverageReadingSpeed(),
-  ])
+  const [timeReadTodayMinutes, readingTrend, { inProgress, finished }, avgSpeed] =
+    await Promise.all([
+      getTimeReadToday(),
+      getReadingTimeTrend(14),
+      getBookStatusCounts(),
+      computeAverageReadingSpeed(),
+    ])
 
   return {
     timeReadTodayMinutes,

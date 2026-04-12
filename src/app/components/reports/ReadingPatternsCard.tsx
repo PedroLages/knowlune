@@ -73,9 +73,7 @@ export function ReadingPatternsCard() {
               {pattern.buckets.map(bucket => (
                 <div key={bucket.period}>
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-medium text-foreground">
-                      {bucket.period}
-                    </span>
+                    <span className="text-sm font-medium text-foreground">{bucket.period}</span>
                     <span className="text-xs text-muted-foreground">
                       {bucket.count} {bucket.count === 1 ? 'session' : 'sessions'}
                     </span>

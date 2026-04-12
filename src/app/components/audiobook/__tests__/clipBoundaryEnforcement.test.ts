@@ -13,8 +13,7 @@ function shouldPauseClip(
 ): boolean {
   if (!activeClipEnd) return false
   return (
-    currentChapterIndex === activeClipEnd.chapterIndex &&
-    currentTime >= activeClipEnd.endTime - 0.1
+    currentChapterIndex === activeClipEnd.chapterIndex && currentTime >= activeClipEnd.endTime - 0.1
   )
 }
 
