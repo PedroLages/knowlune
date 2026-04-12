@@ -310,10 +310,13 @@ app.use('/api/abs/proxy', (req, res, next) => {
   const isStreamingRequest = absPath.startsWith('/s/') || absPath.includes('/stream/')
   const timeout = isStreamingRequest ? ABS_STREAM_TIMEOUT_MS : ABS_TIMEOUT_MS
 
-  // AbortController: abort upstream fetch on timeout OR client disconnect
+  // AbortController: abort upstream fetch on timeout OR client disconnect (streaming only)
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort('timeout'), timeout)
-  req.on('close', () => controller.abort('client-disconnect'))
+  // Only abort on client disconnect for streaming — non-streaming requests are short-lived
+  if (isStreamingRequest) {
+    req.on('close', () => { if (!res.writableEnded) controller.abort('client-disconnect') })
+  }
 
   try {
     const hasBody = req.method !== 'GET' && req.method !== 'HEAD' && req.body != null
@@ -402,13 +405,12 @@ app.use('/api/abs/proxy', (req, res, next) => {
     // silent-catch-ok — returns structured error to client
     clearTimeout(timeoutId)
     if ((error as Error).name === 'AbortError') {
-      // Client navigated away — silently drop, no response needed
       if (controller.signal.reason === 'client-disconnect') return
-      // Timeout — inform client
       res.status(504).json({ error: 'Server timed out' })
       return
     }
-    const msg = (error as Error).message
+    const msg = (error as Error).message ?? String(error)
+    console.error('[/api/abs/proxy]', msg)
     if (msg.includes('fetch failed') || msg.includes('ECONNREFUSED')) {
       res.status(502).json({ error: 'Cannot reach server. Check the URL.' })
       return
