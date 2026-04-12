@@ -110,7 +110,7 @@ test.describe('E111-S02: Skip Silence and Speed Memory', () => {
     await skipSilenceToggle.click() // enable
     await expect(page.getByTestId('skip-silence-active-indicator')).toBeVisible()
 
-    await settingsButton.click()
+    // Sheet is still open — disable skip silence by toggling again
     await skipSilenceToggle.click() // disable
     await expect(page.getByTestId('skip-silence-active-indicator')).not.toBeVisible()
   })
