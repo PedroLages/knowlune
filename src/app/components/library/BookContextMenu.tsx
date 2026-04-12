@@ -8,7 +8,7 @@
  * @since E83-S04
  */
 
-import { lazy, Suspense, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import {
   Check,
@@ -109,8 +109,9 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
   const updateBookStatus = useBookStore(s => s.updateBookStatus)
   const deleteBook = useBookStore(s => s.deleteBook)
   const getSortedShelves = useShelfStore(s => s.getSortedShelves)
-  const shelves = getSortedShelves()
+  const rawShelves = useShelfStore(s => s.shelves)
   const bookShelves = useShelfStore(s => s.bookShelves)
+  const shelves = useMemo(() => getSortedShelves(), [rawShelves])
   const addBookToShelf = useShelfStore(s => s.addBookToShelf)
   const removeBookFromShelf = useShelfStore(s => s.removeBookFromShelf)
   const isInQueue = useReadingQueueStore(s => s.isInQueue)

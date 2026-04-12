@@ -86,12 +86,15 @@ export const useShelfStore = create<ShelfStoreState>((set, get) => ({
       createdAt: now(),
     }
 
+    // Optimistic update
+    set(state => ({ shelves: [...state.shelves, shelf] }))
+
     try {
       await db.shelves.put(shelf)
-      set(state => ({ shelves: [...state.shelves, shelf] }))
       toast.success(`Shelf "${trimmed}" created`)
       return shelf
     } catch {
+      set(state => ({ shelves: state.shelves.filter(s => s.id !== shelf.id) }))
       toast.error('Failed to create shelf')
       return null
     }
@@ -213,6 +216,8 @@ export const useShelfStore = create<ShelfStoreState>((set, get) => ({
 
     try {
       await db.bookShelves.delete(entry.id)
+      const shelf = get().shelves.find(s => s.id === shelfId)
+      if (shelf) toast.success(`Removed from "${shelf.name}"`)
     } catch {
       const bookShelves = await db.bookShelves.toArray()
       set({ bookShelves })
