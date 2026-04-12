@@ -68,18 +68,9 @@ export function ColorSchemePicker() {
                   style={{ backgroundColor: colors.sidebar }}
                 >
                   <div className="w-3 h-3 rounded" style={{ backgroundColor: colors.brand }} />
-                  <div
-                    className="w-3 h-1 rounded-full"
-                    style={{ backgroundColor: colors.muted }}
-                  />
-                  <div
-                    className="w-3 h-1 rounded-full"
-                    style={{ backgroundColor: colors.muted }}
-                  />
-                  <div
-                    className="w-3 h-1 rounded-full"
-                    style={{ backgroundColor: colors.muted }}
-                  />
+                  <div className="w-3 h-1 rounded-full" style={{ backgroundColor: colors.muted }} />
+                  <div className="w-3 h-1 rounded-full" style={{ backgroundColor: colors.muted }} />
+                  <div className="w-3 h-1 rounded-full" style={{ backgroundColor: colors.muted }} />
                 </div>
                 {/* Content area */}
                 <div className="flex-1 p-2.5 flex flex-col gap-1.5">
@@ -92,14 +83,8 @@ export function ColorSchemePicker() {
                     style={{ backgroundColor: colors.brand, opacity: 0.15 }}
                   />
                   <div className="flex gap-1.5 mt-0.5">
-                    <div
-                      className="h-6 flex-1 rounded"
-                      style={{ backgroundColor: colors.muted }}
-                    />
-                    <div
-                      className="h-6 flex-1 rounded"
-                      style={{ backgroundColor: colors.muted }}
-                    />
+                    <div className="h-6 flex-1 rounded" style={{ backgroundColor: colors.muted }} />
+                    <div className="h-6 flex-1 rounded" style={{ backgroundColor: colors.muted }} />
                   </div>
                   <div
                     className="h-1 w-1/2 rounded-full mt-auto"

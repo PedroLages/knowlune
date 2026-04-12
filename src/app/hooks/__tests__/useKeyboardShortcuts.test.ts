@@ -31,9 +31,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('fires callback when matching key is pressed', () => {
     const action = vi.fn()
-    renderHook(() =>
-      useKeyboardShortcuts([{ key: 'n', description: 'Open import', action }])
-    )
+    renderHook(() => useKeyboardShortcuts([{ key: 'n', description: 'Open import', action }]))
 
     fireKey('n')
     expect(action).toHaveBeenCalledTimes(1)
@@ -41,9 +39,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('fires callback for case-insensitive match (key.toLowerCase)', () => {
     const action = vi.fn()
-    renderHook(() =>
-      useKeyboardShortcuts([{ key: 'n', description: 'Open import', action }])
-    )
+    renderHook(() => useKeyboardShortcuts([{ key: 'n', description: 'Open import', action }]))
 
     // N (uppercase) should match shortcut registered as 'n'
     fireKey('N')
@@ -52,9 +48,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('ignores shortcut when isComposing is true (IME guard)', () => {
     const action = vi.fn()
-    renderHook(() =>
-      useKeyboardShortcuts([{ key: 'n', description: 'Open import', action }])
-    )
+    renderHook(() => useKeyboardShortcuts([{ key: 'n', description: 'Open import', action }]))
 
     fireKey('n', { isComposing: true })
     expect(action).not.toHaveBeenCalled()
@@ -62,9 +56,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('ignores shortcut when INPUT element is focused', () => {
     const action = vi.fn()
-    renderHook(() =>
-      useKeyboardShortcuts([{ key: 'n', description: 'Open import', action }])
-    )
+    renderHook(() => useKeyboardShortcuts([{ key: 'n', description: 'Open import', action }]))
 
     const input = document.createElement('input')
     document.body.appendChild(input)
@@ -80,9 +72,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('ignores shortcut when TEXTAREA element is focused', () => {
     const action = vi.fn()
-    renderHook(() =>
-      useKeyboardShortcuts([{ key: 'n', description: 'Open import', action }])
-    )
+    renderHook(() => useKeyboardShortcuts([{ key: 'n', description: 'Open import', action }]))
 
     const textarea = document.createElement('textarea')
     document.body.appendChild(textarea)
@@ -99,9 +89,7 @@ describe('useKeyboardShortcuts', () => {
     // Note: isContentEditable guard is not testable in jsdom (isContentEditable always false).
     // That guard is verified by the E2E test in story-e21-s02-keyboard-shortcuts.spec.ts.
     const action = vi.fn()
-    renderHook(() =>
-      useKeyboardShortcuts([{ key: 'n', description: 'Open import', action }])
-    )
+    renderHook(() => useKeyboardShortcuts([{ key: 'n', description: 'Open import', action }]))
 
     const select = document.createElement('select')
     document.body.appendChild(select)

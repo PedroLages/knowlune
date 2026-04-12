@@ -205,7 +205,10 @@ export function useAudiobookshelfSync() {
 
         toast.success(`Synced ${allMappedBooks.length} audiobooks`, { duration: 3000 })
         if (removedCount > 0) {
-          toast.info(`Removed ${removedCount} audiobook${removedCount > 1 ? 's' : ''} no longer on server`, { duration: 5000 })
+          toast.info(
+            `Removed ${removedCount} audiobook${removedCount > 1 ? 's' : ''} no longer on server`,
+            { duration: 5000 }
+          )
         }
 
         // Auto-load collections and series after catalog sync (staggered to avoid Cloudflare 429)

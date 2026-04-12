@@ -237,24 +237,23 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
                 Shelf
               </h4>
               <div className="flex flex-wrap gap-2">
-                {shelves
-                  .map(shelf => (
-                    <button
-                      key={shelf.id}
-                      onClick={() =>
-                        setFilter('shelfId', filters.shelfId === shelf.id ? undefined : shelf.id)
-                      }
-                      className={cn(
-                        'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-                        filters.shelfId === shelf.id
-                          ? 'bg-brand text-brand-foreground'
-                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                      )}
-                      data-testid={`shelf-filter-${shelf.name.toLowerCase().replace(/\s+/g, '-')}`}
-                    >
-                      {shelf.name}
-                    </button>
-                  ))}
+                {shelves.map(shelf => (
+                  <button
+                    key={shelf.id}
+                    onClick={() =>
+                      setFilter('shelfId', filters.shelfId === shelf.id ? undefined : shelf.id)
+                    }
+                    className={cn(
+                      'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                      filters.shelfId === shelf.id
+                        ? 'bg-brand text-brand-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    )}
+                    data-testid={`shelf-filter-${shelf.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    {shelf.name}
+                  </button>
+                ))}
               </div>
             </div>
           )}

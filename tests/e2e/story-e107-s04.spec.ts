@@ -20,7 +20,7 @@ test.describe('E107-S04: About Book Dialog', () => {
     await page.addInitScript(() => {
       const onboardingData = {
         completedAt: new Date('2025-01-01').toISOString(),
-        skipped: true
+        skipped: true,
       }
       localStorage.setItem('knowlune-onboarding-v1', JSON.stringify(onboardingData))
     })
@@ -36,7 +36,8 @@ test.describe('E107-S04: About Book Dialog', () => {
         author: 'F. Scott Fitzgerald',
         format: 'epub',
         status: 'reading',
-        description: 'A story of the mysteriously wealthy Jay Gatsby and his love for Daisy Buchanan.',
+        description:
+          'A story of the mysteriously wealthy Jay Gatsby and his love for Daisy Buchanan.',
         isbn: '978-0-7432-7356-5',
         tags: ['Classic', 'Fiction'],
         fileSize: 450000,
@@ -44,7 +45,7 @@ test.describe('E107-S04: About Book Dialog', () => {
         chapters: [],
         source: { type: 'local', opfsPath: '/test/gatsby.epub' },
         createdAt: FIXED_DATE,
-        updatedAt: FIXED_DATE
+        updatedAt: FIXED_DATE,
       },
       {
         id: 'test-book-2-missing-metadata',
@@ -58,7 +59,7 @@ test.describe('E107-S04: About Book Dialog', () => {
         progress: 0,
         chapters: [],
         source: { type: 'local', opfsPath: '/test/untitled.epub' },
-        createdAt: FIXED_DATE
+        createdAt: FIXED_DATE,
       },
       {
         id: 'test-book-3-audiobook',
@@ -67,7 +68,8 @@ test.describe('E107-S04: About Book Dialog', () => {
         narrator: 'Rob Inglis',
         format: 'audiobook',
         status: 'reading',
-        description: 'Bilbo Baggins, a hobbit enjoying his quiet life, is swept into an epic quest.',
+        description:
+          'Bilbo Baggins, a hobbit enjoying his quiet life, is swept into an epic quest.',
         isbn: '978-0-2611-0221-4',
         tags: ['Fantasy', 'Adventure'],
         fileSize: 250000000,
@@ -75,8 +77,8 @@ test.describe('E107-S04: About Book Dialog', () => {
         progress: 60,
         chapters: [],
         source: { type: 'local', opfsPath: '/test/hobbit.m4b' },
-        createdAt: FIXED_DATE
-      }
+        createdAt: FIXED_DATE,
+      },
     ])
 
     // Reload page to pick up seeded data
@@ -98,7 +100,10 @@ test.describe('E107-S04: About Book Dialog', () => {
     }
   })
 
-  test('AC-1: Opens About Book dialog from BookCard context menu', async ({ libraryPage, page }) => {
+  test('AC-1: Opens About Book dialog from BookCard context menu', async ({
+    libraryPage,
+    page,
+  }) => {
     // Open context menu on first book card
     await libraryPage.openBookCardContextMenu(0)
 
@@ -175,7 +180,9 @@ test.describe('E107-S04: About Book Dialog', () => {
     await page.keyboard.press('Tab')
 
     // Verify focus stays within dialog (focus trap)
-    const focusedElement = await page.evaluate(() => document.activeElement?.getAttribute('data-testid'))
+    const focusedElement = await page.evaluate(() =>
+      document.activeElement?.getAttribute('data-testid')
+    )
     expect(focusedElement).toBeTruthy()
 
     // Press Escape to close dialog

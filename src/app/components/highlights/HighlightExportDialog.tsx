@@ -20,10 +20,7 @@ import {
 import { Button } from '@/app/components/ui/button'
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
 import { Label } from '@/app/components/ui/label'
-import {
-  exportHighlights,
-  type HighlightExportFormat,
-} from '@/lib/highlightExport'
+import { exportHighlights, type HighlightExportFormat } from '@/lib/highlightExport'
 import { downloadText, downloadZip } from '@/lib/fileDownload'
 
 const FORMAT_OPTIONS: Array<{
@@ -107,10 +104,7 @@ export function HighlightExportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-md"
-        data-testid="highlight-export-dialog"
-      >
+      <DialogContent className="sm:max-w-md" data-testid="highlight-export-dialog">
         <DialogHeader>
           <DialogTitle>Export Highlights</DialogTitle>
           <DialogDescription>
@@ -139,19 +133,11 @@ export function HighlightExportDialog({
                       : 'border-border hover:bg-muted/40'
                   }`}
                 >
-                  <RadioGroupItem
-                    value={opt.value}
-                    id={`format-${opt.value}`}
-                  />
-                  <Icon
-                    className="size-5 shrink-0 text-muted-foreground"
-                    aria-hidden="true"
-                  />
+                  <RadioGroupItem value={opt.value} id={`format-${opt.value}`} />
+                  <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium">{opt.label}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {opt.description}
-                    </div>
+                    <div className="text-xs text-muted-foreground">{opt.description}</div>
                   </div>
                 </Label>
               )
@@ -160,11 +146,7 @@ export function HighlightExportDialog({
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-            disabled={isExporting}
-          >
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isExporting}>
             Cancel
           </Button>
           <Button

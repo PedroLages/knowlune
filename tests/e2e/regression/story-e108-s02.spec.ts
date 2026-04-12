@@ -148,9 +148,10 @@ test.describe('E108-S02: Delete flow via context menu', () => {
     })
     await page.goto('/')
     // Seed only one book
-    await seedIndexedDBStore(page, DB_NAME, 'books', [
-      DELETE_TEST_BOOKS[0],
-    ] as unknown as Record<string, unknown>[])
+    await seedIndexedDBStore(page, DB_NAME, 'books', [DELETE_TEST_BOOKS[0]] as unknown as Record<
+      string,
+      unknown
+    >[])
     await page.goto('/library')
 
     await expect(page.getByText('Book To Delete')).toBeVisible({ timeout: 8000 })

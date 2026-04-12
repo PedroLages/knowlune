@@ -18,9 +18,30 @@ const now = () => new Date().toISOString()
 
 /** Default shelves created on first load — fixed IDs for E2E test reliability */
 const DEFAULT_SHELVES: Shelf[] = [
-  { id: 'shelf-favorites', name: 'Favorites', icon: 'Heart', isDefault: true, sortOrder: 0, createdAt: '' },
-  { id: 'shelf-currently-reading', name: 'Currently Reading', icon: 'BookOpen', isDefault: true, sortOrder: 1, createdAt: '' },
-  { id: 'shelf-want-to-read', name: 'Want to Read', icon: 'Bookmark', isDefault: true, sortOrder: 2, createdAt: '' },
+  {
+    id: 'shelf-favorites',
+    name: 'Favorites',
+    icon: 'Heart',
+    isDefault: true,
+    sortOrder: 0,
+    createdAt: '',
+  },
+  {
+    id: 'shelf-currently-reading',
+    name: 'Currently Reading',
+    icon: 'BookOpen',
+    isDefault: true,
+    sortOrder: 1,
+    createdAt: '',
+  },
+  {
+    id: 'shelf-want-to-read',
+    name: 'Want to Read',
+    icon: 'Bookmark',
+    isDefault: true,
+    sortOrder: 2,
+    createdAt: '',
+  },
 ]
 
 interface ShelfStoreState {
@@ -117,9 +138,7 @@ export const useShelfStore = create<ShelfStoreState>((set, get) => ({
 
     // Check for duplicate names (case-insensitive), excluding self
     if (
-      get().shelves.some(
-        s => s.id !== shelfId && s.name.toLowerCase() === trimmed.toLowerCase()
-      )
+      get().shelves.some(s => s.id !== shelfId && s.name.toLowerCase() === trimmed.toLowerCase())
     ) {
       toast.error('A shelf with that name already exists')
       return
@@ -204,9 +223,7 @@ export const useShelfStore = create<ShelfStoreState>((set, get) => ({
   },
 
   removeBookFromShelf: async (bookId: string, shelfId: string) => {
-    const entry = get().bookShelves.find(
-      bs => bs.bookId === bookId && bs.shelfId === shelfId
-    )
+    const entry = get().bookShelves.find(bs => bs.bookId === bookId && bs.shelfId === shelfId)
     if (!entry) return
 
     // Optimistic
@@ -227,9 +244,7 @@ export const useShelfStore = create<ShelfStoreState>((set, get) => ({
 
   getShelvesForBook: (bookId: string) => {
     const { shelves, bookShelves } = get()
-    const shelfIds = new Set(
-      bookShelves.filter(bs => bs.bookId === bookId).map(bs => bs.shelfId)
-    )
+    const shelfIds = new Set(bookShelves.filter(bs => bs.bookId === bookId).map(bs => bs.shelfId))
     return shelves.filter(s => shelfIds.has(s.id))
   },
 

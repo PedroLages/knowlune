@@ -188,10 +188,7 @@ export function BookmarkButton({
         onClick={handleBookmark}
         aria-label={isNearBookmark ? 'Remove bookmark' : 'Add bookmark'}
       >
-        <Bookmark
-          className={`size-5 ${isNearBookmark ? 'fill-current' : ''}`}
-          aria-hidden="true"
-        />
+        <Bookmark className={`size-5 ${isNearBookmark ? 'fill-current' : ''}`} aria-hidden="true" />
       </Button>
       {noteContainerRef?.current ? createPortal(noteInput, noteContainerRef.current) : noteInput}
     </>

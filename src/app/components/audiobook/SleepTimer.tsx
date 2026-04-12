@@ -58,8 +58,7 @@ export function SleepTimer({ activeOption, badgeText, onSelect }: SleepTimerProp
   }
 
   const renderOption = (opt: { value: SleepTimerOption; label: string }) => {
-    const isActive =
-      opt.value === activeOption || (opt.value === 'off' && activeOption === null)
+    const isActive = opt.value === activeOption || (opt.value === 'off' && activeOption === null)
     return (
       <li key={String(opt.value)} role="option" aria-selected={isActive}>
         <button
@@ -137,9 +136,7 @@ export function SleepTimer({ activeOption, badgeText, onSelect }: SleepTimerProp
                 className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted/60 ${isCustomActive ? 'text-brand font-medium' : 'text-foreground'}`}
               >
                 <span>{isCustomActive ? `Custom (${activeOption}m)` : 'Custom'}</span>
-                {isCustomActive && (
-                  <Check className="size-4 text-brand" aria-hidden="true" />
-                )}
+                {isCustomActive && <Check className="size-4 text-brand" aria-hidden="true" />}
               </button>
             )}
           </li>

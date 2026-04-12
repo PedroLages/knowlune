@@ -27,8 +27,7 @@ export const test = base.extend<{
     const helper: LibraryPageHelper = {
       goto: () => page.goto('/library'),
 
-      switchToListView: () =>
-        page.locator('[data-testid="local-view-list"]').click(),
+      switchToListView: () => page.locator('[data-testid="local-view-list"]').click(),
 
       openBookCardContextMenu: async (index: number) => {
         // BookCard uses data-testid="book-card-{id}", so we use prefix matching
@@ -45,8 +44,8 @@ export const test = base.extend<{
       openAboutBookDialog: async (index: number) => {
         await helper.openBookCardContextMenu(index)
         await page.locator('[data-testid="context-menu-about-book"]').click()
-      }
+      },
     }
     await use(helper)
-  }
+  },
 })

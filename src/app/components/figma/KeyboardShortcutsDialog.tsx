@@ -25,7 +25,10 @@ const shortcutGroups: ShortcutGroup[] = [
       { keys: ['Cmd', 'K'], description: 'Open search' },
       { keys: ['Cmd', 'B'], description: 'Toggle sidebar' },
       { keys: ['Cmd', ','], description: 'Go to Settings' },
-      { keys: ['Escape'], description: 'Close dialog / search (also closes TOC, panels in reader)' },
+      {
+        keys: ['Escape'],
+        description: 'Close dialog / search (also closes TOC, panels in reader)',
+      },
     ],
   },
   {
