@@ -47,6 +47,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
     const hasAutoCompletedRef = useRef(false)
     const [initialPosition, setInitialPosition] = useState<number | null>(null)
     const [isReady, setIsReady] = useState(false)
+    const [loadFailed, setLoadFailed] = useState(false)
 
     // Expose seekTo to parent via ref (E28-S10: transcript click-to-seek)
     useImperativeHandle(
@@ -151,11 +152,13 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
       }
     }, [stopPolling])
 
-    // Timeout fallback: clear loading overlay if onReady never fires (e.g. CSP block, network issue)
+    // Timeout fallback: if onReady never fires (CSP block, extension blocking, network issue),
+    // clear the spinner and show a fallback link to watch on YouTube directly.
     useEffect(() => {
       if (isReady) return
       const timeout = setTimeout(() => {
-        console.warn('[YouTubePlayer] onReady timeout — clearing loading overlay')
+        console.warn('[YouTubePlayer] onReady timeout — player failed to initialize')
+        setLoadFailed(true)
         setIsReady(true)
       }, 10_000)
       return () => clearTimeout(timeout)
@@ -176,7 +179,8 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
     const handleError = useCallback(
       (event: YouTubeEvent<number>) => {
         console.error('[YouTubePlayer] YouTube error code:', event.data)
-        // Clear the loading overlay so the user sees the YouTube error screen
+        // Error codes 100/101/150 = video not embeddable; others = network/config errors
+        setLoadFailed(true)
         setIsReady(true)
       },
       []
@@ -236,11 +240,37 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
       )
     }
 
+    if (loadFailed) {
+      return (
+        <div
+          className="aspect-video w-full flex flex-col items-center justify-center bg-muted rounded-xl gap-3 text-muted-foreground"
+          data-testid="youtube-player-fallback"
+        >
+          <svg className="size-10 opacity-40" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+          </svg>
+          <p className="text-sm font-medium">Video couldn't load</p>
+          <p className="text-xs text-center max-w-xs px-4">
+            The YouTube player failed to initialize. This may be caused by a browser extension or network setting.
+          </p>
+          <a
+            href={`https://www.youtube.com/watch?v=${videoId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-brand hover:underline"
+          >
+            Watch on YouTube ↗
+          </a>
+        </div>
+      )
+    }
+
     return (
       <div className="aspect-video w-full relative" data-testid="youtube-player-container">
         <YouTube
           videoId={videoId}
           opts={{
+            host: 'https://www.youtube-nocookie.com',
             width: '100%',
             height: '100%',
             playerVars: {

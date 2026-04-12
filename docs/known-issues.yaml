@@ -707,10 +707,10 @@ issues:
     severity: medium
     discovered_by: E110-S02
     discovered_on: 2026-04-11
-    status: open
-    scheduled_for: null
+    status: scheduled
+    scheduled_for: cleanup-epic
     fixed_by: null
-    notes: "Pre-existing TS errors in files not touched by E110-S02. Discovered during R4 review."
+    notes: "Pre-existing TS errors in files not touched by E110-S02. Discovered during R4 review. Scheduled to cleanup-epic — not blocking E112 (files are unrelated to reading analytics)."
 
   - id: KI-058
     type: test
@@ -719,7 +719,31 @@ issues:
     severity: medium
     discovered_by: E110-S02
     discovered_on: 2026-04-11
-    status: open
-    scheduled_for: null
+    status: scheduled
+    scheduled_for: cleanup-epic
     fixed_by: null
-    notes: "Pre-existing unit test failures in files not touched by E110-S02. Identical count on main branch. Discovered during R4 review."
+    notes: "Pre-existing unit test failures in files not touched by E110-S02. Identical count on main branch. Discovered during R4 review. Scheduled to cleanup-epic — confirmed not regressions from E111 (same count pre/post)."
+
+  - id: KI-059
+    type: design
+    summary: "ClipListPanel edit/delete icon buttons are 32×32px (size-8) — below 44×44px WCAG touch target minimum"
+    file: "src/app/components/audiobook/ClipListPanel.tsx"
+    severity: low
+    discovered_by: E111-NFR
+    discovered_on: 2026-04-12
+    status: scheduled
+    scheduled_for: cleanup-epic
+    fixed_by: null
+    notes: "Secondary controls (edit title, delete clip) use size-8 (32px). Bump to size-11 or min-h-[44px] min-w-[44px]. Low effort, low urgency — no primary interaction is affected."
+
+  - id: KI-060
+    type: ux
+    summary: "SpeedControl SPEED_OPTIONS (9 speeds) diverges from VALID_SPEEDS in useAudiobookPrefsStore (11 speeds) — 2.25× and 2.75× missing from picker"
+    file: "src/app/components/audiobook/SpeedControl.tsx"
+    severity: low
+    discovered_by: E111-NFR
+    discovered_on: 2026-04-12
+    status: scheduled
+    scheduled_for: E112
+    fixed_by: null
+    notes: "A per-book speed of 2.25× or 2.75× (set via keyboard shortcut) validates fine but shows no checkmark in the SpeedControl picker. Fix: unify to a single SPEED_OPTIONS constant. Scheduling to E112 since it touches audiobook playback speed infrastructure that E112 may extend."
