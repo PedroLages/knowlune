@@ -7,7 +7,7 @@
  * @since E113-S01
  */
 
-import { useState, useCallback, type KeyboardEvent } from 'react'
+import { useState, useCallback, useEffect, type KeyboardEvent } from 'react'
 import { Star } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 
@@ -33,8 +33,14 @@ export function StarRating({
   className,
 }: StarRatingProps) {
   const [hoverValue, setHoverValue] = useState(0)
-  const displayValue = hoverValue || value
+  const [keyboardValue, setKeyboardValue] = useState(0)
+  const displayValue = hoverValue || keyboardValue || value
   const interactive = !readonly && !!onChange
+
+  // Clear keyboard preview once parent confirms the new value
+  useEffect(() => {
+    setKeyboardValue(0)
+  }, [value])
 
   const handleClick = useCallback(
     (starIndex: number, isHalf: boolean) => {
@@ -61,10 +67,12 @@ export function StarRating({
       if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
         e.preventDefault()
         const next = Math.min(5, (value || 0) + 0.5)
+        setKeyboardValue(next) // immediate local visual feedback
         onChange(next)
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
         e.preventDefault()
         const prev = Math.max(0.5, (value || 1) - 0.5)
+        setKeyboardValue(prev) // immediate local visual feedback
         onChange(prev)
       }
     },
@@ -104,17 +112,11 @@ export function StarRating({
             }
           >
             {/* Background star (empty) */}
-            <Star
-              className={cn(sizeMap[size], 'text-muted-foreground/30')}
-              aria-hidden="true"
-            />
+            <Star className={cn(sizeMap[size], 'text-muted-foreground/30')} aria-hidden="true" />
             {/* Filled overlay via clip-path */}
             {fillPercent > 0 && (
               <Star
-                className={cn(
-                  sizeMap[size],
-                  'absolute inset-0 fill-warning text-warning'
-                )}
+                className={cn(sizeMap[size], 'absolute inset-0 fill-warning text-warning')}
                 style={{ clipPath: `inset(0 ${100 - fillPercent}% 0 0)` }}
                 aria-hidden="true"
               />

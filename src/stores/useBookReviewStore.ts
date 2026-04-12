@@ -36,6 +36,7 @@ export const useBookReviewStore = create<BookReviewStoreState>((set, get) => ({
       const reviews = await db.bookReviews.toArray()
       set({ reviews, isLoaded: true })
     } catch {
+      set({ isLoaded: true }) // prevent infinite retry loops on corrupted DB
       toast.error('Failed to load book reviews')
     }
   },
@@ -47,8 +48,8 @@ export const useBookReviewStore = create<BookReviewStoreState>((set, get) => ({
   setRating: async (bookId: string, rating: number) => {
     // Clamp to valid range: 0.5 to 5, in 0.5 increments
     const clamped = Math.round(Math.max(0.5, Math.min(5, rating)) * 2) / 2
-    const { reviews } = get()
-    const existing = reviews.find(r => r.bookId === bookId)
+    const snapshot = get().reviews
+    const existing = snapshot.find(r => r.bookId === bookId)
 
     const review: BookReview = existing
       ? { ...existing, rating: clamped, updatedAt: now() }
@@ -59,23 +60,24 @@ export const useBookReviewStore = create<BookReviewStoreState>((set, get) => ({
           createdAt: now(),
         }
 
-    // Optimistic update
-    const updated = existing
-      ? reviews.map(r => (r.bookId === bookId ? review : r))
-      : [...reviews, review]
-    set({ reviews: updated })
+    // Optimistic update using callback to avoid stale closure
+    set(state => ({
+      reviews: existing
+        ? state.reviews.map(r => (r.bookId === bookId ? review : r))
+        : [...state.reviews, review],
+    }))
 
     try {
       await db.bookReviews.put(review)
     } catch {
-      set({ reviews }) // rollback
+      set({ reviews: snapshot }) // rollback to pre-optimistic snapshot
       toast.error('Failed to save rating')
     }
   },
 
   setReviewText: async (bookId: string, reviewText: string) => {
-    const { reviews } = get()
-    const existing = reviews.find(r => r.bookId === bookId)
+    const snapshot = get().reviews
+    const existing = snapshot.find(r => r.bookId === bookId)
 
     if (!existing) {
       // Cannot set review text without a rating first
@@ -84,30 +86,33 @@ export const useBookReviewStore = create<BookReviewStoreState>((set, get) => ({
     }
 
     const review: BookReview = { ...existing, reviewText, updatedAt: now() }
-    const updated = reviews.map(r => (r.bookId === bookId ? review : r))
-    set({ reviews: updated })
+
+    // Optimistic update using callback to avoid stale closure
+    set(state => ({
+      reviews: state.reviews.map(r => (r.bookId === bookId ? review : r)),
+    }))
 
     try {
       await db.bookReviews.put(review)
     } catch {
-      set({ reviews }) // rollback
+      set({ reviews: snapshot }) // rollback to pre-optimistic snapshot
       toast.error('Failed to save review')
     }
   },
 
   deleteReview: async (bookId: string) => {
-    const { reviews } = get()
-    const existing = reviews.find(r => r.bookId === bookId)
+    const snapshot = get().reviews
+    const existing = snapshot.find(r => r.bookId === bookId)
     if (!existing) return
 
-    // Optimistic delete
-    set({ reviews: reviews.filter(r => r.bookId !== bookId) })
+    // Optimistic delete using callback to avoid stale closure
+    set(state => ({ reviews: state.reviews.filter(r => r.bookId !== bookId) }))
 
     try {
       await db.bookReviews.delete(existing.id)
       toast.success('Review removed')
     } catch {
-      set({ reviews }) // rollback
+      set({ reviews: snapshot }) // rollback to pre-optimistic snapshot
       toast.error('Failed to remove review')
     }
   },
