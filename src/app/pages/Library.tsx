@@ -11,7 +11,7 @@
  * @modified E108-S03 — keyboard shortcuts (N=import, /=search, G+L=toggle view)
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import {
   BookOpen,
@@ -218,6 +218,9 @@ export function Library() {
   // useMemo caused stale closure issues because getFilteredBooks is a stable function reference
   // in Zustand, causing the memo to return cached empty arrays even after books loaded.
   const filteredBooks = getFilteredBooks()
+
+  // Stable ID array so LocalSeriesView's useMemo dep doesn't fire on every render (ADV-3).
+  const filteredBookIds = useMemo(() => filteredBooks.map(b => b.id), [filteredBooks])
 
   // Load books on mount
   useEffect(() => {
@@ -653,7 +656,7 @@ export function Library() {
         <LocalSeriesView
           getBooksBySeries={getBooksBySeries}
           onEdit={setEditingBook}
-          filteredBookIds={filteredBooks.map(b => b.id)}
+          filteredBookIds={filteredBookIds}
         />
       )}
 

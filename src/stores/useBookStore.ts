@@ -515,25 +515,37 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
   },
 
   getBooksBySeries: () => {
+    const allBooks = get().books
     const filteredBooks = get().getFilteredBooks()
-    const seriesMap = new Map<string, Book[]>()
-    const ungrouped: Book[] = []
 
-    for (const book of filteredBooks) {
+    // Build series map from ALL books for true progress counts (ADV-2).
+    // Key is normalized to lowercase to prevent case-sensitivity duplicates (ADV-5).
+    const seriesMap = new Map<string, { displayName: string; books: Book[] }>()
+
+    for (const book of allBooks) {
       if (book.series) {
-        const existing = seriesMap.get(book.series)
+        const key = book.series.trim().toLowerCase()
+        const existing = seriesMap.get(key)
         if (existing) {
-          existing.push(book)
+          existing.books.push(book)
         } else {
-          seriesMap.set(book.series, [book])
+          seriesMap.set(key, { displayName: book.series, books: [book] })
         }
-      } else {
-        ungrouped.push(book)
       }
     }
 
+    // Ungrouped: filtered books with no series metadata
+    const ungrouped: Book[] = filteredBooks.filter(b => !b.series)
+
+    // Only show series that have at least one book matching the current filter
+    const visibleSeriesKeys = new Set(
+      filteredBooks.filter(b => b.series).map(b => b.series!.trim().toLowerCase())
+    )
+
     const groups: LocalSeriesGroup[] = []
-    for (const [name, books] of seriesMap) {
+    for (const [key, { displayName, books }] of seriesMap) {
+      if (!visibleSeriesKeys.has(key)) continue
+
       // Sort by sequence number (null/missing or non-numeric go to end, then localeCompare)
       const sorted = [...books].sort((a, b) => {
         const rawA = a.seriesSequence != null ? parseFloat(a.seriesSequence) : NaN
@@ -557,7 +569,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       }
 
       groups.push({
-        name,
+        name: displayName,
         books: sorted,
         completed,
         total: sorted.length,
