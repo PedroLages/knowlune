@@ -1397,7 +1397,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-114: in-progress
   114-1-reading-ruler-and-spacing: done
-  114-2-continuous-scroll-mode: ready-for-dev
+  114-2-continuous-scroll-mode: review
   epic-114-retrospective: optional
 
   # ──────────────────────────────────────────────────
