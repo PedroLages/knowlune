@@ -2,7 +2,8 @@
 name: doc-sync
 description: Post-merge documentation consistency checker. Dispatched by /finish-story to verify project docs remain aligned with shipped code. Report-only — suggests changes, does not auto-edit.
 tools: ["Read", "Grep", "Glob", "Bash", "TodoWrite"]
-model: sonnet
+model: haiku
+effort: low
 max_turns: 15
 ---
 

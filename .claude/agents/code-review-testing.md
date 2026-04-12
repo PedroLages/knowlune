@@ -3,6 +3,7 @@ name: code-review-testing
 description: "Test coverage specialist. Verifies acceptance criteria have corresponding tests, reviews test quality, and identifies edge case gaps. Runs alongside the main code-review agent.\n\nExamples:\n- After implementing a feature: verify every AC has a test\n- After adding E2E tests: check selector quality and isolation\n- Before merge: ensure no untested acceptance criteria"
 tools: Read, Grep, Glob, Bash, TodoWrite
 model: sonnet
+effort: low
 maxTurns: 30
 ---
 

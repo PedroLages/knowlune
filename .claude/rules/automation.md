@@ -21,23 +21,7 @@ These rules provide **instant feedback** as you type/save — catching issues be
 | `react-best-practices/no-inline-styles` | Inline style objects → suggests Tailwind utilities | WARNING | [eslint-plugin-react-best-practices.js](../../../eslint-plugin-react-best-practices.js) |
 | `error-handling/no-silent-catch` | Catch blocks without `toast.error()` or visible user feedback | WARNING | [eslint-plugin-error-handling.js](../../../eslint-plugin-error-handling.js) |
 
-**Configuration:** [eslint.config.js](../../../eslint.config.js)
-
-**Test ESLint Rules:**
-```bash
-# Test design token rule
-echo 'export const Test = () => <div className="bg-blue-600">Test</div>' > test.tsx
-npx eslint test.tsx
-# Expected: ERROR - Hardcoded color "bg-blue-600" detected. Use bg-brand...
-
-# Run all ESLint checks
-npm run lint
-```
-
-**Impact Example (Design Tokens):**
-- **Before automation (Epic 7):** 4/5 stories (80%) had hardcoded colors caught in review
-- **After automation (Epic 8+):** <10% (caught at save-time before commit)
-- **Research validation:** Automated feedback reduces review rounds by ~33% (2-3 → 1-2)
+**Configuration:** [eslint.config.js](../../../eslint.config.js) — See [automation-details.md](automation-details.md) for test commands and metrics.
 
 ## 🔵 Always-On Hooks (Claude Code Settings)
 
@@ -51,12 +35,6 @@ Session-scoped hooks that warn before destructive operations. Active in every Cl
 
 **Configuration:** [.claude/settings.json](../../settings.json)
 
-**Test:**
-```bash
-echo '{"tool_name":"Bash","tool_input":{"command":"rm -rf src/"}}' | bash .claude/hooks/safety-guardrail.sh
-# Expected: {"decision":"ask","reason":"..."}
-```
-
 ## 🟡 Commit-Time Enforcement (Git Hooks)
 
 These hooks **block operations** if quality gates fail — ensuring clean working tree and committed code.
@@ -66,25 +44,7 @@ These hooks **block operations** if quality gates fail — ensuring clean workin
 | `pre-review` | `/review-story` if uncommitted changes or untracked files | Manual (see below) | [scripts/git-hooks/pre-review](../../../scripts/git-hooks/pre-review) |
 | `pre-push` | `git push` if working tree is dirty | Manual (see below) | [scripts/git-hooks/pre-push](../../../scripts/git-hooks/pre-push) |
 
-**Installation** (hooks not version-controlled):
-```bash
-# Install pre-review hook
-cp scripts/git-hooks/pre-review .git/hooks/pre-review
-chmod +x .git/hooks/pre-review
-
-# Install pre-push hook
-cp scripts/git-hooks/pre-push .git/hooks/pre-push
-chmod +x .git/hooks/pre-push
-
-# Verify installation
-.git/hooks/pre-review
-# Expected: ✅ Working tree is clean (if no uncommitted changes)
-```
-
-**Emergency Bypass** (document reason if used):
-```bash
-SKIP_PRE_REVIEW=1 /review-story
-```
+**Installation & emergency bypass**: See [automation-details.md](automation-details.md).
 
 ## 🟢 Review-Time Enforcement (Claude Agents)
 
@@ -102,24 +62,7 @@ These agents provide **deep analysis** during `/review-story` — catching issue
 | `openai-code-review` | Adversarial review via OpenAI Codex CLI (optional — requires Codex CLI + OPENAI_API_KEY) | BLOCKER/HIGH/MEDIUM/NIT | [.claude/agents/openai-code-review.md](../../agents/openai-code-review.md) |
 | `glm-code-review` | Adversarial review via GLM/z.ai GLM-5.1 (optional — requires ZAI_API_KEY) | BLOCKER/HIGH/MEDIUM/NIT | [.claude/agents/glm-code-review.md](../../agents/glm-code-review.md) |
 
-**Trigger:** `/review-story` automatically dispatches all agents in parallel (if applicable). External model agents are optional — dispatched when API keys are available.
-
-**Test Agent Workflows:**
-```bash
-# Full review (runs all agents)
-/review-story E##-S##
-
-# Standalone design review
-/design-review
-```
-
-**Agent Reports Saved To:**
-- Design reviews: `docs/reviews/design/design-review-{date}-{story-id}.md`
-- Code reviews: `docs/reviews/code/code-review-{date}-{story-id}.md`
-- Test coverage: `docs/reviews/code/code-review-testing-{date}-{story-id}.md`
-- Performance benchmarks: `docs/reviews/performance/performance-benchmark-{date}-{story-id}.md`
-- Security reviews: `docs/reviews/security/security-review-{date}-{story-id}.md`
-- Exploratory QA: `docs/reviews/qa/exploratory-qa-{date}-{story-id}.md`
+**Trigger:** `/review-story` dispatches all agents in parallel (tiered by diff scope). Reports saved to `docs/reviews/{type}/`. See [automation-details.md](automation-details.md) for full report locations.
 
 ## 📊 Automation Coverage Summary
 
@@ -131,49 +74,9 @@ These agents provide **deep analysis** during `/review-story` — catching issue
 | **Review-Time** | 6 Claude agents + 1 optional dedup scan + 2 optional external model agents | Architecture, UX, accessibility, edge cases, AC coverage, performance, security, functional QA, deduplication, cross-model consensus | During `/review-story` workflow |
 | **Total** | **20 mechanisms** | 11 automated + 6 required agents + 3 optional agents | Multi-layered enforcement |
 
-## 🎯 Effectiveness Metrics (Research-Backed)
-
-**Industry Baseline** ([Easy Agile research](https://www.easyagile.com/blog/improve-sprint-retrospective-action-items)):
-- Manual compliance: 40-50% follow-through
-- Automated enforcement: 65% follow-through (+45% improvement)
-
-**Knowlune Baseline (Epic 7 - before automation awareness):**
-- Hardcoded colors: 4/5 stories (80%)
-- Empty lessons learned: 2/5 stories (40%)
-- Average review rounds: 2-3
-
-**Knowlune Target (Epic 8+ - with automation):**
-- Hardcoded colors: <10% (caught at save-time)
-- Empty lessons learned: 0% (lessons learned gate in `/review-story`)
-- Average review rounds: 1-2 (fewer blockers)
-
-**Measurement:** Track metrics in Epic 8-10 retrospectives, publish effectiveness report after Epic 10.
-
-## 🛠️ Adding New Automation
-
-When adding new quality enforcement:
-
-1. **Choose the right stage:**
-   - **Save-time:** ESLint rule (instant feedback, low friction)
-   - **Commit-time:** Git hook (blocks bad commits, high friction)
-   - **Review-time:** Agent enhancement (complex analysis, moderate friction)
-
-2. **Document in this catalog:**
-   - Add row to appropriate table (save/commit/review-time)
-   - Include test command for verification
-   - Update coverage summary count
-
-3. **Verify effectiveness:**
-   - Track metric before automation (baseline)
-   - Measure after 2-3 epics
-   - Document in retrospective
-
-4. **Update references:**
-   - Add to `automation-infrastructure-status-*.md`
-   - Include in `engineering-patterns.md` if pattern-based
-
 ## 📚 References
 
+- **Verification commands & metrics**: [automation-details.md](automation-details.md)
 - **Full Status Report:** [automation-infrastructure-status-2026-03-13.md](../../../docs/implementation-artifacts/automation-infrastructure-status-2026-03-13.md)
 - **Engineering Patterns:** [engineering-patterns.md](../../../docs/engineering-patterns.md)
 - **Design Token Cheat Sheet:** [design-token-cheat-sheet.md](../../../docs/implementation-artifacts/design-token-cheat-sheet.md)

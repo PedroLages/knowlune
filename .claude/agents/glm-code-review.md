@@ -2,7 +2,8 @@
 name: glm-code-review
 description: "Adversarial code review via GLM (z.ai) API. Calls GLM-5.1 as an independent reviewer to surface bugs Claude may miss. Requires ZAI_API_KEY env var. Optional gate — never blocks reviewed: true.\n\nExamples:\n- After implementing a feature: independent adversarial review from a different model architecture\n- Before merging: cross-model consensus on critical findings"
 tools: Read, Grep, Glob, Bash, TodoWrite
-model: sonnet
+model: haiku
+effort: low
 maxTurns: 15
 ---
 

@@ -238,88 +238,11 @@ Mark the first todo as `in_progress` and proceed:
 
    **TodoWrite**: Mark "Suggest ATDD tests" → `completed`. Mark "Suggest design guidance" → `in_progress`.
 
-8b. **Design guidance suggestion** (idempotent):
-   - Check if `## Design Guidance` section already exists in story file.
-   - **Section exists**: Skip design guidance suggestion. Inform user: "Design guidance already exists in story file."
-   - **Section does not exist**: Analyze story content to detect if this is a UI story:
-
-     **Detection algorithm:**
-     1. **Read acceptance criteria** from the story file (created in Step 6)
-     2. **Check for UI keywords** in ACs (case-insensitive):
-        - Layout/structure: "page", "component", "layout", "modal", "dialog", "sheet", "panel", "sidebar", "header", "footer"
-        - Interactive elements: "button", "form", "input", "select", "dropdown", "checkbox", "radio", "slider", "switch"
-        - Visual behavior: "display", "show", "hide", "render", "click", "hover", "focus", "visible", "scroll"
-        - Content presentation: "card", "list", "table", "grid", "carousel", "accordion", "tab", "badge"
-     3. **Check affected files** in epic context:
-        - Read the story section from `docs/planning-artifacts/epics.md` (using story ID from `$ARGUMENTS`)
-        - Look for tasks/subtasks mentioning files in `src/app/pages/` or `src/app/components/`
-        - If no explicit file mentions, check if any tasks reference "create page", "add component", "update UI", or "style"
-     4. **UI story if**: EITHER (a) 2+ UI keywords found in ACs, OR (b) affected files include `.tsx` files in `src/app/pages/` or `src/app/components/`
-
-     **If UI story detected**:
-
-     Use AskUserQuestion to offer design guidance:
-
-     ```
-     This story involves UI changes — frontend design guidance can help shape the implementation plan before coding starts.
-
-     Design guidance provides:
-     - Layout approach and responsive considerations
-     - Component structure and composition patterns
-     - Design system token usage (colors, spacing, typography)
-     - Accessibility requirements (WCAG 2.1 AA+)
-     - Mobile-first vs desktop-first strategy
-
-     Would you like to generate design guidance now?
-
-     Options:
-     - "Generate design guidance (Recommended)" — AI agent analyzes ACs and suggests design approach
-     - "Skip for now" — Continue without design guidance (can add manually later)
-     ```
-
-     **If user selects "Generate design guidance (Recommended)"**:
-     1. Invoke the `/frontend-design` skill via Skill tool:
-        ```
-        Skill({
-          skill: "frontend-design",
-          args: "E##-S## --story-file=docs/implementation-artifacts/{story-key}.md"
-        })
-        ```
-        The skill should receive:
-        - Story ID
-        - Story description from epic
-        - Acceptance criteria (UI-related ACs emphasized)
-        - Affected files (if known from epic)
-        - Context: This guidance will be used in Step 10 plan mode
-
-     2. **Wait for skill completion**: The `/frontend-design` skill returns design guidance in markdown format
-
-     3. **Save guidance to story file**:
-        - Read current story file from `docs/implementation-artifacts/{story-key}.md`
-        - Insert new section `## Design Guidance` AFTER `## Tasks / Subtasks` and BEFORE `## Implementation Notes`
-        - Content from `/frontend-design` skill output
-        - Write updated story file
-
-     4. **Verify insertion**: Re-read story file to confirm section exists
-
-     5. **Error handling**:
-        - If `/frontend-design` skill fails (skill not found, timeout, error):
-          - Log error to user: "Design guidance skill failed: {error message}"
-          - Inform user: "Continuing without design guidance. You can add design notes manually to the `## Design Guidance` section in the story file."
-          - Mark todo completed (don't block workflow)
-        - If story file write fails:
-          - Log error: "Could not save design guidance to story file: {error}"
-          - Display guidance in chat output
-          - Inform user: "Please add the guidance manually to `docs/implementation-artifacts/{story-key}.md` under `## Design Guidance`"
-
-     **If user selects "Skip for now"**:
-     - Inform user: "Skipping design guidance. You can add design notes manually to the story file under `## Design Guidance` section if needed during implementation."
-     - Continue to next step
-
-     **If NOT a UI story**:
-     - Skip design guidance suggestion (no AskUserQuestion)
-     - Inform user: "No UI changes detected — skipping design guidance suggestion."
-     - Continue to next step
+8b. **Design guidance suggestion** (idempotent): Follow the algorithm in `.claude/skills/start-story/docs/design-guidance.md`. Summary:
+   - Skip if `## Design Guidance` section already exists in story file
+   - Detect if UI story: 2+ UI keywords in ACs OR `.tsx` files in `src/app/pages/` or `src/app/components/`
+   - If UI story: AskUserQuestion to offer design guidance → invoke `/frontend-design` skill → insert `## Design Guidance` after Tasks section
+   - If not UI story or user skips: inform and continue
 
    **TodoWrite**: Mark "Suggest design guidance" → `completed`. Mark all 3 research agent todos → `in_progress` simultaneously.
 
@@ -364,75 +287,9 @@ Mark the first todo as `in_progress` and proceed:
 
    **TodoWrite**: Mark "Web research (if external deps detected)" → `in_progress`.
 
-9c. **Selective web research** (conditional — skipped if no external signals detected):
+9c. **Selective web research** (conditional): Scan ACs + tasks + agent findings for external signals (new packages, named technologies like "Supabase"/"Stripe", integration keywords like "migrate"/"upgrade", version-specific terms). If 0 signals: skip silently. If 1+ signals: AskUserQuestion offering web research.
 
-   **Detection**: Scan the story's acceptance criteria, task descriptions, and implementation notes (from Steps 1 and 9) for signals that web research would add value. This is pure text matching — no network calls.
-
-   **Signal categories:**
-
-   | Category | Patterns |
-   |----------|----------|
-   | New packages | Library/package names not already in `package.json` dependencies |
-   | External APIs | "REST", "GraphQL", "OAuth", "webhook", "endpoint", "API key" |
-   | Named technologies | "Supabase", "Stripe", "Playwright", "Firebase", "Auth0", "Prisma", "Drizzle", or any proper-noun technology name not part of the existing stack |
-   | Integration keywords | "integrate", "migrate", "upgrade", "third-party", "SDK", "authentication" |
-   | Security concerns | "CVE", "vulnerability", "encryption", "CORS", "CSP", "OWASP" |
-   | Version-specific | "v2", "v3", "latest version", "breaking changes", "deprecat" |
-
-   **Decision logic:**
-   - Count signal matches across all story text (ACs + tasks + implementation notes + agent research summaries)
-   - If 0 signals detected: skip silently, inform user "No external dependencies detected — skipping web research.", mark todo `completed`, proceed to step 10
-   - If 1+ signals detected: proceed to user prompt
-
-   **User prompt** (via AskUserQuestion):
-   ```
-   Detected external dependencies/technologies in this story:
-   - {signal 1: e.g., "Supabase" (named technology)}
-   - {signal 2: e.g., "OAuth" (external API)}
-   - {signal 3: e.g., "migrate" (integration keyword)}
-
-   Want me to research latest versions, breaking changes, and best practices?
-
-   Options:
-   - Yes — run web research before planning
-   - No — skip and proceed to plan mode
-   ```
-
-   **If user declines (or no signals):** Mark todo `completed`. Proceed to step 10.
-
-   **If user accepts:** Dispatch a single `general-purpose` agent (`model: "sonnet"`) via Task tool with WebSearch and WebFetch access:
-
-   ```
-   Task(general-purpose, model: "sonnet"):
-   "Research the following external dependencies/technologies for story E##-S##:
-   - {detected signals list}
-
-   For each, find:
-   1. Latest stable version (as of today)
-   2. Breaking changes from commonly-used previous versions
-   3. Security advisories or known vulnerabilities
-   4. Best practices and common pitfalls
-   5. API documentation specifics relevant to: {brief AC summary}
-
-   Search queries to try:
-   - '{technology} latest version {current year}'
-   - '{technology} migration guide breaking changes'
-   - '{technology} security advisory'
-   - '{technology} best practices {use case from ACs}'
-
-   Return: Structured markdown summary with source links. Group by technology.
-   Keep findings concise — focus on actionable information for implementation."
-   ```
-
-   **Output integration:** When the agent returns:
-   1. Read the current story file at `docs/implementation-artifacts/{story-key}.md`
-   2. Insert a `## Web Research` section AFTER `## Design Guidance` (or after `## Tasks / Subtasks` if no design guidance) and BEFORE `## Implementation Notes`
-   3. Content: the agent's structured findings
-   4. If story file write fails: display findings in chat output and inform user to add manually
-
-   **Error handling:**
-   - If agent fails or times out: log warning "Web research agent failed: {error}. Continuing without web research." Mark todo `completed`. Do not block workflow.
-   - If WebSearch/WebFetch tools are unavailable: inform user "Web tools not available in this session. Skipping web research." Mark todo `completed`. Continue.
+   If user accepts: dispatch `general-purpose` agent (`model: "sonnet"`) to research technologies — latest versions, breaking changes, best practices relevant to the ACs. Insert findings as `## Web Research` section in story file after Design Guidance.
 
    **TodoWrite**: Mark "Web research (if external deps detected)" → `completed`. Mark "Enter plan mode" → `in_progress`.
 
@@ -612,62 +469,10 @@ Mark the first todo as `in_progress` and proceed:
 
 **Without arguments**: Read sprint-status.yaml + epics.md, find first `backlog` story, confirm with user via AskUserQuestion, then proceed from step 1.
 
-## Route Map
+## References
 
-Map changed files to routes for design review context:
-
-| Source file pattern | Route | Page |
-|---|---|---|
-| `pages/Overview.tsx` | `/` | Dashboard overview |
-| `pages/MyClass.tsx` | `/my-class` | Current class |
-| `pages/Courses.tsx` | `/courses` | Course library |
-| `pages/CourseDetail.tsx` | `/courses/:courseId` | Course detail |
-| `pages/LessonPlayer.tsx` | `/courses/:courseId/:lessonId` | Lesson player |
-| `pages/Library.tsx` | `/library` | Content library |
-| `pages/Messages.tsx` | `/messages` | Messages |
-| `pages/Instructors.tsx` | `/instructors` | Instructors |
-| `pages/Reports.tsx` | `/reports` | Reports & analytics |
-| `pages/Settings.tsx` | `/settings` | Settings |
-
-## Knowlune Stack Patterns
-
-| Story content | Pattern |
-|---|---|
-| UI pages/routes | React Router v7 + lazy loading in `routes.tsx` |
-| Local storage | Dexie.js (IndexedDB) — `src/db/` |
-| State management | Zustand stores — `src/stores/` |
-| UI components | shadcn/ui (Radix) — `src/app/components/ui/` |
-| Custom components | `src/app/components/figma/` |
-| Styling | Tailwind CSS v4 utilities + `theme.css` tokens |
-| Icons | Lucide React |
-| File access | File System Access API — `src/lib/fileSystem.ts` |
-
-## Branch Naming
-
-| Story ID | Branch |
-|---|---|
-| E01-S03 | `feature/e01-s03-organize-courses-by-topic` |
-| E02-S01 | `feature/e02-s01-lesson-player-page-video-playback` |
-
-## Common Mistakes
-
-- **Not branching from main**: Always `git checkout main && git pull` first.
-- **Story already in-progress**: Check sprint-status.yaml first.
-- **Wrong branch format**: `feature/e##-s##-slug` — all lowercase.
-- **Uncommitted changes**: Commit or stash before switching.
-
-## Recovery
-
-All steps are idempotent — re-running `/start-story` after an interruption safely resumes:
-- **Steps 1-2 fail** (lookup/status): Nothing changed. Fix and re-run.
-- **Step 4 fail** (uncommitted changes): Commit or stash, re-run.
-- **Step 5** (branch): If branch exists, switches to it instead of failing.
-- **Step 6** (story file): If file exists, keeps it instead of overwriting.
-- **Step 7** (sprint status): If already in-progress, skips update.
-- **Step 8** (ATDD tests): If test file exists, skips suggestion.
-- **Step 9c** (web research): If agent failed, re-run `/start-story` — detection re-runs, user can accept again.
-- **Step 11** (plan link): If `## Implementation Plan` section exists, skips.
-- **Step 13** (initial commit): If commit exists, skips.
-- **General cleanup** (if needed):
-  - **Main workspace**: `git checkout main && git branch -D feature/e##-s##-slug`
-  - **Worktree**: `worktree-cleanup {story-key-lower}` (removes worktree and deletes branch)
+- **Route map & stack patterns**: `.claude/skills/start-story/docs/reference-tables.md`
+- **Common mistakes & recovery**: `.claude/skills/start-story/docs/recovery-and-gotchas.md`
+- **Worktree setup details**: `.claude/skills/start-story/docs/worktree-setup.md`
+- **Status validation scenarios**: `.claude/skills/start-story/docs/status-validation.md`
+- **Design guidance algorithm**: `.claude/skills/start-story/docs/design-guidance.md`
