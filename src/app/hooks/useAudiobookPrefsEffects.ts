@@ -53,7 +53,9 @@ export function useAudiobookPrefsEffects({
     // Per-book speed takes priority over global default (AC-6).
     // Fall back to global default for first-open books (AC-7).
     // Read via getState() to avoid book.playbackSpeed in dep array (would re-run on every speed change)
-    const bookPlaybackSpeed = useBookStore.getState().books.find(b => b.id === book.id)?.playbackSpeed
+    const bookPlaybackSpeed = useBookStore
+      .getState()
+      .books.find(b => b.id === book.id)?.playbackSpeed
     const resolvedSpeed = bookPlaybackSpeed ?? useAudiobookPrefsStore.getState().defaultSpeed
     useAudioPlayerStore.getState().setPlaybackRate(resolvedSpeed)
   }, [book.id])
