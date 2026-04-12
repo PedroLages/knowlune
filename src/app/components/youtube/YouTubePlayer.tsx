@@ -151,6 +151,16 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
       }
     }, [stopPolling])
 
+    // Timeout fallback: clear loading overlay if onReady never fires (e.g. CSP block, network issue)
+    useEffect(() => {
+      if (isReady) return
+      const timeout = setTimeout(() => {
+        console.warn('[YouTubePlayer] onReady timeout — clearing loading overlay')
+        setIsReady(true)
+      }, 10_000)
+      return () => clearTimeout(timeout)
+    }, [isReady])
+
     const handleReady = useCallback(
       (event: YouTubeEvent) => {
         playerRef.current = event.target
@@ -161,6 +171,15 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
         }
       },
       [initialPosition]
+    )
+
+    const handleError = useCallback(
+      (event: YouTubeEvent<number>) => {
+        console.error('[YouTubePlayer] YouTube error code:', event.data)
+        // Clear the loading overlay so the user sees the YouTube error screen
+        setIsReady(true)
+      },
+      []
     )
 
     const handleStateChange = useCallback(
@@ -235,6 +254,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
           className="w-full h-full [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:rounded-xl"
           onReady={handleReady}
           onStateChange={handleStateChange}
+          onError={handleError}
         />
         {!isReady && (
           <div

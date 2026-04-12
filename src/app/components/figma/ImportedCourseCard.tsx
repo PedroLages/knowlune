@@ -130,7 +130,7 @@ export function ImportedCourseCard({
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const statusBadgeRef = useRef<HTMLButtonElement>(null)
-  const thumbnailUrl = thumbnailUrls[course.id] ?? null
+  const thumbnailUrl = thumbnailUrls[course.id] ?? course.youtubeThumbnailUrl ?? null
 
   // Lazy-load thumbnail: only render <img> when card enters viewport (E1B-S04 AC5)
   const [lazyRef, isCardVisible] = useLazyVisible<HTMLElement>()
