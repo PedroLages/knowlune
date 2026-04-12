@@ -17,11 +17,11 @@
   },
   "page_metrics": {
     "/": {
-      "ttfb": 1,
-      "dom_interactive": 38,
-      "dom_complete": 255,
-      "load_complete": 255,
-      "fcp": 392,
+      "ttfb": 2,
+      "dom_interactive": 15,
+      "dom_complete": 179,
+      "load_complete": 179,
+      "fcp": 516,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
@@ -146,11 +146,11 @@
       "samples": 3
     },
     "/library/:bookId/read": {
-      "ttfb": 3,
-      "dom_interactive": 50,
-      "dom_complete": 282,
-      "load_complete": 282,
-      "fcp": 499,
+      "ttfb": 2,
+      "dom_interactive": 11,
+      "dom_complete": 153,
+      "load_complete": 153,
+      "fcp": 502,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
@@ -190,15 +190,15 @@
   },
   "bundle_sizes": {
     "Library": {
-      "raw": 214978,
+      "raw": 214980,
       "file": "Library-BmQsFSxq.js"
     },
     "AudiobookRenderer": {
-      "raw": 56398,
+      "raw": 56400,
       "file": "AudiobookRenderer-C_-eCM4H.js"
     },
     "index_js": {
-      "raw": 829906,
+      "raw": 829910,
       "file": "index-AJOgU4wq.js"
     },
     "index_css": {
