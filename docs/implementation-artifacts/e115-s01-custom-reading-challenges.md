@@ -1,9 +1,9 @@
 ---
 story_id: E115-S01
 story_name: "Custom Reading Challenges"
-status: review
+status: done
 started: 2026-04-13
-completed:
+completed: 2026-04-12
 reviewed: true
 review_started: 2026-04-13
 review_gates_passed:

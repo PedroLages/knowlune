@@ -1407,5 +1407,5 @@ development_status:
   # Depends on: E107
   # ──────────────────────────────────────────────────
   epic-115: in-progress
-  115-1-custom-reading-challenges: review
+  115-1-custom-reading-challenges: done
   epic-115-retrospective: optional
