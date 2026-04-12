@@ -7,66 +7,10 @@
 import { test, expect } from '@playwright/test'
 import { dismissOnboarding } from '../../helpers/dismiss-onboarding'
 import { seedBooks, seedAudioClips } from '../../support/helpers/indexeddb-seed'
+import { mockAudioElement } from '../../support/helpers/audio-mock'
 import { FIXED_DATE } from '../../utils/test-time'
 
 const AUDIOBOOK_ID = 'clip-test-audiobook'
-
-/**
- * Mock the HTML5 Audio element for headless playback.
- * play() resolves immediately, load() fires canplay so chapter loading resolves.
- * Exposes window.__mockCurrentTime__ to allow test-controlled currentTime values.
- */
-async function mockAudioElement(page: import('@playwright/test').Page): Promise<void> {
-  await page.addInitScript(() => {
-    Object.defineProperty(HTMLMediaElement.prototype, 'play', {
-      configurable: true,
-      value: function () {
-        return Promise.resolve()
-      },
-    })
-
-    const originalLoad = HTMLMediaElement.prototype.load
-    HTMLMediaElement.prototype.load = function () {
-      originalLoad.call(this)
-      Promise.resolve().then(() => {
-        this.dispatchEvent(new Event('canplay'))
-      })
-    }
-
-    Object.defineProperty(HTMLMediaElement.prototype, 'readyState', {
-      configurable: true,
-      get() {
-        return (this as HTMLMediaElement & { _fakeSrc?: string })._fakeSrc ? 4 : 0
-      },
-    })
-
-    const srcDescriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'src')
-    Object.defineProperty(HTMLMediaElement.prototype, 'src', {
-      configurable: true,
-      get() {
-        return (this as HTMLMediaElement & { _fakeSrc?: string })._fakeSrc ?? ''
-      },
-      set(value: string) {
-        ;(this as HTMLMediaElement & { _fakeSrc?: string })._fakeSrc = value
-        if (srcDescriptor?.set) srcDescriptor.set.call(this, value)
-      },
-    })
-
-    // Expose test-controlled currentTime — tests can set window.__mockCurrentTime__
-    // to control what the player sees when End Clip is clicked.
-    Object.defineProperty(HTMLMediaElement.prototype, 'currentTime', {
-      configurable: true,
-      get() {
-        const win = window as Window & { __mockCurrentTime__?: number }
-        return win.__mockCurrentTime__ ?? 0
-      },
-      set(value: number) {
-        const win = window as Window & { __mockCurrentTime__?: number }
-        win.__mockCurrentTime__ = value
-      },
-    })
-  })
-}
 
 async function seedAudiobook(page: import('@playwright/test').Page) {
   await seedBooks(page, [
@@ -191,6 +135,7 @@ test.describe('E111-S01: Audio Clips', () => {
   })
 
   test('AC-3: Clips panel lists all clips for the book', async ({ page }) => {
+    await seedClips(page)
     await page.goto(`/library/${AUDIOBOOK_ID}/read`)
     // Open clips panel
     const clipsPanelBtn = page.getByRole('button', { name: /^clips$/i })
@@ -199,6 +144,30 @@ test.describe('E111-S01: Audio Clips', () => {
 
     // Clips panel should be visible
     await expect(page.getByTestId('clip-list-panel')).toBeVisible()
+
+    // Should display the correct number of seeded clips
+    const clipItems = page.getByTestId('clip-item')
+    await expect(clipItems).toHaveCount(2)
+
+    // Each clip should display chapter title and timestamp text
+    const firstClip = clipItems.nth(0)
+    const secondClip = clipItems.nth(1)
+    await expect(firstClip.getByText('Chapter 1')).toBeVisible()
+    await expect(firstClip.getByText(/0:10/)).toBeVisible()
+    await expect(secondClip.getByText('Chapter 1')).toBeVisible()
+    await expect(secondClip.getByText(/1:00/)).toBeVisible()
+
+    // Verify ordering — first clip's start time (10s) is before second clip's (60s)
+    const firstClipTime = await firstClip.getByText(/\d+:\d+/).first().textContent()
+    const secondClipTime = await secondClip.getByText(/\d+:\d+/).first().textContent()
+    expect(firstClipTime).toBeTruthy()
+    expect(secondClipTime).toBeTruthy()
+    // Parse "M:SS" timestamps and verify ordering
+    const parseTime = (t: string) => {
+      const parts = t.split(':').map(Number)
+      return parts.length === 2 ? parts[0] * 60 + parts[1] : 0
+    }
+    expect(parseTime(firstClipTime!)).toBeLessThan(parseTime(secondClipTime!))
   })
 
   test('AC-4: Tapping a clip plays from start to end time', async ({ page }) => {
@@ -271,6 +240,38 @@ test.describe('E111-S01: Audio Clips', () => {
     // Should have drag handles
     const dragHandles = page.getByTestId('clip-drag-handle')
     await expect(dragHandles.first()).toBeVisible()
+
+    // Verify initial order: First Clip before Second Clip
+    const clipItems = page.getByTestId('clip-item')
+    await expect(clipItems).toHaveCount(2)
+    await expect(clipItems.nth(0)).toContainText('First Clip')
+    await expect(clipItems.nth(1)).toContainText('Second Clip')
+
+    // Drag second clip's handle above the first clip using pointer events (dnd-kit PointerSensor)
+    const handle = dragHandles.nth(1)
+    const target = clipItems.nth(0)
+
+    const handleBox = await handle.boundingBox()
+    const targetBox = await target.boundingBox()
+    if (!handleBox || !targetBox) throw new Error('Could not get bounding boxes for drag test')
+
+    const startX = handleBox.x + handleBox.width / 2
+    const startY = handleBox.y + handleBox.height / 2
+    const endX = targetBox.x + targetBox.width / 2
+    // Drop in upper quarter to place above the first item
+    const endY = targetBox.y + targetBox.height / 4
+
+    await page.mouse.move(startX, startY)
+    await page.mouse.down()
+    // Activate PointerSensor: needs ≥5px movement before drag starts
+    await page.mouse.move(startX, startY - 6, { steps: 4 })
+    // Gradually move to target position
+    await page.mouse.move(endX, endY, { steps: 20 })
+    await page.mouse.up()
+
+    // Assert new order: Second Clip is now before First Clip
+    await expect(clipItems.nth(0)).toContainText('Second Clip')
+    await expect(clipItems.nth(1)).toContainText('First Clip')
   })
 
   test('AC-8: Accessibility — keyboard navigation and ARIA labels', async ({ page }) => {

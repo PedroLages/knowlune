@@ -204,20 +204,20 @@ function SortableClipItem({
             <Button
               variant="ghost"
               size="icon"
-              className="size-8 text-muted-foreground hover:text-foreground"
+              className="size-11 text-muted-foreground hover:text-foreground"
               onClick={handleEditStart}
               aria-label="Edit clip title"
             >
-              <Pencil className="size-3.5" aria-hidden="true" />
+              <Pencil className="size-4" aria-hidden="true" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="size-8 text-muted-foreground hover:text-destructive"
+              className="size-11 text-muted-foreground hover:text-destructive"
               onClick={() => setConfirmDelete(true)}
               aria-label="Delete clip"
             >
-              <Trash2 className="size-3.5" aria-hidden="true" />
+              <Trash2 className="size-4" aria-hidden="true" />
             </Button>
           </>
         )}

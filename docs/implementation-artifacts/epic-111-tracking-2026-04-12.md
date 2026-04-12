@@ -7,14 +7,14 @@ Last Updated: 2026-04-12 15:16
 
 | Story | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|--------|--------|---------------|--------------|
-| E111-S01 | reviewing | — | — | — |
-| E111-S02 | queued | — | — | — |
-| E111-S03 | queued | — | — | — |
+| E111-S01 | done | — | — | — |
+| E111-S02 | done | — | — | — |
+| E111-S03 | done | — | — | — |
 
 ## Story Details
 
 ### E111-S01: Audio Clips
-**Status:** queued
+**Status:** done
 #### Errors
 _(none yet)_
 #### Review Findings
@@ -27,7 +27,7 @@ _(none yet)_
 ---
 
 ### E111-S02: Skip Silence And Speed Memory
-**Status:** queued
+**Status:** done
 #### Errors
 _(none yet)_
 #### Review Findings
@@ -40,7 +40,7 @@ _(none yet)_
 ---
 
 ### E111-S03: Sleep Timer End Of Chapter
-**Status:** queued
+**Status:** done
 #### Errors
 _(none yet)_
 #### Review Findings
@@ -54,15 +54,15 @@ _(none yet)_
 
 | Command | Status | Result | Notes |
 |---------|--------|--------|-------|
-| Sprint Status | pending | — | — |
-| Mark Epic Done | pending | — | — |
-| Testarch Trace | pending | — | — |
-| Testarch NFR | pending | — | — |
-| Adversarial Review | pending | — | — |
-| Retrospective | pending | — | — |
-| Fix Pass Planning | pending | — | — |
-| Fix Pass Execution | pending | — | — |
-| Gate Check | pending | — | — |
+| Sprint Status | done | — | — |
+| Mark Epic Done | done | — | — |
+| Testarch Trace | done | — | — |
+| Testarch NFR | done | — | — |
+| Adversarial Review | done | — | — |
+| Retrospective | done | — | — |
+| Fix Pass Planning | done | — | — |
+| Fix Pass Execution | done | — | — |
+| Gate Check | done | — | — |
 
 ## Non-Issues (False Positives)
 _(none yet)_
@@ -77,7 +77,7 @@ _(none yet)_
 
 ## Epic Summary
 - Started: 2026-04-12
-- Completed: --
+- Completed: 2026-04-12
 - Total Stories: 3
 - Total Review Rounds: --
 - Total Issues Fixed: --
