@@ -224,7 +224,7 @@ test.describe('E111-S01: Audio Clips', () => {
 
     // Title should be updated
     await expect(
-      page.getByTestId('clip-item').first().getByText('My Favorite Passage'),
+      page.getByTestId('clip-item').first().getByText('My Favorite Passage')
     ).toBeVisible()
   })
 

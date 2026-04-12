@@ -55,10 +55,7 @@ describe('loadClips', () => {
     expect(useAudioClipStore.getState().isLoaded).toBe(true)
 
     // Second load should be a no-op
-    const dbSpy = vi.spyOn(
-      (await import('@/db/schema')).db.audioClips,
-      'where'
-    )
+    const dbSpy = vi.spyOn((await import('@/db/schema')).db.audioClips, 'where')
     await act(async () => {
       await useAudioClipStore.getState().loadClips('book-1')
     })

@@ -104,7 +104,9 @@ export function AudiobookRenderer({
       .catch(() => {
         // silent-catch-ok: badge stays at 0
       })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [book.id])
   const prevIsPlayingRef = useRef(false)
   const bookmarkNoteContainerRef = useRef<HTMLDivElement>(null)
@@ -122,10 +124,13 @@ export function AudiobookRenderer({
     }
   }, [isPlaying, sessionBookmarkIds.size])
 
-  const handleBookmarkCreated = useCallback((bookmarkId: string) => {
-    setSessionBookmarkIds(prev => new Set([...prev, bookmarkId]))
-    onBookmarkChange?.()
-  }, [onBookmarkChange])
+  const handleBookmarkCreated = useCallback(
+    (bookmarkId: string) => {
+      setSessionBookmarkIds(prev => new Set([...prev, bookmarkId]))
+      onBookmarkChange?.()
+    },
+    [onBookmarkChange]
+  )
 
   const handleBookmarkDeleted = useCallback((bookmarkId: string) => {
     setSessionBookmarkIds(prev => {

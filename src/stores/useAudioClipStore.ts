@@ -40,15 +40,12 @@ export const useAudioClipStore = create<AudioClipStoreState>((set, get) => ({
     // Skip reload if the same book is already loaded
     if (get().isLoaded && get().loadedBookId === bookId) return
 
-    const clips = await db.audioClips
-      .where('bookId')
-      .equals(bookId)
-      .sortBy('sortOrder')
+    const clips = await db.audioClips.where('bookId').equals(bookId).sortBy('sortOrder')
 
     set({ clips, isLoaded: true, loadedBookId: bookId })
   },
 
-  addClip: async (clipData) => {
+  addClip: async clipData => {
     const { clips } = get()
     const maxOrder = Math.max(-1, ...clips.map(c => c.sortOrder))
 

@@ -250,9 +250,7 @@ function ClipDragOverlay({ clip, chapterTitle }: { clip: AudioClip; chapterTitle
         <p className="text-xs font-medium text-muted-foreground truncate">
           {chapterTitle} · {formatAudioTime(clip.startTime)} – {formatAudioTime(clip.endTime)}
         </p>
-        <p className="text-sm text-foreground truncate">
-          {clip.title || 'Untitled clip'}
-        </p>
+        <p className="text-sm text-foreground truncate">{clip.title || 'Untitled clip'}</p>
       </div>
     </div>
   )
@@ -260,13 +258,7 @@ function ClipDragOverlay({ clip, chapterTitle }: { clip: AudioClip; chapterTitle
 
 // ─── Panel ────────────────────────────────────────────────────────────────────
 
-export function ClipListPanel({
-  open,
-  onClose,
-  bookId,
-  chapters,
-  onPlayClip,
-}: ClipListPanelProps) {
+export function ClipListPanel({ open, onClose, bookId, chapters, onPlayClip }: ClipListPanelProps) {
   const clips = useAudioClipStore(s => s.clips)
   const isLoaded = useAudioClipStore(s => s.isLoaded)
   const loadedBookId = useAudioClipStore(s => s.loadedBookId)
@@ -318,7 +310,12 @@ export function ClipListPanel({
   const activeClip = activeId ? clips.find(c => c.id === activeId) : null
 
   return (
-    <Sheet open={open} onOpenChange={v => { if (!v) onClose() }}>
+    <Sheet
+      open={open}
+      onOpenChange={v => {
+        if (!v) onClose()
+      }}
+    >
       <SheetContent
         side="right"
         className="flex flex-col w-full sm:max-w-md p-0"
@@ -348,7 +345,7 @@ export function ClipListPanel({
                   strategy={verticalListSortingStrategy}
                 >
                   <ul role="list" aria-label="Audio clips">
-                    {clips.map((clip) => {
+                    {clips.map(clip => {
                       const chapterTitle =
                         chapters[clip.chapterIndex]?.title ?? `Chapter ${clip.chapterIndex + 1}`
 
