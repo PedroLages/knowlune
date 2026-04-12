@@ -13,6 +13,7 @@ import { Check } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { Button } from '@/app/components/ui/button'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
+import { useBookStore } from '@/stores/useBookStore'
 
 const SPEED_OPTIONS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0]
 
@@ -20,8 +21,18 @@ function formatSpeed(rate: number): string {
   return `${rate % 1 === 0 ? rate.toFixed(1) : rate}×`
 }
 
-export function SpeedControl() {
+interface SpeedControlProps {
+  bookId: string
+}
+
+export function SpeedControl({ bookId }: SpeedControlProps) {
   const { playbackRate, setPlaybackRate } = useAudioPlayerStore()
+
+  const handleSelect = (rate: number) => {
+    setPlaybackRate(rate)
+    // Persist per-book speed — fires-and-forgets; store handles rollback on failure
+    useBookStore.getState().updateBookPlaybackSpeed(bookId, rate)
+  }
 
   return (
     <Popover>
@@ -31,6 +42,7 @@ export function SpeedControl() {
           size="sm"
           className="min-h-[44px] min-w-[44px] px-3 text-sm font-medium text-muted-foreground hover:text-foreground"
           aria-label={`Playback speed: ${formatSpeed(playbackRate)}`}
+          data-testid="speed-button"
         >
           {formatSpeed(playbackRate)}
         </Button>
@@ -42,8 +54,9 @@ export function SpeedControl() {
             return (
               <li key={rate} role="option" aria-selected={isActive}>
                 <button
-                  onClick={() => setPlaybackRate(rate)}
+                  onClick={() => handleSelect(rate)}
                   className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted/60 ${isActive ? 'text-brand font-medium' : 'text-foreground'}`}
+                  data-testid={`speed-option-${rate}`}
                 >
                   <span>{formatSpeed(rate)}</span>
                   {isActive && <Check className="size-4 text-brand" aria-hidden="true" />}

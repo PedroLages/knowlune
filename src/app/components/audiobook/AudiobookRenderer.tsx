@@ -138,7 +138,7 @@ export function AudiobookRenderer({
 
   // Prefs-driven side-effects: default speed, auto-bookmark on stop, auto sleep timer (E108-S04)
   useAudiobookPrefsEffects({
-    bookId: book.id,
+    book,
     isPlaying,
     currentTime,
     currentChapterIndex,
@@ -430,7 +430,7 @@ export function AudiobookRenderer({
 
         {/* Secondary Controls: Speed | Bookmark | Sleep Timer */}
         <div className="flex items-center gap-2 bg-card/40 backdrop-blur-2xl rounded-full px-4 py-1.5 border border-white/20">
-          <SpeedControl />
+          <SpeedControl bookId={book.id} />
           <div className="relative">
             <BookmarkButton
               bookId={book.id}
