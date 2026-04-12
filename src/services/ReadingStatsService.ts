@@ -63,20 +63,20 @@ export async function computeAverageReadingSpeed(): Promise<number | null> {
   const ninetyDaysAgo = new Date()
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
 
-  let totalSeconds = 0
-  let totalPages = 0
+  // Only include books that have at least one session in the 90-day window
+  // to avoid inflating speed with pages from books with no recent sessions
+  const booksWithRecentSessions = new Set<string>()
   const bookPagesMap = new Map<string, number>()
 
   for (const book of finishedBooks) {
     if (book.totalPages) {
       bookPagesMap.set(book.id, book.totalPages)
-      totalPages += book.totalPages
     }
   }
 
-  if (totalPages === 0) return null
+  let totalSeconds = 0
 
-  // Sum session duration for finished books in last 90 days
+  // Sum session duration for finished books in last 90 days, tracking which books contributed
   for (const session of sessions) {
     const bookId = session.contentItemId
     if (!bookId || !finishedBookIds.has(bookId)) continue
@@ -86,6 +86,13 @@ export async function computeAverageReadingSpeed(): Promise<number | null> {
     if (sessionDate < ninetyDaysAgo) continue
 
     totalSeconds += session.duration ?? 0
+    booksWithRecentSessions.add(bookId)
+  }
+
+  // Only count pages for books that had recent sessions
+  let totalPages = 0
+  for (const bookId of booksWithRecentSessions) {
+    totalPages += bookPagesMap.get(bookId) ?? 0
   }
 
   if (totalSeconds === 0) return null
@@ -133,7 +140,9 @@ export async function computeETA(
   // Insufficient data for ETA
   if (totalSeconds === 0 || sessionCount === 0) return null
 
-  const avgPagesPerDay = (avgSpeedPagesPerHour * (totalSeconds / 3600)) / (sessionCount / 7) // avg pages per day estimate
+  // avg pages per day = total pages read in window / 30 days
+  // (avgSpeedPagesPerHour * hours read) = total pages read in last 30 days
+  const avgPagesPerDay = (avgSpeedPagesPerHour * (totalSeconds / 3600)) / 30
   const remainingPages = Math.round((1 - (book.progress ?? 0) / 100) * book.totalPages)
 
   if (remainingPages <= 0) return null

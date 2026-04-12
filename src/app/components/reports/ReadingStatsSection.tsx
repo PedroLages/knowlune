@@ -19,8 +19,10 @@ import {
 } from '@/app/components/ui/chart'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import { db } from '@/db/schema'
 import {
   getReadingStats,
+  computeETA,
   formatReadingTime,
   type ReadingStats,
 } from '@/services/ReadingStatsService'
@@ -56,8 +58,15 @@ function StatPill({ icon, label, value, 'data-testid': testId }: StatPillProps) 
   )
 }
 
+interface BookETA {
+  id: string
+  title: string
+  eta: string | null
+}
+
 export function ReadingStatsSection() {
   const [stats, setStats] = useState<ReadingStats | null>(null)
+  const [bookETAs, setBookETAs] = useState<BookETA[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const loadStats = useCallback(async () => {
@@ -65,6 +74,17 @@ export function ReadingStatsSection() {
     try {
       const data = await getReadingStats()
       setStats(data)
+
+      // AC2: Compute ETA for each in-progress book using the computed avg speed
+      const inProgressBooks = await db.books.where('status').equals('reading').toArray()
+      const etas = await Promise.all(
+        inProgressBooks.map(async book => ({
+          id: book.id,
+          title: book.title ?? 'Untitled',
+          eta: await computeETA(book, data.avgReadingSpeedPagesPerHour),
+        }))
+      )
+      setBookETAs(etas)
     } catch (err) {
       // silent-catch-ok: reading stats are non-critical — zero-state fallback shown instead of error toast
       console.error('[ReadingStatsSection] Failed to load reading stats:', err)
@@ -72,6 +92,7 @@ export function ReadingStatsSection() {
         timeReadTodayMinutes: 0,
         booksInProgress: 0,
         totalBooksFinished: 0,
+        avgReadingSpeedPagesPerHour: null,
         readingTrend: [],
       })
     } finally {
@@ -144,6 +165,20 @@ export function ReadingStatsSection() {
             }
             data-testid="reading-stat-avg-speed"
           />
+        </div>
+      )}
+
+      {/* AC2: ETA per in-progress book */}
+      {!isLoading && bookETAs.length > 0 && (
+        <div className="space-y-1.5">
+          {bookETAs.map(({ id, title, eta }) => (
+            <div key={id} className="flex items-center justify-between text-sm text-muted-foreground">
+              <span className="truncate max-w-[70%]">{title}</span>
+              <span className="font-medium tabular-nums" data-testid={`book-eta-${id}`}>
+                {eta ?? '—'}
+              </span>
+            </div>
+          ))}
         </div>
       )}
 
