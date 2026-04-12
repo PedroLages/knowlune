@@ -105,11 +105,7 @@ export function BookReviewEditor({ bookId, className }: BookReviewEditorProps) {
                   onClick={() => setShowPreview(!showPreview)}
                   aria-label={showPreview ? 'Edit review' : 'Preview review'}
                 >
-                  {showPreview ? (
-                    <Pencil className="size-3.5" />
-                  ) : (
-                    <Eye className="size-3.5" />
-                  )}
+                  {showPreview ? <Pencil className="size-3.5" /> : <Eye className="size-3.5" />}
                 </Button>
               )}
               {review.reviewText && (

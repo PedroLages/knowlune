@@ -239,9 +239,7 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
         {book.genre && (
           <p className="text-[11px] text-muted-foreground/70 truncate">{book.genre}</p>
         )}
-        {review?.rating ? (
-          <StarRating value={review.rating} readonly size="sm" />
-        ) : null}
+        {review?.rating ? <StarRating value={review.rating} readonly size="sm" /> : null}
         {book.totalDuration != null && book.totalDuration > 0 && (
           <p className="text-[10px] text-muted-foreground" data-testid={`duration-${book.id}`}>
             {formatDuration(book.totalDuration)}
