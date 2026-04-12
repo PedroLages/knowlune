@@ -22,7 +22,7 @@ Usage:
     python scripts/epic-runner.py --epic-only 15 --phase testarch-trace testarch-nfr
     python scripts/epic-runner.py --legacy-mode --next 3  # disable all optimizations
 
-Requires: pip install claude-agent-sdk pyyaml
+Requires: pip install claude-agent-sdk pyyaml rich
 """
 
 from __future__ import annotations
@@ -49,6 +49,11 @@ from claude_agent_sdk import (
     ResultMessage,
 )
 from claude_agent_sdk.types import AgentDefinition, McpStdioServerConfig, TextBlock
+
+from epic_runner_ui import (
+    HAS_RICH, banner, console, cprint, coordinator_decision, epic_listing,
+    findings_panel, phase_header, rule, status_badge, story_table, summary_panel,
+)
 
 # ─────────────────────────────────────────────────
 # Section A: CLI & Config
@@ -319,14 +324,9 @@ def parse_args() -> RunConfig:
             done_stories = find_done_stories_for_epic(s)
             if epic_stories or done_stories:
                 total = len(epic_stories) + len(done_stories)
-                print(f"\n📋 Epic {s.upper()}: {total} stories total")
-                if done_stories:
-                    print(f"   ✅ Done ({len(done_stories)}): {', '.join(done_stories)}")
+                epic_listing(s.upper(), total, done_stories, epic_stories)
                 if epic_stories:
-                    print(f"   🔄 Pending ({len(epic_stories)}): {', '.join(epic_stories)}")
                     expanded.extend(epic_stories)
-                else:
-                    print(f"   All stories complete!")
             else:
                 log.warning(f"No stories found for {s}")
         else:
@@ -1520,9 +1520,9 @@ async def merge_epic_prs(
         return []
 
     if supervised:
-        print(f"\n  PRs to merge for Epic {epic_num}:")
+        cprint(f"\n  PRs to merge for Epic {epic_num}:", "bold")
         for pr in pr_infos:
-            print(f"    #{pr['number']} — {pr['story']} ({pr['url']})")
+            cprint(f"    #{pr['number']} — {pr['story']} ({pr['url']})")
         approval = input(f"\n  Merge {len(pr_infos)} PR(s)? [y/n]: ").strip().lower()
         if approval != "y":
             log.info("  Skipping PR merge per user request")
@@ -2246,10 +2246,8 @@ async def run_story(
 
         # Supervised: show plan and ask for approval
         if config.mode == "supervised":
-            print(f"\n{'=' * 60}")
-            print(f"PLAN FOR {story.key}")
-            print(f"{'=' * 60}")
-            print(text[-PLAN_PREVIEW_CHARS:])
+            banner(f"PLAN FOR {story.key}", "bold cyan")
+            cprint(text[-PLAN_PREVIEW_CHARS:], "dim")
             approval = input("\nApprove plan? [y/n]: ").strip().lower()
             if approval != "y":
                 raise StoryError("Plan rejected by user")
@@ -2460,17 +2458,18 @@ async def run_story(
 
             # Supervised: show decision and allow override
             if config.mode == "supervised":
-                print(f"\n{'=' * 60}")
-                print(f"REVIEW ROUND {round_num}: "
-                      f"{verdict.blocker_count} BLOCKER, {verdict.high_count} HIGH, "
-                      f"{verdict.medium_count} MEDIUM, {verdict.low_count} LOW")
+                banner(
+                    f"REVIEW ROUND {round_num}: "
+                    f"{verdict.blocker_count} BLOCKER, {verdict.high_count} HIGH, "
+                    f"{verdict.medium_count} MEDIUM, {verdict.low_count} LOW",
+                    "bold yellow",
+                )
                 if coord_decision:
-                    print(f"COORDINATOR: {coord_decision.action.upper()} — {coord_decision.reason}")
-                    if coord_decision.strategy:
-                        print(f"STRATEGY: {coord_decision.strategy[:200]}")
-                print(f"{'=' * 60}")
-                print(verdict.findings_text[:2000])
-                print()
+                    coordinator_decision(
+                        coord_decision.action, coord_decision.reason,
+                        coord_decision.strategy or "",
+                    )
+                findings_panel("Findings", verdict.findings_text[:2000])
                 action = input("Fix automatically? [y/n/skip/override]: ").strip().lower()
                 if action == "n":
                     raise StoryError("User declined to fix blockers")
@@ -2532,11 +2531,8 @@ async def run_story(
                     f"PASSED (0 blockers), {verdict.story_related_total} remaining finding(s) — fixing in one pass")
                 should_fix = True
                 if config.mode == "supervised":
-                    print(f"\n{'=' * 60}")
-                    print(f"NON-BLOCKER FINDINGS: {verdict.story_related_total} total")
-                    print(f"{'=' * 60}")
-                    print(verdict.findings_text[:2000])
-                    print()
+                    banner(f"NON-BLOCKER FINDINGS: {verdict.story_related_total} total", "yellow")
+                    findings_panel("Findings", verdict.findings_text[:2000])
                     should_fix = input("Fix non-blockers? [y/n]: ").strip().lower() == "y"
 
                 if should_fix:
@@ -3054,23 +3050,25 @@ async def _run_epic_only(config: RunConfig) -> None:
     epic_ctx.tracking_file = find_tracking_file(epic_num)
 
     if config.dry_run:
-        print(f"\nDRY RUN — Epic-only finish for Epic {epic_num}: {epic_name}")
-        print(f"  Stories in epic: {story_count}")
+        banner(f"DRY RUN — Epic-only finish for Epic {epic_num}: {epic_name}", "bold cyan")
         phases = [p[0] for p in EPIC_FINISH_PHASES
                   if not (p[0] == "adversarial" and config.skip_adversarial)]
         if config.epic_phases:
             phases = [p for p in phases if p in config.epic_phases]
-        print(f"  Phases: {', '.join(phases)}")
-        # Show optimization info
-        print(f"  Fix pass: opus planner → sonnet executors")
-        print(f"  Gate check: subprocess only (zero AI cost)")
-        print(f"  Report: sonnet, effort=medium")
         parallel = [p for p in phases if p in {"testarch-trace", "testarch-nfr", "adversarial"}]
+        kvs: dict[str, str] = {
+            "Stories in epic": str(story_count),
+            "Phases": ", ".join(phases),
+            "Fix pass": "opus planner → sonnet executors",
+            "Gate check": "subprocess only (zero AI cost)",
+            "Report": "sonnet, effort=medium",
+        }
         if parallel and len(parallel) > 1:
-            print(f"  Parallel: {', '.join(parallel)}")
-        print(f"  Known issues loaded: {len(epic_ctx.known_issues_summary.splitlines()) if epic_ctx.known_issues_summary else 0}")
-        print(f"  Mode: {config.mode}")
-        print(f"  Legacy mode: {config.legacy_mode}")
+            kvs["Parallel"] = ", ".join(parallel)
+        kvs["Known issues"] = str(len(epic_ctx.known_issues_summary.splitlines()) if epic_ctx.known_issues_summary else 0)
+        kvs["Mode"] = config.mode
+        kvs["Legacy mode"] = str(config.legacy_mode)
+        summary_panel("Configuration", kvs, "cyan")
         return
 
     PROGRESS_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -3114,18 +3112,21 @@ async def _run_epic_only(config: RunConfig) -> None:
         log_epic_result(ef_result, config.log_file)
 
         # Summary
-        print(f"\n{'=' * 60}")
-        print(f"EPIC {epic_num} FINISH {'COMPLETE' if ef_result.success else 'PARTIAL'}")
-        print(f"{'=' * 60}")
+        finish_status = "COMPLETE" if ef_result.success else "PARTIAL"
+        banner(f"EPIC {epic_num} FINISH {finish_status}",
+               "bold green" if ef_result.success else "bold red")
+        kvs: dict[str, str] = {}
         if ef_result.phases_completed:
-            print(f"  Passed: {', '.join(ef_result.phases_completed)}")
+            kvs["Passed"] = ", ".join(ef_result.phases_completed)
         if ef_result.phases_failed:
-            print(f"  Failed: {', '.join(ef_result.phases_failed)}")
+            kvs["Failed"] = ", ".join(ef_result.phases_failed)
         if merged:
-            print(f"  Merged PRs: {len(merged)}")
-        print(f"  Cost: ${ef_result.total_cost_usd:.2f}")
-        print(f"  Time: {ef_result.duration_secs / 60:.1f} min")
-        print(f"  Log: {config.log_file}")
+            kvs["Merged PRs"] = str(len(merged))
+        kvs["Cost"] = f"${ef_result.total_cost_usd:.2f}"
+        kvs["Time"] = f"{ef_result.duration_secs / 60:.1f} min"
+        kvs["Log"] = str(config.log_file)
+        summary_panel("Epic Finish Results", kvs,
+                       "green" if ef_result.success else "red")
 
     finally:
         log.info("Stopping dev server...")
@@ -3228,32 +3229,47 @@ async def main() -> None:
 
     # Dry run
     if config.dry_run:
-        print(f"\nDRY RUN — {len(stories)} story(ies) for Epic {primary_epic}: {epic_name}\n")
-        for s in stories:
-            print(f"  {s.key}: {s.name} (status: {s.status})")
+        banner(f"DRY RUN — {len(stories)} story(ies) for Epic {primary_epic}: {epic_name}", "bold cyan")
+
+        # Story listing
+        if HAS_RICH:
+            from rich.table import Table as RichTable
+            st = RichTable(show_edge=False, pad_edge=True, expand=False)
+            st.add_column("Story", style="bold")
+            st.add_column("Name")
+            st.add_column("Status", no_wrap=True)
+            for s in stories:
+                st.add_row(s.key, s.name, status_badge(s.status))
+            console.print(st)
+        else:
+            for s in stories:
+                print(f"  {s.key}: {s.name} (status: {s.status})")
+
         est_cost = len(stories) * BUDGET_PER_STORY
-        print(f"\nEstimated max cost: ${est_cost:.2f} "
-              f"({len(stories)} stories x ${BUDGET_PER_STORY:.2f})")
-        print(f"Mode: {config.mode}")
-        print(f"Max review rounds: {config.max_review_rounds}")
-        print(f"Max turns per session: {config.max_turns}")
-        print(f"Known issues: {len(known_summary.splitlines()) if known_summary else 0}")
-        print(f"Tracking file: {epic_ctx.tracking_file}")
-        print(f"Legacy mode: {config.legacy_mode}")
+        kvs: dict[str, str] = {
+            "Est. max cost": f"${est_cost:.2f} ({len(stories)} stories x ${BUDGET_PER_STORY:.2f})",
+            "Mode": config.mode,
+            "Max review rounds": str(config.max_review_rounds),
+            "Max turns/session": str(config.max_turns),
+            "Known issues": str(len(known_summary.splitlines()) if known_summary else 0),
+            "Tracking file": str(epic_ctx.tracking_file),
+            "Legacy mode": str(config.legacy_mode),
+        }
+        summary_panel("Configuration", kvs, "cyan")
 
         # Model/effort optimization preview
         if not config.legacy_mode:
-            print(f"\nOptimized model/effort per phase:")
-            print(f"  START:  opus, effort=high")
-            print(f"  IMPL:   sonnet, effort=high (fresh session, reads plan from disk)")
-            print(f"  REVIEW: sonnet, effort=medium")
-            coord_status = "(DISABLED)" if config.no_coordinator else ""
-            print(f"  COORD:  sonnet, effort=low {coord_status}")
-            print(f"  FIX:    sonnet, effort=high (or opus on escalate)")
-            print(f"  FINISH: sonnet, effort=low")
-            print(f"\nPer-phase turn caps (when --max-turns not set):")
-            print(f"  START={MAX_TURNS_START}, IMPL={MAX_TURNS_IMPLEMENT}, "
-                  f"REVIEW={MAX_TURNS_REVIEW}, FIX={MAX_TURNS_FIX}, FINISH={MAX_TURNS_FINISH}")
+            coord_status = " (DISABLED)" if config.no_coordinator else ""
+            summary_panel("Optimized Model/Effort", {
+                "START": "opus, effort=high",
+                "IMPL": "sonnet, effort=high (fresh session, reads plan from disk)",
+                "REVIEW": "sonnet, effort=medium",
+                "COORD": f"sonnet, effort=low{coord_status}",
+                "FIX": "sonnet, effort=high (or opus on escalate)",
+                "FINISH": "sonnet, effort=low",
+                "Turn caps": f"START={MAX_TURNS_START}, IMPL={MAX_TURNS_IMPLEMENT}, "
+                             f"REVIEW={MAX_TURNS_REVIEW}, FIX={MAX_TURNS_FIX}, FINISH={MAX_TURNS_FINISH}",
+            }, "dim cyan")
 
         if not config.skip_epic_finish:
             fake_results = [StoryResult(story=s, success=True) for s in stories]
@@ -3261,9 +3277,9 @@ async def main() -> None:
             if would_complete:
                 phases = [p[0] for p in EPIC_FINISH_PHASES
                           if not (p[0] == "adversarial" and config.skip_adversarial)]
-                print(f"\nEpic finish (if all stories pass):")
+                cprint("\nEpic finish (if all stories pass):", "bold")
                 for e in would_complete:
-                    print(f"  Epic {e} → phases: {', '.join(phases)} + fix-pass + gate-check + report")
+                    cprint(f"  Epic {e} → phases: {', '.join(phases)} + fix-pass + gate-check + report")
         return
 
     # Clear progress file
@@ -3325,26 +3341,27 @@ async def main() -> None:
             )
 
         # Final summary
-        print(f"\n{'=' * 60}")
-        print("BATCH COMPLETE")
-        print(f"{'=' * 60}")
-        print_progress(results, len(stories))
+        banner("BATCH COMPLETE", "bold green")
+        story_table(results, len(stories))
 
         total_cost = sum(r.total_cost_usd for r in results)
         total_time = sum(r.duration_secs for r in results)
-        print(f"\nTotal cost: ${total_cost:.2f}")
-        print(f"Total time: {total_time / 60:.1f} min")
-        print(f"Log file: {config.log_file}")
+        summary_panel("Totals", {
+            "Cost": f"${total_cost:.2f}",
+            "Time": f"{total_time / 60:.1f} min",
+            "Log": str(config.log_file),
+        })
 
         # ── Phase 2+3: End-of-Epic Processing ──
         if not config.skip_epic_finish:
             completed_epics = detect_completed_epics(stories, results, completed_keys)
 
             if completed_epics:
-                print(f"\n{'=' * 60}")
-                print(f"EPIC FINISH — {len(completed_epics)} epic(s) newly completed: "
-                      f"{', '.join(f'E{e}' for e in completed_epics)}")
-                print(f"{'=' * 60}")
+                banner(
+                    f"EPIC FINISH — {len(completed_epics)} epic(s) newly completed: "
+                    f"{', '.join(f'E{e}' for e in completed_epics)}",
+                    "bold magenta",
+                )
 
                 if config.mode == "supervised":
                     action = input(
@@ -3377,16 +3394,21 @@ async def main() -> None:
 
                     status = "PASS" if ef_result.success else "PARTIAL"
                     phases_done = ", ".join(ef_result.phases_completed) or "none"
-                    print(f"  Epic {epic_num_done}: {status} ({phases_done}) "
-                          f"${ef_result.total_cost_usd:.2f} {ef_result.duration_secs:.0f}s")
+                    cprint(
+                        f"  Epic {epic_num_done}: {status_badge(status)} ({phases_done}) "
+                        f"${ef_result.total_cost_usd:.2f} {ef_result.duration_secs:.0f}s",
+                    )
                     if ef_result.phases_failed:
-                        print(f"    Failed: {', '.join(ef_result.phases_failed)}")
+                        cprint(f"    Failed: {', '.join(ef_result.phases_failed)}", "bold red")
 
                     total_cost += ef_result.total_cost_usd
                     total_time += ef_result.duration_secs
 
                 if completed_epics:
-                    print(f"\nGrand total: ${total_cost:.2f} | {total_time / 60:.1f} min")
+                    summary_panel("Grand Total", {
+                        "Cost": f"${total_cost:.2f}",
+                        "Time": f"{total_time / 60:.1f} min",
+                    }, "bold green")
 
     finally:
         log.info("Stopping dev server...")
@@ -3406,18 +3428,7 @@ async def main() -> None:
 
 
 def print_progress(results: list[StoryResult], total: int) -> None:
-    done = sum(1 for r in results if r.success)
-    failed = sum(1 for r in results if not r.success and r.phase_reached != "init")
-    remaining = total - len(results)
-
-    print(f"\n--- Progress: {done} done, {failed} failed, {remaining} remaining ---")
-    for r in results:
-        status = "PASS" if r.success else f"FAIL ({r.phase_reached})"
-        cost = f"${r.total_cost_usd:.2f}"
-        duration = f"{r.duration_secs:.0f}s"
-        pr = f" | PR: {r.pr_url}" if r.pr_url else ""
-        err = f" | {r.error}" if r.error else ""
-        print(f"  {r.story.key}: {status} | {duration} | {cost}{pr}{err}")
+    story_table(results, total)
 
 
 def log_result(result: StoryResult, log_file: Path) -> None:
