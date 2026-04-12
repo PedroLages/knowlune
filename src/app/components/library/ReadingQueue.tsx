@@ -9,7 +9,7 @@
  * @since E110-S03
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -84,7 +84,8 @@ function SortableQueueItem({
       data-testid={`queue-item-${book.id}`}
     >
       <button
-        className="cursor-grab touch-manipulation rounded p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing"
+        type="button"
+        className="cursor-grab touch-manipulation rounded p-2.5 min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground active:cursor-grabbing"
         aria-label={`Drag to reorder ${book.title}`}
         data-testid={`queue-drag-handle-${book.id}`}
         {...listeners}
@@ -117,7 +118,8 @@ function SortableQueueItem({
       </div>
 
       <button
-        className="shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+        type="button"
+        className="shrink-0 rounded p-2.5 min-h-[44px] min-w-[44px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
         onClick={() => onRemove(book.id)}
         aria-label={`Remove ${book.title} from queue`}
         data-testid={`queue-remove-${book.id}`}
@@ -160,7 +162,7 @@ export function ReadingQueue() {
   )
 
   // Build a map of bookId → Book for quick lookup
-  const bookMap = new Map(books.map(b => [b.id, b]))
+  const bookMap = useMemo(() => new Map(books.map(b => [b.id, b])), [books])
 
   // Filter entries to only those with existing books
   const validEntries = entries.filter(e => bookMap.has(e.bookId))
