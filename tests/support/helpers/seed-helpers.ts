@@ -206,6 +206,14 @@ export async function seedShelves(page: Page, shelves: Record<string, unknown>[]
   await seedIndexedDBStore(page, DB_NAME, 'shelves', shelves)
 }
 
+/** Seed reading queue entries into the readingQueue store. */
+export async function seedReadingQueue(
+  page: Page,
+  entries: Record<string, unknown>[]
+): Promise<void> {
+  await seedIndexedDBStore(page, DB_NAME, 'readingQueue', entries)
+}
+
 /** Seed book-shelf associations into the bookShelves store. */
 export async function seedBookShelves(
   page: Page,

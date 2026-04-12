@@ -42,6 +42,7 @@ import { BookContextMenu } from '@/app/components/library/BookContextMenu'
 import { BookMetadataEditor } from '@/app/components/library/BookMetadataEditor'
 import { LibraryFilters } from '@/app/components/library/LibraryFilters'
 import { LibrarySourceTabs } from '@/app/components/library/LibrarySourceTabs'
+import { ReadingQueue } from '@/app/components/library/ReadingQueue'
 import { ShelfManager } from '@/app/components/library/ShelfManager'
 import { ReadingGoalSettings } from '@/app/components/library/ReadingGoalSettings'
 import { OpdsCatalogSettings } from '@/app/components/library/OpdsCatalogSettings'
@@ -54,6 +55,7 @@ import { useOpdsCatalogStore } from '@/stores/useOpdsCatalogStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 import { useReadingGoalStore } from '@/stores/useReadingGoalStore'
 import { useShelfStore } from '@/stores/useShelfStore'
+import { useReadingQueueStore } from '@/stores/useReadingQueueStore'
 import { useAudiobookshelfSync } from '@/app/hooks/useAudiobookshelfSync'
 import { appEventBus } from '@/lib/eventBus'
 import type { Book } from '@/data/types'
@@ -113,6 +115,7 @@ export function Library() {
   const loadCollections = useAudiobookshelfStore(s => s.loadCollections)
 
   const loadShelves = useShelfStore(s => s.loadShelves)
+  const loadQueue = useReadingQueueStore(s => s.loadQueue)
 
   const loadGoal = useReadingGoalStore(s => s.loadGoal)
   const goal = useReadingGoalStore(s => s.goal)
@@ -150,6 +153,20 @@ export function Library() {
   useEffect(() => {
     loadShelves()
   }, [loadShelves])
+
+  // Load reading queue on mount (E110-S03)
+  useEffect(() => {
+    loadQueue()
+  }, [loadQueue])
+
+  // Auto-remove book from queue when it's finished (E110-S03 AC-7)
+  // Intentional: reads from get() inside the callback to avoid stale closure
+  useEffect(() => {
+    const unsub = appEventBus.on('book:finished', event => {
+      useReadingQueueStore.getState().removeFromQueue(event.bookId)
+    })
+    return unsub
+  }, [])
 
   // Load goals from localStorage on mount (E86-S05)
   useEffect(() => {
@@ -446,6 +463,9 @@ export function Library() {
           </div>
         </section>
       )}
+
+      {/* Reading Queue — always visible when books exist (E110-S03 AC-1) */}
+      {books.length > 0 && <ReadingQueue />}
 
       {/* Source filter tabs — only show when ABS servers configured (E101-S03) */}
       {books.length > 0 && <LibrarySourceTabs />}

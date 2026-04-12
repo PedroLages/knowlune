@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 45
+export const CHECKPOINT_VERSION = 46
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
@@ -86,9 +86,11 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   vocabularyItems: 'id, bookId, masteryLevel, createdAt',
   shelves: 'id, name, isDefault, sortOrder, createdAt',
   bookShelves: 'id, bookId, shelfId, [bookId+shelfId], addedAt',
+  readingQueue: 'id, bookId, sortOrder, addedAt',
 }
 
 // v42 (E109-S01): vocabularyItems table added
 // v43 (E109-S02): (data-only migration, no schema change)
 // v44 (E110-S01): shelves + bookShelves tables added for Smart Shelves
 // v45 (E110-S02): series index added to books for series grouping
+// v46 (E110-S03): readingQueue table for reading queue

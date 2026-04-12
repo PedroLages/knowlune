@@ -15,6 +15,7 @@ import type { Book, BookStatus, LocalSeriesGroup } from '@/data/types'
 import { db } from '@/db/schema'
 import { opfsStorageService } from '@/services/OpfsStorageService'
 import { useShelfStore } from '@/stores/useShelfStore'
+import { useReadingQueueStore } from '@/stores/useReadingQueueStore'
 import { appEventBus } from '@/lib/eventBus'
 import { unlockSidebarItem } from '@/app/hooks/useProgressiveDisclosure'
 
@@ -162,9 +163,10 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     }))
 
     try {
-      // Cascade deletion order: shelf entries → highlights → book record → OPFS files (best-effort)
-      // intentional cross-store cascade — shelf cleanup on book delete
+      // Cascade deletion order: shelf entries → queue entries → highlights → book record → OPFS files (best-effort)
+      // intentional cross-store cascade — shelf/queue cleanup on book delete
       await useShelfStore.getState().removeAllBookEntries(bookId)
+      await useReadingQueueStore.getState().removeAllBookEntries(bookId)
       await db.bookHighlights.where('bookId').equals(bookId).delete()
       await db.books.delete(bookId)
 

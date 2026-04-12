@@ -10,11 +10,19 @@
 
 import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
-import { Check, MoreVertical, ArrowRightLeft, Highlighter, Library } from 'lucide-react'
+import {
+  Check,
+  MoreVertical,
+  ArrowRightLeft,
+  Highlighter,
+  Library,
+  ListOrdered,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import type { Book, BookStatus } from '@/data/types'
 import { useBookStore } from '@/stores/useBookStore'
 import { useShelfStore } from '@/stores/useShelfStore'
+import { useReadingQueueStore } from '@/stores/useReadingQueueStore'
 import { LinkFormatsDialog } from './LinkFormatsDialog'
 
 // Lazy-load AboutBookDialog to defer ~5.5KB until dialog opens
@@ -105,6 +113,9 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
   const bookShelves = useShelfStore(s => s.bookShelves)
   const addBookToShelf = useShelfStore(s => s.addBookToShelf)
   const removeBookFromShelf = useShelfStore(s => s.removeBookFromShelf)
+  const isInQueue = useReadingQueueStore(s => s.isInQueue)
+  const addToQueue = useReadingQueueStore(s => s.addToQueue)
+  const removeFromQueue = useReadingQueueStore(s => s.removeFromQueue)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false)
@@ -136,6 +147,14 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
       removeBookFromShelf(book.id, shelfId)
     } else {
       addBookToShelf(book.id, shelfId)
+    }
+  }
+
+  const handleQueueToggle = () => {
+    if (isInQueue(book.id)) {
+      removeFromQueue(book.id)
+    } else {
+      addToQueue(book.id)
     }
   }
 
@@ -176,23 +195,30 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
                 </span>
               </ContextMenuSubTrigger>
               <ContextMenuSubContent className="w-48">
-                {shelves
-                  .map(shelf => (
-                    <ContextMenuItem
-                      key={shelf.id}
-                      onClick={() => handleShelfToggle(shelf.id)}
-                      data-testid={`context-menu-shelf-${shelf.name.toLowerCase().replace(/\s+/g, '-')}`}
-                    >
-                      <span className="flex items-center gap-2">
-                        {isBookOnShelf(shelf.id) && <Check className="h-3.5 w-3.5" />}
-                        <span className={isBookOnShelf(shelf.id) ? 'font-medium' : ''}>
-                          {shelf.name}
-                        </span>
+                {shelves.map(shelf => (
+                  <ContextMenuItem
+                    key={shelf.id}
+                    onClick={() => handleShelfToggle(shelf.id)}
+                    data-testid={`context-menu-shelf-${shelf.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <span className="flex items-center gap-2">
+                      {isBookOnShelf(shelf.id) && <Check className="h-3.5 w-3.5" />}
+                      <span className={isBookOnShelf(shelf.id) ? 'font-medium' : ''}>
+                        {shelf.name}
                       </span>
-                    </ContextMenuItem>
-                  ))}
+                    </span>
+                  </ContextMenuItem>
+                ))}
               </ContextMenuSubContent>
             </ContextMenuSub>
+            <ContextMenuItem
+              onClick={handleQueueToggle}
+              data-testid="context-menu-queue-toggle"
+              className="flex items-center gap-2"
+            >
+              <ListOrdered className="h-3.5 w-3.5" aria-hidden="true" />
+              {isInQueue(book.id) ? 'Remove from Queue' : 'Add to Queue'}
+            </ContextMenuItem>
             <ContextMenuItem
               onClick={() => navigate(`/library/${book.id}/annotations`)}
               data-testid="context-menu-annotations"
@@ -257,23 +283,30 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
                 </span>
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="w-48">
-                {shelves
-                  .map(shelf => (
-                    <DropdownMenuItem
-                      key={shelf.id}
-                      onClick={() => handleShelfToggle(shelf.id)}
-                      data-testid={`dropdown-shelf-${shelf.name.toLowerCase().replace(/\s+/g, '-')}`}
-                    >
-                      <span className="flex items-center gap-2">
-                        {isBookOnShelf(shelf.id) && <Check className="h-3.5 w-3.5" />}
-                        <span className={isBookOnShelf(shelf.id) ? 'font-medium' : ''}>
-                          {shelf.name}
-                        </span>
+                {shelves.map(shelf => (
+                  <DropdownMenuItem
+                    key={shelf.id}
+                    onClick={() => handleShelfToggle(shelf.id)}
+                    data-testid={`dropdown-shelf-${shelf.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <span className="flex items-center gap-2">
+                      {isBookOnShelf(shelf.id) && <Check className="h-3.5 w-3.5" />}
+                      <span className={isBookOnShelf(shelf.id) ? 'font-medium' : ''}>
+                        {shelf.name}
                       </span>
-                    </DropdownMenuItem>
-                  ))}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuSubContent>
             </DropdownMenuSub>
+            <DropdownMenuItem
+              onClick={handleQueueToggle}
+              data-testid="dropdown-menu-queue-toggle"
+              className="flex items-center gap-2"
+            >
+              <ListOrdered className="h-3.5 w-3.5" aria-hidden="true" />
+              {isInQueue(book.id) ? 'Remove from Queue' : 'Add to Queue'}
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => navigate(`/library/${book.id}/annotations`)}
               data-testid="dropdown-menu-annotations"
@@ -313,7 +346,8 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
           <AlertDialogHeader>
             <AlertDialogTitle>Delete &ldquo;{book.title}&rdquo;?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove the book, its highlights, and all locally stored files (OPFS). This action cannot be undone.
+              This will permanently remove the book, its highlights, and all locally stored files
+              (OPFS). This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

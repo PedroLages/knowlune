@@ -660,6 +660,14 @@ export interface BookShelfEntry {
   addedAt: string // ISO 8601
 }
 
+/** Reading queue entry — ordered list of books to read next (E110-S03) */
+export interface ReadingQueueEntry {
+  id: string // UUID v4
+  bookId: string // FK to Book.id
+  sortOrder: number // 0-based display order
+  addedAt: string // ISO 8601
+}
+
 /** User reading goals persisted in localStorage */
 export interface ReadingGoal {
   /** Whether daily goal is measured in minutes or pages */
