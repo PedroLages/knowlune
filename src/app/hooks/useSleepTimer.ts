@@ -17,24 +17,37 @@ export type SleepTimerOption = number | 'end-of-chapter' | 'off'
 const FADE_DURATION_MS = 5_000
 const LS_KEY = 'knowlune:sleep-timer-ended'
 
-/** Fade audio volume to 0 over FADE_DURATION_MS, then pause and restore volume. */
-export function fadeOutAndPause(audio: HTMLAudioElement, onDone: () => void): void {
+/**
+ * Fade audio volume to 0 over FADE_DURATION_MS, then pause and restore volume.
+ * Returns a cancel function — call it to stop the fade and restore original volume.
+ * // Intentional: cancel function prevents zombie rAF loops when user cancels timer mid-fade.
+ */
+export function fadeOutAndPause(audio: HTMLAudioElement, onDone: () => void): () => void {
   const startVolume = audio.volume
   const startTime = performance.now()
+  let rafId: number
+  let cancelled = false
 
   function tick() {
+    if (cancelled) return
     const elapsed = performance.now() - startTime
     const progress = Math.min(elapsed / FADE_DURATION_MS, 1)
     audio.volume = startVolume * (1 - progress)
     if (progress < 1) {
-      requestAnimationFrame(tick)
+      rafId = requestAnimationFrame(tick)
     } else {
       audio.pause()
       audio.volume = startVolume
       onDone()
     }
   }
-  requestAnimationFrame(tick)
+  rafId = requestAnimationFrame(tick)
+
+  return () => {
+    cancelled = true
+    cancelAnimationFrame(rafId)
+    audio.volume = startVolume
+  }
 }
 
 export interface UseSleepTimerReturn {
@@ -59,6 +72,8 @@ export function useSleepTimer(): UseSleepTimerReturn {
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const eocCleanupRef = useRef<(() => void) | null>(null)
+  // Stores the cancel fn returned by fadeOutAndPause so cancelTimer can stop an in-flight fade.
+  const fadeCancelRef = useRef<(() => void) | null>(null)
 
   const cancelTimer = useCallback(() => {
     if (intervalRef.current !== null) {
@@ -68,6 +83,11 @@ export function useSleepTimer(): UseSleepTimerReturn {
     if (eocCleanupRef.current) {
       eocCleanupRef.current()
       eocCleanupRef.current = null
+    }
+    // Stop any in-progress fade so audio is not paused after user cancels.
+    if (fadeCancelRef.current) {
+      fadeCancelRef.current()
+      fadeCancelRef.current = null
     }
     setActiveOption(null)
     setRemainingSeconds(null)
@@ -99,7 +119,8 @@ export function useSleepTimer(): UseSleepTimerReturn {
           e.preventDefault()
           const audio = audioRef.current
           if (!audio) return
-          fadeOutAndPause(audio, () => {
+          fadeCancelRef.current = fadeOutAndPause(audio, () => {
+            fadeCancelRef.current = null
             localStorage.setItem(LS_KEY, '1')
             setActiveOption(null)
             setRemainingSeconds(null)
@@ -128,7 +149,8 @@ export function useSleepTimer(): UseSleepTimerReturn {
             // Fade out and pause
             const audio = audioRef.current
             if (audio) {
-              fadeOutAndPause(audio, () => {
+              fadeCancelRef.current = fadeOutAndPause(audio, () => {
+                fadeCancelRef.current = null
                 localStorage.setItem(LS_KEY, '1')
                 setActiveOption(null)
                 setRemainingSeconds(null)
@@ -154,6 +176,7 @@ export function useSleepTimer(): UseSleepTimerReturn {
     return () => {
       if (intervalRef.current !== null) clearInterval(intervalRef.current)
       if (eocCleanupRef.current) eocCleanupRef.current()
+      if (fadeCancelRef.current) fadeCancelRef.current()
     }
   }, [])
 

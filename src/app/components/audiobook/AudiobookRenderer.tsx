@@ -9,7 +9,7 @@
  * @module AudiobookRenderer
  * @since E87-S02
  */
-import { useEffect, useCallback, useState, useRef } from 'react'
+import { useEffect, useCallback, useState, useRef, useMemo } from 'react'
 import { Play, Pause, SkipBack, SkipForward, BookOpen, Settings, Scissors } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/db/schema'
@@ -304,8 +304,11 @@ export function AudiobookRenderer({
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
-  // Chapter progress for sleep timer EOC indicator
-  const chapterProgressPercent = (() => {
+  // Chapter progress for sleep timer EOC indicator.
+  // Rounded to nearest integer — fractional % changes are invisible at 208px popover width
+  // but would trigger SleepTimer re-renders ~4× per second, remounting Popover content
+  // and causing button detach during rapid re-open. useMemo memoizes on integer boundaries.
+  const chapterProgressPercent = useMemo(() => {
     if (activeOption !== 'end-of-chapter') return null
     const chapter = book.chapters[currentChapterIndex]
     if (!chapter) return null
@@ -320,12 +323,12 @@ export function AudiobookRenderer({
       const chapterDuration = chapterEnd - chapterStart
       if (chapterDuration <= 0) return null
       const elapsed = currentTime - chapterStart
-      return Math.min(100, Math.max(0, (elapsed / chapterDuration) * 100))
+      return Math.round(Math.min(100, Math.max(0, (elapsed / chapterDuration) * 100)))
     }
     // Multi-file: duration is the current audio file's duration
     if (duration <= 0) return null
-    return Math.min(100, Math.max(0, (currentTime / duration) * 100))
-  })()
+    return Math.round(Math.min(100, Math.max(0, (currentTime / duration) * 100)))
+  }, [activeOption, book, currentChapterIndex, currentTime, duration])
 
   const handleSleepTimerSelect = (option: Parameters<typeof setTimer>[0]) => {
     if (option === 'off') {
