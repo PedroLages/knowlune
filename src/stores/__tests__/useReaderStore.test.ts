@@ -61,6 +61,11 @@ describe('useReaderStore — accessibility settings (E114-S01)', () => {
       expect(useReaderStore.getState().wordSpacing).toBe(0.5)
     })
 
+    it('clamps word spacing to min 0 (negative values)', () => {
+      act(() => useReaderStore.getState().setWordSpacing(-0.2))
+      expect(useReaderStore.getState().wordSpacing).toBe(0)
+    })
+
     it('persists word spacing to localStorage', () => {
       act(() => useReaderStore.getState().setWordSpacing(0.3))
       const stored = JSON.parse(localStorage.getItem('knowlune-reader-settings-v1')!)

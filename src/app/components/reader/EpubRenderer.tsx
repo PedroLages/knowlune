@@ -89,13 +89,10 @@ export function EpubRenderer({
         'font-family': fontFamilyMap[fontFamily] ?? 'inherit',
       }
 
-      // Only inject spacing when non-zero to avoid overriding EPUB defaults
-      if (letterSpacing > 0) {
-        bodyStyles['letter-spacing'] = `${letterSpacing}em`
-      }
-      if (wordSpacing > 0) {
-        bodyStyles['word-spacing'] = `${wordSpacing}em`
-      }
+      // Set spacing explicitly: use 'normal' when zero to reset any stale epub.js
+      // styles that may have been applied by a previous non-zero value.
+      bodyStyles['letter-spacing'] = letterSpacing > 0 ? `${letterSpacing}em` : 'normal'
+      bodyStyles['word-spacing'] = wordSpacing > 0 ? `${wordSpacing}em` : 'normal'
 
       rendition.themes.default({
         body: bodyStyles,

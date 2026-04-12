@@ -8,6 +8,12 @@
  *
  * Toggle via useReaderStore.readingRulerEnabled.
  *
+ * Implementation note: The container uses `pointer-events-none` so it never
+ * blocks tap navigation zones (prev/center/next at z-10). Pointer tracking
+ * is done on `document` so movement is captured regardless of which child
+ * element the pointer is over. The visual ruler only appears after the first
+ * pointer move so no blank overlay intercepts clicks before the user moves.
+ *
  * @module ReadingRuler
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -24,18 +30,30 @@ export function ReadingRuler() {
   const handlePointerMove = useCallback((e: PointerEvent) => {
     if (!containerRef.current) return
     const rect = containerRef.current.getBoundingClientRect()
+    // Only update position when pointer is within the ruler container bounds
+    if (
+      e.clientX < rect.left ||
+      e.clientX > rect.right ||
+      e.clientY < rect.top ||
+      e.clientY > rect.bottom
+    ) {
+      return
+    }
     const y = e.clientY - rect.top
     setYPosition(Math.max(0, Math.min(y, rect.height)))
   }, [])
 
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) {
+      setYPosition(null)
+      return
+    }
 
-    const el = containerRef.current
-    if (!el) return
-
-    el.addEventListener('pointermove', handlePointerMove, { passive: true })
-    return () => el.removeEventListener('pointermove', handlePointerMove)
+    // Listen on document so pointer-events-none on the container doesn't
+    // prevent event delivery. This also handles the case where the user's
+    // pointer is over the epub iframe.
+    document.addEventListener('pointermove', handlePointerMove, { passive: true })
+    return () => document.removeEventListener('pointermove', handlePointerMove)
   }, [enabled, handlePointerMove])
 
   if (!enabled) return null
@@ -47,10 +65,12 @@ export function ReadingRuler() {
   return (
     <div
       ref={containerRef}
-      className="pointer-events-auto absolute inset-0 z-20"
+      // pointer-events-none ensures this overlay never blocks tap navigation zones
+      className="pointer-events-none absolute inset-0 z-20"
       aria-hidden="true"
       data-testid="reading-ruler"
     >
+      {/* Visual ruler only renders after first pointer move — no blank overlay on initial render */}
       {yPosition !== null && (
         <>
           {/* Dim area above the ruler band */}

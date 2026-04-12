@@ -118,17 +118,14 @@ interface ReaderStoreState extends ReaderSettings {
   resetSettings: () => void
 }
 
-/** Extract persisted settings fields from current state */
+/** Extract persisted settings fields from current state.
+ *  Derived from DEFAULT_SETTINGS keys so new settings are automatically included
+ *  without needing to manually list every field here. */
 function getSettingsFromState(s: ReaderSettings): ReaderSettings {
-  return {
-    theme: s.theme,
-    fontSize: s.fontSize,
-    fontFamily: s.fontFamily,
-    lineHeight: s.lineHeight,
-    letterSpacing: s.letterSpacing,
-    wordSpacing: s.wordSpacing,
-    readingRulerEnabled: s.readingRulerEnabled,
-  }
+  return (Object.keys(DEFAULT_SETTINGS) as (keyof ReaderSettings)[]).reduce(
+    (acc, key) => ({ ...acc, [key]: s[key] }),
+    {} as ReaderSettings
+  )
 }
 
 export const useReaderStore = create<ReaderStoreState>((set, get) => {
