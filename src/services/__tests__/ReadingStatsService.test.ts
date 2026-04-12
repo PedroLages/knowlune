@@ -606,3 +606,216 @@ describe('getReadingStats', () => {
     expect(result.avgReadingSpeedPagesPerHour === null || typeof result.avgReadingSpeedPagesPerHour === 'number').toBe(true)
   })
 })
+
+// ---------------------------------------------------------------------------
+// getGenreDistribution (E112-S02, AC1 + AC2)
+// ---------------------------------------------------------------------------
+
+describe('getGenreDistribution', () => {
+  it('returns null when fewer than 2 books have genres', async () => {
+    vi.mocked(db.books.where).mockReturnValue({
+      anyOf: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          { id: 'b1', status: 'reading', genre: 'Fiction' },
+        ]),
+      }),
+    } as never)
+
+    const { getGenreDistribution } = await import('@/services/ReadingStatsService')
+    const result = await getGenreDistribution()
+    expect(result).toBeNull()
+  })
+
+  it('returns null when no books have genres', async () => {
+    vi.mocked(db.books.where).mockReturnValue({
+      anyOf: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          { id: 'b1', status: 'reading', genre: undefined },
+          { id: 'b2', status: 'finished', genre: undefined },
+        ]),
+      }),
+    } as never)
+
+    const { getGenreDistribution } = await import('@/services/ReadingStatsService')
+    const result = await getGenreDistribution()
+    expect(result).toBeNull()
+  })
+
+  it('groups genres and sorts by count descending', async () => {
+    vi.mocked(db.books.where).mockReturnValue({
+      anyOf: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          { id: 'b1', status: 'finished', genre: 'Fiction' },
+          { id: 'b2', status: 'finished', genre: 'Fiction' },
+          { id: 'b3', status: 'finished', genre: 'Non-Fiction' },
+          { id: 'b4', status: 'reading', genre: 'Technology' },
+        ]),
+      }),
+    } as never)
+
+    const { getGenreDistribution } = await import('@/services/ReadingStatsService')
+    const result = await getGenreDistribution()
+    expect(result).not.toBeNull()
+    expect(result![0]).toEqual({ genre: 'Fiction', count: 2 })
+    expect(result!.map(d => d.genre)).toContain('Non-Fiction')
+    expect(result!.map(d => d.genre)).toContain('Technology')
+  })
+
+  it('groups genres below 5% into Other', async () => {
+    // 20 books total: 18 Fiction, 1 Sci-Fi (5%), 1 Horror (5%)
+    // But below 5% threshold: 1/20 = 5% exactly — borderline, only below < 5%
+    // Use 21 books: 19 Fiction, 1 Sci-Fi (4.76%), 1 Horror (4.76%) → both < 5% → Other
+    const books = [
+      ...Array.from({ length: 19 }, (_, i) => ({ id: `b${i}`, status: 'finished', genre: 'Fiction' })),
+      { id: 'b19', status: 'finished', genre: 'Sci-Fi' },
+      { id: 'b20', status: 'finished', genre: 'Horror' },
+    ]
+    vi.mocked(db.books.where).mockReturnValue({
+      anyOf: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue(books),
+      }),
+    } as never)
+
+    const { getGenreDistribution } = await import('@/services/ReadingStatsService')
+    const result = await getGenreDistribution()
+    expect(result).not.toBeNull()
+    // Fiction visible, Sci-Fi and Horror merged into Other
+    const genreNames = result!.map(d => d.genre)
+    expect(genreNames).toContain('Fiction')
+    expect(genreNames).toContain('Other')
+    expect(genreNames).not.toContain('Sci-Fi')
+    expect(genreNames).not.toContain('Horror')
+    const other = result!.find(d => d.genre === 'Other')
+    expect(other?.count).toBe(2)
+  })
+
+  it('excludes abandoned books', async () => {
+    // abandoned books should not be queried (anyOf only includes reading/finished/want-to-read)
+    // This is enforced by the Dexie query — verify the anyOf call
+    const anyOfMock = vi.fn().mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        { id: 'b1', status: 'finished', genre: 'Fiction' },
+        { id: 'b2', status: 'reading', genre: 'Fiction' },
+      ]),
+    })
+    vi.mocked(db.books.where).mockReturnValue({
+      anyOf: anyOfMock,
+    } as never)
+
+    const { getGenreDistribution } = await import('@/services/ReadingStatsService')
+    await getGenreDistribution()
+    expect(anyOfMock).toHaveBeenCalledWith(['reading', 'finished', 'want-to-read'])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// getReadingSummary (E112-S02, AC3 + AC4)
+// ---------------------------------------------------------------------------
+
+describe('getReadingSummary', () => {
+  it('returns null when no finished books exist (AC4)', async () => {
+    vi.mocked(db.books.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        count: vi.fn().mockResolvedValue(0),
+      }),
+    } as never)
+
+    const { getReadingSummary } = await import('@/services/ReadingStatsService')
+    const result = await getReadingSummary()
+    expect(result).toBeNull()
+  })
+
+  it('counts books finished this year correctly', async () => {
+    // FIXED_DATE is 2026-04-06 — books finished in 2026 count, 2025 does not
+    vi.mocked(db.books.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          { id: 'b1', status: 'finished', totalPages: 300, author: 'Author A', finishedAt: '2026-01-15T00:00:00Z' },
+          { id: 'b2', status: 'finished', totalPages: 200, author: 'Author A', finishedAt: '2025-12-31T00:00:00Z' },
+        ]),
+        count: vi.fn().mockResolvedValue(2),
+      }),
+    } as never)
+    vi.mocked(db.studySessions.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+      }),
+    } as never)
+
+    const { getReadingSummary } = await import('@/services/ReadingStatsService')
+    const result = await getReadingSummary()
+    expect(result).not.toBeNull()
+    expect(result!.booksFinishedThisYear).toBe(1) // only the 2026 book
+  })
+
+  it('identifies most read author with alphabetical tie-break', async () => {
+    vi.mocked(db.books.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          { id: 'b1', status: 'finished', totalPages: 300, author: 'Zebra Author', finishedAt: '2026-01-01T00:00:00Z' },
+          { id: 'b2', status: 'finished', totalPages: 300, author: 'Alpha Author', finishedAt: '2026-01-02T00:00:00Z' },
+          { id: 'b3', status: 'finished', totalPages: 300, author: 'Zebra Author', finishedAt: '2026-01-03T00:00:00Z' },
+        ]),
+        count: vi.fn().mockResolvedValue(3),
+      }),
+    } as never)
+    vi.mocked(db.studySessions.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+      }),
+    } as never)
+
+    const { getReadingSummary } = await import('@/services/ReadingStatsService')
+    const result = await getReadingSummary()
+    // Zebra Author has 2 books vs Alpha Author 1 → Zebra Author wins
+    expect(result!.mostReadAuthor).toBe('Zebra Author')
+  })
+
+  it('breaks ties alphabetically when author book counts are equal', async () => {
+    vi.mocked(db.books.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          { id: 'b1', status: 'finished', totalPages: 300, author: 'Zebra Author', finishedAt: '2026-01-01T00:00:00Z' },
+          { id: 'b2', status: 'finished', totalPages: 300, author: 'Alpha Author', finishedAt: '2026-01-02T00:00:00Z' },
+        ]),
+        count: vi.fn().mockResolvedValue(2),
+      }),
+    } as never)
+    vi.mocked(db.studySessions.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+      }),
+    } as never)
+
+    const { getReadingSummary } = await import('@/services/ReadingStatsService')
+    const result = await getReadingSummary()
+    // Tied at 1 book each → alphabetically "Alpha Author" comes first
+    expect(result!.mostReadAuthor).toBe('Alpha Author')
+  })
+
+  it('computes longestSessionMinutes from all sessions', async () => {
+    vi.mocked(db.books.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          { id: 'b1', status: 'finished', totalPages: 300, author: 'Author', finishedAt: '2026-01-01T00:00:00Z' },
+        ]),
+        count: vi.fn().mockResolvedValue(1),
+      }),
+    } as never)
+    vi.mocked(db.studySessions.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          { contentItemId: 'b1', startTime: '2026-04-05T10:00:00Z', duration: 3600 },  // 1 hour
+          { contentItemId: 'b1', startTime: '2026-04-04T10:00:00Z', duration: 9000 },  // 2.5 hours → longest
+          { contentItemId: 'b1', startTime: '2026-04-03T10:00:00Z', duration: 1800 },  // 30 min
+        ]),
+      }),
+    } as never)
+
+    const { getReadingSummary } = await import('@/services/ReadingStatsService')
+    const result = await getReadingSummary()
+    // 9000 seconds / 60 = 150 minutes
+    expect(result!.longestSessionMinutes).toBe(150)
+  })
+})

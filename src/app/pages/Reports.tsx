@@ -48,6 +48,8 @@ import { QuizExportCard } from '@/app/components/reports/QuizExportCard'
 import { ReadingStatsSection } from '@/app/components/reports/ReadingStatsSection'
 import { ReadingPatternsCard } from '@/app/components/reports/ReadingPatternsCard'
 import { ReadingGoalsCard } from '@/app/components/reports/ReadingGoalsCard'
+import { GenreDistributionCard } from '@/app/components/reports/GenreDistributionCard'
+import { ReadingSummaryCard } from '@/app/components/reports/ReadingSummaryCard'
 import { toast } from 'sonner'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 
@@ -325,6 +327,16 @@ export default function Reports() {
               {/* ── Reading Goals Card (E86-S05) — shown when reading goal is set ── */}
               <motion.div variants={fadeUp}>
                 <ReadingGoalsCard />
+              </motion.div>
+
+              {/* ── Genre Distribution Card (E112-S02) — shown when 2+ books have genres ── */}
+              <motion.div variants={fadeUp}>
+                <GenreDistributionCard />
+              </motion.div>
+
+              {/* ── Reading Summary Card (E112-S02) — shown when 1+ books finished ── */}
+              <motion.div variants={fadeUp}>
+                <ReadingSummaryCard />
               </motion.div>
 
               {/* ── Row 2: Weekly Goal Ring + Study Time ── */}
