@@ -1406,6 +1406,6 @@ development_status:
   # User-defined reading challenges with progress tracking
   # Depends on: E107
   # ──────────────────────────────────────────────────
-  epic-115: backlog
-  115-1-custom-reading-challenges: backlog
+  epic-115: in-progress
+  115-1-custom-reading-challenges: in-progress
   epic-115-retrospective: optional

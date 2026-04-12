@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Target, Clock, Flame, Trophy, RefreshCcw, ChevronDown, Check } from 'lucide-react'
+import { Plus, Target, Clock, Flame, Trophy, RefreshCcw, ChevronDown, Check, BookOpen, FileText } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
 import { Button } from '@/app/components/ui/button'
@@ -22,6 +22,8 @@ const typeConfig: Record<ChallengeType, { label: string; unit: string; icon: typ
   completion: { label: 'Completion', unit: 'videos', icon: Trophy },
   time: { label: 'Time', unit: 'hours', icon: Clock },
   streak: { label: 'Streak', unit: 'days', icon: Flame },
+  books: { label: 'Books', unit: 'books', icon: BookOpen },
+  pages: { label: 'Pages', unit: 'pages', icon: FileText },
 }
 
 /** Parse date-only string as local date (avoids UTC midnight shift). */

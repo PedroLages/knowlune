@@ -5,9 +5,11 @@ import {
   calculateCompletionProgress,
   calculateTimeProgress,
   calculateStreakProgress,
+  calculateBooksProgress,
+  calculatePagesProgress,
   calculateProgress,
 } from '@/lib/challengeProgress'
-import type { Challenge, ContentProgress, StudySession } from '@/data/types'
+import type { Book, Challenge, ContentProgress, StudySession } from '@/data/types'
 
 function makeChallenge(overrides: Partial<Challenge> = {}): Challenge {
   return {
@@ -49,10 +51,26 @@ function makeSession(overrides: Partial<StudySession> = {}): StudySession {
   }
 }
 
+function makeBook(overrides: Partial<Book> = {}): Book {
+  return {
+    id: crypto.randomUUID(),
+    title: 'Test Book',
+    format: 'epub',
+    status: 'unread',
+    tags: [],
+    chapters: [],
+    source: { type: 'local', opfsPath: '/test.epub' },
+    progress: 0,
+    createdAt: '2026-03-01T00:00:00.000Z',
+    ...overrides,
+  }
+}
+
 beforeEach(async () => {
   await db.contentProgress.clear()
   await db.studySessions.clear()
   await db.challenges.clear()
+  await db.books.clear()
   localStorage.clear()
 })
 
@@ -178,6 +196,92 @@ describe('calculateStreakProgress', () => {
   })
 })
 
+// ── Books Progress ──────────────────────────────────
+
+describe('calculateBooksProgress', () => {
+  it('counts finished books after challenge creation', async () => {
+    const challenge = makeChallenge({ type: 'books', createdAt: '2026-03-01T00:00:00.000Z' })
+
+    await db.books.bulkPut([
+      makeBook({ status: 'finished', finishedAt: '2026-03-05T10:00:00.000Z' }),
+      makeBook({ status: 'finished', finishedAt: '2026-03-10T10:00:00.000Z' }),
+      makeBook({ status: 'reading' }), // not finished
+    ])
+
+    expect(await calculateBooksProgress(challenge)).toBe(2)
+  })
+
+  it('excludes books finished before challenge creation', async () => {
+    const challenge = makeChallenge({ type: 'books', createdAt: '2026-03-05T00:00:00.000Z' })
+
+    await db.books.bulkPut([
+      makeBook({ status: 'finished', finishedAt: '2026-03-01T10:00:00.000Z' }), // before
+      makeBook({ status: 'finished', finishedAt: '2026-03-10T10:00:00.000Z' }), // after
+    ])
+
+    expect(await calculateBooksProgress(challenge)).toBe(1)
+  })
+
+  it('excludes finished books without finishedAt timestamp', async () => {
+    const challenge = makeChallenge({ type: 'books' })
+
+    await db.books.bulkPut([
+      makeBook({ status: 'finished' }), // no finishedAt
+      makeBook({ status: 'finished', finishedAt: '2026-03-05T10:00:00.000Z' }),
+    ])
+
+    expect(await calculateBooksProgress(challenge)).toBe(1)
+  })
+
+  it('returns 0 when no books exist', async () => {
+    const challenge = makeChallenge({ type: 'books' })
+    expect(await calculateBooksProgress(challenge)).toBe(0)
+  })
+})
+
+// ── Pages Progress ──────────────────────────────────
+
+describe('calculatePagesProgress', () => {
+  it('sums pages read from books updated after challenge creation', async () => {
+    const challenge = makeChallenge({ type: 'pages', createdAt: '2026-03-01T00:00:00.000Z' })
+
+    await db.books.bulkPut([
+      makeBook({ totalPages: 300, progress: 50, updatedAt: '2026-03-05T10:00:00.000Z' }), // 150 pages
+      makeBook({ totalPages: 200, progress: 100, updatedAt: '2026-03-10T10:00:00.000Z' }), // 200 pages
+    ])
+
+    expect(await calculatePagesProgress(challenge)).toBe(350)
+  })
+
+  it('excludes books not updated since challenge creation', async () => {
+    const challenge = makeChallenge({ type: 'pages', createdAt: '2026-03-05T00:00:00.000Z' })
+
+    await db.books.bulkPut([
+      makeBook({ totalPages: 300, progress: 100, updatedAt: '2026-03-01T10:00:00.000Z' }), // before
+      makeBook({ totalPages: 200, progress: 50, updatedAt: '2026-03-10T10:00:00.000Z' }), // after: 100
+    ])
+
+    expect(await calculatePagesProgress(challenge)).toBe(100)
+  })
+
+  it('ignores books without totalPages', async () => {
+    const challenge = makeChallenge({ type: 'pages' })
+
+    await db.books.bulkPut([
+      makeBook({ totalPages: undefined, progress: 50, updatedAt: '2026-03-05T10:00:00.000Z' }),
+      makeBook({ totalPages: 0, progress: 50, updatedAt: '2026-03-05T10:00:00.000Z' }),
+      makeBook({ totalPages: 200, progress: 50, updatedAt: '2026-03-05T10:00:00.000Z' }), // 100
+    ])
+
+    expect(await calculatePagesProgress(challenge)).toBe(100)
+  })
+
+  it('returns 0 when no books exist', async () => {
+    const challenge = makeChallenge({ type: 'pages' })
+    expect(await calculatePagesProgress(challenge)).toBe(0)
+  })
+})
+
 // ── Progress Capping ────────────────────────────────
 
 describe('progress capping at 100%', () => {
@@ -225,5 +329,21 @@ describe('calculateProgress', () => {
   it('routes streak type to streak calculator', async () => {
     const challenge = makeChallenge({ type: 'streak' })
     expect(await calculateProgress(challenge)).toBe(0)
+  })
+
+  it('routes books type to books calculator', async () => {
+    const challenge = makeChallenge({ type: 'books' })
+    await db.books.bulkPut([
+      makeBook({ status: 'finished', finishedAt: '2026-03-05T10:00:00.000Z' }),
+    ])
+    expect(await calculateProgress(challenge)).toBe(1)
+  })
+
+  it('routes pages type to pages calculator', async () => {
+    const challenge = makeChallenge({ type: 'pages' })
+    await db.books.bulkPut([
+      makeBook({ totalPages: 200, progress: 50, updatedAt: '2026-03-05T10:00:00.000Z' }),
+    ])
+    expect(await calculateProgress(challenge)).toBe(100)
   })
 })

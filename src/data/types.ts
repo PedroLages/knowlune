@@ -293,7 +293,7 @@ export type QualityTrend = 'improving' | 'stable' | 'declining'
 
 // --- Learning Challenges (Story 6.1) ---
 
-export type ChallengeType = 'completion' | 'time' | 'streak'
+export type ChallengeType = 'completion' | 'time' | 'streak' | 'books' | 'pages'
 
 export interface Challenge {
   id: string
