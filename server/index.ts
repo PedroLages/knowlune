@@ -157,24 +157,52 @@ app.get('/api/ai/ollama/health', async (req, res) => {
 // ──────────────────────────────────────────────────────────────────────────────
 // Audiobookshelf Proxy — bypasses browser CORS by proxying through Express.
 // No JWT required: the user's own ABS API key authenticates against their server.
-// Rate limited to prevent abuse (10 req/min — catalog browsing, not streaming).
+// Rate limited per traffic type: covers need high throughput (310+ books),
+// streaming needs headroom for Range requests, API calls stay moderate.
 // ──────────────────────────────────────────────────────────────────────────────
 
 const ABS_TIMEOUT_MS = 15_000
 const ABS_STREAM_TIMEOUT_MS = 120_000 // 2 minutes for streaming requests (audio files)
 
-const absRateLimit = rateLimit({
+// Separate rate limiters by traffic type to prevent covers from starving streaming/API
+const absApiRateLimit = rateLimit({
   windowMs: 60 * 1000,
-  max: 120, // Higher limit: audio streaming makes many Range requests during seeking
+  max: 120, // Catalog, search, progress, ping
   standardHeaders: true,
   legacyHeaders: false,
   message: 'Too Many Requests',
 })
 
+const absCoverRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 600, // Static images — 310+ books visible, harmless to serve
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too Many Requests',
+})
+
+const absStreamRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300, // Audio Range requests during seeking
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too Many Requests',
+})
+
+// ── In-memory cover cache (30-min TTL, max 500 entries) ─────────────────────
+interface CachedCover {
+  buffer: Buffer
+  contentType: string
+  cachedAt: number
+}
+const coverCache = new Map<string, CachedCover>()
+const COVER_CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes
+const COVER_CACHE_MAX = 500
+
 /**
  * GET /api/abs/ping — test ABS connection (lightweight, no auth chain)
  */
-app.get('/api/abs/ping', absRateLimit, async (req, res) => {
+app.get('/api/abs/ping', absApiRateLimit, async (req, res) => {
   const absUrl = req.headers['x-abs-url'] as string
   const absToken = req.headers['x-abs-token'] as string
 
@@ -225,7 +253,17 @@ app.get('/api/abs/ping', absRateLimit, async (req, res) => {
  * The ABS server URL and API token are passed via X-ABS-URL / X-ABS-Token headers,
  * or via _absUrl / _absToken query params (for <img>/<audio> tags that can't set headers).
  */
-app.use('/api/abs/proxy', absRateLimit, async (req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => {
+app.use('/api/abs/proxy', (req, res, next) => {
+  // Route to appropriate rate limiter based on request path
+  const absPath = req.path || '/'
+  if (absPath.endsWith('/cover')) {
+    absCoverRateLimit(req, res, next)
+  } else if (absPath.startsWith('/s/') || absPath.includes('/stream/')) {
+    absStreamRateLimit(req, res, next)
+  } else {
+    absApiRateLimit(req, res, next)
+  }
+}, async (req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => {
   const absUrl = (req.headers['x-abs-url'] as string) || (req.query._absUrl as string)
   const absToken = (req.headers['x-abs-token'] as string) || (req.query._absToken as string)
 
@@ -242,6 +280,21 @@ app.use('/api/abs/proxy', absRateLimit, async (req: import('express').Request, r
   // req.path is relative to the mount point (/api/abs/proxy)
   const absPath = req.path || '/'
   const normalizedUrl = absUrl.replace(/\/+$/, '')
+  const isCoverRequest = absPath.endsWith('/cover') && req.method === 'GET'
+
+  // Serve cached cover if available
+  if (isCoverRequest) {
+    const cacheKey = `${normalizedUrl}:${absPath}`
+    const cached = coverCache.get(cacheKey)
+    if (cached && Date.now() - cached.cachedAt < COVER_CACHE_TTL_MS) {
+      res.setHeader('Content-Type', cached.contentType)
+      res.setHeader('Content-Length', cached.buffer.length)
+      res.setHeader('Cache-Control', 'public, max-age=1800')
+      res.setHeader('X-Cover-Cache', 'HIT')
+      res.status(200).send(cached.buffer)
+      return
+    }
+  }
 
   // Forward original query params (minus our internal _absUrl/_absToken)
   const forwardParams = new URLSearchParams(req.query as Record<string, string>)
@@ -298,6 +351,34 @@ app.use('/api/abs/proxy', absRateLimit, async (req: import('express').Request, r
     // For binary responses (covers, streams), pipe the body directly
     if (contentType && !contentType.includes('application/json') && response.body) {
       res.status(response.status)
+
+      // For cover requests: collect chunks to cache, then send
+      if (isCoverRequest && response.ok) {
+        const chunks: Buffer[] = []
+        const reader = response.body.getReader()
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            const buf = Buffer.from(value)
+            chunks.push(buf)
+            res.write(buf)
+          }
+        } finally {
+          res.end()
+        }
+        // Store in cache (evict oldest if at capacity)
+        const buffer = Buffer.concat(chunks)
+        const cacheKey = `${normalizedUrl}:${absPath}`
+        if (coverCache.size >= COVER_CACHE_MAX) {
+          const oldest = coverCache.keys().next().value!
+          coverCache.delete(oldest)
+        }
+        coverCache.set(cacheKey, { buffer, contentType: contentType || 'image/jpeg', cachedAt: Date.now() })
+        return
+      }
+
+      // Non-cover binary: stream directly
       const reader = response.body.getReader()
       try {
         while (true) {
