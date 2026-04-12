@@ -5,9 +5,9 @@
  * Each test maps to an acceptance criterion from the story file.
  */
 import { test, expect } from '@playwright/test'
-import { dismissOnboarding } from '../helpers/dismiss-onboarding'
-import { seedBooks, seedAudioClips } from '../support/helpers/indexeddb-seed'
-import { FIXED_DATE } from '../utils/test-time'
+import { dismissOnboarding } from '../../helpers/dismiss-onboarding'
+import { seedBooks, seedAudioClips } from '../../support/helpers/indexeddb-seed'
+import { FIXED_DATE } from '../../utils/test-time'
 
 const AUDIOBOOK_ID = 'clip-test-audiobook'
 

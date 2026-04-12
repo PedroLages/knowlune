@@ -1363,7 +1363,7 @@ development_status:
   # Depends on: E107
   # ──────────────────────────────────────────────────
   epic-111: in-progress
-  111-1-audio-clips: ready-for-dev
+  111-1-audio-clips: done
   111-2-skip-silence-and-speed-memory: backlog
   111-3-sleep-timer-end-of-chapter: backlog
   epic-111-retrospective: optional
