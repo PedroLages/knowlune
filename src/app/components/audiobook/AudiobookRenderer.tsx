@@ -12,6 +12,7 @@
 import { useEffect, useCallback, useState, useRef } from 'react'
 import { Play, Pause, SkipBack, SkipForward, BookOpen, Settings } from 'lucide-react'
 import { toast } from 'sonner'
+import { db } from '@/db/schema'
 import { Button } from '@/app/components/ui/button'
 import { Slider } from '@/app/components/ui/slider'
 import { useAudioPlayer, formatAudioTime } from '@/app/hooks/useAudioPlayer'
@@ -79,6 +80,24 @@ export function AudiobookRenderer({
   // Post-session bookmark review
   const [postSessionOpen, setPostSessionOpen] = useState(false)
   const [sessionBookmarkIds, setSessionBookmarkIds] = useState<ReadonlySet<string>>(new Set())
+
+  // Load existing bookmark IDs from Dexie on mount so the badge count persists across refreshes
+  useEffect(() => {
+    let cancelled = false
+    db.audioBookmarks
+      .where('bookId')
+      .equals(book.id)
+      .toArray()
+      .then(bookmarks => {
+        if (!cancelled && bookmarks.length > 0) {
+          setSessionBookmarkIds(new Set(bookmarks.map(b => b.id)))
+        }
+      })
+      .catch(() => {
+        // silent-catch-ok: badge stays at 0
+      })
+    return () => { cancelled = true }
+  }, [book.id])
   const prevIsPlayingRef = useRef(false)
   const bookmarkNoteContainerRef = useRef<HTMLDivElement>(null)
   // Set to true when the user explicitly ends the session (unmount or audio reaches end).
