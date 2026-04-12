@@ -87,7 +87,12 @@ async function openReader(
 
   // Dismiss any dialogs
   const backdrop = page.locator('[data-slot="dialog-overlay"]').first()
-  if (await backdrop.waitFor({ state: 'visible', timeout: 1500 }).then(() => true).catch(() => false)) {
+  if (
+    await backdrop
+      .waitFor({ state: 'visible', timeout: 1500 })
+      .then(() => true)
+      .catch(() => false)
+  ) {
     await page.keyboard.press('Escape')
     await backdrop.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {})
   }
@@ -203,7 +208,9 @@ test.describe('E107-S05: Sync Reader Themes', () => {
     await expect(container).toHaveClass(/bg-\[#f9f9fe\]/, { timeout: 3000 })
   })
 
-  test('AC-3: reader container has correct background on initial render (no flash)', async ({ page }) => {
+  test('AC-3: reader container has correct background on initial render (no flash)', async ({
+    page,
+  }) => {
     // Set up Clean scheme via addInitScript (before navigation)
     await page.addInitScript(() => {
       localStorage.setItem(

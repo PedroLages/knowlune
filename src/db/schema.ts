@@ -34,6 +34,7 @@ import type {
   Book,
   BookHighlight,
   AudioBookmark,
+  AudioClip,
   OpdsCatalog,
   AudiobookshelfServer,
   VocabularyItem,
@@ -88,6 +89,7 @@ export type ElearningDatabase = Dexie & {
   shelves: EntityTable<import('@/data/types').Shelf, 'id'>
   bookShelves: EntityTable<import('@/data/types').BookShelfEntry, 'id'>
   readingQueue: EntityTable<import('@/data/types').ReadingQueueEntry, 'id'>
+  audioClips: EntityTable<AudioClip, 'id'>
 }
 
 /**
@@ -1306,6 +1308,10 @@ function _declareLegacyMigrations(database: Dexie): void {
   // E110-S03: Reading Queue — ordered list of books to read next
   database.version(46).stores({
     readingQueue: 'id, bookId, sortOrder, addedAt',
+  })
+  // E111-S01: Audio Clips — clippable audio ranges
+  database.version(47).stores({
+    audioClips: 'id, bookId, chapterId, createdAt, sortOrder',
   })
 } // end _declareLegacyMigrations
 

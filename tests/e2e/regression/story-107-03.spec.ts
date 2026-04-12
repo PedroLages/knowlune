@@ -135,9 +135,7 @@ test.describe('E107-S03: Fix TOC Loading and Fallback', () => {
     })
   })
 
-  test('AC-1: TOC loading state is displayed in TableOfContents panel', async ({
-    page,
-  }) => {
+  test('AC-1: TOC loading state is displayed in TableOfContents panel', async ({ page }) => {
     await openBookReader(page, TEST_BOOK_WITH_TOC)
 
     // Open TOC panel via menu
@@ -160,9 +158,7 @@ test.describe('E107-S03: Fix TOC Loading and Fallback', () => {
     await expect(emptyMessage).toBeVisible({ timeout: 8000 })
   })
 
-  test('AC-3: TOC timeout falls back to empty state gracefully', async ({
-    page,
-  }) => {
+  test('AC-3: TOC timeout falls back to empty state gracefully', async ({ page }) => {
     await openBookReader(page, TEST_BOOK_NO_TOC)
 
     // Open TOC panel via menu
@@ -177,10 +173,12 @@ test.describe('E107-S03: Fix TOC Loading and Fallback', () => {
 
     // Loading indicator should NOT be present after timeout
     const loadingIndicator = page.getByTestId('toc-loading').or(page.locator('.animate-spin'))
-    await expect(loadingIndicator).not.toBeVisible().catch(() => {
-      // Loading indicator may not exist if timeout logic uses different approach
-      // This is acceptable as long as empty state is shown
-    })
+    await expect(loadingIndicator)
+      .not.toBeVisible()
+      .catch(() => {
+        // Loading indicator may not exist if timeout logic uses different approach
+        // This is acceptable as long as empty state is shown
+      })
   })
 
   test('AC-4: Chapter tracking falls back to progress percentage when TOC unavailable', async ({
@@ -196,9 +194,7 @@ test.describe('E107-S03: Fix TOC Loading and Fallback', () => {
     await expect(progressDisplay).toContainText('0%', { timeout: 8000 })
   })
 
-  test('AC-4: Chapter tracking shows chapter name when TOC is available', async ({
-    page,
-  }) => {
+  test('AC-4: Chapter tracking shows chapter name when TOC is available', async ({ page }) => {
     await openBookReader(page, TEST_BOOK_WITH_TOC)
 
     // Reader header should show chapter name from TOC
@@ -212,9 +208,7 @@ test.describe('E107-S03: Fix TOC Loading and Fallback', () => {
     expect(text?.trim()).toBeTruthy()
   })
 
-  test('AC-5: TOC panel button remains enabled when TOC is unavailable', async ({
-    page,
-  }) => {
+  test('AC-5: TOC panel button remains enabled when TOC is unavailable', async ({ page }) => {
     await openBookReader(page, TEST_BOOK_NO_TOC)
 
     // Menu button should be present and enabled
@@ -231,9 +225,7 @@ test.describe('E107-S03: Fix TOC Loading and Fallback', () => {
     await expect(tocPanel).toBeVisible({ timeout: 5000 })
   })
 
-  test('Integration: End-to-end TOC loading flow with valid EPUB', async ({
-    page,
-  }) => {
+  test('Integration: End-to-end TOC loading flow with valid EPUB', async ({ page }) => {
     await openBookReader(page, TEST_BOOK_WITH_TOC)
 
     // Open TOC panel via menu
@@ -245,11 +237,10 @@ test.describe('E107-S03: Fix TOC Loading and Fallback', () => {
 
     // TOC panel should be open - content depends on EPUB navigation parsing
     // With mock EPUB, may show empty state or minimal navigation
-    const panelContent = tocPanel.locator('[data-testid="toc-loading"]').or(
-      tocPanel.getByText(/No table of contents/i)
-    ).or(
-      tocPanel.locator('[data-testid="toc-list"]')
-    )
+    const panelContent = tocPanel
+      .locator('[data-testid="toc-loading"]')
+      .or(tocPanel.getByText(/No table of contents/i))
+      .or(tocPanel.locator('[data-testid="toc-list"]'))
 
     await expect(panelContent.first()).toBeVisible({ timeout: 5000 })
 
@@ -280,9 +271,7 @@ test.describe('E107-S03: Edge Cases', () => {
     await expect(page.getByTestId('toc-panel')).toBeVisible({ timeout: 5000 })
   })
 
-  test('Concurrent reader navigation and TOC loading does not cause errors', async ({
-    page,
-  }) => {
+  test('Concurrent reader navigation and TOC loading does not cause errors', async ({ page }) => {
     await openBookReader(page, TEST_BOOK_WITH_TOC)
 
     // Open TOC panel via menu

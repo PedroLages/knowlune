@@ -2013,6 +2013,47 @@ def verify_implement(story: StoryInfo) -> list[str]:
     return failures
 
 
+def _assert_on_branch(expected: str) -> None:
+    """Raise StoryError if not on the expected branch."""
+    current = subprocess.run(
+        ["git", "branch", "--show-current"],
+        capture_output=True, text=True, cwd=PROJECT_DIR,
+    ).stdout.strip()
+    if current != expected:
+        raise StoryError(f"Expected branch '{expected}' but on '{current}'")
+
+
+def auto_push_branch() -> None:
+    """Push any unpushed commits on the current branch. No-op if up to date."""
+    upstream_check = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "@{u}"],
+        capture_output=True, text=True, cwd=PROJECT_DIR,
+    )
+    if upstream_check.returncode != 0:
+        push = subprocess.run(
+            ["git", "push", "-u", "origin", "HEAD"],
+            capture_output=True, text=True, cwd=PROJECT_DIR,
+        )
+        if push.returncode != 0:
+            log.warning(f"  Auto-push failed: {push.stderr.strip()}")
+        else:
+            log.info("  Auto-pushed branch (no upstream set)")
+    else:
+        unpushed = subprocess.run(
+            ["git", "log", "@{u}..HEAD", "--oneline"],
+            capture_output=True, text=True, cwd=PROJECT_DIR,
+        )
+        if unpushed.stdout.strip():
+            push = subprocess.run(
+                ["git", "push"],
+                capture_output=True, text=True, cwd=PROJECT_DIR,
+            )
+            if push.returncode != 0:
+                log.warning(f"  Auto-push failed: {push.stderr.strip()}")
+            else:
+                log.info("  Auto-pushed unpushed commits")
+
+
 def verify_finish(story: StoryInfo) -> list[str]:
     """Check that FINISH actually completed its tasks."""
     failures: list[str] = []
@@ -2208,10 +2249,14 @@ async def run_story(
             if not start_failures:
                 log.info(f"  ┌─ Planning: SKIPPED — branch '{existing_branch}' already has plan + story file")
                 write_progress(story.key, "SESSION 1: START", "skipped (resuming from previous run)")
-                subprocess.run(
+                co = subprocess.run(
                     ["git", "checkout", existing_branch],
                     capture_output=True, text=True, cwd=PROJECT_DIR,
                 )
+                if co.returncode != 0:
+                    raise StoryError(
+                        f"Failed to checkout {existing_branch}: {co.stderr.strip()}"
+                    )
                 text, sid, cost = "", None, 0.0
                 start_already_done = True
 
@@ -2253,6 +2298,9 @@ async def run_story(
                 raise StoryError("Plan rejected by user")
 
         # ── Session 2: IMPLEMENT (fresh — reads plan from disk) ──
+        feature_branch = _find_feature_branch(story)
+        if feature_branch:
+            _assert_on_branch(feature_branch)
         log.info(f"  ├─ Building: Implementing the plan (fresh session, reads plan from disk)")
         write_progress(story.key, "SESSION 2: IMPLEMENT", "coding feature...")
         impl_phase = None if config.legacy_mode else PhaseConfig(
@@ -2301,6 +2349,10 @@ async def run_story(
             needs_agents=True, needs_playwright=True,
             append_context=f"Story: {story.key}. Running quality gates.",
         )
+
+        # Verify we're still on the feature branch
+        if feature_branch:
+            _assert_on_branch(feature_branch)
 
         # Detect which agents to skip based on changed files
         skip_agents = "" if config.legacy_mode else detect_review_skip_agents()
@@ -2555,6 +2607,10 @@ async def run_story(
         result.issues_fixed_total = verdict.story_related_total
         result.phase_reached = "review"
 
+        # Verify we're still on the feature branch before finish
+        if feature_branch:
+            _assert_on_branch(feature_branch)
+
         # Ensure clean tree before finish
         ensure_clean_tree(story, "finish")
 
@@ -2577,22 +2633,7 @@ async def run_story(
         result.phase_reached = "finish"
 
         # Auto-push if session didn't push (avoids $0.15 retry session)
-        upstream_check = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "@{u}"],
-            capture_output=True, text=True, cwd=PROJECT_DIR,
-        )
-        if upstream_check.returncode != 0:
-            # No upstream — push with -u
-            subprocess.run(["git", "push", "-u", "origin", "HEAD"], cwd=PROJECT_DIR, check=False)
-            log.info("  Auto-pushed branch (session didn't set upstream)")
-        else:
-            unpushed = subprocess.run(
-                ["git", "log", "@{u}..HEAD", "--oneline"],
-                capture_output=True, text=True, cwd=PROJECT_DIR,
-            )
-            if unpushed.stdout.strip():
-                subprocess.run(["git", "push"], cwd=PROJECT_DIR, check=False)
-                log.info("  Auto-pushed unpushed commits after finish")
+        auto_push_branch()
 
         # Verify FINISH completed its tasks
         missing = verify_finish(story)
@@ -2609,6 +2650,10 @@ async def run_story(
             )
             result.total_cost_usd += retry_cost
             text += "\n" + retry_text
+
+            # Safety net: auto-commit and auto-push after retry too
+            ensure_clean_tree(story, "finish-retry")
+            auto_push_branch()
 
             still_missing = verify_finish(story)
             if still_missing:

@@ -7,7 +7,11 @@
 import { test, expect } from '@playwright/test'
 import { dismissOnboarding } from '../helpers/dismiss-onboarding'
 import { navigateAndWait } from '../support/helpers/navigation'
-import { seedBooks, seedBookHighlights, seedVocabularyItems } from '../support/helpers/indexeddb-seed'
+import {
+  seedBooks,
+  seedBookHighlights,
+  seedVocabularyItems,
+} from '../support/helpers/indexeddb-seed'
 import { FIXED_DATE, getRelativeDate } from '../utils/test-time'
 
 const BOOK_A = 'book-search-a'

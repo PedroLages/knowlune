@@ -22,9 +22,7 @@ const testAudiobook = {
   format: 'audiobook' as const,
   status: 'reading' as const,
   progress: 10,
-  chapters: [
-    { title: 'Chapter 1', duration: 3600, src: '' },
-  ],
+  chapters: [{ title: 'Chapter 1', duration: 3600, src: '' }],
   source: { type: 'local' as const, opfsPath: '/test/test.m4b' },
   totalDuration: 3600,
   createdAt: FIXED_DATE,
@@ -66,7 +64,9 @@ test.describe('E108-S04: Audiobook Settings Panel', () => {
     await expect(sheet).toContainText('Audiobook Settings')
   })
 
-  test('AC-2: Speed preset buttons are rendered and clicking one persists preference', async ({ page }) => {
+  test('AC-2: Speed preset buttons are rendered and clicking one persists preference', async ({
+    page,
+  }) => {
     await page.goto(`/library/test-audiobook-e108-s04/read`)
 
     const settingsButton = page.getByTestId('audiobook-settings-button')

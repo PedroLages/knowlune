@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Mindful Reader - Reading Goals</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-surface": "#30302e",
+                        "on-error-container": "#93000a",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed-variant": "#522aa7",
+                        "on-tertiary": "#ffffff",
+                        "surface-dim": "#dcdad6",
+                        "outline": "#7a7484",
+                        "on-secondary-container": "#5e5080",
+                        "surface": "#fcf9f5",
+                        "on-tertiary-fixed": "#2c1700",
+                        "on-secondary-fixed": "#20133f",
+                        "primary-fixed-dim": "#d0bcff",
+                        "tertiary-fixed": "#ffdcbc",
+                        "primary-fixed": "#e9ddff",
+                        "secondary-fixed-dim": "#cfbef5",
+                        "surface-container-low": "#f6f3ef",
+                        "on-background": "#1b1c1a",
+                        "tertiary": "#683d00",
+                        "on-secondary-fixed-variant": "#4c3f6d",
+                        "surface-container": "#f0edea",
+                        "surface-variant": "#e5e2de",
+                        "surface-bright": "#fcf9f5",
+                        "on-surface-variant": "#494453",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed-dim": "#ffb86a",
+                        "surface-tint": "#6b46c1",
+                        "on-tertiary-fixed-variant": "#683d00",
+                        "outline-variant": "#cbc3d5",
+                        "error-container": "#ffdad6",
+                        "primary-container": "#6b46c1",
+                        "secondary-container": "#d7c6fe",
+                        "primary": "#532aa8",
+                        "surface-container-highest": "#e5e2de",
+                        "on-primary-fixed": "#23005c",
+                        "surface-container-high": "#eae8e4",
+                        "secondary": "#645787",
+                        "on-primary-container": "#e1d2ff",
+                        "inverse-on-surface": "#f3f0ec",
+                        "secondary-fixed": "#e9ddff",
+                        "on-surface": "#1b1c1a",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#d0bcff",
+                        "background": "#fcf9f5",
+                        "tertiary-container": "#895200",
+                        "on-tertiary-container": "#ffd1a2"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Manrope"],
+                        "label": ["Manrope"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .progress-ring { transform: rotate(-90deg); }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen">
+<!-- TopNavBar Navigation Shell -->
+<nav class="bg-[#fcf9f5] dark:bg-stone-950 sticky top-0 z-40 w-full bg-[#f6f3ef] dark:bg-stone-900 border-none">
+<div class="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold text-[#1b1c1a] dark:text-[#fcf9f5] tracking-tight">The Mindful Reader</span>
+<div class="hidden md:flex items-center gap-6 font-manrope text-base leading-relaxed">
+<a class="text-[#494453] hover:text-[#532aa8] transition-colors" href="#">Library</a>
+<a class="text-[#494453] hover:text-[#532aa8] transition-colors" href="#">Discover</a>
+<a class="text-[#532aa8] font-bold border-b-2 border-[#532aa8] pb-1" href="#">Goals</a>
+<a class="text-[#494453] hover:text-[#532aa8] transition-colors" href="#">Account</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined p-2 text-[#532aa8] dark:text-[#e9ddff] hover:bg-[#f6f3ef] dark:hover:bg-stone-800 rounded-full transition-all scale-95 active:opacity-80">settings</button>
+</div>
+</div>
+</nav>
+<main class="max-w-7xl mx-auto px-6 py-12 md:px-12 flex flex-col md:flex-row gap-12">
+<!-- SideNavBar - Only for desktop view as per Responsive Pivot -->
+<aside class="hidden md:flex flex-col gap-4 p-6 border-r border-[#cbc3d5]/15 h-fit sticky top-24 w-64 bg-[#fcf9f5] dark:bg-stone-950">
+<div class="mb-6">
+<h2 class="text-lg font-bold text-[#1b1c1a]">Library</h2>
+<p class="font-manrope text-sm font-medium text-[#494453]">Your curated collection</p>
+</div>
+<div class="flex flex-col gap-2">
+<button class="flex items-center gap-3 text-[#494453] px-4 py-2 hover:bg-[#f6f3ef] rounded-full font-manrope text-sm font-medium transition-all ease-in-out duration-300">
+<span class="material-symbols-outlined">library_music</span> All Audiobooks
+                </button>
+<button class="flex items-center gap-3 text-[#494453] px-4 py-2 hover:bg-[#f6f3ef] rounded-full font-manrope text-sm font-medium transition-all ease-in-out duration-300">
+<span class="material-symbols-outlined">play_circle</span> In Progress
+                </button>
+<button class="flex items-center gap-3 text-[#494453] px-4 py-2 hover:bg-[#f6f3ef] rounded-full font-manrope text-sm font-medium transition-all ease-in-out duration-300">
+<span class="material-symbols-outlined">check_circle</span> Finished
+                </button>
+<button class="flex items-center gap-3 text-[#494453] px-4 py-2 hover:bg-[#f6f3ef] rounded-full font-manrope text-sm font-medium transition-all ease-in-out duration-300">
+<span class="material-symbols-outlined">bookmark</span> Wishlist
+                </button>
+<button class="flex items-center gap-3 text-[#494453] px-4 py-2 hover:bg-[#f6f3ef] rounded-full font-manrope text-sm font-medium transition-all ease-in-out duration-300">
+<span class="material-symbols-outlined">auto_stories</span> Collections
+                </button>
+</div>
+<button class="mt-8 bg-primary text-on-primary rounded-full px-6 py-3 font-semibold text-sm transition-transform active:scale-95">
+                Add New Collection
+            </button>
+</aside>
+<!-- Main Content Area -->
+<section class="flex-1 space-y-16">
+<!-- Header Section -->
+<header>
+<h1 class="text-5xl font-extrabold tracking-tight text-on-surface mb-4">My Reading Goals</h1>
+<p class="text-on-surface-variant italic font-light text-lg">
+                    “A book is a dream you hold in your hand.” — <span class="font-medium">Neil Gaiman</span>
+</p>
+</header>
+<!-- Grid Layout for Goal Settings -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- Left Column: Daily & Streak (Bento Style) -->
+<div class="lg:col-span-7 space-y-8">
+<!-- Daily Goal Section -->
+<div class="bg-surface-container-low p-8 rounded-xl">
+<div class="flex items-center justify-between mb-8">
+<h2 class="text-xl font-bold text-on-surface">Daily Goal</h2>
+<span class="text-primary font-semibold">30 mins active</span>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+<button class="flex flex-col items-center justify-center gap-3 p-6 bg-surface-container-lowest rounded-lg border border-transparent hover:border-primary/20 transition-all">
+<span class="material-symbols-outlined text-on-surface-variant">schedule</span>
+<span class="font-bold text-lg">15</span>
+<span class="text-xs text-on-surface-variant uppercase tracking-wider">Mins</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-3 p-6 bg-primary-fixed text-primary rounded-lg shadow-sm">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">schedule</span>
+<span class="font-bold text-lg">30</span>
+<span class="text-xs uppercase tracking-wider">Mins</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-3 p-6 bg-surface-container-lowest rounded-lg border border-transparent hover:border-primary/20 transition-all">
+<span class="material-symbols-outlined text-on-surface-variant">schedule</span>
+<span class="font-bold text-lg">45</span>
+<span class="text-xs text-on-surface-variant uppercase tracking-wider">Mins</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-3 p-6 bg-surface-container-lowest rounded-lg border border-transparent hover:border-primary/20 transition-all">
+<span class="material-symbols-outlined text-on-surface-variant">schedule</span>
+<span class="font-bold text-lg">60</span>
+<span class="text-xs text-on-surface-variant uppercase tracking-wider">Mins</span>
+</button>
+</div>
+<div class="flex items-end gap-4 bg-surface-container-high/50 p-6 rounded-lg">
+<div class="flex-1">
+<label class="block text-xs font-bold uppercase text-on-surface-variant mb-2 ml-1">Custom Goal</label>
+<input class="w-full bg-transparent border-0 border-b border-outline-variant focus:ring-0 focus:border-primary text-lg p-0 pb-2 transition-colors" placeholder="Enter minutes..." type="number"/>
+</div>
+<button class="bg-primary text-on-primary h-12 w-12 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90">
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Streak Tracker Section -->
+<div class="bg-surface-container-low p-8 rounded-xl">
+<div class="flex items-center gap-4 mb-10">
+<div class="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+</div>
+<div>
+<h2 class="text-3xl font-extrabold text-on-surface">Current Streak: 42 Days</h2>
+<p class="text-on-surface-variant font-medium">You haven't missed a day in 6 weeks!</p>
+</div>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-center text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">
+<span>Past 3 Months</span>
+<span class="flex gap-2 items-center">
+                                    Less <div class="w-2.5 h-2.5 bg-surface-container-highest rounded-sm"></div>
+<div class="w-2.5 h-2.5 bg-primary/40 rounded-sm"></div>
+<div class="w-2.5 h-2.5 bg-primary rounded-sm"></div> More
+                                </span>
+</div>
+<div class="grid grid-cols-13 gap-1.5 p-4 bg-surface-container-lowest rounded-lg overflow-x-auto">
+<!-- Calendar Heat Map Logic Simulation -->
+<div class="grid grid-flow-col grid-rows-7 gap-1.5">
+<!-- Generating a grid of 91 days (approx 13 weeks) -->
+<div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary/60"></div><div class="w-3 h-3 rounded-sm bg-surface-container-highest"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div>
+<div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary/20"></div><div class="w-3 h-3 rounded-sm bg-primary"></div>
+<div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div>
+<div class="w-3 h-3 rounded-sm bg-primary/40"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div>
+<div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div>
+<div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div>
+<div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div>
+<div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div>
+<div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div>
+<div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div>
+<div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div>
+<div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div>
+<div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div><div class="w-3 h-3 rounded-sm bg-primary"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Yearly Progress (Editorial Detail) -->
+<div class="lg:col-span-5">
+<div class="bg-surface-container-high p-8 rounded-xl sticky top-24">
+<h2 class="text-xl font-bold text-on-surface mb-12">Yearly Reading Goal</h2>
+<div class="relative flex justify-center items-center mb-12">
+<svg class="w-64 h-64 progress-ring">
+<circle class="text-surface-container-highest" cx="128" cy="128" fill="transparent" r="110" stroke="currentColor" stroke-width="12"></circle>
+<circle class="text-primary rounded-full" cx="128" cy="128" fill="transparent" r="110" stroke="currentColor" stroke-dasharray="691" stroke-dashoffset="345.5" stroke-width="12"></circle>
+</svg>
+<div class="absolute text-center">
+<span class="block text-5xl font-extrabold text-on-surface">50%</span>
+<span class="text-sm font-bold uppercase tracking-widest text-on-surface-variant">Complete</span>
+</div>
+</div>
+<div class="text-center space-y-6">
+<div class="space-y-1">
+<p class="text-on-surface-variant font-medium">Current progress</p>
+<p class="text-3xl font-bold text-on-surface">12 / <span class="text-primary">24 books</span></p>
+</div>
+<button class="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary py-4 rounded-full font-bold shadow-xl shadow-primary/10 transition-all hover:brightness-110 active:scale-[0.98]">
+                                Update Yearly Goal
+                            </button>
+<div class="pt-6 border-t border-outline-variant/30 text-left">
+<h3 class="text-xs font-bold uppercase text-on-surface-variant mb-4">Milestones</h3>
+<ul class="space-y-4">
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">stars</span>
+<span class="text-sm font-medium">Halfway point reached in July!</span>
+</li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant/40 text-xl">auto_stories</span>
+<span class="text-sm text-on-surface-variant italic">Next reward at 18 books</span>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar - Responsive Pivot for Mobile -->
+<div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#fcf9f5] dark:bg-stone-950 border-none px-4 py-2">
+<div class="flex justify-around items-center h-16 max-w-lg mx-auto">
+<button class="flex flex-col items-center gap-1 text-[#494453] hover:text-[#532aa8] transition-colors">
+<span class="material-symbols-outlined">library_music</span>
+<span class="text-[10px] font-manrope font-medium">Library</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-[#494453] hover:text-[#532aa8] transition-colors">
+<span class="material-symbols-outlined">explore</span>
+<span class="text-[10px] font-manrope font-medium">Discover</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-[#532aa8] font-bold">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">track_changes</span>
+<span class="text-[10px] font-manrope">Goals</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-[#494453] hover:text-[#532aa8] transition-colors">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-manrope font-medium">Profile</span>
+</button>
+</div>
+</div>
+</body></html>

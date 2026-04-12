@@ -4,10 +4,11 @@
  * Extracted from PlayerSidePanel.tsx to reduce god-component complexity.
  */
 
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { NoteEditor } from '@/app/components/notes/NoteEditor'
 import { useNoteStore } from '@/stores/useNoteStore'
+import { db } from '@/db'
 import type { Note } from '@/data/types'
 import type { CapturedFrame } from '@/lib/frame-capture'
 
@@ -40,6 +41,24 @@ export function NotesTab({
   }, [courseId, lessonId, loadNotesByLesson])
 
   const existingNote = notes.find(n => n.courseId === courseId && n.videoId === lessonId)
+
+  // Seed notes with YouTube video description when no note exists yet
+  const [videoDescription, setVideoDescription] = useState('')
+  useEffect(() => {
+    if (existingNote || isLoading) return
+    db.importedVideos
+      .get(lessonId)
+      .then(v => {
+        if (v?.description) {
+          const html = v.description
+            .split(/\n{2,}/)
+            .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+            .join('')
+          setVideoDescription(html)
+        }
+      })
+      .catch(() => {})
+  }, [lessonId, existingNote, isLoading])
 
   const handleSave = useCallback(
     async (content: string, tags: string[]) => {
@@ -81,7 +100,7 @@ export function NotesTab({
         courseId={courseId}
         lessonId={lessonId}
         noteId={existingNote?.id}
-        initialContent={existingNote?.content ?? ''}
+        initialContent={existingNote?.content ?? videoDescription}
         onSave={handleSave}
         onVideoSeek={onSeek}
         currentVideoTime={currentTime}

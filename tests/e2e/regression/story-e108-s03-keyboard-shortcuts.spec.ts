@@ -42,7 +42,12 @@ async function goToLibrary(page: Parameters<typeof navigateAndWait>[0]) {
     )
   })
   // Seed a book so search input and filters render
-  await seedIndexedDBStore(page, DB_NAME, 'books', SEED_BOOK as unknown as Record<string, unknown>[])
+  await seedIndexedDBStore(
+    page,
+    DB_NAME,
+    'books',
+    SEED_BOOK as unknown as Record<string, unknown>[]
+  )
   await navigateAndWait(page, '/library')
   await page.reload()
 }
@@ -102,7 +107,9 @@ test.describe('E108-S03 AC-2: Library shortcuts', () => {
 
     // The dialog should appear — target the heading to avoid strict mode violation
     // (the row "Show keyboard shortcuts" also contains this text)
-    await expect(page.getByRole('heading', { name: 'Keyboard Shortcuts' })).toBeVisible({ timeout: TIMEOUTS.SHORT })
+    await expect(page.getByRole('heading', { name: 'Keyboard Shortcuts' })).toBeVisible({
+      timeout: TIMEOUTS.SHORT,
+    })
   })
 
   test('/ shortcut is suppressed when an input already has focus', async ({ page }) => {

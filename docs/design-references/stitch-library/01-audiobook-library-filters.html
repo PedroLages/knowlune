@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #e4e3db;
+            border-radius: 10px;
+        }
+        .glass-player {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary": "#ffffff",
+                        "surface": "#fbf9f1",
+                        "inverse-surface": "#30312c",
+                        "on-primary-fixed": "#22005d",
+                        "tertiary-container": "#963200",
+                        "secondary-fixed-dim": "#cfbdff",
+                        "on-surface-variant": "#494456",
+                        "tertiary": "#6f2300",
+                        "primary-fixed": "#e8ddff",
+                        "background": "#fbf9f1",
+                        "on-background": "#1b1c17",
+                        "primary": "#4800b2",
+                        "primary-fixed-dim": "#cfbdff",
+                        "secondary-fixed": "#e8ddff",
+                        "surface-container-high": "#eae8e0",
+                        "secondary-container": "#b398ff",
+                        "surface-variant": "#e4e3db",
+                        "surface-bright": "#fbf9f1",
+                        "inverse-primary": "#cfbdff",
+                        "on-surface": "#1b1c17",
+                        "on-secondary-fixed-variant": "#4f3494",
+                        "on-error": "#ffffff",
+                        "surface-container-highest": "#e4e3db",
+                        "surface-tint": "#6d23f9",
+                        "on-primary-fixed-variant": "#5300cd",
+                        "on-tertiary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "outline": "#7a7488",
+                        "surface-container": "#f0eee6",
+                        "inverse-on-surface": "#f3f1e9",
+                        "tertiary-fixed": "#ffdbcf",
+                        "surface-dim": "#dcdad2",
+                        "on-tertiary-container": "#ffb79d",
+                        "on-primary-container": "#d0beff",
+                        "tertiary-fixed-dim": "#ffb59a",
+                        "surface-container-low": "#f5f4ec",
+                        "secondary": "#674dae",
+                        "on-secondary-fixed": "#22005d",
+                        "on-primary": "#ffffff",
+                        "on-secondary-container": "#45298a",
+                        "primary-container": "#6200ee",
+                        "on-tertiary-fixed-variant": "#802a00",
+                        "on-tertiary-fixed": "#380d00",
+                        "surface-container-lowest": "#ffffff",
+                        "outline-variant": "#cbc3d9",
+                        "on-error-container": "#93000a",
+                        "error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface font-body text-on-surface flex h-screen overflow-hidden">
+<!-- Sidebar Navigation (From JSON SideNavBar) -->
+<aside class="h-screen w-72 flex-shrink-0 bg-[#fbf9f1] flex flex-col py-8 gap-y-6 border-r border-outline-variant/15">
+<div class="px-8 flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+</div>
+<div>
+<h2 class="font-headline font-bold text-on-surface tracking-tight">My Atelier</h2>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">64 Artifacts Collected</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Active Tab: Library -->
+<a class="flex items-center gap-3 py-3 font-['Inter'] text-sm font-bold text-[#4800b2] border-l-4 border-[#4800b2] pl-8 transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">library_books</span>
+<span>Library</span>
+</a>
+<a class="flex items-center gap-3 py-3 font-['Inter'] text-sm font-medium text-stone-600 pl-9 hover:bg-[#f5f4ec] transition-colors" href="#">
+<span class="material-symbols-outlined">podcasts</span>
+<span>Podcasts</span>
+</a>
+<a class="flex items-center gap-3 py-3 font-['Inter'] text-sm font-medium text-stone-600 pl-9 hover:bg-[#f5f4ec] transition-colors" href="#">
+<span class="material-symbols-outlined">layers</span>
+<span>Series</span>
+</a>
+<a class="flex items-center gap-3 py-3 font-['Inter'] text-sm font-medium text-stone-600 pl-9 hover:bg-[#f5f4ec] transition-colors" href="#">
+<span class="material-symbols-outlined">check_circle</span>
+<span>Finished</span>
+</a>
+<a class="flex items-center gap-3 py-3 font-['Inter'] text-sm font-medium text-stone-600 pl-9 hover:bg-[#f5f4ec] transition-colors" href="#">
+<span class="material-symbols-outlined">play_circle</span>
+<span>In-progress</span>
+</a>
+<a class="flex items-center gap-3 py-3 font-['Inter'] text-sm font-medium text-stone-600 pl-9 hover:bg-[#f5f4ec] transition-colors" href="#">
+<span class="material-symbols-outlined">radio_button_unchecked</span>
+<span>Not started</span>
+</a>
+</nav>
+<div class="px-8 mt-auto">
+<button class="w-full py-4 bg-primary text-white rounded-full font-headline font-bold text-sm hover:scale-97 transition-transform active:scale-95 shadow-lg shadow-primary/20">
+                Browse New Releases
+            </button>
+<div class="mt-8 space-y-4">
+<a class="flex items-center gap-3 text-sm font-medium text-stone-600 pl-1 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 text-sm font-medium text-stone-600 pl-1 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span>Support</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Cluster -->
+<main class="flex-1 flex overflow-hidden">
+<!-- Filter Sidebar Panel (The Request's Specific Core) -->
+<div class="w-80 h-full bg-[#FFFDF5] border-r border-outline-variant/15 flex flex-col shadow-sm">
+<!-- Header -->
+<div class="p-6 flex items-center justify-between">
+<h3 class="font-headline text-lg font-bold text-on-surface">Sort &amp; Filter</h3>
+<button class="text-primary-container font-bold text-sm hover:opacity-80">Clear All</button>
+</div>
+<!-- Active Filter Chips -->
+<div class="px-6 pb-6 flex gap-2 overflow-x-auto no-scrollbar">
+<span class="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-primary-fixed text-on-primary-fixed rounded-full text-xs font-bold">
+                    In Progress <span class="material-symbols-outlined text-sm cursor-pointer">close</span>
+</span>
+<span class="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-primary-fixed text-on-primary-fixed rounded-full text-xs font-bold">
+                    Audiobooks <span class="material-symbols-outlined text-sm cursor-pointer">close</span>
+</span>
+</div>
+<div class="flex-1 overflow-y-auto px-6 pb-20">
+<!-- Sort Section -->
+<div class="mb-8">
+<h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-4">Sort By</h4>
+<div class="space-y-3">
+<label class="flex items-center justify-between group cursor-pointer">
+<span class="text-sm font-medium text-on-surface">Recent First</span>
+<div class="w-5 h-5 rounded-full border-2 border-primary bg-primary flex items-center justify-center">
+<div class="w-1.5 h-1.5 rounded-full bg-white"></div>
+</div>
+<input checked="" class="hidden" name="sort" type="radio"/>
+</label>
+<label class="flex items-center justify-between group cursor-pointer">
+<span class="text-sm font-medium text-stone-600 group-hover:text-on-surface">Oldest First</span>
+<div class="w-5 h-5 rounded-full border-2 border-stone-300"></div>
+<input class="hidden" name="sort" type="radio"/>
+</label>
+<label class="flex items-center justify-between group cursor-pointer">
+<span class="text-sm font-medium text-stone-600 group-hover:text-on-surface">Title (A-Z)</span>
+<div class="w-5 h-5 rounded-full border-2 border-stone-300"></div>
+<input class="hidden" name="sort" type="radio"/>
+</label>
+<label class="flex items-center justify-between group cursor-pointer">
+<span class="text-sm font-medium text-stone-600 group-hover:text-on-surface">Narrator</span>
+<div class="w-5 h-5 rounded-full border-2 border-stone-300"></div>
+<input class="hidden" name="sort" type="radio"/>
+</label>
+</div>
+</div>
+<!-- Format Section (Collapsible) -->
+<div class="mb-8">
+<div class="flex items-center justify-between mb-4 group cursor-pointer">
+<h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Format</h4>
+<span class="material-symbols-outlined text-stone-400 group-hover:text-on-surface text-lg">keyboard_arrow_down</span>
+</div>
+<div class="space-y-3">
+<label class="flex items-center gap-3 cursor-pointer">
+<input checked="" class="rounded-md border-stone-300 text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span class="text-sm font-medium text-on-surface">Audiobook</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer">
+<input class="rounded-md border-stone-300 text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span class="text-sm font-medium text-on-surface">Podcast</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer">
+<input class="rounded-md border-stone-300 text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span class="text-sm font-medium text-on-surface">Series</span>
+</label>
+</div>
+</div>
+<!-- Status Section -->
+<div class="mb-8">
+<div class="flex items-center justify-between mb-4 group cursor-pointer">
+<h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Status</h4>
+<span class="material-symbols-outlined text-stone-400 group-hover:text-on-surface text-lg">keyboard_arrow_down</span>
+</div>
+<div class="space-y-3">
+<label class="flex items-center gap-3 cursor-pointer">
+<input class="rounded-md border-stone-300 text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span class="text-sm font-medium text-on-surface">Not Started</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer">
+<input checked="" class="rounded-md border-stone-300 text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span class="text-sm font-medium text-on-surface">In Progress</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer">
+<input class="rounded-md border-stone-300 text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span class="text-sm font-medium text-on-surface">Finished</span>
+</label>
+</div>
+</div>
+<!-- Author Section -->
+<div class="mb-8">
+<h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-4">Author</h4>
+<div class="relative mb-4">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-xl text-sm focus:ring-1 focus:ring-primary-container/30" placeholder="Search authors..." type="text"/>
+</div>
+<div class="h-40 overflow-y-auto pr-2 space-y-3">
+<label class="flex items-center gap-3 cursor-pointer">
+<input class="rounded-md border-stone-300 text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span class="text-sm font-medium text-on-surface">Dungeon Crawler Carl</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer">
+<input class="rounded-md border-stone-300 text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span class="text-sm font-medium text-on-surface">Andy Weir</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer">
+<input class="rounded-md border-stone-300 text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span class="text-sm font-medium text-on-surface">Neil Gaiman</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer">
+<input class="rounded-md border-stone-300 text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span class="text-sm font-medium text-on-surface">Robin Hobb</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer">
+<input class="rounded-md border-stone-300 text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span class="text-sm font-medium text-on-surface">Brandon Sanderson</span>
+</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Grid Area (Content Backdrop) -->
+<div class="flex-1 bg-surface-container-low p-10 overflow-y-auto">
+<div class="max-w-6xl mx-auto">
+<header class="flex justify-between items-end mb-12">
+<div>
+<h1 class="font-headline text-5xl font-extrabold tracking-tighter text-on-surface mb-2">Library</h1>
+<p class="text-on-surface-variant font-medium">Continuing your journey through 12 unfinished tales.</p>
+</div>
+<div class="flex gap-4">
+<button class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">grid_view</span>
+</button>
+<button class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface-variant hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">reorder</span>
+</button>
+</div>
+</header>
+<!-- Featured Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 blur-[2px] opacity-60 select-none">
+<!-- Book Card 1 -->
+<div class="group relative bg-surface-container-lowest rounded-xl overflow-hidden transition-all duration-500">
+<div class="aspect-[2/3] w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Vibrant surrealist book cover art with floating geometric shapes and a deep purple nebula background in a painterly style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBGcet0YtVCHWdAq0fChxjvotXGOxnAYT9WxiuswA-rQLl7G9L1Yri2LPWDIZh1geCPZqpCOgvjpZMcTDLcEgu0WbJSj-XBwLjYLEgVFKyRWy16VnnCeNV4KLoPGygw-fygW0bWAOBKFMLS3m8dshWpGKWv5yAyQDMQ-PuPGuA7dEP9zWV822xS_Rr14DmDhqgo2lrj-UcjelnSgmk7gpJNmK6E1xzA4-qT56p-bYqOWKmfD0J5rqTJJ3GA7LeGHr5-pEYu3jXX_g"/>
+</div>
+<div class="p-6">
+<h4 class="font-headline font-bold text-lg leading-tight mb-1">The Midnight Library</h4>
+<p class="text-sm text-on-surface-variant font-medium">Matt Haig</p>
+<div class="mt-4 w-full bg-surface-container rounded-full h-1">
+<div class="bg-primary w-2/3 h-full rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Book Card 2 -->
+<div class="group relative bg-surface-container-lowest rounded-xl overflow-hidden transition-all duration-500">
+<div class="aspect-[2/3] w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Abstract cinematic book cover with golden light rays piercing through dark mysterious forest mist, high contrast lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCszAVfQBpJIxQ-9dAdL9LWO3S2WOIxNHXgQJ8jH5MjXd3XtsB87z5Zqdgp9cko9rO_RV0I6YQ-ODamZDQOHewTDmPLmJiaOzyktwMg-VMwCR8kygf9DFcrDlrc5-kUdQKvPZ33u2b3wsHC3ZqoR-Zq485RNEGsfLuKP3SR5Vas4dollj2S6C6h1Mwjx0mD4MF4tBX5-s1urWomub-k_Vw05Rx3x1-gqgW8b8hxMWulb7lFZvFCdqrrrjKDBwguZw2e4nCp0JeshJ4"/>
+</div>
+<div class="p-6">
+<h4 class="font-headline font-bold text-lg leading-tight mb-1">Circe</h4>
+<p class="text-sm text-on-surface-variant font-medium">Madeline Miller</p>
+<div class="mt-4 w-full bg-surface-container rounded-full h-1">
+<div class="bg-primary w-1/4 h-full rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Book Card 3 -->
+<div class="group relative bg-surface-container-lowest rounded-xl overflow-hidden transition-all duration-500">
+<div class="aspect-[2/3] w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Artistic book cover featuring stylized architectural drawing of a futuristic city with vibrant neon accent colors" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDP7FVTYKdc2lTzEBtsAIMnJpj5mvBYAxVETiqJ94WtGMN1OFd93cwuFsDtV7tGtsElftfyPTlmlskHxSX2WOiBzYta-jCawT-irYWjw7q9SxNNMMAx0TL0XTWIm6SRrT90SXGpC952yPJeJ-BM8PYT9VnhUr61KQ9HzxWOLRCZ1W2HAIwLsWT2PnoWxahT0Tu0pFrp7GQVYYNeZTQzwYD1jFQXHoYXuEqHHRvBa76dSY7A90Qui97qKSdp-3O6ayehAEsAWqqjOQ"/>
+</div>
+<div class="p-6">
+<h4 class="font-headline font-bold text-lg leading-tight mb-1">Project Hail Mary</h4>
+<p class="text-sm text-on-surface-variant font-medium">Andy Weir</p>
+<div class="mt-4 w-full bg-surface-container rounded-full h-1">
+<div class="bg-primary w-4/5 h-full rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Book Card 4 -->
+<div class="group relative bg-surface-container-lowest rounded-xl overflow-hidden transition-all duration-500">
+<div class="aspect-[2/3] w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Whimsical illustrated book cover of a small wooden house in a field of sunflowers under a bright blue sky" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5a2GWRkB2YCk2Czl7k2YFT2NxdajZVLVV3X8nbIlQsgXztiHJse8NAkZpnrxjgorQf6GMXo8WHfkL00c2fH8IYjJkyPiX2UENtOrQDevrSctFljJgVWpV_JRVJWbpgllezs_nw5v7sF94q_zS1sxDdaCVlzi-3eppLGm1_ZW_A8jYrfqhUnhMKol6Jk3PtCOu2HhO_0J88Ou3XWfOien1UXCJAjQMWika7gT3hAu5FgqB98jX9LH2VQFsqa0EaTsvkBah3tXg9T4"/>
+</div>
+<div class="p-6">
+<h4 class="font-headline font-bold text-lg leading-tight mb-1">The House in the Cerulean Sea</h4>
+<p class="text-sm text-on-surface-variant font-medium">TJ Klune</p>
+<div class="mt-4 w-full bg-surface-container rounded-full h-1">
+<div class="bg-primary w-1/2 h-full rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Repeated for context -->
+<div class="group relative bg-surface-container-lowest rounded-xl overflow-hidden">
+<div class="aspect-[2/3] w-full bg-stone-200"></div>
+<div class="p-6 h-32"></div>
+</div>
+<div class="group relative bg-surface-container-lowest rounded-xl overflow-hidden">
+<div class="aspect-[2/3] w-full bg-stone-200"></div>
+<div class="p-6 h-32"></div>
+</div>
+<div class="group relative bg-surface-container-lowest rounded-xl overflow-hidden">
+<div class="aspect-[2/3] w-full bg-stone-200"></div>
+<div class="p-6 h-32"></div>
+</div>
+<div class="group relative bg-surface-container-lowest rounded-xl overflow-hidden">
+<div class="aspect-[2/3] w-full bg-stone-200"></div>
+<div class="p-6 h-32"></div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Player (Glassmorphism) -->
+<div class="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-4xl px-8 z-50">
+<div class="glass-player h-20 rounded-full px-6 flex items-center gap-6 shadow-2xl shadow-primary/10 border border-white/30">
+<div class="flex items-center gap-4 min-w-[240px]">
+<div class="w-12 h-12 rounded-lg overflow-hidden shadow-md">
+<img class="w-full h-full object-cover" data-alt="Close up thumbnail of a vibrant surrealist book cover art" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDYUqNmCisebcneIDdaFowMjWcgvtZQixpZlwtBLSijB1BAD3MBKCrb84tPiWDeq5QiEeA0iWbTDjdxHmrp7vyKxQ9l8DU4g5kPqzYokadQHPZC9Lm1e_5NiIQ2KHoBD_00kEQxxneqwrtYfb--3XdR7Lk7OkY_l2RwNu6O6lMXKBp_u7zKY3dDtqabhiJYC9y21Fo4eHh8COkHCZ7bmBDPoIGvdZuiwicDPt1XSlKIpgkW36m0i8FZWKnLYrhay_Cliud3OmBvBuA"/>
+</div>
+<div>
+<p class="font-headline font-bold text-sm text-on-surface truncate max-w-[160px]">The Midnight Library</p>
+<p class="text-[11px] text-on-surface-variant font-medium">Matt Haig</p>
+</div>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1">
+<div class="flex items-center gap-6">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-2xl">skip_previous</span>
+</button>
+<button class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-2xl">skip_next</span>
+</button>
+</div>
+<div class="w-full flex items-center gap-3">
+<span class="text-[10px] font-bold text-on-surface-variant tabular-nums">04:12:30</span>
+<div class="flex-1 h-1 bg-primary/10 rounded-full relative">
+<div class="absolute top-0 left-0 h-full w-2/3 bg-primary rounded-full"></div>
+<div class="absolute top-1/2 left-2/3 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-primary rounded-full shadow-sm"></div>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant tabular-nums">06:22:15</span>
+</div>
+</div>
+<div class="flex items-center gap-4 min-w-[180px] justify-end">
+<span class="text-xs font-bold text-primary px-2 py-1 bg-primary/5 rounded-md">1.2x</span>
+<span class="material-symbols-outlined text-on-surface-variant">volume_up</span>
+<span class="material-symbols-outlined text-on-surface-variant">list</span>
+</div>
+</div>
+</div>
+</body></html>

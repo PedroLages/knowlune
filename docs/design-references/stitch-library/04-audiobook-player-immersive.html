@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-fixed": "#20133f",
+                    "tertiary-fixed": "#ffdcbc",
+                    "surface-variant": "#e4e3d7",
+                    "surface-dim": "#dbdbcf",
+                    "surface-container-high": "#e9e9dd",
+                    "surface-container-highest": "#e4e3d7",
+                    "surface-tint": "#6b46c1",
+                    "on-primary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "on-primary-container": "#e1d2ff",
+                    "primary-fixed": "#e9ddff",
+                    "tertiary-fixed-dim": "#ffb86a",
+                    "secondary-fixed": "#e9ddff",
+                    "secondary-container": "#d7c6fe",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "on-surface-variant": "#494453",
+                    "on-primary-fixed-variant": "#522aa7",
+                    "on-primary-fixed": "#23005c",
+                    "on-background": "#1b1c15",
+                    "error-container": "#ffdad6",
+                    "error": "#ba1a1a",
+                    "on-error-container": "#93000a",
+                    "background": "#fbfaee",
+                    "outline-variant": "#cbc3d5",
+                    "on-secondary-fixed-variant": "#4c3f6d",
+                    "primary-container": "#6b46c1",
+                    "on-tertiary-fixed": "#2c1700",
+                    "secondary-fixed-dim": "#cfbef5",
+                    "on-secondary-container": "#5e5080",
+                    "inverse-surface": "#303129",
+                    "primary": "#532aa8",
+                    "inverse-primary": "#d0bcff",
+                    "inverse-on-surface": "#f2f1e5",
+                    "surface-container-low": "#f5f4e8",
+                    "on-surface": "#1b1c15",
+                    "surface": "#fbfaee",
+                    "on-tertiary-fixed-variant": "#683d00",
+                    "surface-container": "#efeee3",
+                    "outline": "#7a7484",
+                    "secondary": "#645787",
+                    "primary-fixed-dim": "#d0bcff",
+                    "tertiary-container": "#895200",
+                    "surface-bright": "#fbfaee",
+                    "on-tertiary-container": "#ffd1a2",
+                    "tertiary": "#683d00"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Noto Serif"],
+                    "body": ["Manrope"],
+                    "label": ["Manrope"]
+            }
+          },
+        }
+      }
+    </script>
+<style type="text/tailwindcss">
+    .glass-panel {
+        background: rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(32px);
+        -webkit-backdrop-filter: blur(32px)
+    }
+    .material-symbols-outlined {
+        font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24
+    }
+    .bg-blur-cover {
+        background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuB2ImJY6KrHSHsQq4nMHW_fVzXxUdd67G6k2u4XF6JhIrP6z0MaZwpNqYmCuCYbz4qE8huyUuFyxXQoWw9RmcDxOrq5rjnGImqjvOuliNHB86GYVIHvdVJpEXyWSM7LwVo0l71mBKK8LMEyj8nP2237MWj5jeKpHBWxqMoyju7kCVpsjvRxGLGUPnH-JUJGV5U18sXVYLZoiWn91JJqDKW4Y_5kWu_rNI8kVGK-HzGqpAVEE6A5EQd4by_t74-HUkiqJMn8JP1aB64);
+        filter: blur(80px) saturate(1.5);
+        transform: scale(1.2)
+    }
+    .custom-shadow {
+        box-shadow: 0 20px 30px -10px rgba(27, 28, 21, 0.2)
+    }
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: rgba(107, 70, 193, 0.2);
+        border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: rgba(107, 70, 193, 0.4);
+    }
+    </style>
+</head>
+<body class="bg-background font-body text-on-surface overflow-hidden h-screen w-full relative">
+<div class="absolute inset-0 z-0 bg-blur-cover bg-cover bg-center opacity-30"></div>
+<div class="absolute inset-0 z-1 bg-gradient-to-b from-background/40 via-background/60 to-background"></div>
+<div class="relative z-10 h-full flex flex-col max-w-[1400px] mx-auto px-6 py-6 overflow-hidden">
+<header class="flex items-center justify-between mb-8">
+<button class="w-10 h-10 flex items-center justify-center rounded-full glass-panel hover:bg-white/60 transition-colors">
+<span class="material-symbols-outlined text-primary text-xl">arrow_back</span>
+</button>
+<div class="text-center">
+<span class="text-xs font-bold tracking-widest uppercase text-outline opacity-70">Library View</span>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full glass-panel hover:bg-white/60 transition-colors">
+<span class="material-symbols-outlined text-primary text-xl">more_vert</span>
+</button>
+</header>
+<div class="flex-1 flex flex-col lg:flex-row gap-8 overflow-hidden mb-8">
+<div class="flex-none w-full lg:w-[400px] flex flex-col gap-6">
+<div class="relative w-full aspect-square max-w-[320px] mx-auto lg:mx-0">
+<img alt="The Great Gatsby Book Cover" class="rounded-2xl custom-shadow w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrbQC4twTFtNNsOjPvWrcnB5uF8ur0Z_MOuMHsUF4v4RVYtnnWB_-8PczP7YX7yjIMMiC33HOXwKdKMsFurZmfZ-1__BQvIvCQ5BbpfqeVAs85NKRq2uRYuaB0JbhG7oUP39r-9iyAo4LS-GHyToLCMLgV9LxtXPc0wyyAb3HgmI1nLMeolVZJwY5FFVzH0phynNGMid4LwKdunulo14wfC9BoAmsHZ9fkvr0YJaiK1L8lvDWczoS6evd6Iflj-kCzf3Yj8T-dS-g"/>
+</div>
+<div class="space-y-4">
+<div>
+<h1 class="font-headline text-3xl font-bold tracking-tight text-on-surface">The Great Gatsby</h1>
+<p class="text-lg text-primary font-medium opacity-80 mt-1">F. Scott Fitzgerald</p>
+</div>
+<div class="glass-panel rounded-2xl p-4 border border-white/20 grid grid-cols-2 gap-4">
+<div class="flex flex-col">
+<span class="text-[10px] uppercase font-bold text-outline">Narrated By</span>
+<span class="text-sm font-semibold">Jake Gyllenhaal</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] uppercase font-bold text-outline">Released</span>
+<span class="text-sm font-semibold">Oct 2023</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] uppercase font-bold text-outline">Genre</span>
+<span class="text-sm font-semibold">Classic Literature</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] uppercase font-bold text-outline">Length</span>
+<span class="text-sm font-semibold">6h 22m</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex-1 glass-panel rounded-3xl border border-white/20 overflow-hidden flex flex-col">
+<div class="p-6 border-b border-white/10 flex justify-between items-end">
+<div>
+<h2 class="font-headline text-2xl font-bold text-on-surface">Chapters</h2>
+<p class="text-sm text-outline font-medium mt-1">9 total chapters • 6h 22m</p>
+</div>
+<button class="text-xs font-bold text-primary uppercase tracking-widest hover:underline">Select All</button>
+</div>
+<div class="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+<div class="flex items-center gap-4 p-4 rounded-xl hover:bg-white/30 transition-colors cursor-pointer group">
+<span class="text-xs font-bold text-outline w-6">01</span>
+<div class="flex-1">
+<h3 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Chapter One</h3>
+<p class="text-[10px] text-outline font-semibold">48 MINUTES</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-xl hover:bg-white/30 transition-colors cursor-pointer group">
+<span class="text-xs font-bold text-outline w-6">02</span>
+<div class="flex-1">
+<h3 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Chapter Two</h3>
+<p class="text-[10px] text-outline font-semibold">32 MINUTES</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-xl hover:bg-white/30 transition-colors cursor-pointer group">
+<span class="text-xs font-bold text-outline w-6">03</span>
+<div class="flex-1">
+<h3 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Chapter Three</h3>
+<p class="text-[10px] text-outline font-semibold">55 MINUTES</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-xl bg-primary/10 border border-primary/20 relative overflow-hidden">
+<div class="absolute left-0 top-0 h-full w-1 bg-primary"></div>
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+<div class="flex-1">
+<h3 class="text-sm font-bold text-primary">Chapter Four</h3>
+<p class="text-[10px] text-primary/70 font-bold uppercase tracking-tight">Now Playing • 1h 12m left</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-xl hover:bg-white/30 transition-colors cursor-pointer group">
+<span class="text-xs font-bold text-outline w-6">05</span>
+<div class="flex-1">
+<h3 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Chapter Five</h3>
+<p class="text-[10px] text-outline font-semibold">41 MINUTES</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-xl hover:bg-white/30 transition-colors cursor-pointer group">
+<span class="text-xs font-bold text-outline w-6">06</span>
+<div class="flex-1">
+<h3 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Chapter Six</h3>
+<p class="text-[10px] text-outline font-semibold">38 MINUTES</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-xl hover:bg-white/30 transition-colors cursor-pointer group">
+<span class="text-xs font-bold text-outline w-6">07</span>
+<div class="flex-1">
+<h3 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Chapter Seven</h3>
+<p class="text-[10px] text-outline font-semibold">1H 05M</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-xl hover:bg-white/30 transition-colors cursor-pointer group">
+<span class="text-xs font-bold text-outline w-6">08</span>
+<div class="flex-1">
+<h3 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Chapter Eight</h3>
+<p class="text-[10px] text-outline font-semibold">22 MINUTES</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-xl hover:bg-white/30 transition-colors cursor-pointer group">
+<span class="text-xs font-bold text-outline w-6">09</span>
+<div class="flex-1">
+<h3 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Chapter Nine</h3>
+<p class="text-[10px] text-outline font-semibold">1H 10M</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="glass-panel rounded-3xl p-6 border border-white/30 shadow-2xl">
+<div class="flex flex-col lg:flex-row items-center gap-6 lg:gap-12">
+<div class="flex items-center gap-6">
+<button class="text-on-surface/60 hover:text-primary transition-colors" title="Rewind 10s">
+<span class="material-symbols-outlined text-2xl">replay_10</span>
+</button>
+<button class="text-on-surface/60 hover:text-primary transition-colors" title="Previous Chapter">
+<span class="material-symbols-outlined text-2xl">skip_previous</span>
+</button>
+<button class="w-14 h-14 flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary-container text-white shadow-lg hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">pause</span>
+</button>
+<button class="text-on-surface/60 hover:text-primary transition-colors" title="Next Chapter">
+<span class="material-symbols-outlined text-2xl">skip_next</span>
+</button>
+<button class="text-on-surface/60 hover:text-primary transition-colors" title="Forward 30s">
+<span class="material-symbols-outlined text-2xl">forward_30</span>
+</button>
+</div>
+<div class="flex-1 w-full space-y-2">
+<div class="flex justify-between text-[10px] font-bold text-outline tracking-wider uppercase">
+<span>04:12:30</span>
+<span class="text-on-surface/40">Chapter 4 of 9</span>
+<span>06:22:15</span>
+</div>
+<div class="relative h-1.5 w-full bg-surface-variant/40 rounded-full overflow-hidden">
+<div class="absolute top-0 left-0 h-full w-[65%] bg-gradient-to-r from-primary to-primary-container rounded-full"></div>
+</div>
+</div>
+<div class="flex items-center gap-6 min-w-fit">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-xl">volume_down</span>
+<div class="relative w-24 h-1 bg-surface-variant/40 rounded-full">
+<div class="absolute h-full w-3/4 bg-primary/60 rounded-full"></div>
+</div>
+</div>
+<div class="h-6 w-px bg-outline-variant/30 hidden lg:block"></div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/30 transition-colors">
+<span class="text-xs font-bold text-primary">1.2x</span>
+</button>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/30 transition-colors">
+<span class="material-symbols-outlined text-primary text-xl">bedtime</span>
+<span class="text-xs font-bold text-primary">30m</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</body></html>
