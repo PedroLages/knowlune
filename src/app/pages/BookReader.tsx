@@ -25,7 +25,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router'
 import type { Rendition } from 'epubjs'
 import type { NavItem } from 'epubjs'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ChevronDown } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { useBookStore } from '@/stores/useBookStore'
 import { useReaderStore } from '@/stores/useReaderStore'
@@ -82,6 +82,13 @@ function LoadingSkeleton({ message = 'Loading book...' }: { message?: string }) 
 export function BookReader() {
   const { bookId } = useParams<{ bookId: string }>()
   const navigate = useNavigate()
+  const handleMinimize = useCallback(() => {
+    if (window.history.length > 1) {
+      navigate(-1)
+    } else {
+      navigate('/library')
+    }
+  }, [navigate])
   const [searchParams] = useSearchParams()
   const books = useBookStore(s => s.books)
   const isLoaded = useBookStore(s => s.isLoaded)
@@ -368,13 +375,13 @@ export function BookReader() {
           setSettingsOpen(!useReaderStore.getState().settingsOpen)
           break
         case 'Escape':
-          navigate('/library')
+          handleMinimize()
           break
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [navigate])
+  }, [handleMinimize])
 
   /** Debounced position save: persists CFI + progress to Dexie and updates BookStore */
   const debouncedSavePosition = useCallback(
@@ -654,14 +661,18 @@ export function BookReader() {
       >
         {/* Minimal header for back navigation + bookmarks */}
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-          <button
-            onClick={() => navigate('/library')}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors min-h-[44px] flex items-center"
-            aria-label="Back to Library"
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleMinimize}
+            className="min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground"
+            aria-label="Minimize player"
+            data-testid="audiobook-minimize-button"
           >
-            ← Library
-          </button>
+            <ChevronDown className="size-5" />
+          </Button>
           <button
+            type="button"
             onClick={() => setAudiobookBookmarksOpen(true)}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors min-h-[44px] flex items-center"
             aria-label="View bookmarks"
