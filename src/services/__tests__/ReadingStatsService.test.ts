@@ -503,13 +503,11 @@ describe('computeETA', () => {
     expect(result).toBe('≈ 22 weeks')
   })
 
-  it('returns "≈ 1 week" (singular) for exactly 7-day ETA', async () => {
-    // Need exactly ceil(etaDays/7) = 1, so etaDays = 1..7
-    // 300 pages, 98% done = 6 remaining
-    // Speed: 60 p/hr, 3hr in 30 days → avgPagesPerDay = 6
-    // ETA = 6 / 6 = 1 day → "≈ 1 day" (not week)
-    // For "1 week": need 8-14 days remaining
-    // 300 pages, 95% done = 15 remaining; avgPagesPerDay = 2 → ETA = ceil(15/2) = 8 days → "≈ 1 week"
+  it('returns "≈ N weeks" for multi-week ETAs', async () => {
+    // 300 pages, 90% done = 30 remaining
+    // Speed: 60 p/hr, 1hr in 30 days → avgPagesPerDay = 2
+    // ETA = ceil(30/2) = 15 days → ceil(15/7) = 3 weeks
+    // Note: "≈ 1 week" singular is unreachable — etaDays > 14 means weeks >= ceil(15/7) = 3
     vi.mocked(db.studySessions.where).mockReturnValue({
       equals: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([
@@ -519,24 +517,7 @@ describe('computeETA', () => {
     } as never)
 
     const { computeETA } = await import('@/services/ReadingStatsService')
-    // avgPagesPerDay = 60 * 1 / 30 = 2; 300 * 5% = 15 remaining; ceil(15/2) = 8 > 14? No → "≈ 8 days"
-    // Try progress: 75% → 75 remaining; ceil(75/2) = 38 days → ceil(38/7) = 6 weeks
-    // For "1 week": need 8-14 days
-    // 300 * 5% = 15 remaining; 2 p/day; ceil(15/2) = 8 → 8 <= 14 → "≈ 8 days" not week
-    // Need > 14 days: 300 * 10% = 30 remaining; 2 p/day; ceil(30/2) = 15 → "≈ 3 weeks"? No, ceil(15/7) = 3
-    // For exactly "1 week": etaDays = 8..14 (ceil(x/7)=1 when x<=7, ceil(8/7)=2...)
-    // Actually ceil(7/7)=1 → need etaDays=7
-    // 30 remaining, 6 p/day → ETA = ceil(30/6) = 5 days → "≈ 5 days"
-    // Need etaDays exactly 15: 15/7 = 2.14 → ceil = 2 weeks
-    // "1 week" requires ceil(etaDays/7) = 1, so etaDays <= 7 AND etaDays > 14 is impossible
-    // "≈ X weeks" only triggered when etaDays > 14 → minimum is ceil(15/7) = 3 weeks
-    // Wait: ceil(15/7) = ceil(2.14) = 3, so "≈ 3 weeks"
-    // Actually "≈ 1 week" requires etaDays in (14,21] where ceil(days/7)=ceil(days/7)...
-    // 15 → ceil(15/7) = 3; 21 → ceil(21/7) = 3; 8 → ceil(8/7) = 2
-    // "≈ 1 week" is never reachable with current formula since it requires etaDays > 14 and ceil(x/7) = 1 which needs x <= 7.
-    // This is a dead code path — let's just verify the plural "≈ 2 weeks" path instead
     const result = await computeETA({ id: 'b1', status: 'reading', totalPages: 300, progress: 90 }, 60)
-    // 300 * 10% = 30 remaining; 60 * 1hr / 30 = 2 p/day; ceil(30/2) = 15 → "≈ 3 weeks"? ceil(15/7)=3
     expect(result).toBe('≈ 3 weeks')
   })
 })

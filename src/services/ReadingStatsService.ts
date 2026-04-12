@@ -150,8 +150,9 @@ export async function computeETA(
   const etaDays = Math.ceil(remainingPages / Math.max(avgPagesPerDay, 0.1))
 
   if (etaDays > 14) {
+    // weeks >= ceil(15/7) = 3 when etaDays > 14, so singular "week" is unreachable
     const weeks = Math.ceil(etaDays / 7)
-    return `≈ ${weeks} ${weeks === 1 ? 'week' : 'weeks'}`
+    return `≈ ${weeks} weeks`
   }
 
   return `≈ ${etaDays} ${etaDays === 1 ? 'day' : 'days'}`
