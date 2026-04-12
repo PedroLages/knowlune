@@ -43,10 +43,30 @@ const QUEUE_ENTRY_1 = {
   addedAt: FIXED_DATE,
 }
 
+const BOOK_3 = {
+  id: 'q-book-3',
+  title: 'Neuromancer',
+  author: 'William Gibson',
+  format: 'epub',
+  status: 'unread',
+  tags: [],
+  chapters: [],
+  source: { type: 'local', opfsPath: '/test3' },
+  progress: 0,
+  createdAt: FIXED_DATE,
+}
+
 const QUEUE_ENTRY_2 = {
   id: 'qe-2',
   bookId: 'q-book-2',
   sortOrder: 1,
+  addedAt: FIXED_DATE,
+}
+
+const QUEUE_ENTRY_3 = {
+  id: 'qe-3',
+  bookId: 'q-book-3',
+  sortOrder: 2,
   addedAt: FIXED_DATE,
 }
 
@@ -164,5 +184,52 @@ test.describe('Reading Queue (E110-S03)', () => {
 
     // Count badge should show 1
     await expect(badge).toHaveText('1')
+  })
+
+  test('drag-and-drop reorders queue and persists after reload (AC-4)', async ({ page }) => {
+    await navigateAndWait(page, '/')
+    await seedBooks(page, [BOOK_1, BOOK_2, BOOK_3])
+    await seedReadingQueue(page, [QUEUE_ENTRY_1, QUEUE_ENTRY_2, QUEUE_ENTRY_3])
+    await navigateAndWait(page, '/library')
+
+    // Verify initial DOM order: book-1, book-2, book-3
+    const items = page.locator('[data-testid^="queue-item-q-book-"]')
+    await expect(items).toHaveCount(3)
+    await expect(items.nth(0)).toHaveAttribute('data-testid', 'queue-item-q-book-1')
+    await expect(items.nth(1)).toHaveAttribute('data-testid', 'queue-item-q-book-2')
+
+    // Drag book-2's handle above book-1 using pointer events
+    const handle = page.getByTestId('queue-drag-handle-q-book-2')
+    const target = page.getByTestId('queue-item-q-book-1')
+
+    const handleBox = await handle.boundingBox()
+    const targetBox = await target.boundingBox()
+    if (!handleBox || !targetBox) throw new Error('Could not get bounding boxes for drag test')
+
+    const startX = handleBox.x + handleBox.width / 2
+    const startY = handleBox.y + handleBox.height / 2
+    const endX = targetBox.x + targetBox.width / 2
+    // Drop in upper quarter of book-1 to place above it
+    const endY = targetBox.y + targetBox.height / 4
+
+    await page.mouse.move(startX, startY)
+    await page.mouse.down()
+    // Activate PointerSensor: needs ≥5px movement before drag starts
+    await page.mouse.move(startX, startY - 6, { steps: 4 })
+    // Gradually move to target position
+    await page.mouse.move(endX, endY, { steps: 20 })
+    await page.mouse.up()
+
+    // Assert new order: book-2 is now before book-1
+    await expect(items.nth(0)).toHaveAttribute('data-testid', 'queue-item-q-book-2')
+    await expect(items.nth(1)).toHaveAttribute('data-testid', 'queue-item-q-book-1')
+
+    // Reload and assert order persists (was saved to IndexedDB)
+    await page.reload()
+    await page.waitForLoadState('load')
+
+    const reloadedItems = page.locator('[data-testid^="queue-item-q-book-"]')
+    await expect(reloadedItems.nth(0)).toHaveAttribute('data-testid', 'queue-item-q-book-2')
+    await expect(reloadedItems.nth(1)).toHaveAttribute('data-testid', 'queue-item-q-book-1')
   })
 })
