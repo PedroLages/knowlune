@@ -25,7 +25,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router'
 import type { Rendition } from 'epubjs'
 import type { NavItem } from 'epubjs'
 import { toast } from 'sonner'
-import { Loader2, ChevronDown } from 'lucide-react'
+import { Loader2, ChevronDown, Bookmark } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { useBookStore } from '@/stores/useBookStore'
 import { useReaderStore } from '@/stores/useReaderStore'
@@ -671,14 +671,15 @@ export function BookReader() {
           >
             <ChevronDown className="size-5" />
           </Button>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setAudiobookBookmarksOpen(true)}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors min-h-[44px] flex items-center"
+            className={`min-h-[44px] min-w-[44px] hover:text-foreground ${audiobookBookmarksOpen ? 'text-foreground' : 'text-muted-foreground'}`}
             aria-label="View bookmarks"
           >
-            Bookmarks
-          </button>
+            <Bookmark className={`size-5 ${audiobookBookmarksOpen ? 'fill-current' : ''}`} />
+          </Button>
         </div>
         <Suspense
           fallback={
