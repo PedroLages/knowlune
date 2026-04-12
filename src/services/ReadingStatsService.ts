@@ -325,7 +325,9 @@ export async function getGenreDistribution(): Promise<GenreDataPoint[] | null> {
   // Sort by count desc
   const sorted = Array.from(genreCounts.entries()).sort(([, a], [, b]) => b - a)
 
-  // Cap at 8 named genres, rest → Other
+  // Cap at 8 named genres, rest → Other.
+  // Priority: size cap (8) takes precedence over the 5% threshold — a genre above 5%
+  // that falls outside the top 8 is still grouped into Other (AC2: legend caps at 8).
   const threshold = total * 0.05
   const named: GenreDataPoint[] = []
   let otherCount = 0
@@ -377,13 +379,16 @@ export async function getReadingSummary(): Promise<ReadingSummary | null> {
     // Intentional: localStorage may be unavailable in test environments — silently ignore
   }
 
-  // Compute session-based metrics across all book sessions
+  // Compute session-based metrics — scope to finished books only so that
+  // avgPagesPerSession numerator (finished book pages) matches the denominator (finished book sessions)
   const allSessions = await getBookSessions()
+  const finishedBookIds = new Set(finishedBooks.map(b => b.id))
   let totalDuration = 0
   let sessionCount = 0
   let longestDuration = 0
 
   for (const session of allSessions) {
+    if (!session.contentItemId || !finishedBookIds.has(session.contentItemId)) continue
     const d = session.duration ?? 0
     if (d <= 0) continue
     totalDuration += d
@@ -391,7 +396,7 @@ export async function getReadingSummary(): Promise<ReadingSummary | null> {
     if (d > longestDuration) longestDuration = d
   }
 
-  // Avg pages per session: use finished books' total pages / session count
+  // Avg pages per session: finished books' total pages / finished books' session count
   const totalPages = finishedBooks.reduce((sum, b) => sum + (b.totalPages ?? 0), 0)
   const avgPagesPerSession = sessionCount > 0 && totalPages > 0
     ? Math.round(totalPages / sessionCount)

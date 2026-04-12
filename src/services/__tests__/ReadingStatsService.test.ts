@@ -706,6 +706,49 @@ describe('getGenreDistribution', () => {
     await getGenreDistribution()
     expect(anyOfMock).toHaveBeenCalledWith(['reading', 'finished', 'want-to-read'])
   })
+
+  it('counts want-to-read books in genre distribution', async () => {
+    vi.mocked(db.books.where).mockReturnValue({
+      anyOf: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          { id: 'b1', status: 'want-to-read', genre: 'Fantasy' },
+          { id: 'b2', status: 'want-to-read', genre: 'Fantasy' },
+          { id: 'b3', status: 'finished', genre: 'Fantasy' },
+        ]),
+      }),
+    } as never)
+
+    const { getGenreDistribution } = await import('@/services/ReadingStatsService')
+    const result = await getGenreDistribution()
+    expect(result).not.toBeNull()
+    const fantasy = result!.find(d => d.genre === 'Fantasy')
+    // All 3 books (want-to-read + finished) contribute to the count
+    expect(fantasy?.count).toBe(3)
+  })
+
+  it('caps named genres at 8, remaining go into Other', async () => {
+    // 9 genres each with 10 books (well above 5% threshold), one extra
+    const genres = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
+    const books = genres.flatMap((genre, i) =>
+      Array.from({ length: 10 }, (_, j) => ({ id: `b${i}-${j}`, status: 'finished', genre }))
+    )
+    vi.mocked(db.books.where).mockReturnValue({
+      anyOf: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue(books),
+      }),
+    } as never)
+
+    const { getGenreDistribution } = await import('@/services/ReadingStatsService')
+    const result = await getGenreDistribution()
+    expect(result).not.toBeNull()
+    // 8 named + 1 Other = 9 entries total
+    const namedGenres = result!.filter(d => d.genre !== 'Other')
+    const other = result!.find(d => d.genre === 'Other')
+    expect(namedGenres).toHaveLength(8)
+    expect(other).toBeDefined()
+    // 9th genre (10 books) goes into Other
+    expect(other?.count).toBe(10)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -794,7 +837,7 @@ describe('getReadingSummary', () => {
     expect(result!.mostReadAuthor).toBe('Alpha Author')
   })
 
-  it('computes longestSessionMinutes from all sessions', async () => {
+  it('computes longestSessionMinutes and avgPagesPerSession from finished-book sessions', async () => {
     vi.mocked(db.books.where).mockReturnValue({
       equals: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([
@@ -809,13 +852,43 @@ describe('getReadingSummary', () => {
           { contentItemId: 'b1', startTime: '2026-04-05T10:00:00Z', duration: 3600 },  // 1 hour
           { contentItemId: 'b1', startTime: '2026-04-04T10:00:00Z', duration: 9000 },  // 2.5 hours → longest
           { contentItemId: 'b1', startTime: '2026-04-03T10:00:00Z', duration: 1800 },  // 30 min
+          // In-progress book session — should be excluded from avgPagesPerSession
+          { contentItemId: 'in-progress-book', startTime: '2026-04-05T12:00:00Z', duration: 7200 },
         ]),
       }),
     } as never)
 
     const { getReadingSummary } = await import('@/services/ReadingStatsService')
     const result = await getReadingSummary()
-    // 9000 seconds / 60 = 150 minutes
+    // 9000 seconds / 60 = 150 minutes (longest)
     expect(result!.longestSessionMinutes).toBe(150)
+    // 300 pages / 3 finished-book sessions = 100 pages/session (excludes in-progress session)
+    expect(result!.avgPagesPerSession).toBe(100)
+  })
+
+  it('reads yearlyGoal from localStorage when set', async () => {
+    // Seed localStorage with a reading goal
+    localStorage.setItem('knowlune:reading-goal', JSON.stringify({ yearlyBookTarget: 24, updatedAt: '2026-01-01T00:00:00Z' }))
+
+    vi.mocked(db.books.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          { id: 'b1', status: 'finished', totalPages: 200, author: 'Author', finishedAt: '2026-03-01T00:00:00Z' },
+        ]),
+        count: vi.fn().mockResolvedValue(1),
+      }),
+    } as never)
+    vi.mocked(db.studySessions.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+      }),
+    } as never)
+
+    const { getReadingSummary } = await import('@/services/ReadingStatsService')
+    const result = await getReadingSummary()
+    expect(result!.yearlyGoal).toBe(24)
+
+    // Cleanup
+    localStorage.removeItem('knowlune:reading-goal')
   })
 })
