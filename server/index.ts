@@ -394,7 +394,11 @@ app.use('/api/abs/proxy', (req, res, next) => {
 
       // Non-cover binary: stream with backpressure via pipeline
       const nodeStream = Readable.fromWeb(response.body as import('stream/web').ReadableStream)
-      await pipeline(nodeStream, res)
+      try {
+        await pipeline(nodeStream, res)
+      } catch {
+        // silent-catch-ok: pipeline errors are expected on client disconnect (seek, navigate away)
+      }
       return
     }
 
@@ -404,6 +408,7 @@ app.use('/api/abs/proxy', (req, res, next) => {
   } catch (error) {
     // silent-catch-ok — returns structured error to client
     clearTimeout(timeoutId)
+    if (res.headersSent) return // Headers already sent (streaming in progress) — can't send error
     if ((error as Error).name === 'AbortError') {
       if (controller.signal.reason === 'client-disconnect') return
       res.status(504).json({ error: 'Server timed out' })
