@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-fixed": "#20133f",
+                    "tertiary-fixed": "#ffdcbc",
+                    "surface-variant": "#e4e3d7",
+                    "surface-dim": "#dbdbcf",
+                    "surface-container-high": "#e9e9dd",
+                    "surface-container-highest": "#e4e3d7",
+                    "surface-tint": "#6b46c1",
+                    "on-primary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "on-primary-container": "#e1d2ff",
+                    "primary-fixed": "#e9ddff",
+                    "tertiary-fixed-dim": "#ffb86a",
+                    "secondary-fixed": "#e9ddff",
+                    "secondary-container": "#d7c6fe",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "on-surface-variant": "#494453",
+                    "on-primary-fixed-variant": "#522aa7",
+                    "on-primary-fixed": "#23005c",
+                    "on-background": "#1b1c15",
+                    "error-container": "#ffdad6",
+                    "error": "#ba1a1a",
+                    "on-error-container": "#93000a",
+                    "background": "#fbfaee",
+                    "outline-variant": "#cbc3d5",
+                    "on-secondary-fixed-variant": "#4c3f6d",
+                    "primary-container": "#6b46c1",
+                    "on-tertiary-fixed": "#2c1700",
+                    "secondary-fixed-dim": "#cfbef5",
+                    "on-secondary-container": "#5e5080",
+                    "inverse-surface": "#303129",
+                    "primary": "#532aa8",
+                    "inverse-primary": "#d0bcff",
+                    "inverse-on-surface": "#f2f1e5",
+                    "surface-container-low": "#f5f4e8",
+                    "on-surface": "#1b1c15",
+                    "surface": "#fbfaee",
+                    "on-tertiary-fixed-variant": "#683d00",
+                    "surface-container": "#efeee3",
+                    "outline": "#7a7484",
+                    "secondary": "#645787",
+                    "primary-fixed-dim": "#d0bcff",
+                    "tertiary-container": "#895200",
+                    "surface-bright": "#fbfaee",
+                    "on-tertiary-container": "#ffd1a2",
+                    "tertiary": "#683d00"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Noto Serif"],
+                    "body": ["Manrope"],
+                    "label": ["Manrope"]
+            }
+          },
+        }
+      }
+    </script>
+<style>.glass-panel {
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px)
+    }
+.material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24
+    }
+.bg-blur-cover {
+    background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuB2ImJY6KrHSHsQq4nMHW_fVzXxUdd67G6k2u4XF6JhIrP6z0MaZwpNqYmCuCYbz4qE8huyUuFyxXQoWw9RmcDxOrq5rjnGImqjvOuliNHB86GYVIHvdVJpEXyWSM7LwVo0l71mBKK8LMEyj8nP2237MWj5jeKpHBWxqMoyju7kCVpsjvRxGLGUPnH-JUJGV5U18sXVYLZoiWn91JJqDKW4Y_5kWu_rNI8kVGK-HzGqpAVEE6A5EQd4by_t74-HUkiqJMn8JP1aB64);
+    filter: blur(80px) saturate(1.5);
+    transform: scale(1.2)
+    }
+.custom-shadow {
+    box-shadow: 0 40px 60px -15px rgba(27, 28, 21, 0.25)
+    }</style>
+</head>
+<body class="bg-background font-body text-on-surface overflow-hidden h-screen w-full relative">
+<!-- Immersive Background Layer -->
+<div class="absolute inset-0 z-0 bg-blur-cover bg-cover bg-center opacity-30"></div>
+<div class="absolute inset-0 z-1 bg-gradient-to-b from-background/40 via-background/80 to-background"></div>
+<div class="relative z-10 h-full flex flex-col md:flex-row max-w-[1400px] mx-auto px-6 py-8 gap-12 overflow-hidden">
+<!-- Left Section: Navigation & Player Core -->
+<div class="flex-1 flex flex-col justify-between h-full">
+<!-- Minimal Header -->
+<header class="flex items-center justify-between">
+<button class="w-12 h-12 flex items-center justify-center rounded-full glass-panel hover:bg-white/60 transition-colors">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<div class="text-center">
+<span class="text-xs font-bold tracking-widest uppercase text-outline opacity-70">Now Playing</span>
+</div>
+<button class="w-12 h-12 flex items-center justify-center rounded-full glass-panel hover:bg-white/60 transition-colors">
+<span class="material-symbols-outlined text-primary">more_vert</span>
+</button>
+</header>
+<!-- Book Cover -->
+<div class="flex-1 flex flex-col items-center justify-center py-8">
+<div class="relative group max-w-[320px] lg:max-w-[420px]">
+<img alt="The Great Gatsby Book Cover" class="rounded-xl custom-shadow w-full aspect-[2/3] object-cover" data-alt="Premium minimalist book cover for The Great Gatsby featuring Art Deco gold patterns on a deep emerald and black background, elegant serif typography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrbQC4twTFtNNsOjPvWrcnB5uF8ur0Z_MOuMHsUF4v4RVYtnnWB_-8PczP7YX7yjIMMiC33HOXwKdKMsFurZmfZ-1__BQvIvCQ5BbpfqeVAs85NKRq2uRYuaB0JbhG7oUP39r-9iyAo4LS-GHyToLCMLgV9LxtXPc0wyyAb3HgmI1nLMeolVZJwY5FFVzH0phynNGMid4LwKdunulo14wfC9BoAmsHZ9fkvr0YJaiK1L8lvDWczoS6evd6Iflj-kCzf3Yj8T-dS-g"/>
+</div>
+<div class="mt-10 text-center space-y-2">
+<h1 class="font-headline text-4xl lg:text-5xl font-bold tracking-tight text-on-surface">The Great Gatsby</h1>
+<p class="text-lg lg:text-xl text-primary font-medium opacity-80">F. Scott Fitzgerald</p>
+</div>
+</div>
+<!-- Playback Controls -->
+<div class="space-y-8 pb-8">
+<!-- Scrubber -->
+<div class="space-y-2 px-4">
+<div class="relative h-1.5 w-full bg-surface-variant/40 rounded-full overflow-hidden">
+<div class="absolute top-0 left-0 h-full w-[65%] bg-gradient-to-r from-primary to-primary-container rounded-full"></div>
+</div>
+<div class="flex justify-between text-xs font-semibold text-outline tracking-wider">
+<span>04:12:30</span>
+<span>06:22:15</span>
+</div>
+</div>
+<!-- Main Buttons -->
+<div class="flex items-center justify-center gap-8 lg:gap-12">
+<button class="text-on-surface/60 hover:text-primary transition-colors" title="Rewind 10s">
+<span class="material-symbols-outlined text-3xl">replay_10</span>
+</button>
+<button class="text-on-surface/60 hover:text-primary transition-colors" title="Previous Chapter">
+<span class="material-symbols-outlined text-4xl">skip_previous</span>
+</button>
+<button class="w-20 h-20 flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary-container text-white shadow-lg hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-5xl" style="font-variation-settings: 'FILL' 1;">pause</span>
+</button>
+<button class="text-on-surface/60 hover:text-primary transition-colors" title="Next Chapter">
+<span class="material-symbols-outlined text-4xl">skip_next</span>
+</button>
+<button class="text-on-surface/60 hover:text-primary transition-colors" title="Forward 30s">
+<span class="material-symbols-outlined text-3xl">forward_30</span>
+</button>
+</div>
+<!-- Secondary Controls Bar -->
+<div class="flex items-center justify-between glass-panel px-6 py-4 rounded-full max-w-lg mx-auto border border-white/20">
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-white/30 transition-colors">
+<span class="text-xs font-bold text-primary">1.2x</span>
+<span class="text-[10px] uppercase font-bold text-outline">Speed</span>
+</button>
+<div class="h-6 w-px bg-outline-variant/30"></div>
+<div class="flex items-center gap-3 flex-1 px-6">
+<span class="material-symbols-outlined text-primary text-xl">volume_down</span>
+<div class="relative flex-1 h-1 bg-surface-variant/40 rounded-full">
+<div class="absolute h-full w-3/4 bg-primary/60 rounded-full"></div>
+<div class="absolute h-3 w-3 bg-white border-2 border-primary rounded-full top-1/2 -translate-y-1/2 left-3/4 -ml-1.5 shadow-sm"></div>
+</div>
+</div>
+<div class="h-6 w-px bg-outline-variant/30"></div>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-white/30 transition-colors">
+<span class="material-symbols-outlined text-primary text-xl">bedtime</span>
+<span class="text-xs font-bold text-primary">30m</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Right Section: Chapter List (Always visible desktop-side menu) -->
+<aside class="hidden lg:flex w-[400px] flex-col glass-panel rounded-3xl border border-white/20 overflow-hidden shadow-2xl">
+<div class="p-8 border-b border-white/10">
+<h2 class="font-headline text-2xl font-bold text-on-surface">Chapters</h2>
+<p class="text-sm text-outline font-medium mt-1">9 total chapters • 6h 22m</p>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-2">
+<!-- Chapter Item -->
+<div class="flex items-center gap-4 p-4 rounded-2xl hover:bg-white/30 transition-colors cursor-pointer group">
+<span class="text-xs font-bold text-outline w-6">01</span>
+<div class="flex-1">
+<h3 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Chapter One</h3>
+<p class="text-xs text-outline">48 minutes</p>
+</div>
+<span class="material-symbols-outlined text-outline-variant opacity-0 group-hover:opacity-100 transition-opacity">play_circle</span>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-2xl hover:bg-white/30 transition-colors cursor-pointer group">
+<span class="text-xs font-bold text-outline w-6">02</span>
+<div class="flex-1">
+<h3 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Chapter Two</h3>
+<p class="text-xs text-outline">32 minutes</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-2xl hover:bg-white/30 transition-colors cursor-pointer group">
+<span class="text-xs font-bold text-outline w-6">03</span>
+<div class="flex-1">
+<h3 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Chapter Three</h3>
+<p class="text-xs text-outline">55 minutes</p>
+</div>
+</div>
+<!-- Current Playing Chapter -->
+<div class="flex items-center gap-4 p-4 rounded-2xl bg-primary/10 border border-primary/10 relative overflow-hidden">
+<div class="absolute left-0 top-0 h-full w-1.5 bg-primary"></div>
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+<div class="flex-1">
+<h3 class="text-sm font-bold text-primary">Chapter Four</h3>
+<p class="text-xs text-primary/70">Playing • 1h 12m remaining</p>
+</div>
+<div class="flex gap-0.5">
+<div class="w-0.5 h-3 bg-primary animate-pulse"></div>
+<div class="w-0.5 h-4 bg-primary animate-pulse" style="animation-delay: 0.1s"></div>
+<div class="w-0.5 h-2 bg-primary animate-pulse" style="animation-delay: 0.2s"></div>
+</div>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-2xl hover:bg-white/30 transition-colors cursor-pointer group">
+<span class="text-xs font-bold text-outline w-6">05</span>
+<div class="flex-1">
+<h3 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Chapter Five</h3>
+<p class="text-xs text-outline">41 minutes</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-2xl hover:bg-white/30 transition-colors cursor-pointer group">
+<span class="text-xs font-bold text-outline w-6">06</span>
+<div class="flex-1">
+<h3 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Chapter Six</h3>
+<p class="text-xs text-outline">38 minutes</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-2xl hover:bg-white/30 transition-colors cursor-pointer group">
+<span class="text-xs font-bold text-outline w-6">07</span>
+<div class="flex-1">
+<h3 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Chapter Seven</h3>
+<p class="text-xs text-outline">1h 05m</p>
+</div>
+</div>
+</div>
+<div class="p-6 bg-white/20">
+<button class="w-full py-4 rounded-2xl bg-surface-container-highest text-primary font-bold text-sm tracking-wide border border-white/30 shadow-sm hover:bg-white/40 transition-colors">
+                    View Full Tracklist
+                </button>
+</div>
+</aside>
+</div>
+<!-- Floating Tray Mobile (Indicator for chapters) -->
+<div class="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] max-w-md">
+<button class="w-full glass-panel py-4 rounded-full flex items-center justify-center gap-3 border border-white/30 shadow-xl">
+<span class="material-symbols-outlined text-primary">list_alt</span>
+<span class="font-bold text-sm text-primary uppercase tracking-widest">Chapters</span>
+</button>
+</div>
+</body></html>

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Audiobook Collections - The Luminary</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container": "#f0eee6",
+                        "on-primary-fixed-variant": "#522aa7",
+                        "on-secondary-fixed": "#20133f",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#6b46c1",
+                        "secondary": "#645787",
+                        "secondary-container": "#d7c6fe",
+                        "surface-container-low": "#f5f4ec",
+                        "inverse-on-surface": "#f3f1e9",
+                        "surface-container-high": "#eae8e0",
+                        "primary-fixed-dim": "#d0bcff",
+                        "tertiary-fixed-dim": "#ffb86a",
+                        "on-background": "#1b1c17",
+                        "secondary-fixed-dim": "#cfbef5",
+                        "primary": "#532aa8",
+                        "on-tertiary-container": "#ffd1a2",
+                        "inverse-surface": "#30312c",
+                        "on-tertiary-fixed": "#2c1700",
+                        "surface": "#fbf9f1",
+                        "on-primary-fixed": "#23005c",
+                        "on-surface": "#1b1c17",
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#cbc3d5",
+                        "on-secondary-container": "#5e5080",
+                        "inverse-primary": "#d0bcff",
+                        "tertiary-container": "#895200",
+                        "tertiary-fixed": "#ffdcbc",
+                        "on-error": "#ffffff",
+                        "error": "#ba1a1a",
+                        "on-primary": "#ffffff",
+                        "tertiary": "#683d00",
+                        "on-error-container": "#93000a",
+                        "on-primary-container": "#e1d2ff",
+                        "surface-bright": "#fbf9f1",
+                        "surface-container-highest": "#e4e3db",
+                        "surface-dim": "#dcdad2",
+                        "on-surface-variant": "#494453",
+                        "error-container": "#ffdad6",
+                        "primary-fixed": "#e9ddff",
+                        "on-secondary-fixed-variant": "#4c3f6d",
+                        "on-tertiary-fixed-variant": "#683d00",
+                        "surface-tint": "#6b46c1",
+                        "secondary-fixed": "#e9ddff",
+                        "surface-variant": "#e4e3db",
+                        "background": "#fbf9f1",
+                        "outline": "#7a7484"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fbf9f1;
+            color: #1b1c17;
+        }
+        .editorial-shadow {
+            box-shadow: 0 10px 40px -10px rgba(27, 28, 23, 0.06);
+        }
+    </style>
+</head>
+<body class="bg-surface">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-[#fbf9f1]/70 dark:bg-stone-950/70 backdrop-blur-xl shadow-sm shadow-stone-200/50 dark:shadow-none">
+<nav class="flex justify-between items-center px-8 py-4 w-full max-w-screen-2xl mx-auto">
+<div class="font-manrope font-black text-2xl tracking-tight text-stone-900 dark:text-stone-100">
+                The Luminary
+            </div>
+<div class="hidden md:flex items-center gap-8">
+<a class="font-manrope font-bold text-lg text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 transition-colors" href="#">Library</a>
+<a class="font-manrope font-bold text-lg text-purple-700 dark:text-purple-400 border-b-2 border-purple-600" href="#">Collections</a>
+<a class="font-manrope font-bold text-lg text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 transition-colors" href="#">Account</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-stone-100/50 dark:hover:bg-stone-800/50 transition-colors">
+<span class="material-symbols-outlined text-on-surface">notifications</span>
+</button>
+<button class="p-2 rounded-full hover:bg-stone-100/50 dark:hover:bg-stone-800/50 transition-colors">
+<span class="material-symbols-outlined text-on-surface">settings</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden ml-2 ring-2 ring-primary-container/20">
+<img alt="User account profile" data-alt="close-up portrait of a woman with soft lighting and neutral background for profile image" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9jV7Xf7N-hATBxCI6QUqD_A04QuhuT7JuVI2co4rr-8ZCUT4N_l-tud58qy3590iObNfaIKXoF1hlm1ldYCPzZRScf83betV9lC0vsB2NZR5ROOel6V9IVhzWhpT4ZunqgXeFWs-AKIYFSTo0eiiOYFuVeEu_3Bk_1lZFbBTyxvhjK-Wzf3XhmUQxHGwrKtF2eMd6rE08NxCXiYx-BC30gNcYa2rYEhXl45BI7pfJD3BAwMiVw3dQ6SSUDmi-R9l7T2vUp7NXqeQ"/>
+</div>
+</div>
+</nav>
+</header>
+<!-- SideNavBar (Desktop Only) -->
+<aside class="h-screen w-64 fixed left-0 top-0 pt-24 bg-[#f5f4ec] dark:bg-stone-900 hidden lg:flex flex-col gap-2 p-6 z-40">
+<div class="px-4 mb-6">
+<h3 class="font-manrope font-bold text-xs uppercase tracking-widest text-on-surface-variant/60">Filters</h3>
+<p class="font-inter text-xs text-on-surface-variant/80">Organize your library</p>
+</div>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-4 py-3 text-stone-500 dark:text-stone-400 hover:bg-stone-200/50 dark:hover:bg-stone-800/30 rounded-full transition-all group" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-manrope font-semibold text-sm">Recent</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-stone-800 text-purple-700 dark:text-purple-300 rounded-full shadow-sm group" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">library_books</span>
+<span class="font-manrope font-semibold text-sm">All Collections</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-stone-500 dark:text-stone-400 hover:bg-stone-200/50 dark:hover:bg-stone-800/30 rounded-full transition-all group" href="#">
+<span class="material-symbols-outlined">bookmark</span>
+<span class="font-manrope font-semibold text-sm">Favorites</span>
+</a>
+</nav>
+<div class="mt-auto flex flex-col gap-1">
+<a class="flex items-center gap-3 px-4 py-3 text-stone-500 dark:text-stone-400 hover:bg-stone-200/50 dark:hover:bg-stone-800/30 rounded-full transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-manrope font-semibold text-sm">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-stone-500 dark:text-stone-400 hover:bg-stone-200/50 dark:hover:bg-stone-800/30 rounded-full transition-all" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<span class="font-manrope font-semibold text-sm">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="lg:ml-64 pt-24 pb-12 px-8 max-w-screen-2xl mx-auto min-h-screen">
+<header class="mb-12">
+<h1 class="font-manrope font-extrabold text-5xl text-on-surface tracking-tight mb-2">My Collections</h1>
+<p class="font-body text-lg text-on-surface-variant max-w-xl">A curated archive of your literary journeys, organized by mood and genre.</p>
+</header>
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 items-start">
+<!-- Expanded Collection Card (Classic Mysteries) -->
+<div class="xl:col-span-2 bg-white rounded-xl editorial-shadow overflow-hidden p-8 flex flex-col md:flex-row gap-10">
+<div class="md:w-1/3 flex-shrink-0">
+<div class="relative w-full aspect-[3/4] rounded-lg overflow-hidden editorial-shadow group cursor-pointer">
+<div class="grid grid-cols-2 grid-rows-2 h-full gap-1 p-2 bg-surface-container">
+<img class="w-full h-full object-cover rounded" data-alt="classic vintage book cover with gold foil lettering and dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDp_jo_YRYByKOrTbehqcS1BhCnCHEA1pVKukbyh6C2cO-6YNdXtJFx-eLoFtpMOM6Q9eKXTFmN2mN9KnduVUeA8fdWP6KQatbbddPBC3lRDfUv2Cj9uhCEf8qUJITapA2XhDIVchTCYBiVfd0ksKkpwMCHVVT9cV7ZdVWcRv3sQaXnwv32ZEUEjZ4k1kzkwPfoWb6P7g07TGALyf77LNpnnABXsno8pn96EyvuxFUaJi0Jlr-nWyj5AjjI--cYKwTRsNsRE8vAzK8"/>
+<img class="w-full h-full object-cover rounded" data-alt="minimalist modern book cover with abstract blue and white geometric patterns" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_8dDMvCl3Z0dVsrA22SsoDC-uc9Yc9LOKNBy00bS-tucIRj8iD6j9zdi5-WioCfDrVc5HZBQ0J0f__QGOaVjk56OFCOauoYja0x1_35vedCvq8Pi80NEz8XfICXOdph0IhjIPwmfiN5vJFUhFh85wjFf2U73ujQ-7ZaSDVRr67Wk_irMuOdJwqQg-TpdP1GoaLRdPTk7VB8TY4ZZF7KiEJRTBP7myEUi1UiEHeZXvsGavAeY7oZJ0nmJT91n_nXou4q-qBtknrpY"/>
+<img class="w-full h-full object-cover rounded" data-alt="illustrated book cover showing a Victorian mansion under a starry night sky" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtOv9ifCdhKvDrGLBvkk4hZliXTPVOaOHK-KOVylaDnURlomrGWgSeDW8RjAwo8dnf39RB_3LoYUs5O3o6tVz5uHRuLITL0fnnAF4cAd2v_PieYolOSOP7QyPs4rfSAi5PrJd1x8txzORhByBs0Mz58pT8-upXDipzMHxmjTvOaIJb1RCyttq0QpGZY0g7BJf-AEITMxDnahyVnBvLX55S2o9JvmXKHoP8z1gnVECNDRL2rn230Ftm6Bd4TUqkbqtQa9XBZ1GlWoE"/>
+<img class="w-full h-full object-cover rounded" data-alt="spine of several antique leather bound books on a wooden library shelf" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDaghqdkOqrjbr-mFd5q1hH9dGmvP68MGpOdnFz9fErUW4hiV1KGI8qdA820PeKBXaxodPucYbK4HCINKzV_P5s-LACVsAfVzp4RnQqDcYP6QxqQ7gNwOz0tMkTJXq9wpd4dn_0da2tuX7MBFE_AjkclRvhxTWqNSg3lC1FrOwxI2MbXfrYEqX2k_zC7DWfMyPDkRpWMLuxaJD7l4IIlZTV2yZTy9OocS72VeBzwQgdYKGWZqwat1eTfEDLlD32MiyihEzXTLzaJQA"/>
+</div>
+<div class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-5xl">play_circle</span>
+</div>
+</div>
+<div class="mt-6">
+<h2 class="font-manrope font-bold text-3xl text-on-surface mb-1">Classic Mysteries</h2>
+<div class="flex items-center gap-2 text-on-surface-variant font-medium">
+<span class="material-symbols-outlined text-base">auto_stories</span>
+<span>12 Books</span>
+</div>
+<button class="mt-6 w-full py-4 bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold rounded-full shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                            Shuffle Collection
+                        </button>
+</div>
+</div>
+<div class="flex-grow">
+<h3 class="font-manrope font-bold text-lg mb-6 border-b border-surface-container-high pb-4">Inside this Collection</h3>
+<div class="space-y-6">
+<!-- Book Entry -->
+<div class="flex items-center gap-4 group">
+<div class="w-16 h-20 bg-surface-container rounded-md overflow-hidden flex-shrink-0 editorial-shadow">
+<img class="w-full h-full object-cover" data-alt="detail of a dark green book cover with gold embossed text" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKAx1WyqzuMd6bp4tpRCyraAOx6eOxQYgBDAXH3lvklW2lEGvgP5j0p_KGqZgxPnJ2KlQAILC27KxFNQukWgjgWKItCtu2oqRAOCfmB-Dn1J3qed583GjFZ1lOrUamln92A5W5alVSsgtNPETMOFJ6Ke1FLb4EIzlS8MWAE9K3QQEdudTV1C_oNDS2ZdJvQlfovObDx_4auX1X2PBmWP_Iw90QRcDZnqxnuReBt45vtCm2ihK8lgACePRyO_HJWOHBYTIjJkRQ22s"/>
+</div>
+<div class="flex-grow">
+<h4 class="font-manrope font-bold text-on-surface leading-tight group-hover:text-primary transition-colors">The Murder of Roger Ackroyd</h4>
+<p class="text-sm text-on-surface-variant">Agatha Christie</p>
+<div class="mt-2 w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[75%] rounded-full"></div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-xs font-bold text-primary">75%</span>
+</div>
+</div>
+<!-- Book Entry -->
+<div class="flex items-center gap-4 group">
+<div class="w-16 h-20 bg-surface-container rounded-md overflow-hidden flex-shrink-0 editorial-shadow">
+<img class="w-full h-full object-cover" data-alt="night sky book illustration with stars" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDV9fVywc4Jda5IEsMLuPqgfHDEWa9u5WEYinaMDpB3ElsSi3r_Y_pLFla2bFu7By2bEKXu2I430WZ24tqnpjvqs9miDg6ZBVlGQFpj0Rod7AajnVmij-Jo8bgQaNtBTzArd89HUqIHWOTza-hHKhtSFqMFGe-6KCWxRZ8MCAioUsdGcQ_ZE7oR-vsJvwRsZnygUD0TTdujtBKHm5IG0Ot_9TS-6KgkCM0Z_iCZOc9ENVDbuuBEGr9jFGYdJTZpethLXSWa-6Jr8o"/>
+</div>
+<div class="flex-grow">
+<h4 class="font-manrope font-bold text-on-surface leading-tight group-hover:text-primary transition-colors">The Big Sleep</h4>
+<p class="text-sm text-on-surface-variant">Raymond Chandler</p>
+<div class="mt-2 w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[20%] rounded-full"></div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-xs font-bold text-primary">20%</span>
+</div>
+</div>
+<!-- Book Entry -->
+<div class="flex items-center gap-4 group">
+<div class="w-16 h-20 bg-surface-container rounded-md overflow-hidden flex-shrink-0 editorial-shadow">
+<img class="w-full h-full object-cover" data-alt="abstract white and blue book cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIihDiIwP3WmdxpqjCT8vaXb0d6mIYnfZJ9uGFN1Ek_No5m6CsXWBUIROQNb8QWteXqr-d94iFxS49iOI46JUIDtJ90cQHhfcySfb04sAS1yfJTsdKUMa6gTOWDkCTNiphXVDMxYMELBqG0mkWk1PhWFz903IJR5nckVb2XDoNiUprlnvOIV3ZwNuxEDwLKyag38YMwTHkgfeItdOsllydp-WTEnI46N015-7aIV7_g8Wuq7vhzO3Muo0oFUUr3TeA_GhIUMbXfe0"/>
+</div>
+<div class="flex-grow">
+<h4 class="font-manrope font-bold text-on-surface leading-tight group-hover:text-primary transition-colors">The Hound of the Baskervilles</h4>
+<p class="text-sm text-on-surface-variant">Arthur Conan Doyle</p>
+<div class="mt-2 w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-surface-container-highest w-full rounded-full"></div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-xs font-bold text-on-surface-variant">Unplayed</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Modern Fiction Card -->
+<div class="bg-surface-container-lowest rounded-xl p-6 editorial-shadow flex flex-col gap-6 hover:scale-[1.02] transition-transform cursor-pointer group">
+<div class="grid grid-cols-2 grid-rows-2 aspect-square rounded-lg overflow-hidden gap-2 bg-surface-container-high p-1">
+<img class="w-full h-full object-cover rounded" data-alt="modern minimalist book cover with bright yellow background and simple typography" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAxTSZ_iheLytZ1koJHF2nqg6c3MusOOi0wkyZzaPInNMu-OkW02BBnNr5GwvfQJ4r6IK7IyNh2k3gQBANv1is8BoQhEWCIdDfYH0kLawHqVvnERV78yv0Fl3-zFtZdLXreL3G8NJf6IW0WV8eQiVwlRVphWshY38QF2kG0gJ-BuifRc-cAKTU0pN9FonUmCgAM8XhMeTsaPp7VCrseWMGGB63BK4IVfxQ3UdKCKLIMJV0cdHA0CC8WoOEe_GYrdPzYZ7ZICdkX0pw"/>
+<img class="w-full h-full object-cover rounded" data-alt="contemporary novel cover featuring a watercolor landscape in soft pinks and greys" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_1Se8XR4FkirR0SBuq1F0dB4xkcaHaek_M6GYB8f0v6YFb65vmITQY_RL9x5FWk3Sk2VvT55Z-GqvZS8qhXsq9jbIaAOFjCfBw9nJzKALzhrsiwIA8czIuU5Hi5ZKW9GA5_jhMUfxdWdkvY-ZQhC--vJwOhXocnX7SnK0HnLAJfAwzjGi7D-wjHhFhfxnfPUTNAX9hSebEQdgAIbQm1wxYRqBZhopOzMMy805-tI9YZk-5Tyg3cEyBQZ-ztevB9YqilZNML6lrtQ"/>
+<img class="w-full h-full object-cover rounded" data-alt="stylized cover for a contemporary fiction book with bold red stripes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuABJshfjTwj3GXeiiGgaEPSIkXbGD5jC-3wK53kDCBb08IaoDddgXLoVrCZ7wmWIDYW7WMbEdHREw0p6dIBg2GTv0M9Pb9H6Na_i7aPQZLeYkxosznXEfrVsyLr2PUTlnrgNsTHgNa-MlX2ka0FCkhlCGOKcCF8-fcXpXX0y5MAiVwHhk9W-8Fld3WAF9UtVijZHH_RfVx14dupiHTAUhIp5uJOrjGSbks9LWXGYvgsAkXLMtwgKYBA506VbQHzuuB3j3xAYQhfgdo"/>
+<img class="w-full h-full object-cover rounded" data-alt="blurred bookstore interior background with focusing on several book spines" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeb-mjUA6ZyEfefPZzybr8ccSJRRGeHe9VTsafFdP46mJfKsSpJpQtA4TvYdYLfe4fygO833AZc_ZW9z85BcfSKX_LYlCKJ9Z-n5GU-bFdBY1ZmKwnUrZnhnTB2OsbVaTB5gOLBBTNr23a7jgC6Qgg6tzArmwfp0b4qHOnohyMyfaWw8WU8yYXSxKBMWJRJL0xuzi3nYYc9sGE1ukULsmvduF8kXOTAnASH485owFhm0sWu8JbuoFh9P9lHyiRBo-BTqf1RmbgpBc"/>
+</div>
+<div>
+<h2 class="font-manrope font-bold text-2xl text-on-surface group-hover:text-primary transition-colors">Modern Fiction</h2>
+<div class="flex items-center justify-between mt-2">
+<span class="text-sm font-medium text-on-surface-variant">24 Books</span>
+<span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+</div>
+<!-- Science Fiction Favorites Card -->
+<div class="bg-surface-container-lowest rounded-xl p-6 editorial-shadow flex flex-col gap-6 hover:scale-[1.02] transition-transform cursor-pointer group">
+<div class="grid grid-cols-2 grid-rows-2 aspect-square rounded-lg overflow-hidden gap-2 bg-surface-container-high p-1">
+<img class="w-full h-full object-cover rounded" data-alt="sci-fi book cover with a purple nebula and a silhouetted space station" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhehrTpQZXF3ru3glfK5r2HhmhA-hxcHNMF0l3JPP4g7N0IbpWN40Bos9lY4sB0WXSwRd_4RhclxZV-txpFvv8tMRXYJsFFeodsUVtpgRvBC0LA0lyr4P34sV8iUgFol1kfg4GjoRzfX_y3Bf5p4dyftGGOSXsb74QY7RXdzSHfpl3sV8nSCNp1zVyy38-eS30k-GLPovXWoyT2Zv-khx9NjkRUNN1kXfTSoCkzdZcNM-nA93Ot7LMp8hW7aKUj-GG77K7ICLDyjM"/>
+<img class="w-full h-full object-cover rounded" data-alt="earth from orbit with vibrant blue and black space background for book cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDT10YPgQ66IqO7PzQ8aH8qyniSUJ_bpVAvhroPiNZuhEoCwcXLDaohdp-Q5iN3sXgPW_TpkhE3Be0cY4Iv3V2iEhR3oWoNUX5t556fvULE814sslECUq5bpVeEsyVZhaJn1OOCJDygc6vlsRFWlNvEOzDe69XNmHhjgT1pj0CjC6ipD7Aq06sS1l3kcJln3DoLK8VMuhp-tdU2IIvmV3puQdtBfAKCDhQz0_guFJX1xEprVW5MzJUduRg_myWgH50_c4dsc2Eiqk0"/>
+<img class="w-full h-full object-cover rounded" data-alt="digital network representation in glowing blue on dark cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDflQ7OhX14gNBELhRiWSguDR53ASuSVrv5MZKmCklYBo-Ht-5tCNvmo_6ySmhQbM53PVxXvLQFQR2nIX-ZugQsaA6jMHOAzfmnU3tAZKxbliXTNOM-BOoeKL4QwH5UNXyg35S_nUFCf4ajHL56JyORaq9KQFjMBWOPaAXgmI7SfJCJJl_Kjht8pekOoV7M4x61l6YpGN5gQK2TT9GNuTb7R71yXSR00zEi6LQZ7dtUw9CCMASpWMHnfegJbEumeknbolo9a_L7dBo"/>
+<img class="w-full h-full object-cover rounded" data-alt="vast galaxy spiral with bright cosmic dust and stars" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAagP-PmBe6ozjb5HOzRFOkgv_xNWfuCe8Kr8RhPr55oDP0Sc1cKyRyhkwKi-mGj3YWrMcDCJ6e754hsNeRjtLNe0CKxpnmqCuWSAVHg0ifu6lm4mpyRduXKNJ9QDjBfQMB9uU47pZvV0QO3N64WOGOQnvNwjFFH9NIyLO-U2LflzpZwrt-IgPeJsg_8S8MqXqdJQ4ZkzrapI7-_kq0pfcs7WPfVlXIOXg0xAa9TnU-mWJxUknISTcatz7mlMlPZAf-nF-v9ILrnO4"/>
+</div>
+<div>
+<h2 class="font-manrope font-bold text-2xl text-on-surface group-hover:text-primary transition-colors">Science Fiction Favorites</h2>
+<div class="flex items-center justify-between mt-2">
+<span class="text-sm font-medium text-on-surface-variant">8 Books</span>
+<span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+</div>
+<!-- New Collection Placeholder Card -->
+<div class="bg-surface-container-low border-2 border-dashed border-outline-variant/30 rounded-xl p-6 flex flex-col items-center justify-center gap-4 hover:border-primary/50 transition-colors group cursor-pointer h-full min-h-[350px]">
+<div class="w-16 h-16 rounded-full bg-surface-container-highest flex items-center justify-center group-hover:bg-primary-container group-hover:text-on-primary-container transition-all">
+<span class="material-symbols-outlined text-3xl">add</span>
+</div>
+<div class="text-center">
+<h2 class="font-manrope font-bold text-xl text-on-surface">Create Collection</h2>
+<p class="text-sm text-on-surface-variant px-6 mt-1">Bundle your favorite audiobooks into a custom theme.</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Audio Player (Glassmorphism Signature) -->
+<div class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[calc(100%-4rem)] max-w-4xl bg-white/80 dark:bg-stone-900/80 backdrop-blur-2xl rounded-xl p-4 editorial-shadow flex items-center gap-6 z-50 border border-white/20">
+<div class="flex items-center gap-4 flex-grow">
+<div class="w-14 h-14 bg-surface-container-high rounded-md overflow-hidden editorial-shadow flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="close-up of a book cover with classic fonts" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCj5yPC4b2MClNKC3h97GM1L--pl9vzUF-6ALh7x2-iz6g30dWjpRy1rsaUOdRZgVyqTv_mo812_AdC_VtRZvvM4jBOHc38-UDVKI3p98dD5T-B5EFCpJDUgMMzyP8ijbkexRSSVJ8Jf6XLmuWuntiOLIwTQLRhkdgc7cciUkrdhYIL11LswbRZOTF4HqcF4mx16Z3r1-oVZeOy8tM4-WpNCtnlyE25gJW1ArMjRN2WeYplGvQw2GHeR3EyldjqdpsuDvroHNKdMss"/>
+</div>
+<div class="min-w-0">
+<h4 class="font-manrope font-bold text-on-surface truncate">The Murder of Roger Ackroyd</h4>
+<p class="text-xs text-on-surface-variant truncate">Chapter 14: The Flora Mystery • 12:45 left</p>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary">replay_10</button>
+<button class="w-12 h-12 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform shadow-lg shadow-primary/30">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">pause</span>
+</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary">forward_30</button>
+</div>
+<div class="hidden md:flex items-center gap-4 w-48 px-4 border-l border-surface-container-high">
+<span class="material-symbols-outlined text-on-surface-variant">volume_up</span>
+<div class="flex-grow h-1 bg-surface-container rounded-full relative">
+<div class="absolute inset-y-0 left-0 w-3/4 bg-primary rounded-full"></div>
+</div>
+</div>
+</div>
+</body></html>

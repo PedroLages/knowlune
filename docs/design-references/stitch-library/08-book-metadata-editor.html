@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Modern Editor - Book Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-surface": "#2f312e",
+                        "on-tertiary-container": "#ffd1a2",
+                        "surface": "#faf9f5",
+                        "on-tertiary-fixed": "#2c1700",
+                        "on-background": "#1b1c1a",
+                        "secondary-fixed-dim": "#cfbef5",
+                        "tertiary-fixed-dim": "#ffb86a",
+                        "primary": "#532aa8",
+                        "outline-variant": "#cbc3d5",
+                        "on-secondary-container": "#5e5080",
+                        "inverse-primary": "#d0bcff",
+                        "on-primary-fixed": "#23005c",
+                        "on-surface": "#1b1c1a",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-low": "#f4f4f0",
+                        "secondary-container": "#d7c6fe",
+                        "on-secondary-fixed": "#20133f",
+                        "on-primary-fixed-variant": "#522aa7",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container": "#efeeea",
+                        "primary-container": "#6b46c1",
+                        "secondary": "#645787",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#e9e8e4",
+                        "primary-fixed-dim": "#d0bcff",
+                        "inverse-on-surface": "#f2f1ed",
+                        "on-tertiary-fixed-variant": "#683d00",
+                        "on-secondary-fixed-variant": "#4c3f6d",
+                        "primary-fixed": "#e9ddff",
+                        "outline": "#7a7484",
+                        "surface-tint": "#6b46c1",
+                        "secondary-fixed": "#e9ddff",
+                        "background": "#faf9f5",
+                        "surface-variant": "#e3e2df",
+                        "error": "#ba1a1a",
+                        "on-primary": "#ffffff",
+                        "tertiary-container": "#895200",
+                        "tertiary-fixed": "#ffdcbc",
+                        "on-error": "#ffffff",
+                        "surface-container-highest": "#e3e2df",
+                        "surface-dim": "#dbdad6",
+                        "on-surface-variant": "#494453",
+                        "error-container": "#ffdad6",
+                        "on-error-container": "#93000a",
+                        "tertiary": "#683d00",
+                        "on-primary-container": "#e1d2ff",
+                        "surface-bright": "#faf9f5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Noto Serif"],
+                        "body": ["Plus Jakarta Sans"],
+                        "label": ["Plus Jakarta Sans"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #faf9f5; }
+        .font-serif { font-family: 'Noto Serif', serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .ghost-border { outline: 2px solid rgba(203, 195, 213, 0.2); }
+        .primary-gradient { background: linear-gradient(135deg, #532aa8 0%, #6b46c1 100%); }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#FAF9F5]/80 dark:bg-stone-900/80 backdrop-blur-xl shadow-sm dark:shadow-none">
+<div class="flex justify-between items-center px-8 h-16 w-full max-w-[1440px] mx-auto">
+<div class="text-2xl font-serif font-bold text-[#6B46C1] dark:text-[#D0BCFF]">The Modern Editor</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-[#6B46C1] dark:text-[#D0BCFF] font-bold border-b-2 border-[#6B46C1] py-1 transition-colors" href="#">All Books</a>
+<a class="text-[#1B1C1A]/60 dark:text-[#FAF9F5]/60 hover:text-[#6B46C1] transition-colors py-1" href="#">Reading</a>
+<a class="text-[#1B1C1A]/60 dark:text-[#FAF9F5]/60 hover:text-[#6B46C1] transition-colors py-1" href="#">Finished</a>
+<a class="text-[#1B1C1A]/60 dark:text-[#FAF9F5]/60 hover:text-[#6B46C1] transition-colors py-1" href="#">Wishlist</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-surface-container-high transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-on-surface-variant">search</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-high transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-[#6B46C1]">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<!-- SideNavBar (Hidden on desktop for this specific detail view but included for shell consistency) -->
+<aside class="hidden lg:flex flex-col h-screen w-64 fixed left-0 top-0 py-8 px-4 bg-[#F4F4F0] dark:bg-stone-800 z-40 pt-24">
+<div class="px-4 mb-8">
+<h2 class="font-serif text-lg font-bold text-[#6B46C1]">Library</h2>
+<p class="text-xs tracking-wide text-[#1B1C1A]/60 uppercase mt-1">The Curator's Desk</p>
+</div>
+<div class="flex flex-col gap-2 flex-grow">
+<div class="flex items-center gap-3 px-4 py-3 bg-[#FFFFFF] dark:bg-stone-700 text-[#6B46C1] dark:text-[#D0BCFF] rounded-full shadow-sm cursor-pointer transition-transform active:translate-x-1">
+<span class="material-symbols-outlined">library_books</span>
+<span class="text-sm font-medium">All Books</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 text-[#1B1C1A]/70 dark:text-[#FAF9F5]/70 hover:bg-[#FFFFFF]/50 dark:hover:bg-stone-700/50 rounded-full transition-all cursor-pointer transition-transform active:translate-x-1">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="text-sm font-medium">Reading</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 text-[#1B1C1A]/70 dark:text-[#FAF9F5]/70 hover:bg-[#FFFFFF]/50 dark:hover:bg-stone-700/50 rounded-full transition-all cursor-pointer transition-transform active:translate-x-1">
+<span class="material-symbols-outlined">check_circle</span>
+<span class="text-sm font-medium">Finished</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 text-[#1B1C1A]/70 dark:text-[#FAF9F5]/70 hover:bg-[#FFFFFF]/50 dark:hover:bg-stone-700/50 rounded-full transition-all cursor-pointer transition-transform active:translate-x-1">
+<span class="material-symbols-outlined">bookmark</span>
+<span class="text-sm font-medium">Wishlist</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 pt-8 border-t border-outline-variant/20">
+<div class="flex items-center gap-3 px-4 py-3 text-[#1B1C1A]/70 dark:text-[#FAF9F5]/70 hover:bg-[#FFFFFF]/50 rounded-full transition-all cursor-pointer">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 text-[#1B1C1A]/70 dark:text-[#FAF9F5]/70 hover:bg-[#FFFFFF]/50 rounded-full transition-all cursor-pointer">
+<span class="material-symbols-outlined">help_outline</span>
+<span class="text-sm font-medium">Support</span>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="lg:ml-64 pt-24 pb-12 px-8 max-w-[1440px] mx-auto">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+<!-- Left Side: Book Cover -->
+<div class="lg:col-span-5 flex flex-col items-center lg:items-start space-y-8">
+<div class="relative group w-full max-w-md aspect-[2/3] rounded-lg overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
+<img class="w-full h-full object-cover" data-alt="vintage book cover of The Great Gatsby with art deco gold patterns and deep blue background elegant editorial lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwO3t1-BmTNbEv-H5dP5td3zmMuJqlg_EsxxjNYwIpvfGHJu5ASOs9wWbLuPeQK4cWgCHiDJz__pdUrLHJ0o4-AIzhH8pFXug-ICeFujkjyVTzcuxlxO-GrwDsn-Dx7dL1Tn1ypUtVqWGaaz38MAffVfi2bX6UGXuenvMKMkvf0plm1oqZFIaOAvhO_8cvcxBl2esTb_yFdpA_V0A9IQsDfE0QfTl-SAjQ5OlhD5a8rPY8EIUqtyfamktSwpUxi3ESOBLDzXzDlNs"/>
+<div class="absolute inset-0 bg-on-surface/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+<button class="primary-gradient text-white px-8 py-3 rounded-full flex items-center gap-2 shadow-xl hover:scale-105 transition-transform">
+<span class="material-symbols-outlined">edit</span>
+<span class="font-semibold uppercase tracking-wider text-sm">Edit Overlay</span>
+</button>
+</div>
+</div>
+<div class="w-full max-w-md flex flex-wrap gap-3">
+<div class="px-4 py-2 bg-primary-container text-on-primary-container rounded-full text-xs font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">audio_file</span>
+                        AUDIOBOOK (MP3)
+                    </div>
+<div class="px-4 py-2 bg-surface-container-high text-primary rounded-full text-xs font-bold flex items-center gap-2 cursor-pointer hover:bg-secondary-container transition-colors">
+<span class="material-symbols-outlined text-sm">auto_stories</span>
+                        EPUB LINKED
+                    </div>
+</div>
+</div>
+<!-- Right Side: Editor Card -->
+<div class="lg:col-span-7">
+<div class="bg-surface-container-low rounded-lg p-8 lg:p-12">
+<div class="mb-10">
+<h1 class="font-serif text-4xl font-bold text-on-surface mb-2">Editor's Desk</h1>
+<p class="text-on-surface-variant font-medium">Curating metadata for <span class="text-primary italic">The Great Gatsby</span></p>
+</div>
+<form class="space-y-8">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Title -->
+<div class="flex flex-col gap-2">
+<label class="text-xs font-bold uppercase tracking-widest text-on-surface-variant px-1">Book Title</label>
+<div class="bg-surface-container-lowest rounded px-4 py-3 shadow-sm ghost-border focus-within:ring-2 focus-within:ring-primary/40 transition-all">
+<input class="w-full bg-transparent border-none p-0 focus:ring-0 text-lg font-serif text-on-surface" type="text" value="The Great Gatsby"/>
+</div>
+</div>
+<!-- Author -->
+<div class="flex flex-col gap-2">
+<label class="text-xs font-bold uppercase tracking-widest text-on-surface-variant px-1">Author</label>
+<div class="bg-surface-container-lowest rounded px-4 py-3 shadow-sm ghost-border focus-within:ring-2 focus-within:ring-primary/40 transition-all">
+<input class="w-full bg-transparent border-none p-0 focus:ring-0 text-lg font-body text-on-surface" type="text" value="F. Scott Fitzgerald"/>
+</div>
+</div>
+<!-- Narrator -->
+<div class="flex flex-col gap-2">
+<label class="text-xs font-bold uppercase tracking-widest text-on-surface-variant px-1">Narrator</label>
+<div class="bg-surface-container-lowest rounded px-4 py-3 shadow-sm ghost-border focus-within:ring-2 focus-within:ring-primary/40 transition-all">
+<input class="w-full bg-transparent border-none p-0 focus:ring-0 text-lg font-body text-on-surface" type="text" value="Jake Gyllenhaal"/>
+</div>
+</div>
+<!-- ISBN -->
+<div class="flex flex-col gap-2">
+<label class="text-xs font-bold uppercase tracking-widest text-on-surface-variant px-1">ISBN-13</label>
+<div class="bg-surface-container-lowest rounded px-4 py-3 shadow-sm ghost-border focus-within:ring-2 focus-within:ring-primary/40 transition-all">
+<input class="w-full bg-transparent border-none p-0 focus:ring-0 text-lg font-body text-on-surface" type="text" value="978-0743273565"/>
+</div>
+</div>
+</div>
+<!-- Description -->
+<div class="flex flex-col gap-2">
+<label class="text-xs font-bold uppercase tracking-widest text-on-surface-variant px-1">Description</label>
+<div class="bg-surface-container-lowest rounded px-4 py-3 shadow-sm ghost-border focus-within:ring-2 focus-within:ring-primary/40 transition-all">
+<textarea class="w-full bg-transparent border-none p-0 focus:ring-0 text-md font-body leading-relaxed text-on-surface resize-none" rows="6">A true classic of twentieth-century literature, this edition has been updated by Fitzgerald scholar James L.W. West III to include the author’s final revisions and features a note on the composition and text, a personal foreword by Fitzgerald’s granddaughter, Eleanor Lanahan—and an introduction by two-time National Book Award winner Jesmyn Ward.</textarea>
+</div>
+</div>
+<!-- Genre Tags -->
+<div class="flex flex-col gap-2">
+<label class="text-xs font-bold uppercase tracking-widest text-on-surface-variant px-1">Genre Tags</label>
+<div class="bg-surface-container-lowest rounded px-4 py-4 shadow-sm ghost-border flex flex-wrap gap-2 items-center">
+<span class="bg-primary text-white px-3 py-1 rounded-full text-sm flex items-center gap-1 font-medium">
+                                    Classic <span class="material-symbols-outlined text-xs cursor-pointer">close</span>
+</span>
+<span class="bg-primary text-white px-3 py-1 rounded-full text-sm flex items-center gap-1 font-medium">
+                                    Fiction <span class="material-symbols-outlined text-xs cursor-pointer">close</span>
+</span>
+<span class="bg-primary text-white px-3 py-1 rounded-full text-sm flex items-center gap-1 font-medium">
+                                    1920s <span class="material-symbols-outlined text-xs cursor-pointer">close</span>
+</span>
+<input class="bg-transparent border-none p-0 focus:ring-0 text-sm italic text-on-surface-variant ml-2 w-24" placeholder="Add genre..." type="text"/>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex items-center justify-end gap-4 pt-6 border-t border-outline-variant/10">
+<button class="px-8 py-3 rounded-full text-primary font-bold hover:bg-surface-container-high transition-colors active:scale-95 duration-200" type="button">
+                                CANCEL
+                            </button>
+<button class="primary-gradient text-white px-10 py-3 rounded-full font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all active:scale-95 duration-200" type="submit">
+                                SAVE CHANGES
+                            </button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-[#FAF9F5]/90 backdrop-blur-xl flex justify-around items-center h-16 z-50">
+<div class="flex flex-col items-center text-[#6B46C1]">
+<span class="material-symbols-outlined">library_books</span>
+<span class="text-[10px] font-bold">Books</span>
+</div>
+<div class="flex flex-col items-center text-[#1B1C1A]/60">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="text-[10px]">Reading</span>
+</div>
+<div class="flex flex-col items-center text-[#1B1C1A]/60">
+<span class="material-symbols-outlined">check_circle</span>
+<span class="text-[10px]">Done</span>
+</div>
+<div class="flex flex-col items-center text-[#1B1C1A]/60">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px]">Profile</span>
+</div>
+</nav>
+</body></html>
