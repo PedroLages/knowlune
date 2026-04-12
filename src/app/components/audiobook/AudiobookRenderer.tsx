@@ -444,8 +444,8 @@ export function AudiobookRenderer({
           </button>
         </div>
 
-        {/* Skip silence active indicator — shown when skip silence feature is running */}
-        <SkipSilenceActiveIndicator isActive={silenceDetection.isActive} />
+        {/* Skip silence active indicator — shown when skip silence feature is enabled */}
+        <SkipSilenceActiveIndicator isActive={skipSilence} />
 
         {/* Secondary Controls: Speed | Bookmark | Sleep Timer */}
         <div className="flex items-center gap-2 bg-card/40 backdrop-blur-2xl rounded-full px-4 py-1.5 border border-white/20">

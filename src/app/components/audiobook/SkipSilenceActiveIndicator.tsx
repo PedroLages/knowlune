@@ -19,7 +19,7 @@ export function SkipSilenceActiveIndicator({ isActive }: SkipSilenceActiveIndica
       role="status"
       aria-label={isActive ? 'Skip silence is active' : undefined}
       aria-hidden={!isActive}
-      className={`transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+      className={`transition-all duration-200 ${isActive ? 'visible opacity-100' : 'invisible opacity-0 pointer-events-none'}`}
     >
       <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-0.5 text-[10px] font-medium text-brand-soft-foreground">
         <span
