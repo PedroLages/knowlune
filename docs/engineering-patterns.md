@@ -676,6 +676,35 @@ This pattern also applies to `try/catch` blocks where multiple catch paths could
 
 **Case study:** E108-S01 — `useBulkImport` abort handling. Fixed in `f4fd82ee` after code review flagged the race.
 
+## Numerator/Denominator Scope Matching for Aggregate Metrics
+
+When computing a ratio or average from database records, verify that both the numerator and denominator reference the same scope (same book set, same session set, same time window). Scope mismatches produce silently wrong metrics.
+
+**Checklist before coding any ratio:**
+
+1. Write out: "Numerator = [sum of X] over [scope A]"
+2. Write out: "Denominator = [count of Y] over [scope B]"
+3. If scope A ≠ scope B, the ratio is suspect — align them.
+
+**Example (correct):**
+
+```text
+avgPagesPerSession (finished books only):
+  Numerator   = totalPages from finished books
+  Denominator = session count WHERE bookId IN (finished book IDs)
+```
+
+**Anti-pattern (wrong):**
+
+```text
+avgPagesPerSession:
+  Numerator   = totalPages from finished books only
+  Denominator = count of ALL sessions (including in-progress books)
+  → Denominator scope is wider → average is artificially low
+```
+
+**Case study:** E112-S02 — `avgPagesPerSession` initially summed pages from finished books but counted all sessions. Fix: scope both to `finishedBookIds`.
+
 ## Keyboard Shortcut Hooks: useRef for Zero-Render-Cost Registration
 
 When building keyboard shortcut hooks, store the shortcut map in a `useRef` (not state) and register a single `keydown` listener on `document`. This avoids re-registering the listener on every render when shortcuts change.
