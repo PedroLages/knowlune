@@ -23,6 +23,8 @@ import { useAudioListeningSession } from '@/app/hooks/useAudioListeningSession'
 import { useAudiobookshelfProgressSync } from '@/app/hooks/useAudiobookshelfProgressSync'
 import { useAudiobookshelfSocket } from '@/app/hooks/useAudiobookshelfSocket'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
+import { useAudiobookPrefsStore } from '@/stores/useAudiobookPrefsStore'
+import { useSilenceDetection } from '@/app/hooks/useSilenceDetection'
 import { SpeedControl } from './SpeedControl'
 import { SleepTimer } from './SleepTimer'
 import { ChapterList } from './ChapterList'
@@ -30,6 +32,8 @@ import { BookmarkButton } from './BookmarkButton'
 import { BookmarkListPanel } from './BookmarkListPanel'
 import { PostSessionBookmarkReview } from './PostSessionBookmarkReview'
 import { AudiobookSettingsPanel } from './AudiobookSettingsPanel'
+import { SilenceSkipIndicator } from './SilenceSkipIndicator'
+import { SkipSilenceActiveIndicator } from './SkipSilenceActiveIndicator'
 import { useAudiobookPrefsEffects } from '@/app/hooks/useAudiobookPrefsEffects'
 import { useAudiobookPositionSync } from '@/app/hooks/useAudiobookPositionSync'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
@@ -75,6 +79,8 @@ export function AudiobookRenderer({
 
   const [settingsOpen, setSettingsOpen] = useState(false)
   const setCurrentBook = useAudioPlayerStore(s => s.setCurrentBook)
+  const skipSilence = useAudiobookPrefsStore(s => s.skipSilence)
+  const silenceDetection = useSilenceDetection({ enabled: skipSilence, audioRef, isPlaying })
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
   const { activeOption, badgeText, setTimer, cancelTimer } = useSleepTimer()
   // Post-session bookmark review
@@ -275,6 +281,11 @@ export function AudiobookRenderer({
         if (audio) audio.muted = !audio.muted
       },
     },
+    {
+      key: 's',
+      description: 'Toggle skip silence',
+      action: () => useAudiobookPrefsStore.getState().toggleSkipSilence(),
+    },
   ])
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
@@ -428,6 +439,9 @@ export function AudiobookRenderer({
           </button>
         </div>
 
+        {/* Skip silence active indicator — shown when skip silence feature is running */}
+        <SkipSilenceActiveIndicator isActive={silenceDetection.isActive} />
+
         {/* Secondary Controls: Speed | Bookmark | Sleep Timer */}
         <div className="flex items-center gap-2 bg-card/40 backdrop-blur-2xl rounded-full px-4 py-1.5 border border-white/20">
           <SpeedControl bookId={book.id} />
@@ -468,6 +482,8 @@ export function AudiobookRenderer({
         {/* Bookmark note + progress — tighter spacing than the main gap-8 */}
         <div className="-mt-4 flex flex-col items-center gap-3">
           <div ref={bookmarkNoteContainerRef} />
+          {/* Transient silence skip notification */}
+          <SilenceSkipIndicator lastSkip={silenceDetection.lastSkip} />
           <p className="text-xs text-muted-foreground" aria-live="polite">
             {Math.round(progressPercent)}% complete
           </p>

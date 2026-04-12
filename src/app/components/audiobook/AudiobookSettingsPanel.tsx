@@ -107,26 +107,21 @@ export function AudiobookSettingsPanel({ open, onOpenChange }: AudiobookSettings
               </div>
             </div>
 
-            <div className="mt-4 flex items-center justify-between opacity-60">
+            <div className="mt-4 flex items-center justify-between">
               <div>
                 <Label htmlFor="skip-silence" className="text-sm font-medium">
                   Skip Silence
-                  <span className="ml-2 text-[10px] font-normal uppercase tracking-wider text-muted-foreground bg-muted rounded px-1.5 py-0.5">
-                    Coming soon
-                  </span>
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Automatically skip silent sections during playback. Requires advanced audio
-                  analysis — not yet available.
+                  Automatically skip silent sections during playback.
                 </p>
               </div>
               <Switch
                 id="skip-silence"
                 checked={skipSilence}
                 onCheckedChange={toggleSkipSilence}
-                aria-label="Toggle skip silence (coming soon)"
+                aria-label="Toggle skip silence"
                 data-testid="skip-silence-toggle"
-                disabled
               />
             </div>
           </section>
