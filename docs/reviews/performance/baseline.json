@@ -1,6 +1,6 @@
 {
   "captured_at": "2026-04-12",
-  "commit": "cc237d2d",
+  "commit": "7814945",
   "bundle": {
     "total_js_bytes": 9728000,
     "total_css_bytes": 288000,
@@ -18,43 +18,43 @@
   "page_metrics": {
     "/": {
       "ttfb": 2,
-      "dom_interactive": 11,
-      "dom_complete": 145,
-      "load_complete": 145,
-      "fcp": 223,
+      "dom_interactive": 14,
+      "dom_complete": 131,
+      "load_complete": 131,
+      "fcp": 221,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
       "resource_count": 250,
-      "js_resource_count": 250,
-      "css_resource_count": 0,
-      "total_transfer_bytes": 61500,
+      "js_resource_count": 249,
+      "css_resource_count": 1,
+      "total_transfer_bytes": 60300,
       "samples": 3,
       "largest_resources": [
         {
-          "name": "@sentry_react.js?v=3ac5ad39",
-          "size": 1923645,
-          "duration": 35
+          "name": "client",
+          "size": 300,
+          "duration": 8
         },
         {
-          "name": "lucide-react.js?v=3ac5ad39",
-          "size": 1047716,
-          "duration": 24
+          "name": "reduce-motion-init.js",
+          "size": 300,
+          "duration": 6
         },
         {
-          "name": "react-dom_client.js?v=3ac5ad39",
-          "size": 1005907,
-          "duration": 47
+          "name": "@react-refresh",
+          "size": 300,
+          "duration": 8
         },
         {
-          "name": "react-day-picker.js?v=3ac5ad39",
-          "size": 806475,
-          "duration": 28
+          "name": "main.tsx",
+          "size": 300,
+          "duration": 9
         },
         {
-          "name": "@supabase_supabase-js.js?v=3ac5ad39",
-          "size": 577648,
-          "duration": 30
+          "name": "env.mjs",
+          "size": 300,
+          "duration": 4
         }
       ]
     },
@@ -146,24 +146,24 @@
       "samples": 3
     },
     "/library/:bookId/read": {
-      "ttfb": 2,
-      "dom_interactive": 9,
-      "dom_complete": 138,
-      "load_complete": 139,
-      "fcp": 495,
+      "ttfb": 6,
+      "dom_interactive": 16,
+      "dom_complete": 134,
+      "load_complete": 134,
+      "fcp": 341,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
-      "resource_count": 246,
-      "js_resource_count": 245,
+      "resource_count": 226,
+      "js_resource_count": 225,
       "css_resource_count": 1,
-      "total_transfer_bytes": 61500,
+      "total_transfer_bytes": 55500,
       "samples": 3,
       "largest_resources": [
         {
           "name": "client",
           "size": 300,
-          "duration": 1
+          "duration": 2
         },
         {
           "name": "reduce-motion-init.js",
@@ -173,17 +173,17 @@
         {
           "name": "@react-refresh",
           "size": 300,
-          "duration": 1
+          "duration": 2
         },
         {
           "name": "main.tsx",
           "size": 300,
-          "duration": 2
+          "duration": 3
         },
         {
           "name": "env.mjs",
           "size": 300,
-          "duration": 4
+          "duration": 2
         }
       ]
     }
@@ -191,23 +191,23 @@
   "bundle_sizes": {
     "Library": {
       "raw": 214978,
-      "file": "Library-QreO_SE1.js"
+      "file": "Library-qhF6Bu2n.js"
     },
     "index_js": {
-      "raw": 830265,
-      "file": "index-1S1eXiXD.js"
+      "raw": 830605,
+      "file": "index-DLjXZadg.js"
     },
     "index_css": {
-      "raw": 277108,
-      "file": "index-V4ND4z35.css"
+      "raw": 277205,
+      "file": "index-D7NvZWye.css"
     },
     "dexie": {
-      "raw": 96420,
+      "raw": 96417,
       "file": "dexie-D8hooWrS.js"
     },
     "BookReader": {
-      "raw": 73122,
-      "file": "BookReader-CI0KyqBz.js"
+      "raw": 73163,
+      "file": "BookReader-CTeG5glo.js"
     }
   }
 }
