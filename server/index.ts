@@ -24,6 +24,8 @@ import { createDetectBYOKMiddleware, createEntitlementMiddleware } from './middl
 import { createRateLimiter } from './middleware/rate-limiter.js'
 import calendarRouter from './routes/calendar.js'
 import rateLimit from 'express-rate-limit'
+import { pipeline } from 'node:stream/promises'
+import { Readable } from 'node:stream'
 
 const app = express()
 const PORT = 3001
@@ -167,7 +169,7 @@ const ABS_STREAM_TIMEOUT_MS = 120_000 // 2 minutes for streaming requests (audio
 // Separate rate limiters by traffic type to prevent covers from starving streaming/API
 const absApiRateLimit = rateLimit({
   windowMs: 60 * 1000,
-  max: 120, // Catalog, search, progress, ping
+  max: 500, // Catalog, search, progress, ping
   standardHeaders: true,
   legacyHeaders: false,
   message: 'Too Many Requests',
@@ -181,13 +183,9 @@ const absCoverRateLimit = rateLimit({
   message: 'Too Many Requests',
 })
 
-const absStreamRateLimit = rateLimit({
-  windowMs: 60 * 1000,
-  max: 300, // Audio Range requests during seeking
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: 'Too Many Requests',
-})
+// Streaming is exempt from rate limiting — HTML5 <audio> seeking fires dozens of
+// Range requests per second, and ABS has no server-side rate limits (only auth).
+// The session token provides access control.
 
 // ── In-memory cover cache (30-min TTL, max 500 entries) ─────────────────────
 interface CachedCover {
@@ -259,7 +257,7 @@ app.use('/api/abs/proxy', (req, res, next) => {
   if (absPath.endsWith('/cover')) {
     absCoverRateLimit(req, res, next)
   } else if (absPath.startsWith('/s/') || absPath.includes('/stream/')) {
-    absStreamRateLimit(req, res, next)
+    next() // Streaming exempt — see comment above absApiRateLimit
   } else {
     absApiRateLimit(req, res, next)
   }
@@ -303,6 +301,15 @@ app.use('/api/abs/proxy', (req, res, next) => {
   const qs = forwardParams.toString()
   const targetUrl = `${normalizedUrl}${absPath}${qs ? `?${qs}` : ''}`
 
+  // Use longer timeout for streaming paths (audio files can be large)
+  const isStreamingRequest = absPath.startsWith('/s/') || absPath.includes('/stream/')
+  const timeout = isStreamingRequest ? ABS_STREAM_TIMEOUT_MS : ABS_TIMEOUT_MS
+
+  // AbortController: abort upstream fetch on timeout OR client disconnect
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort('timeout'), timeout)
+  req.on('close', () => controller.abort('client-disconnect'))
+
   try {
     const hasBody = req.method !== 'GET' && req.method !== 'HEAD' && req.body != null
     const headers: Record<string, string> = {
@@ -316,14 +323,10 @@ app.use('/api/abs/proxy', (req, res, next) => {
       headers['Range'] = req.headers['range'] as string
     }
 
-    // Use longer timeout for streaming paths (audio files can be large)
-    const isStreamingRequest = absPath.startsWith('/s/') || absPath.includes('/stream/')
-    const timeout = isStreamingRequest ? ABS_STREAM_TIMEOUT_MS : ABS_TIMEOUT_MS
-
     const fetchOptions: RequestInit = {
       method: req.method,
       headers,
-      signal: AbortSignal.timeout(timeout),
+      signal: controller.signal,
     }
 
     if (hasBody) {
@@ -337,8 +340,11 @@ app.use('/api/abs/proxy', (req, res, next) => {
       const retryAfter = parseInt(response.headers.get('retry-after') || '3', 10)
       const delay = Math.min(retryAfter, 10) * 1000 // Cap at 10s
       await new Promise(r => setTimeout(r, delay))
-      response = await fetch(targetUrl, { ...fetchOptions, signal: AbortSignal.timeout(timeout) })
+      response = await fetch(targetUrl, fetchOptions)
     }
+
+    // Request succeeded — clear the timeout (abort controller stays for client disconnect)
+    clearTimeout(timeoutId)
 
     // Relay essential response headers for streaming and content delivery
     const headersToForward = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'content-disposition']
@@ -378,17 +384,9 @@ app.use('/api/abs/proxy', (req, res, next) => {
         return
       }
 
-      // Non-cover binary: stream directly
-      const reader = response.body.getReader()
-      try {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          res.write(Buffer.from(value))
-        }
-      } finally {
-        res.end()
-      }
+      // Non-cover binary: stream with backpressure via pipeline
+      const nodeStream = Readable.fromWeb(response.body as import('stream/web').ReadableStream)
+      await pipeline(nodeStream, res)
       return
     }
 
@@ -397,8 +395,11 @@ app.use('/api/abs/proxy', (req, res, next) => {
     res.status(response.status).send(text)
   } catch (error) {
     // silent-catch-ok — returns structured error to client
-    console.error('[/api/abs/proxy]', (error as Error).message)
-    if ((error as Error).name === 'AbortError' || (error as Error).name === 'TimeoutError') {
+    clearTimeout(timeoutId)
+    if ((error as Error).name === 'AbortError') {
+      // Client navigated away — silently drop, no response needed
+      if (controller.signal.reason === 'client-disconnect') return
+      // Timeout — inform client
       res.status(504).json({ error: 'Server timed out' })
       return
     }
