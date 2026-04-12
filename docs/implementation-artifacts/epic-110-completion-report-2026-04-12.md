@@ -147,12 +147,12 @@ Additional deferred post-adversarial findings (not filed as formal KIs but docum
 
 | Status | Count | ACs |
 |--------|-------|-----|
-| ✅ Covered | 13 | S01: AC-1–6; S02: AC-1, AC-4; S03: AC-1–3, AC-5–7 |
+| ✅ Covered | 16 | S01: AC-1–6; S02: AC-1, AC-3, AC-4, AC-5; S03: AC-1–7 |
 | ⚠️ Partial | 2 | S01: AC-7 (schema only, no reload cycle); S02: AC-2 (logic only, no visual) |
-| ❌ Gap (at trace time) | 3 | S02: AC-3, AC-5; S03: AC-4 |
+| ❌ Gap (at trace time) | 0 | — (all 3 gaps resolved in fix pass) |
 
 **Coverage rate at trace:** 72% fully covered (13/18); 83% at least partially covered  
-**Post-fix-pass:** S03-AC4 gap resolved — drag-and-drop E2E test added. S02-AC3 and S02-AC5 remain gaps (filed as E111 chore window items).
+**Post-fix-pass:** All 3 gaps resolved — S03-AC4 drag-and-drop E2E test added; S02-AC3 expand/collapse + Continue badge E2E test added; S02-AC5 BookMetadataEditor series fields E2E test added (commit `f8934235`).
 
 **Trace Report:** `docs/reviews/testarch-trace-2026-04-12-epic-110.md`
 
