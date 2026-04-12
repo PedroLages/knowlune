@@ -53,13 +53,14 @@ describe('getPagesReadToday', () => {
     vi.mocked(computeAverageReadingSpeed).mockResolvedValue(60)
 
     // Book with 120 minutes of reading today
+    // progress: 50% → currentPage = 150, above estimated 120, so cap won't trigger
     vi.mocked(db.books.toArray).mockResolvedValue([
       {
         id: 'book1',
         title: 'Test',
         status: 'reading',
         totalPages: 300,
-        progress: 25,
+        progress: 50,
         currentPosition: { type: 'cfi', cfi: '' },
         lastOpenedAt: FIXED_DATE.toISOString(),
       },
