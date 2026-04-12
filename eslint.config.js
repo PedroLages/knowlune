@@ -23,7 +23,8 @@ export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.r
     'public/', // Static assets (plain JS, not TypeScript)
     'StudyGy-Dashboard/', // External reference implementation
     'scripts/**/*.js', // Node CLI scripts with shebangs — not app code
-    '*.js', // Root-level Node.js utility scripts — not app code
+    '*.js', // Root-level Node.js/browser utility scripts — not app code
+    '*.mjs', // Root-level ES module utility scripts — not app code
   ],
 }, {
   plugins: {
