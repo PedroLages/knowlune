@@ -46,6 +46,48 @@ export function calculateStreakProgress(challenge: Challenge): number {
   return studyDays.size
 }
 
+/**
+ * Count books finished since the challenge was created.
+ * Uses the `status` index on books for efficient querying, then filters by finishedAt.
+ */
+export async function calculateBooksProgress(challenge: Challenge): Promise<number> {
+  const createdAtMs = new Date(challenge.createdAt).getTime()
+  return db.books
+    .where('status')
+    .equals('finished')
+    .filter(b => {
+      if (!b.finishedAt) return false
+      return new Date(b.finishedAt).getTime() >= createdAtMs
+    })
+    .count()
+}
+
+/**
+ * Sum pages read across all books since the challenge was created.
+ * For each book updated after challenge creation, pages read = totalPages * progress / 100.
+ *
+ * **Known limitation**: `progress` reflects the *current* reading position, not pages read
+ * *during* the challenge. A book already 50% read before the challenge started will
+ * contribute those pre-existing pages to the total. No per-challenge baseline snapshot
+ * exists in the data model to subtract the prior position, so this is an accepted
+ * design trade-off: progress counts are optimistic but straightforward to compute.
+ */
+export async function calculatePagesProgress(challenge: Challenge): Promise<number> {
+  const createdAtMs = new Date(challenge.createdAt).getTime()
+  const books = await db.books
+    .filter(b => {
+      const updatedAt = b.updatedAt || b.createdAt
+      return new Date(updatedAt).getTime() >= createdAtMs
+    })
+    .toArray()
+
+  return books.reduce((sum, book) => {
+    if (!book.totalPages || book.totalPages <= 0) return sum
+    const pagesRead = Math.round((book.totalPages * book.progress) / 100)
+    return sum + pagesRead
+  }, 0)
+}
+
 /** Dispatch to the appropriate calculator based on challenge type. */
 export async function calculateProgress(challenge: Challenge): Promise<number> {
   switch (challenge.type) {
@@ -55,5 +97,9 @@ export async function calculateProgress(challenge: Challenge): Promise<number> {
       return calculateTimeProgress(challenge)
     case 'streak':
       return calculateStreakProgress(challenge)
+    case 'books':
+      return calculateBooksProgress(challenge)
+    case 'pages':
+      return calculatePagesProgress(challenge)
   }
 }

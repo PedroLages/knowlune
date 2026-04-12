@@ -25,12 +25,16 @@ const typeUnits: Record<ChallengeType, string> = {
   completion: 'videos',
   time: 'hours',
   streak: 'days',
+  books: 'books',
+  pages: 'pages',
 }
 
 const typeLabels: Record<ChallengeType, string> = {
   completion: 'Completion (videos)',
   time: 'Time (study hours)',
   streak: 'Streak (days)',
+  books: 'Books (finish count)',
+  pages: 'Pages (total read)',
 }
 
 interface FormErrors {
@@ -188,6 +192,8 @@ export function CreateChallengeDialog({ open, onOpenChange }: CreateChallengeDia
                 <SelectItem value="completion">{typeLabels.completion}</SelectItem>
                 <SelectItem value="time">{typeLabels.time}</SelectItem>
                 <SelectItem value="streak">{typeLabels.streak}</SelectItem>
+                <SelectItem value="books">{typeLabels.books}</SelectItem>
+                <SelectItem value="pages">{typeLabels.pages}</SelectItem>
               </SelectContent>
             </Select>
             {errors.type && (
