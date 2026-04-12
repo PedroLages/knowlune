@@ -1364,7 +1364,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-111: backlog
   111-1-audio-clips: review
-  111-2-skip-silence-and-speed-memory: backlog
+  111-2-skip-silence-and-speed-memory: done
   111-3-sleep-timer-end-of-chapter: backlog
   epic-111-retrospective: optional
 

@@ -72,6 +72,7 @@ interface BookStoreState {
     position: import('@/data/types').ContentPosition,
     progress: number
   ) => Promise<void>
+  updateBookPlaybackSpeed: (bookId: string, speed: number) => Promise<void>
   linkBooks: (bookIdA: string, bookIdB: string) => Promise<void>
   unlinkBooks: (bookIdA: string, bookIdB: string) => Promise<void>
   upsertAbsBook: (book: Book) => Promise<void>
@@ -326,6 +327,35 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
         }))
       }
       toast.error('Failed to save reading position')
+    }
+  },
+
+  updateBookPlaybackSpeed: async (bookId, speed) => {
+    if (!isFinite(speed) || speed < 0.5 || speed > 3.0) {
+      console.error('[BookStore] Invalid playback speed rejected:', speed)
+      return
+    }
+    const now = new Date().toISOString()
+    const prevBook = get().books.find(b => b.id === bookId)
+    // Optimistic update
+    set(state => ({
+      books: state.books.map(b =>
+        b.id === bookId ? { ...b, playbackSpeed: speed, updatedAt: now } : b
+      ),
+    }))
+    try {
+      await db.books.update(bookId, { playbackSpeed: speed, updatedAt: now } as Parameters<
+        typeof db.books.update
+      >[1])
+    } catch (err) {
+      console.error('[BookStore] Failed to save playback speed:', err)
+      // Rollback only the affected book
+      if (prevBook) {
+        set(state => ({
+          books: state.books.map(b => (b.id === bookId ? prevBook : b)),
+        }))
+      }
+      toast.error('Failed to save playback speed')
     }
   },
 

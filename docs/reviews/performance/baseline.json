@@ -1,6 +1,6 @@
 {
   "captured_at": "2026-04-12",
-  "commit": "c0c244b3",
+  "commit": "cc237d2d",
   "bundle": {
     "total_js_bytes": 9728000,
     "total_css_bytes": 288000,
@@ -18,43 +18,43 @@
   "page_metrics": {
     "/": {
       "ttfb": 2,
-      "dom_interactive": 15,
-      "dom_complete": 179,
-      "load_complete": 179,
-      "fcp": 516,
+      "dom_interactive": 11,
+      "dom_complete": 145,
+      "load_complete": 145,
+      "fcp": 223,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
       "resource_count": 250,
-      "js_resource_count": 249,
-      "css_resource_count": 2,
-      "total_transfer_bytes": 13545422,
+      "js_resource_count": 250,
+      "css_resource_count": 0,
+      "total_transfer_bytes": 61500,
       "samples": 3,
       "largest_resources": [
         {
           "name": "@sentry_react.js?v=3ac5ad39",
           "size": 1923645,
-          "duration": 20
+          "duration": 35
         },
         {
           "name": "lucide-react.js?v=3ac5ad39",
           "size": 1047716,
-          "duration": 19
+          "duration": 24
         },
         {
           "name": "react-dom_client.js?v=3ac5ad39",
           "size": 1005907,
-          "duration": 19
+          "duration": 47
         },
         {
           "name": "react-day-picker.js?v=3ac5ad39",
           "size": 806475,
-          "duration": 15
+          "duration": 28
         },
         {
           "name": "@supabase_supabase-js.js?v=3ac5ad39",
           "size": 577648,
-          "duration": 22
+          "duration": 30
         }
       ]
     },
@@ -147,67 +147,67 @@
     },
     "/library/:bookId/read": {
       "ttfb": 2,
-      "dom_interactive": 11,
-      "dom_complete": 153,
-      "load_complete": 153,
-      "fcp": 502,
+      "dom_interactive": 9,
+      "dom_complete": 138,
+      "load_complete": 139,
+      "fcp": 495,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
-      "resource_count": 225,
-      "js_resource_count": 224,
-      "css_resource_count": 2,
-      "total_transfer_bytes": 11955655,
+      "resource_count": 246,
+      "js_resource_count": 245,
+      "css_resource_count": 1,
+      "total_transfer_bytes": 61500,
       "samples": 3,
       "largest_resources": [
         {
-          "name": "@sentry_react.js?v=3ac5ad39",
-          "size": 1923645,
-          "duration": 18
+          "name": "client",
+          "size": 300,
+          "duration": 1
         },
         {
-          "name": "lucide-react.js?v=3ac5ad39",
-          "size": 1047716,
-          "duration": 25
+          "name": "reduce-motion-init.js",
+          "size": 300,
+          "duration": 2
         },
         {
-          "name": "react-dom_client.js?v=3ac5ad39",
-          "size": 1005907,
-          "duration": 17
+          "name": "@react-refresh",
+          "size": 300,
+          "duration": 1
         },
         {
-          "name": "@supabase_supabase-js.js?v=3ac5ad39",
-          "size": 577648,
-          "duration": 23
+          "name": "main.tsx",
+          "size": 300,
+          "duration": 2
         },
         {
-          "name": "radix-ui.js?v=3ac5ad39",
-          "size": 464288,
-          "duration": 22
+          "name": "env.mjs",
+          "size": 300,
+          "duration": 4
         }
       ]
     }
   },
   "bundle_sizes": {
     "Library": {
-      "raw": 214980,
-      "file": "Library-BmQsFSxq.js"
-    },
-    "AudiobookRenderer": {
-      "raw": 56400,
-      "file": "AudiobookRenderer-C_-eCM4H.js"
+      "raw": 214978,
+      "file": "Library-QreO_SE1.js"
     },
     "index_js": {
-      "raw": 829910,
-      "file": "index-AJOgU4wq.js"
+      "raw": 830265,
+      "file": "index-1S1eXiXD.js"
     },
     "index_css": {
-      "raw": 277049,
-      "file": "index-Q6Lc6EgP.css"
+      "raw": 277108,
+      "file": "index-V4ND4z35.css"
     },
     "dexie": {
       "raw": 96420,
       "file": "dexie-D8hooWrS.js"
+    },
+    "BookReader": {
+      "raw": 73122,
+      "file": "BookReader-CI0KyqBz.js"
     }
   }
 }

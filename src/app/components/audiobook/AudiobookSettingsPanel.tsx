@@ -96,7 +96,7 @@ export function AudiobookSettingsPanel({ open, onOpenChange }: AudiobookSettings
                       role="radio"
                       aria-checked={isActive}
                       onClick={() => setDefaultSpeed(rate)}
-                      className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors min-h-[36px] ${
+                      className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors min-h-[44px] ${
                         isActive
                           ? 'bg-brand text-brand-foreground'
                           : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
@@ -111,26 +111,21 @@ export function AudiobookSettingsPanel({ open, onOpenChange }: AudiobookSettings
               </div>
             </div>
 
-            <div className="mt-4 flex items-center justify-between opacity-60">
+            <div className="mt-4 flex items-center justify-between">
               <div>
                 <Label htmlFor="skip-silence" className="text-sm font-medium">
                   Skip Silence
-                  <span className="ml-2 text-[10px] font-normal uppercase tracking-wider text-muted-foreground bg-muted rounded px-1.5 py-0.5">
-                    Coming soon
-                  </span>
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Automatically skip silent sections during playback. Requires advanced audio
-                  analysis — not yet available.
+                  Automatically skip silent sections during playback.
                 </p>
               </div>
               <Switch
                 id="skip-silence"
                 checked={skipSilence}
                 onCheckedChange={toggleSkipSilence}
-                aria-label="Toggle skip silence (coming soon)"
+                aria-label="Toggle skip silence"
                 data-testid="skip-silence-toggle"
-                disabled
               />
             </div>
           </section>

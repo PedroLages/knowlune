@@ -14,11 +14,13 @@ import { useEffect, useRef } from 'react'
 import type { RefObject } from 'react'
 import { useAudiobookPrefsStore } from '@/stores/useAudiobookPrefsStore'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
+import { useBookStore } from '@/stores/useBookStore'
 import { useSleepTimer } from '@/app/hooks/useSleepTimer'
 import { db } from '@/db/schema'
+import type { Book } from '@/data/types'
 
 interface UseAudiobookPrefsEffectsParams {
-  bookId: string
+  book: Book
   isPlaying: boolean
   currentTime: number
   currentChapterIndex: number
@@ -30,7 +32,7 @@ interface UseAudiobookPrefsEffectsParams {
 }
 
 export function useAudiobookPrefsEffects({
-  bookId,
+  book,
   isPlaying,
   currentTime,
   currentChapterIndex,
@@ -40,20 +42,23 @@ export function useAudiobookPrefsEffects({
   setTimer,
   pause,
 }: UseAudiobookPrefsEffectsParams): void {
-  // ── Effect 1: Apply default speed on new session (AC-2, AC-7) ───────────────
-  // Track the book ID for which default speed was already applied to avoid
-  // re-applying if the audio player store retains a rate from a previous book.
+  // ── Effect 1: Apply per-book or global default speed on new book open (AC-6, AC-7) ──
+  // Reads from get() inside the callback to avoid stale closure on book.playbackSpeed.
   const defaultSpeedAppliedForBookRef = useRef<string | null>(null)
   useEffect(() => {
     // Only apply once per book — prevents stale store rate from a previous book
-    // incorrectly blocking the global default on a new book.
-    if (defaultSpeedAppliedForBookRef.current === bookId) return
-    defaultSpeedAppliedForBookRef.current = bookId
-    const defaultSpeed = useAudiobookPrefsStore.getState().defaultSpeed
-    if (defaultSpeed !== 1.0) {
-      useAudioPlayerStore.getState().setPlaybackRate(defaultSpeed)
-    }
-  }, [bookId])
+    // incorrectly blocking the restored speed on return.
+    if (defaultSpeedAppliedForBookRef.current === book.id) return
+    defaultSpeedAppliedForBookRef.current = book.id
+    // Per-book speed takes priority over global default (AC-6).
+    // Fall back to global default for first-open books (AC-7).
+    // Read via getState() to avoid book.playbackSpeed in dep array (would re-run on every speed change)
+    const bookPlaybackSpeed = useBookStore
+      .getState()
+      .books.find(b => b.id === book.id)?.playbackSpeed
+    const resolvedSpeed = bookPlaybackSpeed ?? useAudiobookPrefsStore.getState().defaultSpeed
+    useAudioPlayerStore.getState().setPlaybackRate(resolvedSpeed)
+  }, [book.id])
 
   // ── Effect 2: Auto-bookmark on stop (AC-5) ───────────────────────────────────
   // lastAutoBookmarkTimeRef prevents duplicate bookmarks on rapid pause/play toggles
@@ -77,7 +82,7 @@ export function useAudiobookPrefsEffects({
         db.audioBookmarks
           .add({
             id: bookmarkId,
-            bookId,
+            bookId: book.id,
             chapterIndex: currentChapterIndex,
             timestamp: Math.floor(currentTime),
             note: 'Auto-bookmark',
@@ -92,7 +97,7 @@ export function useAudiobookPrefsEffects({
           })
       }
     }
-  }, [isPlaying, currentTime, currentChapterIndex, bookId, onBookmarkCreated])
+  }, [isPlaying, currentTime, currentChapterIndex, book.id, onBookmarkCreated])
 
   // ── Effect 3: Auto-start sleep timer from default pref (AC-4 Task 5) ─────────
   // Fires once per session when playback first begins, if a default is configured
