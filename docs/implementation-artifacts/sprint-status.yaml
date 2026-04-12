@@ -1350,7 +1350,7 @@ development_status:
   # Smart shelves, series grouping, reading queue
   # Depends on: E107
   # ──────────────────────────────────────────────────
-  epic-110: in-progress
+  epic-110: done
   110-1-smart-shelves: done
   110-2-series-grouping: done
   110-3-reading-queue: done
