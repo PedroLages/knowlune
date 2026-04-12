@@ -1374,9 +1374,9 @@ development_status:
   # Reading speed, ETA, time-of-day patterns, genre distribution, reading reports
   # Depends on: E107
   # ──────────────────────────────────────────────────
-  epic-112: backlog
-  112-1-reading-speed-eta-patterns: backlog
-  112-2-genre-distribution-and-reports: backlog
+  epic-112: in-progress
+  112-1-reading-speed-eta-patterns: ready-for-dev
+  112-2-genre-distribution-and-reports: ready-for-dev
   epic-112-retrospective: optional
 
   # ──────────────────────────────────────────────────
