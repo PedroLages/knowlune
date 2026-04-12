@@ -300,9 +300,6 @@ export async function seedBookHighlights(
  * Seeds the audioClips object store in ElearningDB.
  * Convenience wrapper around seedIndexedDBStore.
  */
-export async function seedAudioClips(
-  page: Page,
-  clips: Record<string, unknown>[]
-): Promise<void> {
+export async function seedAudioClips(page: Page, clips: Record<string, unknown>[]): Promise<void> {
   await seedIndexedDBStore(page, 'ElearningDB', 'audioClips', clips)
 }
