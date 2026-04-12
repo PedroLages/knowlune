@@ -78,7 +78,6 @@ export function Library() {
   const libraryView = useBookStore(s => s.libraryView)
   const localSeriesView = useBookStore(s => s.localSeriesView)
   const setLocalSeriesView = useBookStore(s => s.setLocalSeriesView)
-  const getFilteredBooks = useBookStore(s => s.getFilteredBooks)
   const filters = useBookStore(s => s.filters)
   const setFilters = useBookStore(s => s.setFilters)
   const loadBooks = useBookStore(s => s.loadBooks)
@@ -214,10 +213,10 @@ export function Library() {
     }
   }, [syncCatalog])
 
-  // Call getFilteredBooks() directly on each render — it reads from Zustand's get() internally.
-  // useMemo caused stale closure issues because getFilteredBooks is a stable function reference
-  // in Zustand, causing the memo to return cached empty arrays even after books loaded.
-  const filteredBooks = getFilteredBooks()
+  // Use useBookStore.getState() to always read from the authoritative store state.
+  // The previously-extracted getFilteredBooks via selector had stale get() reads on initial
+  // render when books loaded async (E110-S02 regression).
+  const filteredBooks = useBookStore.getState().getFilteredBooks()
 
   // Stable ID array so LocalSeriesView's useMemo dep doesn't fire on every render (ADV-3).
   const filteredBookIds = useMemo(() => filteredBooks.map(b => b.id), [filteredBooks])

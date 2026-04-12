@@ -83,7 +83,11 @@ export function AudiobookSettingsPanel({ open, onOpenChange }: AudiobookSettings
               <p className="text-xs text-muted-foreground">
                 Applied to new audiobook sessions (per-book overrides are preserved).
               </p>
-              <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Default playback speed">
+              <div
+                className="flex flex-wrap gap-1.5"
+                role="radiogroup"
+                aria-label="Default playback speed"
+              >
                 {SPEED_OPTIONS.map(rate => {
                   const isActive = rate === defaultSpeed
                   return (

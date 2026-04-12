@@ -1,16 +1,17 @@
 /**
- * BookmarkButton — creates AudioBookmark records at the current timestamp.
+ * BookmarkButton — toggle-style bookmark at the current timestamp.
  *
- * On tap:
- *  1. Creates an AudioBookmark in Dexie at currentTime
- *  2. Shows a slide-down note input
- *  3. On Enter/Save, updates the bookmark with an optional note
- *  4. Toasts "Bookmark saved at mm:ss"
+ * Follows the Audible/Apple Books pattern:
+ *  - If no bookmark exists within ±3s of currentTime → creates one (icon fills)
+ *  - If a bookmark exists within ±3s → removes it (icon unfills)
+ *  - Icon fills/unfills in real-time as playback moves near/away from bookmarks
  *
  * @module BookmarkButton
  * @since E87-S04
  */
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'motion/react'
 import { Bookmark } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
@@ -18,12 +19,19 @@ import { db } from '@/db/schema'
 import { formatAudioTime } from '@/app/hooks/useAudioPlayer'
 import type { AudioBookmark } from '@/data/types'
 
+/** Bookmarks within this many seconds of currentTime are considered "at this position" */
+const PROXIMITY_THRESHOLD_S = 3
+
 interface BookmarkButtonProps {
   bookId: string
   chapterIndex: number
   currentTime: number
-  /** Called after a bookmark is successfully persisted to Dexie, with the new bookmark's ID */
+  /** Called after a bookmark is successfully created, with the new bookmark's ID */
   onBookmarkCreated?: (id: string) => void
+  /** Called after a bookmark is removed (toggle off), with the deleted bookmark's ID */
+  onBookmarkDeleted?: (id: string) => void
+  /** If provided, renders the note input into this container via portal instead of inline */
+  noteContainerRef?: React.RefObject<HTMLDivElement | null>
 }
 
 export function BookmarkButton({
@@ -31,24 +39,82 @@ export function BookmarkButton({
   chapterIndex,
   currentTime,
   onBookmarkCreated,
+  onBookmarkDeleted,
+  noteContainerRef,
 }: BookmarkButtonProps) {
   const [showNote, setShowNote] = useState(false)
   const [note, setNote] = useState('')
   const [pendingId, setPendingId] = useState<string | null>(null)
+  const [isNearBookmark, setIsNearBookmark] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Check proximity to existing bookmarks as playback position changes
+  useEffect(() => {
+    const flooredTime = Math.floor(currentTime)
+    let cancelled = false
+
+    db.audioBookmarks
+      .where('bookId')
+      .equals(bookId)
+      .filter(
+        b =>
+          b.chapterIndex === chapterIndex &&
+          Math.abs(b.timestamp - flooredTime) <= PROXIMITY_THRESHOLD_S
+      )
+      .first()
+      .then(match => {
+        if (!cancelled) setIsNearBookmark(!!match)
+      })
+      .catch(() => {
+        // silent-catch-ok: non-critical UI state
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [bookId, chapterIndex, Math.floor(currentTime)])
+
   const handleBookmark = async () => {
+    const flooredTime = Math.floor(currentTime)
+
+    // Check for nearby bookmark (toggle off if found)
+    const existing = await db.audioBookmarks
+      .where('bookId')
+      .equals(bookId)
+      .filter(
+        b =>
+          b.chapterIndex === chapterIndex &&
+          Math.abs(b.timestamp - flooredTime) <= PROXIMITY_THRESHOLD_S
+      )
+      .first()
+
+    if (existing) {
+      // Toggle off — remove existing bookmark
+      try {
+        await db.audioBookmarks.delete(existing.id)
+        setIsNearBookmark(false)
+        onBookmarkDeleted?.(existing.id)
+        toast('Bookmark removed', { duration: 2000 })
+      } catch {
+        // silent-catch-ok: surfaced via toast
+        toast.error('Failed to remove bookmark')
+      }
+      return
+    }
+
+    // Toggle on — create new bookmark
     const id = crypto.randomUUID()
     const record: AudioBookmark = {
       id,
       bookId,
       chapterIndex,
-      timestamp: Math.floor(currentTime),
+      timestamp: flooredTime,
       createdAt: new Date().toISOString(),
     }
 
     try {
       await db.audioBookmarks.add(record)
+      setIsNearBookmark(true)
       setPendingId(id)
       setNote('')
       setShowNote(true)
@@ -85,20 +151,16 @@ export function BookmarkButton({
     }
   }
 
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="min-h-[44px] min-w-[44px] px-3 text-muted-foreground hover:text-foreground"
-        onClick={handleBookmark}
-        aria-label="Add bookmark"
-      >
-        <Bookmark className="size-5" aria-hidden="true" />
-      </Button>
-
+  const noteInput = (
+    <AnimatePresence>
       {showNote && (
-        <div className="flex items-center gap-1 w-full max-w-xs">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 8 }}
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+          className="flex items-center gap-1 w-full max-w-xs mx-auto rounded-full bg-card/40 backdrop-blur-2xl border border-white/20 px-3 py-1.5"
+        >
           <input
             ref={inputRef}
             type="text"
@@ -112,8 +174,23 @@ export function BookmarkButton({
           <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={handleSaveNote}>
             Save
           </Button>
-        </div>
+        </motion.div>
       )}
-    </div>
+    </AnimatePresence>
+  )
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="min-h-[44px] min-w-[44px] px-3 text-muted-foreground hover:text-foreground"
+        onClick={handleBookmark}
+        aria-label={isNearBookmark ? 'Remove bookmark' : 'Add bookmark'}
+      >
+        <Bookmark className={`size-5 ${isNearBookmark ? 'fill-current' : ''}`} aria-hidden="true" />
+      </Button>
+      {noteContainerRef?.current ? createPortal(noteInput, noteContainerRef.current) : noteInput}
+    </>
   )
 }

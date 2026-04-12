@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error-container": "#93000a",
+                    "tertiary": "#683d00",
+                    "surface-bright": "#fbfaee",
+                    "on-primary-container": "#e1d2ff",
+                    "surface-dim": "#dbdbcf",
+                    "surface-container-highest": "#e4e3d7",
+                    "on-surface-variant": "#494453",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed": "#ffdcbc",
+                    "tertiary-container": "#895200",
+                    "on-error": "#ffffff",
+                    "error": "#ba1a1a",
+                    "on-primary": "#ffffff",
+                    "surface-tint": "#6b46c1",
+                    "secondary-fixed": "#e9ddff",
+                    "background": "#fbfaee",
+                    "surface-variant": "#e4e3d7",
+                    "outline": "#7a7484",
+                    "on-secondary-fixed-variant": "#4c3f6d",
+                    "primary-fixed": "#e9ddff",
+                    "on-tertiary-fixed-variant": "#683d00",
+                    "inverse-on-surface": "#f2f1e5",
+                    "surface-container-high": "#e9e9dd",
+                    "primary-fixed-dim": "#d0bcff",
+                    "on-secondary-fixed": "#20133f",
+                    "on-primary-fixed-variant": "#522aa7",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container": "#efeee3",
+                    "secondary": "#645787",
+                    "primary-container": "#6b46c1",
+                    "on-secondary": "#ffffff",
+                    "surface-container-low": "#f5f4e8",
+                    "secondary-container": "#d7c6fe",
+                    "on-surface": "#1b1c15",
+                    "on-primary-fixed": "#23005c",
+                    "on-tertiary": "#ffffff",
+                    "outline-variant": "#cbc3d5",
+                    "on-secondary-container": "#5e5080",
+                    "inverse-primary": "#d0bcff",
+                    "secondary-fixed-dim": "#cfbef5",
+                    "on-background": "#1b1c15",
+                    "tertiary-fixed-dim": "#ffb86a",
+                    "primary": "#532aa8",
+                    "inverse-surface": "#303129",
+                    "on-tertiary-container": "#ffd1a2",
+                    "surface": "#fbfaee",
+                    "on-tertiary-fixed": "#2c1700"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Noto Serif"],
+                    "body": ["Manrope"],
+                    "label": ["Manrope"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; background-color: #fbfaee; color: #1b1c15; }
+        .font-serif { font-family: 'Noto Serif', serif; }
+        .glass-player {
+            backdrop-filter: blur(32px);
+            -webkit-backdrop-filter: blur(32px);
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-32">
+<!-- Top Navigation Shell -->
+<header class="fixed top-0 w-full z-50 bg-stone-50/60 backdrop-blur-xl shadow-[0_40px_40px_-5px_rgba(27,28,21,0.06)]">
+<div class="flex justify-between items-center px-8 py-4 w-full max-w-full">
+<div class="text-2xl font-serif italic text-purple-900">The Editorial Glasshouse</div>
+<nav class="hidden md:flex items-center space-x-8">
+<a class="text-stone-600 font-medium hover:text-purple-600 transition-colors duration-300" href="#">Library</a>
+<a class="text-purple-800 font-bold border-b-2 border-purple-500 pb-1" href="#">Explore</a>
+<a class="text-stone-600 font-medium hover:text-purple-600 transition-colors duration-300" href="#">Curations</a>
+</nav>
+<div class="flex items-center space-x-4">
+<span class="material-symbols-outlined text-purple-700">search</span>
+<span class="material-symbols-outlined text-purple-700">account_circle</span>
+</div>
+</div>
+</header>
+<!-- Main Content Area (Gallery Layout) -->
+<main class="pt-32 px-8 max-w-7xl mx-auto">
+<header class="mb-16">
+<h1 class="text-6xl font-serif font-bold tracking-tight text-on-surface mb-4">Evening Curations</h1>
+<p class="text-xl font-body text-on-surface-variant max-w-2xl leading-relaxed">Hand-selected literature and essays, voiced by masters of the craft. Immerse yourself in the architecture of sound.</p>
+</header>
+<!-- Bento Grid for Content -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+<!-- Large Featured Card -->
+<div class="md:col-span-8 group cursor-pointer relative overflow-hidden rounded-xl bg-surface-container-low p-8 shadow-sm">
+<div class="flex flex-col h-full justify-between relative z-10">
+<div>
+<span class="uppercase tracking-widest text-xs font-bold text-primary mb-4 block">Current Spotlight</span>
+<h2 class="text-4xl font-serif font-bold mb-4">The Architecture of Silence</h2>
+<p class="text-on-surface-variant max-w-md">An exploration of minimal spaces and the philosophy of quietude in the modern era.</p>
+</div>
+<div class="mt-12">
+<button class="bg-gradient-to-br from-primary to-primary-container text-white px-8 py-3 rounded-xl font-bold flex items-center space-x-2 hover:scale-[1.02] transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+<span>Resume Listening</span>
+</button>
+</div>
+</div>
+<img alt="Minimalist interior" class="absolute top-0 right-0 h-full w-1/2 object-cover opacity-20 group-hover:opacity-30 transition-opacity" data-alt="Modern minimalist living room with clean lines, large windows, and soft natural light hitting a beige linen sofa" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1KG89llrZ3En4Ll1oBVXmcO1UCZcybvh9y_2KFqm1rT9y8ng-H6LL-lVanu0RwRXRUZsDAT1rzt3S5as4kUNYg25EVybuewlQMgazsqAwJx3syA1qsiHGu3vfeMa_mRs5bUHcuGOv_txO4qlbHIcPz0EEG2Lb9TEaFvJ8Sv7K5xAT7n98lafttH-JnPdSg3KnJBPq5_2Wjcc7rdn5g3Rjzr_KRmNO-L2LA44j3KbdQsziKfmrc8jIHxFCkeAcKkANNar9yHMqFcc"/>
+</div>
+<!-- Side Cards -->
+<div class="md:col-span-4 space-y-8">
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm flex items-center space-x-4 hover:bg-surface-container-high transition-colors cursor-pointer">
+<img alt="Book cover" class="w-20 h-20 rounded-lg object-cover" data-alt="Artistic book cover design with abstract geometric shapes in muted purple and cream tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBhtYL-lvcZgdq_Msgmwt1nwCLBwAvG7WFhmct_6yPTAHHZ-cejHkPKjrjn0grdAgWND6QKJGtHtdrD9RIhNOig968gQ8U6gSTwI4Cw1pX9FRlzqFLe3gJRMCwQYxfyWebTmKx2LATVYb7uQ8IeuAWtgQrYDqdyGXHVlmvEM1AUO4BbsOc3ij-EEbI_xTTsB_1Sc4I9Z2puq6BD9cUNiWmb5HtmzxlFCHQkKzA_sT2lxaM_pLCX2K-Vnb9IEG0ZnUnzUMyqucMxYvg"/>
+<div>
+<h3 class="font-bold text-lg">Beyond the Horizon</h3>
+<p class="text-sm text-on-surface-variant">Narrated by Elena Vance</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm flex items-center space-x-4 hover:bg-surface-container-high transition-colors cursor-pointer">
+<img alt="Book cover" class="w-20 h-20 rounded-lg object-cover" data-alt="Leather bound classic books stacked neatly on a dark wooden table with warm ambient study lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhzuWFNQynCqmeZMf71cLMNq7-heSp94yAMg17QkJ6-yekLjTsRLU04adirkk3-B9Ua5YaQT9NztTv8BsLpAVlONuIGLv4mqNMisHoZX3pCy_vnuAO0pVlDvauIUiaNu-AXabftJDYVk4QaXvJ8H3FHG_nl1cNlSJ7Phhax4gNNhAuo-6-4t0VbQbaUp6F18sNWCmaik-A4xrkmHmMxbadf7V82eqvf56dA2MtT9P8EEDhzVne6cj_jJB2jxexrOTK0UeC-CFZVbo"/>
+<div>
+<h3 class="font-bold text-lg">Classical Echoes</h3>
+<p class="text-sm text-on-surface-variant">Chapter 4: The Golden Age</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Secondary Shelf -->
+<section class="mt-20">
+<h2 class="text-3xl font-serif font-bold mb-8">Recently Discovered</h2>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+<div class="flex flex-col space-y-3 group cursor-pointer">
+<div class="aspect-square rounded-xl overflow-hidden bg-surface-container">
+<img alt="Book" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Top down view of an open book on a cream textured surface with dried lavender sprigs" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2MOUL_wCtMu5KeDbmDYnH3of615X7iHbO9Laor-S2oOMs-Kfo7tGEH8tvRu6acw1ezqI3LjdiNciKaghyF80DnH-2KNDo7EeQOMhitfXAEvZJ3Z4PWzMLUQaztyaG-tc6o1d_pXihTFmrUfu98cH0-NVn39paQlA1_tYOnt5tG69vR6yyRzGQWR5d-z02jsAoM3-9Y1ImHmF6iu9Vpke4ciXNwrXtPgWQ4NhL9h1S-kdCHBg6t5LjKzNNAAcNH2MQ3jKjbCQdGC0"/>
+</div>
+<h4 class="font-bold">Midnight Library</h4>
+<p class="text-xs text-on-surface-variant uppercase tracking-wider">Fiction • 8h 12m</p>
+</div>
+<div class="flex flex-col space-y-3 group cursor-pointer">
+<div class="aspect-square rounded-xl overflow-hidden bg-surface-container">
+<img alt="Library" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Close up of vintage book spines in a library with soft focus and warm golden light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAqGLJ3LliAWiepfOvdu8IQgqbGhD-l-dJtyDhDcJ8Yq5lApGkmtLkKlST1jJBBf66Fy_DxC42UJ9sTtvMdFRIpPU1dxvQGPCWSfSe7368fpjQAbVNTQkUStlSnD3ks4I5_GQG_kTbqmgVlNk09I1FSJuzX0K9epX13IagSmDH9VNi3Ebw1nfOwQK5BQwX5YuV2XjIOsbDnZDNM6xMRKfsrJ7DJuYfiMu8ImuDAzCINT5vG0NGYm5XCpZJHs_i3Pfj0sK-ei6--0K4"/>
+</div>
+<h4 class="font-bold">The Silent Patient</h4>
+<p class="text-xs text-on-surface-variant uppercase tracking-wider">Thriller • 10h 45m</p>
+</div>
+<div class="flex flex-col space-y-3 group cursor-pointer">
+<div class="aspect-square rounded-xl overflow-hidden bg-surface-container">
+<img alt="Abstract art" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Fluid acrylic painting with swirls of deep violet, gold leaf, and soft cream" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTDkjuFUOl1dbjxNbANYpaq_q1TEBMkMT8mhtxK48ENaIsxFawlSS5cqFqqrpXqZpWmLDUJM4KIiJ0NOe9JFD8L9DZ8QIZdKuajIEHodIeX-quDs4CP6as83h5FKVhvbBqO3SmQLVKPxT5cz5LrYZ9QWZx66TkVnDNaTqsJng1oLRXqEPVZRQzRFPEOeb0ojwNmvvTTRqMoAHcf5Y9NJu_iafNgoNzFiiHY5BTJt6CwZmJpvzv-w5RAcvxHUvo596iZ8FAOoMCs4k"/>
+</div>
+<h4 class="font-bold">Stardust Memories</h4>
+<p class="text-xs text-on-surface-variant uppercase tracking-wider">Memoir • 6h 20m</p>
+</div>
+<div class="flex flex-col space-y-3 group cursor-pointer">
+<div class="aspect-square rounded-xl overflow-hidden bg-surface-container">
+<img alt="Bookshelves" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Floor to ceiling bookshelves in a modern house with a tall rolling ladder and warm wooden floors" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3lut4qtkyeHXxYbMH6QH41l3bPNyqSaNN7hHLrwPmC3KbQIWNzk0oajfoVrP9J9buA3R9Y8cLflQYY4gY4nfpDS6N8JMOmSaZpj3z6QChdTCnBdLTyezh5M2fQL7Mgh3EHYGB6A42vznRBtUKMK-oO9n3rRO9ELiT0MudooVmxkbBMl1lRl5U0Fvbwe1XlxXIuKDwy9ByGDZGayIY6xVJ7N0acUp2N3q9Kc0muAelxLtNX159GrjJU8oQiJL8U6lu-Myz4YQaz88"/>
+</div>
+<h4 class="font-bold">The Glass Hotel</h4>
+<p class="text-xs text-on-surface-variant uppercase tracking-wider">Mystery • 9h 15m</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Persistent Audio Mini-Player Bar -->
+<footer class="fixed bottom-0 left-0 w-full z-[100] h-20 bg-stone-50/70 glass-player border-t border-outline-variant/15 shadow-[0_-12px_40px_-5px_rgba(27,28,21,0.08)]">
+<!-- Progress Bar Anchor -->
+<div class="absolute top-0 left-0 w-full h-[3px] bg-surface-container-highest">
+<div class="h-full bg-primary w-[35%] relative">
+<!-- Progress Indicator -->
+<div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-primary rounded-full shadow-lg opacity-0 hover:opacity-100 transition-opacity"></div>
+</div>
+</div>
+<div class="max-w-full h-full flex items-center justify-between px-8">
+<!-- Left Side: Content Info -->
+<div class="flex items-center space-x-4 min-w-[300px]">
+<div class="relative w-14 h-14 rounded-lg overflow-hidden shadow-md group">
+<img alt="The Great Gatsby" class="w-full h-full object-cover" data-alt="Art Deco style book cover with intricate gold patterns on a dark navy background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5NhiAcC1R0zcscuVdu4Glp8N4YOZ61PpKD0ctu8XPKh-cFW0gJdYxwF3eaxpoZsZ7MzSBDplnY46E8-PubgCMe7Z-4fjO8KLPZt4xA6P3A15z-ZClQQLeI3Rk50-KdJ80vE5Bed5s4n8HFWVQHHu5ehdeMqZQqZfYQKgzjO33AzHaWHKt3rNdTn4W6lbqNtcUXIB6Tz0-cBO2sZmi-L8F7jrsM5G7e3o5SN5zucSohw732Gxt0CYftUlETN8sYc2mXMuGEujMc_0"/>
+<div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">
+<span class="material-symbols-outlined text-white text-xl">expand_less</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="text-on-surface font-bold text-base leading-tight">The Great Gatsby</span>
+<span class="text-on-surface-variant text-sm font-medium">Chapter 1 • 12:45 remaining</span>
+</div>
+<button class="ml-2 text-primary/40 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl">favorite</span>
+</button>
+</div>
+<!-- Center/Right: Media Controls -->
+<div class="flex items-center space-x-10">
+<!-- Secondary Controls -->
+<div class="hidden lg:flex items-center space-x-6 text-on-surface-variant">
+<button class="hover:text-primary transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">shuffle</span>
+</button>
+<button class="hover:text-primary transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">repeat</span>
+</button>
+</div>
+<!-- Main Playback Cluster -->
+<div class="flex items-center space-x-6">
+<button class="flex items-center justify-center text-on-surface hover:text-primary transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-3xl">replay_5</span>
+</button>
+<button class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center shadow-lg hover:bg-primary-container hover:scale-105 active:scale-95 transition-all duration-300">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<button class="flex items-center justify-center text-on-surface hover:text-primary transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-3xl">forward_30</span>
+</button>
+</div>
+<!-- Volume & Queue -->
+<div class="hidden xl:flex items-center space-x-6 pl-6 border-l border-outline-variant/30">
+<div class="flex items-center space-x-2 w-32 group">
+<span class="material-symbols-outlined text-on-surface-variant text-xl">volume_up</span>
+<div class="flex-1 h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-on-surface-variant w-[70%] group-hover:bg-primary transition-colors"></div>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl">queue_music</span>
+</button>
+</div>
+</div>
+</div>
+</footer>
+<!-- FAB Suppression Rule Applied (Not rendered on details/list context) -->
+</body></html>

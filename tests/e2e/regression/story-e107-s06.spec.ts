@@ -91,18 +91,22 @@ async function setupMiniPlayerTest(page: import('@playwright/test').Page): Promi
   await page.waitForLoadState('domcontentloaded')
 
   // Seed the test audiobook into IndexedDB
-  await seedIndexedDBStore(page, DB_NAME, 'books', [
-    TEST_AUDIOBOOK,
-  ] as unknown as Record<string, unknown>[])
+  await seedIndexedDBStore(page, DB_NAME, 'books', [TEST_AUDIOBOOK] as unknown as Record<
+    string,
+    unknown
+  >[])
 
   // Navigate to /library — the Layout is mounted here and renders AudioMiniPlayer
   await page.goto('/library')
   await page.waitForLoadState('domcontentloaded')
 
   // Wait for the book store to be accessible via the window test handle
-  await page.waitForFunction(() => !!(window as Window & { __audioPlayerStore__?: unknown }).__audioPlayerStore__, {
-    timeout: 10000,
-  })
+  await page.waitForFunction(
+    () => !!(window as Window & { __audioPlayerStore__?: unknown }).__audioPlayerStore__,
+    {
+      timeout: 10000,
+    }
+  )
 
   // Load books into the book store first (normally triggered by Library page useEffect)
   await page.waitForFunction(

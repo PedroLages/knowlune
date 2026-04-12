@@ -25,7 +25,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router'
 import type { Rendition } from 'epubjs'
 import type { NavItem } from 'epubjs'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ChevronDown, Bookmark } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { useBookStore } from '@/stores/useBookStore'
 import { useReaderStore } from '@/stores/useReaderStore'
@@ -82,6 +82,13 @@ function LoadingSkeleton({ message = 'Loading book...' }: { message?: string }) 
 export function BookReader() {
   const { bookId } = useParams<{ bookId: string }>()
   const navigate = useNavigate()
+  const handleMinimize = useCallback(() => {
+    if (window.history.length > 1) {
+      navigate(-1)
+    } else {
+      navigate('/library')
+    }
+  }, [navigate])
   const [searchParams] = useSearchParams()
   const books = useBookStore(s => s.books)
   const isLoaded = useBookStore(s => s.isLoaded)
@@ -109,6 +116,28 @@ export function BookReader() {
   const [highlightsOpen, setHighlightsOpen] = useState(false)
   // audiobookBookmarksOpen: controls BookmarkListPanel in AudiobookRenderer (E87-S04)
   const [audiobookBookmarksOpen, setAudiobookBookmarksOpen] = useState(false)
+  const [hasBookmarks, setHasBookmarks] = useState(false)
+  const [bookmarkVersion, setBookmarkVersion] = useState(0)
+  const handleBookmarkChange = useCallback(() => setBookmarkVersion(v => v + 1), [])
+
+  // Check if book has any bookmarks (for filled icon state)
+  useEffect(() => {
+    if (!bookId) return
+    let cancelled = false
+    db.audioBookmarks
+      .where('bookId')
+      .equals(bookId)
+      .count()
+      .then(count => {
+        if (!cancelled) setHasBookmarks(count > 0)
+      })
+      .catch(() => {
+        // silent-catch-ok: non-critical UI state
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [bookId, audiobookBookmarksOpen, bookmarkVersion])
   // Cloze flashcard creator state (E85-S04)
   const [clozeText, setClozeText] = useState('')
   const [clozeHighlightId, setClozeHighlightId] = useState<string | undefined>(undefined)
@@ -368,13 +397,13 @@ export function BookReader() {
           setSettingsOpen(!useReaderStore.getState().settingsOpen)
           break
         case 'Escape':
-          navigate('/library')
+          handleMinimize()
           break
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [navigate])
+  }, [handleMinimize])
 
   /** Debounced position save: persists CFI + progress to Dexie and updates BookStore */
   const debouncedSavePosition = useCallback(
@@ -653,21 +682,26 @@ export function BookReader() {
         data-testid="audiobook-reader"
       >
         {/* Minimal header for back navigation + bookmarks */}
-        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-          <button
-            onClick={() => navigate('/library')}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors min-h-[44px] flex items-center"
-            aria-label="Back to Library"
+        <div className="flex items-center justify-between gap-3 px-4 py-3 bg-card/70 backdrop-blur-[32px] shadow-[0_4px_24px_-4px_rgba(27,28,21,0.06)] sticky top-0 z-10">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleMinimize}
+            className="min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground"
+            aria-label="Minimize player"
+            data-testid="audiobook-minimize-button"
           >
-            ← Library
-          </button>
-          <button
+            <ChevronDown className="size-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setAudiobookBookmarksOpen(true)}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors min-h-[44px] flex items-center"
+            className={`min-h-[44px] min-w-[44px] hover:text-foreground ${audiobookBookmarksOpen || hasBookmarks ? 'text-foreground' : 'text-muted-foreground'}`}
             aria-label="View bookmarks"
           >
-            Bookmarks
-          </button>
+            <Bookmark className="size-5" fill={hasBookmarks ? 'currentColor' : 'none'} />
+          </Button>
         </div>
         <Suspense
           fallback={
@@ -688,6 +722,7 @@ export function BookReader() {
                 ? Math.max(0, Math.min(startChapterIndex, book.chapters.length - 1))
                 : undefined
             }
+            onBookmarkChange={handleBookmarkChange}
           />
         </Suspense>
       </div>
@@ -827,7 +862,7 @@ export function BookReader() {
             setClozeHighlightId(highlightId)
             setClozeOpen(true)
           }}
-          onVocabularyRequest={(text) => {
+          onVocabularyRequest={text => {
             if (!bookId) return
             const now = new Date().toISOString()
             useVocabularyStore.getState().addItem({

@@ -13,14 +13,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { toast } from 'sonner'
-import {
-  ArrowLeft,
-  BookOpen,
-  Highlighter,
-  StickyNote,
-  Download,
-  Filter,
-} from 'lucide-react'
+import { ArrowLeft, BookOpen, Highlighter, StickyNote, Download, Filter } from 'lucide-react'
 import { db } from '@/db/schema'
 import { useBookStore } from '@/stores/useBookStore'
 import { Button } from '@/app/components/ui/button'
@@ -79,10 +72,10 @@ function groupByChapter(highlights: BookHighlight[]): ChapterGroup[] {
     chapter:
       key === '__ungrouped__'
         ? 'Ungrouped'
-        : key
+        : (key
             .split('/')
             .pop()
-            ?.replace(/\.[^.]+$/, '') ?? key,
+            ?.replace(/\.[^.]+$/, '') ?? key),
     highlights: items,
   }))
 }
@@ -97,10 +90,7 @@ export function AnnotationSummary() {
   const [colorFilter, setColorFilter] = useState<ColorFilter>('all')
   const [exportOpen, setExportOpen] = useState(false)
 
-  const book: Book | undefined = useMemo(
-    () => books.find(b => b.id === bookId),
-    [books, bookId]
-  )
+  const book: Book | undefined = useMemo(() => books.find(b => b.id === bookId), [books, bookId])
 
   useEffect(() => {
     if (!bookId) return
@@ -108,10 +98,7 @@ export function AnnotationSummary() {
 
     async function load() {
       try {
-        const data = await db.bookHighlights
-          .where('bookId')
-          .equals(bookId!)
-          .sortBy('createdAt')
+        const data = await db.bookHighlights.where('bookId').equals(bookId!).sortBy('createdAt')
         if (!cancelled) {
           setHighlights(data)
           setLoading(false)
@@ -131,10 +118,7 @@ export function AnnotationSummary() {
   }, [bookId])
 
   const filtered = useMemo(
-    () =>
-      colorFilter === 'all'
-        ? highlights
-        : highlights.filter(h => h.color === colorFilter),
+    () => (colorFilter === 'all' ? highlights : highlights.filter(h => h.color === colorFilter)),
     [highlights, colorFilter]
   )
 
@@ -148,10 +132,7 @@ export function AnnotationSummary() {
     return counts
   }, [highlights])
 
-  const notesCount = useMemo(
-    () => highlights.filter(h => h.note).length,
-    [highlights]
-  )
+  const notesCount = useMemo(() => highlights.filter(h => h.note).length, [highlights])
 
   const handleBack = useCallback(() => {
     navigate(-1)
@@ -173,14 +154,8 @@ export function AnnotationSummary() {
           <ArrowLeft className="size-5" aria-hidden="true" />
         </Button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold truncate">
-            {book?.title ?? 'Book'} — Annotations
-          </h1>
-          {book?.author && (
-            <p className="text-sm text-muted-foreground truncate">
-              {book.author}
-            </p>
-          )}
+          <h1 className="text-xl font-bold truncate">{book?.title ?? 'Book'} — Annotations</h1>
+          {book?.author && <p className="text-sm text-muted-foreground truncate">{book.author}</p>}
         </div>
         {highlights.length > 0 && (
           <Button
@@ -227,50 +202,31 @@ export function AnnotationSummary() {
       ) : (
         <>
           {/* Stats */}
-          <div
-            className="grid grid-cols-2 md:grid-cols-3 gap-4"
-            data-testid="annotation-stats"
-          >
-            <StatCard
-              label="Total Highlights"
-              value={highlights.length}
-              icon={Highlighter}
-            />
-            <StatCard
-              label="With Notes"
-              value={notesCount}
-              icon={StickyNote}
-            />
-            <StatCard
-              label="Colors Used"
-              value={Object.keys(colorCounts).length}
-              icon={Filter}
-            />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4" data-testid="annotation-stats">
+            <StatCard label="Total Highlights" value={highlights.length} icon={Highlighter} />
+            <StatCard label="With Notes" value={notesCount} icon={StickyNote} />
+            <StatCard label="Colors Used" value={Object.keys(colorCounts).length} icon={Filter} />
           </div>
 
           {/* Color breakdown badges */}
           <div className="flex flex-wrap gap-2" data-testid="annotation-color-badges">
-            {(Object.entries(colorCounts) as [HighlightColor, number][]).map(
-              ([color, count]) => (
-                <Badge
-                  key={color}
-                  variant="outline"
-                  className="cursor-pointer gap-1.5 px-3 py-1"
-                  onClick={() =>
-                    setColorFilter(colorFilter === color ? 'all' : color)
-                  }
-                  aria-pressed={colorFilter === color}
-                  data-testid={`annotation-color-badge-${color}`}
-                >
-                  <span
-                    style={{ backgroundColor: HIGHLIGHT_HEX[color] }}
-                    className="size-2.5 rounded-full"
-                    aria-hidden="true"
-                  />
-                  {COLOR_LABELS[color]} ({count})
-                </Badge>
-              )
-            )}
+            {(Object.entries(colorCounts) as [HighlightColor, number][]).map(([color, count]) => (
+              <Badge
+                key={color}
+                variant="outline"
+                className="cursor-pointer gap-1.5 px-3 py-1"
+                onClick={() => setColorFilter(colorFilter === color ? 'all' : color)}
+                aria-pressed={colorFilter === color}
+                data-testid={`annotation-color-badge-${color}`}
+              >
+                <span
+                  style={{ backgroundColor: HIGHLIGHT_HEX[color] }}
+                  className="size-2.5 rounded-full"
+                  aria-hidden="true"
+                />
+                {COLOR_LABELS[color]} ({count})
+              </Badge>
+            ))}
             {colorFilter !== 'all' && (
               <Button
                 variant="ghost"
@@ -292,17 +248,11 @@ export function AnnotationSummary() {
                   <div className="sticky top-0 z-10 bg-card px-4 py-2 border-b border-border/50">
                     <h2 className="text-sm font-semibold text-muted-foreground">
                       {group.chapter}{' '}
-                      <span className="font-normal">
-                        ({group.highlights.length})
-                      </span>
+                      <span className="font-normal">({group.highlights.length})</span>
                     </h2>
                   </div>
                   {group.highlights.map(h => (
-                    <HighlightItem
-                      key={h.id}
-                      highlight={h}
-                      bookId={bookId}
-                    />
+                    <HighlightItem key={h.id} highlight={h} bookId={bookId} />
                   ))}
                 </div>
               ))}

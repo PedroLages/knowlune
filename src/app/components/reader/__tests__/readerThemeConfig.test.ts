@@ -6,7 +6,11 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { getReaderThemeColors, getReaderChromeClasses, useAppColorScheme } from '../readerThemeConfig'
+import {
+  getReaderThemeColors,
+  getReaderChromeClasses,
+  useAppColorScheme,
+} from '../readerThemeConfig'
 import type { ReaderColors, ReaderChromeClasses, ColorScheme } from '../readerThemeConfig'
 import { getSettings } from '@/lib/settings'
 
@@ -169,7 +173,9 @@ describe('useAppColorScheme', () => {
   const mockGetSettings = vi.mocked(getSettings)
 
   beforeEach(() => {
-    mockGetSettings.mockReturnValue({ colorScheme: 'professional' } as ReturnType<typeof getSettings>)
+    mockGetSettings.mockReturnValue({ colorScheme: 'professional' } as ReturnType<
+      typeof getSettings
+    >)
   })
 
   afterEach(() => {
@@ -193,7 +199,9 @@ describe('useAppColorScheme', () => {
   })
 
   it('falls back to professional for invalid scheme from settings', () => {
-    mockGetSettings.mockReturnValue({ colorScheme: 'invalid-scheme' } as unknown as ReturnType<typeof getSettings>)
+    mockGetSettings.mockReturnValue({ colorScheme: 'invalid-scheme' } as unknown as ReturnType<
+      typeof getSettings
+    >)
     const { result } = renderHook(() => useAppColorScheme())
     expect(result.current).toBe('professional')
   })

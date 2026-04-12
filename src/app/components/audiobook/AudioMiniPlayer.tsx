@@ -15,7 +15,7 @@
  * @updated E107-S06 — fix interactivity: type="button", focus styles, cover error, stale closure
  */
 import { useCallback, useEffect, useState } from 'react'
-import { Play, Pause, SkipBack, SkipForward, ChevronUp, BookOpen } from 'lucide-react'
+import { Play, Pause, SkipBack, SkipForward, ChevronUp, BookOpen, X } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
 import { useBookStore } from '@/stores/useBookStore'
@@ -95,6 +95,15 @@ export function AudioMiniPlayer() {
     navigate(`/library/${currentBookId}/read`)
   }
 
+  const handleDismiss = useCallback(() => {
+    const audio = sharedAudioRef.current
+    if (audio) {
+      audio.pause()
+      audio.currentTime = 0
+    }
+    useAudioPlayerStore.getState().reset()
+  }, [])
+
   return (
     <div
       className="fixed bottom-0 left-0 right-0 z-50 bg-card/70 backdrop-blur-[32px] shadow-[0_-12px_40px_-5px_rgba(27,28,21,0.08)]"
@@ -136,7 +145,7 @@ export function AudioMiniPlayer() {
         <button
           type="button"
           onClick={handleExpand}
-          className="flex flex-col items-start min-w-0 flex-1 text-left sm:hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none rounded"
+          className="flex flex-col items-start min-w-0 flex-1 text-left min-h-[44px] justify-center sm:hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none rounded"
           aria-label="Open full player"
         >
           <span className="text-sm font-medium text-foreground truncate w-full">{book.title}</span>
@@ -194,6 +203,17 @@ export function AudioMiniPlayer() {
           aria-label="Open full player"
         >
           <ChevronUp className="size-5" aria-hidden="true" />
+        </button>
+
+        {/* Dismiss button */}
+        <button
+          type="button"
+          onClick={handleDismiss}
+          className="flex-shrink-0 size-11 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+          aria-label="Close mini player"
+          data-testid="audio-mini-player-close"
+        >
+          <X className="size-4" aria-hidden="true" />
         </button>
       </div>
     </div>

@@ -784,6 +784,19 @@ export interface AudioBookmark {
   createdAt: string // ISO 8601
 }
 
+/** A clipped audio range within an audiobook chapter (E111-S01) */
+export interface AudioClip {
+  id: string // UUID v4
+  bookId: string // FK to Book.id
+  chapterId: string // chapter identifier (title or slug)
+  chapterIndex: number // 0-based index into Book.chapters
+  startTime: number // seconds from chapter start
+  endTime: number // seconds from chapter start
+  title?: string // user-assigned label
+  sortOrder: number // 0-based display order (for DnD reordering)
+  createdAt: string // ISO 8601
+}
+
 /** OPDS catalog connection configuration (E88-S01) */
 export interface OpdsCatalog {
   id: string // UUID v4

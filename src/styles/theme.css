@@ -351,8 +351,8 @@
  * Clean color scheme — activated by `.clean` class on <html>
  * (E100: Apple-inspired cool blue-white aesthetic)
  *
- * Light-mode only — dark mode inherits default dark tokens.
  * Overrides structural + brand tokens for a crisp, cool-toned look.
+ * Dark variant: `.dark.clean` below.
  * -------------------------------------------------------------------------- */
 
 .clean {
@@ -414,6 +414,111 @@
   /* Scrollbar */
   --scrollbar-thumb: #acb2bf;
   --scrollbar-thumb-hover: #747b86;
+
+  /* Font override — Inter for Clean theme */
+  --font-body: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.dark.clean {
+  /* Core surfaces — cool blue-gray instead of warm purple-navy */
+  --background: #171c24;
+  --foreground: #e4e8ef;
+  --card: #1e2530;
+  --card-foreground: #e4e8ef;
+  --popover: #1e2530;
+  --popover-foreground: #e4e8ef;
+  --primary: #e4e8ef;
+  --primary-foreground: #171c24;
+  --secondary: #2a3340;
+  --secondary-foreground: #e4e8ef;
+  --muted: #2a3340;
+  --muted-foreground: #9ca8b8;
+  --accent: #2a3340;
+  --accent-foreground: #e4e8ef;
+  --border: rgba(148, 175, 210, 0.1);
+  --input: rgba(148, 175, 210, 0.08);
+  --input-background: #1a2230;
+  --switch-background: #3a4858;
+  --ring: #4da3ff;
+
+  /* Surface depth tokens */
+  --brand-soft: #1a2740;
+  --brand-soft-foreground: #6db5ff;
+  --brand-muted: #243550;
+  --success-soft: #162e22;
+  --surface-elevated: #232c3a;
+  --surface-sunken: #121820;
+
+  /* Brand — Apple blue for dark */
+  --brand: #4da3ff;
+  --brand-hover: #3d93ef;
+  --brand-foreground: #0a1520;
+  --info: #4da3ff;
+  --info-foreground: #0a1520;
+
+  /* Semantic colors */
+  --success: #5cc08a;
+  --success-foreground: #ffffff;
+  --warning: #e0a850;
+  --warning-foreground: #171c24;
+  --destructive: #e86868;
+  --destructive-foreground: #fde8e8;
+  --destructive-soft-foreground: #f5aaaa;
+
+  /* Sidebar — cool dark container */
+  --sidebar: #1a2230;
+  --sidebar-foreground: #e4e8ef;
+  --sidebar-primary: #4da3ff;
+  --sidebar-primary-foreground: #e4e8ef;
+  --sidebar-accent: #232c3a;
+  --sidebar-accent-foreground: #e4e8ef;
+  --sidebar-border: rgba(148, 175, 210, 0.08);
+  --sidebar-ring: #4da3ff;
+
+  /* Scrollbar */
+  --scrollbar-thumb: #3a4858;
+  --scrollbar-thumb-hover: #4a5a6a;
+  --scrollbar-track: #171c24;
+
+  /* Shadows — cool blue tint */
+  --shadow-brand: oklch(0.25 0.08 230 / 0.2);
+  --shadow-warm: oklch(0.25 0.03 230 / 0.15);
+  --shadow-gold: oklch(0.35 0.08 85 / 0.15);
+
+  /* Chart colors — cool palette */
+  --chart-1: oklch(0.6 0.15 230);
+  --chart-2: oklch(0.62 0.12 160);
+  --chart-3: oklch(0.65 0.1 85);
+  --chart-4: oklch(0.58 0.14 310);
+  --chart-5: oklch(0.6 0.12 40);
+
+  /* Accent violet — cooler */
+  --accent-violet: #a8b8d0;
+  --accent-violet-foreground: #171c24;
+  --accent-violet-muted: #252e40;
+
+  /* Momentum tiers */
+  --momentum-hot: #e8845a;
+  --momentum-hot-bg: #2e2018;
+  --momentum-warm: #e0a850;
+  --momentum-warm-bg: #2e2818;
+  --momentum-cold: #4da3ff;
+  --momentum-cold-bg: #1a2740;
+
+  /* At-risk indicator */
+  --at-risk: #e8845a;
+  --at-risk-bg: #2e2018;
+
+  /* Gold */
+  --gold: #e0a850;
+  --gold-foreground: #171c24;
+  --gold-muted: #302818;
+  --gold-soft-foreground: #e0a850;
+
+  --study-day-text: #5cc08a;
+  --freeze-day-text: #4da3ff;
+  --table-selected: oklch(0.25 0.05 230);
 
   /* Font override — Inter for Clean theme */
   --font-body: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;

@@ -136,10 +136,7 @@ describe('useBulkImport', () => {
       await new Promise(r => setTimeout(r, 5))
     })
 
-    const files = [
-      makeEpubFile('a.epub'),
-      makeEpubFile('b.epub'),
-    ]
+    const files = [makeEpubFile('a.epub'), makeEpubFile('b.epub')]
 
     const { result } = renderHook(() => useBulkImport())
 

@@ -206,7 +206,9 @@ export function HighlightLayer({
         const range = sel.getRangeAt(0)
         const rect = range.getBoundingClientRect()
         // Convert iframe coordinates to window coordinates
-        const iframe = (rendition.getContents() as unknown as Array<{ iframe?: HTMLIFrameElement }>)[0]
+        const iframe = (
+          rendition.getContents() as unknown as Array<{ iframe?: HTMLIFrameElement }>
+        )[0]
         const iframeRect = iframe.iframe?.getBoundingClientRect() ?? { top: 0, left: 0 }
         popoverPosition = {
           top: iframeRect.top + rect.top,

@@ -1,11 +1,8 @@
-import { Sparkles, Palette } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Switch } from '@/app/components/ui/switch'
 import { Label } from '@/app/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
-import { Separator } from '@/app/components/ui/separator'
-import { cn } from '@/app/components/ui/utils'
-import { useEngagementPrefsStore, type ColorScheme } from '@/stores/useEngagementPrefsStore'
+import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
 
 const toggles = [
   {
@@ -40,7 +37,6 @@ export function EngagementPreferences() {
   const streaks = useEngagementPrefsStore(s => s.streaks)
   const badges = useEngagementPrefsStore(s => s.badges)
   const animations = useEngagementPrefsStore(s => s.animations)
-  const colorScheme = useEngagementPrefsStore(s => s.colorScheme)
   const setPreference = useEngagementPrefsStore(s => s.setPreference)
 
   const values = { achievements, streaks, badges, animations }
@@ -86,86 +82,6 @@ export function EngagementPreferences() {
               />
             </div>
           ))}
-        </div>
-
-        <Separator />
-
-        {/* Color Scheme Picker */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Palette className="size-4 text-muted-foreground" aria-hidden="true" />
-            <Label className="text-sm font-medium">Color Scheme</Label>
-          </div>
-
-          <RadioGroup
-            value={colorScheme}
-            onValueChange={(value: string) => setPreference('colorScheme', value as ColorScheme)}
-            aria-label="Color scheme"
-            className="grid grid-cols-1 sm:grid-cols-3 gap-3"
-            data-testid="color-scheme-picker"
-          >
-            {/* Professional */}
-            <label
-              className={cn(
-                'relative flex flex-col gap-2 p-4 border-2 rounded-xl cursor-pointer',
-                'transition-all duration-200 hover:shadow-sm',
-                colorScheme === 'professional'
-                  ? 'border-brand bg-brand-soft shadow-sm'
-                  : 'border-border bg-background hover:border-brand/50'
-              )}
-            >
-              <RadioGroupItem value="professional" className="sr-only" />
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Professional</span>
-                {colorScheme === 'professional' && (
-                  <div className="w-2 h-2 bg-brand rounded-full" />
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Clean, muted color palette for focused learning
-              </p>
-            </label>
-
-            {/* Vibrant */}
-            <label
-              className={cn(
-                'relative flex flex-col gap-2 p-4 border-2 rounded-xl cursor-pointer',
-                'transition-all duration-200 hover:shadow-sm',
-                colorScheme === 'vibrant'
-                  ? 'border-brand bg-brand-soft shadow-sm'
-                  : 'border-border bg-background hover:border-brand/50'
-              )}
-            >
-              <RadioGroupItem value="vibrant" className="sr-only" />
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Vibrant</span>
-                {colorScheme === 'vibrant' && <div className="w-2 h-2 bg-brand rounded-full" />}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                High-contrast vibrant colors for an energized experience
-              </p>
-            </label>
-
-            {/* Clean */}
-            <label
-              className={cn(
-                'relative flex flex-col gap-2 p-4 border-2 rounded-xl cursor-pointer',
-                'transition-all duration-200 hover:shadow-sm',
-                colorScheme === 'clean'
-                  ? 'border-brand bg-brand-soft shadow-sm'
-                  : 'border-border bg-background hover:border-brand/50'
-              )}
-            >
-              <RadioGroupItem value="clean" className="sr-only" />
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Clean</span>
-                {colorScheme === 'clean' && <div className="w-2 h-2 bg-brand rounded-full" />}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Cool white workspace inspired by Apple design
-              </p>
-            </label>
-          </RadioGroup>
         </div>
       </CardContent>
     </Card>

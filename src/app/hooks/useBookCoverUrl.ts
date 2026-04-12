@@ -53,13 +53,17 @@ export function useBookCoverUrl({ bookId, coverUrl }: UseBookCoverUrlOptions): s
       }
 
       // Guard: reject unrecognized protocols (ftp://, file://, javascript:, etc.)
-      if (!/^(https?:|opfs:|opfs-cover:|data:image\/)/.test(coverUrl)) {
+      if (!/^(https?:|opfs:|opfs-cover:|data:image\/|\/)/.test(coverUrl)) {
         if (!isCancelled) setResolvedUrl(null)
         return
       }
 
-      // External URL (http/https) - use directly
-      if (coverUrl.startsWith('http://') || coverUrl.startsWith('https://')) {
+      // External URL (http/https) or relative proxy path - use directly
+      if (
+        coverUrl.startsWith('http://') ||
+        coverUrl.startsWith('https://') ||
+        coverUrl.startsWith('/')
+      ) {
         if (!isCancelled) setResolvedUrl(coverUrl)
         return
       }

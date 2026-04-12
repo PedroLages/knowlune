@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-on-surface": "#f8f0dc",
+                        "primary-fixed-dim": "#e7bdb1",
+                        "on-primary-fixed-variant": "#5d4037",
+                        "outline-variant": "#cbc6bb",
+                        "on-secondary-fixed": "#2b160f",
+                        "surface-container-high": "#f0e8d4",
+                        "on-primary-container": "#846359",
+                        "inverse-primary": "#e7bdb1",
+                        "primary": "#77574d",
+                        "on-secondary-container": "#795c51",
+                        "tertiary-fixed-dim": "#cac4d0",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#5b4137",
+                        "secondary-fixed": "#ffdbce",
+                        "surface-dim": "#e1dac6",
+                        "surface-container-highest": "#eae2ce",
+                        "secondary": "#75584d",
+                        "primary-fixed": "#ffdbd0",
+                        "error": "#ba1a1a",
+                        "surface-bright": "#fff9ee",
+                        "tertiary-fixed": "#e7e0ec",
+                        "on-tertiary-fixed": "#1d1a22",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed": "#2c160e",
+                        "background": "#fff9ee",
+                        "tertiary": "#615d67",
+                        "secondary-fixed-dim": "#e4beb2",
+                        "surface-container": "#f5edd9",
+                        "outline": "#7b776d",
+                        "error-container": "#ffdad6",
+                        "surface-tint": "#77574d",
+                        "inverse-surface": "#343023",
+                        "primary-container": "#ffe8e1",
+                        "on-background": "#1f1c0f",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#6d6973",
+                        "secondary-container": "#fed7ca",
+                        "on-surface": "#1f1c0f",
+                        "surface-container-low": "#fbf3df",
+                        "on-error-container": "#93000a",
+                        "on-surface-variant": "#4a473e",
+                        "surface-variant": "#eae2ce",
+                        "tertiary-container": "#f1eaf6",
+                        "on-tertiary-fixed-variant": "#49454f",
+                        "on-secondary": "#ffffff",
+                        "surface": "#fff9ee",
+                        "on-error": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Noto Serif"],
+                        "body": ["Noto Serif"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #F4ECD8; /* Specific Sepia requirement */
+            color: #2D241E; /* Specific Dark Brown requirement */
+        }
+        .reading-column {
+            column-count: 2;
+            column-gap: 4rem;
+            max-width: 1200px;
+        }
+        @media (max-width: 768px) {
+            .reading-column {
+                column-count: 1;
+            }
+        }
+    </style>
+</head>
+<body class="font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-40 bg-[#F4ECD8]/80 dark:bg-stone-900/80 backdrop-blur-xl shadow-sm opacity-90 flex justify-between items-center px-6 py-4">
+<div class="flex items-center gap-4">
+<button class="hover:bg-stone-200/50 dark:hover:bg-stone-800/50 transition-colors p-2 rounded-full">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="font-noto-serif font-semibold text-stone-900 dark:text-stone-100 text-lg leading-relaxed">The Great Gatsby</h1>
+</div>
+<div class="flex items-center gap-2">
+<button class="hover:bg-stone-200/50 dark:hover:bg-stone-800/50 transition-colors p-2 rounded-full">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+</div>
+</header>
+<!-- Reading Canvas -->
+<main class="min-h-screen pt-24 pb-32 px-12 md:px-24 flex justify-center">
+<article class="reading-column text-lg leading-[1.8] text-justify">
+<p class="mb-8 first-letter:text-5xl first-letter:font-bold first-letter:mr-3 first-letter:float-left">In my younger and more vulnerable years my father gave me some advice that I’ve been turning over in my mind ever since. "Whenever you feel like criticizing any one," he told me, "just remember that all the people in this world haven't had the advantages that you've had."</p>
+<p class="mb-8">He didn't say any more but we've always been unusually communicative in a reserved way, and I understood that he meant a great deal more than that. In consequence I'm inclined to reserve all judgments, a habit that has opened up many curious natures to me and also made me the victim of not a few veteran bores.</p>
+<p class="mb-8">The abnormal mind is quick to detect and attach itself to this quality when it appears in a normal person, and so it came about that in college I was unjustly accused of being a politician, because I was privy to the secret griefs of wild, unknown men. Most of the confidences were unsought—frequently I have feigned sleep, preoccupation, or a hostile levity when I realized by some unmistakable sign that an intimate revelation was quivering on the horizon.</p>
+<p class="mb-8">For the intimate revelations of young men or at least the terms in which they express them are usually plagiaristic and marred by obvious suppressions. Reserving judgments is a matter of infinite hope. I am still a little afraid of missing something if I forget that, as my father snobbishly suggested, and I snobbishly repeat, a sense of the fundamental decencies is parcelled out unequally at birth.</p>
+<p class="mb-8">And, after boasting this way of my tolerance, I come to the admission that it has a limit. Conduct may be founded on the hard rock or the wet marshes but after a certain point I don’t care what it’s founded on. When I came back from the East last autumn I felt that I wanted the world to be in uniform and at a sort of moral attention forever.</p>
+<p class="mb-8">I wanted no more riotous excursions with privileged glimpses into the human heart. Only Gatsby, the man who gives his name to this book, was exempt from my reaction—Gatsby who represented everything for which I have an unaffected scorn.</p>
+<p class="mb-8">If personality is an unbroken series of successful gestures, then there was something gorgeous about him, some heightened sensitivity to the promises of life, as if he were related to one of those intricate machines that register earthquakes ten thousand miles away.</p>
+</article>
+</main>
+<!-- Settings Panel Overlay -->
+<aside class="fixed top-20 right-6 z-50 w-80 bg-surface-container-lowest rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 border border-outline-variant/15">
+<div class="space-y-8">
+<!-- Themes -->
+<section>
+<h3 class="font-label text-[10px] font-semibold uppercase tracking-wider text-outline mb-4">Appearance</h3>
+<div class="flex justify-between items-center bg-surface-container-low p-2 rounded-full">
+<button class="w-10 h-10 rounded-full bg-white border border-outline-variant shadow-sm flex items-center justify-center">
+<div class="w-6 h-6 rounded-full bg-white"></div>
+</button>
+<button class="w-10 h-10 rounded-full bg-[#F4ECD8] border-2 border-primary flex items-center justify-center">
+<div class="w-6 h-6 rounded-full bg-[#F4ECD8]"></div>
+</button>
+<button class="w-10 h-10 rounded-full bg-[#2D241E] flex items-center justify-center">
+<div class="w-6 h-6 rounded-full bg-[#2D241E]"></div>
+</button>
+</div>
+</section>
+<!-- Font Size -->
+<section>
+<h3 class="font-label text-[10px] font-semibold uppercase tracking-wider text-outline mb-4">Text Size</h3>
+<div class="flex items-center gap-4 bg-surface-container-low p-3 rounded-xl">
+<span class="material-symbols-outlined text-sm">text_fields</span>
+<input class="flex-grow accent-primary h-1.5 bg-outline-variant rounded-full appearance-none cursor-pointer" max="10" min="1" type="range" value="4"/>
+<span class="material-symbols-outlined text-2xl">text_fields</span>
+</div>
+</section>
+<!-- Font Family -->
+<section>
+<h3 class="font-label text-[10px] font-semibold uppercase tracking-wider text-outline mb-4">Typography</h3>
+<div class="space-y-1">
+<button class="w-full text-left px-4 py-3 rounded-lg bg-primary-container text-on-primary-container flex justify-between items-center">
+<span class="font-headline">Noto Serif</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</button>
+<button class="w-full text-left px-4 py-3 rounded-lg hover:bg-surface-container-high transition-colors font-label text-sm">
+                        Inter
+                    </button>
+<button class="w-full text-left px-4 py-3 rounded-lg hover:bg-surface-container-high transition-colors font-sans text-sm">
+                        System Sans
+                    </button>
+</div>
+</section>
+<!-- Line Height -->
+<section>
+<h3 class="font-label text-[10px] font-semibold uppercase tracking-wider text-outline mb-4">Line Spacing</h3>
+<div class="grid grid-cols-3 gap-2">
+<button class="p-2 flex justify-center items-center rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-primary-container/30 transition-colors">
+<span class="material-symbols-outlined">format_line_spacing</span>
+</button>
+<button class="p-2 flex justify-center items-center rounded-lg bg-primary-container text-on-primary-container">
+<span class="material-symbols-outlined">reorder</span>
+</button>
+<button class="p-2 flex justify-center items-center rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-primary-container/30 transition-colors">
+<span class="material-symbols-outlined">segment</span>
+</button>
+</div>
+</section>
+</div>
+</aside>
+<!-- BottomNavBar -->
+<footer class="fixed bottom-0 left-0 w-full z-50 flex flex-col items-center px-8 pb-8 pt-4 bg-[#F4ECD8]/80 dark:bg-stone-900/80 backdrop-blur-xl rounded-t-xl shadow-[0_-4px_24px_rgba(0,0,0,0.04)]">
+<div class="w-full max-w-3xl mb-6 px-4">
+<div class="relative h-1 bg-secondary-container rounded-full overflow-hidden">
+<div class="absolute left-0 top-0 h-full w-[12%] bg-primary shadow-[0_0_8px_rgba(119,87,77,0.4)]"></div>
+</div>
+</div>
+<div class="flex flex-col items-center text-stone-900 dark:text-stone-100 transition-opacity tap-highlight-none">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+<span class="font-inter text-xs tracking-widest uppercase mt-1">Page 12 of 348</span>
+</div>
+</footer>
+</body></html>

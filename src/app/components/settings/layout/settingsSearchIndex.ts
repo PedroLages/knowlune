@@ -171,8 +171,8 @@ export const SETTINGS_SEARCH_INDEX: SettingsSearchEntry[] = [
   },
   {
     label: 'Color Scheme',
-    description: 'Professional or vibrant color palette',
-    keywords: ['vibrant', 'professional', 'colors', 'palette'],
+    description: 'Professional, vibrant, or clean color palette',
+    keywords: ['vibrant', 'professional', 'clean', 'colors', 'palette', 'scheme'],
     category: 'appearance',
     icon: Palette,
   },

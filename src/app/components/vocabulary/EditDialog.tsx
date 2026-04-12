@@ -24,14 +24,22 @@ export function EditDialog({
   const [note, setNote] = useState(item.note ?? '')
 
   return (
-    <Dialog open onOpenChange={open => { if (!open) onCancel() }}>
+    <Dialog
+      open
+      onOpenChange={open => {
+        if (!open) onCancel()
+      }}
+    >
       <DialogContent data-testid="vocab-edit-dialog" className="max-w-md">
         <DialogHeader>
           <DialogTitle className="text-lg">Edit: {item.word}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <label htmlFor="vocab-definition" className="text-sm font-medium text-foreground mb-1 block">
+            <label
+              htmlFor="vocab-definition"
+              className="text-sm font-medium text-foreground mb-1 block"
+            >
               Definition
             </label>
             <Textarea
