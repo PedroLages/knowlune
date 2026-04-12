@@ -44,6 +44,8 @@ interface AudiobookRendererProps {
   onSwitchToReading?: (currentChapterIndex: number) => void
   /** Initial chapter index to load on mount (E103-S02 format switching). Defaults to 0. */
   initialChapterIndex?: number
+  /** Called when a bookmark is created or deleted — lets parent refresh bookmark state */
+  onBookmarkChange?: () => void
 }
 
 export function AudiobookRenderer({
@@ -52,6 +54,7 @@ export function AudiobookRenderer({
   onBookmarksClose,
   onSwitchToReading,
   initialChapterIndex = 0,
+  onBookmarkChange,
 }: AudiobookRendererProps) {
   const {
     isPlaying,
@@ -94,12 +97,14 @@ export function AudiobookRenderer({
 
   const handleBookmarkCreated = useCallback((bookmarkId: string) => {
     setSessionBookmarkIds(prev => new Set([...prev, bookmarkId]))
-  }, [])
+    onBookmarkChange?.()
+  }, [onBookmarkChange])
 
   const handleBookmarkDeleted = useCallback((bookmarkId: string) => {
     setSessionBookmarkIds(prev => {
       const next = new Set(prev)
       next.delete(bookmarkId)
+      onBookmarkChange?.()
       return next
     })
   }, [])

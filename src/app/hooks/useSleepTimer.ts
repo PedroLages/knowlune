@@ -12,7 +12,7 @@
  */
 import { useState, useRef, useCallback, useEffect } from 'react'
 
-export type SleepTimerOption = 15 | 30 | 45 | 60 | 'end-of-chapter' | 'off'
+export type SleepTimerOption = number | 'end-of-chapter' | 'off'
 
 const FADE_DURATION_MS = 5_000
 const LS_KEY = 'knowlune:sleep-timer-ended'

@@ -116,6 +116,26 @@ export function BookReader() {
   const [highlightsOpen, setHighlightsOpen] = useState(false)
   // audiobookBookmarksOpen: controls BookmarkListPanel in AudiobookRenderer (E87-S04)
   const [audiobookBookmarksOpen, setAudiobookBookmarksOpen] = useState(false)
+  const [hasBookmarks, setHasBookmarks] = useState(false)
+  const [bookmarkVersion, setBookmarkVersion] = useState(0)
+  const handleBookmarkChange = useCallback(() => setBookmarkVersion(v => v + 1), [])
+
+  // Check if book has any bookmarks (for filled icon state)
+  useEffect(() => {
+    if (!bookId) return
+    let cancelled = false
+    db.audioBookmarks
+      .where('bookId')
+      .equals(bookId)
+      .count()
+      .then(count => {
+        if (!cancelled) setHasBookmarks(count > 0)
+      })
+      .catch(() => {
+        // silent-catch-ok: non-critical UI state
+      })
+    return () => { cancelled = true }
+  }, [bookId, audiobookBookmarksOpen, bookmarkVersion])
   // Cloze flashcard creator state (E85-S04)
   const [clozeText, setClozeText] = useState('')
   const [clozeHighlightId, setClozeHighlightId] = useState<string | undefined>(undefined)
@@ -675,10 +695,10 @@ export function BookReader() {
             variant="ghost"
             size="icon"
             onClick={() => setAudiobookBookmarksOpen(true)}
-            className={`min-h-[44px] min-w-[44px] hover:text-foreground ${audiobookBookmarksOpen ? 'text-foreground' : 'text-muted-foreground'}`}
+            className={`min-h-[44px] min-w-[44px] hover:text-foreground ${audiobookBookmarksOpen || hasBookmarks ? 'text-foreground' : 'text-muted-foreground'}`}
             aria-label="View bookmarks"
           >
-            <Bookmark className={`size-5 ${audiobookBookmarksOpen ? 'fill-current' : ''}`} />
+            <Bookmark className="size-5" fill={hasBookmarks ? 'currentColor' : 'none'} />
           </Button>
         </div>
         <Suspense
@@ -700,6 +720,7 @@ export function BookReader() {
                 ? Math.max(0, Math.min(startChapterIndex, book.chapters.length - 1))
                 : undefined
             }
+            onBookmarkChange={handleBookmarkChange}
           />
         </Suspense>
       </div>
