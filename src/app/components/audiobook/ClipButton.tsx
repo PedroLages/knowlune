@@ -65,7 +65,7 @@ export function ClipButton({
       setPendingStartTime(null)
       onClipCreated?.(id)
     } catch {
-      // Intentional: error surfaced via toast inside addClip
+      // silent-catch-ok: error surfaced via toast inside addClip
     }
   }
 
@@ -98,10 +98,9 @@ export function ClipButton({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.5 }}
               transition={{ duration: 0.2 }}
-              className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive"
+              className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive animate-pulse"
               data-testid="clip-recording-indicator"
               aria-label="Recording in progress"
-              style={{ animation: 'pulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}
             />
           )}
         </AnimatePresence>

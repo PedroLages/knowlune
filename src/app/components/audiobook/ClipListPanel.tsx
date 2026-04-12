@@ -348,7 +348,7 @@ export function ClipListPanel({
                   strategy={verticalListSortingStrategy}
                 >
                   <ul role="list" aria-label="Audio clips">
-                    {clips.map((clip, index) => {
+                    {clips.map((clip) => {
                       const chapterTitle =
                         chapters[clip.chapterIndex]?.title ?? `Chapter ${clip.chapterIndex + 1}`
 
