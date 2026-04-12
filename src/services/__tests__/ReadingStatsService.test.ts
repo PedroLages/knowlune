@@ -259,6 +259,56 @@ describe('computeAverageReadingSpeed', () => {
     expect(speed).toBe(30)
   })
 
+  it('rounds speed to nearest integer', async () => {
+    vi.mocked(db.books.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          { id: 'book1', status: 'finished', totalPages: 100, progress: 100 },
+        ]),
+      }),
+    } as never)
+
+    vi.mocked(db.studySessions.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          { contentItemId: 'book1', startTime: '2026-04-06T08:00:00Z', duration: 36100 }, // ~10.03 hours
+        ]),
+      }),
+    } as never)
+
+    const { computeAverageReadingSpeed } = await import('@/services/ReadingStatsService')
+    const speed = await computeAverageReadingSpeed()
+
+    // 100 pages / (36100/3600) hours = ~9.97 → rounded to 10
+    expect(speed).toBe(10)
+  })
+
+  it('aggregates pages and seconds across multiple finished books', async () => {
+    vi.mocked(db.books.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          { id: 'book1', status: 'finished', totalPages: 200, progress: 100 },
+          { id: 'book2', status: 'finished', totalPages: 400, progress: 100 },
+        ]),
+      }),
+    } as never)
+
+    vi.mocked(db.studySessions.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          { contentItemId: 'book1', startTime: '2026-04-06T08:00:00Z', duration: 7200 },  // 2 hours
+          { contentItemId: 'book2', startTime: '2026-04-06T10:00:00Z', duration: 14400 }, // 4 hours
+        ]),
+      }),
+    } as never)
+
+    const { computeAverageReadingSpeed } = await import('@/services/ReadingStatsService')
+    const speed = await computeAverageReadingSpeed()
+
+    // (200 + 400) pages / (2 + 4) hours = 600 / 6 = 100 pages/hour
+    expect(speed).toBe(100)
+  })
+
   it('ignores sessions older than 90 days', async () => {
     vi.mocked(db.books.where).mockReturnValue({
       equals: vi.fn().mockReturnValue({

@@ -137,14 +137,14 @@ describe('getPagesReadToday', () => {
     // High speed to push estimate over currentPage
     vi.mocked(computeAverageReadingSpeed).mockResolvedValue(300)
 
-    // Book at 50 pages, but long session would estimate 200 pages
+    // Book at 60 pages (20% of 300), but long session would estimate 200 pages
     vi.mocked(db.books.toArray).mockResolvedValue([
       {
         id: 'book1',
         title: 'Test EPUB',
         status: 'reading',
         totalPages: 300,
-        progress: 16.67, // 50 pages out of 300
+        progress: 20, // 20% of 300 = 60 pages (clean integer currentPage)
         currentPosition: { type: 'cfi', cfi: '' },
         lastOpenedAt: FIXED_DATE.toISOString(),
       },
@@ -168,8 +168,8 @@ describe('getPagesReadToday', () => {
     const { getPagesReadToday } = await import('@/app/hooks/usePagesReadToday')
     const pages = await getPagesReadToday()
 
-    // Capped at currentPage (50)
-    expect(pages).toBe(50)
+    // Capped at currentPage (60)
+    expect(pages).toBe(60)
   })
 
   it('skips books without lastOpenedAt', async () => {
