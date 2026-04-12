@@ -319,7 +319,11 @@ export function ClipListPanel({
 
   return (
     <Sheet open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <SheetContent side="right" className="flex flex-col w-full sm:max-w-md p-0">
+      <SheetContent
+        side="right"
+        className="flex flex-col w-full sm:max-w-md p-0"
+        data-testid="clip-list-panel"
+      >
         <SheetHeader className="px-4 pt-4 pb-2 border-b border-border/50">
           <SheetTitle>Clips</SheetTitle>
         </SheetHeader>
@@ -332,7 +336,7 @@ export function ClipListPanel({
           </div>
         ) : (
           <ScrollArea className="flex-1">
-            <div data-testid="clip-list-panel">
+            <div>
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
