@@ -270,7 +270,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
         <YouTube
           videoId={videoId}
           opts={{
-            host: 'https://www.youtube-nocookie.com',
+            host: 'https://www.youtube.com',
             width: '100%',
             height: '100%',
             playerVars: {
