@@ -524,19 +524,6 @@
     },
     {
       "severity": "BLOCKER",
-      "description": "Infinite silence skip loop. Once silence exceeds 500ms and audio.currentTime is advanced by SKIP_LOOKAHEAD_S (0.1s), the audio is still in the silent region. The code resets silenceStartRef.current = null and immediately starts tracking again. On the next animation frame (~16ms later), silence is still detected, and after another ~500ms, another skip of 0.1s fires. This creates an infinite loop of tiny 0.1s skips (~6/second) until non-silent audio is reached, causing constant UI flashing, rapid seeking that degrades audio playback, and high CPU usage.",
-      "file": "src/app/hooks/useSilenceDetection.ts",
-      "line": 78,
-      "end_line": 95,
-      "confidence": 92,
-      "category": "architecture",
-      "suggestion": "After a skip, continue scanning forward to find non-silent audio (or jump by a much larger increment like 5\u201310 seconds), or implement a cooldown that prevents re-triggering for several seconds after a skip.",
-      "model_source": "glm-5.1",
-      "agent": "glm-code-review",
-      "consensus_score": 92
-    },
-    {
-      "severity": "BLOCKER",
       "description": "`loadClips` silently swallows errors \u2014 `isLoaded` never set to `true` on query failure, permanently disabling the store. Fix: set `isLoaded: true` in the catch block (with `clips: []`) or introduce a distinct `error` state.",
       "file": "src/stores/useAudioClipStore.ts",
       "line": 53,
@@ -616,65 +603,132 @@
     },
     {
       "severity": "HIGH",
-      "description": "opacity: 0 elements with aria-live='polite' cause ghost screen reader announcements. When visible is false, the indicator div still has aria-live='polite' and aria-atomic='true', and the displayText span remains in the DOM. Screen readers may announce stale 'Skipped Xs silence' text when other DOM changes occur nearby.",
-      "file": "src/app/components/audiobook/SilenceSkipIndicator.tsx",
-      "line": 43,
-      "end_line": 49,
-      "confidence": 75,
-      "category": "accessibility",
-      "suggestion": "Only render aria-live='polite' when visible is true, or clear displayText when visible becomes false, or use aria-hidden when not visible.",
-      "model_source": "glm-5.1",
-      "agent": "glm-code-review",
+      "description": "Keyboard shortcuts [ and ] for speed adjustment only call setPlaybackRate() but do NOT call updateBookPlaybackSpeed(). Speed changes via keyboard are not persisted per-book to IndexedDB, violating AC-5. The SpeedControl popover correctly calls both. Fix: add updateBookPlaybackSpeed(book.id, newRate) after each setPlaybackRate call in both keyboard shortcut actions.",
+      "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
+      "line": 266,
+      "end_line": 279,
+      "confidence": 90,
+      "category": "Correctness",
+      "suggestion": "Add useBookStore.getState().updateBookPlaybackSpeed(book.id, newRate) after each setPlaybackRate call in the [ and ] keyboard shortcut actions.",
+      "agent": "code-review",
       "consensus_sources": [
         {
-          "agent": "glm-code-review",
+          "agent": "code-review",
+          "confidence": 90
+        },
+        {
+          "agent": "code-review",
           "confidence": 75
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 code-review + code-review"
+    },
+    {
+      "severity": "HIGH",
+      "description": "useSilenceDetection production hook uses Date.now() directly in setLastSkip (line 129). This is benign in production but makes the lastSkip.timestamp field non-deterministic if a unit test is ever written for the detection loop.",
+      "file": "src/app/hooks/useSilenceDetection.ts",
+      "line": 129,
+      "end_line": 129,
+      "confidence": 78,
+      "category": "test-maintainability",
+      "suggestion": "Use performance.now() + a fixed epoch reference, or document that timestamp is informational only and must not be asserted in tests.",
+      "agent": "code-review-testing",
+      "consensus_sources": [
+        {
+          "agent": "code-review-testing",
+          "confidence": 78
+        },
+        {
+          "agent": "openai-code-review",
+          "confidence": 75
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 code-review-testing + openai-code-review"
+    },
+    {
+      "severity": "HIGH",
+      "description": "SpeedControl hard-codes SPEED_OPTIONS=[0.5,0.75,1.0,1.25,1.5,1.75,2.0,2.5,3.0] \u2014 missing 2.25 and 2.75 that exist in VALID_SPEEDS. A user who sets the global default to 2.25x will play at that rate but see no option selected in the popover.",
+      "file": "src/app/components/audiobook/SpeedControl.tsx",
+      "line": 19,
+      "end_line": 19,
+      "confidence": 95,
+      "category": "architecture",
+      "suggestion": "Replace local SPEED_OPTIONS with `import { VALID_SPEEDS } from '@/stores/useAudiobookPrefsStore'`.",
+      "model_source": "adversarial-fallback",
+      "agent": "openai-code-review",
+      "consensus_sources": [
+        {
+          "agent": "openai-code-review",
+          "confidence": 95
+        },
+        {
+          "agent": "exploratory-qa",
+          "confidence": 100
         },
         {
           "agent": "design-review",
-          "confidence": 70
-        }
-      ],
-      "consensus_count": 2,
-      "consensus_score": 100,
-      "consensus_tag": "Consensus: 2 \u2014 glm-code-review + design-review"
-    },
-    {
-      "severity": "HIGH",
-      "description": "book.playbackSpeed in dependency array causes re-application on every speed change. When the user changes speed via SpeedControl, the optimistic store update changes book.playbackSpeed, which triggers this effect. The guard returns early in most cases, but unnecessary effect executions occur. More critically, if the book object reference changes due to an unrelated field update, the effect could re-fire.",
-      "file": "src/app/hooks/useAudiobookPrefsEffects.ts",
-      "line": 58,
-      "end_line": 61,
-      "confidence": 82,
-      "category": "architecture",
-      "suggestion": "Remove book.playbackSpeed from the dependency array and read it via a ref or inside the effect from the store. The effect should only fire when book.id changes.",
-      "model_source": "glm-5.1",
-      "agent": "glm-code-review",
-      "consensus_sources": [
-        {
-          "agent": "glm-code-review",
-          "confidence": 82
+          "confidence": 85
         },
         {
-          "agent": "glm-code-review",
-          "confidence": 55
+          "agent": "openai-code-review",
+          "confidence": 85
+        }
+      ],
+      "consensus_count": 4,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 4 \u2014 openai-code-review + exploratory-qa + design-review + openai-code-review"
+    },
+    {
+      "severity": "HIGH",
+      "description": "Invalid ARIA: <li role=\"option\"> wraps a <button> child in the speed popover. The ARIA spec prohibits interactive elements inside `option` roles. Screen readers (NVDA, VoiceOver) will double-announce each item as both an option and a button, confusing learners.",
+      "file": "src/app/components/audiobook/SpeedControl.tsx",
+      "line": 56,
+      "end_line": 68,
+      "confidence": 95,
+      "category": "accessibility",
+      "suggestion": "Convert to role=\"menu\" on <ul> and role=\"menuitem\" on each <button>, removing role=\"option\" and aria-selected from the <li>. Menus permit interactive descendants.",
+      "agent": "design-review",
+      "consensus_sources": [
+        {
+          "agent": "design-review",
+          "confidence": 95
+        },
+        {
+          "agent": "design-review",
+          "confidence": 98
         }
       ],
       "consensus_count": 2,
       "consensus_score": 100,
-      "consensus_tag": "Consensus: 2 \u2014 glm-code-review + glm-code-review"
+      "consensus_tag": "Consensus: 2 \u2014 design-review + design-review"
     },
     {
       "severity": "HIGH",
-      "description": "Speed preset buttons in AudiobookSettingsPanel use min-h-[36px] which is below the 44px touch-target minimum. Users on touch devices must tap with high precision to select a playback speed.",
-      "file": "src/app/components/audiobook/AudiobookSettingsPanel.tsx",
-      "line": 99,
-      "confidence": 95,
-      "category": "accessibility",
-      "suggestion": "Change py-1.5 to py-2.5 on the speed pill buttons to reach 44px total height, or replace min-h-[36px] with min-h-[44px].",
-      "model_source": null,
-      "agent": "design-review",
-      "consensus_score": 95
+      "description": "useKeyboardShortcuts crashes with TypeError when keydown event target is document (no tagName property). Happens when no focusable element has focus \u2014 real-world edge case on audiobook reader page.",
+      "file": "src/app/hooks/useKeyboardShortcuts.ts",
+      "line": 62,
+      "end_line": 62,
+      "confidence": 90,
+      "category": "console",
+      "suggestion": "Add null guard: const tagName = target?.tagName?.toLowerCase() ?? ''",
+      "agent": "exploratory-qa",
+      "consensus_sources": [
+        {
+          "agent": "exploratory-qa",
+          "confidence": 90
+        },
+        {
+          "agent": "exploratory-qa",
+          "confidence": 85
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 exploratory-qa + exploratory-qa"
     },
     {
       "severity": "HIGH",
@@ -712,46 +766,36 @@
     },
     {
       "severity": "HIGH",
+      "description": "SkipSilenceActiveIndicator has both role=\"status\" (which implies aria-live=\"polite\") and an explicit aria-live=\"polite\" attribute. This redundancy can confuse automated tools and over-specifies semantics.",
+      "file": "src/app/components/audiobook/SkipSilenceActiveIndicator.tsx",
+      "line": 17,
+      "end_line": 19,
+      "confidence": 90,
+      "category": "accessibility",
+      "suggestion": "Remove aria-live=\"polite\" \u2014 role=\"status\" already provides the implicit live region semantics.",
+      "agent": "design-review",
+      "consensus_score": 90
+    },
+    {
+      "severity": "HIGH",
+      "description": "Module-level AudioContext singletons (_mediaSource, _analyser) are never re-bound when the underlying HTMLAudioElement changes (new book). The second book's audio bypasses the analyser entirely \u2014 silence detection reads zeroed buffers from a disconnected stale source.",
+      "file": "src/app/hooks/useSilenceDetection.ts",
+      "line": 21,
+      "end_line": 23,
+      "confidence": 88,
+      "category": "architecture",
+      "suggestion": "Track the HTMLAudioElement reference alongside _mediaSource. On mount, if audioRef.current !== stored element reference, disconnect and reinitialise _mediaSource and _analyser for the new element.",
+      "model_source": "adversarial-fallback",
+      "agent": "openai-code-review",
+      "consensus_score": 88
+    },
+    {
+      "severity": "HIGH",
       "description": "Optimistic `updateClipTitle` rollback has same stale-snapshot problem \u2014 concurrent mutations can be silently overwritten on failure. Fix: re-fetch from Dexie on failure.",
       "file": "src/stores/useAudioClipStore.ts",
       "line": 82,
       "confidence": 85,
       "category": "data-integrity",
-      "agent": "glm-code-review",
-      "consensus_score": 85
-    },
-    {
-      "severity": "HIGH",
-      "description": "AC-1: test only verifies skip-silence-active-indicator is visible after toggling \u2014 does not verify that silence detection actually fires (RMS below threshold for >500ms causes seek). Test would pass even if useSilenceDetection were a no-op.",
-      "file": "tests/e2e/story-e111-s02.spec.ts",
-      "line": 86,
-      "confidence": 85,
-      "category": "ac-coverage",
-      "suggestion": "Add a unit test for useSilenceDetection that mocks AnalyserNode.getByteTimeDomainData to produce sub-threshold data held for >500ms, then asserts audio.currentTime was advanced and lastSkip.durationSeconds > 0.",
-      "agent": "code-review-testing",
-      "consensus_score": 85
-    },
-    {
-      "severity": "HIGH",
-      "description": "AC-2: toBeAttached() on silence-skip-indicator always passes because the element is always in the DOM (rendered with opacity-0). The assertion does not verify the indicator becomes visible or shows text matching 'Skipped X.Xs silence'.",
-      "file": "tests/e2e/story-e111-s02.spec.ts",
-      "line": 100,
-      "confidence": 85,
-      "category": "assertion-quality",
-      "suggestion": "Upgrade assertion to verify the indicator becomes visible and toContainText(/Skipped \\d+\\.\\ds silence/) after a real skip event is triggered.",
-      "agent": "code-review-testing",
-      "consensus_score": 85
-    },
-    {
-      "severity": "HIGH",
-      "description": "Module-level singletons coupled to per-element instance \u2014 cross-element contamination. _mediaSource, _audioCtx, and _analyser are module-level singletons, but createMediaElementSource(audio) binds to a specific HTMLAudioElement. If useSilenceDetection is ever used with a different audio element, _mediaSource is non-null so it won't be recreated, but it's still connected to the old element.",
-      "file": "src/app/hooks/useSilenceDetection.ts",
-      "line": 117,
-      "end_line": 125,
-      "confidence": 85,
-      "category": "architecture",
-      "suggestion": "Track which element _mediaSource is bound to (e.g., let _sourceElement: HTMLAudioElement | null = null) and verify it matches audioRef.current before reusing. Alternatively, reset all module-level state when a different element is detected.",
-      "model_source": "glm-5.1",
       "agent": "glm-code-review",
       "consensus_score": 85
     },
@@ -777,17 +821,6 @@
     },
     {
       "severity": "HIGH",
-      "description": "useKeyboardShortcuts crashes with TypeError when a KeyboardEvent is dispatched programmatically without a valid target (e.target is null/undefined causes tagName.toLowerCase() to throw). This is a pre-existing bug not introduced by E110-S03 but exposed during testing at src/app/hooks/useKeyboardShortcuts.ts:62 \u2014 the handler accesses e.target.tagName without a null guard.",
-      "file": "src/app/hooks/useKeyboardShortcuts.ts",
-      "line": 62,
-      "confidence": 85,
-      "category": "Console",
-      "suggestion": "Add a null guard: `if (!target || !target.tagName) return` before accessing target.tagName at line 62.",
-      "agent": "exploratory-qa",
-      "consensus_score": 85
-    },
-    {
-      "severity": "HIGH",
       "description": "handlePlayClip uses setTimeout without cleanup -- seekTo/play may execute after component unmount",
       "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
       "line": 316,
@@ -799,34 +832,24 @@
     },
     {
       "severity": "HIGH",
+      "description": "AC-1 E2E test verifies toggle persistence and active-indicator visibility but does not exercise the actual silence detection loop (RAF tick, threshold crossing, audio seek). The test passes even if Web Audio API detection is entirely non-functional. No test path covers the full skip event emission.",
+      "file": "tests/e2e/story-e111-s02.spec.ts",
+      "line": 73,
+      "end_line": 97,
+      "confidence": 82,
+      "category": "ac-coverage",
+      "suggestion": "Add a comment documenting that the RAF detection loop is verified by calculateRms unit tests + code review, not by E2E. Consider a unit test for useSilenceDetection that mocks requestAnimationFrame and AnalyserNode to simulate a threshold-crossing event.",
+      "agent": "code-review-testing",
+      "consensus_score": 82
+    },
+    {
+      "severity": "HIGH",
       "description": "`reorderClips(oldIndex, newIndex)` uses array indices that can desync from Dexie data if `isLoaded` is false or clips were externally modified. Fix: guard with `if (!get().isLoaded) return;`.",
       "file": "src/app/components/audiobook/ClipListPanel.tsx",
       "line": 65,
       "confidence": 80,
       "category": "correctness",
       "agent": "glm-code-review",
-      "consensus_score": 80
-    },
-    {
-      "severity": "HIGH",
-      "description": "Navigating to a second audiobook URL (/library/:id/read) redirects back to the previously-opened book. The in-memory Zustand AudioPlayerStore.currentBookId drives a redirect during component mount, preventing users from switching audiobooks via URL and blocking full AC-6 cross-book navigation verification.",
-      "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
-      "line": 165,
-      "confidence": 80,
-      "category": "functional",
-      "suggestion": "Investigate race condition between AudiobookRenderer.setCurrentBook(book.id) on mount and any effect/component that re-navigates to currentBookId. Consider resetting currentBookId in the store when navigating away from the reader, or deferring store update until the new book's renderer fully mounts.",
-      "agent": "exploratory-qa",
-      "consensus_score": 80
-    },
-    {
-      "severity": "HIGH",
-      "description": "AC-5: speed persistence test does not navigate away and return to confirm the speed was written to Dexie. Test only verifies the UI label updated in memory, not that updateBookPlaybackSpeed persisted the value.",
-      "file": "tests/e2e/story-e111-s02.spec.ts",
-      "line": 130,
-      "confidence": 80,
-      "category": "ac-coverage",
-      "suggestion": "After asserting speed display, navigate to /library and back to the book, then re-assert speed-button still shows 1.5x.",
-      "agent": "code-review-testing",
       "consensus_score": 80
     },
     {
@@ -867,6 +890,18 @@
       "confidence": 78,
       "agent": "code-review-testing",
       "consensus_score": 78
+    },
+    {
+      "severity": "HIGH",
+      "description": "Potential infinite silence skip loop: useSilenceDetection.ts skips only 0.1s (SKIP_LOOKAHEAD_S) per trigger then resets silenceStartRef.current to null, which immediately re-detects silence and fires another skip ~6 times/second until non-silent audio is reached. The diff was truncated so the fix could not be confirmed in source. Causes constant UI flashing, degraded playback, and high CPU.",
+      "file": "src/app/hooks/useSilenceDetection.ts",
+      "line": null,
+      "confidence": 72,
+      "category": "architecture",
+      "suggestion": "After a skip, scan forward to find non-silent audio before jumping, use a larger skip increment (5\u201310s), or implement a cooldown preventing re-triggering for several seconds.",
+      "model_source": "glm-5.1",
+      "agent": "glm-code-review",
+      "consensus_score": 72
     },
     {
       "severity": "HIGH",
@@ -975,52 +1010,50 @@
     },
     {
       "severity": "MEDIUM",
-      "description": "SkipSilenceActiveIndicator has role=\"status\" but no explicit aria-live attribute. The element also serves as a landmark label target via aria-label set/cleared conditionally. Some screen reader + browser combinations do not reliably announce state changes without an explicit aria-live declaration.",
-      "file": "src/app/components/audiobook/SkipSilenceActiveIndicator.tsx",
-      "line": 19,
-      "end_line": 22,
-      "confidence": 80,
-      "category": "accessibility",
-      "suggestion": "Add aria-live=\"polite\" explicitly to the outer div alongside role=\"status\". This makes the live region declaration stable and explicit regardless of browser ARIA implementation.",
-      "model_source": null,
-      "agent": "design-review",
+      "description": "ChapterList emits React duplicate-key prop warnings on every render because chapter.id is undefined for test seed data (and potentially ABS chapters not yet migrated). key={chapter.id} resolves to undefined for all items.",
+      "file": "src/app/components/audiobook/ChapterList.tsx",
+      "line": 61,
+      "end_line": 61,
+      "confidence": 95,
+      "category": "console",
+      "suggestion": "Fall back to index: key={chapter.id ?? index}",
+      "agent": "exploratory-qa",
       "consensus_sources": [
         {
-          "agent": "design-review",
-          "confidence": 80
+          "agent": "exploratory-qa",
+          "confidence": 95
         },
         {
           "agent": "design-review",
-          "confidence": 60
+          "confidence": 97
         }
       ],
       "consensus_count": 2,
       "consensus_score": 100,
-      "consensus_tag": "Consensus: 2 \u2014 design-review + design-review"
+      "consensus_tag": "Consensus: 2 \u2014 exploratory-qa + design-review"
     },
     {
       "severity": "MEDIUM",
-      "description": "animate-pulse on the SkipSilenceActiveIndicator dot is missing the motion-safe: guard. The codebase consistently uses motion-safe:animate-pulse elsewhere (ContinueLearning.tsx:187, YouTubeImportDialog.tsx:526). Bare animate-pulse plays for users with prefers-reduced-motion enabled.",
-      "file": "src/app/components/audiobook/SkipSilenceActiveIndicator.tsx",
-      "line": 26,
-      "confidence": 98,
-      "category": "accessibility",
-      "suggestion": "Replace animate-pulse with motion-safe:animate-pulse to match the established codebase pattern.",
-      "model_source": null,
+      "description": "formatSpeed uses '\u00d7' (Unicode U+00D7) in SpeedControl.tsx but 'x' (ASCII letter) in AudiobookSettingsPanel.tsx. The player speed button shows '1.5\u00d7' while settings presets show '1.5x', creating a visual mismatch. Screen readers also announce them differently.",
+      "file": "src/app/components/audiobook/AudiobookSettingsPanel.tsx",
+      "line": 45,
+      "confidence": 99,
+      "category": "visual",
+      "suggestion": "Extract a single formatSpeed utility using '\u00d7' consistently, import it in both components. Also aligns the divergent integer-check logic (rate % 1 === 0 vs Number.isInteger).",
       "agent": "design-review",
-      "consensus_sources": [
-        {
-          "agent": "design-review",
-          "confidence": 98
-        },
-        {
-          "agent": "design-review",
-          "confidence": 60
-        }
-      ],
-      "consensus_count": 2,
-      "consensus_score": 100,
-      "consensus_tag": "Consensus: 2 \u2014 design-review + design-review"
+      "consensus_score": 99
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "The Skip Silence switch and Auto-Bookmark on Stop switch both have adjacent description paragraphs not linked via aria-describedby. Keyboard/AT users receive no programmatic description when the switch receives focus.",
+      "file": "src/app/components/audiobook/AudiobookSettingsPanel.tsx",
+      "line": 116,
+      "end_line": 130,
+      "confidence": 92,
+      "category": "accessibility",
+      "suggestion": "Add id=\"skip-silence-description\" to the <p> tag and aria-describedby=\"skip-silence-description\" to the <Switch>. Apply the same pattern to the auto-bookmark toggle (lines 189-205).",
+      "agent": "design-review",
+      "consensus_score": 92
     },
     {
       "severity": "MEDIUM",
@@ -1045,13 +1078,15 @@
     },
     {
       "severity": "MEDIUM",
-      "description": "React 'key' prop warning emitted from ChapterList when rendering the E2E test fixture audiobook (test-audiobook-e111-s02-a). List items lack unique key props.",
+      "description": "SkipSilenceActiveIndicator receives isActive={skipSilence} (stored preference) instead of silenceDetection.isActive (runtime). The badge shows 'active' as soon as the toggle is flipped, even before Play is pressed and while AudioContext is suspended.",
       "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
-      "line": null,
+      "line": 448,
+      "end_line": 448,
       "confidence": 90,
-      "category": "console",
-      "suggestion": "Find the ChapterList component and add unique key props to list items (use chapter index or a stable chapter ID).",
-      "agent": "exploratory-qa",
+      "category": "architecture",
+      "suggestion": "Change to <SkipSilenceActiveIndicator isActive={silenceDetection.isActive} />.",
+      "model_source": "adversarial-fallback",
+      "agent": "openai-code-review",
       "consensus_score": 90
     },
     {
@@ -1066,13 +1101,13 @@
     },
     {
       "severity": "MEDIUM",
-      "description": "No unit tests exist for useSilenceDetection. The hook contains testable pure logic (calculateRms, 500ms threshold gate, singleton guard) that the E2E environment cannot exercise because no real audio loads.",
-      "file": "src/app/hooks/useSilenceDetection.ts",
-      "line": 62,
+      "description": "The <Label> elements for 'Default Speed' (line 82) and 'Default Sleep Timer' (line 145) have no htmlFor attribute. They are not programmatically associated with their radiogroup controls. Screen readers announce them as standalone text rather than as group labels.",
+      "file": "src/app/components/audiobook/AudiobookSettingsPanel.tsx",
+      "line": 82,
       "confidence": 90,
-      "category": "test-type-appropriateness",
-      "suggestion": "Add src/app/hooks/__tests__/useSilenceDetection.test.ts using renderHook with a mock AudioContext/AnalyserNode. Test: isActive true when enabled+playing, lastSkip fires after sub-threshold RMS, loop stops when enabled flips false.",
-      "agent": "code-review-testing",
+      "category": "accessibility",
+      "suggestion": "Remove the standalone <Label> wrappers and fold their text into the aria-label on the radiogroup, or add aria-labelledby on the radiogroup pointing to the label element's id.",
+      "agent": "design-review",
       "consensus_score": 90
     },
     {
@@ -1133,23 +1168,13 @@
     },
     {
       "severity": "MEDIUM",
-      "description": "Test data defined as inline object literals rather than using factory functions from tests/support/fixtures/factories/. testAudiobook and testAudiobookB repeat chapters/source/totalDuration structure.",
+      "description": "AC-2 E2E test verifies element attachment and ARIA attributes but does not verify the indicator shows the correct text after a skip event (e.g., 'Skipped 2.3s silence'). The display logic of SilenceSkipIndicator (text formatting, 2000ms hide timer, rapid-skip reset) has no unit test.",
       "file": "tests/e2e/story-e111-s02.spec.ts",
-      "line": 22,
-      "confidence": 75,
-      "category": "factory-fixture-usage",
-      "suggestion": "Extract createAudiobook() factory to tests/support/fixtures/factories/audiobook.ts and use overrides for per-test differences.",
-      "agent": "code-review-testing",
-      "consensus_score": 75
-    },
-    {
-      "severity": "MEDIUM",
-      "description": "AC-8 accessibility test misses ARIA attributes on SkipSilenceActiveIndicator (role=status, aria-label) and SilenceSkipIndicator (aria-live=polite, aria-atomic=true).",
-      "file": "tests/e2e/story-e111-s02.spec.ts",
-      "line": 176,
+      "line": 99,
+      "end_line": 112,
       "confidence": 75,
       "category": "ac-coverage",
-      "suggestion": "Extend AC-8 test to assert getByRole('status') for the active indicator and verify aria-live attribute on the silence-skip-indicator element.",
+      "suggestion": "Add src/app/components/audiobook/__tests__/SilenceSkipIndicator.test.tsx: render with lastSkip={durationSeconds:2.3, timestamp:...}, assert 'Skipped 2.3s silence' is visible, assert it disappears after 2000ms with vi.useFakeTimers().",
       "agent": "code-review-testing",
       "consensus_score": 75
     },
@@ -1165,6 +1190,30 @@
     },
     {
       "severity": "MEDIUM",
+      "description": "AC-5 assertion uses toContainText('1.5x') and AC-6 uses toContainText('1.5') \u2014 both are weak partial-match assertions that would pass for any visible text containing those strings.",
+      "file": "tests/e2e/story-e111-s02.spec.ts",
+      "line": 153,
+      "end_line": 178,
+      "confidence": 74,
+      "category": "assertion-quality",
+      "suggestion": "Use exact-match assertions: await expect(speedButton).toHaveText('1.5x') for unambiguous verification.",
+      "agent": "code-review-testing",
+      "consensus_score": 74
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "updateBookPlaybackSpeed in useBookStore has no dedicated unit tests. The error rollback path (Dexie failure), the toast.error call, and the out-of-range validation guard (speed < 0.5 or > 3.0 silently dropped) have zero test coverage.",
+      "file": "src/stores/useBookStore.ts",
+      "line": 333,
+      "end_line": 360,
+      "confidence": 74,
+      "category": "edge-cases",
+      "suggestion": "Add src/stores/__tests__/useBookStore.test.ts: mock db.books.update to reject, assert rollback and toast.error. Also assert updateBookPlaybackSpeed(bookId, 4.0) does not update state.",
+      "agent": "code-review-testing",
+      "consensus_score": 74
+    },
+    {
+      "severity": "MEDIUM",
       "description": "Second useEffect for bookId change detection is redundant -- first effect already covers this case",
       "file": "src/app/components/audiobook/ClipListPanel.tsx",
       "line": 279,
@@ -1172,19 +1221,6 @@
       "category": "Correctness",
       "classification": "STORY-RELATED",
       "agent": "code-review",
-      "consensus_score": 72
-    },
-    {
-      "severity": "MEDIUM",
-      "description": "AnalyserNode is never disconnected \u2014 AudioContext may enter 'closed' state silently. If the AudioContext is closed by the browser (e.g., after extended inactivity), _audioCtx will be in a 'closed' state and all operations on it will fail silently.",
-      "file": "src/app/hooks/useSilenceDetection.ts",
-      "line": 133,
-      "end_line": null,
-      "confidence": 72,
-      "category": "architecture",
-      "suggestion": "Add a check for _audioCtx.state === 'closed' and reset all module-level singletons to null if so, forcing re-creation.",
-      "model_source": "glm-5.1",
-      "agent": "glm-code-review",
       "consensus_score": 72
     },
     {
@@ -1199,22 +1235,23 @@
     },
     {
       "severity": "MEDIUM",
-      "description": "No input validation on playbackSpeed before IndexedDB write. updateBookPlaybackSpeed accepts any number and persists it without bounds checking. UI constrains to 0.5-3.0 but store API is public.",
-      "file": "src/stores/useBookStore.ts",
-      "line": 335,
-      "confidence": 72,
-      "category": "CS5: Client-Side Integrity",
-      "suggestion": "Add bounds clamping: const clampedSpeed = Math.min(3.0, Math.max(0.5, speed))",
-      "agent": "security-review",
-      "consensus_score": 72
-    },
-    {
-      "severity": "MEDIUM",
       "description": "AC-3 clips panel test does not verify empty-state message ('No clips yet...') \u2014 only checks panel is visible. Empty state is an implicit AC per test quality framework.",
       "file": "tests/e2e/regression/story-e111-s01.spec.ts",
       "line": 193,
       "confidence": 72,
       "agent": "code-review-testing",
+      "consensus_score": 72
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "updateBookPlaybackSpeed in useBookStore.ts has no input validation \u2014 any out-of-range number can be persisted. The UI constrains to 0.5\u20133.0 but the store API is public and can be called directly.",
+      "file": "src/app/hooks/useBookStore.ts",
+      "line": null,
+      "confidence": 72,
+      "category": "architecture",
+      "suggestion": "Add bounds clamping: const clampedSpeed = Math.min(3.0, Math.max(0.5, speed))",
+      "model_source": "glm-5.1",
+      "agent": "glm-code-review",
       "consensus_score": 72
     },
     {
@@ -1225,6 +1262,19 @@
       "confidence": 70,
       "category": "data-integrity",
       "agent": "glm-code-review",
+      "consensus_score": 70
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "RAF tick dataArray (Uint8Array) is allocated inside runDetectionLoop rather than in a ref. Each enable/disable toggle recreates the array. In a high-frequency RAF loop this creates avoidable GC pressure.",
+      "file": "src/app/hooks/useSilenceDetection.ts",
+      "line": 89,
+      "end_line": 89,
+      "confidence": 70,
+      "category": "performance",
+      "suggestion": "Move dataArray to a useRef<Uint8Array> allocated once at component mount.",
+      "model_source": "adversarial-fallback",
+      "agent": "openai-code-review",
       "consensus_score": 70
     },
     {
@@ -1268,19 +1318,6 @@
     },
     {
       "severity": "MEDIUM",
-      "description": "SKIP_LOOKAHEAD_S = 0.1 is too small to be useful. A 0.1 second skip means the algorithm must detect silence, skip 0.1s, re-detect silence, wait another 500ms, skip another 0.1s. For a 10-second silence gap, this triggers ~15 skip events.",
-      "file": "src/app/hooks/useSilenceDetection.ts",
-      "line": 46,
-      "end_line": 48,
-      "confidence": 68,
-      "category": "performance",
-      "suggestion": "Use a larger skip amount (e.g., 2\u20135 seconds) and optionally scan forward to find non-silent audio.",
-      "model_source": "glm-5.1",
-      "agent": "glm-code-review",
-      "consensus_score": 68
-    },
-    {
-      "severity": "MEDIUM",
       "description": "No tests for optimistic rollback paths in updateClipTitle, deleteClip, and reorderClips. Store has explicit rollback logic that is completely untested.",
       "file": "src/stores/__tests__/useAudioClipStore.test.ts",
       "line": null,
@@ -1296,45 +1333,6 @@
       "confidence": 65,
       "agent": "code-review-testing",
       "consensus_score": 65
-    },
-    {
-      "severity": "MEDIUM",
-      "description": "Section headings in AudiobookSettingsPanel (Playback, Sleep Timer, Bookmarks) use text-xs uppercase text-muted-foreground. These are used as aria-labelledby targets for section landmarks, so contrast is functionally important. text-muted-foreground in dark mode may not meet 4.5:1 for 12px text.",
-      "file": "src/app/components/audiobook/AudiobookSettingsPanel.tsx",
-      "line": 75,
-      "confidence": 65,
-      "category": "accessibility",
-      "suggestion": "Consider using text-foreground/60 instead of text-muted-foreground for section labels that serve as landmark labels, or verify the muted-foreground token passes 4.5:1 in both colour schemes.",
-      "model_source": null,
-      "agent": "design-review",
-      "consensus_score": 65
-    },
-    {
-      "severity": "LOW",
-      "description": "SilenceSkipIndicator uses opacity-0 for hiding rather than visibility:hidden/Tailwind invisible class. Per the story's own Lessons Learned, opacity-0 elements are still considered visible by Playwright toBeVisible(), creating false-positive risk in AC-2 tests. SkipSilenceActiveIndicator correctly uses invisible.",
-      "file": "src/app/components/audiobook/SilenceSkipIndicator.tsx",
-      "line": 50,
-      "confidence": 95,
-      "category": "functional",
-      "suggestion": "Change the hidden class from 'opacity-0' to 'invisible opacity-0' (matching SkipSilenceActiveIndicator pattern) so Playwright correctly reports the element as not visible when no skip has occurred.",
-      "agent": "exploratory-qa",
-      "consensus_sources": [
-        {
-          "agent": "exploratory-qa",
-          "confidence": 95
-        },
-        {
-          "agent": "design-review",
-          "confidence": 70
-        },
-        {
-          "agent": "code-review",
-          "confidence": 75
-        }
-      ],
-      "consensus_count": 3,
-      "consensus_score": 100,
-      "consensus_tag": "Consensus: 3 \u2014 exploratory-qa + design-review + code-review"
     },
     {
       "severity": "LOW",
@@ -1431,6 +1429,19 @@
     },
     {
       "severity": "NIT",
+      "description": "handleBookmarkDeleted calls onBookmarkChange() inside a setState updater \u2014 side effects inside updaters are unsafe in concurrent React. Also has an empty dep array so it captures a stale onBookmarkChange reference.",
+      "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
+      "line": 133,
+      "end_line": 139,
+      "confidence": 80,
+      "category": "architecture",
+      "suggestion": "Move onBookmarkChange() call outside the setState updater and add it to the useCallback dependency array.",
+      "model_source": "adversarial-fallback",
+      "agent": "openai-code-review",
+      "consensus_score": 80
+    },
+    {
+      "severity": "NIT",
       "description": "Queue section container div lacks a landmark role or aria-labelledby. Adding role=\"section\" with aria-labelledby pointing to the h3 would let screen reader users jump to this section via landmark navigation.",
       "file": "src/app/components/library/ReadingQueue.tsx",
       "line": 207,
@@ -1438,6 +1449,30 @@
       "confidence": 70,
       "category": "accessibility",
       "suggestion": "Change outer div to <section aria-labelledby=\"reading-queue-heading\"> and add id=\"reading-queue-heading\" to the h3.",
+      "agent": "design-review",
+      "consensus_score": 70
+    },
+    {
+      "severity": "NIT",
+      "description": "E2E AC-7 test seeds localStorage with an ad-hoc object rather than a typed factory shape. If the prefs schema changes, the seed silently mismatches.",
+      "file": "tests/e2e/story-e111-s02.spec.ts",
+      "line": 183,
+      "end_line": 185,
+      "confidence": 70,
+      "category": "testing",
+      "suggestion": "Use a typed prefs factory or import the defaults from the store and spread-override only the tested field.",
+      "model_source": "adversarial-fallback",
+      "agent": "openai-code-review",
+      "consensus_score": 70
+    },
+    {
+      "severity": "NIT",
+      "description": "SilenceSkipIndicator has aria-live=\"polite\" and aria-atomic=\"true\" but no explicit role. Adding role=\"status\" would make semantics self-documenting and consistent with SkipSilenceActiveIndicator.",
+      "file": "src/app/components/audiobook/SilenceSkipIndicator.tsx",
+      "line": 47,
+      "confidence": 70,
+      "category": "accessibility",
+      "suggestion": "Add role=\"status\" to the wrapper div.",
       "agent": "design-review",
       "consensus_score": 70
     },
@@ -1465,23 +1500,36 @@
     },
     {
       "severity": "NIT",
-      "description": "toContainText('1.5') would also pass for '1.50' or any string containing '1.5'. Actual rendered text is '1.5x'. Use toContainText('1.5x') for precision.",
+      "description": "[Recurring] String interpolation for conditional className instead of cn() in AudiobookSettingsPanel speed preset buttons and sleep timer option buttons.",
+      "file": "src/app/components/audiobook/AudiobookSettingsPanel.tsx",
+      "line": 99,
+      "confidence": 65,
+      "category": "Maintainability",
+      "suggestion": "Use cn() from @/app/components/ui/utils for class merging consistency.",
+      "agent": "code-review",
+      "consensus_score": 65
+    },
+    {
+      "severity": "NIT",
+      "description": "testAudiobook and testAudiobookB are defined as inline literal objects rather than using factories from tests/support/fixtures/factories/.",
       "file": "tests/e2e/story-e111-s02.spec.ts",
-      "line": 142,
+      "line": 20,
+      "end_line": 52,
       "confidence": 60,
-      "category": "assertion-quality",
-      "suggestion": "Use toContainText('1.5x') or toHaveText('1.5x') to match the exact formatSpeed output.",
+      "category": "factory-usage",
+      "suggestion": "Use audiobook factory if available, or create one to maintain consistent defaults.",
       "agent": "code-review-testing",
       "consensus_score": 60
     },
     {
       "severity": "NIT",
-      "description": "useSilenceDetection uses Date.now() for lastSkip.timestamp (line 106) while the detection loop uses performance.now(). Minor inconsistency \u2014 timestamp field is wall-clock, detection timing is performance clock.",
-      "file": "src/app/hooks/useSilenceDetection.ts",
-      "line": 106,
+      "description": "AC-8 accessibility test verifies ARIA label and role but does not test keyboard-only interaction flow (Tab focus, Enter/Space to open speed popover, arrow key navigation).",
+      "file": "tests/e2e/story-e111-s02.spec.ts",
+      "line": 192,
+      "end_line": 205,
       "confidence": 60,
-      "category": "test-patterns",
-      "suggestion": "Align to performance.now() throughout, or document why wall-clock is intentional for the timestamp field.",
+      "category": "accessibility",
+      "suggestion": "Optional: add keyboard tab/enter navigation test for speed popover as a follow-up in a future accessibility story.",
       "agent": "code-review-testing",
       "consensus_score": 60
     },
@@ -1520,6 +1568,30 @@
     },
     {
       "severity": "NIT",
+      "description": "useSilenceDetection.test.ts header comment claims 'full hook is covered by E2E tests' \u2014 the E2E tests do not exercise the RAF detection loop either (no real audio signal in headless). Comment is misleading.",
+      "file": "src/app/hooks/__tests__/useSilenceDetection.test.ts",
+      "line": 1,
+      "end_line": 6,
+      "confidence": 55,
+      "category": "documentation",
+      "suggestion": "Update comment to: 'The RAF detection loop and Web Audio API wiring are verified by code review; calculateRms is unit-tested here.'",
+      "agent": "code-review-testing",
+      "consensus_score": 55
+    },
+    {
+      "severity": "NIT",
+      "description": "SilenceSkipIndicator rapid-skip scenario (two skips within 2s) is not tested \u2014 the clearTimeout + reset pattern is correct but unverified.",
+      "file": "src/app/components/audiobook/SilenceSkipIndicator.tsx",
+      "line": 31,
+      "end_line": 37,
+      "confidence": 55,
+      "category": "edge-cases",
+      "suggestion": "Add unit test: fire lastSkip twice 1 second apart with vi.useFakeTimers(), assert indicator remains visible until 2s after the second skip.",
+      "agent": "code-review-testing",
+      "consensus_score": 55
+    },
+    {
+      "severity": "NIT",
       "description": "QUEUE_ENTRY_1.sortOrder: 0 and QUEUE_ENTRY_2.sortOrder: 1 are magic numbers. Named constants would clarify intent.",
       "file": "tests/e2e/story-e110-s03.spec.ts",
       "line": 39,
@@ -1531,11 +1603,11 @@
   ],
   "verdict": "BLOCKED",
   "summary": {
-    "total": 79,
-    "blockers": 5,
+    "total": 83,
+    "blockers": 4,
     "high": 24,
     "medium": 32,
-    "nits": 18
+    "nits": 23
   },
-  "consensus_count": 13
+  "consensus_count": 14
 }

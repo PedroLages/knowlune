@@ -1,29 +1,31 @@
 ## Security Review: E111-S02 — Skip Silence and Speed Memory
 
 **Date:** 2026-04-12
-**Phases executed:** 4/8
-**Diff scope:** 40 files changed, 1183 insertions, 302 deletions
+**Phases executed:** 5/8
+**Diff scope:** 52 files changed, 3602 insertions, 342 deletions
 
 ### Phases Executed
 
 | Phase | Name | Triggered By | Findings |
 |-------|------|-------------|----------|
 | 1 | Attack Surface | Always | 3 vectors identified |
-| 2 | Secrets Scan | Always | Clean (diff) |
-| 3 | OWASP Top 10 | Always | 4 categories checked |
+| 2 | Secrets Scan | Always | Clean |
+| 3 | OWASP Top 10 | Always | 6 categories checked, 0 findings |
 | 4 | Dependencies | package.json changed | N/A — no package.json changes |
 | 5 | Auth & Access | auth files changed | N/A — no auth files changed |
-| 6 | STRIDE | new routes/components | N/A — no new routes |
-| 7 | Configuration | config files changed | N/A — no config files changed |
-| 8 | Config Security | Always-on | 1 informational finding |
+| 6 | STRIDE | new routes/components | 2 new components analyzed |
+| 7 | Configuration | config files changed | N/A — no config changes |
+| 8 | Config Security | Always-on | Clean |
 
 ### Attack Surface Changes
 
-1. **Web Audio API integration** (`useSilenceDetection.ts`): New module-level `AudioContext`, `AnalyserNode`, and `MediaElementAudioSourceNode`. Processes audio time-domain data via `getByteTimeDomainData()` to detect silence. No external network calls, no cross-origin audio sources.
+This story introduces three new attack vectors, all low-risk:
 
-2. **IndexedDB write path** (`useBookStore.ts:updateBookPlaybackSpeed`): New method writes `playbackSpeed` field to the `books` table in Dexie. Accepts `bookId: string` and `speed: number` from UI-controlled `SpeedControl` component.
+1. **Web Audio API (useSilenceDetection)** — New `AudioContext`, `AnalyserNode`, and `MediaElementAudioSourceNode` usage. Processes audio data from a same-origin `HTMLAudioElement`. No external input or network calls. No user-controlled parameters beyond the `enabled` boolean toggle.
 
-3. **Keyboard shortcut** (`AudiobookRenderer.tsx`): New `s` key binding toggles skip silence via `toggleSkipSilence()` from the prefs store. Toggle is a boolean flip — no user-controlled input.
+2. **Per-book playback speed persistence (useBookStore.updateBookPlaybackSpeed)** — New IndexedDB write path for `playbackSpeed`. Input validated with `isFinite()` and range check `[0.5, 3.0]`. Optimistic update with rollback on failure.
+
+3. **Two new presentational components** — `SilenceSkipIndicator` and `SkipSilenceActiveIndicator`. Pure display components with no user input, no `dangerouslySetInnerHTML`, no dynamic `href`. Text content is computed from numeric values only.
 
 ### Findings
 
@@ -34,48 +36,46 @@ None.
 None.
 
 #### Medium
-
-- **`src/stores/useBookStore.ts:335`** (confidence: 72): **No input validation on playbackSpeed before IndexedDB write.** The `updateBookPlaybackSpeed(bookId, speed)` method writes the `speed` parameter directly to IndexedDB without bounds checking. While the UI constrains speed to `SPEED_OPTIONS` (0.5-3.0), the store method is a public API callable from anywhere (e.g., `useBookStore.getState().updateBookPlaybackSpeed(id, 999)`). A malicious or buggy caller could persist an invalid playback rate.
-  **Exploit:** Limited — requires code-level access or a separate XSS vector to call the store directly. The `HTMLAudioElement.playbackRate` clamps at browser limits, but the persisted value would be restored on next session, causing unexpected behavior.
-  **Fix:** Add bounds validation at the store level:
-  ```typescript
-  updateBookPlaybackSpeed: async (bookId, speed) => {
-    const clampedSpeed = Math.min(3.0, Math.max(0.5, speed))
-    // ... rest of method using clampedSpeed
-  }
-  ```
+None.
 
 #### Informational
 
-- **`src/app/hooks/useSilenceDetection.ts:21-23`** (confidence: 70): **Module-level Web Audio singletons persist across navigation.** The `_audioCtx`, `_mediaSource`, and `_analyser` variables are module-scoped and never cleaned up. This is intentional (documented in the JSDoc — `createMediaElementSource` can only be called once) and not exploitable, but worth noting: if the app ever supports multiple audio elements or concurrent playback, these singletons would conflict. No action needed for current architecture.
-
-- **`.mcp.json` (local only, not in git)**: Contains plaintext API keys (`OPENAI_API_KEY`, `ZAI_API_KEY`). File is correctly gitignored and not tracked. No action needed — this is the expected local-only configuration pattern. Recommend using environment variable references (`${OPENAI_API_KEY}`) if MCP supports it, to avoid plaintext keys on disk.
+- **src/app/components/audiobook/AudiobookRenderer.tsx:320** (confidence: 45): The `backgroundImage` inline style uses `url(${resolvedCoverUrl})` which is a CSS injection vector if the URL contains unescaped `)` characters. However, `useBookCoverUrl` enforces a protocol allowlist (`https?:`, `opfs:`, `opfs-cover:`, `data:image/`, `/`) and resolves OPFS paths to `blob:` URLs. All legitimate URL schemes would not contain unescaped parentheses. This is a defense-in-depth observation, not an actionable finding. **Filtered as below-threshold** (confidence < 70).
 
 ### Secrets Scan
-
-Clean — no secrets detected in the diff. The `.mcp.json` keys noted above are local-only and not part of any commit.
+Clean — no secrets detected in diff. No API keys, tokens, passwords, or hardcoded credentials found in any changed file.
 
 ### OWASP Coverage
 
 | Category | Applicable? | Finding? | Details |
 |----------|------------|----------|---------|
-| CS1: Broken Client-Side Access Control | No | No | No premium gating or route changes |
-| CS2: Client-Side Injection (XSS) | Yes | No | No `dangerouslySetInnerHTML`, no `href={variable}`, no `.innerHTML`. All new components render static text via React JSX auto-escaping. `displayText` in SilenceSkipIndicator is derived from a numeric value (`toFixed(1)`), not user input. |
-| CS3: Sensitive Data in Client Storage | No | No | Only `playbackSpeed` (number) written to IndexedDB — not sensitive data |
-| CS5: Client-Side Integrity | Yes | Yes | Medium finding: `updateBookPlaybackSpeed` lacks input validation (see above) |
-| CS7: Client-Side Security Logging | Yes | No | `console.error` calls log generic error messages, no sensitive data exposed |
-| CS9: Client-Side Communication | No | No | No postMessage, no cross-window communication |
-| A05: Security Misconfiguration | No | No | No config file changes |
-| A06: Vulnerable Components | No | No | No new dependencies |
-| A07: Auth Failures | No | No | No auth changes |
+| CS1: Broken Client-Side Access Control | No | No | No premium gating or route guards changed |
+| CS2: Client-Side Injection (XSS) | Yes | No | No `dangerouslySetInnerHTML`, no dynamic `href`, no `innerHTML`. All text interpolation uses React auto-escaping. Numeric-only `toFixed()` output in indicator. |
+| CS3: Sensitive Data in Client Storage | Yes | No | Only `playbackSpeed` (number) written to IndexedDB. No secrets or PII stored. Known false positive: prefs in localStorage via Zustand persist (expected pattern). |
+| CS5: Client-Side Integrity | Yes | No | `updateBookPlaybackSpeed` validates range [0.5, 3.0] and `isFinite()` before write. Optimistic update includes rollback on Dexie failure. |
+| CS7: Client-Side Security Logging | Yes | No | `console.error` used only for non-sensitive error messages (speed validation, AudioContext resume failure). No keys/tokens logged. |
+| CS9: Client-Side Communication | No | No | No postMessage, no cross-window communication. Web Audio API is same-origin only. |
+| A05: Security Misconfiguration | No | No | No config files changed |
+| A06: Vulnerable Components | No | No | No new dependencies added |
+| A07: Auth Failures | No | No | No auth code changed |
+
+### STRIDE (New Components)
+
+**SilenceSkipIndicator** and **SkipSilenceActiveIndicator**:
+- **Spoofing**: N/A — no identity involved
+- **Tampering**: N/A — display-only, no data writes
+- **Repudiation**: N/A — no auditable actions
+- **Information Disclosure**: No — displays only duration (numeric) and static text
+- **Denial of Service**: Low theoretical risk — `requestAnimationFrame` loop in `useSilenceDetection` runs only when enabled + playing. Properly cancelled on disable/pause via `cancelAnimationFrame`. No CPU concern.
+- **Elevation of Privilege**: N/A — no access control boundaries
 
 ### What's Done Well
 
-1. **Correct AudioContext lifecycle management.** The module-level singleton pattern for `createMediaElementSource()` prevents the `InvalidStateError` that would crash audio playback. The `AudioContext.resume()` call correctly handles browser autoplay policy.
+1. **Input validation on speed persistence**: `updateBookPlaybackSpeed` checks `isFinite()` and range `[0.5, 3.0]` before writing, with optimistic rollback on failure. This prevents corrupt data in IndexedDB.
 
-2. **No sensitive data in new storage paths.** The only new IndexedDB field (`playbackSpeed`) is a non-sensitive numeric preference. No API keys, tokens, or PII are introduced.
+2. **Module-level AudioContext guard**: The singleton pattern for `createMediaElementSource()` prevents the `InvalidStateError` that would occur on re-mount, and the closed-state check handles browser GC gracefully.
 
-3. **Proper optimistic update with rollback.** The `updateBookPlaybackSpeed` store method captures previous state and rolls back on IndexedDB write failure, with a user-visible `toast.error()` — no silent failures.
+3. **Clean separation of concerns**: Silence detection is isolated in a pure hook with no side effects beyond audio seeking. No XSS vectors introduced — all rendering uses React auto-escaping with numeric-only interpolated values.
 
 ---
-Phases: 4/8 | Findings: 1 total | Blockers: 0 | False positives filtered: 1 (Web Audio fingerprinting — theoretical only, no cross-origin audio, user's own local files)
+Phases: 5/8 | Findings: 0 total | Blockers: 0 | False positives filtered: 1

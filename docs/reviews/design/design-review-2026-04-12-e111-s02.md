@@ -2,101 +2,118 @@
 
 **Review Date**: 2026-04-12
 **Reviewed By**: Ava (design-review agent, Claude Sonnet 4.6 via Playwright MCP)
-**Story**: E111-S02 — Skip Silence Detection & Per-Book Speed Memory
-**Branch**: feature/e111-s02-skip-silence-speed-memory
+**Story**: E111-S02 — Skip Silence + Speed Memory for Audiobook Player
 **Changed Files (UI-relevant)**:
-- `src/app/components/audiobook/SkipSilenceActiveIndicator.tsx` (new)
 - `src/app/components/audiobook/SilenceSkipIndicator.tsx` (new)
-- `src/app/components/audiobook/AudiobookSettingsPanel.tsx` (modified)
+- `src/app/components/audiobook/SkipSilenceActiveIndicator.tsx` (new)
 - `src/app/components/audiobook/SpeedControl.tsx` (modified)
+- `src/app/components/audiobook/AudiobookSettingsPanel.tsx` (modified)
 - `src/app/components/audiobook/AudiobookRenderer.tsx` (modified)
-- `src/app/hooks/useSilenceDetection.ts` (new)
-- `src/app/hooks/useAudiobookPrefsEffects.ts` (modified)
 
-**Tested Route**: `/library/:id/read` (AudiobookRenderer)
-**Test Book**: The Intelligent Investor Rev Ed. (`021013bb-d31a-447d-98ac-4334484cd4dd`)
+**Affected Route**: `/library/:bookId/read` (audiobook player)
+**Test URL**: `http://localhost:5173/library/test-audiobook-e111-s02-a/read`
 
 ---
 
 ## Executive Summary
 
-E111-S02 adds silence detection with a persistent active-state pill (`SkipSilenceActiveIndicator`), a transient skip notification badge (`SilenceSkipIndicator`), a settings toggle in `AudiobookSettingsPanel`, and per-book speed memory in `SpeedControl`. The implementation is solid overall — design tokens are used correctly, touch targets for all primary controls meet the 44px minimum, no horizontal overflow at any breakpoint, and the accessibility ARIA structure is mostly correct. Three targeted issues require attention: the speed preset buttons in the settings panel are below the touch-target minimum, the active-state pill's `animate-pulse` dot is missing the `motion-safe:` guard used consistently elsewhere in the codebase, and the `SkipSilenceActiveIndicator` is missing an explicit `aria-live` attribute despite carrying `role="status"`.
+E111-S02 adds two new visual components to the audiobook player — a transient silence-skip notification badge and a persistent "Skip Silence" active indicator — and introduces per-book speed memory. The implementation is structurally sound: the new components use design tokens correctly, touch targets on primary controls all pass the 44px minimum, and the responsive layout holds at mobile (375px) without horizontal overflow. Several targeted issues need attention before merge, the most significant being invalid ARIA (nested interactive elements in the speed popover, `role="status"` duplicating `aria-live`), a touch target shortfall in the speed popover options, and a character inconsistency in `formatSpeed` between the two components.
 
 ---
 
 ## What Works Well
 
-1. **Design token compliance**: All new components use `bg-brand-soft`, `text-brand-soft-foreground`, `bg-brand`, and `text-brand-foreground` — zero hardcoded hex colors. The ESLint token rule would catch regressions automatically.
-
-2. **Primary control touch targets**: Every primary playback button (Play: 64×64, Skip Back/Fwd: 48×67, Speed: 52×44, Bookmark/Sleep/Settings: 44×44) meets the 44px minimum. Settings and bookmark buttons in the secondary bar also meet the minimum exactly.
-
-3. **Transient indicator semantics**: `SilenceSkipIndicator` correctly uses `aria-live="polite"` and `aria-atomic="true"` on the wrapper div, so screen readers announce the "Skipped Xs silence" message without interrupting speech. The timeout+fade pattern is clean and respects existing interaction flow.
-
-4. **Responsive layout**: No horizontal overflow at mobile (375px), tablet (768px), or desktop (1440px). The centered `max-w-lg` layout adapts gracefully, and h1 uses `truncate` for long titles.
-
-5. **Per-book speed memory**: `SpeedControl` correctly calls `useBookStore.getState().updateBookPlaybackSpeed(bookId, rate)` on selection. Speed persists across page loads — confirmed live: reloading the reader showed 1.5× retained from the previous session.
-
-6. **Settings panel ARIA structure**: The `AudiobookSettingsPanel` uses proper `radiogroup`/`radio` patterns, `<section aria-labelledby>`, `<Switch>` with `htmlFor` labels, and `<SheetTitle>`/`<SheetDescription>` — the full ARIA sheet structure is correct.
-
-7. **Keyboard shortcut wired**: The `s` key toggles skip silence via `useKeyboardShortcuts` — discoverable through the keyboard shortcuts dialog.
+- All new components use design tokens (`bg-brand-soft`, `text-brand-soft-foreground`, `bg-brand`, `text-brand-foreground`) — no hardcoded colors detected.
+- The `SilenceSkipIndicator` correctly uses `aria-hidden={!visible}` + `invisible/opacity-0` for the invisible-but-present-in-DOM pattern required by E2E tests.
+- Primary playback controls (play/pause 64×64px, skip buttons 48×67px) comfortably exceed the 44px touch target floor at mobile.
+- The `AudiobookSettingsPanel` section headings are properly marked up as `<section aria-labelledby>` with `<h3>` — correct landmark structure.
+- Speed presets in the settings panel all meet the 44px minimum height (computed 44px with `min-h-[44px]`).
+- The blurred cover background div carries `aria-hidden="true"` — decorative element correctly hidden.
+- The `SkipSilenceActiveIndicator` pulse dot uses `motion-safe:animate-pulse`, respecting `prefers-reduced-motion`.
+- `SilenceSkipIndicator` uses `aria-atomic="true"` so screen readers announce the complete badge text each time, not just the changed portion.
+- No horizontal scroll at 375px mobile viewport.
 
 ---
 
 ## Findings by Severity
 
+### Blockers (Must fix before merge)
+
+None identified.
+
 ### High Priority (Should fix before merge)
 
-**H1 — Speed preset buttons in settings panel: touch target below 44px minimum**
-- **Location**: `src/app/components/audiobook/AudiobookSettingsPanel.tsx:99`
-- **Evidence**: `min-h-[36px]` on the speed pill buttons. Measured height: 36px (< 44px requirement).
-- **Impact**: On touch devices, users must tap with high precision to select a speed. Learners adjusting playback speed during a commute or workout are most likely to be affected. The sleep timer options in the same panel use a full-width row layout (`py-2` ≈ 40px via padding) but the speed pills are compact and fail on mobile.
-- **Suggestion**: Change `py-1.5` to `py-2.5` (adds 4px top + bottom = 44px total) and verify the pill wrapping still looks correct at all speeds. Alternatively, increase `min-h-[36px]` to `min-h-[44px]`.
+**H1 — Invalid ARIA: nested interactive element inside `role="option"` (SpeedControl.tsx)**
+
+`<li role="option">` contains a `<button>` child. The ARIA spec prohibits interactive elements inside `option` roles — `option` is not an interactive widget itself; interactivity belongs on the `option` role directly, or the `<button>` should replace the `option` role entirely. Screen readers in virtual browse mode may announce both the `option` and the `button`, creating a confusing double-announcement ("1.5× option — 1.5× button"). For learners using NVDA or VoiceOver, this makes the speed picker unnecessarily noisy.
+
+- **Location**: `src/app/components/audiobook/SpeedControl.tsx:56-68`
+- **Evidence**: Accessibility tree shows `option > button` nesting; computed `role="option"` on `<li>` wrapping `<button>`
+- **Suggestion**: Remove `role="option"` and `aria-selected` from the `<li>` and instead apply the listbox pattern purely via the `<button>` elements, converting to `role="menuitem"` in a `role="menu"`, or use native `<select>` / a purpose-built combobox. The simplest fix that preserves current visual design: remove the `role="listbox"` / `role="option"` from `<ul>`/`<li>` and use `role="menu"` + `role="menuitem"` on the `<button>` directly, which permits interactive descendants.
+
+**H2 — Speed popover options touch target too small (SpeedControl.tsx)**
+
+Speed option buttons are 36px tall (computed). The design standard requires ≥44px on touch devices. A learner with motor impairment listening on a phone will have difficulty precisely tapping a speed option.
+
+- **Location**: `src/app/components/audiobook/SpeedControl.tsx:58-67`
+- **Evidence**: `getBoundingClientRect().height = 36` for `[data-testid="speed-option-0.5"]`
+- **Suggestion**: Add `min-h-[44px]` to the button className, matching the approach used for speed presets in `AudiobookSettingsPanel.tsx:99`.
+
+**H3 — `role="status"` + explicit `aria-live="polite"` are redundant on SkipSilenceActiveIndicator (SkipSilenceActiveIndicator.tsx)**
+
+`role="status"` already implies `aria-live="polite"` per the ARIA spec. Specifying both explicitly is redundant and can confuse automated accessibility tools (axe flags it as a potential issue). More importantly, the element also has `aria-label` set conditionally — when `isActive=false` the `aria-label` attribute is `undefined`, which removes it entirely. This is correct, but combined with `aria-hidden="true"` and the redundant live region, the element's semantics are over-specified.
+
+- **Location**: `src/app/components/audiobook/SkipSilenceActiveIndicator.tsx:17-19`
+- **Evidence**: `role="status"` + `aria-live="polite"` both present in DOM
+- **Suggestion**: Remove `aria-live="polite"` — keep `role="status"` alone. This simplifies the element and removes the redundancy.
 
 ### Medium Priority (Fix when possible)
 
-**M1 — `animate-pulse` on skip silence dot missing `motion-safe:` guard**
-- **Location**: `src/app/components/audiobook/SkipSilenceActiveIndicator.tsx:26`
-- **Evidence**: `className="inline-block size-1.5 rounded-full bg-brand-soft-foreground animate-pulse"`. The codebase's own convention (found in `ContinueLearning.tsx:187`, `figma/YouTubeImportDialog.tsx:526`, `reader/ClozeFlashcardCreator.tsx:238`) is `motion-safe:animate-pulse`. Bare `animate-pulse` plays for users who have enabled "Reduce Motion" in OS accessibility settings.
-- **Impact**: Vestibular disorders can be aggravated by persistent looping animations. The dot pulses continuously whenever skip silence is active — which could be the entire listening session.
-- **Suggestion**: Replace `animate-pulse` with `motion-safe:animate-pulse`. This matches the established pattern in the codebase and requires a single-word change.
+**M1 — `formatSpeed` character inconsistency: `×` vs `x` (SpeedControl.tsx / AudiobookSettingsPanel.tsx)**
 
-**M2 — `SkipSilenceActiveIndicator` missing explicit `aria-live` on `role="status"` element**
-- **Location**: `src/app/components/audiobook/SkipSilenceActiveIndicator.tsx:19-22`
-- **Evidence**:
-  ```
-  role="status"
-  aria-label={isActive ? 'Skip silence is active' : undefined}
-  aria-hidden={!isActive}
-  ```
-  `role="status"` has an implicit `aria-live="polite"` per the ARIA spec, but `aria-label` on the container is set/cleared dynamically. When `isActive` becomes `true`, some screen reader + browser combinations announce the element change from `aria-hidden` but do not re-announce the `aria-label` without an explicit live region. The `SilenceSkipIndicator` sibling correctly uses an explicit `aria-live="polite"` on its wrapper div.
-- **Impact**: Screen reader users toggling "Skip Silence" via the keyboard shortcut (`s`) or settings panel may not receive audible confirmation that the feature activated.
-- **Suggestion**: Add `aria-live="polite"` explicitly to the outer div. Also consider whether `aria-label` needs to be present when inactive or if `aria-hidden="true"` alone is sufficient for the inactive state — removing `aria-label` when inactive is fine, but the live region declaration should be stable. Example:
-  ```tsx
-  <div
-    data-testid="skip-silence-active-indicator"
-    role="status"
-    aria-live="polite"
-    aria-label={isActive ? 'Skip silence is active' : undefined}
-    aria-hidden={!isActive}
-    ...
-  >
-  ```
+`SpeedControl.tsx` uses the Unicode multiplication sign `×` (U+00D7): `"1.5×"`. `AudiobookSettingsPanel.tsx` uses the ASCII letter `x`: `"1.5x"`. A learner who toggles their speed in the player sees `1.5×` on the speed button, then opens settings and sees `1.5x` presets. The mismatch looks like a different unit or scale. Screen readers also announce them differently ("times" vs "ex").
 
-**M3 — Section heading labels in settings panel use `text-xs uppercase` which may be low contrast**
-- **Location**: `src/app/components/audiobook/AudiobookSettingsPanel.tsx:75,139,184`
-- **Evidence**: `className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3"`. In dark mode, `text-muted-foreground` resolves to a mid-grey. Text at `text-xs` (12px) uppercase is considered "normal text" under WCAG (not large text, which requires 18px or 14px bold), so it requires 4.5:1 contrast. The muted foreground token in dark mode is designed to be low-contrast by intent (labels, hints), and these are purely decorative section dividers not conveying critical information — but they are used as `aria-labelledby` targets for the `<section>` landmark, making them functional labels.
-- **Impact**: Low contrast on section labels reduces scanability for users with low vision, and since they are `aria-labelledby` targets, poor readability undermines the landmark's purpose.
-- **Suggestion**: Either bump to `text-foreground` at reduced opacity (`text-foreground/60`) which gives slightly higher contrast while staying subtle, or accept the existing pattern as consistent with other settings panels in the codebase (check `EngagementPreferences.tsx` for prior precedent).
+- **Location**: `src/app/components/audiobook/SpeedControl.tsx:22` vs `src/app/components/audiobook/AudiobookSettingsPanel.tsx:45`
+- **Evidence**: `SpeedControl.formatSpeed` returns `` `${rate}×` ``; `AudiobookSettingsPanel.formatSpeed` returns `` `${rate}x` ``
+- **Suggestion**: Extract a single `formatSpeed` utility (e.g., to `src/app/components/audiobook/formatSpeed.ts`) using `×` consistently, and import it in both components. This also eliminates a logic divergence (`rate % 1 === 0` vs `Number.isInteger(rate)` — functionally equivalent but not obviously so).
 
-### Nitpicks
+**M2 — "Default Speed" and "Default Sleep Timer" labels not associated with their controls (AudiobookSettingsPanel.tsx)**
 
-**N1 — `SilenceSkipIndicator` wrapper div has no semantic role**
-- **Location**: `src/app/components/audiobook/SilenceSkipIndicator.tsx:46`
-- **Evidence**: The outer `<div>` carries `aria-live="polite"` and `aria-atomic="true"` but no `role`. Per ARIA authoring practices, a live region benefits from `role="status"` (polite) to clarify intent.
-- **Suggestion**: Add `role="status"` to the wrapper div. This is already the pattern on `SkipSilenceActiveIndicator` and makes the live region semantics explicit. Low priority since browsers handle bare `aria-live` live regions correctly.
+The `<Label>` components for "Default Speed" (line 82) and "Default Sleep Timer" (line 145) have no `htmlFor` attribute. They are visually grouped with their `radiogroup` below, but screen readers cannot programmatically associate the label text with the group. The `radiogroup` itself has `aria-label="Default playback speed"` which partially compensates, but the `<Label>` text is not connected to the group and will be announced separately, creating redundancy (screen reader announces "Default Speed" as standalone text, then "Default playback speed radiogroup").
 
-**N2 — Settings speed presets use `text-[10px]` implicitly via pill container layout**
-- The `SkipSilenceActiveIndicator` pill uses `text-[10px]` (10px) for the "Skip Silence" label. This is technically a "large text" threshold edge case at 10px — well below it. The colour pairing `text-brand-soft-foreground` on `bg-brand-soft` uses the dedicated foreground token designed to pass 4.5:1, so contrast should be acceptable. No action required, but worth verifying the token passes in both light and dark mode if the colour scheme changes.
+- **Location**: `src/app/components/audiobook/AudiobookSettingsPanel.tsx:82` and `145`
+- **Evidence**: `label.htmlFor = null` for both "Default Speed" and "Default Sleep Timer" labels
+- **Suggestion**: Either add `id` to the `radiogroup` div and use `aria-labelledby` pointing to both the `<Label>` and the group, or remove the standalone `<Label>` and rely solely on the `aria-label` on the `radiogroup`. The simplest fix: remove the `<Label>` wrappers and fold their text into the `aria-label` on the `radiogroup`.
+
+**M3 — Skip Silence switch missing `aria-describedby` for help text (AudiobookSettingsPanel.tsx)**
+
+The "Skip Silence" switch has a description paragraph ("Automatically skip silent sections during playback.") immediately below its label, but this description is not programmatically linked to the switch via `aria-describedby`. Screen readers will not announce the description when the switch receives focus, leaving learners who rely on AT without context for what the toggle does.
+
+- **Location**: `src/app/components/audiobook/AudiobookSettingsPanel.tsx:116-130`
+- **Evidence**: `skipSilenceSwitch.getAttribute('aria-describedby') === null`
+- **Suggestion**: Add `id="skip-silence-description"` to the `<p>` and `aria-describedby="skip-silence-description"` to the `<Switch>`. Apply the same pattern to "Auto-Bookmark on Stop" (line 189-205).
+
+**M4 — React key warning: `ChapterList` chapters without `id` produce duplicate `undefined` keys**
+
+The `ChapterList` component uses `key={chapter.id}`. Test-seeded audiobooks (and potentially real ABS-imported books) may have chapters without an `id` field, causing all keys to be `undefined` and triggering a React console error: "Each child in a list should have a unique key prop." This produces a console error in the player which could mask other errors during E2E runs.
+
+- **Location**: `src/app/components/audiobook/ChapterList.tsx:61`
+- **Evidence**: Console error in browser: "Each child in a list should have a unique 'key' prop. Check the render method of ChapterList." Test book chapters `{ title: "Chapter 1" }` have no `id` field.
+- **Suggestion**: Use a fallback key: `key={chapter.id ?? chapter.title ?? index}`. A composite fallback on `title` is more stable than index alone, but index is acceptable as last resort since chapter order is stable for a given book.
+
+### Nitpicks (Optional)
+
+**N1 — `SilenceSkipIndicator` has no `role` attribute**
+
+The `SilenceSkipIndicator` wrapper `<div>` has `aria-live="polite"` and `aria-atomic="true"` but no explicit role. Adding `role="status"` (implied by `aria-live="polite"`) is not required but would make the semantics self-documenting and consistent with `SkipSilenceActiveIndicator` which does use `role="status"`.
+
+- **Location**: `src/app/components/audiobook/SilenceSkipIndicator.tsx:47`
+
+**N2 — `SPEED_OPTIONS` defined independently in both `SpeedControl` and `AudiobookSettingsPanel`**
+
+`SpeedControl` defines its own `SPEED_OPTIONS = [0.5, 0.75, 1.0, ...]` array while `AudiobookSettingsPanel` imports `VALID_SPEEDS` from the store. The `SpeedControl` array does not include `2.25` and `2.75` that exist in the store's `VALID_SPEEDS`, meaning the player speed button offers fewer options than the settings panel. This is a functional mismatch surfaced by the design review, not a blocker, but worth aligning.
+
+- **Location**: `src/app/components/audiobook/SpeedControl.tsx:19`
 
 ---
 
@@ -104,41 +121,54 @@ E111-S02 adds silence detection with a persistent active-state pill (`SkipSilenc
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| Text contrast ≥4.5:1 (new components) | Pass | Brand-soft token pairing designed for this use case |
-| Keyboard navigation — skip silence toggle | Pass | `s` key wired in `useKeyboardShortcuts` |
-| Keyboard navigation — speed control | Pass | Popover opens via Enter/Space; arrow keys navigate the listbox |
-| Focus indicators visible | Pass | Radix UI button/switch primitives retain focus rings |
-| Heading hierarchy on reader page | Pass | H1 (book title) → H2 (Chapters) — no skipped levels |
-| ARIA labels on icon buttons | Pass | Settings (44×44), Speed, Bookmark, Sleep Timer all have aria-label |
-| Semantic HTML — settings vs div | Pass | `<button>`, `<section aria-labelledby>`, `<Switch>` via Radix |
-| Cover image alt text | Pass | `alt="Cover of {book.title}"` |
-| `aria-live` on transient skip notification | Pass | `aria-live="polite"` + `aria-atomic="true"` on SilenceSkipIndicator |
-| `aria-live` on persistent active indicator | Warn | `role="status"` present but `aria-live` not explicit (M2) |
-| `prefers-reduced-motion` on pulse dot | Fail | Missing `motion-safe:` guard (M1) |
-| Touch targets ≥44px — primary controls | Pass | All primary playback buttons ≥44px |
-| Touch targets ≥44px — settings speed pills | Fail | `min-h-[36px]` on speed presets (H1) |
-| No horizontal overflow (mobile 375px) | Pass | `overflow-x: hidden` confirmed |
-| Dark mode contrast — new components | Pass | Theme tokens used; no hardcoded values |
-| `aria-hidden` toggles correctly on indicator | Pass | `aria-hidden={!isActive}` — hidden when inactive, announced when active |
+| Text contrast ≥4.5:1 (light + dark) | Pass | Design tokens used throughout; no hardcoded colors |
+| Touch targets ≥44px (primary controls) | Pass | Play 64px, skip ±48px, all secondary controls 44px |
+| Touch targets ≥44px (speed popover) | Fail | Speed options 36px tall — see H2 |
+| Keyboard navigation | Pass | Tab order logical; Escape closes panels |
+| Focus indicators visible | Pass | Default Radix focus rings present |
+| Heading hierarchy | Pass | H1 (title) → H2 (Chapters) → H3 (settings sections) |
+| ARIA labels on icon buttons | Pass | All icon-only buttons have `aria-label` |
+| Semantic HTML | Partial | Speed popover `option>button` nesting invalid — see H1 |
+| Form labels associated | Partial | "Default Speed" / "Default Sleep Timer" labels unlinked — see M2 |
+| `aria-describedby` for help text | Fail | Skip Silence and Auto-Bookmark switches missing — see M3 |
+| `aria-live` regions | Partial | `role="status"` + `aria-live` redundant on SkipSilenceActiveIndicator — see H3 |
+| `prefers-reduced-motion` | Pass | Pulse animation uses `motion-safe:animate-pulse` |
+| No horizontal scroll at mobile | Pass | `scrollWidth === clientWidth` at 375px |
+| Design tokens (no hardcoded colors) | Pass | All new components use theme tokens |
+| Console errors | Fail | React key warning from ChapterList — see M4 |
 
 ---
 
 ## Responsive Design Verification
 
-- **Mobile (375px)**: Pass — no horizontal overflow; all primary controls render and are accessible; h1 truncates with ellipsis. Controls bar wraps correctly within the `max-w-lg` constraint.
-- **Tablet (768px)**: Pass — player remains centred and full controls visible; no layout reflow issues.
-- **Sidebar Collapse (1024px)**: Not directly tested (audiobook reader is a fullscreen overlay that bypasses the sidebar layout).
-- **Desktop (1440px)**: Pass — centred layout with `max-w-lg` works well; no overflow.
+- **Mobile (375px)**: Pass — no horizontal overflow, all primary controls meet touch targets, secondary controls bar fits within viewport (242px width in 375px viewport), layout renders single-column correctly.
+- **Tablet (768px)**: Not independently tested — player layout is single-column centered (`max-w-lg mx-auto`) so tablet breakpoint is not a risk point.
+- **Desktop (1440px)**: Pass — player centers within viewport, blurred background cover fills correctly.
+
+---
+
+## Detailed Findings Summary
+
+| # | Severity | File | Line | Issue |
+|---|----------|------|------|-------|
+| H1 | HIGH | SpeedControl.tsx | 56–68 | `role="option"` wrapping `<button>` — invalid ARIA nesting |
+| H2 | HIGH | SpeedControl.tsx | 58–67 | Speed option touch targets 36px (need ≥44px) |
+| H3 | HIGH | SkipSilenceActiveIndicator.tsx | 17–19 | `role="status"` + `aria-live="polite"` redundant |
+| M1 | MEDIUM | SpeedControl.tsx:22 / AudiobookSettingsPanel.tsx:45 | — | `×` vs `x` character inconsistency in `formatSpeed` |
+| M2 | MEDIUM | AudiobookSettingsPanel.tsx | 82, 145 | "Default Speed" / "Default Sleep Timer" labels not associated |
+| M3 | MEDIUM | AudiobookSettingsPanel.tsx | 116–130 | Skip Silence / Auto-Bookmark switches missing `aria-describedby` |
+| M4 | MEDIUM | ChapterList.tsx | 61 | `key={chapter.id}` breaks when chapters have no `id` — React error in console |
+| N1 | NIT | SilenceSkipIndicator.tsx | 47 | No `role="status"` on `aria-live` wrapper (minor, self-documenting) |
+| N2 | NIT | SpeedControl.tsx | 19 | `SPEED_OPTIONS` not aligned with store's `VALID_SPEEDS` (functional gap) |
 
 ---
 
 ## Recommendations
 
-1. **Fix H1 first**: The `min-h-[36px]` on speed preset buttons in the settings panel is the highest-priority item since users will interact with these on mobile during playback configuration. One-line change.
+1. **Fix H1 + H2 together** — the speed popover ARIA pattern needs rework regardless of touch targets. Converting to `role="menu"` / `role="menuitem"` on the `<button>` elements directly solves both: menus permit interactive children and the button height can then be set to `min-h-[44px]`.
 
-2. **Fix M1 simultaneously** (`motion-safe:animate-pulse`): This is a single-keyword addition that aligns with the established codebase convention and respects vestibular accessibility needs. Zero visual change for users without reduced-motion preference.
+2. **Address M1 (formatSpeed)** — extract a shared utility and use `×` consistently. This takes ~10 minutes and prevents the mismatch from confusing learners.
 
-3. **Address M2 before shipping**: The `aria-live` annotation on `SkipSilenceActiveIndicator` ensures screen reader users get confirmed feedback when the feature activates/deactivates. The fix is additive and non-breaking.
+3. **Address M3 (aria-describedby on switches)** — the pattern is straightforward: add `id` to the description `<p>` and link it via `aria-describedby`. Apply to both "Skip Silence" and "Auto-Bookmark on Stop".
 
-4. **Consider M3 in a polish pass**: The section label contrast in the settings panel is a lower-stakes issue since the labels are supplementary. If the settings panel gets a visual polish pass, address it then.
-
+4. **Fix M4 (ChapterList key)** — one-line fix with a clear fallback: `key={chapter.id ?? chapter.title ?? index}`.
