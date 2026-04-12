@@ -75,7 +75,7 @@ interface BookStoreState {
   linkBooks: (bookIdA: string, bookIdB: string) => Promise<void>
   unlinkBooks: (bookIdA: string, bookIdB: string) => Promise<void>
   upsertAbsBook: (book: Book) => Promise<void>
-  bulkUpsertAbsBooks: (books: Book[]) => Promise<void>
+  bulkUpsertAbsBooks: (books: Book[]) => Promise<{ removedCount: number }>
   getAllTags: () => string[]
   getAllAuthors: () => string[]
   getBookCountByStatus: () => Record<'all' | BookStatus, number>
@@ -436,7 +436,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
   },
 
   bulkUpsertAbsBooks: async (newBooks: Book[]) => {
-    if (newBooks.length === 0) return
+    if (newBooks.length === 0) return { removedCount: 0 }
     try {
       // Build Map<absServerId:absItemId, Book> for O(1) dedup lookup
       const absKeyMap = new Map<string, Book>()
@@ -462,16 +462,35 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
           : book
       })
 
+      // Purge local books whose absItemId no longer exists on the server
+      const incomingServerIds = new Set(newBooks.map(b => b.absServerId))
+      const incomingAbsKeys = new Set(newBooks.map(b => `${b.absServerId}:${b.absItemId}`))
+      const staleBooks = get().books.filter(b =>
+        b.absServerId && b.absItemId &&
+        incomingServerIds.has(b.absServerId) &&
+        !incomingAbsKeys.has(`${b.absServerId}:${b.absItemId}`)
+      )
+      if (staleBooks.length > 0) {
+        await db.books.bulkDelete(staleBooks.map(b => b.id))
+      }
+
       // Single bulk IDB write instead of N individual puts
       await db.books.bulkPut(mergedBooks)
 
-      // Single state update instead of N re-renders
+      // Single state update — add merged, remove stale
       const mergedIds = new Set(mergedBooks.map(b => b.id))
+      const staleIds = new Set(staleBooks.map(b => b.id))
       set(state => ({
-        books: [...state.books.filter(b => !mergedIds.has(b.id)), ...mergedBooks],
+        books: [
+          ...state.books.filter(b => !mergedIds.has(b.id) && !staleIds.has(b.id)),
+          ...mergedBooks,
+        ],
       }))
+
+      return { removedCount: staleBooks.length }
     } catch {
       toast.error('Failed to sync audiobooks from server')
+      return { removedCount: 0 }
     }
   },
 

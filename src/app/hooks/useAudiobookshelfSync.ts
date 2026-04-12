@@ -185,7 +185,7 @@ export function useAudiobookshelfSync() {
         }
 
         // Single bulk upsert: 1 IDB write + 1 state update instead of N
-        await bulkUpsertAbsBooks(allMappedBooks)
+        const { removedCount } = await bulkUpsertAbsBooks(allMappedBooks)
 
         // Update pagination state
         setState(prev => ({
@@ -204,6 +204,9 @@ export function useAudiobookshelfSync() {
         })
 
         toast.success(`Synced ${allMappedBooks.length} audiobooks`, { duration: 3000 })
+        if (removedCount > 0) {
+          toast.info(`Removed ${removedCount} audiobook${removedCount > 1 ? 's' : ''} no longer on server`, { duration: 5000 })
+        }
 
         // Auto-load collections and series after catalog sync (staggered to avoid Cloudflare 429)
         setTimeout(() => {

@@ -322,7 +322,11 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
             const sessionResult = await createPlaybackSession(baseUrl, apiKey, absItemId)
             if (!sessionResult.ok) {
               setIsLoading(false)
-              toast.error(`Stream failed: ${sessionResult.error}`)
+              if (sessionResult.status === 404) {
+                toast.error('This audiobook is no longer available on the server.')
+              } else {
+                toast.error(`Stream failed: ${sessionResult.error}`)
+              }
               return
             }
             const session = sessionResult.data
