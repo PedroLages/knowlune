@@ -423,7 +423,7 @@ export function AudiobookRenderer({
             className="w-full"
           />
           <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
-            <span>{formatAudioTime(currentTime)}</span>
+            <span data-testid="current-time-display">{formatAudioTime(currentTime)}</span>
             <span>{formatAudioTime(duration)}</span>
           </div>
         </div>

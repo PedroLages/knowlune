@@ -76,6 +76,7 @@ async function seedAudiobook(page: import('@playwright/test').Page) {
       author: 'Test Author',
       format: 'audiobook',
       status: 'reading',
+      source: { type: 'remote', url: 'http://localhost/test.m4b' },
       chapters: [
         {
           id: 'ch-1',
@@ -141,14 +142,27 @@ test.describe('E111-S01: Audio Clips', () => {
 
   test('AC-2: End Clip saves clip to database', async ({ page }) => {
     await page.goto(`/library/${AUDIOBOOK_ID}/read`)
-    // Start a clip at time=0
+
+    // Start playback to activate the RAF loop so currentTime updates via React state.
+    // Without play(), the rAF loop is idle and ClipButton's currentTime prop stays at 0,
+    // causing endTime <= startTime validation to reject the clip.
+    await page.evaluate(() => {
+      ;(window as Window & { __mockCurrentTime__?: number }).__mockCurrentTime__ = 10
+    })
+    await page.getByRole('button', { name: /^play$/i }).click()
+    // Wait for RAF loop to propagate time=10 into React state (shown in the time display)
+    await expect(page.getByTestId('current-time-display')).toHaveText('0:10')
+
+    // Start clip at time=10
     await page.getByRole('button', { name: /start clip/i }).click()
     await expect(page.getByTestId('clip-recording-indicator')).toBeVisible()
 
-    // Advance mock currentTime so endTime > startTime validation passes
+    // Advance mock currentTime so endTime (30) > startTime (10)
     await page.evaluate(() => {
       ;(window as Window & { __mockCurrentTime__?: number }).__mockCurrentTime__ = 30
     })
+    // Wait for RAF loop to propagate time=30 into React state
+    await expect(page.getByTestId('current-time-display')).toHaveText('0:30')
 
     // End the clip
     const endClipBtn = page.getByRole('button', { name: /end clip/i })
