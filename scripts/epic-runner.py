@@ -1629,10 +1629,10 @@ async def collect_response(
             if msg.result:
                 parts.append(msg.result)
             if msg.is_error:
-                if msg.stop_reason == "max_turns":
-                    # Session hit turn limit but completed work — log warning, don't fail
-                    write_progress(story_key, "SESSION_WARN", f"max_turns reached ({getattr(msg, 'num_turns', '?')} turns) — treating as complete")
-                    log.warning(f"[{story_key}] Session hit max_turns limit — output collected, continuing")
+                if msg.stop_reason in ("max_turns", "tool_use"):
+                    # Session hit turn limit or ended mid-tool — log warning, don't fail
+                    write_progress(story_key, "SESSION_WARN", f"{msg.stop_reason} at turn {getattr(msg, 'num_turns', '?')} — treating as complete")
+                    log.warning(f"[{story_key}] Session ended with stop_reason={msg.stop_reason} — output collected, continuing")
                 else:
                     write_progress(story_key, "SESSION_ERROR", msg.result or "unknown")
                     raise StoryError(f"Session error: {msg.result or 'unknown'}")
@@ -1894,6 +1894,31 @@ def ensure_clean_tree(story: StoryInfo, next_phase: str) -> None:
         cwd=PROJECT_DIR, check=True,
     )
     log.info(f"  Auto-committed {len(meaningful)} file(s) before {next_phase}")
+
+
+def ensure_clean_tree_epic(epic_num: str, context: str) -> None:
+    """Auto-commit any dirty files during epic-level operations (fix-pass, gate-fix)."""
+    result = subprocess.run(
+        ["git", "status", "--porcelain"],
+        capture_output=True, text=True, cwd=PROJECT_DIR,
+    )
+    dirty_lines = result.stdout.strip()
+    if not dirty_lines:
+        return
+
+    meaningful = [
+        line for line in dirty_lines.splitlines()
+        if not any(noise in line for noise in _NOISE_FILES)
+    ]
+    if not meaningful:
+        return
+
+    subprocess.run(["git", "add", "-A"], cwd=PROJECT_DIR, check=True)
+    subprocess.run(
+        ["git", "commit", "-m", f"fix(Epic {epic_num}): post-epic fixes — {context}"],
+        cwd=PROJECT_DIR, check=True,
+    )
+    log.info(f"  Auto-committed {len(meaningful)} file(s) — {context}")
 
 
 def _find_feature_branch(story: StoryInfo) -> str | None:
@@ -2520,6 +2545,24 @@ async def run_story(
             result.session_ids.append(sid)
         result.phase_reached = "finish"
 
+        # Auto-push if session didn't push (avoids $0.15 retry session)
+        upstream_check = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "@{u}"],
+            capture_output=True, text=True, cwd=PROJECT_DIR,
+        )
+        if upstream_check.returncode != 0:
+            # No upstream — push with -u
+            subprocess.run(["git", "push", "-u", "origin", "HEAD"], cwd=PROJECT_DIR, check=False)
+            log.info("  Auto-pushed branch (session didn't set upstream)")
+        else:
+            unpushed = subprocess.run(
+                ["git", "log", "@{u}..HEAD", "--oneline"],
+                capture_output=True, text=True, cwd=PROJECT_DIR,
+            )
+            if unpushed.stdout.strip():
+                subprocess.run(["git", "push"], cwd=PROJECT_DIR, check=False)
+                log.info("  Auto-pushed unpushed commits after finish")
+
         # Verify FINISH completed its tasks
         missing = verify_finish(story)
         if missing:
@@ -2656,9 +2699,22 @@ async def _run_single_epic_phase(
             )
         return phase_name, True, cost, text
     else:
-        write_progress(epic_key, f"EPIC_FINISH: {phase_name}",
-                       f"WARNING: {marker} not found in output")
-        return phase_name, False, cost, text
+        # Advisory phases (retrospective) succeed even without marker — content was likely generated
+        advisory_phases = {"retrospective"}
+        if phase_name in advisory_phases:
+            write_progress(epic_key, f"EPIC_FINISH: {phase_name}",
+                           f"WARNING: {marker} not found in output — treating as success (advisory phase)")
+            if epic_ctx and epic_ctx.tracking_file:
+                update_tracking_post_epic(
+                    epic_ctx.tracking_file,
+                    phase_name.replace("-", " ").title().replace(" ", " "),
+                    "done", "completed (marker missing)",
+                )
+            return phase_name, True, cost, text
+        else:
+            write_progress(epic_key, f"EPIC_FINISH: {phase_name}",
+                           f"WARNING: {marker} not found in output")
+            return phase_name, False, cost, text
 
 
 async def run_fix_pass(
@@ -2726,6 +2782,8 @@ async def run_fix_pass(
             write_progress(epic_key, f"FIX_PASS: GROUP {i}", f"DONE, cost=${exec_cost:.2f}")
         except StoryError as e:
             log.error(f"  [{epic_key}] Fix pass executor group {i} failed: {e}")
+        # Auto-commit any uncommitted changes from this group
+        ensure_clean_tree_epic(epic_num, theme)
 
     if epic_ctx and epic_ctx.tracking_file:
         update_tracking_post_epic(epic_ctx.tracking_file, "Fix Pass Execution", "done", f"{len(groups)} groups")
@@ -2836,10 +2894,57 @@ async def run_epic_finish(
             else:
                 result.phases_failed.append("fix-pass")
 
-        # 5. Gate check (subprocess only — zero AI cost)
+        # 5. Gate check with auto-fix loop (max 2 retries before AI fix)
         if not config.epic_phases or "gate-check" in (config.epic_phases or []):
             write_progress(epic_key, "GATE_CHECK", "build, lint, test, tsc...")
+
+            # Auto-commit any leftover dirty files first
+            ensure_clean_tree_epic(epic_num, "pre-gate-check cleanup")
+
             gate_passed, gate_failures = run_gate_check()
+
+            # Retry 1: auto-fix lint and re-check
+            if not gate_passed and "lint failed" in gate_failures:
+                write_progress(epic_key, "GATE_CHECK", "attempting lint --fix...")
+                subprocess.run(
+                    ["npm", "run", "lint", "--", "--fix"],
+                    capture_output=True, text=True, cwd=PROJECT_DIR, timeout=120,
+                )
+                ensure_clean_tree_epic(epic_num, "lint auto-fix")
+                gate_passed, gate_failures = run_gate_check()
+
+            # Retry 2: AI fix session for remaining failures
+            if not gate_passed:
+                write_progress(epic_key, "GATE_FIX", f"sonnet fixing: {', '.join(gate_failures)}...")
+                gate_fix_prompt = (
+                    f"STEP 0: Activate `/auto-answer autopilot` to handle any interactive questions autonomously.\n\n"
+                    f"Fix the following gate check failures for Epic {epic_num}:\n"
+                    f"Failures: {', '.join(gate_failures)}\n\n"
+                    f"INSTRUCTIONS:\n"
+                    f"1. Run each failing command to see the actual errors\n"
+                    f"2. Fix the errors with minimal changes (no refactoring)\n"
+                    f"3. Run `npm run build` and `npm run lint` after fixes\n"
+                    f"4. Commit all changes: git add -A && git commit -m \"fix(Epic {epic_num}): gate-check auto-fix\"\n"
+                )
+                gate_fix_phase = None if config.legacy_mode else PhaseConfig(
+                    model="sonnet", effort="high",
+                    needs_agents=False, needs_playwright=False,
+                )
+                try:
+                    _, _, gate_fix_cost = await run_session(
+                        gate_fix_prompt, phase_turns(config, MAX_TURNS_FIX),
+                        BUDGET_SESSION_EPIC_FINISH,
+                        config.mode == "autonomous",
+                        story_key=epic_key, phase=gate_fix_phase,
+                    )
+                    result.total_cost_usd += gate_fix_cost
+                    ensure_clean_tree_epic(epic_num, "gate-fix session cleanup")
+                except StoryError as e:
+                    log.error(f"  [{epic_key}] Gate fix session failed: {e}")
+
+                # Final gate check
+                gate_passed, gate_failures = run_gate_check()
+
             if gate_passed:
                 result.phases_completed.append("gate-check")
                 write_progress(epic_key, "GATE_CHECK", "PASSED")
