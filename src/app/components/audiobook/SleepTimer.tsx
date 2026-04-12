@@ -106,7 +106,7 @@ export function SleepTimer({
       <PopoverContent className="w-52 p-1" align="center">
         {activeOption === 'end-of-chapter' && chapterProgressPercent != null && (
           <div className="px-3 pb-1.5 pt-2" data-testid="chapter-progress-bar">
-            <span className="text-xs text-muted-foreground">Chapter progress</span>
+            <span className="text-xs text-muted-foreground">Current chapter progress</span>
             <div
               className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted"
               role="progressbar"
@@ -116,7 +116,7 @@ export function SleepTimer({
               aria-label="Current chapter progress"
             >
               <div
-                className="h-full rounded-full bg-brand transition-[width] duration-300"
+                className="h-full rounded-full bg-brand transition-[width] duration-300 motion-reduce:transition-none"
                 style={{ width: `${chapterProgressPercent}%` }}
               />
             </div>
