@@ -82,22 +82,33 @@ test.describe('E111-S02: Skip Silence and Speed Memory', () => {
     await expect(skipSilenceToggle).toBeVisible()
     await skipSilenceToggle.click()
 
-    // Verify skip silence is active — silence detection should be running
-    await expect(page.getByTestId('skip-silence-active-indicator')).toBeVisible()
+    // Verify the toggle is now checked — preference persisted in store
+    await expect(skipSilenceToggle).toHaveAttribute('aria-checked', 'true')
+
+    // Verify the active indicator is visible and correctly labelled
+    const indicator = page.getByTestId('skip-silence-active-indicator')
+    await expect(indicator).toBeVisible()
+    await expect(indicator).toHaveAttribute('aria-label', 'Skip silence is active')
+
+    // Verify toggle state survives settings panel re-open (localStorage persistence)
+    await page.keyboard.press('Escape')
+    await settingsButton.click()
+    await expect(page.getByTestId('skip-silence-toggle')).toHaveAttribute('aria-checked', 'true')
   })
 
   test('AC-2: Visual indicator shows skipped silence duration', async ({ page }) => {
     await page.goto(`/library/${testAudiobook.id}/read`)
 
-    // Enable skip silence
-    const settingsButton = page.getByTestId('audiobook-settings-button')
-    await settingsButton.click()
-    const skipSilenceToggle = page.getByTestId('skip-silence-toggle')
-    await skipSilenceToggle.click()
+    // The silence-skip-indicator is always in the DOM but hidden until a skip occurs
+    const indicator = page.getByTestId('silence-skip-indicator')
+    await expect(indicator).toBeAttached()
 
-    // When a silence skip occurs, a transient indicator should appear
-    // This test verifies the indicator element exists and has accessible text
-    await expect(page.getByTestId('silence-skip-indicator')).toBeAttached()
+    // Verify aria attributes are correctly set for screen reader announcements
+    await expect(indicator).toHaveAttribute('aria-live', 'polite')
+    await expect(indicator).toHaveAttribute('aria-atomic', 'true')
+
+    // The indicator should be initially hidden (no skip has occurred yet)
+    await expect(indicator).not.toBeVisible()
   })
 
   test('AC-3: Disabling skip silence stops detection immediately', async ({ page }) => {
@@ -138,8 +149,13 @@ test.describe('E111-S02: Skip Silence and Speed Memory', () => {
     const speed15 = page.getByTestId('speed-option-1.5')
     await speed15.click()
 
-    // Verify speed display shows 1.5x
-    await expect(speedButton).toContainText('1.5')
+    // Verify speed display shows 1.5×
+    await expect(speedButton).toContainText('1.5×')
+
+    // Navigate away and back to confirm Dexie (IndexedDB) persistence
+    await page.goto('/library')
+    await page.goto(`/library/${testAudiobook.id}/read`)
+    await expect(page.getByTestId('speed-button')).toContainText('1.5×')
   })
 
   test('AC-6: Returning to a book restores its previously-set speed', async ({ page }) => {
@@ -148,14 +164,14 @@ test.describe('E111-S02: Skip Silence and Speed Memory', () => {
     const speedButton = page.getByTestId('speed-button')
     await speedButton.click()
     await page.getByTestId('speed-option-1.5').click()
-    await expect(speedButton).toContainText('1.5')
+    await expect(speedButton).toContainText('1.5×')
 
     // Navigate to book B and set to 2x speed
     await page.goto(`/library/${testAudiobookB.id}/read`)
     const speedButtonB = page.getByTestId('speed-button')
     await speedButtonB.click()
     await page.getByTestId('speed-option-2').click()
-    await expect(speedButtonB).toContainText('2')
+    await expect(speedButtonB).toContainText('2.0×')
 
     // Return to book A — speed should be 1.5x (not 2x)
     await page.goto(`/library/${testAudiobook.id}/read`)

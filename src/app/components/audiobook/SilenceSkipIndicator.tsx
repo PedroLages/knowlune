@@ -10,6 +10,7 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import type { SilenceSkip } from '@/app/hooks/useSilenceDetection'
+import { cn } from '@/app/components/ui/utils'
 
 interface SilenceSkipIndicatorProps {
   lastSkip: SilenceSkip | null
@@ -47,9 +48,11 @@ export function SilenceSkipIndicator({ lastSkip }: SilenceSkipIndicatorProps) {
       data-testid="silence-skip-indicator"
       aria-live="polite"
       aria-atomic="true"
-      className={`pointer-events-none transition-opacity duration-300 ${
-        visible ? 'opacity-100' : 'opacity-0'
-      }`}
+      aria-hidden={!visible}
+      className={cn(
+        'pointer-events-none transition-all duration-300',
+        visible ? 'visible opacity-100' : 'invisible opacity-0'
+      )}
     >
       {displayText && (
         <span className="inline-flex items-center rounded-full bg-brand-soft px-3 py-1 text-xs font-medium text-brand-soft-foreground">

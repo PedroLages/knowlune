@@ -28,8 +28,8 @@ const SILENCE_THRESHOLD = 0.015
 const SILENCE_DURATION_MS = 500
 /** FFT size for the AnalyserNode — must be power of 2 */
 const FFT_SIZE = 2048
-/** How far to skip forward after silence is detected (seconds) */
-const SKIP_LOOKAHEAD_S = 0.1
+/** Chunk size to seek per animation frame while in skip mode (seconds) */
+const SKIP_CHUNK_S = 1.0
 
 export interface SilenceSkip {
   durationSeconds: number
@@ -49,7 +49,7 @@ interface UseSilenceDetectionReturn {
   lastSkip: SilenceSkip | null
 }
 
-function calculateRms(data: Uint8Array): number {
+export function calculateRms(data: Uint8Array): number {
   let sum = 0
   for (let i = 0; i < data.length; i++) {
     // Byte time-domain data: 128 = silence, 0–255 is the range
@@ -69,6 +69,8 @@ export function useSilenceDetection({
 
   const rafRef = useRef<number | null>(null)
   const silenceStartRef = useRef<number | null>(null)
+  const isSkippingRef = useRef(false)
+  const skipStartPositionRef = useRef<number | null>(null)
 
   const stopLoop = useCallback(() => {
     if (rafRef.current !== null) {
@@ -76,6 +78,8 @@ export function useSilenceDetection({
       rafRef.current = null
     }
     silenceStartRef.current = null
+    isSkippingRef.current = false
+    skipStartPositionRef.current = null
   }, [])
 
   const runDetectionLoop = useCallback(() => {
@@ -92,21 +96,42 @@ export function useSilenceDetection({
       const now = performance.now()
 
       if (rms < SILENCE_THRESHOLD) {
-        // Start tracking silence duration
-        if (silenceStartRef.current === null) {
-          silenceStartRef.current = now
-        } else if (now - silenceStartRef.current >= SILENCE_DURATION_MS) {
-          // Silence threshold exceeded — skip past it
-          const silenceDurationS = (now - silenceStartRef.current) / 1000
+        if (isSkippingRef.current) {
+          // Already in skip mode — keep seeking one chunk per frame until audio resumes
           const audio = audioRef.current
           if (audio && !audio.ended) {
-            audio.currentTime = audio.currentTime + SKIP_LOOKAHEAD_S
+            audio.currentTime = Math.min(audio.currentTime + SKIP_CHUNK_S, audio.duration)
+          } else {
+            // Reached end — exit skip mode without emitting a skip event
+            isSkippingRef.current = false
+            skipStartPositionRef.current = null
+          }
+        } else if (silenceStartRef.current === null) {
+          // Start the 500ms gate
+          silenceStartRef.current = now
+        } else if (now - silenceStartRef.current >= SILENCE_DURATION_MS) {
+          // 500ms gate exceeded — enter skip mode and seek past the silence
+          isSkippingRef.current = true
+          skipStartPositionRef.current = audioRef.current?.currentTime ?? null
+          const audio = audioRef.current
+          if (audio && !audio.ended) {
+            audio.currentTime = Math.min(audio.currentTime + SKIP_CHUNK_S, audio.duration)
           }
           silenceStartRef.current = null
-          setLastSkip({ durationSeconds: silenceDurationS, timestamp: Date.now() })
         }
       } else {
-        // Audio is not silent — reset tracking
+        if (isSkippingRef.current) {
+          // Non-silent audio found — exit skip mode and emit the skip event
+          const endPos = audioRef.current?.currentTime ?? 0
+          const startPos = skipStartPositionRef.current ?? endPos
+          setLastSkip({
+            durationSeconds: Math.max(0, endPos - startPos),
+            timestamp: Date.now(),
+          })
+          isSkippingRef.current = false
+          skipStartPositionRef.current = null
+        }
+        // Audio is not silent — reset detection gate
         silenceStartRef.current = null
       }
 
@@ -125,6 +150,13 @@ export function useSilenceDetection({
 
     const audio = audioRef.current
     if (!audio) return
+
+    // Handle closed AudioContext — can occur after extended inactivity (browser GC)
+    if (_audioCtx && _audioCtx.state === 'closed') {
+      _audioCtx = null
+      _mediaSource = null
+      _analyser = null
+    }
 
     // Lazily create AudioContext on user gesture (play satisfies user gesture requirement)
     if (!_audioCtx) {

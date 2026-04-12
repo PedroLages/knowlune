@@ -96,7 +96,7 @@ export function AudiobookSettingsPanel({ open, onOpenChange }: AudiobookSettings
                       role="radio"
                       aria-checked={isActive}
                       onClick={() => setDefaultSpeed(rate)}
-                      className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors min-h-[36px] ${
+                      className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors min-h-[44px] ${
                         isActive
                           ? 'bg-brand text-brand-foreground'
                           : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'

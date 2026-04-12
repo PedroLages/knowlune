@@ -12,6 +12,7 @@
 import { Check } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { Button } from '@/app/components/ui/button'
+import { cn } from '@/app/components/ui/utils'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
 import { useBookStore } from '@/stores/useBookStore'
 
@@ -55,7 +56,10 @@ export function SpeedControl({ bookId }: SpeedControlProps) {
               <li key={rate} role="option" aria-selected={isActive}>
                 <button
                   onClick={() => handleSelect(rate)}
-                  className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted/60 ${isActive ? 'text-brand font-medium' : 'text-foreground'}`}
+                  className={cn(
+                    'flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted/60',
+                    isActive ? 'text-brand font-medium' : 'text-foreground'
+                  )}
                   data-testid={`speed-option-${rate}`}
                 >
                   <span>{formatSpeed(rate)}</span>

@@ -14,6 +14,7 @@ import { useEffect, useRef } from 'react'
 import type { RefObject } from 'react'
 import { useAudiobookPrefsStore } from '@/stores/useAudiobookPrefsStore'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
+import { useBookStore } from '@/stores/useBookStore'
 import { useSleepTimer } from '@/app/hooks/useSleepTimer'
 import { db } from '@/db/schema'
 import type { Book } from '@/data/types'
@@ -51,9 +52,11 @@ export function useAudiobookPrefsEffects({
     defaultSpeedAppliedForBookRef.current = book.id
     // Per-book speed takes priority over global default (AC-6).
     // Fall back to global default for first-open books (AC-7).
-    const resolvedSpeed = book.playbackSpeed ?? useAudiobookPrefsStore.getState().defaultSpeed
+    // Read via getState() to avoid book.playbackSpeed in dep array (would re-run on every speed change)
+    const bookPlaybackSpeed = useBookStore.getState().books.find(b => b.id === book.id)?.playbackSpeed
+    const resolvedSpeed = bookPlaybackSpeed ?? useAudiobookPrefsStore.getState().defaultSpeed
     useAudioPlayerStore.getState().setPlaybackRate(resolvedSpeed)
-  }, [book.id, book.playbackSpeed])
+  }, [book.id])
 
   // ── Effect 2: Auto-bookmark on stop (AC-5) ───────────────────────────────────
   // lastAutoBookmarkTimeRef prevents duplicate bookmarks on rapid pause/play toggles

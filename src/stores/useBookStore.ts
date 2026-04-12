@@ -331,6 +331,10 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
   },
 
   updateBookPlaybackSpeed: async (bookId, speed) => {
+    if (!isFinite(speed) || speed < 0.5 || speed > 3.0) {
+      console.error('[BookStore] Invalid playback speed rejected:', speed)
+      return
+    }
     const now = new Date().toISOString()
     const prevBook = get().books.find(b => b.id === bookId)
     // Optimistic update
