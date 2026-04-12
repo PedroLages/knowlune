@@ -662,7 +662,7 @@ app.post('/api/ai/ollama', async (req, res) => {
       model: providerModel,
       messages,
       temperature: temperature ?? 0.7,
-      maxTokens: maxTokens ?? 4096,
+      maxOutputTokens: maxTokens ?? 4096,
     })
 
     // Set SSE headers
@@ -716,7 +716,7 @@ app.post('/api/ai/generate', async (req, res) => {
       model: providerModel,
       messages,
       temperature: temperature ?? 0.7,
-      maxTokens: maxTokens ?? 4096,
+      maxOutputTokens: maxTokens ?? 4096,
     })
 
     res.json({ text: result.text })
@@ -751,7 +751,7 @@ app.post('/api/ai/stream', async (req, res) => {
       model: providerModel,
       messages,
       temperature: temperature ?? 0.7,
-      maxTokens: maxTokens ?? 4096,
+      maxOutputTokens: maxTokens ?? 4096,
     })
 
     // Set SSE headers

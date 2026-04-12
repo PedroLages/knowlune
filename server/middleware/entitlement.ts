@@ -21,7 +21,7 @@
  */
 
 import { LRUCache } from 'lru-cache'
-import type { Response, NextFunction } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import type { AuthenticatedRequest, EntitlementCacheEntry, EntitlementTier } from './types.js'
 
 /** Cache TTL in milliseconds (5 minutes) */
@@ -97,9 +97,9 @@ async function fetchEntitlementFromSupabase(
  * Critical design rule: BYOK detection is independent of entitlement state.
  * A BYOK request must NEVER be rejected because of hosted-AI entitlement state.
  */
-export function createDetectBYOKMiddleware() {
+export function createDetectBYOKMiddleware(): import('express').RequestHandler {
   return function detectBYOK(
-    req: AuthenticatedRequest,
+    req: Request,
     _res: Response,
     next: NextFunction
   ): void {
@@ -109,7 +109,7 @@ export function createDetectBYOKMiddleware() {
     const hasOllamaUrl =
       typeof body?.ollamaServerUrl === 'string' && body.ollamaServerUrl.length > 0
 
-    req.isBYOK = hasApiKey || hasOllamaUrl
+    ;(req as AuthenticatedRequest).isBYOK = hasApiKey || hasOllamaUrl
 
     next()
   }
@@ -126,7 +126,7 @@ export function createDetectBYOKMiddleware() {
  * @param config - Supabase connection configuration
  * @returns Express middleware function
  */
-export function createEntitlementMiddleware(config: EntitlementConfig) {
+export function createEntitlementMiddleware(config: EntitlementConfig): import('express').RequestHandler {
   if (!config.supabaseUrl || !config.supabaseServiceRoleKey) {
     throw new Error(
       'Entitlement middleware requires supabaseUrl and supabaseServiceRoleKey'
@@ -139,10 +139,11 @@ export function createEntitlementMiddleware(config: EntitlementConfig) {
   })
 
   return async function entitlement(
-    req: AuthenticatedRequest,
+    _req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> {
+    const req = _req as AuthenticatedRequest
     // BYOK requests skip entitlement check — user provides their own key/server.
     // Critical: This check is independent of hosted-AI entitlement state.
     if (req.isBYOK) {

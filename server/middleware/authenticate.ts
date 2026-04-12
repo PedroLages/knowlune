@@ -11,8 +11,8 @@
  * After this middleware, `req.user` contains the decoded JWT payload.
  */
 
-import { jwtVerify, createRemoteJWKSet, type JWTVerifyResult, type KeyLike } from 'jose'
-import type { Response, NextFunction } from 'express'
+import { jwtVerify, createRemoteJWKSet, type JWTVerifyResult } from 'jose'
+import type { Request, Response, NextFunction } from 'express'
 import type { AuthConfig, AuthenticatedRequest, SupabaseJwtPayload } from './types.js'
 
 /**
@@ -21,7 +21,7 @@ import type { AuthConfig, AuthenticatedRequest, SupabaseJwtPayload } from './typ
  * @param config - JWT configuration (secret or JWKS URL)
  * @returns Express middleware function
  */
-export function createAuthMiddleware(config: AuthConfig) {
+export function createAuthMiddleware(config: AuthConfig): import('express').RequestHandler {
   // Validate config at startup — fail fast
   if (!config.jwtSecret && !config.jwksUrl) {
     throw new Error(
@@ -41,7 +41,7 @@ export function createAuthMiddleware(config: AuthConfig) {
   }
 
   return async function authenticate(
-    req: AuthenticatedRequest,
+    req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> {
@@ -62,7 +62,7 @@ export function createAuthMiddleware(config: AuthConfig) {
     try {
       const result: JWTVerifyResult = await jwtVerify(
         token,
-        keyOrJwks as KeyLike | Uint8Array,
+        keyOrJwks as CryptoKey | Uint8Array,
         {
           algorithms: config.jwksUrl ? undefined : ['HS256'],
         }
@@ -77,7 +77,7 @@ export function createAuthMiddleware(config: AuthConfig) {
       }
 
       // Attach user to request for downstream middleware/handlers
-      req.user = payload
+      ;(req as AuthenticatedRequest).user = payload
       next()
     } catch (error) {
       // silent-catch-ok: server middleware, error surfaced as HTTP 401 response
