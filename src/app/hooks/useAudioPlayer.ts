@@ -262,14 +262,16 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
         const startTime = getChapterStartTime(chapters[i])
         if (currentTime >= startTime) {
           if (i !== currentIdx) {
-            // Chapter boundary crossed — dispatch cancelable event for sleep timer EOC
+            // Always update the index first — prevents repeated chapterend dispatch on subsequent
+            // 500ms polls when the sleep timer's fade-out holds currentTime near the boundary.
+            setCurrentChapterIndex(i)
+            // Dispatch cancelable event so the sleep timer EOC can intercept and fade out.
+            // defaultPrevented means the timer is handling the pause — no further action needed.
             const evt = new CustomEvent('chapterend', {
               cancelable: true,
               detail: { fromIndex: currentIdx, toIndex: i },
             })
             audio.dispatchEvent(evt)
-            if (evt.defaultPrevented) break // Intentional: sleep timer intercepted — skip index update
-            setCurrentChapterIndex(i)
           }
           break
         }

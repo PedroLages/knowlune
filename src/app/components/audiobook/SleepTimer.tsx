@@ -117,7 +117,7 @@ export function SleepTimer({
             >
               <div
                 className="h-full rounded-full bg-brand transition-[width] duration-300"
-                style={{ width: `${Math.min(100, Math.max(0, chapterProgressPercent))}%` }}
+                style={{ width: `${chapterProgressPercent}%` }}
               />
             </div>
           </div>
