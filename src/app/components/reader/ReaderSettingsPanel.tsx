@@ -24,6 +24,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/app/components/ui/select'
+import { Switch } from '@/app/components/ui/switch'
+import { Label } from '@/app/components/ui/label'
 import { cn } from '@/app/components/ui/utils'
 import { useReaderStore } from '@/stores/useReaderStore'
 import type { ReaderTheme, ReaderFontFamily } from '@/stores/useReaderStore'
@@ -70,6 +72,12 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
   const setFontFamily = useReaderStore(s => s.setFontFamily)
   const lineHeight = useReaderStore(s => s.lineHeight)
   const setLineHeight = useReaderStore(s => s.setLineHeight)
+  const letterSpacing = useReaderStore(s => s.letterSpacing)
+  const setLetterSpacing = useReaderStore(s => s.setLetterSpacing)
+  const wordSpacing = useReaderStore(s => s.wordSpacing)
+  const setWordSpacing = useReaderStore(s => s.setWordSpacing)
+  const readingRulerEnabled = useReaderStore(s => s.readingRulerEnabled)
+  const setReadingRulerEnabled = useReaderStore(s => s.setReadingRulerEnabled)
   const resetSettings = useReaderStore(s => s.resetSettings)
 
   const handleDecrease = () => {
@@ -224,6 +232,75 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
               ))}
             </SelectContent>
           </Select>
+        </section>
+
+        {/* Letter Spacing */}
+        <section aria-labelledby="letter-spacing-label" className="mb-6">
+          <p
+            id="letter-spacing-label"
+            className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3"
+          >
+            Letter Spacing — {letterSpacing.toFixed(2)}em
+          </p>
+          <Slider
+            min={0}
+            max={0.3}
+            step={0.02}
+            value={[letterSpacing]}
+            onValueChange={([val]) => setLetterSpacing(val)}
+            className="w-full"
+            aria-label="Letter spacing"
+            aria-valuemin={0}
+            aria-valuemax={0.3}
+            aria-valuenow={letterSpacing}
+            data-testid="letter-spacing-slider"
+          />
+        </section>
+
+        {/* Word Spacing */}
+        <section aria-labelledby="word-spacing-label" className="mb-6">
+          <p
+            id="word-spacing-label"
+            className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3"
+          >
+            Word Spacing — {wordSpacing.toFixed(2)}em
+          </p>
+          <Slider
+            min={0}
+            max={0.5}
+            step={0.05}
+            value={[wordSpacing]}
+            onValueChange={([val]) => setWordSpacing(val)}
+            className="w-full"
+            aria-label="Word spacing"
+            aria-valuemin={0}
+            aria-valuemax={0.5}
+            aria-valuenow={wordSpacing}
+            data-testid="word-spacing-slider"
+          />
+        </section>
+
+        {/* Reading Ruler */}
+        <section aria-labelledby="reading-ruler-label" className="mb-6">
+          <div className="flex items-center justify-between">
+            <Label
+              id="reading-ruler-label"
+              htmlFor="reading-ruler-switch"
+              className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+            >
+              Reading Ruler
+            </Label>
+            <Switch
+              id="reading-ruler-switch"
+              checked={readingRulerEnabled}
+              onCheckedChange={setReadingRulerEnabled}
+              aria-label="Toggle reading ruler"
+              data-testid="reading-ruler-switch"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            A guide line that follows your cursor to help track reading position
+          </p>
         </section>
 
         {/* Reset */}

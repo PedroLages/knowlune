@@ -50,6 +50,8 @@ export function EpubRenderer({
   const fontSize = useReaderStore(s => s.fontSize)
   const fontFamily = useReaderStore(s => s.fontFamily)
   const lineHeight = useReaderStore(s => s.lineHeight)
+  const letterSpacing = useReaderStore(s => s.letterSpacing)
+  const wordSpacing = useReaderStore(s => s.wordSpacing)
   const toggleHeader = useReaderStore(s => s.toggleHeader)
   const colorScheme = useAppColorScheme()
   const renditionRef = useRef<Rendition | null>(null)
@@ -79,17 +81,24 @@ export function EpubRenderer({
       }
 
       // Apply theme via rendition.themes.default() which accepts a CSS rules object
+      const bodyStyles: Record<string, string> = {
+        background: themeColors.background,
+        color: themeColors.foreground,
+        'font-size': `${fontSize}%`,
+        'line-height': String(lineHeight),
+        'font-family': fontFamilyMap[fontFamily] ?? 'inherit',
+      }
+
+      // Set spacing explicitly: use 'normal' when zero to reset any stale epub.js
+      // styles that may have been applied by a previous non-zero value.
+      bodyStyles['letter-spacing'] = letterSpacing > 0 ? `${letterSpacing}em` : 'normal'
+      bodyStyles['word-spacing'] = wordSpacing > 0 ? `${wordSpacing}em` : 'normal'
+
       rendition.themes.default({
-        body: {
-          background: themeColors.background,
-          color: themeColors.foreground,
-          'font-size': `${fontSize}%`,
-          'line-height': String(lineHeight),
-          'font-family': fontFamilyMap[fontFamily] ?? 'inherit',
-        },
+        body: bodyStyles,
       })
     },
-    [theme, colorScheme, fontSize, fontFamily, lineHeight]
+    [theme, colorScheme, fontSize, fontFamily, lineHeight, letterSpacing, wordSpacing]
   )
 
   /** Store rendition ref and apply initial theme */

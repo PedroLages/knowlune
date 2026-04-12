@@ -36,6 +36,7 @@ import { ReaderErrorBoundary } from '@/app/components/reader/ReaderErrorBoundary
 import { TableOfContents } from '@/app/components/reader/TableOfContents'
 import { ReaderSettingsPanel } from '@/app/components/reader/ReaderSettingsPanel'
 import { TtsControlBar } from '@/app/components/reader/TtsControlBar'
+import { ReadingRuler } from '@/app/components/reader/ReadingRuler'
 import { HighlightLayer } from '@/app/components/reader/HighlightLayer'
 import { useVocabularyStore } from '@/stores/useVocabularyStore'
 import { HighlightListPanel } from '@/app/components/reader/HighlightListPanel'
@@ -762,7 +763,9 @@ export function BookReader() {
       />
 
       {/* Main content area */}
-      <main className="flex-1 overflow-hidden">
+      <main className="relative flex-1 overflow-hidden">
+        {/* Reading ruler overlay (E114-S01) */}
+        <ReadingRuler />
         {(isLoadingContent || !isLoaded) && (
           <LoadingSkeleton
             message={book?.source.type === 'remote' ? 'Loading from server...' : 'Loading book...'}

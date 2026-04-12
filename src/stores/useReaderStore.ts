@@ -19,6 +19,9 @@ interface ReaderSettings {
   fontSize: number // 80–200 (percentage)
   fontFamily: ReaderFontFamily
   lineHeight: number // 1.2–2.0
+  letterSpacing: number // 0–0.3 (em)
+  wordSpacing: number // 0–0.5 (em)
+  readingRulerEnabled: boolean
 }
 
 const DEFAULT_SETTINGS: ReaderSettings = {
@@ -26,6 +29,9 @@ const DEFAULT_SETTINGS: ReaderSettings = {
   fontSize: 100,
   fontFamily: 'default',
   lineHeight: 1.6,
+  letterSpacing: 0,
+  wordSpacing: 0,
+  readingRulerEnabled: false,
 }
 
 function loadSettings(): ReaderSettings {
@@ -52,6 +58,22 @@ function loadSettings(): ReaderSettings {
         parsed.lineHeight <= 2.0
           ? parsed.lineHeight
           : DEFAULT_SETTINGS.lineHeight,
+      letterSpacing:
+        typeof parsed.letterSpacing === 'number' &&
+        parsed.letterSpacing >= 0 &&
+        parsed.letterSpacing <= 0.3
+          ? parsed.letterSpacing
+          : DEFAULT_SETTINGS.letterSpacing,
+      wordSpacing:
+        typeof parsed.wordSpacing === 'number' &&
+        parsed.wordSpacing >= 0 &&
+        parsed.wordSpacing <= 0.5
+          ? parsed.wordSpacing
+          : DEFAULT_SETTINGS.wordSpacing,
+      readingRulerEnabled:
+        typeof parsed.readingRulerEnabled === 'boolean'
+          ? parsed.readingRulerEnabled
+          : DEFAULT_SETTINGS.readingRulerEnabled,
     }
   } catch {
     // silent-catch-ok: corrupted storage, use defaults
@@ -90,7 +112,20 @@ interface ReaderStoreState extends ReaderSettings {
   setFontSize: (size: number) => void
   setFontFamily: (family: ReaderFontFamily) => void
   setLineHeight: (height: number) => void
+  setLetterSpacing: (spacing: number) => void
+  setWordSpacing: (spacing: number) => void
+  setReadingRulerEnabled: (enabled: boolean) => void
   resetSettings: () => void
+}
+
+/** Extract persisted settings fields from current state.
+ *  Derived from DEFAULT_SETTINGS keys so new settings are automatically included
+ *  without needing to manually list every field here. */
+function getSettingsFromState(s: ReaderSettings): ReaderSettings {
+  return (Object.keys(DEFAULT_SETTINGS) as (keyof ReaderSettings)[]).reduce(
+    (acc, key) => ({ ...acc, [key]: s[key] }),
+    {} as ReaderSettings
+  )
 }
 
 export const useReaderStore = create<ReaderStoreState>((set, get) => {
@@ -119,49 +154,49 @@ export const useReaderStore = create<ReaderStoreState>((set, get) => {
     setSettingsOpen: open => set({ settingsOpen: open }),
 
     setTheme: theme => {
-      const settings: ReaderSettings = {
-        theme,
-        fontSize: get().fontSize,
-        fontFamily: get().fontFamily,
-        lineHeight: get().lineHeight,
-      }
-      saveSettings(settings)
+      const s = get()
+      saveSettings({ ...getSettingsFromState(s), theme })
       set({ theme })
     },
 
     setFontSize: size => {
       const clamped = Math.max(80, Math.min(200, size))
-      const settings: ReaderSettings = {
-        theme: get().theme,
-        fontSize: clamped,
-        fontFamily: get().fontFamily,
-        lineHeight: get().lineHeight,
-      }
-      saveSettings(settings)
+      const s = get()
+      saveSettings({ ...getSettingsFromState(s), fontSize: clamped })
       set({ fontSize: clamped })
     },
 
     setFontFamily: family => {
-      const settings: ReaderSettings = {
-        theme: get().theme,
-        fontSize: get().fontSize,
-        fontFamily: family,
-        lineHeight: get().lineHeight,
-      }
-      saveSettings(settings)
+      const s = get()
+      saveSettings({ ...getSettingsFromState(s), fontFamily: family })
       set({ fontFamily: family })
     },
 
     setLineHeight: height => {
       const clamped = Math.max(1.2, Math.min(2.0, height))
-      const settings: ReaderSettings = {
-        theme: get().theme,
-        fontSize: get().fontSize,
-        fontFamily: get().fontFamily,
-        lineHeight: clamped,
-      }
-      saveSettings(settings)
+      const s = get()
+      saveSettings({ ...getSettingsFromState(s), lineHeight: clamped })
       set({ lineHeight: clamped })
+    },
+
+    setLetterSpacing: spacing => {
+      const clamped = Math.max(0, Math.min(0.3, spacing))
+      const s = get()
+      saveSettings({ ...getSettingsFromState(s), letterSpacing: clamped })
+      set({ letterSpacing: clamped })
+    },
+
+    setWordSpacing: spacing => {
+      const clamped = Math.max(0, Math.min(0.5, spacing))
+      const s = get()
+      saveSettings({ ...getSettingsFromState(s), wordSpacing: clamped })
+      set({ wordSpacing: clamped })
+    },
+
+    setReadingRulerEnabled: enabled => {
+      const s = get()
+      saveSettings({ ...getSettingsFromState(s), readingRulerEnabled: enabled })
+      set({ readingRulerEnabled: enabled })
     },
 
     resetSettings: () => {
