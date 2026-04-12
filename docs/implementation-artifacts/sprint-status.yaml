@@ -1354,7 +1354,7 @@ development_status:
   110-1-smart-shelves: done
   110-2-series-grouping: done
   110-3-reading-queue: done
-  epic-110-retrospective: optional
+  epic-110-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 111: Audiobook Experience — Clips, Silence, Memory

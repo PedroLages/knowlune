@@ -58,14 +58,14 @@ Story file does NOT exist yet — /start-story agent will create from sprint-sta
 
 | Command | Status | Result | Notes |
 |---------|--------|--------|-------|
-| Sprint Status | pending | — | — |
+| Sprint Status | done | completed | — |
 | Mark Epic Done | pending | — | — |
-| Testarch Trace | pending | — | — |
+| Testarch Trace | done | completed | — |
 | Testarch NFR | pending | — | — |
 | Retrospective | pending | — | — |
-| Fix Pass Planning | pending | — | — |
-| Fix Pass Execution | pending | — | — |
-| Gate Check | pending | — | — |
+| Fix Pass Planning | done | completed | — |
+| Fix Pass Execution | done | 10 groups | — |
+| Gate Check | failed | lint failed, test:unit failed, tsc failed, uncommitted changes | — |
 
 ## Non-Issues (False Positives)
 _(none yet)_
