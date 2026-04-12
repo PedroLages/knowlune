@@ -736,6 +736,7 @@ export interface Book {
   linkedBookId?: string // FK to paired format's Book.id (E103-S03 dual-format linking)
   series?: string // Series name for grouping (E110-S02)
   seriesSequence?: string // Position within series, e.g. "1", "2.5" (E110-S02)
+  playbackSpeed?: number // Per-book speed memory — overrides global default (E111-S02)
 }
 
 export interface BookHighlight {
