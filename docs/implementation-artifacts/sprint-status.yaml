@@ -1386,7 +1386,7 @@ development_status:
   # Depends on: E107
   # ──────────────────────────────────────────────────
   epic-113: in-progress
-  113-1-star-ratings-and-reviews: in-progress
+  113-1-star-ratings-and-reviews: review
   epic-113-retrospective: optional
 
   # ──────────────────────────────────────────────────
