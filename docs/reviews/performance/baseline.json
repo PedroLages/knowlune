@@ -1,6 +1,6 @@
 {
   "captured_at": "2026-04-12",
-  "commit": "0427384b",
+  "commit": "20634f88",
   "bundle": {
     "total_js_bytes": 9728000,
     "total_css_bytes": 288000,
@@ -17,18 +17,18 @@
   },
   "page_metrics": {
     "/": {
-      "ttfb": 2,
-      "dom_interactive": 74,
-      "dom_complete": 1830,
-      "load_complete": 1830,
-      "fcp": 2041,
+      "ttfb": 1,
+      "dom_interactive": 11,
+      "dom_complete": 156,
+      "load_complete": 156,
+      "fcp": 252,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
       "resource_count": 250,
-      "js_resource_count": 249,
+      "js_resource_count": 250,
       "css_resource_count": 2,
-      "total_transfer_bytes": 13426638,
+      "total_transfer_bytes": 61200,
       "samples": 3,
       "largest_resources": [
         {
@@ -147,63 +147,67 @@
     },
     "/library/:bookId/read": {
       "ttfb": 2,
-      "dom_interactive": 48,
-      "dom_complete": 260,
-      "load_complete": 260,
-      "fcp": 477,
+      "dom_interactive": 9,
+      "dom_complete": 147,
+      "load_complete": 147,
+      "fcp": 478,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
-      "resource_count": 213,
-      "js_resource_count": 212,
-      "css_resource_count": 2,
-      "total_transfer_bytes": 11454328,
+      "resource_count": 246,
+      "js_resource_count": 245,
+      "css_resource_count": 1,
+      "total_transfer_bytes": 61500,
       "samples": 3,
       "largest_resources": [
         {
-          "name": "@sentry_react.js?v=3ac5ad39",
-          "size": 1923645,
-          "duration": 21
+          "name": "play",
+          "size": 13350,
+          "duration": 32
         },
         {
-          "name": "lucide-react.js?v=3ac5ad39",
-          "size": 1047716,
-          "duration": 14
+          "name": "client",
+          "size": 300,
+          "duration": 1
         },
         {
-          "name": "react-dom_client.js?v=3ac5ad39",
-          "size": 1005907,
-          "duration": 20
+          "name": "reduce-motion-init.js",
+          "size": 300,
+          "duration": 1
         },
         {
-          "name": "@supabase_supabase-js.js?v=3ac5ad39",
-          "size": 577648,
-          "duration": 23
+          "name": "main.tsx",
+          "size": 300,
+          "duration": 1
         },
         {
-          "name": "radix-ui.js?v=3ac5ad39",
-          "size": 464288,
-          "duration": 18
+          "name": "@react-refresh",
+          "size": 300,
+          "duration": 1
         }
       ]
     }
   },
   "bundle_sizes": {
     "Library": {
-      "raw": 225460,
-      "file": "Library-DM83PKNd.js"
+      "raw": 214980,
+      "file": "Library-BwrZCtf8.js"
     },
     "index_js": {
-      "raw": 828320,
-      "file": "index-W2aGQuKM.js"
+      "raw": 830170,
+      "file": "index-n0Alnthp.js"
     },
     "index_css": {
-      "raw": 274610,
-      "file": "index-DxWN202Z.css"
+      "raw": 277110,
+      "file": "index-V4ND4z35.css"
     },
     "dexie": {
       "raw": 96420,
       "file": "dexie-D8hooWrS.js"
+    },
+    "BookReader": {
+      "raw": 73120,
+      "file": "BookReader-B-E_0Prd.js"
     }
   }
 }
