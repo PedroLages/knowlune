@@ -103,12 +103,16 @@ export function getReaderChromeClasses(
   const colors = getReaderThemeColors(theme, colorScheme)
   let bgClasses = BG_CLASSES[colors.background]
   if (!bgClasses) {
-    console.warn(`Unknown background hex "${colors.background}", falling back to Professional default (#faf5ee)`)
+    console.warn(
+      `Unknown background hex "${colors.background}", falling back to Professional default (#faf5ee)`
+    )
     bgClasses = BG_CLASSES['#faf5ee']
   }
   let textClass = TEXT_CLASSES[colors.foreground]
   if (!textClass) {
-    console.warn(`Unknown foreground hex "${colors.foreground}", falling back to Professional default (#1c1d2b)`)
+    console.warn(
+      `Unknown foreground hex "${colors.foreground}", falling back to Professional default (#1c1d2b)`
+    )
     textClass = TEXT_CLASSES['#1c1d2b']
   }
   return { ...bgClasses, text: textClass }

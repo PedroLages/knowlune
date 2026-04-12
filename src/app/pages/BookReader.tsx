@@ -134,7 +134,9 @@ export function BookReader() {
       .catch(() => {
         // silent-catch-ok: non-critical UI state
       })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [bookId, audiobookBookmarksOpen, bookmarkVersion])
   // Cloze flashcard creator state (E85-S04)
   const [clozeText, setClozeText] = useState('')
@@ -860,7 +862,7 @@ export function BookReader() {
             setClozeHighlightId(highlightId)
             setClozeOpen(true)
           }}
-          onVocabularyRequest={(text) => {
+          onVocabularyRequest={text => {
             if (!bookId) return
             const now = new Date().toISOString()
             useVocabularyStore.getState().addItem({

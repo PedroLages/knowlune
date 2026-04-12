@@ -9,12 +9,7 @@
 
 import { useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/app/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import {
@@ -196,9 +191,7 @@ export function ShelfManager({ open, onOpenChange }: ShelfManagerProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Delete &ldquo;{shelfToDelete?.name}&rdquo;?
-            </AlertDialogTitle>
+            <AlertDialogTitle>Delete &ldquo;{shelfToDelete?.name}&rdquo;?</AlertDialogTitle>
             <AlertDialogDescription>
               Books on this shelf will not be deleted. They will simply be removed from this shelf.
             </AlertDialogDescription>

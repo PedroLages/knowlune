@@ -59,7 +59,11 @@ export function useBookCoverUrl({ bookId, coverUrl }: UseBookCoverUrlOptions): s
       }
 
       // External URL (http/https) or relative proxy path - use directly
-      if (coverUrl.startsWith('http://') || coverUrl.startsWith('https://') || coverUrl.startsWith('/')) {
+      if (
+        coverUrl.startsWith('http://') ||
+        coverUrl.startsWith('https://') ||
+        coverUrl.startsWith('/')
+      ) {
         if (!isCancelled) setResolvedUrl(coverUrl)
         return
       }

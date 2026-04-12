@@ -47,9 +47,7 @@ export function HighlightItem({ highlight, bookId }: HighlightItemProps) {
               className="size-3.5 text-muted-foreground mt-0.5 shrink-0"
               aria-hidden="true"
             />
-            <p className="text-xs text-muted-foreground italic">
-              {highlight.note}
-            </p>
+            <p className="text-xs text-muted-foreground italic">{highlight.note}</p>
           </div>
         )}
         <p className="text-xs text-muted-foreground mt-1.5">{date}</p>

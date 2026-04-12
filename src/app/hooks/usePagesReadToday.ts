@@ -34,9 +34,7 @@ function estimatePagesFromSessions(
   sessions: { duration?: number | null }[],
   currentPage: number
 ): number {
-  const qualifiedSessions = sessions.filter(
-    s => (s.duration ?? 0) >= MIN_SESSION_SECONDS
-  )
+  const qualifiedSessions = sessions.filter(s => (s.duration ?? 0) >= MIN_SESSION_SECONDS)
   if (qualifiedSessions.length === 0) return 0
   const totalMinutes = qualifiedSessions.reduce((sum, s) => sum + (s.duration ?? 0), 0) / 60
   const pagesEstimate = Math.round(totalMinutes / 2)

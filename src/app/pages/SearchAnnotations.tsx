@@ -43,9 +43,13 @@ function highlightMatch(text: string, query: string): React.ReactNode {
   return (
     <>
       {parts.map((part, i) =>
-        part.toLowerCase() === qLower
-          ? <mark key={i} className="bg-warning/30 text-foreground rounded-sm px-0.5">{part}</mark>
-          : part
+        part.toLowerCase() === qLower ? (
+          <mark key={i} className="bg-warning/30 text-foreground rounded-sm px-0.5">
+            {part}
+          </mark>
+        ) : (
+          part
+        )
       )}
     </>
   )
@@ -97,21 +101,26 @@ export function SearchAnnotations() {
       }
     }
     load()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [deferredQuery])
 
   // Sync query to URL with 300ms debounce to avoid polluting history
-  const updateQuery = useCallback((value: string) => {
-    setQuery(value)
-    clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => {
-      if (value.trim()) {
-        setSearchParams({ q: value }, { replace: true })
-      } else {
-        setSearchParams({}, { replace: true })
-      }
-    }, 300)
-  }, [setSearchParams])
+  const updateQuery = useCallback(
+    (value: string) => {
+      setQuery(value)
+      clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        if (value.trim()) {
+          setSearchParams({ q: value }, { replace: true })
+        } else {
+          setSearchParams({}, { replace: true })
+        }
+      }, 300)
+    },
+    [setSearchParams]
+  )
 
   // Filter results using deferred query for smooth input
   const results = useMemo<SearchResult[]>(() => {
@@ -169,7 +178,10 @@ export function SearchAnnotations() {
 
       {/* Search input */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" aria-hidden="true" />
+        <Search
+          className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
+          aria-hidden="true"
+        />
         <Input
           type="search"
           placeholder="Search highlights and vocabulary..."
@@ -219,10 +231,14 @@ export function SearchAnnotations() {
       ) : !query.trim() ? (
         <div className="text-center py-12" data-testid="empty-state">
           <Search className="size-12 mx-auto mb-4 text-muted-foreground/50" />
-          <p className="text-muted-foreground">Enter a search term to find highlights and vocabulary across all your books.</p>
+          <p className="text-muted-foreground">
+            Enter a search term to find highlights and vocabulary across all your books.
+          </p>
         </div>
       ) : query.trim() && !isLoaded ? (
-        <p className="text-muted-foreground text-center py-8" role="status">Loading...</p>
+        <p className="text-muted-foreground text-center py-8" role="status">
+          Loading...
+        </p>
       ) : results.length === 0 ? (
         <div className="text-center py-12" data-testid="no-results">
           <p className="text-muted-foreground">No results found for &ldquo;{query}&rdquo;</p>
@@ -245,7 +261,11 @@ export function SearchAnnotations() {
                     {group.results.length} {group.results.length === 1 ? 'result' : 'results'}
                   </Badge>
                 </div>
-                <ul className="divide-y divide-border" role="list" aria-label={`Results from ${group.book?.title ?? 'Unknown Book'}`}>
+                <ul
+                  className="divide-y divide-border"
+                  role="list"
+                  aria-label={`Results from ${group.book?.title ?? 'Unknown Book'}`}
+                >
                   {group.results.map(r => (
                     <li key={r.item.id} className="py-2.5 first:pt-0 last:pb-0">
                       {r.kind === 'highlight' ? (

@@ -491,10 +491,12 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       // Purge local books whose absItemId no longer exists on the server
       const incomingServerIds = new Set(newBooks.map(b => b.absServerId))
       const incomingAbsKeys = new Set(newBooks.map(b => `${b.absServerId}:${b.absItemId}`))
-      const staleBooks = get().books.filter(b =>
-        b.absServerId && b.absItemId &&
-        incomingServerIds.has(b.absServerId) &&
-        !incomingAbsKeys.has(`${b.absServerId}:${b.absItemId}`)
+      const staleBooks = get().books.filter(
+        b =>
+          b.absServerId &&
+          b.absItemId &&
+          incomingServerIds.has(b.absServerId) &&
+          !incomingAbsKeys.has(`${b.absServerId}:${b.absItemId}`)
       )
       if (staleBooks.length > 0) {
         await db.books.bulkDelete(staleBooks.map(b => b.id))

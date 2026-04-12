@@ -14,12 +14,7 @@
  * @since E109-S01
  */
 import { useEffect, useState, useCallback } from 'react'
-import {
-  BookOpen,
-  RotateCcw,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react'
+import { BookOpen, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useVocabularyStore } from '@/stores/useVocabularyStore'
 import { useBookStore } from '@/stores/useBookStore'
 import { Button } from '@/app/components/ui/button'
@@ -91,9 +86,8 @@ export function Vocabulary() {
     total: items.length,
     mastered: items.filter(i => i.masteryLevel === 3).length,
   }
-  const masteryPercent = masteryStats.total > 0
-    ? Math.round((masteryStats.mastered / masteryStats.total) * 100)
-    : 0
+  const masteryPercent =
+    masteryStats.total > 0 ? Math.round((masteryStats.mastered / masteryStats.total) * 100) : 0
 
   const handleEdit = useCallback((item: VocabularyItem) => {
     setEditingItem(item)
@@ -184,7 +178,10 @@ export function Vocabulary() {
         <div className="flex items-center justify-between">
           <Button
             variant="ghost"
-            onClick={() => { setViewMode('list'); setReviewIndex(0) }}
+            onClick={() => {
+              setViewMode('list')
+              setReviewIndex(0)
+            }}
             aria-label="Back to list"
           >
             <ChevronLeft className="size-4 mr-1" />
@@ -214,7 +211,10 @@ export function Vocabulary() {
             variant="ghost"
             size="icon"
             disabled={reviewIndex === 0}
-            onClick={() => { setReviewIndex(reviewIndex - 1); setFlipped(false) }}
+            onClick={() => {
+              setReviewIndex(reviewIndex - 1)
+              setFlipped(false)
+            }}
             aria-label="Previous word"
           >
             <ChevronLeft className="size-4" />
@@ -223,7 +223,10 @@ export function Vocabulary() {
             variant="ghost"
             size="icon"
             disabled={reviewIndex >= reviewableItems.length - 1}
-            onClick={() => { setReviewIndex(reviewIndex + 1); setFlipped(false) }}
+            onClick={() => {
+              setReviewIndex(reviewIndex + 1)
+              setFlipped(false)
+            }}
             aria-label="Next word"
           >
             <ChevronRight className="size-4" />

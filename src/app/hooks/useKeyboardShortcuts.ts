@@ -60,7 +60,13 @@ export function useKeyboardShortcuts(
       // Guard: skip when text input, select, or contentEditable is focused (AC-5)
       const target = e.target as HTMLElement
       const tagName = target.tagName.toLowerCase()
-      if (tagName === 'input' || tagName === 'textarea' || tagName === 'select' || target.isContentEditable) return
+      if (
+        tagName === 'input' ||
+        tagName === 'textarea' ||
+        tagName === 'select' ||
+        target.isContentEditable
+      )
+        return
 
       const key = e.key.toLowerCase()
       const isMod = e.metaKey || e.ctrlKey
@@ -72,7 +78,11 @@ export function useKeyboardShortcuts(
 
         for (const shortcut of shortcutsRef.current) {
           if (!Array.isArray(shortcut.key)) continue
-          if (shortcut.key.length === 2 && shortcut.key[0] === firstKey && shortcut.key[1] === key) {
+          if (
+            shortcut.key.length === 2 &&
+            shortcut.key[0] === firstKey &&
+            shortcut.key[1] === key
+          ) {
             e.preventDefault()
             shortcut.action()
             return
@@ -83,7 +93,11 @@ export function useKeyboardShortcuts(
 
       // Check single-key and chord-start shortcuts
       for (const shortcut of shortcutsRef.current) {
-        if (shortcut.modifier && isMod && key === (typeof shortcut.key === 'string' ? shortcut.key : shortcut.key[0])) {
+        if (
+          shortcut.modifier &&
+          isMod &&
+          key === (typeof shortcut.key === 'string' ? shortcut.key : shortcut.key[0])
+        ) {
           e.preventDefault()
           shortcut.action()
           return

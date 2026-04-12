@@ -27,7 +27,11 @@ export function ReviewCard({
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
         )}
         onClick={onFlip}
-        aria-label={flipped ? 'Showing definition — click to show word' : 'Showing word — click to reveal definition'}
+        aria-label={
+          flipped
+            ? 'Showing definition — click to show word'
+            : 'Showing word — click to reveal definition'
+        }
         data-testid="review-flip-card"
       >
         {!flipped ? (
@@ -65,11 +69,7 @@ export function ReviewCard({
             <X className="size-4 mr-1.5" />
             Again
           </Button>
-          <Button
-            variant="brand"
-            onClick={onCorrect}
-            aria-label="Mark as correct"
-          >
+          <Button variant="brand" onClick={onCorrect} aria-label="Mark as correct">
             <CheckCircle2 className="size-4 mr-1.5" />
             Got it
           </Button>
