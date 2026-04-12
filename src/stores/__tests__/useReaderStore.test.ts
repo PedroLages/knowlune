@@ -90,12 +90,36 @@ describe('useReaderStore — accessibility settings (E114-S01)', () => {
     })
   })
 
+  describe('scrollMode (E114-S02)', () => {
+    it('defaults to false', () => {
+      expect(useReaderStore.getState().scrollMode).toBe(false)
+    })
+
+    it('toggles scroll mode on', () => {
+      act(() => useReaderStore.getState().setScrollMode(true))
+      expect(useReaderStore.getState().scrollMode).toBe(true)
+    })
+
+    it('toggles scroll mode off', () => {
+      act(() => useReaderStore.getState().setScrollMode(true))
+      act(() => useReaderStore.getState().setScrollMode(false))
+      expect(useReaderStore.getState().scrollMode).toBe(false)
+    })
+
+    it('persists scroll mode to localStorage', () => {
+      act(() => useReaderStore.getState().setScrollMode(true))
+      const stored = JSON.parse(localStorage.getItem('knowlune-reader-settings-v1')!)
+      expect(stored.scrollMode).toBe(true)
+    })
+  })
+
   describe('resetSettings', () => {
     it('resets all accessibility settings to defaults', () => {
       act(() => {
         useReaderStore.getState().setLetterSpacing(0.2)
         useReaderStore.getState().setWordSpacing(0.3)
         useReaderStore.getState().setReadingRulerEnabled(true)
+        useReaderStore.getState().setScrollMode(true)
       })
 
       act(() => useReaderStore.getState().resetSettings())
@@ -104,6 +128,7 @@ describe('useReaderStore — accessibility settings (E114-S01)', () => {
       expect(state.letterSpacing).toBe(0)
       expect(state.wordSpacing).toBe(0)
       expect(state.readingRulerEnabled).toBe(false)
+      expect(state.scrollMode).toBe(false)
     })
   })
 })

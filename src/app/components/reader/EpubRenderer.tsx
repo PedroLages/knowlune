@@ -52,6 +52,7 @@ export function EpubRenderer({
   const lineHeight = useReaderStore(s => s.lineHeight)
   const letterSpacing = useReaderStore(s => s.letterSpacing)
   const wordSpacing = useReaderStore(s => s.wordSpacing)
+  const scrollMode = useReaderStore(s => s.scrollMode)
   const toggleHeader = useReaderStore(s => s.toggleHeader)
   const colorScheme = useAppColorScheme()
   const renditionRef = useRef<Rendition | null>(null)
@@ -118,6 +119,24 @@ export function EpubRenderer({
       applyTheme(renditionRef.current)
     }
   }, [applyTheme])
+
+  /** Switch epub.js flow between paginated and scrolled-doc at runtime (E114-S02) */
+  useEffect(() => {
+    const rendition = renditionRef.current
+    if (!rendition) return
+    const newFlow = scrollMode ? 'scrolled-doc' : 'paginated'
+    rendition.flow(newFlow)
+    // After flow change, resize to re-layout content
+    const container = containerRef.current
+    if (container) {
+      const { width, height } = container.getBoundingClientRect()
+      if (width > 0 && height > 0) {
+        rendition.resize(width, height)
+      }
+    }
+    // Re-apply theme after flow switch — some epub.js versions reset theme styles on flow change
+    applyTheme(rendition)
+  }, [scrollMode, applyTheme])
 
   /** Clear page turn animation timer on unmount to avoid setState after unmount */
   useEffect(() => {
@@ -208,14 +227,14 @@ export function EpubRenderer({
   const chromeClasses = getReaderChromeClasses(theme, colorScheme)
   const containerBg = chromeClasses.bg
 
-  // Memoize epubOptions to prevent unnecessary re-renders (Bug 3 fix — AC-4)
+  // Memoize epubOptions — depends on scrollMode for flow switching (E114-S02)
   const epubOptions = useMemo(
     () => ({
       spread: 'none' as const, // Force single-page layout on all screen widths (AC-4)
-      flow: 'paginated' as const, // Explicit paginated flow for clarity
+      flow: scrollMode ? ('scrolled-doc' as const) : ('paginated' as const),
       allowPopups: false,
     }),
-    []
+    [scrollMode]
   )
 
   return (
@@ -223,8 +242,8 @@ export function EpubRenderer({
       ref={containerRef}
       className={cn('relative h-full w-full', containerBg, animationClass)}
       data-testid="epub-renderer"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
+      onTouchStart={scrollMode ? undefined : handleTouchStart}
+      onTouchEnd={scrollMode ? undefined : handleTouchEnd}
     >
       {/* epub.js content via react-reader EpubView */}
       <EpubView
@@ -244,21 +263,21 @@ export function EpubRenderer({
         }
       />
 
-      {/* Interaction zones overlaid on epub content (Bug 4 fix — AC-5)
-          Container uses pointer-events-none so epub.js iframe receives scroll/select events.
-          Individual zones use pointer-events-auto to capture tap/click for navigation. */}
+      {/* Interaction zones — prev/next hidden in scroll mode (native scroll replaces), center toggle always present */}
       <div className="pointer-events-none absolute inset-0 z-10">
-        {/* Left zone (prev) — 33% */}
-        <div
-          className="pointer-events-auto absolute inset-y-0 left-0 w-[33%] cursor-pointer"
-          onClick={navigatePrev}
-          role="button"
-          tabIndex={-1}
-          aria-label="Previous page"
-          data-reader-zone="prev"
-        />
+        {/* Left zone (prev) — 33%, paginated only */}
+        {!scrollMode && (
+          <div
+            className="pointer-events-auto absolute inset-y-0 left-0 w-[33%] cursor-pointer"
+            onClick={navigatePrev}
+            role="button"
+            tabIndex={-1}
+            aria-label="Previous page"
+            data-reader-zone="prev"
+          />
+        )}
 
-        {/* Center zone (34%) — toggle header/footer visibility */}
+        {/* Center zone (34%) — toggle header/footer visibility, always active */}
         <div
           className="pointer-events-auto absolute inset-y-0 left-[33%] w-[34%] cursor-pointer"
           onClick={toggleHeader}
@@ -268,15 +287,17 @@ export function EpubRenderer({
           data-reader-zone="toggle"
         />
 
-        {/* Right zone (next) — 33% */}
-        <div
-          className="pointer-events-auto absolute inset-y-0 right-0 w-[33%] cursor-pointer"
-          onClick={navigateNext}
-          role="button"
-          tabIndex={-1}
-          aria-label="Next page"
-          data-reader-zone="next"
-        />
+        {/* Right zone (next) — 33%, paginated only */}
+        {!scrollMode && (
+          <div
+            className="pointer-events-auto absolute inset-y-0 right-0 w-[33%] cursor-pointer"
+            onClick={navigateNext}
+            role="button"
+            tabIndex={-1}
+            aria-label="Next page"
+            data-reader-zone="next"
+          />
+        )}
       </div>
 
       {/* Live region for page change announcements (accessibility) */}

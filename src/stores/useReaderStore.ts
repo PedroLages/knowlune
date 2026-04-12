@@ -22,6 +22,7 @@ interface ReaderSettings {
   letterSpacing: number // 0–0.3 (em)
   wordSpacing: number // 0–0.5 (em)
   readingRulerEnabled: boolean
+  scrollMode: boolean
 }
 
 const DEFAULT_SETTINGS: ReaderSettings = {
@@ -32,6 +33,7 @@ const DEFAULT_SETTINGS: ReaderSettings = {
   letterSpacing: 0,
   wordSpacing: 0,
   readingRulerEnabled: false,
+  scrollMode: false,
 }
 
 function loadSettings(): ReaderSettings {
@@ -74,6 +76,10 @@ function loadSettings(): ReaderSettings {
         typeof parsed.readingRulerEnabled === 'boolean'
           ? parsed.readingRulerEnabled
           : DEFAULT_SETTINGS.readingRulerEnabled,
+      scrollMode:
+        typeof parsed.scrollMode === 'boolean'
+          ? parsed.scrollMode
+          : DEFAULT_SETTINGS.scrollMode,
     }
   } catch {
     // silent-catch-ok: corrupted storage, use defaults
@@ -115,6 +121,7 @@ interface ReaderStoreState extends ReaderSettings {
   setLetterSpacing: (spacing: number) => void
   setWordSpacing: (spacing: number) => void
   setReadingRulerEnabled: (enabled: boolean) => void
+  setScrollMode: (enabled: boolean) => void
   resetSettings: () => void
 }
 
@@ -197,6 +204,12 @@ export const useReaderStore = create<ReaderStoreState>((set, get) => {
       const s = get()
       saveSettings({ ...getSettingsFromState(s), readingRulerEnabled: enabled })
       set({ readingRulerEnabled: enabled })
+    },
+
+    setScrollMode: enabled => {
+      const s = get()
+      saveSettings({ ...getSettingsFromState(s), scrollMode: enabled })
+      set({ scrollMode: enabled })
     },
 
     resetSettings: () => {
