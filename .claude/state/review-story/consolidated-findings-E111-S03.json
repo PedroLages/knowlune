@@ -1,0 +1,1894 @@
+{
+  "agents": {
+    "performance-benchmark": {
+      "schema_version": 1,
+      "producer": "performance-benchmark",
+      "created_at": "2026-04-12T13:38:04Z",
+      "story_id": "E111-S01",
+      "agent": "performance-benchmark",
+      "gate": "performance-benchmark",
+      "status": "PASS",
+      "counts": {
+        "blockers": 0,
+        "high": 0,
+        "medium": 1,
+        "nits": 0,
+        "total": 1
+      },
+      "findings": [
+        {
+          "severity": "MEDIUM",
+          "description": "Homepage FCP increased 31.6% (392ms \u2192 516ms), exceeding the 25% relative threshold. Absolute value (516ms) is well within the 1800ms budget. Audio clips changes are confined to AudiobookRenderer \u2014 not present on the homepage route. Classified as dev server measurement variance.",
+          "file": null,
+          "line": null,
+          "confidence": 70,
+          "category": "performance",
+          "agent": "performance-benchmark",
+          "consensus_score": 70
+        }
+      ],
+      "report_path": "docs/reviews/performance/performance-benchmark-2026-04-12-e111-s01.md"
+    },
+    "code-review": {
+      "schema_version": 1,
+      "producer": "code-review",
+      "created_at": "2026-04-12T13:38:04Z",
+      "story_id": "E111-S01",
+      "agent": "code-review",
+      "gate": "code-review",
+      "status": "WARNINGS",
+      "counts": {
+        "blockers": 0,
+        "high": 3,
+        "medium": 2,
+        "nits": 1,
+        "total": 6
+      },
+      "findings": [
+        {
+          "severity": "HIGH",
+          "description": "loadClips has no error handling -- Dexie query failure leaves panel stuck on 'Loading clips...' with no recovery path",
+          "file": "src/stores/useAudioClipStore.ts",
+          "line": 39,
+          "confidence": 90,
+          "category": "Correctness",
+          "classification": "STORY-RELATED",
+          "agent": "code-review",
+          "consensus_score": 90
+        },
+        {
+          "severity": "HIGH",
+          "description": "handlePlayClip uses setTimeout without cleanup -- seekTo/play may execute after component unmount",
+          "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
+          "line": 316,
+          "confidence": 82,
+          "category": "Correctness",
+          "classification": "STORY-RELATED",
+          "agent": "code-review",
+          "consensus_score": 82
+        },
+        {
+          "severity": "HIGH",
+          "description": "activeClipEnd is never cleared on manual play/pause/seek -- stale clip boundary causes unexpected auto-pause during normal playback",
+          "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
+          "line": 328,
+          "confidence": 78,
+          "category": "Silent Failure",
+          "classification": "STORY-RELATED",
+          "agent": "code-review",
+          "consensus_score": 78
+        },
+        {
+          "severity": "MEDIUM",
+          "description": "SortableClipItem has role='listitem' but is wrapped in <li> -- duplicate semantics for assistive technology",
+          "file": "src/app/components/audiobook/ClipListPanel.tsx",
+          "line": 109,
+          "confidence": 75,
+          "category": "Accessibility",
+          "classification": "STORY-RELATED",
+          "agent": "code-review",
+          "consensus_score": 75
+        },
+        {
+          "severity": "MEDIUM",
+          "description": "Second useEffect for bookId change detection is redundant -- first effect already covers this case",
+          "file": "src/app/components/audiobook/ClipListPanel.tsx",
+          "line": 279,
+          "confidence": 72,
+          "category": "Correctness",
+          "classification": "STORY-RELATED",
+          "agent": "code-review",
+          "consensus_score": 72
+        },
+        {
+          "severity": "NIT",
+          "description": "String interpolation for className instead of cn() -- project convention",
+          "file": "src/app/components/audiobook/ClipButton.tsx",
+          "line": 88,
+          "confidence": 65,
+          "category": "Maintainability",
+          "classification": "STORY-RELATED",
+          "agent": "code-review",
+          "consensus_score": 65
+        }
+      ],
+      "report_path": "docs/reviews/code/code-review-2026-04-12-e111-s01.md"
+    },
+    "design-review": {
+      "schema_version": 1,
+      "producer": "design-review",
+      "created_at": "2026-04-12T00:00:00Z",
+      "story_id": "E110-S03",
+      "agent": "design-review",
+      "gate": "design-review",
+      "status": "WARNINGS",
+      "counts": {
+        "blockers": 0,
+        "high": 2,
+        "medium": 3,
+        "nits": 2,
+        "total": 7,
+        "phases_completed": [
+          "Phase 0: Context Gathering",
+          "Phase 1: Interactive Browser Testing",
+          "Phase 2: Responsive Testing (375px, 768px, 1440px)",
+          "Phase 3: Visual Polish Verification",
+          "Phase 4: Accessibility Audit",
+          "Phase 5: Robustness Testing",
+          "Phase 6: Report Generation"
+        ]
+      },
+      "findings": [
+        {
+          "severity": "HIGH",
+          "description": "Drag handle and remove buttons have 24x24px touch targets, well below the 44x44px WCAG 2.5.5 minimum. Measured via getBoundingClientRect() at 375px and 768px viewports.",
+          "file": "src/app/components/library/ReadingQueue.tsx",
+          "line": 87,
+          "end_line": 127,
+          "confidence": 98,
+          "category": "accessibility",
+          "suggestion": "Change p-1 to min-h-[44px] min-w-[44px] flex items-center justify-center on both the drag handle and remove buttons.",
+          "agent": "design-review"
+        },
+        {
+          "severity": "HIGH",
+          "description": "Drag handle and remove buttons are missing type=\"button\". Without it, buttons default to type=\"submit\" per the HTML spec when inside a form ancestor, creating a latent form-submit regression risk.",
+          "file": "src/app/components/library/ReadingQueue.tsx",
+          "line": 86,
+          "end_line": 86,
+          "confidence": 97,
+          "category": "accessibility",
+          "suggestion": "Add type=\"button\" to both the drag handle button (line 86) and the remove button (line 119).",
+          "agent": "design-review",
+          "consensus_sources": [
+            {
+              "agent": "design-review",
+              "confidence": 97
+            },
+            {
+              "agent": "design-review",
+              "confidence": 98
+            }
+          ],
+          "consensus_count": 2,
+          "consensus_score": 100,
+          "consensus_tag": "Consensus: 2 \u2014 design-review + design-review"
+        },
+        {
+          "severity": "MEDIUM",
+          "description": "No aria-live region announces queue mutations (remove, reorder) to screen readers. The remove action is completely silent for AT \u2014 no toast, no live region. Only add/error events are announced via Sonner toasts.",
+          "file": "src/app/components/library/ReadingQueue.tsx",
+          "line": 149,
+          "end_line": 247,
+          "confidence": 92,
+          "category": "accessibility",
+          "suggestion": "Add a visually-hidden aria-live=\"polite\" status region that announces removal (e.g., 'Who Moved My Cheese removed from reading queue') and reorder events.",
+          "agent": "design-review"
+        },
+        {
+          "severity": "MEDIUM",
+          "description": "Empty state container applies text-center globally, centering the instruction paragraph. Design principles specify left-aligned body text for LTR languages. Center-aligned multi-line instructional text is harder to read.",
+          "file": "src/app/components/library/ReadingQueue.tsx",
+          "line": 194,
+          "end_line": 204,
+          "confidence": 85,
+          "category": "visual",
+          "suggestion": "Remove text-center from the container div, keep mx-auto on the icon only.",
+          "agent": "design-review",
+          "consensus_sources": [
+            {
+              "agent": "design-review",
+              "confidence": 85
+            },
+            {
+              "agent": "design-review",
+              "confidence": 90
+            }
+          ],
+          "consensus_count": 2,
+          "consensus_score": 100,
+          "consensus_tag": "Consensus: 2 \u2014 design-review + design-review"
+        },
+        {
+          "severity": "MEDIUM",
+          "description": "Empty state instruction only describes the right-click gesture (desktop only). Mobile users see no guidance on how to add books via the '...' more-actions button.",
+          "file": "src/app/components/library/ReadingQueue.tsx",
+          "line": 199,
+          "end_line": 202,
+          "confidence": 90,
+          "category": "ux",
+          "suggestion": "Use responsive conditional text to show 'Tap the ... menu on a book' on mobile and 'Right-click a book' on desktop.",
+          "agent": "design-review"
+        },
+        {
+          "severity": "NIT",
+          "description": "Queue section container div lacks a landmark role or aria-labelledby. Adding role=\"section\" with aria-labelledby pointing to the h3 would let screen reader users jump to this section via landmark navigation.",
+          "file": "src/app/components/library/ReadingQueue.tsx",
+          "line": 207,
+          "end_line": 207,
+          "confidence": 70,
+          "category": "accessibility",
+          "suggestion": "Change outer div to <section aria-labelledby=\"reading-queue-heading\"> and add id=\"reading-queue-heading\" to the h3.",
+          "agent": "design-review",
+          "consensus_score": 70
+        },
+        {
+          "severity": "NIT",
+          "description": "Cover image uses alt=\"\" (decorative) \u2014 this is intentional and correct per WCAG F39 since the book title immediately follows in text. Documented as verified.",
+          "file": "src/app/components/library/ReadingQueue.tsx",
+          "line": 43,
+          "end_line": 43,
+          "confidence": 95,
+          "category": "accessibility",
+          "suggestion": "No change needed. Pattern is correct.",
+          "agent": "design-review",
+          "consensus_sources": [
+            {
+              "agent": "design-review",
+              "confidence": 95
+            },
+            {
+              "agent": "exploratory-qa",
+              "confidence": 60
+            }
+          ],
+          "consensus_count": 2,
+          "consensus_score": 100,
+          "consensus_tag": "Consensus: 2 \u2014 design-review + exploratory-qa"
+        }
+      ],
+      "report_path": "docs/reviews/design/design-review-2026-04-12-e110-s03.md"
+    },
+    "code-review-testing": {
+      "schema_version": 1,
+      "producer": "code-review-testing",
+      "created_at": "2026-04-12T13:38:04Z",
+      "story_id": "E111-S01",
+      "agent": "code-review-testing",
+      "gate": "code-review-testing",
+      "status": "WARNINGS",
+      "counts": {
+        "blockers": 0,
+        "high": 2,
+        "medium": 4,
+        "nits": 3,
+        "total": 9
+      },
+      "findings": [
+        {
+          "severity": "HIGH",
+          "description": "AC-4 play-clip E2E assertion is weak: clicks 'play clip' button and asserts audio-playing-indicator without verifying seek to clip start time or stop at end time. No wait for isPlaying state to settle after mock play() resolves. Test does not verify the core AC-4 behavior of seeking to startTime and playing to endTime.",
+          "file": "tests/e2e/regression/story-e111-s01.spec.ts",
+          "line": 204,
+          "confidence": 80,
+          "agent": "code-review-testing",
+          "consensus_score": 80
+        },
+        {
+          "severity": "HIGH",
+          "description": "AC-7 DnD E2E test only verifies drag handles are visible \u2014 does not perform an actual drag reorder or assert new order persists across page reload. The AC explicitly requires persistence across sessions.",
+          "file": "tests/e2e/regression/story-e111-s01.spec.ts",
+          "line": 266,
+          "confidence": 78,
+          "agent": "code-review-testing",
+          "consensus_score": 78
+        },
+        {
+          "severity": "MEDIUM",
+          "description": "AC-3 clips panel test does not verify empty-state message ('No clips yet...') \u2014 only checks panel is visible. Empty state is an implicit AC per test quality framework.",
+          "file": "tests/e2e/regression/story-e111-s01.spec.ts",
+          "line": 193,
+          "confidence": 72,
+          "agent": "code-review-testing",
+          "consensus_score": 72
+        },
+        {
+          "severity": "MEDIUM",
+          "description": "addClip returns-id test uses toBeTruthy() + typeof string \u2014 would pass for any non-empty string. Should assert UUID format with a regex.",
+          "file": "src/stores/__tests__/useAudioClipStore.test.ts",
+          "line": 120,
+          "confidence": 70,
+          "agent": "code-review-testing",
+          "consensus_score": 70
+        },
+        {
+          "severity": "MEDIUM",
+          "description": "No tests for optimistic rollback paths in updateClipTitle, deleteClip, and reorderClips. Store has explicit rollback logic that is completely untested.",
+          "file": "src/stores/__tests__/useAudioClipStore.test.ts",
+          "line": null,
+          "confidence": 68,
+          "agent": "code-review-testing",
+          "consensus_score": 68
+        },
+        {
+          "severity": "MEDIUM",
+          "description": "AC-8 accessibility test only checks touch target size for startClipBtn. Edit/delete icon buttons inside ClipListPanel are size-8 (32px) \u2014 below the 44px minimum \u2014 and are not checked.",
+          "file": "tests/e2e/regression/story-e111-s01.spec.ts",
+          "line": 276,
+          "confidence": 65,
+          "agent": "code-review-testing",
+          "consensus_score": 65
+        },
+        {
+          "severity": "LOW",
+          "description": "seedClips uses inline hardcoded data instead of project factory pattern. Minor deviation from test-data conventions.",
+          "file": "tests/e2e/regression/story-e111-s01.spec.ts",
+          "line": 96,
+          "confidence": 60,
+          "agent": "code-review-testing",
+          "consensus_score": 60
+        },
+        {
+          "severity": "LOW",
+          "description": "No test for ClipButton cancel recording path (handleCancelRecording) \u2014 state reset and UI return to 'Start Clip' is unverified.",
+          "file": "tests/e2e/regression/story-e111-s01.spec.ts",
+          "line": null,
+          "confidence": 62,
+          "agent": "code-review-testing",
+          "consensus_score": 62
+        },
+        {
+          "severity": "LOW",
+          "description": "Loading intermediate state ('Loading clips...') in ClipListPanel has no E2E test. Per test quality framework, intermediate UI states count as implicit ACs.",
+          "file": "tests/e2e/regression/story-e111-s01.spec.ts",
+          "line": null,
+          "confidence": 55,
+          "agent": "code-review-testing",
+          "consensus_score": 55
+        }
+      ],
+      "report_path": null
+    },
+    "security-review": {
+      "schema_version": 1,
+      "producer": "security-review",
+      "created_at": "2026-04-12T13:38:04Z",
+      "story_id": "E111-S01",
+      "agent": "security-review",
+      "gate": "security-review",
+      "status": "PASS",
+      "counts": {
+        "blockers": 0,
+        "high": 0,
+        "medium": 0,
+        "nits": 0,
+        "total": 0
+      },
+      "findings": [],
+      "report_path": null
+    },
+    "glm-code-review": {
+      "schema_version": 1,
+      "producer": "glm-code-review",
+      "created_at": "2026-04-12T00:00:00Z",
+      "story_id": "E110-S03",
+      "agent": "glm-code-review",
+      "gate": "glm-code-review",
+      "status": "FAIL",
+      "counts": {
+        "blockers": 1,
+        "high": 1,
+        "medium": 2,
+        "nits": 1,
+        "total": 5
+      },
+      "findings": [
+        {
+          "severity": "BLOCKER",
+          "description": "Optimistic UI update before persistence. `addToQueue` sets state before `await db.readingQueue.put(entry)`. If the DB write fails, the user briefly sees the item added then it vanishes on rollback. Same pattern in `removeFromQueue`, `reorderQueue`, and `removeAllBookEntries`. Fix: move all `set()` calls after the successful `await db.*()` calls.",
+          "file": "src/stores/useReadingQueueStore.ts",
+          "line": 65,
+          "end_line": 67,
+          "confidence": 85,
+          "category": "architecture",
+          "suggestion": "Move set() calls after successful await db calls. Example: await db.readingQueue.put(entry); set(state => ({ entries: [...state.entries, entry] })); toast.success(...)",
+          "model_source": "glm-5.1",
+          "agent": "glm-code-review",
+          "consensus_score": 85
+        },
+        {
+          "severity": "HIGH",
+          "description": "`isLoaded` guard prevents queue reload after deletion cascade. When `deleteBook` triggers `removeAllBookEntries`, navigating away and back skips `loadQueue` because `isLoaded` is still true. External changes (e.g. another tab) also won't load. Fix: remove the guard or ensure cascade cleanup resets `isLoaded`, or add a comment explaining the tradeoff.",
+          "file": "src/stores/useReadingQueueStore.ts",
+          "line": 55,
+          "end_line": null,
+          "confidence": 90,
+          "category": "architecture",
+          "suggestion": "Either remove the isLoaded early return and let loadQueue always fetch fresh data, or reset isLoaded when cascade cleanup occurs.",
+          "model_source": "glm-5.1",
+          "agent": "glm-code-review",
+          "consensus_score": 90
+        },
+        {
+          "severity": "MEDIUM",
+          "description": "`handleDragEnd` uses `validEntries` from the closure, which may be stale during concurrent drags. If a book is removed while a drag is in progress, findIndex could return -1, causing a silent no-op reorder.",
+          "file": "src/app/components/library/ReadingQueue.tsx",
+          "line": 168,
+          "end_line": 175,
+          "confidence": 75,
+          "category": "architecture",
+          "suggestion": "Read entries from the store via useReadingQueueStore.getState().entries inside the callback, or document the silent no-op as acceptable.",
+          "model_source": "glm-5.1",
+          "agent": "glm-code-review"
+        },
+        {
+          "severity": "MEDIUM",
+          "description": "`reorderQueue` issues N individual `update()` calls inside a transaction. For large queues this is N separate write operations. Consider using `bulkPut` for efficiency.",
+          "file": "src/stores/useReadingQueueStore.ts",
+          "line": 96,
+          "end_line": 107,
+          "confidence": 70,
+          "category": "performance",
+          "suggestion": "Use await db.readingQueue.bulkPut(reordered) inside the transaction for O(1) writes instead of O(N).",
+          "model_source": "glm-5.1",
+          "agent": "glm-code-review",
+          "consensus_sources": [
+            {
+              "agent": "glm-code-review",
+              "confidence": 70
+            },
+            {
+              "agent": "code-review",
+              "confidence": 72
+            }
+          ],
+          "consensus_count": 2,
+          "consensus_score": 100,
+          "consensus_tag": "Consensus: 2 \u2014 glm-code-review + code-review"
+        },
+        {
+          "severity": "NIT",
+          "description": "The `book:finished` event subscription correctly reads from `getState()` inside the callback, avoiding stale closures. The `// Intentional:` comment is present. Confirming the pattern is correct \u2014 no action needed.",
+          "file": "src/app/pages/Library.tsx",
+          "line": 162,
+          "end_line": 167,
+          "confidence": 60,
+          "category": null,
+          "suggestion": null,
+          "model_source": "glm-5.1",
+          "agent": "glm-code-review",
+          "consensus_score": 60
+        }
+      ],
+      "report_path": "docs/reviews/code/glm-code-review-2026-04-12-e110-s03.md",
+      "skip_reason": null,
+      "error_message": null
+    },
+    "openai-code-review": {
+      "schema_version": 1,
+      "producer": "openai-code-review",
+      "created_at": "2026-04-12T13:38:04Z",
+      "story_id": "E111-S01",
+      "agent": "openai-code-review",
+      "gate": "openai-code-review",
+      "status": "ERROR",
+      "counts": {
+        "blockers": 0,
+        "high": 0,
+        "medium": 0,
+        "nits": 0,
+        "total": 0
+      },
+      "findings": [],
+      "report_path": null
+    },
+    "code-E111-S03.json": {
+      "gate": "code-review",
+      "story_id": "E111-S03",
+      "verdict": "pass",
+      "summary": "Well-architected race condition fix using cancelable CustomEvent pattern. One HIGH finding: single-file M4B chapter polling dispatches repeated chapterend events during the 5-second fade because setCurrentChapterIndex is skipped when defaultPrevented. Fix: always update chapter index even when sleep timer intercepts. One MEDIUM: fadeOutAndPause has no cancellation mechanism.",
+      "counts": {
+        "blockers": 0,
+        "high": 1,
+        "medium": 1,
+        "nits": 1,
+        "total": 3
+      },
+      "findings": [
+        {
+          "severity": "HIGH",
+          "description": "Single-file M4B: repeated chapterend dispatch during fade-out. When defaultPrevented skips setCurrentChapterIndex, the 500ms polling loop re-detects the boundary and fires chapterend ~10 times during the 5s fade, starting competing rAF loops. Fix: always call setCurrentChapterIndex(i) before the defaultPrevented check, or add a fading guard in handleChapterEnd.",
+          "file": "src/app/hooks/useAudioPlayer.ts",
+          "line": 271,
+          "confidence": 88,
+          "category": "Correctness",
+          "agent": "code-E111-S03.json",
+          "consensus_score": 88
+        },
+        {
+          "severity": "MEDIUM",
+          "description": "fadeOutAndPause has no cancellation mechanism. If user cancels timer during 5s fade, rAF loop continues and eventually pauses audio. Fix: return a cancel function that calls cancelAnimationFrame and restores volume.",
+          "file": "src/app/hooks/useSleepTimer.ts",
+          "line": 21,
+          "confidence": 72,
+          "category": "Correctness",
+          "agent": "code-E111-S03.json",
+          "consensus_score": 72
+        },
+        {
+          "severity": "NIT",
+          "description": "Double-clamping of chapterProgressPercent: Math.min/Math.max applied both in AudiobookRenderer IIFE and in SleepTimer inline style. One clamp is sufficient.",
+          "file": "src/app/components/audiobook/SleepTimer.tsx",
+          "line": 120,
+          "confidence": 65,
+          "category": "Maintainability",
+          "agent": "code-E111-S03.json"
+        }
+      ],
+      "report_path": "docs/reviews/code/code-review-2026-04-12-e111-s03.md"
+    },
+    "exploratory-qa": {
+      "schema_version": 1,
+      "producer": "exploratory-qa",
+      "created_at": "2026-04-12T19:00:00Z",
+      "story_id": "E111-S03",
+      "agent": "exploratory-qa",
+      "gate": "exploratory-qa",
+      "status": "WARNINGS",
+      "counts": {
+        "blockers": 0,
+        "high": 0,
+        "medium": 1,
+        "nits": 2,
+        "total": 3,
+        "ac_coverage": 100,
+        "health_score": 95,
+        "phases_completed": [
+          "happy-path",
+          "edge-cases",
+          "error-paths",
+          "console-audit",
+          "persona-impatient",
+          "persona-keyboard"
+        ]
+      },
+      "findings": [
+        {
+          "severity": "MEDIUM",
+          "description": "Sleep timer popover option buttons briefly detach from DOM when the popover is reopened while a timer is active. Caused by chapterProgressPercent updates triggering re-renders of AudiobookRenderer that propagate to SleepTimer PopoverContent, unmounting/remounting option buttons mid-click. Official spec already works around this with force:true and explicit listbox wait.",
+          "file": "src/app/components/audiobook/SleepTimer.tsx",
+          "line": 67,
+          "end_line": 83,
+          "confidence": 90,
+          "category": "UX",
+          "suggestion": "Memoize SleepTimer with React.memo to prevent re-renders from chapterProgressPercent changes when the popover is closed. Only pass chapterProgressPercent when needed.",
+          "agent": "exploratory-qa",
+          "consensus_sources": [
+            {
+              "agent": "exploratory-qa",
+              "confidence": 90
+            },
+            {
+              "agent": "exploratory-qa",
+              "confidence": 75
+            }
+          ],
+          "consensus_count": 2,
+          "consensus_score": 100,
+          "consensus_tag": "Consensus: 2 \u2014 exploratory-qa + exploratory-qa"
+        },
+        {
+          "severity": "LOW",
+          "description": "EOC chapterend event listener is silently not registered if audioRef.current is null when setTimer is called. Badge shows EOC but chapter-end fade never fires. setActiveOption('end-of-chapter') is called unconditionally before the null check on audioRef.",
+          "file": "src/app/hooks/useSleepTimer.ts",
+          "line": 109,
+          "end_line": 116,
+          "confidence": 85,
+          "category": "functional",
+          "suggestion": "Either guard setActiveOption behind the same null check, or schedule a deferred listener registration when audioRef.current becomes available.",
+          "agent": "exploratory-qa",
+          "consensus_score": 85
+        },
+        {
+          "severity": "LOW",
+          "description": "li[role=option] wrapping an interactive button is a non-standard ARIA pattern. Screen readers may announce both 'button' and 'option' roles for each item, potentially causing duplicate activation announcements.",
+          "file": "src/app/components/audiobook/SleepTimer.tsx",
+          "line": 70,
+          "end_line": 82,
+          "confidence": 75,
+          "category": "accessibility",
+          "suggestion": "Remove role='option' from the <li> and place it on the <button> directly, or make <li role='option'> non-interactive and move the onClick handler to it instead of nesting a button.",
+          "agent": "exploratory-qa"
+        }
+      ],
+      "report_path": "docs/reviews/qa/exploratory-qa-2026-04-12-e111-s03.md"
+    },
+    "testing-E111-S03.json": {
+      "gate": "code-review-testing",
+      "story_id": "E111-S03",
+      "verdict": "pass",
+      "findings": [
+        {
+          "severity": "MEDIUM",
+          "description": "No unit test for null audioRef guard in EOC mode (useSleepTimer.ts:109-115). When audioRef.current is null at the time setTimer('end-of-chapter') is called, the chapterend listener is never attached and eocCleanupRef is never set. The test suite exercises the happy path but not this branch. Suggested test: 'EOC mode: silently skips listener attachment when audioRef.current is null'.",
+          "agent": "testing-E111-S03.json",
+          "consensus_score": 80
+        },
+        {
+          "severity": "MEDIUM",
+          "description": "No unit test for cancelTimer called during an active fade (mid-rAF sequence). If the user cancels EOC after chapterend fires but before fadeOutAndPause completes, the fade continues to completion and still calls onPause + sets the localStorage flag. This is a potential UX defect and is unverified. Suggested test: 'cancelTimer during fade does not invoke onPause after cancellation'.",
+          "agent": "testing-E111-S03.json",
+          "consensus_score": 80
+        },
+        {
+          "severity": "MEDIUM",
+          "description": "No test for the last-chapter-of-book edge case: when chapterend fires on the final chapter (toIndex would equal chapter count), the current implementation still triggers fade+pause with no special handling. The story AC-3 text ('single-file M4B fires chapterend, triggers fade+pause') implies this is expected, but there is no test confirming last-chapter behavior is identical to mid-book chapters, nor that the event detail shape (fromIndex/toIndex) is validated.",
+          "agent": "testing-E111-S03.json",
+          "consensus_score": 80
+        },
+        {
+          "severity": "LOW",
+          "description": "E2E test for AC-1 (story-e111-s03.spec.ts:73) is titled 'AC-1/AC-3' but only asserts the badge shows 'EOC' \u2014 it does not verify that audio actually fades out or pauses at a chapter boundary. The actual fade+pause behavior for AC-1 is validated only at the unit level (useSleepTimer.test.ts:111-141). For full AC-1 confidence an E2E assertion such as checking audio.paused or the player UI entering a paused state after a dispatched chapterend event would be preferred.",
+          "agent": "testing-E111-S03.json",
+          "consensus_score": 80
+        },
+        {
+          "severity": "LOW",
+          "description": "E2E AC-4 test (story-e111-s03.spec.ts:122-123) asserts chapter-progress-bar is 'not.toBeVisible()' but the element may be absent from DOM entirely in countdown mode. This assertion succeeds whether the element is hidden or non-existent; a stricter assertion (count() === 0 or toBeHidden with attached state) would make the intent explicit.",
+          "agent": "testing-E111-S03.json",
+          "consensus_score": 80
+        },
+        {
+          "severity": "NIT",
+          "description": "The inline test data object (story-e111-s03.spec.ts:21-51) is defined directly in the spec rather than using a factory from tests/support/fixtures/factories/. Per test-patterns.md, factories should be preferred. Low risk since this is a leaf spec, but deviates from the project factory convention.",
+          "agent": "testing-E111-S03.json",
+          "consensus_score": 80
+        }
+      ],
+      "ac_coverage": {
+        "AC-1": "partial \u2014 badge assertion E2E covered; fade+pause behavior covered only at unit level",
+        "AC-2": "covered \u2014 E2E story-e111-s03.spec.ts:89-107",
+        "AC-3": "covered \u2014 unit useSleepTimer.test.ts:93-109 (chapterend vs ended listener); E2E badge smoke",
+        "AC-4": "covered \u2014 E2E story-e111-s03.spec.ts:109-124",
+        "AC-5": "covered \u2014 E2E story-e111-s03.spec.ts:126-140 + unit consumeSleepTimerEndedFlag tests",
+        "AC-6": "covered \u2014 E2E story-e111-s03.spec.ts:142-170 (ARIA label + keyboard navigation)"
+      },
+      "summary": "All 6 ACs have test coverage (5 fully covered, 1 partial). The three specific checks requested are confirmed: (1) useSleepTimer.test.ts:93-109 explicitly asserts chapterend is listened to and ended is NOT; (2) cancelTimer cleanup test at line 143-158 verifies removeEventListener is called for chapterend; (3) the 'ended not attached in EOC mode' race condition regression is verified at line 107-108. Coverage gate: PASS (100% AC coverage, above 80% threshold). Three medium findings flag untested code paths (null audioRef, cancel-during-fade, last-chapter edge case) that represent realistic production scenarios without test coverage."
+    }
+  },
+  "consolidated_findings": [
+    {
+      "severity": "BLOCKER",
+      "description": "Race condition in `addClip` \u2014 duplicate sortOrder values under concurrent calls. Fix: wrap read-compute-write in a Dexie transaction, or compute sortOrder from already-loaded in-memory state.",
+      "file": "src/stores/useAudioClipStore.ts",
+      "line": 70,
+      "confidence": 95,
+      "category": "concurrency",
+      "agent": "glm-code-review",
+      "consensus_score": 95
+    },
+    {
+      "severity": "BLOCKER",
+      "description": "`loadClips` silently swallows errors \u2014 `isLoaded` never set to `true` on query failure, permanently disabling the store. Fix: set `isLoaded: true` in the catch block (with `clips: []`) or introduce a distinct `error` state.",
+      "file": "src/stores/useAudioClipStore.ts",
+      "line": 53,
+      "confidence": 90,
+      "category": "error-handling",
+      "agent": "glm-code-review",
+      "consensus_score": 90
+    },
+    {
+      "severity": "BLOCKER",
+      "description": "Optimistic `deleteClip` rollback is broken \u2014 rollback restores stale snapshot, silently undoing concurrent successful mutations (data-loss). Fix: re-insert only the deleted clip, or re-fetch from Dexie on failure.",
+      "file": "src/stores/useAudioClipStore.ts",
+      "line": 96,
+      "confidence": 88,
+      "category": "data-integrity",
+      "agent": "glm-code-review",
+      "consensus_score": 88
+    },
+    {
+      "severity": "BLOCKER",
+      "description": "Optimistic UI update before persistence. `addToQueue` sets state before `await db.readingQueue.put(entry)`. If the DB write fails, the user briefly sees the item added then it vanishes on rollback. Same pattern in `removeFromQueue`, `reorderQueue`, and `removeAllBookEntries`. Fix: move all `set()` calls after the successful `await db.*()` calls.",
+      "file": "src/stores/useReadingQueueStore.ts",
+      "line": 65,
+      "end_line": 67,
+      "confidence": 85,
+      "category": "architecture",
+      "suggestion": "Move set() calls after successful await db calls. Example: await db.readingQueue.put(entry); set(state => ({ entries: [...state.entries, entry] })); toast.success(...)",
+      "model_source": "glm-5.1",
+      "agent": "glm-code-review",
+      "consensus_score": 85
+    },
+    {
+      "severity": "HIGH",
+      "description": "Drag handle and remove buttons are missing type=\"button\". Without it, buttons default to type=\"submit\" per the HTML spec when inside a form ancestor, creating a latent form-submit regression risk.",
+      "file": "src/app/components/library/ReadingQueue.tsx",
+      "line": 86,
+      "end_line": 86,
+      "confidence": 97,
+      "category": "accessibility",
+      "suggestion": "Add type=\"button\" to both the drag handle button (line 86) and the remove button (line 119).",
+      "agent": "design-review",
+      "consensus_sources": [
+        {
+          "agent": "design-review",
+          "confidence": 97
+        },
+        {
+          "agent": "design-review",
+          "confidence": 98
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 design-review + design-review"
+    },
+    {
+      "severity": "HIGH",
+      "description": "`startTime` can be stale in ClipButton; no validation that `endTime > startTime` \u2014 a clip with negative duration can be persisted if audio is seeked backward. Fix: add guard before calling `addClip`.",
+      "file": "src/app/components/audiobook/ClipButton.tsx",
+      "line": 48,
+      "confidence": 92,
+      "category": "validation",
+      "agent": "glm-code-review",
+      "consensus_sources": [
+        {
+          "agent": "glm-code-review",
+          "confidence": 92
+        },
+        {
+          "agent": "exploratory-qa",
+          "confidence": 85
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 glm-code-review + exploratory-qa"
+    },
+    {
+      "severity": "HIGH",
+      "description": "Keyboard shortcuts [ and ] for speed adjustment only call setPlaybackRate() but do NOT call updateBookPlaybackSpeed(). Speed changes via keyboard are not persisted per-book to IndexedDB, violating AC-5. The SpeedControl popover correctly calls both. Fix: add updateBookPlaybackSpeed(book.id, newRate) after each setPlaybackRate call in both keyboard shortcut actions.",
+      "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
+      "line": 266,
+      "end_line": 279,
+      "confidence": 90,
+      "category": "Correctness",
+      "suggestion": "Add useBookStore.getState().updateBookPlaybackSpeed(book.id, newRate) after each setPlaybackRate call in the [ and ] keyboard shortcut actions.",
+      "agent": "code-review",
+      "consensus_sources": [
+        {
+          "agent": "code-review",
+          "confidence": 90
+        },
+        {
+          "agent": "code-review",
+          "confidence": 75
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 code-review + code-review"
+    },
+    {
+      "severity": "HIGH",
+      "description": "useSilenceDetection production hook uses Date.now() directly in setLastSkip (line 129). This is benign in production but makes the lastSkip.timestamp field non-deterministic if a unit test is ever written for the detection loop.",
+      "file": "src/app/hooks/useSilenceDetection.ts",
+      "line": 129,
+      "end_line": 129,
+      "confidence": 78,
+      "category": "test-maintainability",
+      "suggestion": "Use performance.now() + a fixed epoch reference, or document that timestamp is informational only and must not be asserted in tests.",
+      "agent": "code-review-testing",
+      "consensus_sources": [
+        {
+          "agent": "code-review-testing",
+          "confidence": 78
+        },
+        {
+          "agent": "openai-code-review",
+          "confidence": 75
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 code-review-testing + openai-code-review"
+    },
+    {
+      "severity": "HIGH",
+      "description": "SpeedControl hard-codes SPEED_OPTIONS=[0.5,0.75,1.0,1.25,1.5,1.75,2.0,2.5,3.0] \u2014 missing 2.25 and 2.75 that exist in VALID_SPEEDS. A user who sets the global default to 2.25x will play at that rate but see no option selected in the popover.",
+      "file": "src/app/components/audiobook/SpeedControl.tsx",
+      "line": 19,
+      "end_line": 19,
+      "confidence": 95,
+      "category": "architecture",
+      "suggestion": "Replace local SPEED_OPTIONS with `import { VALID_SPEEDS } from '@/stores/useAudiobookPrefsStore'`.",
+      "model_source": "adversarial-fallback",
+      "agent": "openai-code-review",
+      "consensus_sources": [
+        {
+          "agent": "openai-code-review",
+          "confidence": 95
+        },
+        {
+          "agent": "exploratory-qa",
+          "confidence": 100
+        },
+        {
+          "agent": "design-review",
+          "confidence": 85
+        },
+        {
+          "agent": "openai-code-review",
+          "confidence": 85
+        }
+      ],
+      "consensus_count": 4,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 4 \u2014 openai-code-review + exploratory-qa + design-review + openai-code-review"
+    },
+    {
+      "severity": "HIGH",
+      "description": "Invalid ARIA: <li role=\"option\"> wraps a <button> child in the speed popover. The ARIA spec prohibits interactive elements inside `option` roles. Screen readers (NVDA, VoiceOver) will double-announce each item as both an option and a button, confusing learners.",
+      "file": "src/app/components/audiobook/SpeedControl.tsx",
+      "line": 56,
+      "end_line": 68,
+      "confidence": 95,
+      "category": "accessibility",
+      "suggestion": "Convert to role=\"menu\" on <ul> and role=\"menuitem\" on each <button>, removing role=\"option\" and aria-selected from the <li>. Menus permit interactive descendants.",
+      "agent": "design-review",
+      "consensus_sources": [
+        {
+          "agent": "design-review",
+          "confidence": 95
+        },
+        {
+          "agent": "design-review",
+          "confidence": 98
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 design-review + design-review"
+    },
+    {
+      "severity": "HIGH",
+      "description": "useKeyboardShortcuts crashes with TypeError when keydown event target is document (no tagName property). Happens when no focusable element has focus \u2014 real-world edge case on audiobook reader page.",
+      "file": "src/app/hooks/useKeyboardShortcuts.ts",
+      "line": 62,
+      "end_line": 62,
+      "confidence": 90,
+      "category": "console",
+      "suggestion": "Add null guard: const tagName = target?.tagName?.toLowerCase() ?? ''",
+      "agent": "exploratory-qa",
+      "consensus_sources": [
+        {
+          "agent": "exploratory-qa",
+          "confidence": 90
+        },
+        {
+          "agent": "exploratory-qa",
+          "confidence": 85
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 exploratory-qa + exploratory-qa"
+    },
+    {
+      "severity": "HIGH",
+      "description": "`isLoaded` guard prevents queue reload after deletion cascade. When `deleteBook` triggers `removeAllBookEntries`, navigating away and back skips `loadQueue` because `isLoaded` is still true. External changes (e.g. another tab) also won't load. Fix: remove the guard or ensure cascade cleanup resets `isLoaded`, or add a comment explaining the tradeoff.",
+      "file": "src/stores/useReadingQueueStore.ts",
+      "line": 55,
+      "end_line": null,
+      "confidence": 90,
+      "category": "architecture",
+      "suggestion": "Either remove the isLoaded early return and let loadQueue always fetch fresh data, or reset isLoaded when cascade cleanup occurs.",
+      "model_source": "glm-5.1",
+      "agent": "glm-code-review",
+      "consensus_score": 90
+    },
+    {
+      "severity": "HIGH",
+      "description": "Cancel recording button touch target is 25x44px \u2014 below the 44x44px minimum. Missing min-w-[44px] on the cancel button in ClipButton. On touch devices users will frequently miss this target during time-sensitive clip recording.",
+      "file": "src/app/components/audiobook/ClipButton.tsx",
+      "line": 119,
+      "confidence": 90,
+      "category": "accessibility",
+      "agent": "design-review",
+      "consensus_score": 90
+    },
+    {
+      "severity": "HIGH",
+      "description": "loadClips has no error handling -- Dexie query failure leaves panel stuck on 'Loading clips...' with no recovery path",
+      "file": "src/stores/useAudioClipStore.ts",
+      "line": 39,
+      "confidence": 90,
+      "category": "Correctness",
+      "classification": "STORY-RELATED",
+      "agent": "code-review",
+      "consensus_score": 90
+    },
+    {
+      "severity": "HIGH",
+      "description": "SkipSilenceActiveIndicator has both role=\"status\" (which implies aria-live=\"polite\") and an explicit aria-live=\"polite\" attribute. This redundancy can confuse automated tools and over-specifies semantics.",
+      "file": "src/app/components/audiobook/SkipSilenceActiveIndicator.tsx",
+      "line": 17,
+      "end_line": 19,
+      "confidence": 90,
+      "category": "accessibility",
+      "suggestion": "Remove aria-live=\"polite\" \u2014 role=\"status\" already provides the implicit live region semantics.",
+      "agent": "design-review",
+      "consensus_score": 90
+    },
+    {
+      "severity": "HIGH",
+      "description": "Module-level AudioContext singletons (_mediaSource, _analyser) are never re-bound when the underlying HTMLAudioElement changes (new book). The second book's audio bypasses the analyser entirely \u2014 silence detection reads zeroed buffers from a disconnected stale source.",
+      "file": "src/app/hooks/useSilenceDetection.ts",
+      "line": 21,
+      "end_line": 23,
+      "confidence": 88,
+      "category": "architecture",
+      "suggestion": "Track the HTMLAudioElement reference alongside _mediaSource. On mount, if audioRef.current !== stored element reference, disconnect and reinitialise _mediaSource and _analyser for the new element.",
+      "model_source": "adversarial-fallback",
+      "agent": "openai-code-review",
+      "consensus_score": 88
+    },
+    {
+      "severity": "HIGH",
+      "description": "Single-file M4B: repeated chapterend dispatch during fade-out. When defaultPrevented skips setCurrentChapterIndex, the 500ms polling loop re-detects the boundary and fires chapterend ~10 times during the 5s fade, starting competing rAF loops. Fix: always call setCurrentChapterIndex(i) before the defaultPrevented check, or add a fading guard in handleChapterEnd.",
+      "file": "src/app/hooks/useAudioPlayer.ts",
+      "line": 271,
+      "confidence": 88,
+      "category": "Correctness",
+      "agent": "code-E111-S03.json",
+      "consensus_score": 88
+    },
+    {
+      "severity": "HIGH",
+      "description": "Optimistic `updateClipTitle` rollback has same stale-snapshot problem \u2014 concurrent mutations can be silently overwritten on failure. Fix: re-fetch from Dexie on failure.",
+      "file": "src/stores/useAudioClipStore.ts",
+      "line": 82,
+      "confidence": 85,
+      "category": "data-integrity",
+      "agent": "glm-code-review",
+      "consensus_score": 85
+    },
+    {
+      "severity": "HIGH",
+      "description": "ABS progress sync (useAudiobookshelfProgressSync) floods console with 188+ repeated 429 errors when playback position changes via clip seek \u2014 no rate limiting or backoff on 429 responses. Pre-existing issue, not introduced by E111-S01.",
+      "file": "src/app/hooks/useAudiobookshelfProgressSync.ts",
+      "line": null,
+      "confidence": 85,
+      "category": "Console",
+      "agent": "exploratory-qa",
+      "consensus_score": 85
+    },
+    {
+      "severity": "HIGH",
+      "description": "AC-7 test only covers marking status as 'finished' via dropdown. The AC states '100% progress' as the trigger, but the implementation only emits book:finished on status change \u2014 not when progress reaches 100. The test does not cover the progress=100 path, nor is there documentation that it is intentionally excluded.",
+      "file": "tests/e2e/story-e110-s03.spec.ts",
+      "line": 131,
+      "confidence": 85,
+      "category": "ac-coverage",
+      "agent": "code-review-testing",
+      "consensus_score": 85
+    },
+    {
+      "severity": "HIGH",
+      "description": "handlePlayClip uses setTimeout without cleanup -- seekTo/play may execute after component unmount",
+      "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
+      "line": 316,
+      "confidence": 82,
+      "category": "Correctness",
+      "classification": "STORY-RELATED",
+      "agent": "code-review",
+      "consensus_score": 82
+    },
+    {
+      "severity": "HIGH",
+      "description": "AC-1 E2E test verifies toggle persistence and active-indicator visibility but does not exercise the actual silence detection loop (RAF tick, threshold crossing, audio seek). The test passes even if Web Audio API detection is entirely non-functional. No test path covers the full skip event emission.",
+      "file": "tests/e2e/story-e111-s02.spec.ts",
+      "line": 73,
+      "end_line": 97,
+      "confidence": 82,
+      "category": "ac-coverage",
+      "suggestion": "Add a comment documenting that the RAF detection loop is verified by calculateRms unit tests + code review, not by E2E. Consider a unit test for useSilenceDetection that mocks requestAnimationFrame and AnalyserNode to simulate a threshold-crossing event.",
+      "agent": "code-review-testing",
+      "consensus_score": 82
+    },
+    {
+      "severity": "HIGH",
+      "description": "`reorderClips(oldIndex, newIndex)` uses array indices that can desync from Dexie data if `isLoaded` is false or clips were externally modified. Fix: guard with `if (!get().isLoaded) return;`.",
+      "file": "src/app/components/audiobook/ClipListPanel.tsx",
+      "line": 65,
+      "confidence": 80,
+      "category": "correctness",
+      "agent": "glm-code-review",
+      "consensus_score": 80
+    },
+    {
+      "severity": "HIGH",
+      "description": "AC-4 (drag-and-drop reorder) has zero test coverage. No E2E test exercises the reorderQueue store action or verifies that the UI order changes persist after reload.",
+      "file": "tests/e2e/story-e110-s03.spec.ts",
+      "line": null,
+      "confidence": 80,
+      "category": "ac-coverage",
+      "agent": "code-review-testing",
+      "consensus_score": 80
+    },
+    {
+      "severity": "HIGH",
+      "description": "AC-4 play-clip E2E assertion is weak: clicks 'play clip' button and asserts audio-playing-indicator without verifying seek to clip start time or stop at end time. No wait for isPlaying state to settle after mock play() resolves. Test does not verify the core AC-4 behavior of seeking to startTime and playing to endTime.",
+      "file": "tests/e2e/regression/story-e111-s01.spec.ts",
+      "line": 204,
+      "confidence": 80,
+      "agent": "code-review-testing",
+      "consensus_score": 80
+    },
+    {
+      "severity": "HIGH",
+      "description": "activeClipEnd is never cleared on manual play/pause/seek -- stale clip boundary causes unexpected auto-pause during normal playback",
+      "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
+      "line": 328,
+      "confidence": 78,
+      "category": "Silent Failure",
+      "classification": "STORY-RELATED",
+      "agent": "code-review",
+      "consensus_score": 78
+    },
+    {
+      "severity": "HIGH",
+      "description": "AC-7 DnD E2E test only verifies drag handles are visible \u2014 does not perform an actual drag reorder or assert new order persists across page reload. The AC explicitly requires persistence across sessions.",
+      "file": "tests/e2e/regression/story-e111-s01.spec.ts",
+      "line": 266,
+      "confidence": 78,
+      "agent": "code-review-testing",
+      "consensus_score": 78
+    },
+    {
+      "severity": "HIGH",
+      "description": "Potential infinite silence skip loop: useSilenceDetection.ts skips only 0.1s (SKIP_LOOKAHEAD_S) per trigger then resets silenceStartRef.current to null, which immediately re-detects silence and fires another skip ~6 times/second until non-silent audio is reached. The diff was truncated so the fix could not be confirmed in source. Causes constant UI flashing, degraded playback, and high CPU.",
+      "file": "src/app/hooks/useSilenceDetection.ts",
+      "line": null,
+      "confidence": 72,
+      "category": "architecture",
+      "suggestion": "After a skip, scan forward to find non-silent audio before jumping, use a larger skip increment (5\u201310s), or implement a cooldown preventing re-triggering for several seconds.",
+      "model_source": "glm-5.1",
+      "agent": "glm-code-review",
+      "consensus_score": 72
+    },
+    {
+      "severity": "HIGH",
+      "description": "IDB 'object store not found' errors on first page load before DB upgrade completes caused navigation away from audiobook player, blocking all clip functionality in the initial session.",
+      "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
+      "line": null,
+      "confidence": 70,
+      "category": "Console",
+      "agent": "exploratory-qa",
+      "consensus_score": 70
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "The ReadingQueue section is rendered inside the Library page but the section has no landmark role or aria-label on the containing div (data-testid='reading-queue-section'). Screen reader users navigating by landmark cannot distinguish it from other content regions.",
+      "file": "src/app/components/library/ReadingQueue.tsx",
+      "line": 149,
+      "confidence": 70,
+      "category": "UX",
+      "suggestion": "Add role='region' and aria-labelledby pointing to the Reading Queue h3 heading, or wrap it in a <section> element.",
+      "agent": "exploratory-qa",
+      "consensus_sources": [
+        {
+          "agent": "exploratory-qa",
+          "confidence": 70
+        },
+        {
+          "agent": "design-review",
+          "confidence": 92
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 exploratory-qa + design-review"
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "bookMap is rebuilt on every render; useMemo would clarify intent and avoid unnecessary work.",
+      "file": "src/app/components/library/ReadingQueue.tsx",
+      "line": 163,
+      "confidence": 70,
+      "category": "Maintainability",
+      "suggestion": "Wrap in useMemo: const bookMap = useMemo(() => new Map(books.map(b => [b.id, b])), [books])",
+      "agent": "code-review",
+      "consensus_sources": [
+        {
+          "agent": "code-review",
+          "confidence": 70
+        },
+        {
+          "agent": "glm-code-review",
+          "confidence": 75
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 code-review + glm-code-review"
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "Empty state container applies text-center globally, centering the instruction paragraph. Design principles specify left-aligned body text for LTR languages. Center-aligned multi-line instructional text is harder to read.",
+      "file": "src/app/components/library/ReadingQueue.tsx",
+      "line": 194,
+      "end_line": 204,
+      "confidence": 85,
+      "category": "visual",
+      "suggestion": "Remove text-center from the container div, keep mx-auto on the icon only.",
+      "agent": "design-review",
+      "consensus_sources": [
+        {
+          "agent": "design-review",
+          "confidence": 85
+        },
+        {
+          "agent": "design-review",
+          "confidence": 90
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 design-review + design-review"
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "`reorderQueue` issues N individual `update()` calls inside a transaction. For large queues this is N separate write operations. Consider using `bulkPut` for efficiency.",
+      "file": "src/stores/useReadingQueueStore.ts",
+      "line": 96,
+      "end_line": 107,
+      "confidence": 70,
+      "category": "performance",
+      "suggestion": "Use await db.readingQueue.bulkPut(reordered) inside the transaction for O(1) writes instead of O(N).",
+      "model_source": "glm-5.1",
+      "agent": "glm-code-review",
+      "consensus_sources": [
+        {
+          "agent": "glm-code-review",
+          "confidence": 70
+        },
+        {
+          "agent": "code-review",
+          "confidence": 72
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 glm-code-review + code-review"
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "Sleep timer popover option buttons briefly detach from DOM when the popover is reopened while a timer is active. Caused by chapterProgressPercent updates triggering re-renders of AudiobookRenderer that propagate to SleepTimer PopoverContent, unmounting/remounting option buttons mid-click. Official spec already works around this with force:true and explicit listbox wait.",
+      "file": "src/app/components/audiobook/SleepTimer.tsx",
+      "line": 67,
+      "end_line": 83,
+      "confidence": 90,
+      "category": "UX",
+      "suggestion": "Memoize SleepTimer with React.memo to prevent re-renders from chapterProgressPercent changes when the popover is closed. Only pass chapterProgressPercent when needed.",
+      "agent": "exploratory-qa",
+      "consensus_sources": [
+        {
+          "agent": "exploratory-qa",
+          "confidence": 90
+        },
+        {
+          "agent": "exploratory-qa",
+          "confidence": 75
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 exploratory-qa + exploratory-qa"
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "Progress bar fill div uses transition-[width] duration-300 without motion-reduce:transition-none. Learners who have enabled 'Reduce Motion' in OS settings will still see animated bar width updates, violating WCAG 2.1 SC 2.3.3 and the project's prefers-reduced-motion convention.",
+      "file": "src/app/components/audiobook/SleepTimer.tsx",
+      "line": 119,
+      "confidence": 98,
+      "category": "accessibility",
+      "suggestion": "Add motion-reduce:transition-none to the fill div className: \"h-full rounded-full bg-brand transition-[width] duration-300 motion-reduce:transition-none\"",
+      "agent": "design-review",
+      "consensus_sources": [
+        {
+          "agent": "design-review",
+          "confidence": 98
+        },
+        {
+          "agent": "code-E111-S03.json",
+          "confidence": 65
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 design-review + code-E111-S03.json"
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "ChapterList emits React duplicate-key prop warnings on every render because chapter.id is undefined for test seed data (and potentially ABS chapters not yet migrated). key={chapter.id} resolves to undefined for all items.",
+      "file": "src/app/components/audiobook/ChapterList.tsx",
+      "line": 61,
+      "end_line": 61,
+      "confidence": 95,
+      "category": "console",
+      "suggestion": "Fall back to index: key={chapter.id ?? index}",
+      "agent": "exploratory-qa",
+      "consensus_sources": [
+        {
+          "agent": "exploratory-qa",
+          "confidence": 95
+        },
+        {
+          "agent": "design-review",
+          "confidence": 97
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 exploratory-qa + design-review"
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "formatSpeed uses '\u00d7' (Unicode U+00D7) in SpeedControl.tsx but 'x' (ASCII letter) in AudiobookSettingsPanel.tsx. The player speed button shows '1.5\u00d7' while settings presets show '1.5x', creating a visual mismatch. Screen readers also announce them differently.",
+      "file": "src/app/components/audiobook/AudiobookSettingsPanel.tsx",
+      "line": 45,
+      "confidence": 99,
+      "category": "visual",
+      "suggestion": "Extract a single formatSpeed utility using '\u00d7' consistently, import it in both components. Also aligns the divergent integer-check logic (rate % 1 === 0 vs Number.isInteger).",
+      "agent": "design-review",
+      "consensus_score": 99
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "The Skip Silence switch and Auto-Bookmark on Stop switch both have adjacent description paragraphs not linked via aria-describedby. Keyboard/AT users receive no programmatic description when the switch receives focus.",
+      "file": "src/app/components/audiobook/AudiobookSettingsPanel.tsx",
+      "line": 116,
+      "end_line": 130,
+      "confidence": 92,
+      "category": "accessibility",
+      "suggestion": "Add id=\"skip-silence-description\" to the <p> tag and aria-describedby=\"skip-silence-description\" to the <Switch>. Apply the same pattern to the auto-bookmark toggle (lines 189-205).",
+      "agent": "design-review",
+      "consensus_score": 92
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "Library production chunk grew 20.1% (183KB \u2192 220KB), exceeding the 10% bundle growth threshold. Caused by ReadingQueue.tsx, useReadingQueueStore.ts, and BookContextMenu.tsx additions from E110-S03.",
+      "file": "src/app/components/library/ReadingQueue.tsx",
+      "line": null,
+      "confidence": 90,
+      "category": "performance",
+      "suggestion": "Wrap ReadingQueue in React.lazy() + Suspense to defer the component from the initial Library chunk parse, saving ~10-15KB on first load.",
+      "agent": "performance-benchmark",
+      "consensus_score": 90
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "Missing SheetDescription in ClipListPanel triggers Radix UI console warning on every panel open: 'Missing Description or aria-describedby={undefined} for {DialogContent}'. Screen reader users receive no panel description. AudiobookSettingsPanel shows the correct pattern.",
+      "file": "src/app/components/audiobook/ClipListPanel.tsx",
+      "line": 319,
+      "confidence": 90,
+      "category": "accessibility",
+      "agent": "design-review",
+      "consensus_score": 90
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "SkipSilenceActiveIndicator receives isActive={skipSilence} (stored preference) instead of silenceDetection.isActive (runtime). The badge shows 'active' as soon as the toggle is flipped, even before Play is pressed and while AudioContext is suspended.",
+      "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
+      "line": 448,
+      "end_line": 448,
+      "confidence": 90,
+      "category": "architecture",
+      "suggestion": "Change to <SkipSilenceActiveIndicator isActive={silenceDetection.isActive} />.",
+      "model_source": "adversarial-fallback",
+      "agent": "openai-code-review",
+      "consensus_score": 90
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "Clips panel trigger button in AudiobookRenderer uses a raw <button> without the project focus ring pattern (focus-visible:ring-[3px]). Falls back to browser-default outline \u2014 visually inconsistent with all other secondary controls which use the shadcn Button component.",
+      "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
+      "line": 508,
+      "confidence": 90,
+      "category": "visual-consistency",
+      "agent": "design-review",
+      "consensus_score": 90
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "The <Label> elements for 'Default Speed' (line 82) and 'Default Sleep Timer' (line 145) have no htmlFor attribute. They are not programmatically associated with their radiogroup controls. Screen readers announce them as standalone text rather than as group labels.",
+      "file": "src/app/components/audiobook/AudiobookSettingsPanel.tsx",
+      "line": 82,
+      "confidence": 90,
+      "category": "accessibility",
+      "suggestion": "Remove the standalone <Label> wrappers and fold their text into the aria-label on the radiogroup, or add aria-labelledby on the radiogroup pointing to the label element's id.",
+      "agent": "design-review",
+      "consensus_score": 90
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "useAppColorScheme() duplicates event-listening logic from useColorScheme() in src/hooks/useColorScheme.ts. Both listen to settingsUpdated and read getSettings().colorScheme. Consider extracting a shared base hook.",
+      "file": "src/app/components/reader/readerThemeConfig.ts",
+      "line": 104,
+      "confidence": 70,
+      "category": "Maintainability",
+      "suggestion": "Extract shared hook that reads color scheme setting, with useColorScheme adding CSS class side effects on top.",
+      "agent": "code-review",
+      "consensus_sources": [
+        {
+          "agent": "code-review",
+          "confidence": 70
+        },
+        {
+          "agent": "code-review",
+          "confidence": 65
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 90,
+      "consensus_tag": "Consensus: 2 \u2014 code-review + code-review"
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "No unit test for null audioRef guard in EOC mode (useSleepTimer.ts:109-115). When audioRef.current is null at the time setTimer('end-of-chapter') is called, the chapterend listener is never attached and eocCleanupRef is never set. The test suite exercises the happy path but not this branch. Suggested test: 'EOC mode: silently skips listener attachment when audioRef.current is null'.",
+      "agent": "testing-E111-S03.json",
+      "consensus_score": 80
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "No unit test for cancelTimer called during an active fade (mid-rAF sequence). If the user cancels EOC after chapterend fires but before fadeOutAndPause completes, the fade continues to completion and still calls onPause + sets the localStorage flag. This is a potential UX defect and is unverified. Suggested test: 'cancelTimer during fade does not invoke onPause after cancellation'.",
+      "agent": "testing-E111-S03.json",
+      "consensus_score": 80
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "No test for the last-chapter-of-book edge case: when chapterend fires on the final chapter (toIndex would equal chapter count), the current implementation still triggers fade+pause with no special handling. The story AC-3 text ('single-file M4B fires chapterend, triggers fade+pause') implies this is expected, but there is no test confirming last-chapter behavior is identical to mid-book chapters, nor that the event detail shape (fromIndex/toIndex) is validated.",
+      "agent": "testing-E111-S03.json",
+      "consensus_score": 80
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "loadQueue uses isLoaded guard but never resets it, preventing DB refresh on re-navigation. Single-tab assumption should be documented.",
+      "file": "src/stores/useReadingQueueStore.ts",
+      "line": 38,
+      "end_line": 43,
+      "confidence": 75,
+      "category": "Correctness",
+      "suggestion": "Consider resetting isLoaded on visibility change, or document the single-tab assumption.",
+      "agent": "code-review",
+      "consensus_score": 75
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "SortableClipItem has role='listitem' but is wrapped in <li> -- duplicate semantics for assistive technology",
+      "file": "src/app/components/audiobook/ClipListPanel.tsx",
+      "line": 109,
+      "confidence": 75,
+      "category": "Accessibility",
+      "classification": "STORY-RELATED",
+      "agent": "code-review",
+      "consensus_score": 75
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "`reorderClips` writes every clip's sortOrder on each drag, issuing N Dexie puts. Fix: only update the two clips that actually changed sortOrder.",
+      "file": "src/stores/useAudioClipStore.ts",
+      "line": 106,
+      "confidence": 75,
+      "category": "performance",
+      "agent": "glm-code-review",
+      "consensus_score": 75
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "AC-2 E2E test verifies element attachment and ARIA attributes but does not verify the indicator shows the correct text after a skip event (e.g., 'Skipped 2.3s silence'). The display logic of SilenceSkipIndicator (text formatting, 2000ms hide timer, rapid-skip reset) has no unit test.",
+      "file": "tests/e2e/story-e111-s02.spec.ts",
+      "line": 99,
+      "end_line": 112,
+      "confidence": 75,
+      "category": "ac-coverage",
+      "suggestion": "Add src/app/components/audiobook/__tests__/SilenceSkipIndicator.test.tsx: render with lastSkip={durationSeconds:2.3, timestamp:...}, assert 'Skipped 2.3s silence' is visible, assert it disappears after 2000ms with vi.useFakeTimers().",
+      "agent": "code-review-testing",
+      "consensus_score": 75
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "AC-6 asserts title, author, and progress but omits book cover. The AC explicitly names cover as a required display field. Test would pass even if QueueItemCover rendered nothing.",
+      "file": "tests/e2e/story-e110-s03.spec.ts",
+      "line": 114,
+      "confidence": 75,
+      "category": "assertion-quality",
+      "agent": "code-review-testing",
+      "consensus_score": 75
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "AC-5 assertion uses toContainText('1.5x') and AC-6 uses toContainText('1.5') \u2014 both are weak partial-match assertions that would pass for any visible text containing those strings.",
+      "file": "tests/e2e/story-e111-s02.spec.ts",
+      "line": 153,
+      "end_line": 178,
+      "confidence": 74,
+      "category": "assertion-quality",
+      "suggestion": "Use exact-match assertions: await expect(speedButton).toHaveText('1.5x') for unambiguous verification.",
+      "agent": "code-review-testing",
+      "consensus_score": 74
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "updateBookPlaybackSpeed in useBookStore has no dedicated unit tests. The error rollback path (Dexie failure), the toast.error call, and the out-of-range validation guard (speed < 0.5 or > 3.0 silently dropped) have zero test coverage.",
+      "file": "src/stores/useBookStore.ts",
+      "line": 333,
+      "end_line": 360,
+      "confidence": 74,
+      "category": "edge-cases",
+      "suggestion": "Add src/stores/__tests__/useBookStore.test.ts: mock db.books.update to reject, assert rollback and toast.error. Also assert updateBookPlaybackSpeed(bookId, 4.0) does not update state.",
+      "agent": "code-review-testing",
+      "consensus_score": 74
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "Second useEffect for bookId change detection is redundant -- first effect already covers this case",
+      "file": "src/app/components/audiobook/ClipListPanel.tsx",
+      "line": 279,
+      "confidence": 72,
+      "category": "Correctness",
+      "classification": "STORY-RELATED",
+      "agent": "code-review",
+      "consensus_score": 72
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "fadeOutAndPause has no cancellation mechanism. If user cancels timer during 5s fade, rAF loop continues and eventually pauses audio. Fix: return a cancel function that calls cancelAnimationFrame and restores volume.",
+      "file": "src/app/hooks/useSleepTimer.ts",
+      "line": 21,
+      "confidence": 72,
+      "category": "Correctness",
+      "agent": "code-E111-S03.json",
+      "consensus_score": 72
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "AC-2 only tests the dropdown (book-more-actions) add path. The right-click ContextMenu path (context-menu-queue-toggle) \u2014 the primary desktop UX surface \u2014 has no test.",
+      "file": "tests/e2e/story-e110-s03.spec.ts",
+      "line": 62,
+      "confidence": 72,
+      "category": "ac-coverage",
+      "agent": "code-review-testing",
+      "consensus_score": 72
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "AC-3 clips panel test does not verify empty-state message ('No clips yet...') \u2014 only checks panel is visible. Empty state is an implicit AC per test quality framework.",
+      "file": "tests/e2e/regression/story-e111-s01.spec.ts",
+      "line": 193,
+      "confidence": 72,
+      "agent": "code-review-testing",
+      "consensus_score": 72
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "updateBookPlaybackSpeed in useBookStore.ts has no input validation \u2014 any out-of-range number can be persisted. The UI constrains to 0.5\u20133.0 but the store API is public and can be called directly.",
+      "file": "src/app/hooks/useBookStore.ts",
+      "line": null,
+      "confidence": 72,
+      "category": "architecture",
+      "suggestion": "Add bounds clamping: const clampedSpeed = Math.min(3.0, Math.max(0.5, speed))",
+      "model_source": "glm-5.1",
+      "agent": "glm-code-review",
+      "consensus_score": 72
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "v47 Dexie migration may omit prior tables \u2014 Dexie requires all tables to be re-declared in each version's `.stores()` call or it will drop unlisted tables on upgrade from v46.",
+      "file": "src/db/schema.ts",
+      "line": 87,
+      "confidence": 70,
+      "category": "data-integrity",
+      "agent": "glm-code-review",
+      "consensus_score": 70
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "RAF tick dataArray (Uint8Array) is allocated inside runDetectionLoop rather than in a ref. Each enable/disable toggle recreates the array. In a high-frequency RAF loop this creates avoidable GC pressure.",
+      "file": "src/app/hooks/useSilenceDetection.ts",
+      "line": 89,
+      "end_line": 89,
+      "confidence": 70,
+      "category": "performance",
+      "suggestion": "Move dataArray to a useRef<Uint8Array> allocated once at component mount.",
+      "model_source": "adversarial-fallback",
+      "agent": "openai-code-review",
+      "consensus_score": 70
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "Test data (BOOK_1, BOOK_2, QUEUE_ENTRY_1, QUEUE_ENTRY_2) is defined inline as module-level constants rather than using factories from tests/support/fixtures/factories/. Project pattern requires factory usage.",
+      "file": "tests/e2e/story-e110-s03.spec.ts",
+      "line": 13,
+      "confidence": 70,
+      "category": "factory-usage",
+      "agent": "code-review-testing",
+      "consensus_score": 70
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "AC-3 tests removal via the queue item remove button only. The dropdown menu remove-from-queue path (dropdown-menu-queue-toggle when already queued) has no test.",
+      "file": "tests/e2e/story-e110-s03.spec.ts",
+      "line": 80,
+      "confidence": 70,
+      "category": "ac-coverage",
+      "agent": "code-review-testing",
+      "consensus_score": 70
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "addClip returns-id test uses toBeTruthy() + typeof string \u2014 would pass for any non-empty string. Should assert UUID format with a regex.",
+      "file": "src/stores/__tests__/useAudioClipStore.test.ts",
+      "line": 120,
+      "confidence": 70,
+      "agent": "code-review-testing",
+      "consensus_score": 70
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "Homepage FCP increased 31.6% (392ms \u2192 516ms), exceeding the 25% relative threshold. Absolute value (516ms) is well within the 1800ms budget. Audio clips changes are confined to AudiobookRenderer \u2014 not present on the homepage route. Classified as dev server measurement variance.",
+      "file": null,
+      "line": null,
+      "confidence": 70,
+      "category": "performance",
+      "agent": "performance-benchmark",
+      "consensus_score": 70
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "No tests for optimistic rollback paths in updateClipTitle, deleteClip, and reorderClips. Store has explicit rollback logic that is completely untested.",
+      "file": "src/stores/__tests__/useAudioClipStore.test.ts",
+      "line": null,
+      "confidence": 68,
+      "agent": "code-review-testing",
+      "consensus_score": 68
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "AC-8 accessibility test only checks touch target size for startClipBtn. Edit/delete icon buttons inside ClipListPanel are size-8 (32px) \u2014 below the 44px minimum \u2014 and are not checked.",
+      "file": "tests/e2e/regression/story-e111-s01.spec.ts",
+      "line": 276,
+      "confidence": 65,
+      "agent": "code-review-testing",
+      "consensus_score": 65
+    },
+    {
+      "severity": "LOW",
+      "description": "Pulsing recording indicator span has aria-label='Recording in progress' but is not aria-hidden. Screen readers may announce this redundantly since the button aria-label already communicates state via 'Start Clip' / 'End Clip'.",
+      "file": "src/app/components/audiobook/ClipButton.tsx",
+      "line": 104,
+      "confidence": 90,
+      "category": "accessibility",
+      "agent": "design-review",
+      "consensus_score": 90
+    },
+    {
+      "severity": "LOW",
+      "description": "setTimeout(() => inputRef.current?.focus(), 50) for post-render focus is a minor anti-pattern. Low practical risk but useEffect or flushSync would be more deterministic.",
+      "file": "src/app/components/audiobook/ClipListPanel.tsx",
+      "line": 79,
+      "confidence": 90,
+      "category": "code-quality",
+      "agent": "design-review",
+      "consensus_score": 90
+    },
+    {
+      "severity": "LOW",
+      "description": "EOC chapterend event listener is silently not registered if audioRef.current is null when setTimer is called. Badge shows EOC but chapter-end fade never fires. setActiveOption('end-of-chapter') is called unconditionally before the null check on audioRef.",
+      "file": "src/app/hooks/useSleepTimer.ts",
+      "line": 109,
+      "end_line": 116,
+      "confidence": 85,
+      "category": "functional",
+      "suggestion": "Either guard setActiveOption behind the same null check, or schedule a deferred listener registration when audioRef.current becomes available.",
+      "agent": "exploratory-qa",
+      "consensus_score": 85
+    },
+    {
+      "severity": "LOW",
+      "description": "E2E test for AC-1 (story-e111-s03.spec.ts:73) is titled 'AC-1/AC-3' but only asserts the badge shows 'EOC' \u2014 it does not verify that audio actually fades out or pauses at a chapter boundary. The actual fade+pause behavior for AC-1 is validated only at the unit level (useSleepTimer.test.ts:111-141). For full AC-1 confidence an E2E assertion such as checking audio.paused or the player UI entering a paused state after a dispatched chapterend event would be preferred.",
+      "agent": "testing-E111-S03.json",
+      "consensus_score": 80
+    },
+    {
+      "severity": "LOW",
+      "description": "E2E AC-4 test (story-e111-s03.spec.ts:122-123) asserts chapter-progress-bar is 'not.toBeVisible()' but the element may be absent from DOM entirely in countdown mode. This assertion succeeds whether the element is hidden or non-existent; a stricter assertion (count() === 0 or toBeHidden with attached state) would make the intent explicit.",
+      "agent": "testing-E111-S03.json",
+      "consensus_score": 80
+    },
+    {
+      "severity": "LOW",
+      "description": "No test for ClipButton cancel recording path (handleCancelRecording) \u2014 state reset and UI return to 'Start Clip' is unverified.",
+      "file": "tests/e2e/regression/story-e111-s01.spec.ts",
+      "line": null,
+      "confidence": 62,
+      "agent": "code-review-testing",
+      "consensus_score": 62
+    },
+    {
+      "severity": "LOW",
+      "description": "seedClips uses inline hardcoded data instead of project factory pattern. Minor deviation from test-data conventions.",
+      "file": "tests/e2e/regression/story-e111-s01.spec.ts",
+      "line": 96,
+      "confidence": 60,
+      "agent": "code-review-testing",
+      "consensus_score": 60
+    },
+    {
+      "severity": "LOW",
+      "description": "Loading intermediate state ('Loading clips...') in ClipListPanel has no E2E test. Per test quality framework, intermediate UI states count as implicit ACs.",
+      "file": "tests/e2e/regression/story-e111-s01.spec.ts",
+      "line": null,
+      "confidence": 55,
+      "agent": "code-review-testing",
+      "consensus_score": 55
+    },
+    {
+      "severity": "LOW",
+      "description": "Fallback in getReaderChromeClasses uses hardcoded default keys without documenting why.",
+      "file": "src/app/components/reader/readerThemeConfig.ts",
+      "line": 95,
+      "confidence": 50,
+      "category": "Maintainability",
+      "suggestion": "Add comment explaining fallback is for defensive coding against future THEME_COLORS expansions.",
+      "agent": "code-review",
+      "consensus_score": 50
+    },
+    {
+      "severity": "NIT",
+      "description": "Cover image uses alt=\"\" (decorative) \u2014 this is intentional and correct per WCAG F39 since the book title immediately follows in text. Documented as verified.",
+      "file": "src/app/components/library/ReadingQueue.tsx",
+      "line": 43,
+      "end_line": 43,
+      "confidence": 95,
+      "category": "accessibility",
+      "suggestion": "No change needed. Pattern is correct.",
+      "agent": "design-review",
+      "consensus_sources": [
+        {
+          "agent": "design-review",
+          "confidence": 95
+        },
+        {
+          "agent": "exploratory-qa",
+          "confidence": 60
+        }
+      ],
+      "consensus_count": 2,
+      "consensus_score": 100,
+      "consensus_tag": "Consensus: 2 \u2014 design-review + exploratory-qa"
+    },
+    {
+      "severity": "NIT",
+      "description": "Visible label 'Chapter progress' (line 109) does not exactly match the aria-label 'Current chapter progress' (line 116). Sighted and AT users read slightly different text for the same control.",
+      "file": "src/app/components/audiobook/SleepTimer.tsx",
+      "line": 109,
+      "confidence": 95,
+      "category": "accessibility",
+      "suggestion": "Align both strings \u2014 update visible span to 'Current chapter progress' to match the aria-label, or use aria-labelledby pointing to the span and remove the aria-label.",
+      "agent": "design-review",
+      "consensus_score": 95
+    },
+    {
+      "severity": "NIT",
+      "description": "[Recurring] Multiple h-3.5 w-3.5 instances should use size-3.5 Tailwind v4 shorthand.",
+      "file": "src/app/components/library/BookContextMenu.tsx",
+      "line": 92,
+      "confidence": 80,
+      "category": "Maintainability",
+      "suggestion": "Replace h-3.5 w-3.5 with size-3.5 across the file.",
+      "agent": "code-review",
+      "consensus_score": 80
+    },
+    {
+      "severity": "NIT",
+      "description": "handleBookmarkDeleted calls onBookmarkChange() inside a setState updater \u2014 side effects inside updaters are unsafe in concurrent React. Also has an empty dep array so it captures a stale onBookmarkChange reference.",
+      "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
+      "line": 133,
+      "end_line": 139,
+      "confidence": 80,
+      "category": "architecture",
+      "suggestion": "Move onBookmarkChange() call outside the setState updater and add it to the useCallback dependency array.",
+      "model_source": "adversarial-fallback",
+      "agent": "openai-code-review",
+      "consensus_score": 80
+    },
+    {
+      "severity": "NIT",
+      "description": "The inline test data object (story-e111-s03.spec.ts:21-51) is defined directly in the spec rather than using a factory from tests/support/fixtures/factories/. Per test-patterns.md, factories should be preferred. Low risk since this is a leaf spec, but deviates from the project factory convention.",
+      "agent": "testing-E111-S03.json",
+      "consensus_score": 80
+    },
+    {
+      "severity": "NIT",
+      "description": "Queue section container div lacks a landmark role or aria-labelledby. Adding role=\"section\" with aria-labelledby pointing to the h3 would let screen reader users jump to this section via landmark navigation.",
+      "file": "src/app/components/library/ReadingQueue.tsx",
+      "line": 207,
+      "end_line": 207,
+      "confidence": 70,
+      "category": "accessibility",
+      "suggestion": "Change outer div to <section aria-labelledby=\"reading-queue-heading\"> and add id=\"reading-queue-heading\" to the h3.",
+      "agent": "design-review",
+      "consensus_score": 70
+    },
+    {
+      "severity": "NIT",
+      "description": "E2E AC-7 test seeds localStorage with an ad-hoc object rather than a typed factory shape. If the prefs schema changes, the seed silently mismatches.",
+      "file": "tests/e2e/story-e111-s02.spec.ts",
+      "line": 183,
+      "end_line": 185,
+      "confidence": 70,
+      "category": "testing",
+      "suggestion": "Use a typed prefs factory or import the defaults from the store and spread-override only the tested field.",
+      "model_source": "adversarial-fallback",
+      "agent": "openai-code-review",
+      "consensus_score": 70
+    },
+    {
+      "severity": "NIT",
+      "description": "SilenceSkipIndicator has aria-live=\"polite\" and aria-atomic=\"true\" but no explicit role. Adding role=\"status\" would make semantics self-documenting and consistent with SkipSilenceActiveIndicator.",
+      "file": "src/app/components/audiobook/SilenceSkipIndicator.tsx",
+      "line": 47,
+      "confidence": 70,
+      "category": "accessibility",
+      "suggestion": "Add role=\"status\" to the wrapper div.",
+      "agent": "design-review",
+      "consensus_score": 70
+    },
+    {
+      "severity": "NIT",
+      "description": "Progress bar inline style lacks the eslint-disable comment present on the dnd-kit style.",
+      "file": "src/app/components/library/ReadingQueue.tsx",
+      "line": 110,
+      "confidence": 65,
+      "category": "Maintainability",
+      "suggestion": "Add a brief comment noting dynamic value requires inline style.",
+      "agent": "code-review",
+      "consensus_score": 65
+    },
+    {
+      "severity": "NIT",
+      "description": "String interpolation for className instead of cn() -- project convention",
+      "file": "src/app/components/audiobook/ClipButton.tsx",
+      "line": 88,
+      "confidence": 65,
+      "category": "Maintainability",
+      "classification": "STORY-RELATED",
+      "agent": "code-review",
+      "consensus_score": 65
+    },
+    {
+      "severity": "NIT",
+      "description": "[Recurring] String interpolation for conditional className instead of cn() in AudiobookSettingsPanel speed preset buttons and sleep timer option buttons.",
+      "file": "src/app/components/audiobook/AudiobookSettingsPanel.tsx",
+      "line": 99,
+      "confidence": 65,
+      "category": "Maintainability",
+      "suggestion": "Use cn() from @/app/components/ui/utils for class merging consistency.",
+      "agent": "code-review",
+      "consensus_score": 65
+    },
+    {
+      "severity": "NIT",
+      "description": "testAudiobook and testAudiobookB are defined as inline literal objects rather than using factories from tests/support/fixtures/factories/.",
+      "file": "tests/e2e/story-e111-s02.spec.ts",
+      "line": 20,
+      "end_line": 52,
+      "confidence": 60,
+      "category": "factory-usage",
+      "suggestion": "Use audiobook factory if available, or create one to maintain consistent defaults.",
+      "agent": "code-review-testing",
+      "consensus_score": 60
+    },
+    {
+      "severity": "NIT",
+      "description": "AC-8 accessibility test verifies ARIA label and role but does not test keyboard-only interaction flow (Tab focus, Enter/Space to open speed popover, arrow key navigation).",
+      "file": "tests/e2e/story-e111-s02.spec.ts",
+      "line": 192,
+      "end_line": 205,
+      "confidence": 60,
+      "category": "accessibility",
+      "suggestion": "Optional: add keyboard tab/enter navigation test for speed popover as a follow-up in a future accessibility story.",
+      "agent": "code-review-testing",
+      "consensus_score": 60
+    },
+    {
+      "severity": "NIT",
+      "description": "No test covers the duplicate-add guard (adding a book already in the queue should be a no-op). The store has this guard at line 46 of useReadingQueueStore.ts but it is untested.",
+      "file": "tests/e2e/story-e110-s03.spec.ts",
+      "line": null,
+      "confidence": 60,
+      "category": "edge-cases",
+      "agent": "code-review-testing",
+      "consensus_score": 60
+    },
+    {
+      "severity": "NIT",
+      "description": "Persistence test does not verify queue item order after reload \u2014 only presence. If sortOrder persistence is critical (per lessons learned), an order assertion should be added.",
+      "file": "tests/e2e/story-e110-s03.spec.ts",
+      "line": 97,
+      "confidence": 60,
+      "category": "assertion-quality",
+      "agent": "code-review-testing",
+      "consensus_score": 60
+    },
+    {
+      "severity": "NIT",
+      "description": "The `book:finished` event subscription correctly reads from `getState()` inside the callback, avoiding stale closures. The `// Intentional:` comment is present. Confirming the pattern is correct \u2014 no action needed.",
+      "file": "src/app/pages/Library.tsx",
+      "line": 162,
+      "end_line": 167,
+      "confidence": 60,
+      "category": null,
+      "suggestion": null,
+      "model_source": "glm-5.1",
+      "agent": "glm-code-review",
+      "consensus_score": 60
+    },
+    {
+      "severity": "NIT",
+      "description": "useSilenceDetection.test.ts header comment claims 'full hook is covered by E2E tests' \u2014 the E2E tests do not exercise the RAF detection loop either (no real audio signal in headless). Comment is misleading.",
+      "file": "src/app/hooks/__tests__/useSilenceDetection.test.ts",
+      "line": 1,
+      "end_line": 6,
+      "confidence": 55,
+      "category": "documentation",
+      "suggestion": "Update comment to: 'The RAF detection loop and Web Audio API wiring are verified by code review; calculateRms is unit-tested here.'",
+      "agent": "code-review-testing",
+      "consensus_score": 55
+    },
+    {
+      "severity": "NIT",
+      "description": "SilenceSkipIndicator rapid-skip scenario (two skips within 2s) is not tested \u2014 the clearTimeout + reset pattern is correct but unverified.",
+      "file": "src/app/components/audiobook/SilenceSkipIndicator.tsx",
+      "line": 31,
+      "end_line": 37,
+      "confidence": 55,
+      "category": "edge-cases",
+      "suggestion": "Add unit test: fire lastSkip twice 1 second apart with vi.useFakeTimers(), assert indicator remains visible until 2s after the second skip.",
+      "agent": "code-review-testing",
+      "consensus_score": 55
+    },
+    {
+      "severity": "NIT",
+      "description": "QUEUE_ENTRY_1.sortOrder: 0 and QUEUE_ENTRY_2.sortOrder: 1 are magic numbers. Named constants would clarify intent.",
+      "file": "tests/e2e/story-e110-s03.spec.ts",
+      "line": 39,
+      "confidence": 55,
+      "category": "test-quality",
+      "agent": "code-review-testing",
+      "consensus_score": 55
+    }
+  ],
+  "verdict": "BLOCKED",
+  "summary": {
+    "total": 95,
+    "blockers": 4,
+    "high": 25,
+    "medium": 38,
+    "nits": 28
+  },
+  "consensus_count": 16
+}

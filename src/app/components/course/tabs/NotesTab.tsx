@@ -46,9 +46,11 @@ export function NotesTab({
   const [videoDescription, setVideoDescription] = useState('')
   useEffect(() => {
     if (existingNote || isLoading) return
+    let ignore = false
     db.importedVideos
       .get(lessonId)
       .then(v => {
+        if (ignore) return
         if (v?.description) {
           const html = v.description
             .split(/\n{2,}/)
@@ -57,7 +59,11 @@ export function NotesTab({
           setVideoDescription(html)
         }
       })
+      // silent-catch-ok: video description is optional seed data; failure is non-critical
       .catch(() => {})
+    return () => {
+      ignore = true
+    }
   }, [lessonId, existingNote, isLoading])
 
   const handleSave = useCallback(

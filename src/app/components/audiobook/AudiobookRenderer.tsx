@@ -15,7 +15,8 @@ import { toast } from 'sonner'
 import { db } from '@/db/schema'
 import { Button } from '@/app/components/ui/button'
 import { Slider } from '@/app/components/ui/slider'
-import { useAudioPlayer, formatAudioTime } from '@/app/hooks/useAudioPlayer'
+import { useAudioPlayer, formatAudioTime, isSingleFileAudiobook } from '@/app/hooks/useAudioPlayer'
+import { getChapterStartTime } from '@/lib/audiobook-utils'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
 import { useSleepTimer, consumeSleepTimerEndedFlag } from '@/app/hooks/useSleepTimer'
 import { useMediaSession } from '@/app/hooks/useMediaSession'
@@ -303,6 +304,29 @@ export function AudiobookRenderer({
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
+  // Chapter progress for sleep timer EOC indicator
+  const chapterProgressPercent = (() => {
+    if (activeOption !== 'end-of-chapter') return null
+    const chapter = book.chapters[currentChapterIndex]
+    if (!chapter) return null
+    const singleFile = isSingleFileAudiobook(book)
+    if (singleFile) {
+      // Single-file M4B: chapter duration derived from gap between start times
+      const chapterStart = getChapterStartTime(chapter)
+      const nextChapter = book.chapters[currentChapterIndex + 1]
+      const chapterEnd = nextChapter
+        ? getChapterStartTime(nextChapter)
+        : (book.totalDuration ?? duration)
+      const chapterDuration = chapterEnd - chapterStart
+      if (chapterDuration <= 0) return null
+      const elapsed = currentTime - chapterStart
+      return Math.min(100, Math.max(0, (elapsed / chapterDuration) * 100))
+    }
+    // Multi-file: duration is the current audio file's duration
+    if (duration <= 0) return null
+    return Math.min(100, Math.max(0, (currentTime / duration) * 100))
+  })()
+
   const handleSleepTimerSelect = (option: Parameters<typeof setTimer>[0]) => {
     if (option === 'off') {
       cancelTimer()
@@ -510,6 +534,7 @@ export function AudiobookRenderer({
             activeOption={activeOption}
             badgeText={badgeText}
             onSelect={handleSleepTimerSelect}
+            chapterProgressPercent={chapterProgressPercent}
           />
           {/* Clip Button — two-phase start/end recording (E111-S01) */}
           <ClipButton

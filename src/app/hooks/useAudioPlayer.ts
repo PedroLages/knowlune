@@ -27,6 +27,7 @@ import {
 } from '@/services/AudiobookshelfService'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
+import { getChapterStartTime } from '@/lib/audiobook-utils'
 
 const AUTO_REWIND_THRESHOLD_MS = 30_000 // 30 seconds
 const AUTO_REWIND_SECONDS = 5 // seconds to rewind on resume
@@ -53,12 +54,6 @@ export function isSingleFileAudiobook(book: Book): boolean {
   if (book.source.type === 'remote') return true
   if (book.source.type !== 'local') return false
   return book.source.opfsPath.endsWith('book.m4b') || book.source.opfsPath.endsWith('.m4b')
-}
-
-/** Get the start time (in seconds) for a chapter from its position. */
-function getChapterStartTime(chapter: { position: Book['chapters'][0]['position'] }): number {
-  if (chapter.position.type === 'time') return chapter.position.seconds
-  return 0
 }
 
 /**
@@ -178,8 +173,20 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
         return
       }
       // Multi-file: auto-advance to next chapter
-      const nextIndex = useAudioPlayerStore.getState().currentChapterIndex + 1
+      const currentIdx = useAudioPlayerStore.getState().currentChapterIndex
+      const nextIndex = currentIdx + 1
       const chapters = bookRef.current?.chapters ?? []
+      // Dispatch cancelable chapterend — sleep timer EOC calls preventDefault()
+      // to block auto-advance and fade out instead
+      const event = new CustomEvent('chapterend', {
+        cancelable: true,
+        detail: { fromIndex: currentIdx, toIndex: nextIndex },
+      })
+      audio.dispatchEvent(event)
+      if (event.defaultPrevented) {
+        // Sleep timer (or other listener) intercepted — don't auto-advance
+        return
+      }
       if (nextIndex < chapters.length) {
         loadChapterInternalRef.current(nextIndex, true)
       } else {
@@ -255,11 +262,16 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
         const startTime = getChapterStartTime(chapters[i])
         if (currentTime >= startTime) {
           if (i !== currentIdx) {
-            // Chapter boundary crossed — dispatch custom event for sleep timer EOC
-            audio.dispatchEvent(
-              new CustomEvent('chapterend', { detail: { fromIndex: currentIdx, toIndex: i } })
-            )
+            // Always update the index first — prevents repeated chapterend dispatch on subsequent
+            // 500ms polls when the sleep timer's fade-out holds currentTime near the boundary.
             setCurrentChapterIndex(i)
+            // Dispatch cancelable event so the sleep timer EOC can intercept and fade out.
+            // defaultPrevented means the timer is handling the pause — no further action needed.
+            const evt = new CustomEvent('chapterend', {
+              cancelable: true,
+              detail: { fromIndex: currentIdx, toIndex: i },
+            })
+            audio.dispatchEvent(evt)
           }
           break
         }

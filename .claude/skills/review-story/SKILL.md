@@ -70,18 +70,19 @@ Consolidation happens ONLY through `finalize-review.sh` → downstream scripts.
 
 ```
 [ ] Identify story and detect resumption
+[ ] Detect review tier (lite/standard/full)
 [ ] Pre-checks (via run-prechecks.sh)
 [ ] Burn-in validation (if applicable)
 [ ] Lessons learned gate
 [ ] Deduplication scan (optional)
-[ ] Design review (Agent)
+[ ] Design review (Agent) [if tier >= standard + UI changes]
 [ ] Code review — architecture (Agent)
-[ ] Code review — testing (Agent)
-[ ] Performance benchmark (Agent)
+[ ] Code review — testing (Agent) [if tier >= standard]
+[ ] Performance benchmark (Agent) [if tier == full]
 [ ] Security review (Agent)
-[ ] Exploratory QA (Agent) [if UI changes]
-[ ] OpenAI adversarial review (Agent) [if available]
-[ ] GLM adversarial review (Agent) [if available]
+[ ] Exploratory QA (Agent) [if tier == full + UI changes]
+[ ] OpenAI adversarial review (Agent) [if tier == full + available]
+[ ] GLM adversarial review (Agent) [if tier == full + available]
 [ ] Consolidate findings and verdict
 ```
 
@@ -110,6 +111,56 @@ If `resuming == true`: inform "Resuming interrupted review. Previously passed ga
 If `previous_status == true`: inform "Story already reviewed — re-running full review."
 
 TodoWrite: Mark "Identify story and detect resumption" → `completed`. Mark "Pre-checks" → `in_progress`.
+
+### 1b. Detect review tier
+
+Detect diff scope to select the right review tier — skips unnecessary agents on small changes:
+
+```bash
+DIFF_LINES=$(git diff main --stat 2>/dev/null | tail -1 | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+' || echo "0")
+UI_FILE_COUNT=$(git diff main --name-only 2>/dev/null | grep -cE '\.(tsx|css)$' || echo "0")
+SECURITY_FILE_COUNT=$(git diff main --name-only 2>/dev/null | grep -cE '(auth|api|env|config|hook|payment|stripe)' || echo "0")
+NEW_PAGES=$(git diff main --name-only 2>/dev/null | grep -cE 'src/app/pages/' || echo "0")
+```
+
+**Tier selection:**
+
+| Condition | Tier | Agents dispatched |
+|-----------|------|-------------------|
+| `DIFF_LINES < 50` AND `UI_FILE_COUNT == 0` | **lite** | code-review + security-review |
+| `DIFF_LINES < 300` AND `NEW_PAGES == 0` | **standard** | code-review + code-review-testing + security-review + design-review (if UI) |
+| Otherwise | **full** | All 6 required + optional external |
+
+**Override conditions** — always use `full`:
+- `SECURITY_FILE_COUNT > 0` (auth/payment changes need security + full review regardless of size)
+- Resuming an interrupted review (use previous tier)
+
+```bash
+# Determine tier
+if [ "$SECURITY_FILE_COUNT" -gt 0 ] || [ "$NEW_PAGES" -gt 1 ]; then
+  REVIEW_SCOPE="full"
+elif [ "$DIFF_LINES" -lt 50 ] && [ "$UI_FILE_COUNT" -eq 0 ]; then
+  REVIEW_SCOPE="lite"
+elif [ "$DIFF_LINES" -lt 300 ] && [ "$NEW_PAGES" -eq 0 ]; then
+  REVIEW_SCOPE="standard"
+else
+  REVIEW_SCOPE="full"
+fi
+```
+
+**Confirm with user for non-full tiers:**
+
+```
+AskUserQuestion({
+  question: "Diff scope: ${DIFF_LINES} lines, ${UI_FILE_COUNT} UI files. Review tier: [TIER]. Proceed?",
+  options: [
+    { label: "Proceed with [TIER] tier (${agent_count} agents)", description: "..." },
+    { label: "Upgrade to full review (all 6 agents)", description: "Maximum coverage" }
+  ]
+})
+```
+
+Pass `REVIEW_SCOPE` to `prepare-dispatch.py` in Step 6.
 
 ### 2. Pre-checks (via run-prechecks.sh)
 
@@ -203,7 +254,7 @@ MANIFEST=$(python3 scripts/workflow/prepare-dispatch.py \
   --story-id=$STORY_ID \
   --base-path=$BASE_PATH \
   --has-ui-changes=$HAS_UI_CHANGES \
-  --review-scope=full \
+  --review-scope=$REVIEW_SCOPE \
   --gates-already-passed="$GATES_PASSED" \
   --resuming=$RESUMING \
   --gates-config=.claude/skills/review-story/config/gates.json)

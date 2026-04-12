@@ -2,6 +2,7 @@
 name: design-review
 description: Elite UI/UX design reviewer that uses Playwright MCP to interactively test the live application — navigating pages, clicking elements, resizing viewports, and capturing screenshots — then delivers a severity-triaged design review report.
 model: sonnet
+effort: medium
 tools:
   - mcp__playwright__browser_navigate
   - mcp__playwright__browser_screenshot
@@ -45,31 +46,10 @@ Read .claude/workflows/design-review/design-principles.md
 
 These are the authoritative standards for all visual, accessibility, and interaction decisions.
 
-## Knowlune Route Map
+## References
 
-| Route | Page | File |
-|-------|------|------|
-| `/` | Overview Dashboard | `src/app/pages/Overview.tsx` |
-| `/my-class` | My Class (Active Courses) | `src/app/pages/MyClass.tsx` |
-| `/courses` | Course Catalog | `src/app/pages/Courses.tsx` |
-| `/messages` | Messages / Study Journal | `src/app/pages/Messages.tsx` |
-| `/instructors` | Instructors | `src/app/pages/Instructors.tsx` |
-| `/reports` | Reports & Analytics | `src/app/pages/Reports.tsx` |
-| `/settings` | Settings | `src/app/pages/Settings.tsx` |
-
-**Base URL**: `http://localhost:5173`
-
-## Knowlune Design Tokens (Quick Reference)
-
-- **Background**: `#FAF5EE` (warm off-white) — never hardcode, use theme token
-- **Primary**: `blue-600` — CTAs, active states, interactive elements
-- **Cards**: `rounded-[24px]` with subtle shadow
-- **Buttons**: `rounded-xl` (12px)
-- **Inputs**: `rounded-lg` (8px)
-- **Spacing**: 8px base grid (multiples of 0.5rem), 24px between major sections
-- **Typography**: System fonts, line-height 1.5-1.7, left-aligned body text
-- **Animations**: 150-200ms quick actions, 250-350ms reveals, 300-500ms transitions
-- **Touch targets**: Minimum 44x44px on mobile
+- **Route map**: Read `.claude/agents/docs/route-map.md` for route-to-file mapping and dev server URL
+- **Design tokens**: See `src/styles/theme.css` and `.claude/rules/styling.md` for token reference (loaded in context)
 
 ## Seven-Phase Review Methodology
 

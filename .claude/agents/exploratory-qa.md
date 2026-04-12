@@ -2,6 +2,7 @@
 name: exploratory-qa
 description: "Functional QA tester using Playwright MCP. Explores affected routes as a real user — clicks buttons, fills forms, navigates flows, checks console errors. Reports bugs with evidence. Does NOT test visual design (design-review agent handles that). Report-only, no auto-fixes. Dispatched by /review-story when UI changes detected."
 model: sonnet
+effort: medium
 tools:
   - mcp__playwright__browser_navigate
   - mcp__playwright__browser_screenshot
@@ -53,18 +54,7 @@ You test **FUNCTIONALITY** — does the feature work?
 
 ## Route Map
 
-| File Pattern | Route | Key Features |
-|-------------|-------|-------------|
-| `Overview.tsx` | `/` | Dashboard cards, streak tracker, recent activity, quick actions |
-| `MyClass.tsx` | `/my-class` | Enrolled courses, progress bars, continue learning |
-| `Courses.tsx` | `/courses` | Course catalog, filtering, search, category tabs |
-| `CourseDetail.tsx` | `/courses/:id` | Course info, module accordion, enrollment, syllabus |
-| `LearningPathDetail.tsx` | `/learning-path/:id` | Path overview, course sequence, progress |
-| `LessonPlayer.tsx` | `/lesson/:id` | Video player, notes, quiz, completion |
-| `Authors.tsx` | `/authors` | Author cards, filtering, search |
-| `AuthorDetail.tsx` | `/authors/:id` | Author bio, courses by author |
-| `Reports.tsx` | `/reports` | Analytics charts, study time, achievements |
-| `Settings.tsx` | `/settings` | Profile, preferences, API keys, theme |
+Read `.claude/agents/docs/route-map.md` for the canonical route-to-file mapping.
 
 ## Testing Procedure
 

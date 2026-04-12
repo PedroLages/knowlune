@@ -42,9 +42,7 @@ const testAudiobookB = {
   format: 'audiobook' as const,
   status: 'reading' as const,
   progress: 5,
-  chapters: [
-    { title: 'Chapter 1', duration: 1800, src: '' },
-  ],
+  chapters: [{ title: 'Chapter 1', duration: 1800, src: '' }],
   source: { type: 'local' as const, opfsPath: '/test/book-b.m4b' },
   totalDuration: 1800,
   createdAt: FIXED_DATE,
@@ -126,7 +124,9 @@ test.describe('E111-S02: Skip Silence and Speed Memory', () => {
     await expect(page.getByTestId('skip-silence-active-indicator')).not.toBeVisible()
   })
 
-  test('AC-4: E108-S04 skip silence toggle wired to actual Web Audio detection', async ({ page }) => {
+  test('AC-4: E108-S04 skip silence toggle wired to actual Web Audio detection', async ({
+    page,
+  }) => {
     await page.goto(`/library/${testAudiobook.id}/read`)
 
     const settingsButton = page.getByTestId('audiobook-settings-button')
@@ -178,9 +178,11 @@ test.describe('E111-S02: Skip Silence and Speed Memory', () => {
     await expect(page.getByTestId('speed-button')).toContainText('1.5')
   })
 
-  test('AC-7: First-open book uses global default speed from audiobook preferences', async ({ page }) => {
+  test('AC-7: First-open book uses global default speed from audiobook preferences', async ({
+    page,
+  }) => {
     // Set global default speed to 1.25x in audiobook preferences
-    await page.evaluate((key) => {
+    await page.evaluate(key => {
       localStorage.setItem(key, JSON.stringify({ defaultSpeed: 1.25, skipSilence: false }))
     }, AUDIOBOOK_PREFS_KEY)
 
