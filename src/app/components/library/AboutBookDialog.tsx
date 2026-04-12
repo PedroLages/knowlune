@@ -20,7 +20,9 @@ import {
   DialogDescription,
 } from '@/app/components/ui/dialog'
 import { Badge } from '@/app/components/ui/badge'
+import { Separator } from '@/app/components/ui/separator'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
+import { BookReviewEditor } from './BookReviewEditor'
 
 interface AboutBookDialogProps {
   book: Book
@@ -182,6 +184,10 @@ export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogPro
               </div>
             </div>
           ) : null}
+
+          {/* Review & Rating */}
+          <Separator />
+          <BookReviewEditor bookId={book.id} />
         </div>
       </DialogContent>
     </Dialog>

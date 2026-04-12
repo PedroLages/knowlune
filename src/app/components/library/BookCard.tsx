@@ -16,7 +16,9 @@ import { BookOpen, Cloud, Headphones, ArrowRightLeft, Clock } from 'lucide-react
 import type { Book } from '@/data/types'
 import { BookStatusBadge } from './BookStatusBadge'
 import { FormatBadge } from './FormatBadge'
+import { StarRating } from './StarRating'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
+import { useBookReviewStore } from '@/stores/useBookReviewStore'
 
 /** Find the current chapter title based on playback position in seconds */
 function findCurrentChapterTitle(chapters: Book['chapters'], posSeconds: number): string {
@@ -49,6 +51,7 @@ interface BookCardProps {
 export const BookCard = memo(function BookCard({ book }: BookCardProps) {
   const navigate = useNavigate()
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
+  const review = useBookReviewStore(s => s.getReviewForBook(book.id))
 
   const readerPath =
     book.format === 'epub' || book.format === 'audiobook'
@@ -158,6 +161,11 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
                 : formatDuration(book.totalDuration)}
             </p>
           )}
+          {review?.rating ? (
+            <div className="mt-1 flex justify-center">
+              <StarRating value={review.rating} readonly size="sm" />
+            </div>
+          ) : null}
           {book.linkedBookId && (
             <p
               className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground mt-0.5"
@@ -231,6 +239,7 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
         {book.genre && (
           <p className="text-[11px] text-muted-foreground/70 truncate">{book.genre}</p>
         )}
+        {review?.rating ? <StarRating value={review.rating} readonly size="sm" /> : null}
         {book.totalDuration != null && book.totalDuration > 0 && (
           <p className="text-[10px] text-muted-foreground" data-testid={`duration-${book.id}`}>
             {formatDuration(book.totalDuration)}

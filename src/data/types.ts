@@ -739,6 +739,17 @@ export interface Book {
   playbackSpeed?: number // Per-book speed memory — overrides global default (E111-S02)
 }
 
+// --- Book Review Types (E113) ---
+
+export interface BookReview {
+  id: string // UUID v4
+  bookId: string // FK to Book.id
+  rating: number // 1-5, supports half-stars (e.g., 3.5)
+  reviewText?: string // Markdown-formatted personal review
+  createdAt: string // ISO 8601
+  updatedAt?: string // ISO 8601
+}
+
 export interface BookHighlight {
   id: string // UUID v4
   bookId: string
