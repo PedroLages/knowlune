@@ -660,7 +660,7 @@ export function BookReader() {
         data-testid="audiobook-reader"
       >
         {/* Minimal header for back navigation + bookmarks */}
-        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 bg-card/70 backdrop-blur-[32px] shadow-[0_4px_24px_-4px_rgba(27,28,21,0.06)] sticky top-0 z-10">
           <Button
             variant="ghost"
             size="icon"
