@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 47
+export const CHECKPOINT_VERSION = 48
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
@@ -88,6 +88,7 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   bookShelves: 'id, bookId, shelfId, [bookId+shelfId], addedAt',
   readingQueue: 'id, bookId, sortOrder, addedAt',
   audioClips: 'id, bookId, chapterId, createdAt, sortOrder',
+  bookReviews: 'id, bookId, createdAt',
 }
 
 // v42 (E109-S01): vocabularyItems table added
@@ -96,3 +97,4 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
 // v45 (E110-S02): series index added to books for series grouping
 // v46 (E110-S03): readingQueue table for reading queue
 // v47 (E111-S01): audioClips table for audio clip ranges
+// v48 (E113-S01): bookReviews table for personal book reviews & star ratings

@@ -38,6 +38,7 @@ import type {
   OpdsCatalog,
   AudiobookshelfServer,
   VocabularyItem,
+  BookReview,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA } from './checkpoint'
@@ -90,6 +91,7 @@ export type ElearningDatabase = Dexie & {
   bookShelves: EntityTable<import('@/data/types').BookShelfEntry, 'id'>
   readingQueue: EntityTable<import('@/data/types').ReadingQueueEntry, 'id'>
   audioClips: EntityTable<AudioClip, 'id'>
+  bookReviews: EntityTable<BookReview, 'id'>
 }
 
 /**
@@ -1312,6 +1314,10 @@ function _declareLegacyMigrations(database: Dexie): void {
   // E111-S01: Audio Clips — clippable audio ranges
   database.version(47).stores({
     audioClips: 'id, bookId, chapterId, createdAt, sortOrder',
+  })
+  // E113-S01: Book Reviews & Ratings — personal reviews with star ratings
+  database.version(48).stores({
+    bookReviews: 'id, bookId, createdAt',
   })
 } // end _declareLegacyMigrations
 
