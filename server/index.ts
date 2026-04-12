@@ -256,8 +256,13 @@ app.use('/api/abs/proxy', (req, res, next) => {
   const absPath = req.path || '/'
   if (absPath.endsWith('/cover')) {
     absCoverRateLimit(req, res, next)
-  } else if (absPath.startsWith('/s/') || absPath.includes('/stream/')) {
-    next() // Streaming exempt — see comment above absApiRateLimit
+  } else if (
+    absPath.startsWith('/s/') ||
+    absPath.includes('/stream/') ||
+    absPath.endsWith('/play') ||
+    absPath.includes('/session/')
+  ) {
+    next() // Streaming + playback exempt — user-initiated critical actions
   } else {
     absApiRateLimit(req, res, next)
   }
