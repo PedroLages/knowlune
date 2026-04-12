@@ -1362,8 +1362,8 @@ development_status:
   # Audio clips, skip silence, per-book speed memory, end-of-chapter sleep timer
   # Depends on: E107
   # ──────────────────────────────────────────────────
-  epic-111: in-progress
-  111-1-audio-clips: done
+  epic-111: backlog
+  111-1-audio-clips: review
   111-2-skip-silence-and-speed-memory: backlog
   111-3-sleep-timer-end-of-chapter: backlog
   epic-111-retrospective: optional
