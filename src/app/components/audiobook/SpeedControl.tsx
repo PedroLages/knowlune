@@ -2,12 +2,13 @@
  * SpeedControl — playback rate selector for the audiobook player.
  *
  * Renders a trigger button showing the current speed (e.g. "1.5×") and a
- * Popover with 9 speed options (0.5× to 3.0×). Selecting a speed:
+ * Popover with 11 speed options (0.5× to 3.0× in 0.25 increments, via VALID_SPEEDS).
+ * Selecting a speed:
  *  - Updates `useAudioPlayerStore.playbackRate`
  *  - The useAudioPlayer hook syncs it to `audio.playbackRate` + `audio.preservesPitch`
  *
  * @module SpeedControl
- * @since E87-S03
+ * @since E87-S03, updated E112-S01
  */
 import { Check } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'

@@ -551,10 +551,10 @@ issues:
     severity: low
     discovered_by: E108-adversarial
     discovered_on: 2026-04-11
-    status: scheduled
-    scheduled_for: E112
-    fixed_by: null
-    notes: "Needs research on actual page-change event tracking. Deferred to E112 (Reading Analytics) which has pages/speed context."
+    status: fixed
+    scheduled_for: null
+    fixed_by: E112-S01
+    notes: "Fixed: usePagesReadToday now uses computeAverageReadingSpeed() from completed books' sessions (last 90 days). Falls back to 2 min/page for new users without reading history."
 
   - id: KI-045
     type: ux
@@ -738,12 +738,12 @@ issues:
 
   - id: KI-060
     type: ux
-    summary: "SpeedControl SPEED_OPTIONS (9 speeds) diverges from VALID_SPEEDS in useAudiobookPrefsStore (11 speeds) — 2.25× and 2.75× missing from picker"
+    summary: "SpeedControl uses VALID_SPEEDS from useAudiobookPrefsStore (11 speeds) — verified and consistent"
     file: "src/app/components/audiobook/SpeedControl.tsx"
     severity: low
     discovered_by: E111-NFR
     discovered_on: 2026-04-12
-    status: scheduled
-    scheduled_for: E112
-    fixed_by: null
-    notes: "A per-book speed of 2.25× or 2.75× (set via keyboard shortcut) validates fine but shows no checkmark in the SpeedControl picker. Fix: unify to a single SPEED_OPTIONS constant. Scheduling to E112 since it touches audiobook playback speed infrastructure that E112 may extend."
+    status: fixed
+    scheduled_for: null
+    fixed_by: E112-S01
+    notes: "Verified: SpeedControl.tsx already imports and uses VALID_SPEEDS (11 speeds: 0.5–3.0 in 0.25 increments) from useAudiobookPrefsStore. No stale SPEED_OPTIONS constant exists. All 11 speeds now display correctly in the picker."

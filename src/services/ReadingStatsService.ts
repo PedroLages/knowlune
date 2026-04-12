@@ -96,6 +96,59 @@ export async function computeAverageReadingSpeed(): Promise<number | null> {
 }
 
 /**
+ * Compute ETA (estimated finish date) for a book in progress.
+ * Uses the user's average reading speed from recent sessions (last 30 days).
+ * Returns "≈ N days" or "≈ X weeks" format, or "—" if insufficient data.
+ * Returns null if the book is not in progress or has insufficient data.
+ *
+ * Formula: remainingPages / avgPagesPerDay where avgPagesPerDay = avgSpeedPagesPerHour * (dailyReadingHours)
+ */
+export async function computeETA(
+  book: { id: string; status?: string; totalPages?: number; progress?: number },
+  avgSpeedPagesPerHour: number | null
+): Promise<string | null> {
+  // Only compute ETA for in-progress books
+  if (book.status !== 'reading') return null
+  if (!book.totalPages || !avgSpeedPagesPerHour) return null
+
+  const sessions = await getBookSessions()
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+  // Filter sessions for this book in the last 30 days
+  let totalSeconds = 0
+  let sessionCount = 0
+
+  for (const session of sessions) {
+    if (session.contentItemId !== book.id) continue
+    if (!session.startTime) continue
+
+    const sessionDate = new Date(session.startTime)
+    if (sessionDate < thirtyDaysAgo) continue
+
+    totalSeconds += session.duration ?? 0
+    sessionCount++
+  }
+
+  // Insufficient data for ETA
+  if (totalSeconds === 0 || sessionCount === 0) return null
+
+  const avgPagesPerDay = avgSpeedPagesPerHour * (totalSeconds / 3600) / (sessionCount / 7) // avg pages per day estimate
+  const remainingPages = Math.round((1 - (book.progress ?? 0) / 100) * book.totalPages)
+
+  if (remainingPages <= 0) return null
+
+  const etaDays = Math.ceil(remainingPages / Math.max(avgPagesPerDay, 0.1))
+
+  if (etaDays > 14) {
+    const weeks = Math.ceil(etaDays / 7)
+    return `≈ ${weeks} ${weeks === 1 ? 'week' : 'weeks'}`
+  }
+
+  return `≈ ${etaDays} ${etaDays === 1 ? 'day' : 'days'}`
+}
+
+/**
  * Get time-of-day pattern from reading sessions.
  * Buckets: Morning [5, 12), Afternoon [12, 17), Evening [17, 21), Night [21, 5)
  * Night wraps around midnight — hour < 5 || hour >= 21.

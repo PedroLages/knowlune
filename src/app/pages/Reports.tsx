@@ -317,6 +317,11 @@ export default function Reports() {
                 <ReadingStatsSection />
               </motion.div>
 
+              {/* ── Reading Patterns Card (E112-S01) — shown when 7+ sessions exist ── */}
+              <motion.div variants={fadeUp}>
+                <ReadingPatternsCard />
+              </motion.div>
+
               {/* ── Reading Goals Card (E86-S05) — shown when reading goal is set ── */}
               <motion.div variants={fadeUp}>
                 <ReadingGoalsCard />
