@@ -9,8 +9,8 @@
 
 | Story | Name | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|------|--------|--------|---------------|--------------|
-| E112-S01 | Reading Speed, ETA & Time-of-Day Patterns | ready-for-dev | — | — | — |
-| E112-S02 | Genre Distribution & Reading Reports | ready-for-dev | — | — | — |
+| E112-S01 | Reading Speed, ETA & Time-of-Day Patterns | in-progress (impl) | — | — | — |
+| E112-S02 | Genre Distribution & Reading Reports | queued | — | — | — |
 
 ## Known Issues Scheduled for This Epic
 
@@ -44,3 +44,4 @@
 | Date | Step | Outcome |
 |------|------|---------|
 | 2026-04-12 | Phase 0 complete — stories created, sprint-status updated | Ready to execute |
+| 2026-04-12 | Story Agent (E112-S01) dispatched | Implementing AC1-AC5 + unit tests + KI fixes |

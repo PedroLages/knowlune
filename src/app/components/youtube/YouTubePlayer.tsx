@@ -265,26 +265,26 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
       )
     }
 
+    // DEBUG: Direct iframe test — bypasses react-youtube to isolate the issue
+    const startParam = initialPosition > 0 ? `&start=${Math.floor(initialPosition)}` : ''
+    const iframeSrc = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&modestbranding=1&rel=0${startParam}&origin=${encodeURIComponent(window.location.origin)}`
+
     return (
       <div className="aspect-video w-full relative" data-testid="youtube-player-container">
-        <YouTube
-          videoId={videoId}
-          opts={{
-            host: 'https://www.youtube.com',
-            width: '100%',
-            height: '100%',
-            playerVars: {
-              autoplay: 0,
-              modestbranding: 1,
-              rel: 0,
-              start: initialPosition > 0 ? Math.floor(initialPosition) : undefined,
-              origin: window.location.origin,
-            },
+        <iframe
+          src={iframeSrc}
+          className="w-full h-full rounded-xl"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          onLoad={() => {
+            console.log('[YouTubePlayer] Direct iframe loaded successfully')
+            setIsReady(true)
           }}
-          className="w-full h-full [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:rounded-xl"
-          onReady={handleReady}
-          onStateChange={handleStateChange}
-          onError={handleError}
+          onError={() => {
+            console.error('[YouTubePlayer] Direct iframe failed to load')
+            setLoadFailed(true)
+            setIsReady(true)
+          }}
         />
         {!isReady && (
           <div

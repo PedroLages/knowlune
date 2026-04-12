@@ -108,15 +108,16 @@ export function ReadingStatsSection() {
         Reading
       </h2>
 
-      {/* Stat pills row */}
+      {/* Stat pills row — 4 columns: Read Today, In Progress, Finished, Avg Speed */}
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Skeleton className="h-20 rounded-xl" />
           <Skeleton className="h-20 rounded-xl" />
           <Skeleton className="h-20 rounded-xl" />
           <Skeleton className="h-20 rounded-xl" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatPill
             icon={<Clock className="size-3.5" aria-hidden="true" />}
             label="Read Today"
@@ -134,6 +135,12 @@ export function ReadingStatsSection() {
             label="Books Finished"
             value={stats?.totalBooksFinished ?? 0}
             data-testid="reading-stat-finished"
+          />
+          <StatPill
+            icon={<BookOpen className="size-3.5" aria-hidden="true" />}
+            label="Avg Speed"
+            value={stats?.avgReadingSpeedPagesPerHour ? `${stats.avgReadingSpeedPagesPerHour} p/h` : '—'}
+            data-testid="reading-stat-avg-speed"
           />
         </div>
       )}

@@ -46,6 +46,7 @@ import { RecentActivityTimeline } from '@/app/components/reports/RecentActivityT
 import { ActivityHeatmap } from '@/app/components/reports/ActivityHeatmap'
 import { QuizExportCard } from '@/app/components/reports/QuizExportCard'
 import { ReadingStatsSection } from '@/app/components/reports/ReadingStatsSection'
+import { ReadingPatternsCard } from '@/app/components/reports/ReadingPatternsCard'
 import { ReadingGoalsCard } from '@/app/components/reports/ReadingGoalsCard'
 import { toast } from 'sonner'
 import { staggerContainer, fadeUp } from '@/lib/motion'

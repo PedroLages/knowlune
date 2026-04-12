@@ -17,10 +17,22 @@ export interface ReadingTimePoint {
   minutes: number
 }
 
+export interface TimeOfDayBucket {
+  period: 'Morning' | 'Afternoon' | 'Evening' | 'Night'
+  count: number
+  percentage: number
+}
+
+export interface TimeOfDayPattern {
+  buckets: TimeOfDayBucket[]
+  dominant: 'Morning' | 'Afternoon' | 'Evening' | 'Night' | null
+}
+
 export interface ReadingStats {
   timeReadTodayMinutes: number
   booksInProgress: number
   totalBooksFinished: number
+  avgReadingSpeedPagesPerHour: number | null
   readingTrend: ReadingTimePoint[] // Last 14 days
 }
 
@@ -31,6 +43,101 @@ export interface ReadingStats {
  */
 async function getBookSessions() {
   return db.studySessions.where('courseId').equals('').toArray()
+}
+
+/**
+ * Compute average reading speed (pages/hour) from finished books.
+ * Aggregates all sessions across finished books (last 90 days) and computes total pages / total hours.
+ * Returns null if insufficient data or no finished books exist.
+ * Used by usePagesReadToday for accurate page estimation and by ReadingStatsSection for display.
+ *
+ * Formula: totalPages / (totalReadingSeconds / 3600)
+ */
+export async function computeAverageReadingSpeed(): Promise<number | null> {
+  const sessions = await getBookSessions()
+  const finishedBooks = await db.books.where('status').equals('finished').toArray()
+
+  if (finishedBooks.length === 0) return null
+
+  const finishedBookIds = new Set(finishedBooks.map(b => b.id))
+  const ninetyDaysAgo = new Date()
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+
+  let totalSeconds = 0
+  let totalPages = 0
+  const bookPagesMap = new Map<string, number>()
+
+  for (const book of finishedBooks) {
+    if (book.totalPages) {
+      bookPagesMap.set(book.id, book.totalPages)
+      totalPages += book.totalPages
+    }
+  }
+
+  if (totalPages === 0) return null
+
+  // Sum session duration for finished books in last 90 days
+  for (const session of sessions) {
+    const bookId = session.contentItemId
+    if (!bookId || !finishedBookIds.has(bookId)) continue
+    if (!session.startTime) continue
+
+    const sessionDate = new Date(session.startTime)
+    if (sessionDate < ninetyDaysAgo) continue
+
+    totalSeconds += session.duration ?? 0
+  }
+
+  if (totalSeconds === 0) return null
+
+  // pages/hour = pages / (seconds / 3600) = (pages * 3600) / seconds
+  const pagesPerHour = (totalPages * 3600) / totalSeconds
+  return Math.round(pagesPerHour)
+}
+
+/**
+ * Get time-of-day pattern from reading sessions.
+ * Buckets: Morning [5, 12), Afternoon [12, 17), Evening [17, 21), Night [21, 5)
+ * Night wraps around midnight — hour < 5 || hour >= 21.
+ * Returns null if fewer than 7 sessions exist.
+ */
+export async function getTimeOfDayPattern(): Promise<TimeOfDayPattern | null> {
+  const sessions = await getBookSessions()
+
+  if (sessions.length < 7) return null
+
+  const buckets = {
+    Morning: 0,
+    Afternoon: 0,
+    Evening: 0,
+    Night: 0,
+  }
+
+  for (const session of sessions) {
+    if (!session.startTime) continue
+    const hour = new Date(session.startTime).getHours()
+
+    if (hour >= 5 && hour < 12) buckets.Morning++
+    else if (hour >= 12 && hour < 17) buckets.Afternoon++
+    else if (hour >= 17 && hour < 21) buckets.Evening++
+    else buckets.Night++ // 21-4:59
+  }
+
+  const total = Object.values(buckets).reduce((sum, v) => sum + v, 0)
+  if (total === 0) return null
+
+  const dominant = (
+    Object.entries(buckets).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null
+  ) as 'Morning' | 'Afternoon' | 'Evening' | 'Night' | null
+
+  return {
+    buckets: Object.entries(buckets).map(([period, count]) => ({
+      period: period as 'Morning' | 'Afternoon' | 'Evening' | 'Night',
+      count,
+      percentage: Math.round((count / total) * 100),
+    })),
+    dominant,
+  }
 }
 
 /**
@@ -96,16 +203,18 @@ export async function getBookStatusCounts(): Promise<{ inProgress: number; finis
  * Fetch all reading statistics in a single call.
  */
 export async function getReadingStats(): Promise<ReadingStats> {
-  const [timeReadTodayMinutes, readingTrend, { inProgress, finished }] = await Promise.all([
+  const [timeReadTodayMinutes, readingTrend, { inProgress, finished }, avgSpeed] = await Promise.all([
     getTimeReadToday(),
     getReadingTimeTrend(14),
     getBookStatusCounts(),
+    computeAverageReadingSpeed(),
   ])
 
   return {
     timeReadTodayMinutes,
     booksInProgress: inProgress,
     totalBooksFinished: finished,
+    avgReadingSpeedPagesPerHour: avgSpeed,
     readingTrend,
   }
 }
