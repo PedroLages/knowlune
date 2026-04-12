@@ -3,7 +3,7 @@
  *
  * Features:
  * - Countdown mode: 15, 30, 45, or 60 minutes using setInterval
- * - End-of-chapter mode: listens for the audio 'ended' event
+ * - End-of-chapter mode: listens for the custom 'chapterend' event
  * - On expiry: rAF-based volume fade-out over 5 seconds, then pause
  * - Persists `sleepTimerEnded` flag in localStorage for post-sleep toast
  *
@@ -18,7 +18,7 @@ const FADE_DURATION_MS = 5_000
 const LS_KEY = 'knowlune:sleep-timer-ended'
 
 /** Fade audio volume to 0 over FADE_DURATION_MS, then pause and restore volume. */
-function fadeOutAndPause(audio: HTMLAudioElement, onDone: () => void): void {
+export function fadeOutAndPause(audio: HTMLAudioElement, onDone: () => void): void {
   const startVolume = audio.volume
   const startTime = performance.now()
 
@@ -87,22 +87,29 @@ export function useSleepTimer(): UseSleepTimerReturn {
       setActiveOption(option)
 
       if (option === 'end-of-chapter') {
-        // Listen for the audio ended event on the current chapter (multi-file)
-        // AND the custom 'chapterend' event (single-file M4B — dispatched by useAudioPlayer)
-        const handleChapterEnd = () => {
+        // Listen ONLY for 'chapterend' — NOT 'ended'.
+        // 'ended' races with useAudioPlayer's auto-advance handler (which also
+        // listens to 'ended' and immediately loads the next chapter). Listening
+        // to both causes unpredictable behavior where the next chapter may
+        // briefly start before the pause takes effect.
+        // useAudioPlayer dispatches 'chapterend' for both single-file M4B
+        // (chapter boundary detection) and multi-file (after auto-advance).
+        const handleChapterEnd = (e: Event) => {
+          // Prevent useAudioPlayer from auto-advancing to next chapter
+          e.preventDefault()
           const audio = audioRef.current
           if (!audio) return
-          localStorage.setItem(LS_KEY, '1')
-          setActiveOption(null)
-          setRemainingSeconds(null)
-          onPause()
+          fadeOutAndPause(audio, () => {
+            localStorage.setItem(LS_KEY, '1')
+            setActiveOption(null)
+            setRemainingSeconds(null)
+            onPause()
+          })
         }
         const audio = audioRef.current
         if (audio) {
-          audio.addEventListener('ended', handleChapterEnd)
           audio.addEventListener('chapterend', handleChapterEnd)
           eocCleanupRef.current = () => {
-            audio.removeEventListener('ended', handleChapterEnd)
             audio.removeEventListener('chapterend', handleChapterEnd)
           }
         }

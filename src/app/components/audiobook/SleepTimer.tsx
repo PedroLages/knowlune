@@ -18,6 +18,8 @@ interface SleepTimerProps {
   activeOption: SleepTimerOption | null
   badgeText: string | null
   onSelect: (option: SleepTimerOption) => void
+  /** Chapter progress 0–100, shown when EOC is active. Null hides the bar. */
+  chapterProgressPercent?: number | null
 }
 
 const PRESET_OPTIONS: { value: SleepTimerOption; label: string }[] = [
@@ -32,7 +34,12 @@ const SUFFIX_OPTIONS: { value: SleepTimerOption; label: string }[] = [
   { value: 'off', label: 'Off' },
 ]
 
-export function SleepTimer({ activeOption, badgeText, onSelect }: SleepTimerProps) {
+export function SleepTimer({
+  activeOption,
+  badgeText,
+  onSelect,
+  chapterProgressPercent,
+}: SleepTimerProps) {
   const [showCustom, setShowCustom] = useState(false)
   const [customValue, setCustomValue] = useState('')
   const customInputRef = useRef<HTMLInputElement>(null)
@@ -83,6 +90,7 @@ export function SleepTimer({ activeOption, badgeText, onSelect }: SleepTimerProp
           size="sm"
           className="relative min-h-[44px] min-w-[44px] px-3 text-muted-foreground hover:text-foreground"
           aria-label={activeOption ? `Sleep timer: ${badgeText ?? 'active'}` : 'Sleep timer'}
+          data-testid="sleep-timer-button"
         >
           <Moon className="size-5" aria-hidden="true" />
           {badgeText && (
@@ -96,6 +104,24 @@ export function SleepTimer({ activeOption, badgeText, onSelect }: SleepTimerProp
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-52 p-1" align="center">
+        {activeOption === 'end-of-chapter' && chapterProgressPercent != null && (
+          <div className="px-3 pb-1.5 pt-2" data-testid="chapter-progress-bar">
+            <span className="text-xs text-muted-foreground">Chapter progress</span>
+            <div
+              className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-valuenow={Math.round(chapterProgressPercent)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Current chapter progress"
+            >
+              <div
+                className="h-full rounded-full bg-brand transition-[width] duration-300"
+                style={{ width: `${Math.min(100, Math.max(0, chapterProgressPercent))}%` }}
+              />
+            </div>
+          </div>
+        )}
         <ul role="listbox" aria-label="Sleep timer">
           {PRESET_OPTIONS.map(renderOption)}
 
