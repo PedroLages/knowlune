@@ -7,10 +7,11 @@
  */
 
 import { useNavigate } from 'react-router'
-import { formatDistanceToNow } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
+import { Progress } from '@/app/components/ui/progress'
 import { tierBadgeClass, tierLabel } from '@/lib/knowledgeTierUtils'
 import type { ScoredTopic } from '@/stores/useKnowledgeMapStore'
 import type { SuggestedAction, ConfidenceLevel } from '@/lib/knowledgeScore'
@@ -59,6 +60,73 @@ function formatPercent(value: number | null): string {
 
 function formatWeight(value: number): string {
   return `${Math.round(value * 100)}%`
+}
+
+/**
+ * Memory Decay section for TopicDetailPopover (E62-S02).
+ * Shows retention percentage, decay prediction, and urgency badge.
+ */
+function MemoryDecaySection({
+  aggregateRetention,
+  predictedDecayDate,
+}: {
+  aggregateRetention: number
+  predictedDecayDate: string | null
+}) {
+  const decayInfo = getDecayInfo(predictedDecayDate)
+
+  return (
+    <div className="mb-3 pt-2 border-t border-border space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">Memory Decay</span>
+        {decayInfo && (
+          <Badge variant={decayInfo.badgeVariant} className="text-[10px] px-1.5 py-0">
+            {decayInfo.label}
+          </Badge>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <Progress
+          value={aggregateRetention}
+          className="h-2 flex-1"
+          aria-label={`Retention: ${aggregateRetention}%`}
+        />
+        <span className="text-xs font-medium tabular-nums w-8 text-right">
+          {aggregateRetention}%
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function getDecayInfo(
+  predictedDecayDate: string | null
+): { label: string; badgeVariant: 'destructive' | 'default' | 'outline' } | null {
+  if (!predictedDecayDate) return null
+
+  const now = new Date()
+  const decayDate = new Date(predictedDecayDate)
+  const daysUntil = Math.ceil((decayDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (daysUntil < 0) {
+    return { label: 'Already fading', badgeVariant: 'destructive' }
+  }
+  if (daysUntil < 7) {
+    return {
+      label: `Fading in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}`,
+      badgeVariant: 'destructive',
+    }
+  }
+  if (daysUntil <= 30) {
+    return {
+      label: `Fading by ${format(decayDate, 'MMM d')}`,
+      badgeVariant: 'default',
+    }
+  }
+  return {
+    label: `Stable until ${format(decayDate, 'MMM d')}`,
+    badgeVariant: 'outline',
+  }
 }
 
 export function TopicDetailPopover({
@@ -130,6 +198,14 @@ export function TopicDetailPopover({
             <span className="font-medium">{Math.round(factors.recencyScore)}%</span>
           </div>
         </div>
+
+        {/* Memory Decay section (E62-S02) — only shown when FSRS retention data exists */}
+        {topic.aggregateRetention !== null && (
+          <MemoryDecaySection
+            aggregateRetention={topic.aggregateRetention}
+            predictedDecayDate={topic.predictedDecayDate}
+          />
+        )}
 
         {/* Confidence + last engagement */}
         <div className="flex items-center justify-between text-xs text-muted-foreground mb-4 pt-2 border-t border-border">

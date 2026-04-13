@@ -53,6 +53,8 @@ export function KnowledgeMap() {
     size: Math.max(t.courseIds.length, 1),
     score: t.scoreResult.score,
     tier: t.scoreResult.tier,
+    aggregateRetention: t.aggregateRetention,
+    predictedDecayDate: t.predictedDecayDate,
   }))
 
   const categoryNames = [ALL_CATEGORIES, ...categories.map(c => c.category)]
