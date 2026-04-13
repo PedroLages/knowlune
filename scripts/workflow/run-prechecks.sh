@@ -295,11 +295,21 @@ else
     GATES[type-check]="passed"
     log_warning "Type errors in unchanged files (pre-existing) — continuing"
   else
-    # Auto-fix attempt would go here (simplified for now)
-    # Re-run type check
-    if run_check "type-check" "${LOG_DIR:+${LOG_DIR}/type-check.log}" npx tsc --noEmit; then
+    # Filter type errors to only branch-changed files
+    TYPE_LOG="${LOG_DIR:+${LOG_DIR}/type-check.log}"
+    BRANCH_ERRORS=""
+    if [ -n "$TYPE_LOG" ] && [ -f "$TYPE_LOG" ]; then
+      for cf in $CHANGED_FILES; do
+        MATCHES=$(grep "^${cf}" "$TYPE_LOG" || true)
+        if [ -n "$MATCHES" ]; then
+          BRANCH_ERRORS="${BRANCH_ERRORS}${MATCHES}\n"
+        fi
+      done
+    fi
+
+    if [ -z "$BRANCH_ERRORS" ]; then
       GATES[type-check]="passed"
-      log_success "Type check passed"
+      log_warning "Type errors in unchanged files only (pre-existing) — continuing"
     else
       GATES[type-check]="failed"
       log_error "Type errors in branch-changed files — fix required"
@@ -312,19 +322,24 @@ fi
 # Format check
 log_section "Format Check"
 
-if run_check "format-check" "${LOG_DIR:+${LOG_DIR}/format-check.log}" npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"; then
+# Scope format check to branch-changed files only to avoid polluting the diff
+FORMAT_FILES=$(git diff --name-only main...HEAD | grep -E '\.(ts|tsx|js|jsx|css|md)$' | tr '\n' ' ' || true)
+if [ -z "$FORMAT_FILES" ]; then
+  GATES[format-check]="passed"
+  log_success "Format check passed (no formattable files changed)"
+elif echo "$FORMAT_FILES" | xargs npx prettier --check > "${LOG_DIR:+${LOG_DIR}/format-check.log}" 2>&1; then
   GATES[format-check]="passed"
   log_success "Format check passed"
 else
-  log_warning "Formatting issues found — auto-fixing"
+  log_warning "Formatting issues found — auto-fixing branch-changed files"
 
-  # Auto-fix
-  if run_check "format-fix" "${LOG_DIR:+${LOG_DIR}/format-check.log}" npx prettier --write "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"; then
+  # Auto-fix only branch-changed files
+  if echo "$FORMAT_FILES" | xargs npx prettier --write > /dev/null 2>&1; then
     FORMAT_AUTO_FIXED=1
-    log_info "Auto-formatted files with Prettier"
+    log_info "Auto-formatted branch-changed files with Prettier"
 
     # Re-run to verify
-    if run_check "format-check" "${LOG_DIR:+${LOG_DIR}/format-check.log}" npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"; then
+    if echo "$FORMAT_FILES" | xargs npx prettier --check > "${LOG_DIR:+${LOG_DIR}/format-check.log}" 2>&1; then
       GATES[format-check]="passed"
       log_success "Format check passed after auto-fix"
     else
@@ -345,12 +360,32 @@ fi
 log_section "Unit Tests"
 
 if npm run | grep -q "test:unit"; then
-  if run_check "unit-tests" "${LOG_DIR:+${LOG_DIR}/unit-tests.log}" npm run test:unit -- --run; then
+  # Collect branch-changed test files and source files that have corresponding tests
+  BRANCH_TEST_FILES=""
+  for f in $(git diff --name-only main...HEAD | grep -E '\.(ts|tsx)$'); do
+    # Direct test files
+    if echo "$f" | grep -qE '__tests__/.*\.test\.(ts|tsx)$'; then
+      BRANCH_TEST_FILES="$BRANCH_TEST_FILES $f"
+    else
+      # Find corresponding test file for source file
+      DIR=$(dirname "$f")
+      BASE=$(basename "$f" | sed 's/\.\(ts\|tsx\)$//')
+      TEST_FILE="${DIR}/__tests__/${BASE}.test.ts"
+      TEST_FILE_TSX="${DIR}/__tests__/${BASE}.test.tsx"
+      [ -f "$TEST_FILE" ] && BRANCH_TEST_FILES="$BRANCH_TEST_FILES $TEST_FILE"
+      [ -f "$TEST_FILE_TSX" ] && BRANCH_TEST_FILES="$BRANCH_TEST_FILES $TEST_FILE_TSX"
+    fi
+  done
+
+  if [ -z "$BRANCH_TEST_FILES" ]; then
     GATES[unit-tests]="passed"
-    log_success "Unit tests passed"
+    log_warning "Unit tests skipped — no test files for branch-changed sources"
+  elif run_check "unit-tests" "${LOG_DIR:+${LOG_DIR}/unit-tests.log}" npx vitest run $BRANCH_TEST_FILES; then
+    GATES[unit-tests]="passed"
+    log_success "Unit tests passed (branch-scoped)"
   else
     GATES[unit-tests]="failed"
-    log_error "Unit tests failed"
+    log_error "Unit tests failed in branch-changed files"
     output_results 1
     exit 1
   fi

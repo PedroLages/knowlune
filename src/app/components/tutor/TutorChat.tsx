@@ -49,18 +49,26 @@ export function TutorChat({
   lessonPosition,
   videoPositionSeconds = 0,
 }: TutorChatProps) {
-  const { messages, isGenerating, error, transcriptStatus, mode, sendMessage, clearConversation, setMode } =
-    useTutor({
-      courseId,
-      lessonId,
-      courseName,
-      lessonTitle,
-      lessonPosition,
-      videoPositionSeconds,
-    })
+  const {
+    messages,
+    isGenerating,
+    error,
+    transcriptStatus,
+    mode,
+    sendMessage,
+    clearConversation,
+    setMode,
+  } = useTutor({
+    courseId,
+    lessonId,
+    courseName,
+    lessonTitle,
+    lessonPosition,
+    videoPositionSeconds,
+  })
 
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
-  const { learnerModel, clearLearnerModel, updateLearnerModel, replaceLearnerModelFields } = useTutorStore()
+  const { learnerModel, clearLearnerModel, replaceLearnerModelFields } = useTutorStore()
 
   // Determine badge status — use hook's transcriptStatus or fallback
   const badgeStatus: TranscriptStatus = transcriptStatus ?? {
@@ -83,15 +91,14 @@ export function TutorChat({
       <div className="px-4 py-2 border-b border-border flex items-center gap-2">
         <TranscriptBadge
           status={
-            isOffline
-              ? { available: false, strategy: 'none', label: 'Offline' }
-              : badgeStatus
+            isOffline ? { available: false, strategy: 'none', label: 'Offline' } : badgeStatus
           }
         />
         <TutorModeChips
           mode={mode}
           onModeChange={setMode}
           disabled={isGenerating || isOffline || isPremiumGated}
+          hasTranscript={badgeStatus.available}
         />
         <div className="ml-auto">
           {messages.length > 0 && (
@@ -136,13 +143,16 @@ export function TutorChat({
       />
       <div className="flex-1 overflow-hidden">
         {messages.length === 0 ? (
-          <TutorEmptyState lessonTitle={lessonTitle} />
+          <TutorEmptyState lessonTitle={lessonTitle} mode={mode} onSendMessage={sendMessage} />
         ) : (
           <MessageList messages={messages} isStreaming={isGenerating} />
         )}
       </div>
       {(isOffline || isPremiumGated) && (
-        <div role="alert" className="px-4 py-2 text-sm text-destructive bg-destructive/10 border-t border-border">
+        <div
+          role="alert"
+          className="px-4 py-2 text-sm text-destructive bg-destructive/10 border-t border-border"
+        >
           {isOffline ? LLM_ERROR_MESSAGES.OFFLINE : LLM_ERROR_MESSAGES.PREMIUM}
         </div>
       )}

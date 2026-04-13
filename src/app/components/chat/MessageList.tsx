@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import type { ChatMessage } from '@/ai/rag/types'
 import { MessageBubble } from './MessageBubble'
 import { EmptyState } from './EmptyState'
+import { ModeTransitionMessage } from '@/app/components/tutor/ModeTransitionMessage'
 
 interface MessageListProps {
   /** Array of messages to display */
@@ -53,7 +54,21 @@ export function MessageList({ messages, isStreaming }: MessageListProps) {
           const isLastMessage = index === messages.length - 1
           const showStreaming = isStreaming && isLastMessage && message.role === 'assistant'
 
-          return <MessageBubble key={message.id} message={message} isStreaming={showStreaming} showModeBadge={isMultiMode} />
+          // Show mode transition divider when adjacent messages have different modes (E73-S01)
+          const prevMessage = index > 0 ? messages[index - 1] : null
+          const showTransition =
+            isMultiMode && prevMessage?.mode && message.mode && prevMessage.mode !== message.mode
+
+          return (
+            <div key={message.id}>
+              {showTransition && message.mode && <ModeTransitionMessage newMode={message.mode} />}
+              <MessageBubble
+                message={message}
+                isStreaming={showStreaming}
+                showModeBadge={isMultiMode}
+              />
+            </div>
+          )
         })}
 
         {/* Invisible element to scroll to */}

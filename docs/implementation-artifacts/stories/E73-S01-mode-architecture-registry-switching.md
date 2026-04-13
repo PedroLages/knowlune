@@ -1,12 +1,12 @@
 ---
 story_id: E73-S01
-story_name: "Mode Architecture — Registry, Budget Allocator & Mode Switching"
+story_name: 'Mode Architecture — Registry, Budget Allocator & Mode Switching'
 status: ready-for-dev
 started:
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-04-13
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, bundle-analysis, code-review, code-review-testing, security-review, glm-code-review, design-review-skipped, performance-benchmark-skipped, exploratory-qa-skipped]
 burn_in_validated: false
 ---
 

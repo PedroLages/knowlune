@@ -44,6 +44,10 @@ interface TutorState {
   /** Current lesson context for persistence */
   _courseId: string | null
   _videoId: string | null
+  /** History of mode switches (E73-S01) */
+  modeHistory: TutorMode[]
+  /** Mode transition context string for the next LLM call (E73-S01) */
+  modeTransitionContext: string | null
 
   /** Add a message to the conversation */
   addMessage: (message: ChatMessage) => void
@@ -55,6 +59,10 @@ interface TutorState {
   setStreamingContent: (content: string) => void
   /** Set the tutor mode */
   setMode: (mode: TutorMode) => void
+  /** Switch mode with history tracking and transition context (E73-S01) */
+  switchMode: (newMode: TutorMode) => void
+  /** Consume and clear the mode transition context (E73-S01) */
+  consumeTransitionContext: () => string | null
   /** Set the hint level */
   setHintLevel: (level: number) => void
   /** Set the stuck count for auto-escalation tracking */
@@ -80,7 +88,10 @@ interface TutorState {
   /** Update learner model with additive merge (E72-S01) */
   updateLearnerModel: (courseId: string, updates: Partial<LearnerModel>) => Promise<void>
   /** Replace specific array fields with overwrite semantics — for UI-initiated edits (B2 fix) */
-  replaceLearnerModelFields: (courseId: string, fields: Partial<Pick<LearnerModel, 'strengths' | 'misconceptions' | 'topicsExplored'>>) => Promise<void>
+  replaceLearnerModelFields: (
+    courseId: string,
+    fields: Partial<Pick<LearnerModel, 'strengths' | 'misconceptions' | 'topicsExplored'>>
+  ) => Promise<void>
   /** Clear learner model for a course (E72-S01) */
   clearLearnerModel: (courseId: string) => Promise<void>
 }
@@ -121,6 +132,8 @@ export const useTutorStore = create<TutorState>((set, get) => ({
   conversationId: null,
   _courseId: null,
   _videoId: null,
+  modeHistory: [],
+  modeTransitionContext: null,
 
   setLessonContext: (courseId: string, videoId: string) => {
     set({ _courseId: courseId, _videoId: videoId })
@@ -175,6 +188,35 @@ export const useTutorStore = create<TutorState>((set, get) => ({
 
   setMode: (mode: TutorMode) => {
     set({ mode, hintLevel: 0, stuckCount: 0 })
+  },
+
+  switchMode: (newMode: TutorMode) => {
+    const { mode: previousMode, messages } = get()
+    if (newMode === previousMode) return
+
+    // Extract last topic from the most recent user message
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
+    const lastTopic = lastUserMsg ? lastUserMsg.content.slice(0, 100) : 'the current topic'
+
+    const transitionContext = `The user switched from ${previousMode} to ${newMode}. Acknowledge briefly and begin operating in ${newMode} mode about the topic: ${lastTopic}.`
+
+    const MAX_MODE_HISTORY = 50
+    set(state => ({
+      mode: newMode,
+      hintLevel: 0,
+      stuckCount: 0,
+      modeHistory: [...state.modeHistory, previousMode].slice(-MAX_MODE_HISTORY),
+      modeTransitionContext: transitionContext,
+    }))
+  },
+
+  consumeTransitionContext: () => {
+    let captured: string | null = null
+    set(state => {
+      captured = state.modeTransitionContext
+      return { modeTransitionContext: null }
+    })
+    return captured
   },
 
   setHintLevel: (level: number) => {
@@ -313,7 +355,10 @@ export const useTutorStore = create<TutorState>((set, get) => ({
     }
   },
 
-  replaceLearnerModelFields: async (courseId: string, fields: Partial<Pick<LearnerModel, 'strengths' | 'misconceptions' | 'topicsExplored'>>) => {
+  replaceLearnerModelFields: async (
+    courseId: string,
+    fields: Partial<Pick<LearnerModel, 'strengths' | 'misconceptions' | 'topicsExplored'>>
+  ) => {
     try {
       const updated = await replaceLearnerModelFieldsService(courseId, fields)
       if (updated) {

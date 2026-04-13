@@ -1,17 +1,13 @@
 /**
- * Mode label lookup for tutor modes (E72-S02)
+ * Mode label lookup for tutor modes (E72-S02, updated E73-S01)
  *
- * Minimal label map used by MessageBubble mode badges.
- * TODO(E73-S01): replace with MODE_REGISTRY when available
+ * Derives labels from MODE_REGISTRY — single source of truth.
  */
 
 import type { TutorMode } from './types'
+import { MODE_REGISTRY } from '@/ai/prompts/modeRegistry'
 
-/** Human-readable labels for each tutor mode */
-export const MODE_LABELS: Record<TutorMode, string> = {
-  socratic: 'Socratic',
-  explain: 'Explain',
-  quiz: 'Quiz',
-  eli5: 'ELI5',
-  debug: 'Debug',
-}
+/** Human-readable labels for each tutor mode (derived from MODE_REGISTRY) */
+export const MODE_LABELS: Record<TutorMode, string> = Object.fromEntries(
+  Object.entries(MODE_REGISTRY).map(([key, config]) => [key, config.label])
+) as Record<TutorMode, string>
