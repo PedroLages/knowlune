@@ -393,6 +393,7 @@ test.describe('E62-S04: Knowledge Map FSRS Integration', () => {
     await page.goto('/knowledge-map')
 
     // Verify the mocked date is active in browser context
+    // eslint-disable-next-line test-patterns/deterministic-time -- verifying browser date mock is active
     const browserNow = await page.evaluate(() => Date.now())
     const expectedTimestamp = new Date(FIXED_DATE).getTime()
     expect(browserNow).toBe(expectedTimestamp)
