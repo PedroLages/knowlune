@@ -38,6 +38,10 @@ interface TutorMemoryIndicatorProps {
     courseId: string,
     fields: Partial<Pick<LearnerModel, 'strengths' | 'misconceptions' | 'topicsExplored'>>
   ) => Promise<void>
+  /** External control for expand/collapse (E73-S05 keyboard shortcut) */
+  open?: boolean
+  /** External callback for expand/collapse state changes */
+  onOpenChange?: (open: boolean) => void
 }
 
 export function TutorMemoryIndicator({
@@ -45,8 +49,12 @@ export function TutorMemoryIndicator({
   courseId,
   onClearMemory,
   onUpdateMemory,
+  open: externalOpen,
+  onOpenChange: externalOnOpenChange,
 }: TutorMemoryIndicatorProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isOpen = externalOpen ?? internalOpen
+  const setIsOpen = externalOnOpenChange ?? setInternalOpen
   const [editOpen, setEditOpen] = useState(false)
 
   // AC: hide entirely when no learner model exists
