@@ -166,4 +166,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+1. **CSS variable resolution for SVG fills**: Recharts SVG `<rect>` elements cannot use CSS variables directly for gradient interpolation. Solved by creating a temporary DOM element to resolve `var(--success)` etc. to computed RGB values, with a MutationObserver to invalidate the cache on theme class changes.
+
+2. **Duplicated decay formatting logic**: The decay date formatting logic (`getDecayInfo` / `formatDecayPrediction`) is duplicated between `TopicDetailPopover.tsx` and `TopicTreemap.tsx` with slightly different return types (badgeVariant vs colorClass). A shared utility in `src/lib/` would reduce drift risk.
+
+3. **WCAG contrast on gradient backgrounds**: Using continuous color interpolation means text contrast must be calculated dynamically per-cell rather than using pre-defined foreground tokens. Implemented `getRelativeLuminance` + threshold check to switch between white and `var(--foreground)` text.
