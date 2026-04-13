@@ -20,9 +20,9 @@ so that the tutor can personalize future sessions based on my strengths and misc
 
 ## Acceptance Criteria
 
-**Given** the Dexie database is at version 29 (from E57-S03)
+**Given** the Dexie database is at version 50 (checkpoint after E57-S05)
 **When** the application initializes with the updated schema
-**Then** a new `learnerModels` table exists at Dexie v30 with indexes on `id` and `courseId`
+**Then** a new `learnerModels` table exists at Dexie v51 with indexes on `id` and `courseId`
 **And** the LearnerModel TypeScript interface includes: id, courseId, vocabularyLevel (beginner/intermediate/advanced), strengths (ConceptAssessment[]), misconceptions (ConceptAssessment[]), topicsExplored (string[]), preferredMode (TutorMode), lastSessionSummary (string), quizStats ({totalQuestions, correctAnswers, weakTopics}), createdAt, updatedAt
 
 **Given** a learnerModelService module exists at src/ai/tutor/learnerModelService.ts
@@ -50,11 +50,11 @@ so that the tutor can personalize future sessions based on my strengths and misc
   - [ ] 1.1 Add `VocabularyLevel` type to `src/data/types.ts`
   - [ ] 1.2 Add `ConceptAssessment` interface to `src/data/types.ts`
   - [ ] 1.3 Add `LearnerModel` interface to `src/data/types.ts`
-  - [ ] 1.4 Extend `TutorMode` type to include `'eli5' | 'quiz' | 'debug'` (forward-compatible for E73)
+  - [ ] 1.4 Extend `TutorMode` type to include `'eli5' | 'debug'` (forward-compatible for E73; `'quiz'` already exists in current TutorMode)
 
-- [ ] Task 2: Dexie schema migration to v30 (AC: 1)
-  - [ ] 2.1 Add `learnerModels` table to `src/db/schema.ts` with indexes `id, courseId`
-  - [ ] 2.2 Update `CHECKPOINT_VERSION` to 30 in `src/db/checkpoint.ts`
+- [ ] Task 2: Dexie schema migration to v51 (AC: 1)
+  - [ ] 2.1 Add `learnerModels` table to `src/db/schema.ts` with indexes `id, courseId` (after v50 transcriptEmbeddings)
+  - [ ] 2.2 Update `CHECKPOINT_VERSION` to 51 in `src/db/checkpoint.ts`
   - [ ] 2.3 Add `learnerModels` to `CHECKPOINT_SCHEMA`
 
 - [ ] Task 3: Implement learnerModelService CRUD (AC: 2, 3, 4)
@@ -81,7 +81,7 @@ so that the tutor can personalize future sessions based on my strengths and misc
 ## Design Guidance
 
 This is a data/service-layer story with no UI components. Focus areas:
-- **Dexie migration**: Follow the established v28→v29 pattern from E57-S03
+- **Dexie migration**: Follow the established v49→v50 pattern from E57-S05
 - **Type safety**: All interfaces use strict TypeScript types, no `any`
 - **Additive merge**: The merge logic for strengths/misconceptions must append, not replace, and deduplicate by concept name keeping the most recent `lastAssessed` timestamp
 - **Zustand pattern**: Follow individual selector pattern per project conventions (`useTutorStore(state => state.learnerModel)`)
@@ -90,9 +90,10 @@ This is a data/service-layer story with no UI components. Focus areas:
 
 **Key architecture references:**
 - Architecture doc: `_bmad-output/planning-artifacts/architecture-tutor-memory-modes.md` — LearnerModel schema (Decision 1), state management pattern
-- Existing Dexie patterns: `src/db/schema.ts` (v29 chatConversations), `src/db/checkpoint.ts`
+- Existing Dexie patterns: `src/db/schema.ts` (v50 is current checkpoint), `src/db/checkpoint.ts`
 - Existing store: `src/stores/useTutorStore.ts` (E57)
-- Existing types: `src/data/types.ts` (TutorMessage, ChatConversation, TutorMode)
+- Existing types: `src/data/types.ts` (TutorMessage, ChatConversation), `src/ai/tutor/types.ts` (TutorMode: 'socratic' | 'explain' | 'quiz')
+- **Note**: E63's `src/ai/tutor/learnerProfileBuilder.ts` already has `LearnerProfileData` (quiz/knowledge/flashcard/study aggregation) injected via prompt builder slot 6. The new `LearnerModel` in this story is a separate persistent per-course model, not a replacement.
 
 **ConceptAssessment schema:**
 ```typescript

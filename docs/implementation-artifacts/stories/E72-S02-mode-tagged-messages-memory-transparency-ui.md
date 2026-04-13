@@ -20,10 +20,11 @@ so that I trust the tutor's memory and can track how my conversation flowed acro
 
 ## Acceptance Criteria
 
-**Given** the TutorMessage interface exists (from E57-S03)
+**Given** the TutorMessage interface exists in `src/data/types.ts` (from E57-S03, currently has only `role`, `content`, `timestamp`)
 **When** the schema is extended
 **Then** each TutorMessage includes a required `mode: TutorMode` field, an optional `quizScore?: { correct: boolean; questionNumber: number }`, and an optional `debugAssessment?: 'green' | 'yellow' | 'red'`
-**And** the chatConversations Dexie schema reflects these extended message fields
+**And** the chatConversations Dexie schema (blob-stored messages) does not need index changes, but the TutorMessage TypeScript interface is updated
+**And** existing conversations without `mode` field gracefully default to `'socratic'` when loaded
 
 **Given** a learner model exists for the current course
 **When** the Tutor tab renders
@@ -57,7 +58,7 @@ so that I trust the tutor's memory and can track how my conversation flowed acro
   - [ ] 1.1 Add `mode: TutorMode` required field to TutorMessage interface in `src/data/types.ts`
   - [ ] 1.2 Add `quizScore?: { correct: boolean; questionNumber: number }` to TutorMessage
   - [ ] 1.3 Add `debugAssessment?: 'green' | 'yellow' | 'red'` to TutorMessage
-  - [ ] 1.4 Update chatConversations Dexie schema if needed for the extended fields
+  - [ ] 1.4 No Dexie schema change needed (messages are blob-stored); add backward-compat default `mode: 'socratic'` in `toChatMessage()` in `useTutorStore.ts`
 
 - [ ] Task 2: Create TutorMemoryIndicator component (AC: 2, 3)
   - [ ] 2.1 Create `src/app/components/tutor/TutorMemoryIndicator.tsx`
@@ -123,8 +124,10 @@ so that I trust the tutor's memory and can track how my conversation flowed acro
 **Key architecture references:**
 - UX spec: `_bmad-output/planning-artifacts/ux-design-tutor-memory-modes.md` — Component specs 2, 8
 - Architecture: `_bmad-output/planning-artifacts/architecture-tutor-memory-modes.md` — Decision 5 (mode-tagged messages)
-- Existing MessageBubble: `src/app/components/chat/MessageBubble.tsx`
-- Existing TutorModeChips: `src/app/components/tutor/TutorModeChips.tsx`
+- Existing MessageBubble: `src/app/components/chat/MessageBubble.tsx` (already exists from E57)
+- Existing TutorModeChips: `src/app/components/tutor/TutorModeChips.tsx` (already exists from E57-S04, renders mode toggle UI)
+- Existing `toChatMessage()`/`toTutorMessage()` converters in `src/stores/useTutorStore.ts` — must be updated to include `mode` field
+- Current TutorMode type: `'socratic' | 'explain' | 'quiz'` (defined in `src/ai/tutor/types.ts`)
 
 **Dependencies:**
 - E72-S01 (learner model schema, CRUD service, store state) — must be complete first

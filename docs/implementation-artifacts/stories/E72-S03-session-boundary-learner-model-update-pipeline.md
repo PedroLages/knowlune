@@ -42,7 +42,8 @@ so that future sessions are personalized without me having to do anything.
 
 **Given** the learner model is injected into the prompt builder
 **When** a new tutor message is generated
-**Then** slot 5 (learner profile) contains a compact natural-language summary of the model (~50-80 tokens) in the format: "Student profile: [vocabulary] vocabulary. Strengths: [list]. Misconceptions: [list]. Preferred mode: [mode]. Last session: [summary]."
+**Then** slot 6 (learner profile, priority 6) contains a compact natural-language summary of the model (~50-80 tokens) in the format: "Student profile: [vocabulary] vocabulary. Strengths: [list]. Misconceptions: [list]. Preferred mode: [mode]. Last session: [summary]."
+**And** this augments (not replaces) the existing E63 learner profile data already injected via `buildAndFormatLearnerProfile()` in `src/ai/tutor/learnerProfileBuilder.ts`
 
 **Given** the LLM provider is offline or the update LLM call fails
 **When** the session boundary update is attempted
@@ -58,7 +59,7 @@ so that future sessions are personalized without me having to do anything.
 - [ ] Task 1: Implement session boundary detection (AC: 1, 2)
   - [ ] 1.1 Add useEffect cleanup in the Tutor tab component to detect navigation away
   - [ ] 1.2 Add visibilitychange listener for tab switching / minimizing
-  - [ ] 1.3 Implement exchange counting: count messages where mode is 'quiz' or 'debug' and role is 'user'
+  - [ ] 1.3 Implement exchange counting: count messages where mode is 'quiz' or 'debug' and role is 'user' (note: TutorMode currently is 'socratic' | 'explain' | 'quiz'; 'debug' will be added by E72-S01 task 1.4)
   - [ ] 1.4 Only trigger update when exchange count >= 3
 
 - [ ] Task 2: Implement updateFromSession in learnerModelService (AC: 1, 3, 4)
@@ -84,7 +85,7 @@ so that future sessions are personalized without me having to do anything.
   - [ ] 5.1 Create `serializeLearnerModelForPrompt(model: LearnerModel): string` function
   - [ ] 5.2 Format as compact natural-language: "Student profile: [vocab] vocabulary. Strengths: [list]. Misconceptions: [list]. Preferred mode: [mode]. Last session: [summary]."
   - [ ] 5.3 Target ~50-80 tokens output
-  - [ ] 5.4 Integrate into prompt builder slot 5 (learner profile)
+  - [ ] 5.4 Integrate into prompt builder slot 6 (learner profile, priority 6) — extend the existing `buildLearnerSlot()` in `src/ai/tutor/tutorPromptBuilder.ts` to include LearnerModel data alongside E63's `buildAndFormatLearnerProfile()` output
 
 - [ ] Task 6: Error handling (AC: 6, 7)
   - [ ] 6.1 Wrap LLM call in try/catch, console.warn on failure, no toast
@@ -123,7 +124,9 @@ Last session: Discussed async/await error handling, reached hint level 2.
 **Key architecture references:**
 - Architecture doc: `_bmad-output/planning-artifacts/architecture-tutor-memory-modes.md` — Decision 7 (Learner Model Update Pipeline)
 - Existing LLM integration: `src/ai/providers/` — `callOllamaChat` with `format` param (proven in `courseTagger.ts`)
-- Existing prompt builder: `src/ai/rag/promptBuilder.ts` — 6-slot priority system
+- Existing prompt builder: `src/ai/tutor/tutorPromptBuilder.ts` — 7-slot priority system (base, mode, course, rag, transcript, learner, resume)
+- Existing learner profile builder: `src/ai/tutor/learnerProfileBuilder.ts` (E63) — already provides `buildAndFormatLearnerProfile()` which is called in `useTutor.ts` and passed to `buildTutorSystemPrompt()` as `learnerProfile` param
+- **No session boundary logic exists** in `useTutor.ts` — must be added (useEffect cleanup + visibilitychange)
 - Zod: already in project dependencies
 
 **Dependencies:**
