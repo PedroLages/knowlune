@@ -1,12 +1,12 @@
 ---
 story_id: E57-S04
 story_name: "Socratic System Prompt + Hint Ladder"
-status: ready-for-dev
-started:
+status: in-review
+started: 2026-04-13
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-04-13
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped, design-review, code-review, code-review-testing, performance-benchmark-skipped, security-review, exploratory-qa-skipped]
 burn_in_validated: false
 ---
 
