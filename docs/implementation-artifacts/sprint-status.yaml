@@ -830,8 +830,8 @@ development_status:
   # Cross-session memory for AI tutor — misconceptions, strengths, mastery
   # Depends on: E57 (AI Tutoring)
   # ──────────────────────────────────────────────────
-  epic-72: backlog
-  72-1-learner-model-schema-and-crud-service: backlog
+  epic-72: in-progress
+  72-1-learner-model-schema-and-crud-service: review
   72-2-mode-tagged-messages-and-memory-transparency-ui: backlog
   72-3-session-boundary-learner-model-update-pipeline: backlog
   epic-72-retrospective: optional
