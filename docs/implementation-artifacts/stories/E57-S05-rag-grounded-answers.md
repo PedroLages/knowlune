@@ -1,12 +1,12 @@
 ---
 story_id: E57-S05
 story_name: "RAG-Grounded Answers (Phase 2)"
-status: ready-for-dev
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: review
+started: 2026-04-13
+completed: 2026-04-13
+reviewed: true
+review_started: 2026-04-13
+review_gates_passed: [build, lint, type-check, unit-tests, e2e-tests, code-review, test-review, security-review]
 burn_in_validated: false
 ---
 

@@ -342,6 +342,28 @@ export interface Embedding {
   createdAt: string // ISO timestamp
 }
 
+/** Transcript chunk embedding for RAG-grounded tutor answers (E57-S05) */
+export interface TranscriptEmbedding {
+  /** UUID primary key */
+  id: string
+  /** Course ID */
+  courseId: string
+  /** Video/lesson ID */
+  videoId: string
+  /** Chunk text content */
+  chunkText: string
+  /** Start time of chunk in seconds */
+  startTime: number
+  /** End time of chunk in seconds */
+  endTime: number
+  /** 384-dimensional embedding vector */
+  embedding: number[]
+  /** Chunk index within the transcript */
+  chunkIndex: number
+  /** ISO timestamp */
+  createdAt: string
+}
+
 // --- AI Usage Events (Story 9B.6) ---
 
 export type AIFeatureType =

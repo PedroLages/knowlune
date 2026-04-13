@@ -105,16 +105,18 @@ export function buildTutorSystemPrompt(
   context: TutorContext,
   mode: TutorMode = 'socratic',
   tokenBudget: number = DEFAULT_TOKEN_BUDGET,
-  hintLevel: number = 0
+  hintLevel: number = 0,
+  ragContext: string = ''
 ): string {
   // Build all slots
   const slots: PromptSlot[] = [
     { id: 'base', required: true, priority: 1, content: buildBaseSlot() },
     { id: 'mode', required: true, priority: 2, content: buildModeSlot(mode, hintLevel) },
     { id: 'course', required: true, priority: 3, content: buildCourseSlot(context) },
-    { id: 'transcript', required: false, priority: 4, content: buildTranscriptSlot(context) },
-    { id: 'learner', required: false, priority: 5, content: buildLearnerSlot() },
-    { id: 'resume', required: false, priority: 6, content: buildResumeSlot() },
+    { id: 'rag', required: false, priority: 4, content: ragContext },
+    { id: 'transcript', required: false, priority: 5, content: buildTranscriptSlot(context) },
+    { id: 'learner', required: false, priority: 6, content: buildLearnerSlot() },
+    { id: 'resume', required: false, priority: 7, content: buildResumeSlot() },
   ]
 
   // Sort by priority (already sorted, but be explicit)

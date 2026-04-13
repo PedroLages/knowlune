@@ -18,6 +18,21 @@ import { LLMError } from '@/ai/llm/types'
 
 // ── Mocks ──────────────────────────────────────────────────────────
 
+vi.mock('@/db', () => ({
+  db: {
+    importedVideos: {
+      get: vi.fn().mockResolvedValue(null),
+    },
+    youtubeTranscripts: {
+      where: vi.fn().mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          first: vi.fn().mockResolvedValue(null),
+        }),
+      }),
+    },
+  },
+}))
+
 vi.mock('@/ai/tutor/transcriptContext', () => ({
   getTranscriptContext: vi.fn().mockResolvedValue({
     excerpt: 'Some transcript text',
