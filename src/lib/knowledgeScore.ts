@@ -146,23 +146,6 @@ export function calculateTopicScore(input: TopicScoreInput): TopicScoreResult {
 
   const signalsUsed = available.length
 
-  // Guard: no signals (should not happen since completion+recency are always present)
-  if (signalsUsed === 0) {
-    return {
-      score: 0,
-      tier: 'weak',
-      confidence: 'none',
-      factors: {
-        quizScore: null,
-        flashcardRetention: null,
-        completionScore: 0,
-        recencyScore: 0,
-      },
-      signalsUsed: 0,
-      effectiveWeights: { quiz: 0, flashcard: 0, completion: 0, recency: 0 },
-    }
-  }
-
   // Redistribute weights proportionally
   const totalAvailableWeight = available.reduce((sum, s) => sum + s.value, 0)
 

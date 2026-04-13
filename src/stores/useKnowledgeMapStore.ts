@@ -15,7 +15,6 @@ import {
   resolveTopics,
   normalizeTopic,
   canonicalize,
-  type ResolvedTopic,
   type TopicCourseInput,
   type TopicQuestionInput,
 } from '@/lib/topicResolver'
@@ -76,6 +75,8 @@ interface KnowledgeMapState {
 
   /** Compute/recompute all knowledge scores */
   computeScores: (now?: Date) => Promise<void>
+  /** Invalidate the 30-second cache, forcing recomputation on next computeScores() call */
+  invalidateCache: () => void
   /** Get topics filtered by category, sorted by score ascending */
   getTopicsByCategory: (category: string) => ScoredTopic[]
   /** Get a single topic by canonical name */
@@ -118,10 +119,9 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
 
     try {
       // ── Step 1: Fetch raw data from Dexie ──────────────────────
-      const [importedCourses, courses, allQuizzes, allAttempts, allFlashcards, allSessions, allProgress] =
+      const [importedCourses, allQuizzes, allAttempts, allFlashcards, allSessions, allProgress] =
         await Promise.all([
           db.importedCourses.toArray(),
-          db.courses.toArray(),
           db.quizzes.toArray(),
           db.quizAttempts.toArray(),
           db.flashcards.toArray(),
@@ -137,21 +137,16 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
         tags: c.tags,
       }))
 
-      // Build quiz-to-course mapping: quiz.lessonId → course that contains it
+      // Build quiz-to-course mapping via contentProgress: quiz.lessonId → courseId
+      // Since the legacy courses table was dropped (v30), we derive the mapping from
+      // contentProgress records which track (courseId, itemId) for imported courses.
       const lessonToCourseId = new Map<string, string>()
-      for (const course of courses) {
-        for (const module of course.modules ?? []) {
-          for (const lesson of module.lessons) {
-            lessonToCourseId.set(lesson.id, course.id)
-          }
-        }
+      for (const progress of allProgress) {
+        lessonToCourseId.set(progress.itemId, progress.courseId)
       }
 
-      // Also check imported courses for lesson→course via quizzes
-      const quizToLessonId = new Map<string, string>()
       const quizToCourseId = new Map<string, string>()
       for (const quiz of allQuizzes) {
-        quizToLessonId.set(quiz.id, quiz.lessonId)
         const courseId = lessonToCourseId.get(quiz.lessonId)
         if (courseId) {
           quizToCourseId.set(quiz.id, courseId)
@@ -218,23 +213,13 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
       }
 
       // 3c. Completion per topic
-      // Build: courseId → completion percentage
+      // Build: courseId → { completed, total } from contentProgress records
       const completionByCourse = new Map<string, { completed: number; total: number }>()
-      for (const course of courses) {
-        let total = 0
-        let completed = 0
-        for (const module of course.modules ?? []) {
-          for (const lesson of module.lessons) {
-            total++
-            const progress = allProgress.find(
-              (p) => p.courseId === course.id && p.itemId === lesson.id
-            )
-            if (progress?.status === 'completed') completed++
-          }
-        }
-        if (total > 0) {
-          completionByCourse.set(course.id, { completed, total })
-        }
+      for (const progress of allProgress) {
+        const existing = completionByCourse.get(progress.courseId) ?? { completed: 0, total: 0 }
+        existing.total += 1
+        if (progress.status === 'completed') existing.completed += 1
+        completionByCourse.set(progress.courseId, existing)
       }
 
       // 3d. Most recent engagement timestamps
@@ -389,6 +374,10 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
         error: error instanceof Error ? error.message : 'Failed to compute knowledge scores',
       })
     }
+  },
+
+  invalidateCache: () => {
+    set({ lastComputedAt: null })
   },
 
   getTopicsByCategory: (category: string) => {

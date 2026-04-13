@@ -186,6 +186,61 @@ describe('calculateTopicScore', () => {
     expect(result.factors.completionScore).toBe(80)
     expect(result.factors.recencyScore).toBeGreaterThan(0)
   })
+
+  // ── Edge cases ──────────────────────────────────────────────────
+
+  it('returns a valid score when questionCount is effectively 0 (quiz/flashcard both null)', () => {
+    const result = calculateTopicScore({
+      quizScore: null,
+      flashcardRetention: null,
+      completionPercent: 0,
+      daysSinceLastEngagement: 0,
+    })
+    // signalsUsed === 2 (completion + recency), score must be in range
+    expect(result.score).toBeGreaterThanOrEqual(0)
+    expect(result.score).toBeLessThanOrEqual(100)
+    expect(result.signalsUsed).toBe(2)
+    expect(result.confidence).toBe('low')
+  })
+
+  it('returns score near recency floor when all signals are 0 (completionPercent=0, daysAgo=365)', () => {
+    const result = calculateTopicScore({
+      quizScore: 0,
+      flashcardRetention: 0,
+      completionPercent: 0,
+      daysSinceLastEngagement: 365,
+    })
+    // recencyScore=10 (floor), completionScore=0, quizScore=0, flashcard=0
+    // weighted score: 0*0.3 + 0*0.3 + 0*0.2 + 10*0.2 = 2
+    expect(result.score).toBe(2)
+    expect(result.tier).toBe('weak')
+  })
+
+  it('clamps flashcardRetention > 100 to 100 via completionPercent clamping pattern', () => {
+    // The function clamps completionPercent to [0,100]; flashcardRetention is used as-is
+    // but passed by the store as a 0-100 value. Test that a high retention value
+    // does not push the score above 100.
+    const result = calculateTopicScore({
+      quizScore: 100,
+      flashcardRetention: 150, // abnormally high — should still produce score <= 100
+      completionPercent: 100,
+      daysSinceLastEngagement: 0,
+    })
+    expect(result.score).toBeLessThanOrEqual(100)
+  })
+
+  it('scores very recent engagement (daysSinceLastEngagement=0) at full recency', () => {
+    const result = calculateTopicScore({
+      quizScore: null,
+      flashcardRetention: null,
+      completionPercent: 0,
+      daysSinceLastEngagement: 0,
+    })
+    // recencyScore=100, completionScore=0, weights redistribute to 0.5 each
+    // score = 0*0.5 + 100*0.5 = 50
+    expect(result.score).toBe(50)
+    expect(result.factors.recencyScore).toBe(100)
+  })
 })
 
 // ── computeUrgency ────────────────────────────────────────────────
