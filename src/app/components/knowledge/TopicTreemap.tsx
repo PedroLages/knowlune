@@ -9,6 +9,7 @@ import { Treemap, ResponsiveContainer } from 'recharts'
 import type { KnowledgeTier } from '@/lib/knowledgeScore'
 
 export interface TreemapDataItem {
+  [key: string]: string | number
   name: string
   size: number
   score: number
