@@ -81,13 +81,15 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
   const store = useTutorStore()
   const setLessonContext = useTutorStore((s) => s.setLessonContext)
   const loadConversation = useTutorStore((s) => s.loadConversation)
+  const loadLearnerModel = useTutorStore((s) => s.loadLearnerModel)
   const abortRef = useRef<AbortController | null>(null)
 
-  // Set lesson context for persistence and load existing conversation
+  // Set lesson context for persistence and load existing conversation + learner model
   useEffect(() => {
     setLessonContext(courseId, lessonId)
     loadConversation(courseId, lessonId)
-  }, [courseId, lessonId, setLessonContext, loadConversation])
+    loadLearnerModel(courseId)
+  }, [courseId, lessonId, setLessonContext, loadConversation, loadLearnerModel])
 
   // Load transcript status on mount / lesson change — stored in Zustand for reactive re-renders
   useEffect(() => {

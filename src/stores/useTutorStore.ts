@@ -17,6 +17,7 @@ import type { ChatConversation, TutorMessage, LearnerModel } from '@/data/types'
 import {
   getOrCreateLearnerModel,
   updateLearnerModel as updateLearnerModelService,
+  replaceLearnerModelFields as replaceLearnerModelFieldsService,
   clearLearnerModel as clearLearnerModelService,
 } from '@/ai/tutor/learnerModelService'
 
@@ -78,6 +79,8 @@ interface TutorState {
   loadLearnerModel: (courseId: string) => Promise<void>
   /** Update learner model with additive merge (E72-S01) */
   updateLearnerModel: (courseId: string, updates: Partial<LearnerModel>) => Promise<void>
+  /** Replace specific array fields with overwrite semantics — for UI-initiated edits (B2 fix) */
+  replaceLearnerModelFields: (courseId: string, fields: Partial<Pick<LearnerModel, 'strengths' | 'misconceptions' | 'topicsExplored'>>) => Promise<void>
   /** Clear learner model for a course (E72-S01) */
   clearLearnerModel: (courseId: string) => Promise<void>
 }
@@ -302,6 +305,17 @@ export const useTutorStore = create<TutorState>((set, get) => ({
   updateLearnerModel: async (courseId: string, updates: Partial<LearnerModel>) => {
     try {
       const updated = await updateLearnerModelService(courseId, updates)
+      if (updated) {
+        set({ learnerModel: updated })
+      }
+    } catch {
+      toast.error('Failed to update learner model.')
+    }
+  },
+
+  replaceLearnerModelFields: async (courseId: string, fields: Partial<Pick<LearnerModel, 'strengths' | 'misconceptions' | 'topicsExplored'>>) => {
+    try {
+      const updated = await replaceLearnerModelFieldsService(courseId, fields)
       if (updated) {
         set({ learnerModel: updated })
       }

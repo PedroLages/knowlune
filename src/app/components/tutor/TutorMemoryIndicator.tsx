@@ -30,7 +30,7 @@ interface TutorMemoryIndicatorProps {
   learnerModel: LearnerModel | null
   courseId: string
   onClearMemory: (courseId: string) => Promise<void>
-  onUpdateMemory: (courseId: string, updates: Partial<LearnerModel>) => Promise<void>
+  onUpdateMemory: (courseId: string, fields: Partial<Pick<LearnerModel, 'strengths' | 'misconceptions' | 'topicsExplored'>>) => Promise<void>
 }
 
 export function TutorMemoryIndicator({

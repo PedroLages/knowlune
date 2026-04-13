@@ -31,9 +31,4 @@ export function tierLabel(tier: KnowledgeTier): string {
   }
 }
 
-/** Derives a KnowledgeTier from a numeric score (0–100). */
-export function getTierFromScore(score: number): KnowledgeTier {
-  if (score >= 70) return 'strong'
-  if (score >= 40) return 'fading'
-  return 'weak'
-}
+export { getKnowledgeTier as getTierFromScore } from '@/lib/knowledgeScore'

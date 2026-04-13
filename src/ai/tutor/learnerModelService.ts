@@ -121,6 +121,31 @@ export async function updateLearnerModel(
 }
 
 /**
+ * Replace specific array fields with overwrite semantics (for UI-initiated edits).
+ * Unlike updateLearnerModel (additive merge), this directly overwrites the specified arrays.
+ * Use when the user explicitly removes items — the intent is authoritative replacement, not accumulation.
+ */
+export async function replaceLearnerModelFields(
+  courseId: string,
+  fields: Partial<Pick<LearnerModel, 'strengths' | 'misconceptions' | 'topicsExplored'>>
+): Promise<LearnerModel | null> {
+  const existing = await getLearnerModel(courseId)
+  if (!existing) return null
+
+  const now = new Date().toISOString()
+  const replaced: LearnerModel = {
+    ...existing,
+    ...(fields.strengths !== undefined && { strengths: fields.strengths }),
+    ...(fields.misconceptions !== undefined && { misconceptions: fields.misconceptions }),
+    ...(fields.topicsExplored !== undefined && { topicsExplored: fields.topicsExplored }),
+    updatedAt: now,
+  }
+
+  await db.learnerModels.put(replaced)
+  return replaced
+}
+
+/**
  * Delete learner model for a course. Returns null on subsequent get.
  */
 export async function clearLearnerModel(courseId: string): Promise<void> {

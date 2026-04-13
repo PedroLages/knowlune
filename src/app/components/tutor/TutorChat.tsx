@@ -60,7 +60,7 @@ export function TutorChat({
     })
 
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
-  const { learnerModel, clearLearnerModel, updateLearnerModel } = useTutorStore()
+  const { learnerModel, clearLearnerModel, updateLearnerModel, replaceLearnerModelFields } = useTutorStore()
 
   // Determine badge status — use hook's transcriptStatus or fallback
   const badgeStatus: TranscriptStatus = transcriptStatus ?? {
@@ -132,7 +132,7 @@ export function TutorChat({
         learnerModel={learnerModel}
         courseId={courseId}
         onClearMemory={clearLearnerModel}
-        onUpdateMemory={updateLearnerModel}
+        onUpdateMemory={replaceLearnerModelFields}
       />
       <div className="flex-1 overflow-hidden">
         {messages.length === 0 ? (

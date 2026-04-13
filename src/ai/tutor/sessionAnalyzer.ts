@@ -328,15 +328,25 @@ export async function updateFromSession(
 
     const responseText = await collectStreamResponse(llmMessages)
 
-    // Extract JSON from response (may be wrapped in markdown code blocks)
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
+    // Extract JSON from response: try markdown code block first, then non-greedy bare JSON
+    let jsonCandidate: string | null = null
+    const codeBlockMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/)
+    if (codeBlockMatch) {
+      jsonCandidate = codeBlockMatch[1]
+    } else {
+      const bareMatch = responseText.match(/\{[\s\S]*?\}/)
+      if (bareMatch) jsonCandidate = bareMatch[0]
+    }
+
+    let parsed: unknown
+    try {
+      if (!jsonCandidate) throw new Error('no JSON found')
+      parsed = JSON.parse(jsonCandidate)
+    } catch {
       console.warn('[sessionAnalyzer] LLM returned no valid JSON, using local insights only')
       await updateLearnerModel(courseId, localUpdate)
       return
     }
-
-    const parsed = JSON.parse(jsonMatch[0])
     const validated = LearnerModelUpdateSchema.parse(parsed)
 
     // Augment LLM response with timestamps for concept assessments.
