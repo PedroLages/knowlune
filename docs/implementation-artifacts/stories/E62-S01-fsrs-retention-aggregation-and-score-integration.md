@@ -147,4 +147,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+1. **FSRS aggregation centralizes retention logic**: Moving per-card `predictRetention()` calls from the store into a dedicated `calculateAggregateRetention()` function in `knowledgeScore.ts` simplified the store code and made the retention calculation independently testable. The store previously had inline loop logic for card-by-card retention that was harder to unit test.
+
+2. **Backward compatibility via optional parameter**: Adding `fsrsRetention` as an optional field to `TopicScoreInput` rather than replacing `flashcardRetention` preserved full backward compatibility. The fallback chain (`fsrsRetention ?? flashcardRetention`) ensures existing callers see identical behavior without code changes.
+
+3. **SM-2 legacy path simplified**: The story spec called for dual-mode SM-2/FSRS feature detection, but since `predictRetention()` already handles both card shapes internally (via the `stability` and `last_review` fields), the aggregation function only needed to filter on `card.last_review && card.stability > 0` — no explicit mode parameter was needed.
