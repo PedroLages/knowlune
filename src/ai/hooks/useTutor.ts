@@ -370,6 +370,28 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
           }
         }
 
+        // Parse ASSESSMENT markers from debug mode responses (E73-S04)
+        if (store.mode === 'debug' && fullResponse && !abortController.signal.aborted) {
+          const assessmentMatch = fullResponse.match(/^ASSESSMENT:\s*(green|yellow|red)/im)
+          if (assessmentMatch) {
+            const assessment = assessmentMatch[1] as 'green' | 'yellow' | 'red'
+            // Tag the assistant message with debugAssessment before persisting
+            useTutorStore.setState(state => {
+              const messages = [...state.messages]
+              const lastMsg = messages[messages.length - 1]
+              if (lastMsg && lastMsg.role === 'assistant') {
+                messages[messages.length - 1] = {
+                  ...lastMsg,
+                  debugAssessment: assessment,
+                }
+              }
+              return { messages }
+            })
+            // Record assessment in store for session boundary update
+            store.recordDebugAssessment(assessment)
+          }
+        }
+
         // Stage 6: Persist to Dexie
         await store.persistConversation()
       } catch (err) {

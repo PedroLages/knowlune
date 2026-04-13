@@ -60,11 +60,11 @@ const MODE_EMPTY_STATES: Record<TutorMode, ModeEmptyConfig> = {
   },
   debug: {
     icon: Bug,
-    heading: 'Debug your understanding',
+    heading: "Explain a concept and I'll find the gaps",
     suggestions: [
-      'I think I understand this, check my reasoning',
-      "Something doesn't make sense to me",
-      'Where might I have misconceptions?',
+      'I think X works by...',
+      'Let me explain my understanding of Y',
+      "Here's how I'd describe Z",
     ],
   },
 }

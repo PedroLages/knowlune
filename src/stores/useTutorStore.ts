@@ -113,6 +113,14 @@ interface TutorState {
   recordQuizAnswer: (correct: boolean) => void
   /** Reset quiz state (E73-S03) */
   resetQuizState: () => void
+  /** Debug assessment history for session boundary update (E73-S04) */
+  debugAssessments: Array<{
+    assessment: 'green' | 'yellow' | 'red'
+    concept?: string
+    timestamp: number
+  }>
+  /** Record a debug assessment for session boundary update (E73-S04) */
+  recordDebugAssessment: (assessment: 'green' | 'yellow' | 'red', concept?: string) => void
 }
 
 /** Maximum conversation history to retain (prevents unbounded growth) */
@@ -126,6 +134,7 @@ function toTutorMessage(msg: ChatMessage, mode: TutorMode): TutorMessage {
     timestamp: msg.timestamp,
     mode,
     quizScore: msg.quizScore,
+    debugAssessment: msg.debugAssessment,
   }
 }
 
@@ -137,6 +146,7 @@ function toChatMessage(msg: TutorMessage): ChatMessage {
     content: msg.content,
     timestamp: msg.timestamp,
     mode: msg.mode ?? ('socratic' as const),
+    debugAssessment: msg.debugAssessment,
   }
 }
 
@@ -162,6 +172,7 @@ export const useTutorStore = create<TutorState>((set, get) => ({
     lastAnswerCorrect: null,
   },
   lastQuizResult: null,
+  debugAssessments: [],
 
   setLessonContext: (courseId: string, videoId: string) => {
     set({ _courseId: courseId, _videoId: videoId })
@@ -256,6 +267,8 @@ export const useTutorStore = create<TutorState>((set, get) => ({
               lastAnswerCorrect: null,
             }
           : state.quizState,
+      // Reset debug assessments when switching away from debug mode (E73-S04)
+      debugAssessments: previousMode === 'debug' ? [] : state.debugAssessments,
     }))
   },
 
@@ -466,5 +479,11 @@ export const useTutorStore = create<TutorState>((set, get) => ({
         lastAnswerCorrect: null,
       },
     })
+  },
+
+  recordDebugAssessment: (assessment: 'green' | 'yellow' | 'red', concept?: string) => {
+    set(state => ({
+      debugAssessments: [...state.debugAssessments, { assessment, concept, timestamp: Date.now() }],
+    }))
   },
 }))

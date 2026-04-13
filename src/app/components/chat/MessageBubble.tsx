@@ -8,6 +8,7 @@ import { User, Sparkles, Loader2 } from 'lucide-react'
 import type { ChatMessage } from '@/ai/rag/types'
 import { CitationLink } from './CitationLink'
 import { MODE_LABELS } from '@/ai/tutor/modeLabels'
+import { DebugTrafficLight } from '@/app/components/tutor/DebugTrafficLight'
 import type { ReactElement } from 'react'
 
 interface MessageBubbleProps {
@@ -42,10 +43,16 @@ export function MessageBubble({
     minute: '2-digit',
   })
 
+  // Strip protocol markers (SCORE:, ASSESSMENT:) from displayed content
+  const displayContent = message.content
+    .replace(/^SCORE:\s*(correct|incorrect)\s*$/gim, '')
+    .replace(/^ASSESSMENT:\s*(green|yellow|red)\s*$/gim, '')
+    .trim()
+
   // Extract citations from message content
   const renderContentWithCitations = () => {
     if (!message.citations || message.citations.size === 0) {
-      return <span>{message.content}</span>
+      return <span>{displayContent}</span>
     }
 
     // Split content by citation markers [1], [2], etc.
@@ -54,10 +61,10 @@ export function MessageBubble({
     let lastIndex = 0
     let match: RegExpExecArray | null
 
-    while ((match = citationRegex.exec(message.content)) !== null) {
+    while ((match = citationRegex.exec(displayContent)) !== null) {
       // Add text before citation
       if (match.index > lastIndex) {
-        parts.push(message.content.slice(lastIndex, match.index))
+        parts.push(displayContent.slice(lastIndex, match.index))
       }
 
       // Add citation link
@@ -74,8 +81,8 @@ export function MessageBubble({
     }
 
     // Add remaining text
-    if (lastIndex < message.content.length) {
-      parts.push(message.content.slice(lastIndex))
+    if (lastIndex < displayContent.length) {
+      parts.push(displayContent.slice(lastIndex))
     }
 
     return <>{parts}</>
@@ -106,6 +113,11 @@ export function MessageBubble({
           }`}
         >
           <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+            {!isUser && message.debugAssessment && (
+              <span className="mb-1.5 block">
+                <DebugTrafficLight assessment={message.debugAssessment} />
+              </span>
+            )}
             {renderContentWithCitations()}
             {isStreaming && (
               <span className="inline-flex items-center ml-1">
