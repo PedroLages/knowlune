@@ -115,14 +115,13 @@ Browser stores only a `credentialConfigured: boolean` per OPDS catalog and per A
 **P0 — "Where was I?" (3 tables):**
 - `content_progress` (courseId, itemId, status, progress 0-100, completedAt) — monotonic upsert
 - `study_sessions` (INSERT-only log — duration, idle, interactions, breaks)
-- `video_progress` (watchedSeconds, watchedPercent, lastPosition) — monotonic upsert
+- `video_progress` (watchedSeconds, watchedPercent, lastPosition) — monotonic upsert. Note: Dexie table is named `progress` (maps to `video_progress` in Supabase via tableRegistry)
 
 **P1 — Learning content (10 tables, was 6):**
 - `notes` (markdown content, tags, soft delete, linkedNoteIds)
 - `bookmarks` (video position, label)
 - `flashcards` (front, back, tags, FSRS state — now also `sourceType='book'`, `sourceBookId`, `sourceHighlightId`)
-- `review_records` (FSRS review history — rating, interval, easeFactor)
-- `flashcard_reviews` (INSERT-only log for cross-device FSRS replay)
+- `flashcard_reviews` (INSERT-only log for cross-device FSRS replay — **Supabase-only table**, no Dexie equivalent; local `reviewRecords` is a derived FSRS state cache, not synced)
 - `embeddings` (pgvector `vector(384)`, HNSW index)
 - `books` (title, author, format, status, progress — LWW + `GREATEST()` monotonic; strip `source` when `type=fileHandle`)
 - `book_highlights` (cfiRange, color, note, flashcardId, reviewRating — LWW)

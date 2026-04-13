@@ -92,8 +92,8 @@
   }
   ```
 - Entries for all 30+ syncable tables, organized by priority:
-  - **P0:** `contentProgress`, `studySessions`, `videoProgress`
-  - **P1:** `notes`, `bookmarks`, `flashcards`, `reviewRecords`, `flashcardReviews`, `embeddings`, `bookHighlights`, `vocabularyItems`, `audioBookmarks`, `audioClips`, `chatConversations`, `learnerModels`
+  - **P0:** `contentProgress`, `studySessions`, `progress` (Dexie name; maps to `video_progress` in Supabase)
+  - **P1:** `notes`, `bookmarks`, `flashcards`, `reviewRecords`, `embeddings`, `bookHighlights`, `vocabularyItems`, `audioBookmarks`, `audioClips`, `chatConversations`, `learnerModels`. Note: `flashcard_reviews` is a **Supabase-only** INSERT-only table (no Dexie equivalent) — created in E93-S01, populated during upload from `reviewRecords`
   - **P2:** `importedCourses`, `importedVideos`, `importedPdfs`, `authors`, `books`, `bookReviews`, `shelves`, `bookShelves`, `readingQueue`, `chapterMappings`
   - **P3:** `learningPaths`, `learningPathEntries`, `challenges`, `courseReminders`, `notifications`, `careerPaths`, `pathEnrollments`, `studySchedules`, `opdsCatalogs`, `audiobookshelfServers`, `notificationPreferences`
   - **P4:** `quizzes`, `quizAttempts`, `aiUsageEvents`
@@ -105,8 +105,8 @@
 - Round-trip field mapping tests pass for all tables with non-trivial field maps
 - Non-serializable fields (`directoryHandle`, `coverImageHandle`, `fileHandle`, `photoHandle`) listed under `stripFields` for correct tables
 - Vault fields (`password` in `opdsCatalogs`, `apiKey` in `audiobookshelfServers`) listed under `vaultFields`
-- Monotonic fields correctly listed: `videoProgress.watchedSeconds`, `bookProgress.progress`, `challengeProgress.progress`, `vocabularyItem.masteryLevel`
-- `flashcardReviews` and `aiUsageEvents` have `conflictStrategy: 'insert-only'`
+- Monotonic fields correctly listed: `progress.watchedSeconds` (Dexie `progress` table → Supabase `video_progress`), `books.progress`, `challenges.currentProgress`, `vocabularyItems.masteryLevel`
+- `aiUsageEvents` has `conflictStrategy: 'insert-only'`; `flashcard_reviews` is Supabase-only (no Dexie entry), created in E93-S01
 - `skipSync` field exists (populated in E96-S04); registry compiles without errors before that epic
 
 ---
@@ -258,7 +258,7 @@
 **Key Deliverables:**
 - `src/app/stores/useContentProgressStore.ts`: all `put`/`delete` calls → `syncableWrite('contentProgress', ...)`
 - `src/app/stores/useSessionStore.ts`: all `add` calls → `syncableWrite('studySessions', 'add', ...)` (INSERT-only)
-- Video progress writes (wherever they live): → `syncableWrite('videoProgress', ...)` using monotonic upsert path
+- Video progress writes (wherever they live): → `syncableWrite('progress', ...)` using monotonic upsert path (Dexie table is `progress`; tableRegistry maps to Supabase `video_progress`)
 - Field stripping applied per tableRegistry (verify no non-serializable fields in P0 tables — none expected, but confirm)
 - Integration test `tests/sync/p0-sync.spec.ts`: seeds Dexie, signs in, waits for sync, queries Supabase to confirm records present
 
@@ -293,10 +293,9 @@
   - `notes` (id, user_id, content_id, content_type, title, content, tags[], soft_deleted, conflict_copy, conflict_source_id, created_at, updated_at)
   - `bookmarks` (id, user_id, video_id, position_seconds, label, created_at, updated_at)
   - `flashcards` (id, user_id, front, back, tags[], source_type ['manual'|'note'|'book'], source_note_id, source_book_id, source_highlight_id, due_date, stability, difficulty, elapsed_days, scheduled_days, reps, lapses, state, last_review, created_at, updated_at)
-  - `review_records` (id, user_id, flashcard_id, scheduled_days, elapsed_days, created_at, updated_at)
-  - `flashcard_reviews` (id, user_id, flashcard_id, rating, reviewed_at) — INSERT-only policy
+  - `flashcard_reviews` (id, user_id, flashcard_id, rating, reviewed_at) — **Supabase-only INSERT-only table** for cross-device FSRS replay. No Dexie equivalent; populated during upload from local `reviewRecords`. Local `reviewRecords` stores derived FSRS scheduling state and is NOT synced to Supabase (recomputed from merged `flashcard_reviews` log on download)
   - `embeddings` (id, user_id, note_id, vector vector(384), created_at, updated_at) — pgvector HNSW index
-  - `book_highlights` (id, user_id, book_id, chapter_id, cfi_range, text, color, note, flashcard_id, soft_deleted, created_at, updated_at)
+  - `book_highlights` (id, user_id, book_id, chapter_id, cfi_range, text, color, note, flashcard_id, review_rating, created_at, updated_at) — no soft-delete (hard delete; `BookHighlight` type has no `deleted` field)
   - `vocabulary_items` (id, user_id, word, definition, example, mastery_level int, source_book_id, source_highlight_id, flashcard_id, created_at, updated_at)
   - `audio_bookmarks` (id, user_id, book_id, position_seconds, label, created_at, updated_at)
   - `audio_clips` (id, user_id, book_id, start_time_seconds, end_time_seconds, label, sort_order, created_at, updated_at)
@@ -308,7 +307,7 @@
 - Migration file: `supabase/migrations/20260413000002_p1_learning_content.sql`
 
 **Acceptance Criteria:**
-- All 12 tables exist with correct columns and types
+- All 11 tables exist with correct columns and types (note: `review_records` is local-only, not created in Supabase)
 - pgvector HNSW index created on `embeddings.vector` column
 - INSERT-only policy on `flashcard_reviews` verified: `UPDATE` returns 403, `INSERT` succeeds
 - `search_similar_notes()` returns results ordered by cosine similarity (tested with known vectors)
@@ -322,15 +321,15 @@
 **Summary:** All note and video bookmark mutations go through `syncableWrite()`, enabling notes to sync across devices with soft-delete support.
 
 **Key Deliverables:**
-- `src/app/stores/useNoteStore.ts`: `createNote`, `updateNote`, `deleteNote` (sets `softDeleted: true`) → `syncableWrite('notes', ...)`
+- `src/app/stores/useNoteStore.ts`: `createNote`, `updateNote`, `deleteNote` (sets `deleted: true`) → `syncableWrite('notes', ...)`
 - `src/app/stores/useBookmarkStore.ts` (video bookmarks): `addBookmark`, `updateBookmark`, `deleteBookmark` → `syncableWrite('bookmarks', ...)`
 - Field mapping in tableRegistry (E92-S03 already has entries; confirm `notes.tags` maps to `notes.tags` as JSONB array)
-- Soft-delete: `deleteNote()` calls `syncableWrite('notes', 'put', { ...note, softDeleted: true })` rather than a Dexie `delete()`; download phase respects `soft_deleted: true` by deleting from local Dexie
+- Soft-delete: `deleteNote()` calls `syncableWrite('notes', 'put', { ...note, deleted: true })` rather than a Dexie `delete()`; field mapping converts `deleted` → `soft_deleted` in Supabase; download phase respects `soft_deleted: true`
 
 **Acceptance Criteria:**
 - New note created on Device A appears in Device B's Dexie after sync
 - Note edited on Device A: updated content appears on Device B
-- Deleted note (soft-deleted): `softDeleted: true` flag syncs; note disappears from Device B's UI
+- Deleted note (soft-deleted): `deleted: true` flag syncs (mapped to `soft_deleted` in Supabase); note disappears from Device B's UI
 - Video bookmark position (seconds) syncs correctly without precision loss
 - No direct `db.notes.put()` calls remain in `useNoteStore` outside of the sync layer
 - Existing unit tests for note store pass after refactor
@@ -366,8 +365,8 @@
 **Key Deliverables:**
 - `src/app/stores/useFlashcardStore.ts`:
   - `createFlashcard`, `updateFlashcard`, `deleteFlashcard` → `syncableWrite('flashcards', ...)`
-  - `recordReview(flashcardId, rating)` → `syncableWrite('flashcardReviews', 'add', ...)` (INSERT-only)
-- Download phase for `flashcardReviews`: after downloading all reviews for the user, sort by `reviewed_at`, replay through `calculateNextReview()` (FSRS, from E59), update each flashcard's scheduling fields in Dexie
+  - `recordReview(flashcardId, rating)` → writes to Dexie `reviewRecords` + uploads to Supabase `flashcard_reviews` (INSERT-only Supabase-only table created in E93-S01; no Dexie `flashcardReviews` table exists)
+- Download phase: fetch all `flashcard_reviews` from Supabase for the user, sort by `reviewed_at`, replay through `calculateNextReview()` (FSRS, from E59), update each flashcard's scheduling fields in Dexie. Local `reviewRecords` are the derived FSRS state cache — recomputed from the merged review log
 - `src/lib/fsrs/replay.ts`: `replayReviewLog(reviews: FlashcardReview[]): Map<string, FlashcardSchedule>` — pure function, testable
 - Book-sourced flashcards (`sourceType: 'book'`, `sourceBookId`, `sourceHighlightId`): all source reference fields synced correctly; FK integrity not enforced in Supabase (books may not be synced yet)
 
@@ -792,8 +791,9 @@
 **Summary:** Calculate study and reading streaks using server-side Postgres functions that aggregate synced data, with graceful offline fallback.
 
 **Key Deliverables:**
-- `calculate_study_streak(p_user_id uuid) RETURNS int` Postgres function:
-  - Counts consecutive days (in user's local timezone — pass as parameter or use `now()`) where total session duration ≥ 60 seconds in `study_sessions`
+- `calculate_study_streak(p_user_id uuid, p_timezone text DEFAULT 'UTC') RETURNS int` Postgres function:
+  - Counts consecutive days (converted to user's timezone via `AT TIME ZONE p_timezone`) where total session duration ≥ 60 seconds in `study_sessions`
+  - Client passes IANA timezone string (e.g., `'Europe/Lisbon'`) from `Intl.DateTimeFormat().resolvedOptions().timeZone`
   - Returns current streak (days including today if applicable)
 - `calculate_reading_streak(p_user_id uuid) RETURNS int` Postgres function:
   - Counts consecutive days where reading progress meets daily target from `user_settings.settings.dailyTarget` and `dailyType`
@@ -803,7 +803,7 @@
 - Offline fallback: if RPC fails (offline), show locally-calculated streak with "(offline)" suffix in UI
 
 **Acceptance Criteria:**
-- Study streak matches locally-calculated value within 1 day tolerance (timezone handling)
+- Study streak matches locally-calculated value exactly when same timezone is passed
 - Reading streak correctly counts days where reading target was met (based on synced data)
 - Offline indicator shown when streak is locally calculated (not from server)
 - Server streak updates within one sync cycle after study session uploaded
