@@ -4,8 +4,8 @@ story_name: "Knowledge Map Overview Widget"
 status: ready-for-dev
 started:
 completed:
-reviewed: false
-review_started:
+reviewed: in-progress
+review_started: 2026-04-13
 review_gates_passed: []
 burn_in_validated: false
 ---
