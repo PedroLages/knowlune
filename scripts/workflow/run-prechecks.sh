@@ -322,19 +322,24 @@ fi
 # Format check
 log_section "Format Check"
 
-if run_check "format-check" "${LOG_DIR:+${LOG_DIR}/format-check.log}" npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"; then
+# Scope format check to branch-changed files only to avoid polluting the diff
+FORMAT_FILES=$(git diff --name-only main...HEAD | grep -E '\.(ts|tsx|js|jsx|css|md)$' | tr '\n' ' ' || true)
+if [ -z "$FORMAT_FILES" ]; then
+  GATES[format-check]="passed"
+  log_success "Format check passed (no formattable files changed)"
+elif echo "$FORMAT_FILES" | xargs npx prettier --check > "${LOG_DIR:+${LOG_DIR}/format-check.log}" 2>&1; then
   GATES[format-check]="passed"
   log_success "Format check passed"
 else
-  log_warning "Formatting issues found — auto-fixing"
+  log_warning "Formatting issues found — auto-fixing branch-changed files"
 
-  # Auto-fix
-  if run_check "format-fix" "${LOG_DIR:+${LOG_DIR}/format-check.log}" npx prettier --write "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"; then
+  # Auto-fix only branch-changed files
+  if echo "$FORMAT_FILES" | xargs npx prettier --write > /dev/null 2>&1; then
     FORMAT_AUTO_FIXED=1
-    log_info "Auto-formatted files with Prettier"
+    log_info "Auto-formatted branch-changed files with Prettier"
 
     # Re-run to verify
-    if run_check "format-check" "${LOG_DIR:+${LOG_DIR}/format-check.log}" npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"; then
+    if echo "$FORMAT_FILES" | xargs npx prettier --check > "${LOG_DIR:+${LOG_DIR}/format-check.log}" 2>&1; then
       GATES[format-check]="passed"
       log_success "Format check passed after auto-fix"
     else
