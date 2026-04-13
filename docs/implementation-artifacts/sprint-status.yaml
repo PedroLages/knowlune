@@ -704,9 +704,9 @@ development_status:
   epic-63: done  # reset 2026-03-30: story specs created but no code implemented
   63-1-learner-profile-data-aggregation-layer: done
   63-2-token-aware-profile-formatter-and-orchestrator: done
-  63-3-prompt-builder-slot-6-integration: review
+  63-3-prompt-builder-slot-6-integration: done
   63-4-learner-profile-builder-unit-tests: done
-  epic-63-retrospective: optional
+  epic-63-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 64: Performance Optimization
