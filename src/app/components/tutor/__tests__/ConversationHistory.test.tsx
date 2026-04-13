@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { isConversationStale } from '../ContinueConversationPrompt'
 import { ConversationHistorySheet } from '../ConversationHistorySheet'
 import { ContinueConversationPrompt } from '../ContinueConversationPrompt'
@@ -220,5 +220,63 @@ describe('useTutorKeyboardShortcuts', () => {
     )
     fireEvent.keyDown(document, { key: '1', metaKey: true })
     expect(onSwitchMode).not.toHaveBeenCalled()
+  })
+})
+
+// ------- Delete conversation (AlertDialog) -------
+
+describe('ConversationHistorySheet — delete conversation', () => {
+  const onDelete = vi.fn()
+  const onContinue = vi.fn()
+
+  function renderSheet() {
+    const conv = makeConversation({
+      id: 'conv-del',
+      courseId: 'course-1',
+      videoId: 'video-1',
+    })
+    render(
+      <ConversationHistorySheet
+        open={true}
+        onOpenChange={vi.fn()}
+        conversations={[conv]}
+        currentLessonId="video-1"
+        courseId="course-1"
+        onContinue={onContinue}
+        onDelete={onDelete}
+      />
+    )
+  }
+
+  beforeEach(() => {
+    onDelete.mockReset()
+    onContinue.mockReset()
+  })
+
+  it('clicking Delete button shows AlertDialog confirmation', () => {
+    renderSheet()
+    const deleteBtn = screen.getByTestId('delete-conversation-btn')
+    fireEvent.click(deleteBtn)
+    expect(screen.getByText(/delete conversation\?/i)).toBeInTheDocument()
+  })
+
+  it('confirming AlertDialog calls the delete handler', async () => {
+    renderSheet()
+    fireEvent.click(screen.getByTestId('delete-conversation-btn'))
+    // There may be multiple Delete buttons (trigger + action), pick the AlertDialogAction
+    const allDeleteBtns = screen.getAllByRole('button', { name: /^delete$/i })
+    const confirmBtn = allDeleteBtns[allDeleteBtns.length - 1]
+    fireEvent.click(confirmBtn)
+    await waitFor(() => {
+      expect(onDelete).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('canceling AlertDialog does NOT call the delete handler', () => {
+    renderSheet()
+    fireEvent.click(screen.getByTestId('delete-conversation-btn'))
+    const cancelBtn = screen.getByRole('button', { name: /cancel/i })
+    fireEvent.click(cancelBtn)
+    expect(onDelete).not.toHaveBeenCalled()
   })
 })
