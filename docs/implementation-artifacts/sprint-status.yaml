@@ -614,7 +614,7 @@ development_status:
   epic-56: in-progress
   56-1-topic-resolution-service: review
   56-2-knowledge-score-calculation-zustand-store: review
-  56-3-knowledge-map-overview-widget: backlog
+  56-3-knowledge-map-overview-widget: review
   56-4-dedicated-knowledge-map-page: backlog
 
   # ──────────────────────────────────────────────────

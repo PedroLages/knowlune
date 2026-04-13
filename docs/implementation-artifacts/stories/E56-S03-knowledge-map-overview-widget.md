@@ -1,12 +1,24 @@
 ---
 story_id: E56-S03
 story_name: "Knowledge Map Overview Widget"
-status: ready-for-dev
-started:
+status: review
+started: 2026-04-13
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-04-13
-review_gates_passed: []
+review_gates_passed:
+  - build
+  - lint
+  - type-check
+  - format-check
+  - unit-tests-skipped
+  - e2e-tests
+  - design-review
+  - code-review
+  - code-review-testing
+  - performance-benchmark
+  - security-review
+  - exploratory-qa
 burn_in_validated: false
 ---
 
