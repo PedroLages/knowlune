@@ -6,11 +6,13 @@
  * Provides Continue and Delete actions for each session card.
  */
 
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo } from 'react'
 import { History, MessageSquare } from 'lucide-react'
+import { useIsMobile } from '@/app/hooks/useMediaQuery'
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from '@/app/components/ui/sheet'
@@ -47,18 +49,6 @@ interface ConversationHistorySheetProps {
   onContinue: (conversation: ChatConversation) => void
   onDelete: (conversationId: string) => void
 }
-
-/** Detect if viewport is mobile (<640px) with resize listener */
-function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640)
-  useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < 640)
-    window.addEventListener('resize', handler)
-    return () => window.removeEventListener('resize', handler)
-  }, [])
-  return isMobile
-}
-
 
 function ConversationSessionCard({
   conversation,
@@ -217,6 +207,9 @@ export function ConversationHistorySheet({
             <History className="size-4" aria-hidden="true" />
             Conversation History
           </SheetTitle>
+          <SheetDescription className="sr-only">
+            Browse and continue past tutor conversations
+          </SheetDescription>
         </SheetHeader>
         <div className="overflow-y-auto flex-1 p-4 space-y-4">
           {thisLesson.length === 0 && otherLessons.length === 0 && (

@@ -41,6 +41,7 @@ function makeConversation(overrides: Partial<ChatConversation> = {}): ChatConver
     courseId: 'course-1',
     videoId: 'video-1',
     mode: 'socratic',
+    hintLevel: 0,
     messages: [],
     createdAt: FIXED_MS - 10 * 60 * 1000, // 10 min ago
     updatedAt: FIXED_MS - 10 * 60 * 1000,
@@ -113,7 +114,7 @@ describe('ContinueConversationPrompt', () => {
   const baseProps = {
     conversation: makeConversation({
       messages: [
-        { id: 'm1', role: 'user' as const, content: 'Hello', timestamp: FIXED_MS, mode: 'socratic' as const },
+        { role: 'user' as const, content: 'Hello', timestamp: FIXED_MS, mode: 'socratic' as const },
       ],
     }),
     onContinue: vi.fn(),
@@ -145,9 +146,12 @@ describe('ContinueConversationPrompt', () => {
 // ------- useTutorKeyboardShortcuts -------
 
 describe('useTutorKeyboardShortcuts', () => {
-  let onToggleHistory: ReturnType<typeof vi.fn>
-  let onToggleMemory: ReturnType<typeof vi.fn>
-  let onSwitchMode: ReturnType<typeof vi.fn>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let onToggleHistory: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let onToggleMemory: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let onSwitchMode: any
 
   beforeEach(() => {
     onToggleHistory = vi.fn()

@@ -6,24 +6,24 @@
  * continue, and delete operations.
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, type SetStateAction } from 'react'
 import { useTutorStore } from '@/stores/useTutorStore'
 import { db } from '@/db'
 import { isConversationStale } from './ContinueConversationPrompt'
 import type { ChatConversation } from '@/data/types'
 import type { TutorMode } from '@/ai/tutor/types'
-import type { TutorMessage as StoreTutorMessage } from '@/data/types'
+import type { ChatMessage } from '@/ai/rag/types'
 
 interface UseConversationHistoryOptions {
   courseId: string
   videoId: string
-  messages: StoreTutorMessage[]
+  messages: ChatMessage[]
 }
 
 interface UseConversationHistoryResult {
   allConversations: ChatConversation[]
   historyOpen: boolean
-  setHistoryOpen: (open: boolean) => void
+  setHistoryOpen: (open: SetStateAction<boolean>) => void
   staleConversation: ChatConversation | null
   conversationsLoaded: boolean
   continuePromptDismissed: boolean
@@ -103,7 +103,7 @@ export function useConversationHistory({
     (conv: ChatConversation) => {
       // Load conversation messages into the store, preserving original IDs
       const chatMessages = conv.messages.map(msg => ({
-        id: msg.id,
+        id: crypto.randomUUID(),
         role: msg.role,
         content: msg.content,
         timestamp: msg.timestamp,
