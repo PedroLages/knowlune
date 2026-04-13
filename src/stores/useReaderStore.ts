@@ -77,7 +77,9 @@ function loadSettings(): ReaderSettings {
           ? parsed.readingRulerEnabled
           : DEFAULT_SETTINGS.readingRulerEnabled,
       scrollMode:
-        typeof parsed.scrollMode === 'boolean' ? parsed.scrollMode : DEFAULT_SETTINGS.scrollMode,
+        typeof parsed.scrollMode === 'boolean'
+          ? parsed.scrollMode
+          : DEFAULT_SETTINGS.scrollMode,
     }
   } catch {
     // silent-catch-ok: corrupted storage, use defaults

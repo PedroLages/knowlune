@@ -47,11 +47,7 @@ const TEST_VIDEO = {
 
 const PERSISTED_MESSAGES = [
   { role: 'user', content: 'Hello tutor!', timestamp: FIXED_TIMESTAMP },
-  {
-    role: 'assistant',
-    content: 'Hi! How can I help you today?',
-    timestamp: FIXED_TIMESTAMP + 1000,
-  },
+  { role: 'assistant', content: 'Hi! How can I help you today?', timestamp: FIXED_TIMESTAMP + 1000 },
 ]
 
 const TEST_CONVERSATION = {

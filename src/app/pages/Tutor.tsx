@@ -58,8 +58,8 @@ export function Tutor() {
             Start tutoring from a lesson
           </h2>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            Open any course lesson and switch to the <strong>Tutor</strong> tab to get AI-powered
-            help grounded in the lesson transcript.
+            Open any course lesson and switch to the <strong>Tutor</strong> tab to get
+            AI-powered help grounded in the lesson transcript.
           </p>
           {importedCourses.length > 0 ? (
             <Button variant="brand" onClick={() => navigate('/courses')}>

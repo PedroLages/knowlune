@@ -29,7 +29,7 @@ export const MODE_REGISTRY: Readonly<Record<TutorMode, ModeConfig>> = Object.fre
     loadingMessage: 'Thinking of a good question...',
     requiresTranscript: false,
     tokenBudgetOverrides: {},
-    buildPromptRules: ctx => {
+    buildPromptRules: (ctx) => {
       const hintInstruction = getHintInstruction(ctx.hintLevel)
       return `Teaching mode: Socratic Questioning.
 Rules:

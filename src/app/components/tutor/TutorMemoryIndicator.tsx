@@ -8,11 +8,7 @@
 
 import { useState } from 'react'
 import { Brain, Check, X, ChevronDown, Trash2, Pencil } from 'lucide-react'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/app/components/ui/collapsible'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/app/components/ui/collapsible'
 import { Card } from '@/app/components/ui/card'
 import { Button } from '@/app/components/ui/button'
 import {
@@ -34,10 +30,7 @@ interface TutorMemoryIndicatorProps {
   learnerModel: LearnerModel | null
   courseId: string
   onClearMemory: (courseId: string) => Promise<void>
-  onUpdateMemory: (
-    courseId: string,
-    fields: Partial<Pick<LearnerModel, 'strengths' | 'misconceptions' | 'topicsExplored'>>
-  ) => Promise<void>
+  onUpdateMemory: (courseId: string, fields: Partial<Pick<LearnerModel, 'strengths' | 'misconceptions' | 'topicsExplored'>>) => Promise<void>
 }
 
 export function TutorMemoryIndicator({
@@ -71,9 +64,7 @@ export function TutorMemoryIndicator({
           >
             <Brain className="size-4 flex-shrink-0" />
             <span className="text-sm font-medium flex-1 text-left">
-              <span className="hidden sm:inline">
-                Tutor Memory: {insightCount} insights about you
-              </span>
+              <span className="hidden sm:inline">Tutor Memory: {insightCount} insights about you</span>
               <span className="sm:hidden">{insightCount} insights</span>
             </span>
             <ChevronDown
@@ -89,11 +80,7 @@ export function TutorMemoryIndicator({
                   <h4 className="text-xs font-semibold text-muted-foreground mb-1">Strengths</h4>
                   <ul role="list" className="space-y-1">
                     {learnerModel.strengths.map(s => (
-                      <li
-                        key={s.concept}
-                        role="listitem"
-                        className="flex items-center gap-1.5 text-success"
-                      >
+                      <li key={s.concept} role="listitem" className="flex items-center gap-1.5 text-success">
                         <Check className="size-3 flex-shrink-0" />
                         <span className="text-foreground">{s.concept}</span>
                         <span className="text-muted-foreground text-xs ml-auto">
@@ -108,16 +95,10 @@ export function TutorMemoryIndicator({
               {/* Misconceptions */}
               {learnerModel.misconceptions.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground mb-1">
-                    Misconceptions
-                  </h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground mb-1">Misconceptions</h4>
                   <ul role="list" className="space-y-1">
                     {learnerModel.misconceptions.map(m => (
-                      <li
-                        key={m.concept}
-                        role="listitem"
-                        className="flex items-center gap-1.5 text-destructive"
-                      >
+                      <li key={m.concept} role="listitem" className="flex items-center gap-1.5 text-destructive">
                         <X className="size-3 flex-shrink-0" />
                         <span className="text-foreground">{m.concept}</span>
                         <span className="text-muted-foreground text-xs ml-auto">
@@ -131,9 +112,7 @@ export function TutorMemoryIndicator({
 
               {/* Vocabulary Level */}
               <div>
-                <h4 className="text-xs font-semibold text-muted-foreground mb-1">
-                  Vocabulary Level
-                </h4>
+                <h4 className="text-xs font-semibold text-muted-foreground mb-1">Vocabulary Level</h4>
                 <span className="capitalize">{learnerModel.vocabularyLevel}</span>
               </div>
 
@@ -172,9 +151,8 @@ export function TutorMemoryIndicator({
                     <AlertDialogHeader>
                       <AlertDialogTitle>Clear tutor memory?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will permanently delete all stored insights about your learning for
-                        this course. The tutor will start fresh with no memory of your strengths or
-                        misconceptions.
+                        This will permanently delete all stored insights about your learning for this course.
+                        The tutor will start fresh with no memory of your strengths or misconceptions.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -198,7 +176,7 @@ export function TutorMemoryIndicator({
         learnerModel={learnerModel}
         open={editOpen}
         onOpenChange={setEditOpen}
-        onUpdate={updates => onUpdateMemory(courseId, updates)}
+        onUpdate={(updates) => onUpdateMemory(courseId, updates)}
       />
     </div>
   )

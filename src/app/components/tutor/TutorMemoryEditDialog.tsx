@@ -47,9 +47,7 @@ export function TutorMemoryEditDialog({
     setIsRemoving(true)
     try {
       await onUpdate({
-        misconceptions: learnerModel.misconceptions.filter(
-          (m: ConceptAssessment) => m.concept !== concept
-        ),
+        misconceptions: learnerModel.misconceptions.filter((m: ConceptAssessment) => m.concept !== concept),
       })
     } finally {
       setIsRemoving(false)
@@ -125,8 +123,7 @@ export function TutorMemoryEditDialog({
 
           {learnerModel.strengths.length === 0 && learnerModel.misconceptions.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">
-              No individual entries to edit. The tutor hasn&apos;t recorded any specific strengths
-              or misconceptions yet.
+              No individual entries to edit. The tutor hasn&apos;t recorded any specific strengths or misconceptions yet.
             </p>
           )}
         </div>

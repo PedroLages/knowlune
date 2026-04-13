@@ -26,11 +26,8 @@ const DEFAULT_VARIABLE_SLOTS: Pick<TokenBudgetSlots, 'history' | 'transcript' | 
 }
 
 /** Total tokens consumed by fixed slots */
-const FIXED_TOTAL =
-  FIXED_SLOTS.baseInstructions +
-  FIXED_SLOTS.modeRules +
-  FIXED_SLOTS.courseContext +
-  FIXED_SLOTS.learnerProfile
+const FIXED_TOTAL = FIXED_SLOTS.baseInstructions + FIXED_SLOTS.modeRules +
+  FIXED_SLOTS.courseContext + FIXED_SLOTS.learnerProfile
 
 /**
  * Allocate token budget across prompt slots for a given mode.
@@ -44,7 +41,10 @@ const FIXED_TOTAL =
  * @param mode - Active tutor mode
  * @returns Allocation where all slots sum to exactly totalTokens
  */
-export function allocateTokenBudget(totalTokens: number, mode: TutorMode): TokenBudgetAllocation {
+export function allocateTokenBudget(
+  totalTokens: number,
+  mode: TutorMode
+): TokenBudgetAllocation {
   const config = MODE_REGISTRY[mode]
   const overrides = config.tokenBudgetOverrides
 

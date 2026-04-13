@@ -20,8 +20,7 @@ const HINT_INSTRUCTIONS: Record<number, string> = {
 export type FrustrationLevel = 'none' | 'mild' | 'high'
 
 /** Explicit frustration patterns — escalate by +2 */
-const EXPLICIT_FRUSTRATION =
-  /\b(just tell me|give me the answer|i give up|stop asking|explain it)\b/i
+const EXPLICIT_FRUSTRATION = /\b(just tell me|give me the answer|i give up|stop asking|explain it)\b/i
 
 /** Implicit frustration keywords — escalate by +1 */
 const IMPLICIT_FRUSTRATION = /\b(i don'?t know|help|idk|no idea)\b/i

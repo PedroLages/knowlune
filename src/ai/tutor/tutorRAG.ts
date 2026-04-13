@@ -157,7 +157,10 @@ async function searchNoteEmbeddings(
 ): Promise<TutorRAGChunk[]> {
   try {
     // Get notes for this lesson
-    const notes = await db.notes.where('[courseId+videoId]').equals([courseId, videoId]).toArray()
+    const notes = await db.notes
+      .where('[courseId+videoId]')
+      .equals([courseId, videoId])
+      .toArray()
 
     if (notes.length === 0) return []
 

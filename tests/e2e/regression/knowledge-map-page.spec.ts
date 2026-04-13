@@ -227,9 +227,7 @@ test.describe('Knowledge Map Page (E56-S04)', () => {
     await expect(treemapCell).toBeAttached({ timeout: 10000 })
 
     // Use evaluate to dispatch click on the g element — Playwright's click can miss SVG elements
-    await treemapCell.evaluate((el: SVGGElement) =>
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 200, clientY: 200 }))
-    )
+    await treemapCell.evaluate((el: SVGGElement) => el.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 200, clientY: 200 })))
 
     // TopicDetailPopover should open — it renders a PopoverContent with the topic name
     // Score breakdown rows contain "Quiz score" text
@@ -267,9 +265,7 @@ test.describe('Knowledge Map Page (E56-S04)', () => {
     // Open the popover by clicking a treemap cell
     const treemapCell = treemapContainer.locator('g[role="button"]').first()
     await expect(treemapCell).toBeAttached({ timeout: 10000 })
-    await treemapCell.evaluate((el: SVGGElement) =>
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 200, clientY: 200 }))
-    )
+    await treemapCell.evaluate((el: SVGGElement) => el.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 200, clientY: 200 })))
 
     const popoverContent = page.locator('[data-slot="popover-content"]')
     await expect(popoverContent).toBeVisible({ timeout: 10000 })

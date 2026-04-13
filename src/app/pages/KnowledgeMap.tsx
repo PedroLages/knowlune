@@ -31,7 +31,8 @@ import { Brain } from 'lucide-react'
 const ALL_CATEGORIES = 'All Categories'
 
 export function KnowledgeMap() {
-  const { topics, categories, focusAreas, isLoading, error, computeScores } = useKnowledgeMapStore()
+  const { topics, categories, focusAreas, isLoading, error, computeScores } =
+    useKnowledgeMapStore()
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES)
   const [popoverTopic, setPopoverTopic] = useState<string | null>(null)
   const [clickPos, setClickPos] = useState<{ x: number; y: number } | null>(null)
@@ -60,9 +61,7 @@ export function KnowledgeMap() {
       const topic = topics.find(t => t.name === name)
       if (topic) {
         if (event) {
-          const rect = (event.currentTarget as HTMLElement)
-            .closest('[data-treemap-container]')
-            ?.getBoundingClientRect()
+          const rect = (event.currentTarget as HTMLElement).closest('[data-treemap-container]')?.getBoundingClientRect()
           if (rect) {
             setClickPos({ x: event.clientX - rect.left, y: event.clientY - rect.top })
           } else {
@@ -77,12 +76,7 @@ export function KnowledgeMap() {
 
   if (isLoading) {
     return (
-      <div
-        className="space-y-6 p-1"
-        role="status"
-        aria-busy="true"
-        aria-label="Loading knowledge map"
-      >
+      <div className="space-y-6 p-1" role="status" aria-busy="true" aria-label="Loading knowledge map">
         <Skeleton className="h-8 w-56" />
         <div className="flex gap-2">
           {Array.from({ length: 4 }, (_, i) => (
@@ -97,7 +91,11 @@ export function KnowledgeMap() {
   if (error) {
     return (
       <div className="p-1">
-        <EmptyState icon={Brain} title="Unable to load Knowledge Map" description={error} />
+        <EmptyState
+          icon={Brain}
+          title="Unable to load Knowledge Map"
+          description={error}
+        />
       </div>
     )
   }
@@ -150,7 +148,9 @@ export function KnowledgeMap() {
             <MobileTopicList
               topics={filteredTopics}
               categories={categories
-                .filter(c => selectedCategory === ALL_CATEGORIES || c.category === selectedCategory)
+                .filter(
+                  c => selectedCategory === ALL_CATEGORIES || c.category === selectedCategory
+                )
                 .map(c => c.category)}
             />
           ) : (
@@ -231,7 +231,13 @@ function PopoverForTopic({
 /**
  * Mobile fallback: sorted topic list with accordion groups by category.
  */
-function MobileTopicList({ topics, categories }: { topics: ScoredTopic[]; categories: string[] }) {
+function MobileTopicList({
+  topics,
+  categories,
+}: {
+  topics: ScoredTopic[]
+  categories: string[]
+}) {
   // Group topics by category, sorted worst-first within each category
   const grouped = categories
     .map(cat => ({
@@ -244,7 +250,9 @@ function MobileTopicList({ topics, categories }: { topics: ScoredTopic[]; catego
 
   if (grouped.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground text-center py-8">No topics in this category.</p>
+      <p className="text-sm text-muted-foreground text-center py-8">
+        No topics in this category.
+      </p>
     )
   }
 
@@ -275,7 +283,11 @@ function MobileTopicCard({ topic }: { topic: ScoredTopic }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <TopicDetailPopover topic={topic} open={expanded} onOpenChange={setExpanded}>
+    <TopicDetailPopover
+      topic={topic}
+      open={expanded}
+      onOpenChange={setExpanded}
+    >
       <Card
         className="p-3 cursor-pointer hover:bg-accent/50 transition-colors"
         role="button"

@@ -312,8 +312,7 @@ describe('suggestActions', () => {
 
 describe('BASE_WEIGHTS', () => {
   it('sums to 1.0', () => {
-    const sum =
-      BASE_WEIGHTS.quiz + BASE_WEIGHTS.flashcard + BASE_WEIGHTS.completion + BASE_WEIGHTS.recency
+    const sum = BASE_WEIGHTS.quiz + BASE_WEIGHTS.flashcard + BASE_WEIGHTS.completion + BASE_WEIGHTS.recency
     expect(sum).toBeCloseTo(1.0, 10)
   })
 })

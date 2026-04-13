@@ -29,11 +29,7 @@ interface MessageBubbleProps {
  * - Streaming indicator (animated dots)
  * - Timestamp display
  */
-export function MessageBubble({
-  message,
-  isStreaming = false,
-  showModeBadge = false,
-}: MessageBubbleProps) {
+export function MessageBubble({ message, isStreaming = false, showModeBadge = false }: MessageBubbleProps) {
   const isUser = message.role === 'user'
 
   // Format timestamp
@@ -116,9 +112,7 @@ export function MessageBubble({
 
           {/* Timestamp + mode badge (E72-S02) */}
           {showModeBadge && !isUser && message.mode ? (
-            <div
-              className={`text-[10px] mt-2 ${isUser ? 'text-white/80' : 'text-muted-foreground'}`}
-            >
+            <div className={`text-[10px] mt-2 ${isUser ? 'text-white/80' : 'text-muted-foreground'}`}>
               {MODE_LABELS[message.mode] ?? message.mode} &middot; {timeStr}
             </div>
           ) : (

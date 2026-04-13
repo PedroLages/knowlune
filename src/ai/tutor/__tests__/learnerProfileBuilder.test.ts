@@ -201,7 +201,10 @@ function makeScoredTopic(overrides: Record<string, unknown> = {}) {
 // Mock setup helper — chain .where().equals().toArray()
 // ---------------------------------------------------------------------------
 
-function mockChainedQuery(table: { where: ReturnType<typeof vi.fn> }, data: unknown[]) {
+function mockChainedQuery(
+  table: { where: ReturnType<typeof vi.fn> },
+  data: unknown[]
+) {
   const toArray = vi.fn().mockResolvedValue(data)
   const equals = vi.fn(() => ({ toArray }))
   table.where.mockReturnValue({ equals })
@@ -249,20 +252,8 @@ describe('aggregateQuizScores', () => {
       percentage: 90,
       passed: true,
       answers: [
-        {
-          questionId: 'q1',
-          userAnswer: 'A',
-          isCorrect: true,
-          pointsEarned: 10,
-          pointsPossible: 10,
-        },
-        {
-          questionId: 'q2',
-          userAnswer: 'B',
-          isCorrect: true,
-          pointsEarned: 10,
-          pointsPossible: 10,
-        },
+        { questionId: 'q1', userAnswer: 'A', isCorrect: true, pointsEarned: 10, pointsPossible: 10 },
+        { questionId: 'q2', userAnswer: 'B', isCorrect: true, pointsEarned: 10, pointsPossible: 10 },
       ],
     })
     const progress = makeContentProgress()
@@ -284,20 +275,8 @@ describe('aggregateQuizScores', () => {
     const attempt = makeQuizAttempt({
       percentage: 0,
       answers: [
-        {
-          questionId: 'q1',
-          userAnswer: 'B',
-          isCorrect: false,
-          pointsEarned: 0,
-          pointsPossible: 10,
-        },
-        {
-          questionId: 'q2',
-          userAnswer: 'A',
-          isCorrect: false,
-          pointsEarned: 0,
-          pointsPossible: 10,
-        },
+        { questionId: 'q1', userAnswer: 'B', isCorrect: false, pointsEarned: 0, pointsPossible: 10 },
+        { questionId: 'q2', userAnswer: 'A', isCorrect: false, pointsEarned: 0, pointsPossible: 10 },
       ],
     })
     const progress = makeContentProgress()
@@ -383,7 +362,9 @@ describe('aggregateKnowledgeScores', () => {
 
   it('returns null when no topics are weak or fading', () => {
     mockGetState.mockReturnValue({
-      topics: [makeScoredTopic({ name: 'Strong Topic', scoreResult: { score: 85 } })],
+      topics: [
+        makeScoredTopic({ name: 'Strong Topic', scoreResult: { score: 85 } }),
+      ],
     })
 
     expect(aggregateKnowledgeScores('course-1')).toBeNull()
@@ -768,11 +749,7 @@ describe('formatLearnerProfile', () => {
 describe('filterByTopics', () => {
   it('prioritizes matching topics to front of lists', () => {
     const data: LearnerProfileData = {
-      quizProfile: {
-        avgPercentage: 50,
-        failedCount: 2,
-        weakTopics: ['Geometry', 'Algebra', 'Calculus'],
-      },
+      quizProfile: { avgPercentage: 50, failedCount: 2, weakTopics: ['Geometry', 'Algebra', 'Calculus'] },
       knowledgeProfile: { weakTopics: ['Statistics', 'Algebra'], fadingTopics: ['Geometry'] },
       flashcardProfile: null,
       studyProfile: null,
@@ -849,7 +826,9 @@ describe('buildAndFormatLearnerProfile', () => {
     mockChainedQuery(mockContentProgress, [])
 
     // Flashcard works
-    mockChainedQuery(mockFlashcards, [makeFlashcard({ lapses: 5, stability: 2 })])
+    mockChainedQuery(mockFlashcards, [
+      makeFlashcard({ lapses: 5, stability: 2 }),
+    ])
 
     // Study works
     mockChainedQuery(mockStudySessions, [makeStudySession()])
@@ -873,20 +852,8 @@ describe('buildAndFormatLearnerProfile', () => {
       makeQuizAttempt({
         percentage: 40,
         answers: [
-          {
-            questionId: 'q1',
-            userAnswer: 'B',
-            isCorrect: false,
-            pointsEarned: 0,
-            pointsPossible: 10,
-          },
-          {
-            questionId: 'q2',
-            userAnswer: 'A',
-            isCorrect: false,
-            pointsEarned: 0,
-            pointsPossible: 10,
-          },
+          { questionId: 'q1', userAnswer: 'B', isCorrect: false, pointsEarned: 0, pointsPossible: 10 },
+          { questionId: 'q2', userAnswer: 'A', isCorrect: false, pointsEarned: 0, pointsPossible: 10 },
         ],
       }),
     ])

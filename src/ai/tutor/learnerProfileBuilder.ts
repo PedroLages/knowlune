@@ -92,6 +92,7 @@ export const STUDY_WINDOW_DAYS = 7
 /** Approximate characters per token (conservative estimate) */
 export const CHARS_PER_TOKEN = 4
 
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -136,7 +137,7 @@ export async function aggregateQuizScores(
     ])
 
     // Map lessonId → courseId using contentProgress
-    const lessonIds = new Set(allProgress.map(p => p.itemId))
+    const lessonIds = new Set(allProgress.map((p) => p.itemId))
 
     // Find quizzes belonging to this course's lessons
     const courseQuizIds = new Set<string>()
@@ -149,22 +150,22 @@ export async function aggregateQuizScores(
     }
 
     // Filter attempts for this course's quizzes
-    const courseAttempts = allAttempts.filter(a => courseQuizIds.has(a.quizId))
+    const courseAttempts = allAttempts.filter((a) => courseQuizIds.has(a.quizId))
 
     if (courseAttempts.length === 0) return null
 
     // Compute average percentage and failed count
     const totalPercentage = courseAttempts.reduce((sum, a) => sum + a.percentage, 0)
     const avgPercentage = Math.round(totalPercentage / courseAttempts.length)
-    const failedCount = courseAttempts.filter(a => a.percentage < QUIZ_FAIL_THRESHOLD).length
+    const failedCount = courseAttempts.filter((a) => a.percentage < QUIZ_FAIL_THRESHOLD).length
 
     // Find weak topics: topics where average score is below threshold
     const topicScores = new Map<string, { correct: number; total: number }>()
     for (const attempt of courseAttempts) {
-      const quiz = courseQuizzes.find(q => q.id === attempt.quizId)
+      const quiz = courseQuizzes.find((q) => q.id === attempt.quizId)
       if (!quiz) continue
       for (const answer of attempt.answers) {
-        const question = quiz.questions.find(q => q.id === answer.questionId)
+        const question = quiz.questions.find((q) => q.id === answer.questionId)
         if (!question?.topic) continue
         const existing = topicScores.get(question.topic) ?? { correct: 0, total: 0 }
         existing.total += 1
@@ -174,9 +175,7 @@ export async function aggregateQuizScores(
     }
 
     const weakTopics = [...topicScores.entries()]
-      .filter(
-        ([, data]) => data.total > 0 && (data.correct / data.total) * 100 < QUIZ_FAIL_THRESHOLD
-      )
+      .filter(([, data]) => data.total > 0 && (data.correct / data.total) * 100 < QUIZ_FAIL_THRESHOLD)
       .sort((a, b) => a[1].correct / a[1].total - b[1].correct / b[1].total)
       .map(([topic]) => topic)
 
@@ -199,17 +198,22 @@ export function aggregateKnowledgeScores(courseId: string): KnowledgeProfileData
     if (!state.topics || state.topics.length === 0) return null
 
     // Filter topics that belong to this course
-    const courseTopics = state.topics.filter(t => t.courseIds.includes(courseId))
+    const courseTopics = state.topics.filter((t) => t.courseIds.includes(courseId))
     if (courseTopics.length === 0) return null
 
     // Classify by score tier: weak = score < 40, fading = score 40-60 with high urgency
-    const weakTopics = courseTopics.filter(t => t.scoreResult.score < 40).map(t => t.name)
+    const weakTopics = courseTopics
+      .filter((t) => t.scoreResult.score < 40)
+      .map((t) => t.name)
 
     const fadingTopics = courseTopics
       .filter(
-        t => t.scoreResult.score >= 40 && t.scoreResult.score < 60 && t.daysSinceLastEngagement > 7
+        (t) =>
+          t.scoreResult.score >= 40 &&
+          t.scoreResult.score < 60 &&
+          t.daysSinceLastEngagement > 7
       )
-      .map(t => t.name)
+      .map((t) => t.name)
 
     if (weakTopics.length === 0 && fadingTopics.length === 0) return null
 
@@ -237,9 +241,11 @@ export async function aggregateFlashcardWeakness(
     const currentTime = now ?? new Date()
 
     const weakCards = cards.filter(isWeakCard)
-    const overdueCards = cards.filter(c => isOverdue(c, currentTime))
+    const overdueCards = cards.filter((c) => isOverdue(c, currentTime))
 
-    const weakTopicHints = weakCards.slice(0, 5).map(c => extractTopicHint(c.front))
+    const weakTopicHints = weakCards
+      .slice(0, 5)
+      .map((c) => extractTopicHint(c.front))
 
     return {
       weakCardCount: weakCards.length,
@@ -271,7 +277,7 @@ export async function aggregateStudySessions(
 
     // Filter to sessions within the study window
     const recentSessions = allSessions.filter(
-      s => new Date(s.startTime).getTime() >= windowStart.getTime()
+      (s) => new Date(s.startTime).getTime() >= windowStart.getTime()
     )
 
     if (recentSessions.length === 0) return null
@@ -281,7 +287,7 @@ export async function aggregateStudySessions(
 
     const qualityScores = recentSessions
       .filter((s): s is StudySession & { qualityScore: number } => s.qualityScore != null)
-      .map(s => s.qualityScore)
+      .map((s) => s.qualityScore)
     const avgQuality =
       qualityScores.length > 0
         ? Math.round(qualityScores.reduce((sum, q) => sum + q, 0) / qualityScores.length)
@@ -289,7 +295,7 @@ export async function aggregateStudySessions(
 
     // Find most recent session to compute daysSinceLastSession
     const mostRecentTime = Math.max(
-      ...allSessions.map(s => new Date(s.endTime ?? s.startTime).getTime())
+      ...allSessions.map((s) => new Date(s.endTime ?? s.startTime).getTime())
     )
     const daysSinceLastSession = Math.round(
       (currentTime.getTime() - mostRecentTime) / (1000 * 60 * 60 * 24)
@@ -350,11 +356,16 @@ function formatKnowledgeSignal(data: KnowledgeProfileData): string {
 }
 
 /** Format quiz failure signal into a compact string */
-function formatQuizSignal(data: QuizProfileData, knowledgeTopics: Set<string>): string {
+function formatQuizSignal(
+  data: QuizProfileData,
+  knowledgeTopics: Set<string>
+): string {
   const parts: string[] = []
   parts.push(`Quiz avg: ${data.avgPercentage}%.`)
   // Deduplicate: only include quiz weak topics not already in knowledge signal
-  const uniqueWeakTopics = data.weakTopics.filter(t => !knowledgeTopics.has(t.toLowerCase()))
+  const uniqueWeakTopics = data.weakTopics.filter(
+    (t) => !knowledgeTopics.has(t.toLowerCase())
+  )
   if (uniqueWeakTopics.length > 0) {
     parts.push(`Quiz struggles: ${uniqueWeakTopics.join(', ')}.`)
   }
@@ -401,14 +412,16 @@ export function filterByTopics(
   data: LearnerProfileData,
   lessonTopics: string[]
 ): LearnerProfileData {
-  const lowerTopics = lessonTopics.map(t => t.toLowerCase())
+  const lowerTopics = lessonTopics.map((t) => t.toLowerCase())
 
   const matchesTopic = (topic: string): boolean =>
-    lowerTopics.some(lt => topic.toLowerCase().includes(lt) || lt.includes(topic.toLowerCase()))
+    lowerTopics.some(
+      (lt) => topic.toLowerCase().includes(lt) || lt.includes(topic.toLowerCase())
+    )
 
   const prioritizeTopics = (topics: string[]): string[] => {
     const matching = topics.filter(matchesTopic)
-    const nonMatching = topics.filter(t => !matchesTopic(t))
+    const nonMatching = topics.filter((t) => !matchesTopic(t))
     return [...matching, ...nonMatching]
   }
 
@@ -438,7 +451,10 @@ export function filterByTopics(
  * Entire signal blocks are omitted when budget is exceeded — never truncated mid-sentence.
  * Returns empty string when all signals are null/empty.
  */
-export function formatLearnerProfile(data: LearnerProfileData, maxTokens: number): string {
+export function formatLearnerProfile(
+  data: LearnerProfileData,
+  maxTokens: number
+): string {
   const maxChars = maxTokens * CHARS_PER_TOKEN
 
   // Collect knowledge topics for deduplication with quiz signal
@@ -549,7 +565,10 @@ export async function buildAndFormatLearnerProfile(
   if (studyResult.status === 'fulfilled') {
     studyProfile = studyResult.value
   } else {
-    console.warn('[learnerProfileBuilder] aggregateStudySessions rejected:', studyResult.reason)
+    console.warn(
+      '[learnerProfileBuilder] aggregateStudySessions rejected:',
+      studyResult.reason
+    )
   }
 
   let profileData: LearnerProfileData = {

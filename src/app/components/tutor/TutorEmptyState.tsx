@@ -5,7 +5,14 @@
  * Renders mode-specific icon, heading, and tappable suggestion prompts.
  */
 
-import { Sparkles, HelpCircle, BookOpen, Lightbulb, ClipboardCheck, Bug } from 'lucide-react'
+import {
+  Sparkles,
+  HelpCircle,
+  BookOpen,
+  Lightbulb,
+  ClipboardCheck,
+  Bug,
+} from 'lucide-react'
 import type { TutorMode } from '@/ai/tutor/types'
 import type { LucideIcon } from 'lucide-react'
 
@@ -44,8 +51,8 @@ const MODE_EMPTY_STATES: Record<TutorMode, ModeEmptyConfig> = {
     icon: Lightbulb,
     heading: 'Explain it simply',
     suggestions: [
-      "Explain this like I'm five",
-      "What's a simple analogy for this concept?",
+      'Explain this like I\'m five',
+      'What\'s a simple analogy for this concept?',
       'Why does this matter in everyday life?',
     ],
   },
@@ -63,7 +70,7 @@ const MODE_EMPTY_STATES: Record<TutorMode, ModeEmptyConfig> = {
     heading: 'Debug your understanding',
     suggestions: [
       'I think I understand this, check my reasoning',
-      "Something doesn't make sense to me",
+      'Something doesn\'t make sense to me',
       'Where might I have misconceptions?',
     ],
   },
@@ -88,13 +95,15 @@ export function TutorEmptyState({
 
       <p className="text-muted-foreground mb-6 max-w-md text-sm">
         I can help you understand the material in{' '}
-        <span className="font-medium text-foreground">{lessonTitle.replace(/\.\w{2,4}$/, '')}</span>
+        <span className="font-medium text-foreground">
+          {lessonTitle.replace(/\.\w{2,4}$/, '')}
+        </span>
         . Ask me anything about the content.
       </p>
 
       <div className="space-y-2 w-full max-w-sm">
         <div className="text-xs font-medium text-muted-foreground mb-1">Try asking:</div>
-        {config.suggestions.map(suggestion => (
+        {config.suggestions.map((suggestion) => (
           <button
             key={suggestion}
             type="button"

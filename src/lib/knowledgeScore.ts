@@ -224,5 +224,5 @@ export function suggestActions(input: {
   // Sort by score ascending (weakest first = highest priority)
   signals.sort((a, b) => a.score - b.score)
 
-  return signals.map(s => s.action)
+  return signals.map((s) => s.action)
 }

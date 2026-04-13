@@ -128,12 +128,7 @@ export function buildTutorSystemPrompt(
     { id: 'course', required: true, priority: 3, content: buildCourseSlot(context) },
     { id: 'rag', required: false, priority: 4, content: ragContext },
     { id: 'transcript', required: false, priority: 5, content: buildTranscriptSlot(context) },
-    {
-      id: 'learner',
-      required: false,
-      priority: 6,
-      content: buildLearnerSlot(learnerProfile, learnerModelSummary),
-    },
+    { id: 'learner', required: false, priority: 6, content: buildLearnerSlot(learnerProfile, learnerModelSummary) },
     { id: 'resume', required: false, priority: 7, content: buildResumeSlot() },
   ]
 

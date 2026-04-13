@@ -81,7 +81,7 @@ export const CANONICAL_MAP: Record<string, string> = {
   'facial expressions': 'facial expression analysis',
   'reading faces': 'facial expression analysis',
   'micro expressions': 'microexpression recognition',
-  microexpressions: 'microexpression recognition',
+  'microexpressions': 'microexpression recognition',
   'machine learning': 'ml',
   'deep learning': 'dl',
   'artificial intelligence': 'ai',
@@ -107,7 +107,12 @@ export const CANONICAL_MAP: Record<string, string> = {
  * with spaces, collapse multiple spaces into one.
  */
 export function normalizeTopic(raw: string): string {
-  return raw.toLowerCase().trim().replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim()
+  return raw
+    .toLowerCase()
+    .trim()
+    .replace(/[-_]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 /**
@@ -116,7 +121,7 @@ export function normalizeTopic(raw: string): string {
 export function toTitleCase(normalized: string): string {
   return normalized
     .split(' ')
-    .map(word => (word.length === 0 ? '' : word[0].toUpperCase() + word.slice(1)))
+    .map((word) => (word.length === 0 ? '' : word[0].toUpperCase() + word.slice(1)))
     .join(' ')
 }
 
@@ -128,7 +133,7 @@ export function toTitleCase(normalized: string): string {
  * Returns true if the normalized topic matches any noise pattern.
  */
 export function isNoiseTopic(normalized: string): boolean {
-  return NOISE_PATTERNS.some(pattern => pattern.test(normalized))
+  return NOISE_PATTERNS.some((pattern) => pattern.test(normalized))
 }
 
 // ---------------------------------------------------------------------------
@@ -196,7 +201,10 @@ export function resolveTopics(
 
       const entry = getOrCreate(canonical)
       entry.courseIds.add(course.id)
-      entry.categoryVotes.set(course.category, (entry.categoryVotes.get(course.category) ?? 0) + 1)
+      entry.categoryVotes.set(
+        course.category,
+        (entry.categoryVotes.get(course.category) ?? 0) + 1
+      )
     }
   }
 
@@ -209,7 +217,10 @@ export function resolveTopics(
 
     const entry = getOrCreate(canonical)
     entry.courseIds.add(course.id)
-    entry.categoryVotes.set(course.category, (entry.categoryVotes.get(course.category) ?? 0) + 1)
+    entry.categoryVotes.set(
+      course.category,
+      (entry.categoryVotes.get(course.category) ?? 0) + 1
+    )
   }
 
   // --- Phase 3: Map Question.topic values ---

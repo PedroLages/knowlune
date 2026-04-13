@@ -125,7 +125,8 @@ export function TopicDetailPopover({
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">
-              Recency <span className="opacity-60">({formatWeight(effectiveWeights.recency)})</span>
+              Recency{' '}
+              <span className="opacity-60">({formatWeight(effectiveWeights.recency)})</span>
             </span>
             <span className="font-medium">{Math.round(factors.recencyScore)}%</span>
           </div>

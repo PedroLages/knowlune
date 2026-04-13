@@ -154,7 +154,7 @@ describe('buildTutorSystemPrompt', () => {
         2048,
         0,
         '',
-        'Intermediate learner, prefers examples over theory.'
+        'Intermediate learner, prefers examples over theory.',
       )
 
       expect(prompt).toContain('Learner profile:')
@@ -173,7 +173,14 @@ describe('buildTutorSystemPrompt', () => {
         transcriptStrategy: 'full',
       })
 
-      const prompt = buildTutorSystemPrompt(ctx, 'socratic', 2048, 0, '', 'Advanced learner.')
+      const prompt = buildTutorSystemPrompt(
+        ctx,
+        'socratic',
+        2048,
+        0,
+        '',
+        'Advanced learner.',
+      )
 
       const transcriptIdx = prompt.indexOf('Transcript text here.')
       const learnerIdx = prompt.indexOf('Learner profile:')

@@ -68,7 +68,10 @@ export function GenreDistributionCard() {
       </CardHeader>
       <CardContent>
         <div className="flex flex-col sm:flex-row items-center gap-6">
-          <ChartContainer config={genreChartConfig} className="h-[160px] w-[160px] shrink-0">
+          <ChartContainer
+            config={genreChartConfig}
+            className="h-[160px] w-[160px] shrink-0"
+          >
             <PieChart aria-label="Genre distribution chart">
               <Pie
                 data={data}
@@ -80,7 +83,10 @@ export function GenreDistributionCard() {
                 outerRadius={75}
               >
                 {data.map((_, i) => (
-                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                  <Cell
+                    key={i}
+                    fill={CHART_COLORS[i % CHART_COLORS.length]}
+                  />
                 ))}
               </Pie>
               <Tooltip

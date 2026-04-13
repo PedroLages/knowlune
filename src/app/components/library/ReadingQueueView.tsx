@@ -28,14 +28,7 @@ interface QueueBookRowProps {
   onMoveDown: () => void
 }
 
-function QueueBookRow({
-  book,
-  position,
-  isFirst,
-  isLast,
-  onMoveUp,
-  onMoveDown,
-}: QueueBookRowProps) {
+function QueueBookRow({ book, position, isFirst, isLast, onMoveUp, onMoveDown }: QueueBookRowProps) {
   const navigate = useNavigate()
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
 
@@ -53,7 +46,9 @@ function QueueBookRow({
       <span
         className={cn(
           'flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold',
-          position === 1 ? 'bg-brand text-brand-foreground' : 'bg-muted text-muted-foreground'
+          position === 1
+            ? 'bg-brand text-brand-foreground'
+            : 'bg-muted text-muted-foreground'
         )}
         aria-label={`Queue position ${position}`}
         data-testid={`queue-position-${book.id}`}
@@ -68,7 +63,11 @@ function QueueBookRow({
         aria-label={`Open ${book.title}`}
       >
         {resolvedCoverUrl ? (
-          <img src={resolvedCoverUrl} alt="" className="w-full h-full object-cover" />
+          <img
+            src={resolvedCoverUrl}
+            alt=""
+            className="w-full h-full object-cover"
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <BookOpen className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -88,8 +87,12 @@ function QueueBookRow({
         aria-label={`Open ${book.title}`}
       >
         <p className="text-sm font-semibold truncate text-foreground">{book.title}</p>
-        {book.author && <p className="text-xs text-muted-foreground truncate">{book.author}</p>}
-        {book.progress > 0 && <p className="text-xs text-brand mt-0.5">{book.progress}% read</p>}
+        {book.author && (
+          <p className="text-xs text-muted-foreground truncate">{book.author}</p>
+        )}
+        {book.progress > 0 && (
+          <p className="text-xs text-brand mt-0.5">{book.progress}% read</p>
+        )}
       </div>
 
       {/* Reorder controls */}

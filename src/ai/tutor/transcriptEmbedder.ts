@@ -22,7 +22,10 @@ function compositeKey(courseId: string, videoId: string): string {
 /**
  * Check if transcript embeddings already exist for a lesson.
  */
-export async function hasTranscriptEmbeddings(courseId: string, videoId: string): Promise<boolean> {
+export async function hasTranscriptEmbeddings(
+  courseId: string,
+  videoId: string
+): Promise<boolean> {
   const count = await db.transcriptEmbeddings
     .where('[courseId+videoId]')
     .equals([courseId, videoId])
@@ -114,6 +117,12 @@ async function doEmbed(
  * Remove all transcript embeddings for a lesson.
  * Useful when transcript is re-fetched.
  */
-export async function removeTranscriptEmbeddings(courseId: string, videoId: string): Promise<void> {
-  await db.transcriptEmbeddings.where('[courseId+videoId]').equals([courseId, videoId]).delete()
+export async function removeTranscriptEmbeddings(
+  courseId: string,
+  videoId: string
+): Promise<void> {
+  await db.transcriptEmbeddings
+    .where('[courseId+videoId]')
+    .equals([courseId, videoId])
+    .delete()
 }

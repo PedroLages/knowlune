@@ -172,10 +172,7 @@ export function ReadingStatsSection() {
       {!isLoading && bookETAs.length > 0 && (
         <div className="space-y-1.5">
           {bookETAs.map(({ id, title, eta }) => (
-            <div
-              key={id}
-              className="flex items-center justify-between text-sm text-muted-foreground"
-            >
+            <div key={id} className="flex items-center justify-between text-sm text-muted-foreground">
               <span className="truncate max-w-[70%]">{title}</span>
               <span className="font-medium tabular-nums" data-testid={`book-eta-${id}`}>
                 {eta ?? '—'}
