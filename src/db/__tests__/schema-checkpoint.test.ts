@@ -28,8 +28,8 @@ function extractSchema(db: Dexie): Record<string, string> {
 }
 
 describe('Dexie migration checkpoint', () => {
-  it('CHECKPOINT_VERSION should be 48', () => {
-    expect(CHECKPOINT_VERSION).toBe(48)
+  it('CHECKPOINT_VERSION should be 49', () => {
+    expect(CHECKPOINT_VERSION).toBe(49)
   })
 
   it('CHECKPOINT_SCHEMA should define all expected tables', () => {
@@ -59,6 +59,7 @@ describe('Dexie migration checkpoint', () => {
       'careerPaths',
       'challenges',
       'chapterMappings',
+      'chatConversations',
       'contentProgress',
       'courseEmbeddings',
       'courseReminders',

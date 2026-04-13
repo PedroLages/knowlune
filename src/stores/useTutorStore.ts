@@ -1,15 +1,19 @@
 /**
- * Tutor Chat State Management (Session-Only)
+ * Tutor Chat State Management with Dexie Persistence
  *
  * Zustand store for managing tutor conversation state, mode, and streaming.
- * State is NOT persisted — resets on page reload. Dexie persistence in S03.
+ * Persists conversations to Dexie chatConversations table.
  *
  * @see E57-S02 — Tutor Hook + Streaming
+ * @see E57-S03 — Conversation Persistence
  */
 
 import { create } from 'zustand'
+import { db } from '@/db'
+import { toast } from 'sonner'
 import type { TutorMode, TranscriptStatus } from '@/ai/tutor/types'
 import type { ChatMessage } from '@/ai/rag/types'
+import type { ChatConversation, TutorMessage } from '@/data/types'
 
 /** Tutor store state */
 interface TutorState {
@@ -25,6 +29,11 @@ interface TutorState {
   error: string | null
   /** Transcript status for badge display */
   transcriptStatus: TranscriptStatus | null
+  /** Active conversation ID (from Dexie) */
+  conversationId: string | null
+  /** Current lesson context for persistence */
+  _courseId: string | null
+  _videoId: string | null
 
   /** Add a message to the conversation */
   addMessage: (message: ChatMessage) => void
@@ -44,26 +53,54 @@ interface TutorState {
   setLoading: (isLoading: boolean) => void
   /** Set error state */
   setError: (error: string | null) => void
-  /** Clear the conversation */
+  /** Clear the conversation (and delete from Dexie) */
   clearConversation: () => void
   /** Set transcript status */
   setTranscriptStatus: (status: TranscriptStatus | null) => void
-  /** Load a conversation (stub for S03 persistence) */
-  loadConversation: (messages: ChatMessage[]) => void
-  /** Persist conversation (stub — full Dexie persistence in S03) */
-  persistConversation: () => void
+  /** Load conversation from Dexie for courseId+videoId */
+  loadConversation: (courseId: string, videoId: string) => Promise<void>
+  /** Persist current conversation to Dexie */
+  persistConversation: () => Promise<void>
+  /** Set lesson context for persistence */
+  setLessonContext: (courseId: string, videoId: string) => void
 }
 
 /** Maximum conversation history to retain (prevents unbounded growth) */
-const MAX_HISTORY_MESSAGES = 50
+const MAX_HISTORY_MESSAGES = 500
 
-export const useTutorStore = create<TutorState>(set => ({
+/** Convert ChatMessage to TutorMessage for Dexie storage */
+function toTutorMessage(msg: ChatMessage): TutorMessage {
+  return {
+    role: msg.role as 'user' | 'assistant',
+    content: msg.content,
+    timestamp: msg.timestamp,
+  }
+}
+
+/** Convert TutorMessage to ChatMessage for display */
+function toChatMessage(msg: TutorMessage): ChatMessage {
+  return {
+    id: crypto.randomUUID(),
+    role: msg.role,
+    content: msg.content,
+    timestamp: msg.timestamp,
+  }
+}
+
+export const useTutorStore = create<TutorState>((set, get) => ({
   messages: [],
   mode: 'socratic',
   hintLevel: 0,
   isGenerating: false,
   error: null,
   transcriptStatus: null,
+  conversationId: null,
+  _courseId: null,
+  _videoId: null,
+
+  setLessonContext: (courseId: string, videoId: string) => {
+    set({ _courseId: courseId, _videoId: videoId })
+  },
 
   addMessage: (message: ChatMessage) => {
     set(state => {
@@ -131,11 +168,20 @@ export const useTutorStore = create<TutorState>(set => ({
   },
 
   clearConversation: () => {
+    const { conversationId } = get()
+    // Delete from Dexie if we have a persisted conversation
+    if (conversationId) {
+      db.chatConversations.delete(conversationId).catch((error: unknown) => {
+        console.error('Failed to clear conversation from Dexie:', error)
+        // silent-catch-ok — clearing UI state is the priority; delete failure is non-blocking
+      })
+    }
     set({
       messages: [],
       hintLevel: 0,
       error: null,
       isGenerating: false,
+      conversationId: null,
     })
   },
 
@@ -143,12 +189,75 @@ export const useTutorStore = create<TutorState>(set => ({
     set({ transcriptStatus: status })
   },
 
-  loadConversation: (messages: ChatMessage[]) => {
-    set({ messages })
+  loadConversation: async (courseId: string, videoId: string) => {
+    try {
+      const conv = await db.chatConversations
+        .where('[courseId+videoId]')
+        .equals([courseId, videoId])
+        .first()
+
+      if (conv) {
+        // Validate messages blob (EC-HIGH: corruption guard)
+        if (!Array.isArray(conv.messages)) {
+          toast.error('Conversation data was corrupted. Starting fresh.')
+          await db.chatConversations.delete(conv.id)
+          set({ messages: [], conversationId: null })
+          return
+        }
+
+        const chatMessages = conv.messages.map(toChatMessage)
+        set({
+          messages: chatMessages,
+          conversationId: conv.id,
+          mode: conv.mode as TutorMode,
+          hintLevel: conv.hintLevel,
+        })
+      } else {
+        set({ messages: [], conversationId: null })
+      }
+    } catch {
+      // silent-catch-ok — load failure is non-critical, start fresh
+      set({ messages: [], conversationId: null })
+    }
   },
 
-  persistConversation: () => {
-    // Stub — full Dexie persistence in S03
-    console.debug('[useTutorStore] persistConversation stub (S03)')
+  persistConversation: async () => {
+    const { messages, mode, hintLevel, conversationId, _courseId, _videoId } = get()
+    if (!_courseId || !_videoId || messages.length === 0) return
+
+    const tutorMessages = messages
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(toTutorMessage)
+
+    const now = Date.now()
+
+    try {
+      if (conversationId) {
+        // Update existing conversation
+        await db.chatConversations.update(conversationId, {
+          messages: tutorMessages,
+          mode,
+          hintLevel,
+          updatedAt: now,
+        })
+      } else {
+        // Create new conversation
+        const id = crypto.randomUUID()
+        const conversation: ChatConversation = {
+          id,
+          courseId: _courseId,
+          videoId: _videoId,
+          mode,
+          hintLevel,
+          messages: tutorMessages,
+          createdAt: now,
+          updatedAt: now,
+        }
+        await db.chatConversations.add(conversation)
+        set({ conversationId: id })
+      }
+    } catch {
+      toast.error('Failed to save conversation.')
+    }
   },
 }))

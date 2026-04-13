@@ -1,5 +1,5 @@
 /**
- * useTutor Hook (E57-S02)
+ * useTutor Hook (E57-S02, persistence in S03)
  *
  * React hook for tutor chat with streaming LLM responses.
  * Implements a 6-stage pipeline:
@@ -8,7 +8,7 @@
  *   3. Build system prompt
  *   4. Assemble LLM message array (sliding window)
  *   5. Stream LLM response
- *   6. Persist to store
+ *   6. Persist to Dexie
  *
  * Follows useChatQA pattern with AbortController for cleanup.
  */
@@ -72,7 +72,15 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
   } = options
 
   const store = useTutorStore()
+  const setLessonContext = useTutorStore((s) => s.setLessonContext)
+  const loadConversation = useTutorStore((s) => s.loadConversation)
   const abortRef = useRef<AbortController | null>(null)
+
+  // Set lesson context for persistence and load existing conversation
+  useEffect(() => {
+    setLessonContext(courseId, lessonId)
+    loadConversation(courseId, lessonId)
+  }, [courseId, lessonId, setLessonContext, loadConversation])
 
   // Load transcript status on mount / lesson change — stored in Zustand for reactive re-renders
   useEffect(() => {
@@ -101,11 +109,6 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
       cancelled = true
     }
   }, [courseId, lessonId, videoPositionSeconds])
-
-  // Clear conversation when lesson changes
-  useEffect(() => {
-    store.clearConversation()
-  }, [lessonId, store.clearConversation])
 
   // Abort streaming on unmount
   useEffect(() => {
@@ -213,8 +216,8 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
           store.updateLastMessage(fullResponse + ' [Response interrupted]')
         }
 
-        // Stage 6: Persist (stub for S03)
-        store.persistConversation()
+        // Stage 6: Persist to Dexie
+        await store.persistConversation()
       } catch (err) {
         if (abortController.signal.aborted) {
           // User-initiated abort — don't show error
