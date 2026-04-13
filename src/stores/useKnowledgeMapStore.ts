@@ -180,6 +180,7 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
           topics: [],
           categories: [],
           focusAreas: [],
+          suggestions: [],
           isLoading: false,
           lastComputedAt: currentTime.toISOString(),
         })
