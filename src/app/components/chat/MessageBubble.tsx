@@ -8,6 +8,7 @@ import { User, Sparkles, Loader2 } from 'lucide-react'
 import type { ChatMessage } from '@/ai/rag/types'
 import { CitationLink } from './CitationLink'
 import { MODE_LABELS } from '@/ai/tutor/modeLabels'
+import { DebugTrafficLight } from '@/app/components/tutor/DebugTrafficLight'
 import type { ReactElement } from 'react'
 
 interface MessageBubbleProps {
@@ -106,6 +107,11 @@ export function MessageBubble({
           }`}
         >
           <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+            {!isUser && message.debugAssessment && (
+              <span className="mb-1.5 block">
+                <DebugTrafficLight assessment={message.debugAssessment} />
+              </span>
+            )}
             {renderContentWithCitations()}
             {isStreaming && (
               <span className="inline-flex items-center ml-1">

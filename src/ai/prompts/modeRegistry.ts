@@ -12,6 +12,7 @@ import type { ModeConfig } from './types'
 import { getHintInstruction } from '@/ai/tutor/hintLadder'
 import { buildELI5Prompt } from './modes/eli5'
 import { buildQuizPrompt } from './modes/quiz'
+import { buildDebugPrompt } from './modes/debug'
 
 /**
  * Complete registry of all 5 tutor modes.
@@ -98,19 +99,11 @@ Rules:
     hintLadderEnabled: false,
     scoringEnabled: false,
     updatesLearnerModel: true,
-    emptyStateMessage: 'Debug your understanding',
-    loadingMessage: 'Analyzing your understanding...',
+    emptyStateMessage: "Explain a concept and I'll find the gaps",
+    loadingMessage: 'Analyzing your explanation...',
     requiresTranscript: true,
     tokenBudgetOverrides: { history: 800 },
-    buildPromptRules: () =>
-      `Teaching mode: Debug My Understanding.
-Rules:
-- Help the learner identify and fix gaps or misconceptions in their understanding.
-- Ask targeted diagnostic questions to surface what they think they know.
-- When a misconception is found, explain why it's wrong and provide the correct understanding.
-- Be encouraging — misconceptions are learning opportunities, not failures.
-- Provide step-by-step guidance to rebuild correct mental models.
-- Reference the transcript to ground corrections in lesson material.`,
+    buildPromptRules: buildDebugPrompt,
   },
 })
 
