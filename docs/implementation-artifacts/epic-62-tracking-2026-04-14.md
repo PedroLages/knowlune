@@ -7,8 +7,8 @@ Last Updated: 2026-04-14
 
 | Story   | Status         | PR URL | Review Rounds | Issues Fixed |
 | ------- | -------------- | ------ | ------------- | ------------ |
-| E62-S01 | reviewing (R1) | —      | 1             | —            |
-| E62-S02 | queued         | —      | —             | —            |
+| E62-S01 | done           | [#332](https://github.com/PedroLages/knowlune/pull/332) | 2 | 4 |
+| E62-S02 | reviewing (R1) | —      | 1             | —            |
 | E62-S03 | queued         | —      | —             | —            |
 | E62-S04 | queued         | —      | —             | —            |
 

@@ -4,8 +4,8 @@ story_name: "Retention Gradient Treemap and Decay Predictions UI"
 status: complete
 started: 2026-04-14
 completed: 2026-04-14
-reviewed: false
-review_started:
+reviewed: in-progress
+review_started: 2026-04-14
 review_gates_passed: []
 burn_in_validated: false
 ---
