@@ -20,6 +20,10 @@ export interface ChatMessage {
   error?: string
   /** Tutor mode when this message was sent (E72-S02, tutor context only) */
   mode?: import('@/ai/tutor/types').TutorMode
+  /** Quiz result when this message was a quiz answer (E72-S03, tutor context only) */
+  quizScore?: { correct: boolean; questionNumber: number }
+  /** Debug assessment result when this message was a debug response (E72-S03, tutor context only) */
+  debugAssessment?: 'green' | 'yellow' | 'red'
 }
 
 /** Citation metadata for clickable references */
