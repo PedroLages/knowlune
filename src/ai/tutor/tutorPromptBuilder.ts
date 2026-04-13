@@ -105,24 +105,34 @@ function buildResumeSlot(): string {
 // Public API
 // ---------------------------------------------------------------------------
 
+/** Options for {@link buildTutorSystemPrompt}. */
+export interface TutorSystemPromptOptions {
+  context: TutorContext
+  mode?: TutorMode
+  tokenBudget?: number
+  hintLevel?: number
+  ragContext?: string
+  learnerProfile?: string
+  learnerModelSummary?: string
+  bloomLevel?: number
+}
+
 /**
  * Build the tutor system prompt from context with token budget enforcement.
  *
- * @param context - Tutor context with course/lesson/transcript info
- * @param mode - Tutor interaction mode (default: socratic)
- * @param tokenBudget - Maximum tokens for the system prompt
+ * @param options - Prompt assembly options (see {@link TutorSystemPromptOptions})
  * @returns Assembled system prompt string
  */
-export function buildTutorSystemPrompt(
-  context: TutorContext,
-  mode: TutorMode = 'socratic',
-  tokenBudget: number = DEFAULT_TOKEN_BUDGET,
-  hintLevel: number = 0,
-  ragContext: string = '',
-  learnerProfile: string = '',
-  learnerModelSummary: string = '',
-  bloomLevel: number = 0
-): string {
+export function buildTutorSystemPrompt({
+  context,
+  mode = 'socratic',
+  tokenBudget = DEFAULT_TOKEN_BUDGET,
+  hintLevel = 0,
+  ragContext = '',
+  learnerProfile = '',
+  learnerModelSummary = '',
+  bloomLevel = 0,
+}: TutorSystemPromptOptions): string {
   // Build all slots
   const slots: PromptSlot[] = [
     { id: 'base', required: true, priority: 1, content: buildBaseSlot() },

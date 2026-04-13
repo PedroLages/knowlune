@@ -285,16 +285,15 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
           learnerModelStr = serializeLearnerModelForPrompt(currentLearnerModel)
         }
 
-        const systemPrompt = buildTutorSystemPrompt(
-          tutorContext,
-          store.mode,
-          undefined,
-          store.hintLevel,
-          ragContextStr,
-          learnerProfileStr,
-          learnerModelStr,
-          useTutorStore.getState().quizState.bloomLevel
-        )
+        const systemPrompt = buildTutorSystemPrompt({
+          context: tutorContext,
+          mode: store.mode,
+          hintLevel: store.hintLevel,
+          ragContext: ragContextStr,
+          learnerProfile: learnerProfileStr,
+          learnerModelSummary: learnerModelStr,
+          bloomLevel: useTutorStore.getState().quizState.bloomLevel,
+        })
 
         // Stage 4: Build LLM message array with sliding window
         const allMessages = [...store.messages] // includes the user message we just added

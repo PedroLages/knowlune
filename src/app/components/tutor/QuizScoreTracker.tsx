@@ -33,7 +33,7 @@ export function QuizScoreTracker({
   useEffect(() => {
     if (total !== prevTotalRef.current && total > 0) {
       setIsPulsing(true)
-      const timer = setTimeout(() => setIsPulsing(false), 100)
+      const timer = setTimeout(() => setIsPulsing(false), 200)
       prevTotalRef.current = total
       return () => clearTimeout(timer)
     }
@@ -47,7 +47,7 @@ export function QuizScoreTracker({
       role="status"
       aria-live="polite"
       aria-label={`Quiz score: ${correct} out of ${total} correct`}
-      className={`ml-auto w-fit bg-card border border-border rounded-xl shadow-sm px-3 py-1.5 flex items-center gap-2 text-sm font-medium transition-transform duration-100 ${
+      className={`ml-auto w-fit bg-card border border-border rounded-xl shadow-sm px-3 py-1.5 flex items-center gap-2 text-sm font-medium transition-transform duration-200 ${
         isPulsing ? 'motion-safe:scale-105' : ''
       }`}
       data-testid="quiz-score-tracker"

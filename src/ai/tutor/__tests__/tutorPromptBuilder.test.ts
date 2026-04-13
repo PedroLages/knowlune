@@ -32,7 +32,7 @@ function makeContext(overrides: Partial<TutorContext> = {}): TutorContext {
 describe('buildTutorSystemPrompt', () => {
   describe('slot order', () => {
     it('starts with base instructions followed by mode', () => {
-      const prompt = buildTutorSystemPrompt(makeContext(), 'socratic')
+      const prompt = buildTutorSystemPrompt({ context: makeContext(), mode: 'socratic' })
 
       const baseIdx = prompt.indexOf('knowledgeable tutor')
       const modeIdx = prompt.indexOf('Socratic')
@@ -49,7 +49,7 @@ describe('buildTutorSystemPrompt', () => {
         transcriptStrategy: 'full',
       })
 
-      const prompt = buildTutorSystemPrompt(ctx)
+      const prompt = buildTutorSystemPrompt({ context: ctx })
 
       const courseIdx = prompt.indexOf('Test Course')
       const transcriptIdx = prompt.indexOf('Hello from transcript.')
@@ -61,17 +61,17 @@ describe('buildTutorSystemPrompt', () => {
 
   describe('mode variants', () => {
     it('includes Socratic language for socratic mode', () => {
-      const prompt = buildTutorSystemPrompt(makeContext(), 'socratic')
+      const prompt = buildTutorSystemPrompt({ context: makeContext(), mode: 'socratic' })
       expect(prompt).toContain('Socratic')
     })
 
     it('includes explain language for explain mode', () => {
-      const prompt = buildTutorSystemPrompt(makeContext(), 'explain')
+      const prompt = buildTutorSystemPrompt({ context: makeContext(), mode: 'explain' })
       expect(prompt).toContain('Direct Explanation')
     })
 
     it('includes quiz language for quiz mode', () => {
-      const prompt = buildTutorSystemPrompt(makeContext(), 'quiz')
+      const prompt = buildTutorSystemPrompt({ context: makeContext(), mode: 'quiz' })
       expect(prompt).toContain('Quiz')
     })
   })
@@ -79,7 +79,7 @@ describe('buildTutorSystemPrompt', () => {
   describe('missing optional context', () => {
     it('builds valid prompt without transcript', () => {
       const ctx = makeContext({ transcriptStrategy: 'none' })
-      const prompt = buildTutorSystemPrompt(ctx)
+      const prompt = buildTutorSystemPrompt({ context: ctx })
 
       expect(prompt).toContain('Test Course')
       expect(prompt).toContain('Lesson 1')
@@ -88,7 +88,7 @@ describe('buildTutorSystemPrompt', () => {
 
     it('builds valid prompt without lessonPosition', () => {
       const ctx = makeContext({ lessonPosition: undefined })
-      const prompt = buildTutorSystemPrompt(ctx)
+      const prompt = buildTutorSystemPrompt({ context: ctx })
 
       expect(prompt).toContain('Lesson 1')
       expect(prompt).not.toContain('Lesson position')
@@ -96,14 +96,14 @@ describe('buildTutorSystemPrompt', () => {
 
     it('builds valid prompt without videoPositionSeconds', () => {
       const ctx = makeContext({ videoPositionSeconds: undefined })
-      const prompt = buildTutorSystemPrompt(ctx)
+      const prompt = buildTutorSystemPrompt({ context: ctx })
 
       expect(prompt).not.toContain('video position')
     })
 
     it('includes video position when provided', () => {
       const ctx = makeContext({ videoPositionSeconds: 125 }) // 2:05
-      const prompt = buildTutorSystemPrompt(ctx)
+      const prompt = buildTutorSystemPrompt({ context: ctx })
 
       expect(prompt).toContain('2:05')
     })
@@ -116,7 +116,7 @@ describe('buildTutorSystemPrompt', () => {
         transcriptStrategy: 'chapter',
         chapterTitle: 'Introduction',
       })
-      const prompt = buildTutorSystemPrompt(ctx)
+      const prompt = buildTutorSystemPrompt({ context: ctx })
 
       expect(prompt).toContain('Chapter: Introduction')
       expect(prompt).toContain('Chapter content here.')
@@ -128,7 +128,7 @@ describe('buildTutorSystemPrompt', () => {
         transcriptStrategy: 'window',
         timeRange: '[02:00 - 03:30]',
       })
-      const prompt = buildTutorSystemPrompt(ctx)
+      const prompt = buildTutorSystemPrompt({ context: ctx })
 
       expect(prompt).toContain('[02:00 - 03:30]')
       expect(prompt).toContain('Windowed content.')
@@ -139,7 +139,7 @@ describe('buildTutorSystemPrompt', () => {
         transcriptExcerpt: 'Full text.',
         transcriptStrategy: 'full',
       })
-      const prompt = buildTutorSystemPrompt(ctx)
+      const prompt = buildTutorSystemPrompt({ context: ctx })
 
       expect(prompt).toContain('Lesson transcript')
       expect(prompt).toContain('Full text.')
@@ -148,21 +148,19 @@ describe('buildTutorSystemPrompt', () => {
 
   describe('learnerProfile parameter', () => {
     it('includes learner profile content in the prompt when non-empty', () => {
-      const prompt = buildTutorSystemPrompt(
-        makeContext(),
-        'socratic',
-        2048,
-        0,
-        '',
-        'Intermediate learner, prefers examples over theory.'
-      )
+      const prompt = buildTutorSystemPrompt({
+        context: makeContext(),
+        mode: 'socratic',
+        tokenBudget: 2048,
+        learnerProfile: 'Intermediate learner, prefers examples over theory.',
+      })
 
       expect(prompt).toContain('Learner profile:')
       expect(prompt).toContain('Intermediate learner, prefers examples over theory.')
     })
 
     it('does not add learner section when learnerProfile is empty (default)', () => {
-      const prompt = buildTutorSystemPrompt(makeContext(), 'socratic', 2048)
+      const prompt = buildTutorSystemPrompt({ context: makeContext(), mode: 'socratic', tokenBudget: 2048 })
 
       expect(prompt).not.toContain('Learner profile:')
     })
@@ -173,7 +171,12 @@ describe('buildTutorSystemPrompt', () => {
         transcriptStrategy: 'full',
       })
 
-      const prompt = buildTutorSystemPrompt(ctx, 'socratic', 2048, 0, '', 'Advanced learner.')
+      const prompt = buildTutorSystemPrompt({
+        context: ctx,
+        mode: 'socratic',
+        tokenBudget: 2048,
+        learnerProfile: 'Advanced learner.',
+      })
 
       const transcriptIdx = prompt.indexOf('Transcript text here.')
       const learnerIdx = prompt.indexOf('Learner profile:')
@@ -191,7 +194,7 @@ describe('buildTutorSystemPrompt', () => {
       })
 
       // Tiny budget — optional transcript slot should be excluded
-      const prompt = buildTutorSystemPrompt(ctx, 'socratic', 10)
+      const prompt = buildTutorSystemPrompt({ context: ctx, mode: 'socratic', tokenBudget: 10 })
 
       // Required slots still present
       expect(prompt).toContain('knowledgeable tutor') // base
@@ -205,7 +208,7 @@ describe('buildTutorSystemPrompt', () => {
         transcriptStrategy: 'full',
       })
 
-      const prompt = buildTutorSystemPrompt(ctx, 'socratic', 2048)
+      const prompt = buildTutorSystemPrompt({ context: ctx, mode: 'socratic', tokenBudget: 2048 })
 
       expect(prompt).toContain('Short excerpt.')
     })
@@ -218,7 +221,7 @@ describe('buildTutorSystemPrompt', () => {
       })
 
       // Budget small enough that required slots fill it, but not transcript
-      const prompt = buildTutorSystemPrompt(ctx, 'socratic', 1)
+      const prompt = buildTutorSystemPrompt({ context: ctx, mode: 'socratic', tokenBudget: 1 })
 
       expect(prompt).not.toContain('Lesson transcript')
     })
