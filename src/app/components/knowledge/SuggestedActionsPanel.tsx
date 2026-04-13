@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useId } from 'react'
 import { Sparkles, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react'
 import type { ActionSuggestion } from '@/lib/actionSuggestions'
 import { ActionCard } from '@/app/components/knowledge/ActionCard'
@@ -18,6 +18,7 @@ export function SuggestedActionsPanel({
   className,
 }: SuggestedActionsPanelProps) {
   const [expanded, setExpanded] = useState(false)
+  const titleId = useId()
 
   const hasOverflow = maxVisible !== undefined && suggestions.length > maxVisible
   const visibleSuggestions =
@@ -27,7 +28,7 @@ export function SuggestedActionsPanel({
   return (
     <section
       data-testid="suggested-actions-panel"
-      aria-labelledby="suggested-actions-title"
+      aria-labelledby={titleId}
       role="region"
       className={cn('rounded-xl border border-border bg-card p-4', className)}
     >
@@ -35,7 +36,7 @@ export function SuggestedActionsPanel({
       <div className="mb-4 flex items-center gap-2">
         <Sparkles className="size-5 shrink-0 text-brand" />
         <div>
-          <h2 id="suggested-actions-title" className="text-lg font-semibold">
+          <h2 id={titleId} className="text-lg font-semibold">
             Suggested Actions
           </h2>
           <p className="text-sm text-muted-foreground">Topics that need your attention</p>
