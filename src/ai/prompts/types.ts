@@ -41,6 +41,8 @@ export interface ModePromptContext {
   lastTopicDiscussed?: string
   /** Whether transcript is available */
   hasTranscript: boolean
+  /** Current Bloom's Taxonomy level (0=Remember … 5=Create) for Quiz Me mode */
+  bloomLevel?: number
 }
 
 /** Named token budget slots for prompt assembly */

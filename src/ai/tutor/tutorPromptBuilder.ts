@@ -12,6 +12,7 @@
 import type { TutorContext, TutorMode, PromptSlot } from './types'
 import { estimateTokens } from './transcriptContext'
 import { getHintInstruction } from './hintLadder'
+import { buildQuizPrompt } from '@/ai/prompts/modes/quiz'
 
 /** Default token budget for system prompt (conservative for small Ollama models) */
 const DEFAULT_TOKEN_BUDGET = 2048
@@ -29,7 +30,7 @@ function buildBaseSlot(): string {
 - Reference specific parts of the transcript when relevant`
 }
 
-function buildModeSlot(mode: TutorMode, hintLevel: number = 0): string {
+function buildModeSlot(mode: TutorMode, hintLevel: number = 0, bloomLevel: number = 0): string {
   switch (mode) {
     case 'socratic': {
       const hintInstruction = getHintInstruction(hintLevel)
@@ -49,7 +50,7 @@ Rules:
 - Use analogies and examples to make concepts accessible.
 - After explaining, ask a brief check-for-understanding question.`
     case 'quiz':
-      return `Teaching mode: Quiz. Test the learner's understanding by asking questions about the material. After they answer, provide feedback on what they got right and wrong, with explanations.`
+      return buildQuizPrompt({ hintLevel, hasTranscript: true, bloomLevel })
     case 'eli5':
       return `Teaching mode: Explain Like I'm 5. Use simple language, relatable analogies, and everyday examples to explain concepts. Avoid jargon. Make complex ideas accessible to a complete beginner.`
     case 'debug':
@@ -119,12 +120,13 @@ export function buildTutorSystemPrompt(
   hintLevel: number = 0,
   ragContext: string = '',
   learnerProfile: string = '',
-  learnerModelSummary: string = ''
+  learnerModelSummary: string = '',
+  bloomLevel: number = 0
 ): string {
   // Build all slots
   const slots: PromptSlot[] = [
     { id: 'base', required: true, priority: 1, content: buildBaseSlot() },
-    { id: 'mode', required: true, priority: 2, content: buildModeSlot(mode, hintLevel) },
+    { id: 'mode', required: true, priority: 2, content: buildModeSlot(mode, hintLevel, bloomLevel) },
     { id: 'course', required: true, priority: 3, content: buildCourseSlot(context) },
     { id: 'rag', required: false, priority: 4, content: ragContext },
     { id: 'transcript', required: false, priority: 5, content: buildTranscriptSlot(context) },

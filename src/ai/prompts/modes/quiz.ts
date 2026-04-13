@@ -18,17 +18,24 @@ import { getHintInstruction } from '@/ai/tutor/hintLadder'
  * Uses hintLevel for hint ladder integration (hintLadderEnabled=true).
  * Requires transcript (requiresTranscript=true).
  */
+const BLOOM_LABELS = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'] as const
+
 export function buildQuizPrompt(context: ModePromptContext): string {
   const hintInstruction = getHintInstruction(context.hintLevel)
+  const bloomLevel = context.bloomLevel ?? 0
+  const currentBloomLabel = BLOOM_LABELS[Math.min(bloomLevel, BLOOM_LABELS.length - 1)]
 
   return `MODE: Quiz Me — Adaptive Knowledge Testing
 
+CURRENT BLOOM'S LEVEL: ${currentBloomLabel} (level ${bloomLevel}/5)
+
 YOU MUST:
 - Ask one transcript-grounded question at a time.
+- Ask questions appropriate for the current Bloom's level: ${currentBloomLabel}.
 - Wait for the student's answer before providing feedback.
 - Score each answer as correct or incorrect with brief explanation.
 - Adapt difficulty using Bloom's Taxonomy: Remember → Understand → Apply → Analyze → Evaluate → Create.
-- Progress: start at Remember, advance after 2 consecutive correct, drop one level after 2 consecutive incorrect.
+- Progress: advance after 2 consecutive correct, drop one level after 2 consecutive incorrect.
 
 YOU MUST NOT:
 - Reveal the answer before the student attempts it.

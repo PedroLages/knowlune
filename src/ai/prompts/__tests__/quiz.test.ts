@@ -86,12 +86,14 @@ describe('buildQuizPrompt', () => {
     expect(result3).toContain('strong hint')
   })
 
-  it('token count is within 100-150 budget', () => {
+  it('token count is within prompt budget (±20% estimation variance)', () => {
     const result = buildQuizPrompt(DEFAULT_CONTEXT)
     const wordCount = result.split(/\s+/).length
+    // Using 1.33 word-to-token approximation ratio (same as eli5.test.ts)
     const estimatedTokens = Math.ceil(wordCount * 1.33)
     expect(estimatedTokens).toBeGreaterThanOrEqual(80)
-    expect(estimatedTokens).toBeLessThanOrEqual(250)
+    // bloomLevel context line adds ~20 tokens; upper bound accounts for that
+    expect(estimatedTokens).toBeLessThanOrEqual(230)
   })
 
   it('is a pure function (same input produces same output)', () => {

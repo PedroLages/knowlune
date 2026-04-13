@@ -56,6 +56,13 @@ interface TutorState {
     bloomLevel: number
     lastAnswerCorrect: boolean | null
   }
+  /** Last completed quiz result, saved before reset on mode switch (E73-S03 AC7) */
+  lastQuizResult: {
+    totalQuestions: number
+    correctAnswers: number
+    bloomLevel: number
+    completedAt: number
+  } | null
 
   /** Add a message to the conversation */
   addMessage: (message: ChatMessage) => void
@@ -118,6 +125,7 @@ function toTutorMessage(msg: ChatMessage, mode: TutorMode): TutorMessage {
     content: msg.content,
     timestamp: msg.timestamp,
     mode,
+    quizScore: msg.quizScore,
   }
 }
 
@@ -153,6 +161,7 @@ export const useTutorStore = create<TutorState>((set, get) => ({
     bloomLevel: 0,
     lastAnswerCorrect: null,
   },
+  lastQuizResult: null,
 
   setLessonContext: (courseId: string, videoId: string) => {
     set({ _courseId: courseId, _videoId: videoId })
@@ -226,8 +235,17 @@ export const useTutorStore = create<TutorState>((set, get) => ({
       stuckCount: 0,
       modeHistory: [...state.modeHistory, previousMode].slice(-MAX_MODE_HISTORY),
       modeTransitionContext: transitionContext,
+      // Save quiz results before reset on mode switch (E73-S03 AC7)
+      lastQuizResult:
+        previousMode === 'quiz' && state.quizState.totalQuestions > 0
+          ? {
+              totalQuestions: state.quizState.totalQuestions,
+              correctAnswers: state.quizState.correctAnswers,
+              bloomLevel: state.quizState.bloomLevel,
+              completedAt: Date.now(),
+            }
+          : state.lastQuizResult,
       // Reset quiz state when switching away from quiz mode (E73-S03)
-      // Partial results are already on TutorMessages via quizScore field
       quizState:
         previousMode === 'quiz'
           ? {
