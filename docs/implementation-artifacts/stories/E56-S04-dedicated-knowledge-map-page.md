@@ -1,10 +1,10 @@
 ---
 story_id: E56-S04
 story_name: "Dedicated Knowledge Map Page"
-status: ready-for-dev
-started:
-completed:
-reviewed: false
+status: done
+started: 2026-04-13
+completed: 2026-04-13
+reviewed: true
 review_started:
 review_gates_passed: []
 burn_in_validated: false
