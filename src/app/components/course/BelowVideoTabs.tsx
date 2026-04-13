@@ -10,7 +10,16 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { PencilLine, Bookmark, FileText, Sparkles, FolderOpen, X, Maximize2 } from 'lucide-react'
+import {
+  PencilLine,
+  Bookmark,
+  FileText,
+  Sparkles,
+  FolderOpen,
+  X,
+  Maximize2,
+  GraduationCap,
+} from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs'
 import { Button } from '@/app/components/ui/button'
 import { useMediaQuery } from '@/app/hooks/useMediaQuery'
@@ -22,6 +31,8 @@ import { NotesTab } from './tabs/NotesTab'
 import { TranscriptTab } from './tabs/TranscriptTab'
 import { LessonBookmarksTab } from './tabs/LessonBookmarksTab'
 import { MaterialsTab } from './tabs/MaterialsTab'
+import { TutorChat } from '@/app/components/tutor/TutorChat'
+import { isAIAvailable } from '@/lib/aiConfiguration'
 
 interface BelowVideoTabsProps {
   courseId: string
@@ -41,6 +52,12 @@ interface BelowVideoTabsProps {
   hideNotesTab?: boolean
   /** Callback to capture video frame for embedding in notes */
   onCaptureFrame?: () => Promise<CapturedFrame | null>
+  /** Course name for tutor context */
+  courseName?: string
+  /** Lesson title for tutor context */
+  lessonTitle?: string
+  /** Lesson position string (e.g. "3 of 12") for tutor context */
+  lessonPosition?: string
 }
 
 export function BelowVideoTabs({
@@ -54,9 +71,13 @@ export function BelowVideoTabs({
   isPdf,
   hideNotesTab,
   onCaptureFrame,
+  courseName,
+  lessonTitle,
+  lessonPosition,
 }: BelowVideoTabsProps) {
   const capabilities = adapter.getCapabilities()
   const isMobile = useMediaQuery('(max-width: 768px)')
+  const aiAvailable = isAIAvailable()
 
   // Default to notes (or materials for PDF lessons)
   const defaultTab = isPdf ? 'materials' : 'notes'
@@ -221,6 +242,12 @@ export function BelowVideoTabs({
               Materials
             </TabsTrigger>
           )}
+          {aiAvailable && (
+            <TabsTrigger value="tutor" variant="brand-pill">
+              <GraduationCap className="size-3.5" aria-hidden="true" />
+              Tutor
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {!hideNotesTab && (
@@ -304,6 +331,21 @@ export function BelowVideoTabs({
           <TabsContent value="materials" className="mt-4">
             <div className="bg-card rounded-2xl shadow-sm">
               <MaterialsTab courseId={courseId} lessonId={lessonId} adapter={adapter} />
+            </div>
+          </TabsContent>
+        )}
+
+        {aiAvailable && (
+          <TabsContent value="tutor" className="mt-4">
+            <div className="bg-card rounded-2xl shadow-sm overflow-hidden">
+              <TutorChat
+                courseId={courseId}
+                lessonId={lessonId}
+                courseName={courseName ?? 'Course'}
+                lessonTitle={lessonTitle ?? 'Lesson'}
+                lessonPosition={lessonPosition}
+                videoPositionSeconds={currentTime}
+              />
             </div>
           </TabsContent>
         )}
