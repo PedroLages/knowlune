@@ -1,7 +1,7 @@
 ---
 story_id: E57-S02
 story_name: "Tutor Hook + Streaming"
-status: draft
+status: ready-for-dev
 started:
 completed:
 reviewed: false
@@ -97,6 +97,7 @@ so that I see responses appear in real-time with the same quality and provider s
 
 - Architecture reference: `_bmad-output/planning-artifacts/architecture.md` lines 4338-4518 (Decision 6: Tutor Hook)
 - useTutor follows useChatQA 5-stage pattern extended to 6 stages (adds frustration processing)
+- **IMPORTANT: `'tutor'` is not yet in the `AIFeatureId` type** (`src/lib/modelDefaults.ts`). Must add `'tutor'` to the `AIFeatureId` union type, `AI_FEATURE_IDS` array, and `FEATURE_DEFAULTS` before calling `getLLMClient('tutor')`. Follow the same pattern as existing feature IDs (e.g., `'noteQA'`).
 - getLLMClient('tutor') uses existing factory — enables per-feature model selection from AI Deep Strategy
 - Conversation context window: last 3 exchanges = ~650 tokens at average message length
 - Frustration detection in Stage 1 is a placeholder in this story (returns 'none') — full implementation in S04

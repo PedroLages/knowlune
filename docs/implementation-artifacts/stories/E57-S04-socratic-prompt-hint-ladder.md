@@ -1,7 +1,7 @@
 ---
 story_id: E57-S04
 story_name: "Socratic System Prompt + Hint Ladder"
-status: draft
+status: ready-for-dev
 started:
 completed:
 reviewed: false

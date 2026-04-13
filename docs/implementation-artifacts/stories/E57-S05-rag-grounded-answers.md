@@ -1,7 +1,7 @@
 ---
 story_id: E57-S05
 story_name: "RAG-Grounded Answers (Phase 2)"
-status: draft
+status: ready-for-dev
 started:
 completed:
 reviewed: false
@@ -94,11 +94,12 @@ so that I get accurate, citation-rich answers grounded in the actual lesson mate
 
 - Architecture reference: `_bmad-output/planning-artifacts/architecture.md` lines 4253-4259 (Phase 2 RAG preview)
 - Existing RAG infrastructure: `src/ai/rag/ragCoordinator.ts`, `src/ai/rag/promptBuilder.ts`, `embeddings` Dexie table
+- **IMPORTANT: Current `Embedding` type (src/data/types.ts) uses `noteId` as primary key and has no `sourceType` field.** This story must extend the Embedding interface to support transcript sources — either add a `sourceType` discriminator field and generalize the key from `noteId` to a generic `sourceId`, or create a separate `transcriptEmbeddings` table. Evaluate trade-offs at implementation time. If modifying the Embedding type, a Dexie schema migration (v50) will be needed to add the sourceType index.
 - Transcript chunks need timestamp metadata: each chunk stores startTime and endTime of covered cues
 - Position-aware boosting formula: `boostedScore = rawScore + (isWithin60s ? 0.2 : 0)`
 - Lazy embedding: only embed when tutor is actually used for a lesson (not on import or lesson view)
-- Embedding model: uses same embedding provider as notes (via existing embedding pipeline)
-- sourceType discriminator: add 'transcript' to existing sourceType options in embeddings table
+- Embedding model: uses same embedding provider as notes (via existing embedding pipeline `src/ai/embeddingPipeline.ts`)
+- Existing vector math utilities in `src/lib/vectorMath.ts` and `src/lib/vectorSearch.ts`
 
 ## Testing Notes
 

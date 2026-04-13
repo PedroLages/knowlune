@@ -1,7 +1,7 @@
 ---
 story_id: E57-S01
 story_name: "Tutor Chat UI + Context Injection"
-status: draft
+status: ready-for-dev
 started:
 completed:
 reviewed: false
@@ -83,7 +83,7 @@ so that I can ask questions about the material I'm studying and get relevant, tr
   - [ ] 5.2 Wire up placeholder sendMessage (full implementation in S02)
   - [ ] 5.3 Implement empty state with custom tutor prompt
 - [ ] Task 6: Add Tutor tab to LessonPlayer (AC: 1, 8)
-  - [ ] 6.1 Modify `src/app/pages/LessonPlayer.tsx` to add 6th TabsTrigger + TabsContent
+  - [ ] 6.1 Modify `src/app/pages/UnifiedLessonPlayer.tsx` to add 6th TabsTrigger + TabsContent
   - [ ] 6.2 Conditionally render based on AI provider configuration
   - [ ] 6.3 Pass courseId, lessonId (videoId), and videoPosition to TutorChat
 

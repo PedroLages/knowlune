@@ -1,7 +1,7 @@
 ---
 story_id: E57-S03
 story_name: "Conversation Persistence"
-status: draft
+status: ready-for-dev
 started:
 completed:
 reviewed: false
@@ -20,10 +20,10 @@ so that I can pick up where I left off without re-asking previous questions.
 
 ## Acceptance Criteria
 
-**Given** the Dexie schema is at version 28 or earlier
+**Given** the Dexie schema is at version 48 (current as of E113)
 **When** the app loads after this story is deployed
-**Then** Dexie migrates to v29 with a new `chatConversations` table indexed by `id, [courseId+videoId], courseId, updatedAt`
-**And** the CHECKPOINT_VERSION in checkpoint.ts is updated to 29 with chatConversations in CHECKPOINT_SCHEMA
+**Then** Dexie migrates to v49 with a new `chatConversations` table indexed by `id, [courseId+videoId], courseId, updatedAt`
+**And** the CHECKPOINT_VERSION in checkpoint.ts is updated to 49 with chatConversations in CHECKPOINT_SCHEMA
 
 **Given** a ChatConversation type is added to src/data/types.ts
 **When** referenced in the codebase
@@ -59,9 +59,9 @@ so that I can pick up where I left off without re-asking previous questions.
 
 - [ ] Task 1: Add ChatConversation and TutorMessage types (AC: 2)
   - [ ] 1.1 Add TutorMode, TutorMessage, ChatConversation types to `src/data/types.ts`
-- [ ] Task 2: Dexie v29 migration (AC: 1)
-  - [ ] 2.1 Add v29 schema to `src/db/schema.ts` with chatConversations table
-  - [ ] 2.2 Update CHECKPOINT_VERSION to 29 in `src/db/checkpoint.ts`
+- [ ] Task 2: Dexie v49 migration (AC: 1)
+  - [ ] 2.1 Add v49 schema to `src/db/schema.ts` with chatConversations table
+  - [ ] 2.2 Update CHECKPOINT_VERSION to 49 in `src/db/checkpoint.ts`
   - [ ] 2.3 Add chatConversations to CHECKPOINT_SCHEMA
   - [ ] 2.4 Add `chatConversations: EntityTable<ChatConversation, 'id'>` to ElearningDatabase type
 - [ ] Task 3: Implement Dexie persistence in useTutorStore (AC: 3, 4, 5)
@@ -75,7 +75,7 @@ so that I can pick up where I left off without re-asking previous questions.
   - [ ] 5.1 Reset store state when courseId/lessonId changes (useEffect cleanup)
   - [ ] 5.2 Load correct conversation for new lesson
 - [ ] Task 6: Unit tests for persistence (AC: 1, 3, 4, 5, 7)
-  - [ ] 6.1 Test Dexie v29 migration creates chatConversations table
+  - [ ] 6.1 Test Dexie v49 migration creates chatConversations table
   - [ ] 6.2 Test conversation CRUD (create, update, load, delete)
   - [ ] 6.3 Test compound index [courseId+videoId] lookup
   - [ ] 6.4 Test multi-lesson conversation isolation
@@ -88,7 +88,7 @@ so that I can pick up where I left off without re-asking previous questions.
 ## Implementation Notes
 
 - Architecture reference: `_bmad-output/planning-artifacts/architecture.md` lines 4261-4337 (Decision 5: Conversation Storage)
-- **CRITICAL: Dexie version is provisional.** v28 is reserved for E50 StudySchedule. If E50 ships first, use v29. If E57 ships first, use v28. Check `src/db/schema.ts` at implementation time to determine the next available version number. Do NOT hardcode v29 until confirmed.
+- **Dexie version confirmed.** Current version is v48 (CHECKPOINT_VERSION=48, last migration is bookReviews from E113-S01). Next available version is v49. Verify `src/db/schema.ts` at implementation time in case another epic ships first.
 - Blob storage: messages as JSON array in conversation record (~2-5 KB per conversation)
 
 **Edge case review findings (HIGH severity — must address):**
