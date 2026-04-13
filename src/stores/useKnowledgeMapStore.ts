@@ -374,7 +374,12 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
         canonicalName: t.canonicalName,
         score: t.scoreResult.score,
         tier: t.scoreResult.tier,
-        trend: t.daysSinceLastEngagement > 14 ? 'declining' : t.daysSinceLastEngagement > 7 ? 'stable' : 'improving',
+        trend:
+          t.daysSinceLastEngagement > 14
+            ? 'declining'
+            : t.daysSinceLastEngagement > 7
+              ? 'stable'
+              : 'improving',
         recencyScore: Math.max(0, 100 - t.daysSinceLastEngagement * 2),
         hasFlashcards: t.suggestedActions.some(a => a === 'Review Flashcards'),
         hasQuizzes: t.suggestedActions.some(a => a === 'Retake Quiz'),

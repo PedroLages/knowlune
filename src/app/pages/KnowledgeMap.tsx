@@ -32,7 +32,8 @@ import { Brain } from 'lucide-react'
 const ALL_CATEGORIES = 'All Categories'
 
 export function KnowledgeMap() {
-  const { topics, categories, focusAreas, suggestions, isLoading, error, computeScores } = useKnowledgeMapStore()
+  const { topics, categories, focusAreas, suggestions, isLoading, error, computeScores } =
+    useKnowledgeMapStore()
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES)
   const [popoverTopic, setPopoverTopic] = useState<string | null>(null)
   const [clickPos, setClickPos] = useState<{ x: number; y: number } | null>(null)
@@ -144,9 +145,7 @@ export function KnowledgeMap() {
       </div>
 
       {/* Suggested Actions — mobile: inline above topic list (desktop version in sidebar below) */}
-      {isMobile && (
-        <SuggestedActionsPanel suggestions={suggestions} />
-      )}
+      {isMobile && <SuggestedActionsPanel suggestions={suggestions} />}
 
       {/* Main content: treemap + sidebars */}
       <div className="flex flex-col lg:flex-row gap-6">
@@ -188,9 +187,7 @@ export function KnowledgeMap() {
         {/* Right sidebar column — desktop only; Focus Areas rendered once for all viewports */}
         <div className="lg:w-80 shrink-0 flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
           {/* Suggested Actions — desktop sidebar only (mobile version rendered above) */}
-          {!isMobile && (
-            <SuggestedActionsPanel suggestions={suggestions} />
-          )}
+          {!isMobile && <SuggestedActionsPanel suggestions={suggestions} />}
 
           {/* Focus Areas — single instance, shown on all viewports */}
           <Card className="p-4">

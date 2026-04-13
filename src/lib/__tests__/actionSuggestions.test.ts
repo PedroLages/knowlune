@@ -273,7 +273,15 @@ describe('generateActionSuggestions', () => {
         tier: 'fading',
         hasFlashcards: false,
         hasQuizzes: false,
-        lessons: [{ lessonId: 'L20', courseId: 'C6', title: 'Tactics', completionPct: 25, durationMinutes: 30 }],
+        lessons: [
+          {
+            lessonId: 'L20',
+            courseId: 'C6',
+            title: 'Tactics',
+            completionPct: 25,
+            durationMinutes: 30,
+          },
+        ],
       }),
     ]
 
@@ -281,7 +289,9 @@ describe('generateActionSuggestions', () => {
 
     expect(result).toHaveLength(3)
     // Body Language → flashcard-review (highest priority action)
-    expect(result.find(s => s.canonicalName === 'body-language')!.actionType).toBe('flashcard-review')
+    expect(result.find(s => s.canonicalName === 'body-language')!.actionType).toBe(
+      'flashcard-review'
+    )
     // Public Speaking → quiz-refresh (flashcard-review not available, quiz > lesson)
     expect(result.find(s => s.canonicalName === 'public-speaking')!.actionType).toBe('quiz-refresh')
     // Negotiation → lesson-rewatch (only option)
