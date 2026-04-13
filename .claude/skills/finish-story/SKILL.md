@@ -454,7 +454,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    1. `/sprint-status` — Verify all stories are done, surface risks
    2. `/testarch-trace` — Requirements-to-tests traceability
    3. `/testarch-nfr` — Non-functional requirements validation
-   4. `/review-adversarial` — (Optional) Cynical epic-level critique
+   4. `/review-adversarial` — Cynical epic-level critique
    5. `/retrospective` — Lessons learned and pattern extraction
 
    ---

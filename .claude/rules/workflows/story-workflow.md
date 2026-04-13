@@ -94,7 +94,7 @@ When all stories in an epic are done, run in order:
 1. `/sprint-status` — Verify epic is fully complete, surface any orphaned or in-progress stories *(pre-gate)*
 2. `/testarch-trace` — Requirements-to-tests traceability matrix
 3. `/testarch-nfr` — Non-functional requirements validation
-4. `/review-adversarial` — Optional: cynical critique of the epic's scope and implementation *(skip if low-risk epic)*
+4. `/review-adversarial` — Cynical critique of the epic's scope and implementation
 5. `/retrospective` — Lessons learned and pattern extraction
 6. **Known issues triage** — Review `docs/known-issues.yaml` for `open` items discovered during this epic. For each: schedule for a future epic, mark `wont-fix`, or fix now as a chore commit.
 
