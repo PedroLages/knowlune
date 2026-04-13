@@ -702,7 +702,7 @@ development_status:
   # Depends on: E57 (AI Tutoring), soft deps on E52/E56/E59
   # ──────────────────────────────────────────────────
   epic-63: backlog  # reset 2026-03-30: story specs created but no code implemented
-  63-1-learner-profile-data-aggregation-layer: ready-for-dev
+  63-1-learner-profile-data-aggregation-layer: review
   63-2-token-aware-profile-formatter-and-orchestrator: ready-for-dev
   63-3-prompt-builder-slot-5-integration: ready-for-dev
   63-4-learner-profile-builder-unit-tests: ready-for-dev
