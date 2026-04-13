@@ -1,12 +1,24 @@
 ---
 story_id: E56-S02
 story_name: "Knowledge Score Calculation + Zustand Store"
-status: ready-for-dev
-started:
+status: review
+started: 2026-04-13
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-04-13
+review_gates_passed:
+  - build
+  - lint
+  - type-check
+  - format-check
+  - unit-tests
+  - e2e-tests-skipped
+  - design-review-skipped
+  - code-review
+  - code-review-testing
+  - performance-benchmark-skipped
+  - security-review-skipped
+  - exploratory-qa-skipped
 burn_in_validated: false
 ---
 
