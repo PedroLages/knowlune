@@ -6,7 +6,7 @@ started:
 completed:
 reviewed: true
 review_started: 2026-04-13
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, bundle-analysis, code-review, code-review-testing, security-review, glm-code-review]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, bundle-analysis, code-review, code-review-testing, security-review, glm-code-review, design-review-skipped, performance-benchmark-skipped, exploratory-qa-skipped]
 burn_in_validated: false
 ---
 
