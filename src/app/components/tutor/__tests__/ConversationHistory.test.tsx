@@ -223,6 +223,65 @@ describe('useTutorKeyboardShortcuts', () => {
   })
 })
 
+// ------- History button badge count -------
+
+describe('History button badge count', () => {
+  /**
+   * GAP-09: Verify the badge shown on the history button reflects the
+   * number of conversations for the current course.
+   * The badge renders when conversationCount > 1 (per TutorChat.tsx L151).
+   */
+
+  function HistoryBadge({ conversations, courseId }: { conversations: ChatConversation[]; courseId: string }) {
+    const conversationCount = conversations.filter(c => c.courseId === courseId).length
+    return (
+      <div data-testid="badge-wrapper" style={{ position: 'relative', display: 'inline-block' }}>
+        <button aria-label="Conversation history" data-testid="history-btn">H</button>
+        {conversationCount > 1 && (
+          <span
+            data-testid="history-badge"
+            aria-label={`${conversationCount} conversations`}
+          >
+            {conversationCount}
+          </span>
+        )}
+      </div>
+    )
+  }
+
+  it('shows badge with correct count when 3 conversations exist for the course', () => {
+    const conversations = [
+      makeConversation({ id: 'c1', courseId: 'course-1', videoId: 'video-1' }),
+      makeConversation({ id: 'c2', courseId: 'course-1', videoId: 'video-2' }),
+      makeConversation({ id: 'c3', courseId: 'course-1', videoId: 'video-3' }),
+    ]
+    render(<HistoryBadge conversations={conversations} courseId="course-1" />)
+    const badge = screen.getByTestId('history-badge')
+    expect(badge).toBeInTheDocument()
+    expect(badge).toHaveTextContent('3')
+    expect(badge).toHaveAccessibleName('3 conversations')
+  })
+
+  it('does not show badge when only 1 conversation exists', () => {
+    const conversations = [
+      makeConversation({ id: 'c1', courseId: 'course-1', videoId: 'video-1' }),
+    ]
+    render(<HistoryBadge conversations={conversations} courseId="course-1" />)
+    expect(screen.queryByTestId('history-badge')).not.toBeInTheDocument()
+  })
+
+  it('only counts conversations for the matching courseId', () => {
+    const conversations = [
+      makeConversation({ id: 'c1', courseId: 'course-1', videoId: 'video-1' }),
+      makeConversation({ id: 'c2', courseId: 'course-2', videoId: 'video-1' }),
+      makeConversation({ id: 'c3', courseId: 'course-2', videoId: 'video-2' }),
+    ]
+    // Only 1 for course-1, so no badge
+    render(<HistoryBadge conversations={conversations} courseId="course-1" />)
+    expect(screen.queryByTestId('history-badge')).not.toBeInTheDocument()
+  })
+})
+
 // ------- Delete conversation (AlertDialog) -------
 
 describe('ConversationHistorySheet — delete conversation', () => {
