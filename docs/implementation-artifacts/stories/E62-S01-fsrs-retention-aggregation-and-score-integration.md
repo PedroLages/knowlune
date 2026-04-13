@@ -1,6 +1,6 @@
 ---
 story_id: E62-S01
-story_name: "FSRS Retention Aggregation and Score Integration"
+story_name: 'FSRS Retention Aggregation and Score Integration'
 status: in-progress
 started: 2026-04-14
 completed:
@@ -34,7 +34,7 @@ so that topics with fading flashcards show declining scores and I can see when I
 
 **Given** a topic with average stability of 15 days
 **When** `calculateDecayDate(15, now)` is called with FSRS mode
-**Then** it returns an ISO date approximately 58 days in the future (9 * 15 * 0.4286 ≈ 57.9 days from now)
+**Then** it returns an ISO date approximately 58 days in the future (9 _ 15 _ 0.4286 ≈ 57.9 days from now)
 
 **Given** a topic with avgStability of 0 or negative
 **When** `calculateDecayDate()` is called
@@ -100,15 +100,18 @@ No UI in this story — pure scoring logic and store wiring. Follows the existin
 **Key files to create:** None (all modifications to existing files)
 
 **Key files to modify:**
+
 - `src/lib/knowledgeScore.ts` — add `calculateAggregateRetention()`, `calculateDecayDate()`, extend `ScoredTopic`, update `calculateTopicScore()`
 - `src/stores/useKnowledgeMapStore.ts` — wire retention aggregation into `computeScores()` pipeline
 
 **Key files to reference:**
+
 - `src/lib/spacedRepetition.ts` — `predictRetention()` signature (SM-2 now, FSRS after E59)
 - `src/stores/useFlashcardStore.ts` — flashcard data access
 - `src/lib/topicResolver.ts` — `ResolvedTopic` with `courseIds[]`
 
 **Architecture decisions:**
+
 - FSRS retention replaces the flashcard retention factor (30% weight), not the recency factor
 - Recency factor (20%) remains as independent engagement freshness signal
 - Feature detection via `'stability' in card` for SM-2/FSRS compatibility

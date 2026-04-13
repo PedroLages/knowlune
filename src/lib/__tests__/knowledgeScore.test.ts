@@ -347,10 +347,7 @@ describe('calculateAggregateRetention', () => {
   })
 
   it('returns null for cards with no last_review (unreviewed)', () => {
-    const cards = [
-      { stability: 10 },
-      { stability: 20 },
-    ]
+    const cards = [{ stability: 10 }, { stability: 20 }]
     const result = calculateAggregateRetention(cards, FIXED_NOW)
     expect(result.retention).toBeNull()
     expect(result.avgStability).toBeNull()

@@ -198,10 +198,7 @@ export function calculateAggregateRetention(
  * @param now - Current timestamp
  * @returns ISO date string when retention drops to 70%, or null if avgStability <= 0
  */
-export function calculateDecayDate(
-  avgStability: number,
-  now: Date = new Date()
-): string | null {
+export function calculateDecayDate(avgStability: number, now: Date = new Date()): string | null {
   if (avgStability <= 0) return null
 
   // FSRS power-law: solve for t when R(t,S) = 0.70

@@ -285,9 +285,8 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
           currentTime
         )
         const flashcardRetention = aggregateRetention
-        const predictedDecayDate = avgStability !== null
-          ? calculateDecayDate(avgStability, currentTime)
-          : null
+        const predictedDecayDate =
+          avgStability !== null ? calculateDecayDate(avgStability, currentTime) : null
 
         // Completion across topic's courses
         let totalLessons = 0
@@ -435,5 +434,4 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
   getTopicByName: (canonicalName: string) => {
     return get().topics.find(t => t.canonicalName === canonicalName)
   },
-
 }))

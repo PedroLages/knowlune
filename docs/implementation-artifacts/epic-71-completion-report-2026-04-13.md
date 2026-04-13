@@ -9,24 +9,24 @@
 
 Epic 71 delivered the full contextual action suggestion stack for the Knowledge Map feature. The system surfaces urgency-ranked action cards — flashcard review, quiz refresh, and lesson rewatch — computed from a pure-function data layer and rendered in a responsive sidebar/panel that integrates with the existing Knowledge Map page. All three stories shipped to `main` with zero production incidents. Post-epic validation required a fix pass to close test coverage gaps before the traceability gate passed.
 
-| Attribute | Value |
-|-----------|-------|
-| Epic goal | Contextual action suggestions on Knowledge Map |
-| Outcome | Fully delivered — all 3 stories merged, post-epic fix pass complete |
-| Date range | 2026-04-13 → 2026-04-13 |
-| Production incidents | 0 |
-| Post-epic PASS gate | Achieved after fix pass |
+| Attribute            | Value                                                               |
+| -------------------- | ------------------------------------------------------------------- |
+| Epic goal            | Contextual action suggestions on Knowledge Map                      |
+| Outcome              | Fully delivered — all 3 stories merged, post-epic fix pass complete |
+| Date range           | 2026-04-13 → 2026-04-13                                             |
+| Production incidents | 0                                                                   |
+| Post-epic PASS gate  | Achieved after fix pass                                             |
 
 ---
 
 ## 2. Stories Delivered
 
-| Story ID | Name | PR URL | Review Rounds | Issues Fixed |
-|----------|------|--------|---------------|--------------|
-| E71-S01 | Action Suggestion Data Layer | [#329](https://github.com/PedroLages/knowlune/pull/329) | 3 | 8 |
-| E71-S02 | ActionCard and SuggestedActionsPanel UI Components | [#330](https://github.com/PedroLages/knowlune/pull/330) | 2 | 6 |
-| E71-S03 | Knowledge Map Integration and Tests | [#331](https://github.com/PedroLages/knowlune/pull/331) | 4 | 7 |
-| **Total** | — | — | **9** | **21** |
+| Story ID  | Name                                               | PR URL                                                  | Review Rounds | Issues Fixed |
+| --------- | -------------------------------------------------- | ------------------------------------------------------- | ------------- | ------------ |
+| E71-S01   | Action Suggestion Data Layer                       | [#329](https://github.com/PedroLages/knowlune/pull/329) | 3             | 8            |
+| E71-S02   | ActionCard and SuggestedActionsPanel UI Components | [#330](https://github.com/PedroLages/knowlune/pull/330) | 2             | 6            |
+| E71-S03   | Knowledge Map Integration and Tests                | [#331](https://github.com/PedroLages/knowlune/pull/331) | 4             | 7            |
+| **Total** | —                                                  | —                                                       | **9**         | **21**       |
 
 ### Story Notes
 
@@ -42,14 +42,14 @@ Epic 71 delivered the full contextual action suggestion stack for the Knowledge 
 
 Issues found and fixed across all 9 review rounds (story-related only; pre-existing issues excluded):
 
-| Severity | Found | Fixed | False Positives | Deferred |
-|----------|-------|-------|-----------------|----------|
-| BLOCKER | 1 | 1 | 0 | 0 |
-| HIGH | 1 | 1 | 0 | 0 |
-| MEDIUM | 6 | 6 | 1 (GLM) | 0 |
-| LOW | 8 | 8 | 0 | 0 |
-| NIT | 5 | 5 | 0 | 0 |
-| **Total** | **21** | **21** | **1** | **0** |
+| Severity  | Found  | Fixed  | False Positives | Deferred |
+| --------- | ------ | ------ | --------------- | -------- |
+| BLOCKER   | 1      | 1      | 0               | 0        |
+| HIGH      | 1      | 1      | 0               | 0        |
+| MEDIUM    | 6      | 6      | 1 (GLM)         | 0        |
+| LOW       | 8      | 8      | 0               | 0        |
+| NIT       | 5      | 5      | 0               | 0        |
+| **Total** | **21** | **21** | **1**           | **0**    |
 
 **False positive note:** GLM flagged `lg:flex` overriding `sm:grid` as a BLOCKER in E71-S02 R2. This is correct Tailwind v4 responsive cascade behavior. Pattern documented in `engineering-patterns.md` to prevent future triage overhead.
 
@@ -61,19 +61,19 @@ Issues found and fixed across all 9 review rounds (story-related only; pre-exist
 
 ### 4a. Known Issues Already Tracked (no new action required)
 
-| KI ID | Summary | Re-encountered in |
-|-------|---------|------------------|
-| KI-057 | Pre-existing test failures | E71-S03 |
-| KI-058 | Unit test coverage below threshold | E71-S03 |
-| KI-063 | 8 pre-existing HIGH npm audit vulnerabilities (epubjs, lodash, vite dev-only) | E71-S03 |
+| KI ID  | Summary                                                                       | Re-encountered in |
+| ------ | ----------------------------------------------------------------------------- | ----------------- |
+| KI-057 | Pre-existing test failures                                                    | E71-S03           |
+| KI-058 | Unit test coverage below threshold                                            | E71-S03           |
+| KI-063 | 8 pre-existing HIGH npm audit vulnerabilities (epubjs, lodash, vite dev-only) | E71-S03           |
 
 ### 4b. New Pre-Existing Issues (added to known-issues.yaml)
 
-| KI ID | Type | Severity | Summary | File:Location | Discovered By |
-|-------|------|----------|---------|---------------|---------------|
-| KI-064 | design | low | Breakpoint mismatch: `useIsMobile()` uses 639px threshold but `lg:` Tailwind breakpoint is 1024px — gap of 384px where neither sidebar nor mobile layout applies | `src/hooks/useIsMobile.ts` | E71-S03 R4 |
-| KI-065 | architecture | medium | Lesson title in action suggestions approximated from `courseId`/`lessonId` — real title requires E56-S04 data | `src/stores/useKnowledgeMapStore.ts` | E71-NFR |
-| KI-066 | architecture | low | Action suggestion trend derivation is time-only (days since last engagement) — ignores actual score trajectory over sessions | `src/lib/actionSuggestions.ts` | E71-NFR |
+| KI ID  | Type         | Severity | Summary                                                                                                                                                          | File:Location                        | Discovered By |
+| ------ | ------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ------------- |
+| KI-064 | design       | low      | Breakpoint mismatch: `useIsMobile()` uses 639px threshold but `lg:` Tailwind breakpoint is 1024px — gap of 384px where neither sidebar nor mobile layout applies | `src/hooks/useIsMobile.ts`           | E71-S03 R4    |
+| KI-065 | architecture | medium   | Lesson title in action suggestions approximated from `courseId`/`lessonId` — real title requires E56-S04 data                                                    | `src/stores/useKnowledgeMapStore.ts` | E71-NFR       |
+| KI-066 | architecture | low      | Action suggestion trend derivation is time-only (days since last engagement) — ignores actual score trajectory over sessions                                     | `src/lib/actionSuggestions.ts`       | E71-NFR       |
 
 KI-065 and KI-066 are both documented with `TODO(E56-S04)` and `TODO(E59)` inline comments respectively. KI-064 is an app-wide pattern requiring a dedicated fix pass.
 
@@ -92,6 +92,7 @@ Root cause: E71-S02 was a pure component story with zero dedicated tests across 
 ### NFR Assessment (testarch-nfr)
 
 Two architectural findings captured as new known issues (KI-065, KI-066). Both have inline TODO comments pointing to the prerequisite epics (E56-S04, E59). Two NFR fixes applied directly:
+
 - `aria-expanded` added to show-more toggle button (accessibility)
 - `suggestions` reset on cache invalidation path (correctness)
 
@@ -103,20 +104,21 @@ No standalone E71 adversarial review report found. E71 stories were covered as p
 
 Post-epic fix pass (`commit 2f466d1b`) added 41 tests across three gap areas:
 
-| Area | Tests Added | ACs Covered |
-|------|-------------|-------------|
-| `ActionCard` component tests (all 3 variants, ARIA, truncation) | ~18 | S02-AC1, AC2, AC3, AC5, AC12 |
-| `SuggestedActionsPanel` interaction tests (show-more/less toggle, header, tablet layout) | ~16 | S02-AC10, AC11, AC13, AC7 |
-| `useKnowledgeMapStore.getSuggestedActions()` unit test + tiebreaker sort test | 7 | S03-AC5, S01-AC4 (hardened) |
+| Area                                                                                     | Tests Added | ACs Covered                  |
+| ---------------------------------------------------------------------------------------- | ----------- | ---------------------------- |
+| `ActionCard` component tests (all 3 variants, ARIA, truncation)                          | ~18         | S02-AC1, AC2, AC3, AC5, AC12 |
+| `SuggestedActionsPanel` interaction tests (show-more/less toggle, header, tablet layout) | ~16         | S02-AC10, AC11, AC13, AC7    |
+| `useKnowledgeMapStore.getSuggestedActions()` unit test + tiebreaker sort test            | 7           | S03-AC5, S01-AC4 (hardened)  |
 
-| Metric | Value |
-|--------|-------|
-| Tests added | 41 |
-| New issues introduced by fix pass | 0 |
-| False positives triaged | 1 (GLM `lg:flex` cascade — documented) |
-| Gate result after fix pass | PASS |
+| Metric                            | Value                                  |
+| --------------------------------- | -------------------------------------- |
+| Tests added                       | 41                                     |
+| New issues introduced by fix pass | 0                                      |
+| False positives triaged           | 1 (GLM `lg:flex` cascade — documented) |
+| Gate result after fix pass        | PASS                                   |
 
 Additional fix-pass commits:
+
 - `68d5a2f5` — `aria-expanded` on toggle, reset suggestions on cache invalidation
 - `aa44fb81` — post-epic validation reports, NFR fixes, KI-064/065/066 added to register
 - `63e94bfa` / `2f466d1b` — comprehensive fix pass: tiebreaker test, `className` test, Zustand anti-pattern docs, pre-review checklist update
@@ -182,4 +184,4 @@ Result: **PASS** — no TypeScript errors, no build failures. Chunk size warning
 
 ---
 
-*Report generated: 2026-04-13*
+_Report generated: 2026-04-13_
