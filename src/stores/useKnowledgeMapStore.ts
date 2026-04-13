@@ -368,6 +368,9 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
       const focusAreas = [...scoredTopics].sort((a, b) => b.urgency - a.urgency).slice(0, 3)
 
       // ── Step 7: Pre-compute action suggestions ─────────────────
+      // TODO(E56-S02): The ScoredTopic → TopicWithScore adapter below approximates hasFlashcards,
+      // hasQuizzes, and lessons from derived signals (suggestedActions, courseIds). Replace with
+      // direct per-topic data once E56-S02 provides a richer TopicWithScore shape from the store.
       const topicsWithScores: TopicWithScore[] = scoredTopics.map(t => ({
         topicName: t.name,
         canonicalName: t.canonicalName,

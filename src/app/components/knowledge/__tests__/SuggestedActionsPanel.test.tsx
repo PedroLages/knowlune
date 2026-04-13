@@ -116,3 +116,13 @@ describe('SuggestedActionsPanel — Show more/less toggle (GAP-08, GAP-09)', () 
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
   })
 })
+
+// ── S02-AC12: className prop passthrough ─────────────────────────
+
+describe('SuggestedActionsPanel — className prop passthrough (S02-AC12)', () => {
+  it('applies className to the root section element', () => {
+    render(<SuggestedActionsPanel suggestions={makeSuggestions(2)} className="custom-class" />)
+    const section = screen.getByRole('region')
+    expect(section).toHaveClass('custom-class')
+  })
+})

@@ -733,3 +733,38 @@ Key guards to always include:
 - `contenteditable` check — `active?.closest('[contenteditable]')`
 
 **Case study:** E108-S03 — `useKeyboardShortcuts` hook in `src/app/hooks/useKeyboardShortcuts.ts`.
+
+## Zustand Selector Anti-Pattern
+
+**Never call a function inside a Zustand selector:**
+
+```typescript
+// ❌ WRONG — creates new array reference every render → infinite re-render loop
+const suggestions = useStore(state => state.getSuggestions())
+
+// ✅ CORRECT — select pre-computed state directly
+const suggestions = useStore(state => state.suggestions) // pre-computed state (preferred)
+```
+
+Root cause: Zustand uses referential equality for bailout. A selector returning a new array/object each call always triggers re-render because `[] !== []`. The fix is to pre-compute in the store (e.g., in `computeScores()`) and select the computed value directly.
+
+**Case study:** E71-S03 — `getSuggestedActions()` getter was replaced with pre-computed `suggestions` state in `computeScores()` to avoid infinite re-render.
+
+## Tailwind Responsive Cascade
+
+`lg:flex` correctly overrides `sm:grid` — larger breakpoints always win, this is expected Tailwind behavior and is not a bug. The cascade order is `sm` < `md` < `lg` < `xl` < `2xl`.
+
+```typescript
+// ✅ CORRECT — mobile grid, desktop flex
+<div className="sm:grid lg:flex gap-6">
+```
+
+## Pre-Review Checklist (Story Workflow)
+
+Before running `/review-story`, run the story's E2E spec locally to catch crashes and test failures before the full review pipeline runs:
+
+```bash
+npx playwright test tests/e2e/story-{epic}-{story}.spec.ts --project=chromium
+```
+
+This avoids a full review pipeline run only to discover a basic spec crash — saving 5-10 minutes per iteration.

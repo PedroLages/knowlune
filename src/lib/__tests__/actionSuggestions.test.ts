@@ -353,6 +353,37 @@ describe('generateActionSuggestions', () => {
     expect(result[0].urgencyScore).toBeCloseTo(53)
   })
 
+  // ── AC 7: Tiebreaker — identical urgency scores sort alphabetically ──
+
+  it('sorts alphabetically by canonicalName when urgency scores are identical (AC 7 tiebreaker)', () => {
+    // Both topics have identical score and recencyScore → identical urgencyScore
+    const apple = makeTopic({
+      topicName: 'Apple Topic',
+      canonicalName: 'apple-topic',
+      score: 45,
+      tier: 'fading',
+      recencyScore: 60,
+      hasQuizzes: true,
+    })
+    const zebra = makeTopic({
+      topicName: 'Zebra Topic',
+      canonicalName: 'zebra-topic',
+      score: 45,
+      tier: 'fading',
+      recencyScore: 60,
+      hasQuizzes: true,
+    })
+
+    // Verify scores are truly identical before testing sort
+    const result = generateActionSuggestions([zebra, apple])
+
+    expect(result).toHaveLength(2)
+    expect(result[0].urgencyScore).toBe(result[1].urgencyScore)
+    // Tiebreaker: A-Z by canonicalName
+    expect(result[0].canonicalName).toBe('apple-topic')
+    expect(result[1].canonicalName).toBe('zebra-topic')
+  })
+
   // ── AC 9: Empty input returns empty array ─────────────────────
 
   it('returns empty array for empty input (AC 9)', () => {
