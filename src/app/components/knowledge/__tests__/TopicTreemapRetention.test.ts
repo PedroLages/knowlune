@@ -29,8 +29,8 @@ function lerpRgb(
 
 // Replicate getRetentionColor with fixed token colors (no DOM)
 const FIXED_COLORS = {
-  success: hexToRgb('#3a7553'),  // green
-  warning: hexToRgb('#866224'),  // amber
+  success: hexToRgb('#3a7553'), // green
+  warning: hexToRgb('#866224'), // amber
   destructive: hexToRgb('#c44850'), // red
 }
 

@@ -7,16 +7,21 @@
 ### Findings
 
 #### Blockers
+
 (None — the diff is entirely documentation, metadata, and a review-consolidation JSON artifact. No application code was changed.)
 
 #### High Priority
+
 (None)
 
 #### Medium
+
 (None)
 
 #### Nits
+
 (None)
 
 ---
+
 Issues found: 0 | Blockers: 0 | High: 0 | Medium: 0 | Nits: 0
