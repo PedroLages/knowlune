@@ -6,6 +6,11 @@
  * is independently callable and returns null when no data is available.
  *
  * Pattern reference: src/lib/qualityScore.ts (pure function module)
+ *
+ * S02 additions: Token-aware profile formatter and orchestrator.
+ * - formatLearnerProfile(): formats LearnerProfileData into a budget-constrained string
+ * - buildAndFormatLearnerProfile(): orchestrates aggregation + formatting
+ * - filterByTopics(): scopes profile data to lesson-relevant topics
  */
 
 import { db } from '@/db'
@@ -60,6 +65,13 @@ export interface LearnerProfileData {
   studyProfile: StudyProfileData | null
 }
 
+/** Configuration for the profile builder orchestrator (S02) */
+export interface ProfileBuilderConfig {
+  courseId: string
+  maxTokens: number
+  lessonTopics?: string[]
+}
+
 /** Signals indicating areas of learner difficulty */
 export enum ProfileSignal {
   KNOWLEDGE_WEAKNESS = 'KNOWLEDGE_WEAKNESS',
@@ -76,6 +88,17 @@ export const QUIZ_FAIL_THRESHOLD = 70
 export const FSRS_WEAK_LAPSES = 2
 export const FSRS_WEAK_STABILITY = 5
 export const STUDY_WINDOW_DAYS = 7
+
+/** Approximate characters per token (conservative estimate) */
+export const CHARS_PER_TOKEN = 4
+
+/** Signal priority order — highest priority first */
+export const SIGNAL_PRIORITY = [
+  ProfileSignal.KNOWLEDGE_WEAKNESS,
+  ProfileSignal.QUIZ_FAILURES,
+  ProfileSignal.FLASHCARD_STRUGGLES,
+  ProfileSignal.STUDY_PATTERNS,
+] as const
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -300,7 +323,6 @@ export async function aggregateStudySessions(
 /**
  * Build a complete learner profile for a course by aggregating all data sources.
  *
- * This is the main entry point for S02 (Token-Aware Profile Formatter).
  * Each sub-aggregation runs independently and returns null if no data exists.
  */
 export async function buildLearnerProfile(
@@ -322,4 +344,247 @@ export async function buildLearnerProfile(
     flashcardProfile,
     studyProfile,
   }
+}
+
+// ---------------------------------------------------------------------------
+// S02: Signal Formatters
+// ---------------------------------------------------------------------------
+
+/** Format knowledge weakness signal into a compact string */
+function formatKnowledgeSignal(data: KnowledgeProfileData): string {
+  const parts: string[] = []
+  if (data.weakTopics.length > 0) {
+    parts.push(`Weak: ${data.weakTopics.join(', ')}.`)
+  }
+  if (data.fadingTopics.length > 0) {
+    parts.push(`Fading: ${data.fadingTopics.join(', ')}.`)
+  }
+  return parts.join(' ')
+}
+
+/** Format quiz failure signal into a compact string */
+function formatQuizSignal(
+  data: QuizProfileData,
+  knowledgeTopics: Set<string>
+): string {
+  const parts: string[] = []
+  parts.push(`Quiz avg: ${data.avgPercentage}%.`)
+  // Deduplicate: only include quiz weak topics not already in knowledge signal
+  const uniqueWeakTopics = data.weakTopics.filter(
+    (t) => !knowledgeTopics.has(t.toLowerCase())
+  )
+  if (uniqueWeakTopics.length > 0) {
+    parts.push(`Quiz struggles: ${uniqueWeakTopics.join(', ')}.`)
+  }
+  return parts.join(' ')
+}
+
+/** Format flashcard struggle signal into a compact string */
+function formatFlashcardSignal(data: FlashcardProfileData): string {
+  const parts: string[] = []
+  if (data.weakCardCount > 0) {
+    parts.push(`${data.weakCardCount} weak cards.`)
+  }
+  if (data.overdueCount > 0) {
+    parts.push(`${data.overdueCount} overdue.`)
+  }
+  return parts.join(' ')
+}
+
+/** Format study pattern signal into a compact string */
+function formatStudySignal(data: StudyProfileData): string {
+  const parts: string[] = []
+  parts.push(`${data.sessionCount} sessions, ${data.totalHours}h this week.`)
+  if (data.avgQuality > 0) {
+    parts.push(`Avg quality: ${data.avgQuality}/100.`)
+  }
+  if (data.daysSinceLastSession > 1) {
+    parts.push(`Last session: ${data.daysSinceLastSession}d ago.`)
+  }
+  return parts.join(' ')
+}
+
+// ---------------------------------------------------------------------------
+// S02: Topic Filtering
+// ---------------------------------------------------------------------------
+
+/**
+ * Filter and prioritize profile data by lesson topics.
+ *
+ * Matching topics are boosted to the front of each list.
+ * Non-matching topics are retained at lower priority.
+ * Uses case-insensitive partial matching.
+ */
+export function filterByTopics(
+  data: LearnerProfileData,
+  lessonTopics: string[]
+): LearnerProfileData {
+  const lowerTopics = lessonTopics.map((t) => t.toLowerCase())
+
+  const matchesTopic = (topic: string): boolean =>
+    lowerTopics.some(
+      (lt) => topic.toLowerCase().includes(lt) || lt.includes(topic.toLowerCase())
+    )
+
+  const prioritizeTopics = (topics: string[]): string[] => {
+    const matching = topics.filter(matchesTopic)
+    const nonMatching = topics.filter((t) => !matchesTopic(t))
+    return [...matching, ...nonMatching]
+  }
+
+  return {
+    quizProfile: data.quizProfile
+      ? { ...data.quizProfile, weakTopics: prioritizeTopics(data.quizProfile.weakTopics) }
+      : null,
+    knowledgeProfile: data.knowledgeProfile
+      ? {
+          weakTopics: prioritizeTopics(data.knowledgeProfile.weakTopics),
+          fadingTopics: prioritizeTopics(data.knowledgeProfile.fadingTopics),
+        }
+      : null,
+    flashcardProfile: data.flashcardProfile,
+    studyProfile: data.studyProfile,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// S02: Token-Aware Formatter
+// ---------------------------------------------------------------------------
+
+/**
+ * Format learner profile data into a compact string within a token budget.
+ *
+ * Signals are added in priority order (knowledge > quiz > flashcard > study).
+ * Entire signal blocks are omitted when budget is exceeded — never truncated mid-sentence.
+ * Returns empty string when all signals are null/empty.
+ */
+export function formatLearnerProfile(
+  data: LearnerProfileData,
+  maxTokens: number
+): string {
+  const maxChars = maxTokens * CHARS_PER_TOKEN
+
+  // Collect knowledge topics for deduplication with quiz signal
+  const knowledgeTopics = new Set<string>()
+  if (data.knowledgeProfile) {
+    for (const t of data.knowledgeProfile.weakTopics) knowledgeTopics.add(t.toLowerCase())
+    for (const t of data.knowledgeProfile.fadingTopics) knowledgeTopics.add(t.toLowerCase())
+  }
+
+  // Build signal blocks in priority order
+  const signalBlocks: Array<{ signal: ProfileSignal; text: string }> = []
+
+  if (data.knowledgeProfile) {
+    const text = formatKnowledgeSignal(data.knowledgeProfile)
+    if (text) signalBlocks.push({ signal: ProfileSignal.KNOWLEDGE_WEAKNESS, text })
+  }
+
+  if (data.quizProfile) {
+    const text = formatQuizSignal(data.quizProfile, knowledgeTopics)
+    if (text) signalBlocks.push({ signal: ProfileSignal.QUIZ_FAILURES, text })
+  }
+
+  if (data.flashcardProfile) {
+    const text = formatFlashcardSignal(data.flashcardProfile)
+    if (text) signalBlocks.push({ signal: ProfileSignal.FLASHCARD_STRUGGLES, text })
+  }
+
+  if (data.studyProfile) {
+    const text = formatStudySignal(data.studyProfile)
+    if (text) signalBlocks.push({ signal: ProfileSignal.STUDY_PATTERNS, text })
+  }
+
+  if (signalBlocks.length === 0) return ''
+
+  // Incrementally add signals while within budget
+  const parts: string[] = []
+  let currentLength = 0
+
+  for (const block of signalBlocks) {
+    const separator = parts.length > 0 ? ' ' : ''
+    const newLength = currentLength + separator.length + block.text.length
+
+    if (newLength > maxChars) break
+
+    parts.push(block.text)
+    currentLength = newLength
+  }
+
+  // If budget is extremely tight but we have signals, include at least the first one
+  if (parts.length === 0 && signalBlocks.length > 0) {
+    parts.push(signalBlocks[0].text)
+  }
+
+  return parts.join(' ')
+}
+
+// ---------------------------------------------------------------------------
+// S02: Orchestrator
+// ---------------------------------------------------------------------------
+
+/**
+ * Build and format a learner profile for prompt injection.
+ *
+ * Orchestrates: parallel aggregation → topic filtering → token-aware formatting.
+ * Uses Promise.allSettled so individual aggregation failures don't block others.
+ */
+export async function buildAndFormatLearnerProfile(
+  config: ProfileBuilderConfig,
+  now?: Date
+): Promise<string> {
+  const { courseId, maxTokens, lessonTopics } = config
+
+  // Run all aggregations in parallel with graceful degradation
+  const [quizResult, flashcardResult, studyResult] = await Promise.allSettled([
+    aggregateQuizScores(courseId, now),
+    aggregateFlashcardWeakness(courseId, now),
+    aggregateStudySessions(courseId, now),
+  ])
+
+  // Knowledge is synchronous — wrap in try/catch for consistency
+  let knowledgeProfile: KnowledgeProfileData | null = null
+  try {
+    knowledgeProfile = aggregateKnowledgeScores(courseId)
+  } catch (error) {
+    console.warn('[learnerProfileBuilder] aggregateKnowledgeScores failed:', error)
+  }
+
+  // Map settled results: fulfilled → value, rejected → null with warning
+  const quizProfile =
+    quizResult.status === 'fulfilled'
+      ? quizResult.value
+      : (console.warn('[learnerProfileBuilder] aggregateQuizScores rejected:', quizResult.reason),
+        null)
+
+  const flashcardProfile =
+    flashcardResult.status === 'fulfilled'
+      ? flashcardResult.value
+      : (console.warn(
+          '[learnerProfileBuilder] aggregateFlashcardWeakness rejected:',
+          flashcardResult.reason
+        ),
+        null)
+
+  const studyProfile =
+    studyResult.status === 'fulfilled'
+      ? studyResult.value
+      : (console.warn(
+          '[learnerProfileBuilder] aggregateStudySessions rejected:',
+          studyResult.reason
+        ),
+        null)
+
+  let profileData: LearnerProfileData = {
+    quizProfile,
+    knowledgeProfile,
+    flashcardProfile,
+    studyProfile,
+  }
+
+  // Apply topic filtering if lesson topics are provided
+  if (lessonTopics && lessonTopics.length > 0) {
+    profileData = filterByTopics(profileData, lessonTopics)
+  }
+
+  return formatLearnerProfile(profileData, maxTokens)
 }
