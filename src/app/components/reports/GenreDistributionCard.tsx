@@ -84,10 +84,11 @@ export function GenreDistributionCard() {
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value: number, name: string) => [
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                formatter={((value: number, name: string) => [
                   `${value} ${value === 1 ? 'book' : 'books'}`,
                   name,
-                ]}
+                ]) as any}
               />
             </PieChart>
           </ChartContainer>

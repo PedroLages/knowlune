@@ -122,14 +122,13 @@ function QueueBookRow({
 }
 
 export function ReadingQueueView({ books }: ReadingQueueViewProps) {
-  const queue = useReadingQueueStore(s => s.queue)
-  const moveUp = useReadingQueueStore(s => s.moveUp)
-  const moveDown = useReadingQueueStore(s => s.moveDown)
+  const entries = useReadingQueueStore(s => s.entries)
+  const reorderQueue = useReadingQueueStore(s => s.reorderQueue)
 
   // Build ordered list: match queue entries to books, sort by position
   const bookMap = new Map(books.map(b => [b.id, b]))
-  const orderedEntries = [...queue]
-    .sort((a, b) => a.position - b.position)
+  const orderedEntries = [...entries]
+    .sort((a, b) => a.sortOrder - b.sortOrder)
     .map(entry => ({ entry, book: bookMap.get(entry.bookId) }))
     .filter((item): item is { entry: typeof item.entry; book: Book } => item.book !== undefined)
 
@@ -162,11 +161,11 @@ export function ReadingQueueView({ books }: ReadingQueueViewProps) {
         <QueueBookRow
           key={entry.bookId}
           book={book}
-          position={entry.position}
+          position={entry.sortOrder + 1}
           isFirst={index === 0}
           isLast={index === orderedEntries.length - 1}
-          onMoveUp={() => moveUp(book.id)}
-          onMoveDown={() => moveDown(book.id)}
+          onMoveUp={() => reorderQueue(index, index - 1)}
+          onMoveDown={() => reorderQueue(index, index + 1)}
         />
       ))}
     </div>

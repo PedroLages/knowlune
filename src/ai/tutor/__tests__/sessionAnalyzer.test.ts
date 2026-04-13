@@ -321,7 +321,7 @@ describe('LearnerModelUpdateSchema', () => {
 // ---------------------------------------------------------------------------
 
 const mockUpdateLearnerModel = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
-const mockStreamCompletion = vi.hoisted(() => vi.fn())
+vi.hoisted(() => vi.fn()) // mockStreamCompletion — reserved for future stream tests
 const mockGetLLMClient = vi.hoisted(() => vi.fn())
 
 vi.mock('@/ai/tutor/learnerModelService', () => ({
