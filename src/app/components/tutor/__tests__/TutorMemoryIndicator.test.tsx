@@ -54,7 +54,7 @@ describe('TutorMemoryIndicator', () => {
   it('renders strengths when model has strength data', () => {
     const model = makeLearnerModel({
       strengths: [
-        { concept: 'React hooks', confidence: 0.9, mode: 'explain' },
+        { concept: 'React hooks', confidence: 0.9, assessedBy: 'explain', lastAssessed: '2026-04-13T00:00:00Z' },
       ],
     })
     render(<TutorMemoryIndicator {...defaultProps} learnerModel={model} />)
@@ -69,10 +69,10 @@ describe('TutorMemoryIndicator', () => {
   it('shows insight count in the trigger label', () => {
     const model = makeLearnerModel({
       strengths: [
-        { concept: 'TypeScript', confidence: 0.8, mode: 'socratic' },
-        { concept: 'Hooks', confidence: 0.7, mode: 'explain' },
+        { concept: 'TypeScript', confidence: 0.8, assessedBy: 'socratic', lastAssessed: '2026-04-13T00:00:00Z' },
+        { concept: 'Hooks', confidence: 0.7, assessedBy: 'explain', lastAssessed: '2026-04-13T00:00:00Z' },
       ],
-      misconceptions: [{ concept: 'useEffect deps', confidence: 0.6, mode: 'debug' }],
+      misconceptions: [{ concept: 'useEffect deps', confidence: 0.6, assessedBy: 'debug', lastAssessed: '2026-04-13T00:00:00Z' }],
       quizStats: { totalQuestions: 5, correctAnswers: 3, weakTopics: ['closures'] },
     })
     render(<TutorMemoryIndicator {...defaultProps} learnerModel={model} />)
@@ -86,7 +86,7 @@ describe('TutorMemoryIndicator', () => {
   it('collapse/expand toggle works', async () => {
     const user = userEvent.setup()
     const model = makeLearnerModel({
-      strengths: [{ concept: 'React hooks', confidence: 0.9, mode: 'explain' }],
+      strengths: [{ concept: 'React hooks', confidence: 0.9, assessedBy: 'explain', lastAssessed: '2026-04-13T00:00:00Z' }],
     })
     render(<TutorMemoryIndicator {...defaultProps} learnerModel={model} />)
 
