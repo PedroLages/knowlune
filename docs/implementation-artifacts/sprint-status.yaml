@@ -705,7 +705,7 @@ development_status:
   63-1-learner-profile-data-aggregation-layer: review
   63-2-token-aware-profile-formatter-and-orchestrator: review
   63-3-prompt-builder-slot-6-integration: review
-  63-4-learner-profile-builder-unit-tests: ready-for-dev
+  63-4-learner-profile-builder-unit-tests: review
   epic-63-retrospective: optional
 
   # ──────────────────────────────────────────────────
