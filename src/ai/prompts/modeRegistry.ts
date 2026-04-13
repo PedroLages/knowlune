@@ -10,6 +10,7 @@
 import type { TutorMode } from '@/ai/tutor/types'
 import type { ModeConfig } from './types'
 import { getHintInstruction } from '@/ai/tutor/hintLadder'
+import { buildELI5Prompt } from './modes/eli5'
 
 /**
  * Complete registry of all 5 tutor modes.
@@ -68,18 +69,11 @@ Rules:
     hintLadderEnabled: false,
     scoringEnabled: false,
     updatesLearnerModel: false,
-    emptyStateMessage: 'Explain it simply',
-    loadingMessage: 'Simplifying...',
+    emptyStateMessage: "I'll explain it simply",
+    loadingMessage: 'Finding the simplest way to explain...',
     requiresTranscript: false,
     tokenBudgetOverrides: { response: 2250 },
-    buildPromptRules: () =>
-      `Teaching mode: Explain Like I'm 5.
-Rules:
-- Use simple language, relatable analogies, and everyday examples to explain concepts.
-- Avoid jargon entirely. If a technical term is essential, define it immediately in simple words.
-- Make complex ideas accessible to a complete beginner.
-- Use metaphors and comparisons to things a child would understand.
-- Keep sentences short and conversational.`,
+    buildPromptRules: buildELI5Prompt,
   },
 
   quiz: {
