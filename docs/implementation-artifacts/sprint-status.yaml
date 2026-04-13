@@ -622,12 +622,12 @@ development_status:
   # Epic 57: AI Tutoring Phase 1-2
   # Source: epics.md
   # ──────────────────────────────────────────────────
-  epic-57: in-progress
-  57-1-tutor-chat-ui-context-injection: review
-  57-2-tutor-hook-streaming: review
-  57-3-conversation-persistence: review
-  57-4-socratic-prompt-hint-ladder: review
-  57-5-rag-grounded-answers: review
+  epic-57: done
+  57-1-tutor-chat-ui-context-injection: done
+  57-2-tutor-hook-streaming: done
+  57-3-conversation-persistence: done
+  57-4-socratic-prompt-hint-ladder: done
+  57-5-rag-grounded-answers: done
 
   # ──────────────────────────────────────────────────
   # Epic 58: Notifications Page
