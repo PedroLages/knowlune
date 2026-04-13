@@ -1,12 +1,12 @@
 ---
 story_id: E57-S01
 story_name: "Tutor Chat UI + Context Injection"
-status: ready-for-dev
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: review
+started: 2026-04-13
+completed: 2026-04-13
+reviewed: true
+review_started: 2026-04-13
+review_gates_passed: [build, lint, typecheck, unit-tests, e2e-tests, design-review, code-review, security-review, testing-review]
 burn_in_validated: false
 ---
 
