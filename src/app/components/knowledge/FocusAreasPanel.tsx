@@ -9,32 +9,11 @@ import { useNavigate } from 'react-router'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import type { ScoredTopic } from '@/stores/useKnowledgeMapStore'
-import type { KnowledgeTier, SuggestedAction } from '@/lib/knowledgeScore'
+import type { SuggestedAction } from '@/lib/knowledgeScore'
+import { tierBadgeClass, tierLabel } from '@/lib/knowledgeTierUtils'
 
 interface FocusAreasPanelProps {
   focusAreas: ScoredTopic[]
-}
-
-function tierBadgeClass(tier: KnowledgeTier): string {
-  switch (tier) {
-    case 'strong':
-      return 'bg-success/15 text-success border-success/30'
-    case 'fading':
-      return 'bg-warning/15 text-warning border-warning/30'
-    case 'weak':
-      return 'bg-destructive/15 text-destructive border-destructive/30'
-  }
-}
-
-function tierLabel(tier: KnowledgeTier): string {
-  switch (tier) {
-    case 'strong':
-      return 'Strong'
-    case 'fading':
-      return 'Fading'
-    case 'weak':
-      return 'Weak'
-  }
 }
 
 function formatDaysAgo(days: number): string {
@@ -92,7 +71,7 @@ export function FocusAreasPanel({ focusAreas }: FocusAreasPanelProps) {
                   key={action}
                   variant="outline"
                   size="sm"
-                  className="text-xs h-7 px-2"
+                  className="text-xs min-h-[44px] min-w-[44px] px-2"
                   aria-label={`${action} for ${topic.name}`}
                   onClick={() => handleAction(topic, action)}
                 >

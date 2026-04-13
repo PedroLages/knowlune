@@ -19,29 +19,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/app/components/ui/accordion'
-import type { KnowledgeTier } from '@/lib/knowledgeScore'
-
-function tierBadgeClass(tier: KnowledgeTier): string {
-  switch (tier) {
-    case 'strong':
-      return 'bg-success/15 text-success border-success/30'
-    case 'fading':
-      return 'bg-warning/15 text-warning border-warning/30'
-    case 'weak':
-      return 'bg-destructive/15 text-destructive border-destructive/30'
-  }
-}
-
-function tierLabel(tier: KnowledgeTier): string {
-  switch (tier) {
-    case 'strong':
-      return 'Strong'
-    case 'fading':
-      return 'Fading'
-    case 'weak':
-      return 'Weak'
-  }
-}
+import { tierBadgeClass, tierLabel, getTierFromScore } from '@/lib/knowledgeTierUtils'
 
 export function KnowledgeMapWidget() {
   const categories = useKnowledgeMapStore(s => s.categories)
@@ -88,7 +66,7 @@ export function KnowledgeMapWidget() {
     name: cat.category,
     size: Math.max(cat.topics.length, 1),
     score: cat.averageScore,
-    tier: cat.averageScore >= 70 ? 'strong' : cat.averageScore >= 40 ? 'fading' : ('weak' as const),
+    tier: getTierFromScore(cat.averageScore),
   }))
 
   return (
@@ -119,9 +97,7 @@ export function KnowledgeMapWidget() {
                 <span className="flex items-center gap-2">
                   {cat.category}
                   <Badge
-                    className={tierBadgeClass(
-                      cat.averageScore >= 70 ? 'strong' : cat.averageScore >= 40 ? 'fading' : 'weak'
-                    )}
+                    className={tierBadgeClass(getTierFromScore(cat.averageScore))}
                   >
                     {cat.averageScore}%
                   </Badge>

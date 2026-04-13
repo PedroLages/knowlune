@@ -9,7 +9,6 @@ import { Treemap, ResponsiveContainer } from 'recharts'
 import type { KnowledgeTier } from '@/lib/knowledgeScore'
 
 export interface TreemapDataItem {
-  [key: string]: string | number
   name: string
   size: number
   score: number
@@ -43,6 +42,8 @@ function getTierTextFill(tier: KnowledgeTier): string {
       return 'var(--destructive-foreground)'
   }
 }
+
+const MAX_LABEL_LENGTH = 14
 
 /**
  * Custom cell renderer for Treemap.
@@ -87,7 +88,7 @@ function CustomCell(props: Record<string, unknown>) {
             fontWeight: 600,
           }}
         >
-          {name.length > 14 ? name.slice(0, 12) + '...' : name}
+          {name.length > MAX_LABEL_LENGTH ? name.slice(0, MAX_LABEL_LENGTH - 2) + '...' : name}
         </text>
       )}
       {showScore && (
@@ -114,7 +115,7 @@ export function TopicTreemap({ data }: TopicTreemapProps) {
   if (data.length === 0) return null
 
   return (
-    <ResponsiveContainer width="100%" height={200}>
+    <ResponsiveContainer width="100%" minHeight={200} aspect={16 / 9}>
       <Treemap
         data={data}
         dataKey="size"

@@ -192,6 +192,10 @@ describe('computeRelevanceScore', () => {
   })
 
   it('returns higher score for recent access', () => {
+    // Uses real Date.now() intentionally: this test validates that the recency
+    // decay function treats "now" as more relevant than "7 days ago". The
+    // assertion only compares relative scores, so the absolute wall-clock time
+    // does not affect correctness.
     const recent: SectionStats = {
       views: 1,
       timeSpentMs: 60000,
