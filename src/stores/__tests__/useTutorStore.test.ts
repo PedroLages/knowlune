@@ -12,10 +12,20 @@
  * - maxHistory trimming: messages beyond MAX_HISTORY are dropped from the front
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useTutorStore } from '@/stores/useTutorStore'
 import type { ChatMessage } from '@/ai/rag/types'
 import type { TranscriptStatus } from '@/ai/tutor/types'
+import type { LearnerModel } from '@/data/types'
+
+// Mock learnerModelService to avoid real Dexie calls in store action tests
+vi.mock('@/ai/tutor/learnerModelService', () => ({
+  getOrCreateLearnerModel: vi.fn(),
+  updateLearnerModel: vi.fn(),
+  clearLearnerModel: vi.fn(),
+}))
+
+import * as learnerModelService from '@/ai/tutor/learnerModelService'
 
 function makeMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
   return {
@@ -210,5 +220,114 @@ describe('maxHistory trimming', () => {
       useTutorStore.getState().addMessage(makeMessage({ id: `id-${i}` }))
     }
     expect(useTutorStore.getState().messages).toHaveLength(500)
+  })
+})
+
+// ── loadLearnerModel ──────────────────────────────────────────────
+
+function makeLearnerModel(overrides: Partial<LearnerModel> = {}): LearnerModel {
+  return {
+    id: crypto.randomUUID(),
+    courseId: 'course-1',
+    vocabularyLevel: 'beginner',
+    strengths: [],
+    misconceptions: [],
+    topicsExplored: [],
+    preferredMode: 'socratic',
+    lastSessionSummary: '',
+    quizStats: { totalQuestions: 0, correctAnswers: 0, weakTopics: [] },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    ...overrides,
+  }
+}
+
+describe('loadLearnerModel', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useTutorStore.setState({ learnerModel: null, error: null })
+  })
+
+  it('loads learner model into store on success', async () => {
+    const model = makeLearnerModel({ courseId: 'course-1' })
+    vi.mocked(learnerModelService.getOrCreateLearnerModel).mockResolvedValue(model)
+
+    await useTutorStore.getState().loadLearnerModel('course-1')
+
+    expect(useTutorStore.getState().learnerModel).toEqual(model)
+  })
+
+  it('sets learnerModel to null on Dexie error', async () => {
+    vi.mocked(learnerModelService.getOrCreateLearnerModel).mockRejectedValue(
+      new Error('Dexie error')
+    )
+    useTutorStore.setState({ learnerModel: makeLearnerModel() })
+
+    await useTutorStore.getState().loadLearnerModel('course-1')
+
+    expect(useTutorStore.getState().learnerModel).toBeNull()
+  })
+})
+
+// ── updateLearnerModel ────────────────────────────────────────────
+
+describe('updateLearnerModel', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useTutorStore.setState({ learnerModel: null, error: null })
+  })
+
+  it('applies update via learnerModelService and sets store', async () => {
+    const updated = makeLearnerModel({ vocabularyLevel: 'advanced' })
+    vi.mocked(learnerModelService.updateLearnerModel).mockResolvedValue(updated)
+
+    await useTutorStore.getState().updateLearnerModel('course-1', { vocabularyLevel: 'advanced' })
+
+    expect(useTutorStore.getState().learnerModel).toEqual(updated)
+  })
+
+  it('does not update store when service returns null/undefined', async () => {
+    const initial = makeLearnerModel()
+    useTutorStore.setState({ learnerModel: initial })
+    vi.mocked(learnerModelService.updateLearnerModel).mockResolvedValue(null as unknown as LearnerModel)
+
+    await useTutorStore.getState().updateLearnerModel('course-1', { vocabularyLevel: 'advanced' })
+
+    // Store should remain unchanged since updated is falsy
+    expect(useTutorStore.getState().learnerModel).toEqual(initial)
+  })
+
+  it('does not crash on Dexie error', async () => {
+    vi.mocked(learnerModelService.updateLearnerModel).mockRejectedValue(new Error('Dexie error'))
+
+    await expect(
+      useTutorStore.getState().updateLearnerModel('course-1', {})
+    ).resolves.not.toThrow()
+  })
+})
+
+// ── clearLearnerModel ─────────────────────────────────────────────
+
+describe('clearLearnerModel', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useTutorStore.setState({ learnerModel: makeLearnerModel(), error: null })
+  })
+
+  it('clears store state after service call', async () => {
+    vi.mocked(learnerModelService.clearLearnerModel).mockResolvedValue(undefined)
+
+    await useTutorStore.getState().clearLearnerModel('course-1')
+
+    expect(useTutorStore.getState().learnerModel).toBeNull()
+    expect(learnerModelService.clearLearnerModel).toHaveBeenCalledWith('course-1')
+  })
+
+  it('does not crash on Dexie error', async () => {
+    vi.mocked(learnerModelService.clearLearnerModel).mockRejectedValue(new Error('Dexie error'))
+
+    await expect(
+      useTutorStore.getState().clearLearnerModel('course-1')
+    ).resolves.not.toThrow()
   })
 })

@@ -13,7 +13,12 @@ import { db } from '@/db'
 import { toast } from 'sonner'
 import type { TutorMode, TranscriptStatus } from '@/ai/tutor/types'
 import type { ChatMessage } from '@/ai/rag/types'
-import type { ChatConversation, TutorMessage } from '@/data/types'
+import type { ChatConversation, TutorMessage, LearnerModel } from '@/data/types'
+import {
+  getOrCreateLearnerModel,
+  updateLearnerModel as updateLearnerModelService,
+  clearLearnerModel as clearLearnerModelService,
+} from '@/ai/tutor/learnerModelService'
 
 /** Tutor store state */
 interface TutorState {
@@ -31,6 +36,8 @@ interface TutorState {
   error: string | null
   /** Transcript status for badge display */
   transcriptStatus: TranscriptStatus | null
+  /** Persistent learner model for the current course (E72-S01) */
+  learnerModel: LearnerModel | null
   /** Active conversation ID (from Dexie) */
   conversationId: string | null
   /** Current lesson context for persistence */
@@ -67,6 +74,12 @@ interface TutorState {
   persistConversation: () => Promise<void>
   /** Set lesson context for persistence */
   setLessonContext: (courseId: string, videoId: string) => void
+  /** Load or create learner model for a course (E72-S01) */
+  loadLearnerModel: (courseId: string) => Promise<void>
+  /** Update learner model with additive merge (E72-S01) */
+  updateLearnerModel: (courseId: string, updates: Partial<LearnerModel>) => Promise<void>
+  /** Clear learner model for a course (E72-S01) */
+  clearLearnerModel: (courseId: string) => Promise<void>
 }
 
 /** Maximum conversation history to retain (prevents unbounded growth) */
@@ -99,6 +112,7 @@ export const useTutorStore = create<TutorState>((set, get) => ({
   isGenerating: false,
   error: null,
   transcriptStatus: null,
+  learnerModel: null,
   conversationId: null,
   _courseId: null,
   _videoId: null,
@@ -268,6 +282,36 @@ export const useTutorStore = create<TutorState>((set, get) => ({
       }
     } catch {
       toast.error('Failed to save conversation.')
+    }
+  },
+
+  loadLearnerModel: async (courseId: string) => {
+    try {
+      const model = await getOrCreateLearnerModel(courseId)
+      set({ learnerModel: model })
+    } catch {
+      toast.error('Failed to load learner model.')
+      set({ learnerModel: null })
+    }
+  },
+
+  updateLearnerModel: async (courseId: string, updates: Partial<LearnerModel>) => {
+    try {
+      const updated = await updateLearnerModelService(courseId, updates)
+      if (updated) {
+        set({ learnerModel: updated })
+      }
+    } catch {
+      toast.error('Failed to update learner model.')
+    }
+  },
+
+  clearLearnerModel: async (courseId: string) => {
+    try {
+      await clearLearnerModelService(courseId)
+      set({ learnerModel: null })
+    } catch {
+      toast.error('Failed to clear learner model.')
     }
   },
 }))

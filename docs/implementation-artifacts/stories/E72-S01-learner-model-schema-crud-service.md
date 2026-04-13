@@ -1,12 +1,12 @@
 ---
 story_id: E72-S01
 story_name: "Learner Model Schema & CRUD Service"
-status: draft
-started:
+status: review
+started: 2026-04-13
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-04-13
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped, design-review-skipped, code-review, code-review-testing, performance-benchmark-skipped, security-review, exploratory-qa-skipped]
 burn_in_validated: false
 ---
 
