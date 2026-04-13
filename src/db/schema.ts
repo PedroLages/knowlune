@@ -41,6 +41,7 @@ import type {
   BookReview,
   ChatConversation,
   TranscriptEmbedding,
+  LearnerModel,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA } from './checkpoint'
@@ -96,6 +97,7 @@ export type ElearningDatabase = Dexie & {
   bookReviews: EntityTable<BookReview, 'id'>
   chatConversations: EntityTable<ChatConversation, 'id'>
   transcriptEmbeddings: EntityTable<TranscriptEmbedding, 'id'>
+  learnerModels: EntityTable<LearnerModel, 'id'>
 }
 
 /**
@@ -1330,6 +1332,10 @@ function _declareLegacyMigrations(database: Dexie): void {
   // E57-S05: Transcript Embeddings — RAG-grounded tutor answers
   database.version(50).stores({
     transcriptEmbeddings: 'id, [courseId+videoId], courseId, createdAt',
+  })
+  // E72-S01: Learner Models — persistent per-course learner profile
+  database.version(51).stores({
+    learnerModels: 'id, courseId',
   })
 } // end _declareLegacyMigrations
 

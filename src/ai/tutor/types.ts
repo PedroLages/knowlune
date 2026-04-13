@@ -6,7 +6,7 @@
  */
 
 /** Tutor interaction mode — determines system prompt personality */
-export type TutorMode = 'socratic' | 'explain' | 'quiz'
+export type TutorMode = 'socratic' | 'explain' | 'quiz' | 'eli5' | 'debug'
 
 /** Transcript grounding strategy used for context injection */
 export type TranscriptStrategy = 'full' | 'chapter' | 'window' | 'none'

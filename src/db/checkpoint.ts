@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 50
+export const CHECKPOINT_VERSION = 51
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
@@ -91,6 +91,7 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   bookReviews: 'id, bookId, createdAt',
   chatConversations: 'id, [courseId+videoId], courseId, updatedAt',
   transcriptEmbeddings: 'id, [courseId+videoId], courseId, createdAt',
+  learnerModels: 'id, courseId',
 }
 
 // v42 (E109-S01): vocabularyItems table added
@@ -102,3 +103,4 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
 // v48 (E113-S01): bookReviews table for personal book reviews & star ratings
 // v49 (E57-S03): chatConversations table for tutor chat persistence
 // v50 (E57-S05): transcriptEmbeddings table for RAG-grounded tutor answers
+// v51 (E72-S01): learnerModels table for persistent per-course learner profiles

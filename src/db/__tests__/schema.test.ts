@@ -74,6 +74,7 @@ describe('ElearningDB schema', () => {
       'importedCourses',
       'importedPdfs',
       'importedVideos',
+      'learnerModels',
       'learningPathEntries',
       'learningPaths',
       'notes',
@@ -99,8 +100,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 50', () => {
-    expect(db.verno).toBe(50)
+  it('should be at version 51', () => {
+    expect(db.verno).toBe(51)
   })
 
   it('should have entitlements table with userId as primary key', () => {

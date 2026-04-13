@@ -1032,6 +1032,51 @@ export interface ChatConversation {
   updatedAt: number
 }
 
+/** Vocabulary level for learner model assessment */
+export type VocabularyLevel = 'beginner' | 'intermediate' | 'advanced'
+
+/** Assessment of a single concept within a learner model (E72-S01) */
+export interface ConceptAssessment {
+  /** Concept name/identifier */
+  concept: string
+  /** Confidence score 0-1 */
+  confidence: number
+  /** ISO timestamp of last assessment */
+  lastAssessed: string
+  /** Tutor mode that produced this assessment */
+  assessedBy: import('@/ai/tutor/types').TutorMode
+}
+
+/** Persistent per-course learner model updated at session boundaries (E72-S01) */
+export interface LearnerModel {
+  /** UUID primary key */
+  id: string
+  /** FK to ImportedCourse.id */
+  courseId: string
+  /** Current vocabulary level */
+  vocabularyLevel: VocabularyLevel
+  /** Concepts the learner demonstrates strength in */
+  strengths: ConceptAssessment[]
+  /** Concepts with identified misconceptions */
+  misconceptions: ConceptAssessment[]
+  /** Topics explored across sessions */
+  topicsExplored: string[]
+  /** Learner's preferred tutor mode */
+  preferredMode: import('@/ai/tutor/types').TutorMode
+  /** Summary of last tutor session */
+  lastSessionSummary: string
+  /** Aggregated quiz performance stats */
+  quizStats: {
+    totalQuestions: number
+    correctAnswers: number
+    weakTopics: string[]
+  }
+  /** ISO timestamp — when model was created */
+  createdAt: string
+  /** ISO timestamp — last update */
+  updatedAt: string
+}
+
 export interface YouTubeCourseChapter {
   id: string // PK — UUID
   courseId: string // FK to ImportedCourse.id
