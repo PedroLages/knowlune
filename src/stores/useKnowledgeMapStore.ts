@@ -71,6 +71,8 @@ interface KnowledgeMapState {
   categories: CategoryGroup[]
   /** Top 3 highest-urgency topics */
   focusAreas: ScoredTopic[]
+  /** Pre-computed action suggestions for declining topics (reactive state) */
+  suggestions: ActionSuggestion[]
   /** Loading state */
   isLoading: boolean
   /** Error message */
@@ -86,7 +88,7 @@ interface KnowledgeMapState {
   getTopicsByCategory: (category: string) => ScoredTopic[]
   /** Get a single topic by canonical name */
   getTopicByName: (canonicalName: string) => ScoredTopic | undefined
-  /** Get action suggestions for declining topics */
+  /** Get action suggestions for declining topics (kept for backward compat; prefer state.suggestions) */
   getSuggestedActions: () => ActionSuggestion[]
 }
 
@@ -108,6 +110,7 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
   topics: [],
   categories: [],
   focusAreas: [],
+  suggestions: [],
   isLoading: false,
   error: null,
   lastComputedAt: null,
@@ -365,10 +368,31 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
       // ── Step 6: Focus areas (top 3 by urgency) ────────────────
       const focusAreas = [...scoredTopics].sort((a, b) => b.urgency - a.urgency).slice(0, 3)
 
+      // ── Step 7: Pre-compute action suggestions ─────────────────
+      const topicsWithScores: TopicWithScore[] = scoredTopics.map(t => ({
+        topicName: t.name,
+        canonicalName: t.canonicalName,
+        score: t.scoreResult.score,
+        tier: t.scoreResult.tier,
+        trend: t.daysSinceLastEngagement > 14 ? 'declining' : t.daysSinceLastEngagement > 7 ? 'stable' : 'improving',
+        recencyScore: Math.max(0, 100 - t.daysSinceLastEngagement * 2),
+        hasFlashcards: t.suggestedActions.some(a => a === 'Review Flashcards'),
+        hasQuizzes: t.suggestedActions.some(a => a === 'Retake Quiz'),
+        // TODO(E56-S04): Lesson data approximated from courseIds — replace with actual lesson data when E56 provides per-lesson tracking
+        lessons: t.courseIds.map(courseId => ({
+          lessonId: courseId,
+          courseId,
+          title: `${t.name} Lesson`,
+          completionPct: t.scoreResult.score,
+        })),
+      }))
+      const suggestions = generateActionSuggestions(topicsWithScores)
+
       set({
         topics: scoredTopics,
         categories,
         focusAreas,
+        suggestions,
         isLoading: false,
         lastComputedAt: currentTime.toISOString(),
       })
@@ -396,26 +420,7 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
   },
 
   getSuggestedActions: () => {
-    const { topics } = get()
-    if (topics.length === 0) return []
-
-    const topicsWithScores: TopicWithScore[] = topics.map(t => ({
-      topicName: t.name,
-      canonicalName: t.canonicalName,
-      score: t.scoreResult.score,
-      tier: t.scoreResult.tier,
-      trend: t.daysSinceLastEngagement > 14 ? 'declining' : t.daysSinceLastEngagement > 7 ? 'stable' : 'improving',
-      recencyScore: Math.max(0, 100 - t.daysSinceLastEngagement * 2),
-      hasFlashcards: t.suggestedActions.some(a => a === 'Review Flashcards'),
-      hasQuizzes: t.suggestedActions.some(a => a === 'Retake Quiz'),
-      lessons: t.courseIds.map(courseId => ({
-        lessonId: courseId,
-        courseId,
-        title: `${t.name} Lesson`,
-        completionPct: t.scoreResult.score,
-      })),
-    }))
-
-    return generateActionSuggestions(topicsWithScores)
+    // Return pre-computed suggestions from store state (reactive, no re-computation)
+    return get().suggestions
   },
 }))
