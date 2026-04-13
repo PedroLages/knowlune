@@ -1,12 +1,18 @@
 /**
- * Knowledge Score Calculation (E56-S02)
+ * Knowledge Score Calculation (E56-S02, E62-S01)
  *
  * Computes per-topic knowledge scores from multiple learning signals:
  * quiz performance, flashcard retention, completion progress, and recency.
  * Dynamic weight redistribution handles missing signals gracefully.
  *
+ * E62-S01 adds FSRS retention aggregation: calculateAggregateRetention()
+ * computes average retention across flashcards using predictRetention(),
+ * and calculateDecayDate() predicts when retention drops below 70%.
+ *
  * Pattern reference: src/lib/qualityScore.ts
  */
+
+import { predictRetention } from '@/lib/spacedRepetition'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -24,6 +30,22 @@ export interface TopicScoreInput {
   completionPercent: number
   /** Days since last engagement with this topic */
   daysSinceLastEngagement: number
+  /**
+   * FSRS aggregate retention 0-100, or null if no FSRS flashcard data.
+   * When provided, replaces flashcardRetention as the flashcard factor (30% weight).
+   * When null, falls back to flashcardRetention for backward compatibility.
+   */
+  fsrsRetention?: number | null
+}
+
+/** Minimal flashcard shape needed for retention aggregation */
+export interface RetentionFlashcard {
+  last_review?: string
+  stability: number
+  /** SM-2 interval field — reserved for future SM-2 path (not yet implemented; codebase is fully FSRS) */
+  interval?: number
+  /** SM-2 reviewedAt field — reserved for future SM-2 path (not yet implemented; codebase is fully FSRS) */
+  reviewedAt?: string
 }
 
 export interface TopicScoreResult {
@@ -111,6 +133,86 @@ export function calculateRecencyScore(daysSinceLastEngagement: number): number {
 }
 
 // ---------------------------------------------------------------------------
+// FSRS Retention Aggregation (E62-S01)
+// ---------------------------------------------------------------------------
+
+/**
+ * Aggregate retention result for a set of flashcards.
+ */
+export interface AggregateRetentionResult {
+  /** Average retention 0-100, or null if no reviewed cards */
+  retention: number | null
+  /** Average stability in days across reviewed cards, or null */
+  avgStability: number | null
+}
+
+/**
+ * Calculate aggregate retention across a set of flashcards.
+ *
+ * Filters out unreviewed cards (no last_review). For reviewed cards, uses
+ * predictRetention() to compute per-card retention, then averages.
+ *
+ * Feature detection: cards with `stability > 0` use FSRS path;
+ * cards without stability but with last_review still get predictRetention()
+ * which handles the stability=0 case (returns 0).
+ *
+ * @returns retention (0-100) and avgStability, or null for both if no reviewed cards
+ */
+export function calculateAggregateRetention(
+  flashcards: RetentionFlashcard[],
+  now?: Date
+): AggregateRetentionResult {
+  const _now = now ?? new Date()
+  if (flashcards.length === 0) return { retention: null, avgStability: null }
+
+  // Filter to FSRS-reviewed cards (stability > 0 + last_review).
+  // TODO(E62): SM-2 path not implemented — codebase is fully FSRS. interval/reviewedAt fields retained for future compatibility.
+  const reviewedCards = flashcards.filter(card => card.last_review && card.stability > 0)
+
+  if (reviewedCards.length === 0) return { retention: null, avgStability: null }
+
+  let totalRetention = 0
+  let totalStability = 0
+
+  for (const card of reviewedCards) {
+    const retention = predictRetention(
+      { last_review: card.last_review, stability: card.stability },
+      _now
+    )
+    totalRetention += retention
+    totalStability += card.stability
+  }
+
+  return {
+    retention: Math.round(totalRetention / reviewedCards.length),
+    avgStability: totalStability / reviewedCards.length,
+  }
+}
+
+/**
+ * Calculate the predicted date when average retention drops below 70%.
+ *
+ * FSRS formula: daysUntilDecay = 9 * avgStability * (1/0.70 - 1)
+ *   Derived from R(t,S) = (1 + t/(9*S))^(-1) = 0.70
+ *   → t = 9*S*(0.70^(-1) - 1) = 9*S*(1/0.70 - 1)
+ *
+ * @param avgStability - Average stability in days across reviewed cards
+ * @param now - Current timestamp
+ * @returns ISO date string when retention drops to 70%, or null if avgStability <= 0
+ */
+export function calculateDecayDate(avgStability: number, now?: Date): string | null {
+  const _now = now ?? new Date()
+  if (avgStability <= 0) return null
+
+  // FSRS power-law: solve for t when R(t,S) = 0.70
+  // R(t,S) = (1 + t/(9*S))^(-1) → t = 9*S*(R^(-1) - 1)
+  const daysUntilDecay = 9 * avgStability * (1 / 0.7 - 1)
+
+  const decayDate = new Date(_now.getTime() + daysUntilDecay * 24 * 60 * 60 * 1000)
+  return decayDate.toISOString()
+}
+
+// ---------------------------------------------------------------------------
 // Composite Score
 // ---------------------------------------------------------------------------
 
@@ -123,9 +225,15 @@ export function calculateTopicScore(input: TopicScoreInput): TopicScoreResult {
   const recencyScore = calculateRecencyScore(input.daysSinceLastEngagement)
   const completionScore = Math.max(0, Math.min(100, input.completionPercent))
 
+  // FSRS retention overrides flashcardRetention when available (E62-S01)
+  const effectiveFlashcardRetention =
+    input.fsrsRetention !== undefined && input.fsrsRetention !== null
+      ? input.fsrsRetention
+      : input.flashcardRetention
+
   // Determine which signals are available
   const hasQuiz = input.quizScore !== null
-  const hasFlashcard = input.flashcardRetention !== null
+  const hasFlashcard = effectiveFlashcardRetention !== null
 
   // Build available weights map
   const available: { key: keyof typeof BASE_WEIGHTS; value: number; score: number }[] = []
@@ -137,7 +245,7 @@ export function calculateTopicScore(input: TopicScoreInput): TopicScoreResult {
     available.push({
       key: 'flashcard',
       value: BASE_WEIGHTS.flashcard,
-      score: input.flashcardRetention!,
+      score: effectiveFlashcardRetention!,
     })
   }
   // Completion and recency are always available
@@ -171,7 +279,7 @@ export function calculateTopicScore(input: TopicScoreInput): TopicScoreResult {
     confidence: getConfidenceLevel(signalsUsed),
     factors: {
       quizScore: input.quizScore,
-      flashcardRetention: input.flashcardRetention,
+      flashcardRetention: effectiveFlashcardRetention,
       completionScore,
       recencyScore,
     },

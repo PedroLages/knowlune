@@ -22,6 +22,8 @@ import {
   calculateTopicScore,
   computeUrgency,
   suggestActions,
+  calculateAggregateRetention,
+  calculateDecayDate,
   type TopicScoreResult,
   type SuggestedAction,
 } from '@/lib/knowledgeScore'
@@ -30,7 +32,7 @@ import {
   type ActionSuggestion,
   type TopicWithScore,
 } from '@/lib/actionSuggestions'
-import { predictRetention } from '@/lib/spacedRepetition'
+// predictRetention is now called via calculateAggregateRetention in knowledgeScore.ts
 
 // ---------------------------------------------------------------------------
 // Types
@@ -53,6 +55,12 @@ export interface ScoredTopic {
   daysSinceLastEngagement: number
   /** Suggested review actions */
   suggestedActions: SuggestedAction[]
+  /** FSRS aggregate retention 0-100, or null if no reviewed flashcards */
+  aggregateRetention: number | null
+  /** Predicted date when retention drops below 70%, or null */
+  predictedDecayDate: string | null
+  /** Average FSRS stability in days across reviewed flashcards, or null */
+  avgStability: number | null
 }
 
 export interface CategoryGroup {
@@ -268,29 +276,16 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
             ? Math.round((quizData.correct / quizData.total) * 100)
             : null
 
-        // Flashcard retention for this topic's courses
-        let flashcardRetention: number | null = null
-        const retentions: number[] = []
-        for (const courseId of topic.courseIds) {
-          const cards = flashcardsByCourseId.get(courseId) ?? []
-          for (const card of cards) {
-            if (!card.last_review) {
-              // EC-HIGH: unreviewed flashcard → retention 0
-              retentions.push(0)
-            } else {
-              const retention = predictRetention(
-                { last_review: card.last_review, stability: card.stability },
-                currentTime
-              )
-              retentions.push(retention)
-            }
-          }
-        }
-        if (retentions.length > 0) {
-          flashcardRetention = Math.round(
-            retentions.reduce((sum, r) => sum + r, 0) / retentions.length
-          )
-        }
+        // Flashcard retention for this topic's courses (E62-S01: FSRS aggregation)
+        const topicFlashcards = topic.courseIds.flatMap(
+          courseId => flashcardsByCourseId.get(courseId) ?? []
+        )
+        const { retention: aggregateRetention, avgStability } = calculateAggregateRetention(
+          topicFlashcards,
+          currentTime
+        )
+        const predictedDecayDate =
+          avgStability !== null ? calculateDecayDate(avgStability, currentTime) : null
 
         // Completion across topic's courses
         let totalLessons = 0
@@ -316,12 +311,13 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
           ? daysBetween(new Date(mostRecentEngagement), currentTime)
           : 365 // Default to very stale if no engagement data
 
-        // Calculate score
+        // Calculate score (E62-S01: fsrsRetention is the sole flashcard signal; flashcardRetention omitted)
         const scoreResult = calculateTopicScore({
           quizScore,
-          flashcardRetention,
+          flashcardRetention: null,
           completionPercent,
           daysSinceLastEngagement: daysAgo,
+          fsrsRetention: aggregateRetention,
         })
 
         // Calculate urgency
@@ -330,7 +326,7 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
         // Suggest actions
         const actions = suggestActions({
           quizScore,
-          flashcardRetention,
+          flashcardRetention: aggregateRetention,
           completionPercent,
         })
 
@@ -343,6 +339,9 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
           urgency,
           daysSinceLastEngagement: Math.round(daysAgo),
           suggestedActions: actions,
+          aggregateRetention,
+          predictedDecayDate,
+          avgStability,
         }
       })
 
@@ -393,10 +392,16 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
           completionPct: t.scoreResult.score,
         })),
       }))
-      // FSRS stability not yet available (E59 pending) — using recency decay fallback.
-      // When E59 is implemented, pass a Map<canonicalName, stability> via options.fsrsStability
-      // to enable per-topic FSRS-based decay factor computation in generateActionSuggestions().
-      const suggestions = generateActionSuggestions(topicsWithScores)
+      // E62-S01: Build FSRS stability map for action suggestions decay factor
+      const fsrsStabilityMap = new Map<string, number>()
+      for (const topic of scoredTopics) {
+        if (topic.avgStability !== null) {
+          fsrsStabilityMap.set(topic.canonicalName, topic.avgStability)
+        }
+      }
+      const suggestions = generateActionSuggestions(topicsWithScores, {
+        fsrsStability: fsrsStabilityMap.size > 0 ? fsrsStabilityMap : undefined,
+      })
 
       set({
         topics: scoredTopics,
@@ -428,5 +433,4 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
   getTopicByName: (canonicalName: string) => {
     return get().topics.find(t => t.canonicalName === canonicalName)
   },
-
 }))

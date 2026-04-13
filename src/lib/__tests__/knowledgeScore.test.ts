@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   calculateRecencyScore,
   calculateTopicScore,
+  calculateAggregateRetention,
+  calculateDecayDate,
   getKnowledgeTier,
   getConfidenceLevel,
   computeUrgency,
@@ -305,6 +307,164 @@ describe('suggestActions', () => {
       completionPercent: 100,
     })
     expect(actions).toEqual([])
+  })
+})
+
+// ── calculateAggregateRetention (E62-S01) ────────────────────────
+
+describe('calculateAggregateRetention', () => {
+  const FIXED_NOW = new Date('2026-04-14T12:00:00Z')
+
+  it('returns average retention for cards with varying stability (AC1)', () => {
+    // 5 cards, stability [10,20,30,40,50], all reviewed 5 days ago
+    const fiveDaysAgo = new Date('2026-04-09T12:00:00Z').toISOString()
+    const cards = [10, 20, 30, 40, 50].map(s => ({
+      last_review: fiveDaysAgo,
+      stability: s,
+    }))
+    const result = calculateAggregateRetention(cards, FIXED_NOW)
+    expect(result.retention).not.toBeNull()
+    // FSRS power-law with stabilities [10-50] at 5 days elapsed yields high retention (~98)
+    expect(result.retention!).toBeGreaterThanOrEqual(90)
+    expect(result.retention!).toBeLessThanOrEqual(100)
+    expect(result.avgStability).toBeCloseTo(30, 0)
+  })
+
+  it('returns null for empty flashcard array (AC2)', () => {
+    const result = calculateAggregateRetention([], FIXED_NOW)
+    expect(result.retention).toBeNull()
+    expect(result.avgStability).toBeNull()
+  })
+
+  it('returns null when all cards have stability 0 (AC3)', () => {
+    const cards = [
+      { last_review: '2026-04-09T12:00:00Z', stability: 0 },
+      { last_review: '2026-04-09T12:00:00Z', stability: 0 },
+    ]
+    const result = calculateAggregateRetention(cards, FIXED_NOW)
+    expect(result.retention).toBeNull()
+    expect(result.avgStability).toBeNull()
+  })
+
+  it('returns null for cards with no last_review (unreviewed)', () => {
+    const cards = [{ stability: 10 }, { stability: 20 }]
+    const result = calculateAggregateRetention(cards, FIXED_NOW)
+    expect(result.retention).toBeNull()
+    expect(result.avgStability).toBeNull()
+  })
+
+  it('handles single card', () => {
+    const card = { last_review: '2026-04-14T12:00:00Z', stability: 30 }
+    const result = calculateAggregateRetention([card], FIXED_NOW)
+    expect(result.retention).toBe(100) // reviewed just now → 100%
+    expect(result.avgStability).toBe(30)
+  })
+
+  it('skips unreviewed cards, averages only reviewed ones', () => {
+    const cards = [
+      { last_review: '2026-04-14T12:00:00Z', stability: 30 }, // reviewed
+      { stability: 10 }, // unreviewed (no last_review)
+      { last_review: '2026-04-14T12:00:00Z', stability: 0 }, // stability 0 → filtered
+    ]
+    const result = calculateAggregateRetention(cards, FIXED_NOW)
+    // Only the first card counts
+    expect(result.retention).toBe(100)
+    expect(result.avgStability).toBe(30)
+  })
+})
+
+// ── calculateDecayDate (E62-S01) ─────────────────────────────────
+
+describe('calculateDecayDate', () => {
+  const FIXED_NOW = new Date('2026-04-14T12:00:00Z')
+
+  it('returns correct decay date for avgStability=15 (AC4)', () => {
+    const result = calculateDecayDate(15, FIXED_NOW)
+    expect(result).not.toBeNull()
+    // daysUntilDecay = 9 * 15 * (1/0.7 - 1) = 135 * 0.4286 ≈ 57.86
+    const decayDate = new Date(result!)
+    const daysDiff = (decayDate.getTime() - FIXED_NOW.getTime()) / (1000 * 60 * 60 * 24)
+    expect(daysDiff).toBeCloseTo(57.86, 0)
+  })
+
+  it('returns null for avgStability=0 (AC5)', () => {
+    expect(calculateDecayDate(0, FIXED_NOW)).toBeNull()
+  })
+
+  it('returns null for negative avgStability (AC5)', () => {
+    expect(calculateDecayDate(-5, FIXED_NOW)).toBeNull()
+  })
+
+  it('returns ISO string format', () => {
+    const result = calculateDecayDate(20, FIXED_NOW)
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+  })
+})
+
+// ── calculateTopicScore with fsrsRetention (E62-S01) ─────────────
+
+describe('calculateTopicScore with fsrsRetention', () => {
+  it('uses fsrsRetention at 30% weight when provided (AC6)', () => {
+    const result = calculateTopicScore({
+      quizScore: 80,
+      flashcardRetention: null, // no legacy flashcard data
+      completionPercent: 100,
+      daysSinceLastEngagement: 3,
+      fsrsRetention: 60,
+    })
+    // fsrsRetention=60 fills the flashcard slot → 4 signals
+    expect(result.signalsUsed).toBe(4)
+    expect(result.effectiveWeights.flashcard).toBeCloseTo(0.3, 5)
+    expect(result.factors.flashcardRetention).toBe(60)
+    // Score: 80*0.3 + 60*0.3 + 100*0.2 + 100*0.2 = 24 + 18 + 20 + 20 = 82
+    expect(result.score).toBe(82)
+  })
+
+  it('falls back to flashcardRetention when fsrsRetention is null (AC7)', () => {
+    const withFsrsNull = calculateTopicScore({
+      quizScore: 80,
+      flashcardRetention: 70,
+      completionPercent: 100,
+      daysSinceLastEngagement: 3,
+      fsrsRetention: null,
+    })
+    const withoutFsrs = calculateTopicScore({
+      quizScore: 80,
+      flashcardRetention: 70,
+      completionPercent: 100,
+      daysSinceLastEngagement: 3,
+    })
+    // Identical output — no regression
+    expect(withFsrsNull.score).toBe(withoutFsrs.score)
+    expect(withFsrsNull.effectiveWeights).toEqual(withoutFsrs.effectiveWeights)
+  })
+
+  it('falls back when fsrsRetention is undefined (AC7)', () => {
+    const withUndefined = calculateTopicScore({
+      quizScore: 80,
+      flashcardRetention: 70,
+      completionPercent: 100,
+      daysSinceLastEngagement: 3,
+      fsrsRetention: undefined,
+    })
+    const without = calculateTopicScore({
+      quizScore: 80,
+      flashcardRetention: 70,
+      completionPercent: 100,
+      daysSinceLastEngagement: 3,
+    })
+    expect(withUndefined.score).toBe(without.score)
+  })
+
+  it('fsrsRetention overrides flashcardRetention when both present', () => {
+    const result = calculateTopicScore({
+      quizScore: 80,
+      flashcardRetention: 70, // would be used without fsrsRetention
+      completionPercent: 100,
+      daysSinceLastEngagement: 3,
+      fsrsRetention: 50, // overrides
+    })
+    expect(result.factors.flashcardRetention).toBe(50)
   })
 })
 

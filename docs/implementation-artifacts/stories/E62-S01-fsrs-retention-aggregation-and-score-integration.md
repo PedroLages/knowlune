@@ -1,12 +1,14 @@
 ---
 story_id: E62-S01
-story_name: "FSRS Retention Aggregation and Score Integration"
-status: draft
-started:
+story_name: 'FSRS Retention Aggregation and Score Integration'
+status: in-progress
+started: 2026-04-14
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-04-14
+review_completed: 2026-04-14
+review_round: 2
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, bundle-analysis, code-review, code-review-testing, security-review, design-review-skipped, performance-benchmark-skipped, exploratory-qa-skipped]
 burn_in_validated: false
 ---
 
@@ -34,7 +36,7 @@ so that topics with fading flashcards show declining scores and I can see when I
 
 **Given** a topic with average stability of 15 days
 **When** `calculateDecayDate(15, now)` is called with FSRS mode
-**Then** it returns an ISO date approximately 58 days in the future (9 * 15 * 0.4286 ≈ 57.9 days from now)
+**Then** it returns an ISO date approximately 58 days in the future (9 _ 15 _ 0.4286 ≈ 57.9 days from now)
 
 **Given** a topic with avgStability of 0 or negative
 **When** `calculateDecayDate()` is called
@@ -100,15 +102,18 @@ No UI in this story — pure scoring logic and store wiring. Follows the existin
 **Key files to create:** None (all modifications to existing files)
 
 **Key files to modify:**
+
 - `src/lib/knowledgeScore.ts` — add `calculateAggregateRetention()`, `calculateDecayDate()`, extend `ScoredTopic`, update `calculateTopicScore()`
 - `src/stores/useKnowledgeMapStore.ts` — wire retention aggregation into `computeScores()` pipeline
 
 **Key files to reference:**
+
 - `src/lib/spacedRepetition.ts` — `predictRetention()` signature (SM-2 now, FSRS after E59)
 - `src/stores/useFlashcardStore.ts` — flashcard data access
 - `src/lib/topicResolver.ts` — `ResolvedTopic` with `courseIds[]`
 
 **Architecture decisions:**
+
 - FSRS retention replaces the flashcard retention factor (30% weight), not the recency factor
 - Recency factor (20%) remains as independent engagement freshness signal
 - Feature detection via `'stability' in card` for SM-2/FSRS compatibility
@@ -140,8 +145,12 @@ Before requesting `/review-story`, verify:
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+See [code-review-2026-04-14-E62-S01.md](../../reviews/code/code-review-2026-04-14-E62-S01.md) — 2 MEDIUM, 1 LOW, 1 NIT. No blockers.
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+1. **FSRS aggregation centralizes retention logic**: Moving per-card `predictRetention()` calls from the store into a dedicated `calculateAggregateRetention()` function in `knowledgeScore.ts` simplified the store code and made the retention calculation independently testable. The store previously had inline loop logic for card-by-card retention that was harder to unit test.
+
+2. **Backward compatibility via optional parameter**: Adding `fsrsRetention` as an optional field to `TopicScoreInput` rather than replacing `flashcardRetention` preserved full backward compatibility. The fallback chain (`fsrsRetention ?? flashcardRetention`) ensures existing callers see identical behavior without code changes.
+
+3. **SM-2 legacy path simplified**: The story spec called for dual-mode SM-2/FSRS feature detection, but since `predictRetention()` already handles both card shapes internally (via the `stability` and `last_review` fields), the aggregation function only needed to filter on `card.last_review && card.stability > 0` — no explicit mode parameter was needed.
