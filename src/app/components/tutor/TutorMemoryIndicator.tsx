@@ -48,7 +48,7 @@ export function TutorMemoryIndicator({
   const insightCount =
     learnerModel.strengths.length +
     learnerModel.misconceptions.length +
-    (learnerModel.lastSessionSummary ? 1 : 0)
+    learnerModel.quizStats.weakTopics.length
 
   const handleClear = async () => {
     await onClearMemory(courseId)

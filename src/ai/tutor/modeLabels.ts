@@ -2,7 +2,7 @@
  * Mode label lookup for tutor modes (E72-S02)
  *
  * Minimal label map used by MessageBubble mode badges.
- * Will be replaced by MODE_REGISTRY in E73-S01.
+ * TODO(E73-S01): replace with MODE_REGISTRY when available
  */
 
 import type { TutorMode } from './types'

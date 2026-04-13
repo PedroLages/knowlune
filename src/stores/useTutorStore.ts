@@ -125,8 +125,8 @@ export const useTutorStore = create<TutorState>((set, get) => ({
 
   addMessage: (message: ChatMessage) => {
     set(state => {
-      // Tag message with current tutor mode (E72-S02)
-      const taggedMessage = Object.assign({}, message, { mode: state.mode })
+      // Tag message with current tutor mode (E72-S02); caller-provided mode takes precedence
+      const taggedMessage = { mode: state.mode, ...message }
       const messages = [...state.messages, taggedMessage]
       // Trim to max history to prevent unbounded growth
       const trimmed =

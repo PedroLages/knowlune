@@ -5,6 +5,7 @@
  * Allows removing individual entries from strengths and misconceptions lists.
  */
 
+import { useState } from 'react'
 import { X } from 'lucide-react'
 import {
   Dialog,
@@ -29,16 +30,28 @@ export function TutorMemoryEditDialog({
   onOpenChange,
   onUpdate,
 }: TutorMemoryEditDialogProps) {
+  const [isRemoving, setIsRemoving] = useState(false)
+
   const handleRemoveStrength = async (concept: string) => {
-    await onUpdate({
-      strengths: learnerModel.strengths.filter((s: ConceptAssessment) => s.concept !== concept),
-    })
+    setIsRemoving(true)
+    try {
+      await onUpdate({
+        strengths: learnerModel.strengths.filter((s: ConceptAssessment) => s.concept !== concept),
+      })
+    } finally {
+      setIsRemoving(false)
+    }
   }
 
   const handleRemoveMisconception = async (concept: string) => {
-    await onUpdate({
-      misconceptions: learnerModel.misconceptions.filter((m: ConceptAssessment) => m.concept !== concept),
-    })
+    setIsRemoving(true)
+    try {
+      await onUpdate({
+        misconceptions: learnerModel.misconceptions.filter((m: ConceptAssessment) => m.concept !== concept),
+      })
+    } finally {
+      setIsRemoving(false)
+    }
   }
 
   return (
@@ -69,6 +82,7 @@ export function TutorMemoryEditDialog({
                       size="icon"
                       className="size-7 min-h-[44px] min-w-[44px] text-muted-foreground hover:text-destructive"
                       onClick={() => handleRemoveStrength(s.concept)}
+                      disabled={isRemoving}
                       aria-label={`Remove strength: ${s.concept}`}
                     >
                       <X className="size-3" />
@@ -96,6 +110,7 @@ export function TutorMemoryEditDialog({
                       size="icon"
                       className="size-7 min-h-[44px] min-w-[44px] text-muted-foreground hover:text-destructive"
                       onClick={() => handleRemoveMisconception(m.concept)}
+                      disabled={isRemoving}
                       aria-label={`Remove misconception: ${m.concept}`}
                     >
                       <X className="size-3" />

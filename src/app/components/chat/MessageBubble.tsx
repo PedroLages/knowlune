@@ -111,13 +111,15 @@ export function MessageBubble({ message, isStreaming = false, showModeBadge = fa
           </div>
 
           {/* Timestamp + mode badge (E72-S02) */}
-          <div className={`text-[10px] mt-2 ${isUser ? 'text-white/80' : 'text-muted-foreground'}`}>
-            {showModeBadge && !isUser && message.mode ? (
-              <>{MODE_LABELS[message.mode] ?? message.mode} &middot; {timeStr}</>
-            ) : (
-              timeStr
-            )}
-          </div>
+          {showModeBadge && !isUser && message.mode ? (
+            <div className={`text-[10px] mt-2 ${isUser ? 'text-white/80' : 'text-muted-foreground'}`}>
+              {MODE_LABELS[message.mode] ?? message.mode} &middot; {timeStr}
+            </div>
+          ) : (
+            <div className={`text-xs mt-2 ${isUser ? 'text-white/80' : 'text-muted-foreground'}`}>
+              {timeStr}
+            </div>
+          )}
 
           {/* Error message */}
           {message.error && (
