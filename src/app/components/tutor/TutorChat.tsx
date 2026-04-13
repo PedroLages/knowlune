@@ -92,6 +92,7 @@ export function TutorChat({
           mode={mode}
           onModeChange={setMode}
           disabled={isGenerating || isOffline || isPremiumGated}
+          hasTranscript={badgeStatus.available}
         />
         <div className="ml-auto">
           {messages.length > 0 && (
@@ -136,7 +137,7 @@ export function TutorChat({
       />
       <div className="flex-1 overflow-hidden">
         {messages.length === 0 ? (
-          <TutorEmptyState lessonTitle={lessonTitle} />
+          <TutorEmptyState lessonTitle={lessonTitle} mode={mode} onSendMessage={sendMessage} />
         ) : (
           <MessageList messages={messages} isStreaming={isGenerating} />
         )}

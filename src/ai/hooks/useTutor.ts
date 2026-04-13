@@ -384,6 +384,6 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
     hintLevel: store.hintLevel,
     sendMessage,
     clearConversation: store.clearConversation,
-    setMode: store.setMode,
+    setMode: store.switchMode,
   }
 }

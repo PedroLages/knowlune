@@ -44,6 +44,10 @@ interface TutorState {
   /** Current lesson context for persistence */
   _courseId: string | null
   _videoId: string | null
+  /** History of mode switches (E73-S01) */
+  modeHistory: TutorMode[]
+  /** Mode transition context string for the next LLM call (E73-S01) */
+  modeTransitionContext: string | null
 
   /** Add a message to the conversation */
   addMessage: (message: ChatMessage) => void
@@ -55,6 +59,10 @@ interface TutorState {
   setStreamingContent: (content: string) => void
   /** Set the tutor mode */
   setMode: (mode: TutorMode) => void
+  /** Switch mode with history tracking and transition context (E73-S01) */
+  switchMode: (newMode: TutorMode) => void
+  /** Consume and clear the mode transition context (E73-S01) */
+  consumeTransitionContext: () => string | null
   /** Set the hint level */
   setHintLevel: (level: number) => void
   /** Set the stuck count for auto-escalation tracking */
@@ -121,6 +129,8 @@ export const useTutorStore = create<TutorState>((set, get) => ({
   conversationId: null,
   _courseId: null,
   _videoId: null,
+  modeHistory: [],
+  modeTransitionContext: null,
 
   setLessonContext: (courseId: string, videoId: string) => {
     set({ _courseId: courseId, _videoId: videoId })
@@ -175,6 +185,33 @@ export const useTutorStore = create<TutorState>((set, get) => ({
 
   setMode: (mode: TutorMode) => {
     set({ mode, hintLevel: 0, stuckCount: 0 })
+  },
+
+  switchMode: (newMode: TutorMode) => {
+    const { mode: previousMode, messages } = get()
+    if (newMode === previousMode) return
+
+    // Extract last topic from the most recent user message
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
+    const lastTopic = lastUserMsg
+      ? lastUserMsg.content.slice(0, 100)
+      : 'the current topic'
+
+    const transitionContext = `The user switched from ${previousMode} to ${newMode}. Acknowledge briefly and begin operating in ${newMode} mode about the topic: ${lastTopic}.`
+
+    set(state => ({
+      mode: newMode,
+      hintLevel: 0,
+      stuckCount: 0,
+      modeHistory: [...state.modeHistory, previousMode],
+      modeTransitionContext: transitionContext,
+    }))
+  },
+
+  consumeTransitionContext: () => {
+    const ctx = get().modeTransitionContext
+    if (ctx) set({ modeTransitionContext: null })
+    return ctx
   },
 
   setHintLevel: (level: number) => {
