@@ -339,18 +339,21 @@ export async function updateFromSession(
     const parsed = JSON.parse(jsonMatch[0])
     const validated = LearnerModelUpdateSchema.parse(parsed)
 
-    // Augment LLM response with timestamps for concept assessments
+    // Augment LLM response with timestamps for concept assessments.
+    // Destructure strengths/misconceptions out so we can replace them with
+    // fully-typed ConceptAssessment objects (adding lastAssessed + assessedBy).
+    const { strengths: rawStrengths, misconceptions: rawMisconceptions, ...rest } = validated
     const enrichedUpdate: Partial<LearnerModel> = {
-      ...validated,
-      ...(validated.strengths && {
-        strengths: validated.strengths.map((s) => ({
+      ...rest,
+      ...(rawStrengths && {
+        strengths: rawStrengths.map((s) => ({
           ...s,
           lastAssessed: now,
           assessedBy: insights.preferredMode as TutorMode,
         })),
       }),
-      ...(validated.misconceptions && {
-        misconceptions: validated.misconceptions.map((m) => ({
+      ...(rawMisconceptions && {
+        misconceptions: rawMisconceptions.map((m) => ({
           ...m,
           lastAssessed: now,
           assessedBy: insights.preferredMode as TutorMode,

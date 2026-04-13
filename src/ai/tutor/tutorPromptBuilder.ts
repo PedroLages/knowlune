@@ -50,6 +50,10 @@ Rules:
 - After explaining, ask a brief check-for-understanding question.`
     case 'quiz':
       return `Teaching mode: Quiz. Test the learner's understanding by asking questions about the material. After they answer, provide feedback on what they got right and wrong, with explanations.`
+    case 'eli5':
+      return `Teaching mode: Explain Like I'm 5. Use simple language, relatable analogies, and everyday examples to explain concepts. Avoid jargon. Make complex ideas accessible to a complete beginner.`
+    case 'debug':
+      return `Teaching mode: Debug Assist. Help the learner identify and fix problems in their understanding or code. Ask targeted questions to surface misconceptions. Provide clear, step-by-step guidance.`
   }
 }
 

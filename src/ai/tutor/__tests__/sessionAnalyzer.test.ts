@@ -11,12 +11,14 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { TutorMessage, LearnerModel } from '@/data/types'
+
+const FIXED_DATE = new Date('2026-04-13T12:00:00.000Z')
+const FIXED_TIMESTAMP = FIXED_DATE.getTime()
 import {
   analyzeSession,
   countAssessmentExchanges,
   serializeLearnerModelForPrompt,
   LearnerModelUpdateSchema,
-  MIN_ASSESSMENT_EXCHANGES,
   updateFromSession,
 } from '../sessionAnalyzer'
 
@@ -28,7 +30,7 @@ function makeTutorMessage(
   overrides: Partial<TutorMessage> & { role: 'user' | 'assistant'; content: string }
 ): TutorMessage {
   return {
-    timestamp: Date.now(),
+    timestamp: FIXED_TIMESTAMP,
     mode: 'socratic',
     ...overrides,
   }
@@ -45,8 +47,8 @@ function makeModel(overrides?: Partial<LearnerModel>): LearnerModel {
     preferredMode: 'socratic',
     lastSessionSummary: '',
     quizStats: { totalQuestions: 0, correctAnswers: 0, weakTopics: [] },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: FIXED_DATE.toISOString(),
+    updatedAt: FIXED_DATE.toISOString(),
     ...overrides,
   }
 }

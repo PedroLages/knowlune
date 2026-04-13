@@ -127,23 +127,12 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
   }, [])
 
   // Session boundary: visibilitychange (tab switch / minimize)
-  useEffect(() => {
-    function handleVisibilityChange() {
-      if (document.visibilityState === 'hidden') {
-        triggerSessionBoundaryUpdate()
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [])
-
   /**
    * Fire-and-forget session boundary update.
    * Converts ChatMessages to TutorMessages and triggers learner model update.
+   * Wrapped in useCallback so the useEffect dependency is stable across renders.
    */
-  function triggerSessionBoundaryUpdate() {
+  const triggerSessionBoundaryUpdate = useCallback(() => {
     const state = useTutorStore.getState()
     if (!state._courseId || !state.learnerModel) return
     if (state.messages.length === 0) return
@@ -156,13 +145,25 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
         content: m.content,
         timestamp: m.timestamp,
         mode: (m.mode ?? state.mode) as TutorMode,
-        quizScore: (m as Record<string, unknown>).quizScore as TutorMessage['quizScore'],
-        debugAssessment: (m as Record<string, unknown>).debugAssessment as TutorMessage['debugAssessment'],
+        quizScore: m.quizScore,
+        debugAssessment: m.debugAssessment,
       }))
 
     // Fire-and-forget — must not block navigation
     void updateFromSession(state._courseId, tutorMessages, state.learnerModel).catch(() => {})
-  }
+  }, [])
+
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'hidden') {
+        triggerSessionBoundaryUpdate()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [triggerSessionBoundaryUpdate])
 
   const sendMessage = useCallback(
     async (content: string) => {
