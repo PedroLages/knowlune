@@ -70,9 +70,7 @@ export function KnowledgeMapWidget() {
     return (
       <div className="text-center py-10" data-testid="knowledge-map-empty">
         <Map className="size-10 mx-auto mb-3 text-muted-foreground/50" aria-hidden="true" />
-        <p className="text-muted-foreground text-sm">
-          Import courses to build your Knowledge Map
-        </p>
+        <p className="text-muted-foreground text-sm">Import courses to build your Knowledge Map</p>
       </div>
     )
   }
@@ -90,8 +88,7 @@ export function KnowledgeMapWidget() {
     name: cat.category,
     size: Math.max(cat.topics.length, 1),
     score: cat.averageScore,
-    tier:
-      cat.averageScore >= 70 ? 'strong' : cat.averageScore >= 40 ? 'fading' : ('weak' as const),
+    tier: cat.averageScore >= 70 ? 'strong' : cat.averageScore >= 40 ? 'fading' : ('weak' as const),
   }))
 
   return (
@@ -123,11 +120,7 @@ export function KnowledgeMapWidget() {
                   {cat.category}
                   <Badge
                     className={tierBadgeClass(
-                      cat.averageScore >= 70
-                        ? 'strong'
-                        : cat.averageScore >= 40
-                          ? 'fading'
-                          : 'weak'
+                      cat.averageScore >= 70 ? 'strong' : cat.averageScore >= 40 ? 'fading' : 'weak'
                     )}
                   >
                     {cat.averageScore}%
