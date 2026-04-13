@@ -100,10 +100,7 @@ export async function getTranscriptContext(
 
   // Strategy 2: Chapter-based — check for YouTube chapters
   if (youtubeVideoId) {
-    const chapters = await db.youtubeChapters
-      .where('courseId')
-      .equals(courseId)
-      .sortBy('order')
+    const chapters = await db.youtubeChapters.where('courseId').equals(courseId).sortBy('order')
 
     // Filter chapters for this specific video
     const videoChapters = chapters.filter(
@@ -111,11 +108,7 @@ export async function getTranscriptContext(
     )
 
     if (videoChapters.length > 0) {
-      const chapterExcerpt = extractChapterContext(
-        cues,
-        videoChapters,
-        videoPositionSeconds
-      )
+      const chapterExcerpt = extractChapterContext(cues, videoChapters, videoPositionSeconds)
       if (chapterExcerpt) {
         return {
           excerpt: chapterExcerpt.text,
@@ -172,9 +165,7 @@ function extractChapterContext(
   if (!matchedChapter) return null
 
   const endTime =
-    matchedChapter.endTime ??
-    chapters[chapters.indexOf(matchedChapter) + 1]?.startTime ??
-    Infinity
+    matchedChapter.endTime ?? chapters[chapters.indexOf(matchedChapter) + 1]?.startTime ?? Infinity
 
   // Collect cues within the chapter's time range
   const chapterCues = cues.filter(

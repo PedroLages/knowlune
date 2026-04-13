@@ -205,7 +205,12 @@ describe('serializeLearnerModelForPrompt', () => {
         { concept: 'event loops', confidence: 0.8, lastAssessed: '', assessedBy: 'quiz' },
       ],
       misconceptions: [
-        { concept: 'Promise.all vs Promise.race', confidence: 0.7, lastAssessed: '', assessedBy: 'debug' },
+        {
+          concept: 'Promise.all vs Promise.race',
+          confidence: 0.7,
+          lastAssessed: '',
+          assessedBy: 'debug',
+        },
       ],
       preferredMode: 'quiz',
       lastSessionSummary: 'Discussed async/await error handling',
@@ -316,7 +321,7 @@ describe('LearnerModelUpdateSchema', () => {
 // ---------------------------------------------------------------------------
 
 const mockUpdateLearnerModel = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
-const mockStreamCompletion = vi.hoisted(() => vi.fn())
+vi.hoisted(() => vi.fn()) // mockStreamCompletion — reserved for future stream tests
 const mockGetLLMClient = vi.hoisted(() => vi.fn())
 
 vi.mock('@/ai/tutor/learnerModelService', () => ({
@@ -368,9 +373,24 @@ describe('updateFromSession', () => {
 
   it('falls back to local insights when LLM returns invalid JSON (Zod validation failure)', async () => {
     const messages: TutorMessage[] = [
-      makeTutorMessage({ role: 'user', content: 'q1 closures', mode: 'quiz', quizScore: { correct: true, questionNumber: 1 } }),
-      makeTutorMessage({ role: 'user', content: 'q2 promises', mode: 'quiz', quizScore: { correct: false, questionNumber: 2 } }),
-      makeTutorMessage({ role: 'user', content: 'q3 async', mode: 'quiz', quizScore: { correct: true, questionNumber: 3 } }),
+      makeTutorMessage({
+        role: 'user',
+        content: 'q1 closures',
+        mode: 'quiz',
+        quizScore: { correct: true, questionNumber: 1 },
+      }),
+      makeTutorMessage({
+        role: 'user',
+        content: 'q2 promises',
+        mode: 'quiz',
+        quizScore: { correct: false, questionNumber: 2 },
+      }),
+      makeTutorMessage({
+        role: 'user',
+        content: 'q3 async',
+        mode: 'quiz',
+        quizScore: { correct: true, questionNumber: 3 },
+      }),
     ]
     const model = makeModel()
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})

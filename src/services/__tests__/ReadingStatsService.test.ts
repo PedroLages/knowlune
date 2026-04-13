@@ -262,9 +262,9 @@ describe('computeAverageReadingSpeed', () => {
   it('rounds speed to nearest integer', async () => {
     vi.mocked(db.books.where).mockReturnValue({
       equals: vi.fn().mockReturnValue({
-        toArray: vi.fn().mockResolvedValue([
-          { id: 'book1', status: 'finished', totalPages: 100, progress: 100 },
-        ]),
+        toArray: vi
+          .fn()
+          .mockResolvedValue([{ id: 'book1', status: 'finished', totalPages: 100, progress: 100 }]),
       }),
     } as never)
 
@@ -296,7 +296,7 @@ describe('computeAverageReadingSpeed', () => {
     vi.mocked(db.studySessions.where).mockReturnValue({
       equals: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([
-          { contentItemId: 'book1', startTime: '2026-04-06T08:00:00Z', duration: 7200 },  // 2 hours
+          { contentItemId: 'book1', startTime: '2026-04-06T08:00:00Z', duration: 7200 }, // 2 hours
           { contentItemId: 'book2', startTime: '2026-04-06T10:00:00Z', duration: 14400 }, // 4 hours
         ]),
       }),
@@ -367,13 +367,13 @@ describe('getTimeOfDayPattern', () => {
     vi.mocked(db.studySessions.where).mockReturnValue({
       equals: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([
-          { startTime: localDate(5), duration: 300 },  // hour 5 → Morning
+          { startTime: localDate(5), duration: 300 }, // hour 5 → Morning
           { startTime: localDate(11), duration: 300 }, // hour 11 → Morning
-          { startTime: localDate(5), duration: 300 },  // hour 5 → Morning
+          { startTime: localDate(5), duration: 300 }, // hour 5 → Morning
           { startTime: localDate(10), duration: 300 }, // hour 10 → Morning
-          { startTime: localDate(6), duration: 300 },  // hour 6 → Morning
-          { startTime: localDate(7), duration: 300 },  // hour 7 → Morning
-          { startTime: localDate(9), duration: 300 },  // hour 9 → Morning
+          { startTime: localDate(6), duration: 300 }, // hour 6 → Morning
+          { startTime: localDate(7), duration: 300 }, // hour 7 → Morning
+          { startTime: localDate(9), duration: 300 }, // hour 9 → Morning
         ]),
       }),
     } as never)
@@ -397,11 +397,11 @@ describe('getTimeOfDayPattern', () => {
         toArray: vi.fn().mockResolvedValue([
           { startTime: nightDate(21), duration: 300 }, // hour 21 → Night
           { startTime: nightDate(23), duration: 300 }, // hour 23 → Night
-          { startTime: nightDate(4), duration: 300 },  // hour 4 → Night (midnight wrap)
-          { startTime: nightDate(0), duration: 300 },  // hour 0 → Night (midnight)
+          { startTime: nightDate(4), duration: 300 }, // hour 4 → Night (midnight wrap)
+          { startTime: nightDate(0), duration: 300 }, // hour 0 → Night (midnight)
           { startTime: nightDate(22), duration: 300 }, // hour 22 → Night
-          { startTime: nightDate(1), duration: 300 },  // hour 1 → Night
-          { startTime: nightDate(3), duration: 300 },  // hour 3 → Night
+          { startTime: nightDate(1), duration: 300 }, // hour 1 → Night
+          { startTime: nightDate(3), duration: 300 }, // hour 3 → Night
         ]),
       }),
     } as never)
@@ -424,7 +424,7 @@ describe('getTimeOfDayPattern', () => {
           { startTime: localDate(19), duration: 300 }, // Evening
           { startTime: localDate(20), duration: 300 }, // Evening
           { startTime: localDate(17), duration: 300 }, // Evening
-          { startTime: localDate(8), duration: 300 },  // Morning
+          { startTime: localDate(8), duration: 300 }, // Morning
           { startTime: localDate(14), duration: 300 }, // Afternoon
           { startTime: localDate(22), duration: 300 }, // Night
         ]),
@@ -444,8 +444,8 @@ describe('getTimeOfDayPattern', () => {
     vi.mocked(db.studySessions.where).mockReturnValue({
       equals: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([
-          { startTime: localDate(8), duration: 300 },  // Morning
-          { startTime: localDate(9), duration: 300 },  // Morning
+          { startTime: localDate(8), duration: 300 }, // Morning
+          { startTime: localDate(9), duration: 300 }, // Morning
           { startTime: localDate(10), duration: 300 }, // Morning
           { startTime: localDate(11), duration: 300 }, // Morning
           { startTime: localDate(13), duration: 300 }, // Afternoon
@@ -476,7 +476,10 @@ describe('computeETA', () => {
     } as never)
 
     const { computeETA } = await import('@/services/ReadingStatsService')
-    const result = await computeETA({ id: 'b1', status: 'finished', totalPages: 300, progress: 80 }, 60)
+    const result = await computeETA(
+      { id: 'b1', status: 'finished', totalPages: 300, progress: 80 },
+      60
+    )
     expect(result).toBeNull()
   })
 
@@ -489,13 +492,19 @@ describe('computeETA', () => {
 
     const { computeETA } = await import('@/services/ReadingStatsService')
     // No sessions → null (UI renders as "—")
-    const result = await computeETA({ id: 'b1', status: 'reading', totalPages: 300, progress: 50 }, 60)
+    const result = await computeETA(
+      { id: 'b1', status: 'reading', totalPages: 300, progress: 50 },
+      60
+    )
     expect(result).toBeNull()
   })
 
   it('returns null when avgSpeedPagesPerHour is null', async () => {
     const { computeETA } = await import('@/services/ReadingStatsService')
-    const result = await computeETA({ id: 'b1', status: 'reading', totalPages: 300, progress: 50 }, null)
+    const result = await computeETA(
+      { id: 'b1', status: 'reading', totalPages: 300, progress: 50 },
+      null
+    )
     expect(result).toBeNull()
   })
 
@@ -515,7 +524,10 @@ describe('computeETA', () => {
     } as never)
 
     const { computeETA } = await import('@/services/ReadingStatsService')
-    const result = await computeETA({ id: 'b1', status: 'reading', totalPages: 300, progress: 95 }, 60)
+    const result = await computeETA(
+      { id: 'b1', status: 'reading', totalPages: 300, progress: 95 },
+      60
+    )
     expect(result).toBe('≈ 2 days')
   })
 
@@ -525,14 +537,19 @@ describe('computeETA', () => {
     // ETA = 3 / 12 = 0.25 → ceil = 1 day
     vi.mocked(db.studySessions.where).mockReturnValue({
       equals: vi.fn().mockReturnValue({
-        toArray: vi.fn().mockResolvedValue([
-          { contentItemId: 'b1', startTime: '2026-04-05T10:00:00Z', duration: 21600 },
-        ]),
+        toArray: vi
+          .fn()
+          .mockResolvedValue([
+            { contentItemId: 'b1', startTime: '2026-04-05T10:00:00Z', duration: 21600 },
+          ]),
       }),
     } as never)
 
     const { computeETA } = await import('@/services/ReadingStatsService')
-    const result = await computeETA({ id: 'b1', status: 'reading', totalPages: 300, progress: 99 }, 60)
+    const result = await computeETA(
+      { id: 'b1', status: 'reading', totalPages: 300, progress: 99 },
+      60
+    )
     expect(result).toBe('≈ 1 day')
   })
 
@@ -549,7 +566,10 @@ describe('computeETA', () => {
     } as never)
 
     const { computeETA } = await import('@/services/ReadingStatsService')
-    const result = await computeETA({ id: 'b1', status: 'reading', totalPages: 300, progress: 0 }, 60)
+    const result = await computeETA(
+      { id: 'b1', status: 'reading', totalPages: 300, progress: 0 },
+      60
+    )
     expect(result).toBe('≈ 22 weeks')
   })
 
@@ -567,7 +587,10 @@ describe('computeETA', () => {
     } as never)
 
     const { computeETA } = await import('@/services/ReadingStatsService')
-    const result = await computeETA({ id: 'b1', status: 'reading', totalPages: 300, progress: 90 }, 60)
+    const result = await computeETA(
+      { id: 'b1', status: 'reading', totalPages: 300, progress: 90 },
+      60
+    )
     expect(result).toBe('≈ 3 weeks')
   })
 })
@@ -603,7 +626,10 @@ describe('getReadingStats', () => {
     })
     // avgReadingSpeedPagesPerHour must be number | null (not undefined)
     expect('avgReadingSpeedPagesPerHour' in result).toBe(true)
-    expect(result.avgReadingSpeedPagesPerHour === null || typeof result.avgReadingSpeedPagesPerHour === 'number').toBe(true)
+    expect(
+      result.avgReadingSpeedPagesPerHour === null ||
+        typeof result.avgReadingSpeedPagesPerHour === 'number'
+    ).toBe(true)
   })
 })
 
@@ -615,9 +641,7 @@ describe('getGenreDistribution', () => {
   it('returns null when fewer than 2 books have genres', async () => {
     vi.mocked(db.books.where).mockReturnValue({
       anyOf: vi.fn().mockReturnValue({
-        toArray: vi.fn().mockResolvedValue([
-          { id: 'b1', status: 'reading', genre: 'Fiction' },
-        ]),
+        toArray: vi.fn().mockResolvedValue([{ id: 'b1', status: 'reading', genre: 'Fiction' }]),
       }),
     } as never)
 
@@ -666,7 +690,11 @@ describe('getGenreDistribution', () => {
     // But below 5% threshold: 1/20 = 5% exactly — borderline, only below < 5%
     // Use 21 books: 19 Fiction, 1 Sci-Fi (4.76%), 1 Horror (4.76%) → both < 5% → Other
     const books = [
-      ...Array.from({ length: 19 }, (_, i) => ({ id: `b${i}`, status: 'finished', genre: 'Fiction' })),
+      ...Array.from({ length: 19 }, (_, i) => ({
+        id: `b${i}`,
+        status: 'finished',
+        genre: 'Fiction',
+      })),
       { id: 'b19', status: 'finished', genre: 'Sci-Fi' },
       { id: 'b20', status: 'finished', genre: 'Horror' },
     ]
@@ -774,8 +802,20 @@ describe('getReadingSummary', () => {
     vi.mocked(db.books.where).mockReturnValue({
       equals: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([
-          { id: 'b1', status: 'finished', totalPages: 300, author: 'Author A', finishedAt: '2026-01-15T00:00:00Z' },
-          { id: 'b2', status: 'finished', totalPages: 200, author: 'Author A', finishedAt: '2025-12-31T00:00:00Z' },
+          {
+            id: 'b1',
+            status: 'finished',
+            totalPages: 300,
+            author: 'Author A',
+            finishedAt: '2026-01-15T00:00:00Z',
+          },
+          {
+            id: 'b2',
+            status: 'finished',
+            totalPages: 200,
+            author: 'Author A',
+            finishedAt: '2025-12-31T00:00:00Z',
+          },
         ]),
         count: vi.fn().mockResolvedValue(2),
       }),
@@ -796,9 +836,27 @@ describe('getReadingSummary', () => {
     vi.mocked(db.books.where).mockReturnValue({
       equals: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([
-          { id: 'b1', status: 'finished', totalPages: 300, author: 'Zebra Author', finishedAt: '2026-01-01T00:00:00Z' },
-          { id: 'b2', status: 'finished', totalPages: 300, author: 'Alpha Author', finishedAt: '2026-01-02T00:00:00Z' },
-          { id: 'b3', status: 'finished', totalPages: 300, author: 'Zebra Author', finishedAt: '2026-01-03T00:00:00Z' },
+          {
+            id: 'b1',
+            status: 'finished',
+            totalPages: 300,
+            author: 'Zebra Author',
+            finishedAt: '2026-01-01T00:00:00Z',
+          },
+          {
+            id: 'b2',
+            status: 'finished',
+            totalPages: 300,
+            author: 'Alpha Author',
+            finishedAt: '2026-01-02T00:00:00Z',
+          },
+          {
+            id: 'b3',
+            status: 'finished',
+            totalPages: 300,
+            author: 'Zebra Author',
+            finishedAt: '2026-01-03T00:00:00Z',
+          },
         ]),
         count: vi.fn().mockResolvedValue(3),
       }),
@@ -819,8 +877,20 @@ describe('getReadingSummary', () => {
     vi.mocked(db.books.where).mockReturnValue({
       equals: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([
-          { id: 'b1', status: 'finished', totalPages: 300, author: 'Zebra Author', finishedAt: '2026-01-01T00:00:00Z' },
-          { id: 'b2', status: 'finished', totalPages: 300, author: 'Alpha Author', finishedAt: '2026-01-02T00:00:00Z' },
+          {
+            id: 'b1',
+            status: 'finished',
+            totalPages: 300,
+            author: 'Zebra Author',
+            finishedAt: '2026-01-01T00:00:00Z',
+          },
+          {
+            id: 'b2',
+            status: 'finished',
+            totalPages: 300,
+            author: 'Alpha Author',
+            finishedAt: '2026-01-02T00:00:00Z',
+          },
         ]),
         count: vi.fn().mockResolvedValue(2),
       }),
@@ -841,7 +911,13 @@ describe('getReadingSummary', () => {
     vi.mocked(db.books.where).mockReturnValue({
       equals: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([
-          { id: 'b1', status: 'finished', totalPages: 300, author: 'Author', finishedAt: '2026-01-01T00:00:00Z' },
+          {
+            id: 'b1',
+            status: 'finished',
+            totalPages: 300,
+            author: 'Author',
+            finishedAt: '2026-01-01T00:00:00Z',
+          },
         ]),
         count: vi.fn().mockResolvedValue(1),
       }),
@@ -849,9 +925,9 @@ describe('getReadingSummary', () => {
     vi.mocked(db.studySessions.where).mockReturnValue({
       equals: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([
-          { contentItemId: 'b1', startTime: '2026-04-05T10:00:00Z', duration: 3600 },  // 1 hour
-          { contentItemId: 'b1', startTime: '2026-04-04T10:00:00Z', duration: 9000 },  // 2.5 hours → longest
-          { contentItemId: 'b1', startTime: '2026-04-03T10:00:00Z', duration: 1800 },  // 30 min
+          { contentItemId: 'b1', startTime: '2026-04-05T10:00:00Z', duration: 3600 }, // 1 hour
+          { contentItemId: 'b1', startTime: '2026-04-04T10:00:00Z', duration: 9000 }, // 2.5 hours → longest
+          { contentItemId: 'b1', startTime: '2026-04-03T10:00:00Z', duration: 1800 }, // 30 min
           // In-progress book session — should be excluded from avgPagesPerSession
           { contentItemId: 'in-progress-book', startTime: '2026-04-05T12:00:00Z', duration: 7200 },
         ]),
@@ -868,12 +944,21 @@ describe('getReadingSummary', () => {
 
   it('reads yearlyGoal from localStorage when set', async () => {
     // Seed localStorage with a reading goal
-    localStorage.setItem('knowlune:reading-goal', JSON.stringify({ yearlyBookTarget: 24, updatedAt: '2026-01-01T00:00:00Z' }))
+    localStorage.setItem(
+      'knowlune:reading-goal',
+      JSON.stringify({ yearlyBookTarget: 24, updatedAt: '2026-01-01T00:00:00Z' })
+    )
 
     vi.mocked(db.books.where).mockReturnValue({
       equals: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue([
-          { id: 'b1', status: 'finished', totalPages: 200, author: 'Author', finishedAt: '2026-03-01T00:00:00Z' },
+          {
+            id: 'b1',
+            status: 'finished',
+            totalPages: 200,
+            author: 'Author',
+            finishedAt: '2026-03-01T00:00:00Z',
+          },
         ]),
         count: vi.fn().mockResolvedValue(1),
       }),

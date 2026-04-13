@@ -42,11 +42,11 @@ const MODE_EMPTY_STATES: Record<TutorMode, ModeEmptyConfig> = {
   },
   eli5: {
     icon: Lightbulb,
-    heading: 'Explain it simply',
+    heading: "I'll explain it simply",
     suggestions: [
-      "Explain this like I'm five",
-      "What's a simple analogy for this concept?",
-      'Why does this matter in everyday life?',
+      'What is this concept in simple terms?',
+      "Explain this like I'm new to the topic",
+      "I'm confused about this part",
     ],
   },
   quiz: {

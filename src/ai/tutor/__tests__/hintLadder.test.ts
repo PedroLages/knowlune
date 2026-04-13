@@ -63,7 +63,11 @@ describe('detectFrustration', () => {
   })
 
   it('returns "none" for long thoughtful messages', () => {
-    expect(detectFrustration('I think the answer is related to how the event loop processes async callbacks')).toBe('none')
+    expect(
+      detectFrustration(
+        'I think the answer is related to how the event loop processes async callbacks'
+      )
+    ).toBe('none')
   })
 })
 

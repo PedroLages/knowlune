@@ -98,7 +98,9 @@ export async function updateLearnerModel(
     ? {
         totalQuestions: existing.quizStats.totalQuestions + updates.quizStats.totalQuestions,
         correctAnswers: existing.quizStats.correctAnswers + updates.quizStats.correctAnswers,
-        weakTopics: [...new Set([...existing.quizStats.weakTopics, ...updates.quizStats.weakTopics])],
+        weakTopics: [
+          ...new Set([...existing.quizStats.weakTopics, ...updates.quizStats.weakTopics]),
+        ],
       }
     : existing.quizStats
 
@@ -106,7 +108,9 @@ export async function updateLearnerModel(
     ...existing,
     // Overwrite fields (only if provided)
     ...(updates.vocabularyLevel !== undefined && { vocabularyLevel: updates.vocabularyLevel }),
-    ...(updates.lastSessionSummary !== undefined && { lastSessionSummary: updates.lastSessionSummary }),
+    ...(updates.lastSessionSummary !== undefined && {
+      lastSessionSummary: updates.lastSessionSummary,
+    }),
     ...(updates.preferredMode !== undefined && { preferredMode: updates.preferredMode }),
     // Merged fields
     strengths: mergedStrengths,

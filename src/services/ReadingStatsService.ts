@@ -398,13 +398,10 @@ export async function getReadingSummary(): Promise<ReadingSummary | null> {
 
   // Avg pages per session: finished books' total pages / finished books' session count
   const totalPages = finishedBooks.reduce((sum, b) => sum + (b.totalPages ?? 0), 0)
-  const avgPagesPerSession = sessionCount > 0 && totalPages > 0
-    ? Math.round(totalPages / sessionCount)
-    : null
+  const avgPagesPerSession =
+    sessionCount > 0 && totalPages > 0 ? Math.round(totalPages / sessionCount) : null
 
-  const longestSessionMinutes = longestDuration > 0
-    ? Math.round(longestDuration / 60)
-    : null
+  const longestSessionMinutes = longestDuration > 0 ? Math.round(longestDuration / 60) : null
 
   // Most read author: count finished books per author, tie-break alphabetically
   const authorCounts = new Map<string, number>()

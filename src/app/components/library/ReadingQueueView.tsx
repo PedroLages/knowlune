@@ -28,7 +28,14 @@ interface QueueBookRowProps {
   onMoveDown: () => void
 }
 
-function QueueBookRow({ book, position, isFirst, isLast, onMoveUp, onMoveDown }: QueueBookRowProps) {
+function QueueBookRow({
+  book,
+  position,
+  isFirst,
+  isLast,
+  onMoveUp,
+  onMoveDown,
+}: QueueBookRowProps) {
   const navigate = useNavigate()
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
 
@@ -46,9 +53,7 @@ function QueueBookRow({ book, position, isFirst, isLast, onMoveUp, onMoveDown }:
       <span
         className={cn(
           'flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold',
-          position === 1
-            ? 'bg-brand text-brand-foreground'
-            : 'bg-muted text-muted-foreground'
+          position === 1 ? 'bg-brand text-brand-foreground' : 'bg-muted text-muted-foreground'
         )}
         aria-label={`Queue position ${position}`}
         data-testid={`queue-position-${book.id}`}
@@ -63,11 +68,7 @@ function QueueBookRow({ book, position, isFirst, isLast, onMoveUp, onMoveDown }:
         aria-label={`Open ${book.title}`}
       >
         {resolvedCoverUrl ? (
-          <img
-            src={resolvedCoverUrl}
-            alt=""
-            className="w-full h-full object-cover"
-          />
+          <img src={resolvedCoverUrl} alt="" className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <BookOpen className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -87,12 +88,8 @@ function QueueBookRow({ book, position, isFirst, isLast, onMoveUp, onMoveDown }:
         aria-label={`Open ${book.title}`}
       >
         <p className="text-sm font-semibold truncate text-foreground">{book.title}</p>
-        {book.author && (
-          <p className="text-xs text-muted-foreground truncate">{book.author}</p>
-        )}
-        {book.progress > 0 && (
-          <p className="text-xs text-brand mt-0.5">{book.progress}% read</p>
-        )}
+        {book.author && <p className="text-xs text-muted-foreground truncate">{book.author}</p>}
+        {book.progress > 0 && <p className="text-xs text-brand mt-0.5">{book.progress}% read</p>}
       </div>
 
       {/* Reorder controls */}
@@ -125,14 +122,13 @@ function QueueBookRow({ book, position, isFirst, isLast, onMoveUp, onMoveDown }:
 }
 
 export function ReadingQueueView({ books }: ReadingQueueViewProps) {
-  const queue = useReadingQueueStore(s => s.queue)
-  const moveUp = useReadingQueueStore(s => s.moveUp)
-  const moveDown = useReadingQueueStore(s => s.moveDown)
+  const entries = useReadingQueueStore(s => s.entries)
+  const reorderQueue = useReadingQueueStore(s => s.reorderQueue)
 
   // Build ordered list: match queue entries to books, sort by position
   const bookMap = new Map(books.map(b => [b.id, b]))
-  const orderedEntries = [...queue]
-    .sort((a, b) => a.position - b.position)
+  const orderedEntries = [...entries]
+    .sort((a, b) => a.sortOrder - b.sortOrder)
     .map(entry => ({ entry, book: bookMap.get(entry.bookId) }))
     .filter((item): item is { entry: typeof item.entry; book: Book } => item.book !== undefined)
 
@@ -165,11 +161,11 @@ export function ReadingQueueView({ books }: ReadingQueueViewProps) {
         <QueueBookRow
           key={entry.bookId}
           book={book}
-          position={entry.position}
+          position={entry.sortOrder + 1}
           isFirst={index === 0}
           isLast={index === orderedEntries.length - 1}
-          onMoveUp={() => moveUp(book.id)}
-          onMoveDown={() => moveDown(book.id)}
+          onMoveUp={() => reorderQueue(index, index - 1)}
+          onMoveDown={() => reorderQueue(index, index + 1)}
         />
       ))}
     </div>
