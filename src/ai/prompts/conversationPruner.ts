@@ -147,6 +147,8 @@ function prunePairs(messages: ChatMessage[], maxTokens: number): ChatMessage[] {
   return [first, makePruneSummary(prunedCount), ...kept.flat()]
 }
 
+// Module-level singleton counter — browser PWA context only.
+// Not safe for concurrent workers or SSR. Reset via resetPruneSummaryCounter() in tests.
 /** Monotonic counter to ensure unique prune-summary IDs across multiple prune operations */
 let pruneSummaryCounter = 0
 

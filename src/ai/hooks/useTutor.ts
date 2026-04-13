@@ -393,6 +393,10 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
         }
 
         // Stage 6: Persist to Dexie
+        // SECURITY: fullResponse content comes from LLM and must be sanitized before rendering
+        // if a markdown renderer (e.g. react-markdown + rehype-sanitize) is added in future.
+        // Current rendering: React escapes all content — XSS risk is latent, not active.
+        // TODO(security): add DOMPurify wrapper here when markdown rendering is enabled.
         await store.persistConversation()
       } catch (err) {
         if (abortController.signal.aborted) {
