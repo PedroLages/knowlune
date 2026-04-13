@@ -89,13 +89,13 @@ _(none yet)_
 
 | Command | Status | Result | Notes |
 |---------|--------|--------|-------|
-| Sprint Status | pending | — | — |
-| Mark Epic Done | pending | — | — |
-| Testarch Trace | pending | — | — |
-| Testarch NFR | pending | — | — |
-| Adversarial Review | pending | — | — |
-| Retrospective | pending | — | — |
-| Fix Pass Planning | pending | — | — |
+| Sprint Status | done | READY | All 5 stories done |
+| Mark Epic Done | done | committed | 78fa93e6 |
+| Testarch Trace | done | CONCERNS→80%+ | 2 fix rounds, 43 tests added, P1 96% |
+| Testarch NFR | done | CONCERNS (72%) | 1 MEDIUM (XSS doc), 2 LOW fixed |
+| Adversarial Review | skipped | — | Not requested |
+| Retrospective | done | saved | epic-73-retrospective-2026-04-13.md |
+| Fix Pass Planning | in-progress | — | — |
 | Fix Pass Execution | pending | — | — |
 | Gate Check | pending | — | — |
 
