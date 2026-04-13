@@ -22,6 +22,11 @@ import { mapLLMError } from '@/ai/lib/llmErrorMapper'
 import type { LLMMessage } from '@/ai/llm/types'
 import type { TutorContext, TutorMode, TranscriptStatus } from '@/ai/tutor/types'
 import { processUserMessage } from '@/ai/tutor/hintLadder'
+import {
+  hasTranscriptEmbeddings,
+  lazyEmbedTranscript,
+} from '@/ai/tutor/transcriptEmbedder'
+import { retrieveTutorContext, formatRAGContext } from '@/ai/tutor/tutorRAG'
 import type { ChatMessage } from '@/ai/rag/types'
 
 /** Maximum number of past exchanges to include in LLM context */
@@ -163,14 +168,55 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
           }
         }
 
+        // Stage 2.5: RAG retrieval — semantic search across transcript embeddings
+        // Lazy-embed transcript on first interaction if not already embedded
+        let ragContextStr = ''
+        const video = await (await import('@/db')).db.importedVideos.get(lessonId)
+        const youtubeVideoId = video?.youtubeVideoId
+        if (youtubeVideoId) {
+          const hasEmbeddings = await hasTranscriptEmbeddings(courseId, youtubeVideoId)
+
+          if (!hasEmbeddings) {
+            // Trigger lazy embedding — get cues from transcript record
+            try {
+              const transcript = await (await import('@/db')).db.youtubeTranscripts
+                .where('[courseId+videoId]')
+                .equals([courseId, youtubeVideoId])
+                .first()
+              if (transcript?.cues && transcript.cues.length > 0) {
+                // Fire and forget — don't block the chat
+                lazyEmbedTranscript(courseId, youtubeVideoId, transcript.cues)
+              }
+            } catch {
+              // silent-catch-ok — lazy embedding is non-critical
+            }
+          }
+
+          // If embeddings exist, perform RAG retrieval
+          if (hasEmbeddings) {
+            try {
+              const ragResult = await retrieveTutorContext(
+                content,
+                courseId,
+                youtubeVideoId,
+                position
+              )
+              ragContextStr = formatRAGContext(ragResult.chunks)
+            } catch {
+              // silent-catch-ok — RAG is non-critical, falls back to position-based injection
+            }
+          }
+        }
+
         // Stage 3: Build system prompt
         const tutorContext: TutorContext = {
           courseName,
           lessonTitle,
           lessonPosition,
           videoPositionSeconds: position,
-          transcriptExcerpt: transcriptResult.excerpt || undefined,
-          transcriptStrategy: transcriptResult.strategy,
+          // If RAG context is available, transcript excerpt becomes supplementary
+          transcriptExcerpt: ragContextStr ? undefined : (transcriptResult.excerpt || undefined),
+          transcriptStrategy: ragContextStr ? 'none' : transcriptResult.strategy,
           chapterTitle: transcriptResult.chapterTitle,
           timeRange: transcriptResult.timeRange,
         }
@@ -178,7 +224,8 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
           tutorContext,
           store.mode,
           undefined,
-          store.hintLevel
+          store.hintLevel,
+          ragContextStr
         )
 
         // Stage 4: Build LLM message array with sliding window

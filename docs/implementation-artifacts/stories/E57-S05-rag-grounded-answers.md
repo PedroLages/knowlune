@@ -1,8 +1,8 @@
 ---
 story_id: E57-S05
 story_name: "RAG-Grounded Answers (Phase 2)"
-status: ready-for-dev
-started:
+status: in-progress
+started: 2026-04-13
 completed:
 reviewed: false
 review_started:

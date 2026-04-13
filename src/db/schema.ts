@@ -40,6 +40,7 @@ import type {
   VocabularyItem,
   BookReview,
   ChatConversation,
+  TranscriptEmbedding,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA } from './checkpoint'
@@ -94,6 +95,7 @@ export type ElearningDatabase = Dexie & {
   audioClips: EntityTable<AudioClip, 'id'>
   bookReviews: EntityTable<BookReview, 'id'>
   chatConversations: EntityTable<ChatConversation, 'id'>
+  transcriptEmbeddings: EntityTable<TranscriptEmbedding, 'id'>
 }
 
 /**
@@ -1324,6 +1326,10 @@ function _declareLegacyMigrations(database: Dexie): void {
   // E57-S03: Chat Conversations — tutor chat persistence
   database.version(49).stores({
     chatConversations: 'id, [courseId+videoId], courseId, updatedAt',
+  })
+  // E57-S05: Transcript Embeddings — RAG-grounded tutor answers
+  database.version(50).stores({
+    transcriptEmbeddings: 'id, [courseId+videoId], courseId, createdAt',
   })
 } // end _declareLegacyMigrations
 

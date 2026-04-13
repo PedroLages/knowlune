@@ -44,7 +44,7 @@ export interface TutorContext {
 /** Priority-ordered prompt slot for the system prompt builder */
 export interface PromptSlot {
   /** Slot identifier */
-  id: 'base' | 'mode' | 'course' | 'transcript' | 'learner' | 'resume'
+  id: 'base' | 'mode' | 'course' | 'transcript' | 'rag' | 'learner' | 'resume'
   /** Whether this slot is required (never omitted for budget) */
   required: boolean
   /** Priority (lower = higher priority, filled first) */
