@@ -18,6 +18,8 @@ export interface ChatMessage {
   timestamp: number
   /** Error message for failed messages */
   error?: string
+  /** Tutor mode when this message was sent (E72-S02, tutor context only) */
+  mode?: import('@/ai/tutor/types').TutorMode
 }
 
 /** Citation metadata for clickable references */

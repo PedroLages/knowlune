@@ -86,21 +86,23 @@ interface TutorState {
 const MAX_HISTORY_MESSAGES = 500
 
 /** Convert ChatMessage to TutorMessage for Dexie storage */
-function toTutorMessage(msg: ChatMessage): TutorMessage {
+function toTutorMessage(msg: ChatMessage, mode: TutorMode): TutorMessage {
   return {
     role: msg.role as 'user' | 'assistant',
     content: msg.content,
     timestamp: msg.timestamp,
+    mode,
   }
 }
 
-/** Convert TutorMessage to ChatMessage for display */
+/** Convert TutorMessage to ChatMessage for display (backward-compat: default mode to 'socratic') */
 function toChatMessage(msg: TutorMessage): ChatMessage {
   return {
     id: crypto.randomUUID(),
     role: msg.role,
     content: msg.content,
     timestamp: msg.timestamp,
+    mode: msg.mode ?? ('socratic' as const),
   }
 }
 
@@ -123,7 +125,9 @@ export const useTutorStore = create<TutorState>((set, get) => ({
 
   addMessage: (message: ChatMessage) => {
     set(state => {
-      const messages = [...state.messages, message]
+      // Tag message with current tutor mode (E72-S02); caller-provided mode takes precedence
+      const taggedMessage = { mode: state.mode, ...message }
+      const messages = [...state.messages, taggedMessage]
       // Trim to max history to prevent unbounded growth
       const trimmed =
         messages.length > MAX_HISTORY_MESSAGES
@@ -251,7 +255,7 @@ export const useTutorStore = create<TutorState>((set, get) => ({
 
     const tutorMessages = messages
       .filter(m => m.role === 'user' || m.role === 'assistant')
-      .map(toTutorMessage)
+      .map(m => toTutorMessage(m, m.mode ?? mode))
 
     const now = Date.now()
 
