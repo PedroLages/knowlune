@@ -1,12 +1,24 @@
 ---
 story_id: E72-S02
 story_name: "Mode-Tagged Messages & Memory Transparency UI"
-status: draft
-started:
+status: review
+started: 2026-04-13
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-04-13
+review_gates_passed:
+  - build
+  - lint
+  - type-check
+  - format-check
+  - unit-tests-skipped
+  - e2e-tests-skipped
+  - design-review
+  - code-review
+  - code-review-testing
+  - performance-benchmark-skipped
+  - security-review
+  - exploratory-qa
 burn_in_validated: false
 ---
 
