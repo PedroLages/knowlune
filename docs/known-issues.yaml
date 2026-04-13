@@ -783,3 +783,39 @@ issues:
     scheduled_for: null
     fixed_by: null
     notes: "Deferred from E73 NFR. None introduced by E73. Vite HIGH is dev-only, does not affect production builds."
+
+  - id: KI-064
+    type: design
+    summary: "Breakpoint mismatch: useIsMobile() uses 639px threshold vs lg: Tailwind breakpoint at 1024px — gap of 384px where neither sidebar nor mobile layout applies"
+    file: "src/hooks/useIsMobile.ts"
+    severity: low
+    discovered_by: E71-S03
+    discovered_on: 2026-04-13
+    status: scheduled
+    scheduled_for: cleanup-epic
+    fixed_by: null
+    notes: "Pre-existing pattern used app-wide. Between 640px-1023px the panel uses sm:grid (2-col) which is acceptable, but useIsMobile returns false in that range while lg: sidebar isn't active either. Discovered during E71-S03 R4 review."
+
+  - id: KI-065
+    type: architecture
+    summary: "Lesson title approximation in action suggestions uses synthetic names from courseIds rather than real lesson data"
+    file: "src/stores/useKnowledgeMapStore.ts"
+    severity: medium
+    discovered_by: E71-NFR
+    discovered_on: 2026-04-13
+    status: scheduled
+    scheduled_for: null
+    fixed_by: null
+    notes: "TODO(E56-S04) documented in store. Lesson-rewatch suggestions show '${topicName} Lesson' as title instead of real lesson names. Fix requires E56-S04 to expose per-lesson tracking data."
+
+  - id: KI-066
+    type: architecture
+    summary: "Action suggestion trend derivation is time-only (daysSinceLastEngagement thresholds) — ignores actual score trajectory"
+    file: "src/stores/useKnowledgeMapStore.ts"
+    severity: low
+    discovered_by: E71-NFR
+    discovered_on: 2026-04-13
+    status: scheduled
+    scheduled_for: null
+    fixed_by: null
+    notes: "Trend field mapped from days-since-engagement rather than score delta over time. Requires E56 to expose score history. Deferred architectural finding from E71 NFR."
