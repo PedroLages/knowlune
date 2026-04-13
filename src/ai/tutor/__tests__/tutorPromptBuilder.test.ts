@@ -67,7 +67,7 @@ describe('buildTutorSystemPrompt', () => {
 
     it('includes explain language for explain mode', () => {
       const prompt = buildTutorSystemPrompt(makeContext(), 'explain')
-      expect(prompt).toContain('Direct explanation')
+      expect(prompt).toContain('Direct Explanation')
     })
 
     it('includes quiz language for quiz mode', () => {

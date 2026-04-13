@@ -11,6 +11,7 @@
 
 import type { TutorContext, TutorMode, PromptSlot } from './types'
 import { estimateTokens } from './transcriptContext'
+import { getHintInstruction } from './hintLadder'
 
 /** Default token budget for system prompt (conservative for small Ollama models) */
 const DEFAULT_TOKEN_BUDGET = 2048
@@ -28,12 +29,25 @@ function buildBaseSlot(): string {
 - Reference specific parts of the transcript when relevant`
 }
 
-function buildModeSlot(mode: TutorMode): string {
+function buildModeSlot(mode: TutorMode, hintLevel: number = 0): string {
   switch (mode) {
-    case 'socratic':
-      return `Teaching mode: Socratic. Guide the learner to discover answers through thoughtful questions. Don't give answers directly — ask leading questions that help them reason through the problem. When they get stuck, provide hints rather than solutions.`
+    case 'socratic': {
+      const hintInstruction = getHintInstruction(hintLevel)
+      return `Teaching mode: Socratic Questioning.
+Rules:
+- Guide the learner to discover answers through thoughtful questions.
+- Do NOT give answers directly — ask leading questions that help them reason through the problem.
+- When they get stuck, provide progressively more explicit hints.
+- Always end your response with a question to keep the learner thinking.
+- Current hint level instruction: ${hintInstruction}`
+    }
     case 'explain':
-      return `Teaching mode: Direct explanation. Provide clear, thorough explanations. Break complex topics into understandable parts. Use analogies and examples to make concepts accessible.`
+      return `Teaching mode: Direct Explanation.
+Rules:
+- Provide clear, structured explanations using examples from the lesson material.
+- Break complex topics into understandable parts.
+- Use analogies and examples to make concepts accessible.
+- After explaining, ask a brief check-for-understanding question.`
     case 'quiz':
       return `Teaching mode: Quiz. Test the learner's understanding by asking questions about the material. After they answer, provide feedback on what they got right and wrong, with explanations.`
   }
@@ -90,12 +104,13 @@ function buildResumeSlot(): string {
 export function buildTutorSystemPrompt(
   context: TutorContext,
   mode: TutorMode = 'socratic',
-  tokenBudget: number = DEFAULT_TOKEN_BUDGET
+  tokenBudget: number = DEFAULT_TOKEN_BUDGET,
+  hintLevel: number = 0
 ): string {
   // Build all slots
   const slots: PromptSlot[] = [
     { id: 'base', required: true, priority: 1, content: buildBaseSlot() },
-    { id: 'mode', required: true, priority: 2, content: buildModeSlot(mode) },
+    { id: 'mode', required: true, priority: 2, content: buildModeSlot(mode, hintLevel) },
     { id: 'course', required: true, priority: 3, content: buildCourseSlot(context) },
     { id: 'transcript', required: false, priority: 4, content: buildTranscriptSlot(context) },
     { id: 'learner', required: false, priority: 5, content: buildLearnerSlot() },

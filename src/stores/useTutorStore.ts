@@ -21,8 +21,10 @@ interface TutorState {
   messages: ChatMessage[]
   /** Current tutor mode */
   mode: TutorMode
-  /** Progressive hint level (0 = no hint, 1-3 = increasing directness) */
+  /** Progressive hint level (0 = no hint, 1-4 = increasing directness) */
   hintLevel: number
+  /** Consecutive exchanges at the same hint level (for auto-escalation) */
+  stuckCount: number
   /** Whether the LLM is currently generating a response */
   isGenerating: boolean
   /** Current error message, if any */
@@ -47,6 +49,8 @@ interface TutorState {
   setMode: (mode: TutorMode) => void
   /** Set the hint level */
   setHintLevel: (level: number) => void
+  /** Set the stuck count for auto-escalation tracking */
+  setStuckCount: (count: number) => void
   /** Set generating state (alias: setLoading) */
   setGenerating: (isGenerating: boolean) => void
   /** Set loading state (alias for setGenerating) */
@@ -91,6 +95,7 @@ export const useTutorStore = create<TutorState>((set, get) => ({
   messages: [],
   mode: 'socratic',
   hintLevel: 0,
+  stuckCount: 0,
   isGenerating: false,
   error: null,
   transcriptStatus: null,
@@ -148,11 +153,15 @@ export const useTutorStore = create<TutorState>((set, get) => ({
   },
 
   setMode: (mode: TutorMode) => {
-    set({ mode })
+    set({ mode, hintLevel: 0, stuckCount: 0 })
   },
 
   setHintLevel: (level: number) => {
-    set({ hintLevel: Math.max(0, Math.min(3, level)) })
+    set({ hintLevel: Math.max(0, Math.min(4, level)) })
+  },
+
+  setStuckCount: (count: number) => {
+    set({ stuckCount: Math.max(0, count) })
   },
 
   setGenerating: (isGenerating: boolean) => {
@@ -179,6 +188,7 @@ export const useTutorStore = create<TutorState>((set, get) => ({
     set({
       messages: [],
       hintLevel: 0,
+      stuckCount: 0,
       error: null,
       isGenerating: false,
       conversationId: null,

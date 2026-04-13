@@ -11,6 +11,7 @@ import { Trash2 } from 'lucide-react'
 import { MessageList } from '@/app/components/chat/MessageList'
 import { ChatInput } from '@/app/components/chat/ChatInput'
 import { TranscriptBadge } from './TranscriptBadge'
+import { TutorModeChips } from './TutorModeChips'
 import { TutorEmptyState } from './TutorEmptyState'
 import { Button } from '@/app/components/ui/button'
 import {
@@ -46,7 +47,7 @@ export function TutorChat({
   lessonPosition,
   videoPositionSeconds = 0,
 }: TutorChatProps) {
-  const { messages, isGenerating, error, transcriptStatus, sendMessage, clearConversation } =
+  const { messages, isGenerating, error, transcriptStatus, mode, sendMessage, clearConversation, setMode } =
     useTutor({
       courseId,
       lessonId,
@@ -83,6 +84,11 @@ export function TutorChat({
               ? { available: false, strategy: 'none', label: 'Offline' }
               : badgeStatus
           }
+        />
+        <TutorModeChips
+          mode={mode}
+          onModeChange={setMode}
+          disabled={isGenerating || isOffline || isPremiumGated}
         />
         <div className="ml-auto">
           {messages.length > 0 && (
