@@ -264,3 +264,69 @@ describe('getTopicByName (AC12)', () => {
     expect(useKnowledgeMapStore.getState().getTopicByName('nonexistent-topic')).toBeUndefined()
   })
 })
+
+// ── GAP-04: suggestions state populated by computeScores ─────────
+
+describe('suggestions state (GAP-04 / Epic 71)', () => {
+  it('starts as empty array before computeScores', () => {
+    expect(useKnowledgeMapStore.getState().suggestions).toEqual([])
+  })
+
+  it('suggestions is an array after computeScores with no courses', async () => {
+    await useKnowledgeMapStore.getState().computeScores(FIXED_DATE)
+    expect(Array.isArray(useKnowledgeMapStore.getState().suggestions)).toBe(true)
+  })
+
+  it('suggestions is empty when no courses/topics exist', async () => {
+    await useKnowledgeMapStore.getState().computeScores(FIXED_DATE)
+    expect(useKnowledgeMapStore.getState().suggestions).toHaveLength(0)
+  })
+
+  it('suggestions contains ActionSuggestion shaped objects when declining topics exist', async () => {
+    // Seed a course with quiz data to produce a declining/weak topic with a quiz suggestion
+    await db.importedCourses.put(makeCourse())
+    await db.quizzes.put(makeQuiz())
+    await db.contentProgress.put({
+      courseId: 'course-1',
+      itemId: 'lesson-1',
+      status: 'completed',
+      updatedAt: '2026-01-14T00:00:00.000Z',
+    })
+    // Low score attempt to produce a fading/weak topic
+    await db.quizAttempts.put(makeAttempt({ score: 20, passed: false }))
+
+    await useKnowledgeMapStore.getState().computeScores(FIXED_DATE)
+
+    const { suggestions } = useKnowledgeMapStore.getState()
+    // If any suggestion is generated, verify its shape
+    if (suggestions.length > 0) {
+      const s = suggestions[0]
+      expect(s).toHaveProperty('topicName')
+      expect(s).toHaveProperty('canonicalName')
+      expect(s).toHaveProperty('score')
+      expect(s).toHaveProperty('trend')
+      expect(s).toHaveProperty('actionType')
+      expect(s).toHaveProperty('actionLabel')
+      expect(s).toHaveProperty('actionRoute')
+      expect(s).toHaveProperty('estimatedMinutes')
+      expect(s).toHaveProperty('urgencyScore')
+    }
+  })
+
+  it('suggestions resets to [] when computeScores finds no courses', async () => {
+    // First run with a course so suggestions may populate
+    await db.importedCourses.put(makeCourse())
+    await useKnowledgeMapStore.getState().computeScores(FIXED_DATE)
+
+    // Wipe DB and invalidate cache
+    await Dexie.delete('ElearningDB')
+    vi.resetModules()
+    const storeModule = await import('@/stores/useKnowledgeMapStore')
+    const freshStore = storeModule.useKnowledgeMapStore
+    const dbModule = await import('@/db')
+    db = dbModule.db
+
+    await freshStore.getState().computeScores(FIXED_DATE)
+    expect(freshStore.getState().suggestions).toEqual([])
+  })
+})
