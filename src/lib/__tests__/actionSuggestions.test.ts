@@ -225,6 +225,43 @@ describe('generateActionSuggestions', () => {
     expect(result).toHaveLength(3)
   })
 
+  // ── Zero-activity declining topic returns empty suggestions ────
+
+  it('returns empty array for a fading topic with no activities (no flashcards, quizzes, or lessons)', () => {
+    const topic = makeTopic({
+      topicName: 'Empty Topic',
+      canonicalName: 'empty-topic',
+      score: 40,
+      tier: 'fading',
+      hasFlashcards: false,
+      hasQuizzes: false,
+      lessons: [],
+    })
+
+    const result = generateActionSuggestions([topic])
+
+    expect(result).toEqual([])
+  })
+
+  // ── Default recencyScore fallback (undefined → 50) ────────────
+
+  it('uses default recencyScore of 50 when not provided', () => {
+    const topic = makeTopic({
+      topicName: 'No Recency',
+      canonicalName: 'no-recency',
+      score: 45,
+      tier: 'fading',
+      recencyScore: undefined,
+      hasFlashcards: true,
+    })
+
+    const result = generateActionSuggestions([topic])
+
+    expect(result).toHaveLength(1)
+    // With default recencyScore=50, decayFactor=50, urgency = (100-45)*0.6 + 50*0.4 = 33 + 20 = 53
+    expect(result[0].urgencyScore).toBeCloseTo(53)
+  })
+
   // ── AC 9: Empty input returns empty array ─────────────────────
 
   it('returns empty array for empty input (AC 9)', () => {

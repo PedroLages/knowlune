@@ -71,7 +71,8 @@ const QUIZ_DURATION = 10
  * Formula: urgencyScore = (100 - score) * 0.6 + decayFactor * 0.4
  */
 export function calculateUrgencyScore(score: number, decayFactor: number): number {
-  return (100 - score) * URGENCY_WEIGHTS.scoreFactor + decayFactor * URGENCY_WEIGHTS.decayFactor
+  const raw = (100 - score) * URGENCY_WEIGHTS.scoreFactor + decayFactor * URGENCY_WEIGHTS.decayFactor
+  return Math.max(0, Math.min(100, raw))
 }
 
 /**
@@ -88,7 +89,7 @@ export function fsrsDecayFactor(stability: number): number {
  * Low recency → high decay (more urgent).
  */
 export function recencyDecayFactor(recencyScore: number): number {
-  return 100 - recencyScore
+  return Math.max(0, Math.min(100, 100 - recencyScore))
 }
 
 // ── Per-Topic Suggestion Generation ─────────────────────────────
@@ -101,7 +102,7 @@ function generateFlashcardSuggestion(topic: TopicWithScore, urgency: number): Ac
     trend: topic.trend,
     actionType: 'flashcard-review',
     actionLabel: `Review 5 flashcards on ${topic.topicName}`,
-    actionRoute: `/flashcards?topic=${topic.canonicalName}`,
+    actionRoute: `/flashcards?topic=${encodeURIComponent(topic.canonicalName)}`,
     estimatedMinutes: FLASHCARD_DURATION,
     urgencyScore: urgency,
   }
@@ -115,7 +116,7 @@ function generateQuizSuggestion(topic: TopicWithScore, urgency: number): ActionS
     trend: topic.trend,
     actionType: 'quiz-refresh',
     actionLabel: `Take a refresher quiz on ${topic.topicName}`,
-    actionRoute: `/quiz?topic=${topic.canonicalName}`,
+    actionRoute: `/quiz?topic=${encodeURIComponent(topic.canonicalName)}`,
     estimatedMinutes: QUIZ_DURATION,
     urgencyScore: urgency,
   }
@@ -194,8 +195,9 @@ export function generateActionSuggestions(
   for (const topic of decliningTopics) {
     // Calculate decay factor
     let decayFactor: number
-    if (fsrsStability && fsrsStability.has(topic.canonicalName)) {
-      decayFactor = fsrsDecayFactor(fsrsStability.get(topic.canonicalName)!)
+    const stability = fsrsStability?.get(topic.canonicalName)
+    if (stability !== undefined) {
+      decayFactor = fsrsDecayFactor(stability)
     } else {
       decayFactor = recencyDecayFactor(topic.recencyScore ?? 50)
     }
