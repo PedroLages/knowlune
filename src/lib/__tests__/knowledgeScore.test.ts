@@ -1,0 +1,263 @@
+import { describe, it, expect } from 'vitest'
+import {
+  calculateRecencyScore,
+  calculateTopicScore,
+  getKnowledgeTier,
+  getConfidenceLevel,
+  computeUrgency,
+  suggestActions,
+  BASE_WEIGHTS,
+} from '@/lib/knowledgeScore'
+
+// ── getKnowledgeTier ──────────────────────────────────────────────
+
+describe('getKnowledgeTier', () => {
+  it('returns "strong" for score >= 70', () => {
+    expect(getKnowledgeTier(70)).toBe('strong')
+    expect(getKnowledgeTier(100)).toBe('strong')
+  })
+
+  it('returns "fading" for score 40-69', () => {
+    expect(getKnowledgeTier(40)).toBe('fading')
+    expect(getKnowledgeTier(69)).toBe('fading')
+  })
+
+  it('returns "weak" for score < 40', () => {
+    expect(getKnowledgeTier(39)).toBe('weak')
+    expect(getKnowledgeTier(0)).toBe('weak')
+  })
+})
+
+// ── getConfidenceLevel ────────────────────────────────────────────
+
+describe('getConfidenceLevel', () => {
+  it('returns "high" for 4 signals', () => {
+    expect(getConfidenceLevel(4)).toBe('high')
+  })
+
+  it('returns "medium" for 3 signals', () => {
+    expect(getConfidenceLevel(3)).toBe('medium')
+  })
+
+  it('returns "low" for 2 signals', () => {
+    expect(getConfidenceLevel(2)).toBe('low')
+  })
+
+  it('returns "none" for 0-1 signals', () => {
+    expect(getConfidenceLevel(0)).toBe('none')
+    expect(getConfidenceLevel(1)).toBe('none')
+  })
+})
+
+// ── calculateRecencyScore ─────────────────────────────────────────
+
+describe('calculateRecencyScore', () => {
+  it('returns 100 for 0 days', () => {
+    expect(calculateRecencyScore(0)).toBe(100)
+  })
+
+  it('returns 100 for 7 days (boundary)', () => {
+    expect(calculateRecencyScore(7)).toBe(100)
+  })
+
+  it('returns 10 for 90 days (boundary)', () => {
+    expect(calculateRecencyScore(90)).toBe(10)
+  })
+
+  it('returns 10 for 180 days (beyond floor)', () => {
+    expect(calculateRecencyScore(180)).toBe(10)
+  })
+
+  it('returns approximately 56 for 48 days (midpoint)', () => {
+    const score = calculateRecencyScore(48)
+    // Linear decay: 100 - ((48-7)/83) * 90 ≈ 100 - 44.46 ≈ 56
+    expect(score).toBeGreaterThanOrEqual(54)
+    expect(score).toBeLessThanOrEqual(57)
+  })
+
+  it('decays linearly between 7 and 90 days', () => {
+    const s30 = calculateRecencyScore(30)
+    const s50 = calculateRecencyScore(50)
+    const s70 = calculateRecencyScore(70)
+    expect(s30).toBeGreaterThan(s50)
+    expect(s50).toBeGreaterThan(s70)
+  })
+})
+
+// ── calculateTopicScore ───────────────────────────────────────────
+
+describe('calculateTopicScore', () => {
+  it('uses 30/30/20/20 weights when all 4 signals available (AC1)', () => {
+    const result = calculateTopicScore({
+      quizScore: 80,
+      flashcardRetention: 70,
+      completionPercent: 100,
+      daysSinceLastEngagement: 3,
+    })
+
+    // All 4 signals → weights stay at base (0.3, 0.3, 0.2, 0.2)
+    expect(result.effectiveWeights.quiz).toBeCloseTo(0.3, 5)
+    expect(result.effectiveWeights.flashcard).toBeCloseTo(0.3, 5)
+    expect(result.effectiveWeights.completion).toBeCloseTo(0.2, 5)
+    expect(result.effectiveWeights.recency).toBeCloseTo(0.2, 5)
+    expect(result.signalsUsed).toBe(4)
+    expect(result.confidence).toBe('high')
+    expect(result.tier).toBe('strong')
+
+    // Score: 80*0.3 + 70*0.3 + 100*0.2 + 100*0.2 = 24 + 21 + 20 + 20 = 85
+    expect(result.score).toBe(85)
+  })
+
+  it('redistributes to 50/50 when quiz and flashcard are null (AC2)', () => {
+    const result = calculateTopicScore({
+      quizScore: null,
+      flashcardRetention: null,
+      completionPercent: 100,
+      daysSinceLastEngagement: 3,
+    })
+
+    // Only completion (0.2) + recency (0.2) → each gets 0.5
+    expect(result.effectiveWeights.quiz).toBe(0)
+    expect(result.effectiveWeights.flashcard).toBe(0)
+    expect(result.effectiveWeights.completion).toBeCloseTo(0.5, 5)
+    expect(result.effectiveWeights.recency).toBeCloseTo(0.5, 5)
+    expect(result.signalsUsed).toBe(2)
+    expect(result.confidence).toBe('low')
+
+    // Score: 100*0.5 + 100*0.5 = 100
+    expect(result.score).toBe(100)
+  })
+
+  it('redistributes to ~43/29/29 when flashcard is null (AC3)', () => {
+    const result = calculateTopicScore({
+      quizScore: 80,
+      flashcardRetention: null,
+      completionPercent: 60,
+      daysSinceLastEngagement: 30,
+    })
+
+    // Available weights: quiz(0.3) + completion(0.2) + recency(0.2) = 0.7
+    // quiz: 0.3/0.7 ≈ 0.4286, completion: 0.2/0.7 ≈ 0.2857, recency: 0.2/0.7 ≈ 0.2857
+    expect(result.effectiveWeights.quiz).toBeCloseTo(0.4286, 3)
+    expect(result.effectiveWeights.completion).toBeCloseTo(0.2857, 3)
+    expect(result.effectiveWeights.recency).toBeCloseTo(0.2857, 3)
+    expect(result.signalsUsed).toBe(3)
+    expect(result.confidence).toBe('medium')
+  })
+
+  it('clamps score to 0-100', () => {
+    const result = calculateTopicScore({
+      quizScore: 100,
+      flashcardRetention: 100,
+      completionPercent: 100,
+      daysSinceLastEngagement: 0,
+    })
+    expect(result.score).toBeLessThanOrEqual(100)
+
+    const result2 = calculateTopicScore({
+      quizScore: 0,
+      flashcardRetention: 0,
+      completionPercent: 0,
+      daysSinceLastEngagement: 365,
+    })
+    expect(result2.score).toBeGreaterThanOrEqual(0)
+  })
+
+  it('handles all signals at zero', () => {
+    const result = calculateTopicScore({
+      quizScore: 0,
+      flashcardRetention: 0,
+      completionPercent: 0,
+      daysSinceLastEngagement: 365,
+    })
+    expect(result.score).toBeLessThanOrEqual(10) // Recency floor is 10
+    expect(result.tier).toBe('weak')
+  })
+
+  it('populates all factor fields', () => {
+    const result = calculateTopicScore({
+      quizScore: 75,
+      flashcardRetention: 60,
+      completionPercent: 80,
+      daysSinceLastEngagement: 14,
+    })
+    expect(result.factors.quizScore).toBe(75)
+    expect(result.factors.flashcardRetention).toBe(60)
+    expect(result.factors.completionScore).toBe(80)
+    expect(result.factors.recencyScore).toBeGreaterThan(0)
+  })
+})
+
+// ── computeUrgency ────────────────────────────────────────────────
+
+describe('computeUrgency', () => {
+  it('follows the urgency formula', () => {
+    // urgency = (100 - score) * 0.6 + min(100, days * 2) * 0.4
+    const urgency = computeUrgency(60, 30)
+    // (100-60)*0.6 + min(100, 60)*0.4 = 24 + 24 = 48
+    expect(urgency).toBe(48)
+  })
+
+  it('caps days factor at 100', () => {
+    const urgency = computeUrgency(50, 100)
+    // (100-50)*0.6 + min(100, 200)*0.4 = 30 + 40 = 70
+    expect(urgency).toBe(70)
+  })
+
+  it('returns 0 for perfect score and recent engagement', () => {
+    const urgency = computeUrgency(100, 0)
+    expect(urgency).toBe(0)
+  })
+})
+
+// ── suggestActions ────────────────────────────────────────────────
+
+describe('suggestActions', () => {
+  it('sorts by lowest-scoring signal first', () => {
+    const actions = suggestActions({
+      quizScore: 90,
+      flashcardRetention: 40,
+      completionPercent: 70,
+    })
+    expect(actions[0]).toBe('Review Flashcards')
+    expect(actions[1]).toBe('Rewatch Lesson')
+    expect(actions[2]).toBe('Retake Quiz')
+  })
+
+  it('omits Rewatch Lesson when completion is 100%', () => {
+    const actions = suggestActions({
+      quizScore: 50,
+      flashcardRetention: 80,
+      completionPercent: 100,
+    })
+    expect(actions).not.toContain('Rewatch Lesson')
+    expect(actions).toHaveLength(2)
+  })
+
+  it('handles null quiz and flashcard', () => {
+    const actions = suggestActions({
+      quizScore: null,
+      flashcardRetention: null,
+      completionPercent: 50,
+    })
+    expect(actions).toEqual(['Rewatch Lesson'])
+  })
+
+  it('returns empty when all complete and no quiz/flashcard', () => {
+    const actions = suggestActions({
+      quizScore: null,
+      flashcardRetention: null,
+      completionPercent: 100,
+    })
+    expect(actions).toEqual([])
+  })
+})
+
+// ── BASE_WEIGHTS ──────────────────────────────────────────────────
+
+describe('BASE_WEIGHTS', () => {
+  it('sums to 1.0', () => {
+    const sum = BASE_WEIGHTS.quiz + BASE_WEIGHTS.flashcard + BASE_WEIGHTS.completion + BASE_WEIGHTS.recency
+    expect(sum).toBeCloseTo(1.0, 10)
+  })
+})
