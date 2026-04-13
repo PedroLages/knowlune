@@ -11,6 +11,7 @@ import { ChatInput } from '@/app/components/chat/ChatInput'
 import { TranscriptBadge } from './TranscriptBadge'
 import { TutorEmptyState } from './TutorEmptyState'
 import { useTutor } from '@/ai/hooks/useTutor'
+import { LLM_ERROR_MESSAGES } from '@/ai/lib/llmErrorMapper'
 import type { TranscriptStatus } from '@/ai/tutor/types'
 
 interface TutorChatProps {
@@ -48,12 +49,9 @@ export function TutorChat({
     label: 'Loading...',
   }
 
-  // Detect offline/unavailable state for the banner
-  const isOffline =
-    error === 'AI provider offline. Configure a provider in Settings to use tutoring.'
-  const isPremiumGated =
-    error ===
-    'Premium subscription required. Configure an AI provider in Settings to use tutoring.'
+  // Detect offline/unavailable state for the banner using named constants (not fragile string comparison)
+  const isOffline = error === LLM_ERROR_MESSAGES.OFFLINE
+  const isPremiumGated = error === LLM_ERROR_MESSAGES.PREMIUM
 
   return (
     <div className="flex flex-col h-[400px]" data-testid="tutor-chat">
@@ -74,10 +72,8 @@ export function TutorChat({
         )}
       </div>
       {(isOffline || isPremiumGated) && (
-        <div className="px-4 py-2 text-sm text-destructive bg-destructive/10 border-t border-border">
-          {isOffline
-            ? 'AI provider offline. Configure a provider in Settings to use tutoring.'
-            : 'Premium subscription required. Configure an AI provider in Settings to use tutoring.'}
+        <div role="alert" className="px-4 py-2 text-sm text-destructive bg-destructive/10 border-t border-border">
+          {isOffline ? LLM_ERROR_MESSAGES.OFFLINE : LLM_ERROR_MESSAGES.PREMIUM}
         </div>
       )}
       {error && !isOffline && !isPremiumGated && (

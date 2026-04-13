@@ -18,7 +18,7 @@ import { useTutorStore } from '@/stores/useTutorStore'
 import { getTranscriptContext } from '@/ai/tutor/transcriptContext'
 import { buildTutorSystemPrompt } from '@/ai/tutor/tutorPromptBuilder'
 import { getLLMClient } from '@/ai/llm/factory'
-import { LLMError } from '@/ai/llm/types'
+import { mapLLMError } from '@/ai/lib/llmErrorMapper'
 import type { LLMMessage } from '@/ai/llm/types'
 import type { TutorContext, TranscriptStatus } from '@/ai/tutor/types'
 import type { ChatMessage } from '@/ai/rag/types'
@@ -54,33 +54,6 @@ interface UseTutorResult {
 }
 
 /**
- * Map LLMError codes to user-friendly messages.
- * Reuses the same error mapping pattern as useChatQA.
- */
-function mapLLMError(err: unknown): string {
-  if (err instanceof LLMError) {
-    switch (err.code) {
-      case 'TIMEOUT':
-        return 'Request timed out. Please try again.'
-      case 'RATE_LIMIT':
-      case 'RATE_LIMITED':
-        return 'Rate limit exceeded. Please wait a moment before trying again.'
-      case 'AUTH_ERROR':
-        return 'Authentication failed. Please check your AI provider settings.'
-      case 'AUTH_REQUIRED':
-        return 'Sign in required. Please sign in to use AI features.'
-      case 'ENTITLEMENT_ERROR':
-        return 'Premium subscription required. Configure an AI provider in Settings to use tutoring.'
-      case 'NETWORK_ERROR':
-        return 'AI provider offline. Configure a provider in Settings to use tutoring.'
-      default:
-        return `AI provider error: ${err.message}`
-    }
-  }
-  return 'Failed to process your request. Please try again.'
-}
-
-/**
  * Detect frustration level from user message.
  * Placeholder — full implementation in S04.
  */
@@ -100,9 +73,8 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
 
   const store = useTutorStore()
   const abortRef = useRef<AbortController | null>(null)
-  const transcriptStatusRef = useRef<TranscriptStatus | null>(null)
 
-  // Load transcript status on mount / lesson change
+  // Load transcript status on mount / lesson change — stored in Zustand for reactive re-renders
   useEffect(() => {
     let cancelled = false
 
@@ -110,16 +82,16 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
       try {
         const result = await getTranscriptContext(courseId, lessonId, videoPositionSeconds)
         if (!cancelled) {
-          transcriptStatusRef.current = result.status
+          store.setTranscriptStatus(result.status)
         }
       } catch {
         // silent-catch-ok — transcript context is non-critical
         if (!cancelled) {
-          transcriptStatusRef.current = {
+          store.setTranscriptStatus({
             available: false,
             strategy: 'none',
             label: 'General mode',
-          }
+          })
         }
       }
     }
@@ -133,7 +105,7 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
   // Clear conversation when lesson changes
   useEffect(() => {
     store.clearConversation()
-  }, [lessonId])
+  }, [lessonId, store.clearConversation])
 
   // Abort streaming on unmount
   useEffect(() => {
@@ -155,6 +127,7 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
       abortRef.current = abortController
 
       // Stage 1: Frustration detection (placeholder — S04)
+      // TODO(E57-S04): frustration detection — result used for Socratic mode in S04
       detectFrustration(content)
 
       // Add user message
@@ -275,7 +248,7 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
     messages: store.messages,
     isGenerating: store.isGenerating,
     error: store.error,
-    transcriptStatus: transcriptStatusRef.current,
+    transcriptStatus: store.transcriptStatus,
     sendMessage,
     clearConversation: store.clearConversation,
   }
