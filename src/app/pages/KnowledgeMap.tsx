@@ -12,6 +12,7 @@ import type { ScoredTopic } from '@/stores/useKnowledgeMapStore'
 import { TopicTreemap } from '@/app/components/knowledge/TopicTreemap'
 import type { TreemapDataItem } from '@/app/components/knowledge/TopicTreemap'
 import { FocusAreasPanel } from '@/app/components/knowledge/FocusAreasPanel'
+import { SuggestedActionsPanel } from '@/app/components/knowledge/SuggestedActionsPanel'
 import { TopicDetailPopover } from '@/app/components/knowledge/TopicDetailPopover'
 import { Badge } from '@/app/components/ui/badge'
 import { Card } from '@/app/components/ui/card'
@@ -32,6 +33,7 @@ const ALL_CATEGORIES = 'All Categories'
 
 export function KnowledgeMap() {
   const { topics, categories, focusAreas, isLoading, error, computeScores } = useKnowledgeMapStore()
+  const suggestions = useKnowledgeMapStore(state => state.getSuggestedActions())
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES)
   const [popoverTopic, setPopoverTopic] = useState<string | null>(null)
   const [clickPos, setClickPos] = useState<{ x: number; y: number } | null>(null)
@@ -142,7 +144,12 @@ export function KnowledgeMap() {
         ))}
       </div>
 
-      {/* Main content: treemap + focus areas */}
+      {/* Suggested Actions — mobile: inline above topic list */}
+      {isMobile && (
+        <SuggestedActionsPanel suggestions={suggestions} />
+      )}
+
+      {/* Main content: treemap + sidebars */}
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Treemap / Mobile list */}
         <div className="flex-1 min-w-0">
@@ -179,8 +186,23 @@ export function KnowledgeMap() {
           )}
         </div>
 
-        {/* Focus Areas sidebar */}
-        <div className="lg:w-80 shrink-0">
+        {/* Right sidebar column — desktop only */}
+        <div className="hidden lg:flex lg:w-80 shrink-0 flex-col gap-6 sticky top-6 self-start max-h-[calc(100vh-8rem)] overflow-y-auto">
+          {/* Suggested Actions — desktop sidebar */}
+          <SuggestedActionsPanel suggestions={suggestions} />
+
+          {/* Focus Areas */}
+          <Card className="p-4">
+            <h2 className="text-base font-semibold mb-1">Focus Areas</h2>
+            <p className="text-xs text-muted-foreground mb-3">
+              Topics that need your attention most
+            </p>
+            <FocusAreasPanel focusAreas={focusAreas} />
+          </Card>
+        </div>
+
+        {/* Focus Areas — mobile only (already had this) */}
+        <div className="lg:hidden">
           <Card className="p-4">
             <h2 className="text-base font-semibold mb-1">Focus Areas</h2>
             <p className="text-xs text-muted-foreground mb-3">

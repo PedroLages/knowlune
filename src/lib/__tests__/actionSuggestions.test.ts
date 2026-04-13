@@ -207,6 +207,87 @@ describe('generateActionSuggestions', () => {
     expect(art.urgencyScore).toBeGreaterThan(music.urgencyScore)
   })
 
+  // ── AC 8 (E71-S03): Mixed FSRS + recency in same result set ──
+
+  it('uses FSRS for topics with stability data and recency fallback for others in same call (AC 8 E71-S03)', () => {
+    const withFsrs = makeTopic({
+      topicName: 'Genetics',
+      canonicalName: 'genetics',
+      score: 45,
+      tier: 'fading',
+      recencyScore: 80, // should be ignored when FSRS is available
+      hasFlashcards: true,
+    })
+    const withoutFsrs = makeTopic({
+      topicName: 'Ecology',
+      canonicalName: 'ecology',
+      score: 45,
+      tier: 'fading',
+      recencyScore: 20, // low recency → high decay
+      hasQuizzes: true,
+    })
+
+    // Only provide FSRS stability for genetics (stability=5 → decay=90)
+    const fsrsStability = new Map([['genetics', 5]])
+
+    const result = generateActionSuggestions([withFsrs, withoutFsrs], { fsrsStability })
+
+    expect(result).toHaveLength(2)
+    const genetics = result.find(s => s.canonicalName === 'genetics')!
+    const ecology = result.find(s => s.canonicalName === 'ecology')!
+
+    // Genetics: FSRS decay=90, urgency = (100-45)*0.6 + 90*0.4 = 33 + 36 = 69
+    expect(genetics.urgencyScore).toBeCloseTo(69)
+    // Ecology: recency decay=80, urgency = (100-45)*0.6 + 80*0.4 = 33 + 32 = 65
+    expect(ecology.urgencyScore).toBeCloseTo(65)
+    // Genetics should rank higher
+    expect(result[0].canonicalName).toBe('genetics')
+  })
+
+  // ── AC 7 (E71-S03): Mixed topic data — flashcards, quizzes, lessons only ──
+
+  it('handles mixed topic data with different activity types (AC 7 E71-S03)', () => {
+    const topics = [
+      makeTopic({
+        topicName: 'Body Language',
+        canonicalName: 'body-language',
+        score: 30,
+        tier: 'weak',
+        hasFlashcards: true,
+        hasQuizzes: false,
+        lessons: [],
+      }),
+      makeTopic({
+        topicName: 'Public Speaking',
+        canonicalName: 'public-speaking',
+        score: 55,
+        tier: 'fading',
+        hasFlashcards: false,
+        hasQuizzes: true,
+        lessons: [{ lessonId: 'L10', courseId: 'C5', title: 'Delivery', completionPct: 40 }],
+      }),
+      makeTopic({
+        topicName: 'Negotiation',
+        canonicalName: 'negotiation',
+        score: 60,
+        tier: 'fading',
+        hasFlashcards: false,
+        hasQuizzes: false,
+        lessons: [{ lessonId: 'L20', courseId: 'C6', title: 'Tactics', completionPct: 25, durationMinutes: 30 }],
+      }),
+    ]
+
+    const result = generateActionSuggestions(topics)
+
+    expect(result).toHaveLength(3)
+    // Body Language → flashcard-review (highest priority action)
+    expect(result.find(s => s.canonicalName === 'body-language')!.actionType).toBe('flashcard-review')
+    // Public Speaking → quiz-refresh (flashcard-review not available, quiz > lesson)
+    expect(result.find(s => s.canonicalName === 'public-speaking')!.actionType).toBe('quiz-refresh')
+    // Negotiation → lesson-rewatch (only option)
+    expect(result.find(s => s.canonicalName === 'negotiation')!.actionType).toBe('lesson-rewatch')
+  })
+
   // ── AC 8: maxSuggestions limit respected ──────────────────────
 
   it('respects maxSuggestions limit (AC 8)', () => {

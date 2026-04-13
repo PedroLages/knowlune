@@ -25,6 +25,11 @@ import {
   type TopicScoreResult,
   type SuggestedAction,
 } from '@/lib/knowledgeScore'
+import {
+  generateActionSuggestions,
+  type ActionSuggestion,
+  type TopicWithScore,
+} from '@/lib/actionSuggestions'
 import { predictRetention } from '@/lib/spacedRepetition'
 
 // ---------------------------------------------------------------------------
@@ -81,6 +86,8 @@ interface KnowledgeMapState {
   getTopicsByCategory: (category: string) => ScoredTopic[]
   /** Get a single topic by canonical name */
   getTopicByName: (canonicalName: string) => ScoredTopic | undefined
+  /** Get action suggestions for declining topics */
+  getSuggestedActions: () => ActionSuggestion[]
 }
 
 // ---------------------------------------------------------------------------
@@ -386,5 +393,29 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
 
   getTopicByName: (canonicalName: string) => {
     return get().topics.find(t => t.canonicalName === canonicalName)
+  },
+
+  getSuggestedActions: () => {
+    const { topics } = get()
+    if (topics.length === 0) return []
+
+    const topicsWithScores: TopicWithScore[] = topics.map(t => ({
+      topicName: t.name,
+      canonicalName: t.canonicalName,
+      score: t.scoreResult.score,
+      tier: t.scoreResult.tier,
+      trend: t.daysSinceLastEngagement > 14 ? 'declining' : t.daysSinceLastEngagement > 7 ? 'stable' : 'improving',
+      recencyScore: Math.max(0, 100 - t.daysSinceLastEngagement * 2),
+      hasFlashcards: t.suggestedActions.some(a => a === 'Review Flashcards'),
+      hasQuizzes: t.suggestedActions.some(a => a === 'Retake Quiz'),
+      lessons: t.courseIds.map(courseId => ({
+        lessonId: courseId,
+        courseId,
+        title: `${t.name} Lesson`,
+        completionPct: t.scoreResult.score,
+      })),
+    }))
+
+    return generateActionSuggestions(topicsWithScores)
   },
 }))
