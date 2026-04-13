@@ -240,7 +240,18 @@ const MAX_LABEL_LENGTH = 14
  * Supports click and keyboard interaction.
  */
 function CustomCell(props: Record<string, unknown>) {
-  const { x, y, width, height, name, score, tier, aggregateRetention, predictedDecayDate, onCellClick } = props as {
+  const {
+    x,
+    y,
+    width,
+    height,
+    name,
+    score,
+    tier,
+    aggregateRetention,
+    predictedDecayDate,
+    onCellClick,
+  } = props as {
     x: number
     y: number
     width: number
@@ -352,11 +363,7 @@ function CustomCell(props: Record<string, unknown>) {
               — {score}% ({tier})
             </span>
           </div>
-          {decayInfo && (
-            <div className={`text-xs ${decayInfo.colorClass}`}>
-              {decayInfo.label}
-            </div>
-          )}
+          {decayInfo && <div className={`text-xs ${decayInfo.colorClass}`}>{decayInfo.label}</div>}
         </div>
       </TooltipContent>
     </Tooltip>

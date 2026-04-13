@@ -1,6 +1,6 @@
 ---
 story_id: E62-S02
-story_name: "Retention Gradient Treemap and Decay Predictions UI"
+story_name: 'Retention Gradient Treemap and Decay Predictions UI'
 status: complete
 started: 2026-04-14
 completed: 2026-04-14
@@ -84,15 +84,18 @@ so that I can visually identify which topics are fading and when I need to revie
 ## Design Guidance
 
 **Layout approach:**
+
 - Treemap cells: gradient fill replaces discrete tier fill, same cell dimensions
 - Tooltip: existing tooltip structure extended with one additional line for decay prediction
 - TopicDetailPopover: new "Memory Decay" row added to the score breakdown section, between existing score factors and the action buttons
 
 **Component structure:**
+
 - `getRetentionColor()` and `getTextColor()` are utility functions within TopicTreemap.tsx (not exported)
 - TopicDetailPopover receives `aggregateRetention` and `predictedDecayDate` via the existing `ScoredTopic` prop
 
 **Design system usage:**
+
 - Gradient base colors: `var(--success)`, `var(--warning)`, `var(--destructive)` from theme.css
 - Tooltip text colors: `text-destructive`, `text-warning`, `text-success` design tokens
 - Urgency badges: Badge component with `variant="destructive"`, `variant="default"` (warning), `variant="outline"` (success)
@@ -100,11 +103,13 @@ so that I can visually identify which topics are fading and when I need to revie
 - No hardcoded colors — all via design tokens and CSS custom properties
 
 **Responsive strategy:**
+
 - Gradient colors work identically on desktop/tablet/mobile treemap
 - Mobile list fallback (< 640px): uses tier badges (not gradient), no change needed
 - TopicDetailPopover: same on all viewports (shadcn/ui Popover handles positioning)
 
 **Accessibility:**
+
 - Text labels use adaptive foreground (white/dark) based on background luminance — not just tier
 - Tier badge text still present in labels (color is not the only information channel)
 - Tooltip decay text uses semantic color tokens, not hardcoded
@@ -113,15 +118,18 @@ so that I can visually identify which topics are fading and when I need to revie
 ## Implementation Notes
 
 **Key files to modify:**
+
 - `src/app/components/knowledge/TopicTreemap.tsx` — gradient coloring, tooltip enhancement, text contrast
 - `src/app/components/knowledge/TopicDetailPopover.tsx` — Memory Decay section
 
 **Key files to reference:**
+
 - `src/styles/theme.css` — design token CSS custom properties
 - `src/app/components/ui/badge.tsx` — Badge component variants
 - `src/app/components/ui/progress.tsx` — Progress component for inline retention bar
 
 **Color interpolation approach:**
+
 - Read `--success`, `--warning`, `--destructive` CSS custom properties
 - Parse to HSL components
 - Interpolate H, S, L independently based on retention percentage
