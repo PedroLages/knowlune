@@ -76,13 +76,7 @@ import {
   formatLearnerProfile,
   buildAndFormatLearnerProfile,
   filterByTopics,
-  QUIZ_FAIL_THRESHOLD,
-  CHARS_PER_TOKEN,
   type LearnerProfileData,
-  type QuizProfileData,
-  type KnowledgeProfileData,
-  type FlashcardProfileData,
-  type StudyProfileData,
   type ProfileBuilderConfig,
 } from '../learnerProfileBuilder'
 
