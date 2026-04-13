@@ -1,9 +1,9 @@
 ---
 story_id: E62-S02
 story_name: "Retention Gradient Treemap and Decay Predictions UI"
-status: draft
-started:
-completed:
+status: complete
+started: 2026-04-14
+completed: 2026-04-14
 reviewed: false
 review_started:
 review_gates_passed: []
