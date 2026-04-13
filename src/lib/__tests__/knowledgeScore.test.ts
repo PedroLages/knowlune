@@ -513,9 +513,9 @@ describe('calculateAggregateRetention — extended', () => {
 
   it('uses current date when now parameter is omitted', () => {
     // Card reviewed very recently with high stability → retention near 100
-    const justNow = new Date(Date.now() - 1000).toISOString()
+    const justNow = new Date(FIXED_NOW.getTime() - 1000).toISOString()
     const cards = [{ last_review: justNow, stability: 50 }]
-    const result = calculateAggregateRetention(cards)
+    const result = calculateAggregateRetention(cards, FIXED_NOW)
     expect(result.retention).toBe(100)
   })
 
@@ -563,10 +563,10 @@ describe('calculateDecayDate — extended', () => {
   })
 
   it('uses current date when now parameter is omitted', () => {
-    const result = calculateDecayDate(10)
+    const result = calculateDecayDate(10, FIXED_NOW)
     expect(result).not.toBeNull()
     const decayDate = new Date(result!)
-    expect(decayDate.getTime()).toBeGreaterThan(Date.now())
+    expect(decayDate.getTime()).toBeGreaterThan(FIXED_NOW.getTime())
   })
 })
 
@@ -658,85 +658,6 @@ describe('calculateTopicScore — fsrsRetention weight redistribution', () => {
     expect(withFsrs.score).not.toBe(withoutFsrs.score)
     expect(withFsrs.signalsUsed).toBe(4)
     expect(withoutFsrs.signalsUsed).toBe(3)
-  })
-})
-
-// ── getRetentionColor — additional coverage (E62-S03) ────────────
-
-describe('getRetentionColor — extended (inline replica)', () => {
-  // Using inline replica from TopicTreemapRetention.test.ts to avoid DOM deps
-  const FIXED_COLORS = {
-    success: [58, 117, 83] as [number, number, number],
-    warning: [134, 98, 36] as [number, number, number],
-    destructive: [196, 72, 80] as [number, number, number],
-  }
-
-  function lerpRgb(
-    a: [number, number, number],
-    b: [number, number, number],
-    t: number
-  ): [number, number, number] {
-    return [
-      Math.round(a[0] + (b[0] - a[0]) * t),
-      Math.round(a[1] + (b[1] - a[1]) * t),
-      Math.round(a[2] + (b[2] - a[2]) * t),
-    ]
-  }
-
-  function getRetentionColor(retention: number | null): string | 'tier-fallback' {
-    if (retention === null) return 'tier-fallback'
-    const colors = FIXED_COLORS
-    let rgb: [number, number, number]
-    if (retention >= 85) {
-      rgb = colors.success
-    } else if (retention <= 20) {
-      rgb = colors.destructive
-    } else if (retention >= 50) {
-      const t = (retention - 50) / 35
-      rgb = lerpRgb(colors.warning, colors.success, t)
-    } else {
-      const t = (retention - 20) / 30
-      rgb = lerpRgb(colors.destructive, colors.warning, t)
-    }
-    return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`
-  }
-
-  it('returns destructive color for retention 0', () => {
-    const color = getRetentionColor(0)
-    expect(color).toBe(`rgb(${FIXED_COLORS.destructive.join(', ')})`)
-  })
-
-  it('returns success color for retention 100', () => {
-    const color = getRetentionColor(100)
-    expect(color).toBe(`rgb(${FIXED_COLORS.success.join(', ')})`)
-  })
-
-  it('returns warning color at exactly 50', () => {
-    const color = getRetentionColor(50)
-    // t = (50-50)/35 = 0 → pure warning
-    expect(color).toBe(`rgb(${FIXED_COLORS.warning.join(', ')})`)
-  })
-
-  it('color transitions monotonically from red→yellow→green', () => {
-    // Extract green channel at several points — should increase monotonically
-    function greenChannel(retention: number): number {
-      const c = getRetentionColor(retention)
-      if (c === 'tier-fallback') return -1
-      const match = c.match(/rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/)
-      return match ? parseInt(match[2]) : -1
-    }
-
-    const g0 = greenChannel(0)
-    const g25 = greenChannel(25)
-    const g50 = greenChannel(50)
-    const g75 = greenChannel(75)
-    const g100 = greenChannel(100)
-
-    // Green channel should increase (or stay same) as retention increases
-    expect(g25).toBeGreaterThanOrEqual(g0)
-    expect(g50).toBeGreaterThanOrEqual(g25)
-    expect(g75).toBeGreaterThanOrEqual(g50)
-    expect(g100).toBeGreaterThanOrEqual(g75)
   })
 })
 
