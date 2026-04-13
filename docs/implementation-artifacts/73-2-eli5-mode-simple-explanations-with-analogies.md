@@ -1,6 +1,6 @@
 ---
 story_id: E73-S02
-story_name: "ELI5 Mode — Simple Explanations with Analogies"
+story_name: 'ELI5 Mode — Simple Explanations with Analogies'
 status: in-progress
 started: 2026-04-13
 completed:
