@@ -1021,7 +1021,7 @@ export interface ChatConversation {
   /** Video/lesson ID within the course */
   videoId: string
   /** Tutor mode at time of conversation */
-  mode: 'socratic' | 'explain' | 'quiz'
+  mode: import('@/ai/tutor/types').TutorMode
   /** Progressive hint level (0-4) */
   hintLevel: number
   /** Conversation messages (blob — stored as JSON array) */
