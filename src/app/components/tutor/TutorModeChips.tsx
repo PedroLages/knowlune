@@ -14,6 +14,7 @@ interface TutorModeChipsProps {
   disabled?: boolean
 }
 
+// 'quiz' mode is system-controlled — not user-selectable
 const MODES: { value: TutorMode; label: string }[] = [
   { value: 'socratic', label: 'Socratic' },
   { value: 'explain', label: 'Explain' },
@@ -21,7 +22,7 @@ const MODES: { value: TutorMode; label: string }[] = [
 
 export function TutorModeChips({ mode, onModeChange, disabled }: TutorModeChipsProps) {
   return (
-    <div className="flex items-center gap-1.5" role="group" aria-label="Tutor mode">
+    <div className="flex items-center gap-1.5" role="radiogroup" aria-label="Tutor mode">
       {MODES.map(({ value, label }) => {
         const isSelected = mode === value
         return (
@@ -30,12 +31,11 @@ export function TutorModeChips({ mode, onModeChange, disabled }: TutorModeChipsP
             type="button"
             role="radio"
             aria-checked={isSelected}
-            aria-pressed={isSelected}
             disabled={disabled}
             onClick={() => onModeChange(value)}
             className={cn(
               'px-3 py-1 text-xs font-medium rounded-full border transition-colors',
-              'min-h-[28px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+              'min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
               isSelected
                 ? 'border-brand bg-brand-soft text-brand-soft-foreground'
                 : 'border-border bg-transparent text-muted-foreground hover:border-brand/50 hover:text-foreground',

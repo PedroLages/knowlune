@@ -55,7 +55,7 @@ async function* makeStream(chunks: string[]) {
 async function* makeErrorStream(): AsyncGenerator<never> {
   throw new LLMError('Provider offline', 'NETWORK_ERROR')
   // eslint-disable-next-line no-unreachable
-  yield // make TypeScript happy — never reached
+  yield undefined as never
 }
 
 // Get the mock streamCompletion function after module mocking
@@ -71,7 +71,7 @@ beforeEach(async () => {
     transcriptStatus: null,
   })
   const { getLLMClient } = await import('@/ai/llm/factory')
-  const client = await (getLLMClient as ReturnType<typeof vi.fn>)()
+  const client = await (getLLMClient as unknown as () => Promise<{ streamCompletion: ReturnType<typeof vi.fn> }> )()
   mockStreamCompletion = client.streamCompletion as ReturnType<typeof vi.fn>
   mockStreamCompletion.mockReturnValue(makeStream(['Hello ', 'world!']))
 })
@@ -140,7 +140,7 @@ describe('useTutor — error handling', () => {
   it('maps ENTITLEMENT_ERROR to premium message in store', async () => {
     async function* premiumErrorStream(): AsyncGenerator<never> {
       throw new LLMError('Premium required', 'ENTITLEMENT_ERROR')
-      yield // unreachable
+      yield undefined as never
     }
     mockStreamCompletion.mockReturnValue(premiumErrorStream())
 
@@ -158,7 +158,7 @@ describe('useTutor — error handling', () => {
   it('maps unknown error to generic message', async () => {
     async function* genericErrorStream(): AsyncGenerator<never> {
       throw new Error('unexpected failure')
-      yield // unreachable
+      yield undefined as never
     }
     mockStreamCompletion.mockReturnValue(genericErrorStream())
 

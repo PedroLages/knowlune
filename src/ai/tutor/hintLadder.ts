@@ -29,6 +29,8 @@ const IMPLICIT_FRUSTRATION = /\b(i don'?t know|help|idk|no idea)\b/i
 const IMPLICIT_SHORT_RESPONSES = /^(what\??|huh\??)$/i
 
 /** Valid short answers that should NOT trigger frustration */
+// safe: checked AFTER EXPLICIT_FRUSTRATION and IMPLICIT_FRUSTRATION patterns — valid short answers
+// like "yes", "no", "TCP", "42" won't reach here if they already matched a confusion signal first.
 const VALID_SHORT = /^(yes|no|ok|okay|true|false|yep|nope|yeah|nah|\d+|[a-z]{1,5})$/i
 
 /**
@@ -97,6 +99,8 @@ export function processUserMessage(
     }
   }
 
+  // TODO(E57-S05 or future): add de-escalation when user demonstrates understanding
+  // (correct answer → reduce hintLevel)
   return { hintLevel: newLevel, stuckCount: newStuckCount }
 }
 

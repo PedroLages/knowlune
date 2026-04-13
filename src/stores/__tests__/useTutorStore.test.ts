@@ -173,6 +173,20 @@ describe('setTranscriptStatus', () => {
   })
 })
 
+// ── setMode ───────────────────────────────────────────────────────
+
+describe('setMode', () => {
+  it('resets hintLevel and stuckCount to 0 when mode changes', () => {
+    useTutorStore.setState({ hintLevel: 3, stuckCount: 2 })
+    useTutorStore.getState().setMode('socratic')
+
+    const state = useTutorStore.getState()
+    expect(state.hintLevel).toBe(0)
+    expect(state.stuckCount).toBe(0)
+    expect(state.mode).toBe('socratic')
+  })
+})
+
 // ── maxHistory trimming ───────────────────────────────────────────
 
 describe('maxHistory trimming', () => {
