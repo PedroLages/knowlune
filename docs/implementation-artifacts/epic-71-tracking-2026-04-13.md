@@ -8,7 +8,7 @@ Last Updated: 2026-04-13
 | Story | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|--------|--------|---------------|--------------|
 | E71-S01 | done | [#329](https://github.com/PedroLages/knowlune/pull/329) | 3 | 8 |
-| E71-S02 | review | — | 1 | 0 |
+| E71-S02 | done | [#330](https://github.com/PedroLages/knowlune/pull/330) | 2 | 6 |
 | E71-S03 | queued | — | — | — |
 
 ## Story Details
@@ -32,20 +32,20 @@ Last Updated: 2026-04-13
 ---
 
 ### E71-S02: ActionCard and SuggestedActionsPanel UI Components
-**Status:** review
-#### Errors
-_(none)_
+**Status:** done — [PR #330](https://github.com/PedroLages/knowlune/pull/330)
 #### Review Findings
-- R1: PASS — 3 MEDIUM (accessibility), 2 LOW, 1 NIT — no blockers
-  - MEDIUM: ARIA listitem nesting, aria-label uses ctaLabel, CTA touch target < 44px
-  - LOW: duplicate id (use useId()), time estimate label literal
-  - NIT: transition-all narrowing
+- R1: 3 MEDIUM (ARIA nesting, aria-label, touch target) + 2 LOW + 1 NIT → all 6 fixed
+- R2: PASS — 0 findings | GLM BLOCKER = false positive (lg:flex overrides sm:grid correctly)
 #### Fixes Applied
-_(deferred to S03 integration — no blockers)_
+- ARIA: article role="listitem" is direct child of role="list" wrapper
+- aria-label uses actionLabel (descriptive) not ctaLabel
+- CTA button size="default" for 44px touch target
+- useId() for unique panel title IDs
+- Time badge labels: "min review" / "min quiz" / "min lesson"
+- transition-[box-shadow,transform] instead of transition-all
 #### Notes
-- Responsive: sidebar desktop, 2-col tablet, horizontal scroll mobile
-- Design tokens only, variant="brand" CTAs
-- snap-x snap-mandatory on mobile
+- 13 ACs verified passing | design tokens 100% compliant
+- Non-issues: GLM false positive (lg:flex/sm:grid cascade)
 
 ---
 
