@@ -1,6 +1,6 @@
 ---
 story_id: E62-S04
-story_name: "E2E Tests for Knowledge Map FSRS Integration"
+story_name: 'E2E Tests for Knowledge Map FSRS Integration'
 status: in-progress
 started: 2026-04-14
 completed:
@@ -89,14 +89,17 @@ No UI — pure E2E test story.
 ## Implementation Notes
 
 **Key files to create:**
+
 - `tests/e2e/knowledge-map-fsrs.spec.ts` (~150-200 lines)
 
 **Key files to reference:**
+
 - Existing E2E tests in `tests/e2e/` for seeding patterns and factory usage
 - `tests/support/fixtures/factories/` for flashcard factory patterns
 - Existing knowledge map E2E tests (if any from E56) for page interaction patterns
 
 **Testing approach:**
+
 - Chromium only for visual color verification
 - Use `page.evaluate()` to seed IndexedDB with FSRS flashcard data
 - Use `page.locator()` for treemap cell targeting
@@ -104,6 +107,7 @@ No UI — pure E2E test story.
 - Use `formatDistanceToNow` logic expectations for tooltip text matching
 
 **Seeding strategy:**
+
 - 3 courses with flashcards at different retention levels
 - 1 course with no flashcards (fallback path)
 - All using FIXED_DATE-relative timestamps for determinism

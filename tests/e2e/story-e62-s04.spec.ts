@@ -204,11 +204,7 @@ async function seedAllData(page: import('@playwright/test').Page) {
   await seedImportedCourses(page, [HIGH_RETENTION_COURSE, LOW_RETENTION_COURSE, NO_FC_COURSE])
   await seedQuizzes(page, [HIGH_RETENTION_QUIZ, LOW_RETENTION_QUIZ, NO_FC_QUIZ])
   await seedQuizAttempts(page, [HIGH_RETENTION_ATTEMPT, LOW_RETENTION_ATTEMPT, NO_FC_ATTEMPT])
-  await seedContentProgress(page, [
-    HIGH_RETENTION_PROGRESS,
-    LOW_RETENTION_PROGRESS,
-    NO_FC_PROGRESS,
-  ])
+  await seedContentProgress(page, [HIGH_RETENTION_PROGRESS, LOW_RETENTION_PROGRESS, NO_FC_PROGRESS])
   await seedStudySessions(page, [HIGH_RETENTION_SESSION, LOW_RETENTION_SESSION, NO_FC_SESSION])
   await seedIndexedDBStore(page, 'ElearningDB', 'flashcards', [
     HIGH_RETENTION_FLASHCARD,
