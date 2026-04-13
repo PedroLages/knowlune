@@ -611,8 +611,8 @@ development_status:
   # Epic 56: Knowledge Map Phase 1
   # Source: epics.md
   # ──────────────────────────────────────────────────
-  epic-56: backlog
-  56-1-topic-resolution-service: backlog
+  epic-56: in-progress
+  56-1-topic-resolution-service: review
   56-2-knowledge-score-calculation-zustand-store: backlog
   56-3-knowledge-map-overview-widget: backlog
   56-4-dedicated-knowledge-map-page: backlog
