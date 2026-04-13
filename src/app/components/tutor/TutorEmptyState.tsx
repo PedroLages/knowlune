@@ -51,11 +51,11 @@ const MODE_EMPTY_STATES: Record<TutorMode, ModeEmptyConfig> = {
   },
   quiz: {
     icon: ClipboardCheck,
-    heading: 'Test your knowledge',
+    heading: 'Ready to test your knowledge?',
     suggestions: [
-      'Quiz me on what I just learned',
-      'Give me a challenging question',
-      'Start with an easy question',
+      'Start a quiz on this lesson',
+      'Test me on the key concepts',
+      'Give me a hard question',
     ],
   },
   debug: {

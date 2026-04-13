@@ -13,6 +13,7 @@ import { ChatInput } from '@/app/components/chat/ChatInput'
 import { TranscriptBadge } from './TranscriptBadge'
 import { TutorModeChips } from './TutorModeChips'
 import { TutorEmptyState } from './TutorEmptyState'
+import { QuizScoreTracker } from './QuizScoreTracker'
 import { Button } from '@/app/components/ui/button'
 import {
   AlertDialog,
@@ -68,7 +69,7 @@ export function TutorChat({
   })
 
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
-  const { learnerModel, clearLearnerModel, replaceLearnerModelFields } = useTutorStore()
+  const { learnerModel, clearLearnerModel, replaceLearnerModelFields, quizState } = useTutorStore()
 
   // Determine badge status — use hook's transcriptStatus or fallback
   const badgeStatus: TranscriptStatus = transcriptStatus ?? {
@@ -141,7 +142,16 @@ export function TutorChat({
         onClearMemory={clearLearnerModel}
         onUpdateMemory={replaceLearnerModelFields}
       />
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
+        {mode === 'quiz' && quizState.totalQuestions > 0 && (
+          <div className="absolute top-2 right-2 z-10">
+            <QuizScoreTracker
+              correct={quizState.correctAnswers}
+              total={quizState.totalQuestions}
+              lastAnswerCorrect={quizState.lastAnswerCorrect}
+            />
+          </div>
+        )}
         {messages.length === 0 ? (
           <TutorEmptyState lessonTitle={lessonTitle} mode={mode} onSendMessage={sendMessage} />
         ) : (

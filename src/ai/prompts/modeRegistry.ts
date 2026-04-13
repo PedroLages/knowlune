@@ -11,6 +11,7 @@ import type { TutorMode } from '@/ai/tutor/types'
 import type { ModeConfig } from './types'
 import { getHintInstruction } from '@/ai/tutor/hintLadder'
 import { buildELI5Prompt } from './modes/eli5'
+import { buildQuizPrompt } from './modes/quiz'
 
 /**
  * Complete registry of all 5 tutor modes.
@@ -80,22 +81,14 @@ Rules:
     mode: 'quiz',
     label: 'Quiz Me',
     description: 'Test your understanding with questions',
-    hintLadderEnabled: false,
+    hintLadderEnabled: true,
     scoringEnabled: true,
     updatesLearnerModel: true,
-    emptyStateMessage: 'Test your knowledge',
-    loadingMessage: 'Creating a question...',
+    emptyStateMessage: 'Ready to test your knowledge?',
+    loadingMessage: 'Preparing your first question...',
     requiresTranscript: true,
     tokenBudgetOverrides: { transcript: 1200 },
-    buildPromptRules: () =>
-      `Teaching mode: Quiz.
-Rules:
-- Test the learner's understanding by asking questions about the lesson material.
-- Ask one question at a time. Wait for the answer before providing feedback.
-- After they answer, provide feedback on what they got right and wrong, with explanations.
-- Vary question types: recall, comprehension, application, analysis.
-- Track their score and mention it periodically.
-- Base questions on the provided transcript content.`,
+    buildPromptRules: buildQuizPrompt,
   },
 
   debug: {

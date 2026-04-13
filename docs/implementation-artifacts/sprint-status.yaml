@@ -845,7 +845,7 @@ development_status:
   epic-73: in-progress
   73-1-mode-architecture-registry-budget-allocator-and-mode-switching: done
   73-2-eli5-mode-simple-explanations-with-analogies: done
-  73-3-quiz-me-mode-adaptive-questioning-with-score-tracking: backlog
+  73-3-quiz-me-mode-adaptive-questioning-with-score-tracking: review
   73-4-debug-my-understanding-mode-gap-analysis-with-traffic-light-feedback: backlog
   73-5-conversation-history-and-session-continuity: backlog
   epic-73-retrospective: optional

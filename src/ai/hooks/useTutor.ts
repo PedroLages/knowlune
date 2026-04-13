@@ -285,15 +285,15 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
           learnerModelStr = serializeLearnerModelForPrompt(currentLearnerModel)
         }
 
-        const systemPrompt = buildTutorSystemPrompt(
-          tutorContext,
-          store.mode,
-          undefined,
-          store.hintLevel,
-          ragContextStr,
-          learnerProfileStr,
-          learnerModelStr
-        )
+        const systemPrompt = buildTutorSystemPrompt({
+          context: tutorContext,
+          mode: store.mode,
+          hintLevel: store.hintLevel,
+          ragContext: ragContextStr,
+          learnerProfile: learnerProfileStr,
+          learnerModelSummary: learnerModelStr,
+          bloomLevel: useTutorStore.getState().quizState.bloomLevel,
+        })
 
         // Stage 4: Build LLM message array with sliding window
         const allMessages = [...store.messages] // includes the user message we just added
@@ -344,6 +344,30 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
         // If aborted mid-stream, preserve partial content
         if (abortController.signal.aborted && fullResponse) {
           store.updateLastMessage(fullResponse + ' [Response interrupted]')
+        }
+
+        // Parse SCORE markers from quiz mode responses (AC5, fixes HIGH #1 and #2)
+        if (store.mode === 'quiz' && fullResponse && !abortController.signal.aborted) {
+          const scoreMatch = fullResponse.match(/^SCORE:\s*(correct|incorrect)/im)
+          if (scoreMatch) {
+            const isCorrect = scoreMatch[1].toLowerCase() === 'correct'
+            store.recordQuizAnswer(isCorrect)
+
+            // Tag the assistant message with quizScore before persisting (AC5)
+            const currentQuizState = useTutorStore.getState().quizState
+            const questionNumber = currentQuizState.totalQuestions // already incremented by recordQuizAnswer
+            useTutorStore.setState(state => {
+              const messages = [...state.messages]
+              const lastMsg = messages[messages.length - 1]
+              if (lastMsg && lastMsg.role === 'assistant') {
+                messages[messages.length - 1] = {
+                  ...lastMsg,
+                  quizScore: { correct: isCorrect, questionNumber },
+                }
+              }
+              return { messages }
+            })
+          }
         }
 
         // Stage 6: Persist to Dexie
