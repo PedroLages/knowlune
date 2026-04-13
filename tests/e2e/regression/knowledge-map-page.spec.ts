@@ -195,4 +195,90 @@ test.describe('Knowledge Map Page (E56-S04)', () => {
     const emptyTitle = page.getByText('No knowledge data yet')
     await expect(emptyTitle).toBeVisible({ timeout: 10000 })
   })
+
+  test('6 — AC3: clicking a treemap cell opens TopicDetailPopover with score breakdown', async ({
+    page,
+  }) => {
+    // Pre-set sidebar as expanded to avoid mobile-sheet overlay
+    await page.goto('/')
+    await page.evaluate(() => {
+      localStorage.setItem('knowlune-sidebar-v1', 'true')
+    })
+    await seedImportedCourses(page, [TEST_COURSE])
+    await seedContentProgress(page, [TEST_CONTENT_PROGRESS])
+    await seedQuizzes(page, [TEST_QUIZ])
+    await seedQuizAttempts(page, [TEST_QUIZ_ATTEMPT])
+
+    // Use desktop viewport so treemap (not accordion) renders
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await page.goto('/knowledge-map')
+
+    // Wait for treemap to be present
+    const heading = page.locator('h1').filter({ hasText: 'Knowledge Map' })
+    await expect(heading).toBeVisible({ timeout: 20000 })
+
+    // Treemap cells render as <g role="button"> inside Recharts SVG.
+    // Click the first clickable cell using evaluate to dispatch a proper click event.
+    const treemapContainer = page.locator('[data-treemap-container]')
+    await expect(treemapContainer).toBeVisible({ timeout: 10000 })
+
+    // Wait for Recharts SVG to render cells
+    const treemapCell = treemapContainer.locator('g[role="button"]').first()
+    await expect(treemapCell).toBeAttached({ timeout: 10000 })
+
+    // Use evaluate to dispatch click on the g element — Playwright's click can miss SVG elements
+    await treemapCell.evaluate((el: SVGGElement) => el.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 200, clientY: 200 })))
+
+    // TopicDetailPopover should open — it renders a PopoverContent with the topic name
+    // Score breakdown rows contain "Quiz score" text
+    const popoverContent = page.locator('[data-slot="popover-content"]')
+    await expect(popoverContent).toBeVisible({ timeout: 10000 })
+
+    // Verify score breakdown is shown in the popover
+    await expect(popoverContent.getByText('Quiz score')).toBeVisible()
+    await expect(popoverContent.getByText('Completion')).toBeVisible()
+  })
+
+  test('7 — AC4: action button in TopicDetailPopover navigates to correct route', async ({
+    page,
+  }) => {
+    // Pre-set sidebar as expanded to avoid mobile-sheet overlay
+    await page.goto('/')
+    await page.evaluate(() => {
+      localStorage.setItem('knowlune-sidebar-v1', 'true')
+    })
+    await seedImportedCourses(page, [TEST_COURSE])
+    await seedContentProgress(page, [TEST_CONTENT_PROGRESS])
+    await seedQuizzes(page, [TEST_QUIZ])
+    await seedQuizAttempts(page, [TEST_QUIZ_ATTEMPT])
+
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await page.goto('/knowledge-map')
+
+    // Wait for treemap
+    const heading = page.locator('h1').filter({ hasText: 'Knowledge Map' })
+    await expect(heading).toBeVisible({ timeout: 20000 })
+
+    const treemapContainer = page.locator('[data-treemap-container]')
+    await expect(treemapContainer).toBeVisible({ timeout: 10000 })
+
+    // Open the popover by clicking a treemap cell
+    const treemapCell = treemapContainer.locator('g[role="button"]').first()
+    await expect(treemapCell).toBeAttached({ timeout: 10000 })
+    await treemapCell.evaluate((el: SVGGElement) => el.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 200, clientY: 200 })))
+
+    const popoverContent = page.locator('[data-slot="popover-content"]')
+    await expect(popoverContent).toBeVisible({ timeout: 10000 })
+
+    // Click the first action button in the popover (e.g. "Retake Quiz", "Rewatch Lesson", etc.)
+    const actionButton = popoverContent.locator('button').first()
+    await expect(actionButton).toBeVisible({ timeout: 5000 })
+    await actionButton.click()
+
+    // After clicking an action button, navigation should occur — URL should change
+    // away from /knowledge-map (navigate to a course sub-route)
+    await expect(page).not.toHaveURL('/knowledge-map', { timeout: 10000 })
+    // URL should now include the course ID
+    await expect(page).toHaveURL(new RegExp(`/courses/${TEST_COURSE.id}`), { timeout: 5000 })
+  })
 })
