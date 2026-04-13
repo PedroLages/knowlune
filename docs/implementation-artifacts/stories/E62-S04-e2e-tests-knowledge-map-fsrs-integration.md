@@ -1,8 +1,8 @@
 ---
 story_id: E62-S04
 story_name: "E2E Tests for Knowledge Map FSRS Integration"
-status: draft
-started:
+status: in-progress
+started: 2026-04-14
 completed:
 reviewed: false
 review_started:
