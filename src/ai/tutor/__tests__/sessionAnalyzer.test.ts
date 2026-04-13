@@ -20,6 +20,7 @@ import {
   serializeLearnerModelForPrompt,
   LearnerModelUpdateSchema,
   updateFromSession,
+  MIN_ASSESSMENT_EXCHANGES,
 } from '../sessionAnalyzer'
 
 // ---------------------------------------------------------------------------
@@ -310,9 +311,26 @@ describe('LearnerModelUpdateSchema', () => {
 // updateFromSession (threshold + error handling)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// updateFromSession mocks (hoisted so vi.mock can reference them)
+// ---------------------------------------------------------------------------
+
+const mockUpdateLearnerModel = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
+const mockStreamCompletion = vi.hoisted(() => vi.fn())
+const mockGetLLMClient = vi.hoisted(() => vi.fn())
+
+vi.mock('@/ai/tutor/learnerModelService', () => ({
+  updateLearnerModel: mockUpdateLearnerModel,
+}))
+
+vi.mock('@/ai/llm/factory', () => ({
+  getLLMClient: mockGetLLMClient,
+}))
+
 describe('updateFromSession', () => {
   beforeEach(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
+    mockUpdateLearnerModel.mockResolvedValue(undefined)
   })
 
   it('skips update when fewer than MIN_ASSESSMENT_EXCHANGES', async () => {
@@ -323,12 +341,85 @@ describe('updateFromSession', () => {
     ]
     const model = makeModel()
 
-    // Mock the LLM client to verify it's NOT called
-    const getLLMClientMock = vi.fn()
-    vi.doMock('@/ai/llm/factory', () => ({ getLLMClient: getLLMClientMock }))
+    await updateFromSession('course-1', messages, model)
+
+    // Should not call LLM or updateLearnerModel when below threshold
+    expect(mockGetLLMClient).not.toHaveBeenCalled()
+    expect(mockUpdateLearnerModel).not.toHaveBeenCalled()
+  })
+
+  it('calls updateLearnerModel when at or above MIN_ASSESSMENT_EXCHANGES (above-threshold fires)', async () => {
+    // Provide exactly MIN_ASSESSMENT_EXCHANGES quiz user messages
+    const messages: TutorMessage[] = Array.from({ length: MIN_ASSESSMENT_EXCHANGES }, (_, i) =>
+      makeTutorMessage({ role: 'user', content: `question ${i}`, mode: 'quiz' })
+    )
+    const model = makeModel()
+
+    // Mock LLM to fail so it falls back to local insights immediately
+    mockGetLLMClient.mockRejectedValue(new Error('no LLM provider in test'))
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     await updateFromSession('course-1', messages, model)
-    expect(getLLMClientMock).not.toHaveBeenCalled()
+
+    // updateLearnerModel should have been called (fallback to local insights)
+    expect(mockUpdateLearnerModel).toHaveBeenCalledOnce()
+    expect(mockUpdateLearnerModel).toHaveBeenCalledWith('course-1', expect.any(Object))
+  })
+
+  it('falls back to local insights when LLM returns invalid JSON (Zod validation failure)', async () => {
+    const messages: TutorMessage[] = [
+      makeTutorMessage({ role: 'user', content: 'q1 closures', mode: 'quiz', quizScore: { correct: true, questionNumber: 1 } }),
+      makeTutorMessage({ role: 'user', content: 'q2 promises', mode: 'quiz', quizScore: { correct: false, questionNumber: 2 } }),
+      makeTutorMessage({ role: 'user', content: 'q3 async', mode: 'quiz', quizScore: { correct: true, questionNumber: 3 } }),
+    ]
+    const model = makeModel()
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    // Mock LLM to return JSON that fails Zod validation (invalid vocabularyLevel)
+    const invalidJsonResponse = JSON.stringify({
+      vocabularyLevel: 'expert', // not in enum — will fail Zod
+      strengths: [{ concept: 'closures', confidence: 2.5 }], // confidence out of range
+    })
+
+    mockGetLLMClient.mockResolvedValue({
+      streamCompletion: async function* () {
+        yield { content: invalidJsonResponse, finishReason: 'stop' }
+      },
+    })
+
+    await updateFromSession('course-1', messages, model)
+
+    // Should fall back to local insights after Zod validation fails
+    expect(mockUpdateLearnerModel).toHaveBeenCalledOnce()
+    expect(mockUpdateLearnerModel).toHaveBeenCalledWith('course-1', expect.any(Object))
+    expect(warnSpy).toHaveBeenCalled()
+
+    warnSpy.mockRestore()
+  })
+
+  it('falls back to local insights when LLM returns no JSON block', async () => {
+    const messages: TutorMessage[] = Array.from({ length: MIN_ASSESSMENT_EXCHANGES }, (_, i) =>
+      makeTutorMessage({ role: 'user', content: `q${i}`, mode: 'quiz' })
+    )
+    const model = makeModel()
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    // Mock LLM to return plain text with no JSON
+    mockGetLLMClient.mockResolvedValue({
+      streamCompletion: async function* () {
+        yield { content: 'I cannot process this session.', finishReason: 'stop' }
+      },
+    })
+
+    await updateFromSession('course-1', messages, model)
+
+    // Should call updateLearnerModel with local insights fallback
+    expect(mockUpdateLearnerModel).toHaveBeenCalledOnce()
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[sessionAnalyzer] LLM returned no valid JSON')
+    )
+
+    warnSpy.mockRestore()
   })
 
   it('handles LLM errors gracefully with console.warn', async () => {
@@ -338,7 +429,8 @@ describe('updateFromSession', () => {
     const model = makeModel()
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    // The LLM call will fail because no provider is configured in test env
+    mockGetLLMClient.mockRejectedValue(new Error('provider unavailable'))
+
     // updateFromSession should catch and warn, not throw
     await expect(updateFromSession('course-1', messages, model)).resolves.not.toThrow()
 
