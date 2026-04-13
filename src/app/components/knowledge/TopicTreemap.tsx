@@ -158,7 +158,9 @@ function CustomCell(props: Record<string, unknown>) {
       <TooltipTrigger asChild>{cellContent}</TooltipTrigger>
       <TooltipContent side="top">
         <span className="font-medium">{name}</span>
-        <span className="ml-1 text-muted-foreground">— {score}% ({tier})</span>
+        <span className="ml-1 text-muted-foreground">
+          — {score}% ({tier})
+        </span>
       </TooltipContent>
     </Tooltip>
   )

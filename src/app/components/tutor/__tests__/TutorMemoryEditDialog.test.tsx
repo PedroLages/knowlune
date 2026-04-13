@@ -52,8 +52,18 @@ describe('TutorMemoryEditDialog', () => {
   it('renders strength entries when model has strengths', () => {
     const model = makeLearnerModel({
       strengths: [
-        { concept: 'React hooks', confidence: 0.9, assessedBy: 'quiz', lastAssessed: '2026-04-13T00:00:00Z' },
-        { concept: 'Closures', confidence: 0.8, assessedBy: 'explain', lastAssessed: '2026-04-13T00:00:00Z' },
+        {
+          concept: 'React hooks',
+          confidence: 0.9,
+          assessedBy: 'quiz',
+          lastAssessed: '2026-04-13T00:00:00Z',
+        },
+        {
+          concept: 'Closures',
+          confidence: 0.8,
+          assessedBy: 'explain',
+          lastAssessed: '2026-04-13T00:00:00Z',
+        },
       ],
     })
 
@@ -74,7 +84,12 @@ describe('TutorMemoryEditDialog', () => {
   it('renders misconception entries when model has misconceptions', () => {
     const model = makeLearnerModel({
       misconceptions: [
-        { concept: 'useEffect deps', confidence: 0.6, assessedBy: 'debug', lastAssessed: '2026-04-13T00:00:00Z' },
+        {
+          concept: 'useEffect deps',
+          confidence: 0.6,
+          assessedBy: 'debug',
+          lastAssessed: '2026-04-13T00:00:00Z',
+        },
       ],
     })
 
@@ -95,8 +110,18 @@ describe('TutorMemoryEditDialog', () => {
     const user = userEvent.setup()
     const model = makeLearnerModel({
       strengths: [
-        { concept: 'React hooks', confidence: 0.9, assessedBy: 'quiz', lastAssessed: '2026-04-13T00:00:00Z' },
-        { concept: 'Closures', confidence: 0.8, assessedBy: 'explain', lastAssessed: '2026-04-13T00:00:00Z' },
+        {
+          concept: 'React hooks',
+          confidence: 0.9,
+          assessedBy: 'quiz',
+          lastAssessed: '2026-04-13T00:00:00Z',
+        },
+        {
+          concept: 'Closures',
+          confidence: 0.8,
+          assessedBy: 'explain',
+          lastAssessed: '2026-04-13T00:00:00Z',
+        },
       ],
     })
 
@@ -125,8 +150,18 @@ describe('TutorMemoryEditDialog', () => {
     const user = userEvent.setup()
     const model = makeLearnerModel({
       misconceptions: [
-        { concept: 'useEffect deps', confidence: 0.6, assessedBy: 'debug', lastAssessed: '2026-04-13T00:00:00Z' },
-        { concept: 'Promise.all', confidence: 0.4, assessedBy: 'quiz', lastAssessed: '2026-04-13T00:00:00Z' },
+        {
+          concept: 'useEffect deps',
+          confidence: 0.6,
+          assessedBy: 'debug',
+          lastAssessed: '2026-04-13T00:00:00Z',
+        },
+        {
+          concept: 'Promise.all',
+          confidence: 0.4,
+          assessedBy: 'quiz',
+          lastAssessed: '2026-04-13T00:00:00Z',
+        },
       ],
     })
 
@@ -139,7 +174,9 @@ describe('TutorMemoryEditDialog', () => {
       />
     )
 
-    const removeButton = screen.getByRole('button', { name: 'Remove misconception: useEffect deps' })
+    const removeButton = screen.getByRole('button', {
+      name: 'Remove misconception: useEffect deps',
+    })
     await user.click(removeButton)
 
     await waitFor(() => {
@@ -155,15 +192,28 @@ describe('TutorMemoryEditDialog', () => {
     const user = userEvent.setup()
     let resolveUpdate!: () => void
     const slowUpdate = vi.fn(
-      () => new Promise<void>((resolve) => { resolveUpdate = resolve })
+      () =>
+        new Promise<void>(resolve => {
+          resolveUpdate = resolve
+        })
     )
 
     const model = makeLearnerModel({
       strengths: [
-        { concept: 'TypeScript', confidence: 0.85, assessedBy: 'quiz', lastAssessed: '2026-04-13T00:00:00Z' },
+        {
+          concept: 'TypeScript',
+          confidence: 0.85,
+          assessedBy: 'quiz',
+          lastAssessed: '2026-04-13T00:00:00Z',
+        },
       ],
       misconceptions: [
-        { concept: 'Generics', confidence: 0.5, assessedBy: 'debug', lastAssessed: '2026-04-13T00:00:00Z' },
+        {
+          concept: 'Generics',
+          confidence: 0.5,
+          assessedBy: 'debug',
+          lastAssessed: '2026-04-13T00:00:00Z',
+        },
       ],
     })
 
@@ -177,7 +227,9 @@ describe('TutorMemoryEditDialog', () => {
     )
 
     const removeStrength = screen.getByRole('button', { name: 'Remove strength: TypeScript' })
-    const removeMisconception = screen.getByRole('button', { name: 'Remove misconception: Generics' })
+    const removeMisconception = screen.getByRole('button', {
+      name: 'Remove misconception: Generics',
+    })
 
     // Click the first remove button — operation starts
     await user.click(removeStrength)

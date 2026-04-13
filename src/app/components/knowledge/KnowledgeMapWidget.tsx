@@ -50,7 +50,9 @@ export function KnowledgeMapWidget() {
         <h2 className="text-xl font-semibold mb-4">Knowledge Map</h2>
         <div className="text-center py-10">
           <Map className="size-10 mx-auto mb-3 text-muted-foreground/50" aria-hidden="true" />
-          <p className="text-muted-foreground text-sm">Import courses to build your Knowledge Map</p>
+          <p className="text-muted-foreground text-sm">
+            Import courses to build your Knowledge Map
+          </p>
         </div>
       </div>
     )
@@ -99,9 +101,7 @@ export function KnowledgeMapWidget() {
               <AccordionTrigger className="text-sm">
                 <span className="flex items-center gap-2">
                   {cat.category}
-                  <Badge
-                    className={tierBadgeClass(getTierFromScore(cat.averageScore))}
-                  >
+                  <Badge className={tierBadgeClass(getTierFromScore(cat.averageScore))}>
                     {cat.averageScore}%
                   </Badge>
                 </span>

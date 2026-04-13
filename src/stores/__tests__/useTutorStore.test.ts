@@ -289,7 +289,9 @@ describe('updateLearnerModel', () => {
   it('does not update store when service returns null/undefined', async () => {
     const initial = makeLearnerModel()
     useTutorStore.setState({ learnerModel: initial })
-    vi.mocked(learnerModelService.updateLearnerModel).mockResolvedValue(null as unknown as LearnerModel)
+    vi.mocked(learnerModelService.updateLearnerModel).mockResolvedValue(
+      null as unknown as LearnerModel
+    )
 
     await useTutorStore.getState().updateLearnerModel('course-1', { vocabularyLevel: 'advanced' })
 
@@ -300,9 +302,7 @@ describe('updateLearnerModel', () => {
   it('does not crash on Dexie error', async () => {
     vi.mocked(learnerModelService.updateLearnerModel).mockRejectedValue(new Error('Dexie error'))
 
-    await expect(
-      useTutorStore.getState().updateLearnerModel('course-1', {})
-    ).resolves.not.toThrow()
+    await expect(useTutorStore.getState().updateLearnerModel('course-1', {})).resolves.not.toThrow()
   })
 })
 
@@ -326,8 +326,6 @@ describe('clearLearnerModel', () => {
   it('does not crash on Dexie error', async () => {
     vi.mocked(learnerModelService.clearLearnerModel).mockRejectedValue(new Error('Dexie error'))
 
-    await expect(
-      useTutorStore.getState().clearLearnerModel('course-1')
-    ).resolves.not.toThrow()
+    await expect(useTutorStore.getState().clearLearnerModel('course-1')).resolves.not.toThrow()
   })
 })

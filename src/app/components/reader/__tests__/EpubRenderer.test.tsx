@@ -602,7 +602,9 @@ describe('EpubRenderer', () => {
       const { rerender } = render(<EpubRenderer {...defaultProps} />)
       const mockRendition = createMockRendition()
       const epubViewCall = mockEpubViewProps.mock.calls[0][0]
-      act(() => { epubViewCall.getRendition(mockRendition) })
+      act(() => {
+        epubViewCall.getRendition(mockRendition)
+      })
       mockRendition.themes.default.mockClear()
 
       mockStoreState.letterSpacing = 0.2
@@ -622,9 +624,7 @@ describe('EpubRenderer', () => {
       render(<EpubRenderer {...defaultProps} />)
 
       const passedProps = mockEpubViewProps.mock.calls[0][0]
-      expect(passedProps.epubOptions).toEqual(
-        expect.objectContaining({ flow: 'scrolled-doc' })
-      )
+      expect(passedProps.epubOptions).toEqual(expect.objectContaining({ flow: 'scrolled-doc' }))
     })
 
     it('passes flow: "paginated" in epubOptions when scrollMode is false (AC-3)', () => {
@@ -632,9 +632,7 @@ describe('EpubRenderer', () => {
       render(<EpubRenderer {...defaultProps} />)
 
       const passedProps = mockEpubViewProps.mock.calls[0][0]
-      expect(passedProps.epubOptions).toEqual(
-        expect.objectContaining({ flow: 'paginated' })
-      )
+      expect(passedProps.epubOptions).toEqual(expect.objectContaining({ flow: 'paginated' }))
     })
 
     it('hides prev/next tap zones when scrollMode is true (AC-4)', () => {
@@ -667,7 +665,9 @@ describe('EpubRenderer', () => {
       render(<EpubRenderer {...defaultProps} />)
       const mockRendition = createMockRendition()
       const epubViewCall = mockEpubViewProps.mock.calls[0][0]
-      act(() => { epubViewCall.getRendition(mockRendition) })
+      act(() => {
+        epubViewCall.getRendition(mockRendition)
+      })
 
       const container = screen.getByTestId('epub-renderer')
       // Simulate a left swipe — should not trigger navigation in scroll mode
@@ -681,7 +681,9 @@ describe('EpubRenderer', () => {
       render(<EpubRenderer {...defaultProps} />)
       const mockRendition = createMockRendition()
       const epubViewCall = mockEpubViewProps.mock.calls[0][0]
-      act(() => { epubViewCall.getRendition(mockRendition) })
+      act(() => {
+        epubViewCall.getRendition(mockRendition)
+      })
       mockRendition.themes.default.mockClear()
 
       // Simulate scrollMode changing
@@ -689,7 +691,9 @@ describe('EpubRenderer', () => {
       const { rerender } = render(<EpubRenderer {...defaultProps} />)
       const mockRendition2 = createMockRendition()
       const epubViewCall2 = mockEpubViewProps.mock.calls[mockEpubViewProps.mock.calls.length - 1][0]
-      act(() => { epubViewCall2.getRendition(mockRendition2) })
+      act(() => {
+        epubViewCall2.getRendition(mockRendition2)
+      })
 
       // Theme must be applied (re-applies on rendition ready via handleGetRendition)
       expect(mockRendition2.themes.default).toHaveBeenCalled()

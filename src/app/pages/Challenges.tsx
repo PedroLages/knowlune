@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Target, Clock, Flame, Trophy, RefreshCcw, ChevronDown, Check, BookOpen, FileText } from 'lucide-react'
+import {
+  Plus,
+  Target,
+  Clock,
+  Flame,
+  Trophy,
+  RefreshCcw,
+  ChevronDown,
+  Check,
+  BookOpen,
+  FileText,
+} from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
 import { Button } from '@/app/components/ui/button'

@@ -434,7 +434,11 @@ export function UnifiedLessonPlayer() {
         onCaptureFrame={handleCaptureFrame}
         courseName={courseName}
         lessonTitle={state.lessonTitle}
-        lessonPosition={lessonId && totalLessons ? `${(lessons?.findIndex(l => l.id === lessonId) ?? 0) + 1} of ${totalLessons}` : undefined}
+        lessonPosition={
+          lessonId && totalLessons
+            ? `${(lessons?.findIndex(l => l.id === lessonId) ?? 0) + 1} of ${totalLessons}`
+            : undefined
+        }
       />
 
       {/* Inline prev/next navigation (classic style, inside scroll) */}
