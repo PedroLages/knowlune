@@ -19,6 +19,8 @@ export interface TreemapDataItem {
 
 interface TopicTreemapProps {
   data: TreemapDataItem[]
+  /** Called when a treemap cell is clicked with the cell name */
+  onCellClick?: (name: string) => void
 }
 
 /** Map tier to CSS variable color values */
@@ -50,9 +52,10 @@ const MAX_LABEL_LENGTH = 14
 /**
  * Custom cell renderer for Treemap.
  * Shows category/topic name + score when cell is large enough.
+ * Supports click and keyboard interaction.
  */
 function CustomCell(props: Record<string, unknown>) {
-  const { x, y, width, height, name, score, tier } = props as {
+  const { x, y, width, height, name, score, tier, onCellClick } = props as {
     x: number
     y: number
     width: number
@@ -60,15 +63,29 @@ function CustomCell(props: Record<string, unknown>) {
     name: string
     score: number
     tier: KnowledgeTier
+    onCellClick?: (name: string) => void
   }
 
   const fill = getTierFill(tier)
   const textFill = getTierTextFill(tier)
-  const showLabel = width > 60 && height > 40
-  const showScore = width > 50 && height > 55
+  const showLabel = width > 60 && height > 30
+  const showScore = width > 40 && height > 45
 
   return (
-    <g>
+    <g
+      role="button"
+      tabIndex={0}
+      aria-label={`Topic: ${name}, knowledge score: ${score} percent, status: ${tier}`}
+      onClick={() => onCellClick?.(name)}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onCellClick?.(name)
+        }
+      }}
+      // eslint-disable-next-line react-best-practices/no-inline-styles -- SVG cursor styling
+      style={{ cursor: 'pointer', outline: 'none' }}
+    >
       <rect
         x={x}
         y={y}
@@ -76,8 +93,26 @@ function CustomCell(props: Record<string, unknown>) {
         height={height}
         rx={6}
         ry={6}
-        // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic SVG fill from tier data, cannot use Tailwind for SVG attributes
+         
         style={{ fill, stroke: 'var(--border)', strokeWidth: 1 }}
+      />
+      {/* Focus indicator */}
+      <rect
+        x={x + 1}
+        y={y + 1}
+        width={width - 2}
+        height={height - 2}
+        rx={5}
+        ry={5}
+        // eslint-disable-next-line react-best-practices/no-inline-styles -- SVG focus ring styling
+        style={{
+          fill: 'none',
+          stroke: 'var(--ring)',
+          strokeWidth: 2,
+          opacity: 0,
+        }}
+        className="group-focus-visible:opacity-100"
+        pointerEvents="none"
       />
       {showLabel && (
         <text
@@ -85,7 +120,8 @@ function CustomCell(props: Record<string, unknown>) {
           y={y + height / 2 - (showScore ? 8 : 0)}
           textAnchor="middle"
           dominantBaseline="central"
-          // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic SVG fill and fontSize from tier/size data
+          pointerEvents="none"
+           
           style={{
             fill: textFill,
             fontSize: width > 100 ? 13 : 11,
@@ -101,7 +137,8 @@ function CustomCell(props: Record<string, unknown>) {
           y={y + height / 2 + 12}
           textAnchor="middle"
           dominantBaseline="central"
-          // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic SVG fill from tier data
+          pointerEvents="none"
+           
           style={{
             fill: textFill,
             fontSize: 11,
@@ -116,13 +153,13 @@ function CustomCell(props: Record<string, unknown>) {
   )
 }
 
-export function TopicTreemap({ data }: TopicTreemapProps) {
+export function TopicTreemap({ data, onCellClick }: TopicTreemapProps) {
   if (data.length === 0) return null
 
   return (
     <ResponsiveContainer width="100%" minHeight={200} aspect={16 / 9}>
       <Treemap
-        data={data}
+        data={data.map(item => ({ ...item, onCellClick }))}
         dataKey="size"
         aspectRatio={4 / 3}
         stroke="var(--border)"

@@ -112,6 +112,11 @@ const SearchAnnotations = React.lazy(() =>
   import('./pages/SearchAnnotations').then(m => ({ default: m.SearchAnnotations }))
 )
 
+// E56-S04: Knowledge Map — dedicated full-page knowledge map
+const KnowledgeMap = React.lazy(() =>
+  import('./pages/KnowledgeMap').then(m => ({ default: m.KnowledgeMap }))
+)
+
 function PageLoader() {
   return (
     <DelayedFallback>
@@ -487,6 +492,14 @@ export const router = createBrowserRouter([
             <PremiumFeaturePage {...PREMIUM_FEATURES.aiLearningPath} icon={Sparkles}>
               <AILearningPath />
             </PremiumFeaturePage>
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'knowledge-map',
+        element: (
+          <SuspensePage>
+            <KnowledgeMap />
           </SuspensePage>
         ),
       },

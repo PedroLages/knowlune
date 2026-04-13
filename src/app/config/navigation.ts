@@ -14,6 +14,7 @@ import {
   BarChart3,
   Sparkles,
   Brain,
+  Map,
   Route,
   Library,
   Layers,
@@ -85,6 +86,7 @@ export const navigationGroups: NavigationGroup[] = [
     label: 'Track',
     items: [
       { name: 'Challenges', path: '/challenges', icon: Target, disclosureKey: 'challenge-used' },
+      { name: 'Knowledge Map', path: '/knowledge-map', icon: Map },
       { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain, disclosureKey: 'ai-used' },
       { name: 'Retention', path: '/retention', icon: ShieldCheck, disclosureKey: 'review-used' },
       {
