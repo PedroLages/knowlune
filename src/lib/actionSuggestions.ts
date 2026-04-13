@@ -93,10 +93,7 @@ export function recencyDecayFactor(recencyScore: number): number {
 
 // ── Per-Topic Suggestion Generation ─────────────────────────────
 
-function generateFlashcardSuggestion(
-  topic: TopicWithScore,
-  urgency: number
-): ActionSuggestion {
+function generateFlashcardSuggestion(topic: TopicWithScore, urgency: number): ActionSuggestion {
   return {
     topicName: topic.topicName,
     canonicalName: topic.canonicalName,
@@ -110,10 +107,7 @@ function generateFlashcardSuggestion(
   }
 }
 
-function generateQuizSuggestion(
-  topic: TopicWithScore,
-  urgency: number
-): ActionSuggestion {
+function generateQuizSuggestion(topic: TopicWithScore, urgency: number): ActionSuggestion {
   return {
     topicName: topic.topicName,
     canonicalName: topic.canonicalName,
@@ -127,10 +121,7 @@ function generateQuizSuggestion(
   }
 }
 
-function generateLessonSuggestion(
-  topic: TopicWithScore,
-  urgency: number
-): ActionSuggestion | null {
+function generateLessonSuggestion(topic: TopicWithScore, urgency: number): ActionSuggestion | null {
   if (topic.lessons.length === 0) return null
 
   // Target the lesson with the lowest completion percentage
@@ -155,10 +146,7 @@ function generateLessonSuggestion(
 /**
  * Generate all applicable action suggestions for a single topic.
  */
-function generateTopicSuggestions(
-  topic: TopicWithScore,
-  urgency: number
-): ActionSuggestion[] {
+function generateTopicSuggestions(topic: TopicWithScore, urgency: number): ActionSuggestion[] {
   const suggestions: ActionSuggestion[] = []
 
   if (topic.hasFlashcards) {
@@ -196,9 +184,7 @@ export function generateActionSuggestions(
   const { maxSuggestions = DEFAULT_MAX_SUGGESTIONS, fsrsStability } = options
 
   // Filter to only declining topics (fading or weak — score < 70)
-  const decliningTopics = topics.filter(
-    (t) => t.tier === 'fading' || t.tier === 'weak'
-  )
+  const decliningTopics = topics.filter(t => t.tier === 'fading' || t.tier === 'weak')
 
   if (decliningTopics.length === 0) return []
 

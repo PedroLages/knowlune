@@ -138,9 +138,7 @@ describe('generateActionSuggestions', () => {
       tier: 'fading',
       hasFlashcards: true,
       hasQuizzes: true,
-      lessons: [
-        { lessonId: 'L1', courseId: 'C2', title: 'Probability', completionPct: 50 },
-      ],
+      lessons: [{ lessonId: 'L1', courseId: 'C2', title: 'Probability', completionPct: 50 }],
     })
 
     const result = generateActionSuggestions([topic])
@@ -169,19 +167,16 @@ describe('generateActionSuggestions', () => {
     })
 
     const fsrsStability = new Map([
-      ['chemistry', 5],  // low stability → high decay
-      ['history', 50],   // high stability → low decay
+      ['chemistry', 5], // low stability → high decay
+      ['history', 50], // high stability → low decay
     ])
 
-    const result = generateActionSuggestions(
-      [lowStability, highStability],
-      { fsrsStability }
-    )
+    const result = generateActionSuggestions([lowStability, highStability], { fsrsStability })
 
     expect(result).toHaveLength(2)
     // Chemistry (low stability=5, decay=90) should have higher urgency than History (stability=50, decay=0)
-    const chemistry = result.find((s) => s.canonicalName === 'chemistry')!
-    const history = result.find((s) => s.canonicalName === 'history')!
+    const chemistry = result.find(s => s.canonicalName === 'chemistry')!
+    const history = result.find(s => s.canonicalName === 'history')!
     expect(chemistry.urgencyScore).toBeGreaterThan(history.urgencyScore)
   })
 
@@ -207,8 +202,8 @@ describe('generateActionSuggestions', () => {
 
     const result = generateActionSuggestions([lowRecency, highRecency])
 
-    const art = result.find((s) => s.canonicalName === 'art')!
-    const music = result.find((s) => s.canonicalName === 'music')!
+    const art = result.find(s => s.canonicalName === 'art')!
+    const music = result.find(s => s.canonicalName === 'music')!
     expect(art.urgencyScore).toBeGreaterThan(music.urgencyScore)
   })
 
@@ -257,9 +252,7 @@ describe('generateActionSuggestions', () => {
       tier: 'weak',
       hasFlashcards: false,
       hasQuizzes: false,
-      lessons: [
-        { lessonId: 'L5', courseId: 'C3', title: 'Ethics 101', completionPct: 20 },
-      ],
+      lessons: [{ lessonId: 'L5', courseId: 'C3', title: 'Ethics 101', completionPct: 20 }],
     })
 
     const result = generateActionSuggestions([topic])
