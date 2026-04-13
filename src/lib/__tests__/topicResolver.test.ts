@@ -60,15 +60,12 @@ describe('toTitleCase', () => {
 // ---------------------------------------------------------------------------
 
 describe('isNoiseTopic', () => {
-  it.each([
-    'october 2023',
-    'jan 2024',
-    'q3 2024',
-    '2023-10-15',
-    '2024-01',
-  ])('filters date pattern: %s', (topic) => {
-    expect(isNoiseTopic(topic)).toBe(true)
-  })
+  it.each(['october 2023', 'jan 2024', 'q3 2024', '2023-10-15', '2024-01'])(
+    'filters date pattern: %s',
+    topic => {
+      expect(isNoiseTopic(topic)).toBe(true)
+    }
+  )
 
   it.each([
     'course overview',
@@ -80,16 +77,11 @@ describe('isNoiseTopic', () => {
     'part 1',
     'section 3',
     'module 2',
-  ])('filters meta-topic: %s', (topic) => {
+  ])('filters meta-topic: %s', topic => {
     expect(isNoiseTopic(topic)).toBe(true)
   })
 
-  it.each([
-    'miscellaneous',
-    'other',
-    'n/a',
-    'tbd',
-  ])('filters generic filler: %s', (topic) => {
+  it.each(['miscellaneous', 'other', 'n/a', 'tbd'])('filters generic filler: %s', topic => {
     expect(isNoiseTopic(topic)).toBe(true)
   })
 
@@ -129,18 +121,18 @@ describe('canonicalize', () => {
 // ---------------------------------------------------------------------------
 
 describe('resolveTopics', () => {
-  const makeCourse = (
-    id: string,
-    category: string,
-    tags: string[]
-  ): TopicCourseInput => ({ id, category, tags })
+  const makeCourse = (id: string, category: string, tags: string[]): TopicCourseInput => ({
+    id,
+    category,
+    tags,
+  })
 
   it('extracts topics from course tags', () => {
     const courses = [makeCourse('c1', 'Psychology', ['Body Language', 'Deception Detection'])]
     const result = resolveTopics(courses)
 
     expect(result).toHaveLength(3) // 2 tags + 1 category
-    const names = result.map((t) => t.canonicalName)
+    const names = result.map(t => t.canonicalName)
     expect(names).toContain('nonverbal communication') // body language → canonical
     expect(names).toContain('deception detection')
     expect(names).toContain('psychology')
@@ -154,7 +146,7 @@ describe('resolveTopics', () => {
     ]
     const result = resolveTopics(courses)
 
-    const dd = result.find((t) => t.canonicalName === 'deception detection')
+    const dd = result.find(t => t.canonicalName === 'deception detection')
     expect(dd).toBeDefined()
     expect(dd!.courseIds).toEqual(['c1', 'c2', 'c3'])
   })
@@ -168,7 +160,7 @@ describe('resolveTopics', () => {
     const result = resolveTopics(courses)
 
     // All variants should merge into "nonverbal communication" via canonical map
-    const nv = result.find((t) => t.canonicalName === 'nonverbal communication')
+    const nv = result.find(t => t.canonicalName === 'nonverbal communication')
     expect(nv).toBeDefined()
     expect(nv!.courseIds).toEqual(['c1', 'c2', 'c3'])
   })
@@ -185,7 +177,7 @@ describe('resolveTopics', () => {
     ]
     const result = resolveTopics(courses)
 
-    const names = result.map((t) => t.canonicalName)
+    const names = result.map(t => t.canonicalName)
     expect(names).not.toContain('october 2023')
     expect(names).not.toContain('weekly session')
     expect(names).not.toContain('course overview')
@@ -202,7 +194,7 @@ describe('resolveTopics', () => {
     ]
     const result = resolveTopics(courses)
 
-    const react = result.find((t) => t.canonicalName === 'react')
+    const react = result.find(t => t.canonicalName === 'react')
     expect(react).toBeDefined()
     // Web Development has 2 votes vs Data Science 1
     expect(react!.category).toBe('Web Development')
@@ -216,7 +208,7 @@ describe('resolveTopics', () => {
     ]
     const result = resolveTopics(courses, questions)
 
-    const dd = result.find((t) => t.canonicalName === 'deception detection')
+    const dd = result.find(t => t.canonicalName === 'deception detection')
     expect(dd).toBeDefined()
     expect(dd!.questionTopics).toContain('Deception Detection')
     // "lie detection" canonicalizes to "deception detection"
@@ -236,19 +228,17 @@ describe('resolveTopics', () => {
     const courses = [makeCourse('c1', 'Psychology', ['deception detection'])]
     const result = resolveTopics(courses, [])
 
-    const dd = result.find((t) => t.canonicalName === 'deception detection')
+    const dd = result.find(t => t.canonicalName === 'deception detection')
     expect(dd).toBeDefined()
     expect(dd!.questionTopics).toEqual([])
   })
 
   it('handles questions with undefined topic', () => {
     const courses = [makeCourse('c1', 'Psychology', ['deception detection'])]
-    const questions: TopicQuestionInput[] = [
-      { topic: undefined, courseId: 'c1' },
-    ]
+    const questions: TopicQuestionInput[] = [{ topic: undefined, courseId: 'c1' }]
     const result = resolveTopics(courses, questions)
 
-    const dd = result.find((t) => t.canonicalName === 'deception detection')
+    const dd = result.find(t => t.canonicalName === 'deception detection')
     expect(dd!.questionTopics).toEqual([])
   })
 
@@ -259,29 +249,25 @@ describe('resolveTopics', () => {
     ]
     const result = resolveTopics(courses)
 
-    const neg = result.find((t) => t.canonicalName === 'negotiation')
+    const neg = result.find(t => t.canonicalName === 'negotiation')
     expect(neg).toBeDefined()
     expect(neg!.courseIds).toEqual(['c1', 'c2'])
   })
 
   it('returns sorted results by canonical name', () => {
-    const courses = [
-      makeCourse('c1', 'Tech', ['zsh scripting', 'angular', 'bash']),
-    ]
+    const courses = [makeCourse('c1', 'Tech', ['zsh scripting', 'angular', 'bash'])]
     const result = resolveTopics(courses)
 
-    const names = result.map((t) => t.canonicalName)
+    const names = result.map(t => t.canonicalName)
     expect(names).toEqual([...names].sort())
   })
 
   it('adds courseId from question even if topic not in course tags', () => {
     const courses = [makeCourse('c1', 'Psychology', ['negotiation'])]
-    const questions: TopicQuestionInput[] = [
-      { topic: 'empathy', courseId: 'c1' },
-    ]
+    const questions: TopicQuestionInput[] = [{ topic: 'empathy', courseId: 'c1' }]
     const result = resolveTopics(courses, questions)
 
-    const empathy = result.find((t) => t.canonicalName === 'empathy')
+    const empathy = result.find(t => t.canonicalName === 'empathy')
     expect(empathy).toBeDefined()
     expect(empathy!.courseIds).toContain('c1')
     expect(empathy!.questionTopics).toContain('empathy')

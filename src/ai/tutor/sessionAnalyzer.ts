@@ -58,11 +58,13 @@ export const LearnerModelUpdateSchema = z.object({
   topicsExplored: z.array(z.string()).optional(),
   lastSessionSummary: z.string().optional(),
   preferredMode: z.enum(['socratic', 'explain', 'quiz', 'eli5', 'debug']).optional(),
-  quizStats: z.object({
-    totalQuestions: z.number(),
-    correctAnswers: z.number(),
-    weakTopics: z.array(z.string()),
-  }).optional(),
+  quizStats: z
+    .object({
+      totalQuestions: z.number(),
+      correctAnswers: z.number(),
+      weakTopics: z.array(z.string()),
+    })
+    .optional(),
 })
 
 export type LearnerModelUpdate = z.infer<typeof LearnerModelUpdateSchema>
@@ -75,9 +77,7 @@ export type LearnerModelUpdate = z.infer<typeof LearnerModelUpdateSchema>
  * Count assessment exchanges: user messages in quiz or debug modes.
  */
 export function countAssessmentExchanges(messages: TutorMessage[]): number {
-  return messages.filter(
-    (m) => m.role === 'user' && (m.mode === 'quiz' || m.mode === 'debug')
-  ).length
+  return messages.filter(m => m.role === 'user' && (m.mode === 'quiz' || m.mode === 'debug')).length
 }
 
 /**
@@ -105,7 +105,7 @@ function getMostUsedMode(messages: TutorMessage[]): TutorMode {
  * Extract quiz stats from messages with quizScore fields.
  */
 function extractQuizStats(messages: TutorMessage[]): SessionInsights['quizStats'] {
-  const quizMessages = messages.filter((m) => m.quizScore != null)
+  const quizMessages = messages.filter(m => m.quizScore != null)
   if (quizMessages.length === 0) return null
 
   let totalQuestions = 0
@@ -182,9 +182,7 @@ function extractDebugConcepts(messages: TutorMessage[]): {
       const assessment: ConceptAssessment = {
         concept,
         confidence:
-          m.debugAssessment === 'green' ? 0.9
-          : m.debugAssessment === 'yellow' ? 0.5
-          : 0.2,
+          m.debugAssessment === 'green' ? 0.9 : m.debugAssessment === 'yellow' ? 0.5 : 0.2,
         lastAssessed: now,
         assessedBy: 'debug',
       }
@@ -214,8 +212,8 @@ export function analyzeSession(messages: TutorMessage[]): SessionInsights {
 
   // Extract explored topics from all messages
   const topicsExplored = messages
-    .filter((m) => m.role === 'user')
-    .map((m) => m.content.trim().split(/\s+/).slice(0, 4).join(' '))
+    .filter(m => m.role === 'user')
+    .map(m => m.content.trim().split(/\s+/).slice(0, 4).join(' '))
     .filter(Boolean)
     .slice(0, 10) // Cap to prevent unbounded growth
 
@@ -237,22 +235,19 @@ export function analyzeSession(messages: TutorMessage[]): SessionInsights {
 /**
  * Build the LLM prompt for session analysis.
  */
-function buildSessionUpdatePrompt(
-  currentModel: LearnerModel,
-  messages: TutorMessage[]
-): string {
+function buildSessionUpdatePrompt(currentModel: LearnerModel, messages: TutorMessage[]): string {
   const assessmentMessages = messages
-    .filter((m) => m.mode === 'quiz' || m.mode === 'debug')
+    .filter(m => m.mode === 'quiz' || m.mode === 'debug')
     .slice(-20) // Cap to prevent token overflow
-    .map((m) => `[${m.role}/${m.mode}]: ${m.content.slice(0, 200)}`)
+    .map(m => `[${m.role}/${m.mode}]: ${m.content.slice(0, 200)}`)
     .join('\n')
 
   return `You are analyzing a tutor session to update a learner model. Given the current model and session transcript, produce a JSON object with updated fields.
 
 Current learner model:
 - Vocabulary level: ${currentModel.vocabularyLevel}
-- Strengths: ${currentModel.strengths.map((s) => s.concept).join(', ') || 'none'}
-- Misconceptions: ${currentModel.misconceptions.map((m) => m.concept).join(', ') || 'none'}
+- Strengths: ${currentModel.strengths.map(s => s.concept).join(', ') || 'none'}
+- Misconceptions: ${currentModel.misconceptions.map(m => m.concept).join(', ') || 'none'}
 - Topics explored: ${currentModel.topicsExplored.join(', ') || 'none'}
 
 Session assessment exchanges:
@@ -356,14 +351,14 @@ export async function updateFromSession(
     const enrichedUpdate: Partial<LearnerModel> = {
       ...rest,
       ...(rawStrengths && {
-        strengths: rawStrengths.map((s) => ({
+        strengths: rawStrengths.map(s => ({
           ...s,
           lastAssessed: now,
           assessedBy: insights.preferredMode as TutorMode,
         })),
       }),
       ...(rawMisconceptions && {
-        misconceptions: rawMisconceptions.map((m) => ({
+        misconceptions: rawMisconceptions.map(m => ({
           ...m,
           lastAssessed: now,
           assessedBy: insights.preferredMode as TutorMode,
@@ -400,7 +395,7 @@ export function serializeLearnerModelForPrompt(model: LearnerModel): string {
     const top = model.strengths
       .sort((a, b) => b.confidence - a.confidence)
       .slice(0, 4)
-      .map((s) => s.concept)
+      .map(s => s.concept)
       .join(', ')
     parts.push(`Strengths: ${top}.`)
   }
@@ -409,7 +404,7 @@ export function serializeLearnerModelForPrompt(model: LearnerModel): string {
     const top = model.misconceptions
       .sort((a, b) => b.confidence - a.confidence)
       .slice(0, 3)
-      .map((m) => m.concept)
+      .map(m => m.concept)
       .join(', ')
     parts.push(`Misconceptions: ${top}.`)
   }

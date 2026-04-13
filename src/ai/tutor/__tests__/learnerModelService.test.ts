@@ -141,9 +141,13 @@ describe('learnerModelService', () => {
       await getOrCreateLearnerModel('course-1')
 
       await updateLearnerModel('course-1', { topicsExplored: ['arrays', 'loops'] })
-      const result = await updateLearnerModel('course-1', { topicsExplored: ['loops', 'functions'] })
+      const result = await updateLearnerModel('course-1', {
+        topicsExplored: ['loops', 'functions'],
+      })
 
-      expect(result!.topicsExplored).toEqual(expect.arrayContaining(['arrays', 'loops', 'functions']))
+      expect(result!.topicsExplored).toEqual(
+        expect.arrayContaining(['arrays', 'loops', 'functions'])
+      )
       expect(result!.topicsExplored).toHaveLength(3)
     })
 
@@ -157,7 +161,9 @@ describe('learnerModelService', () => {
     it('overwrites lastSessionSummary', async () => {
       await getOrCreateLearnerModel('course-1')
 
-      const result = await updateLearnerModel('course-1', { lastSessionSummary: 'Covered recursion basics' })
+      const result = await updateLearnerModel('course-1', {
+        lastSessionSummary: 'Covered recursion basics',
+      })
       expect(result!.lastSessionSummary).toBe('Covered recursion basics')
     })
 

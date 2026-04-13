@@ -61,10 +61,10 @@ export function allocateTokenBudget(totalTokens: number, mode: TutorMode): Token
   const scaledCourseContext = Math.floor(FIXED_SLOTS.courseContext * fixedScale)
   // Give remainder to learnerProfile to ensure fixed slots sum exactly to min(totalTokens, FIXED_TOTAL)
   const fixedUsed = scaledBaseInstructions + scaledModeRules + scaledCourseContext
-  const scaledLearnerProfile =
-    fixedScale < 1 ? totalTokens - fixedUsed : FIXED_SLOTS.learnerProfile
+  const scaledLearnerProfile = fixedScale < 1 ? totalTokens - fixedUsed : FIXED_SLOTS.learnerProfile
 
-  const fixedTotal = scaledBaseInstructions + scaledModeRules + scaledCourseContext + scaledLearnerProfile
+  const fixedTotal =
+    scaledBaseInstructions + scaledModeRules + scaledCourseContext + scaledLearnerProfile
   const variableBudget = Math.max(0, totalTokens - fixedTotal)
   const rawVariableTotal = rawHistory + rawTranscript + rawResponse
 

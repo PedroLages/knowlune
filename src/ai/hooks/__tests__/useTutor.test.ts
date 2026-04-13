@@ -86,7 +86,9 @@ beforeEach(async () => {
     transcriptStatus: null,
   })
   const { getLLMClient } = await import('@/ai/llm/factory')
-  const client = await (getLLMClient as unknown as () => Promise<{ streamCompletion: ReturnType<typeof vi.fn> }> )()
+  const client = await (
+    getLLMClient as unknown as () => Promise<{ streamCompletion: ReturnType<typeof vi.fn> }>
+  )()
   mockStreamCompletion = client.streamCompletion as ReturnType<typeof vi.fn>
   mockStreamCompletion.mockReturnValue(makeStream(['Hello ', 'world!']))
 })
@@ -183,9 +185,7 @@ describe('useTutor — error handling', () => {
       await result.current.sendMessage('Question')
     })
 
-    expect(useTutorStore.getState().error).toBe(
-      'Failed to process your request. Please try again.'
-    )
+    expect(useTutorStore.getState().error).toBe('Failed to process your request. Please try again.')
   })
 
   it('clears error on new sendMessage attempt', async () => {

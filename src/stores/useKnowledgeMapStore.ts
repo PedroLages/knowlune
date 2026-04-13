@@ -131,7 +131,7 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
 
       // ── Step 2: Resolve topics ─────────────────────────────────
       // Build TopicCourseInput from ImportedCourses
-      const courseInputs: TopicCourseInput[] = importedCourses.map((c) => ({
+      const courseInputs: TopicCourseInput[] = importedCourses.map(c => ({
         id: c.id,
         category: c.category,
         tags: c.tags,
@@ -185,11 +185,11 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
       const quizScoreByTopic = new Map<string, { correct: number; total: number }>()
       for (const attempt of allAttempts) {
         const quizId = attempt.quizId
-        const quiz = allQuizzes.find((q) => q.id === quizId)
+        const quiz = allQuizzes.find(q => q.id === quizId)
         if (!quiz) continue
 
         for (const answer of attempt.answers) {
-          const question = quiz.questions.find((q) => q.id === answer.questionId)
+          const question = quiz.questions.find(q => q.id === answer.questionId)
           if (!question?.topic) continue
 
           const normalized = normalizeTopic(question.topic)
@@ -251,7 +251,7 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
       }
 
       // ── Step 4: Score each topic ───────────────────────────────
-      const scoredTopics: ScoredTopic[] = resolvedTopics.map((topic) => {
+      const scoredTopics: ScoredTopic[] = resolvedTopics.map(topic => {
         // Quiz score for this topic
         const quizData = quizScoreByTopic.get(topic.canonicalName)
         const quizScore =
@@ -356,9 +356,7 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
         .sort((a, b) => a.category.localeCompare(b.category))
 
       // ── Step 6: Focus areas (top 3 by urgency) ────────────────
-      const focusAreas = [...scoredTopics]
-        .sort((a, b) => b.urgency - a.urgency)
-        .slice(0, 3)
+      const focusAreas = [...scoredTopics].sort((a, b) => b.urgency - a.urgency).slice(0, 3)
 
       set({
         topics: scoredTopics,
@@ -382,11 +380,11 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
 
   getTopicsByCategory: (category: string) => {
     return get()
-      .topics.filter((t) => t.category === category)
+      .topics.filter(t => t.category === category)
       .sort((a, b) => a.scoreResult.score - b.scoreResult.score)
   },
 
   getTopicByName: (canonicalName: string) => {
-    return get().topics.find((t) => t.canonicalName === canonicalName)
+    return get().topics.find(t => t.canonicalName === canonicalName)
   },
 }))

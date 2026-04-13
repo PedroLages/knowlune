@@ -12,7 +12,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { BookOpen, Clock, User, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Skeleton } from '@/app/components/ui/skeleton'
-import { getReadingSummary, formatReadingTime, type ReadingSummary } from '@/services/ReadingStatsService'
+import {
+  getReadingSummary,
+  formatReadingTime,
+  type ReadingSummary,
+} from '@/services/ReadingStatsService'
 
 interface SummaryPillProps {
   icon: React.ReactNode
@@ -67,9 +71,10 @@ export function ReadingSummaryCard() {
   // AC4: render null when no finished books
   if (!summary) return null
 
-  const booksThisYearValue = summary.yearlyGoal != null
-    ? `${summary.booksFinishedThisYear} / ${summary.yearlyGoal}`
-    : `${summary.booksFinishedThisYear}`
+  const booksThisYearValue =
+    summary.yearlyGoal != null
+      ? `${summary.booksFinishedThisYear} / ${summary.yearlyGoal}`
+      : `${summary.booksFinishedThisYear}`
 
   return (
     <Card data-testid="reading-summary-card">
@@ -96,7 +101,11 @@ export function ReadingSummaryCard() {
           <SummaryPill
             icon={<Clock className="size-3.5" aria-hidden="true" />}
             label="Longest Session"
-            value={summary.longestSessionMinutes != null ? formatReadingTime(summary.longestSessionMinutes) : '—'}
+            value={
+              summary.longestSessionMinutes != null
+                ? formatReadingTime(summary.longestSessionMinutes)
+                : '—'
+            }
             data-testid="summary-longest-session"
           />
           <SummaryPill

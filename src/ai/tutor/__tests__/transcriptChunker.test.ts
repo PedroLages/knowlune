@@ -12,10 +12,7 @@ describe('chunkTranscript', () => {
   })
 
   it('creates a single chunk for short transcript', () => {
-    const cues = [
-      makeCue(0, 'Hello world'),
-      makeCue(5, 'This is a test'),
-    ]
+    const cues = [makeCue(0, 'Hello world'), makeCue(5, 'This is a test')]
     const chunks = chunkTranscript(cues)
     expect(chunks.length).toBeGreaterThanOrEqual(1)
     expect(chunks[0].chunkIndex).toBe(0)
@@ -24,10 +21,7 @@ describe('chunkTranscript', () => {
   })
 
   it('preserves timestamp metadata on chunks', () => {
-    const cues = [
-      makeCue(10, 'First sentence'),
-      makeCue(15, 'Second sentence'),
-    ]
+    const cues = [makeCue(10, 'First sentence'), makeCue(15, 'Second sentence')]
     const chunks = chunkTranscript(cues)
     expect(chunks[0].startTime).toBe(10)
     expect(chunks[0].endTime).toBe(20)
