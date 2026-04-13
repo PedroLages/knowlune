@@ -688,8 +688,8 @@ development_status:
   # Connects FSRS stability estimates to Knowledge Map scoring
   # Depends on: E56 (Knowledge Map), E59 (FSRS Migration)
   # ──────────────────────────────────────────────────
-  epic-62: backlog
-  62-1-fsrs-retention-aggregation-and-score-integration: backlog
+  epic-62: in-progress
+  62-1-fsrs-retention-aggregation-and-score-integration: review
   62-2-retention-gradient-treemap-and-decay-predictions-ui: backlog
   62-3-unit-tests-fsrs-retention-scoring: backlog
   62-4-e2e-tests-knowledge-map-fsrs-integration: backlog
