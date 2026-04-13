@@ -176,25 +176,25 @@ describe('setTranscriptStatus', () => {
 // ── maxHistory trimming ───────────────────────────────────────────
 
 describe('maxHistory trimming', () => {
-  it('trims messages to 50 when exceeding max', () => {
-    // Add 55 messages
-    for (let i = 0; i < 55; i++) {
+  it('trims messages to 500 when exceeding max', () => {
+    // Add 505 messages (exceeds MAX_HISTORY_MESSAGES = 500)
+    for (let i = 0; i < 505; i++) {
       useTutorStore.getState().addMessage(makeMessage({ content: `msg-${i}`, id: `id-${i}` }))
     }
 
     const { messages } = useTutorStore.getState()
-    // Should be capped at 50
-    expect(messages.length).toBe(50)
+    // Should be capped at 500
+    expect(messages.length).toBe(500)
     // Oldest 5 messages should be dropped — first retained is msg-5
     expect(messages[0].content).toBe('msg-5')
-    // Last retained is msg-54
-    expect(messages[messages.length - 1].content).toBe('msg-54')
+    // Last retained is msg-504
+    expect(messages[messages.length - 1].content).toBe('msg-504')
   })
 
-  it('does not trim when at or below 50 messages', () => {
-    for (let i = 0; i < 50; i++) {
+  it('does not trim when at or below 500 messages', () => {
+    for (let i = 0; i < 500; i++) {
       useTutorStore.getState().addMessage(makeMessage({ id: `id-${i}` }))
     }
-    expect(useTutorStore.getState().messages).toHaveLength(50)
+    expect(useTutorStore.getState().messages).toHaveLength(500)
   })
 })

@@ -91,7 +91,7 @@ export function TutorChat({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  className="h-7 w-7 min-h-[44px] min-w-[44px] text-muted-foreground hover:text-destructive"
                   aria-label="Clear conversation"
                   data-testid="clear-conversation-btn"
                 >

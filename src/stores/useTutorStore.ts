@@ -171,8 +171,9 @@ export const useTutorStore = create<TutorState>((set, get) => ({
     const { conversationId } = get()
     // Delete from Dexie if we have a persisted conversation
     if (conversationId) {
-      db.chatConversations.delete(conversationId).catch(() => {
-        // silent-catch-ok — clearing UI state is the priority
+      db.chatConversations.delete(conversationId).catch((error: unknown) => {
+        console.error('Failed to clear conversation from Dexie:', error)
+        // silent-catch-ok — clearing UI state is the priority; delete failure is non-blocking
       })
     }
     set({

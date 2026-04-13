@@ -72,24 +72,15 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
   } = options
 
   const store = useTutorStore()
+  const setLessonContext = useTutorStore((s) => s.setLessonContext)
+  const loadConversation = useTutorStore((s) => s.loadConversation)
   const abortRef = useRef<AbortController | null>(null)
 
   // Set lesson context for persistence and load existing conversation
   useEffect(() => {
-    let cancelled = false
-
-    store.setLessonContext(courseId, lessonId)
-
-    async function loadExisting() {
-      await store.loadConversation(courseId, lessonId)
-      if (cancelled) return
-    }
-
-    loadExisting()
-    return () => {
-      cancelled = true
-    }
-  }, [courseId, lessonId])
+    setLessonContext(courseId, lessonId)
+    loadConversation(courseId, lessonId)
+  }, [courseId, lessonId, setLessonContext, loadConversation])
 
   // Load transcript status on mount / lesson change — stored in Zustand for reactive re-renders
   useEffect(() => {
