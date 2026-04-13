@@ -4,9 +4,9 @@ story_name: 'ELI5 Mode — Simple Explanations with Analogies'
 status: in-progress
 started: 2026-04-13
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-04-13
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, performance-benchmark-skipped, security-review, exploratory-qa]
 burn_in_validated: false
 ---
 
