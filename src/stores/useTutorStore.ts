@@ -267,6 +267,8 @@ export const useTutorStore = create<TutorState>((set, get) => ({
               lastAnswerCorrect: null,
             }
           : state.quizState,
+      // Reset debug assessments when switching away from debug mode (E73-S04)
+      debugAssessments: previousMode === 'debug' ? [] : state.debugAssessments,
     }))
   },
 

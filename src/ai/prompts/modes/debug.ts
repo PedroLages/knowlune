@@ -19,6 +19,7 @@ import type { ModePromptContext } from '../types'
  * Requires transcript (requiresTranscript=true).
  * Updates learner model (updatesLearnerModel=true).
  */
+// TODO(E73-future): use context.bloomLevel or similar when debug adaptive difficulty is added
 export function buildDebugPrompt(_context: ModePromptContext): string {
   return `MODE: Debug My Understanding — Gap Analysis with Traffic Light Feedback
 

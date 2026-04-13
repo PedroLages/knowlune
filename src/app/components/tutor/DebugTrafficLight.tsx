@@ -38,10 +38,10 @@ export function DebugTrafficLight({ assessment }: DebugTrafficLightProps) {
 
   return (
     <span
+      aria-label={`Assessment: ${config.label}`}
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border ${config.className}`}
     >
-      {config.label}
-      <span className="sr-only">Assessment: {config.label}</span>
+      <span aria-hidden="true">{config.label}</span>
     </span>
   )
 }
