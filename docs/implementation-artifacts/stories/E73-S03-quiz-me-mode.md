@@ -1,9 +1,9 @@
 ---
 story_id: E73-S03
 story_name: "Quiz Me Mode — Adaptive Questioning with Score Tracking"
-status: review
+status: done
 started: 2026-04-13
-completed:
+completed: 2026-04-13
 reviewed: true
 review_started: 2026-04-13
 review_gates_passed:
