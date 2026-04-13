@@ -85,7 +85,11 @@ describe('buildELI5Prompt', () => {
 
   it('is a pure function with different context inputs', () => {
     const ctx1: ModePromptContext = { hintLevel: 0, hasTranscript: false }
-    const ctx2: ModePromptContext = { hintLevel: 3, hasTranscript: true, lastTopicDiscussed: 'math' }
+    const ctx2: ModePromptContext = {
+      hintLevel: 3,
+      hasTranscript: true,
+      lastTopicDiscussed: 'math',
+    }
     // ELI5 ignores context, so both should produce the same output
     const result1 = buildELI5Prompt(ctx1)
     const result2 = buildELI5Prompt(ctx2)
