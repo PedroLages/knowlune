@@ -818,8 +818,8 @@ development_status:
   # Contextual action cards for declining topics
   # Depends on: E56 (Knowledge Map)
   # ──────────────────────────────────────────────────
-  epic-71: backlog
-  71-1-action-suggestion-data-layer: backlog
+  epic-71: in-progress
+  71-1-action-suggestion-data-layer: review
   71-2-actioncard-and-suggestedactionspanel-ui-components: backlog
   71-3-knowledge-map-integration-and-tests: backlog
   epic-71-retrospective: optional
