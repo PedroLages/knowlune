@@ -22,6 +22,7 @@ import { CourseCard } from '@/app/components/figma/CourseCard'
 import { ProgressChart } from '@/app/components/charts/ProgressChart'
 import { DashboardCustomizer } from '@/app/components/DashboardCustomizer'
 import { SkillProficiencyRadar } from '@/app/components/overview/SkillProficiencyRadar'
+import { KnowledgeMapWidget } from '@/app/components/knowledge/KnowledgeMapWidget'
 import { TodaysStudyPlan } from '@/app/components/figma/TodaysStudyPlan'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
@@ -317,6 +318,17 @@ export function Overview() {
             <SkillProficiencyRadar data={skillProficiencyData} />
           </motion.section>
         ) : null,
+      'knowledge-map': () => (
+        <motion.section
+          key="knowledge-map"
+          ref={createSectionRef('knowledge-map')}
+          {...viewportAnimation}
+          className="rounded-2xl border border-border/50 bg-card p-[var(--content-padding)]"
+          data-testid="section-knowledge-map"
+        >
+          <KnowledgeMapWidget />
+        </motion.section>
+      ),
       'course-gallery': () => (
         <motion.section
           key="course-gallery"
