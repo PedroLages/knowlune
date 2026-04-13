@@ -413,7 +413,7 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
   },
 
   invalidateCache: () => {
-    set({ lastComputedAt: null })
+    set({ lastComputedAt: null, suggestions: [] })
   },
 
   getTopicsByCategory: (category: string) => {

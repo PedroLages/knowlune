@@ -87,6 +87,7 @@ export function SuggestedActionsPanel({
           {hasOverflow && (
             <button
               type="button"
+              aria-expanded={expanded}
               onClick={() => setExpanded((prev) => !prev)}
               className="mt-3 inline-flex items-center gap-1 text-sm text-brand hover:text-brand-hover"
             >
