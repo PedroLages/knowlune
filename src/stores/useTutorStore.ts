@@ -211,9 +211,12 @@ export const useTutorStore = create<TutorState>((set, get) => ({
   },
 
   consumeTransitionContext: () => {
-    const ctx = get().modeTransitionContext
-    if (ctx) set({ modeTransitionContext: null })
-    return ctx
+    let captured: string | null = null
+    set(state => {
+      captured = state.modeTransitionContext
+      return { modeTransitionContext: null }
+    })
+    return captured
   },
 
   setHintLevel: (level: number) => {

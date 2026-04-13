@@ -4,8 +4,8 @@
  * Tests pair preservation for quiz/debug and standard window for other modes.
  */
 
-import { describe, it, expect } from 'vitest'
-import { pruneConversation } from '../conversationPruner'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { pruneConversation, resetPruneSummaryCounter } from '../conversationPruner'
 import type { ChatMessage } from '@/ai/rag/types'
 
 function makeMessage(
@@ -35,6 +35,10 @@ function makeConversation(pairs: number): ChatMessage[] {
 }
 
 describe('pruneConversation', () => {
+  beforeEach(() => {
+    resetPruneSummaryCounter()
+  })
+
   it('returns all messages when within budget', () => {
     const msgs = makeConversation(2)
     const result = pruneConversation(msgs, 10000, 'socratic')

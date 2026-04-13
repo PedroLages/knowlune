@@ -150,6 +150,14 @@ function prunePairs(messages: ChatMessage[], maxTokens: number): ChatMessage[] {
 /** Monotonic counter to ensure unique prune-summary IDs across multiple prune operations */
 let pruneSummaryCounter = 0
 
+/**
+ * Reset the prune summary counter to 0.
+ * Call this in `beforeEach` in tests to prevent counter state leaking between test cases.
+ */
+export function resetPruneSummaryCounter(): void {
+  pruneSummaryCounter = 0
+}
+
 /** Create a system message summarizing what was pruned.
  *
  * @param prunedCount - Number of messages that were pruned

@@ -76,7 +76,12 @@ export function TutorModeChips({
         }
       }
 
+      // Guard: if all candidates were disabled the loop may have wrapped back to a disabled mode.
+      // In that case keep the current mode — don't fire onModeChange with a disabled key.
       const finalMode = MODE_ORDER[nextIndex]
+      const finalConfig = MODE_REGISTRY[finalMode]
+      if (finalConfig.requiresTranscript && !hasTranscript) return
+
       onModeChange(finalMode)
 
       // Focus the newly selected chip

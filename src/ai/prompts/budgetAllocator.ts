@@ -53,9 +53,19 @@ export function allocateTokenBudget(totalTokens: number, mode: TutorMode): Token
   const rawTranscript = overrides.transcript ?? DEFAULT_VARIABLE_SLOTS.transcript
   const rawResponse = overrides.response ?? DEFAULT_VARIABLE_SLOTS.response
 
-  // Guard: if total budget is smaller than fixed slots, clamp variable budget to 0
-  // to avoid negative values producing nonsensical (negative) slot sizes.
-  const variableBudget = Math.max(0, totalTokens - FIXED_TOTAL)
+  // When totalTokens < FIXED_TOTAL, scale down fixed slots proportionally so all
+  // slots still sum to exactly totalTokens. Variable budget is clamped to 0.
+  const fixedScale = totalTokens < FIXED_TOTAL ? totalTokens / FIXED_TOTAL : 1
+  const scaledBaseInstructions = Math.floor(FIXED_SLOTS.baseInstructions * fixedScale)
+  const scaledModeRules = Math.floor(FIXED_SLOTS.modeRules * fixedScale)
+  const scaledCourseContext = Math.floor(FIXED_SLOTS.courseContext * fixedScale)
+  // Give remainder to learnerProfile to ensure fixed slots sum exactly to min(totalTokens, FIXED_TOTAL)
+  const fixedUsed = scaledBaseInstructions + scaledModeRules + scaledCourseContext
+  const scaledLearnerProfile =
+    fixedScale < 1 ? totalTokens - fixedUsed : FIXED_SLOTS.learnerProfile
+
+  const fixedTotal = scaledBaseInstructions + scaledModeRules + scaledCourseContext + scaledLearnerProfile
+  const variableBudget = Math.max(0, totalTokens - fixedTotal)
   const rawVariableTotal = rawHistory + rawTranscript + rawResponse
 
   // Proportionally scale variable slots to fill the remaining budget exactly
@@ -66,10 +76,10 @@ export function allocateTokenBudget(totalTokens: number, mode: TutorMode): Token
   const scaledResponse = variableBudget - scaledHistory - scaledTranscript
 
   return {
-    baseInstructions: FIXED_SLOTS.baseInstructions,
-    modeRules: FIXED_SLOTS.modeRules,
-    courseContext: FIXED_SLOTS.courseContext,
-    learnerProfile: FIXED_SLOTS.learnerProfile,
+    baseInstructions: scaledBaseInstructions,
+    modeRules: scaledModeRules,
+    courseContext: scaledCourseContext,
+    learnerProfile: scaledLearnerProfile,
     history: scaledHistory,
     transcript: scaledTranscript,
     response: scaledResponse,
