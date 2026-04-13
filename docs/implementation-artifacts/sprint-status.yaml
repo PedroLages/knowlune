@@ -842,12 +842,12 @@ development_status:
   # Three new interactive tutoring modes + mode registry
   # Depends on: E57 (AI Tutoring), E72 (Learner Model)
   # ──────────────────────────────────────────────────
-  epic-73: in-progress
+  epic-73: done
   73-1-mode-architecture-registry-budget-allocator-and-mode-switching: done
   73-2-eli5-mode-simple-explanations-with-analogies: done
   73-3-quiz-me-mode-adaptive-questioning-with-score-tracking: done
-  73-4-debug-my-understanding-mode-gap-analysis-with-traffic-light-feedback: review
-  73-5-conversation-history-and-session-continuity: review
+  73-4-debug-my-understanding-mode-gap-analysis-with-traffic-light-feedback: done
+  73-5-conversation-history-and-session-continuity: done
   epic-73-retrospective: optional
 
   # ──────────────────────────────────────────────────
