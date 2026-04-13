@@ -8,7 +8,7 @@ Last Updated: 2026-04-13
 | Story | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|--------|--------|---------------|--------------|
 | E71-S01 | done | [#329](https://github.com/PedroLages/knowlune/pull/329) | 3 | 8 |
-| E71-S02 | queued | — | — | — |
+| E71-S02 | review | — | 1 | 0 |
 | E71-S03 | queued | — | — | — |
 
 ## Story Details
@@ -32,13 +32,16 @@ Last Updated: 2026-04-13
 ---
 
 ### E71-S02: ActionCard and SuggestedActionsPanel UI Components
-**Status:** queued
+**Status:** review
 #### Errors
-_(none yet)_
+_(none)_
 #### Review Findings
-_(none yet)_
+- R1: PASS — 3 MEDIUM (accessibility), 2 LOW, 1 NIT — no blockers
+  - MEDIUM: ARIA listitem nesting, aria-label uses ctaLabel, CTA touch target < 44px
+  - LOW: duplicate id (use useId()), time estimate label literal
+  - NIT: transition-all narrowing
 #### Fixes Applied
-_(none yet)_
+_(deferred to S03 integration — no blockers)_
 #### Notes
 - Responsive: sidebar desktop, 2-col tablet, horizontal scroll mobile
 - Design tokens only, variant="brand" CTAs
