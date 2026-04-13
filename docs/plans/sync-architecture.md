@@ -1,3 +1,13 @@
+> ⚠️ **SUPERSEDED** — This document (2026-03-28, E44-E49 numbering) has been superseded by the updated design.
+>
+> **Current reference:** [`docs/plans/2026-03-31-supabase-data-sync-design.md`](./2026-03-31-supabase-data-sync-design.md)
+>
+> The 2026-03-31 design covers the current schema (Dexie v51, 51 tables, 30+ syncable) including the Books/Reading ecosystem, AI Tutor system, and all features through E115. The epic numbering is E92-E97 (not E44-E49 as referenced here).
+>
+> This document is preserved for historical reference only.
+
+---
+
 # Knowlune Sync Architecture
 
 > **Purpose:** Implementation blueprint for cross-device data synchronization via Supabase.

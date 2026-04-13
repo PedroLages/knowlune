@@ -1130,72 +1130,85 @@ development_status:
 
   # ─── Supabase Data Sync (E92-E97) ───────────────────────────────
   # Source: epics-supabase-data-sync.md
-  # Design: docs/plans/2026-03-31-supabase-data-sync-design.md
-  # Architecture: docs/plans/sync-architecture.md
+  # Design: docs/plans/2026-03-31-supabase-data-sync-design.md (updated 2026-04-13)
+  # Architecture: docs/plans/sync-architecture.md (superseded by design doc)
   # Dependency chain: E92 → E93-E96 (parallel) → E97
   # Depends on: E19 (Auth complete), E89 (unified courses), E90 (AI model config), E91 (caption settings)
+  # Updated 2026-04-13: expanded 28→39 stories to cover Dexie v51 (51 tables, 30+ syncable)
+  # New coverage: Books/Reading (E83-E115), AI Tutor (E56-E72), study schedules (E50)
 
   # Epic 92: Sync Foundation — "Continue Where I Left Off"
-  # Sync engine core, P0 tables (progress, sessions), offline handling, auth integration
+  # Sync engine core, P0 tables (progress, sessions), table registry, offline handling, auth integration
   epic-92: backlog
   92-1-supabase-p0-migrations-and-extensions: backlog
-  92-2-dexie-schema-migration-and-sync-infrastructure: backlog
-  92-3-syncable-write-wrapper-and-field-mapping: backlog
-  92-4-sync-engine-upload-phase: backlog
-  92-5-sync-engine-download-and-apply-phase: backlog
-  92-6-sync-triggers-and-offline-handling: backlog
-  92-7-auth-lifecycle-integration-and-userid-backfill: backlog
-  92-8-wire-p0-stores-with-syncable-write: backlog
+  92-2-dexie-v52-migration-and-sync-infrastructure: backlog
+  92-3-sync-table-registry-and-field-mapping: backlog
+  92-4-syncable-write-wrapper: backlog
+  92-5-sync-engine-upload-phase: backlog
+  92-6-sync-engine-download-and-apply-phase: backlog
+  92-7-sync-triggers-and-offline-handling: backlog
+  92-8-auth-lifecycle-integration-and-userid-backfill: backlog
+  92-9-wire-p0-stores-with-syncable-write: backlog
   epic-92-retrospective: optional
 
   # Epic 93: Learning Content Sync — "My Notes and Cards Everywhere"
-  # Notes, bookmarks, flashcards, SRS replay, embeddings (pgvector)
+  # Notes, bookmarks, flashcards (FSRS), embeddings, book highlights, vocab, audio bookmarks, tutor data
   # Depends on: E92 (sync engine)
   epic-93: backlog
   93-1-p1-supabase-migrations: backlog
   93-2-wire-notes-and-bookmarks-with-sync: backlog
   93-3-note-conflict-preservation: backlog
-  93-4-flashcard-sync-with-review-log-replay: backlog
+  93-4-flashcard-sync-with-fsrs-review-log-replay: backlog
   93-5-embeddings-sync-with-pgvector: backlog
+  93-6-book-highlights-and-vocabulary-sync: backlog
+  93-7-audio-bookmarks-and-audio-clips-sync: backlog
+  93-8-chat-conversations-and-learner-models-sync: backlog
   epic-93-retrospective: optional
 
-  # Epic 94: Course Library Sync — "My Courses on Any Device"
-  # Course metadata, Supabase Storage buckets, file upload/download
+  # Epic 94: Course & Book Library Sync — "My Library on Any Device"
+  # Course metadata, book library, shelves, reviews, Storage buckets, chapter mappings, book files
   # Depends on: E92 (sync engine)
   epic-94: backlog
-  94-1-p2-supabase-migrations: backlog
-  94-2-course-metadata-sync-with-field-stripping: backlog
-  94-3-supabase-storage-bucket-setup-and-file-upload: backlog
-  94-4-file-download-on-new-device: backlog
+  94-1-p2-supabase-migrations-courses-videos-pdfs-authors-books: backlog
+  94-2-course-and-book-metadata-sync-with-field-stripping: backlog
+  94-3-book-reviews-shelves-and-reading-queue-sync: backlog
+  94-4-supabase-storage-bucket-setup-and-file-upload: backlog
+  94-5-file-download-on-new-device: backlog
+  94-6-chapter-mappings-sync: backlog
+  94-7-book-files-storage-integration: backlog
   epic-94-retrospective: optional
 
   # Epic 95: Settings & Security Sync — "My Preferences Follow Me"
-  # Settings sync, Supabase Vault API keys, entitlements, server streaks
+  # Settings sync (reader/audiobook/reading goals), Vault for all credentials, entitlements, streaks
   # Depends on: E92 (sync engine)
   epic-95: backlog
   95-1-full-settings-sync-expansion: backlog
-  95-2-api-keys-via-supabase-vault: backlog
+  95-2-api-keys-and-all-credentials-via-supabase-vault: backlog
   95-3-server-authoritative-entitlements: backlog
   95-4-server-side-streak-calculation: backlog
+  95-5-opds-and-abs-server-connection-sync: backlog
+  95-6-notification-preferences-sync: backlog
   epic-95-retrospective: optional
 
-  # Epic 96: Remaining Tables & Features Sync
-  # Learning paths, challenges, quizzes, notifications, career paths
+  # Epic 96: Remaining Tables & Features Sync — "Everything Everywhere"
+  # Learning paths, challenges, quizzes, study schedules, notifications, career paths, youtube chapters
   # Depends on: E92 (sync engine)
   epic-96: backlog
   96-1-p3-p4-supabase-migrations: backlog
   96-2-wire-p3-p4-stores-with-syncable-write: backlog
-  96-3-ai-usage-events-and-course-reminders-sync: backlog
+  96-3-ai-usage-events-course-reminders-and-notifications-sync: backlog
+  96-4-youtube-chapters-sync-evaluation: backlog
   epic-96-retrospective: optional
 
   # Epic 97: Sync UX Polish — "Sync That Just Works"
-  # Status indicator, settings panel, upload wizard, new device experience
+  # Status indicator, settings panel, upload wizard, new device experience, credential UX
   # Depends on: E92 (sync engine), benefits from E93-E96 being complete
   epic-97: backlog
   97-1-sync-status-indicator-in-header: backlog
   97-2-sync-settings-panel: backlog
   97-3-initial-upload-wizard: backlog
   97-4-new-device-download-experience: backlog
+  97-5-credential-sync-ux-for-external-services: backlog
   epic-97-retrospective: optional
 
   # ──────────────────────────────────────────────────
