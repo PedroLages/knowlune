@@ -83,8 +83,8 @@ export function chunkTranscript(cues: TranscriptCue[]): TranscriptChunk[] {
     const advance = Math.max(1, chunkCues.length - overlapCues)
     cueIndex += advance
 
-    // Prevent infinite loop if we can't advance
-    if (cueIndex <= cueIndex - advance) break
+    // Prevent infinite loop if advance is zero or negative
+    if (advance <= 0) break
   }
 
   return chunks

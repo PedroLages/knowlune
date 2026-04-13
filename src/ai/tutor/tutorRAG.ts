@@ -79,14 +79,15 @@ export async function retrieveTutorContext(
 
   try {
     // Generate query embedding with timeout
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('RAG timeout')), RAG_TIMEOUT)
-    )
+    let timeoutId: ReturnType<typeof setTimeout>
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('RAG timeout')), RAG_TIMEOUT)
+    })
 
     const [queryEmbedding] = (await Promise.race([
       generateEmbeddings([cleanQuery]),
       timeoutPromise,
-    ])) as [Float32Array]
+    ]).finally(() => clearTimeout(timeoutId))) as [Float32Array]
 
     // Fetch transcript embeddings from IndexedDB
     const transcriptEmbeddings = await db.transcriptEmbeddings

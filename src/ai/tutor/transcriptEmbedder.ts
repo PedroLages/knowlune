@@ -77,6 +77,9 @@ async function doEmbed(
     const chunks = chunkTranscript(cues)
     if (chunks.length === 0) return false
 
+    // Capture timestamp once so all embeddings share the same pipeline run time
+    const embeddedAt = new Date().toISOString()
+
     // Generate embeddings in batches of 8 to avoid overwhelming the worker
     const BATCH_SIZE = 8
     for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
@@ -95,7 +98,7 @@ async function doEmbed(
         endTime: chunk.endTime,
         embedding: Array.from(embeddings[idx]),
         chunkIndex: chunk.chunkIndex,
-        createdAt: new Date().toISOString(),
+        createdAt: embeddedAt,
       }))
 
       await db.transcriptEmbeddings.bulkPut(records)

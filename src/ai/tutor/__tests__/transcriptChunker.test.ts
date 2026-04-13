@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { chunkTranscript, type TranscriptChunk } from '../transcriptChunker'
+import { chunkTranscript } from '../transcriptChunker'
 import type { TranscriptCue } from '@/data/types'
 
 function makeCue(startTime: number, text: string, duration = 5): TranscriptCue {
