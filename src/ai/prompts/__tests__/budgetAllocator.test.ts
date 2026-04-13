@@ -71,6 +71,16 @@ describe('allocateTokenBudget', () => {
     }
   })
 
+  it('handles totalTokens smaller than fixed slots — variable slots are zero, not negative', () => {
+    // FIXED_TOTAL = 200 + 150 + 100 + 100 = 550
+    const alloc = allocateTokenBudget(100, 'socratic')
+    expect(alloc.history).toBeGreaterThanOrEqual(0)
+    expect(alloc.transcript).toBeGreaterThanOrEqual(0)
+    expect(alloc.response).toBeGreaterThanOrEqual(0)
+    // total field still reflects the requested budget
+    expect(alloc.total).toBe(100)
+  })
+
   it('proportional scaling works: doubling budget roughly doubles variable slots', () => {
     const small = allocateTokenBudget(2000, 'socratic')
     const large = allocateTokenBudget(4000, 'socratic')

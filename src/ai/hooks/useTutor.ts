@@ -301,8 +301,13 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
           .filter(m => m.role === 'user' || m.role === 'assistant')
           .slice(-MAX_CONTEXT_MESSAGES)
 
+        // Consume mode transition context — inject as an extra system message so
+        // the LLM acknowledges the mode switch (E73-S01).
+        const transitionContext = useTutorStore.getState().consumeTransitionContext()
+
         const llmMessages: LLMMessage[] = [
           { role: 'system', content: systemPrompt },
+          ...(transitionContext ? [{ role: 'system' as const, content: transitionContext }] : []),
           ...conversationMessages.map(m => ({
             role: m.role as 'user' | 'assistant',
             content: m.content,

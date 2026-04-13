@@ -116,12 +116,19 @@ function prunePairs(messages: ChatMessage[], maxTokens: number): ChatMessage[] {
   const first = messages[0]
   const rest = messages.slice(1)
 
-  // Group into pairs: [user, assistant]
+  // Group into role-based pairs: each user message + the assistant reply that follows it.
+  // This handles non-alternating sequences (system messages, consecutive same-role messages)
+  // by grouping all messages between user messages as one logical pair.
   const pairs: ChatMessage[][] = []
-  for (let i = 0; i < rest.length; i += 2) {
-    const pair = rest.slice(i, i + 2)
-    pairs.push(pair)
+  let current: ChatMessage[] = []
+  for (const msg of rest) {
+    if (msg.role === 'user' && current.length > 0) {
+      pairs.push(current)
+      current = []
+    }
+    current.push(msg)
   }
+  if (current.length > 0) pairs.push(current)
 
   const firstTokens = estimateTokens(first.content)
   let remaining = maxTokens - firstTokens
@@ -140,12 +147,20 @@ function prunePairs(messages: ChatMessage[], maxTokens: number): ChatMessage[] {
   return [first, makePruneSummary(prunedCount), ...kept.flat()]
 }
 
-/** Create a system message summarizing what was pruned */
-function makePruneSummary(prunedCount: number): ChatMessage {
+/** Monotonic counter to ensure unique prune-summary IDs across multiple prune operations */
+let pruneSummaryCounter = 0
+
+/** Create a system message summarizing what was pruned.
+ *
+ * @param prunedCount - Number of messages that were pruned
+ * @param timestamp - Optional deterministic timestamp (defaults to Date.now(); pass a fixed
+ *   value in tests to keep snapshots stable)
+ */
+export function makePruneSummary(prunedCount: number, timestamp?: number): ChatMessage {
   return {
-    id: 'prune-summary',
+    id: `prune-summary-${++pruneSummaryCounter}`,
     role: 'system',
     content: `[${prunedCount} earlier messages were summarized to fit the conversation window.]`,
-    timestamp: Date.now(),
+    timestamp: timestamp ?? Date.now(),
   }
 }

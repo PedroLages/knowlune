@@ -53,8 +53,9 @@ export function allocateTokenBudget(totalTokens: number, mode: TutorMode): Token
   const rawTranscript = overrides.transcript ?? DEFAULT_VARIABLE_SLOTS.transcript
   const rawResponse = overrides.response ?? DEFAULT_VARIABLE_SLOTS.response
 
-  // Available budget for variable slots after fixed allocations
-  const variableBudget = totalTokens - FIXED_TOTAL
+  // Guard: if total budget is smaller than fixed slots, clamp variable budget to 0
+  // to avoid negative values producing nonsensical (negative) slot sizes.
+  const variableBudget = Math.max(0, totalTokens - FIXED_TOTAL)
   const rawVariableTotal = rawHistory + rawTranscript + rawResponse
 
   // Proportionally scale variable slots to fill the remaining budget exactly

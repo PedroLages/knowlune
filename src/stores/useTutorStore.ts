@@ -200,11 +200,12 @@ export const useTutorStore = create<TutorState>((set, get) => ({
 
     const transitionContext = `The user switched from ${previousMode} to ${newMode}. Acknowledge briefly and begin operating in ${newMode} mode about the topic: ${lastTopic}.`
 
+    const MAX_MODE_HISTORY = 50
     set(state => ({
       mode: newMode,
       hintLevel: 0,
       stuckCount: 0,
-      modeHistory: [...state.modeHistory, previousMode],
+      modeHistory: [...state.modeHistory, previousMode].slice(-MAX_MODE_HISTORY),
       modeTransitionContext: transitionContext,
     }))
   },

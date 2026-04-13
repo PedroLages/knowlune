@@ -84,7 +84,7 @@ describe('pruneConversation', () => {
     it('includes prune summary when messages are removed', () => {
       const msgs = makeConversation(10)
       const result = pruneConversation(msgs, 50, 'quiz')
-      const summaries = result.filter(m => m.id === 'prune-summary')
+      const summaries = result.filter(m => m.id.startsWith('prune-summary-'))
       expect(summaries.length).toBe(1)
     })
 
