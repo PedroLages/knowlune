@@ -23,10 +23,7 @@ import { mapLLMError } from '@/ai/lib/llmErrorMapper'
 import type { LLMMessage } from '@/ai/llm/types'
 import type { TutorContext, TutorMode, TranscriptStatus } from '@/ai/tutor/types'
 import { processUserMessage } from '@/ai/tutor/hintLadder'
-import {
-  hasTranscriptEmbeddings,
-  lazyEmbedTranscript,
-} from '@/ai/tutor/transcriptEmbedder'
+import { hasTranscriptEmbeddings, lazyEmbedTranscript } from '@/ai/tutor/transcriptEmbedder'
 import { retrieveTutorContext, formatRAGContext } from '@/ai/tutor/tutorRAG'
 import type { ChatMessage } from '@/ai/rag/types'
 import { updateFromSession, serializeLearnerModelForPrompt } from '@/ai/tutor/sessionAnalyzer'
@@ -79,9 +76,9 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
   } = options
 
   const store = useTutorStore()
-  const setLessonContext = useTutorStore((s) => s.setLessonContext)
-  const loadConversation = useTutorStore((s) => s.loadConversation)
-  const loadLearnerModel = useTutorStore((s) => s.loadLearnerModel)
+  const setLessonContext = useTutorStore(s => s.setLessonContext)
+  const loadConversation = useTutorStore(s => s.loadConversation)
+  const loadLearnerModel = useTutorStore(s => s.loadLearnerModel)
   const abortRef = useRef<AbortController | null>(null)
 
   // Set lesson context for persistence and load existing conversation + learner model
@@ -141,8 +138,8 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
 
     // Convert ChatMessages to TutorMessages for the analyzer
     const tutorMessages: TutorMessage[] = state.messages
-      .filter((m) => m.role === 'user' || m.role === 'assistant')
-      .map((m) => ({
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(m => ({
         role: m.role as 'user' | 'assistant',
         content: m.content,
         timestamp: m.timestamp,
@@ -276,7 +273,7 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
           lessonPosition,
           videoPositionSeconds: position,
           // If RAG context is available, transcript excerpt becomes supplementary
-          transcriptExcerpt: ragContextStr ? undefined : (transcriptResult.excerpt || undefined),
+          transcriptExcerpt: ragContextStr ? undefined : transcriptResult.excerpt || undefined,
           transcriptStrategy: ragContextStr ? 'none' : transcriptResult.strategy,
           chapterTitle: transcriptResult.chapterTitle,
           timeRange: transcriptResult.timeRange,

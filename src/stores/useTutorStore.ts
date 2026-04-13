@@ -88,7 +88,10 @@ interface TutorState {
   /** Update learner model with additive merge (E72-S01) */
   updateLearnerModel: (courseId: string, updates: Partial<LearnerModel>) => Promise<void>
   /** Replace specific array fields with overwrite semantics — for UI-initiated edits (B2 fix) */
-  replaceLearnerModelFields: (courseId: string, fields: Partial<Pick<LearnerModel, 'strengths' | 'misconceptions' | 'topicsExplored'>>) => Promise<void>
+  replaceLearnerModelFields: (
+    courseId: string,
+    fields: Partial<Pick<LearnerModel, 'strengths' | 'misconceptions' | 'topicsExplored'>>
+  ) => Promise<void>
   /** Clear learner model for a course (E72-S01) */
   clearLearnerModel: (courseId: string) => Promise<void>
 }
@@ -193,9 +196,7 @@ export const useTutorStore = create<TutorState>((set, get) => ({
 
     // Extract last topic from the most recent user message
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
-    const lastTopic = lastUserMsg
-      ? lastUserMsg.content.slice(0, 100)
-      : 'the current topic'
+    const lastTopic = lastUserMsg ? lastUserMsg.content.slice(0, 100) : 'the current topic'
 
     const transitionContext = `The user switched from ${previousMode} to ${newMode}. Acknowledge briefly and begin operating in ${newMode} mode about the topic: ${lastTopic}.`
 
@@ -350,7 +351,10 @@ export const useTutorStore = create<TutorState>((set, get) => ({
     }
   },
 
-  replaceLearnerModelFields: async (courseId: string, fields: Partial<Pick<LearnerModel, 'strengths' | 'misconceptions' | 'topicsExplored'>>) => {
+  replaceLearnerModelFields: async (
+    courseId: string,
+    fields: Partial<Pick<LearnerModel, 'strengths' | 'misconceptions' | 'topicsExplored'>>
+  ) => {
     try {
       const updated = await replaceLearnerModelFieldsService(courseId, fields)
       if (updated) {

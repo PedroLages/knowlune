@@ -24,8 +24,12 @@ function makeMessage(
 function makeConversation(pairs: number): ChatMessage[] {
   const msgs: ChatMessage[] = [makeMessage('system', 'System prompt', 0)]
   for (let i = 0; i < pairs; i++) {
-    msgs.push(makeMessage('user', `Question ${i + 1} with some content to increase token count`, i * 2 + 1))
-    msgs.push(makeMessage('assistant', `Answer ${i + 1} with detailed explanation and examples`, i * 2 + 2))
+    msgs.push(
+      makeMessage('user', `Question ${i + 1} with some content to increase token count`, i * 2 + 1)
+    )
+    msgs.push(
+      makeMessage('assistant', `Answer ${i + 1} with detailed explanation and examples`, i * 2 + 2)
+    )
   }
   return msgs
 }

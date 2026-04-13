@@ -8,7 +8,12 @@
 import { useCallback, useRef } from 'react'
 import { HelpCircle, BookOpen, Lightbulb, ClipboardCheck, Bug } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/app/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/app/components/ui/tooltip'
 import type { TutorMode } from '@/ai/tutor/types'
 import { MODE_REGISTRY, getModeKeys } from '@/ai/prompts/modeRegistry'
 import type { LucideIcon } from 'lucide-react'
@@ -83,55 +88,53 @@ export function TutorModeChips({
 
   return (
     <TooltipProvider delayDuration={300}>
-    <div
-      ref={containerRef}
-      className="flex items-center gap-1.5 overflow-x-auto max-sm:pb-1"
-      role="radiogroup"
-      aria-label="Tutoring mode"
-      onKeyDown={handleKeyDown}
-    >
-      {MODE_ORDER.map((modeKey) => {
-        const config = MODE_REGISTRY[modeKey]
-        const Icon = MODE_ICONS[modeKey]
-        const isSelected = mode === modeKey
-        const isTranscriptDisabled = config.requiresTranscript && !hasTranscript
-        const isChipDisabled = disabled || isTranscriptDisabled
+      <div
+        ref={containerRef}
+        className="flex items-center gap-1.5 overflow-x-auto max-sm:pb-1"
+        role="radiogroup"
+        aria-label="Tutoring mode"
+        onKeyDown={handleKeyDown}
+      >
+        {MODE_ORDER.map(modeKey => {
+          const config = MODE_REGISTRY[modeKey]
+          const Icon = MODE_ICONS[modeKey]
+          const isSelected = mode === modeKey
+          const isTranscriptDisabled = config.requiresTranscript && !hasTranscript
+          const isChipDisabled = disabled || isTranscriptDisabled
 
-        const tooltipText = isTranscriptDisabled
-          ? 'Requires transcript'
-          : config.description
+          const tooltipText = isTranscriptDisabled ? 'Requires transcript' : config.description
 
-        return (
-          <Tooltip key={modeKey}>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={isSelected}
-                aria-disabled={isChipDisabled || undefined}
-                disabled={isChipDisabled}
-                tabIndex={isSelected ? 0 : -1}
-                onClick={() => onModeChange(modeKey)}
-                className={cn(
-                  'inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full border transition-colors whitespace-nowrap',
-                  'min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-1',
-                  isSelected
-                    ? 'border-brand bg-brand text-brand-foreground'
-                    : 'border-border bg-transparent text-muted-foreground hover:border-brand/50 hover:text-foreground',
-                  isChipDisabled && 'opacity-50 cursor-not-allowed'
-                )}
-              >
-                <Icon className="size-3.5" aria-hidden="true" />
-                {config.label}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>{tooltipText}</p>
-            </TooltipContent>
-          </Tooltip>
-        )
-      })}
-    </div>
+          return (
+            <Tooltip key={modeKey}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  aria-disabled={isChipDisabled || undefined}
+                  disabled={isChipDisabled}
+                  tabIndex={isSelected ? 0 : -1}
+                  onClick={() => onModeChange(modeKey)}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full border transition-colors whitespace-nowrap',
+                    'min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-1',
+                    isSelected
+                      ? 'border-brand bg-brand text-brand-foreground'
+                      : 'border-border bg-transparent text-muted-foreground hover:border-brand/50 hover:text-foreground',
+                    isChipDisabled && 'opacity-50 cursor-not-allowed'
+                  )}
+                >
+                  <Icon className="size-3.5" aria-hidden="true" />
+                  {config.label}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>{tooltipText}</p>
+              </TooltipContent>
+            </Tooltip>
+          )
+        })}
+      </div>
     </TooltipProvider>
   )
 }

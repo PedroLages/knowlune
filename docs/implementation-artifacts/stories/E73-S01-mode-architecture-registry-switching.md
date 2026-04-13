@@ -1,6 +1,6 @@
 ---
 story_id: E73-S01
-story_name: "Mode Architecture — Registry, Budget Allocator & Mode Switching"
+story_name: 'Mode Architecture — Registry, Budget Allocator & Mode Switching'
 status: ready-for-dev
 started:
 completed:
