@@ -468,6 +468,278 @@ describe('calculateTopicScore with fsrsRetention', () => {
   })
 })
 
+// ── calculateAggregateRetention — additional coverage (E62-S03) ──
+
+describe('calculateAggregateRetention — extended', () => {
+  const FIXED_NOW = new Date('2026-04-14T12:00:00Z')
+
+  it('returns correct retention for 5 cards with known FSRS stabilities at 10 days elapsed', () => {
+    const tenDaysAgo = new Date('2026-04-04T12:00:00Z').toISOString()
+    const cards = [5, 10, 20, 40, 80].map(s => ({
+      last_review: tenDaysAgo,
+      stability: s,
+    }))
+    const result = calculateAggregateRetention(cards, FIXED_NOW)
+    expect(result.retention).not.toBeNull()
+    // Each card: predictRetention at 10 days with given stability
+    // Lower stability cards decay faster; average should be well-defined
+    expect(result.retention!).toBeGreaterThan(0)
+    expect(result.retention!).toBeLessThanOrEqual(100)
+    expect(result.avgStability).toBeCloseTo(31, 0) // (5+10+20+40+80)/5 = 31
+  })
+
+  it('filters out SM-2 cards (interval + reviewedAt, no stability) — returns null', () => {
+    // SM-2 path is not implemented; cards with stability=0 are filtered out
+    const cards = [
+      { interval: 5, reviewedAt: '2026-04-09T12:00:00Z', stability: 0 },
+      { interval: 10, reviewedAt: '2026-04-04T12:00:00Z', stability: 0 },
+    ]
+    const result = calculateAggregateRetention(cards, FIXED_NOW)
+    expect(result.retention).toBeNull()
+    expect(result.avgStability).toBeNull()
+  })
+
+  it('includes only FSRS cards when mixed with SM-2 cards', () => {
+    const cards = [
+      // FSRS card — should be included
+      { last_review: '2026-04-14T12:00:00Z', stability: 20 },
+      // SM-2 card (no stability) — should be filtered
+      { interval: 5, reviewedAt: '2026-04-09T12:00:00Z', stability: 0 },
+    ]
+    const result = calculateAggregateRetention(cards, FIXED_NOW)
+    expect(result.retention).toBe(100) // reviewed just now
+    expect(result.avgStability).toBe(20)
+  })
+
+  it('uses current date when now parameter is omitted', () => {
+    // Card reviewed very recently with high stability → retention near 100
+    const justNow = new Date(Date.now() - 1000).toISOString()
+    const cards = [{ last_review: justNow, stability: 50 }]
+    const result = calculateAggregateRetention(cards)
+    expect(result.retention).toBe(100)
+  })
+
+  it('returns lower retention for cards reviewed long ago', () => {
+    const longAgo = new Date('2025-01-01T12:00:00Z').toISOString() // ~469 days ago
+    const cards = [{ last_review: longAgo, stability: 10 }]
+    const result = calculateAggregateRetention(cards, FIXED_NOW)
+    expect(result.retention).not.toBeNull()
+    // With stability=10 and ~469 days elapsed, retention should be significantly decayed
+    expect(result.retention!).toBeLessThan(50)
+  })
+})
+
+// ── calculateDecayDate — additional coverage (E62-S03) ───────────
+
+describe('calculateDecayDate — extended', () => {
+  const FIXED_NOW = new Date('2026-04-14T12:00:00Z')
+
+  it('returns ~39 days for stability=10 (AC from story)', () => {
+    const result = calculateDecayDate(10, FIXED_NOW)
+    expect(result).not.toBeNull()
+    const decayDate = new Date(result!)
+    const daysDiff = (decayDate.getTime() - FIXED_NOW.getTime()) / (1000 * 60 * 60 * 24)
+    // 9 * 10 * (1/0.7 - 1) = 90 * 0.4286 ≈ 38.57
+    expect(daysDiff).toBeCloseTo(38.57, 0)
+  })
+
+  it('returns ~386 days for stability=100', () => {
+    const result = calculateDecayDate(100, FIXED_NOW)
+    expect(result).not.toBeNull()
+    const decayDate = new Date(result!)
+    const daysDiff = (decayDate.getTime() - FIXED_NOW.getTime()) / (1000 * 60 * 60 * 24)
+    // 9 * 100 * (1/0.7 - 1) = 900 * 0.4286 ≈ 385.7
+    expect(daysDiff).toBeCloseTo(385.7, 0)
+  })
+
+  it('scales linearly with stability', () => {
+    const d10 = new Date(calculateDecayDate(10, FIXED_NOW)!).getTime()
+    const d20 = new Date(calculateDecayDate(20, FIXED_NOW)!).getTime()
+    const d40 = new Date(calculateDecayDate(40, FIXED_NOW)!).getTime()
+    // d20 - FIXED_NOW should be ~2x (d10 - FIXED_NOW)
+    const base = FIXED_NOW.getTime()
+    expect((d20 - base) / (d10 - base)).toBeCloseTo(2, 1)
+    expect((d40 - base) / (d10 - base)).toBeCloseTo(4, 1)
+  })
+
+  it('uses current date when now parameter is omitted', () => {
+    const result = calculateDecayDate(10)
+    expect(result).not.toBeNull()
+    const decayDate = new Date(result!)
+    expect(decayDate.getTime()).toBeGreaterThan(Date.now())
+  })
+})
+
+// ── calculateTopicScore — regression & weight redistribution (E62-S03) ──
+
+describe('calculateTopicScore — fsrsRetention weight redistribution', () => {
+  it('redistributes when fsrsRetention present but quiz is null', () => {
+    const result = calculateTopicScore({
+      quizScore: null,
+      flashcardRetention: null,
+      completionPercent: 80,
+      daysSinceLastEngagement: 5,
+      fsrsRetention: 60,
+    })
+    // 3 signals: flashcard(0.3), completion(0.2), recency(0.2) → total 0.7
+    expect(result.signalsUsed).toBe(3)
+    expect(result.effectiveWeights.quiz).toBe(0)
+    expect(result.effectiveWeights.flashcard).toBeCloseTo(0.3 / 0.7, 3)
+    expect(result.effectiveWeights.completion).toBeCloseTo(0.2 / 0.7, 3)
+    expect(result.effectiveWeights.recency).toBeCloseTo(0.2 / 0.7, 3)
+    expect(result.confidence).toBe('medium')
+  })
+
+  it('regression: null fsrsRetention + null flashcard gives identical weights to pre-FSRS', () => {
+    const preFsrs = calculateTopicScore({
+      quizScore: 75,
+      flashcardRetention: null,
+      completionPercent: 60,
+      daysSinceLastEngagement: 14,
+    })
+    const postFsrs = calculateTopicScore({
+      quizScore: 75,
+      flashcardRetention: null,
+      completionPercent: 60,
+      daysSinceLastEngagement: 14,
+      fsrsRetention: null,
+    })
+    expect(postFsrs.score).toBe(preFsrs.score)
+    expect(postFsrs.effectiveWeights).toEqual(preFsrs.effectiveWeights)
+    expect(postFsrs.signalsUsed).toBe(preFsrs.signalsUsed)
+    expect(postFsrs.tier).toBe(preFsrs.tier)
+    expect(postFsrs.confidence).toBe(preFsrs.confidence)
+  })
+
+  it('regression snapshot: 4 signals with known values produce exact score', () => {
+    // Pre-computed: quiz=80, flashcard=70, completion=100, recency=100 (days=3)
+    // Score: 80*0.3 + 70*0.3 + 100*0.2 + 100*0.2 = 24+21+20+20 = 85
+    const result = calculateTopicScore({
+      quizScore: 80,
+      flashcardRetention: 70,
+      completionPercent: 100,
+      daysSinceLastEngagement: 3,
+    })
+    expect(result.score).toBe(85)
+    expect(result.tier).toBe('strong')
+    expect(result.confidence).toBe('high')
+    expect(result.signalsUsed).toBe(4)
+  })
+
+  it('regression snapshot: 2 signals produce exact score', () => {
+    // completion=50, recency at 365 days=10, each at 0.5 weight
+    // Score: 50*0.5 + 10*0.5 = 25+5 = 30
+    const result = calculateTopicScore({
+      quizScore: null,
+      flashcardRetention: null,
+      completionPercent: 50,
+      daysSinceLastEngagement: 365,
+    })
+    expect(result.score).toBe(30)
+    expect(result.tier).toBe('weak')
+  })
+
+  it('fsrsRetention=60 with all other signals produces different score than null path', () => {
+    const withFsrs = calculateTopicScore({
+      quizScore: 80,
+      flashcardRetention: null,
+      completionPercent: 100,
+      daysSinceLastEngagement: 3,
+      fsrsRetention: 60,
+    })
+    const withoutFsrs = calculateTopicScore({
+      quizScore: 80,
+      flashcardRetention: null,
+      completionPercent: 100,
+      daysSinceLastEngagement: 3,
+      fsrsRetention: null,
+    })
+    // With FSRS: 4 signals (score=82), Without: 3 signals (different weights)
+    expect(withFsrs.score).not.toBe(withoutFsrs.score)
+    expect(withFsrs.signalsUsed).toBe(4)
+    expect(withoutFsrs.signalsUsed).toBe(3)
+  })
+})
+
+// ── getRetentionColor — additional coverage (E62-S03) ────────────
+
+describe('getRetentionColor — extended (inline replica)', () => {
+  // Using inline replica from TopicTreemapRetention.test.ts to avoid DOM deps
+  const FIXED_COLORS = {
+    success: [58, 117, 83] as [number, number, number],
+    warning: [134, 98, 36] as [number, number, number],
+    destructive: [196, 72, 80] as [number, number, number],
+  }
+
+  function lerpRgb(
+    a: [number, number, number],
+    b: [number, number, number],
+    t: number
+  ): [number, number, number] {
+    return [
+      Math.round(a[0] + (b[0] - a[0]) * t),
+      Math.round(a[1] + (b[1] - a[1]) * t),
+      Math.round(a[2] + (b[2] - a[2]) * t),
+    ]
+  }
+
+  function getRetentionColor(retention: number | null): string | 'tier-fallback' {
+    if (retention === null) return 'tier-fallback'
+    const colors = FIXED_COLORS
+    let rgb: [number, number, number]
+    if (retention >= 85) {
+      rgb = colors.success
+    } else if (retention <= 20) {
+      rgb = colors.destructive
+    } else if (retention >= 50) {
+      const t = (retention - 50) / 35
+      rgb = lerpRgb(colors.warning, colors.success, t)
+    } else {
+      const t = (retention - 20) / 30
+      rgb = lerpRgb(colors.destructive, colors.warning, t)
+    }
+    return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`
+  }
+
+  it('returns destructive color for retention 0', () => {
+    const color = getRetentionColor(0)
+    expect(color).toBe(`rgb(${FIXED_COLORS.destructive.join(', ')})`)
+  })
+
+  it('returns success color for retention 100', () => {
+    const color = getRetentionColor(100)
+    expect(color).toBe(`rgb(${FIXED_COLORS.success.join(', ')})`)
+  })
+
+  it('returns warning color at exactly 50', () => {
+    const color = getRetentionColor(50)
+    // t = (50-50)/35 = 0 → pure warning
+    expect(color).toBe(`rgb(${FIXED_COLORS.warning.join(', ')})`)
+  })
+
+  it('color transitions monotonically from red→yellow→green', () => {
+    // Extract green channel at several points — should increase monotonically
+    function greenChannel(retention: number): number {
+      const c = getRetentionColor(retention)
+      if (c === 'tier-fallback') return -1
+      const match = c.match(/rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/)
+      return match ? parseInt(match[2]) : -1
+    }
+
+    const g0 = greenChannel(0)
+    const g25 = greenChannel(25)
+    const g50 = greenChannel(50)
+    const g75 = greenChannel(75)
+    const g100 = greenChannel(100)
+
+    // Green channel should increase (or stay same) as retention increases
+    expect(g25).toBeGreaterThanOrEqual(g0)
+    expect(g50).toBeGreaterThanOrEqual(g25)
+    expect(g75).toBeGreaterThanOrEqual(g50)
+    expect(g100).toBeGreaterThanOrEqual(g75)
+  })
+})
+
 // ── BASE_WEIGHTS ──────────────────────────────────────────────────
 
 describe('BASE_WEIGHTS', () => {
