@@ -843,7 +843,7 @@ development_status:
   # Depends on: E57 (AI Tutoring), E72 (Learner Model)
   # ──────────────────────────────────────────────────
   epic-73: backlog
-  73-1-mode-architecture-registry-budget-allocator-and-mode-switching: review
+  73-1-mode-architecture-registry-budget-allocator-and-mode-switching: done
   73-2-eli5-mode-simple-explanations-with-analogies: backlog
   73-3-quiz-me-mode-adaptive-questioning-with-score-tracking: backlog
   73-4-debug-my-understanding-mode-gap-analysis-with-traffic-light-feedback: backlog
