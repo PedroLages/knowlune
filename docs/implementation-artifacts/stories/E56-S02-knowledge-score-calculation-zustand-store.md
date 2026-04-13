@@ -1,7 +1,7 @@
 ---
 story_id: E56-S02
 story_name: "Knowledge Score Calculation + Zustand Store"
-status: draft
+status: ready-for-dev
 started:
 completed:
 reviewed: false
@@ -130,6 +130,7 @@ No UI in this story. The score calculation module follows `src/lib/qualityScore.
 - `src/lib/reportStats.ts` — per-category aggregation pattern
 - `src/stores/useContentProgressStore.ts` — completion data
 - `src/stores/useFlashcardStore.ts` — flashcard data
+- `src/data/db.ts` — Dexie database (current schema version: **48**)
 
 **Edge case review findings (HIGH severity — must address):**
 - **EC-HIGH: All signals null → division by zero.** If all 4 signals are unavailable, `availableWeights` is empty and normalization divides by zero. Guard: `if (availableWeights.length === 0) return { score: 0, tier: 'weak', confidence: 'none' }`.
@@ -137,7 +138,7 @@ No UI in this story. The score calculation module follows `src/lib/qualityScore.
 - **EC-HIGH: Stale data after quiz completion.** `computeScores()` only runs on mount, not on quiz/flashcard data changes. Subscribe to data changes via `useLiveQuery` or add invalidation callback. Add `lastComputedAt` check with 30s cache to avoid over-computation.
 - **EC-HIGH: predictRetention with null reviewedAt.** Flashcard with no `reviewedAt` produces NaN. Guard: `if (!flashcard.reviewedAt) return 0` for unreviewed flashcard retention.
 - **EC-HIGH: Quiz topic mismatch.** `Question.topic` may not match canonicalized topic names. Canonicalize quiz topics through same `normalizeTopic()` + `CANONICAL_MAP` pipeline before matching.
-- `src/data/db.ts` — Dexie tables (quizAttempts, studySessions)
+**NOTE:** This story depends on E56-S01's topic resolution. The `lessonIds` field on `ResolvedTopic` may not exist if the data source blocker in S01 results in a tags/quiz-topic-only approach. Adjust `computeScores()` aggregation accordingly.
 
 **Architecture decisions (from brainstorming):**
 - Dynamic weight redistribution over fixed weights — handles sparse data, every topic can reach 100

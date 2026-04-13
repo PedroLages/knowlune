@@ -1,7 +1,7 @@
 ---
 story_id: E56-S01
 story_name: "Topic Resolution Service"
-status: draft
+status: ready-for-dev
 started:
 completed:
 reviewed: false
@@ -20,29 +20,36 @@ So that the Knowledge Map has a clean, meaningful set of ~40-60 topics to score 
 
 ## Acceptance Criteria
 
-**Given** courses exist in useCourseStore with lessons containing keyTopics arrays
-**When** resolveTopics(courses) is called
-**Then** it returns ResolvedTopic[] with each topic having name, canonicalName, category, lessonIds[], courseIds[], and questionTopics[]
+**BLOCKER: Data Source Migration Required**
+> The original design assumes `Course.modules[].lessons[].keyTopics[]` from the deprecated `Course` type.
+> `useCourseStore` is deprecated (courses table dropped in Dexie v30, E89-S01). `src/data/courses/*.ts` files no longer exist.
+> The active data model uses `ImportedCourse` + `ImportedVideo` (flat tables, no `keyTopics` field).
+> Available topic sources: `Question.topic` (optional, from quiz questions), `ImportedCourse.tags[]`, `ImportedCourse.category`.
+> **Decision needed:** Either (a) add a `keyTopics` field to `ImportedVideo` and populate via AI/manual entry, or (b) redesign topic resolution to use available signals (tags, quiz topics, AI extraction).
 
-**Given** lesson keyTopics contain noise entries like "October 2023", "weekly session", "course overview", "getting started", "key takeaways"
+**Given** courses exist as ImportedCourse records in Dexie with associated quiz questions containing optional `topic` fields
+**When** resolveTopics() is called
+**Then** it returns ResolvedTopic[] with each topic having name, canonicalName, category, courseIds[], and questionTopics[]
+
+**Given** topic sources contain noise entries like "October 2023", "weekly session", "course overview", "getting started", "key takeaways"
 **When** topics are resolved
 **Then** all noise entries matching NOISE_PATTERNS regexes are filtered out and do not appear in the output
 
-**Given** lesson keyTopics contain synonyms like "lie detection" and "deception detection", or "nonverbal communication" and "body language"
+**Given** topic sources contain synonyms like "lie detection" and "deception detection", or "nonverbal communication" and "body language"
 **When** topics are resolved
-**Then** synonyms are merged into a single canonical topic via CANONICAL_MAP, with lessonIds and courseIds from all variants combined
+**Then** synonyms are merged into a single canonical topic via CANONICAL_MAP, with courseIds from all variants combined
 
-**Given** a topic like "body language" appears in lessons across two courses with different Course.category values
+**Given** a topic appears in courses with different ImportedCourse.category values
 **When** topics are resolved
-**Then** the topic is assigned the category from the course with more matching lessons
+**Then** the topic is assigned the category from the course with more matching topic sources
 
-**Given** raw keyTopics with mixed casing, extra whitespace, and hyphens ("Body  Language", "body-language", "BODY LANGUAGE")
+**Given** raw topics with mixed casing, extra whitespace, and hyphens ("Body  Language", "body-language", "BODY LANGUAGE")
 **When** normalization runs
 **Then** all variants resolve to the same canonical name with a title-cased display name
 
-**Given** the full set of 8 courses with ~170 lessons in the Knowlune dataset
+**Given** the current set of imported courses in Dexie
 **When** resolveTopics() processes all courses
-**Then** the output contains between 30 and 80 unique topics (after noise filtering and deduplication)
+**Then** the output contains a reasonable set of unique topics (after noise filtering and deduplication)
 
 **Given** a topic "deception detection" exists and quiz questions have Question.topic matching "deception detection" or its synonyms
 **When** topics are resolved
@@ -51,19 +58,20 @@ So that the Knowledge Map has a clean, meaningful set of ~40-60 topics to score 
 ## Tasks / Subtasks
 
 - [ ] Task 1: Create `src/lib/topicResolver.ts` with types and constants (AC: 1)
-  - [ ] 1.1 Define `ResolvedTopic` interface (name, canonicalName, category, lessonIds[], courseIds[], questionTopics[])
+  - [ ] 1.1 Define `ResolvedTopic` interface (name, canonicalName, category, courseIds[], questionTopics[])
   - [ ] 1.2 Define `NOISE_PATTERNS` regex array (dates, meta-topics, session patterns)
   - [ ] 1.3 Define `CANONICAL_MAP` record for known synonyms
+  - [ ] 1.4 **Resolve data source blocker** — determine topic extraction strategy given ImportedCourse (no keyTopics)
 - [ ] Task 2: Implement normalization pipeline (AC: 5)
   - [ ] 2.1 `normalizeTopic()`: toLowerCase, trim, replace hyphens/underscores with spaces, collapse whitespace
   - [ ] 2.2 `toTitleCase()`: convert canonical name to display name
 - [ ] Task 3: Implement noise filter (AC: 2)
   - [ ] 3.1 `isNoiseTopic()`: test normalized topic against all NOISE_PATTERNS
 - [ ] Task 4: Implement `resolveTopics()` main function (AC: 1, 3, 4, 6)
-  - [ ] 4.1 Iterate Course[].modules[].lessons[].keyTopics[]
+  - [ ] 4.1 Iterate topic sources: ImportedCourse.tags[], Question.topic, ImportedCourse.category
   - [ ] 4.2 Normalize and filter noise
   - [ ] 4.3 Canonicalize via CANONICAL_MAP (passthrough if no synonym)
-  - [ ] 4.4 Deduplicate: group by canonical name, merge lessonIds/courseIds
+  - [ ] 4.4 Deduplicate: group by canonical name, merge courseIds
   - [ ] 4.5 Assign category: use course with more lessons for cross-category topics
   - [ ] 4.6 Generate display name via title-case
 - [ ] Task 5: Implement Question.topic mapping (AC: 7)
@@ -88,8 +96,9 @@ No UI in this story. This is a pure function module following the `src/lib/quali
 
 **Key files to reference:**
 - `src/lib/qualityScore.ts` — pattern reference (WEIGHTS object, factor functions, composite)
-- `src/data/types.ts` — Course, Module, Lesson types
-- `src/data/courses/*.ts` — actual course data for validation
+- `src/data/types.ts` — ImportedCourse, ImportedVideo types (NOTE: deprecated Course type has keyTopics but data source removed)
+- `src/types/quiz.ts` — Question schema with optional `topic` field
+- `src/data/db.ts` — Dexie database (importedCourses, quizzes tables). Current schema version: **48**
 
 **Architecture decisions (from brainstorming):**
 - Deterministic canonical map over fuzzy matching — debuggable, no false positives
@@ -99,8 +108,8 @@ No UI in this story. This is a pure function module following the `src/lib/quali
 ## Testing Notes
 
 - Unit tests only (no E2E needed — no UI)
-- Test with actual course data files to validate topic count range
-- Edge cases: empty keyTopics[], courses with no lessons, duplicate topics across courses
+- Test with seeded ImportedCourse + Quiz data to validate topic extraction
+- Edge cases: empty tags[], courses with no quizzes, duplicate topics across courses, Question.topic undefined
 
 ## Pre-Review Checklist
 

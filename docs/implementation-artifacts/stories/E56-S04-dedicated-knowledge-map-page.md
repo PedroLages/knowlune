@@ -1,7 +1,7 @@
 ---
 story_id: E56-S04
 story_name: "Dedicated Knowledge Map Page"
-status: draft
+status: ready-for-dev
 started:
 completed:
 reviewed: false

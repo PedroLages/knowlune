@@ -1,7 +1,7 @@
 ---
 story_id: E56-S03
 story_name: "Knowledge Map Overview Widget"
-status: draft
+status: ready-for-dev
 started:
 completed:
 reviewed: false
@@ -21,8 +21,8 @@ So that I can quickly understand my overall knowledge health and know what needs
 ## Acceptance Criteria
 
 **Given** the Overview page renders with dashboard sections
-**When** 'knowledge-map' is registered as a DashboardSectionId
-**Then** it appears in the section list with label "Knowledge Map", positioned after 'skill-proficiency' in DEFAULT_ORDER
+**When** 'knowledge-map' is registered as a DashboardSectionId in `src/lib/dashboardOrder.ts`
+**Then** it appears in the section list with label "Knowledge Map", positioned after 'skill-proficiency' and before 'insight-action' in DEFAULT_ORDER (current order has 10 sections)
 
 **Given** knowledge scores have been computed for topics across 5 categories
 **When** the KnowledgeMapWidget renders
