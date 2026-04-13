@@ -821,7 +821,7 @@ development_status:
   epic-71: in-progress
   71-1-action-suggestion-data-layer: review
   71-2-actioncard-and-suggestedactionspanel-ui-components: review
-  71-3-knowledge-map-integration-and-tests: backlog
+  71-3-knowledge-map-integration-and-tests: review
   epic-71-retrospective: optional
 
   # ──────────────────────────────────────────────────

@@ -12,6 +12,7 @@ import type { ScoredTopic } from '@/stores/useKnowledgeMapStore'
 import { TopicTreemap } from '@/app/components/knowledge/TopicTreemap'
 import type { TreemapDataItem } from '@/app/components/knowledge/TopicTreemap'
 import { FocusAreasPanel } from '@/app/components/knowledge/FocusAreasPanel'
+import { SuggestedActionsPanel } from '@/app/components/knowledge/SuggestedActionsPanel'
 import { TopicDetailPopover } from '@/app/components/knowledge/TopicDetailPopover'
 import { Badge } from '@/app/components/ui/badge'
 import { Card } from '@/app/components/ui/card'
@@ -31,7 +32,8 @@ import { Brain } from 'lucide-react'
 const ALL_CATEGORIES = 'All Categories'
 
 export function KnowledgeMap() {
-  const { topics, categories, focusAreas, isLoading, error, computeScores } = useKnowledgeMapStore()
+  const { topics, categories, focusAreas, suggestions, isLoading, error, computeScores } =
+    useKnowledgeMapStore()
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES)
   const [popoverTopic, setPopoverTopic] = useState<string | null>(null)
   const [clickPos, setClickPos] = useState<{ x: number; y: number } | null>(null)
@@ -142,7 +144,10 @@ export function KnowledgeMap() {
         ))}
       </div>
 
-      {/* Main content: treemap + focus areas */}
+      {/* Suggested Actions — mobile: inline above topic list (desktop version in sidebar below) */}
+      {isMobile && <SuggestedActionsPanel suggestions={suggestions} />}
+
+      {/* Main content: treemap + sidebars */}
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Treemap / Mobile list */}
         <div className="flex-1 min-w-0">
@@ -179,8 +184,12 @@ export function KnowledgeMap() {
           )}
         </div>
 
-        {/* Focus Areas sidebar */}
-        <div className="lg:w-80 shrink-0">
+        {/* Right sidebar column — desktop only; Focus Areas rendered once for all viewports */}
+        <div className="lg:w-80 shrink-0 flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
+          {/* Suggested Actions — desktop sidebar only (mobile version rendered above) */}
+          {!isMobile && <SuggestedActionsPanel suggestions={suggestions} />}
+
+          {/* Focus Areas — single instance, shown on all viewports */}
           <Card className="p-4">
             <h2 className="text-base font-semibold mb-1">Focus Areas</h2>
             <p className="text-xs text-muted-foreground mb-3">
