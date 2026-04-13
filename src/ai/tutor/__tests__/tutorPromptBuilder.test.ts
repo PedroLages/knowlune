@@ -152,6 +152,8 @@ describe('buildTutorSystemPrompt', () => {
         makeContext(),
         'socratic',
         2048,
+        0,
+        '',
         'Intermediate learner, prefers examples over theory.',
       )
 
@@ -175,6 +177,8 @@ describe('buildTutorSystemPrompt', () => {
         ctx,
         'socratic',
         2048,
+        0,
+        '',
         'Advanced learner.',
       )
 

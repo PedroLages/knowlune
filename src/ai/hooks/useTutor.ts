@@ -29,6 +29,8 @@ import {
 } from '@/ai/tutor/transcriptEmbedder'
 import { retrieveTutorContext, formatRAGContext } from '@/ai/tutor/tutorRAG'
 import type { ChatMessage } from '@/ai/rag/types'
+import { updateFromSession, serializeLearnerModelForPrompt } from '@/ai/tutor/sessionAnalyzer'
+import type { TutorMessage } from '@/data/types'
 
 /** Maximum number of past exchanges to include in LLM context */
 const MAX_CONTEXT_EXCHANGES = 3
@@ -115,12 +117,52 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
     }
   }, [courseId, lessonId, videoPositionSeconds])
 
-  // Abort streaming on unmount
+  // Abort streaming on unmount + session boundary detection (E72-S03)
   useEffect(() => {
     return () => {
       abortRef.current?.abort()
+      // Session boundary: component unmount (navigation away)
+      triggerSessionBoundaryUpdate()
     }
   }, [])
+
+  // Session boundary: visibilitychange (tab switch / minimize)
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'hidden') {
+        triggerSessionBoundaryUpdate()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
+
+  /**
+   * Fire-and-forget session boundary update.
+   * Converts ChatMessages to TutorMessages and triggers learner model update.
+   */
+  function triggerSessionBoundaryUpdate() {
+    const state = useTutorStore.getState()
+    if (!state._courseId || !state.learnerModel) return
+    if (state.messages.length === 0) return
+
+    // Convert ChatMessages to TutorMessages for the analyzer
+    const tutorMessages: TutorMessage[] = state.messages
+      .filter((m) => m.role === 'user' || m.role === 'assistant')
+      .map((m) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+        timestamp: m.timestamp,
+        mode: (m.mode ?? state.mode) as TutorMode,
+        quizScore: (m as Record<string, unknown>).quizScore as TutorMessage['quizScore'],
+        debugAssessment: (m as Record<string, unknown>).debugAssessment as TutorMessage['debugAssessment'],
+      }))
+
+    // Fire-and-forget — must not block navigation
+    void updateFromSession(state._courseId, tutorMessages, state.learnerModel).catch(() => {})
+  }
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -236,13 +278,21 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
           chapterTitle: transcriptResult.chapterTitle,
           timeRange: transcriptResult.timeRange,
         }
+        // Build learner model summary from persistent model (E72-S03)
+        let learnerModelStr = ''
+        const currentLearnerModel = useTutorStore.getState().learnerModel
+        if (currentLearnerModel) {
+          learnerModelStr = serializeLearnerModelForPrompt(currentLearnerModel)
+        }
+
         const systemPrompt = buildTutorSystemPrompt(
           tutorContext,
           store.mode,
           undefined,
           store.hintLevel,
           ragContextStr,
-          learnerProfileStr
+          learnerProfileStr,
+          learnerModelStr
         )
 
         // Stage 4: Build LLM message array with sliding window
