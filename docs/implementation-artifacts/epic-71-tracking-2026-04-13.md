@@ -9,7 +9,7 @@ Last Updated: 2026-04-13
 |-------|--------|--------|---------------|--------------|
 | E71-S01 | done | [#329](https://github.com/PedroLages/knowlune/pull/329) | 3 | 8 |
 | E71-S02 | done | [#330](https://github.com/PedroLages/knowlune/pull/330) | 2 | 6 |
-| E71-S03 | queued | — | — | — |
+| E71-S03 | done | [#331](https://github.com/PedroLages/knowlune/pull/331) | 4 | 7 |
 
 ## Story Details
 
@@ -50,17 +50,23 @@ Last Updated: 2026-04-13
 ---
 
 ### E71-S03: Knowledge Map Integration and Tests
-**Status:** queued
-#### Errors
-_(none yet)_
+**Status:** done — [PR #331](https://github.com/PedroLages/knowlune/pull/331)
 #### Review Findings
-_(none yet)_
+- R1: BLOCKER (infinite re-render from getSuggestedActions() in selector) + HIGH (4 E2E failing) + 2M + 1NIT → all fixed
+- R2: 1L (FSRS not passed) + 1NIT (unused method) → both fixed
+- R3: 1L (stale suggestions on empty topics early return) → fixed
+- R4: PASS — 0 findings | GLM 5 findings all non-issues
 #### Fixes Applied
-_(none yet)_
+- BLOCKER: suggestions pre-computed as reactive store state in computeScores()
+- Duplicate FocusAreasPanel/SuggestedActionsPanel replaced with single JS-conditional instances
+- TODO comment added for lesson data approximation (E56-S04 pending)
+- FSRS fallback comment added (E59 pending)
+- Unused getSuggestedActions() method removed
+- suggestions:[] reset on empty topics early return
 #### Notes
-- getSuggestedActions() store getter
-- Wires panel into existing treemap layout
-- Unit tests + E2E tests
+- 24 unit tests + 4 E2E tests — all passing
+- Pre-existing: breakpoint mismatch useIsMobile(639px) vs lg:(1024px) — app-wide pattern, added to known-issues
+- Non-issues: GLM false positives (5) across R4
 
 ---
 
