@@ -146,6 +146,46 @@ describe('buildTutorSystemPrompt', () => {
     })
   })
 
+  describe('learnerProfile parameter', () => {
+    it('includes learner profile content in the prompt when non-empty', () => {
+      const prompt = buildTutorSystemPrompt(
+        makeContext(),
+        'socratic',
+        2048,
+        'Intermediate learner, prefers examples over theory.',
+      )
+
+      expect(prompt).toContain('Learner profile:')
+      expect(prompt).toContain('Intermediate learner, prefers examples over theory.')
+    })
+
+    it('does not add learner section when learnerProfile is empty (default)', () => {
+      const prompt = buildTutorSystemPrompt(makeContext(), 'socratic', 2048)
+
+      expect(prompt).not.toContain('Learner profile:')
+    })
+
+    it('places learnerProfile after transcript slot (correct priority position)', () => {
+      const ctx = makeContext({
+        transcriptExcerpt: 'Transcript text here.',
+        transcriptStrategy: 'full',
+      })
+
+      const prompt = buildTutorSystemPrompt(
+        ctx,
+        'socratic',
+        2048,
+        'Advanced learner.',
+      )
+
+      const transcriptIdx = prompt.indexOf('Transcript text here.')
+      const learnerIdx = prompt.indexOf('Learner profile:')
+
+      expect(transcriptIdx).toBeGreaterThanOrEqual(0)
+      expect(learnerIdx).toBeGreaterThan(transcriptIdx)
+    })
+  })
+
   describe('token budget enforcement', () => {
     it('always includes required slots even when budget is very small', () => {
       const ctx = makeContext({

@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useTutorStore } from '@/stores/useTutorStore'
 import { getTranscriptContext } from '@/ai/tutor/transcriptContext'
 import { buildTutorSystemPrompt } from '@/ai/tutor/tutorPromptBuilder'
+import { buildAndFormatLearnerProfile } from '@/ai/tutor/learnerProfileBuilder'
 import { getLLMClient } from '@/ai/llm/factory'
 import { mapLLMError } from '@/ai/lib/llmErrorMapper'
 import type { LLMMessage } from '@/ai/llm/types'
@@ -208,7 +209,22 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
           }
         }
 
-        // Stage 3: Build system prompt
+        // Stage 3: Build learner profile (async — resolved before synchronous prompt builder)
+        let learnerProfileStr = ''
+        try {
+          const { db: appDb } = await import('@/db')
+          const course = await appDb.importedCourses.get(courseId)
+          const lessonTopics = course?.tags ?? []
+          learnerProfileStr = await buildAndFormatLearnerProfile({
+            courseId,
+            maxTokens: 100,
+            lessonTopics,
+          })
+        } catch {
+          // silent-catch-ok — learner profile is non-critical enrichment
+        }
+
+        // Build system prompt
         const tutorContext: TutorContext = {
           courseName,
           lessonTitle,
@@ -225,7 +241,8 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
           store.mode,
           undefined,
           store.hintLevel,
-          ragContextStr
+          ragContextStr,
+          learnerProfileStr
         )
 
         // Stage 4: Build LLM message array with sliding window
