@@ -54,7 +54,7 @@ _(none yet)_
 | Testarch Trace | pending | — | — |
 | Testarch NFR | pending | — | — |
 | Adversarial Review | skipped | — | Not requested |
-| Retrospective | pending | — | — |
+| Retrospective | done | epic-56-retro-2026-04-13.md | Complete |
 | Fix Pass Planning | pending | — | — |
 | Fix Pass Execution | pending | — | — |
 | Gate Check | pending | — | — |
