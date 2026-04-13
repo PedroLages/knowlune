@@ -46,9 +46,12 @@ export function KnowledgeMapWidget() {
   // Empty state
   if (!isLoading && topics.length === 0) {
     return (
-      <div className="text-center py-10" data-testid="knowledge-map-empty">
-        <Map className="size-10 mx-auto mb-3 text-muted-foreground/50" aria-hidden="true" />
-        <p className="text-muted-foreground text-sm">Import courses to build your Knowledge Map</p>
+      <div data-testid="knowledge-map-empty">
+        <h2 className="text-xl font-semibold mb-4">Knowledge Map</h2>
+        <div className="text-center py-10">
+          <Map className="size-10 mx-auto mb-3 text-muted-foreground/50" aria-hidden="true" />
+          <p className="text-muted-foreground text-sm">Import courses to build your Knowledge Map</p>
+        </div>
       </div>
     )
   }

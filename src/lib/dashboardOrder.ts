@@ -168,8 +168,7 @@ export function saveOrderConfig(config: DashboardOrderConfig): void {
  * Compute relevance score for a section.
  * Weighs recency (40%), view count (30%), and time spent (30%).
  */
-export function computeRelevanceScore(stats: SectionStats): number {
-  const now = Date.now()
+export function computeRelevanceScore(stats: SectionStats, now: number = Date.now()): number {
   const lastAccessed = stats.lastAccessedAt ? new Date(stats.lastAccessedAt).getTime() : 0
   const hoursSinceAccess = lastAccessed > 0 ? (now - lastAccessed) / (1000 * 60 * 60) : 999
 

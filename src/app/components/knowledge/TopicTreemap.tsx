@@ -13,6 +13,8 @@ export interface TreemapDataItem {
   size: number
   score: number
   tier: KnowledgeTier
+  // Required by Recharts TreemapDataType — internal traversal uses dynamic key access
+  [key: string]: unknown
 }
 
 interface TopicTreemapProps {
@@ -74,6 +76,7 @@ function CustomCell(props: Record<string, unknown>) {
         height={height}
         rx={6}
         ry={6}
+        // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic SVG fill from tier data, cannot use Tailwind for SVG attributes
         style={{ fill, stroke: 'var(--border)', strokeWidth: 1 }}
       />
       {showLabel && (
@@ -82,6 +85,7 @@ function CustomCell(props: Record<string, unknown>) {
           y={y + height / 2 - (showScore ? 8 : 0)}
           textAnchor="middle"
           dominantBaseline="central"
+          // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic SVG fill and fontSize from tier/size data
           style={{
             fill: textFill,
             fontSize: width > 100 ? 13 : 11,
@@ -97,6 +101,7 @@ function CustomCell(props: Record<string, unknown>) {
           y={y + height / 2 + 12}
           textAnchor="middle"
           dominantBaseline="central"
+          // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic SVG fill from tier data
           style={{
             fill: textFill,
             fontSize: 11,
