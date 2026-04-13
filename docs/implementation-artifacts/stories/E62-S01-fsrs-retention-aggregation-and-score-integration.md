@@ -4,9 +4,11 @@ story_name: 'FSRS Retention Aggregation and Score Integration'
 status: in-progress
 started: 2026-04-14
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-04-14
-review_gates_passed: []
+review_completed: 2026-04-14
+review_round: 2
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, bundle-analysis, code-review, code-review-testing, security-review]
 burn_in_validated: false
 ---
 
