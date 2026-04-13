@@ -1,12 +1,12 @@
 ---
 story_id: E72-S03
 story_name: "Session Boundary Learner Model Update Pipeline"
-status: draft
+status: review
 started:
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-04-13
+review_gates_passed: [build, lint, type-check, unit-tests, e2e-tests, code-review, security-review, test-review]
 burn_in_validated: false
 ---
 
