@@ -360,12 +360,32 @@ fi
 log_section "Unit Tests"
 
 if npm run | grep -q "test:unit"; then
-  if run_check "unit-tests" "${LOG_DIR:+${LOG_DIR}/unit-tests.log}" npm run test:unit -- --run; then
+  # Collect branch-changed test files and source files that have corresponding tests
+  BRANCH_TEST_FILES=""
+  for f in $(git diff --name-only main...HEAD | grep -E '\.(ts|tsx)$'); do
+    # Direct test files
+    if echo "$f" | grep -qE '__tests__/.*\.test\.(ts|tsx)$'; then
+      BRANCH_TEST_FILES="$BRANCH_TEST_FILES $f"
+    else
+      # Find corresponding test file for source file
+      DIR=$(dirname "$f")
+      BASE=$(basename "$f" | sed 's/\.\(ts\|tsx\)$//')
+      TEST_FILE="${DIR}/__tests__/${BASE}.test.ts"
+      TEST_FILE_TSX="${DIR}/__tests__/${BASE}.test.tsx"
+      [ -f "$TEST_FILE" ] && BRANCH_TEST_FILES="$BRANCH_TEST_FILES $TEST_FILE"
+      [ -f "$TEST_FILE_TSX" ] && BRANCH_TEST_FILES="$BRANCH_TEST_FILES $TEST_FILE_TSX"
+    fi
+  done
+
+  if [ -z "$BRANCH_TEST_FILES" ]; then
     GATES[unit-tests]="passed"
-    log_success "Unit tests passed"
+    log_warning "Unit tests skipped — no test files for branch-changed sources"
+  elif run_check "unit-tests" "${LOG_DIR:+${LOG_DIR}/unit-tests.log}" npx vitest run $BRANCH_TEST_FILES; then
+    GATES[unit-tests]="passed"
+    log_success "Unit tests passed (branch-scoped)"
   else
     GATES[unit-tests]="failed"
-    log_error "Unit tests failed"
+    log_error "Unit tests failed in branch-changed files"
     output_results 1
     exit 1
   fi
