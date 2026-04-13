@@ -132,7 +132,7 @@ After all post-epic commands complete, the coordinator updates `docs/known-issue
 2. For each NEW pre-existing issue, append a YAML entry:
    ```yaml
    - id: KI-{NEXT_NUMBER}
-     type: {type}           # test | lint | typecheck | build | design | code
+     type: {type}           # test | lint | typecheck | build | design | code | architecture | security | ux | performance | accessibility | reliability | tech-debt | feature
      summary: "{summary}"
      file: "{file:line}"
      severity: {severity}
@@ -155,6 +155,23 @@ After all post-epic commands complete, the coordinator updates `docs/known-issue
 - If an issue was already added to `known-issues.yaml` by a `/review-story` sub-agent (check by file path and summary), do not duplicate it.
 
 **Coordination with /review-story:** The standalone `/review-story` skill has its own known-issues logging workflow. When running inside the epic orchestrator, review agents classify issues as KNOWN, NEW PRE-EXISTING, or STORY-RELATED — the coordinator handles all register writes in this single Phase 2 step to prevent concurrent modification and ensure proper KI-NNN sequencing.
+
+**Architectural / Deferred Findings:**
+
+After appending code-level pre-existing issues, also append any architectural/deferred findings from the NFR assessment and retrospective that were NOT resolved in the fix cycle:
+
+1. Read the NFR report's "Architectural Findings (Deferred)" section
+2. Read the retrospective's action items that require new stories/epics (not process improvements)
+3. For each, append to `known-issues.yaml` with:
+   - `type: architecture`
+   - `status: scheduled` (not `open` — these need epic planning, not hotfixes)
+   - `discovered_by: E{N}-NFR` or `E{N}-RETRO`
+   - `notes:` include the original finding text and recommended approach
+4. Skip if the finding is purely a process improvement (e.g., "add marker-strip checklist to story template") — those belong in the retrospective document only
+
+**Skip conditions for architectural findings:**
+- If the finding is already tracked (check summary against existing entries)
+- If the finding is a process improvement rather than a code/architecture gap
 
 ### 8. Comprehensive Fix Pass (MANDATORY — Two-Stage: Plan then Execute)
 

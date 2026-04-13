@@ -11,7 +11,7 @@
 #
 # Fields:
 #   id:              KI-NNN (auto-increment)
-#   type:            test | lint | typecheck | build | design | code
+#   type:            test | lint | typecheck | build | design | code | architecture | security | ux | performance | accessibility | reliability | tech-debt | feature
 #   summary:         One-line description
 #   file:            file:line where the issue manifests
 #   severity:        low | medium | high
@@ -747,3 +747,39 @@ issues:
     scheduled_for: null
     fixed_by: E112-S01
     notes: "Verified: SpeedControl.tsx already imports and uses VALID_SPEEDS (11 speeds: 0.5–3.0 in 0.25 increments) from useAudiobookPrefsStore. No stale SPEED_OPTIONS constant exists. All 11 speeds now display correctly in the picker."
+
+  - id: KI-061
+    type: architecture
+    summary: "No LLM retry/circuit-breaker — user gets error on first transient 5xx"
+    file: "src/ai/hooks/useTutor.ts"
+    severity: medium
+    discovered_by: E73-NFR
+    discovered_on: 2026-04-13
+    status: scheduled
+    scheduled_for: null
+    fixed_by: null
+    notes: "Deferred architectural finding from E73 NFR assessment. Needs exponential-backoff retry (max 2 attempts) in useTutor sendMessage."
+
+  - id: KI-062
+    type: architecture
+    summary: "No analytics events for mode switches, quiz completions, or debug assessments"
+    file: "src/stores/useTutorStore.ts"
+    severity: low
+    discovered_by: E73-NFR
+    discovered_on: 2026-04-13
+    status: scheduled
+    scheduled_for: null
+    fixed_by: null
+    notes: "Deferred architectural finding from E73 NFR assessment. Product team cannot measure mode adoption without telemetry."
+
+  - id: KI-063
+    type: architecture
+    summary: "8 pre-existing HIGH npm audit vulnerabilities (epubjs, lodash, vite dev-only)"
+    file: "package.json"
+    severity: low
+    discovered_by: E73-NFR
+    discovered_on: 2026-04-13
+    status: scheduled
+    scheduled_for: null
+    fixed_by: null
+    notes: "Deferred from E73 NFR. None introduced by E73. Vite HIGH is dev-only, does not affect production builds."

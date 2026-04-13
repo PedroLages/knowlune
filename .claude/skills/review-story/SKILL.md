@@ -337,7 +337,15 @@ If `verdict == PASS`: show gate table, verdict, high-priority findings. If `verd
 
 ## Known Issues Register
 
-(Same as original SKILL.md — log pre-existing issues to docs/known-issues.yaml)
+Pre-existing issues discovered during `/review-story` that were NOT caused by the story under review are logged to `docs/known-issues.yaml`.
+
+**Valid `type` values:** `test`, `lint`, `typecheck`, `build`, `design`, `code`, `architecture`, `security`, `ux`, `performance`, `accessibility`, `reliability`, `tech-debt`, `feature`
+
+- `architecture` type is for structural/design-level gaps (retry logic, observability, scalability) that need epic planning, not hotfixes. Persisted by the epic orchestrator's Phase 2, not by `/review-story` directly.
+
+**When running standalone** (outside epic orchestrator): `/review-story` classifies issues as STORY-RELATED or PRE-EXISTING and can append pre-existing issues directly.
+
+**When running inside epic orchestrator**: Review agents classify issues but defer all register writes to the orchestrator's Phase 2 Section 7 to prevent concurrent modification. Architectural findings from NFR/retrospective are also appended there with `type: architecture` and `status: scheduled`.
 
 ## When Review Agents Find Issues
 
