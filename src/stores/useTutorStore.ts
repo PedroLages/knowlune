@@ -48,6 +48,14 @@ interface TutorState {
   modeHistory: TutorMode[]
   /** Mode transition context string for the next LLM call (E73-S01) */
   modeTransitionContext: string | null
+  /** Quiz scoring state for Quiz Me mode (E73-S03) */
+  quizState: {
+    totalQuestions: number
+    correctAnswers: number
+    currentStreak: number
+    bloomLevel: number
+    lastAnswerCorrect: boolean | null
+  }
 
   /** Add a message to the conversation */
   addMessage: (message: ChatMessage) => void
@@ -94,6 +102,10 @@ interface TutorState {
   ) => Promise<void>
   /** Clear learner model for a course (E72-S01) */
   clearLearnerModel: (courseId: string) => Promise<void>
+  /** Record a quiz answer and update quiz state (E73-S03) */
+  recordQuizAnswer: (correct: boolean) => void
+  /** Reset quiz state (E73-S03) */
+  resetQuizState: () => void
 }
 
 /** Maximum conversation history to retain (prevents unbounded growth) */
@@ -134,6 +146,13 @@ export const useTutorStore = create<TutorState>((set, get) => ({
   _videoId: null,
   modeHistory: [],
   modeTransitionContext: null,
+  quizState: {
+    totalQuestions: 0,
+    correctAnswers: 0,
+    currentStreak: 0,
+    bloomLevel: 0,
+    lastAnswerCorrect: null,
+  },
 
   setLessonContext: (courseId: string, videoId: string) => {
     set({ _courseId: courseId, _videoId: videoId })
@@ -207,6 +226,18 @@ export const useTutorStore = create<TutorState>((set, get) => ({
       stuckCount: 0,
       modeHistory: [...state.modeHistory, previousMode].slice(-MAX_MODE_HISTORY),
       modeTransitionContext: transitionContext,
+      // Reset quiz state when switching away from quiz mode (E73-S03)
+      // Partial results are already on TutorMessages via quizScore field
+      quizState:
+        previousMode === 'quiz'
+          ? {
+              totalQuestions: 0,
+              correctAnswers: 0,
+              currentStreak: 0,
+              bloomLevel: 0,
+              lastAnswerCorrect: null,
+            }
+          : state.quizState,
     }))
   },
 
@@ -376,5 +407,46 @@ export const useTutorStore = create<TutorState>((set, get) => ({
     } catch {
       toast.error('Failed to clear learner model.')
     }
+  },
+
+  recordQuizAnswer: (correct: boolean) => {
+    set(state => {
+      const { quizState } = state
+      const newCorrect = quizState.correctAnswers + (correct ? 1 : 0)
+      const newTotal = quizState.totalQuestions + 1
+      const newStreak = correct ? quizState.currentStreak + 1 : 0
+
+      // Bloom's Taxonomy progression: advance after 2 consecutive correct, drop after 2 consecutive incorrect
+      let newBloom = quizState.bloomLevel
+      if (correct && newStreak >= 2 && newStreak % 2 === 0) {
+        newBloom = Math.min(5, newBloom + 1) // 0=Remember, 1=Understand, 2=Apply, 3=Analyze, 4=Evaluate, 5=Create
+      }
+      // Drop one level after 2 consecutive incorrect (streak resets on correct, so check if last 2 were wrong)
+      if (!correct && quizState.lastAnswerCorrect === false) {
+        newBloom = Math.max(0, newBloom - 1)
+      }
+
+      return {
+        quizState: {
+          totalQuestions: newTotal,
+          correctAnswers: newCorrect,
+          currentStreak: newStreak,
+          bloomLevel: newBloom,
+          lastAnswerCorrect: correct,
+        },
+      }
+    })
+  },
+
+  resetQuizState: () => {
+    set({
+      quizState: {
+        totalQuestions: 0,
+        correctAnswers: 0,
+        currentStreak: 0,
+        bloomLevel: 0,
+        lastAnswerCorrect: null,
+      },
+    })
   },
 }))
