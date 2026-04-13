@@ -7,8 +7,8 @@
  */
 
 import { Treemap, ResponsiveContainer } from 'recharts'
-import { format } from 'date-fns'
 import type { KnowledgeTier } from '@/lib/knowledgeScore'
+import { formatDecayLabel } from '@/lib/decayFormatting'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip'
 
 export interface TreemapDataItem {
@@ -99,7 +99,7 @@ function getTokenColors() {
     _colorCache = { success, warning, destructive }
     return _colorCache
   }
-  // Fallback: hardcoded approximations of the design tokens
+  // Fallback values match theme.css tokens at time of writing — update if theme.css diverges
   _colorCache = {
     success: hexToRgb('#3a7553'),
     warning: hexToRgb('#866224'),
@@ -108,8 +108,10 @@ function getTokenColors() {
   return _colorCache
 }
 
-/** Invalidate color cache on theme changes */
-if (typeof window !== 'undefined') {
+/** Invalidate color cache on theme changes. Singleton guard prevents duplicate observers on HMR. */
+let _observerInitialized = false
+if (typeof window !== 'undefined' && !_observerInitialized) {
+  _observerInitialized = true
   const observer = new MutationObserver(() => {
     _colorCache = null
   })
@@ -190,47 +192,8 @@ function getTextColorForBg(bgColor: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Decay prediction formatting (E62-S02)
+// Decay prediction formatting (E62-S02) — delegated to @/lib/decayFormatting
 // ---------------------------------------------------------------------------
-
-interface DecayInfo {
-  label: string
-  colorClass: string
-}
-
-/**
- * Format decay prediction into a label and color class.
- * < 7 days: "Fading in N days" (destructive)
- * 7-30 days: "Fading by Mon Day" (warning)
- * > 30 days: "Stable until Mon Day" (success)
- */
-function formatDecayPrediction(predictedDecayDate: string | null, now?: Date): DecayInfo | null {
-  if (!predictedDecayDate) return null
-
-  const _now = now ?? new Date()
-  const decayDate = new Date(predictedDecayDate)
-  const daysUntil = Math.ceil((decayDate.getTime() - _now.getTime()) / (1000 * 60 * 60 * 24))
-
-  if (daysUntil < 0) {
-    return { label: 'Already fading', colorClass: 'text-destructive' }
-  }
-  if (daysUntil < 7) {
-    return {
-      label: `Fading in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}`,
-      colorClass: 'text-destructive',
-    }
-  }
-  if (daysUntil <= 30) {
-    return {
-      label: `Fading by ${format(decayDate, 'MMM d')}`,
-      colorClass: 'text-warning',
-    }
-  }
-  return {
-    label: `Stable until ${format(decayDate, 'MMM d')}`,
-    colorClass: 'text-success',
-  }
-}
 
 const MAX_LABEL_LENGTH = 14
 
@@ -272,7 +235,7 @@ function CustomCell(props: Record<string, unknown>) {
   const textFill = fill.startsWith('rgb') ? getTextColorForBg(fill) : getTierTextFill(tier)
   const showLabel = width > 60 && height > 30
   const showScore = width > 40 && height > 45
-  const decayInfo = formatDecayPrediction(predictedDecayDate)
+  const decayInfo = formatDecayLabel(predictedDecayDate)
 
   const cellContent = (
     <g

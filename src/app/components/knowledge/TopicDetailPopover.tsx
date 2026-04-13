@@ -7,7 +7,8 @@
  */
 
 import { useNavigate } from 'react-router'
-import { format, formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns'
+import { formatDecayLabel } from '@/lib/decayFormatting'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
@@ -66,6 +67,14 @@ function formatWeight(value: number): string {
  * Memory Decay section for TopicDetailPopover (E62-S02).
  * Shows retention percentage, decay prediction, and urgency badge.
  */
+function colorClassToBadgeVariant(
+  colorClass: 'text-destructive' | 'text-warning' | 'text-success'
+): 'destructive' | 'default' | 'outline' {
+  if (colorClass === 'text-destructive') return 'destructive'
+  if (colorClass === 'text-warning') return 'default'
+  return 'outline'
+}
+
 function MemoryDecaySection({
   aggregateRetention,
   predictedDecayDate,
@@ -73,7 +82,10 @@ function MemoryDecaySection({
   aggregateRetention: number
   predictedDecayDate: string | null
 }) {
-  const decayInfo = getDecayInfo(predictedDecayDate)
+  const rawInfo = formatDecayLabel(predictedDecayDate)
+  const decayInfo = rawInfo
+    ? { label: rawInfo.label, badgeVariant: colorClassToBadgeVariant(rawInfo.colorClass) }
+    : null
 
   return (
     <div className="mb-3 pt-2 border-t border-border space-y-2">
@@ -97,36 +109,6 @@ function MemoryDecaySection({
       </div>
     </div>
   )
-}
-
-function getDecayInfo(
-  predictedDecayDate: string | null
-): { label: string; badgeVariant: 'destructive' | 'default' | 'outline' } | null {
-  if (!predictedDecayDate) return null
-
-  const now = new Date()
-  const decayDate = new Date(predictedDecayDate)
-  const daysUntil = Math.ceil((decayDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-
-  if (daysUntil < 0) {
-    return { label: 'Already fading', badgeVariant: 'destructive' }
-  }
-  if (daysUntil < 7) {
-    return {
-      label: `Fading in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}`,
-      badgeVariant: 'destructive',
-    }
-  }
-  if (daysUntil <= 30) {
-    return {
-      label: `Fading by ${format(decayDate, 'MMM d')}`,
-      badgeVariant: 'default',
-    }
-  }
-  return {
-    label: `Stable until ${format(decayDate, 'MMM d')}`,
-    badgeVariant: 'outline',
-  }
 }
 
 export function TopicDetailPopover({
