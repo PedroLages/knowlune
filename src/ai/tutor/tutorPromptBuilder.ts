@@ -79,9 +79,9 @@ function buildTranscriptSlot(context: TutorContext): string {
   return `${header}:\n"""\n${context.transcriptExcerpt}\n"""`
 }
 
-function buildLearnerSlot(): string {
-  // Placeholder for learner profile injection (future stories)
-  return ''
+function buildLearnerSlot(learnerProfile?: string): string {
+  if (!learnerProfile) return ''
+  return `Learner profile:\n${learnerProfile}`
 }
 
 function buildResumeSlot(): string {
@@ -106,7 +106,8 @@ export function buildTutorSystemPrompt(
   mode: TutorMode = 'socratic',
   tokenBudget: number = DEFAULT_TOKEN_BUDGET,
   hintLevel: number = 0,
-  ragContext: string = ''
+  ragContext: string = '',
+  learnerProfile: string = ''
 ): string {
   // Build all slots
   const slots: PromptSlot[] = [
@@ -115,7 +116,7 @@ export function buildTutorSystemPrompt(
     { id: 'course', required: true, priority: 3, content: buildCourseSlot(context) },
     { id: 'rag', required: false, priority: 4, content: ragContext },
     { id: 'transcript', required: false, priority: 5, content: buildTranscriptSlot(context) },
-    { id: 'learner', required: false, priority: 6, content: buildLearnerSlot() },
+    { id: 'learner', required: false, priority: 6, content: buildLearnerSlot(learnerProfile) },
     { id: 'resume', required: false, priority: 7, content: buildResumeSlot() },
   ]
 
