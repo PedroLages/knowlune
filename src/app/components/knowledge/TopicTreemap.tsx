@@ -7,6 +7,7 @@
 
 import { Treemap, ResponsiveContainer } from 'recharts'
 import type { KnowledgeTier } from '@/lib/knowledgeScore'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip'
 
 export interface TreemapDataItem {
   name: string
@@ -66,12 +67,15 @@ function CustomCell(props: Record<string, unknown>) {
     onCellClick?: (name: string) => void
   }
 
+  // Guard: Recharts passes root/parent nodes with undefined name — skip rendering them
+  if (!name) return <g />
+
   const fill = getTierFill(tier)
   const textFill = getTierTextFill(tier)
   const showLabel = width > 60 && height > 30
   const showScore = width > 40 && height > 45
 
-  return (
+  const cellContent = (
     <g
       role="button"
       tabIndex={0}
@@ -93,7 +97,6 @@ function CustomCell(props: Record<string, unknown>) {
         height={height}
         rx={6}
         ry={6}
-         
         style={{ fill, stroke: 'var(--border)', strokeWidth: 1 }}
       />
       {/* Focus indicator */}
@@ -121,7 +124,6 @@ function CustomCell(props: Record<string, unknown>) {
           textAnchor="middle"
           dominantBaseline="central"
           pointerEvents="none"
-           
           style={{
             fill: textFill,
             fontSize: width > 100 ? 13 : 11,
@@ -138,7 +140,6 @@ function CustomCell(props: Record<string, unknown>) {
           textAnchor="middle"
           dominantBaseline="central"
           pointerEvents="none"
-           
           style={{
             fill: textFill,
             fontSize: 11,
@@ -150,6 +151,16 @@ function CustomCell(props: Record<string, unknown>) {
         </text>
       )}
     </g>
+  )
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{cellContent}</TooltipTrigger>
+      <TooltipContent side="top">
+        <span className="font-medium">{name}</span>
+        <span className="ml-1 text-muted-foreground">— {score}% ({tier})</span>
+      </TooltipContent>
+    </Tooltip>
   )
 }
 

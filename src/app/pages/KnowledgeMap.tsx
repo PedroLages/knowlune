@@ -35,6 +35,7 @@ export function KnowledgeMap() {
     useKnowledgeMapStore()
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES)
   const [popoverTopic, setPopoverTopic] = useState<string | null>(null)
+  const [clickPos, setClickPos] = useState<{ x: number; y: number } | null>(null)
   const isMobile = useIsMobile()
 
   useEffect(() => {
@@ -56,9 +57,17 @@ export function KnowledgeMap() {
   const categoryNames = [ALL_CATEGORIES, ...categories.map(c => c.category)]
 
   const handleCellClick = useCallback(
-    (name: string) => {
+    (name: string, event?: React.MouseEvent) => {
       const topic = topics.find(t => t.name === name)
       if (topic) {
+        if (event) {
+          const rect = (event.currentTarget as HTMLElement).closest('[data-treemap-container]')?.getBoundingClientRect()
+          if (rect) {
+            setClickPos({ x: event.clientX - rect.left, y: event.clientY - rect.top })
+          } else {
+            setClickPos({ x: event.clientX, y: event.clientY })
+          }
+        }
         setPopoverTopic(prev => (prev === topic.canonicalName ? null : topic.canonicalName))
       }
     },
@@ -146,14 +155,26 @@ export function KnowledgeMap() {
             />
           ) : (
             <Card className="p-4">
-              <TopicTreemap data={treemapData} onCellClick={handleCellClick} />
-              {/* Invisible popover anchored to page — opens on cell click */}
-              {popoverTopic && (
-                <PopoverForTopic
-                  canonicalName={popoverTopic}
-                  onClose={() => setPopoverTopic(null)}
-                />
-              )}
+              {/* position:relative container so popover trigger is anchored to click position */}
+              <div
+                className="relative"
+                data-treemap-container
+                onClick={e => {
+                  // Capture position for popover anchor
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  setClickPos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+                }}
+              >
+                <TopicTreemap data={treemapData} onCellClick={handleCellClick} />
+                {/* Popover trigger anchored at click position */}
+                {popoverTopic && clickPos && (
+                  <PopoverForTopic
+                    canonicalName={popoverTopic}
+                    anchorPos={clickPos}
+                    onClose={() => setPopoverTopic(null)}
+                  />
+                )}
+              </div>
             </Card>
           )}
         </div>
@@ -179,9 +200,11 @@ export function KnowledgeMap() {
  */
 function PopoverForTopic({
   canonicalName,
+  anchorPos,
   onClose,
 }: {
   canonicalName: string
+  anchorPos: { x: number; y: number }
   onClose: () => void
 }) {
   const topic = useKnowledgeMapStore(s => s.getTopicByName(canonicalName))
@@ -189,7 +212,18 @@ function PopoverForTopic({
 
   return (
     <TopicDetailPopover topic={topic} open={true} onOpenChange={open => !open && onClose()}>
-      <span />
+      {/* Trigger span positioned at click coordinates to anchor the popover correctly */}
+      <span
+        // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic anchor position
+        style={{
+          position: 'absolute',
+          left: anchorPos.x,
+          top: anchorPos.y,
+          width: 1,
+          height: 1,
+          pointerEvents: 'none',
+        }}
+      />
     </TopicDetailPopover>
   )
 }

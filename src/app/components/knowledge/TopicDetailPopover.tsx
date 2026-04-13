@@ -7,6 +7,7 @@
  */
 
 import { useNavigate } from 'react-router'
+import { formatDistanceToNow } from 'date-fns'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
@@ -22,11 +23,8 @@ interface TopicDetailPopoverProps {
 }
 
 function formatDaysAgo(days: number): string {
-  if (days === 0) return 'Today'
-  if (days === 1) return '1 day ago'
-  if (days >= 365) return `${Math.round(days / 365)} year${Math.round(days / 365) > 1 ? 's' : ''} ago`
-  if (days >= 30) return `${Math.round(days / 30)} month${Math.round(days / 30) > 1 ? 's' : ''} ago`
-  return `${days} days ago`
+  const date = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+  return formatDistanceToNow(date, { addSuffix: true })
 }
 
 function confidenceLabel(level: ConfidenceLevel): string {
