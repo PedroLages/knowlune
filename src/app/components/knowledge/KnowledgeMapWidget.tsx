@@ -72,6 +72,8 @@ export function KnowledgeMapWidget() {
     size: Math.max(cat.topics.length, 1),
     score: cat.averageScore,
     tier: getTierFromScore(cat.averageScore),
+    aggregateRetention: null,
+    predictedDecayDate: null,
   }))
 
   return (

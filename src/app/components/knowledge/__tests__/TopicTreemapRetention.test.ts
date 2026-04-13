@@ -3,7 +3,7 @@
  * Tests retention color logic and text contrast calculation.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
 // ---------------------------------------------------------------------------
 // Inline the pure functions under test — avoids browser DOM dependencies from
