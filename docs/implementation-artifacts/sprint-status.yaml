@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-12  # E112 marked done — all 2 stories shipped
+last_updated: 2026-04-13  # E71 marked done — all 3 stories shipped
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -818,11 +818,11 @@ development_status:
   # Contextual action cards for declining topics
   # Depends on: E56 (Knowledge Map)
   # ──────────────────────────────────────────────────
-  epic-71: in-progress
-  71-1-action-suggestion-data-layer: review
-  71-2-actioncard-and-suggestedactionspanel-ui-components: review
-  71-3-knowledge-map-integration-and-tests: review
-  epic-71-retrospective: optional
+  epic-71: done
+  71-1-action-suggestion-data-layer: done
+  71-2-actioncard-and-suggestedactionspanel-ui-components: done
+  71-3-knowledge-map-integration-and-tests: done
+  epic-71-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 72: Conversation Memory (Learner Model)
