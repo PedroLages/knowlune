@@ -1010,6 +1010,12 @@ export interface TutorMessage {
   role: 'user' | 'assistant'
   content: string
   timestamp: number
+  /** Active tutor mode when this message was sent (E72-S02) */
+  mode: import('@/ai/tutor/types').TutorMode
+  /** Quiz score for quiz-mode messages (E72-S02) */
+  quizScore?: { correct: boolean; questionNumber: number }
+  /** Debug assessment level for debug-mode messages (E72-S02) */
+  debugAssessment?: 'green' | 'yellow' | 'red'
 }
 
 /** Persisted tutor chat conversation (E57-S03) */

@@ -25,7 +25,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/app/components/ui/alert-dialog'
+import { TutorMemoryIndicator } from './TutorMemoryIndicator'
 import { useTutor } from '@/ai/hooks/useTutor'
+import { useTutorStore } from '@/stores/useTutorStore'
 import { LLM_ERROR_MESSAGES } from '@/ai/lib/llmErrorMapper'
 import type { TranscriptStatus } from '@/ai/tutor/types'
 
@@ -58,6 +60,7 @@ export function TutorChat({
     })
 
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
+  const { learnerModel, clearLearnerModel, updateLearnerModel } = useTutorStore()
 
   // Determine badge status — use hook's transcriptStatus or fallback
   const badgeStatus: TranscriptStatus = transcriptStatus ?? {
@@ -125,6 +128,12 @@ export function TutorChat({
           )}
         </div>
       </div>
+      <TutorMemoryIndicator
+        learnerModel={learnerModel}
+        courseId={courseId}
+        onClearMemory={clearLearnerModel}
+        onUpdateMemory={updateLearnerModel}
+      />
       <div className="flex-1 overflow-hidden">
         {messages.length === 0 ? (
           <TutorEmptyState lessonTitle={lessonTitle} />

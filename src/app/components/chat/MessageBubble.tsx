@@ -7,6 +7,7 @@
 import { User, Sparkles, Loader2 } from 'lucide-react'
 import type { ChatMessage } from '@/ai/rag/types'
 import { CitationLink } from './CitationLink'
+import { MODE_LABELS } from '@/ai/tutor/modeLabels'
 import type { ReactElement } from 'react'
 
 interface MessageBubbleProps {
@@ -14,6 +15,8 @@ interface MessageBubbleProps {
   message: ChatMessage
   /** Whether this message is currently streaming */
   isStreaming?: boolean
+  /** Whether this conversation uses multiple modes (E72-S02) */
+  showModeBadge?: boolean
 }
 
 /**
@@ -26,7 +29,7 @@ interface MessageBubbleProps {
  * - Streaming indicator (animated dots)
  * - Timestamp display
  */
-export function MessageBubble({ message, isStreaming = false }: MessageBubbleProps) {
+export function MessageBubble({ message, isStreaming = false, showModeBadge = false }: MessageBubbleProps) {
   const isUser = message.role === 'user'
 
   // Format timestamp
@@ -107,9 +110,13 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
             )}
           </div>
 
-          {/* Timestamp */}
-          <div className={`text-xs mt-2 ${isUser ? 'text-white/80' : 'text-muted-foreground'}`}>
-            {timeStr}
+          {/* Timestamp + mode badge (E72-S02) */}
+          <div className={`text-[10px] mt-2 ${isUser ? 'text-white/80' : 'text-muted-foreground'}`}>
+            {showModeBadge && !isUser && message.mode ? (
+              <>{MODE_LABELS[message.mode] ?? message.mode} &middot; {timeStr}</>
+            ) : (
+              timeStr
+            )}
           </div>
 
           {/* Error message */}
