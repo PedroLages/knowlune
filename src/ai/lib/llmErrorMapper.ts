@@ -27,7 +27,8 @@ export function mapLLMError(err: unknown): string {
       case 'NETWORK_ERROR':
         return 'AI provider offline. Configure a provider in Settings to use tutoring.'
       default:
-        return `AI provider error: ${err.message}`
+        console.error('[LLM] Unrecognized error:', err)
+        return 'Something went wrong. Please try again.'
     }
   }
   return 'Failed to process your request. Please try again.'
