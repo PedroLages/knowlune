@@ -1,8 +1,8 @@
 ---
 story_id: E62-S01
 story_name: "FSRS Retention Aggregation and Score Integration"
-status: draft
-started:
+status: in-progress
+started: 2026-04-14
 completed:
 reviewed: false
 review_started:
