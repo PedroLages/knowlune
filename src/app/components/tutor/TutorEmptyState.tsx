@@ -6,7 +6,6 @@
  */
 
 import {
-  GraduationCap,
   Sparkles,
   HelpCircle,
   BookOpen,

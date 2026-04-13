@@ -29,10 +29,6 @@ const DEFAULT_VARIABLE_SLOTS: Pick<TokenBudgetSlots, 'history' | 'transcript' | 
 const FIXED_TOTAL = FIXED_SLOTS.baseInstructions + FIXED_SLOTS.modeRules +
   FIXED_SLOTS.courseContext + FIXED_SLOTS.learnerProfile
 
-/** Default total for variable slots */
-const DEFAULT_VARIABLE_TOTAL = DEFAULT_VARIABLE_SLOTS.history +
-  DEFAULT_VARIABLE_SLOTS.transcript + DEFAULT_VARIABLE_SLOTS.response
-
 /**
  * Allocate token budget across prompt slots for a given mode.
  *

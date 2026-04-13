@@ -60,7 +60,7 @@ export function TutorChat({
     })
 
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
-  const { learnerModel, clearLearnerModel, updateLearnerModel, replaceLearnerModelFields } = useTutorStore()
+  const { learnerModel, clearLearnerModel, replaceLearnerModelFields } = useTutorStore()
 
   // Determine badge status — use hook's transcriptStatus or fallback
   const badgeStatus: TranscriptStatus = transcriptStatus ?? {
