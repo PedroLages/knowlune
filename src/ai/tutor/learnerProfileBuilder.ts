@@ -92,13 +92,6 @@ export const STUDY_WINDOW_DAYS = 7
 /** Approximate characters per token (conservative estimate) */
 export const CHARS_PER_TOKEN = 4
 
-/** Signal priority order — highest priority first */
-export const SIGNAL_PRIORITY = [
-  ProfileSignal.KNOWLEDGE_WEAKNESS,
-  ProfileSignal.QUIZ_FAILURES,
-  ProfileSignal.FLASHCARD_STRUGGLES,
-  ProfileSignal.STUDY_PATTERNS,
-] as const
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -472,26 +465,26 @@ export function formatLearnerProfile(
   }
 
   // Build signal blocks in priority order
-  const signalBlocks: Array<{ signal: ProfileSignal; text: string }> = []
+  const signalBlocks: Array<{ text: string }> = []
 
   if (data.knowledgeProfile) {
     const text = formatKnowledgeSignal(data.knowledgeProfile)
-    if (text) signalBlocks.push({ signal: ProfileSignal.KNOWLEDGE_WEAKNESS, text })
+    if (text) signalBlocks.push({ text })
   }
 
   if (data.quizProfile) {
     const text = formatQuizSignal(data.quizProfile, knowledgeTopics)
-    if (text) signalBlocks.push({ signal: ProfileSignal.QUIZ_FAILURES, text })
+    if (text) signalBlocks.push({ text })
   }
 
   if (data.flashcardProfile) {
     const text = formatFlashcardSignal(data.flashcardProfile)
-    if (text) signalBlocks.push({ signal: ProfileSignal.FLASHCARD_STRUGGLES, text })
+    if (text) signalBlocks.push({ text })
   }
 
   if (data.studyProfile) {
     const text = formatStudySignal(data.studyProfile)
-    if (text) signalBlocks.push({ signal: ProfileSignal.STUDY_PATTERNS, text })
+    if (text) signalBlocks.push({ text })
   }
 
   if (signalBlocks.length === 0) return ''
@@ -510,7 +503,8 @@ export function formatLearnerProfile(
     currentLength = newLength
   }
 
-  // If budget is extremely tight but we have signals, include at least the first one
+  // When budget is extremely tight, include at least the highest-priority signal to avoid
+  // returning empty context — callers should handle potential over-budget responses gracefully.
   if (parts.length === 0 && signalBlocks.length > 0) {
     parts.push(signalBlocks[0].text)
   }
@@ -550,29 +544,32 @@ export async function buildAndFormatLearnerProfile(
   }
 
   // Map settled results: fulfilled → value, rejected → null with warning
-  const quizProfile =
-    quizResult.status === 'fulfilled'
-      ? quizResult.value
-      : (console.warn('[learnerProfileBuilder] aggregateQuizScores rejected:', quizResult.reason),
-        null)
+  let quizProfile: Awaited<ReturnType<typeof aggregateQuizScores>> | null = null
+  if (quizResult.status === 'fulfilled') {
+    quizProfile = quizResult.value
+  } else {
+    console.warn('[learnerProfileBuilder] aggregateQuizScores rejected:', quizResult.reason)
+  }
 
-  const flashcardProfile =
-    flashcardResult.status === 'fulfilled'
-      ? flashcardResult.value
-      : (console.warn(
-          '[learnerProfileBuilder] aggregateFlashcardWeakness rejected:',
-          flashcardResult.reason
-        ),
-        null)
+  let flashcardProfile: Awaited<ReturnType<typeof aggregateFlashcardWeakness>> | null = null
+  if (flashcardResult.status === 'fulfilled') {
+    flashcardProfile = flashcardResult.value
+  } else {
+    console.warn(
+      '[learnerProfileBuilder] aggregateFlashcardWeakness rejected:',
+      flashcardResult.reason
+    )
+  }
 
-  const studyProfile =
-    studyResult.status === 'fulfilled'
-      ? studyResult.value
-      : (console.warn(
-          '[learnerProfileBuilder] aggregateStudySessions rejected:',
-          studyResult.reason
-        ),
-        null)
+  let studyProfile: Awaited<ReturnType<typeof aggregateStudySessions>> | null = null
+  if (studyResult.status === 'fulfilled') {
+    studyProfile = studyResult.value
+  } else {
+    console.warn(
+      '[learnerProfileBuilder] aggregateStudySessions rejected:',
+      studyResult.reason
+    )
+  }
 
   let profileData: LearnerProfileData = {
     quizProfile,
