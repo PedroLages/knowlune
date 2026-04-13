@@ -511,7 +511,7 @@ describe('calculateAggregateRetention — extended', () => {
     expect(result.avgStability).toBe(20)
   })
 
-  it('uses current date when now parameter is omitted', () => {
+  it('uses FIXED_NOW when now parameter is provided explicitly', () => {
     // Card reviewed very recently with high stability → retention near 100
     const justNow = new Date(FIXED_NOW.getTime() - 1000).toISOString()
     const cards = [{ last_review: justNow, stability: 50 }]
@@ -562,7 +562,7 @@ describe('calculateDecayDate — extended', () => {
     expect((d40 - base) / (d10 - base)).toBeCloseTo(4, 1)
   })
 
-  it('uses current date when now parameter is omitted', () => {
+  it('uses FIXED_NOW when now parameter is provided explicitly', () => {
     const result = calculateDecayDate(10, FIXED_NOW)
     expect(result).not.toBeNull()
     const decayDate = new Date(result!)
