@@ -4,9 +4,9 @@ story_name: 'FSRS Retention Aggregation and Score Integration'
 status: in-progress
 started: 2026-04-14
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-04-14
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, bundle-analysis, code-review, security-review, lessons-learned]
 burn_in_validated: false
 ---
 
@@ -143,7 +143,7 @@ Before requesting `/review-story`, verify:
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+See [code-review-2026-04-14-E62-S01.md](../../reviews/code/code-review-2026-04-14-E62-S01.md) — 2 MEDIUM, 1 LOW, 1 NIT. No blockers.
 
 ## Challenges and Lessons Learned
 
