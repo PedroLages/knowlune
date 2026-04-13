@@ -114,7 +114,11 @@ interface TutorState {
   /** Reset quiz state (E73-S03) */
   resetQuizState: () => void
   /** Debug assessment history for session boundary update (E73-S04) */
-  debugAssessments: Array<{ assessment: 'green' | 'yellow' | 'red'; concept?: string; timestamp: number }>
+  debugAssessments: Array<{
+    assessment: 'green' | 'yellow' | 'red'
+    concept?: string
+    timestamp: number
+  }>
   /** Record a debug assessment for session boundary update (E73-S04) */
   recordDebugAssessment: (assessment: 'green' | 'yellow' | 'red', concept?: string) => void
 }
@@ -477,10 +481,7 @@ export const useTutorStore = create<TutorState>((set, get) => ({
 
   recordDebugAssessment: (assessment: 'green' | 'yellow' | 'red', concept?: string) => {
     set(state => ({
-      debugAssessments: [
-        ...state.debugAssessments,
-        { assessment, concept, timestamp: Date.now() },
-      ],
+      debugAssessments: [...state.debugAssessments, { assessment, concept, timestamp: Date.now() }],
     }))
   },
 }))

@@ -11,10 +11,7 @@ interface DebugTrafficLightProps {
   assessment: DebugAssessment
 }
 
-const ASSESSMENT_CONFIG: Record<
-  DebugAssessment,
-  { label: string; className: string }
-> = {
+const ASSESSMENT_CONFIG: Record<DebugAssessment, { label: string; className: string }> = {
   green: {
     label: 'Solid',
     className: 'bg-success/10 text-success border-success/20',
