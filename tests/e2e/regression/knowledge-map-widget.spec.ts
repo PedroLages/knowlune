@@ -8,13 +8,13 @@
  *   - AC7: "See full map" link navigates to /knowledge-map
  *   - AC8: Mobile accordion view is visible at 375px width
  */
-import { test, expect } from '../support/fixtures'
-import { goToOverview } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { goToOverview } from '../../support/helpers/navigation'
 import {
   seedImportedCourses,
   seedQuizzes,
   seedQuizAttempts,
-} from '../support/helpers/indexeddb-seed'
+} from '../../support/helpers/indexeddb-seed'
 
 /** Minimal ImportedCourse record sufficient for the knowledge map store */
 const TEST_COURSE = {
