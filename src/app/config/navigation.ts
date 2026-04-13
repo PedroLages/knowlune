@@ -18,6 +18,7 @@ import {
   Route,
   Library,
   Layers,
+  MessageSquare,
   Settings as SettingsIcon,
   type LucideIcon,
 } from 'lucide-react'
@@ -78,6 +79,12 @@ export const navigationGroups: NavigationGroup[] = [
         name: 'Learning Path',
         path: '/ai-learning-path',
         icon: Sparkles,
+        disclosureKey: 'ai-used',
+      },
+      {
+        name: 'AI Tutor',
+        path: '/tutor',
+        icon: MessageSquare,
         disclosureKey: 'ai-used',
       },
     ],

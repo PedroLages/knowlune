@@ -117,6 +117,10 @@ const KnowledgeMap = React.lazy(() =>
   import('./pages/KnowledgeMap').then(m => ({ default: m.KnowledgeMap }))
 )
 
+// E57-S01: AI Tutor — standalone tutor page
+const Tutor = React.lazy(() => import('./pages/Tutor').then(m => ({ default: m.Tutor })))
+
+
 function PageLoader() {
   return (
     <DelayedFallback>
@@ -500,6 +504,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <KnowledgeMap />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'tutor',
+        element: (
+          <SuspensePage>
+            <Tutor />
           </SuspensePage>
         ),
       },
