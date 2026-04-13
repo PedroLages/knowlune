@@ -611,11 +611,11 @@ development_status:
   # Epic 56: Knowledge Map Phase 1
   # Source: epics.md
   # ──────────────────────────────────────────────────
-  epic-56: in-progress
-  56-1-topic-resolution-service: review
-  56-2-knowledge-score-calculation-zustand-store: review
-  56-3-knowledge-map-overview-widget: review
-  56-4-dedicated-knowledge-map-page: review
+  epic-56: done
+  56-1-topic-resolution-service: done
+  56-2-knowledge-score-calculation-zustand-store: done
+  56-3-knowledge-map-overview-widget: done
+  56-4-dedicated-knowledge-map-page: done
 
   # ──────────────────────────────────────────────────
   # Epic 57: AI Tutoring Phase 1-2
