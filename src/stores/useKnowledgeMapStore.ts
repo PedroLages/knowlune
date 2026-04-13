@@ -284,7 +284,6 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
           topicFlashcards,
           currentTime
         )
-        const flashcardRetention = aggregateRetention
         const predictedDecayDate =
           avgStability !== null ? calculateDecayDate(avgStability, currentTime) : null
 
@@ -312,10 +311,10 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
           ? daysBetween(new Date(mostRecentEngagement), currentTime)
           : 365 // Default to very stale if no engagement data
 
-        // Calculate score (E62-S01: pass FSRS retention as override)
+        // Calculate score (E62-S01: fsrsRetention is the sole flashcard signal; flashcardRetention omitted)
         const scoreResult = calculateTopicScore({
           quizScore,
-          flashcardRetention,
+          flashcardRetention: null,
           completionPercent,
           daysSinceLastEngagement: daysAgo,
           fsrsRetention: aggregateRetention,
@@ -327,7 +326,7 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
         // Suggest actions
         const actions = suggestActions({
           quizScore,
-          flashcardRetention,
+          flashcardRetention: aggregateRetention,
           completionPercent,
         })
 

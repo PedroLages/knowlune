@@ -42,9 +42,9 @@ export interface TopicScoreInput {
 export interface RetentionFlashcard {
   last_review?: string
   stability: number
-  /** SM-2 interval field — present on legacy cards without FSRS stability */
+  /** SM-2 interval field — reserved for future SM-2 path (not yet implemented; codebase is fully FSRS) */
   interval?: number
-  /** SM-2 reviewedAt field — present on legacy cards */
+  /** SM-2 reviewedAt field — reserved for future SM-2 path (not yet implemented; codebase is fully FSRS) */
   reviewedAt?: string
 }
 
@@ -160,11 +160,13 @@ export interface AggregateRetentionResult {
  */
 export function calculateAggregateRetention(
   flashcards: RetentionFlashcard[],
-  now: Date = new Date()
+  now?: Date
 ): AggregateRetentionResult {
+  const _now = now ?? new Date()
   if (flashcards.length === 0) return { retention: null, avgStability: null }
 
-  // Filter to reviewed cards with meaningful stability
+  // Filter to FSRS-reviewed cards (stability > 0 + last_review).
+  // TODO(E62): SM-2 path not implemented — codebase is fully FSRS. interval/reviewedAt fields retained for future compatibility.
   const reviewedCards = flashcards.filter(card => card.last_review && card.stability > 0)
 
   if (reviewedCards.length === 0) return { retention: null, avgStability: null }
@@ -175,7 +177,7 @@ export function calculateAggregateRetention(
   for (const card of reviewedCards) {
     const retention = predictRetention(
       { last_review: card.last_review, stability: card.stability },
-      now
+      _now
     )
     totalRetention += retention
     totalStability += card.stability
@@ -198,14 +200,15 @@ export function calculateAggregateRetention(
  * @param now - Current timestamp
  * @returns ISO date string when retention drops to 70%, or null if avgStability <= 0
  */
-export function calculateDecayDate(avgStability: number, now: Date = new Date()): string | null {
+export function calculateDecayDate(avgStability: number, now?: Date): string | null {
+  const _now = now ?? new Date()
   if (avgStability <= 0) return null
 
   // FSRS power-law: solve for t when R(t,S) = 0.70
   // R(t,S) = (1 + t/(9*S))^(-1) → t = 9*S*(R^(-1) - 1)
   const daysUntilDecay = 9 * avgStability * (1 / 0.7 - 1)
 
-  const decayDate = new Date(now.getTime() + daysUntilDecay * 24 * 60 * 60 * 1000)
+  const decayDate = new Date(_now.getTime() + daysUntilDecay * 24 * 60 * 60 * 1000)
   return decayDate.toISOString()
 }
 
