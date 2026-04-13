@@ -108,10 +108,12 @@ function getTokenColors() {
   return _colorCache
 }
 
-/** Invalidate color cache on theme changes. Singleton guard prevents duplicate observers on HMR. */
-let _observerInitialized = false
-if (typeof window !== 'undefined' && !_observerInitialized) {
-  _observerInitialized = true
+/**
+ * Invalidate color cache on theme changes.
+ * Uses globalThis to persist the observer reference across HMR module re-evaluations in dev.
+ * In production, modules evaluate once so this is a no-op guard.
+ */
+if (typeof window !== 'undefined' && !(globalThis as any).__kmColorCacheObserver) {
   const observer = new MutationObserver(() => {
     _colorCache = null
   })
@@ -119,6 +121,7 @@ if (typeof window !== 'undefined' && !_observerInitialized) {
     attributes: true,
     attributeFilter: ['class'],
   })
+  ;(globalThis as any).__kmColorCacheObserver = observer
 }
 
 /** Linearly interpolate between two RGB colors */

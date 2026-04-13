@@ -36,6 +36,13 @@ describe('formatDecayLabel', () => {
     expect(result!.colorClass).toBe('text-destructive')
   })
 
+  it('returns "Fading today" when decay date is today (days === 0)', () => {
+    const result = formatDecayLabel(NOW.toISOString(), NOW)
+    expect(result).not.toBeNull()
+    expect(result!.label).toBe('Fading today')
+    expect(result!.colorClass).toBe('text-destructive')
+  })
+
   it('returns singular "day" for exactly 1 day away', () => {
     const result = formatDecayLabel(daysFrom(NOW, 1), NOW)
     expect(result).not.toBeNull()

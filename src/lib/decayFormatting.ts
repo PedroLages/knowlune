@@ -44,6 +44,9 @@ export function formatDecayLabel(predictedDecayDate: string | null, now?: Date):
   if (days < 0) {
     return { label: 'Already fading', colorClass: 'text-destructive' }
   }
+  if (days === 0) {
+    return { label: 'Fading today', colorClass: 'text-destructive' }
+  }
   if (days < 7) {
     return {
       label: `Fading in ${days} day${days !== 1 ? 's' : ''}`,

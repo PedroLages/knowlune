@@ -71,7 +71,7 @@ function colorClassToBadgeVariant(
   colorClass: 'text-destructive' | 'text-warning' | 'text-success'
 ): 'destructive' | 'default' | 'outline' {
   if (colorClass === 'text-destructive') return 'destructive'
-  if (colorClass === 'text-warning') return 'default'
+  if (colorClass === 'text-warning') return 'default' // 'default' = amber/warning badge style — shadcn doesn't have a 'warning' variant
   return 'outline'
 }
 
