@@ -983,6 +983,33 @@ export interface ChapterMappingRecord {
   updatedAt: string // ISO 8601
 }
 
+/** Message in a tutor chat conversation (persisted to Dexie) */
+export interface TutorMessage {
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: number
+}
+
+/** Persisted tutor chat conversation (E57-S03) */
+export interface ChatConversation {
+  /** UUID primary key */
+  id: string
+  /** FK to ImportedCourse.id */
+  courseId: string
+  /** Video/lesson ID within the course */
+  videoId: string
+  /** Tutor mode at time of conversation */
+  mode: 'socratic' | 'explain' | 'quiz'
+  /** Progressive hint level (0-4) */
+  hintLevel: number
+  /** Conversation messages (blob — stored as JSON array) */
+  messages: TutorMessage[]
+  /** Epoch ms — when conversation was started */
+  createdAt: number
+  /** Epoch ms — last message added */
+  updatedAt: number
+}
+
 export interface YouTubeCourseChapter {
   id: string // PK — UUID
   courseId: string // FK to ImportedCourse.id

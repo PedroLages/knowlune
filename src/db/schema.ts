@@ -39,6 +39,7 @@ import type {
   AudiobookshelfServer,
   VocabularyItem,
   BookReview,
+  ChatConversation,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA } from './checkpoint'
@@ -92,6 +93,7 @@ export type ElearningDatabase = Dexie & {
   readingQueue: EntityTable<import('@/data/types').ReadingQueueEntry, 'id'>
   audioClips: EntityTable<AudioClip, 'id'>
   bookReviews: EntityTable<BookReview, 'id'>
+  chatConversations: EntityTable<ChatConversation, 'id'>
 }
 
 /**
@@ -1318,6 +1320,10 @@ function _declareLegacyMigrations(database: Dexie): void {
   // E113-S01: Book Reviews & Ratings — personal reviews with star ratings
   database.version(48).stores({
     bookReviews: 'id, bookId, createdAt',
+  })
+  // E57-S03: Chat Conversations — tutor chat persistence
+  database.version(49).stores({
+    chatConversations: 'id, [courseId+videoId], courseId, updatedAt',
   })
 } // end _declareLegacyMigrations
 
