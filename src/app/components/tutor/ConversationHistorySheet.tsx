@@ -6,7 +6,7 @@
  * Provides Continue and Delete actions for each session card.
  */
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { History, MessageSquare } from 'lucide-react'
 import {
   Sheet,
@@ -35,8 +35,8 @@ import {
 import { toast } from 'sonner'
 import { db } from '@/db'
 import { MODE_LABELS } from '@/ai/tutor/modeLabels'
-import type { ChatConversation, TutorMessage } from '@/data/types'
-import type { TutorMode } from '@/ai/tutor/types'
+import { formatTimestamp, extractTopics, extractModes } from './conversationUtils'
+import type { ChatConversation } from '@/data/types'
 
 interface ConversationHistorySheetProps {
   open: boolean
@@ -48,53 +48,17 @@ interface ConversationHistorySheetProps {
   onDelete: (conversationId: string) => void
 }
 
-/** Format timestamp as relative date string */
-function formatTimestamp(epochMs: number): string {
-  const now = new Date()
-  const date = new Date(epochMs)
-  const diffMs = now.getTime() - date.getTime()
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  const timeStr = date.toLocaleTimeString(undefined, {
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-
-  if (diffDays === 0) {
-    // Check if same calendar day
-    if (now.toLocaleDateString('sv-SE') === date.toLocaleDateString('sv-SE')) {
-      return `Today, ${timeStr}`
-    }
-    return `Yesterday, ${timeStr}`
-  }
-  if (diffDays === 1) {
-    return `Yesterday, ${timeStr}`
-  }
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+/** Detect if viewport is mobile (<640px) with resize listener */
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640)
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 640)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+  return isMobile
 }
 
-/** Extract topic labels from conversation messages */
-function extractTopics(messages: TutorMessage[]): string[] {
-  const userMessages = messages.filter(m => m.role === 'user')
-  const topics: string[] = []
-  for (const msg of userMessages.slice(0, 5)) {
-    const text = msg.content.trim()
-    if (text.length > 0) {
-      topics.push(text.length > 40 ? text.slice(0, 37) + '...' : text)
-    }
-    if (topics.length >= 5) break
-  }
-  return topics
-}
-
-/** Extract unique modes used in conversation */
-function extractModes(messages: TutorMessage[]): TutorMode[] {
-  const modes = new Set<TutorMode>()
-  for (const msg of messages) {
-    if (msg.mode) modes.add(msg.mode)
-  }
-  return Array.from(modes)
-}
 
 function ConversationSessionCard({
   conversation,
@@ -213,6 +177,8 @@ export function ConversationHistorySheet({
   onContinue,
   onDelete,
 }: ConversationHistorySheetProps) {
+  const isMobile = useIsMobile()
+
   const { thisLesson, otherLessons } = useMemo(() => {
     const thisLesson: ChatConversation[] = []
     const otherLessons: ChatConversation[] = []
@@ -242,8 +208,8 @@ export function ConversationHistorySheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        side="right"
-        className="w-[320px] sm:w-[320px] max-sm:!w-full max-sm:!h-[70vh] p-0 bg-card border-l"
+        side={isMobile ? 'bottom' : 'right'}
+        className={isMobile ? 'h-[70vh] p-0 bg-card' : 'w-[320px] p-0 bg-card border-l'}
         data-testid="conversation-history-sheet"
       >
         <SheetHeader className="px-4 py-3 border-b">

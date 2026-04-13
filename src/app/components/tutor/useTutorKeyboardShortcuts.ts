@@ -54,6 +54,7 @@ export function useTutorKeyboardShortcuts({
         if (e.key !== 'h') return
       }
 
+      // Cmd+H conflicts with macOS "Hide Window" but e.preventDefault() captures it in-browser per AC spec
       if (e.key === 'h') {
         e.preventDefault()
         onToggleHistory()
