@@ -627,7 +627,7 @@ development_status:
   57-2-tutor-hook-streaming: review
   57-3-conversation-persistence: review
   57-4-socratic-prompt-hint-ladder: review
-  57-5-rag-grounded-answers: in-progress
+  57-5-rag-grounded-answers: review
 
   # ──────────────────────────────────────────────────
   # Epic 58: Notifications Page
