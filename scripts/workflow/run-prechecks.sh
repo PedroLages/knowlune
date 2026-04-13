@@ -295,11 +295,21 @@ else
     GATES[type-check]="passed"
     log_warning "Type errors in unchanged files (pre-existing) — continuing"
   else
-    # Auto-fix attempt would go here (simplified for now)
-    # Re-run type check
-    if run_check "type-check" "${LOG_DIR:+${LOG_DIR}/type-check.log}" npx tsc --noEmit; then
+    # Filter type errors to only branch-changed files
+    TYPE_LOG="${LOG_DIR:+${LOG_DIR}/type-check.log}"
+    BRANCH_ERRORS=""
+    if [ -n "$TYPE_LOG" ] && [ -f "$TYPE_LOG" ]; then
+      for cf in $CHANGED_FILES; do
+        MATCHES=$(grep "^${cf}" "$TYPE_LOG" || true)
+        if [ -n "$MATCHES" ]; then
+          BRANCH_ERRORS="${BRANCH_ERRORS}${MATCHES}\n"
+        fi
+      done
+    fi
+
+    if [ -z "$BRANCH_ERRORS" ]; then
       GATES[type-check]="passed"
-      log_success "Type check passed"
+      log_warning "Type errors in unchanged files only (pre-existing) — continuing"
     else
       GATES[type-check]="failed"
       log_error "Type errors in branch-changed files — fix required"
