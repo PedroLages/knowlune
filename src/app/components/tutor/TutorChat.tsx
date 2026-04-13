@@ -6,8 +6,8 @@
  * Uses useTutor hook for streaming LLM responses with Dexie persistence.
  */
 
-import { useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { useState, useCallback, useEffect } from 'react'
+import { Trash2, History } from 'lucide-react'
 import { MessageList } from '@/app/components/chat/MessageList'
 import { ChatInput } from '@/app/components/chat/ChatInput'
 import { TranscriptBadge } from './TranscriptBadge'
@@ -27,10 +27,18 @@ import {
   AlertDialogTrigger,
 } from '@/app/components/ui/alert-dialog'
 import { TutorMemoryIndicator } from './TutorMemoryIndicator'
+import { ConversationHistorySheet } from './ConversationHistorySheet'
+import {
+  ContinueConversationPrompt,
+  isConversationStale,
+} from './ContinueConversationPrompt'
+import { useTutorKeyboardShortcuts } from './useTutorKeyboardShortcuts'
 import { useTutor } from '@/ai/hooks/useTutor'
 import { useTutorStore } from '@/stores/useTutorStore'
+import { db } from '@/db'
 import { LLM_ERROR_MESSAGES } from '@/ai/lib/llmErrorMapper'
-import type { TranscriptStatus } from '@/ai/tutor/types'
+import type { TranscriptStatus, TutorMode } from '@/ai/tutor/types'
+import type { ChatConversation } from '@/data/types'
 
 interface TutorChatProps {
   courseId: string
@@ -69,7 +77,98 @@ export function TutorChat({
   })
 
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [memoryOpen, setMemoryOpen] = useState(false)
+  const [allConversations, setAllConversations] = useState<ChatConversation[]>([])
+  const [continuePromptDismissed, setContinuePromptDismissed] = useState(false)
   const { learnerModel, clearLearnerModel, replaceLearnerModelFields, quizState } = useTutorStore()
+
+  // Load all conversations for this course when history sheet opens
+  useEffect(() => {
+    if (!historyOpen) return
+    let ignore = false
+    db.chatConversations
+      .where('courseId')
+      .equals(courseId)
+      .toArray()
+      .then(convs => {
+        if (!ignore) setAllConversations(convs)
+      })
+      .catch(() => {
+        // silent-catch-ok — history load failure is non-critical
+      })
+    return () => {
+      ignore = true
+    }
+  }, [historyOpen, courseId])
+
+  // Find the most recent stale conversation for the continue prompt
+  const staleConversation =
+    !continuePromptDismissed && messages.length === 0
+      ? allConversations
+          .filter(
+            c =>
+              c.videoId === lessonId &&
+              c.courseId === courseId &&
+              isConversationStale(c.updatedAt)
+          )
+          .sort((a, b) => b.updatedAt - a.updatedAt)[0] ?? null
+      : null
+
+  // Preload conversations for continue prompt on mount
+  useEffect(() => {
+    let ignore = false
+    db.chatConversations
+      .where('[courseId+videoId]')
+      .equals([courseId, lessonId])
+      .toArray()
+      .then(convs => {
+        if (!ignore) setAllConversations(prev => {
+          const ids = new Set(prev.map(c => c.id))
+          return [...prev, ...convs.filter(c => !ids.has(c.id))]
+        })
+      })
+      .catch(() => {
+        // silent-catch-ok — preload failure is non-critical
+      })
+    return () => {
+      ignore = true
+    }
+  }, [courseId, lessonId])
+
+  const handleContinueConversation = useCallback(
+    (conv: ChatConversation) => {
+      // Load conversation messages into the store
+      const chatMessages = conv.messages.map(msg => ({
+        id: crypto.randomUUID(),
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        mode: msg.mode ?? ('socratic' as const),
+        debugAssessment: msg.debugAssessment,
+      }))
+      useTutorStore.setState({
+        messages: chatMessages,
+        conversationId: conv.id,
+        mode: conv.mode as TutorMode,
+        hintLevel: 0, // Reset hint ladder per AC
+      })
+      setContinuePromptDismissed(true)
+    },
+    []
+  )
+
+  const handleDeleteConversation = useCallback(
+    (conversationId: string) => {
+      setAllConversations(prev => prev.filter(c => c.id !== conversationId))
+    },
+    []
+  )
+
+  // Conversation count for badge
+  const conversationCount = allConversations.filter(
+    c => c.courseId === courseId
+  ).length
 
   // Determine badge status — use hook's transcriptStatus or fallback
   const badgeStatus: TranscriptStatus = transcriptStatus ?? {
@@ -81,6 +180,20 @@ export function TutorChat({
   // Detect offline/unavailable state for the banner using named constants (not fragile string comparison)
   const isOffline = error === LLM_ERROR_MESSAGES.OFFLINE
   const isPremiumGated = error === LLM_ERROR_MESSAGES.PREMIUM
+
+  // Keyboard shortcuts (E73-S05)
+  useTutorKeyboardShortcuts({
+    onToggleHistory: useCallback(() => setHistoryOpen(prev => !prev), []),
+    onToggleMemory: useCallback(() => setMemoryOpen(prev => !prev), []),
+    onSwitchMode: useCallback(
+      (newMode: TutorMode) => {
+        if (!isGenerating && !isOffline && !isPremiumGated) {
+          setMode(newMode)
+        }
+      },
+      [isGenerating, isOffline, isPremiumGated, setMode]
+    ),
+  })
 
   const handleClear = () => {
     clearConversation()
@@ -101,7 +214,27 @@ export function TutorChat({
           disabled={isGenerating || isOffline || isPremiumGated}
           hasTranscript={badgeStatus.available}
         />
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 min-h-[44px] min-w-[44px] text-muted-foreground"
+              aria-label="Conversation history"
+              onClick={() => setHistoryOpen(true)}
+              data-testid="history-btn"
+            >
+              <History className="h-4 w-4" />
+            </Button>
+            {conversationCount > 1 && (
+              <span
+                className="absolute -top-1 -right-1 bg-brand text-brand-foreground text-[10px] rounded-full min-w-[18px] h-[18px] flex items-center justify-center leading-none"
+                aria-label={`${conversationCount} conversations`}
+              >
+                {conversationCount}
+              </span>
+            )}
+          </div>
           {messages.length > 0 && (
             <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
               <AlertDialogTrigger asChild>
@@ -141,6 +274,8 @@ export function TutorChat({
         courseId={courseId}
         onClearMemory={clearLearnerModel}
         onUpdateMemory={replaceLearnerModelFields}
+        open={memoryOpen}
+        onOpenChange={setMemoryOpen}
       />
       <div className="flex-1 overflow-hidden relative">
         {mode === 'quiz' && quizState.totalQuestions > 0 && (
@@ -152,7 +287,13 @@ export function TutorChat({
             />
           </div>
         )}
-        {messages.length === 0 ? (
+        {staleConversation && messages.length === 0 ? (
+          <ContinueConversationPrompt
+            conversation={staleConversation}
+            onContinue={() => handleContinueConversation(staleConversation)}
+            onStartFresh={() => setContinuePromptDismissed(true)}
+          />
+        ) : messages.length === 0 ? (
           <TutorEmptyState lessonTitle={lessonTitle} mode={mode} onSendMessage={sendMessage} />
         ) : (
           <MessageList messages={messages} isStreaming={isGenerating} />
@@ -180,6 +321,15 @@ export function TutorChat({
               ? 'Premium subscription required'
               : 'Ask about this lesson...'
         }
+      />
+      <ConversationHistorySheet
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        conversations={allConversations}
+        currentLessonId={lessonId}
+        courseId={courseId}
+        onContinue={handleContinueConversation}
+        onDelete={handleDeleteConversation}
       />
     </div>
   )
