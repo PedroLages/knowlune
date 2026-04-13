@@ -88,8 +88,6 @@ interface KnowledgeMapState {
   getTopicsByCategory: (category: string) => ScoredTopic[]
   /** Get a single topic by canonical name */
   getTopicByName: (canonicalName: string) => ScoredTopic | undefined
-  /** Get action suggestions for declining topics (kept for backward compat; prefer state.suggestions) */
-  getSuggestedActions: () => ActionSuggestion[]
 }
 
 // ---------------------------------------------------------------------------
@@ -391,6 +389,9 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
           completionPct: t.scoreResult.score,
         })),
       }))
+      // FSRS stability not yet available (E59 pending) — using recency decay fallback.
+      // When E59 is implemented, pass a Map<canonicalName, stability> via options.fsrsStability
+      // to enable per-topic FSRS-based decay factor computation in generateActionSuggestions().
       const suggestions = generateActionSuggestions(topicsWithScores)
 
       set({
@@ -424,8 +425,4 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
     return get().topics.find(t => t.canonicalName === canonicalName)
   },
 
-  getSuggestedActions: () => {
-    // Return pre-computed suggestions from store state (reactive, no re-computation)
-    return get().suggestions
-  },
 }))
