@@ -78,11 +78,25 @@ export function TutorChat({
   const handleSend = useCallback(
     async (content: string) => {
       // Re-fetch transcript context with current video position
-      const currentContext = await getTranscriptContext(
-        courseId,
-        lessonId,
-        videoPositionSeconds
-      )
+      let currentContext: Awaited<ReturnType<typeof getTranscriptContext>>
+      try {
+        currentContext = await getTranscriptContext(courseId, lessonId, videoPositionSeconds)
+      } catch (error) {
+        console.error('[TutorChat] Failed to load lesson context for message:', error)
+        // Add error system message but continue — don't block the user
+        const errorMessage = {
+          id: crypto.randomUUID(),
+          role: 'system' as const,
+          content: 'Failed to load lesson context. Answering without it.',
+          timestamp: Date.now(),
+        }
+        setMessages(prev => [...prev, errorMessage])
+        currentContext = {
+          excerpt: '',
+          strategy: 'none' as const,
+          status: { available: false, strategy: 'none' as const, label: 'General mode' },
+        }
+      }
 
       // Build tutor context for system prompt
       const tutorContext: TutorContext = {
@@ -122,32 +136,17 @@ export function TutorChat({
     [courseId, lessonId, courseName, lessonTitle, lessonPosition, videoPositionSeconds]
   )
 
-  // Custom empty state when no messages
-  if (messages.length === 0) {
-    return (
-      <div className="flex flex-col h-[400px]" data-testid="tutor-chat">
-        <div className="px-4 py-2 border-b border-border flex items-center gap-2">
-          <TranscriptBadge status={transcriptStatus} />
-        </div>
-        <div className="flex-1 overflow-hidden">
-          <TutorEmptyState lessonTitle={lessonTitle} />
-        </div>
-        <ChatInput
-          onSend={handleSend}
-          isGenerating={false}
-          placeholder="Ask about this lesson..."
-        />
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-col h-[400px]" data-testid="tutor-chat">
       <div className="px-4 py-2 border-b border-border flex items-center gap-2">
         <TranscriptBadge status={transcriptStatus} />
       </div>
       <div className="flex-1 overflow-hidden">
-        <MessageList messages={messages} isStreaming={false} />
+        {messages.length === 0 ? (
+          <TutorEmptyState lessonTitle={lessonTitle} />
+        ) : (
+          <MessageList messages={messages} isStreaming={false} />
+        )}
       </div>
       <ChatInput
         onSend={handleSend}

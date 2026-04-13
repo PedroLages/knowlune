@@ -6,12 +6,10 @@
  * For in-lesson tutoring, use the Tutor tab in UnifiedLessonPlayer.
  */
 
-import { useState } from 'react'
-import { GraduationCap, Sparkles } from 'lucide-react'
+import { GraduationCap, Sparkles, AlertCircle, Settings } from 'lucide-react'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { isAIAvailable } from '@/lib/aiConfiguration'
 import { Alert, AlertDescription, AlertTitle } from '@/app/components/ui/alert'
-import { AlertCircle, Settings } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { useNavigate } from 'react-router'
 

@@ -233,7 +233,9 @@ function extractWindowContext(
 
   const windowCues = cues.slice(startIdx, endIdx + 1)
   const text = windowCues.map(c => c.text).join(' ')
-  const timeRange = `[${formatTime(windowCues[0].startTime)} - ${formatTime(windowCues[windowCues.length - 1].endTime)}]`
+  const lastCue = windowCues[windowCues.length - 1]
+  const lastTime = lastCue?.endTime ?? lastCue?.startTime ?? 0
+  const timeRange = `[${formatTime(windowCues[0].startTime)} - ${formatTime(lastTime)}]`
 
   return { text, timeRange }
 }
