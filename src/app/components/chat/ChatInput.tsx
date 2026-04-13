@@ -15,6 +15,8 @@ interface ChatInputProps {
   isGenerating: boolean
   /** Placeholder text */
   placeholder?: string
+  /** Whether the input is disabled (e.g., offline, premium gated) */
+  disabled?: boolean
 }
 
 /**
@@ -30,6 +32,7 @@ export function ChatInput({
   onSend,
   isGenerating,
   placeholder = 'Ask a question about your notes...',
+  disabled = false,
 }: ChatInputProps) {
   const [message, setMessage] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -47,7 +50,7 @@ export function ChatInput({
 
   const handleSend = () => {
     const trimmed = message.trim()
-    if (!trimmed || isGenerating) return
+    if (!trimmed || isGenerating || disabled) return
 
     onSend(trimmed)
     setMessage('')
@@ -76,7 +79,7 @@ export function ChatInput({
             onChange={e => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            disabled={isGenerating}
+            disabled={isGenerating || disabled}
             rows={1}
             className="min-h-12 w-full px-4 py-3 pr-12 rounded-xl border border-input
                      bg-background text-foreground placeholder:text-muted-foreground
@@ -89,7 +92,7 @@ export function ChatInput({
         <Button
           type="button"
           onClick={handleSend}
-          disabled={!message.trim() || isGenerating}
+          disabled={!message.trim() || isGenerating || disabled}
           className="h-12 px-6"
         >
           {isGenerating ? (

@@ -41,6 +41,7 @@ export type AIFeatureId =
   | 'knowledgeGaps'
   | 'noteOrganization'
   | 'analytics'
+  | 'tutor'
 
 /**
  * All valid AI feature IDs as a runtime array (for validation and iteration).
@@ -55,6 +56,7 @@ export const AI_FEATURE_IDS: readonly AIFeatureId[] = [
   'knowledgeGaps',
   'noteOrganization',
   'analytics',
+  'tutor',
 ] as const
 
 // ---------------------------------------------------------------------------
@@ -123,4 +125,5 @@ export const FEATURE_DEFAULTS: Record<AIFeatureId, FeatureModelConfig> = {
   knowledgeGaps: { provider: 'anthropic', model: 'claude-haiku-4-5' },
   noteOrganization: { provider: 'anthropic', model: 'claude-haiku-4-5' },
   analytics: { provider: 'anthropic', model: 'claude-haiku-4-5' },
+  tutor: { provider: 'anthropic', model: 'claude-haiku-4-5' },
 }
