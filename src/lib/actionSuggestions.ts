@@ -137,7 +137,7 @@ function generateLessonSuggestion(topic: TopicWithScore, urgency: number): Actio
     trend: topic.trend,
     actionType: 'lesson-rewatch',
     actionLabel: `Rewatch ${lowestLesson.title}`,
-    actionRoute: `/courses/${lowestLesson.courseId}/lessons/${lowestLesson.lessonId}`,
+    actionRoute: `/courses/${encodeURIComponent(lowestLesson.courseId)}/lessons/${encodeURIComponent(lowestLesson.lessonId)}`,
     estimatedMinutes: lowestLesson.durationMinutes ?? DEFAULT_LESSON_DURATION,
     urgencyScore: urgency,
     lessonTitle: lowestLesson.title,
@@ -221,6 +221,6 @@ export function generateActionSuggestions(
 
   // Sort by urgency descending, limit to maxSuggestions
   return Array.from(bestPerTopic.values())
-    .sort((a, b) => b.urgencyScore - a.urgencyScore)
+    .sort((a, b) => b.urgencyScore - a.urgencyScore || a.canonicalName.localeCompare(b.canonicalName))
     .slice(0, maxSuggestions)
 }
