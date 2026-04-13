@@ -20,7 +20,8 @@ import { buildTutorSystemPrompt } from '@/ai/tutor/tutorPromptBuilder'
 import { getLLMClient } from '@/ai/llm/factory'
 import { mapLLMError } from '@/ai/lib/llmErrorMapper'
 import type { LLMMessage } from '@/ai/llm/types'
-import type { TutorContext, TranscriptStatus } from '@/ai/tutor/types'
+import type { TutorContext, TutorMode, TranscriptStatus } from '@/ai/tutor/types'
+import { processUserMessage } from '@/ai/tutor/hintLadder'
 import type { ChatMessage } from '@/ai/rag/types'
 
 /** Maximum number of past exchanges to include in LLM context */
@@ -47,18 +48,16 @@ interface UseTutorResult {
   error: string | null
   /** Transcript status for badge */
   transcriptStatus: TranscriptStatus | null
+  /** Current tutor mode */
+  mode: TutorMode
+  /** Current hint level (0-4) */
+  hintLevel: number
   /** Send a user message */
   sendMessage: (content: string) => Promise<void>
   /** Clear conversation */
   clearConversation: () => void
-}
-
-/**
- * Detect frustration level from user message.
- * Placeholder — full implementation in S04.
- */
-function detectFrustration(_message: string): 'none' | 'mild' | 'high' {
-  return 'none'
+  /** Set the tutor mode */
+  setMode: (mode: TutorMode) => void
 }
 
 export function useTutor(options: UseTutorOptions): UseTutorResult {
@@ -129,9 +128,16 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
       const abortController = new AbortController()
       abortRef.current = abortController
 
-      // Stage 1: Frustration detection (placeholder — S04)
-      // TODO(E57-S04): frustration detection — result used for Socratic mode in S04
-      detectFrustration(content)
+      // Stage 1: Frustration detection → hint ladder escalation (Socratic mode only)
+      if (store.mode === 'socratic') {
+        const { hintLevel, stuckCount } = processUserMessage(
+          content,
+          store.hintLevel,
+          store.stuckCount
+        )
+        store.setHintLevel(hintLevel)
+        store.setStuckCount(stuckCount)
+      }
 
       // Add user message
       const userMessage: ChatMessage = {
@@ -168,7 +174,12 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
           chapterTitle: transcriptResult.chapterTitle,
           timeRange: transcriptResult.timeRange,
         }
-        const systemPrompt = buildTutorSystemPrompt(tutorContext, store.mode)
+        const systemPrompt = buildTutorSystemPrompt(
+          tutorContext,
+          store.mode,
+          undefined,
+          store.hintLevel
+        )
 
         // Stage 4: Build LLM message array with sliding window
         const allMessages = [...store.messages] // includes the user message we just added
@@ -252,7 +263,10 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
     isGenerating: store.isGenerating,
     error: store.error,
     transcriptStatus: store.transcriptStatus,
+    mode: store.mode,
+    hintLevel: store.hintLevel,
     sendMessage,
     clearConversation: store.clearConversation,
+    setMode: store.setMode,
   }
 }
