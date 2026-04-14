@@ -169,10 +169,16 @@ export function AudiobookRenderer({
     pause,
   })
 
-  // Register this book as the active audiobook and load the first chapter
+  // Register this book as the active audiobook and load the first chapter.
+  // Skip loadChapter if this book is already active in the store (e.g. navigating back
+  // from mini-player) — the singleton audio element already has the correct source and
+  // position; calling loadChapter(0) would seek to the beginning unnecessarily.
   useEffect(() => {
+    const alreadyActive = useAudioPlayerStore.getState().currentBookId === book.id
     setCurrentBook(book.id)
-    loadChapter(initialChapterIndex, false)
+    if (!alreadyActive) {
+      loadChapter(initialChapterIndex, false)
+    }
   }, [book.id]) // book.id is stable after mount; loadChapter/setCurrentBook identity stable
 
   // Check for post-sleep toast on mount
