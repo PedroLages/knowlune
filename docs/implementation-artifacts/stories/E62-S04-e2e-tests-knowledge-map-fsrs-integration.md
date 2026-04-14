@@ -1,12 +1,12 @@
 ---
 story_id: E62-S04
-story_name: "E2E Tests for Knowledge Map FSRS Integration"
-status: draft
-started:
+story_name: 'E2E Tests for Knowledge Map FSRS Integration'
+status: in-progress
+started: 2026-04-14
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-04-14
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, bundle-analysis, code-review, code-review-testing, security-review, design-review-skipped, performance-benchmark-skipped, exploratory-qa-skipped]
 burn_in_validated: false
 ---
 
@@ -89,14 +89,17 @@ No UI — pure E2E test story.
 ## Implementation Notes
 
 **Key files to create:**
+
 - `tests/e2e/knowledge-map-fsrs.spec.ts` (~150-200 lines)
 
 **Key files to reference:**
+
 - Existing E2E tests in `tests/e2e/` for seeding patterns and factory usage
 - `tests/support/fixtures/factories/` for flashcard factory patterns
 - Existing knowledge map E2E tests (if any from E56) for page interaction patterns
 
 **Testing approach:**
+
 - Chromium only for visual color verification
 - Use `page.evaluate()` to seed IndexedDB with FSRS flashcard data
 - Use `page.locator()` for treemap cell targeting
@@ -104,6 +107,7 @@ No UI — pure E2E test story.
 - Use `formatDistanceToNow` logic expectations for tooltip text matching
 
 **Seeding strategy:**
+
 - 3 courses with flashcards at different retention levels
 - 1 course with no flashcards (fallback path)
 - All using FIXED_DATE-relative timestamps for determinism
@@ -140,4 +144,10 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+1. **FSRS seed data design**: Creating deterministic FSRS test data required careful stability/last_review combinations to produce predictable retention percentages. High stability (100) with recent review (1 day ago) yields ~99% retention; low stability (2) with old review (10 days ago) yields low retention. The FSRS exponential decay formula `R = e^(-t/S)` makes the math straightforward once you pick the right parameters.
+
+2. **Browser date mocking via addInitScript**: The `page.addInitScript()` pattern for date mocking must be set before any `goto()` call since navigation creates a new document. The mock replaces `Date` globally in the browser context, ensuring `Date.now()` returns FIXED_DATE throughout the page lifecycle.
+
+3. **Dark mode class persistence across navigations**: Setting `document.documentElement.classList.add('dark')` via `page.evaluate()` is lost on navigation. Only `localStorage` persists. The test relies on the app reading `localStorage` on mount to apply dark mode, which is the app's actual behavior — but this is a subtle testing footgun worth documenting.
+
+4. **Radix popover selectors**: Using `[data-radix-popper-content-wrapper]` is fragile (internal Radix implementation detail). A `data-testid` on the popover component would be more robust but was deferred to avoid changing production code in a test-only story.

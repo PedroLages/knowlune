@@ -692,7 +692,7 @@ development_status:
   62-1-fsrs-retention-aggregation-and-score-integration: review
   62-2-retention-gradient-treemap-and-decay-predictions-ui: review
   62-3-unit-tests-fsrs-retention-scoring: review
-  62-4-e2e-tests-knowledge-map-fsrs-integration: backlog
+  62-4-e2e-tests-knowledge-map-fsrs-integration: review
   epic-62-retrospective: optional
 
   # ──────────────────────────────────────────────────
