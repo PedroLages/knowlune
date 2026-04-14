@@ -368,7 +368,7 @@ test.describe('E62-S04: Knowledge Map FSRS Integration', () => {
     // this up via the theme persistence mechanism (classList.add is not used here
     // because it would be lost when navigation creates a new document)
     await page.evaluate(() => {
-      localStorage.setItem('knowlune-theme', 'dark')
+      localStorage.setItem('theme', 'dark')
     })
 
     await seedAllData(page)
