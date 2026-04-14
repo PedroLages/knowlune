@@ -151,7 +151,7 @@ describe('LessonItem normalization', () => {
     expect(lessons).toHaveLength(1)
     expect(lessons[0]).toMatchObject({
       id: 'vid-1',
-      title: '01-intro.mp4',
+      title: 'intro', // humanizeFilename strips extension and numeric prefix
       type: 'video',
       duration: 600,
       order: 1,
@@ -166,7 +166,7 @@ describe('LessonItem normalization', () => {
     expect(lessons).toHaveLength(1)
     expect(lessons[0]).toMatchObject({
       id: 'pdf-1',
-      title: 'cheatsheet.pdf',
+      title: 'cheatsheet', // humanizeFilename strips extension
       type: 'pdf',
     })
     expect(lessons[0].sourceMetadata).toBeDefined()
@@ -389,7 +389,7 @@ describe('LocalCourseAdapter.getGroupedLessons()', () => {
     expect(group1).toBeDefined()
     expect(group1.primary.type).toBe('video')
     expect(group1.materials).toHaveLength(1)
-    expect(group1.materials[0].title).toBe('01-Intro.pdf')
+    expect(group1.materials[0].title).toBe('Intro') // humanizeFilename strips extension + numeric prefix
 
     // Video group 2 has no matching PDF
     const group2 = groups.find(g => g.primary.id === 'v2')!
@@ -397,7 +397,7 @@ describe('LocalCourseAdapter.getGroupedLessons()', () => {
     expect(group2.materials).toHaveLength(0)
 
     // Unmatched PDF becomes standalone group
-    const standalone = groups.find(g => g.primary.title === 'Resources.pdf')
+    const standalone = groups.find(g => g.primary.title === 'Resources') // humanizeFilename strips extension
     expect(standalone).toBeDefined()
     expect(standalone!.primary.type).toBe('pdf')
   })

@@ -49,6 +49,12 @@ vi.mock('@/lib/youtubeConfiguration', () => ({
   getYouTubeConfiguration: mockGetConfig,
 }))
 
+// Mock Whisper config — default to 'self-hosted' so Tier 3 is active in tests
+const mockGetWhisperConfig = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/whisper', () => ({
+  getWhisperConfig: mockGetWhisperConfig,
+}))
+
 // Import after mocks
 import {
   fetchTranscript,
@@ -73,6 +79,8 @@ describe('youtubeTranscriptPipeline', () => {
     mockGet.mockResolvedValue(undefined)
     mockToArray.mockResolvedValue([])
     mockGetConfig.mockReturnValue({ ...BASE_CONFIG })
+    // Default Whisper config: 'self-hosted' so Tier 3 is active when whisperEndpointUrl is set
+    mockGetWhisperConfig.mockReturnValue({ provider: 'self-hosted' })
     // Re-wire mockWhere chain after clearAllMocks
     mockWhere.mockReturnValue({
       equals: vi.fn().mockReturnValue({

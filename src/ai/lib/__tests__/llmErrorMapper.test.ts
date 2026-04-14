@@ -8,14 +8,14 @@ afterEach(() => {
 
 describe('mapLLMError', () => {
   it('returns expected user message for known error code', () => {
-    const err = new LLMError('TIMEOUT', 'Request timed out after 30s')
+    const err = new LLMError('Request timed out after 30s', 'TIMEOUT')
     const result = mapLLMError(err)
     expect(result).toBe('Request timed out. Please try again.')
   })
 
   it('returns generic safe message for unknown error code — does not expose raw error', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const err = new LLMError('UNKNOWN_CODE' as never, 'internal debug details')
+    const err = new LLMError('internal debug details', 'UNKNOWN_CODE' as never)
     const result = mapLLMError(err)
     expect(result).toBe('Something went wrong. Please try again.')
     expect(result).not.toContain('internal debug details')

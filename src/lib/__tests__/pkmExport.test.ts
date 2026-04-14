@@ -217,16 +217,16 @@ describe('pkmExport', () => {
       const onProgress = vi.fn()
       await exportPkmBundle(onProgress)
 
-      // Should start at 0
+      // Should start at 0 (notes phase 0-30%)
       expect(onProgress).toHaveBeenCalledWith(0, 'Exporting notes...')
-      // Phase transitions at weighted boundaries
-      expect(onProgress).toHaveBeenCalledWith(40, 'Exporting flashcards...')
-      expect(onProgress).toHaveBeenCalledWith(80, 'Exporting bookmarks...')
+      // Phase transitions: notes 30%, flashcards 30%, bookmarks 20%, highlights 20%
+      expect(onProgress).toHaveBeenCalledWith(30, 'Exporting flashcards...')
+      expect(onProgress).toHaveBeenCalledWith(60, 'Exporting bookmarks...')
       // Ends at 100
       expect(onProgress).toHaveBeenCalledWith(100, 'Complete')
     })
 
-    it('passes weighted sub-progress to notes exporter (0-40%)', async () => {
+    it('passes weighted sub-progress to notes exporter (0-30%)', async () => {
       mockExportNotesAsMarkdown.mockImplementation(async cb => {
         // Simulate sub-exporter reporting 50% progress
         cb?.(50, 'Processing notes...')
@@ -236,11 +236,11 @@ describe('pkmExport', () => {
       const onProgress = vi.fn()
       await exportPkmBundle(onProgress)
 
-      // 50% of notes phase (40% weight) = 20%
-      expect(onProgress).toHaveBeenCalledWith(20, 'Processing notes...')
+      // 50% of notes phase (30% weight) = 15%
+      expect(onProgress).toHaveBeenCalledWith(15, 'Processing notes...')
     })
 
-    it('passes weighted sub-progress to flashcards exporter (40-80%)', async () => {
+    it('passes weighted sub-progress to flashcards exporter (30-60%)', async () => {
       mockExportFlashcardsAsMarkdown.mockImplementation(async cb => {
         cb?.(50, 'Processing flashcards...')
         return [{ name: 'flashcards/C/fc.md', content: '' }]
@@ -249,11 +249,11 @@ describe('pkmExport', () => {
       const onProgress = vi.fn()
       await exportPkmBundle(onProgress)
 
-      // 40 + (50% of 40% weight) = 40 + 20 = 60
-      expect(onProgress).toHaveBeenCalledWith(60, 'Processing flashcards...')
+      // 30 + (50% of 30% weight) = 30 + 15 = 45
+      expect(onProgress).toHaveBeenCalledWith(45, 'Processing flashcards...')
     })
 
-    it('passes weighted sub-progress to bookmarks exporter (80-100%)', async () => {
+    it('passes weighted sub-progress to bookmarks exporter (60-80%)', async () => {
       mockExportBookmarksAsMarkdown.mockImplementation(async cb => {
         cb?.(50, 'Processing bookmarks...')
         return [{ name: 'bookmarks/C/bm.md', content: '' }]
@@ -262,8 +262,8 @@ describe('pkmExport', () => {
       const onProgress = vi.fn()
       await exportPkmBundle(onProgress)
 
-      // 80 + (50% of 20% weight) = 80 + 10 = 90
-      expect(onProgress).toHaveBeenCalledWith(90, 'Processing bookmarks...')
+      // 60 + (50% of 20% weight) = 60 + 10 = 70
+      expect(onProgress).toHaveBeenCalledWith(70, 'Processing bookmarks...')
     })
 
     it('works without progress callback (no errors)', async () => {
