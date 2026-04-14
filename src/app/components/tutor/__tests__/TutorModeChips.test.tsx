@@ -14,10 +14,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { TutorModeChips } from '../TutorModeChips'
-import type { TutorMode } from '@/ai/tutor/types'
-
-const ALL_MODES: TutorMode[] = ['socratic', 'explain', 'eli5', 'quiz', 'debug']
-
 function setup(overrides: Partial<Parameters<typeof TutorModeChips>[0]> = {}) {
   const onModeChange = vi.fn()
   render(

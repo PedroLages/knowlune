@@ -1,15 +1,18 @@
 /**
- * YouTubePlayer — wrapper around react-youtube with progress polling,
- * resume-from-last-position, and auto-complete when >90% watched.
+ * YouTubePlayer — iframe-based YouTube embed with resume-from-last-position
+ * and fallback UI when the player fails to load.
  *
- * Polls getCurrentTime() every 1s (matching ImportedLessonPlayer interval)
- * and persists to the Dexie `progress` table using compound key [courseId+videoId].
+ * Loads saved position from Dexie `progress` table and passes it as `&start=`
+ * parameter to the iframe embed URL.
+ *
+ * Note: Progress polling, auto-complete, and imperative seekTo were removed
+ * when migrating from react-youtube to direct iframe (iframe doesn't expose
+ * the YouTube IFrame API methods). These features will need the YouTube
+ * IFrame API postMessage bridge if re-enabled in the future.
  *
  * @see E28-S09
  */
-import { useEffect, useRef, useCallback, useState, useImperativeHandle, forwardRef } from 'react'
-import YouTube from 'react-youtube'
-import type { YouTubeEvent, YouTubePlayer as YTPlayer } from 'react-youtube'
+import { useEffect, useState, forwardRef } from 'react'
 import { db } from '@/db'
 import type { VideoProgress } from '@/data/types'
 
@@ -18,13 +21,13 @@ export interface YouTubePlayerProps {
   courseId: string
   /** The Dexie ImportedVideo.id used as videoId in the progress table */
   lessonId: string
-  /** Called every 1s with current playback time */
+  /** Called every 1s with current playback time (currently unused — requires IFrame API bridge) */
   onTimeUpdate?: (currentTime: number) => void
-  /** Called when video reaches >90% completion */
+  /** Called when video reaches >90% completion (currently unused — requires IFrame API bridge) */
   onAutoComplete?: () => void
-  /** Called when player state changes (playing/paused) */
+  /** Called when player state changes (playing/paused) (currently unused — requires IFrame API bridge) */
   onPlayStateChange?: (isPlaying: boolean) => void
-  /** Called when the video reaches the end (YT state 0) */
+  /** Called when the video reaches the end (YT state 0) (currently unused — requires IFrame API bridge) */
   onEnded?: () => void
 }
 
@@ -33,40 +36,14 @@ export interface YouTubePlayerHandle {
   seekTo: (time: number) => void
 }
 
-const POLL_INTERVAL_MS = 1000
-const AUTO_COMPLETE_THRESHOLD = 0.9
-
 export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>(
-  function YouTubePlayer(
-    { videoId, courseId, lessonId, onTimeUpdate, onAutoComplete, onPlayStateChange, onEnded },
-    ref
-  ) {
-    const playerRef = useRef<YTPlayer | null>(null)
-    const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-    const durationRef = useRef(0)
-    const hasAutoCompletedRef = useRef(false)
+  function YouTubePlayer({ videoId, courseId, lessonId }, ref) {
     const [initialPosition, setInitialPosition] = useState<number | null>(null)
     const [isReady, setIsReady] = useState(false)
     const [loadFailed, setLoadFailed] = useState(false)
 
-    // Expose seekTo to parent via ref (E28-S10: transcript click-to-seek)
-    useImperativeHandle(
-      ref,
-      () => ({
-        seekTo: (time: number) => {
-          const player = playerRef.current
-          if (player) {
-            try {
-              player.seekTo(time, true)
-              onTimeUpdate?.(time)
-            } catch {
-              // silent-catch-ok — player may not be ready
-            }
-          }
-        },
-      }),
-      [onTimeUpdate]
-    )
+    // ref is accepted for API compatibility but currently a no-op with iframe
+    void ref
 
     // Load saved position from Dexie on mount
     useEffect(() => {
@@ -90,69 +67,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
       }
     }, [courseId, lessonId])
 
-    // Persist current position to Dexie
-    const persistProgress = useCallback(
-      async (currentTime: number, duration: number) => {
-        if (duration <= 0) return
-        const completionPercentage = Math.min(100, Math.round((currentTime / duration) * 100))
-        const record: VideoProgress = {
-          courseId,
-          videoId: lessonId,
-          currentTime,
-          completionPercentage,
-          ...(completionPercentage >= 90 ? { completedAt: new Date().toISOString() } : {}),
-        }
-        try {
-          await db.progress.put(record)
-        } catch (error) {
-          // silent-catch-ok: error logged to console
-          console.error('[YouTubePlayer] Failed to persist progress:', error)
-        }
-      },
-      [courseId, lessonId]
-    )
-
-    // Progress polling — runs while video is playing
-    const startPolling = useCallback(() => {
-      if (pollTimerRef.current) return
-      pollTimerRef.current = setInterval(async () => {
-        const player = playerRef.current
-        if (!player) return
-        try {
-          const currentTime = player.getCurrentTime()
-          const duration = player.getDuration()
-          if (duration > 0) {
-            durationRef.current = duration
-            onTimeUpdate?.(currentTime)
-            await persistProgress(currentTime, duration)
-
-            // Auto-complete check
-            if (!hasAutoCompletedRef.current && currentTime / duration >= AUTO_COMPLETE_THRESHOLD) {
-              hasAutoCompletedRef.current = true
-              onAutoComplete?.()
-            }
-          }
-        } catch {
-          // silent-catch-ok — player may have been destroyed during teardown
-        }
-      }, POLL_INTERVAL_MS)
-    }, [onTimeUpdate, onAutoComplete, persistProgress])
-
-    const stopPolling = useCallback(() => {
-      if (pollTimerRef.current) {
-        clearInterval(pollTimerRef.current)
-        pollTimerRef.current = null
-      }
-    }, [])
-
-    // Cleanup on unmount
-    useEffect(() => {
-      return () => {
-        stopPolling()
-      }
-    }, [stopPolling])
-
-    // Timeout fallback: if onReady never fires (CSP block, extension blocking, network issue),
+    // Timeout fallback: if iframe never fires onLoad (CSP block, extension blocking, network issue),
     // clear the spinner and show a fallback link to watch on YouTube directly.
     useEffect(() => {
       if (isReady) return
@@ -163,68 +78,6 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
       }, 10_000)
       return () => clearTimeout(timeout)
     }, [isReady])
-
-    const handleReady = useCallback(
-      (event: YouTubeEvent) => {
-        playerRef.current = event.target
-        setIsReady(true)
-        // Seek to saved position if we have one
-        if (initialPosition && initialPosition > 0) {
-          event.target.seekTo(initialPosition, true)
-        }
-      },
-      [initialPosition]
-    )
-
-    const handleError = useCallback((event: YouTubeEvent<number>) => {
-      console.error('[YouTubePlayer] YouTube error code:', event.data)
-      // Error codes 100/101/150 = video not embeddable; others = network/config errors
-      setLoadFailed(true)
-      setIsReady(true)
-    }, [])
-
-    const handleStateChange = useCallback(
-      (event: YouTubeEvent) => {
-        const state = event.data
-        // YT.PlayerState: PLAYING=1, PAUSED=2, ENDED=0, BUFFERING=3
-        if (state === 1) {
-          // Playing
-          onPlayStateChange?.(true)
-          startPolling()
-        } else if (state === 2) {
-          // Paused
-          onPlayStateChange?.(false)
-          stopPolling()
-          // Persist final position on pause
-          const player = playerRef.current
-          if (player) {
-            try {
-              const currentTime = player.getCurrentTime()
-              const duration = player.getDuration()
-              if (duration > 0) {
-                persistProgress(currentTime, duration)
-              }
-            } catch {
-              // silent-catch-ok — player may have been destroyed
-            }
-          }
-        } else if (state === 0) {
-          // Ended
-          onPlayStateChange?.(false)
-          stopPolling()
-          // Mark as 100% complete
-          if (durationRef.current > 0) {
-            persistProgress(durationRef.current, durationRef.current)
-          }
-          if (!hasAutoCompletedRef.current) {
-            hasAutoCompletedRef.current = true
-            onAutoComplete?.()
-          }
-          onEnded?.()
-        }
-      },
-      [onPlayStateChange, startPolling, stopPolling, onAutoComplete, onEnded, persistProgress]
-    )
 
     // Don't render until we know the initial position
     if (initialPosition === null) {
@@ -268,7 +121,6 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
       )
     }
 
-    // DEBUG: Direct iframe test — bypasses react-youtube to isolate the issue
     const startParam = initialPosition > 0 ? `&start=${Math.floor(initialPosition)}` : ''
     const iframeSrc = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&modestbranding=1&rel=0${startParam}&origin=${encodeURIComponent(window.location.origin)}`
 
