@@ -221,6 +221,8 @@ export function BookReader() {
 
   // Find book in store
   const book = books.find(b => b.id === bookId)
+  const bookRef = useRef(book)
+  bookRef.current = book
 
   // Format switching: EPUB ↔ audiobook via chapter mapping (E103-S02)
   const { hasMapping, switchToFormat } = useFormatSwitch(bookId, book?.format)
@@ -265,7 +267,8 @@ export function BookReader() {
 
   // Load EPUB content
   useEffect(() => {
-    if (!book || book.format !== 'epub') return
+    const currentBook = bookRef.current
+    if (!currentBook || currentBook.format !== 'epub') return
 
     let cancelled = false
     setIsLoadingContent(true)
@@ -274,7 +277,7 @@ export function BookReader() {
     setRemoteEpubError(null)
 
     bookContentService
-      .getEpubContent(book)
+      .getEpubContent(currentBook)
       .then(arrayBuffer => {
         if (cancelled) return
         setEpubUrl(arrayBuffer)
@@ -300,7 +303,7 @@ export function BookReader() {
     return () => {
       cancelled = true
     }
-  }, [book, retryKey])
+  }, [bookId, retryKey])
 
   // Timeout: if epubUrl is set but epub.js never fires getRendition within 12s, show error
   useEffect(() => {

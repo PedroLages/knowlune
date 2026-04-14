@@ -16,6 +16,7 @@ import { EpubView } from 'react-reader'
 import { cn } from '@/app/components/ui/utils'
 import type { Rendition } from 'epubjs'
 import type { NavItem } from 'epubjs'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useReaderStore } from '@/stores/useReaderStore'
 import {
   getReaderThemeColors,
@@ -268,13 +269,20 @@ export function EpubRenderer({
         {/* Left zone (prev) — 33%, paginated only */}
         {!scrollMode && (
           <div
-            className="pointer-events-auto absolute inset-y-0 left-0 w-[33%] cursor-pointer"
+            className="group pointer-events-auto absolute inset-y-0 left-0 w-[33%] cursor-pointer"
             onClick={navigatePrev}
             role="button"
             tabIndex={-1}
             aria-label="Previous page"
             data-reader-zone="prev"
-          />
+          >
+            <ChevronLeft
+              className={cn(
+                'pointer-events-none absolute left-3 top-1/2 size-8 -translate-y-1/2 text-foreground/30 transition-opacity duration-300 motion-reduce:transition-none',
+                pageTurnDirection === 'right' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              )}
+            />
+          </div>
         )}
 
         {/* Center zone (34%) — toggle header/footer visibility, always active */}
@@ -290,13 +298,20 @@ export function EpubRenderer({
         {/* Right zone (next) — 33%, paginated only */}
         {!scrollMode && (
           <div
-            className="pointer-events-auto absolute inset-y-0 right-0 w-[33%] cursor-pointer"
+            className="group pointer-events-auto absolute inset-y-0 right-0 w-[33%] cursor-pointer"
             onClick={navigateNext}
             role="button"
             tabIndex={-1}
             aria-label="Next page"
             data-reader-zone="next"
-          />
+          >
+            <ChevronRight
+              className={cn(
+                'pointer-events-none absolute right-3 top-1/2 size-8 -translate-y-1/2 text-foreground/30 transition-opacity duration-300 motion-reduce:transition-none',
+                pageTurnDirection === 'left' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              )}
+            />
+          </div>
         )}
       </div>
 
