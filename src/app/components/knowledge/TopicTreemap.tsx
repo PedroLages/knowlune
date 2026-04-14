@@ -252,6 +252,7 @@ function CustomCell(props: Record<string, unknown>) {
           onCellClick?.(name)
         }
       }}
+      className="group"
       // eslint-disable-next-line react-best-practices/no-inline-styles -- SVG cursor styling
       style={{ cursor: 'pointer', outline: 'none' }}
     >

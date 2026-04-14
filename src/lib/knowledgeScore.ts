@@ -226,10 +226,14 @@ export function calculateTopicScore(input: TopicScoreInput): TopicScoreResult {
   const completionScore = Math.max(0, Math.min(100, input.completionPercent))
 
   // FSRS retention overrides flashcardRetention when available (E62-S01)
-  const effectiveFlashcardRetention =
+  const rawFlashcardRetention =
     input.fsrsRetention !== undefined && input.fsrsRetention !== null
       ? input.fsrsRetention
       : input.flashcardRetention
+  const effectiveFlashcardRetention =
+    rawFlashcardRetention !== null && rawFlashcardRetention !== undefined
+      ? Math.max(0, Math.min(100, rawFlashcardRetention))
+      : rawFlashcardRetention
 
   // Determine which signals are available
   const hasQuiz = input.quizScore !== null
