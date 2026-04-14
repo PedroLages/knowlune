@@ -22,6 +22,7 @@ import { useBookStore } from '@/stores/useBookStore'
 import { sharedAudioRef } from '@/app/hooks/useAudioPlayer'
 import { formatAudioTime } from '@/app/hooks/useAudioPlayer'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
+import { SpeedControl } from './SpeedControl'
 
 export function AudioMiniPlayer() {
   const navigate = useNavigate()
@@ -32,7 +33,6 @@ export function AudioMiniPlayer() {
   const isPlaying = useAudioPlayerStore(s => s.isPlaying)
   const currentTime = useAudioPlayerStore(s => s.currentTime)
   const currentChapterIndex = useAudioPlayerStore(s => s.currentChapterIndex)
-  const playbackRate = useAudioPlayerStore(s => s.playbackRate)
   const setIsPlaying = useAudioPlayerStore(s => s.setIsPlaying)
 
   const books = useBookStore(s => s.books)
@@ -190,10 +190,10 @@ export function AudioMiniPlayer() {
           <SkipForward className="size-5" aria-hidden="true" />
         </button>
 
-        {/* Speed indicator — desktop only */}
-        <span className="hidden sm:block flex-shrink-0 text-xs text-muted-foreground tabular-nums w-9 text-center">
-          {playbackRate % 1 === 0 ? `${playbackRate.toFixed(1)}×` : `${playbackRate}×`}
-        </span>
+        {/* Speed control — desktop only */}
+        <div className="hidden sm:block flex-shrink-0">
+          <SpeedControl bookId={currentBookId} />
+        </div>
 
         {/* Expand button — desktop only */}
         <button
