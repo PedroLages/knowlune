@@ -149,19 +149,26 @@ export async function fetchLibraries(
 /**
  * Fetch paginated items from a library.
  * Calls GET /api/libraries/{libraryId}/items.
+ *
+ * Defaults to `sort=addedAt&desc=1` so items arrive newest-first,
+ * matching the expected "recently added" order in the library view.
  */
 export async function fetchLibraryItems(
   url: string,
   apiKey: string,
   libraryId: string,
-  options?: { page?: number; limit?: number }
+  options?: { page?: number; limit?: number; sort?: string; desc?: 0 | 1 }
 ): Promise<AbsResult<{ results: AbsLibraryItem[]; total: number }>> {
-  const page = options?.page ?? 0
-  const limit = options?.limit ?? 50
+  const params = new URLSearchParams({
+    page: String(options?.page ?? 0),
+    limit: String(options?.limit ?? 50),
+    sort: options?.sort ?? 'addedAt',
+    desc: String(options?.desc ?? 1),
+  })
   return absApiFetch<{ results: AbsLibraryItem[]; total: number }>(
     url,
     apiKey,
-    `/api/libraries/${encodeURIComponent(libraryId)}/items?page=${page}&limit=${limit}`
+    `/api/libraries/${encodeURIComponent(libraryId)}/items?${params}`
   )
 }
 
