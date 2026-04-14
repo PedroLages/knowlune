@@ -108,7 +108,7 @@ export function BookReader() {
   const settingsOpen = useReaderStore(s => s.settingsOpen)
   const setSettingsOpen = useReaderStore(s => s.setSettingsOpen)
 
-  const [epubUrl, setEpubUrl] = useState<string | null>(null)
+  const [epubUrl, setEpubUrl] = useState<string | ArrayBuffer | null>(null)
   const [isLoadingContent, setIsLoadingContent] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   // CFI resolved from sourceHighlightId query param (E85-S05 back-navigation)
@@ -156,7 +156,6 @@ export function BookReader() {
 
   const renditionRef = useRef<Rendition | null>(null)
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const blobUrlRef = useRef<string | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Timeout effect for TOC loading — fallback to empty state after 5 seconds
@@ -274,20 +273,11 @@ export function BookReader() {
     setLoadError(null)
     setRemoteEpubError(null)
 
-    // Revoke previous Blob URL to avoid memory leaks
-    if (blobUrlRef.current) {
-      URL.revokeObjectURL(blobUrlRef.current)
-      blobUrlRef.current = null
-    }
-
     bookContentService
       .getEpubContent(book)
       .then(arrayBuffer => {
         if (cancelled) return
-        const blob = new Blob([arrayBuffer], { type: 'application/epub+zip' })
-        const url = URL.createObjectURL(blob)
-        blobUrlRef.current = url
-        setEpubUrl(url)
+        setEpubUrl(arrayBuffer)
         setIsLoadingContent(false)
       })
       .catch((err: unknown) => {
@@ -321,13 +311,9 @@ export function BookReader() {
     return () => clearTimeout(timer)
   }, [epubUrl, isEpubReady])
 
-  // Cleanup Blob URL on unmount
+  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current)
-      }
-      // Clear pending save timer
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current)
       }
@@ -605,16 +591,7 @@ export function BookReader() {
         return
       }
 
-      // Revoke previous Blob URL
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current)
-        blobUrlRef.current = null
-      }
-
-      const blob = new Blob([arrayBuffer], { type: 'application/epub+zip' })
-      const url = URL.createObjectURL(blob)
-      blobUrlRef.current = url
-      setEpubUrl(url)
+      setEpubUrl(arrayBuffer)
       setIsLoadingContent(false)
     } catch {
       // silent-catch-ok: Cache API unavailable (e.g. private browsing) — user-visible error set below
