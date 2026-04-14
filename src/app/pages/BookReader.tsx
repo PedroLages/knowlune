@@ -312,6 +312,15 @@ export function BookReader() {
     }
   }, [book, retryKey])
 
+  // Timeout: if epubUrl is set but epub.js never fires getRendition within 12s, show error
+  useEffect(() => {
+    if (!epubUrl || isEpubReady) return
+    const timer = setTimeout(() => {
+      setLoadError('Book failed to load. The file may be corrupted or in an unsupported format.')
+    }, 12_000)
+    return () => clearTimeout(timer)
+  }, [epubUrl, isEpubReady])
+
   // Cleanup Blob URL on unmount
   useEffect(() => {
     return () => {
@@ -654,9 +663,14 @@ export function BookReader() {
     }
   }, [startChapterIndex, toc, book?.format])
 
-  // Derive initial CFI: prefer highlight back-navigation CFI (E85-S05) over saved position
-  const initialCfi =
-    highlightCfi ?? (book?.currentPosition?.type === 'cfi' ? book.currentPosition.value : null)
+  const initialCfiRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (initialCfiRef.current !== null) return
+    if (!book) return
+    initialCfiRef.current =
+      highlightCfi ?? (book.currentPosition?.type === 'cfi' ? book.currentPosition.value : null)
+  }, [book, highlightCfi])
+  const initialCfi = initialCfiRef.current
 
   // Book not found (after store is loaded)
   if (isLoaded && !book) {
