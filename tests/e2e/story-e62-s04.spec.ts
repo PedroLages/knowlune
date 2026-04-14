@@ -19,6 +19,9 @@ import {
 } from '../support/helpers/indexeddb-seed'
 import { FIXED_DATE, getRelativeDate } from '../utils/test-time'
 
+// Shared timeout for popover / cell visibility waits
+const POPOVER_TIMEOUT = 10_000
+
 // ── Seed Data ──────────────────────────────────────────────────
 
 // High retention course: stability 100, reviewed 1 day ago → ~99% retention → "Stable until..."
@@ -241,7 +244,7 @@ test.describe('E62-S04: Knowledge Map FSRS Integration', () => {
 
     // Wait for treemap cells to render (cells are g[role="button"] with rect children)
     const firstCell = page.locator('g[role="button"][aria-label^="Topic:"]').first()
-    await expect(firstCell).toBeVisible({ timeout: 10000 })
+    await expect(firstCell).toBeVisible({ timeout: POPOVER_TIMEOUT })
 
     // Collect all fill colors from the rect elements inside treemap cells
     const fills = await page.evaluate(() => {
@@ -257,9 +260,9 @@ test.describe('E62-S04: Knowledge Map FSRS Integration', () => {
       return [...colors]
     })
 
-    // With gradient rendering, we expect more than 1 distinct color
-    // (High retention = green-ish, low retention = red-ish, no-FC = discrete tier)
-    expect(fills.length).toBeGreaterThanOrEqual(2)
+    // With gradient rendering, expect at least 3 distinct colors to confirm
+    // actual interpolation is occurring (not just 2 discrete tier buckets)
+    expect(fills.length).toBeGreaterThanOrEqual(3)
   })
 
   test('AC-2: Low retention topic tooltip contains "Fading" text', async ({ page }) => {
@@ -268,7 +271,7 @@ test.describe('E62-S04: Knowledge Map FSRS Integration', () => {
 
     // Find the low-retention cell by its aria-label containing the course category
     const lowRetCell = page.locator('g[role="button"][aria-label*="Chemistry"]')
-    await expect(lowRetCell).toBeVisible({ timeout: 10000 })
+    await expect(lowRetCell).toBeVisible({ timeout: POPOVER_TIMEOUT })
 
     // Hover to show tooltip
     await lowRetCell.hover()
@@ -285,7 +288,7 @@ test.describe('E62-S04: Knowledge Map FSRS Integration', () => {
 
     // Find the high-retention cell
     const highRetCell = page.locator('g[role="button"][aria-label*="Calculus"]')
-    await expect(highRetCell).toBeVisible({ timeout: 10000 })
+    await expect(highRetCell).toBeVisible({ timeout: POPOVER_TIMEOUT })
 
     // Hover to show tooltip
     await highRetCell.hover()
@@ -304,11 +307,11 @@ test.describe('E62-S04: Knowledge Map FSRS Integration', () => {
 
     // Click a cell that has flashcard data (high retention)
     const highRetCell = page.locator('g[role="button"][aria-label*="Calculus"]')
-    await expect(highRetCell).toBeVisible({ timeout: 10000 })
+    await expect(highRetCell).toBeVisible({ timeout: POPOVER_TIMEOUT })
     await highRetCell.click()
 
     // Popover should appear with Memory Decay section
-    const popover = page.locator('[data-radix-popper-content-wrapper]')
+    const popover = page.getByTestId('topic-detail-popover')
     await expect(popover).toBeVisible()
 
     // Memory Decay label should be present
@@ -320,6 +323,9 @@ test.describe('E62-S04: Knowledge Map FSRS Integration', () => {
     await expect(retentionBar).toHaveCount(1)
     const ariaLabel = await retentionBar.getAttribute('aria-label')
     expect(ariaLabel).toMatch(/Retention: \d+%/)
+
+    // Decay date text should be present — either a date string or "days" from decay prediction
+    await expect(popover).toContainText(/\d{1,2}|\bdays\b/i)
   })
 
   test('AC-5: TopicDetailPopover does NOT show Memory Decay for topic without flashcards', async ({
@@ -330,15 +336,25 @@ test.describe('E62-S04: Knowledge Map FSRS Integration', () => {
 
     // Click the no-flashcard cell (Art History) — use exact match to avoid "Art" category
     const noFcCell = page.locator('g[role="button"][aria-label*="Art History"]')
-    await expect(noFcCell).toBeVisible({ timeout: 10000 })
+    await expect(noFcCell).toBeVisible({ timeout: POPOVER_TIMEOUT })
     await noFcCell.click()
 
     // Popover should appear
-    const popover = page.locator('[data-radix-popper-content-wrapper]')
+    const popover = page.getByTestId('topic-detail-popover')
     await expect(popover).toBeVisible()
 
     // Memory Decay section should NOT be present
     await expect(popover.getByText('Memory Decay')).not.toBeVisible()
+
+    // Hovering over a no-FC cell should not show retention status labels in a tooltip
+    await noFcCell.hover()
+    const tooltip = page.getByRole('tooltip')
+    // If a tooltip is visible it should not contain FSRS decay labels
+    const tooltipVisible = await tooltip.isVisible()
+    if (tooltipVisible) {
+      await expect(tooltip).not.toContainText(/[Ff]ading/)
+      await expect(tooltip).not.toContainText(/[Ss]table/)
+    }
   })
 
   test('AC-6: Dark mode treemap renders without console errors', async ({ page }) => {
@@ -348,9 +364,10 @@ test.describe('E62-S04: Knowledge Map FSRS Integration', () => {
       if (msg.type() === 'error') consoleErrors.push(msg.text())
     })
 
-    // Enable dark mode
+    // Enable dark mode via localStorage — the goto('/knowledge-map') below will pick
+    // this up via the theme persistence mechanism (classList.add is not used here
+    // because it would be lost when navigation creates a new document)
     await page.evaluate(() => {
-      document.documentElement.classList.add('dark')
       localStorage.setItem('knowlune-theme', 'dark')
     })
 
@@ -359,7 +376,7 @@ test.describe('E62-S04: Knowledge Map FSRS Integration', () => {
 
     // Wait for treemap to render
     const treemapCell = page.locator('g[role="button"][aria-label^="Topic:"]').first()
-    await expect(treemapCell).toBeVisible({ timeout: 10000 })
+    await expect(treemapCell).toBeVisible({ timeout: POPOVER_TIMEOUT })
 
     // Verify text labels are visible (not transparent)
     const textElements = page.locator('g[role="button"][aria-label^="Topic:"] text')
@@ -377,19 +394,36 @@ test.describe('E62-S04: Knowledge Map FSRS Integration', () => {
       expect(hasVisibleText).toBe(true)
     }
 
-    // No console errors related to rendering
-    const renderErrors = consoleErrors.filter(
-      e => e.includes('treemap') || e.includes('color') || e.includes('NaN')
-    )
-    expect(renderErrors).toHaveLength(0)
+    // Verify at least one treemap cell has a fill color in the dark range
+    // (low RGB channel values indicate dark background colors as expected in dark mode)
+    const hasDarkFill = await page.evaluate(() => {
+      const cells = document.querySelectorAll('g[role="button"][aria-label^="Topic:"]')
+      for (const cell of Array.from(cells)) {
+        const rect = cell.querySelector('rect')
+        if (!rect) continue
+        const fill = rect.style.fill
+        // Parse rgb(r, g, b) — dark colors have all channels below 100
+        const match = fill.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/)
+        if (match) {
+          const [, r, g, b] = match.map(Number)
+          if (r < 100 && g < 100 && b < 100) return true
+        }
+      }
+      return false
+    })
+    expect(hasDarkFill).toBe(true)
+
+    // All console errors are unexpected — assert none occurred
+    // (known benign noise from third-party libraries is not expected in this test context)
+    expect(consoleErrors).toHaveLength(0)
   })
 
   test('AC-7: All test dates use FIXED_DATE (determinism verification)', async ({ page }) => {
     await seedAllData(page)
     await page.goto('/knowledge-map')
 
-    // Verify the mocked date is active in browser context
-    // eslint-disable-next-line test-patterns/deterministic-time -- verifying browser date mock is active
+    // Verify the mocked date is active in browser context.
+    // eslint-disable-next-line test-patterns/deterministic-time -- intentional: this assertion verifies that the browser-context Date mock injected via addInitScript is active; it is not a test data timestamp
     const browserNow = await page.evaluate(() => Date.now())
     const expectedTimestamp = new Date(FIXED_DATE).getTime()
     expect(browserNow).toBe(expectedTimestamp)
