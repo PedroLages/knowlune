@@ -6,6 +6,7 @@
  * - showCelebration uses lessons from hook (no extra getLessons call)
  * - Course-level vs lesson-level celebration type selection
  */
+
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, act, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
@@ -23,6 +24,10 @@ const MOCK_LESSONS = [
 // ---------------------------------------------------------------------------
 // Mocks — alphabetical by module path
 // ---------------------------------------------------------------------------
+
+// Prevent Dexie from initializing IndexedDB (not available in jsdom)
+vi.mock('@/db', () => ({ db: {} }))
+vi.mock('@/db/schema', () => ({ db: {} }))
 
 const mockSetItemStatus = vi.fn().mockResolvedValue(undefined)
 const mockGetItemStatus = vi.fn().mockReturnValue('not-started')
@@ -95,6 +100,15 @@ vi.mock('@/app/hooks/useSessionTracking', () => ({
 
 vi.mock('@/hooks/useHasQuiz', () => ({
   useHasQuiz: () => ({ hasQuiz: false }),
+}))
+
+vi.mock('@/hooks/useQuizGeneration', () => ({
+  useQuizGeneration: () => ({
+    generate: vi.fn(),
+    isGenerating: false,
+    error: null,
+    quizId: null,
+  }),
 }))
 
 const mockToastError = vi.fn()

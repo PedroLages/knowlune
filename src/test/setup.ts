@@ -10,6 +10,16 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   }
 }
 
+// jsdom does not implement IntersectionObserver — required by components that
+// use viewport intersection detection (lazy loading, scroll-based effects).
+if (typeof globalThis.IntersectionObserver === 'undefined') {
+  globalThis.IntersectionObserver = class IntersectionObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof IntersectionObserver
+}
+
 // Node 22+ ships a native localStorage that conflicts with jsdom's
 // implementation — its API is incomplete (e.g. clear() is not a function).
 // Override globalThis.localStorage with a standards-compliant in-memory

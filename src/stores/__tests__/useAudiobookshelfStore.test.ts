@@ -27,6 +27,13 @@ vi.mock('@/db/schema', () => ({
       update: vi.fn().mockResolvedValue(1),
       delete: vi.fn().mockResolvedValue(undefined),
     },
+    books: {
+      where: vi.fn().mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          toArray: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    },
   },
 }))
 
