@@ -819,3 +819,27 @@ issues:
     scheduled_for: null
     fixed_by: null
     notes: "Trend field mapped from days-since-engagement rather than score delta over time. Requires E56 to expose score history. Deferred architectural finding from E71 NFR."
+
+  - id: KI-067
+    type: performance
+    summary: "TopicTreemap MutationObserver fires on any <html> class change, not just theme toggles — coarse observer"
+    file: "src/app/components/knowledge/TopicTreemap.tsx"
+    severity: low
+    discovered_by: E62-NFR
+    discovered_on: 2026-04-14
+    status: scheduled
+    scheduled_for: null
+    fixed_by: null
+    notes: "Observer callback is cheap (clears _colorCache = null) and theme changes are rare, so no user-facing impact. Could be refined to check classList.contains('dark') etc. Deferred from E62 post-epic fix pass."
+
+  - id: KI-068
+    type: test
+    summary: "No dedicated test for TopicTreemap color cache invalidation on theme change (S02-AC8 coverage gap)"
+    file: "src/app/components/knowledge/TopicTreemap.tsx"
+    severity: low
+    discovered_by: E62-TRACE
+    discovered_on: 2026-04-14
+    status: scheduled
+    scheduled_for: null
+    fixed_by: null
+    notes: "P2 gap from testarch-trace. MutationObserver theme-change path manually verified in NFR audit. Writing a test requires mocking MutationObserver in Playwright — disproportionate effort for LOW risk. Deferred from E62 post-epic fix pass."
