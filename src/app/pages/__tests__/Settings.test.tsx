@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 
 vi.mock('next-themes', () => ({
@@ -102,23 +103,37 @@ describe('Settings page', () => {
     expect(screen.getByText('Settings')).toBeInTheDocument()
   })
 
-  it('renders Profile, Appearance, and Data Management sections', () => {
+  it('renders Profile, Appearance, and Integrations & Data nav categories', () => {
     render(
       <MemoryRouter>
         <Settings />
       </MemoryRouter>
     )
-    expect(screen.getByText('Your Profile')).toBeInTheDocument()
-    expect(screen.getByText('Appearance')).toBeInTheDocument()
-    expect(screen.getByText('Data Management')).toBeInTheDocument()
+    // Settings uses a category-switcher layout; all nav items are visible in the sidebar
+    expect(screen.getAllByText('Profile').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Appearance').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Integrations & Data').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('renders the Display Name input with default value', () => {
+  it('renders the Display Name input with default value after navigating to Profile', async () => {
+    const user = userEvent.setup()
     render(
       <MemoryRouter>
         <Settings />
       </MemoryRouter>
     )
+    // Navigate to the Profile category — may be a tab (mobile pills) or button (desktop nav)
+    // Both use aria-label="Profile" or aria-label="Profile (modified)"
+    const allInteractives = [
+      ...screen.queryAllByRole('button'),
+      ...screen.queryAllByRole('tab'),
+    ]
+    const profileBtn = allInteractives.find(
+      el => el.getAttribute('aria-label')?.startsWith('Profile')
+    )
+    expect(profileBtn).toBeDefined()
+    await user.click(profileBtn!)
+
     const nameInput = screen.getByLabelText('Display Name')
     expect(nameInput).toBeInTheDocument()
     expect(nameInput).toHaveValue('Student')

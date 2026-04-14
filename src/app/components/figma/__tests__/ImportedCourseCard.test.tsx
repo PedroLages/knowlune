@@ -139,7 +139,7 @@ describe('ImportedCourseCard', () => {
 
   it('uses rounded-2xl border radius', () => {
     const { container } = renderCard()
-    const card = container.querySelector('.rounded-\\[24px\\]')
+    const card = container.querySelector('.rounded-2xl')
     expect(card).toBeInTheDocument()
   })
 
@@ -209,11 +209,10 @@ describe('ImportedCourseCard', () => {
 
     it('uses correct color classes for each status (AC-1.3)', () => {
       const { container, rerender } = renderCard({ status: 'active' })
-      // Badge component is nested inside the button with testid
-      // ImportedCourseCard uses lighter variants (bg-blue-100), StatusFilter uses darker (bg-blue-600)
+      // Badge uses design tokens (not hardcoded colors)
       let badgeEl = container.querySelector('[data-testid="status-badge"] > span')
-      expect(badgeEl?.className).toMatch(/bg-blue-100/)
-      expect(badgeEl?.className).toMatch(/text-blue-700/)
+      expect(badgeEl?.className).toMatch(/bg-brand-soft/)
+      expect(badgeEl?.className).toMatch(/text-brand-soft-foreground/)
 
       rerender(
         <MemoryRouter>
@@ -221,8 +220,8 @@ describe('ImportedCourseCard', () => {
         </MemoryRouter>
       )
       badgeEl = container.querySelector('[data-testid="status-badge"] > span')
-      expect(badgeEl?.className).toMatch(/bg-green-100/)
-      expect(badgeEl?.className).toMatch(/text-green-700/)
+      expect(badgeEl?.className).toMatch(/bg-success\/10/)
+      expect(badgeEl?.className).toMatch(/text-success/)
 
       rerender(
         <MemoryRouter>
@@ -230,8 +229,8 @@ describe('ImportedCourseCard', () => {
         </MemoryRouter>
       )
       badgeEl = container.querySelector('[data-testid="status-badge"] > span')
-      expect(badgeEl?.className).toMatch(/bg-gray-100/)
-      expect(badgeEl?.className).toMatch(/text-gray-400/)
+      expect(badgeEl?.className).toMatch(/bg-muted/)
+      expect(badgeEl?.className).toMatch(/text-muted-foreground/)
     })
 
     it('has descriptive aria-label on status badge', () => {
@@ -285,13 +284,13 @@ describe('ImportedCourseCard', () => {
   })
 
   describe('status dropdown', () => {
-    it('opens dropdown with all three status options and delete on click', async () => {
+    it('opens dropdown with all four status options, edit, and delete on click', async () => {
       const user = userEvent.setup()
       renderCard({ status: 'active' })
 
       await user.click(screen.getByTestId('status-badge'))
 
-      expect(screen.getAllByRole('menuitem')).toHaveLength(5)
+      expect(screen.getAllByRole('menuitem')).toHaveLength(6)
     })
 
     it('calls updateCourseStatus when a different status is selected', async () => {
