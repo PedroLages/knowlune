@@ -39,6 +39,13 @@ describe('settings', () => {
         accessibilityFont: false,
         contentDensity: 'default',
         reduceMotion: 'system',
+        profilePhotoUrl: undefined,
+        fontSize: undefined,
+        focusAutoQuiz: true,
+        focusAutoFlashcard: true,
+        readingFontSize: '1x',
+        readingLineHeight: 1.5,
+        readingTheme: 'auto',
       })
     })
 
@@ -53,6 +60,13 @@ describe('settings', () => {
         accessibilityFont: false,
         contentDensity: 'default',
         reduceMotion: 'system',
+        profilePhotoUrl: undefined,
+        fontSize: undefined,
+        focusAutoQuiz: true,
+        focusAutoFlashcard: true,
+        readingFontSize: '1x',
+        readingLineHeight: 1.5,
+        readingTheme: 'auto',
       })
     })
 
@@ -129,6 +143,13 @@ describe('settings', () => {
         accessibilityFont: false,
         contentDensity: 'default',
         reduceMotion: 'system',
+        profilePhotoUrl: undefined,
+        fontSize: undefined,
+        focusAutoQuiz: true,
+        focusAutoFlashcard: true,
+        readingFontSize: '1x',
+        readingLineHeight: 1.5,
+        readingTheme: 'auto',
       })
     })
 

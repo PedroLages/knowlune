@@ -300,7 +300,7 @@ describe('persistScannedCourse', () => {
     expect(storedCourse!.name).toBe('TypeScript Deep Dive')
     expect(storedCourse!.videoCount).toBe(1)
     expect(storedCourse!.pdfCount).toBe(1)
-    expect(storedCourse!.status).toBe('active')
+    expect(storedCourse!.status).toBe('not-started')
 
     // Verify video in DB
     const videos = await db.importedVideos.where('courseId').equals(course.id).toArray()
@@ -429,7 +429,7 @@ describe('scanCourseFolder → persistScannedCourse integration', () => {
     expect(course.name).toBe('Integration Test')
     expect(course.videoCount).toBe(1)
     expect(course.pdfCount).toBe(1)
-    expect(course.status).toBe('active')
+    expect(course.status).toBe('not-started')
     expect(course.id).toBe(scanned.id)
 
     // Verify DB records
