@@ -693,7 +693,7 @@ development_status:
   62-2-retention-gradient-treemap-and-decay-predictions-ui: done
   62-3-unit-tests-fsrs-retention-scoring: done
   62-4-e2e-tests-knowledge-map-fsrs-integration: done
-  epic-62-retrospective: optional
+  epic-62-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 63: AI Tutor Learner Profile Context Injection
