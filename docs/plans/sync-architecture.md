@@ -1,8 +1,8 @@
-> ⚠️ **SUPERSEDED** — This document (2026-03-28, E44-E49 numbering) has been superseded by the updated design.
+> ⚠️ **SUPERSEDED** — This document (2026-03-28, E92-E97 numbering) has been superseded by the updated design.
 >
 > **Current reference:** [`docs/plans/2026-03-31-supabase-data-sync-design.md`](./2026-03-31-supabase-data-sync-design.md)
 >
-> The 2026-03-31 design covers the current schema (Dexie v51, 51 tables, 30+ syncable) including the Books/Reading ecosystem, AI Tutor system, and all features through E115. The epic numbering is E92-E97 (not E44-E49 as referenced here).
+> The 2026-03-31 design covers the current schema (Dexie v51, 51 tables, 30+ syncable) including the Books/Reading ecosystem, AI Tutor system, and all features through E115. The epic numbering is E92-E97.
 >
 > This document is preserved for historical reference only.
 
@@ -12,7 +12,7 @@
 
 > **Purpose:** Implementation blueprint for cross-device data synchronization via Supabase.
 > **Date:** 2026-03-28
-> **Scope:** 6 epics (E44-E49), 37 stories — MVP-first (Phase 1: 18 stories, Phase 2: 19 stories)
+> **Scope:** 6 epics (E92-E97), 37 stories — MVP-first (Phase 1: 18 stories, Phase 2: 19 stories)
 > **Status:** ✅ READY — adversarial review complete, all decisions resolved, implementation readiness confirmed
 > **Readiness Report:** [`implementation-readiness-report-2026-03-28-sync.md`](../_bmad-output/planning-artifacts/implementation-readiness-report-2026-03-28-sync.md)
 
@@ -62,7 +62,7 @@ Sync adds cross-device continuity while preserving the local-first architecture.
 | studySessions | INSERT-only merge | Sessions are log entries, not mutable state — keep all, dedup by id |
 | bookmarks | Last-Write-Wins (LWW) | Simple, conflicts are low-stakes |
 | Notes (Tiptap rich text) | LWW + conflict preservation | Both versions saved, user chooses |
-| Flashcard SRS state | Review log replay | Merge review histories, replay through SM-2 |
+| Flashcard SRS state | Review log replay | Merge review histories, replay through FSRS |
 | quizAttempts (P4) | INSERT-only merge | Immutable log entries — scores, timestamps, learning history |
 | Derived/cache data | Not synced | Regenerate on each device |
 
@@ -82,7 +82,7 @@ Sync adds cross-device continuity while preserving the local-first architecture.
 
 ## 2. Current State Analysis
 
-### 2.1 Dexie Schema (29 Tables at v27)
+### 2.1 Dexie Schema (48+ Tables at v51)
 
 **Source:** `src/db/checkpoint.ts` (line 23), `src/db/schema.ts` (969 lines)
 
@@ -101,7 +101,7 @@ Sync adds cross-device continuity while preserving the local-first architecture.
 | embeddings | `noteId` | createdAt |
 | courseThumbnails | `courseId` | — |
 | aiUsageEvents | `id` | featureType, timestamp, courseId |
-| reviewRecords | `id` | noteId, nextReviewAt, reviewedAt |
+| reviewRecords | `id` | noteId, due, last_review |
 | courseReminders | `id` | courseId |
 | courses | `id` | category, difficulty, authorId |
 | quizzes | `id` | lessonId, createdAt |
@@ -110,7 +110,7 @@ Sync adds cross-device continuity while preserving the local-first architecture.
 | authors | `id` | name, createdAt |
 | careerPaths | `id` | — |
 | pathEnrollments | `id` | pathId, status |
-| flashcards | `id` | courseId, noteId, nextReviewAt, createdAt |
+| flashcards | `id` | courseId, noteId, due, createdAt |
 | entitlements | `userId` | — |
 | learningPaths | `id` | createdAt |
 | learningPathEntries | `id` | [pathId+courseId], pathId |
@@ -135,9 +135,9 @@ Sync adds cross-device continuity while preserving the local-first architecture.
 | Priority | Tables | Why Sync |
 |----------|--------|----------|
 | P0 | contentProgress, studySessions | "Where was I?" — highest cross-device value |
-| P1 | notes, bookmarks, flashcards, reviewRecords | User-created study materials |
-| P2 | importedCourses, importedVideos, importedPdfs | Course library metadata (not files) |
-| P3 | learningPaths, learningPathEntries, challenges | User learning journeys |
+| P1 | notes, bookmarks, flashcards, reviewRecords, books, bookHighlights, audioBookmarks, vocabularyItems | User-created study materials + reading |
+| P2 | importedCourses, importedVideos, importedPdfs, authors, bookReviews, shelves, bookShelves, readingQueue, audioClips, chatConversations, learnerModels | Course/book library metadata + AI tutor |
+| P3 | learningPaths, learningPathEntries, challenges, studySchedules, opdsCatalogs, audiobookshelfServers, chapterMappings | User learning journeys + external services |
 
 **Skip (derived/cache — regenerate on each device):**
 
@@ -145,12 +145,13 @@ Sync adds cross-device continuity while preserving the local-first architecture.
 |-------|----------|
 | courseThumbnails | Derived from course files |
 | embeddings | Regenerated from notes via OpenAI |
+| courseEmbeddings | Derived from course content, has sourceHash for change detection |
+| transcriptEmbeddings | Derived from transcripts, regenerable per device (384-dim vectors) |
 | youtubeVideoCache | Temporary cache with TTL |
 | youtubeTranscripts | Fetched from YouTube API |
 | youtubeChapters | Fetched from YouTube API |
 | videoCaptions | Extracted from video files |
-| courses | Catalog data (not user-specific) |
-| authors | Catalog data |
+| bookFiles | EPUB/PDF blobs → book-files Storage bucket (on-demand only, not auto-synced) |
 | careerPaths | Template data |
 | pathEnrollments | May move to sync later |
 | aiUsageEvents | Analytics (low sync value) |
@@ -422,11 +423,11 @@ db.version(29).stores({
 db.version(30).stores({
   notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt, userId, syncedAt',
   bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt, userId, syncedAt',
-  flashcards: 'id, courseId, noteId, nextReviewAt, createdAt, userId, syncedAt',
-  reviewRecords: 'id, noteId, nextReviewAt, reviewedAt, userId, syncedAt',
+  flashcards: 'id, courseId, noteId, due, createdAt, userId, syncedAt',
+  reviewRecords: 'id, noteId, due, last_review, userId, syncedAt',
 
   // New table: flashcard review log (for SRS sync)
-  flashcardReviews: 'id, flashcardId, reviewedAt, userId, syncedAt',
+  flashcardReviews: 'id, flashcardId, last_review, userId, syncedAt',
 
   // ...unchanged tables...
 }).upgrade(async tx => {
@@ -492,7 +493,7 @@ interface FlashcardReview {
   id: string                // UUID
   flashcardId: string       // FK to Flashcard.id
   rating: ReviewRating      // 'hard' | 'good' | 'easy'
-  reviewedAt: string        // ISO 8601
+  last_review: string        // ISO 8601
   deviceId: string          // UUID from localStorage
   userId: string            // auth.uid()
   syncedAt?: string | null
@@ -764,7 +765,7 @@ Simple records, conflicts are low-stakes. Latest `updatedAt` wins. No conflict U
 
 ### 5.3 Review Log Sync for Flashcards
 
-**Problem:** Two devices review the same flashcard independently while offline. The SM-2 state (interval, easeFactor, nextReviewAt) diverges.
+**Problem:** Two devices review the same flashcard independently while offline. The FSRS state (interval, easeFactor, due) diverges.
 
 **Solution:** Don't sync computed SRS state. Sync the review log, then replay.
 
@@ -772,17 +773,17 @@ Simple records, conflicts are low-stakes. Latest `updatedAt` wins. No conflict U
 
 ```
 DEVICE A (offline): Reviews card X, rates "hard"
-  → flashcardReviews: { cardId: X, rating: 'hard', reviewedAt: T1, device: A }
+  → flashcardReviews: { cardId: X, rating: 'hard', last_review: T1, device: A }
   → flashcard X: interval=1, ease=2.36, count=6
 
 DEVICE B (offline): Reviews card X, rates "easy"
-  → flashcardReviews: { cardId: X, rating: 'easy', reviewedAt: T2, device: B }
+  → flashcardReviews: { cardId: X, rating: 'easy', last_review: T2, device: B }
   → flashcard X: interval=17, ease=2.6, count=6
 
 BOTH COME ONLINE:
   1. Upload review logs (both devices)
   2. Download reviews from other device
-  3. For card X: merge reviews, sort by reviewedAt:
+  3. For card X: merge reviews, sort by last_review:
      [{ rating: 'hard', T1 }, { rating: 'easy', T2 }]
   4. Replay from initial state through calculateNextReview():
      Start: interval=7, ease=2.5, count=5
@@ -1078,7 +1079,7 @@ test('sync progress across devices', async ({ browser }) => {
 | S05 | Wire useFlashcardStore to syncableWrite() + review log |
 | S06 | Wire useBookmarkStore to syncableWrite() |
 | S07 | Note conflict preservation UI (toast + copy creation) |
-| S08 | Flashcard review log sync + SM-2 replay |
+| S08 | Flashcard review log sync + FSRS replay |
 | S09 | Update initial upload wizard for P1 |
 | S10 | Integration + multi-device tests for P1 |
 
@@ -1086,7 +1087,7 @@ test('sync progress across devices', async ({ browser }) => {
 
 | Story | ⚠️ Additional AC |
 |-------|-----------------|
-| S08 | Replay skips reviews for deleted flashcards (logs warning). Sort reviews by `reviewedAt ASC, id ASC` (stable tiebreaker). |
+| S08 | Replay skips reviews for deleted flashcards (logs warning). Sort reviews by `last_review ASC, id ASC` (stable tiebreaker). |
 
 ### Epic 4: P2-P3 + Polish (6-8 stories)
 
@@ -1103,10 +1104,10 @@ test('sync progress across devices', async ({ browser }) => {
 
 **Original estimate: 28-36 stories across 4 epics**
 
-> **Updated:** After adversarial review + brainstorming, this section was superseded by a formal 6-epic plan (E44-E49, 37 stories) with MVP-first phasing. See [`_bmad-output/planning-artifacts/epics-sync.md`](../_bmad-output/planning-artifacts/epics-sync.md) for the authoritative epic/story breakdown.
+> **Updated:** After adversarial review + brainstorming, this section was superseded by a formal 6-epic plan (E92-E97, 37 stories) with MVP-first phasing. See [`_bmad-output/planning-artifacts/epics-sync.md`](../_bmad-output/planning-artifacts/epics-sync.md) for the authoritative epic/story breakdown.
 >
-> **Phase 1 (E44-E46, 18 stories):** Pre-requisites + Infrastructure + P0 Live
-> **Phase 2 (E47-E49, 19 stories):** P1 tables + P2-P3 + Polish (deferred until Phase 1 validated)
+> **Phase 1 (E92-E94, 18 stories):** Pre-requisites + Infrastructure + P0 Live
+> **Phase 2 (E95-E97, 19 stories):** P1 tables + P2-P3 + Polish (deferred until Phase 1 validated)
 
 ---
 
@@ -1156,7 +1157,7 @@ If time is limited, a stripped-down P0-only sync can ship in ~half an epic (4-5 
 | `src/db/schema.ts` | Dexie migration chain — add v29-v31 (v28 = notifications) |
 | `src/db/checkpoint.ts` | Checkpoint schema — update for sync fields |
 | `src/data/types.ts` | TypeScript interfaces — add SyncableFields mixin |
-| `src/lib/spacedRepetition.ts` | SM-2 pure functions — reuse for review replay |
+| `src/lib/spacedRepetition.ts` | FSRS pure functions — reuse for review replay |
 | `src/lib/exportService.ts` | Progress callback pattern — reuse for upload wizard |
 | `src/lib/auth/supabase.ts` | Supabase client singleton |
 | `src/stores/useAuthStore.ts` | userId source for backfill |
@@ -1240,7 +1241,7 @@ Store migration aligns with sync epic phasing — migrate each store when it get
 | Finding | Resolution |
 |---------|-----------|
 | contentProgress LWW ignores status regression | Added status precedence rule (§1) |
-| SM-2 replay loses interval context | Accepted — self-corrects over 5+ reviews. Document as known limitation. |
+| FSRS replay loses interval context | Accepted — self-corrects over 5+ reviews. Document as known limitation. |
 | Story estimate optimistic | Revised to MVP-first approach (§10, §11.7) |
 | No post-sync data integrity verification | Add periodic count reconciliation in Phase 2 |
 | No "sync breaks" failure documentation | Deferred to Phase 2 — MVP is simple enough |
@@ -1284,7 +1285,7 @@ These are captured as ⚠️ AC items in Section 9 story tables.
 | 1.2 | Partial batch failure marks all 100 as synced | Epic 1 S04 |
 | 1.7 | Download `>` misses records at exact timestamp | Epic 1 S04 |
 | 2.5 | Deleted flashcard + orphan reviews crash replay | Epic 3 S08 |
-| 2.7 | Identical `reviewedAt` timestamps → unstable sort | Epic 3 S08 |
+| 2.7 | Identical `last_review` timestamps → unstable sort | Epic 3 S08 |
 | 5.2 | Records added during initial upload → stale count | Epic 2 S04 |
 | 6.5 | Realtime filter bypass delivers other user's data | Epic 2 S03 |
 | X.4 | Field map incompleteness silently drops fields | Epic 1 S06 |
@@ -1299,7 +1300,7 @@ These are low-likelihood or self-correcting. Revisit if assumptions change.
 | 1.6 | Apply-triggered store action creates untracked derived write | Rare: most Zustand updates don't trigger side-effect writes. Document which store actions are "sync-safe" during implementation. | If derived writes (streak recalc, badge awards) are added to synced stores |
 | 2.3 | Cascading note conflict copies accumulate | Single-user app; simultaneous offline edits to the same note are rare. | If multi-user editing is added, or users report copy spam |
 | 2.4 | Conflict copy appears on other device without context toast | The `conflict-copy` tag makes it identifiable. Minor UX annoyance. | If user feedback indicates confusion |
-| 2.6 | SM-2 algorithm version drift across app versions | All devices auto-update; version skew window is small. `calculateNextReview()` is stable. | If FSRS migration changes the algorithm |
+| 2.6 | FSRS algorithm version drift across app versions | All devices auto-update; version skew window is small. `calculateNextReview()` is stable. | If FSRS parameters are retrained |
 | 3.2 | Large dataset IndexedDB transaction timeout during migration | Current max table is ~10K records. Dexie transactions handle this fine. | If any table exceeds 100K records |
 | 3.3 | No rollback mechanism for Dexie migrations | Standard Dexie limitation. Export service provides data recovery path. | If migration corrupts data in testing |
 | 3.4 | Mid-migration crash between v29 and v30 | Each version is independent — v29 works without v30. Sync engine checks for field presence. | Never (by design) |
