@@ -54,6 +54,7 @@ export function EpubRenderer({
   const letterSpacing = useReaderStore(s => s.letterSpacing)
   const wordSpacing = useReaderStore(s => s.wordSpacing)
   const scrollMode = useReaderStore(s => s.scrollMode)
+  const dualPage = useReaderStore(s => s.dualPage)
   const toggleHeader = useReaderStore(s => s.toggleHeader)
   const colorScheme = useAppColorScheme()
   const renditionRef = useRef<Rendition | null>(null)
@@ -138,6 +139,21 @@ export function EpubRenderer({
     // Re-apply theme after flow switch — some epub.js versions reset theme styles on flow change
     applyTheme(rendition)
   }, [scrollMode, applyTheme])
+
+  /** Switch epub.js spread between auto and none at runtime */
+  useEffect(() => {
+    const rendition = renditionRef.current
+    if (!rendition) return
+    const newSpread = !scrollMode && dualPage ? 'auto' : 'none'
+    rendition.spread(newSpread)
+    const container = containerRef.current
+    if (container) {
+      const { width, height } = container.getBoundingClientRect()
+      if (width > 0 && height > 0) {
+        rendition.resize(width, height)
+      }
+    }
+  }, [dualPage, scrollMode])
 
   /** Clear page turn animation timer on unmount to avoid setState after unmount */
   useEffect(() => {
@@ -231,17 +247,17 @@ export function EpubRenderer({
   // Memoize epubOptions — depends on scrollMode for flow switching (E114-S02)
   const epubOptions = useMemo(
     () => ({
-      spread: 'none' as const, // Force single-page layout on all screen widths (AC-4)
+      spread: (!scrollMode && dualPage ? 'auto' : 'none') as 'auto' | 'none',
       flow: scrollMode ? ('scrolled-doc' as const) : ('paginated' as const),
       allowPopups: false,
     }),
-    [scrollMode]
+    [scrollMode, dualPage]
   )
 
   return (
     <div
       ref={containerRef}
-      className={cn('relative h-full w-full', containerBg, animationClass)}
+      className={cn('relative h-full w-full px-6 pt-14 pb-20 md:px-16 lg:px-24', containerBg, animationClass)}
       data-testid="epub-renderer"
       onTouchStart={scrollMode ? undefined : handleTouchStart}
       onTouchEnd={scrollMode ? undefined : handleTouchEnd}

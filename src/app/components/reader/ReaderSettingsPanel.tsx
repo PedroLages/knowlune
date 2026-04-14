@@ -13,6 +13,7 @@
  *
  * @module ReaderSettingsPanel
  */
+import { useState, useEffect } from 'react'
 import { Sun, Moon, BookOpen } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
@@ -63,6 +64,15 @@ const FONT_SIZE_MAX = 200
 const FONT_SIZE_STEP = 10
 
 export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps) {
+  const [isMd, setIsMd] = useState(() => window.matchMedia('(min-width: 768px)').matches)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)')
+    const handler = (e: MediaQueryListEvent) => setIsMd(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
   const colorScheme = useAppColorScheme()
   const theme = useReaderStore(s => s.theme)
   const setTheme = useReaderStore(s => s.setTheme)
@@ -81,6 +91,12 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
   const scrollMode = useReaderStore(s => s.scrollMode)
   const setScrollMode = useReaderStore(s => s.setScrollMode)
   const resetSettings = useReaderStore(s => s.resetSettings)
+  const dualPage = useReaderStore(s => s.dualPage)
+  const setDualPage = useReaderStore(s => s.setDualPage)
+  const showPageNumbers = useReaderStore(s => s.showPageNumbers)
+  const setShowPageNumbers = useReaderStore(s => s.setShowPageNumbers)
+  const showProgressBar = useReaderStore(s => s.showProgressBar)
+  const setShowProgressBar = useReaderStore(s => s.setShowProgressBar)
 
   const handleDecrease = () => {
     setFontSize(fontSize - FONT_SIZE_STEP)
@@ -93,8 +109,8 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
   return (
     <Sheet open={open} onOpenChange={open => !open && onClose()}>
       <SheetContent
-        side="bottom"
-        className="max-h-[85vh] rounded-t-2xl px-4 pb-6 pt-0 overflow-y-auto"
+        side={isMd ? 'right' : 'bottom'}
+        className={cn('overflow-y-auto px-4 pb-6 pt-0', isMd ? 'w-80 sm:max-w-80' : 'max-h-[85vh] rounded-t-2xl')}
         data-testid="reader-settings-panel"
       >
         <SheetHeader className="py-4 border-b border-border/50 mb-4">
@@ -325,6 +341,78 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             Scroll through content continuously instead of turning pages
+          </p>
+        </section>
+
+        {/* Two-Page Spread */}
+        <section aria-labelledby="dual-page-label" className="mb-6">
+          <div className="flex items-center justify-between">
+            <Label
+              id="dual-page-label"
+              htmlFor="dual-page-switch"
+              className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+            >
+              Two-Page Spread
+            </Label>
+            <Switch
+              id="dual-page-switch"
+              checked={dualPage}
+              onCheckedChange={setDualPage}
+              disabled={scrollMode}
+              aria-label="Toggle two-page spread layout"
+              data-testid="dual-page-switch"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {scrollMode
+              ? 'Not available in continuous scroll mode'
+              : 'Show two pages side by side on wider screens'}
+          </p>
+        </section>
+
+        {/* Page Numbers */}
+        <section aria-labelledby="show-page-numbers-label" className="mb-6">
+          <div className="flex items-center justify-between">
+            <Label
+              id="show-page-numbers-label"
+              htmlFor="show-page-numbers-switch"
+              className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+            >
+              Page Numbers
+            </Label>
+            <Switch
+              id="show-page-numbers-switch"
+              checked={showPageNumbers}
+              onCheckedChange={setShowPageNumbers}
+              aria-label="Toggle page numbers in footer"
+              data-testid="show-page-numbers-switch"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Show page indicator at the bottom of the reader
+          </p>
+        </section>
+
+        {/* Progress Bar */}
+        <section aria-labelledby="show-progress-bar-label" className="mb-6">
+          <div className="flex items-center justify-between">
+            <Label
+              id="show-progress-bar-label"
+              htmlFor="show-progress-bar-switch"
+              className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+            >
+              Progress Bar
+            </Label>
+            <Switch
+              id="show-progress-bar-switch"
+              checked={showProgressBar}
+              onCheckedChange={setShowProgressBar}
+              aria-label="Toggle progress bar in footer"
+              data-testid="show-progress-bar-switch"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Show reading progress bar at the bottom of the reader
           </p>
         </section>
 

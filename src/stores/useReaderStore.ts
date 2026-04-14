@@ -23,10 +23,13 @@ interface ReaderSettings {
   wordSpacing: number // 0–0.5 (em)
   readingRulerEnabled: boolean
   scrollMode: boolean
+  dualPage: boolean // true = epub spread: 'auto', false = spread: 'none'
+  showPageNumbers: boolean // page counter in footer
+  showProgressBar: boolean // progress bar in footer
 }
 
 const DEFAULT_SETTINGS: ReaderSettings = {
-  theme: 'light',
+  theme: 'sepia',
   fontSize: 100,
   fontFamily: 'default',
   lineHeight: 1.6,
@@ -34,6 +37,9 @@ const DEFAULT_SETTINGS: ReaderSettings = {
   wordSpacing: 0,
   readingRulerEnabled: false,
   scrollMode: false,
+  dualPage: true,
+  showPageNumbers: true,
+  showProgressBar: true,
 }
 
 function loadSettings(): ReaderSettings {
@@ -78,6 +84,16 @@ function loadSettings(): ReaderSettings {
           : DEFAULT_SETTINGS.readingRulerEnabled,
       scrollMode:
         typeof parsed.scrollMode === 'boolean' ? parsed.scrollMode : DEFAULT_SETTINGS.scrollMode,
+      dualPage:
+        typeof parsed.dualPage === 'boolean' ? parsed.dualPage : DEFAULT_SETTINGS.dualPage,
+      showPageNumbers:
+        typeof parsed.showPageNumbers === 'boolean'
+          ? parsed.showPageNumbers
+          : DEFAULT_SETTINGS.showPageNumbers,
+      showProgressBar:
+        typeof parsed.showProgressBar === 'boolean'
+          ? parsed.showProgressBar
+          : DEFAULT_SETTINGS.showProgressBar,
     }
   } catch {
     // silent-catch-ok: corrupted storage, use defaults
@@ -120,6 +136,9 @@ interface ReaderStoreState extends ReaderSettings {
   setWordSpacing: (spacing: number) => void
   setReadingRulerEnabled: (enabled: boolean) => void
   setScrollMode: (enabled: boolean) => void
+  setDualPage: (enabled: boolean) => void
+  setShowPageNumbers: (show: boolean) => void
+  setShowProgressBar: (show: boolean) => void
   resetSettings: () => void
 }
 
@@ -208,6 +227,24 @@ export const useReaderStore = create<ReaderStoreState>((set, get) => {
       const s = get()
       saveSettings({ ...getSettingsFromState(s), scrollMode: enabled })
       set({ scrollMode: enabled })
+    },
+
+    setDualPage: enabled => {
+      const s = get()
+      saveSettings({ ...getSettingsFromState(s), dualPage: enabled })
+      set({ dualPage: enabled })
+    },
+
+    setShowPageNumbers: show => {
+      const s = get()
+      saveSettings({ ...getSettingsFromState(s), showPageNumbers: show })
+      set({ showPageNumbers: show })
+    },
+
+    setShowProgressBar: show => {
+      const s = get()
+      saveSettings({ ...getSettingsFromState(s), showProgressBar: show })
+      set({ showProgressBar: show })
     },
 
     resetSettings: () => {

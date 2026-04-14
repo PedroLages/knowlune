@@ -62,8 +62,8 @@ export function ReaderHeader({
   return (
     <header
       className={cn(
-        'fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 h-12',
-        'backdrop-blur-3xl transition-all duration-200',
+        'fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-5 py-3',
+        'backdrop-blur-3xl shadow-sm transition-all duration-200',
         chrome.bgOverlay,
         chrome.text,
         visible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
