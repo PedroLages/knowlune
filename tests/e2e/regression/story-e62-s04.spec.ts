@@ -8,7 +8,7 @@
  * gradient and decay labels are deterministic.
  */
 import { test, expect } from '@playwright/test'
-import { dismissOnboarding } from '../helpers/dismiss-onboarding'
+import { dismissOnboarding } from '../../helpers/dismiss-onboarding'
 import {
   seedImportedCourses,
   seedQuizzes,
@@ -16,8 +16,8 @@ import {
   seedContentProgress,
   seedStudySessions,
   seedIndexedDBStore,
-} from '../support/helpers/indexeddb-seed'
-import { FIXED_DATE, getRelativeDate } from '../utils/test-time'
+} from '../../support/helpers/indexeddb-seed'
+import { FIXED_DATE, getRelativeDate } from '../../utils/test-time'
 
 // Shared timeout for popover / cell visibility waits
 const POPOVER_TIMEOUT = 10_000
