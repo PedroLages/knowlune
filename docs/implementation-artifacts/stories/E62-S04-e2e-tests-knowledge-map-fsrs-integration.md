@@ -4,9 +4,9 @@ story_name: 'E2E Tests for Knowledge Map FSRS Integration'
 status: in-progress
 started: 2026-04-14
 completed:
-reviewed: true
+reviewed: in-progress
 review_started: 2026-04-14
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, bundle-analysis, code-review, code-review-testing, security-review, performance-benchmark, glm-code-review]
+review_gates_passed: []
 burn_in_validated: false
 ---
 
