@@ -396,6 +396,14 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
             _loadedBookId = book.id
           }
 
+          // Skip seek if already playing this chapter in this book (preserves position
+          // when remounting after mini-player expand navigation)
+          const currentIdx = useAudioPlayerStore.getState().currentChapterIndex
+          if (_loadedBookId === book.id && index === currentIdx) {
+            setIsLoading(false)
+            return
+          }
+
           // Seek to chapter start time
           const startTime = getChapterStartTime(chapters[index])
           audio.currentTime = startTime
@@ -477,6 +485,14 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
             setIsLoading(false)
             return
           }
+        }
+
+        // Skip seek if already playing this chapter in this book (preserves position
+        // when remounting after mini-player expand navigation)
+        const currentIdx = useAudioPlayerStore.getState().currentChapterIndex
+        if (_loadedBookId === book.id && index === currentIdx) {
+          setIsLoading(false)
+          return
         }
 
         // Seek to chapter start time
