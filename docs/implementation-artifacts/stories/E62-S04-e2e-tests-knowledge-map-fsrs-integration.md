@@ -144,4 +144,10 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+1. **FSRS seed data design**: Creating deterministic FSRS test data required careful stability/last_review combinations to produce predictable retention percentages. High stability (100) with recent review (1 day ago) yields ~99% retention; low stability (2) with old review (10 days ago) yields low retention. The FSRS exponential decay formula `R = e^(-t/S)` makes the math straightforward once you pick the right parameters.
+
+2. **Browser date mocking via addInitScript**: The `page.addInitScript()` pattern for date mocking must be set before any `goto()` call since navigation creates a new document. The mock replaces `Date` globally in the browser context, ensuring `Date.now()` returns FIXED_DATE throughout the page lifecycle.
+
+3. **Dark mode class persistence across navigations**: Setting `document.documentElement.classList.add('dark')` via `page.evaluate()` is lost on navigation. Only `localStorage` persists. The test relies on the app reading `localStorage` on mount to apply dark mode, which is the app's actual behavior — but this is a subtle testing footgun worth documenting.
+
+4. **Radix popover selectors**: Using `[data-radix-popper-content-wrapper]` is fragile (internal Radix implementation detail). A `data-testid` on the popover component would be more robust but was deferred to avoid changing production code in a test-only story.
