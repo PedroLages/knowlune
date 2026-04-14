@@ -6,19 +6,20 @@
 
 ## Acceptance Criteria Coverage
 
-| AC | Description | Test | Status |
-|----|-------------|------|--------|
-| AC-1 | Treemap cells show varied background colors | AC-1 test | COVERED — asserts >= 2 distinct fill colors |
-| AC-2 | Low retention tooltip contains "Fading" | AC-2 test | COVERED — hovers Chemistry cell, checks /[Ff]ading/ |
-| AC-3 | High retention tooltip contains "Stable" | AC-3 test | COVERED — hovers Calculus cell, checks /[Ss]table/ |
-| AC-4 | Popover shows Memory Decay with retention % | AC-4 test | COVERED — clicks cell, checks "Memory Decay" text + aria-label |
-| AC-5 | No Memory Decay for topic without flashcards | AC-5 test | COVERED — clicks Art History cell, checks absence |
-| AC-6 | Dark mode renders without console errors | AC-6 test | COVERED — enables dark mode, checks text visibility + filtered errors |
-| AC-7 | Deterministic dates | AC-7 test | COVERED — verifies browser Date.now() matches FIXED_DATE |
+| AC   | Description                                  | Test      | Status                                                                |
+| ---- | -------------------------------------------- | --------- | --------------------------------------------------------------------- |
+| AC-1 | Treemap cells show varied background colors  | AC-1 test | COVERED — asserts >= 2 distinct fill colors                           |
+| AC-2 | Low retention tooltip contains "Fading"      | AC-2 test | COVERED — hovers Chemistry cell, checks /[Ff]ading/                   |
+| AC-3 | High retention tooltip contains "Stable"     | AC-3 test | COVERED — hovers Calculus cell, checks /[Ss]table/                    |
+| AC-4 | Popover shows Memory Decay with retention %  | AC-4 test | COVERED — clicks cell, checks "Memory Decay" text + aria-label        |
+| AC-5 | No Memory Decay for topic without flashcards | AC-5 test | COVERED — clicks Art History cell, checks absence                     |
+| AC-6 | Dark mode renders without console errors     | AC-6 test | COVERED — enables dark mode, checks text visibility + filtered errors |
+| AC-7 | Deterministic dates                          | AC-7 test | COVERED — verifies browser Date.now() matches FIXED_DATE              |
 
 ## Test Quality Assessment
 
 ### Strengths
+
 - Deterministic seed data with FSRS parameters (stability, last_review) producing predictable retention
 - Uses shared seeding helpers (seedImportedCourses, seedQuizzes, etc.) per project conventions
 - Browser date mocking via `addInitScript` in `beforeEach`
@@ -38,4 +39,5 @@
 All 7 ACs are covered. 3 advisory gaps identified — none blocking.
 
 ---
+
 Coverage: 7/7 ACs | Gaps: 3 advisory

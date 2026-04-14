@@ -13,4 +13,5 @@ This story adds E2E test code only — no production code changes, no API endpoi
 No security findings. Test-only changes with no attack surface modifications.
 
 ---
+
 Issues found: 0 | Blockers: 0 | High: 0 | Medium: 0 | Nit: 0

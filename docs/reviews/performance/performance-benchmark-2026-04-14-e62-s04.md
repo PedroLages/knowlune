@@ -13,4 +13,5 @@ This story adds E2E test code only — no production code, no bundle changes. Bu
 No performance findings. Test-only changes.
 
 ---
+
 Issues found: 0 | Blockers: 0 | High: 0 | Medium: 0 | Nit: 0

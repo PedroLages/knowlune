@@ -142,7 +142,12 @@ export function TopicDetailPopover({
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent className="w-80 p-4" align="center" sideOffset={8} data-testid="topic-detail-popover">
+      <PopoverContent
+        className="w-80 p-4"
+        align="center"
+        sideOffset={8}
+        data-testid="topic-detail-popover"
+      >
         {/* Header: topic name + tier badge */}
         <div className="flex items-center justify-between gap-2 mb-3">
           <h4 className="text-sm font-semibold truncate">{topic.name}</h4>
