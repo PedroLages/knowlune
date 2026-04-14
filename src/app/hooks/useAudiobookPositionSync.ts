@@ -13,6 +13,7 @@
  */
 import { useEffect, useCallback, useRef } from 'react'
 import { useBookStore } from '@/stores/useBookStore'
+import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
 import { db } from '@/db/schema'
 import { sharedAudioRef } from '@/app/hooks/useAudioPlayer'
 import type { Book } from '@/data/types'
@@ -118,6 +119,13 @@ export function useAudiobookPositionSync({
   useEffect(() => {
     const savedSeconds = savedSecondsRef.current
     if (book.source.type !== 'remote' || savedSeconds === null || savedSeconds <= 0) {
+      return
+    }
+    // Skip seek if this book is already active (e.g. returning from mini-player) —
+    // the singleton audio element already has the correct position
+    const alreadyActive = useAudioPlayerStore.getState().currentBookId === book.id
+    if (alreadyActive) {
+      sessionResumeSeekDoneRef.current = true
       return
     }
     if (!isLoading && !sessionResumeSeekDoneRef.current) {
