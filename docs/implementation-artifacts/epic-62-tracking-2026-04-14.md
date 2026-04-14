@@ -10,7 +10,7 @@ Last Updated: 2026-04-14
 | E62-S01 | done           | [#332](https://github.com/PedroLages/knowlune/pull/332) | 2             | 4            |
 | E62-S02 | done           | [#333](https://github.com/PedroLages/knowlune/pull/333) | 3             | 7            |
 | E62-S03 | done           | [#334](https://github.com/PedroLages/knowlune/pull/334) | 3             | 3            |
-| E62-S04 | reviewing (R1) | —                                                       | 1             | —            |
+| E62-S04 | done           | [#335](https://github.com/PedroLages/knowlune/pull/335) | 2             | 9            |
 
 ## Story Details
 
