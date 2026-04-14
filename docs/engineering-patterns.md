@@ -768,3 +768,104 @@ npx playwright test tests/e2e/story-{epic}-{story}.spec.ts --project=chromium
 ```
 
 This avoids a full review pipeline run only to discover a basic spec crash — saving 5-10 minutes per iteration.
+
+## Zod-Validated Structured Output for LLM JSON Calls
+
+Use Zod schemas to validate JSON returned from LLM structured-output calls. LLMs may omit optional fields, use wrong types, or produce subtly malformed JSON even when instructed to follow a schema.
+
+```typescript
+import { z } from 'zod'
+
+const FlashcardSchema = z.object({
+  front: z.string().min(1),
+  back: z.string().min(1),
+  tags: z.array(z.string()).default([]),
+})
+
+const ResponseSchema = z.array(FlashcardSchema)
+
+const raw = await llm.generateObject({ schema: ResponseSchema, prompt })
+// raw is typed and validated — missing fields get defaults, wrong types throw
+```
+
+**Why:** LLM structured output is not a guarantee — it's a strong hint. A Zod parse failure is an explicit error with a useful message rather than a silent downstream bug (e.g., `undefined.length` in the render path).
+
+**When to use:** Any LLM call where you use the response to mutate state, write to DB, or render UI. Passthrough logging calls don't need validation.
+
+**Case study:** E72 retro — multiple stories discovered silent LLM output bugs when optional fields were omitted. Zod validation with `.default()` handles the common case cleanly.
+
+## Dexie Mock Boilerplate for Unit Tests (`vi.mock('@/db')`)
+
+Any unit test that imports a hook or store that touches Dexie must mock both `@/db` and `@/db/schema` at the top of the file. Dexie calls `indexedDB.open()` at module-load time, which throws `MissingAPIError: IndexedDB API missing` in jsdom.
+
+```typescript
+// At the top of any test file that imports Dexie-dependent code
+vi.mock('@/db', () => ({ db: {} }))
+vi.mock('@/db/schema', () => ({
+  db: {
+    tableName: {
+      where: vi.fn().mockReturnValue({
+        equals: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }),
+      }),
+      add: vi.fn().mockResolvedValue(1),
+      put: vi.fn().mockResolvedValue(1),
+      delete: vi.fn().mockResolvedValue(undefined),
+      toArray: vi.fn().mockResolvedValue([]),
+    },
+  },
+}))
+```
+
+**Key rule:** Mock `@/db/schema` with the specific tables your code under test accesses — not a blanket empty object. The mock must match the exact Dexie API surface the code calls (`.where().equals().toArray()`, `.add()`, etc.), otherwise you get `TypeError: db.tableName.where is not a function`.
+
+**When updating a store** that grows new DB operations (e.g., `removeServer` now also deletes related `books`), update the existing mock to add the new table — don't rely on the blanket `{}` stub.
+
+**Case study:** E57 retro — `useAudiobookshelfStore`, `UnifiedLessonPlayer`, and `useQuizGeneration` tests all failed with `MissingAPIError` until db mocks were added.
+
+## Test the Real Function, Never a Replica
+
+Write unit tests against the production function directly. Never copy-paste the function's logic into the test to compute the expected value.
+
+```typescript
+// ❌ WRONG — tests a replica, not the real function
+it('formats duration correctly', () => {
+  const seconds = 3661
+  const expected = `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m` // replica
+  expect(formatDuration(seconds)).toBe(expected)
+})
+
+// ✅ CORRECT — expected value is a hard-coded literal derived from domain knowledge
+it('formats duration correctly', () => {
+  expect(formatDuration(3661)).toBe('1h 1m')
+})
+```
+
+**Why replicas are dangerous:** They duplicate the same logic flaw. If `formatDuration` has an off-by-one bug, the replica test has the same bug and passes. The literal `'1h 1m'` catches the flaw.
+
+**How to derive literals:** Run the function in a REPL or browser console with known inputs, capture the output, and assert that exact value. If the function is too complex to run manually, it's a sign it needs to be decomposed.
+
+**Case study:** E62 retro — retention score display test computed the expected hex color using the same OKLCH formula as the component. The test passed even when the formula was wrong, because both used the same buggy math.
+
+## Semantic State Over Computed Style Assertions
+
+Assert on semantic state (ARIA attributes, data attributes, text content, class names with meaning) — never on computed CSS values (`getComputedStyle`, raw hex colors, pixel dimensions).
+
+```typescript
+// ❌ WRONG — brittle, theme-dependent, not semantic
+expect(getComputedStyle(badge).backgroundColor).toBe('rgb(239, 68, 68)')
+
+// ✅ CORRECT — asserts what the user perceives
+expect(badge).toHaveAttribute('data-status', 'error')
+expect(badge).toHaveClass('bg-destructive')
+expect(badge).toHaveTextContent('Failed')
+
+// ✅ ALSO CORRECT — ARIA communicates state
+expect(meter).toHaveAttribute('aria-valuenow', '75')
+expect(alert).toHaveAttribute('aria-live', 'polite')
+```
+
+**Why computed styles fail:** jsdom doesn't process Tailwind CSS — `getComputedStyle()` returns empty/default values. Even in browsers, hex color assertions break when themes change.
+
+**Rule for custom status indicators:** Add a `data-status` or `data-variant` attribute to the element and assert on that. The semantic meaning is stable across theme changes and refactors.
+
+**Case study:** E62 retro — `TopicTreemap` retention color tests initially asserted on hex values via `getComputedStyle()`. Tests passed in one theme and silently failed in another. Switched to `data-retention-tier` attribute assertions.

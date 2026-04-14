@@ -57,6 +57,13 @@ Before requesting `/review-story`, verify:
 - [ ] For every `useEffect` or async callback that reads Zustand state: confirm it reads from `get()` inside the callback, not from outer render scope (stale closure risk)
 - [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
 - [ ] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md § CSP Configuration)
+- [ ] Dexie schema: if adding or modifying tables/indexes, update `src/db/__tests__/schema.test.ts`
+- [ ] Touch targets: verify all interactive elements are ≥44×44px (check in DevTools device toolbar)
+- [ ] Visual sanity: load feature with seed data and verify the primary UI renders correctly before submitting
+- [ ] ARIA: run axe scan on any custom selection or interaction UI (keyboard-navigable lists, comboboxes, dialogs)
+- [ ] Marker stripping: if implementing an LLM marker-token pattern (e.g., `<ANSWER>`), confirm strip logic in the render path before displaying to user
+- [ ] `tsc --noEmit`: runs clean (zero TypeScript errors) before submission
+- [ ] E2E: run current story's spec locally (`npx playwright test tests/e2e/story-{epic}-{story}.spec.ts --project=chromium`) and verify all tests pass
 
 ## Design Review Feedback
 

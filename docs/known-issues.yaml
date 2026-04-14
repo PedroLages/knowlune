@@ -756,9 +756,9 @@ issues:
     discovered_by: E73-NFR
     discovered_on: 2026-04-13
     status: scheduled
-    scheduled_for: null
+    scheduled_for: E68
     fixed_by: null
-    notes: "Deferred architectural finding from E73 NFR assessment. Needs exponential-backoff retry (max 2 attempts) in useTutor sendMessage."
+    notes: "Deferred architectural finding from E73 NFR assessment. Needs exponential-backoff retry (max 2 attempts) in useTutor sendMessage. E68 touches AI infra — natural fit."
 
   - id: KI-062
     type: architecture
@@ -768,7 +768,7 @@ issues:
     discovered_by: E73-NFR
     discovered_on: 2026-04-13
     status: scheduled
-    scheduled_for: null
+    scheduled_for: cleanup-epic
     fixed_by: null
     notes: "Deferred architectural finding from E73 NFR assessment. Product team cannot measure mode adoption without telemetry."
 
@@ -780,7 +780,7 @@ issues:
     discovered_by: E73-NFR
     discovered_on: 2026-04-13
     status: scheduled
-    scheduled_for: null
+    scheduled_for: cleanup-epic
     fixed_by: null
     notes: "Deferred from E73 NFR. None introduced by E73. Vite HIGH is dev-only, does not affect production builds."
 
@@ -804,9 +804,9 @@ issues:
     discovered_by: E71-NFR
     discovered_on: 2026-04-13
     status: scheduled
-    scheduled_for: null
+    scheduled_for: E70
     fixed_by: null
-    notes: "TODO(E56-S04) documented in store. Lesson-rewatch suggestions show '${topicName} Lesson' as title instead of real lesson names. Fix requires E56-S04 to expose per-lesson tracking data."
+    notes: "TODO(E56-S04) documented in store. Lesson-rewatch suggestions show '${topicName} Lesson' as title instead of real lesson names. Fix requires E56-S04 to expose per-lesson tracking data. E70 reads action suggestions — natural fix point."
 
   - id: KI-066
     type: architecture
@@ -816,7 +816,7 @@ issues:
     discovered_by: E71-NFR
     discovered_on: 2026-04-13
     status: scheduled
-    scheduled_for: null
+    scheduled_for: E70
     fixed_by: null
     notes: "Trend field mapped from days-since-engagement rather than score delta over time. Requires E56 to expose score history. Deferred architectural finding from E71 NFR."
 
@@ -828,7 +828,7 @@ issues:
     discovered_by: E62-NFR
     discovered_on: 2026-04-14
     status: scheduled
-    scheduled_for: null
+    scheduled_for: cleanup-epic
     fixed_by: null
     notes: "Observer callback is cheap (clears _colorCache = null) and theme changes are rare, so no user-facing impact. Could be refined to check classList.contains('dark') etc. Deferred from E62 post-epic fix pass."
 
@@ -840,6 +840,6 @@ issues:
     discovered_by: E62-TRACE
     discovered_on: 2026-04-14
     status: scheduled
-    scheduled_for: null
+    scheduled_for: cleanup-epic
     fixed_by: null
     notes: "P2 gap from testarch-trace. MutationObserver theme-change path manually verified in NFR audit. Writing a test requires mocking MutationObserver in Playwright — disproportionate effort for LOW risk. Deferred from E62 post-epic fix pass."

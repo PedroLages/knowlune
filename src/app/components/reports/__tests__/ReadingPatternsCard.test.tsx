@@ -12,12 +12,12 @@ const mockGetTimeOfDayPattern = vi.mocked(getTimeOfDayPattern)
 
 const mockPattern = {
   buckets: [
-    { period: 'Morning', count: 5, percentage: 50 },
-    { period: 'Afternoon', count: 3, percentage: 30 },
-    { period: 'Evening', count: 1, percentage: 10 },
-    { period: 'Night', count: 1, percentage: 10 },
+    { period: 'Morning' as const, count: 5, percentage: 50 },
+    { period: 'Afternoon' as const, count: 3, percentage: 30 },
+    { period: 'Evening' as const, count: 1, percentage: 10 },
+    { period: 'Night' as const, count: 1, percentage: 10 },
   ],
-  dominant: 'Morning',
+  dominant: 'Morning' as const,
 }
 
 describe('ReadingPatternsCard', () => {
