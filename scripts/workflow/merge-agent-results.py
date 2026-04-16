@@ -153,24 +153,49 @@ def apply_consensus_scoring(findings):
         finding['consensus_tag'] = f"Consensus: {len(sources)} — {' + '.join(agent_names)}"
 
 
+def filter_low_confidence(findings, threshold=60):
+    """
+    Filter findings below confidence threshold.
+    Returns (kept, filtered_count).
+    """
+    kept = []
+    filtered = 0
+    for f in findings:
+        confidence = f.get('confidence', 80)
+        consensus = f.get('consensus_score', confidence)
+        # Use consensus_score if available (it includes cross-agent boost),
+        # otherwise fall back to raw confidence
+        effective = consensus if consensus != confidence else confidence
+        if effective >= threshold:
+            kept.append(f)
+        else:
+            filtered += 1
+    return kept, filtered
+
+
 def merge_results(agent_outputs):
     """Merge all agent outputs into consolidated findings."""
     all_findings = []
     agents = {}
-    
+
     # Collect all findings from all agents
     for filename, output in agent_outputs.items():
         agent = output.get('agent', filename)
         agents[agent] = output
-        
+
         for finding in output.get('findings', []):
             finding['agent'] = agent
             all_findings.append(finding)
-    
+
     # Deduplicate and apply consensus
     deduped = deduplicate_findings(all_findings)
     apply_consensus_scoring(deduped)
-    
+
+    # Filter low-confidence findings (below 60)
+    deduped, filtered_count = filter_low_confidence(deduped, threshold=60)
+    if filtered_count > 0:
+        print(f"  Filtered: {filtered_count} low-confidence findings (below 60)", file=sys.stderr)
+
     # Sort by severity, then by consensus score
     deduped.sort(key=lambda f: (severity_rank(f.get('severity', 'INFO')), -f.get('consensus_score', 0)))
     
@@ -192,7 +217,8 @@ def merge_results(agent_outputs):
         'consolidated_findings': deduped,
         'verdict': verdict,
         'summary': summary,
-        'consensus_count': sum(1 for f in deduped if f.get('consensus_count', 0) > 1)
+        'consensus_count': sum(1 for f in deduped if f.get('consensus_count', 0) > 1),
+        'filtered_low_confidence': filtered_count
     }
 
 

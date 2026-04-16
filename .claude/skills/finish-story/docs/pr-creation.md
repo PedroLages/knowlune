@@ -2,6 +2,50 @@
 
 Template and guidelines for creating pull requests via `gh pr create`.
 
+## Existing PR Handling
+
+Before creating a new PR, check if one already exists for this branch:
+
+```bash
+EXISTING_PR=$(gh pr list --head "$(git branch --show-current)" --json number,url --jq '.[0]' 2>/dev/null || echo "")
+```
+
+If `EXISTING_PR` is non-empty:
+1. Read the existing body: `gh pr view $PR_NUMBER --json body --jq '.body'`
+2. Extract existing `## Known Issues` section (if any) — preserve it
+3. Generate new body from template, append preserved Known Issues
+4. Update: `gh pr edit $PR_NUMBER --body "$NEW_BODY"`
+5. Print: "PR #N updated — [URL]"
+
+## Template Scaling
+
+Choose template based on diff size:
+
+### Short Template (under 50 changed lines)
+
+```bash
+gh pr create \
+  --title "feat(E##-S##): [Story name]" \
+  --body "$(cat <<'EOF'
+## Summary
+
+- [What changed and why — 2-3 bullets]
+
+## Test Plan
+
+- [ ] [Verification step from AC]
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"
+```
+
+### Standard Template (50-200 changed lines)
+
+Same as Full Template below but omit the `## Verification` table.
+
+### Full Template (over 200 changed lines)
+
 ## Template
 
 ```bash
