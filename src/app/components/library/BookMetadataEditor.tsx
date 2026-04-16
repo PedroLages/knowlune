@@ -61,8 +61,8 @@ async function toJpeg(file: File): Promise<Blob> {
   })
   URL.revokeObjectURL(objectUrl)
 
-  const MAX_W = 800
-  const MAX_H = 1200
+  const MAX_W = 1500
+  const MAX_H = 2250
   let { width, height } = img
   if (width > MAX_W || height > MAX_H) {
     const scale = Math.min(MAX_W / width, MAX_H / height)
