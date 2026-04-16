@@ -109,7 +109,57 @@ describe('searchGoogleBooks', () => {
 
     const [result] = results as MetadataSearchResult[]
     expect(result.coverUrl).toMatch(/^https:\/\//)
-    expect(result.thumbnailUrl).toBe(result.coverUrl)
+    expect(result.thumbnailUrl).toMatch(/^https:\/\//)
+    expect(result.coverUrl).toContain('zoom=6')
+    expect(result.thumbnailUrl).toContain('zoom=1')
+  })
+
+  it('upgrades coverUrl to zoom=6 (extraLarge) from zoom=1', async () => {
+    vi.stubGlobal('fetch', mockFetchOk([VOLUME_FULL]))
+
+    const promise = searchGoogleBooks({ title: 'Project Hail Mary', author: 'Andy Weir' })
+    await vi.runAllTimersAsync()
+    const results = await promise
+
+    const [result] = results as MetadataSearchResult[]
+    expect(result.coverUrl).toContain('zoom=6')
+    expect(result.thumbnailUrl).toContain('zoom=1')
+    expect(result.coverUrl).not.toContain('zoom=1')
+  })
+
+  it('strips edge=curl from coverUrl and thumbnailUrl', async () => {
+    const volumeWithCurl = {
+      volumeInfo: {
+        ...VOLUME_FULL.volumeInfo,
+        imageLinks: {
+          thumbnail: 'http://books.google.com/books/content?id=abc&zoom=1&edge=curl&source=gbs_api',
+        },
+      },
+    }
+    vi.stubGlobal('fetch', mockFetchOk([volumeWithCurl]))
+
+    const promise = searchGoogleBooks({ title: 'Project Hail Mary', author: 'Andy Weir' })
+    await vi.runAllTimersAsync()
+    const results = await promise
+
+    const [result] = results as MetadataSearchResult[]
+    expect(result.coverUrl).not.toContain('edge=curl')
+    expect(result.thumbnailUrl).not.toContain('edge=curl')
+    expect(result.coverUrl).toContain('zoom=6')
+    expect(result.thumbnailUrl).toContain('zoom=1')
+  })
+
+  it('handles thumbnail URL with no edge=curl — URLs unaffected by strip', async () => {
+    vi.stubGlobal('fetch', mockFetchOk([VOLUME_FULL]))
+
+    const promise = searchGoogleBooks({ title: 'Project Hail Mary', author: 'Andy Weir' })
+    await vi.runAllTimersAsync()
+    const results = await promise
+
+    const [result] = results as MetadataSearchResult[]
+    // No edge=curl in fixture — strip is a no-op, URLs should still be valid
+    expect(result.coverUrl).toContain('zoom=6')
+    expect(result.coverUrl).not.toContain('edge=curl')
   })
 
   // ── Happy path: ISBN search ─────────────────────────────────────────────────
@@ -128,7 +178,7 @@ describe('searchGoogleBooks', () => {
 
     // Verify the first fetch used the ISBN query
     const calledUrl = fetchMock.mock.calls[0][0] as string
-    expect(calledUrl).toContain('isbn:9780593135204')
+    expect(calledUrl).toContain('isbn%3A9780593135204')
 
     expect(Array.isArray(results)).toBe(true)
     const [result] = results as MetadataSearchResult[]

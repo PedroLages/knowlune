@@ -86,9 +86,11 @@ function mapVolumeToResult(item: unknown): MetadataSearchResult | null {
 
   const rawThumbnail = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail
   // Google Books serves thumbnails over HTTP — upgrade to HTTPS.
-  const thumbnailUrl = rawThumbnail ? rawThumbnail.replace(/^http:\/\//, 'https://') : undefined
-  // Request the largest available image by switching zoom=1 → zoom=0
-  const coverUrl = thumbnailUrl?.replace(/&zoom=\d/, '&zoom=0')
+  const httpsUrl = rawThumbnail ? rawThumbnail.replace(/^http:\/\//, 'https://') : undefined
+  // Keep thumbnail at zoom=1 (fast grid previews); strip edge=curl visual artifact.
+  const thumbnailUrl = httpsUrl?.replace(/&edge=curl/, '')
+  // Request the largest available image (zoom=6 = extraLarge, ~1280px); strip edge=curl.
+  const coverUrl = httpsUrl?.replace(/&zoom=\d/, '&zoom=6').replace(/&edge=curl/, '')
 
   const isbn13 = info.industryIdentifiers?.find((id) => id.type === 'ISBN_13')?.identifier
 

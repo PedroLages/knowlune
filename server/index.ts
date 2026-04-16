@@ -23,6 +23,7 @@ import { createAuthMiddleware } from './middleware/authenticate.js'
 import { createDetectBYOKMiddleware, createEntitlementMiddleware } from './middleware/entitlement.js'
 import { createRateLimiter } from './middleware/rate-limiter.js'
 import calendarRouter from './routes/calendar.js'
+import coverProxyRouter from './routes/cover-proxy.js'
 import rateLimit from 'express-rate-limit'
 import { pipeline } from 'node:stream/promises'
 import { Readable } from 'node:stream'
@@ -494,6 +495,20 @@ app.get('/api/audible/proxy', async (req, res) => {
     clearTimeout(timeoutId)
   }
 })
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Cover proxy — bypasses CORS for Google Books (and other image CDNs).
+// No auth required — fetches public images on behalf of the browser.
+// Rate limited per IP to prevent proxy abuse.
+// ──────────────────────────────────────────────────────────────────────────────
+const coverProxyRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60, // 60 req/min per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too Many Requests',
+})
+app.use('/api/cover-proxy', coverProxyRateLimit, coverProxyRouter)
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Calendar feed route — token-authenticated, no JWT required (E50-S02)

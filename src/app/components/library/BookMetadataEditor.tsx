@@ -161,11 +161,40 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
       setShowSearchGrid(false)
       setSearchResults([])
       setIsSearching(false)
-      // Set existing cover
-      if (book.coverUrl) {
-        setSafeCoverPreviewUrl(book.coverUrl)
-      } else {
-        setSafeCoverPreviewUrl(null)
+
+      // Resolve existing cover — opfs-cover:// requires async blob resolution
+      let isCancelled = false
+      let blobUrl: string | null = null
+
+      const resolveCover = async () => {
+        setIsFetchingCover(true)
+        try {
+          if (book.coverUrl?.startsWith('opfs-cover://') || book.coverUrl?.startsWith('opfs://')) {
+            blobUrl = await opfsStorageService.getCoverUrl(book.id)
+            if (!isCancelled) {
+              setSafeCoverPreviewUrl(blobUrl)
+              blobUrl = null // setSafeCoverPreviewUrl owns the lifecycle; null out to prevent double-revoke
+            }
+          } else if (book.coverUrl) {
+            // Direct URL (https:// or data:image/) — no resolution needed
+            if (!isCancelled) setSafeCoverPreviewUrl(book.coverUrl)
+          } else {
+            if (!isCancelled) setSafeCoverPreviewUrl(null)
+          }
+        } catch {
+          // silent-catch-ok: cover resolution failure shows placeholder, not an error state
+          if (!isCancelled) setSafeCoverPreviewUrl(null)
+        } finally {
+          if (!isCancelled) setIsFetchingCover(false)
+        }
+      }
+
+      resolveCover()
+
+      return () => {
+        isCancelled = true
+        // Revoke only if the blob was resolved but isCancelled blocked handoff to setSafeCoverPreviewUrl
+        if (blobUrl) URL.revokeObjectURL(blobUrl)
       }
     }
   }, [book, open, setSafeCoverPreviewUrl])
@@ -262,7 +291,12 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
     if (result.coverUrl && /^https?:\/\//.test(result.coverUrl)) {
       setIsFetchingCover(true)
       try {
-        const response = await fetch(result.coverUrl, { signal: AbortSignal.timeout(15_000) })
+        // Google Books CDN blocks browser-direct fetch (no CORS headers) — route through proxy
+        const fetchUrl = result.provider === 'google-books'
+          ? `/api/cover-proxy?url=${encodeURIComponent(result.coverUrl)}`
+          : result.coverUrl
+        const signal = abortControllerRef.current?.signal ?? AbortSignal.timeout(15_000)
+        const response = await fetch(fetchUrl, { signal })
         if (response.ok) {
           const blob = await response.blob()
           const jpegBlob = await toJpeg(new File([blob], 'cover.jpg', { type: blob.type }))
@@ -272,6 +306,7 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
         }
       } catch {
         toast.warning('Could not fetch cover image — try uploading manually.')
+        setShowSearchGrid(false)
       } finally {
         setIsFetchingCover(false)
       }
