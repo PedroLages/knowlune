@@ -306,6 +306,14 @@
   box-shadow: 0 10px 30px var(--shadow-brand);
 }
 
+/* Hide scrollbar while keeping scroll behavior */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

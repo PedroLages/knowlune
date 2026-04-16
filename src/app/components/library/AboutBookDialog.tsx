@@ -10,8 +10,10 @@
  * @since E107-S04
  */
 
+import { useMemo } from 'react'
 import { BookOpen, Headphones } from 'lucide-react'
 import type { Book } from '@/data/types'
+import { stripHtml } from '@/lib/textUtils'
 import {
   Dialog,
   DialogContent,
@@ -44,11 +46,15 @@ function formatFileSize(bytes?: number): string {
 // Named export for testing, default export for React.lazy()
 export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogProps) {
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
+  const plainDescription = useMemo(
+    () => (book.description ? stripHtml(book.description) : ''),
+    [book.description]
+  )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-md w-full"
+        className="max-w-lg w-full"
         aria-describedby="about-book-desc"
         data-testid="about-book-dialog"
       >
@@ -62,9 +68,9 @@ export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogPro
 
         <div className="space-y-6">
           {/* Cover and basic info */}
-          <div className="flex gap-4">
+          <div className="flex gap-5">
             {/* Cover image with fallback */}
-            <div className="w-32 h-48 flex-shrink-0 rounded-xl overflow-hidden bg-muted">
+            <div className={`w-32 ${book.format === 'audiobook' ? 'h-32' : 'h-48'} flex-shrink-0 rounded-xl overflow-hidden bg-muted`}>
               {resolvedCoverUrl ? (
                 <img
                   src={resolvedCoverUrl}
@@ -117,38 +123,33 @@ export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogPro
           </div>
 
           {/* Description */}
-          {book.description ? (
-            <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Description
-              </p>
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Description
+            </p>
+            {plainDescription ? (
               <p
-                className="text-sm text-card-foreground leading-relaxed"
+                className="text-sm text-card-foreground leading-relaxed overflow-y-auto max-h-[200px]"
                 data-testid="about-book-description"
               >
-                {book.description}
+                {plainDescription}
               </p>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Description
-              </p>
+            ) : (
               <p
                 className="text-sm text-muted-foreground italic"
                 data-testid="about-book-description"
               >
                 No description available
               </p>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Metadata grid */}
           <div className="space-y-3">
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Metadata
             </p>
-            <div className="grid grid-cols-[auto_1fr] gap-y-3 gap-x-4 text-sm">
+            <div className="grid grid-cols-[auto_1fr] gap-y-3 gap-x-4 text-sm rounded-xl bg-muted/50 p-4">
               {/* Format */}
               <span className="text-muted-foreground">Format</span>
               <span className="font-medium text-card-foreground">

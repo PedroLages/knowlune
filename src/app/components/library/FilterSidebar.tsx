@@ -33,6 +33,7 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
 const FORMAT_OPTIONS = [
   { value: 'audiobook', label: 'Audiobook' },
   { value: 'epub', label: 'EPUB' },
+  { value: 'pdf', label: 'PDF' },
 ]
 
 /** Sentinel value for books with no genre assigned. Used in filter UI and store. */

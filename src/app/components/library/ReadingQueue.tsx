@@ -1,12 +1,13 @@
 /**
  * Reading Queue section for the Library page (E110-S03).
  *
- * Displays an ordered list of books to read next with drag-and-drop
- * reordering via @dnd-kit. Each queue item shows cover, title, author,
- * and current reading progress.
+ * Horizontal row of draggable book covers. Users drag covers left/right
+ * to reorder their reading priority. Each card shows cover, title, and
+ * a remove button on hover.
  *
  * @module ReadingQueue
  * @since E110-S03
+ * @modified Library Visual Polish — horizontal card layout
  */
 
 import { useState, useCallback, useMemo } from 'react'
@@ -24,34 +25,19 @@ import {
 import {
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
+  horizontalListSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, X, ListOrdered } from 'lucide-react'
+import { X, ListOrdered, Headphones, BookOpen } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { useReadingQueueStore } from '@/stores/useReadingQueueStore'
 import { useBookStore } from '@/stores/useBookStore'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import type { Book, ReadingQueueEntry } from '@/data/types'
 
-/** Renders a single book cover thumbnail with fallback */
-function QueueItemCover({ book }: { book: Book }) {
-  const coverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
-
-  if (coverUrl) {
-    return <img src={coverUrl} alt="" className="h-14 w-10 shrink-0 rounded-md object-cover" />
-  }
-
-  return (
-    <div className="flex h-14 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
-      <ListOrdered className="size-4 text-muted-foreground" aria-hidden="true" />
-    </div>
-  )
-}
-
-/** Sortable queue item row */
-function SortableQueueItem({
+/** Sortable queue card — small cover with title below, X on hover */
+function SortableQueueCard({
   entry,
   book,
   onRemove,
@@ -60,9 +46,12 @@ function SortableQueueItem({
   book: Book
   onRemove: (bookId: string) => void
 }) {
+  const coverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: entry.id,
   })
+  const isAudiobook = book.format === 'audiobook'
+  const FallbackIcon = isAudiobook ? Headphones : BookOpen
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -75,75 +64,88 @@ function SortableQueueItem({
       // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
       style={style}
       {...attributes}
+      {...listeners}
       role="listitem"
       aria-roledescription="sortable"
+      aria-label={`Queue position: ${book.title}. Drag to reorder.`}
       className={cn(
-        'flex items-center gap-3 rounded-xl border border-border/50 bg-card px-3 py-2',
-        isDragging && 'opacity-50 shadow-lg z-10'
+        'group/queue relative w-28 flex-shrink-0 cursor-grab active:cursor-grabbing',
+        isDragging && 'opacity-40 z-10'
       )}
       data-testid={`queue-item-${book.id}`}
     >
-      <button
-        type="button"
-        className="cursor-grab touch-manipulation rounded p-2.5 min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground active:cursor-grabbing"
-        aria-label={`Drag to reorder ${book.title}`}
-        data-testid={`queue-drag-handle-${book.id}`}
-        {...listeners}
-      >
-        <GripVertical className="size-4" aria-hidden="true" />
-      </button>
-
-      <QueueItemCover book={book} />
-
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium" title={book.title}>
-          {book.title}
-        </p>
-        {book.author && (
-          <p className="truncate text-xs text-muted-foreground" title={book.author}>
-            {book.author}
-          </p>
+      {/* Cover */}
+      <div className="relative aspect-square rounded-xl overflow-hidden shadow-card-ambient">
+        {coverUrl ? (
+          <img
+            src={coverUrl}
+            alt={`Cover of ${book.title}`}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-muted">
+            <FallbackIcon className="size-5 text-muted-foreground" />
+          </div>
         )}
-        <div className="mt-1 flex items-center gap-2">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+
+        {/* Progress ring at bottom */}
+        {book.progress > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-foreground/10">
             <div
-              className="h-full rounded-full bg-brand transition-all"
-              style={{ width: `${Math.min(100, Math.max(0, book.progress))}%` }}
+              className="h-full bg-brand rounded-full"
+              style={{ width: `${Math.min(100, book.progress)}%` }}
             />
           </div>
-          <span className="text-[10px] tabular-nums text-muted-foreground">
-            {Math.round(book.progress)}%
-          </span>
+        )}
+
+        {/* Remove button — visible on hover */}
+        <button
+          type="button"
+          className="absolute top-1 right-1 size-6 flex items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover/queue:opacity-100 transition-opacity hover:bg-destructive"
+          onClick={e => {
+            e.stopPropagation()
+            onRemove(book.id)
+          }}
+          aria-label={`Remove ${book.title} from queue`}
+          data-testid={`queue-remove-${book.id}`}
+        >
+          <X className="size-3.5" />
+        </button>
+
+        {/* Queue position number */}
+        <div className="absolute top-1 left-1 size-5 flex items-center justify-center rounded-full bg-black/50 text-[10px] font-bold text-white">
+          {entry.sortOrder + 1}
         </div>
       </div>
 
-      <button
-        type="button"
-        className="shrink-0 rounded p-2.5 min-h-[44px] min-w-[44px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-        onClick={() => onRemove(book.id)}
-        aria-label={`Remove ${book.title} from queue`}
-        data-testid={`queue-remove-${book.id}`}
-      >
-        <X className="size-4" aria-hidden="true" />
-      </button>
+      {/* Title below */}
+      <p className="mt-1.5 text-[11px] font-medium text-foreground leading-tight line-clamp-2 text-center px-0.5">
+        {book.title}
+      </p>
     </div>
   )
 }
 
-/** Drag overlay shown while dragging a queue item */
+/** Drag overlay shown while dragging a queue card */
 function QueueDragOverlay({ book }: { book: Book }) {
+  const coverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
+  const isAudiobook = book.format === 'audiobook'
+  const FallbackIcon = isAudiobook ? Headphones : BookOpen
+
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-brand/30 bg-card px-3 py-2 shadow-xl">
-      <div className="rounded p-1 text-muted-foreground">
-        <GripVertical className="size-4" aria-hidden="true" />
+    <div className="w-28 opacity-90">
+      <div className="aspect-square rounded-xl overflow-hidden shadow-xl ring-2 ring-brand/40">
+        {coverUrl ? (
+          <img src={coverUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-muted">
+            <FallbackIcon className="size-5 text-muted-foreground" />
+          </div>
+        )}
       </div>
-
-      <QueueItemCover book={book} />
-
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{book.title}</p>
-        {book.author && <p className="truncate text-xs text-muted-foreground">{book.author}</p>}
-      </div>
+      <p className="mt-1.5 text-[11px] font-medium text-foreground leading-tight line-clamp-2 text-center px-0.5">
+        {book.title}
+      </p>
     </div>
   )
 }
@@ -193,7 +195,7 @@ export function ReadingQueue() {
   if (validEntries.length === 0) {
     return (
       <div
-        className="mb-4 rounded-2xl border border-dashed border-border/50 p-4 text-center"
+        className="mb-6 rounded-2xl border border-dashed border-border/50 p-4 text-center"
         data-testid="reading-queue-empty"
       >
         <ListOrdered className="mx-auto mb-2 size-6 text-muted-foreground" aria-hidden="true" />
@@ -206,10 +208,10 @@ export function ReadingQueue() {
   }
 
   return (
-    <div className="mb-4" data-testid="reading-queue-section">
-      <div className="mb-2 flex items-center gap-2">
-        <ListOrdered className="size-4 text-brand" aria-hidden="true" />
-        <h3 className="text-sm font-semibold">Reading Queue</h3>
+    <div className="mb-6" data-testid="reading-queue-section">
+      <div className="mb-3 flex items-center gap-2">
+        <ListOrdered className="size-5 text-brand" aria-hidden="true" />
+        <h3 className="text-lg font-semibold text-foreground">Reading Queue</h3>
         <span
           className="rounded-full bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand-soft-foreground"
           data-testid="reading-queue-count"
@@ -224,14 +226,17 @@ export function ReadingQueue() {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext items={validEntries.map(e => e.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-1.5" role="list" aria-label="Reading queue">
+        <SortableContext
+          items={validEntries.map(e => e.id)}
+          strategy={horizontalListSortingStrategy}
+        >
+          <div className="flex gap-3" role="list" aria-label="Reading queue">
             {validEntries.map(entry => {
               const book = bookMap.get(entry.bookId)
               if (!book) return null
 
               return (
-                <SortableQueueItem
+                <SortableQueueCard
                   key={entry.id}
                   entry={entry}
                   book={book}

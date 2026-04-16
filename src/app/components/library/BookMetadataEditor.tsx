@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/app/components/ui/select'
 import type { Book, BookGenre } from '@/data/types'
+import { stripHtml } from '@/lib/textUtils'
 import { Badge } from '@/app/components/ui/badge'
 import { useBookStore } from '@/stores/useBookStore'
 import { opfsStorageService } from '@/services/OpfsStorageService'
@@ -40,7 +41,6 @@ import { EditorTagSection } from './EditorTagSection'
 import { CoverSearchGrid } from './CoverSearchGrid'
 import { ghostInputClass, labelClass } from './designConstants'
 import { cn } from '@/app/components/ui/utils'
-import { stripHtml } from '@/lib/textUtils'
 
 interface BookMetadataEditorProps {
   book: Book | null
