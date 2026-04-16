@@ -58,6 +58,8 @@ interface BookStoreState {
         | 'title'
         | 'author'
         | 'isbn'
+        | 'asin'
+        | 'narrator'
         | 'description'
         | 'tags'
         | 'coverUrl'

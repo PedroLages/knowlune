@@ -60,7 +60,8 @@ docs/
 ├── reviews/                    # Design and code review reports
 │   ├── design/                 # Design review reports
 │   └── code/                   # Code review reports
-└── research/                   # Technical research
+├── research/                   # Technical research
+└── solutions/                  # Documented solutions (bugs, best practices, workflow patterns); YAML frontmatter: module, tags, problem_type
 
 scripts/                        # Test and automation scripts
 ├── auto-story.py              # Story automation orchestrator
