@@ -425,6 +425,77 @@ app.use('/api/abs/proxy', (req, res, next) => {
 })
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Audible catalog proxy — safety net for browser-direct CORS blocks.
+// The Audible catalog endpoint (api.audible.com) may block browser-direct
+// requests. AudnexusService already catches CORS errors gracefully, but this
+// route lets operators switch to the proxy by pointing the service at
+// /api/audible/proxy instead of api.audible.com directly.
+//
+// No auth required — Audible catalog is a public API.
+// Target URL is hardcoded, so SSRF protection is not needed.
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/audible/proxy
+ *
+ * Proxies Audible catalog product searches to avoid browser CORS restrictions.
+ * Used as a fallback when api.audible.com blocks browser-direct requests.
+ *
+ * Query params:
+ *   title          - Book title to search (required)
+ *   author         - Author name to filter results (optional)
+ *   num_results    - Max results to return (default: 5)
+ *   response_groups - Comma-separated Audible response groups (default: product_desc,media,contributors)
+ */
+app.get('/api/audible/proxy', async (req, res) => {
+  const rawTitle = req.query.title
+  const rawAuthor = req.query.author
+  const rawNumResults = req.query.num_results
+
+  const title = typeof rawTitle === 'string' ? rawTitle : undefined
+  const author = typeof rawAuthor === 'string' ? rawAuthor : undefined
+
+  if (!title) {
+    res.status(400).json({ error: 'title query param required' })
+    return
+  }
+
+  // Clamp num_results to a safe range (1–10)
+  const numResults = Math.min(10, Math.max(1, parseInt(typeof rawNumResults === 'string' ? rawNumResults : '5', 10) || 5))
+
+  const params = new URLSearchParams({
+    title,
+    ...(author ? { author } : {}),
+    num_results: String(numResults),
+    response_groups: 'product_desc,media,contributors',
+  })
+  const targetUrl = `https://api.audible.com/1.0/catalog/products?${params}`
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 10_000)
+
+  try {
+    const response = await fetch(targetUrl, { signal: controller.signal })
+    const contentType = response.headers.get('content-type') ?? ''
+    if (!contentType.includes('application/json')) {
+      res.status(502).json({ error: 'Audible returned non-JSON response' })
+      return
+    }
+    const data = await response.json()
+    res.status(response.status).json(data)
+  } catch (err) {
+    // silent-catch-ok — logs to console and returns structured error to client
+    console.error('[/api/audible/proxy]', (err as Error).message)
+    const isTimeout = err instanceof Error && err.name === 'AbortError'
+    res.status(isTimeout ? 504 : 502).json({
+      error: isTimeout ? 'Audible API timeout' : 'Audible API error',
+    })
+  } finally {
+    clearTimeout(timeoutId)
+  }
+})
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Calendar feed route — token-authenticated, no JWT required (E50-S02)
 // MUST BE BEFORE JWT MIDDLEWARE — calendar uses token-in-URL auth model
 // Rate limited separately since it bypasses the main middleware chain.

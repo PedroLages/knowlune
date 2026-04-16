@@ -21,10 +21,10 @@
         manifest-src 'self';
         script-src  'self' 'wasm-unsafe-eval' https://www.youtube.com;
         style-src   'self' 'unsafe-inline';
-        img-src     'self' data: blob: https://images.unsplash.com https://*.unsplash.com https://*.googleusercontent.com https://*.ytimg.com;
+        img-src     'self' data: blob: https://images.unsplash.com https://*.unsplash.com https://*.googleusercontent.com https://*.ytimg.com https://covers.openlibrary.org https://*.mzstatic.com https://m.media-amazon.com;
         media-src   'self' blob:;
         font-src    'self';
-        connect-src 'self' blob: ws: wss: https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com http://titan.local:* http://localhost:* http://127.0.0.1:* https://*.stripe.com https://*.supabase.co https://www.googleapis.com https://www.youtube.com https://*.ingest.sentry.io https://openrouter.ai;
+        connect-src 'self' blob: ws: wss: https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com http://titan.local:* http://localhost:* http://127.0.0.1:* https://*.stripe.com https://*.supabase.co https://www.googleapis.com https://books.google.com https://openlibrary.org https://covers.openlibrary.org https://itunes.apple.com https://*.mzstatic.com https://api.audnex.us https://www.youtube.com https://*.ingest.sentry.io https://openrouter.ai;
         frame-src   'self' blob: https://www.youtube.com https://www.youtube-nocookie.com https://checkout.stripe.com https://js.stripe.com https://accounts.google.com;
         worker-src  'self' blob:;
         object-src  'none';

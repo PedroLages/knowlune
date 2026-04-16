@@ -31,13 +31,16 @@ import {
 import type { Book, BookGenre } from '@/data/types'
 import { Badge } from '@/app/components/ui/badge'
 import { useBookStore } from '@/stores/useBookStore'
-import { fetchOpenLibraryMetadata, fetchCoverImage } from '@/services/OpenLibraryService'
 import { opfsStorageService } from '@/services/OpfsStorageService'
+import { searchCovers, type MetadataSearchResult } from '@/services/CoverSearchService'
+import { detectGenre } from '@/services/GenreDetectionService'
 import { GENRES } from './BookDetailsForm'
 import { EditorCoverSection } from './EditorCoverSection'
 import { EditorTagSection } from './EditorTagSection'
+import { CoverSearchGrid } from './CoverSearchGrid'
 import { ghostInputClass, labelClass } from './designConstants'
 import { cn } from '@/app/components/ui/utils'
+import { stripHtml } from '@/lib/textUtils'
 
 interface BookMetadataEditorProps {
   book: Book | null
@@ -98,6 +101,8 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
   const [isbn, setIsbn] = useState('')
+  const [narrator, setNarrator] = useState('')
+  const [asin, setAsin] = useState('')
   const [description, setDescription] = useState('')
   const [seriesName, setSeriesName] = useState('')
   const [seriesSequence, setSeriesSequence] = useState('')
@@ -113,9 +118,15 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
   const [isFetchingCover, setIsFetchingCover] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
+  // Cover/metadata search state
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchResults, setSearchResults] = useState<MetadataSearchResult[]>([])
+  const [showSearchGrid, setShowSearchGrid] = useState(false)
+
   const coverPreviewUrlRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const tagInputRef = useRef<HTMLInputElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   // Revoke object URL helper
   const setSafeCoverPreviewUrl = useCallback((url: string | null) => {
@@ -132,7 +143,9 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
       setTitle(book.title)
       setAuthor(book.author ?? '')
       setIsbn(book.isbn || '')
-      setDescription(book.description || '')
+      setNarrator(book.narrator ?? '')
+      setAsin(book.asin ?? '')
+      setDescription(book.description ? stripHtml(book.description) : '')
       // Use dedicated genre field if set, fall back to tag-based detection for legacy books
       const bookGenre = book.genre || book.tags.find(t => (GENRES as string[]).includes(t))
       setGenre(bookGenre ?? NONE_GENRE)
@@ -144,6 +157,10 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
       setNewCoverBlob(null)
       setTagInput('')
       setShowTagSuggestions(false)
+      // Reset search state
+      setShowSearchGrid(false)
+      setSearchResults([])
+      setIsSearching(false)
       // Set existing cover
       if (book.coverUrl) {
         setSafeCoverPreviewUrl(book.coverUrl)
@@ -159,11 +176,15 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
       if (coverPreviewUrlRef.current) {
         URL.revokeObjectURL(coverPreviewUrlRef.current)
       }
+      abortControllerRef.current?.abort()
     }
   }, [])
 
   const handleClose = useCallback(() => {
     if (!isSaving) {
+      abortControllerRef.current?.abort()
+      setShowSearchGrid(false)
+      setSearchResults([])
       onOpenChange(false)
     }
   }, [isSaving, onOpenChange])
@@ -205,39 +226,78 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
       )
     : []
 
-  // Cover re-fetch from Open Library
-  const handleRefetchCover = useCallback(async () => {
+  // Unified cover + metadata search across all providers
+  const handleSearchCovers = useCallback(async () => {
     if (!book) return
     if (!navigator.onLine) {
-      toast.warning('You are offline. Cover fetch requires an internet connection.')
+      toast.warning('You are offline. Search requires an internet connection.')
       return
     }
-    setIsFetchingCover(true)
-    try {
-      const result = await fetchOpenLibraryMetadata({
-        isbn: isbn || undefined,
-        title,
-        author,
-      })
-      if (result.coverUrl) {
-        const blob = await fetchCoverImage(result.coverUrl)
-        if (blob) {
+
+    // Cancel any in-flight search
+    abortControllerRef.current?.abort()
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
+    setIsSearching(true)
+    setSearchResults([])
+    setShowSearchGrid(true)
+
+    await searchCovers(
+      { title, author, isbn: isbn || undefined, asin: asin || undefined },
+      book.format,
+      (providerResults) => {
+        if (controller.signal.aborted) return
+        setSearchResults(prev => [...prev, ...providerResults])
+      },
+      controller.signal
+    )
+
+    if (!controller.signal.aborted) setIsSearching(false)
+  }, [book, title, author, isbn, asin])
+
+  // Apply a selected search result: fetch cover + auto-fill blank fields
+  const handleSelectResult = useCallback(async (result: MetadataSearchResult) => {
+    // 1. Fetch and convert cover if available
+    if (result.coverUrl && /^https?:\/\//.test(result.coverUrl)) {
+      setIsFetchingCover(true)
+      try {
+        const response = await fetch(result.coverUrl, { signal: AbortSignal.timeout(15_000) })
+        if (response.ok) {
+          const blob = await response.blob()
           const jpegBlob = await toJpeg(new File([blob], 'cover.jpg', { type: blob.type }))
           const url = URL.createObjectURL(jpegBlob)
           setSafeCoverPreviewUrl(url)
           setNewCoverBlob(jpegBlob)
-        } else {
-          toast.info('No cover found on Open Library')
         }
-      } else {
-        toast.info('No cover found on Open Library')
+      } catch {
+        toast.warning('Could not fetch cover image — try uploading manually.')
+      } finally {
+        setIsFetchingCover(false)
       }
-    } catch {
-      toast.error('Failed to fetch cover')
-    } finally {
-      setIsFetchingCover(false)
     }
-  }, [book, isbn, title, author, setSafeCoverPreviewUrl])
+
+    // 2. Auto-fill only blank fields (never overwrite existing user data)
+    const m = result.metadata
+    if (!author.trim() && m.author) setAuthor(m.author)
+    if (!description.trim() && m.description) setDescription(stripHtml(m.description))
+    if (!seriesName.trim() && m.series) setSeriesName(m.series)
+    if (!seriesSequence.trim() && m.seriesSequence) setSeriesSequence(m.seriesSequence)
+    if (!isbn.trim() && m.isbn) setIsbn(m.isbn)
+    if (!asin.trim() && m.asin) setAsin(m.asin)
+    if (!narrator.trim() && m.narrator) setNarrator(m.narrator)
+
+    // 3. Auto-detect genre if not set
+    if (genre === NONE_GENRE && m.genres && m.genres.length > 0) {
+      const detected = detectGenre(m.genres)
+      if (detected !== 'Other') {
+        setGenre(detected)
+        setGenreChanged(true)
+      }
+    }
+
+    setShowSearchGrid(false)
+  }, [author, description, seriesName, seriesSequence, isbn, asin, narrator, genre, setSafeCoverPreviewUrl])
 
   // Custom cover upload
   const handleCoverUpload = useCallback(
@@ -277,11 +337,13 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
       // Build tags: genre (if set) + user tags
       const finalTags = effectiveGenre ? [effectiveGenre, ...tags] : [...tags]
 
-      // Handle cover update
+      // Handle cover update — append timestamp to bust the useBookCoverUrl cache
+      // when the same opfs-cover:// path is rewritten with a new image.
       let coverUrl = book.coverUrl
       if (newCoverBlob) {
         const coverPath = await opfsStorageService.storeCoverFile(book.id, newCoverBlob)
-        coverUrl = coverPath === 'indexeddb' ? `opfs-cover://${book.id}` : `opfs://${coverPath}`
+        const base = coverPath === 'indexeddb' ? `opfs-cover://${book.id}` : `opfs://${coverPath}`
+        coverUrl = `${base}?t=${Date.now()}`
       }
 
       await updateBookMetadata(book.id, {
@@ -294,6 +356,8 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
         coverUrl,
         series: seriesName.trim() || undefined, // E110-S02: series grouping
         seriesSequence: seriesSequence.trim() || undefined,
+        narrator: narrator.trim() || undefined,
+        asin: asin.trim() || undefined,
       })
 
       onOpenChange(false)
@@ -307,6 +371,8 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
     title,
     author,
     isbn,
+    narrator,
+    asin,
     description,
     genre,
     genreChanged,
@@ -330,11 +396,12 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
       }}
     >
       <DialogContent
-        className="max-w-4xl"
+        className="flex flex-col w-full max-w-2xl sm:max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden"
         aria-label="Edit book details"
         data-testid="book-metadata-editor"
       >
-        <DialogHeader>
+        {/* Fixed header */}
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/20 shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-brand" />
             Edit Book Details
@@ -342,32 +409,44 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
           <DialogDescription>Update the metadata for &ldquo;{book.title}&rdquo;.</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col sm:flex-row gap-6">
-          {/* Left column: Cover + format badges */}
-          <div className="w-full sm:w-2/5 flex flex-col gap-3">
-            <EditorCoverSection
-              coverPreviewUrl={coverPreviewUrl}
-              title={title}
-              isFetchingCover={isFetchingCover}
-              isSaving={isSaving}
-              fileInputRef={fileInputRef}
-              onRefetchCover={handleRefetchCover}
-              onCoverUpload={handleCoverUpload}
-            />
-            <div className="flex flex-wrap gap-2">
-              <Badge className="rounded-full">
-                {book.format === 'audiobook' ? 'Audiobook' : book.format.toUpperCase()}
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          {/* Cover row: image + buttons side by side */}
+          <EditorCoverSection
+            coverPreviewUrl={coverPreviewUrl}
+            title={title}
+            format={book.format}
+            isFetchingCover={isFetchingCover}
+            isSearching={isSearching}
+            isSaving={isSaving}
+            fileInputRef={fileInputRef}
+            onSearchCovers={handleSearchCovers}
+            onCoverUpload={handleCoverUpload}
+          />
+
+          {/* Format badges */}
+          <div className="flex flex-wrap gap-2">
+            <Badge className="rounded-full">
+              {book.format === 'audiobook' ? 'Audiobook' : book.format.toUpperCase()}
+            </Badge>
+            {book.linkedBookId && (
+              <Badge variant="secondary" className="rounded-full">
+                Linked Format
               </Badge>
-              {book.linkedBookId && (
-                <Badge variant="secondary" className="rounded-full">
-                  Linked Format
-                </Badge>
-              )}
-            </div>
+            )}
           </div>
 
-          {/* Right column: Form fields */}
-          <div className="w-full sm:w-3/5 space-y-4">
+          {/* Search results grid — full width, shown after search */}
+          {showSearchGrid && (
+            <CoverSearchGrid
+              results={searchResults}
+              isSearching={isSearching}
+              onSelect={handleSelectResult}
+            />
+          )}
+
+          {/* Form fields — single column, full width */}
+          <div className="space-y-4">
             {/* Title */}
             <div>
               <Label htmlFor="edit-book-title" className={labelClass}>
@@ -415,6 +494,40 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
                 data-testid="edit-book-isbn"
               />
             </div>
+
+            {/* Narrator + ASIN — audiobooks only */}
+            {book.format === 'audiobook' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="edit-book-narrator" className={labelClass}>
+                    Narrator
+                  </Label>
+                  <Input
+                    id="edit-book-narrator"
+                    value={narrator}
+                    onChange={e => setNarrator(e.target.value)}
+                    placeholder="Narrator name"
+                    disabled={isSaving}
+                    className={cn(ghostInputClass)}
+                    data-testid="edit-book-narrator"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-book-asin" className={labelClass}>
+                    ASIN
+                  </Label>
+                  <Input
+                    id="edit-book-asin"
+                    value={asin}
+                    onChange={e => setAsin(e.target.value)}
+                    placeholder="Audible ASIN"
+                    disabled={isSaving}
+                    className={cn(ghostInputClass)}
+                    data-testid="edit-book-asin"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Series (E110-S02) */}
             <div className="grid grid-cols-2 gap-3">
@@ -517,35 +630,36 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
               onRemoveTag={removeTag}
             />
 
-            {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
-                variant="ghost"
-                onClick={handleClose}
-                disabled={isSaving}
-                className="min-h-[44px]"
-                data-testid="editor-cancel-button"
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="brand"
-                onClick={handleSave}
-                disabled={isSaving || !canSave}
-                className="min-h-[44px] rounded-full px-6"
-                data-testid="editor-save-button"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Changes'
-                )}
-              </Button>
-            </div>
-          </div>
+          </div>{/* end form fields */}
+        </div>{/* end scrollable body */}
+
+        {/* Fixed footer with actions */}
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-border/20 shrink-0">
+          <Button
+            variant="ghost"
+            onClick={handleClose}
+            disabled={isSaving}
+            className="min-h-[44px]"
+            data-testid="editor-cancel-button"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="brand"
+            onClick={handleSave}
+            disabled={isSaving || !canSave}
+            className="min-h-[44px] rounded-full px-6"
+            data-testid="editor-save-button"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save Changes'
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
