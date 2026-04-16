@@ -10,11 +10,10 @@
  */
 
 import { useMemo, useState } from 'react'
-import { Headphones, BookOpen, Sparkles } from 'lucide-react'
+import { Headphones, BookOpen } from 'lucide-react'
 import { LocalSeriesCard } from '@/app/components/library/LocalSeriesCard'
 import { BookContextMenu } from '@/app/components/library/BookContextMenu'
 import { BookCard } from '@/app/components/library/BookCard'
-import { RecentBookCard } from '@/app/components/library/RecentBookCard'
 import { BookListItem } from '@/app/components/library/BookListItem'
 import type { Book, LocalSeriesGroup } from '@/data/types'
 
@@ -131,14 +130,6 @@ export function SmartGroupedView({
     }
   }, [ungrouped, formatTab])
 
-  const recentlyAdded = useMemo(() => {
-    if (formatTab !== 'all') return []
-    const allBooks = [...groups.flatMap(g => g.books), ...ungrouped]
-    return [...allBooks]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 12)
-  }, [groups, ungrouped, formatTab])
-
   const hasMultipleFormats = audiobooks.length > 0 && ebooks.length > 0
   const BooksView = viewMode === 'list' ? BookList : BookGrid
 
@@ -158,27 +149,6 @@ export function SmartGroupedView({
 
   return (
     <div data-testid="smart-grouped-view">
-      {/* Recently Added */}
-      {recentlyAdded.length > 0 && (
-        <div className="mb-8">
-          <SectionHeading
-            icon={Sparkles}
-            label="Recently Added"
-            count={recentlyAdded.length}
-            testId="section-heading-recently-added"
-          />
-          <div className="flex gap-4 overflow-x-auto scrollbar-none">
-            {recentlyAdded.map(book => (
-              <div key={book.id} className="w-44 flex-shrink-0">
-                <BookContextMenu book={book} onEdit={() => onEdit(book)}>
-                  <RecentBookCard book={book} />
-                </BookContextMenu>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Series groups (only render when series exist — no empty state hint needed) */}
       {groups.length > 0 && (
         <div className="flex flex-col gap-3">
