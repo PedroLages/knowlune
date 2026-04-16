@@ -61,7 +61,7 @@ describe('ITunesSearchService.searchITunes', () => {
     }>
 
     expect(result.provider).toBe('itunes')
-    expect(result.coverUrl).toBe('https://is1.mzstatic.com/image/thumb/cover600x600bb.jpg')
+    expect(result.coverUrl).toBe('https://is1.mzstatic.com/image/thumb/cover1200x1200bb.jpg')
     expect(result.thumbnailUrl).toBe('https://is1.mzstatic.com/image/thumb/cover100x100bb.jpg')
     expect(result.metadata.title).toBe('Project Hail Mary')
     expect(result.metadata.author).toBe('Andy Weir')
