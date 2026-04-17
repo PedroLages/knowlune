@@ -1,0 +1,11 @@
+{
+  "reviewer": "project-standards",
+  "findings": [],
+  "residual_risks": [
+    {
+      "area": "sprint-status transition",
+      "note": "Story transitioned directly from backlog → review per the diff comment ('backlog → in-progress → review'). The workflow states the expected path is backlog → in-progress → review via /start-story then /review-story, but the sprint-status diff shows only a single final state change (backlog → review). The intermediate in-progress state was apparently not committed separately. This is a process observation only — the file now correctly shows 'review' and no standards rule mandates intermediate commits."
+    }
+  ],
+  "testing_gaps": []
+}

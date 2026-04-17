@@ -1,0 +1,160 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "id": "ADV-01",
+      "title": "Sign-out during backfill permanently stamps invalid userId on every remaining record",
+      "severity": "HIGH",
+      "confidence": 0.88,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "files": [
+        "src/lib/sync/backfill.ts",
+        "src/app/hooks/useAuthLifecycle.ts"
+      ],
+      "evidence": [
+        "1. User is signed in as user-A. SIGNED_IN fires. backfillUserId('user-A') is launched fire-and-forget.",
+        "2. backfill.ts iterates SYNCABLE_TABLES sequentially with `for...of`. After stamping 15 of 38 tables, user clicks Sign Out.",
+        "3. SIGNED_OUT fires. useAuthStore clears session. userId is now invalid / gone.",
+        "4. The backfill loop has no reference to the live session; it holds only the string 'user-A' captured in the closure. Nothing cancels it.",
+        "5. The remaining 23 tables are stamped with 'user-A'.",
+        "6. User signs back in as user-B (different account, e.g. shared device). backfill for user-B runs. Its filter is `existing === undefined || existing === null || existing === ''`. Records already stamped with 'user-A' pass none of these conditions, so they are NOT re-stamped.",
+        "7. Result: records in those 23 tables permanently carry a foreign userId. The sync engine (E92-S05) will upload them to user-A's cloud account or reject them as belonging to the wrong owner, depending on how the upload engine validates userId."
+      ]
+    },
+    {
+      "id": "ADV-02",
+      "title": "Dual invocation paths fire concurrent backfills on every cold start, producing a double-modify race on every record",
+      "severity": "MEDIUM",
+      "confidence": 0.85,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "files": [
+        "src/app/hooks/useAuthLifecycle.ts",
+        "src/lib/sync/backfill.ts"
+      ],
+      "evidence": [
+        "1. useAuthLifecycle calls supabase.auth.onAuthStateChange() first, then supabase.auth.getSession() immediately after (lines 27 and 69).",
+        "2. Supabase fires INITIAL_SESSION through the subscription synchronously (or microtask-synchronously) before getSession() resolves.",
+        "3. On a normal cold start with a persisted session, INITIAL_SESSION fires backfillUserId(user.id) [invocation A], then getSession() resolves and fires backfillUserId(user.id) [invocation B] roughly 1-50ms later.",
+        "4. Both invocations are running concurrently. Invocation A iterates table[0] and is inside .modify() when invocation B starts iterating table[0] and opens its own .modify().",
+        "5. Dexie .modify() opens an IDB readwrite transaction per table call. Two overlapping readwrite transactions on the same store are serialised by the IDB engine — they do not deadlock — but each transaction reads a consistent snapshot from the point it was opened. Both see records with userId=undefined and both stamp them.",
+        "6. In fake-indexeddb (used in tests) transaction serialisation behaviour is not identical to Chrome IDB. Tests pass but do not expose the double-write.",
+        "7. The outcome is benign (both write the same userId) but each backfill wastes a full table scan and modify pass, doubling the write amplification on every app start for users with large libraries."
+      ]
+    },
+    {
+      "id": "ADV-03",
+      "title": "Falsy-check on updatedAt treats numeric 0, false, and empty object as missing — stamps migration timestamp over intentional values",
+      "severity": "MEDIUM",
+      "confidence": 0.82,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "files": [
+        "src/db/schema.ts"
+      ],
+      "evidence": [
+        "1. The v52 upgrade callback checks `if (!record.updatedAt)` before stamping migrationNow.",
+        "2. Falsy values that evaluate to true: 0 (number), false (boolean), '' (empty string), null, undefined, NaN, and any object with a `valueOf()` returning 0.",
+        "3. Concrete scenario: a pre-v52 record was written by an early version of the app that serialised updatedAt as a Unix epoch integer (0 for 'unset', or a real timestamp like 1706745600). A record with `updatedAt: 0` passes `!record.updatedAt` and gets overwritten with migrationNow.",
+        "4. The more operationally plausible variant from the attack surface brief: a record where `updatedAt` was written as an empty object `{}` due to a serialisation bug. `!{}` is false — the object is truthy — so the migration leaves it alone. The compound index `[userId+updatedAt]` then receives an object key, which IDB serialises as `[object Object]` for range scan purposes, making every future range scan over `[userId+updatedAt]` skip or misorder that record.",
+        "5. `backfill.ts` line 100 has the same falsy-check pattern: `if (!record.updatedAt)`. Records surviving the migration with a non-string updatedAt also survive the backfill untouched."
+      ]
+    },
+    {
+      "id": "ADV-04",
+      "title": "SYNCABLE_TABLES constant duplicated verbatim in schema.ts and backfill.ts — divergence silently skips tables in backfill forever",
+      "severity": "MEDIUM",
+      "confidence": 0.95,
+      "autofix_class": "manual",
+      "owner": "human",
+      "files": [
+        "src/db/schema.ts:1415",
+        "src/lib/sync/backfill.ts:22"
+      ],
+      "evidence": [
+        "1. schema.ts declares SYNCABLE_TABLES_V52 (local const inside the upgrade callback, 38 entries). backfill.ts exports SYNCABLE_TABLES (module-level const, 38 entries). Both lists are copy-pasted.",
+        "2. There is no compile-time or test-time enforcement that these two lists are identical. The migration test in migration-v52-sync.test.ts asserts schema shape but does not compare the two constants.",
+        "3. Scenario: E92-S03 engineer adds a new table 'readingGoals' to the migration (schema.ts) but forgets to update backfill.ts. The v53 migration stamps updatedAt on readingGoals records. The backfill never stamps userId on them. The sync engine's userId-indexed range scan finds zero readingGoals records for any user and silently skips uploading them indefinitely.",
+        "4. The inverse scenario is worse: if backfill.ts is updated but schema.ts is not, backfill.ts calls `db.table('readingGoals').filter(...)` on a table that exists but has no userId index. The filter still runs (full scan), stamps userId, but the compound index `[userId+updatedAt]` does not exist on that table, so the sync engine's range scan is either slower or returns wrong results depending on how it queries.",
+        "5. The TODO comment in backfill.ts acknowledges the duplication but defers resolution to E92-S03 with no enforcing mechanism in the interim."
+      ]
+    },
+    {
+      "id": "ADV-05",
+      "title": "Per-table error swallowing in upgrade callback converts hard schema errors into silent partial migrations",
+      "severity": "MEDIUM",
+      "confidence": 0.80,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "files": [
+        "src/db/schema.ts"
+      ],
+      "evidence": [
+        "1. The upgrade callback wraps each table's `.modify()` in a `.catch(() => {})` with the comment 'Tolerate tables that haven't been used yet'. The catch block swallows all errors, not just the empty-table case.",
+        "2. Scenario: a record in 'notes' has a value that causes IDB's structured clone algorithm to throw (e.g. a detached ArrayBuffer stored in a nested field). The .modify() transaction fails for the entire 'notes' table with a DataCloneError.",
+        "3. The catch block silently discards this. The upgrade is considered successful by Dexie. The database advances to v52. Notes records that existed before migration have no updatedAt value.",
+        "4. The app opens normally. backfill.ts later runs and stamps userId but also stamps updatedAt via the `if (!record.updatedAt)` path — however, backfill runs only on sign-in, not on cold-start for anonymous users. An anonymous user's data is left without updatedAt indefinitely.",
+        "5. The sync engine (E92-S05) will attempt range scans on `[userId+updatedAt]` for notes records where updatedAt is missing. Depending on how IDB handles undefined in a compound key, this either returns wrong results or causes a cursor error.",
+        "6. The comment says 'Dexie will surface hard errors through the outer promise regardless' — this is only partially true. DataCloneError in a modify callback terminates the table's transaction but, because the Promise.all collects a .catch()-wrapped promise, the outer Promise.all resolves successfully."
+      ]
+    },
+    {
+      "id": "ADV-06",
+      "title": "Cascade: upgrade callback fires new Date() at migration entry — clock skew between tabs produces non-monotonic updatedAt ordering",
+      "severity": "LOW",
+      "confidence": 0.72,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "files": [
+        "src/db/schema.ts"
+      ],
+      "evidence": [
+        "1. The upgrade callback captures `const migrationNow = new Date().toISOString()` at the top of the async callback.",
+        "2. Multi-tab scenario: Tab 1 opens, triggers v51→v52 upgrade, captures migrationNow = T1. IDB blocks Tab 2 while the upgrade transaction runs. Tab 2 then opens with the upgraded schema; no upgrade callback runs.",
+        "3. Tab 1's backfill runs, stamping records with userId and updatedAt=T1 where missing.",
+        "4. After migration, user creates a new record in Tab 2. That record gets a real createdAt/updatedAt from application code — likely later than T1. This is fine.",
+        "5. The problematic variant: if the upgrade callback is running while the system clock is being adjusted backward (NTP correction, DST change, user manually set clock). Records stamped in the first half of the migration get timestamp T1; records in the second half get... the same T1 because it was captured once at the start. This is actually safe. The risk inverts: any record created between T1 and the real current time will have updatedAt < 'now' — the sync engine's LWW (Last Write Wins) resolver could incorrectly treat migrated records as newer than records created right after migration if the clock was shifted forward.",
+        "6. Confidence is moderate because this requires a clock anomaly coinciding with migration, and the LWW resolver design is not yet visible (E92-S05 is future work)."
+      ]
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "RR-01",
+      "description": "userId: 0 (number), userId: false, or userId: NaN on existing records are not stamped by backfill. The filter checks `=== undefined || === null || === ''` only. These non-string falsy values would not be treated as valid Supabase UUIDs by the sync engine, but they also would not be fixed by any retry.",
+      "likelihood": "low — requires a prior bug that wrote non-string values into a userId field before E92-S02 landed",
+      "impact": "affected records silently excluded from sync indefinitely"
+    },
+    {
+      "id": "RR-02",
+      "description": "No in-flight backfill cancellation token exists. If the app is closed (tab closed, browser crash) mid-backfill, the next open will re-run backfill from scratch, which is correct and idempotent. However, the partial write state (some tables stamped, some not) is never flagged in any persistent store, so there is no way to observe or alert on repeated partial completions.",
+      "likelihood": "moderate — mobile browsers kill tabs frequently",
+      "impact": "silent: tables processed in the last invocation may vary; tolerable only if sync engine handles missing userId gracefully"
+    },
+    {
+      "id": "RR-03",
+      "description": "syncQueue uses `++id` auto-increment. At 1 write per second for 10 years the counter reaches ~315M, well below Number.MAX_SAFE_INTEGER (9007T). Not a practical overflow risk, but if the sync engine ever uses the id as a vector clock or sequence number modulo some value, overflow assumptions could sneak in.",
+      "likelihood": "negligible in the current design",
+      "impact": "none presently"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "TG-01",
+      "description": "No test covers the sign-out-during-backfill race (ADV-01). A test that starts backfill, awaits half the tables, triggers a userId change mid-loop, and asserts that records do not carry the stale userId would be non-trivial but feasible with fake-indexeddb and vi.spyOn on db.table to insert a delay after N calls."
+    },
+    {
+      "id": "TG-02",
+      "description": "No test asserts that SYNCABLE_TABLES in backfill.ts and SYNCABLE_TABLES_V52 in schema.ts are identical sets. A simple unit test importing both and comparing sorted arrays would enforce parity mechanically."
+    },
+    {
+      "id": "TG-03",
+      "description": "No test covers records with numeric or non-string updatedAt values (e.g. updatedAt: 0 or updatedAt: {}). The upgrade callback's `!record.updatedAt` path is only tested against the absent-field case."
+    },
+    {
+      "id": "TG-04",
+      "description": "The dual-invocation path (ADV-02) is not tested. Both the subscription INITIAL_SESSION path and the getSession().then() path are exercised independently in no visible test. A test verifying that calling backfillUserId twice concurrently with the same userId results in exactly the same final state (and the second call stamps zero records) would catch regressions."
+    }
+  ]
+}

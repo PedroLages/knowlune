@@ -74,7 +74,7 @@ export interface BackfillUserIdResult {
  *                touching the database.
  * @returns Counts describing how much work was done.
  */
-export async function backfillUserId(userId: string | null | undefined): Promise<BackfillUserIdResult> {
+export async function backfillUserId(userId: string | null): Promise<BackfillUserIdResult> {
   if (!userId) {
     return { tablesProcessed: 0, recordsStamped: 0, tablesFailed: [] }
   }

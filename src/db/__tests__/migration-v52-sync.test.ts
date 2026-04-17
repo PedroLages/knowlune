@@ -1,10 +1,16 @@
 import 'fake-indexeddb/auto'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Dexie from 'dexie'
+import { SYNCABLE_TABLES } from '@/lib/sync/backfill'
 
 const DB_NAME = 'MigrationV52Test'
 
 beforeEach(async () => {
+  await Dexie.delete(DB_NAME)
+})
+
+afterEach(async () => {
+  // Guarantee cleanup even if a test throws before explicit db.close().
   await Dexie.delete(DB_NAME)
 })
 
@@ -63,48 +69,12 @@ function tableIndexSrcs(db: Dexie, tableName: string): string[] {
 describe('v52 sync migration — schema shape', () => {
   it('adds [userId+updatedAt] compound index to every syncable table', async () => {
     const db = await openWithFullMigrations()
-    const syncableTables = [
-      'importedCourses',
-      'importedVideos',
-      'importedPdfs',
-      'progress',
-      'bookmarks',
-      'notes',
-      'studySessions',
-      'contentProgress',
-      'challenges',
-      'embeddings',
-      'aiUsageEvents',
-      'reviewRecords',
-      'courseReminders',
-      'quizzes',
-      'quizAttempts',
-      'authors',
-      'careerPaths',
-      'pathEnrollments',
-      'flashcards',
-      'learningPaths',
-      'learningPathEntries',
-      'notifications',
-      'notificationPreferences',
-      'studySchedules',
-      'books',
-      'bookHighlights',
-      'audioBookmarks',
-      'opdsCatalogs',
-      'audiobookshelfServers',
-      'chapterMappings',
-      'vocabularyItems',
-      'shelves',
-      'bookShelves',
-      'readingQueue',
-      'audioClips',
-      'bookReviews',
-      'chatConversations',
-      'learnerModels',
-    ]
+    // Single source of truth — SYNCABLE_TABLES is the exported list in
+    // src/lib/sync/backfill.ts. Mirrors (with a cross-ref comment) the
+    // SYNCABLE_TABLES_V52 constant inside schema.ts's v52 upgrade callback.
+    expect(SYNCABLE_TABLES.length).toBe(38)
 
-    for (const tableName of syncableTables) {
+    for (const tableName of SYNCABLE_TABLES) {
       const indexSrcs = tableIndexSrcs(db, tableName)
       expect(indexSrcs, `table "${tableName}" should have userId index`).toContain('userId')
       expect(indexSrcs, `table "${tableName}" should have [userId+updatedAt] compound index`).toContain(

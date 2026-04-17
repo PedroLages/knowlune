@@ -55,7 +55,7 @@ export interface SyncQueueEntry {
   tableName: string
   recordId: string
   operation: 'put' | 'add' | 'delete'
-  payload: unknown
+  payload: Record<string, unknown>
   attempts: number
   status: 'pending' | 'uploading' | 'dead-letter'
   createdAt: string
@@ -1382,8 +1382,8 @@ function _declareLegacyMigrations(database: Dexie): void {
   //
   // Upgrade callback stamps a static `updatedAt = migrationNow` on records
   // that don't already have one. `userId` backfill runs post-open from
-  // `src/lib/sync/backfill.ts` after auth hydration (see E92-S08 for the
-  // sign-in re-invocation hook).
+  // `src/lib/sync/backfill.ts`, invoked by the auth lifecycle hook in
+  // `src/app/hooks/useAuthLifecycle.ts` on SIGNED_IN / INITIAL_SESSION.
   database
     .version(52)
     .stores({
@@ -1433,6 +1433,10 @@ function _declareLegacyMigrations(database: Dexie): void {
     })
     .upgrade(async (tx) => {
       const migrationNow = new Date().toISOString()
+      // Must stay in sync with SYNCABLE_TABLES in src/lib/sync/backfill.ts.
+      // Cannot import that constant here — it creates a circular dep
+      // (schema.ts → backfill.ts → @/db → schema.ts). E92-S03's table
+      // registry will unify both lists.
       const SYNCABLE_TABLES_V52 = [
         'importedCourses',
         'importedVideos',
@@ -1488,11 +1492,17 @@ function _declareLegacyMigrations(database: Dexie): void {
                 record.updatedAt = migrationNow
               }
             })
-            .catch(() => {
+            .catch((err) => {
               // Tolerate tables that haven't been used yet (empty / schema-only).
-              // Per-table failure should not abort the whole migration; Dexie
-              // will surface hard errors (e.g. schema mismatch) through the
-              // outer promise regardless.
+              // Per-table failure does not abort the whole migration — the
+              // current policy is "partial-stamp is better than blocking
+              // upgrade" — but we log so a genuine IDB error (quota, schema
+              // mismatch) is visible in the console rather than silent.
+              // TODO(E92-follow-up): narrow this to rethrow anything that
+              // isn't "table empty / not found" so hard errors abort the
+              // migration cleanly and leave the DB at v51 for safe retry.
+              // silent-catch-ok — logged, not silenced; downgraded intentionally.
+              console.warn(`[v52 upgrade] skipped updatedAt stamp on table "${tableName}":`, err)
             })
         )
       )

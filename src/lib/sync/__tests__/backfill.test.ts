@@ -42,9 +42,6 @@ describe('backfillUserId', () => {
     const nullish = await backfillUserId(null)
     expect(nullish.recordsStamped).toBe(0)
 
-    const undef = await backfillUserId(undefined)
-    expect(undef.recordsStamped).toBe(0)
-
     // Record still untouched.
     const note = asSyncable(await db.notes.get('n1'))
     expect(note?.userId).toBeUndefined()
@@ -194,11 +191,32 @@ describe('backfillUserId', () => {
 
     try {
       const result = await backfillUserId('user-A')
-      expect(result.tablesFailed).toContain('notes')
-      // Still processed the others.
-      expect(result.tablesProcessed).toBeGreaterThan(0)
+      expect(result.tablesFailed).toEqual(['notes'])
+      // Processed every table except the one that threw.
+      expect(result.tablesProcessed).toBe(SYNCABLE_TABLES.length - 1)
     } finally {
       spy.mockRestore()
     }
+  })
+
+  it('stamps records whose userId is an empty string', async () => {
+    // Pre-existing empty-string userId (e.g. from a previous buggy write)
+    // must still be overwritten by the backfill.
+    await db.notes.add({
+      id: 'n-empty',
+      courseId: 'c1',
+      videoId: 'v1',
+      tags: [],
+      createdAt: '2025-01-01T00:00:00Z',
+      updatedAt: '2025-01-01T00:00:00Z',
+      content: '',
+      userId: '',
+    } as unknown as Parameters<typeof db.notes.add>[0])
+
+    const result = await backfillUserId('user-A')
+    expect(result.recordsStamped).toBeGreaterThanOrEqual(1)
+
+    const stamped = asSyncable(await db.notes.get('n-empty'))
+    expect(stamped?.userId).toBe('user-A')
   })
 })

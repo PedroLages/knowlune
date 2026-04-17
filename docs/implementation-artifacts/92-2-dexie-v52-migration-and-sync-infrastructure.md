@@ -143,7 +143,50 @@ See [story-template.md](./story-template.md) for the full pre-review checklist. 
 
 ## Code Review Feedback
 
-[Populated by /review-story]
+### Round 1 (2026-04-17) — ce:review mode:autofix
+
+8 reviewers dispatched in parallel (correctness, testing, maintainability, data-migrations, reliability, kieran-typescript, adversarial, project-standards). Full artifacts at `.context/compound-engineering/ce-review/20260417-212533-5ef6b44b/`.
+
+**10 safe_auto fixes applied in-review:**
+
+1. `SyncQueueEntry.payload: unknown` → `Record<string, unknown>` (KT-01 — tighter type for E92-S04 consumers)
+2. Re-exported `SyncQueueEntry` + `SyncMetadataEntry` from `src/db/index.ts` (KT-03)
+3. Narrowed `backfillUserId` signature: `string | null | undefined` → `string | null` (KT-02)
+4. Removed `backfillUserId(undefined)` test call (paired with signature narrow)
+5. Fixed dead "E92-S08" comment reference in `schema.ts` — now points at `useAuthLifecycle.ts` (M-04)
+6. Added cross-reference comment linking `SYNCABLE_TABLES_V52` (inline in upgrade callback) to `SYNCABLE_TABLES` (in backfill.ts) (M-05)
+7. Replaced inline 38-item table literal in `migration-v52-sync.test.ts` with import of `SYNCABLE_TABLES` from backfill (M-01 / TG-01 — single source of truth)
+8. Added `afterEach(Dexie.delete)` to `migration-v52-sync.test.ts` — matches `beforeEach` pattern and prevents connection leaks between tests (T05)
+9. Tightened error-isolation test: `tablesProcessed > 0` → `=== SYNCABLE_TABLES.length - 1` and `tablesFailed` → `toEqual(['notes'])` (T03)
+10. Added explicit test: backfill stamps records with `userId: ''` (empty-string) — closes branch coverage on the filter predicate (T02)
+11. Upgrade callback's silent `.catch(() => {})` now logs via `console.warn` with the table name and error — genuine IDB errors are visible instead of silent partial migrations. Narrower rethrow behavior captured as R1-01 follow-up below. (C-03 / ADV-05 / DM-01 / REL-01 — 4-reviewer agreement)
+
+All 89 unit tests pass after fixes (88 + the new empty-string test). `tsc --noEmit` clean.
+
+### Round 1 residual work (gated_auto / manual — not auto-applied)
+
+These findings were agreed on by 2+ reviewers and have concrete fixes, but change observable behavior so they need a design decision before applying. Track as E92-S02 round-2 follow-ups or defer to E92-S08:
+
+- **R1-01 (P1, 4-reviewer agreement ~0.95 confidence):** The `Promise.all + per-table .catch` pattern in the v52 upgrade callback still converts a genuine IDB error (QuotaExceededError, DataCloneError, TransactionAbortError) into a silently partial migration — Dexie commits v52 even if every table failed. The logging fix above makes this visible, but the correct long-term fix is to narrow the catch: rethrow anything that isn't `NotFoundError` / "table empty" so the versionchange transaction aborts and leaves the DB at v51 for safe retry. Reviewers: correctness C-03, adversarial ADV-05, data-migrations DM-01, reliability REL-01. **Action:** evaluate whether to narrow the catch now (can be done as a single commit, adds 1 test case to synthesize a hard error) or defer until E92-S05 so the sync engine can detect and recover from partial migrations.
+
+- **R1-02 (P2, 5-reviewer agreement ~0.95 confidence):** `useAuthLifecycle.ts` fires `backfillUserId` at both call sites (INITIAL_SESSION handler AND getSession safety-net) on every cold start. Idempotency prevents double-stamping, but two concurrent 38-table scans run on every app open. Reviewers: correctness C-02, adversarial ADV-02, data-migrations DM-03, reliability REL-02, kieran-typescript KT-04. **Action:** add a module-level in-flight guard (`let backfillInFlight: Promise | null = null`) that coalesces concurrent calls. Best deferred to E92-S08 which owns the full auth-lifecycle sync wiring.
+
+- **R1-03 (P2, adversarial + correctness R-01 ~0.88):** Sign-out during an in-flight backfill stamps records with the now-invalid userId, and the filter guard prevents re-stamping on next sign-in with a different account. No production risk today (single-user model), but must be resolved before multi-account switching ships. **Action:** defer to E92-S08 (auth lifecycle integration). Note in E92-S08's story file.
+
+- **R1-04 (P3, reliability REL-03):** `backfillUserId` returns `BackfillUserIdResult.tablesFailed` but both call sites discard it. A systematic partial failure (e.g., disk quota) produces per-table `console.error` lines but no aggregate signal. **Action:** defer to E92-S05 observability work — the sync engine will need this signal anyway.
+
+- **R1-05 (P3, adversarial ADV-03):** `!record.updatedAt` truthy check mishandles edge cases (`0`, `{}`, `false`). No production data evidence of these values existing. **Action:** advisory only — document in `docs/solutions/` if an incident is traced to this.
+
+### Pre-existing issues surfaced by review (not blocking E92-S02)
+
+- **R1-PE-01 (P2, correctness C-01 0.92):** `progress` table declared as `EntityTable<VideoProgress, 'courseId'>` but its actual primary key is compound `[courseId+videoId]`. This pre-dates E92-S02 but will trip up E92-S04's `syncableWrite` when it tries to use `recordId` as a lookup key. **Action:** fix during E92-S04 when the type shape matters; create a chore commit if the fix is trivial.
+
+### Deferred test gaps (tracked for follow-up)
+
+- Concurrent `backfillUserId` calls with different userIds (R-01 race) — no test today (adversarial + correctness T-01). Will be addressed in E92-S08.
+- 10k-record performance bound (AC8) — not asserted in a test (T04). Plan classifies as qualitative; can be added when we have a performance harness.
+- Hard-error upgrade scenario — becomes easy to test once R1-01 narrows the catch (T06 / TG-01).
+- Concurrent double-backfill with same userId (R1-02) — test should be added alongside the dedup guard fix.
 
 ## Challenges and Lessons Learned
 

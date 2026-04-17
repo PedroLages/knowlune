@@ -1,0 +1,66 @@
+{
+  "reviewer": "data-migrations",
+  "findings": [
+    {
+      "id": "DM-01",
+      "severity": "medium",
+      "confidence": 0.82,
+      "title": "Upgrade callback catch() swallows ALL per-table errors, not just empty-table errors",
+      "description": "The `.catch(() => {})` attached to each `.modify()` call inside the v52 upgrade callback has no error argument and returns `undefined` (resolved). This means genuine errors — quota exceeded, cursor corruption, schema mismatch on an older table — are silently converted to resolved promises. The comment says it tolerates 'tables that haven't been used yet', but the catch is unconditional. If a table fails due to a non-empty-table error, the migration continues, Promise.all resolves, Dexie marks the database at version 52, and the partially-migrated table is left without `updatedAt` stamps. On subsequent opens Dexie will not re-run the upgrade callback because verno is already 52.",
+      "location": "/Volumes/SSD/Dev/Apps/Knowlune/src/db/schema.ts",
+      "code_snippet": ".catch(() => {\n  // Tolerate tables that haven't been used yet (empty / schema-only).\n  // Per-table failure should not abort the whole migration; Dexie\n  // will surface hard errors (e.g. schema mismatch) through the\n  // outer promise regardless.\n})",
+      "recommendation": "Log swallowed errors at minimum: `.catch((err) => { console.warn('[v52 upgrade] table', tableName, 'modify skipped:', err) })`. Ideally only catch the specific DOMException that indicates an empty/absent table, and let unexpected errors propagate to abort the migration cleanly.",
+      "rollback_impact": "No rollback path exists (acceptable for Dexie). The risk is a silently incomplete migration — records in the affected table permanently lack `updatedAt`, which the sync engine will treat as 'never modified'."
+    },
+    {
+      "id": "DM-02",
+      "severity": "low",
+      "confidence": 0.75,
+      "title": "backfillUserId runs without a wrapping transaction — partial application on browser-close",
+      "description": "backfillUserId() iterates 38 tables sequentially with one `.filter().modify()` per table. There is no outer `db.transaction()` wrapping all 38 writes. If the user closes the browser tab or the app crashes mid-backfill, some tables will have `userId` set and others will not. On the next sign-in, the function will complete the remaining tables (it is idempotent). The design doc acknowledges this as 'self-healing'. The risk is that during the partial-application window, range queries on `[userId+updatedAt]` will return incomplete result sets if the sync engine starts before backfill is done.",
+      "location": "/Volumes/SSD/Dev/Apps/Knowlune/src/lib/sync/backfill.ts",
+      "recommendation": "Acceptable given the acknowledged self-healing model, PROVIDED that the sync engine (E92-S05/S06) guards against querying before backfill completes. Track backfill completion state (e.g. a syncMetadata sentinel row) so the upload engine can wait.",
+      "rollback_impact": "None — idempotent. Next sign-in completes the remaining tables."
+    },
+    {
+      "id": "DM-03",
+      "severity": "low",
+      "confidence": 0.78,
+      "title": "Double invocation of backfillUserId on every cold app start",
+      "description": "useAuthLifecycle.ts triggers backfillUserId twice on a typical cold start: once from the `onAuthStateChange` INITIAL_SESSION event, and once from the `getSession()` safety net. Both are fire-and-forget. The two calls run concurrently against Dexie. The second call will find already-stamped records and do nothing (the filter `!userId` returns empty), so correctness is preserved. However, the double scan of all 38 tables occurs on every app open for a signed-in user, not just once post-migration.",
+      "location": "/Volumes/SSD/Dev/Apps/Knowlune/src/app/hooks/useAuthLifecycle.ts",
+      "code_snippet": "// Both paths call backfillUserId(session.user.id) independently:\n// 1. onAuthStateChange INITIAL_SESSION handler (line ~58)\n// 2. getSession().then() handler (line ~76)",
+      "recommendation": "Add a module-level deduplication guard (e.g. `let backfillInProgress: Promise<...> | null`) so concurrent calls coalesce into one Dexie scan. Low urgency until tables have meaningful record counts.",
+      "rollback_impact": "None — idempotent. Performance nuisance only."
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "RR-01",
+      "description": "Records created while the user is signed out (e.g. anonymous pre-auth usage) will have userId=null permanently unless the user subsequently signs in and triggers backfillUserId. This is the intended model per the design, but the sync engine must handle null userId records explicitly (filter them out, or treat them as unsynced). No mitigation exists in this PR; deferred to E92-S04/S05.",
+      "severity": "informational"
+    },
+    {
+      "id": "RR-02",
+      "description": "The upgrade callback stamps a single migrationNow timestamp for ALL records across ALL 38 tables. This means every pre-existing record for a user will appear to have been 'updated' at the same instant. When the sync engine does its first incremental pull, it will need to reconcile these records with server state. If the server already has records with real timestamps, the LWW merge strategy (Last-Write-Wins) needs to handle this correctly. Not a migration bug, but a sync-correctness dependency.",
+      "severity": "informational"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "TG-01",
+      "description": "No test covers the case where a `.modify()` call throws a non-empty-table error inside the upgrade callback. The catch() swallows ALL errors (DM-01), but there is no test asserting behavior when a genuine error occurs — e.g., what version number Dexie records and whether subsequent opens are consistent.",
+      "severity": "medium"
+    },
+    {
+      "id": "TG-02",
+      "description": "No test for the concurrent double-backfill scenario (DM-03). The idempotency test covers sequential re-invocation but not two Promises racing simultaneously against the same tables.",
+      "severity": "low"
+    },
+    {
+      "id": "TG-03",
+      "description": "No performance test with 10k records across all 38 tables together (the AC8 claim). Existing tests use small seeded datasets. The plan acknowledges this but defers the wall-clock assertion — worth adding at least a qualitative 'completes without timeout' guard at scale.",
+      "severity": "low"
+    }
+  ]
+}

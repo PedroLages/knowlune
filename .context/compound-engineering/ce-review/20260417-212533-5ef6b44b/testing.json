@@ -1,0 +1,108 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "id": "T01",
+      "title": "Date.now() used without fake timers in migration updatedAt test",
+      "severity": "medium",
+      "confidence": 0.92,
+      "category": "test-anti-pattern",
+      "file": "src/db/__tests__/migration-v52-sync.test.ts",
+      "line": 207,
+      "description": "The test 'stamps migrationNow on updatedAt when missing' calls Date.now() to capture a lower bound, then asserts the stamped updatedAt is >= that value minus 1 second. No fake timers are in use. In CI under load this window can fail: if the v52 upgrade callback runs before beforeMigration is captured (async scheduling quirk), the stamp will precede beforeMigration, causing a false failure. More importantly, this violates the project's deterministic-time rule (ESLint rule test-patterns/deterministic-time flags Date.now() in tests). The assertion could instead verify only that updatedAt is a valid ISO string and matches a frozen timestamp via vi.useFakeTimers().",
+      "AC": "AC4",
+      "remediation": "Use vi.useFakeTimers() with a fixed date before opening the DB, then assert bookmark.updatedAt equals that exact ISO string. Restore real timers in afterEach."
+    },
+    {
+      "id": "T02",
+      "title": "Empty-string userId branch never exercised in backfill tests",
+      "severity": "medium",
+      "confidence": 0.90,
+      "category": "missing-branch-coverage",
+      "file": "src/lib/sync/__tests__/backfill.test.ts",
+      "line": null,
+      "description": "backfill.ts line 96 filters records matching userId === undefined || userId === null || userId === ''. The falsy-guard test (line 39) covers the empty-string early-exit path in the userId parameter itself, but no test seeds a record with userId: '' and verifies it gets overwritten. This is a distinct branch: a record whose userId field is stored as empty string (could happen from bad upstream writes) should be re-stamped. Currently only undefined records are proven to be stamped (via the 'stamps userId on records whose userId is missing' test).",
+      "AC": "AC5",
+      "remediation": "Add a test that seeds a note with userId: '' (empty string), calls backfillUserId('user-A'), and asserts the record's userId is now 'user-A'."
+    },
+    {
+      "id": "T03",
+      "title": "Per-table error test asserts tablesProcessed > 0 but not the exact count",
+      "severity": "low",
+      "confidence": 0.82,
+      "category": "weak-assertion",
+      "file": "src/lib/sync/__tests__/backfill.test.ts",
+      "line": 199,
+      "description": "The error-isolation test asserts tablesProcessed > 0 after one table (notes) throws. The implementation increments tablesProcessed only on success, so it should equal SYNCABLE_TABLES.length - 1 (37). Using > 0 means the assertion would still pass even if only 1 table succeeded instead of 37 — masking a regression where the loop aborts early after the first non-notes success. The tablesFailed array check (line 197) is correct but insufficient alone.",
+      "AC": "AC5 (error isolation)",
+      "remediation": "Assert result.tablesProcessed === SYNCABLE_TABLES.length - 1 and result.tablesFailed.length === 1 for precision."
+    },
+    {
+      "id": "T04",
+      "title": "AC8 (10k-record perf <3s) has no test — not even a qualitative one",
+      "severity": "low",
+      "confidence": 0.95,
+      "category": "missing-ac-coverage",
+      "file": null,
+      "line": null,
+      "description": "AC8 specifies backfillUserId on 10k records must complete in <3s. Neither test file contains any performance assertion. The story description notes this is 'asserted qualitatively', but a qualitative assertion means a timing test should exist even if it's a loose upper bound. No such test exists in either backfill.test.ts or migration-v52-sync.test.ts. This is an accepted gap per story intent but represents a known regression risk as table counts grow.",
+      "AC": "AC8",
+      "remediation": "Optional: add a single perf test that seeds 10k records across a few tables, calls backfillUserId, and asserts elapsed time < 3000ms. Mark with a comment that it is intentionally slow-path-only and can be skipped in fast unit runs."
+    },
+    {
+      "id": "T05",
+      "title": "migration-v52-sync.test.ts has no afterEach cleanup — fake-indexeddb state leaks between tests",
+      "severity": "medium",
+      "confidence": 0.85,
+      "category": "test-isolation",
+      "file": "src/db/__tests__/migration-v52-sync.test.ts",
+      "line": 7,
+      "description": "The file uses beforeEach to delete DB_NAME but has no afterEach. If a test opens a Dexie instance and then throws before reaching db.close(), the next test's beforeEach will call Dexie.delete() while the previous connection is still open. fake-indexeddb does not enforce blocked-delete semantics strictly, but leaving open connections can cause test order-dependent failures in Node environments where fake-indexeddb reuses the same in-memory IDB instance. The idempotency test (line 246) opens two connections sequentially but if the second open throws, db2 is never closed.",
+      "AC": "N/A (isolation)",
+      "remediation": "Add afterEach(async () => { await Dexie.delete(DB_NAME) }) to ensure cleanup even when tests throw. Alternatively, wrap each db.open() in a try/finally to guarantee close."
+    },
+    {
+      "id": "T06",
+      "title": "Silent .catch() in v52 upgrade callback is untested — a table that throws during modify() is silently swallowed",
+      "severity": "medium",
+      "confidence": 0.80,
+      "category": "missing-error-path",
+      "file": "src/db/schema.ts",
+      "line": 1491,
+      "description": "The v52 upgrade callback at line 1481-1498 uses Promise.all with a per-table .catch(() => {}) that silently swallows any modify() failure. The comment says 'Tolerate tables that haven't been used yet', but there is no test that verifies: (a) a partially-failed upgrade still completes the migration and opens the DB, or (b) the surviving tables still had updatedAt stamped correctly. The migration test suite only seeds happy-path data. A table whose modify() throws (e.g. due to corrupt record) would silently fail with no signal.",
+      "AC": "AC7 (data loss risk)",
+      "remediation": "Add a test that seeds a corrupt record (e.g. non-serializable value) in one table before migration, verifies the DB still opens and that other tables have correct updatedAt stamps."
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "RR01",
+      "description": "Concurrent backfillUserId() invocations are never tested. The implementation uses .filter().modify() which is not wrapped in a transaction, so two concurrent calls (e.g. onAuthStateChange + getSession() both firing) could double-stamp userId on the same records. In practice this is idempotent (same value written twice), but recordsStamped would count the record twice. No test exercises this.",
+      "severity": "low"
+    },
+    {
+      "id": "RR02",
+      "description": "The excluded-table test (migration-v52-sync.test.ts line 138) checks schema indexes only — it does not seed data into all 10 excluded tables and verify their records are unmodified. Only videoCaptions is data-tested (line 233). Tables like courseThumbnails, bookFiles, screenshots could in theory be accidentally included in a future SYNCABLE_TABLES_V52 expansion. The schema test would not catch data corruption in those tables.",
+      "severity": "low"
+    },
+    {
+      "id": "RR03",
+      "description": "The backfill.test.ts beforeEach calls db.open() on the shared exported db singleton. If a test leaves the db in a bad state (e.g. the spy test partially corrupts the db object), subsequent tests in the same file may operate on a tainted singleton. The afterEach closes and deletes the DB, but the spy test's mockRestore happens inside finally — if backfillUserId itself throws unexpectedly, the spy may not be restored before afterEach runs.",
+      "severity": "low"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "ac": "AC5",
+      "gap": "Empty-string userId records are not stamped in any test — only undefined/null records are exercised. The implementation explicitly handles the '' case."
+    },
+    {
+      "ac": "AC8",
+      "gap": "No performance test exists for the 10k-record backfill scenario. Accepted as qualitative per story intent but creates a blind spot for future performance regressions."
+    },
+    {
+      "ac": "AC7",
+      "gap": "No test verifies that a per-table modify() failure during the v52 upgrade callback (the silent .catch) still leaves all other tables correctly migrated."
+    }
+  ]
+}
