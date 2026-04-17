@@ -61,8 +61,11 @@ These agents provide **deep analysis** during `/review-story` — catching issue
 | `techdebt-scan` | Deduplication scan via `/techdebt` Phase 1-2 (optional — user confirms extraction) | ADVISORY (opportunities reported) | [.claude/skills/techdebt/SKILL.md](../../../.claude/skills/techdebt/SKILL.md) |
 | `openai-code-review` | Adversarial review via OpenAI Codex CLI (optional — requires Codex CLI + OPENAI_API_KEY) | BLOCKER/HIGH/MEDIUM/NIT | [.claude/agents/openai-code-review.md](../../agents/openai-code-review.md) |
 | `glm-code-review` | Adversarial review via GLM/z.ai GLM-5.1 (optional — requires ZAI_API_KEY) | BLOCKER/HIGH/MEDIUM/NIT | [.claude/agents/glm-code-review.md](../../agents/glm-code-review.md) |
+| `data-migrations-review` | Migration correctness, schema consistency, data transformation safety (triggered when SQL/migration files detected in diff) | Advisory (CE persona, sibling report) | CE plugin: `compound-engineering:review:data-migrations-reviewer` |
+| `reliability-review` | Error handling chains, retries, idempotency, async/background-job reliability (triggered by infra diff) | Advisory (CE persona, sibling report) | CE plugin: `compound-engineering:review:reliability-reviewer` |
+| `deployment-verification` | Go/No-Go deployment checklist with SQL verification queries, rollback, monitoring (triggered by infra diff) | Advisory (CE persona, sibling report) | CE plugin: `compound-engineering:review:deployment-verification-agent` |
 
-**Trigger:** `/review-story` dispatches all agents in parallel (tiered by diff scope). Reports saved to `docs/reviews/{type}/`. See [automation-details.md](automation-details.md) for full report locations.
+**Trigger:** `/review-story` dispatches all agents in parallel (tiered by diff scope). Reports saved to `docs/reviews/{type}/`. CE persona reports (data-migrations, reliability, deployment-verification) auto-trigger when `INFRA_FILE_COUNT > 0` (SQL, `supabase/migrations/**`, `**/migrations/**`) and are linked as sibling reports from the consolidated review. See [automation-details.md](automation-details.md) for full report locations.
 
 ## 📊 Automation Coverage Summary
 
@@ -71,8 +74,8 @@ These agents provide **deep analysis** during `/review-story` — catching issue
 | **Save-Time** | 8 ESLint rules | Hardcoded colors, test anti-patterns, async cleanup, imports, silent catches | As you type/save in IDE |
 | **Always-On** | 1 Claude Code hook | Destructive commands (rm -rf, force push, hard reset) | Every Claude Code session |
 | **Commit-Time** | 2 git hooks | Dirty working tree, uncommitted changes | Before `/review-story` or `git push` |
-| **Review-Time** | 6 Claude agents + 1 optional dedup scan + 2 optional external model agents | Architecture, UX, accessibility, edge cases, AC coverage, performance, security, functional QA, deduplication, cross-model consensus | During `/review-story` workflow |
-| **Total** | **20 mechanisms** | 11 automated + 6 required agents + 3 optional agents | Multi-layered enforcement |
+| **Review-Time** | 6 Claude agents + 3 conditional CE personas (infra diffs) + 1 optional dedup scan + 2 optional external model agents | Architecture, UX, accessibility, edge cases, AC coverage, performance, security, functional QA, deduplication, SQL/migration/reliability/deployment audit, cross-model consensus | During `/review-story` workflow |
+| **Total** | **23 mechanisms** | 11 automated + 6 required agents + 3 conditional CE agents + 3 optional agents | Multi-layered enforcement |
 
 ## 📚 References
 

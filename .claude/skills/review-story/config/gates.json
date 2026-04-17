@@ -136,6 +136,39 @@
       "description": "Functional QA via Playwright MCP (buttons, forms, flows, console errors)"
     },
     {
+      "name": "data-migrations-review",
+      "phase": "agent",
+      "required": false,
+      "skip_suffix": "data-migrations-review-skipped",
+      "skip_condition": "no infra files in diff",
+      "agent": "compound-engineering:review:data-migrations-reviewer",
+      "report_path_template": "docs/reviews/code/data-migrations-review-{date}-{story-id}.md",
+      "dev_server_required": false,
+      "description": "Migration correctness, schema consistency, data transformation safety (CE persona, diff-content triggered)"
+    },
+    {
+      "name": "reliability-review",
+      "phase": "agent",
+      "required": false,
+      "skip_suffix": "reliability-review-skipped",
+      "skip_condition": "no infra files in diff",
+      "agent": "compound-engineering:review:reliability-reviewer",
+      "report_path_template": "docs/reviews/code/reliability-review-{date}-{story-id}.md",
+      "dev_server_required": false,
+      "description": "Error handling chains, retry logic, idempotency, async/background-job reliability (CE persona, diff-content triggered)"
+    },
+    {
+      "name": "deployment-verification",
+      "phase": "agent",
+      "required": false,
+      "skip_suffix": "deployment-verification-skipped",
+      "skip_condition": "no infra files in diff",
+      "agent": "compound-engineering:review:deployment-verification-agent",
+      "report_path_template": "docs/reviews/code/deployment-verification-{date}-{story-id}.md",
+      "dev_server_required": false,
+      "description": "Go/No-Go deployment checklist with SQL verification queries, rollback, and monitoring (CE persona, diff-content triggered)"
+    },
+    {
       "name": "techdebt-scan",
       "phase": "optional",
       "required": false,

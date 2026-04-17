@@ -120,6 +120,7 @@ Detect diff scope to select the right review tier — skips unnecessary agents o
 DIFF_LINES=$(git diff main --stat 2>/dev/null | tail -1 | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+' || echo "0")
 UI_FILE_COUNT=$(git diff main --name-only 2>/dev/null | grep -cE '\.(tsx|css)$' || echo "0")
 SECURITY_FILE_COUNT=$(git diff main --name-only 2>/dev/null | grep -cE '(auth|api|env|config|hook|payment|stripe)' || echo "0")
+INFRA_FILE_COUNT=$(git diff main --name-only 2>/dev/null | grep -cE '(supabase/(migrations|tests|functions)/|\.sql$|/migrations/)' || echo "0")
 NEW_PAGES=$(git diff main --name-only 2>/dev/null | grep -cE 'src/app/pages/' || echo "0")
 ```
 
@@ -127,17 +128,18 @@ NEW_PAGES=$(git diff main --name-only 2>/dev/null | grep -cE 'src/app/pages/' ||
 
 | Condition | Tier | Agents dispatched |
 |-----------|------|-------------------|
-| `DIFF_LINES < 50` AND `UI_FILE_COUNT == 0` | **lite** | code-review + security-review |
-| `DIFF_LINES < 300` AND `NEW_PAGES == 0` | **standard** | code-review + code-review-testing + security-review + design-review (if UI) |
-| Otherwise | **full** | All 6 required + optional external |
+| `DIFF_LINES < 50` AND `UI_FILE_COUNT == 0` AND `INFRA_FILE_COUNT == 0` | **lite** | code-review + security-review |
+| `DIFF_LINES < 300` AND `NEW_PAGES == 0` AND `INFRA_FILE_COUNT == 0` | **standard** | code-review + code-review-testing + security-review + design-review (if UI) |
+| Otherwise | **full** | All 6 required + conditional CE personas (if infra) + optional external |
 
 **Override conditions** — always use `full`:
 - `SECURITY_FILE_COUNT > 0` (auth/payment changes need security + full review regardless of size)
+- `INFRA_FILE_COUNT > 0` (SQL/migration/RLS/SECURITY DEFINER touches trigger data-migrations-review, reliability-review, deployment-verification)
 - Resuming an interrupted review (use previous tier)
 
 ```bash
 # Determine tier
-if [ "$SECURITY_FILE_COUNT" -gt 0 ] || [ "$NEW_PAGES" -gt 1 ]; then
+if [ "$SECURITY_FILE_COUNT" -gt 0 ] || [ "$INFRA_FILE_COUNT" -gt 0 ] || [ "$NEW_PAGES" -gt 1 ]; then
   REVIEW_SCOPE="full"
 elif [ "$DIFF_LINES" -lt 50 ] && [ "$UI_FILE_COUNT" -eq 0 ]; then
   REVIEW_SCOPE="lite"
@@ -254,6 +256,7 @@ MANIFEST=$(python3 scripts/workflow/prepare-dispatch.py \
   --story-id=$STORY_ID \
   --base-path=$BASE_PATH \
   --has-ui-changes=$HAS_UI_CHANGES \
+  --infra-file-count=$INFRA_FILE_COUNT \
   --review-scope=$REVIEW_SCOPE \
   --gates-already-passed="$GATES_PASSED" \
   --resuming=$RESUMING \
@@ -289,6 +292,19 @@ Task({
 })
 ```
 
+**CE persona agents** (`subagent_type` starting with `compound-engineering:review:`) use their own native JSON finding format — they will NOT emit `agent-output.schema.json`. For these, use a simplified prompt that asks them to save their review to `[agent.report_path]` only:
+
+```
+Task({
+  subagent_type: "[agent.agent]",
+  run_in_background: true,
+  prompt: "Review diff for story $STORY_ID. Bundle: $BUNDLE_PATH. Save findings report as markdown to [agent.report_path]. Focus on your persona's responsibility (data migrations / reliability / deployment verification).",
+  description: "[agent.gate] $STORY_ID"
+})
+```
+
+These reports are linked from the consolidated report as **sibling reviews** (not merged into the findings table — they preserve native CE format).
+
 Also dispatch `openai-code-review` if `$OPENAI_AVAILABLE == "yes"` and `glm-code-review` if `$ZAI_AVAILABLE == "yes"` (these are in the manifest as `phase: external`).
 
 ### 7. Collect results and consolidate
@@ -315,6 +331,8 @@ INVALID_AGENTS=$(echo "$FINAL" | jq -r '.invalid_agents | join(", ")')
 ```
 
 If `invalid_agents` is non-empty, warn: "Agent contract failure: [list]. These reviews were excluded from the consolidated report."
+
+**Sibling CE reviews**: When conditional CE persona agents were dispatched (`data-migrations-review`, `reliability-review`, `deployment-verification`), their reports live alongside Knowlune reviews in `docs/reviews/code/` but are NOT merged into the main findings table. Add a **Sibling Reviews** section to the consolidated report linking each CE report by path so reviewers can inspect domain-specific findings. `finalize-review.sh` can surface them by scanning `docs/reviews/code/{data-migrations,reliability,deployment-verification}-review-*-{story-id}.md`.
 
 **TodoWrite**: Mark all agent todos and "Consolidate findings and verdict" → `completed`.
 

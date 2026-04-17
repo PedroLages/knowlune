@@ -13,6 +13,7 @@ Usage:
         --story-id=E01-S03
         --base-path=PATH
         --has-ui-changes=true|false
+        --infra-file-count=N  (SQL/migration files in diff; default 0)
         --review-scope=full|lightweight
         --gates-already-passed=build,lint,code-review
         --gates-config=.claude/skills/review-story/config/gates.json
@@ -64,6 +65,7 @@ def output_json_path_for_gate(gate: dict, story_id: str, base_path: str) -> str:
 def evaluate_skip(
     gate: dict,
     has_ui_changes: bool,
+    has_infra_changes: bool,
     review_scope: str,
     gates_already_passed: list[str],
     resuming: bool,
@@ -91,6 +93,10 @@ def evaluate_skip(
         if not has_ui_changes:
             return True, "no UI changes detected"
 
+    if "no infra files in diff" in skip_condition:
+        if not has_infra_changes:
+            return True, "no infra/migration files detected"
+
     if "lightweight review" in skip_condition:
         if review_scope == "lightweight":
             return True, "lightweight review scope"
@@ -106,6 +112,7 @@ def main() -> None:
     parser.add_argument("--story-id", required=True)
     parser.add_argument("--base-path", required=True)
     parser.add_argument("--has-ui-changes", required=True, choices=["true", "false"])
+    parser.add_argument("--infra-file-count", default="0")
     parser.add_argument("--review-scope", default="full", choices=["full", "lightweight"])
     parser.add_argument("--gates-already-passed", default="")
     parser.add_argument("--resuming", default="false", choices=["true", "false"])
@@ -115,6 +122,10 @@ def main() -> None:
     story_id = args.story_id.upper()
     base_path = args.base_path
     has_ui_changes = args.has_ui_changes == "true"
+    try:
+        has_infra_changes = int(args.infra_file_count) > 0
+    except ValueError:
+        has_infra_changes = False
     review_scope = args.review_scope
     gates_already_passed = parse_gate_list(args.gates_already_passed)
     resuming = args.resuming == "true"
@@ -147,7 +158,8 @@ def main() -> None:
         output_json = output_json_path_for_gate(gate, story_id, base_path)
 
         should_skip, skip_reason = evaluate_skip(
-            gate, has_ui_changes, review_scope, gates_already_passed, resuming
+            gate, has_ui_changes, has_infra_changes, review_scope,
+            gates_already_passed, resuming
         )
 
         if not should_skip:
