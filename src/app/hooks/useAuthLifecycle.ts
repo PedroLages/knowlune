@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { supabase } from '@/lib/auth/supabase'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { hydrateSettingsFromSupabase } from '@/lib/settings'
+import { backfillUserId } from '@/lib/sync/backfill'
 
 /**
  * E43-S04: Subscribes to Supabase auth state changes and manages session lifecycle.
@@ -51,6 +52,12 @@ export function useAuthLifecycle(): void {
       // Hydrate localStorage settings from Supabase user_metadata on sign-in
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
         hydrateSettingsFromSupabase(session.user.user_metadata)
+        // E92-S02: stamp userId on existing pre-auth records. Idempotent.
+        // Fire-and-forget — the UI should not block on backfill completion.
+        // silent-catch-ok — backfill is self-healing; next sign-in retries.
+        backfillUserId(session.user.id).catch(err => {
+          console.error('[useAuthLifecycle] backfillUserId failed:', err)
+        })
       }
     })
 
@@ -65,6 +72,10 @@ export function useAuthLifecycle(): void {
       state.setSession(session)
       if (session?.user) {
         hydrateSettingsFromSupabase(session.user.user_metadata)
+        // silent-catch-ok — backfill is self-healing; next sign-in retries.
+        backfillUserId(session.user.id).catch(err => {
+          console.error('[useAuthLifecycle] backfillUserId failed:', err)
+        })
       }
     })
 

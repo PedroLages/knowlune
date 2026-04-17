@@ -1,0 +1,76 @@
+{
+  "reviewer": "reliability",
+  "findings": [
+    {
+      "id": "REL-01",
+      "severity": "medium",
+      "confidence": 0.90,
+      "title": "Upgrade .catch(() => {}) swallows critical transaction errors indistinguishably from benign empty-table errors",
+      "file": "src/db/schema.ts",
+      "location": "version(52).upgrade() callback — Promise.all(SYNCABLE_TABLES_V52.map(...)…catch(() => {}))",
+      "description": "Every per-table .catch(() => {}) is a complete swallow: 'table does not exist / empty' (benign) and 'TransactionAbortError / QuotaExceededError / DataCloneError' (critical) are handled identically with no logging. If a hard IDB error aborts a .modify() on a non-empty table, the callback continues and version 52 is committed. On the next open() Dexie skips the upgrade (version already registered), so the partially-stamped updatedAt state is permanent and silent. The outer Promise.all() does NOT re-throw per-table errors because each table's promise is individually .catch()-ed to undefined — so the upgrade callback resolves successfully regardless of how many real failures occurred.",
+      "why_it_matters": "A QuotaExceededError mid-upgrade means some records have updatedAt stamped and others do not. The sync engine (E92-S05) will later use [userId+updatedAt] range scans; records missing updatedAt will be invisible to incremental syncs. There is no mechanism to detect or recover this after the upgrade completes.",
+      "recommendation": "Narrow the catch to benign errors only. Rethrow anything that isn't 'table is empty / not found': catch(err => { if (err?.name !== 'NotFoundError' && !(err instanceof Dexie.NoSuchDatabaseError)) { console.error('[v52 upgrade] fatal on table', tableName, err); throw err; } }). A thrown error inside upgrade() causes Dexie to abort the IDB versionchange transaction, leaving the DB at v51 — the user gets an open() rejection which is recoverable on next app load, rather than a silently corrupt v52 state."
+    },
+    {
+      "id": "REL-02",
+      "severity": "medium",
+      "confidence": 0.85,
+      "title": "Concurrent double-backfill on app load: INITIAL_SESSION from onAuthStateChange races getSession() safety-net",
+      "file": "src/app/hooks/useAuthLifecycle.ts",
+      "location": "lines 44–60 (onAuthStateChange handler) and lines 69–79 (getSession().then())",
+      "description": "Both code paths call backfillUserId(session.user.id) without any guard against concurrent execution. On a normal page load with a persisted session, Supabase fires INITIAL_SESSION through onAuthStateChange (async, after initializePromise) AND the getSession() call resolves (also async from localStorage). Both will pass the if (session?.user) check and launch two concurrent backfillUserId() invocations for the same userId. Each backfill iterates all 38 tables serially, and each table's modify() runs in its own readwrite transaction per Dexie's _write('readwrite', fn, 'locked') scope. IDB serialises concurrent readwrite transactions on the same object store, so IDB itself prevents double-write corruption — but two full 38-table scans will run back-to-back, doubling the IDB write amplification on every cold start. The idempotency guard (filter on userId === undefined) correctly prevents double-stamping on the second run, but the second run still opens 38 transactions and reads all records before finding nothing to do.",
+      "why_it_matters": "On devices with large IDB stores (thousands of notes/flashcards/books) two back-to-back 38-table full scans on app startup will compete for IDB bandwidth during the critical path where the user is actively loading the UI. This is a performance concern that compounds across sign-ins. More importantly, the comment at line 64–68 states getSession() is a 'safety-net for OAuth redirect where tokens are extracted from URL hash before useEffect runs' — but it fires unconditionally on every load, not just OAuth redirects.",
+      "recommendation": "Add a module-level in-flight guard: let backfillInFlight: Promise<BackfillUserIdResult> | null = null. Both call sites assign to it if null, and chain off the existing promise if non-null. Alternatively, move getSession() to only fire when ignore is false AND no INITIAL_SESSION or SIGNED_IN has already been observed (track with a boolean). The idempotency means correctness is not broken, but eliminating the redundant run is cheap insurance."
+    },
+    {
+      "id": "REL-03",
+      "severity": "low",
+      "confidence": 0.82,
+      "title": "BackfillUserIdResult.tablesFailed is computed and returned but never consumed — partial failures are permanently unobservable",
+      "file": "src/lib/sync/backfill.ts and src/app/hooks/useAuthLifecycle.ts",
+      "location": "backfill.ts:61–65 (BackfillUserIdResult type) / useAuthLifecycle.ts:58–60 and 76–78 (call sites)",
+      "description": "backfillUserId() returns a structured result including tablesFailed: string[]. Both call sites in useAuthLifecycle.ts use fire-and-forget .catch(err => console.error(...)) — the resolved value of the promise is discarded. If backfill partially succeeds (e.g. 20/38 tables stamped, 18 failed with individual try/catch errors), the tablesFailed array is computed correctly but then thrown away. The only observable signal is per-table console.error lines, which are invisible in production. The comment at backfill.ts:109 says 'the sync engine will catch any stragglers on next sign-in' — but E92-S08 (re-invocation hook) does not exist yet in this branch, and no mechanism forces a retry if the user never signs out and back in.",
+      "why_it_matters": "A persistent per-table failure (e.g. schema mismatch on one table, IDB version inconsistency, quota on one store) would leave some records without userId forever in the current sprint scope. The sync engine (E92-S05) queries by [userId+updatedAt]; records without userId will never be synced, with no warning to the user and no signal to the developer beyond a console.error that fires once and is lost.",
+      "recommendation": "Log a structured breadcrumb when tablesFailed.length > 0. Even a simple sessionStorage.setItem('backfillFailed', JSON.stringify(result.tablesFailed)) would make it visible in the next session. Separately, the call site should consume the result: backfillUserId(id).then(result => { if (result.tablesFailed.length > 0) { console.warn('[backfill] partial failure:', result.tablesFailed) } }).catch(err => console.error(...)). The structured result type suggests this visibility was intended but the wiring was not completed."
+    },
+    {
+      "id": "REL-04",
+      "severity": "low",
+      "confidence": 0.72,
+      "title": "Fire-and-forget backfill on tab-close mid-flight: IDB transaction abandoned, no orphaned lock risk but state is indeterminate",
+      "file": "src/app/hooks/useAuthLifecycle.ts",
+      "location": "lines 56–60 — fire-and-forget pattern",
+      "description": "When the user closes the tab while backfillUserId() is mid-flight (iterating table N of 38), the pending IDB readwrite transactions are abandoned. Dexie 4.x does not hold IDB locks across page unload — the browser aborts all pending transactions when the page is torn down. The records modified in already-committed table transactions (tables 1 through N-1) retain their userId stamps. Tables N through 38 remain unstamped. This partial state is safe by design (backfill is idempotent), but the next load will need to complete the remaining tables. The ignore flag in the cleanup function (line 88) is set on unmount but has no effect on the already-launched backfillUserId() promise — the for-loop continues running after ignore = true until the page is torn down.",
+      "why_it_matters": "The ignore guard is not connected to backfill cancellation. On React StrictMode double-mount in development, useEffect cleanup fires and remounts, potentially launching two backfill runs before the first completes (the first is not cancelled, only ignored for session state). In production this is only a cosmetic inefficiency. The core risk is the partially-stamped state on hard close, which is acceptably handled by idempotent retry.",
+      "recommendation": "For E92-S02 scope this is acceptable. Flag for E92-S08: when re-invoking backfill on next SIGNED_IN, check if tablesFailed from the previous run is stored and prioritize those tables first. An AbortController passed into backfillUserId() would allow the useEffect cleanup to signal cancellation, reducing wasted IDB work on StrictMode double-mount."
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "RR-01",
+      "title": "No retry budget or escalation path for permanent per-table failures",
+      "description": "The system relies on 'next SIGNED_IN will retry' (E92-S08) as its recovery mechanism, but E92-S08 does not exist yet. Until it lands, a persistent failure on any table means those records silently miss userId forever. If the failure cause is permanent (schema mismatch, corrupted object store), retrying on sign-in will always fail. There is no maximum retry count, no dead-letter state for failed tables, and no user-visible signal.",
+      "scope": "Acceptable for E92-S02 given E92-S08 is planned, but the gap between E92-S02 and E92-S08 shipping is a window where failures are invisible."
+    },
+    {
+      "id": "RR-02",
+      "title": "syncableWrite() lock ordering vs concurrent backfill (future E92-S04)",
+      "description": "backfillUserId() runs 38 sequential per-table readwrite transactions (one IDB transaction per table). When E92-S04's syncableWrite() lands, it will need to write to the same tables. IDB serialises concurrent readwrite transactions, so a backfill mid-run during an active syncableWrite() will queue behind it table by table. This is correct but could cause latency spikes if backfill and syncableWrite() fire simultaneously (e.g. user creates a note immediately after sign-in while backfill is still processing). Flag for E92-S04 design: consider whether syncableWrite() should check for an in-flight backfill and yield, or whether backfill should run inside a single multi-table transaction to reduce interleaving surface."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "TG-01",
+      "description": "No test covers the concurrent double-invocation scenario (INITIAL_SESSION + getSession() both firing for the same userId). The idempotency test (backfill.test.ts line 145) tests sequential second calls but not overlapping concurrent calls. A test that calls backfillUserId('user-A') twice without awaiting the first, then awaits both, would verify that the second run stamps zero records (correct) and does not throw on concurrent IDB readwrite access."
+    },
+    {
+      "id": "TG-02",
+      "description": "The upgrade .catch(() => {}) swallow is not tested for hard-error scenarios. migration-v52-sync.test.ts tests benign cases (empty tables, existing updatedAt). There is no test that injects a synthetic modify() failure on a non-empty table and verifies whether the upgrade still commits version 52. Understanding whether this is safe (version committed with partial data) or unsafe (version committed with full data gap) is not validated by the current test suite."
+    },
+    {
+      "id": "TG-03",
+      "description": "BackfillUserIdResult.tablesFailed consumption is untested at the call site. The call sites in useAuthLifecycle.ts discard the result. There is no test that the caller logs or surfaces a warning when tablesFailed is non-empty. If the consumption logic is added in a future story, there is currently no regression anchor to verify it."
+    }
+  ]
+}

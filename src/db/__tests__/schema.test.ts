@@ -48,6 +48,7 @@ describe('ElearningDB schema', () => {
   it('should create the database with correct tables including notes', async () => {
     expect(db.name).toBe('ElearningDB')
     // courses table dropped in v30 (E89-S01)
+    // syncQueue, syncMetadata added in v52 (E92-S02)
     expect(db.tables.map(t => t.name).sort()).toEqual([
       'aiUsageEvents',
       'audioBookmarks',
@@ -91,6 +92,8 @@ describe('ElearningDB schema', () => {
       'shelves',
       'studySchedules',
       'studySessions',
+      'syncMetadata',
+      'syncQueue',
       'transcriptEmbeddings',
       'videoCaptions',
       'vocabularyItems',
@@ -100,8 +103,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 51', () => {
-    expect(db.verno).toBe(51)
+  it('should be at version 52', () => {
+    expect(db.verno).toBe(52)
   })
 
   it('should have entitlements table with userId as primary key', () => {

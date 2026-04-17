@@ -1,0 +1,113 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "id": "C-01",
+      "title": "progress table typed as EntityTable<VideoProgress, 'courseId'> but primary key is the compound [courseId+videoId]",
+      "severity": "P2",
+      "file": "src/db/schema.ts",
+      "line": 81,
+      "confidence": 0.92,
+      "autofix_class": "manual",
+      "owner": "schema",
+      "requires_verification": false,
+      "pre_existing": true,
+      "suggested_fix": "Change to EntityTable<VideoProgress, 'courseId'> is fundamentally wrong because the PK is compound [courseId+videoId]. Use Table<VideoProgress> (no PK generic) as Dexie does for compound-PK tables, identical to videoCaptions and contentProgress. This is pre-existing but the v52 work adds `userId` to progress — any future sync code calling db.syncQueue via syncableWrite on progress that assumes a string primary key will fail at runtime.",
+      "why_it_matters": "EntityTable<T, K> tells TypeScript/Dexie that the primary key is a single field named K of type string. The actual PK is the compound array [courseId+videoId]. This mismatch means db.progress.get('courseId-value') silently returns undefined when callers pass a single string — correct usage requires db.progress.get([courseId, videoId]). The sync engine in E92-S04/S05 will call operations on this table using a recordId: the backfill already iterates it correctly (filter-based, not index-based), but any upcoming syncableWrite that stores recordId as a string will produce a dead-letter entry for every progress write.",
+      "evidence": "schema.ts:81 — `progress: EntityTable<VideoProgress, 'courseId'>`. schema.ts:1393 — store declaration has `[courseId+videoId]` as the compound PK. Every prior migration line (e.g. 189, 251 etc.) declares `[courseId+videoId]` as PK. VideoProgress in data/types.ts:226 has no `id` field. Compare: contentProgress at schema.ts:86 uses Table<ContentProgress>."
+    },
+    {
+      "id": "C-02",
+      "title": "Double backfill on initial mount: INITIAL_SESSION event fires inside onAuthStateChange AND getSession() safety-net both call backfillUserId for the same session",
+      "severity": "P3",
+      "file": "src/app/hooks/useAuthLifecycle.ts",
+      "line": 53,
+      "confidence": 0.87,
+      "autofix_class": "guarded",
+      "owner": "auth",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Track whether backfill has been dispatched for a given userId in this mount cycle with a Set<string> ref, or rely on idempotency (current approach). The real risk is not correctness (backfill is idempotent) but two concurrent modify() transactions racing on the same table in the same DB open. Dexie serializes IDBTransactions so the second one will simply find 0 records to stamp — safe in practice, but the comment should acknowledge the double-dispatch rather than just noting idempotency.",
+      "why_it_matters": "On a normal page load with an existing Supabase session: (1) onAuthStateChange fires INITIAL_SESSION synchronously before getSession() resolves, triggering backfillUserId. (2) getSession() then resolves (also synchronously if session is in localStorage) and triggers a second backfillUserId for the same userId. These two async backfills run concurrently. IndexedDB transactions are serialized so there is no data corruption, but 38 * 2 = 76 Dexie filter passes run on every cold start. More importantly, if the component unmounts mid-backfill, `ignore = true` does NOT cancel the in-flight backfill (fire-and-forget detaches it from the React lifecycle). If the user signs out during an in-flight backfill started before unmount, that backfill will stamp records with the old userId.",
+      "evidence": "useAuthLifecycle.ts:27-61 — onAuthStateChange callback fires INITIAL_SESSION which calls backfillUserId at line 58. useAuthLifecycle.ts:69-79 — getSession() safety net calls backfillUserId again at line 76 for the same session when session.user is set. There is no deduplication between the two code paths. `ignore` flag (line 23) is only checked inside the onAuthStateChange callback and the getSession() then-handler, but the already-dispatched Promise is not cancelled (line 58 fire-and-forget)."
+    },
+    {
+      "id": "C-03",
+      "title": "Upgrade callback swallows all per-table errors including hard IDB errors, masking real migration failures",
+      "severity": "P2",
+      "file": "src/db/schema.ts",
+      "line": 1491,
+      "confidence": 0.83,
+      "autofix_class": "guarded",
+      "owner": "schema",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Distinguish between empty-table errors (acceptable) and hard IDB errors (schema mismatch, quota exceeded, constraint violation). The catch should only swallow errors whose message matches known benign patterns (e.g. 'Table not found') and rethrow others. Alternatively, check tx.table(tableName).count() first — if it returns 0, skip the modify call entirely, which removes the need for a catch at all.",
+      "why_it_matters": "The comment says 'Dexie will surface hard errors through the outer promise regardless.' This is not accurate. The `.catch(() => {})` with an empty handler is attached to the per-table Collection.modify() promise. If a hard error (QuotaExceededError, a genuine transaction abort, a constraint violation) occurs for one table, that error is silently swallowed. The outer Promise.all resolves successfully. The upgrade callback resolves without error. The user ends up with a partially migrated database — some tables have updatedAt stamped, others do not — with no indication anything went wrong. Subsequent sync operations will produce incorrect delta queries for the unstamped tables.",
+      "evidence": "schema.ts:1491-1496 — `.catch(() => { // Tolerate tables ... })` with empty body. This catch intercepts ALL rejection reasons, not just 'table is empty'. Promise.all at line 1481 receives a fulfilled promise from every table (catch converts rejection to resolution), so Promise.all always resolves."
+    },
+    {
+      "id": "C-04",
+      "title": "backfillUserId filter matches `userId === ''` but the modify sets non-empty userId — a concurrent backfill call can stamp the same record twice with different userIds if userId changes mid-iteration",
+      "severity": "P3",
+      "file": "src/lib/sync/backfill.ts",
+      "line": 92,
+      "confidence": 0.65,
+      "autofix_class": "guarded",
+      "owner": "sync",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "This is low-risk in the current single-user PWA model (one device, one userId). However, if two backfill calls race with different userIds (e.g. a switching-accounts scenario or the double-dispatch from C-02 across a sign-out+sign-in), records that already received userId from the first call will be re-evaluated by the second call's filter — but will correctly be excluded (userId !== '' && !== null && !== undefined). No corruption occurs in the current scenario. Document in the function JSDoc that concurrent calls with *different* userIds are unsafe (the second call must wait for the first to complete) to guard E92-S04.",
+      "why_it_matters": "The filter at line 94-97 runs in a Dexie read cursor and the modify at line 98 runs in the same IDB transaction, so Dexie guarantees atomicity per-record within a single modify() call. Two concurrent backfillUserId calls with the same userId are harmless due to idempotency. Two concurrent calls with different userIds could produce mixed userId values across the 38 tables — half stamped with userId-A and half with userId-B — if an account switch fires a new SIGNED_IN before the previous backfill completes.",
+      "evidence": "backfill.ts:87-113 — sequential for-loop over 38 tables, each with an independent IDB transaction (Dexie's modify uses its own transaction per call). useAuthLifecycle.ts:58 — fire-and-forget; no awaiting. If SIGNED_OUT fires mid-backfill and a new SIGNED_IN fires immediately (token refresh edge case), a second backfillUserId with a new userId starts concurrently with the existing one."
+    },
+    {
+      "id": "C-05",
+      "title": "SyncQueueEntry uses EntityTable<SyncQueueEntry, 'id'> but `id` is declared `++id` (auto-increment) and typed as `id?: number` — the EntityTable PK generic expects a field that is always present",
+      "severity": "P3",
+      "file": "src/db/schema.ts",
+      "line": 129,
+      "confidence": 0.78,
+      "autofix_class": "manual",
+      "owner": "schema",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Either (a) change the interface to `id: number` (non-optional) and add `as unknown as Parameters<...>` casts at insert sites, or (b) type the table as `Table<SyncQueueEntry, number>` which does not require the PK field to be present on insert. Option (b) is safer: `EntityTable<T, K>` expects that K-typed field is the PK and is always defined on read, but auto-increment fields are undefined at insert time. The current `id?: number` on the interface partially handles this but the EntityTable generic signals to TypeScript that `id` is always present after read, which is correct — the optional is only needed on insert.",
+      "why_it_matters": "This is a TypeScript type mismatch that won't cause a runtime bug for reads, but write code calling db.syncQueue.add({...}) without an `id` field will type-check cleanly today. If E92-S04 code tries db.syncQueue.get(someId) and receives `id: number` back, it will work. The risk is future code that calls db.syncQueue.put({id: undefined, ...}) — TypeScript won't catch it because `id?` is optional on both read and write paths. Dexie's auto-increment will assign an id correctly at runtime, but the type system provides weaker guarantees than intended.",
+      "evidence": "schema.ts:53-64 — SyncQueueEntry.id is `id?: number`. schema.ts:129 — `EntityTable<SyncQueueEntry, 'id'>`. schema.ts:1431 — store declaration is `++id, status, [tableName+recordId], createdAt`."
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "R-01",
+      "description": "SIGNED_OUT during in-flight backfill: the fire-and-forget backfill started by onAuthStateChange or getSession() cannot be cancelled. If the user signs out while backfill is running, the backfill completes and stamps records with the signed-out user's userId. On re-login with a different account, a fresh backfill correctly skips already-stamped records (they have a userId). This means the new user's records would be tagged with the previous user's userId until E92-S04's syncableWrite overwrites them on next write. The sync engine (E92-S05) would then upload those records to the wrong Supabase row.",
+      "severity": "P2",
+      "confirmed": false,
+      "note": "Risk materialises only if two different Supabase user accounts use the same device sequentially. Single-user PWA: no practical risk today. Becomes critical before multi-user/account-switching ships."
+    },
+    {
+      "id": "R-02",
+      "description": "The upgrade callback runs inside an IDB versionchange transaction, which cannot make network calls. The comment correctly notes that auth hydration is async and races with Dexie open. However, if db.open() is called before supabase.auth.onAuthStateChange() is registered (e.g., in a Web Worker or server-side context), the upgrade runs with no auth state at all — which is the intended design. The residual risk is that records created *between* version upgrade and backfillUserId executing (e.g., if the user creates a note during the first-run loading screen) will have `updatedAt` from migration but no `userId`. The next sign-in will backfill them correctly since backfill is idempotent.",
+      "severity": "P3",
+      "confirmed": true,
+      "note": "Accepted design decision per E92-S02 spec. Documented in schema.ts:1477-1480."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "T-01",
+      "description": "No test covers the SIGNED_OUT-during-in-flight-backfill scenario (R-01). A test that starts backfill, triggers a userId change, and verifies no record ends up with the stale userId would catch the account-switching data mixing risk.",
+      "file": "src/lib/sync/__tests__/backfill.test.ts"
+    },
+    {
+      "id": "T-02",
+      "description": "migration-v52-sync.test.ts does not test that a hard IDB error during the upgrade callback (e.g., a table modify throwing) causes the migration to fail visibly rather than silently succeeding with partial updatedAt stamps. The current test only checks successful migration.",
+      "file": "src/db/__tests__/migration-v52-sync.test.ts"
+    },
+    {
+      "id": "T-03",
+      "description": "No test exercises the compound-PK progress table through backfillUserId — all backfill tests use simple-PK tables (notes, bookmarks, flashcards). A test adding a record to db.progress and verifying it gets stamped would catch any compound-key-specific quirk in the filter path.",
+      "file": "src/lib/sync/__tests__/backfill.test.ts"
+    }
+  ]
+}

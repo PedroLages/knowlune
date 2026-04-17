@@ -1,0 +1,101 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "id": "M-01",
+      "title": "SYNCABLE_TABLES list is triplicated without a shared constant",
+      "severity": "medium",
+      "confidence": 0.88,
+      "category": "dead_or_duplicated_code",
+      "files": [
+        "src/db/schema.ts:1436-1475",
+        "src/lib/sync/backfill.ts:20-59",
+        "src/db/__tests__/migration-v52-sync.test.ts:66-105"
+      ],
+      "observation": "The 38-table syncable list appears three times: as SYNCABLE_TABLES_V52 (local const) inside the v52 upgrade callback, as the exported SYNCABLE_TABLES const in backfill.ts, and as an inline literal array in migration-v52-sync.test.ts. All three must be kept in sync by hand. A divergence — for example, a new table added to backfill.ts but forgotten in the test list — would not be caught by the compiler.",
+      "recommendation": "Export SYNCABLE_TABLES from backfill.ts (it already is exported). Import it into migration-v52-sync.test.ts instead of re-declaring the list. The schema.ts upgrade callback can stay local (SYNCABLE_TABLES_V52) because it cannot import from backfill.ts without creating a circular dependency (schema.ts → backfill.ts → schema.ts via db import). A comment in the upgrade callback cross-referencing backfill.ts's list would reduce drift risk at minimal cost. The test duplication is the highest-risk copy because it silently diverges.",
+      "impact": "A table added to backfill.ts but not the test array would cause the test to give false confidence that all 38 tables have the compound index, while the real count is 39."
+    },
+    {
+      "id": "M-02",
+      "title": "SyncQueueEntry and SyncMetadataEntry declared in schema.ts where sync consumers will need them",
+      "severity": "low",
+      "confidence": 0.72,
+      "category": "premature_placement",
+      "files": [
+        "src/db/schema.ts:53-74"
+      ],
+      "observation": "SyncQueueEntry and SyncMetadataEntry are defined in src/db/schema.ts, which is a Dexie wiring file. Both types describe the data contract for the sync engine (E92-S04, S05, S06). Currently they are only consumed by ElearningDatabase (same file). When the upload engine, syncableWrite, and tableRegistry land in E92-S03/S04/S05, they will need to import these types. Importing from schema.ts couples future sync modules to the Dexie wiring layer.",
+      "recommendation": "Move SyncQueueEntry and SyncMetadataEntry to src/lib/sync/types.ts (create it) and re-export from schema.ts to preserve the current public surface. This is a low-disruption change that makes the eventual import graph cleaner for E92-S03 through S06. The TODO in backfill.ts's module-level comment already anticipates a types file for the sync engine.",
+      "impact": "If deferred until E92-S04, the import refactor will touch more files at once. Doing it now while the only consumer is schema.ts keeps the change minimal."
+    },
+    {
+      "id": "M-03",
+      "title": "Two identical fire-and-forget backfillUserId call sites in useAuthLifecycle",
+      "severity": "low",
+      "confidence": 0.75,
+      "category": "duplication",
+      "files": [
+        "src/app/hooks/useAuthLifecycle.ts:53-61",
+        "src/app/hooks/useAuthLifecycle.ts:73-79"
+      ],
+      "observation": "backfillUserId is called with the same shape (fire-and-forget, console.error on rejection, silent-catch-ok comment) in two places: inside the onAuthStateChange handler for SIGNED_IN/INITIAL_SESSION, and in the getSession() safety-net block. The two blocks are structurally identical — same function, same error handling, same comment. If the call contract changes (e.g., logging destination, additional argument), both sites must be updated.",
+      "recommendation": "Extract the fire-and-forget wrapper into a local helper inside the hook: `const fireBackfill = (uid: string) => backfillUserId(uid).catch(err => console.error('[useAuthLifecycle] backfillUserId failed:', err))`. This removes the duplication while keeping the two call sites explicit. The architectural reason for two call sites (the getSession race) is sound and should be preserved — only the repetition of the wrapper needs eliminating.",
+      "impact": "Low — idempotency makes a double call harmless. Risk is future maintenance drift if the error path changes."
+    },
+    {
+      "id": "M-04",
+      "title": "Stale story reference in upgrade callback comment (E92-S08 does not match the hook already in this diff)",
+      "severity": "low",
+      "confidence": 0.82,
+      "category": "naming_obscures_intent",
+      "files": [
+        "src/db/schema.ts:1385"
+      ],
+      "observation": "The upgrade callback comment says 'userId backfill runs post-open from src/lib/sync/backfill.ts after auth hydration (see E92-S08 for the sign-in re-invocation hook)'. The backfill call site is already implemented in useAuthLifecycle.ts as part of this very diff (E92-S02). There is no E92-S08 story that will add a new hook; the hook is here now. The comment will mislead the next reader into looking for a story that either doesn't exist yet or will do something different from what the comment implies.",
+      "recommendation": "Replace 'see E92-S08 for the sign-in re-invocation hook' with 'see src/app/hooks/useAuthLifecycle.ts' or simply remove the forward reference. If E92-S08 genuinely adds a separate mechanism, update the comment at that point.",
+      "impact": "Navigation cost for the next developer who follows the E92-S08 breadcrumb and finds it absent or unrelated."
+    },
+    {
+      "id": "M-05",
+      "title": "SYNCABLE_TABLES_V52 inside the upgrade callback is a local copy with no cross-reference to the exported list",
+      "severity": "low",
+      "confidence": 0.70,
+      "category": "duplication",
+      "files": [
+        "src/db/schema.ts:1436-1475"
+      ],
+      "observation": "The upgrade callback declares SYNCABLE_TABLES_V52 as a local const. It cannot import from backfill.ts (circular dependency), but it has no comment linking it to SYNCABLE_TABLES in backfill.ts. A developer adding a table to backfill.ts in a future story may not know the upgrade callback has its own copy, leaving the migration's updatedAt backfill incomplete for the new table.",
+      "recommendation": "Add a single-line comment at SYNCABLE_TABLES_V52: `// Must match SYNCABLE_TABLES in src/lib/sync/backfill.ts (cannot import — circular dep via @/db)`. This is a documentation change, not a code change. The TODO(E92-S03) in backfill.ts already acknowledges the convergence plan; the upgrade callback should point there too.",
+      "impact": "Silent divergence risk when future stories add new syncable tables."
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "RR-01",
+      "description": "console.error is the only error surface for per-table backfill failures. The BackfillUserIdResult.tablesFailed array is returned to the caller but the only caller (useAuthLifecycle) discards it — the .catch() only fires on an unexpected outer rejection. If 5 tables fail silently, the user sees nothing and the sync engine will eventually encounter missing userId fields. The inline comment explains the self-healing rationale, but there is no observability path to detect systematic failure.",
+      "likelihood": "low",
+      "mitigation_hint": "When the sync engine (E92-S05) lands, consider asserting tablesFailed.length === 0 in an integration test or emitting a Sentry breadcrumb for non-empty tablesFailed."
+    },
+    {
+      "id": "RR-02",
+      "description": "The .catch(() => {}) on SYNCABLE_TABLES_V52.map in the upgrade callback silently swallows per-table errors. The inline comment explains the rationale (empty tables are tolerated). However, the suppression also hides schema mismatch errors that Dexie surfaces via the table's toCollection(). If a future version's schema change leaves a table in an unexpected state, the migration would silently skip stamping updatedAt on it.",
+      "likelihood": "very_low",
+      "mitigation_hint": "Consider narrowing the catch to only suppress 'no such table' / empty-table errors and re-throw others. This is a judgment call — the current approach is documented and the risk is low given Dexie's outer error handling."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "TG-01",
+      "description": "migration-v52-sync.test.ts hard-codes the 38-table syncable list inline rather than importing SYNCABLE_TABLES from backfill.ts. If a table is added to backfill.ts but the test list is not updated, the test will still pass against 38 tables while backfill operates on 39. No test currently asserts that the test's list and SYNCABLE_TABLES have the same length.",
+      "affected_file": "src/db/__tests__/migration-v52-sync.test.ts:66-105",
+      "fix": "Import SYNCABLE_TABLES from backfill.ts and use it as the loop input. If the circular-dependency concern applies to tests too, add a length-equality assertion: expect(syncableTables.length).toBe(SYNCABLE_TABLES.length)."
+    },
+    {
+      "id": "TG-02",
+      "description": "No test exercises the path where getSession() and onAuthStateChange both fire for the same session (the race condition that justifies the second backfillUserId call site). The hook is integration-tested implicitly but the two-call-site behavior is untested — a future refactor that deduplicates the sites could silently drop the getSession path.",
+      "affected_file": "src/app/hooks/useAuthLifecycle.ts:69-80",
+      "fix": "Add a test that simulates getSession returning a session without a preceding INITIAL_SESSION event and asserts backfillUserId is invoked."
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "reviewer": "kieran-typescript",
+  "findings": [
+    {
+      "id": "KT-01",
+      "severity": "medium",
+      "confidence": 0.82,
+      "file": "src/db/schema.ts",
+      "lines": "53-64",
+      "title": "SyncQueueEntry.payload typed as unknown instead of Record<string, unknown>",
+      "description": "The `payload` field is `unknown`, which means any consumer reading it (the upload engine in E92-S05) must either cast blindly or do expensive runtime narrowing. The field represents a serialized Dexie record — an object, never a scalar or array. Widening to `unknown` loses that structural guarantee. `Record<string, unknown>` is still loose but encodes 'this is a serializable object', catches accidental scalar or array assignments at write time, and makes the upload engine's narrowing cheaper — one less null/primitive check branch.",
+      "recommendation": "Change `payload: unknown` to `payload: Record<string, unknown>`. All write sites in E92-S04 will construct records from Dexie reads which are objects, so this tightening has zero practical runtime cost and improves checker coverage for future consumers.",
+      "code_reference": "payload: unknown  // SyncQueueEntry line 58"
+    },
+    {
+      "id": "KT-02",
+      "severity": "low",
+      "confidence": 0.76,
+      "file": "src/lib/sync/backfill.ts",
+      "lines": "77",
+      "title": "backfillUserId accepts undefined where callers only ever pass string",
+      "description": "The signature is `userId: string | null | undefined`. Both call sites in `useAuthLifecycle.ts` pass `session.user.id` which is typed `string` (Supabase's `User.id` is non-optional). The `| undefined` arm exists only to let the test file call `backfillUserId(undefined)` directly. Accepting `undefined` on the public API is a looser contract than the real invariant needs — it trains future callers to think passing undefined is a normal case. The early-return guard on `!userId` handles it correctly, but the signal-to-noise ratio on the type is poor.",
+      "recommendation": "Narrow to `userId: string | null`. In the test, change the `backfillUserId(undefined)` call to `backfillUserId(null)` — the null branch exercises the same early-return path. The empty-string guard covers the remaining falsy case.",
+      "code_reference": "export async function backfillUserId(userId: string | null | undefined)  // line 77"
+    },
+    {
+      "id": "KT-03",
+      "severity": "low",
+      "confidence": 0.72,
+      "file": "src/db/index.ts",
+      "lines": "1-4",
+      "title": "SyncQueueEntry and SyncMetadataEntry not re-exported from the db barrel",
+      "description": "`db/index.ts` re-exports `db`, `ElearningDatabase`, `CHECKPOINT_VERSION`, `CHECKPOINT_SCHEMA`, `createCheckpointDb`, and `declareLegacyMigrations` but not the two new sync types. E92-S04 and E92-S05 will need `SyncQueueEntry`; if they import from `@/db/schema` directly (as 58 other source files already do) the omission is harmless, but it deepens the existing inconsistency in the import surface.",
+      "recommendation": "Add `export type { SyncQueueEntry, SyncMetadataEntry } from './schema'` to `src/db/index.ts`. Low urgency — can be batched with E92-S04 when the first real consumer appears.",
+      "code_reference": "src/db/index.ts lines 1-4"
+    },
+    {
+      "id": "KT-04",
+      "severity": "low",
+      "confidence": 0.68,
+      "file": "src/app/hooks/useAuthLifecycle.ts",
+      "lines": "52-61, 73-79",
+      "title": "Concurrent double invocation of backfillUserId on initial page load is undocumented",
+      "description": "On a normal app startup with a valid session, both the `onAuthStateChange` subscription (firing `INITIAL_SESSION`) and the `getSession()` safety-net call `backfillUserId(session.user.id)` nearly simultaneously. Backfill is idempotent so correctness is preserved; in steady state both traversals are cheap (no unmatched records). But on first sign-in with many existing records, two full 38-table `.filter().modify()` scans run concurrently against IndexedDB with no coordination. There is no comment acknowledging this. The pre-existing `hydrateSettingsFromSupabase` has the same double-fire but is synchronous and O(1). Backfill is async and O(N).",
+      "recommendation": "Add a comment at both call sites acknowledging the concurrent double-fire and why idempotency + cheap steady-state cost makes it acceptable. A deduplication flag (e.g. an in-module `Set<string>` of in-flight user IDs) belongs in E92-S08 when the sign-in hook is introduced.",
+      "code_reference": "useAuthLifecycle.ts lines 53-61 and 73-79"
+    },
+    {
+      "id": "KT-05",
+      "severity": "low",
+      "confidence": 0.65,
+      "file": "src/lib/sync/__tests__/backfill.test.ts",
+      "lines": "186-203",
+      "title": "Failure-resilience test mocks at wrong level relative to the actual error path",
+      "description": "`vi.spyOn(db, 'table')` throws synchronously when `name === 'notes'`. The `try/catch` in backfill's for-loop catches this correctly. However, the real per-table failure mode is an async rejection from `.filter()` or `.modify()`, not a synchronous throw from `db.table()`. The current mock exercises a structurally different error path. The test passes and the intent is demonstrated, but a refactor that hoists `db.table()` outside the try block would silently break the test's stated coverage. The cast `(Dexie.prototype.table.call(db, name) as unknown) as ReturnType<typeof db.table>` is also notable — it works, but it's a double-cast through `unknown` on a non-test code path.",
+      "recommendation": "Consider a companion variant that stubs the collection's `.filter` method to return a rejected promise, or add an inline comment that the synchronous-throw mock is an intentional proxy for async rejection given the current loop structure.",
+      "code_reference": "backfill.test.ts lines 187-193"
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "RR-01",
+      "description": "SYNCABLE_TABLES in backfill.ts and SYNCABLE_TABLES_V52 inside the schema upgrade callback are two independent string-literal arrays with identical content. Drift is a silent bug — a table added to one but not the other will silently lose either the `updatedAt` migration stamp or the userId backfill. Both are typed `readonly string[]` / `as const` with no cross-reference check. The TODO(E92-S03) comment plans to unify them via the table registry.",
+      "mitigation": "Accepted as bounded tech debt; E92-S03 will unify. No action needed in this story."
+    },
+    {
+      "id": "RR-02",
+      "description": "The v52 upgrade callback swallows per-table `.modify()` failures with a bare `.catch(() => {})`. If a table truly fails (schema mismatch, corrupted store), the migration appears to succeed but records in that table have no `updatedAt` stamp. The recovery path is userId backfill on next sign-in, which is documented. The risk is that silent swallowing could mask real schema bugs during development without any log output.",
+      "mitigation": "At minimum, log the caught error (even at debug level) so it is visible in development. The current swallow is completely silent."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "TG-01",
+      "description": "No test covers concurrent `backfillUserId` calls for the same userId (two overlapping promises). The idempotency test runs two calls sequentially. A concurrent test would detect any IndexedDB transaction contention.",
+      "priority": "low"
+    },
+    {
+      "id": "TG-02",
+      "description": "The `asSyncable` helper in backfill.test.ts casts `T | undefined` through an intersection type without narrowing (`record as (T & Syncable) | undefined`). This is sound for test-only reading of runtime fields not yet on the TypeScript interface, but if the Note interface gains explicit `userId`/`updatedAt` fields in E92-S03/S04 the cast will become redundant noise and the type will appear to narrow less than it actually does. Track for removal when SyncableFields mixin lands.",
+      "priority": "low"
+    }
+  ]
+}
