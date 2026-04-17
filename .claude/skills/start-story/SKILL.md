@@ -3,6 +3,7 @@ name: start-story
 description: Use when beginning work on a Knowlune story, when user says "start story E##-S##", or when picking the next story from sprint-status.yaml. Creates branch, story file, suggests ATDD tests, gathers context, enters plan mode.
 argument-hint: "[E##-S##]"
 disable-model-invocation: true
+effort: medium
 ---
 
 # Start Story

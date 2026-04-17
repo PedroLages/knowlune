@@ -4,6 +4,7 @@ description: Use when executing an entire epic end-to-end — all stories from s
 color: red
 memory: project
 background: true
+effort: medium
 ---
 
 # Epic Orchestrator

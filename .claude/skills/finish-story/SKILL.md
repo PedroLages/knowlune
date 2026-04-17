@@ -3,6 +3,7 @@ name: finish-story
 description: Use when a Knowlune story is ready to ship. Validates, creates PR. Auto-runs reviews if /review-story was not already run. Use after implementing and optionally reviewing a story.
 argument-hint: "[E##-S##]"
 disable-model-invocation: true
+effort: medium
 ---
 
 # Finish Story

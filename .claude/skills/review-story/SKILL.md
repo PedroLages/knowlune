@@ -3,6 +3,7 @@ name: review-story
 description: Use when running quality gates on a Knowlune story before shipping. Runs build/lint/tests, dispatches design review (Playwright MCP) and adversarial code review agents, generates consolidated report. Use after implementing a story to catch issues before /finish-story.
 argument-hint: "[E##-S##]"
 disable-model-invocation: true
+effort: high
 ---
 
 # Review Story
