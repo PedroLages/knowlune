@@ -1,6 +1,6 @@
 {
-  "captured_at": "2026-04-12",
-  "commit": "7814945",
+  "captured_at": "2026-04-17",
+  "commit": "68239d6",
   "bundle": {
     "total_js_bytes": 9728000,
     "total_css_bytes": 288000,
@@ -17,18 +17,18 @@
   },
   "page_metrics": {
     "/": {
-      "ttfb": 2,
-      "dom_interactive": 14,
-      "dom_complete": 131,
-      "load_complete": 131,
-      "fcp": 221,
+      "ttfb": 1,
+      "dom_interactive": 33,
+      "dom_complete": 226,
+      "load_complete": 226,
+      "fcp": 372,
       "lcp": null,
       "cls": 0,
       "tbt": 0,
       "resource_count": 250,
       "js_resource_count": 249,
       "css_resource_count": 1,
-      "total_transfer_bytes": 60300,
+      "total_transfer_bytes": 61800,
       "samples": 3,
       "largest_resources": [
         {
@@ -189,21 +189,17 @@
     }
   },
   "bundle_sizes": {
-    "Library": {
-      "raw": 214978,
-      "file": "Library-qhF6Bu2n.js"
-    },
     "index_js": {
-      "raw": 830605,
-      "file": "index-DLjXZadg.js"
+      "raw": 843050,
+      "file": "index-D6aS1cIz.js"
+    },
+    "Library": {
+      "raw": 232290,
+      "file": "Library-CDfU-rJa.js"
     },
     "index_css": {
       "raw": 277205,
       "file": "index-D7NvZWye.css"
-    },
-    "dexie": {
-      "raw": 96417,
-      "file": "dexie-D8hooWrS.js"
     },
     "BookReader": {
       "raw": 73163,
