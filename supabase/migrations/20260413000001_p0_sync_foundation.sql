@@ -61,4 +61,42 @@ CREATE POLICY "Users access own content_progress"
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+
+-- ─── Unit 3: study_sessions ─────────────────────────────────────────
+-- Append-only log of study sessions. Immutable once written — no UPDATE/DELETE policies.
+-- No `updated_at` column; E92-S06 uses `created_at` as the download cursor.
+CREATE TABLE IF NOT EXISTS public.study_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  started_at TIMESTAMPTZ NOT NULL,
+  duration_seconds INTEGER NOT NULL DEFAULT 0 CHECK (duration_seconds >= 0),
+  idle_seconds INTEGER NOT NULL DEFAULT 0 CHECK (idle_seconds >= 0),
+  interaction_count INTEGER NOT NULL DEFAULT 0 CHECK (interaction_count >= 0),
+  breaks INTEGER NOT NULL DEFAULT 0 CHECK (breaks >= 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Streak calculation queries (E92-S05 `calculate_streak`).
+CREATE INDEX IF NOT EXISTS idx_study_sessions_user_started
+  ON public.study_sessions (user_id, started_at);
+
+-- Incremental download cursor (E92-S06).
+CREATE INDEX IF NOT EXISTS idx_study_sessions_user_created
+  ON public.study_sessions (user_id, created_at);
+
+ALTER TABLE public.study_sessions ENABLE ROW LEVEL SECURITY;
+
+-- INSERT-only RLS: two policies, no UPDATE/DELETE policies (immutable log).
+DROP POLICY IF EXISTS "insert_own" ON public.study_sessions;
+CREATE POLICY "insert_own"
+  ON public.study_sessions
+  FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "select_own" ON public.study_sessions;
+CREATE POLICY "select_own"
+  ON public.study_sessions
+  FOR SELECT
+  USING (auth.uid() = user_id);
+
 COMMIT;
