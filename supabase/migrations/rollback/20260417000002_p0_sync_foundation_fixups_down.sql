@@ -1,0 +1,2 @@
+-- Stub — per-migration rollback is not supported for the E92-S01 P0 sync foundation.
+-- See p0_sync_foundation_full_down.sql for the combined teardown.

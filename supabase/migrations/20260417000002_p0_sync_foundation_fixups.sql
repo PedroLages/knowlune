@@ -165,11 +165,4 @@ END;
 $$;
 
 
--- ─── Fix 6 (NIT, documented): vector / supabase_vault extension schema ──────
--- These were created without `WITH SCHEMA extensions` in 20260413000001. Moving them now
--- would require DROP + CREATE (destructive — vector would drop embedding columns in future
--- tables if any existed). Since E93 hasn't shipped yet we leave them be and accept the
--- inconsistency. Future work: if a fresh environment is ever set up, prefer recreating
--- with `WITH SCHEMA extensions`. Tracked as follow-up nit.
-
 COMMIT;
