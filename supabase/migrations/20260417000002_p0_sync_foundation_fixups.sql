@@ -49,28 +49,9 @@ END $$;
 
 -- ─── Fix 9: _status_rank NULL/unknown guard ─────────────────────────────────
 -- Original silently returned 0 for NULL or unknown input — hides bugs. Raise instead.
--- NOTE: function becomes STRICT to auto-raise on NULL input (NULL propagation), but we
--- still handle unknown non-NULL values explicitly.
-CREATE OR REPLACE FUNCTION public._status_rank(s TEXT)
-RETURNS INTEGER
-LANGUAGE plpgsql
-IMMUTABLE
-STRICT
-SET search_path = public, pg_temp
-AS $$
-BEGIN
-  RETURN CASE s
-    WHEN 'completed' THEN 3
-    WHEN 'in_progress' THEN 2
-    WHEN 'not_started' THEN 1
-    ELSE NULL
-  END;
-EXCEPTION WHEN OTHERS THEN
-  RAISE EXCEPTION 'unknown status: %', s;
-END;
-$$;
-
--- Re-implement with explicit raise for unknown non-NULL (STRICT handles NULL):
+-- STRICT handles NULL via NULL propagation; unknown non-NULL raises explicitly.
+-- Statuses are closed: new values must be added here before client use. Forward-compat
+-- concern tracked in docs/known-issues.yaml (raise vs. soft-fail is intentional for P0).
 CREATE OR REPLACE FUNCTION public._status_rank(s TEXT)
 RETURNS INTEGER
 LANGUAGE plpgsql

@@ -843,3 +843,39 @@ issues:
     scheduled_for: cleanup-epic
     fixed_by: null
     notes: "P2 gap from testarch-trace. MutationObserver theme-change path manually verified in NFR audit. Writing a test requires mocking MutationObserver in Playwright — disproportionate effort for LOW risk. Deferred from E62 post-epic fix pass."
+
+  - id: KI-069
+    type: architecture
+    summary: "_status_rank raises on unknown status — may need soft-fail (return 0) when future statuses are added"
+    file: "supabase/migrations/20260417000002_p0_sync_foundation_fixups.sql:55"
+    severity: medium
+    discovered_by: E92-S01
+    discovered_on: 2026-04-17
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "GLM R3 cross-model review flagged forward-compat risk. Current behavior: closed enum {completed, in_progress, not_started}, raise on anything else. If E92-S02+ adds new statuses, clients sending them will crash the upsert transaction. Decision point: confirm closed-enum intent (keep RAISE, add new values here first) or flip to soft-fail (RETURN 0). Deferring until a concrete new-status story forces the decision."
+
+  - id: KI-070
+    type: tech-debt
+    summary: "vector / supabase_vault extension schema placement not tracked as follow-up"
+    file: "supabase/migrations/20260417000002_p0_sync_foundation_fixups.sql:187-192"
+    severity: low
+    discovered_by: E92-S01
+    discovered_on: 2026-04-17
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Extensions created without WITH SCHEMA extensions in original migration. Inconsistency documented in fixup but not tracked here. R3 code-review nit."
+
+  - id: KI-071
+    type: test
+    summary: "RLS isolation test lacks auth.uid() sanity assertion inside transaction"
+    file: "supabase/tests/e92-s01-verify.sql"
+    severity: low
+    discovered_by: E92-S01
+    discovered_on: 2026-04-17
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "RLS test seeds userB and checks cross-user isolation, but doesn't assert auth.uid() returns the expected UUID inside the SET LOCAL ROLE block. If a future refactor broke the set_config JWT injection, the RLS test would pass vacuously (0 rows because JWT is null, not because RLS is enforcing). R3 code-review nit."
