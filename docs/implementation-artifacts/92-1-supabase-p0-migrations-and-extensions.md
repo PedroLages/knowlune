@@ -1,6 +1,6 @@
 ---
 story_id: E92-S01
-story_name: "Supabase P0 Migrations and Extensions"
+story_name: 'Supabase P0 Migrations and Extensions'
 status: ready-for-dev
 started: 2026-04-17
 completed:
@@ -78,7 +78,7 @@ Standard checklist applies — but note these domain-specific items for this sto
 - [ ] `content_progress` and `video_progress` have **no** `moddatetime` trigger (verified via `pg_trigger`)
 - [ ] Upsert functions are `SECURITY INVOKER` (not `DEFINER`) so RLS applies to the caller
 - [ ] All DDL wrapped in a single `BEGIN; ... COMMIT;` transaction
-- [ ] Header comment in migration file explains *why* progress tables omit `moddatetime` (LWW + incremental sync)
+- [ ] Header comment in migration file explains _why_ progress tables omit `moddatetime` (LWW + incremental sync)
 - [ ] Verified on titan after applying (extensions, schema, upsert behavior)
 
 ## Design Review Feedback

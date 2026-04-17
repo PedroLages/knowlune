@@ -1,5 +1,5 @@
 ---
-title: "feat: Multi-Provider Metadata Search in Book Editor"
+title: 'feat: Multi-Provider Metadata Search in Book Editor'
 type: feat
 status: active
 date: 2026-04-15
@@ -87,7 +87,7 @@ Knowlune's audiobook metadata is particularly weak because Open Library has poor
 
 ## High-Level Technical Design
 
-> *This illustrates the intended approach and is directional guidance for review, not implementation specification. The implementing agent should treat it as context, not code to reproduce.*
+> _This illustrates the intended approach and is directional guidance for review, not implementation specification. The implementing agent should treat it as context, not code to reproduce._
 
 ```text
 User clicks "Search Covers & Metadata"
@@ -409,14 +409,14 @@ User clicks "Search Covers & Metadata"
 
 ## Risks & Dependencies
 
-| Risk | Mitigation |
-|------|------------|
-| Audible catalog API blocks browser CORS | Test first; Express proxy route ready as Unit 8 (conditional) |
-| Audnexus API blocks browser CORS | Same — test first, proxy if needed |
-| Google Books keyless rate limit (1,000/day) | Sufficient for personal PWA. Can add API key later if needed |
+| Risk                                            | Mitigation                                                                                                                                              |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Audible catalog API blocks browser CORS         | Test first; Express proxy route ready as Unit 8 (conditional)                                                                                           |
+| Audnexus API blocks browser CORS                | Same — test first, proxy if needed                                                                                                                      |
+| Google Books keyless rate limit (1,000/day)     | Sufficient for personal PWA. Can add API key later if needed                                                                                            |
 | Audible catalog API is undocumented/semi-public | May require marketplace headers or specific user-agent. If unreliable, Audnexus path degrades gracefully — books without ASIN simply skip this provider |
-| External API response format changes | Services return normalized types; only the individual service needs updating |
-| Dialog size with search grid | Grid is collapsible/expandable; scrollable within existing `max-h-[60vh]` container |
+| External API response format changes            | Services return normalized types; only the individual service needs updating                                                                            |
+| Dialog size with search grid                    | Grid is collapsible/expandable; scrollable within existing `max-h-[60vh]` container                                                                     |
 
 ## Sources & References
 

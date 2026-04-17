@@ -1,5 +1,5 @@
 ---
-title: "feat: E92-S01 — Supabase P0 Migrations and Extensions"
+title: 'feat: E92-S01 — Supabase P0 Migrations and Extensions'
 type: feat
 status: active
 date: 2026-04-17
@@ -72,13 +72,13 @@ Knowlune is offline-first (Dexie/IndexedDB). Supabase currently handles only aut
 
 Target: self-hosted Supabase on Unraid (`titan.local`), container `supabase-db` on image `supabase/postgres:15.8.1.085`. Verified via `ssh titan` before planning:
 
-| Extension | Status on titan |
-|---|---|
-| `moddatetime` 1.0 | Available, not installed — this migration installs it |
-| `pgcrypto` 1.3 | **Already installed** in schema `extensions` — `CREATE EXTENSION IF NOT EXISTS` is a no-op |
-| `vector` 0.8.0 | Available, not installed — this migration installs it |
-| `supabase_vault` 0.3.1 | **Already installed** in schema `vault` — `CREATE EXTENSION IF NOT EXISTS` is a no-op |
-| `pgsodium` 3.1.8 | Available (not used — `supabase_vault` is preinstalled and is the correct abstraction) |
+| Extension              | Status on titan                                                                            |
+| ---------------------- | ------------------------------------------------------------------------------------------ |
+| `moddatetime` 1.0      | Available, not installed — this migration installs it                                      |
+| `pgcrypto` 1.3         | **Already installed** in schema `extensions` — `CREATE EXTENSION IF NOT EXISTS` is a no-op |
+| `vector` 0.8.0         | Available, not installed — this migration installs it                                      |
+| `supabase_vault` 0.3.1 | **Already installed** in schema `vault` — `CREATE EXTENSION IF NOT EXISTS` is a no-op      |
+| `pgsodium` 3.1.8       | Available (not used — `supabase_vault` is preinstalled and is the correct abstraction)     |
 
 Postgres: 15.8. pgvector (needs ≥ 13) and Vault (needs ≥ 15) both supported.
 
@@ -119,9 +119,11 @@ SELECT version();
 **Dependencies:** None
 
 **Files:**
+
 - Create: `supabase/migrations/20260413000001_p0_sync_foundation.sql`
 
 **Approach:**
+
 - Open the migration file with a header comment identifying E92-S01
 - `CREATE EXTENSION IF NOT EXISTS moddatetime WITH SCHEMA extensions;`
 - `CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;`
@@ -130,13 +132,16 @@ SELECT version();
 - All use `IF NOT EXISTS` for idempotency
 
 **Patterns to follow:**
+
 - `supabase/migrations/001_entitlements.sql` — header comment format
 
 **Test scenarios:**
+
 - Happy path: `SELECT extname FROM pg_extension WHERE extname IN ('moddatetime','pgcrypto','vector','supabase_vault')` returns 4 rows after migration
 - Idempotency: Re-running the migration section does not throw
 
 **Verification:**
+
 - `SELECT extname FROM pg_extension` lists all 4 extensions
 
 ---
@@ -150,9 +155,11 @@ SELECT version();
 **Dependencies:** Unit 1 (extensions installed)
 
 **Files:**
+
 - Modify: `supabase/migrations/20260413000001_p0_sync_foundation.sql`
 
 **Approach:**
+
 - Columns: `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`, `user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE`, `content_id TEXT NOT NULL`, `content_type TEXT NOT NULL CHECK (content_type IN ('course','video','pdf','book'))`, `status TEXT NOT NULL DEFAULT 'not_started' CHECK (status IN ('not_started','in_progress','completed'))`, `progress_pct INTEGER NOT NULL DEFAULT 0 CHECK (progress_pct BETWEEN 0 AND 100)`, `completed_at TIMESTAMPTZ`, `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`, `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`
 - Unique constraint on `(user_id, content_id, content_type)` — one row per user per content item
 - Index on `(user_id, updated_at)` — required by E92-S06 incremental download query (`WHERE user_id = ? AND updated_at >= lastSyncTimestamp`)
@@ -161,10 +168,12 @@ SELECT version();
 - **No `moddatetime` trigger** — `updated_at` is set by `upsert_content_progress()` using the client's timestamp (see Unit 5). Direct UPDATEs (future admin/migration paths) must set `updated_at = now()` explicitly.
 
 **Patterns to follow:**
+
 - `docs/plans/2026-03-31-supabase-data-sync-design.md` §"Common Column Pattern"
 - `docs/plans/2026-03-31-supabase-data-sync-design.md` §"RLS Policy Templates" — standard CRUD
 
 **Test scenarios:**
+
 - Happy path: `INSERT INTO content_progress (...) VALUES (...)` with valid user context succeeds
 - RLS isolation: session as userA cannot `SELECT` rows owned by userB (verify by setting `request.jwt.claims` to each user and querying)
 - CHECK constraints: inserting `status = 'bogus'` or `progress_pct = 150` or `content_type = 'xyz'` fails with constraint violation
@@ -173,6 +182,7 @@ SELECT version();
 - No trigger side-effect: direct `UPDATE content_progress SET progress_pct = 50` does NOT auto-advance `updated_at` (confirms absence of `moddatetime` — critical for upsert function correctness)
 
 **Verification:**
+
 - `\d content_progress` shows all columns, unique constraint, CHECK constraints, and the `(user_id, updated_at)` index
 - `\dy content_progress` (or `SELECT tgname FROM pg_trigger WHERE tgrelid = 'content_progress'::regclass AND NOT tgisinternal`) shows **zero** user triggers
 - RLS test query returns 0 rows for cross-user access
@@ -188,9 +198,11 @@ SELECT version();
 **Dependencies:** Unit 1
 
 **Files:**
+
 - Modify: `supabase/migrations/20260413000001_p0_sync_foundation.sql`
 
 **Approach:**
+
 - Columns: `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`, `user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE`, `started_at TIMESTAMPTZ NOT NULL`, `duration_seconds INTEGER NOT NULL DEFAULT 0 CHECK (duration_seconds >= 0)`, `idle_seconds INTEGER NOT NULL DEFAULT 0 CHECK (idle_seconds >= 0)`, `interaction_count INTEGER NOT NULL DEFAULT 0 CHECK (interaction_count >= 0)`, `breaks INTEGER NOT NULL DEFAULT 0 CHECK (breaks >= 0)`, `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
 - No `updated_at` column — sessions are immutable records once written (E92-S06 downloads `study_sessions` by `created_at` cursor instead)
 - `ALTER TABLE ENABLE ROW LEVEL SECURITY`
@@ -203,9 +215,11 @@ SELECT version();
 - Index on `(user_id, created_at)` for E92-S06 incremental download cursor
 
 **Patterns to follow:**
+
 - `docs/plans/2026-03-31-supabase-data-sync-design.md` §"RLS Policy Templates" — Immutable INSERT+SELECT template
 
 **Test scenarios:**
+
 - Happy path: `INSERT INTO study_sessions (user_id, started_at, duration_seconds, ...) VALUES (...)` succeeds for authenticated user
 - RLS isolation: authenticated user cannot SELECT sessions belonging to another user
 - No UPDATE: `UPDATE study_sessions SET duration_seconds = 999 WHERE ...` fails (no policy)
@@ -213,6 +227,7 @@ SELECT version();
 - Idempotency: `CREATE TABLE IF NOT EXISTS` does not error
 
 **Verification:**
+
 - `SELECT policyname FROM pg_policies WHERE tablename = 'study_sessions'` shows exactly 2 policies (insert_own, select_own)
 - UPDATE and DELETE attempts from `authenticated` role are rejected
 
@@ -227,9 +242,11 @@ SELECT version();
 **Dependencies:** Unit 1
 
 **Files:**
+
 - Modify: `supabase/migrations/20260413000001_p0_sync_foundation.sql`
 
 **Approach:**
+
 - Columns:
   - `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
   - `user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE`
@@ -246,9 +263,11 @@ SELECT version();
 - **No `moddatetime` trigger** — `updated_at` is set by `upsert_video_progress()` using the client's timestamp (see Unit 5).
 
 **Patterns to follow:**
+
 - Same structural pattern as `content_progress` (Units 2 and 4 are parallel)
 
 **Test scenarios:**
+
 - Happy path: INSERT with valid user context succeeds
 - RLS isolation: cross-user SELECT returns no rows
 - Generated column: `INSERT (watched_seconds=300, duration_seconds=600)` → `watched_percent = 50.00`; `UPDATE watched_seconds = 450` → `watched_percent = 75.00` automatically
@@ -260,6 +279,7 @@ SELECT version();
 - Idempotency: re-run does not error
 
 **Verification:**
+
 - `\d video_progress` shows unique constraint on `(user_id, video_id)`, the `(user_id, updated_at)` index, and **no** triggers
 - Generated column tests return expected percent values
 
@@ -269,11 +289,12 @@ SELECT version();
 
 **Goal:** Create `_status_rank()` helper and the two monotonic upsert functions (`upsert_content_progress`, `upsert_video_progress`) that drive conflict resolution in the database.
 
-**Requirements:** R4, R5, R6 (the upsert functions are what *maintain* `updated_at` now that `moddatetime` trigger is absent)
+**Requirements:** R4, R5, R6 (the upsert functions are what _maintain_ `updated_at` now that `moddatetime` trigger is absent)
 
 **Dependencies:** Units 2, 4 (tables must exist before functions reference them)
 
 **Files:**
+
 - Modify: `supabase/migrations/20260413000001_p0_sync_foundation.sql`
 
 **Approach:**
@@ -283,6 +304,7 @@ SELECT version();
 `_status_rank(s TEXT) RETURNS INT` returns `3` for `completed`, `2` for `in_progress`, `1` for `not_started`, `0` otherwise. Underscore prefix signals internal helper; reusable by E93+ state-machine tables.
 
 **Step 5b — `upsert_content_progress(p_user_id, p_content_id, p_content_type, p_status, p_progress_pct, p_updated_at)`:**
+
 - `INSERT INTO content_progress (user_id, content_id, content_type, status, progress_pct, completed_at, updated_at) VALUES (p_user_id, p_content_id, p_content_type, p_status, p_progress_pct, CASE WHEN p_status = 'completed' THEN p_updated_at ELSE NULL END, p_updated_at) ON CONFLICT (user_id, content_id, content_type) DO UPDATE SET ...`
 - `status = CASE WHEN _status_rank(EXCLUDED.status) > _status_rank(content_progress.status) THEN EXCLUDED.status ELSE content_progress.status END`
 - `progress_pct = GREATEST(content_progress.progress_pct, EXCLUDED.progress_pct)`
@@ -290,6 +312,7 @@ SELECT version();
 - `completed_at = COALESCE(content_progress.completed_at, CASE WHEN _status_rank(EXCLUDED.status) > _status_rank(content_progress.status) AND EXCLUDED.status = 'completed' THEN p_updated_at ELSE NULL END)` — set once when status first advances to `completed`; never overwritten
 
 **Step 5c — `upsert_video_progress(p_user_id, p_video_id, p_watched_seconds, p_duration_seconds, p_updated_at)`:**
+
 - Note: `last_position` is NOT a parameter (story spec omits it); default to `watched_seconds` for the initial INSERT. If a future story needs explicit `last_position` control, add an overload then.
 - `INSERT INTO video_progress (user_id, video_id, watched_seconds, duration_seconds, last_position, updated_at) VALUES (p_user_id, p_video_id, p_watched_seconds, p_duration_seconds, p_watched_seconds, p_updated_at) ON CONFLICT (user_id, video_id) DO UPDATE SET ...`
 - `watched_seconds = GREATEST(video_progress.watched_seconds, EXCLUDED.watched_seconds)`
@@ -301,10 +324,12 @@ SELECT version();
 All functions: `LANGUAGE plpgsql` (or `LANGUAGE sql` for `_status_rank`), `SECURITY INVOKER`, `CREATE OR REPLACE`. `_status_rank` marked `IMMUTABLE`; upserts are `VOLATILE` (they write).
 
 **Patterns to follow:**
+
 - `supabase/migrations/001_entitlements.sql` — `CREATE OR REPLACE FUNCTION` pattern
 - Design doc §"Key Postgres Functions" — upsert function signatures
 
 **Test scenarios (covers AC 4 and 5 directly):**
+
 - **Happy path — content:** `upsert_content_progress(uid, 'c1', 'course', 'in_progress', 40, t1)` → row exists, status `in_progress`, progress `40`, updated_at `t1`, completed_at `NULL`
 - **Monotonic status regression (AC 4):** after `completed`, call with `not_started` → status stays `completed`
 - **Monotonic status advance:** `not_started` → `in_progress` → `completed` → all advance correctly
@@ -320,6 +345,7 @@ All functions: `LANGUAGE plpgsql` (or `LANGUAGE sql` for `_status_rank`), `SECUR
 - **RLS (upserts use SECURITY INVOKER):** calling `upsert_content_progress` for a different `p_user_id` than the caller's `auth.uid()` fails the RLS `WITH CHECK` clause
 
 **Verification:**
+
 - Direct psql calls to both functions with test data confirm monotonic behavior
 - `SELECT * FROM content_progress` after out-of-order status calls shows correct final state
 - `SELECT _status_rank('completed'), _status_rank('in_progress'), _status_rank('not_started'), _status_rank('bogus')` returns `3, 2, 1, 0`
@@ -338,13 +364,13 @@ All functions: `LANGUAGE plpgsql` (or `LANGUAGE sql` for `_status_rank`), `SECUR
 
 Preflight already verified that `supabase_vault`, `pgcrypto`, `moddatetime`, and `vector` are present/available on titan (see Target Environment section). Remaining risks:
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| Developer re-introduces `moddatetime` trigger on `content_progress` or `video_progress` in a future migration, silently breaking LWW sync | Medium (the pattern is installed on other tables so it looks "standard") | High (E92-S06 download becomes non-idempotent; sync loops possible) | Unit 2/4 "no-trigger side-effect" tests catch this; add a comment in the migration SQL explaining *why* these two tables omit the trigger |
-| Migration filename `20260413000001` applied on 2026-04-17 | Low | None | Supabase CLI applies in filename order; timestamp is a sequence key, not wall-clock |
-| Direct `UPDATE` on progress tables (outside upsert functions) bypasses monotonicity | Low in this epic (sync engine is the only writer) | High if triggered | Document as a contract in the migration file header; rely on code review + integration tests in E92-S05 |
-| `gen_random_uuid()` unavailable if `pgcrypto` missing | None (verified installed on titan) | N/A | Migration `CREATE EXTENSION IF NOT EXISTS pgcrypto` is a no-op but documents the dependency for fresh environments |
-| Generated column `watched_percent` differs between Postgres versions | Low (syntax stable since PG12; titan is PG15) | None | `GENERATED ALWAYS AS ... STORED` is the only form used; `NUMERIC(5,2)` is explicit to avoid float drift |
+| Risk                                                                                                                                      | Likelihood                                                               | Impact                                                              | Mitigation                                                                                                                                |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Developer re-introduces `moddatetime` trigger on `content_progress` or `video_progress` in a future migration, silently breaking LWW sync | Medium (the pattern is installed on other tables so it looks "standard") | High (E92-S06 download becomes non-idempotent; sync loops possible) | Unit 2/4 "no-trigger side-effect" tests catch this; add a comment in the migration SQL explaining _why_ these two tables omit the trigger |
+| Migration filename `20260413000001` applied on 2026-04-17                                                                                 | Low                                                                      | None                                                                | Supabase CLI applies in filename order; timestamp is a sequence key, not wall-clock                                                       |
+| Direct `UPDATE` on progress tables (outside upsert functions) bypasses monotonicity                                                       | Low in this epic (sync engine is the only writer)                        | High if triggered                                                   | Document as a contract in the migration file header; rely on code review + integration tests in E92-S05                                   |
+| `gen_random_uuid()` unavailable if `pgcrypto` missing                                                                                     | None (verified installed on titan)                                       | N/A                                                                 | Migration `CREATE EXTENSION IF NOT EXISTS pgcrypto` is a no-op but documents the dependency for fresh environments                        |
+| Generated column `watched_percent` differs between Postgres versions                                                                      | Low (syntax stable since PG12; titan is PG15)                            | None                                                                | `GENERATED ALWAYS AS ... STORED` is the only form used; `NUMERIC(5,2)` is explicit to avoid float drift                                   |
 
 ## Verification Strategy
 
@@ -353,6 +379,7 @@ End-to-end validation that this migration satisfies all 7 requirements:
 1. **Fresh-database apply** — in a disposable environment (local `supabase db reset` or a scratch container), run `supabase migration up`. Migration must apply cleanly with no errors.
 
 2. **Extension check (R1):**
+
    ```sql
    SELECT extname FROM pg_extension
    WHERE extname IN ('moddatetime','pgcrypto','vector','supabase_vault');
@@ -360,6 +387,7 @@ End-to-end validation that this migration satisfies all 7 requirements:
    ```
 
 3. **Schema check (R2):**
+
    ```sql
    \d content_progress
    \d study_sessions
@@ -368,6 +396,7 @@ End-to-end validation that this migration satisfies all 7 requirements:
    ```
 
 4. **Trigger negative check (our key invariant):**
+
    ```sql
    SELECT tgname, tgrelid::regclass FROM pg_trigger
    WHERE tgrelid IN ('content_progress'::regclass, 'video_progress'::regclass)
@@ -378,6 +407,7 @@ End-to-end validation that this migration satisfies all 7 requirements:
 5. **RLS isolation (R3, AC 3):** Create two test users (`userA`, `userB`) via Supabase Auth, insert progress rows as each, then switch session to `userA` and confirm `SELECT` over `userB`'s rows returns 0. Repeat as `userB`.
 
 6. **Monotonic status (R4, AC 4):**
+
    ```sql
    -- As a signed-in test user:
    SELECT upsert_content_progress(auth.uid(), 'c1', 'course', 'completed', 100, now());
@@ -387,6 +417,7 @@ End-to-end validation that this migration satisfies all 7 requirements:
    ```
 
 7. **Monotonic watched (R5, AC 5):**
+
    ```sql
    SELECT upsert_video_progress(auth.uid(), 'v1', 500, 1000, now());
    SELECT upsert_video_progress(auth.uid(), 'v1', 200, 1000, now());
@@ -405,6 +436,7 @@ End-to-end validation that this migration satisfies all 7 requirements:
 This migration only creates new objects — it doesn't alter existing ones. Rollback is destructive (drops the P0 tables). In development / pre-production: safe. After production data exists: requires explicit data backup + user approval.
 
 Rollback script (not committed; kept in execution notes):
+
 ```sql
 BEGIN;
 DROP FUNCTION IF EXISTS upsert_content_progress(UUID, TEXT, TEXT, TEXT, INTEGER, TIMESTAMPTZ);

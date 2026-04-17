@@ -1,5 +1,5 @@
 ---
-title: "fix: Repair Google Books covers in Edit Book Details and enable hi-res cover selection"
+title: 'fix: Repair Google Books covers in Edit Book Details and enable hi-res cover selection'
 type: fix
 status: active
 date: 2026-04-16
@@ -101,7 +101,7 @@ Both bugs produce the same visible symptom — broken cover images — but have 
 
 ## High-Level Technical Design
 
-> *This illustrates the intended approach and is directional guidance for review, not implementation specification. The implementing agent should treat it as context, not code to reproduce.*
+> _This illustrates the intended approach and is directional guidance for review, not implementation specification. The implementing agent should treat it as context, not code to reproduce._
 
 ```text
 Google Books cover selection flow (post-fix):
@@ -415,17 +415,17 @@ Bug 1 fix (modal open):
 
 ## Risks & Dependencies
 
-| Risk | Mitigation |
-|------|------------|
-| SSRF via protocol smuggling (`file://`, `ftp://`, `http://`) | Reject any URL whose protocol is not `https:` before domain allowlist check — explicit in Unit 3 |
-| SSRF via HTTP redirect following from an allowlisted domain | Set `redirect: 'error'` on server-side fetch; upstream 3xx returns 502, never followed |
-| Malicious or unexpected upstream `Content-Type` (e.g. `image/svg+xml`) | Validate content-type before streaming; only jpeg/png/webp/gif forwarded; SVG → 502 |
-| No rate limiting on `/api/cover-proxy` (existing limiters are mount-specific) | Add dedicated per-IP limiter (60 req/min) in Unit 3; pattern: `absCoverRateLimit` |
-| Vite dev proxy config missing `/api/cover-proxy` (route returns 404 in dev without it) | Add entry to `vite.config.ts` — listed as required file in Unit 3, not deferred |
-| Double-revoke of OPFS blob URL in Bug 1 useEffect | Null out `blobUrl` after handoff to `setSafeCoverPreviewUrl`; explicit in Unit 4 approach |
-| Google Books CDN changes domain | Allowlist in proxy is single source of truth; update allowlist if URLs change |
-| Proxy adds latency to cover selection | Acceptable: user-action-triggered, 100-200ms overhead is imperceptible |
-| DNS rebinding against allowlisted CDN domains | Low risk: hardcoded well-known CDNs not under attacker control; no DNS pre-resolution step (creates TOCTOU window without benefit) |
+| Risk                                                                                   | Mitigation                                                                                                                         |
+| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| SSRF via protocol smuggling (`file://`, `ftp://`, `http://`)                           | Reject any URL whose protocol is not `https:` before domain allowlist check — explicit in Unit 3                                   |
+| SSRF via HTTP redirect following from an allowlisted domain                            | Set `redirect: 'error'` on server-side fetch; upstream 3xx returns 502, never followed                                             |
+| Malicious or unexpected upstream `Content-Type` (e.g. `image/svg+xml`)                 | Validate content-type before streaming; only jpeg/png/webp/gif forwarded; SVG → 502                                                |
+| No rate limiting on `/api/cover-proxy` (existing limiters are mount-specific)          | Add dedicated per-IP limiter (60 req/min) in Unit 3; pattern: `absCoverRateLimit`                                                  |
+| Vite dev proxy config missing `/api/cover-proxy` (route returns 404 in dev without it) | Add entry to `vite.config.ts` — listed as required file in Unit 3, not deferred                                                    |
+| Double-revoke of OPFS blob URL in Bug 1 useEffect                                      | Null out `blobUrl` after handoff to `setSafeCoverPreviewUrl`; explicit in Unit 4 approach                                          |
+| Google Books CDN changes domain                                                        | Allowlist in proxy is single source of truth; update allowlist if URLs change                                                      |
+| Proxy adds latency to cover selection                                                  | Acceptable: user-action-triggered, 100-200ms overhead is imperceptible                                                             |
+| DNS rebinding against allowlisted CDN domains                                          | Low risk: hardcoded well-known CDNs not under attacker control; no DNS pre-resolution step (creates TOCTOU window without benefit) |
 
 ## Documentation / Operational Notes
 

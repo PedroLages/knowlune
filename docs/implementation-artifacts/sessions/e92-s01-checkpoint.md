@@ -21,6 +21,7 @@ review_gates_passed: []
 None within the story. Story implementation is complete and ready for `/review-story`.
 
 **Follow-up in subsequent stories** (not this story's scope):
+
 - E92-S02: Dexie v52 migration (adds `userId`/`updatedAt` to 30+ Dexie tables, creates `syncQueue`/`syncMetadata`)
 - E92-S05 / E92-S06: client code that actually calls the upsert functions created here
 - Future consideration: if scrub-back semantics for `last_position` are needed, add an overloaded `upsert_video_progress` that accepts `p_last_position` (current function leaves it unchanged on conflict — see Key Decisions)

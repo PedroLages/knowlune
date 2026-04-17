@@ -11,6 +11,7 @@ focus: what we should build on the library page for audiobooks and ebooks
 Knowlune's books/library feature is already extensive — 13 epics completed (E83-E115) spanning 71+ components across library (42), reader (15), and audiobook (14) directories.
 
 **What already exists:**
+
 - Full EPUB reader (epub.js) with themes, bookmarks (audio only — EPUB shows "coming soon"), highlights, vocabulary tracking, TTS
 - Library page with grid/list views, filters, collections, reading queue, smart shelves
 - Audiobook player with chapter nav, speed control, sleep timer, skip silence, audio clips
@@ -22,6 +23,7 @@ Knowlune's books/library feature is already extensive — 13 epics completed (E8
 - Reading accessibility features, keyboard shortcuts
 
 **Known pain points:**
+
 - EPUB reader blank screen bugs (being fixed on current branch)
 - epub.js callbacks unreliable (need timeout fallbacks)
 - BookReader.tsx is a 904-line monolith (20 useState, 15 useEffect)
@@ -33,6 +35,7 @@ Knowlune's books/library feature is already extensive — 13 epics completed (E8
 - No way to import highlights from Kindle or other readers
 
 **Key infrastructure available for leverage:**
+
 - FSRS spaced repetition engine (flashcards)
 - AI tutor with RAG pipeline and "Quiz Me" mode (26 quiz components)
 - BruteForceVectorStore for semantic similarity (notes system)
@@ -49,12 +52,12 @@ Knowlune's books/library feature is already extensive — 13 epics completed (E8
 
 Amazon has **no public API** for Kindle data. Available methods:
 
-| Method | Reliability | Data | Self-Hosted | Notes |
-| --- | --- | --- | --- | --- |
-| **My Clippings.txt** | High | Highlights, notes, bookmarks, timestamps | Yes | USB from physical device. No reading progress. Best for self-hosted |
-| kindle-api (Node.js) | Medium | Full (highlights, progress, metadata) | Partial | Reverse-engineered private API. Requires TLS proxy for fingerprinting. Fragile |
-| Readwise API | High | Full + cloud sync | No | $10/month subscription. Cloud-dependent. Webhooks for real-time sync |
-| Cloud Reader scraping | Low | Limited by 5-10% copy limits | No | Puppeteer/Playwright-based. DRM restrictions block bulk extraction |
+| Method                | Reliability | Data                                     | Self-Hosted | Notes                                                                          |
+| --------------------- | ----------- | ---------------------------------------- | ----------- | ------------------------------------------------------------------------------ |
+| **My Clippings.txt**  | High        | Highlights, notes, bookmarks, timestamps | Yes         | USB from physical device. No reading progress. Best for self-hosted            |
+| kindle-api (Node.js)  | Medium      | Full (highlights, progress, metadata)    | Partial     | Reverse-engineered private API. Requires TLS proxy for fingerprinting. Fragile |
+| Readwise API          | High        | Full + cloud sync                        | No          | $10/month subscription. Cloud-dependent. Webhooks for real-time sync           |
+| Cloud Reader scraping | Low         | Limited by 5-10% copy limits             | No          | Puppeteer/Playwright-based. DRM restrictions block bulk extraction             |
 
 **Decision:** My Clippings.txt parser with drag-drop import. Pedro uses a physical Kindle device — direct USB file access is the most reliable path. No external dependencies, no fragile API wrappers.
 
@@ -84,13 +87,13 @@ Hardcover.app has a **free GraphQL API** with full bidirectional sync capabiliti
 
 The ABS integration is the exact template for Hardcover:
 
-| ABS Component | Hardcover Equivalent |
-| --- | --- |
-| `useAudiobookshelfStore` | `useHardcoverStore` (account config + auth) |
-| `useAudiobookshelfSync` | `useHardcoverSync` (shelf/library pull) |
-| `useAudiobookshelfProgressSync` | `useHardcoverProgressSync` (bidirectional) |
-| `AudiobookshelfSettings.tsx` | `HardcoverSettings.tsx` (connection dialog) |
-| `/api/abs/proxy/*` | `/api/hardcover/proxy/*` (Express proxy) |
+| ABS Component                   | Hardcover Equivalent                        |
+| ------------------------------- | ------------------------------------------- |
+| `useAudiobookshelfStore`        | `useHardcoverStore` (account config + auth) |
+| `useAudiobookshelfSync`         | `useHardcoverSync` (shelf/library pull)     |
+| `useAudiobookshelfProgressSync` | `useHardcoverProgressSync` (bidirectional)  |
+| `AudiobookshelfSettings.tsx`    | `HardcoverSettings.tsx` (connection dialog) |
+| `/api/abs/proxy/*`              | `/api/hardcover/proxy/*` (Express proxy)    |
 
 Key difference: ABS uses REST + Bearer token; Hardcover uses GraphQL + Bearer token. Auth is simpler (no OAuth — just paste the token).
 
@@ -160,7 +163,7 @@ Key difference: ABS uses REST + Bearer token; Hardcover uses GraphQL + Bearer to
 
 **Description:** Visually indicate knowledge decay on book covers in the grid/list view. Finished books that haven't been reviewed show a subtle visual treatment — a "memory strength" ring around the cover or an amber urgency dot. Tapping the indicator shows which concepts from that book are decaying in the FSRS system and offers a 2-minute review session (highlights, vocabulary, or quiz). The overlay only activates for books with sufficient review material (5+ highlights threshold).
 
-**Rationale:** Finishing a book feels like completion, but retention decays invisibly. Making forgetting *visible* on the shelf — right where the user browses — creates a persistent, low-pressure nudge. FSRS already calculates decay and urgency per topic. The flashcard, vocabulary, and highlight systems provide ready-made review material. The knowledge map has topic scoring with urgency levels.
+**Rationale:** Finishing a book feels like completion, but retention decays invisibly. Making forgetting _visible_ on the shelf — right where the user browses — creates a persistent, low-pressure nudge. FSRS already calculates decay and urgency per topic. The flashcard, vocabulary, and highlight systems provide ready-made review material. The knowledge map has topic scoring with urgency levels.
 
 **Downsides:** Only works for books with highlights/vocabulary/flashcards — empty for books read without annotation. Could feel anxiety-inducing if many books show decay. Visual treatment must be subtle enough not to make the grid feel cluttered.
 
@@ -170,7 +173,7 @@ Key difference: ABS uses REST + Bearer token; Hardcover uses GraphQL + Bearer to
 
 ### 7. Universal Library Search (Full-Text Across EPUBs + Transcribed Audiobooks)
 
-**Description:** Extend library search to search *inside* books, not just metadata. For EPUBs, index full text from `book.spine` content. For audiobooks, batch-transcribe via the Whisper/Speaches server on Unraid and index the transcripts. Results show matching passages with surrounding context; tapping a result opens the reader/player at that exact position (CFI for EPUB, timestamp for audio). Use the existing vector store infrastructure (all-MiniLM-L6-v2, 384-dim) for semantic search in addition to keyword matching.
+**Description:** Extend library search to search _inside_ books, not just metadata. For EPUBs, index full text from `book.spine` content. For audiobooks, batch-transcribe via the Whisper/Speaches server on Unraid and index the transcripts. Results show matching passages with surrounding context; tapping a result opens the reader/player at that exact position (CFI for EPUB, timestamp for audio). Use the existing vector store infrastructure (all-MiniLM-L6-v2, 384-dim) for semantic search in addition to keyword matching.
 
 **Rationale:** "Which book mentioned second-order thinking?" is currently unanswerable. This eliminates the biggest disadvantage of both formats — text buried in files and audio that's unsearchable. The vector store and embedding pipeline already exist for the notes system. Whisper on Unraid makes audiobook transcription a batch job (overnight), not a real-time dependency. Pairs EPUB search with audiobook search for a unified experience.
 
@@ -188,46 +191,46 @@ Key difference: ABS uses REST + Bearer token; Hardcover uses GraphQL + Bearer to
 
 ## Implementation Tiers
 
-| Tier | Ideas | Complexity | Compound Value |
-| --- | --- | --- | --- |
-| **Quick wins** | #1 Reflection Prompts, #2 Kindle Import, #3 Goodreads CSV | Low | High — immediate value, data bootstrap |
-| **Medium bets** | #4 Hardcover Sync, #5 Activity Timeline, #6 Forgetting Curve | Medium | High — novel UX, compounds with existing systems |
-| **Bold bet** | #7 Universal Library Search | High | Transformative — makes entire library searchable |
+| Tier            | Ideas                                                        | Complexity | Compound Value                                   |
+| --------------- | ------------------------------------------------------------ | ---------- | ------------------------------------------------ |
+| **Quick wins**  | #1 Reflection Prompts, #2 Kindle Import, #3 Goodreads CSV    | Low        | High — immediate value, data bootstrap           |
+| **Medium bets** | #4 Hardcover Sync, #5 Activity Timeline, #6 Forgetting Curve | Medium     | High — novel UX, compounds with existing systems |
+| **Bold bet**    | #7 Universal Library Search                                  | High       | Transformative — makes entire library searchable |
 
 ## Rejection Summary
 
-| # | Idea | Reason Rejected |
-| --- | --- | --- |
-| 1 | Mood-Based Book Picker | Gimmicky; filter sidebar already narrows choices effectively |
-| 2 | Parallel Reading Tracker | Too small — a layout tweak on the reading queue, not a feature |
-| 3 | Smart Collection Suggestions | Netflix-style carousels don't improve learning, just browsing |
-| 4 | Reading Pace Predictor | Narrow widget; better as part of a broader analytics view |
-| 5 | Book Comparison Side-by-Side | Niche; no clear learning outcome from comparing two books |
-| 6 | Vocabulary Heat Zones on Covers | Unreadable on tiny covers; belongs on a detail page chart |
-| 7 | Library Lending Shelf | Single-user app; no audience until multi-user ships |
-| 8 | Listening Pace Analytics | Duplicate of Reading Pace Predictor for audio |
-| 9 | Audio Clip Mixtapes | Fun but niche; insufficient clip volume for most users |
-| 10 | Ambient Listening Mode | Always-on mic; privacy/complexity too high |
-| 11 | Chapter Difficulty Heatmap | ABS doesn't expose rewind/pause granularity |
-| 12 | Dual-Track AI Summaries | TTS pipeline for arbitrary content is unreliable dependency chain |
-| 13 | A/B Narrator Comparison | Requires multiple narrations of same book (rare) |
-| 14 | Post-Session Fatigue Check-In | Self-reported fatigue data is unreliable |
-| 15 | Narration Mood Tags | Audio classifiers don't exist in the stack |
-| 16 | Unified Streak (books count) | Already explored in prior ideation round |
-| 17 | Reading Momentum Meter | Too small — a sparkline widget |
-| 18 | Social Proof Reading Queue | Fake social proof in single-user app is dishonest UX |
-| 19 | Chapter-Level Commitments | Heavy implementation (notifications, deadlines) for uncertain adoption |
-| 20 | Adaptive Reading Prescription | Single recommendation being wrong 50% of the time is worse than choice |
-| 21 | Reading Ritual Builder | Too abstract; ceremony without clear value |
-| 22 | OPDS One-Click Download | UX improvement to existing flow, not a new feature |
-| 23 | ABS Bidirectional Sync | Already in Supabase sync design — engineering, not ideation |
-| 24 | Library Export JSON/OPDS | Defensive (backup); doesn't improve learning |
-| 25 | Ollama Book Recommendations | LLM recommendations are hit-or-miss without massive data |
-| 26 | Calibre Library Bridge | OPDS already bridges to Calibre-Web; incremental |
-| 27 | Annotation Import (Readwise/Kobo) | Duplicates Kindle import in spirit; do one format first |
-| 28 | Reading Data Webhook/API | No external consumers yet; build when needed |
-| 29 | ISBN Barcode Scan for Physical Books | Physical book tracking is a separate product direction |
-| 30 | Book vs. Course Convergence Dashboard | Subsumed by #5 (Activity Timeline) which is more actionable |
+| #   | Idea                                  | Reason Rejected                                                        |
+| --- | ------------------------------------- | ---------------------------------------------------------------------- |
+| 1   | Mood-Based Book Picker                | Gimmicky; filter sidebar already narrows choices effectively           |
+| 2   | Parallel Reading Tracker              | Too small — a layout tweak on the reading queue, not a feature         |
+| 3   | Smart Collection Suggestions          | Netflix-style carousels don't improve learning, just browsing          |
+| 4   | Reading Pace Predictor                | Narrow widget; better as part of a broader analytics view              |
+| 5   | Book Comparison Side-by-Side          | Niche; no clear learning outcome from comparing two books              |
+| 6   | Vocabulary Heat Zones on Covers       | Unreadable on tiny covers; belongs on a detail page chart              |
+| 7   | Library Lending Shelf                 | Single-user app; no audience until multi-user ships                    |
+| 8   | Listening Pace Analytics              | Duplicate of Reading Pace Predictor for audio                          |
+| 9   | Audio Clip Mixtapes                   | Fun but niche; insufficient clip volume for most users                 |
+| 10  | Ambient Listening Mode                | Always-on mic; privacy/complexity too high                             |
+| 11  | Chapter Difficulty Heatmap            | ABS doesn't expose rewind/pause granularity                            |
+| 12  | Dual-Track AI Summaries               | TTS pipeline for arbitrary content is unreliable dependency chain      |
+| 13  | A/B Narrator Comparison               | Requires multiple narrations of same book (rare)                       |
+| 14  | Post-Session Fatigue Check-In         | Self-reported fatigue data is unreliable                               |
+| 15  | Narration Mood Tags                   | Audio classifiers don't exist in the stack                             |
+| 16  | Unified Streak (books count)          | Already explored in prior ideation round                               |
+| 17  | Reading Momentum Meter                | Too small — a sparkline widget                                         |
+| 18  | Social Proof Reading Queue            | Fake social proof in single-user app is dishonest UX                   |
+| 19  | Chapter-Level Commitments             | Heavy implementation (notifications, deadlines) for uncertain adoption |
+| 20  | Adaptive Reading Prescription         | Single recommendation being wrong 50% of the time is worse than choice |
+| 21  | Reading Ritual Builder                | Too abstract; ceremony without clear value                             |
+| 22  | OPDS One-Click Download               | UX improvement to existing flow, not a new feature                     |
+| 23  | ABS Bidirectional Sync                | Already in Supabase sync design — engineering, not ideation            |
+| 24  | Library Export JSON/OPDS              | Defensive (backup); doesn't improve learning                           |
+| 25  | Ollama Book Recommendations           | LLM recommendations are hit-or-miss without massive data               |
+| 26  | Calibre Library Bridge                | OPDS already bridges to Calibre-Web; incremental                       |
+| 27  | Annotation Import (Readwise/Kobo)     | Duplicates Kindle import in spirit; do one format first                |
+| 28  | Reading Data Webhook/API              | No external consumers yet; build when needed                           |
+| 29  | ISBN Barcode Scan for Physical Books  | Physical book tracking is a separate product direction                 |
+| 30  | Book vs. Course Convergence Dashboard | Subsumed by #5 (Activity Timeline) which is more actionable            |
 
 ## Session Log
 

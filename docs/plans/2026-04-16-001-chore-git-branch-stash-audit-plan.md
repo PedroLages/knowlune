@@ -1,5 +1,5 @@
 ---
-title: "chore: Git branch and stash audit"
+title: 'chore: Git branch and stash audit'
 type: refactor
 status: active
 date: 2026-04-16
@@ -27,15 +27,15 @@ Git's `--merged` / `--no-merged` flags only check whether commits exist in `main
 
 ### Stashes (7 total)
 
-| # | Branch context | Files changed | Assessment |
-|---|---------------|--------------|------------|
-| `stash@{0}` | `feature/library-visual-polish` | 8 files, 204+/134− | **Inspect** — substantial WIP in library components; branch has no remote. Could be useful work. |
-| `stash@{1}` | `main` — "WIP before E62-S04" | 1 file, 1 line | **Drop** — trivial, context is gone |
-| `stash@{2}` | `main` — "WIP before E114-S01" | 0 files (empty) | **Drop** — empty stash |
-| `stash@{3}` | `main` — "WIP before E110-S03" | 1 file, 1 line | **Drop** — trivial, context is gone |
-| `stash@{4}` | `chore/epic-runner-rewrite` | 1 file, 36 lines | **Drop** — epic-runner branch still exists locally; stash is redundant |
-| `stash@{5}` | `chore/epic-runner-rewrite` | 1 file, 150 lines | **Inspect** — larger WIP on the epic-runner rewrite branch |
-| `stash@{6}` | `feature/e110-s02-series-grouping` | 0 files (empty) | **Drop** — empty stash |
+| #           | Branch context                     | Files changed      | Assessment                                                                                       |
+| ----------- | ---------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------ |
+| `stash@{0}` | `feature/library-visual-polish`    | 8 files, 204+/134− | **Inspect** — substantial WIP in library components; branch has no remote. Could be useful work. |
+| `stash@{1}` | `main` — "WIP before E62-S04"      | 1 file, 1 line     | **Drop** — trivial, context is gone                                                              |
+| `stash@{2}` | `main` — "WIP before E114-S01"     | 0 files (empty)    | **Drop** — empty stash                                                                           |
+| `stash@{3}` | `main` — "WIP before E110-S03"     | 1 file, 1 line     | **Drop** — trivial, context is gone                                                              |
+| `stash@{4}` | `chore/epic-runner-rewrite`        | 1 file, 36 lines   | **Drop** — epic-runner branch still exists locally; stash is redundant                           |
+| `stash@{5}` | `chore/epic-runner-rewrite`        | 1 file, 150 lines  | **Inspect** — larger WIP on the epic-runner rewrite branch                                       |
+| `stash@{6}` | `feature/e110-s02-series-grouping` | 0 files (empty)    | **Drop** — empty stash                                                                           |
 
 ---
 
@@ -43,20 +43,20 @@ Git's `--merged` / `--no-merged` flags only check whether commits exist in `main
 
 Git confirms these are ancestors of `main`. Safe to delete with no data loss.
 
-| Branch | Action |
-|--------|--------|
-| `chore/epic-runner-rewrite` | Delete (after reviewing stash@{5} above) |
-| `feature/e107-s03-fix-toc-loading-and-fallback` | Delete |
-| `feature/e107-s04-wire-about-book-dialog` | Delete |
-| `feature/e107-s06-fix-mini-player-interactivity` | Delete |
-| `feature/e108-s02-format-badges-and-delete` | Delete |
-| `feature/e110-s01-smart-shelves` | Delete |
-| `feature/e110-s02-series-grouping` | Delete |
-| `feature/e114-s02-continuous-scroll-mode` | Delete |
-| `feature/e115-s01-custom-reading-challenges` | Delete |
-| `feature/e73-s03-quiz-prompt-score-tracker` | Delete |
-| `feature/e87-s05-mini-player-and-media-session` | Delete |
-| `feature/settings-ui-redesign` | Delete |
+| Branch                                           | Action                                   |
+| ------------------------------------------------ | ---------------------------------------- |
+| `chore/epic-runner-rewrite`                      | Delete (after reviewing stash@{5} above) |
+| `feature/e107-s03-fix-toc-loading-and-fallback`  | Delete                                   |
+| `feature/e107-s04-wire-about-book-dialog`        | Delete                                   |
+| `feature/e107-s06-fix-mini-player-interactivity` | Delete                                   |
+| `feature/e108-s02-format-badges-and-delete`      | Delete                                   |
+| `feature/e110-s01-smart-shelves`                 | Delete                                   |
+| `feature/e110-s02-series-grouping`               | Delete                                   |
+| `feature/e114-s02-continuous-scroll-mode`        | Delete                                   |
+| `feature/e115-s01-custom-reading-challenges`     | Delete                                   |
+| `feature/e73-s03-quiz-prompt-score-tracker`      | Delete                                   |
+| `feature/e87-s05-mini-player-and-media-session`  | Delete                                   |
+| `feature/settings-ui-redesign`                   | Delete                                   |
 
 ---
 
@@ -70,19 +70,20 @@ These branches are 1 commit ahead of `main` and have a remote counterpart, which
 
 Verify by checking: does `origin/main` contain the substance of the branch's single commit?
 
-| Branch | Remote on origin? | Commits ahead |
-|--------|------------------|--------------|
-| `feature/e107-s05-sync-reader-themes` | ✓ | 1 |
-| `feature/e107-s07-fix-m4b-cover-preview` | ✓ | 1 |
-| `feature/e108-s01-bulk-epub-import` | ✓ | 1 |
-| `feature/e108-s03-keyboard-shortcuts` | ✓ | 1 |
-| `feature/e108-s05-genre-detection-pages-goal` | ✓ | 1 |
-| `feature/e109-s01-vocabulary-builder` | ✓ | 1 |
-| `feature/e111-s01-audio-clips` | ✓ | 1 |
-| `feature/e73-s02-eli5-mode` | ✓ | 1 |
-| `feature/review-story-refactor-structured-contracts` | check | 1 |
+| Branch                                               | Remote on origin? | Commits ahead |
+| ---------------------------------------------------- | ----------------- | ------------- |
+| `feature/e107-s05-sync-reader-themes`                | ✓                 | 1             |
+| `feature/e107-s07-fix-m4b-cover-preview`             | ✓                 | 1             |
+| `feature/e108-s01-bulk-epub-import`                  | ✓                 | 1             |
+| `feature/e108-s03-keyboard-shortcuts`                | ✓                 | 1             |
+| `feature/e108-s05-genre-detection-pages-goal`        | ✓                 | 1             |
+| `feature/e109-s01-vocabulary-builder`                | ✓                 | 1             |
+| `feature/e111-s01-audio-clips`                       | ✓                 | 1             |
+| `feature/e73-s02-eli5-mode`                          | ✓                 | 1             |
+| `feature/review-story-refactor-structured-contracts` | check             | 1             |
 
 **Verification command for each:**
+
 ```
 git log --oneline main...<branch> | head -3
 git log --oneline origin/main | head -20  # look for equivalent commit
@@ -92,15 +93,15 @@ git log --oneline origin/main | head -20  # look for equivalent commit
 
 These have multiple commits but all have remote counterparts. Stories E62 and E109 completed a full epic run — their work should be in `origin/main`.
 
-| Branch | Remote | Commits ahead | Notes |
-|--------|--------|--------------|-------|
-| `feature/e109-s02-daily-highlight-review` | ✓ | 4 | Story finished |
-| `feature/e109-s03-highlight-export` | ✓ | 3 | Story finished |
-| `feature/e109-s04-annotation-summary` | ✓ | 3 | Story finished |
-| `feature/e62-s01-fsrs-retention-aggregation-score-integration` | ✓ | 11 | Epic E62 finished |
-| `feature/e62-s02-retention-gradient-treemap-decay-predictions-ui` | ✓ | 16 | Epic E62 finished |
-| `feature/e62-s03-unit-tests-fsrs-retention-scoring` | — | 4 | No remote — **inspect** |
-| `feature/e62-s04-e2e-tests-knowledge-map-fsrs` | ✓ | 14 | Epic E62 finished |
+| Branch                                                            | Remote | Commits ahead | Notes                   |
+| ----------------------------------------------------------------- | ------ | ------------- | ----------------------- |
+| `feature/e109-s02-daily-highlight-review`                         | ✓      | 4             | Story finished          |
+| `feature/e109-s03-highlight-export`                               | ✓      | 3             | Story finished          |
+| `feature/e109-s04-annotation-summary`                             | ✓      | 3             | Story finished          |
+| `feature/e62-s01-fsrs-retention-aggregation-score-integration`    | ✓      | 11            | Epic E62 finished       |
+| `feature/e62-s02-retention-gradient-treemap-decay-predictions-ui` | ✓      | 16            | Epic E62 finished       |
+| `feature/e62-s03-unit-tests-fsrs-retention-scoring`               | —      | 4             | No remote — **inspect** |
+| `feature/e62-s04-e2e-tests-knowledge-map-fsrs`                    | ✓      | 14            | Epic E62 finished       |
 
 **Verification:** `git fetch origin && git log --oneline HEAD...origin/main` on each should show 0 net-new functional commits (or commits already present on origin/main).
 
@@ -108,12 +109,12 @@ These have multiple commits but all have remote counterparts. Stories E62 and E1
 
 These branches have unique local commits that aren't on origin. Do not delete without reading the commit log.
 
-| Branch | Remote | Commits ahead | Risk |
-|--------|--------|--------------|------|
-| `feature/e104-s01-link-formats-dialog` | ✓ (remote exists) | 17 | Has remote — may be an abandoned WIP story. Read commit titles. |
-| `feature/e111-s03-sleep-timer-end-of-chapter` | check | 2 | Small — check commit titles |
-| `feature/fix-epub-reader-blank-screen` | check | 4 | Bug fix — may contain unreleased work |
-| `feature/library-visual-polish` | **no remote** | 4 | **High risk** — no remote, stash@{0} is from this branch. Review before deleting. |
+| Branch                                        | Remote            | Commits ahead | Risk                                                                              |
+| --------------------------------------------- | ----------------- | ------------- | --------------------------------------------------------------------------------- |
+| `feature/e104-s01-link-formats-dialog`        | ✓ (remote exists) | 17            | Has remote — may be an abandoned WIP story. Read commit titles.                   |
+| `feature/e111-s03-sleep-timer-end-of-chapter` | check             | 2             | Small — check commit titles                                                       |
+| `feature/fix-epub-reader-blank-screen`        | check             | 4             | Bug fix — may contain unreleased work                                             |
+| `feature/library-visual-polish`               | **no remote**     | 4             | **High risk** — no remote, stash@{0} is from this branch. Review before deleting. |
 
 ---
 
@@ -187,12 +188,12 @@ These branches have unique local commits that aren't on origin. Do not delete wi
 
 ## Risks & Dependencies
 
-| Risk | Mitigation |
-|------|------------|
+| Risk                                   | Mitigation                                                  |
+| -------------------------------------- | ----------------------------------------------------------- |
 | Deleting a branch with unreleased work | Units 4–6 require reading commit logs before force-deleting |
-| Stash index shifting during bulk drop | Drop stashes in reverse order (highest index first) |
-| `library-visual-polish` work lost | Resolve Unit 1 first; create recovery branch if needed |
-| `e62-s03` has no remote | Read its commits before deleting in Unit 5 |
+| Stash index shifting during bulk drop  | Drop stashes in reverse order (highest index first)         |
+| `library-visual-polish` work lost      | Resolve Unit 1 first; create recovery branch if needed      |
+| `e62-s03` has no remote                | Read its commits before deleting in Unit 5                  |
 
 ## Sources & References
 
