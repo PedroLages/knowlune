@@ -99,4 +99,41 @@ CREATE POLICY "select_own"
   FOR SELECT
   USING (auth.uid() = user_id);
 
+
+-- ─── Unit 4: video_progress ─────────────────────────────────────────
+-- Per-user video playback state. Monotonic on watched_seconds + duration_seconds.
+-- `watched_percent` is a generated column (always consistent; monotonic by construction).
+-- `updated_at` is CLIENT-DRIVEN (no moddatetime trigger) — see header comment.
+CREATE TABLE IF NOT EXISTS public.video_progress (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  video_id TEXT NOT NULL,
+  watched_seconds INTEGER NOT NULL DEFAULT 0 CHECK (watched_seconds >= 0),
+  duration_seconds INTEGER NOT NULL DEFAULT 0 CHECK (duration_seconds >= 0),
+  last_position INTEGER NOT NULL DEFAULT 0 CHECK (last_position >= 0),
+  watched_percent NUMERIC(5, 2) GENERATED ALWAYS AS (
+    CASE
+      WHEN duration_seconds > 0
+        THEN LEAST(100::numeric, (watched_seconds::numeric / duration_seconds) * 100)
+      ELSE 0
+    END
+  ) STORED,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT video_progress_user_video_unique UNIQUE (user_id, video_id)
+);
+
+-- Incremental download cursor for E92-S06.
+CREATE INDEX IF NOT EXISTS idx_video_progress_user_updated
+  ON public.video_progress (user_id, updated_at);
+
+ALTER TABLE public.video_progress ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users access own video_progress" ON public.video_progress;
+CREATE POLICY "Users access own video_progress"
+  ON public.video_progress
+  FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 COMMIT;
