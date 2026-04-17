@@ -70,6 +70,30 @@ N/A — pure database migration, no UI.
 
 End-to-end verification is SQL-based — no E2E Playwright tests. See plan § Verification Strategy for the 10-step gate list. No client code changes in this story (client wiring begins in E92-S02+).
 
+Committed verification script: [`supabase/tests/e92-s01-verify.sql`](../../supabase/tests/e92-s01-verify.sql) — re-runnable, raises EXCEPTION on any failed assertion. Covers AC1-AC7 plus Round-1 fixups (client_request_id idempotency, \_status_rank raise-on-unknown, progress_pct=100+in_progress CHECK, p_updated_at clamp, last_position LWW).
+
+Run on titan:
+
+```bash
+ssh titan docker exec -i supabase-db psql -U postgres -d postgres \
+  < supabase/tests/e92-s01-verify.sql
+```
+
+## Rollback Procedure
+
+Destructive rollback script: [`supabase/migrations/rollback/20260413000001_p0_sync_foundation_down.sql`](../../supabase/migrations/rollback/20260413000001_p0_sync_foundation_down.sql).
+
+Drops (in reverse order): upsert functions, `_status_rank`, then `video_progress`, `study_sessions`, `content_progress` with `CASCADE`. Intentionally does NOT drop extensions (shared across epics).
+
+Apply on titan:
+
+```bash
+ssh titan docker exec -i supabase-db psql -U postgres -d postgres \
+  < supabase/migrations/rollback/20260413000001_p0_sync_foundation_down.sql
+```
+
+After rollback, both the base migration `20260413000001_p0_sync_foundation.sql` and the fixups migration `20260417000002_p0_sync_foundation_fixups.sql` must be re-applied in order to restore state.
+
 ## Pre-Review Checklist
 
 Standard checklist applies — but note these domain-specific items for this story:
