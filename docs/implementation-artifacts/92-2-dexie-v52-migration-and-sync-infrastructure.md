@@ -222,3 +222,6 @@ Initial exploration flagged `notifications` as possibly local-only based on a hi
 
 **6. Plan-aligned execution kept scope tight.**
 The plan explicitly carved out `syncableWrite()`, `tableRegistry`, `syncEngine`, and store rewiring as out-of-scope for E92-S02. During implementation it was tempting to start building the registry inline (since we have the table list right here) — holding the line kept the PR reviewable and preserved the epic's 9-story sequencing.
+
+**7. Pre-existing test failures must be documented and verified before review.**
+6 sepia-theme tests already failed on `main` before this story. Documenting this explicitly in Task 5.1 ("verified by checkout") prevented false review alarm during `/finish-story`. Pattern for future stories: run `git stash && npm run test:unit && git stash pop` to baseline failures before attributing them to new work.

@@ -898,3 +898,47 @@ When multiple AI reviewers (Claude, GLM, OpenAI) rate the same finding at widely
 **Why:** A finding rated NIT by one model and BLOCKER by another typically indicates latent ambiguity — the code works today but creates a footgun for the next person who touches it. The lowest-severity reviewer may be correct about current impact, but the highest-severity reviewer is often correct about future risk.
 
 **Case study:** E92-S01 R3 — duplicate `_status_rank()` definition was rated NIT (Claude), HIGH (GLM), BLOCKER (OpenAI-fallback). Real impact was maintainability risk, not runtime bug. Fixed in R3. The spread correctly flagged an issue that would have confused any future maintainer editing the fixup migration.
+
+## Dexie Upgrade Callbacks Cannot Read Async Auth State
+
+The Dexie `.upgrade()` callback runs synchronously during `db.open()`, which executes at module import time — before Zustand, Supabase, or any async auth hydration has completed. Reading `userId` from an auth store inside `.upgrade()` will always return `null` on first app load, silently skipping every record.
+
+**Pattern:** Split data backfill into two phases:
+1. **Migration-time (inside `.upgrade()`):** stamp only static values like `updatedAt = migrationNow`
+2. **Post-auth (hook):** stamp user-specific values like `userId` from a post-`db.open()` auth lifecycle hook
+
+```typescript
+// ❌ Wrong — auth store is null at upgrade time
+database.version(52).upgrade(async tx => {
+  const userId = useAuthStore.getState().userId // always null here
+  await tx.table('notes').modify(r => { r.userId = userId }) // no-op
+})
+
+// ✅ Correct — split the work
+database.version(52).upgrade(async tx => {
+  const now = new Date().toISOString()
+  await tx.table('notes').modify(r => { if (!r.updatedAt) r.updatedAt = now })
+})
+// After db.open(), in useAuthLifecycle:
+backfillUserId(session.user.id) // stamps userId post-auth
+```
+
+**Case study:** E92-S02 — initial design would have called `useAuthStore.getState().userId` inside the v52 upgrade callback. The race was caught during story planning and the two-phase design was adopted from the start.
+
+## Dexie Filter Semantics for Missing Fields
+
+`db.table(t).where('field').equals(undefined)` returns **zero rows** even when documents have no `field` key at all. Dexie's sparse index only tracks documents where the indexed field is present and defined — `undefined` and absent are not the same from the index's perspective.
+
+**Pattern:** To find records where a field is missing, null, or empty, use `.toCollection().filter()`:
+
+```typescript
+// ❌ Wrong — returns 0 rows for documents missing 'userId'
+await db.notes.where('userId').equals(undefined).modify(stamp)
+
+// ✅ Correct — catches missing, null, and empty-string
+await db.notes.toCollection().filter(r => !r.userId).modify(stamp)
+```
+
+This is slower (full table scan vs index lookup), but it's the only reliable way to target "field not present" records. In steady state after backfill, the filter returns 0 rows so the performance cost is negligible.
+
+**Case study:** E92-S02 — first draft of `backfillUserId` used `.where('userId').equals(undefined)` and silently backfilled nothing. Switching to `.filter(r => !r.userId)` fixed it.
