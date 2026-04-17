@@ -869,3 +869,32 @@ expect(alert).toHaveAttribute('aria-live', 'polite')
 **Rule for custom status indicators:** Add a `data-status` or `data-variant` attribute to the element and assert on that. The semantic meaning is stable across theme changes and refactors.
 
 **Case study:** E62 retro — `TopicTreemap` retention color tests initially asserted on hex values via `getComputedStyle()`. Tests passed in one theme and silently failed in another. Switched to `data-retention-tier` attribute assertions.
+
+## RLS Testing Requires a Transaction
+
+When writing SQL tests for Postgres RLS policies using `auth.uid()`, all role-switching and JWT claims must be wrapped in an explicit transaction:
+
+```sql
+BEGIN;
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claims', '{"sub": "user-a-uuid"}', true);
+  -- now auth.uid() resolves correctly
+  SELECT * FROM content_progress WHERE user_id = 'user-b-uuid'; -- returns 0 rows
+COMMIT;
+```
+
+**Why it fails without a transaction:** `set_config(..., is_local=true)` scopes the value to the current transaction. In psql autocommit mode each statement runs in its own implicit transaction. The `set_config` applies to that single statement's transaction (which has no follow-up query), so the next `SELECT` sees no JWT and `auth.uid()` returns NULL — making RLS allow everything (NULL != user_id is always false, but NULL-safe comparison behavior varies by policy).
+
+**Applies to:** Any psql-based RLS isolation test using `auth.uid()`, `auth.role()`, or JWT claims.
+
+**Case study:** E92-S01 — first AC3 attempt ran set_config + SET ROLE + SELECT as separate statements; all rows were visible across users. Wrapping in BEGIN/COMMIT fixed it.
+
+## Cross-Model Severity Divergence is a Quality Signal
+
+When multiple AI reviewers (Claude, GLM, OpenAI) rate the same finding at widely different severities (e.g., NIT vs HIGH vs BLOCKER), the spread itself is a signal — not just noise to average away. It means the code is ambiguous enough to confuse both reviewers and future maintainers.
+
+**Rule:** Fix any finding where cross-model severity range spans more than 2 levels (e.g., NIT→HIGH or LOW→BLOCKER), regardless of the lowest rating given.
+
+**Why:** A finding rated NIT by one model and BLOCKER by another typically indicates latent ambiguity — the code works today but creates a footgun for the next person who touches it. The lowest-severity reviewer may be correct about current impact, but the highest-severity reviewer is often correct about future risk.
+
+**Case study:** E92-S01 R3 — duplicate `_status_rank()` definition was rated NIT (Claude), HIGH (GLM), BLOCKER (OpenAI-fallback). Real impact was maintainability risk, not runtime bug. Fixed in R3. The spread correctly flagged an issue that would have confused any future maintainer editing the fixup migration.
