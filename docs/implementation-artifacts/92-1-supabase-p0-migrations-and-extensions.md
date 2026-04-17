@@ -1,9 +1,9 @@
 ---
 story_id: E92-S01
 story_name: 'Supabase P0 Migrations and Extensions'
-status: ready-for-dev
+status: done
 started: 2026-04-17
-completed:
+completed: 2026-04-17
 reviewed: true
 review_started: 2026-04-17
 review_gates_passed:
