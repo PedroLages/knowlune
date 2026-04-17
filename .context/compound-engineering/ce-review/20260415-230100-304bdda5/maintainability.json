@@ -1,0 +1,99 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "id": "M-01",
+      "severity": "P1",
+      "confidence": 0.98,
+      "title": "MetadataSearchResult interface duplicated across 4 files",
+      "description": "The MetadataSearchResult interface is defined identically in GoogleBooksService.ts, ITunesSearchService.ts, AudnexusService.ts, and CoverSearchService.ts (canonical). Three of the four files define a local copy instead of importing from the canonical source. Any field addition or type change must be applied in 4 places or drift will silently occur.",
+      "locations": [
+        "src/services/CoverSearchService.ts (canonical + re-export)",
+        "src/services/GoogleBooksService.ts (local duplicate)",
+        "src/services/ITunesSearchService.ts (local duplicate)",
+        "src/services/AudnexusService.ts (local duplicate)"
+      ],
+      "recommendation": "Remove local interface definitions from GoogleBooksService.ts, ITunesSearchService.ts, and AudnexusService.ts. Import MetadataSearchResult from CoverSearchService.ts (or extract to a dedicated src/services/types.ts) in all three files."
+    },
+    {
+      "id": "M-02",
+      "severity": "P1",
+      "confidence": 0.97,
+      "title": "fetchWithTimeout duplicated in 3 service files",
+      "description": "An identical 4-line fetchWithTimeout utility function exists independently in GoogleBooksService.ts, ITunesSearchService.ts, and AudnexusService.ts. This is copy-paste code with no shared source. A bug fix or behaviour change (e.g. error type, AbortSignal handling) must be applied in 3 places.",
+      "locations": [
+        "src/services/GoogleBooksService.ts",
+        "src/services/ITunesSearchService.ts",
+        "src/services/AudnexusService.ts"
+      ],
+      "recommendation": "Extract fetchWithTimeout into src/services/fetchWithTimeout.ts (or src/lib/http.ts) and import it in all three services. The canonical timeout value (5000ms) should be exported as a named constant from the same module."
+    },
+    {
+      "id": "M-03",
+      "severity": "P2",
+      "confidence": 0.90,
+      "title": "Magic number 6000ms timeout in BookMetadataEditor has implicit coupling to provider timeouts",
+      "description": "BookMetadataEditor.tsx uses a hardcoded 6000ms fallback setTimeout to clear the searching state. This value must be strictly greater than all provider fetch timeouts (5000ms each), but that relationship is implicit and undocumented. A future developer raising a provider timeout above 6000ms will produce a UI bug (spinner clears before results arrive) with no compiler or lint warning.",
+      "locations": [
+        "src/app/components/library/BookMetadataEditor.tsx"
+      ],
+      "recommendation": "Define a named constant MAX_PROVIDER_TIMEOUT_MS = 5000 and SEARCH_FALLBACK_TIMEOUT_MS = MAX_PROVIDER_TIMEOUT_MS + 1000 (or equivalent) co-located with the service layer. Import it in BookMetadataEditor so the relationship is explicit and the fallback automatically tracks provider changes."
+    },
+    {
+      "id": "M-04",
+      "severity": "P2",
+      "confidence": 0.85,
+      "title": "BookMetadataEditor component complexity — ~15 state variables signal extraction opportunity",
+      "description": "BookMetadataEditor.tsx has accumulated ~15 useState declarations and multiple useCallback hooks. This level of local state density makes the component difficult to test in isolation, increases cognitive load during review, and makes future feature additions likely to further inflate the file. The search/provider coordination logic is particularly separable from the display logic.",
+      "locations": [
+        "src/app/components/library/BookMetadataEditor.tsx"
+      ],
+      "recommendation": "Extract search coordination into a custom hook (e.g. useMetadataSearch) that encapsulates provider selection, search execution, abort controller lifecycle, and result state. This reduces BookMetadataEditor's surface area and makes the search logic independently testable."
+    },
+    {
+      "id": "M-05",
+      "severity": "P2",
+      "confidence": 0.92,
+      "title": "Array index used as React key in CoverSearchGrid",
+      "description": "CoverSearchGrid renders search results with key={index}. When the results array is replaced by a new search (different provider, different query), React may reuse DOM nodes incorrectly, causing stale images or animation artifacts. Index keys are specifically problematic when the list is replaced wholesale, which is the primary use case here.",
+      "locations": [
+        "src/app/components/library/CoverSearchGrid.tsx"
+      ],
+      "recommendation": "Use a stable unique key derived from result content, e.g. key={result.coverUrl || `${result.title}-${index}`}. If MetadataSearchResult has an id field from the provider, prefer that."
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "RR-01",
+      "confidence": 0.75,
+      "description": "If the fallback 6000ms setTimeout fires while a valid provider response is still in-flight (e.g. Audnexus is slow but under 6s), the spinner clears and the user sees no activity — then results appear unexpectedly. The current approach has no guarantee of correctness beyond the magic number margin."
+    },
+    {
+      "id": "RR-02",
+      "confidence": 0.70,
+      "description": "Three independent fetchWithTimeout implementations may diverge silently over time (e.g. one adds retry logic, another does not). The duplication creates an ongoing maintenance surface with no enforcement mechanism."
+    },
+    {
+      "id": "RR-03",
+      "confidence": 0.65,
+      "description": "The MetadataSearchResult interface duplication means TypeScript structural compatibility is the only thing preventing drift. If one file adds an optional field, the others remain oblivious and CoverSearchService re-export may not reflect the richer type, causing data loss on the aggregation path."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "TG-01",
+      "confidence": 0.80,
+      "description": "No unit test exists for the fetchWithTimeout utility because it is private to each service file. Extracting it would enable a single focused test covering abort behaviour, timeout boundary, and network error passthrough."
+    },
+    {
+      "id": "TG-02",
+      "confidence": 0.75,
+      "description": "BookMetadataEditor's search coordination logic (abort controller management, fallback timeout, provider selection) is untestable at the unit level because it is embedded in a large component. Extracting to useMetadataSearch would make it directly testable with renderHook."
+    },
+    {
+      "id": "TG-03",
+      "confidence": 0.70,
+      "description": "CoverSearchGrid key instability is not caught by existing tests because visual regression / snapshot tests are not present. The bug manifests as a rendering artifact rather than a thrown error."
+    }
+  ]
+}

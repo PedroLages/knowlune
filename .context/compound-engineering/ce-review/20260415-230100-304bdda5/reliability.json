@@ -1,0 +1,113 @@
+{
+  "reviewer": "reliability",
+  "findings": [
+    {
+      "id": "REL-01",
+      "severity": "P1",
+      "confidence": 0.95,
+      "title": "setTimeout spinner not cleared on unmount — stale state update risk",
+      "location": "src/app/components/library/BookMetadataEditor.tsx:257-259",
+      "description": "The 6-second setTimeout that clears the isSearching spinner is not stored or cancelled. If the component unmounts before it fires (dialog closed mid-search), the callback executes on an unmounted component. React 18 suppresses setState on unmounted components without error, but if the component re-mounts with a new book before the 6s elapses, the old timer will clear the new spinner prematurely — silently killing the loading state for the second search.",
+      "reproduction": "1. Open dialog, trigger search. 2. Close dialog within 6s. 3. Re-open immediately and search again. 4. Old timer fires ~6s after first search and clears spinner for new search.",
+      "fix": "Store the timer ID in a ref: `spinnerTimerRef.current = setTimeout(...)`. Clear it in the useEffect cleanup and at the start of each new handleSearchCovers call alongside the AbortController abort.",
+      "code_snippet": "const spinnerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)\n// in handleSearchCovers, before setTimeout:\nif (spinnerTimerRef.current) clearTimeout(spinnerTimerRef.current)\nspinnerTimerRef.current = setTimeout(() => {\n  if (!controller.signal.aborted) setIsSearching(false)\n}, 6000)\n// in useEffect cleanup:\nreturn () => {\n  abortControllerRef.current?.abort()\n  if (spinnerTimerRef.current) clearTimeout(spinnerTimerRef.current)\n  if (coverPreviewUrlRef.current) URL.revokeObjectURL(coverPreviewUrlRef.current)\n}"
+    },
+    {
+      "id": "REL-02",
+      "severity": "P1",
+      "confidence": 0.90,
+      "title": "cover fetch in handleSelectResult has no timeout — indefinite hang possible",
+      "location": "src/app/components/library/BookMetadataEditor.tsx:268",
+      "description": "The fetch call for the selected cover URL (`fetch(result.coverUrl)`) has no timeout signal. External CDN URLs from Google Books, iTunes, or Audnexus can stall indefinitely — large images or slow CDNs will leave the UI in a permanent `isFetchingCover=true` spinner state with no recovery path. The user cannot save or dismiss without closing the dialog entirely.",
+      "fix": "Add AbortSignal.timeout(15_000) to the fetch call. The 15s window is generous for cover images; most should resolve in <3s.",
+      "code_snippet": "const response = await fetch(result.coverUrl, { signal: AbortSignal.timeout(15_000) })"
+    },
+    {
+      "id": "REL-03",
+      "severity": "P1",
+      "confidence": 0.88,
+      "title": "Audible proxy: response.json() without content-type guard — unhandled parse error",
+      "location": "server/index.ts:476",
+      "description": "The /api/audible/proxy handler calls `response.json()` unconditionally after a successful fetch. Audible's API may return an HTML rate-limit page (HTTP 200 or 429 with HTML body) or a CDN error page when under load. Calling .json() on an HTML response throws a SyntaxError that propagates outside the try/catch because the error occurs after the fetch resolves — this crashes the route handler and Express returns a 500 with a stack trace rather than a structured error. The client-side AudnexusService will receive an unexpected error shape.",
+      "note": "The try/catch at line 478 DOES wrap response.json(), so the crash is caught — but the error branch returns a generic 502, losing HTTP status context. Confidence adjusted to 0.75 for the crash risk; the bigger issue is silent degradation when Audible rate-limits.",
+      "confidence": 0.75,
+      "fix": "Check content-type before parsing: `const ct = response.headers.get('content-type') ?? ''; if (!ct.includes('application/json')) { res.status(502).json({ error: 'Audible returned non-JSON response', status: response.status }); return; }`. Also consider propagating the upstream HTTP status (e.g. 429) rather than always returning 502.",
+      "code_snippet": "const ct = response.headers.get('content-type') ?? ''\nif (!ct.includes('application/json')) {\n  console.warn('[/api/audible/proxy] non-JSON response, status:', response.status)\n  res.status(response.status === 429 ? 429 : 502).json({\n    error: 'Audible returned non-JSON response',\n    upstreamStatus: response.status,\n  })\n  return\n}\nconst data = await response.json()"
+    },
+    {
+      "id": "REL-04",
+      "severity": "P2",
+      "confidence": 0.85,
+      "title": "Spinner UX desync: providers responding after 6s show results without loading indicator",
+      "location": "src/app/components/library/BookMetadataEditor.tsx:257-259",
+      "description": "The 6-second hard cutoff for the spinner assumes all providers complete within that window. Each individual provider service has a 5s timeout, but network latency is additive: a provider might still be in-flight at 6s. When results arrive after the spinner clears, the grid shows them without any loading state — the CoverSearchGrid's progressive indicator (`isSearching && results.length > 0`) will be gone, so the user sees new cards appear without context. This is a UX reliability issue rather than a data loss issue.",
+      "fix": "Track pending provider count instead of using a hardcoded timeout. Decrement a `pendingProviders` counter in each provider's callback (both success and error paths in CoverSearchService). Set isSearching=false when counter reaches zero. This eliminates the race entirely."
+    },
+    {
+      "id": "REL-05",
+      "severity": "P2",
+      "confidence": 0.80,
+      "title": "CoverSearchService: fire-and-forget promises with no completion signal to caller",
+      "location": "src/services/CoverSearchService.ts:54-93",
+      "description": "searchCovers() is void-returning and fires all provider promises independently. There is no mechanism for the caller to know when all providers have finished — the 6s setTimeout in the editor is a workaround for this architectural gap. If a provider hangs (e.g., Open Library never resolves and has no timeout), the caller has no way to detect or recover from it. The `onResults` callback is also called for empty results (on error), which does update state correctly, but the lack of a completion callback makes reliable \"all done\" detection impossible without external heuristics.",
+      "fix": "Return a Promise<void> (or a cancel function that also returns a completion promise) from searchCovers so the caller can await all providers. Use Promise.allSettled internally over the provider array to guarantee all branches complete."
+    },
+    {
+      "id": "REL-06",
+      "severity": "P2",
+      "confidence": 0.70,
+      "title": "handleSelectResult closes search grid before cover fetch completes — state inconsistency",
+      "location": "src/app/components/library/BookMetadataEditor.tsx:302",
+      "description": "`setShowSearchGrid(false)` is called at the end of handleSelectResult regardless of whether the cover fetch succeeded or failed. If the cover fetch is slow (no timeout), the grid closes immediately but `isFetchingCover` stays true for an extended period. If the user re-opens the grid and selects a different result during this window, the first fetch may still be in-flight and will overwrite the second selection's cover when it eventually resolves (race condition between two sequential handleSelectResult calls).",
+      "fix": "Cancel the previous cover fetch before starting a new one. Add a `coverFetchAbortRef` ref similar to the search abort controller, and abort it at the start of each handleSelectResult invocation."
+    },
+    {
+      "id": "REL-07",
+      "severity": "P3",
+      "confidence": 0.65,
+      "title": "Cross-provider deduplication only within provider, not across providers",
+      "location": "src/services/CoverSearchService.ts:145-165",
+      "description": "normalizeAndDedup() deduplicates within a single provider's result set using local Sets that are recreated per call. The same ISBN or ASIN can appear from both Google Books and Open Library, resulting in visually identical cards in the grid from different providers. This is a UX reliability concern (user confusion) rather than a data corruption issue.",
+      "fix": "Maintain a shared seen-ISBN and seen-ASIN set in the searchCovers closure scope and pass it through to each deliver() call, or deduplicate in the onResults accumulator in the editor component."
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "RR-01",
+      "description": "Open Library service has no explicit timeout documented. If fetchOpenLibraryMetadata() does not abort on signal or timeout internally, it can hold a provider slot open indefinitely. The void-return architecture of searchCovers means this will never surface as an error to the user.",
+      "confidence": 0.65
+    },
+    {
+      "id": "RR-02",
+      "description": "The AbortController signal is passed to searchCovers but CoverSearchService only checks signal.aborted at deliver() time — after each provider's promise has already resolved. If the user cancels quickly, all 4 providers continue fetching to completion on the network; only result delivery is suppressed. For audiobooks this means 4 concurrent external API calls that cannot be truly cancelled.",
+      "confidence": 0.80
+    },
+    {
+      "id": "RR-03",
+      "description": "toJpeg() in BookMetadataEditor creates an Image element and canvas but does not set a load timeout on img.onload. A malformed or truncated image blob from a slow CDN could leave the promise pending indefinitely, compounding the lack of fetch timeout on the cover URL.",
+      "confidence": 0.60
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "TG-01",
+      "description": "No test covers the timer/unmount race: open dialog → search → close before 6s → reopen and search. The premature spinner clear on the second search is undetected."
+    },
+    {
+      "id": "TG-02",
+      "description": "No test simulates a cover fetch that stalls (slow CDN) to verify isFetchingCover clears and the user can recover without closing the dialog."
+    },
+    {
+      "id": "TG-03",
+      "description": "No test for the Audible proxy receiving an HTML response body (rate-limit page). The 502 fallback path is tested via AbortError but not via SyntaxError from JSON.parse failure."
+    },
+    {
+      "id": "TG-04",
+      "description": "No test for concurrent handleSelectResult calls (rapid double-tap on two different result cards). The cover overwrite race condition from REL-06 is not exercised."
+    },
+    {
+      "id": "TG-05",
+      "description": "CoverSearchService unit tests do not verify that onResults is called exactly N times (once per provider) when all providers error — ensuring the caller always gets a completion signal even under total failure."
+    }
+  ]
+}

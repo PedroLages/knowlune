@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Knowlune - My Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed-variant": "#004493",
+                        "secondary-fixed": "#d8e2ff",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-highest": "#e2e2e7",
+                        "outline-variant": "#c2c6d5",
+                        "on-secondary-container": "#44587f",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-tint": "#005bc0",
+                        "on-surface-variant": "#424753",
+                        "surface-container-high": "#e7e8ed",
+                        "background": "#f9f9fe",
+                        "on-surface": "#1a1c1f",
+                        "on-background": "#1a1c1f",
+                        "surface": "#f9f9fe",
+                        "on-secondary-fixed-variant": "#33466d",
+                        "on-primary-fixed": "#001a41",
+                        "surface-container": "#ededf2",
+                        "inverse-surface": "#2e3034",
+                        "tertiary-fixed-dim": "#ffb595",
+                        "surface-dim": "#d9dade",
+                        "primary": "#004494",
+                        "on-tertiary-container": "#ffcfbb",
+                        "secondary-container": "#bbcffd",
+                        "inverse-on-surface": "#f0f0f5",
+                        "on-error-container": "#93000a",
+                        "on-secondary": "#ffffff",
+                        "tertiary": "#7c2f00",
+                        "on-secondary-fixed": "#021a3f",
+                        "error": "#ba1a1a",
+                        "primary-fixed": "#d8e2ff",
+                        "secondary": "#4b5e86",
+                        "tertiary-fixed": "#ffdbcc",
+                        "surface-bright": "#f9f9fe",
+                        "secondary-fixed-dim": "#b3c6f4",
+                        "surface-container-low": "#f3f3f8",
+                        "on-tertiary-fixed-variant": "#7c2e00",
+                        "surface-variant": "#e2e2e7",
+                        "on-primary": "#ffffff",
+                        "on-primary-container": "#c9d9ff",
+                        "inverse-primary": "#adc6ff",
+                        "primary-container": "#005bc1",
+                        "on-tertiary-fixed": "#351000",
+                        "on-error": "#ffffff",
+                        "outline": "#727784",
+                        "primary-fixed-dim": "#adc6ff",
+                        "tertiary-container": "#a33f00"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        .glass-player {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface selection:bg-primary-fixed selection:text-on-primary-fixed">
+<div class="flex h-screen overflow-hidden">
+<!-- SideNavBar - JSON Implementation -->
+<aside class="h-screen w-64 border-r-0 bg-white dark:bg-slate-950 shadow-[4px_0_24px_rgba(0,0,0,0.02)] flex flex-col py-8 px-6 z-30">
+<div class="mb-10">
+<h1 class="text-xl font-bold tracking-tighter text-[#1a1c1f] dark:text-white">Knowlune</h1>
+<p class="text-xs text-slate-500 font-medium tracking-wide uppercase mt-1">Digital Curator</p>
+</div>
+<nav class="flex-1 space-y-2">
+<!-- Overview -->
+<a class="flex items-center gap-3 py-3 px-4 rounded-xl text-slate-500 dark:text-slate-400 font-medium hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors active:scale-95 duration-150 group" href="#">
+<span class="material-symbols-outlined text-lg">dashboard</span>
+<span>Overview</span>
+</a>
+<!-- Library (Active) -->
+<a class="flex items-center gap-3 py-3 px-4 rounded-xl text-[#004494] dark:text-[#005bc1] font-semibold bg-slate-50 dark:bg-slate-900 transition-colors active:scale-95 duration-150 group" href="#">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">library_books</span>
+<span>Library</span>
+</a>
+<!-- Settings -->
+<a class="flex items-center gap-3 py-3 px-4 rounded-xl text-slate-500 dark:text-slate-400 font-medium hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors active:scale-95 duration-150 group" href="#">
+<span class="material-symbols-outlined text-lg">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-6">
+<div class="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden">
+<img alt="User" data-alt="professional portrait of a man in his 30s with a clean and minimal studio background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkXzU-xFQrohqHxWk9Ijiq2cj-IFx6Z59THCxRXy0GG_6LPrRq2icvi0HhwCxCfbqiLNv3P38IoGms_R3itU3iHgD7ypvdXEy6NhAzny9OgyQVZkCEzJajGsk7teb5MeM48fnkbMMkLyVr8ocOsWmx2EBY_Y8J168eAMzkK2F0TdJ37HFjaqBsiAXTf7wakdb96RWHalu25pZsF4YHSxUxYUgWbctyTJoXe4PBhVMaaqhyg-P3hDS5Gzcpw1mtmdMKPLptv0hzGc0"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold truncate">Alex Chen</p>
+<p class="text-xs text-on-surface-variant truncate">Premium Curator</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto scroll-smooth">
+<!-- TopAppBar - JSON Implementation -->
+<header class="flex justify-between items-end w-full px-12 pt-12 pb-6 max-w-[1600px] mx-auto bg-transparent">
+<div>
+<h2 class="text-[2.75rem] font-semibold tracking-[-0.02em] text-on-surface leading-tight">My Library</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center bg-surface-container-low rounded-xl p-1">
+<button class="p-2 rounded-lg bg-surface-container-lowest shadow-sm text-primary transition-all">
+<span class="material-symbols-outlined">grid_view</span>
+</button>
+<button class="p-2 rounded-lg text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">view_list</span>
+</button>
+<button class="p-2 rounded-lg text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">format_list_bulleted</span>
+</button>
+</div>
+<button class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-low text-on-surface-variant hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined">search</span>
+</button>
+</div>
+</header>
+<div class="px-12 max-w-[1600px] mx-auto space-y-6 pb-24">
+<!-- Filters Section -->
+<div class="space-y-4">
+<!-- Row 1: Source tabs -->
+<div class="flex items-center gap-2">
+<button class="px-6 py-2 rounded-full text-sm font-semibold bg-primary text-on-primary transition-all shadow-sm">All</button>
+<button class="px-6 py-2 rounded-full text-sm font-medium text-on-surface-variant bg-surface-container-high hover:bg-surface-container-highest transition-colors">Audiobookshelf</button>
+</div>
+<!-- Row 2: Format tabs -->
+<div class="flex items-center gap-2">
+<button class="px-6 py-2 rounded-full text-sm font-semibold bg-primary text-on-primary transition-all shadow-sm flex items-center gap-2">
+<span>All</span>
+</button>
+<button class="px-5 py-2 rounded-full text-sm font-medium text-on-surface-variant bg-surface-container-high hover:bg-surface-container-highest transition-colors flex items-center gap-2 group">
+<span class="material-symbols-outlined text-base group-hover:text-primary transition-colors">headphones</span>
+<span>Audiobooks</span>
+</button>
+<button class="px-5 py-2 rounded-full text-sm font-medium text-on-surface-variant bg-surface-container-high hover:bg-surface-container-highest transition-colors flex items-center gap-2 group">
+<span class="material-symbols-outlined text-base group-hover:text-primary transition-colors">book</span>
+<span>Ebooks</span>
+</button>
+</div>
+</div>
+<!-- Audiobooks Section -->
+<section class="pt-8">
+<div class="flex items-center justify-between mb-8">
+<h3 class="text-xl font-bold tracking-tight text-on-surface">Audiobooks <span class="text-on-surface-variant font-normal ml-1">(238)</span></h3>
+<button class="text-primary text-sm font-semibold hover:underline">View All</button>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-8 gap-y-12">
+<!-- Audiobook Card 1 -->
+<div class="group cursor-pointer">
+<div class="aspect-square w-full rounded-xl overflow-hidden bg-surface-container shadow-[0_4px_24px_rgba(0,0,0,0.04)] group-hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-300 relative">
+<img alt="Book Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="minimalist book cover with abstract blue geometric shapes on a white background, clean professional design" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAdsrWX5cbSpFTxS_YOIF_hriZZ0HbgV28Wp73EzWpf97BDu0-eZ_UlDZ45_aSwirZrdN2zo8Qq0BvZYpXYi3Ebqw2oQpHOV65t3tNEjOOGkLCZZj_QEAMJsRsaZkoB9JgzkhYNux_X2z4C2i5Qep5x4ioJB3e3hh9frzarP1vNAjcMnwrCcMYRSbSG7ZolQj5PWO-B-GtA-2oenvuyOTwT0Hi6htiFGO6vS1Q3gxiXEx41Jd1jLfRc-QbPY7w70VHDeoDTT6HpGc"/>
+<div class="absolute bottom-0 left-0 right-0 h-1 bg-surface-container-highest">
+<div class="h-full bg-primary" style="width: 65%;"></div>
+</div>
+</div>
+<div class="mt-4 space-y-1">
+<h4 class="font-bold text-on-surface leading-snug group-hover:text-primary transition-colors line-clamp-1">The Psychology of Money</h4>
+<p class="text-sm text-on-surface-variant font-medium">Morgan Housel</p>
+<p class="text-[0.65rem] font-bold text-on-surface-variant tracking-[0.05em] uppercase pt-1">5H 42M LEFT</p>
+</div>
+</div>
+<!-- Audiobook Card 2 -->
+<div class="group cursor-pointer">
+<div class="aspect-square w-full rounded-xl overflow-hidden bg-surface-container shadow-[0_4px_24px_rgba(0,0,0,0.04)] group-hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-300 relative">
+<img alt="Book Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="creative book cover with a warm sunset palette and silhouette of a lone tree on a hilltop, atmospheric lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8hcKVSlIzUtiMwA2q96wMaz0LGpCvbGXeluE5i2V5wkSpGgTs3tgWQG4YFVCWq6jY2sRIqbQEq0r_6hYLwiYS3fMsTsONoKLi5ycQ9g13jKSCpyFiXSY5fQmkZM3pHC_JF0TfZOBR_QIMVRzOrOBMTGjltqT2Z5TuaASt-dmK6fK8Fl1AHm2YokUL9DbJ2aP8xPEjXsFXyX4aVr2-vJjKHcit6LMMB8d5f73c9lp5dZXna8rVq8Q4kz8bGxYBiuKOObicWG8Extw"/>
+<div class="absolute bottom-0 left-0 right-0 h-1 bg-surface-container-highest">
+<div class="h-full bg-primary" style="width: 12%;"></div>
+</div>
+</div>
+<div class="mt-4 space-y-1">
+<h4 class="font-bold text-on-surface leading-snug group-hover:text-primary transition-colors line-clamp-1">Project Hail Mary</h4>
+<p class="text-sm text-on-surface-variant font-medium">Andy Weir</p>
+<p class="text-[0.65rem] font-bold text-on-surface-variant tracking-[0.05em] uppercase pt-1">14H 10M LEFT</p>
+</div>
+</div>
+<!-- Audiobook Card 3 -->
+<div class="group cursor-pointer">
+<div class="aspect-square w-full rounded-xl overflow-hidden bg-surface-container shadow-[0_4px_24px_rgba(0,0,0,0.04)] group-hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-300 relative">
+<img alt="Book Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="vibrant book cover with organic fluid shapes in deep forest green and gold accents, luxurious feel" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDD_MQsdRRezAfOIz4l3FYyTSpMGJrnMBHooIMnqvcxvvUk2TTYfnb2UhMrODsnTiEh1whcEQWAtRHohumvX_v_O1JkUgqLDdv6GVtb8T7ImCqSUBaASXPvf76G_8kYRaKu16NlcQmN15aKLa-oH5VadAl8rXDZ6EetEj1gwT_sYozC1xbQFK-bk6hRsR5fof1OWh86orasLJOVs0ZRfpCPbyD0HOWJrCPF2HZBbifufT_eifsRKZmzARPZSTzbrrQexegaHSXNuzU"/>
+<div class="absolute bottom-0 left-0 right-0 h-1 bg-surface-container-highest">
+<div class="h-full bg-primary" style="width: 100%;"></div>
+</div>
+</div>
+<div class="mt-4 space-y-1">
+<h4 class="font-bold text-on-surface leading-snug group-hover:text-primary transition-colors line-clamp-1">Atomic Habits</h4>
+<p class="text-sm text-on-surface-variant font-medium">James Clear</p>
+<div class="flex items-center gap-1 text-[0.65rem] font-bold text-primary tracking-[0.05em] uppercase pt-1">
+<span class="material-symbols-outlined text-[10px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                    FINISHED
+                                </div>
+</div>
+</div>
+<!-- Audiobook Card 4 -->
+<div class="group cursor-pointer">
+<div class="aspect-square w-full rounded-xl overflow-hidden bg-surface-container shadow-[0_4px_24px_rgba(0,0,0,0.04)] group-hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-300 relative">
+<img alt="Book Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="architectural book cover with dramatic shadows and sharp lines, monochromatic palette with a single red accent" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-5-Vb5whlt0qwuPcEl6QxQ_oV82BFF3H-xPj-jVw_U24VQYM_DdnIUwmXmqvOilq9dbgGODzDiGpJh8xEBsmpUlP_eHRT6l3RTFpc5KsrFOEktQd-6gj6Xu4FSeGAhw3eWK1d-QAHyVZWSNWTQxFW85xazXwOQlQ5zo1VF6Gwg75Cs24V_29xcLhwaQwSqwhfZlpOc_cje1w6Mv8rAdZAjIh2dQfNpXlgTuWa7LDHYCz9Vbh3tAyZ_At-bzdvthXzBIrOBa_RzXc"/>
+<div class="absolute bottom-0 left-0 right-0 h-1 bg-surface-container-highest">
+<div class="h-full bg-primary" style="width: 42%;"></div>
+</div>
+</div>
+<div class="mt-4 space-y-1">
+<h4 class="font-bold text-on-surface leading-snug group-hover:text-primary transition-colors line-clamp-1">The Creative Act</h4>
+<p class="text-sm text-on-surface-variant font-medium">Rick Rubin</p>
+<p class="text-[0.65rem] font-bold text-on-surface-variant tracking-[0.05em] uppercase pt-1">8H 22M LEFT</p>
+</div>
+</div>
+<!-- Audiobook Card 5 -->
+<div class="group cursor-pointer">
+<div class="aspect-square w-full rounded-xl overflow-hidden bg-surface-container shadow-[0_4px_24px_rgba(0,0,0,0.04)] group-hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-300 relative">
+<img alt="Book Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="serene book cover with a soft watercolor mountain landscape in lavender and grey tones, peaceful mood" src="https://lh3.googleusercontent.com/aida-public/AB6AXuABCQEwtFZYEjFyZqd3cMVPG9yCTgaGYKCHd-tdGyW_Eut4ij76FmUWSjPOjRsetYf0WCD7LuUIHLg2la9ymsuQMwniYOnPLNa1bVez-Xkv6RoIX5O0_8dzsLgRmxGU01pgOkVR-lDhmat9AorhFhL2Fb_AFWRqsd0H3GnQmdEEaobn4cYbtdpKEtiDKcfhpwcL6d95EMcsn5N6dgbzaiixGQWkDZQyBs_ElGVDzGXcWzMXs4bYdHM0Op-LLW4hvBjTcPcsUhEalR4"/>
+<div class="absolute bottom-0 left-0 right-0 h-1 bg-surface-container-highest">
+<div class="h-full bg-primary" style="width: 0%;"></div>
+</div>
+</div>
+<div class="mt-4 space-y-1">
+<h4 class="font-bold text-on-surface leading-snug group-hover:text-primary transition-colors line-clamp-1">Outlive</h4>
+<p class="text-sm text-on-surface-variant font-medium">Peter Attia</p>
+<p class="text-[0.65rem] font-bold text-on-surface-variant tracking-[0.05em] uppercase pt-1">NEW ADDITION</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Ebooks Section -->
+<section class="pt-12">
+<div class="flex items-center justify-between mb-8">
+<h3 class="text-xl font-bold tracking-tight text-on-surface">Ebooks <span class="text-on-surface-variant font-normal ml-1">(1)</span></h3>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-8">
+<!-- Ebook Card 1 (Portrait) -->
+<div class="group cursor-pointer">
+<div class="aspect-[2/3] w-full rounded-xl overflow-hidden bg-surface-container shadow-[0_4px_24px_rgba(0,0,0,0.06)] group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.12)] transition-all duration-500">
+<img alt="Book Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="classic literature book cover with ornate gold filigree and dark leather texture, rich historical aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBK7j7crPq87bK7SYjd1hS-NYYw6zJYj_6IshEbilHrtafW2JzNWqJamHmgUQ2BihqIDuNDnePv2kFCeEVGiFz8IKgfehU-iWdhSVXRBjIPvG46B-zENpuvGlG2sdztpV0R6lkoyLqQWQoMt3uvTA1S2bcfXanyGbuAPsXAdWidledvyAW55wp9S8g__XZ1UCCDJxdqovpkPgkh5EmyMRmPUOt67mlYAHuQI8OphetGVQZMCmitBwHG1IHSJ6NEHD05qz3urioN-kk"/>
+</div>
+<div class="mt-4 space-y-1">
+<h4 class="font-bold text-on-surface leading-tight group-hover:text-primary transition-colors line-clamp-2">Great Expectations</h4>
+<p class="text-sm text-on-surface-variant font-medium">Charles Dickens</p>
+<div class="flex items-center gap-1.5 pt-2">
+<div class="flex-1 h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[75%]"></div>
+</div>
+<span class="text-[0.65rem] font-bold text-on-surface-variant uppercase">75%</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Now Playing Overlay (Glassmorphism) -->
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-[800px] glass-player h-20 rounded-2xl shadow-2xl flex items-center px-6 gap-4 z-40 border-0">
+<div class="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 shadow-md">
+<img alt="Mini Cover" data-alt="blurred book cover detail with soft blue and white hues" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBqydmNGAfyCKjujI3lDej2wpsVLqd7R6l3oJs15RMJQRYP9lofwDXKCi9HJWASjPT6dwre_1BlfuISADlJlOt2yVMV4Wtva0PSq87Abm52G9Ed2nU0J0pZYO8G8rGnSZ_spMoKQ3db5YxPNDnnqF70KViffiBXKo4pO7dR_60iH7E-N8BKffELZO7Tyw9Y5f5VhHDga11y9cJAu452uUrbybkcHFl63zytL2oHNSiOQpoDP3fGi1zmH5tAn_ZZuVyoOyClxkH29ZM"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-bold truncate leading-tight">The Psychology of Money</p>
+<p class="text-xs text-on-surface-variant truncate">Morgan Housel • 05:42:10 left</p>
+<div class="w-full h-1 bg-surface-container-highest rounded-full mt-2 overflow-hidden">
+<div class="h-full bg-primary" style="width: 65%;"></div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 flex items-center justify-center text-on-surface hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-3xl">replay_10</span>
+</button>
+<button class="w-12 h-12 flex items-center justify-center bg-primary rounded-full text-white shadow-lg hover:bg-primary-container active:scale-90 transition-all">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center text-on-surface hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-3xl">forward_30</span>
+</button>
+</div>
+</div>
+</div>
+</body></html>

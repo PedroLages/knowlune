@@ -1,0 +1,167 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "id": "T-01",
+      "severity": "P1",
+      "confidence": 0.92,
+      "title": "AbortSignal never passed to provider functions — abort tests are vacuous",
+      "file": "src/services/__tests__/CoverSearchService.test.ts",
+      "detail": "CoverSearchService.searchCovers accepts an AbortSignal but the test suite has no tests that pass a signal, abort mid-flight, and assert onResults is not called after abort. The abort path is only exercised implicitly via the signal.aborted guard inside the service. A provider that resolves after abort could still invoke onResults.",
+      "recommendation": "Add a test: call searchCovers with a signal, abort the controller before any provider resolves, then flush promises and assert onResults was not called with any results from the aborted providers."
+    },
+    {
+      "id": "T-02",
+      "severity": "P1",
+      "confidence": 0.88,
+      "title": "No tests for handleSelectResult cover-fetch failure path in BookMetadataEditor",
+      "file": "src/app/components/library/BookMetadataEditor.tsx",
+      "detail": "handleSelectResult (line 263) catches cover fetch errors and fires toast.warning, but there are zero unit/component tests for BookMetadataEditor. The cover-fetch failure branch (fetch rejects, response not ok) is completely untested, including that the form still auto-fills metadata fields even when the cover fails.",
+      "recommendation": "Add component tests for BookMetadataEditor covering: (a) cover fetch failure still auto-fills blank metadata fields, (b) toast.warning is called, (c) isFetchingCover is reset to false."
+    },
+    {
+      "id": "T-03",
+      "severity": "P1",
+      "confidence": 0.85,
+      "title": "No tests for auto-fill only-blank-fields guard in BookMetadataEditor",
+      "file": "src/app/components/library/BookMetadataEditor.tsx",
+      "detail": "The auto-fill logic at lines 286-293 silently skips fields that already have values. No test verifies that selecting a result with a full metadata set does not overwrite a pre-populated author, description, series, narrator, ISBN, or ASIN.",
+      "recommendation": "Add component test: open editor with a book that has all metadata fields populated, select a result with different values for all fields, assert none of the existing field values changed."
+    },
+    {
+      "id": "T-04",
+      "severity": "P1",
+      "confidence": 0.82,
+      "title": "No tests for abort-on-unmount / abort-on-close in BookMetadataEditor",
+      "file": "src/app/components/library/BookMetadataEditor.tsx",
+      "detail": "abortControllerRef.current?.abort() is called in two useEffect cleanup paths (lines 179, 185). There are no tests verifying that closing the dialog or unmounting the component aborts an in-progress search, preventing stale state updates.",
+      "recommendation": "Add component tests: (a) close dialog while search is in-progress and assert onResults callback is not invoked after close, (b) unmount mid-search and assert no state-update errors."
+    },
+    {
+      "id": "T-05",
+      "severity": "P2",
+      "confidence": 0.90,
+      "title": "CoverSearchGrid has no tests at all",
+      "file": "src/app/components/library/CoverSearchGrid.tsx",
+      "detail": "CoverSearchGrid is a UI component with three distinct render branches (skeleton loading, empty state, results grid) and internal selection state. None are covered by any test. The skeleton render requires isSearching=true AND results.length===0; the empty state requires isSearching=false AND results.length===0; progressive loading indicator requires isSearching=true AND results.length>0.",
+      "recommendation": "Add rendering tests for all three branches: skeleton (isSearching=true, results=[]), empty state (isSearching=false, results=[]), and results grid with progressive indicator (isSearching=true, results has entries). Also test that clicking a card sets selectedIndex and calls onSelect with the correct result."
+    },
+    {
+      "id": "T-06",
+      "severity": "P2",
+      "confidence": 0.85,
+      "title": "No tests for /api/audible/proxy server route",
+      "file": "server/index.ts",
+      "detail": "The /api/audible/proxy route (line 450) has input validation (400 on missing title), a 10-second timeout with AbortController, and error responses (504/502). None of these paths are tested. A regression in input validation or error handling would be invisible.",
+      "recommendation": "Add server integration tests: (a) missing title param returns 400, (b) upstream timeout returns 504, (c) upstream error returns 502, (d) successful proxy returns 200 with body."
+    },
+    {
+      "id": "T-07",
+      "severity": "P2",
+      "confidence": 0.80,
+      "title": "AudnexusService: timeout behavior tested via network-error mock not actual AbortError",
+      "file": "src/services/__tests__/AudnexusService.test.ts",
+      "detail": "The test titled 'returns empty array when Audible catalog fetch times out (AbortError)' uses a TypeError('Failed to fetch') mock, not an actual AbortError. The real timeout mechanism fires an AbortError with name='AbortError'. If the service discriminates on error.name, this test would pass even with broken timeout handling.",
+      "recommendation": "Replace the TypeError mock with a mock that rejects with a DOMException('Aborted', 'AbortError') to accurately simulate an AbortController timeout."
+    },
+    {
+      "id": "T-08",
+      "severity": "P2",
+      "confidence": 0.78,
+      "title": "CoverSearchService: AbortSignal interaction with provider calls not verified",
+      "file": "src/services/__tests__/CoverSearchService.test.ts",
+      "detail": "All provider mocks are module-level vi.mocked references. Tests verify onResults call counts but never assert that the AbortSignal was forwarded to the individual provider functions. If the service creates a new signal internally rather than forwarding the caller's signal, existing tests would still pass.",
+      "recommendation": "Add a test asserting that the signal passed to searchCovers is also passed as an argument to each provider function (or that the providers' AbortController is derived from it)."
+    },
+    {
+      "id": "T-09",
+      "severity": "P2",
+      "confidence": 0.75,
+      "title": "Genre auto-detection in handleSelectResult not tested",
+      "file": "src/app/components/library/BookMetadataEditor.tsx",
+      "detail": "Lines 295-303 call detectGenre() and conditionally update genre state and set genreChanged=true. No test covers: (a) detected genre is applied when genre was previously NONE_GENRE, (b) genre is not changed when it was already set, (c) detectGenre returns 'Other' and genre stays NONE_GENRE.",
+      "recommendation": "Add component tests for genre auto-detection on result selection."
+    },
+    {
+      "id": "T-10",
+      "severity": "P3",
+      "confidence": 0.72,
+      "title": "ITunesSearchService: no test for AbortSignal / timeout handling",
+      "file": "src/services/__tests__/ITunesSearchService.test.ts",
+      "detail": "Tests cover network error and offline sentinel but do not cover the case where the fetch is aborted via AbortController (AbortError). This is relevant if ITunesSearchService implements its own internal timeout.",
+      "recommendation": "Add a test that rejects fetch with a DOMException('Aborted','AbortError') and verifies an empty array is returned."
+    },
+    {
+      "id": "T-11",
+      "severity": "P3",
+      "confidence": 0.70,
+      "title": "GoogleBooksService: ISBN fallback fetch is not timed — fake timers never advanced between calls",
+      "file": "src/services/__tests__/GoogleBooksService.test.ts",
+      "detail": "The ISBN-fallback test (line asserting 2 fetch calls) uses vi.runAllTimersAsync() once before the first await. If the second (fallback) fetch also has an internal timeout wrapped in setTimeout, the test may succeed in tests due to both resolving synchronously via mockResolvedValueOnce, masking a real bug where the fallback fetch never fires in production.",
+      "recommendation": "Verify the fallback fetch does not depend on a timer gate; if it does, add an explicit timer advance between the two fetch mock calls."
+    },
+    {
+      "id": "T-12",
+      "severity": "P3",
+      "confidence": 0.65,
+      "title": "CoverSearchService: cross-provider deduplication not tested",
+      "file": "src/services/__tests__/CoverSearchService.test.ts",
+      "detail": "Deduplication tests only cover within-provider duplicates (same ISBN from google-books twice, same ASIN from audnexus twice). If CoverSearchService is ever extended to deduplicate across providers (e.g., same ISBN from Google Books and Open Library), this would be untested.",
+      "recommendation": "Add a test where two different providers return results with the same ISBN and assert the behavior (either both are kept, or one is deduplicated, depending on the spec)."
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "RR-01",
+      "severity": "P1",
+      "description": "BookMetadataEditor is entirely untested. The component contains the most complex integration logic (abort lifecycle, auto-fill guards, cover conversion, genre detection) and has zero test coverage. Any regression here is invisible to CI."
+    },
+    {
+      "id": "RR-02",
+      "severity": "P2",
+      "description": "CoverSearchGrid has no tests. Three render branches and stateful selection behavior are exercised only by manual QA. A CSS-level regression (e.g., skeleton not rendering, empty state not showing) would not be caught."
+    },
+    {
+      "id": "RR-03",
+      "severity": "P2",
+      "description": "Server proxy route /api/audible/proxy is untested. Input validation and timeout error paths are production code paths with no automated coverage."
+    },
+    {
+      "id": "RR-04",
+      "severity": "P2",
+      "description": "No E2E tests for the search-to-autofill flow. The multi-provider search, progressive grid population, result selection, and metadata auto-fill form a user-visible workflow that is only integration-tested via mocked unit tests. A wiring bug between components (e.g., onSelect not connected, abort not fired) would not be caught."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "area": "BookMetadataEditor component",
+      "gap": "Zero tests exist for this component. Covers: search trigger, abort on close/unmount, auto-fill guard, cover fetch failure, genre detection on selection.",
+      "priority": "P1"
+    },
+    {
+      "area": "CoverSearchGrid component",
+      "gap": "Zero tests exist. Skeleton, empty state, progressive indicator, selection state all untested.",
+      "priority": "P2"
+    },
+    {
+      "area": "AbortSignal propagation in CoverSearchService",
+      "gap": "No test verifies the caller's AbortSignal is forwarded to provider functions or that post-abort results are suppressed.",
+      "priority": "P1"
+    },
+    {
+      "area": "Server /api/audible/proxy route",
+      "gap": "No server integration tests. Missing title (400), upstream timeout (504), upstream error (502), and success path all untested.",
+      "priority": "P2"
+    },
+    {
+      "area": "E2E search flow",
+      "gap": "No Playwright spec covers: opening editor, triggering search, waiting for progressive results, selecting a result, verifying auto-fill and cover update.",
+      "priority": "P2"
+    },
+    {
+      "area": "AudnexusService real AbortError simulation",
+      "gap": "Timeout tests use TypeError rather than DOMException AbortError, potentially missing discriminated error handling bugs.",
+      "priority": "P2"
+    }
+  ]
+}

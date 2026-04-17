@@ -1,0 +1,127 @@
+{
+  "reviewer": "kieran-typescript",
+  "findings": [
+    {
+      "id": "KT-001",
+      "severity": "P1",
+      "confidence": 0.98,
+      "title": "MetadataSearchResult interface duplicated across 4 service files",
+      "description": "The identical MetadataSearchResult interface is declared independently in GoogleBooksService.ts (line 12), AudnexusService.ts (line 18), ITunesSearchService.ts (line 11), and CoverSearchService.ts (line 23). CoverSearchService already designates itself as 'the single source of truth' in its comment, but the other three services re-declare the full interface instead of importing it. This means a change to the canonical definition (e.g., adding a new provider literal to the union, or adding a metadata field) must be replicated in four places — a silent drift risk.",
+      "locations": [
+        "src/services/GoogleBooksService.ts:12-27",
+        "src/services/AudnexusService.ts:18-33",
+        "src/services/ITunesSearchService.ts:11-26",
+        "src/services/CoverSearchService.ts:23-38"
+      ],
+      "recommendation": "Remove the three duplicate declarations and replace them with `import type { MetadataSearchResult } from './CoverSearchService'`. This is a safe refactor — the shapes are byte-for-byte identical, so no callers are affected.",
+      "effort": "low"
+    },
+    {
+      "id": "KT-002",
+      "severity": "P1",
+      "confidence": 0.95,
+      "title": "Unsafe cast of Express query params to Record<string, string>",
+      "description": "In server/index.ts line 456, `req.query` is cast to `Record<string, string>` before destructuring. Express types req.query as `ParsedQs` where each value is `string | string[] | ParsedQs | ParsedQs[] | undefined`. A request like `?title=Foo&title=Bar` will make `title` a `string[]`, not a `string`. Passing an array to `URLSearchParams` (line 463) calls `.toString()` on it, producing `'Foo,Bar'` — a malformed Audible query. A crafted request with a nested object (`?title[x]=y`) produces a `ParsedQs` object, and `URLSearchParams` would stringify it as `[object Object]`, causing a silent bad query upstream.",
+      "locations": [
+        "server/index.ts:450-456"
+      ],
+      "recommendation": "Extract each param with an explicit string guard:\n```ts\nconst raw = req.query\nconst title = typeof raw.title === 'string' ? raw.title : undefined\nconst author = typeof raw.author === 'string' ? raw.author : undefined\nconst num_results = typeof raw.num_results === 'string' ? raw.num_results : '5'\nconst response_groups = typeof raw.response_groups === 'string' ? raw.response_groups : 'product_desc,media,contributors'\n```\nAlternatively, parse the query with Zod (consistent with how `/api/ai/*` routes validate request bodies).",
+      "effort": "low"
+    },
+    {
+      "id": "KT-003",
+      "severity": "P2",
+      "confidence": 0.90,
+      "title": "Unsafe type assertion: unknown Google Books item cast without structural validation",
+      "description": "In GoogleBooksService.ts line 98, `item` (typed as `unknown`) is cast directly to `GoogleBooksVolume` with `item as GoogleBooksVolume`. TypeScript accepts this but provides no runtime safety — if the Google Books API returns an unexpected shape (e.g., a non-object array item, or a shape change after an API update), subsequent property accesses like `volume?.volumeInfo` will silently produce `undefined` rather than surfacing an error. The `.filter(Boolean)` on line 77 masks null returns, so bad data is swallowed without any logging.",
+      "locations": [
+        "src/services/GoogleBooksService.ts:77-78",
+        "src/services/GoogleBooksService.ts:97-99"
+      ],
+      "recommendation": "Replace the cast with a type predicate or a minimal structural check:\n```ts\nfunction isGoogleBooksVolume(item: unknown): item is GoogleBooksVolume {\n  return typeof item === 'object' && item !== null && 'volumeInfo' in item\n}\n// In queryGoogleBooks:\nreturn items.filter(isGoogleBooksVolume).map(mapVolumeToResult).filter(Boolean) as MetadataSearchResult[]\n```\nThe `mapVolumeToResult` signature can then use `GoogleBooksVolume` directly, eliminating the `as` cast.",
+      "effort": "low"
+    },
+    {
+      "id": "KT-004",
+      "severity": "P2",
+      "confidence": 0.85,
+      "title": "No runtime validation that Audible catalog response.products matches AudibleProduct[]",
+      "description": "In AudnexusService.ts line 102, `data?.products ?? []` is assigned to `AudibleProduct[]` with no runtime check. `response.json()` returns `any`, so TypeScript trusts the annotation unconditionally. If Audible returns a differently-shaped response (non-array `products`, or an object when an error occurs), the `.map((p) => p.asin)` on line 103 will throw a runtime TypeError that propagates to the outer catch block, silently returning `[]`. The failure is masked rather than observable.",
+      "locations": [
+        "src/services/AudnexusService.ts:101-103"
+      ],
+      "recommendation": "Add a runtime array guard before the assignment:\n```ts\nconst rawProducts: unknown = data?.products\nif (!Array.isArray(rawProducts)) return []\nconst products = rawProducts as AudibleProduct[]\n```\nFor stricter safety, validate individual items with an `isAudibleProduct` type guard that checks for the `asin` string property.",
+      "effort": "low"
+    },
+    {
+      "id": "KT-005",
+      "severity": "P2",
+      "confidence": 0.88,
+      "title": "searchCovers returns void but drives async side-effects with no completion signal",
+      "description": "CoverSearchService.ts `searchCovers` (line 54) fires multiple untracked promises and returns `void`. Callers have no way to know when all providers have settled. The component that calls this function (BookMetadataEditor) works around this with a 6-second timeout timer, which is a fragile heuristic: on a slow network a provider can miss the window; on a fast network the UI hangs unnecessarily. Additionally, the void return type prevents callers from cancelling pending work except via the AbortSignal — but only result delivery is guarded by the signal, not the underlying fetch calls themselves (each provider's internal `fetchWithTimeout` uses its own AbortController, not the caller's signal).",
+      "locations": [
+        "src/services/CoverSearchService.ts:54-93"
+      ],
+      "recommendation": "Return `Promise<void>` and use `Promise.allSettled` over the provider promises, while still delivering results progressively via the callback. This lets callers `await searchCovers(...)` and drop the timeout hack:\n```ts\nexport async function searchCovers(...): Promise<void> {\n  const providers = [...]\n  await Promise.allSettled(providers)\n}\n```\nAlternatively, expose the individual provider promises as part of the return value so the caller can track completion granularly. The AbortSignal should also be threaded into each provider's fetch controller so upstream requests are actually cancelled on abort.",
+      "effort": "medium"
+    },
+    {
+      "id": "KT-006",
+      "severity": "P3",
+      "confidence": 0.75,
+      "title": "req.query cast also appears in /api/abs/proxy (line 303) with Record<string, string>",
+      "description": "The same unsafe cast pattern from KT-002 appears in the ABS proxy route at server/index.ts line 303: `new URLSearchParams(req.query as Record<string, string>)`. Array-valued query params (e.g., `?foo=a&foo=b`) will be serialised incorrectly. This is pre-existing code outside the current feature diff but was introduced before this branch, and the new Audible proxy route repeats the pattern.",
+      "locations": [
+        "server/index.ts:303"
+      ],
+      "recommendation": "Same fix as KT-002: use Object.entries with a string filter, or switch to a Zod-based query parser for all proxy routes.",
+      "effort": "low"
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "RR-001",
+      "title": "AbortSignal does not cancel upstream fetches",
+      "description": "The AbortSignal passed to searchCovers only gates the onResults delivery callback (line 61). Each provider's internal fetchWithTimeout uses its own AbortController tied to a fixed 5-second timeout. If a user navigates away or opens a new search, the previous provider fetches continue running until their 5-second timeout expires, consuming network resources and potentially delivering stale results if the signal check is bypassed by a race.",
+      "severity": "medium"
+    },
+    {
+      "id": "RR-002",
+      "title": "Audible catalog CORS fallback path is unreachable from client",
+      "description": "AudnexusService.ts comment on line 5 says the CORS-blocked path will be handled by 'a backend proxy (Unit 8)', but the current code does not attempt the proxy URL — it silently swallows the CORS error and returns []. The proxy at /api/audible/proxy exists in server/index.ts but AudnexusService never calls it. Audiobook searches via title+author always silently produce zero Audnexus results in a browser context.",
+      "severity": "medium"
+    },
+    {
+      "id": "RR-003",
+      "title": "Duplicate MetadataSearchResult interfaces create future drift risk",
+      "description": "Until KT-001 is resolved, adding a new provider (e.g., 'spotify') to the union type requires touching 4 files. Missing any one of them silently produces a type error only at the call site, not at the definition. In a rapid-iteration codebase this is a maintenance trap.",
+      "severity": "low"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "TG-001",
+      "title": "No test for array-valued query params in /api/audible/proxy",
+      "description": "The unsafe cast in server/index.ts KT-002 is not covered by any test that passes duplicate query keys. A test sending `?title=Foo&title=Bar` would expose the malformed query forwarded to Audible.",
+      "affected_file": "src/services/__tests__/AudnexusService.test.ts"
+    },
+    {
+      "id": "TG-002",
+      "title": "No test for non-array Audible products response",
+      "description": "AudnexusService.test.ts should cover the case where the mocked Audible response returns `{ products: null }` or `{ products: 'error' }` to verify the guard in KT-004 prevents a runtime TypeError.",
+      "affected_file": "src/services/__tests__/AudnexusService.test.ts"
+    },
+    {
+      "id": "TG-003",
+      "title": "No test for AbortSignal mid-delivery cancellation in searchCovers",
+      "description": "CoverSearchService.test.ts has no test that aborts the signal after one provider has resolved but before others deliver. This would catch the KT-005 race where a stale callback fires after abort.",
+      "affected_file": "src/services/__tests__/CoverSearchService.test.ts"
+    },
+    {
+      "id": "TG-004",
+      "title": "GoogleBooksService has no test for unexpected item shapes in API response",
+      "description": "The items array from Google Books is currently tested with well-formed mock data. A test passing a non-object item (e.g., a number or null in the array) would expose the unsafe cast in KT-003.",
+      "affected_file": "src/services/__tests__/GoogleBooksService.test.ts"
+    }
+  ]
+}
