@@ -11,6 +11,11 @@ import { db } from '@/db'
  * Idempotent: records that already have `userId` set are left alone. Calling
  * `backfillUserId()` repeatedly is safe and cheap in steady state.
  *
+ * Cross-user device safety: records stamped with a previous user's id are NOT
+ * re-stamped (filter only targets missing/empty userId). On SIGNED_OUT the
+ * previous user's records remain in IndexedDB until a purge is added (tracked
+ * for E92-S08); downstream queries in E92-S05/S06 MUST filter by userId.
+ *
  * Scope: the 38-table syncable list matches E92-S03's forthcoming table
  * registry. When E92-S03 lands, replace `SYNCABLE_TABLES` with
  * `tableRegistry.entries.map(e => e.dexieTable)`.
