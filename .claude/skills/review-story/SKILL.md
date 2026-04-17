@@ -3,6 +3,7 @@ name: review-story
 description: Use when running quality gates on a Knowlune story before shipping. Runs build/lint/tests, dispatches design review (Playwright MCP) and adversarial code review agents, generates consolidated report. Use after implementing a story to catch issues before /finish-story.
 argument-hint: "[E##-S##]"
 disable-model-invocation: true
+effort: high
 ---
 
 # Review Story
@@ -13,7 +14,33 @@ Runs all quality gates: pre-checks, design review, code review, and test quality
 
 ```
 /review-story E01-S03
-/review-story          # derives story ID from branch name
+/review-story                  # derives story ID from branch name
+/review-story E01-S03 --headless  # programmatic mode for skill-to-skill invocation
+```
+
+## Headless Mode
+
+When `--headless` is present in `$ARGUMENTS`:
+
+- **No `AskUserQuestion` prompts** — all interactive decisions use defaults:
+  - Tier confirmation: use detected tier (no user override)
+  - Burn-in: skip (not run in headless)
+  - Deduplication: skip (not run in headless)
+- **No per-agent completion chatter** — same as normal context discipline
+- **Structured JSON return** instead of markdown output — the final output is the JSON from `finalize-review.sh` (verdict, summary, report_path, gates_validation), not the human-readable completion template
+- **Single-pass** — no fix-and-retry loops
+
+This mode is used by `/finish-story` streamlined mode (Step 4b) to avoid reimplementing review logic. Parse `--headless` from `$ARGUMENTS` before extracting the story ID:
+
+```bash
+HEADLESS=false
+STORY_ID=""
+for arg in $ARGUMENTS; do
+  case $arg in
+    --headless) HEADLESS=true ;;
+    *) STORY_ID="$arg" ;;
+  esac
+done
 ```
 
 ## Gate Configuration
@@ -148,8 +175,9 @@ else
 fi
 ```
 
-**Confirm with user for non-full tiers:**
+**Confirm with user for non-full tiers** (skip in headless mode — use detected tier):
 
+If `HEADLESS == false`:
 ```
 AskUserQuestion({
   question: "Diff scope: ${DIFF_LINES} lines, ${UI_FILE_COUNT} UI files. Review tier: [TIER]. Proceed?",
@@ -159,6 +187,8 @@ AskUserQuestion({
   ]
 })
 ```
+
+If `HEADLESS == true`: Use detected tier without confirmation.
 
 Pass `REVIEW_SCOPE` to `prepare-dispatch.py` in Step 6.
 
@@ -191,6 +221,8 @@ TodoWrite: Mark all pre-check todos → `completed`. Mark "Burn-in validation" (
 
 ### 3. Burn-in validation (if E2E spec exists and anti-patterns detected)
 
+**In headless mode**: Skip burn-in entirely — it's interactive and time-consuming. Continue to Step 4.
+
 **Same interactive logic as original SKILL.md** — this stays inline because it requires AskUserQuestion.
 
 If HIGH confidence (anti-patterns detected):
@@ -218,6 +250,8 @@ Check for placeholder text or <50 words of substantive content in "Challenges an
 TodoWrite: Mark "Lessons learned gate" → `completed`. Mark "Deduplication scan" → `in_progress`.
 
 ### 5. Deduplication scan (optional)
+
+**In headless mode**: Skip deduplication scan entirely. Continue to Step 6.
 
 **Same interactive logic as original SKILL.md** — stays inline because it requires AskUserQuestion.
 
@@ -320,7 +354,9 @@ If `invalid_agents` is non-empty, warn: "Agent contract failure: [list]. These r
 
 ### 8. Completion output
 
-**Same output format as original SKILL.md** — this stays inline because it's the final user-facing output.
+**In headless mode**: Do NOT output the human-readable completion template. Instead, return the raw JSON from `finalize-review.sh` as the skill's return value. The calling skill (`/finish-story`) will parse this JSON and handle presentation. Add `"headless": true` to the JSON output.
+
+**In normal mode** — same output format as original SKILL.md — this stays inline because it's the final user-facing output.
 
 If `verdict == PASS`: show gate table, verdict, high-priority findings. If `verdict == BLOCKED`: show blockers and fix instructions.
 

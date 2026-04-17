@@ -49,9 +49,9 @@ const THEME_COLORS: Record<ReaderTheme, Record<ColorScheme, ReaderColors>> = {
     clean: { background: '#1a1b26', foreground: '#e8e9f0' },
   },
   sepia: {
-    professional: { background: '#f4ecd8', foreground: '#3a2a1a' },
-    vibrant: { background: '#f4ecd8', foreground: '#3a2a1a' },
-    clean: { background: '#f4ecd8', foreground: '#3a2a1a' },
+    professional: { background: '#f4ecd8', foreground: '#2d241e' },
+    vibrant: { background: '#f4ecd8', foreground: '#2d241e' },
+    clean: { background: '#f4ecd8', foreground: '#2d241e' },
   },
 }
 
@@ -90,7 +90,7 @@ const TEXT_CLASSES: Record<string, string> = {
   '#1c1d2b': 'text-[#1c1d2b]',
   '#2c333d': 'text-[#2c333d]',
   '#e8e9f0': 'text-[#e8e9f0]',
-  '#3a2a1a': 'text-[#3a2a1a]',
+  '#2d241e': 'text-[#2d241e]',
 }
 
 /**

@@ -16,6 +16,7 @@ import { EpubView } from 'react-reader'
 import { cn } from '@/app/components/ui/utils'
 import type { Rendition } from 'epubjs'
 import type { NavItem } from 'epubjs'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useReaderStore } from '@/stores/useReaderStore'
 import {
   getReaderThemeColors,
@@ -53,6 +54,7 @@ export function EpubRenderer({
   const letterSpacing = useReaderStore(s => s.letterSpacing)
   const wordSpacing = useReaderStore(s => s.wordSpacing)
   const scrollMode = useReaderStore(s => s.scrollMode)
+  const dualPage = useReaderStore(s => s.dualPage)
   const toggleHeader = useReaderStore(s => s.toggleHeader)
   const colorScheme = useAppColorScheme()
   const renditionRef = useRef<Rendition | null>(null)
@@ -137,6 +139,21 @@ export function EpubRenderer({
     // Re-apply theme after flow switch — some epub.js versions reset theme styles on flow change
     applyTheme(rendition)
   }, [scrollMode, applyTheme])
+
+  /** Switch epub.js spread between auto and none at runtime */
+  useEffect(() => {
+    const rendition = renditionRef.current
+    if (!rendition) return
+    const newSpread = !scrollMode && dualPage ? 'auto' : 'none'
+    rendition.spread(newSpread)
+    const container = containerRef.current
+    if (container) {
+      const { width, height } = container.getBoundingClientRect()
+      if (width > 0 && height > 0) {
+        rendition.resize(width, height)
+      }
+    }
+  }, [dualPage, scrollMode])
 
   /** Clear page turn animation timer on unmount to avoid setState after unmount */
   useEffect(() => {
@@ -230,17 +247,17 @@ export function EpubRenderer({
   // Memoize epubOptions — depends on scrollMode for flow switching (E114-S02)
   const epubOptions = useMemo(
     () => ({
-      spread: 'none' as const, // Force single-page layout on all screen widths (AC-4)
+      spread: (!scrollMode && dualPage ? 'auto' : 'none') as 'auto' | 'none',
       flow: scrollMode ? ('scrolled-doc' as const) : ('paginated' as const),
       allowPopups: false,
     }),
-    [scrollMode]
+    [scrollMode, dualPage]
   )
 
   return (
     <div
       ref={containerRef}
-      className={cn('relative h-full w-full', containerBg, animationClass)}
+      className={cn('relative h-full w-full px-6 pt-14 pb-20 md:px-16 lg:px-24', containerBg, animationClass)}
       data-testid="epub-renderer"
       onTouchStart={scrollMode ? undefined : handleTouchStart}
       onTouchEnd={scrollMode ? undefined : handleTouchEnd}
@@ -268,13 +285,20 @@ export function EpubRenderer({
         {/* Left zone (prev) — 33%, paginated only */}
         {!scrollMode && (
           <div
-            className="pointer-events-auto absolute inset-y-0 left-0 w-[33%] cursor-pointer"
+            className="group pointer-events-auto absolute inset-y-0 left-0 w-[33%] cursor-pointer"
             onClick={navigatePrev}
             role="button"
             tabIndex={-1}
             aria-label="Previous page"
             data-reader-zone="prev"
-          />
+          >
+            <ChevronLeft
+              className={cn(
+                'pointer-events-none absolute left-3 top-1/2 size-8 -translate-y-1/2 text-foreground/30 transition-opacity duration-300 motion-reduce:transition-none',
+                pageTurnDirection === 'right' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              )}
+            />
+          </div>
         )}
 
         {/* Center zone (34%) — toggle header/footer visibility, always active */}
@@ -290,13 +314,20 @@ export function EpubRenderer({
         {/* Right zone (next) — 33%, paginated only */}
         {!scrollMode && (
           <div
-            className="pointer-events-auto absolute inset-y-0 right-0 w-[33%] cursor-pointer"
+            className="group pointer-events-auto absolute inset-y-0 right-0 w-[33%] cursor-pointer"
             onClick={navigateNext}
             role="button"
             tabIndex={-1}
             aria-label="Next page"
             data-reader-zone="next"
-          />
+          >
+            <ChevronRight
+              className={cn(
+                'pointer-events-none absolute right-3 top-1/2 size-8 -translate-y-1/2 text-foreground/30 transition-opacity duration-300 motion-reduce:transition-none',
+                pageTurnDirection === 'left' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              )}
+            />
+          </div>
         )}
       </div>
 

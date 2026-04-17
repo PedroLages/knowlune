@@ -1,0 +1,12 @@
+-- Stub — per-migration rollback is not supported for the E92-S01 P0 sync foundation.
+--
+-- Rollback is all-or-nothing across the three P0 sync foundation migrations:
+--   20260413000001_p0_sync_foundation.sql
+--   20260417000002_p0_sync_foundation_fixups.sql
+--   20260417000003_p0_sync_foundation_r4.sql
+--
+-- To tear down, run:
+--   ssh titan docker exec -i supabase-db psql -U postgres -d postgres \
+--     < supabase/migrations/rollback/p0_sync_foundation_full_down.sql
+--
+-- Do not execute this file directly — it intentionally contains no SQL.

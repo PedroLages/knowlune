@@ -3,6 +3,7 @@ name: finish-story
 description: Use when a Knowlune story is ready to ship. Validates, creates PR. Auto-runs reviews if /review-story was not already run. Use after implementing and optionally reviewing a story.
 argument-hint: "[E##-S##]"
 disable-model-invocation: true
+effort: medium
 ---
 
 # Finish Story
@@ -205,9 +206,33 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 
    `git push -u origin feature/e##-s##-slug`.
 
-12. **Create PR**:
+12. **Create or update PR**:
 
-   **See:** [docs/pr-creation.md](docs/pr-creation.md) for PR template, writing guidelines, and Known Issues extraction (HIGH findings from review reports).
+   **12a. Check for existing PR** (idempotent — handles re-runs after blocker fixes):
+   ```bash
+   EXISTING_PR=$(gh pr list --head "$(git branch --show-current)" --json number,url --jq '.[0]' 2>/dev/null || echo "")
+   ```
+
+   **If PR exists** (`EXISTING_PR` is non-empty):
+   - Extract PR number: `PR_NUMBER=$(echo "$EXISTING_PR" | jq -r '.number')`
+   - Update the PR body using `gh pr edit $PR_NUMBER --body "..."` — preserve the existing `## Known Issues` section by reading it first with `gh pr view $PR_NUMBER --json body --jq '.body'` and appending any new Known Issues
+   - Inform: "PR #N already exists — updated description."
+   - Skip to printing the PR URL
+
+   **If no PR exists**: Create a new PR.
+
+   **12b. Description scaling** (adapt template to diff size):
+   ```bash
+   DIFF_LINES=$(git diff main...HEAD --stat | tail -1 | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+' || echo "0")
+   ```
+
+   | Diff Size | Template |
+   |-----------|----------|
+   | Under 50 lines | **Short**: Title + 2-3 bullet Summary + Test Plan. Omit Verification table. |
+   | 50-200 lines | **Standard**: Full template from pr-creation.md |
+   | Over 200 lines | **Full**: Standard + Verification table + Known Issues (if HIGH findings) |
+
+   **See:** [docs/pr-creation.md](docs/pr-creation.md) for templates, writing guidelines, and Known Issues extraction.
 
    Print the PR URL.
 

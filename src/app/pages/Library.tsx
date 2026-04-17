@@ -13,6 +13,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { FormatTabs } from '@/app/components/library/FormatTabs'
+import { SmartGroupedView } from '@/app/components/library/SmartGroupedView'
 import {
   BookOpen,
   CloudUpload,
@@ -33,7 +35,6 @@ import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
 import { SeriesCard } from '@/app/components/library/SeriesCard'
-import { LocalSeriesView } from '@/app/components/library/LocalSeriesView'
 import { CollectionsView } from '@/app/components/library/CollectionsView'
 import { StorageIndicator } from '@/app/components/library/StorageIndicator'
 import { BookCard } from '@/app/components/library/BookCard'
@@ -220,6 +221,15 @@ export function Library() {
 
   // Stable ID array so LocalSeriesView's useMemo dep doesn't fire on every render (ADV-3).
   const filteredBookIds = useMemo(() => filteredBooks.map(b => b.id), [filteredBooks])
+
+  // Derive active format tab from the store's format filter
+  const activeFormatTab = useMemo(() => {
+    const f = filters.format
+    if (!f || f.length === 0) return 'all' as const
+    if (f.length === 1 && f[0] === 'audiobook') return 'audiobooks' as const
+    if (f.every(v => v === 'epub' || v === 'pdf')) return 'ebooks' as const
+    return 'all' as const
+  }, [filters.format])
 
   // Load books on mount
   useEffect(() => {
@@ -472,6 +482,12 @@ export function Library() {
       {/* Source filter tabs — only show when ABS servers configured (E101-S03) */}
       {books.length > 0 && <LibrarySourceTabs />}
 
+      {/* Format tabs — hidden for ABS Series/Collections views (server-driven, not filterable) */}
+      {books.length > 0 &&
+        !(filters.source === 'audiobookshelf' && absViewMode !== 'grid') && (
+        <FormatTabs />
+      )}
+
       {/* ABS view mode toggle: Grid / Series — only when ABS source is selected (E102-S02) */}
       {books.length > 0 && filters.source === 'audiobookshelf' && absServers.length > 0 && (
         <div
@@ -650,19 +666,24 @@ export function Library() {
         <CollectionsView />
       )}
 
-      {/* Local series view (E110-S02) — replaces grid/list when active for non-ABS sources */}
-      {books.length > 0 && filters.source !== 'audiobookshelf' && localSeriesView && (
-        <LocalSeriesView
+      {/* Smart grouped view — series view OR "All" format tab in grid/list (prevents mixed aspect ratios) */}
+      {books.length > 0 &&
+        filters.source !== 'audiobookshelf' &&
+        (localSeriesView || activeFormatTab === 'all') && (
+        <SmartGroupedView
           getBooksBySeries={getBooksBySeries}
           onEdit={setEditingBook}
           filteredBookIds={filteredBookIds}
+          formatTab={activeFormatTab}
+          viewMode={libraryView}
         />
       )}
 
-      {/* Grid view */}
+      {/* Grid view — specific format tabs OR ABS grid (SmartGroupedView handles local "All" tab) */}
       {books.length > 0 &&
         libraryView === 'grid' &&
         !localSeriesView &&
+        (activeFormatTab !== 'all' || filters.source === 'audiobookshelf') &&
         !(
           filters.source === 'audiobookshelf' &&
           (absViewMode === 'series' || absViewMode === 'collections')
@@ -676,10 +697,11 @@ export function Library() {
           </div>
         )}
 
-      {/* List view */}
+      {/* List view — specific format tabs OR ABS list (SmartGroupedView handles local "All" tab) */}
       {books.length > 0 &&
         libraryView === 'list' &&
         !localSeriesView &&
+        (activeFormatTab !== 'all' || filters.source === 'audiobookshelf') &&
         !(
           filters.source === 'audiobookshelf' &&
           (absViewMode === 'series' || absViewMode === 'collections')

@@ -843,3 +843,159 @@ issues:
     scheduled_for: cleanup-epic
     fixed_by: null
     notes: "P2 gap from testarch-trace. MutationObserver theme-change path manually verified in NFR audit. Writing a test requires mocking MutationObserver in Playwright — disproportionate effort for LOW risk. Deferred from E62 post-epic fix pass."
+
+  - id: KI-069
+    type: architecture
+    summary: "_status_rank raises on unknown status — may need soft-fail (return 0) when future statuses are added"
+    file: "supabase/migrations/20260417000002_p0_sync_foundation_fixups.sql:55"
+    severity: medium
+    discovered_by: E92-S01
+    discovered_on: 2026-04-17
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "GLM R3 cross-model review flagged forward-compat risk. Current behavior: closed enum {completed, in_progress, not_started}, raise on anything else. If E92-S02+ adds new statuses, clients sending them will crash the upsert transaction. Decision point: confirm closed-enum intent (keep RAISE, add new values here first) or flip to soft-fail (RETURN 0). Deferring until a concrete new-status story forces the decision."
+
+  - id: KI-070
+    type: tech-debt
+    summary: "vector / supabase_vault extension schema placement not tracked as follow-up"
+    file: "supabase/migrations/20260417000002_p0_sync_foundation_fixups.sql:187-192"
+    severity: low
+    discovered_by: E92-S01
+    discovered_on: 2026-04-17
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Extensions created without WITH SCHEMA extensions in original migration. Inconsistency documented in fixup but not tracked here. R3 code-review nit."
+
+  - id: KI-071
+    type: test
+    summary: "RLS isolation test lacks auth.uid() sanity assertion inside transaction"
+    file: "supabase/tests/e92-s01-verify.sql"
+    severity: low
+    discovered_by: E92-S01
+    discovered_on: 2026-04-17
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "RLS test seeds userB and checks cross-user isolation, but doesn't assert auth.uid() returns the expected UUID inside the SET LOCAL ROLE block. If a future refactor broke the set_config JWT injection, the RLS test would pass vacuously (0 rows because JWT is null, not because RLS is enforcing). R3 code-review nit."
+
+  - id: KI-072
+    type: tech-debt
+    summary: "content_progress NOT VALID CHECK (pct=100+in_progress) awaiting VALIDATE CONSTRAINT after data audit"
+    file: "supabase/migrations/20260417000002_p0_sync_foundation_fixups.sql:36-47"
+    severity: low
+    discovered_by: E92-S01-ce-review
+    discovered_on: 2026-04-17
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "NOT VALID constraint deferred validation until real data exists. Schedule `ALTER TABLE ... VALIDATE CONSTRAINT content_progress_pct_status_consistent;` in a post-E92-S06 migration once production rows are audited for pre-existing violations. ce:review P2 finding; cross-tool (no converged reviewers in R3)."
+
+  - id: KI-073
+    type: code
+    summary: "upsert_video_progress last_position tie semantics: `>` (not `>=`) — equal timestamps keep existing, losing simultaneous multi-device writes"
+    file: "supabase/migrations/20260417000002_p0_sync_foundation_fixups.sql:158-162"
+    severity: low
+    discovered_by: E92-S01-ce-review
+    discovered_on: 2026-04-17
+    status: open
+    scheduled_for: E92-S02
+    fixed_by: null
+    notes: "Current LWW uses `v_clamped_updated_at > video_progress.updated_at` so equal-timestamp writes preserve the existing last_position. With multi-device clients that legitimately can have identical ms timestamps, one write wins arbitrarily. Revisit when real multi-device client behavior is observable (E92-S02+). Decision: defer until concrete scrub-back / multi-device scenario forces semantics choice."
+
+  - id: KI-074
+    type: code
+    summary: "upsert_content_progress silently no-ops on NULL p_status (INSERT with status=NULL violates CHECK; UPDATE path takes no action)"
+    file: "supabase/migrations/20260417000002_p0_sync_foundation_fixups.sql:74-119"
+    severity: low
+    discovered_by: E92-S01-ce-review
+    discovered_on: 2026-04-17
+    status: open
+    scheduled_for: E92-S02
+    fixed_by: null
+    notes: "If client code accidentally sends NULL for p_status, INSERT branch raises CHECK violation (loud) but ON CONFLICT UPDATE branch uses EXCLUDED.status = NULL → _status_rank(NULL) returns NULL → comparison is NULL → false → status silently unchanged. Add early guard `IF p_status IS NULL THEN RAISE EXCEPTION ...` when E92-S02 wires client contract. Low risk: clients always send a valid enum today."
+
+  - id: KI-075
+    type: code
+    summary: "_status_rank raises generic plpgsql error on unknown status instead of SQLSTATE 22023 (invalid_parameter_value)"
+    file: "supabase/migrations/20260417000002_p0_sync_foundation_fixups.sql:55-70"
+    severity: low
+    discovered_by: E92-S01-ce-review
+    discovered_on: 2026-04-17
+    status: open
+    scheduled_for: E92-S02
+    fixed_by: null
+    notes: "Current RAISE uses default plpgsql error code. Clients trying to pattern-match on SQLSTATE for error handling need USING ERRCODE = '22023'. Cosmetic — defer until client error-handling contract is specified in E92-S02."
+
+  - id: KI-076
+    type: code
+    summary: "content_progress_pct_status_consistent CHECK conflicts with client state machines reporting progress_pct=100 before flipping status to completed"
+    file: "supabase/migrations/20260417000002_p0_sync_foundation_fixups.sql:36-47"
+    severity: low
+    discovered_by: E92-S01-ce-review
+    discovered_on: 2026-04-17
+    status: open
+    scheduled_for: E92-S02
+    fixed_by: null
+    notes: "CHECK `NOT (progress_pct=100 AND status='in_progress')` is semantically correct but collides with a two-step client flow: (1) set pct=100 on last-frame render, (2) flip status in the next tick. Either enforce atomic pct+status in the upsert function, or relax the CHECK to allow the transient state. Address when E92-S02 defines client state machine."
+
+  - id: KI-077
+    type: code
+    summary: "study_sessions UPDATE/DELETE by authenticated role silently return 0 rows (no policy → RLS denies) — may surprise clients expecting a loud error"
+    file: "supabase/migrations/20260413000001_p0_sync_foundation.sql:70-106"
+    severity: low
+    discovered_by: E92-S01-ce-review
+    discovered_on: 2026-04-17
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "study_sessions is an append-only log (INSERT+SELECT policies only). Attempted UPDATE/DELETE silently affects 0 rows. Supabase convention — same as the new R4 RLS split on content_progress / video_progress. Log here for client-side error-handling awareness; no fix planned."
+
+  - id: KI-078
+    type: test
+    summary: "UUID literals hardcoded in verify.sql (`00000000-0000-0000-0000-e92501000001`) — refactor to local variables for readability"
+    file: "supabase/tests/e92-s01-verify.sql"
+    severity: low
+    discovered_by: E92-S01-ce-review
+    discovered_on: 2026-04-17
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Test readability nit. The same two UUIDs appear ~15 times. Could be lifted into a DO $$ variable block at the top. Deferred — cosmetic."
+
+  - id: KI-079
+    type: tech-debt
+    summary: "Learning note: VOLATILE DEFAULTs defeat UNIQUE-constraint idempotency (R4 #1 lesson)"
+    file: "docs/solutions/"
+    severity: low
+    discovered_by: E92-S01-ce-review
+    discovered_on: 2026-04-17
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Team learning: `DEFAULT gen_random_uuid()` on an idempotency column defeats the UNIQUE constraint. If a UUID column participates in an idempotency UNIQUE key, the client MUST supply it. Capture in docs/solutions/database-issues/ after E92 epic completes."
+
+  - id: KI-080
+    type: performance
+    summary: "_status_rank plpgsql loses planner inlining — compare with LANGUAGE sql IMMUTABLE STRICT alternative"
+    file: "supabase/migrations/20260417000002_p0_sync_foundation_fixups.sql:55-70"
+    severity: low
+    discovered_by: E92-S01-ce-review
+    discovered_on: 2026-04-17
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "plpgsql function with RAISE loses the planner inlining that the original LANGUAGE sql version had. Measurable overhead on high-volume upserts. If benchmarks show it matters, consider restoring LANGUAGE sql with a subquery CASE + NULLIF pattern that preserves STRICT while also validating the enum. Defer until a measured regression exists."
+
+  - id: KI-081
+    type: security
+    summary: "handle_new_user_entitlement function missing SET search_path = public, pg_temp (CVE-2018-1058 hardening)"
+    file: "supabase/migrations/001_entitlements.sql"
+    severity: high
+    discovered_by: E92-S01-ce-review
+    discovered_on: 2026-04-17
+    status: open
+    scheduled_for: e92-hotfix
+    fixed_by: null
+    notes: "Pre-existing finding from ce:review security-reviewer — out of scope for E92-S01 (predates this story). handle_new_user_entitlement runs as SECURITY DEFINER trigger on auth.users but does not pin search_path, leaving it vulnerable to search_path-based privilege escalation. Fix: add `SET search_path = public, pg_temp` to the function definition. Schedule as standalone hotfix story before E95 (when credential storage goes live)."

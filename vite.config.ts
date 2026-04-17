@@ -579,6 +579,7 @@ export default defineConfig({
     proxy: {
       '/api/ai': { target: 'http://localhost:3001', changeOrigin: true },
       '/api/abs': { target: 'http://localhost:3001', changeOrigin: true },
+      '/api/cover-proxy': { target: 'http://localhost:3001', changeOrigin: true },
     },
     headers: {
       // XSS Protection

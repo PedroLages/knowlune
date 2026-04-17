@@ -108,7 +108,7 @@ export function BookReader() {
   const settingsOpen = useReaderStore(s => s.settingsOpen)
   const setSettingsOpen = useReaderStore(s => s.setSettingsOpen)
 
-  const [epubUrl, setEpubUrl] = useState<string | null>(null)
+  const [epubUrl, setEpubUrl] = useState<string | ArrayBuffer | null>(null)
   const [isLoadingContent, setIsLoadingContent] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   // CFI resolved from sourceHighlightId query param (E85-S05 back-navigation)
@@ -156,7 +156,6 @@ export function BookReader() {
 
   const renditionRef = useRef<Rendition | null>(null)
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const blobUrlRef = useRef<string | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Timeout effect for TOC loading — fallback to empty state after 5 seconds
@@ -222,6 +221,8 @@ export function BookReader() {
 
   // Find book in store
   const book = books.find(b => b.id === bookId)
+  const bookRef = useRef(book)
+  bookRef.current = book
 
   // Format switching: EPUB ↔ audiobook via chapter mapping (E103-S02)
   const { hasMapping, switchToFormat } = useFormatSwitch(bookId, book?.format)
@@ -266,7 +267,8 @@ export function BookReader() {
 
   // Load EPUB content
   useEffect(() => {
-    if (!book || book.format !== 'epub') return
+    const currentBook = bookRef.current
+    if (!currentBook || currentBook.format !== 'epub') return
 
     let cancelled = false
     setIsLoadingContent(true)
@@ -274,20 +276,11 @@ export function BookReader() {
     setLoadError(null)
     setRemoteEpubError(null)
 
-    // Revoke previous Blob URL to avoid memory leaks
-    if (blobUrlRef.current) {
-      URL.revokeObjectURL(blobUrlRef.current)
-      blobUrlRef.current = null
-    }
-
     bookContentService
-      .getEpubContent(book)
+      .getEpubContent(currentBook)
       .then(arrayBuffer => {
         if (cancelled) return
-        const blob = new Blob([arrayBuffer], { type: 'application/epub+zip' })
-        const url = URL.createObjectURL(blob)
-        blobUrlRef.current = url
-        setEpubUrl(url)
+        setEpubUrl(arrayBuffer)
         setIsLoadingContent(false)
       })
       .catch((err: unknown) => {
@@ -310,15 +303,20 @@ export function BookReader() {
     return () => {
       cancelled = true
     }
-  }, [book, retryKey])
+  }, [bookId, retryKey])
 
-  // Cleanup Blob URL on unmount
+  // Timeout: if epubUrl is set but epub.js never fires getRendition within 12s, show error
+  useEffect(() => {
+    if (!epubUrl || isEpubReady) return
+    const timer = setTimeout(() => {
+      setLoadError('Book failed to load. The file may be corrupted or in an unsupported format.')
+    }, 12_000)
+    return () => clearTimeout(timer)
+  }, [epubUrl, isEpubReady])
+
+  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current)
-      }
-      // Clear pending save timer
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current)
       }
@@ -596,16 +594,7 @@ export function BookReader() {
         return
       }
 
-      // Revoke previous Blob URL
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current)
-        blobUrlRef.current = null
-      }
-
-      const blob = new Blob([arrayBuffer], { type: 'application/epub+zip' })
-      const url = URL.createObjectURL(blob)
-      blobUrlRef.current = url
-      setEpubUrl(url)
+      setEpubUrl(arrayBuffer)
       setIsLoadingContent(false)
     } catch {
       // silent-catch-ok: Cache API unavailable (e.g. private browsing) — user-visible error set below
@@ -654,9 +643,14 @@ export function BookReader() {
     }
   }, [startChapterIndex, toc, book?.format])
 
-  // Derive initial CFI: prefer highlight back-navigation CFI (E85-S05) over saved position
-  const initialCfi =
-    highlightCfi ?? (book?.currentPosition?.type === 'cfi' ? book.currentPosition.value : null)
+  const initialCfiRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (initialCfiRef.current !== null) return
+    if (!book) return
+    initialCfiRef.current =
+      highlightCfi ?? (book.currentPosition?.type === 'cfi' ? book.currentPosition.value : null)
+  }, [book, highlightCfi])
+  const initialCfi = initialCfiRef.current
 
   // Book not found (after store is loaded)
   if (isLoaded && !book) {

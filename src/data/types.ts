@@ -747,6 +747,7 @@ export interface Book {
   totalDuration?: number // audiobook seconds
   progress: number // 0-100
   isbn?: string
+  asin?: string // Audible ASIN for audiobook identification
   rating?: number // 1-5
   createdAt: string // ISO 8601
   updatedAt?: string // ISO 8601

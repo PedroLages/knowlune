@@ -12,7 +12,7 @@
 
 import { memo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { BookOpen, Cloud, Headphones, ArrowRightLeft, Clock } from 'lucide-react'
+import { BookOpen, Cloud, Headphones, ArrowRightLeft, Clock, CheckCircle2 } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { BookStatusBadge } from './BookStatusBadge'
 import { FormatBadge } from './FormatBadge'
@@ -42,6 +42,11 @@ function formatDuration(seconds: number): string {
   const minutes = Math.floor((seconds % 3600) / 60)
   if (hours > 0) return `${hours}h ${minutes}m`
   return `${minutes}m`
+}
+
+function isRecentlyAdded(createdAt: string): boolean {
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
+  return Date.now() - new Date(createdAt).getTime() < sevenDaysMs
 }
 
 interface BookCardProps {
@@ -89,7 +94,7 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
               src={resolvedCoverUrl}
               alt={`Cover of ${book.title}`}
               loading="lazy"
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
               onError={e => {
                 e.currentTarget.style.display = 'none'
               }}
@@ -110,6 +115,11 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
               style={{ width: `${book.progress ?? 0}%` }}
             />
           </div>
+          {book.status === 'finished' && (
+            <div className="absolute inset-0 bg-background/40 flex items-center justify-center pointer-events-none">
+              <CheckCircle2 className="size-10 text-success drop-shadow-md" aria-hidden="true" />
+            </div>
+          )}
           {/* Format + remote badges */}
           <div className="absolute top-2 left-2 flex flex-col gap-1">
             <FormatBadge format={book.format} className="backdrop-blur-sm" />
@@ -130,11 +140,8 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
             {book.title}
           </p>
           <p className="text-xs text-muted-foreground mt-1 truncate">{book.author}</p>
-          {book.genre && (
-            <p className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">{book.genre}</p>
-          )}
-          {book.narrator && (
-            <p className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">{book.narrator}</p>
+          {book.progress === 0 && isRecentlyAdded(book.createdAt) && (
+            <p className="text-[10px] font-bold text-brand uppercase tracking-wider mt-0.5">NEW</p>
           )}
           {/* Chapter + time remaining when playing */}
           {book.chapters.length > 0 &&
@@ -188,17 +195,17 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className="rounded-[24px] bg-card overflow-hidden shadow-card-ambient hover:-translate-y-2 transition-all duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      className="group cursor-pointer focus-visible:outline-none"
       data-testid={`book-card-${book.id}`}
     >
       {/* Cover — portrait */}
-      <div className="relative overflow-hidden aspect-[2/3]">
+      <div className="relative aspect-[2/3] rounded-2xl overflow-hidden shadow-card-ambient group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_var(--shadow-brand)] transition-all duration-300">
         {resolvedCoverUrl ? (
           <img
             src={resolvedCoverUrl}
             alt={`Cover of ${book.title}`}
             loading="lazy"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
             onError={e => {
               e.currentTarget.style.display = 'none'
             }}
@@ -215,6 +222,11 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-foreground/10">
           <div className="h-full bg-brand transition-all" style={{ width: `${book.progress}%` }} />
         </div>
+        {book.status === 'finished' && (
+          <div className="absolute inset-0 bg-background/40 flex items-center justify-center pointer-events-none">
+            <CheckCircle2 className="size-10 text-success drop-shadow-md" aria-hidden="true" />
+          </div>
+        )}
         {/* Format + remote badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">
           <FormatBadge format={book.format} className="backdrop-blur-sm" />
@@ -229,27 +241,39 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
           )}
         </div>
       </div>
-
-      {/* Info */}
-      <div className="flex flex-col gap-1 p-3 h-[120px]">
-        <p className="text-sm font-medium text-foreground line-clamp-2 leading-tight">
+      {/* Metadata below cover */}
+      <div className="mt-3 px-1 text-center">
+        <p className="text-sm font-bold text-foreground leading-tight line-clamp-2 group-hover:text-brand transition-colors">
           {book.title}
         </p>
-        <p className="text-xs text-muted-foreground truncate">{book.author}</p>
-        {book.genre && (
-          <p className="text-[11px] text-muted-foreground/70 truncate">{book.genre}</p>
+        <p className="text-xs text-muted-foreground mt-1 truncate">{book.author}</p>
+        {book.progress === 0 && isRecentlyAdded(book.createdAt) && (
+          <p className="text-[10px] font-bold text-brand uppercase tracking-wider mt-0.5">NEW</p>
         )}
-        {review?.rating ? <StarRating value={review.rating} readonly size="sm" /> : null}
+        {(book.progress ?? 0) > 0 && (book.progress ?? 0) < 100 && (
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            {book.progress}% complete
+          </p>
+        )}
+        {book.totalPages != null && book.totalPages > 0 && (book.progress ?? 0) < 100 && (
+          <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center justify-center gap-1">
+            <Clock className="size-3" aria-hidden="true" />
+            {Math.ceil(book.totalPages * (1 - (book.progress ?? 0) / 100))} pages left
+          </p>
+        )}
         {book.totalDuration != null && book.totalDuration > 0 && (
-          <p className="text-[10px] text-muted-foreground" data-testid={`duration-${book.id}`}>
+          <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center justify-center gap-1" data-testid={`duration-${book.id}`}>
+            <Clock className="size-3" aria-hidden="true" />
             {formatDuration(book.totalDuration)}
           </p>
         )}
+        {review?.rating ? (
+          <div className="mt-1 flex justify-center">
+            <StarRating value={review.rating} readonly size="sm" />
+          </div>
+        ) : null}
         {book.linkedBookId && (
-          <p
-            className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5"
-            data-testid={`linked-format-badge-${book.id}`}
-          >
+          <p className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground mt-0.5" data-testid={`linked-format-badge-${book.id}`}>
             <ArrowRightLeft className="size-3 shrink-0" aria-hidden="true" />
             Also available as audiobook
           </p>

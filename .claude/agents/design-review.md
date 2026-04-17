@@ -51,6 +51,28 @@ These are the authoritative standards for all visual, accessibility, and interac
 - **Route map**: Read `.claude/agents/docs/route-map.md` for route-to-file mapping and dev server URL
 - **Design tokens**: See `src/styles/theme.css` and `.claude/rules/styling.md` for token reference (loaded in context)
 
+## Do NOT Flag
+
+These are explicitly excluded — flagging them wastes developer time:
+
+- **Personal aesthetic preferences** not grounded in design principles or WCAG standards
+- **Pre-existing design issues** not introduced by this story's changes
+- **Framework defaults** (Radix UI styling, shadcn/ui component internals)
+- **Pixel-perfect nitpicks** on spacing/alignment within 2px of design tokens
+- **Missing features not in acceptance criteria** ("would be nice to have X")
+- **Color choices that pass contrast requirements** — if WCAG AA passes, don't suggest alternatives based on taste
+
+## Autofix Classification
+
+For each finding, assign an `autofix_class` in the JSON output:
+
+- **`safe_auto`**: Trivial CSS fix (wrong token, missing responsive class). Applied automatically.
+- **`gated_auto`**: Layout or spacing change that affects visual output. Applied with user approval.
+- **`manual`**: Requires design decision, new component, or UX rethinking. User must fix.
+- **`advisory`**: Informational observation. No specific fix.
+
+Default to `manual` when unsure.
+
 ## Seven-Phase Review Methodology
 
 ### Phase 0: Context Gathering
@@ -353,7 +375,10 @@ following `.claude/skills/review-story/schemas/agent-output.schema.json`.
 
 Fields: `agent`, `gate`, `status` (PASS/WARNINGS/FAIL/SKIPPED/ERROR),
 `counts` (blockers/high/medium/nits/total), `findings` array
-(severity/description/file/line/confidence/category), `report_path`.
+(severity/description/file/line/confidence/category/autofix_class), `report_path`.
+
+Each finding MUST include `autofix_class` (see Autofix Classification above).
+Findings with `confidence < 60` will be filtered from the consolidated report.
 
 Graceful: if you cannot produce valid JSON, just return the markdown report —
 the orchestrator will parse your text return as a fallback.

@@ -213,6 +213,29 @@ See `.claude/rules/styling.md` (loaded in context) for token reference. Check fo
 - No dead code, unused imports, or commented-out code
 - Error messages helpful for debugging
 
+## Do NOT Flag
+
+These are explicitly excluded from review — flagging them wastes developer time:
+
+- **Style preferences** with no functional impact (naming opinions, import order, blank lines)
+- **Linter-caught issues** already enforced by ESLint rules in `eslint.config.js` (design tokens, test patterns, import paths, silent catches)
+- **Missing tests for trivial code** (getters, setters, simple type re-exports, config objects)
+- **Pre-existing issues** not introduced by this story's diff — review is diff-scoped
+- **Defensive coding suggestions** for impossible states (e.g., "what if this Zustand selector returns undefined" when the store guarantees initialization)
+- **Framework-mandated patterns** (React key props on static lists, Radix UI forwarded refs)
+- **Hypothetical future requirements** ("you might want to support X later")
+
+## Autofix Classification
+
+For each finding, assign an `autofix_class` in the JSON output:
+
+- **`safe_auto`**: Can be fixed without changing behavior (missing `key` prop, unused import, formatting). Applied automatically.
+- **`gated_auto`**: Clear fix but changes behavior slightly (adding error boundary, null check). Applied with user approval.
+- **`manual`**: Requires design decision or significant refactoring. User must fix.
+- **`advisory`**: Informational — no specific fix recommended. For awareness only.
+
+Default to `manual` when unsure. Prefer `safe_auto` for nits and formatting issues.
+
 ## Confidence Scoring
 
 Every finding gets a confidence score (0-100):
@@ -279,7 +302,10 @@ following `.claude/skills/review-story/schemas/agent-output.schema.json`.
 
 Fields: `agent`, `gate`, `status` (PASS/WARNINGS/FAIL/SKIPPED/ERROR),
 `counts` (blockers/high/medium/nits/total), `findings` array
-(severity/description/file/line/confidence/category), `report_path`.
+(severity/description/file/line/confidence/category/autofix_class), `report_path`.
+
+Each finding MUST include `autofix_class` (see Autofix Classification above).
+Findings with `confidence < 60` will be filtered from the consolidated report.
 
 Graceful: if you cannot produce valid JSON, just return the markdown report —
 the orchestrator will parse your text return as a fallback.

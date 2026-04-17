@@ -121,7 +121,13 @@
             "minimum": 0,
             "maximum": 100,
             "default": 80,
-            "description": "Agent's confidence in this finding (0-100)"
+            "description": "Agent's confidence in this finding (0-100). Findings below 60 are filtered from consolidated output. Thresholds: High 80+, Moderate 60-79, Low <60 (filtered)."
+          },
+          "autofix_class": {
+            "type": ["string", "null"],
+            "enum": ["safe_auto", "gated_auto", "manual", "advisory", null],
+            "default": null,
+            "description": "Fix routing class. safe_auto: apply without asking (formatting, imports). gated_auto: apply with user approval (simple refactors). manual: user must fix. advisory: informational only."
           },
           "category": {
             "type": ["string", "null"],
