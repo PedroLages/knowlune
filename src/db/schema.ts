@@ -1391,8 +1391,10 @@ function _declareLegacyMigrations(database: Dexie): void {
       importedVideos: 'id, courseId, filename, youtubeVideoId, userId, [userId+updatedAt]',
       importedPdfs: 'id, courseId, filename, userId, [userId+updatedAt]',
       progress: '[courseId+videoId], courseId, videoId, userId, [userId+updatedAt]',
-      bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt, userId, [userId+updatedAt]',
-      notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt, userId, [userId+updatedAt]',
+      bookmarks:
+        'id, [courseId+lessonId], courseId, lessonId, createdAt, userId, [userId+updatedAt]',
+      notes:
+        'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt, userId, [userId+updatedAt]',
       studySessions:
         'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime, userId, [userId+updatedAt]',
       contentProgress: '[courseId+itemId], courseId, itemId, status, userId, [userId+updatedAt]',
@@ -1412,13 +1414,15 @@ function _declareLegacyMigrations(database: Dexie): void {
       notifications: 'id, type, createdAt, readAt, dismissedAt, userId, [userId+updatedAt]',
       notificationPreferences: 'id, userId, [userId+updatedAt]',
       studySchedules: 'id, courseId, learningPathId, enabled, userId, [userId+updatedAt]',
-      books: 'id, title, author, format, status, createdAt, lastOpenedAt, series, userId, [userId+updatedAt]',
+      books:
+        'id, title, author, format, status, createdAt, lastOpenedAt, series, userId, [userId+updatedAt]',
       bookHighlights:
         'id, bookId, color, flashcardId, createdAt, lastReviewedAt, reviewRating, userId, [userId+updatedAt]',
       audioBookmarks: 'id, bookId, chapterIndex, timestamp, createdAt, userId, [userId+updatedAt]',
       opdsCatalogs: 'id, name, url, createdAt, userId, [userId+updatedAt]',
       audiobookshelfServers: 'id, name, url, status, lastSyncedAt, userId, [userId+updatedAt]',
-      chapterMappings: '[epubBookId+audioBookId], epubBookId, audioBookId, userId, [userId+updatedAt]',
+      chapterMappings:
+        '[epubBookId+audioBookId], epubBookId, audioBookId, userId, [userId+updatedAt]',
       vocabularyItems: 'id, bookId, masteryLevel, createdAt, userId, [userId+updatedAt]',
       shelves: 'id, name, isDefault, sortOrder, createdAt, userId, [userId+updatedAt]',
       bookShelves: 'id, bookId, shelfId, [bookId+shelfId], addedAt, userId, [userId+updatedAt]',
@@ -1431,7 +1435,7 @@ function _declareLegacyMigrations(database: Dexie): void {
       syncQueue: '++id, status, [tableName+recordId], createdAt',
       syncMetadata: 'table',
     })
-    .upgrade(async (tx) => {
+    .upgrade(async tx => {
       const migrationNow = new Date().toISOString()
       // Must stay in sync with SYNCABLE_TABLES in src/lib/sync/backfill.ts.
       // Cannot import that constant here — it creates a circular dep
@@ -1483,7 +1487,7 @@ function _declareLegacyMigrations(database: Dexie): void {
       // Zustand auth store has hydrated (avoids Dexie-open / auth-hydration
       // race). Idempotent: records that already have `updatedAt` are left alone.
       await Promise.all(
-        SYNCABLE_TABLES_V52.map((tableName) =>
+        SYNCABLE_TABLES_V52.map(tableName =>
           tx
             .table(tableName)
             .toCollection()
@@ -1492,7 +1496,7 @@ function _declareLegacyMigrations(database: Dexie): void {
                 record.updatedAt = migrationNow
               }
             })
-            .catch((err) => {
+            .catch(err => {
               // Tolerate tables that haven't been used yet (empty / schema-only).
               // Per-table failure does not abort the whole migration — the
               // current policy is "partial-stamp is better than blocking

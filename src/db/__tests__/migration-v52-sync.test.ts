@@ -77,9 +77,10 @@ describe('v52 sync migration — schema shape', () => {
     for (const tableName of SYNCABLE_TABLES) {
       const indexSrcs = tableIndexSrcs(db, tableName)
       expect(indexSrcs, `table "${tableName}" should have userId index`).toContain('userId')
-      expect(indexSrcs, `table "${tableName}" should have [userId+updatedAt] compound index`).toContain(
-        '[userId+updatedAt]'
-      )
+      expect(
+        indexSrcs,
+        `table "${tableName}" should have [userId+updatedAt] compound index`
+      ).toContain('[userId+updatedAt]')
     }
 
     db.close()
@@ -134,8 +135,22 @@ describe('v52 sync migration — data preservation and updatedAt backfill', () =
   it('preserves existing records when migrating from v51 to v52', async () => {
     await seedV51Database({
       notes: [
-        { id: 'n1', courseId: 'c1', videoId: 'v1', tags: ['foo'], createdAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-02T00:00:00Z' },
-        { id: 'n2', courseId: 'c1', videoId: 'v2', tags: ['bar'], createdAt: '2025-01-03T00:00:00Z', updatedAt: '2025-01-04T00:00:00Z' },
+        {
+          id: 'n1',
+          courseId: 'c1',
+          videoId: 'v1',
+          tags: ['foo'],
+          createdAt: '2025-01-01T00:00:00Z',
+          updatedAt: '2025-01-02T00:00:00Z',
+        },
+        {
+          id: 'n2',
+          courseId: 'c1',
+          videoId: 'v2',
+          tags: ['bar'],
+          createdAt: '2025-01-03T00:00:00Z',
+          updatedAt: '2025-01-04T00:00:00Z',
+        },
       ],
       bookmarks: [{ id: 'b1', courseId: 'c1', lessonId: 'l1', createdAt: '2025-01-05T00:00:00Z' }],
     })
@@ -154,8 +169,18 @@ describe('v52 sync migration — data preservation and updatedAt backfill', () =
 
   it('preserves pre-existing updatedAt values (does not overwrite)', async () => {
     await seedV51Database({
-      notes: [{ id: 'n1', courseId: 'c1', videoId: 'v1', createdAt: '2025-01-01T00:00:00Z', updatedAt: '2025-06-15T12:00:00Z' }],
-      chatConversations: [{ id: 'cc1', courseId: 'c1', videoId: 'v1', updatedAt: '2025-07-01T00:00:00Z' }],
+      notes: [
+        {
+          id: 'n1',
+          courseId: 'c1',
+          videoId: 'v1',
+          createdAt: '2025-01-01T00:00:00Z',
+          updatedAt: '2025-06-15T12:00:00Z',
+        },
+      ],
+      chatConversations: [
+        { id: 'cc1', courseId: 'c1', videoId: 'v1', updatedAt: '2025-07-01T00:00:00Z' },
+      ],
     })
     const db = await openWithFullMigrations()
 
@@ -172,7 +197,15 @@ describe('v52 sync migration — data preservation and updatedAt backfill', () =
     await seedV51Database({
       bookmarks: [{ id: 'b1', courseId: 'c1', lessonId: 'l1', createdAt: '2025-01-05T00:00:00Z' }],
       contentProgress: [{ courseId: 'c1', itemId: 'i1', status: 'in_progress' }],
-      flashcards: [{ id: 'f1', courseId: 'c1', noteId: 'n1', due: '2025-02-01T00:00:00Z', createdAt: '2025-01-01T00:00:00Z' }],
+      flashcards: [
+        {
+          id: 'f1',
+          courseId: 'c1',
+          noteId: 'n1',
+          due: '2025-02-01T00:00:00Z',
+          createdAt: '2025-01-01T00:00:00Z',
+        },
+      ],
     })
     const beforeMigration = Date.now()
     const db = await openWithFullMigrations()
@@ -192,7 +225,15 @@ describe('v52 sync migration — data preservation and updatedAt backfill', () =
 
   it('does NOT stamp userId during migration (deferred to backfillUserId)', async () => {
     await seedV51Database({
-      notes: [{ id: 'n1', courseId: 'c1', videoId: 'v1', createdAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-02T00:00:00Z' }],
+      notes: [
+        {
+          id: 'n1',
+          courseId: 'c1',
+          videoId: 'v1',
+          createdAt: '2025-01-01T00:00:00Z',
+          updatedAt: '2025-01-02T00:00:00Z',
+        },
+      ],
     })
     const db = await openWithFullMigrations()
     const note = await db.table('notes').get('n1')

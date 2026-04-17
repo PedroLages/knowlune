@@ -57,7 +57,8 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   importedPdfs: 'id, courseId, filename, userId, [userId+updatedAt]',
   progress: '[courseId+videoId], courseId, videoId, userId, [userId+updatedAt]',
   bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt, userId, [userId+updatedAt]',
-  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt, userId, [userId+updatedAt]',
+  notes:
+    'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt, userId, [userId+updatedAt]',
   screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
   studySessions:
     'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime, userId, [userId+updatedAt]',
@@ -85,7 +86,8 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   notificationPreferences: 'id, userId, [userId+updatedAt]',
   courseEmbeddings: 'courseId',
   studySchedules: 'id, courseId, learningPathId, enabled, userId, [userId+updatedAt]',
-  books: 'id, title, author, format, status, createdAt, lastOpenedAt, series, userId, [userId+updatedAt]',
+  books:
+    'id, title, author, format, status, createdAt, lastOpenedAt, series, userId, [userId+updatedAt]',
   bookHighlights:
     'id, bookId, color, flashcardId, createdAt, lastReviewedAt, reviewRating, userId, [userId+updatedAt]',
   bookFiles: '[bookId+filename], bookId',

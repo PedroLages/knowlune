@@ -11,7 +11,7 @@ import { backfillUserId, SYNCABLE_TABLES } from '../backfill'
  * Tests read those fields at runtime, so we narrow through `unknown` here.
  */
 type Syncable = { userId?: string; updatedAt?: string }
-const asSyncable = <T,>(record: T | undefined): (T & Syncable) | undefined =>
+const asSyncable = <T>(record: T | undefined): (T & Syncable) | undefined =>
   record as (T & Syncable) | undefined
 
 beforeEach(async () => {
@@ -186,7 +186,7 @@ describe('backfillUserId', () => {
         throw new Error('synthetic notes failure')
       }
       // Delegate to real table for everything else.
-      return (Dexie.prototype.table.call(db, name) as unknown) as ReturnType<typeof db.table>
+      return Dexie.prototype.table.call(db, name) as unknown as ReturnType<typeof db.table>
     })
 
     try {

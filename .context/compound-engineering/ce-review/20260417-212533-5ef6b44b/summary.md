@@ -14,33 +14,34 @@ Note: agent-native-reviewer and learnings-researcher are documented as always-on
 
 ## Findings summary (post-dedup, post-confidence-gate)
 
-| Finding | Severity | Confidence | Reviewers | Route | Status |
-|---|---|---|---|---|---|
-| R1-01: upgrade .catch() swallows hard errors (now logs) | P1 | 0.95 | correctness, adversarial, data-migrations, reliability | gated_auto → downstream-resolver | Logging added (safe_auto); narrow-catch fix deferred |
-| R1-02: concurrent double-backfill on cold start | P2 | 0.95 | correctness, adversarial, data-migrations, reliability, kieran-ts | gated_auto → downstream-resolver (defer E92-S08) | Captured in story |
-| M-01/TG-01: triplicated SYNCABLE_TABLES list | P2 | 0.98 | maintainability, adversarial, testing | safe_auto | Fixed — test imports from backfill.ts |
-| T05: missing afterEach in migration test | P2 | 0.85 | testing | safe_auto | Fixed |
-| KT-01: payload unknown too loose | P3 | 0.82 | kieran-ts | safe_auto | Fixed |
-| KT-02: backfillUserId accepts undefined | P3 | 0.76 | kieran-ts | safe_auto | Fixed |
-| KT-03: sync types not re-exported from barrel | P3 | 0.72 | kieran-ts | safe_auto | Fixed |
-| M-04: dead E92-S08 comment reference | P3 | 0.82 | maintainability | safe_auto | Fixed |
-| M-05: no cross-ref comment on SYNCABLE_TABLES_V52 | P3 | 0.70 | maintainability | safe_auto | Fixed |
-| T02: empty-string userId branch not tested | P3 | 0.90 | testing | safe_auto | Fixed — test added |
-| T03: weak `> 0` assertion in error-isolation test | P3 | 0.82 | testing | safe_auto | Fixed |
-| R1-03: sign-out mid-backfill stamps stale userId | P2 | 0.88 | adversarial, correctness | manual → E92-S08 | Captured in story |
-| R1-04: tablesFailed discarded at call sites | P3 | 0.82 | reliability | manual → E92-S05 | Captured in story |
-| R1-05: `!record.updatedAt` misses 0/{}/false | P3 | 0.82 | adversarial | advisory | Captured in story |
-| R1-PE-01: progress table EntityTable PK mismatch | P2 | 0.92 | correctness | pre-existing → E92-S04 | Captured in story |
-| T01: Date.now() in migration test | P3 | 0.92 | testing | advisory (vitest not Playwright — no rule violation) | Noted |
-| T04: no 10k-record perf test | P3 | 0.95 | testing | advisory (AC8 qualitative) | Noted |
-| T06: no hard-error upgrade test | P3 | 0.80 | testing | advisory (depends on R1-01) | Noted |
-| REL-04: StrictMode double-mount | P3 | 0.72 | reliability | advisory (dev-only) | Noted |
-| ADV-06: clock skew | P3 | 0.72 | adversarial | advisory | Noted |
-| DM-02: backfill lacks outer tx | P3 | 0.75 | data-migrations | manual → E92-S05 | Captured in story |
+| Finding                                                 | Severity | Confidence | Reviewers                                                         | Route                                                | Status                                               |
+| ------------------------------------------------------- | -------- | ---------- | ----------------------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------- |
+| R1-01: upgrade .catch() swallows hard errors (now logs) | P1       | 0.95       | correctness, adversarial, data-migrations, reliability            | gated_auto → downstream-resolver                     | Logging added (safe_auto); narrow-catch fix deferred |
+| R1-02: concurrent double-backfill on cold start         | P2       | 0.95       | correctness, adversarial, data-migrations, reliability, kieran-ts | gated_auto → downstream-resolver (defer E92-S08)     | Captured in story                                    |
+| M-01/TG-01: triplicated SYNCABLE_TABLES list            | P2       | 0.98       | maintainability, adversarial, testing                             | safe_auto                                            | Fixed — test imports from backfill.ts                |
+| T05: missing afterEach in migration test                | P2       | 0.85       | testing                                                           | safe_auto                                            | Fixed                                                |
+| KT-01: payload unknown too loose                        | P3       | 0.82       | kieran-ts                                                         | safe_auto                                            | Fixed                                                |
+| KT-02: backfillUserId accepts undefined                 | P3       | 0.76       | kieran-ts                                                         | safe_auto                                            | Fixed                                                |
+| KT-03: sync types not re-exported from barrel           | P3       | 0.72       | kieran-ts                                                         | safe_auto                                            | Fixed                                                |
+| M-04: dead E92-S08 comment reference                    | P3       | 0.82       | maintainability                                                   | safe_auto                                            | Fixed                                                |
+| M-05: no cross-ref comment on SYNCABLE_TABLES_V52       | P3       | 0.70       | maintainability                                                   | safe_auto                                            | Fixed                                                |
+| T02: empty-string userId branch not tested              | P3       | 0.90       | testing                                                           | safe_auto                                            | Fixed — test added                                   |
+| T03: weak `> 0` assertion in error-isolation test       | P3       | 0.82       | testing                                                           | safe_auto                                            | Fixed                                                |
+| R1-03: sign-out mid-backfill stamps stale userId        | P2       | 0.88       | adversarial, correctness                                          | manual → E92-S08                                     | Captured in story                                    |
+| R1-04: tablesFailed discarded at call sites             | P3       | 0.82       | reliability                                                       | manual → E92-S05                                     | Captured in story                                    |
+| R1-05: `!record.updatedAt` misses 0/{}/false            | P3       | 0.82       | adversarial                                                       | advisory                                             | Captured in story                                    |
+| R1-PE-01: progress table EntityTable PK mismatch        | P2       | 0.92       | correctness                                                       | pre-existing → E92-S04                               | Captured in story                                    |
+| T01: Date.now() in migration test                       | P3       | 0.92       | testing                                                           | advisory (vitest not Playwright — no rule violation) | Noted                                                |
+| T04: no 10k-record perf test                            | P3       | 0.95       | testing                                                           | advisory (AC8 qualitative)                           | Noted                                                |
+| T06: no hard-error upgrade test                         | P3       | 0.80       | testing                                                           | advisory (depends on R1-01)                          | Noted                                                |
+| REL-04: StrictMode double-mount                         | P3       | 0.72       | reliability                                                       | advisory (dev-only)                                  | Noted                                                |
+| ADV-06: clock skew                                      | P3       | 0.72       | adversarial                                                       | advisory                                             | Noted                                                |
+| DM-02: backfill lacks outer tx                          | P3       | 0.75       | data-migrations                                                   | manual → E92-S05                                     | Captured in story                                    |
 
 ## Autofixes applied (10)
 
 All committed in a follow-up amendment commit:
+
 1. payload type narrowed
 2. barrel re-export
 3. signature narrowed (string | null)

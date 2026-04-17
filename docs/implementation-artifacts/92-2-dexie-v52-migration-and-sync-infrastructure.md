@@ -99,10 +99,10 @@ N/A — schema migration, no UI.
 
 **New test coverage:**
 
-| File | Tests | Coverage |
-| --- | --- | --- |
-| `src/db/__tests__/migration-v52-sync.test.ts` | 10 | Schema shape, data preservation, `updatedAt` stamping, `userId` deferral, excluded tables, idempotency |
-| `src/lib/sync/__tests__/backfill.test.ts` | 7 | Falsy-userId guard, stamp-missing, don't-overwrite, `updatedAt` handling, idempotency, per-table error isolation |
+| File                                          | Tests | Coverage                                                                                                         |
+| --------------------------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------- |
+| `src/db/__tests__/migration-v52-sync.test.ts` | 10    | Schema shape, data preservation, `updatedAt` stamping, `userId` deferral, excluded tables, idempotency           |
+| `src/lib/sync/__tests__/backfill.test.ts`     | 7     | Falsy-userId guard, stamp-missing, don't-overwrite, `updatedAt` handling, idempotency, per-table error isolation |
 
 **Test strategy:**
 
