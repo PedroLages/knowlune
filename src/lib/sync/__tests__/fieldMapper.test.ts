@@ -85,17 +85,22 @@ describe('fieldMapper.toSnakeCase', () => {
   })
 
   it('strips all keys in entry.vaultFields (they are written to Vault separately)', () => {
+    // Realistic OpdsCatalog shape: `auth` is a nested object — the whole
+    // object is vaultFields-stripped so the plaintext password never reaches
+    // the upload payload. A fictional flat `password` key here would give a
+    // false green because fieldMapper only strips top-level keys.
     const entry = tableRegistry.opdsCatalogs
     const input = {
       id: 'o-1',
       name: 'My Catalog',
       url: 'https://example.com/opds',
-      password: 'supersecret',
+      auth: { username: 'alice', password: 'supersecret' },
       userId: 'u-1',
     }
 
     const output = toSnakeCase(entry, input)
 
+    expect(output).not.toHaveProperty('auth')
     expect(output).not.toHaveProperty('password')
     expect(output.name).toBe('My Catalog')
     expect(output.url).toBe('https://example.com/opds')

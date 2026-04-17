@@ -1,6 +1,14 @@
 /**
  * Sync Table Registry — E92-S03
  *
+ * FIXME(E92-S03.5): comprehensive schema audit pending.
+ * This registry's structural design is sound (pure mapper, tests, types) but
+ * a full cross-reference audit of every entry's fieldMap / compoundPkFields /
+ * monotonicFields / vaultFields against the actual Dexie types and Supabase
+ * migration columns has not been completed. Known misalignments are tracked
+ * in .context/compound-engineering/todos/002..010-*.md and will be resolved
+ * by E92-S03.5 before E92-S04 consumes the registry for uploads.
+ *
  * Single source of truth for every Dexie table that participates in Supabase sync.
  *
  * This registry is consumed by:
@@ -641,11 +649,13 @@ export const tableRegistry: Readonly<Record<string, TableRegistryEntry>> = {
     conflictStrategy: 'lww',
     priority: 3,
     fieldMap: {},
-    vaultFields: [
-      // Never sent as part of the row payload — E95 writes to Supabase
-      // Vault in a separate call.
-      'password',
-    ],
+    // `auth` is a nested object { username, password } on the Dexie OpdsCatalog
+    // type. fieldMapper's strip logic only matches top-level keys, so stripping
+    // 'password' (the nested property name) would not fire — the entire auth
+    // object would upload in plaintext. Strip the whole `auth` object; E95
+    // Vault integration reads auth.username/auth.password separately before
+    // upload and re-injects on download.
+    vaultFields: ['auth'],
   },
 
   audiobookshelfServers: {
