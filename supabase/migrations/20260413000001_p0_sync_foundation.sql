@@ -136,4 +136,113 @@ CREATE POLICY "Users access own video_progress"
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+
+-- ─── Unit 5: Monotonic upsert functions ─────────────────────────────
+-- These enforce conflict resolution in the database so any client implementation
+-- gets correct LWW / monotonic behavior automatically.
+--
+-- IMPORTANT: These functions ARE what maintains `updated_at` monotonicity on
+-- content_progress and video_progress, in place of a moddatetime trigger.
+
+-- Helper: rank states for monotonic comparison. Reusable by future state-machine tables.
+-- IMMUTABLE + LANGUAGE sql → Postgres inlines this at plan time.
+CREATE OR REPLACE FUNCTION public._status_rank(s TEXT)
+RETURNS INTEGER
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT CASE s
+    WHEN 'completed' THEN 3
+    WHEN 'in_progress' THEN 2
+    WHEN 'not_started' THEN 1
+    ELSE 0
+  END;
+$$;
+
+-- upsert_content_progress: monotonic on status (completed > in_progress > not_started),
+-- GREATEST on progress_pct and updated_at, set-once completed_at.
+CREATE OR REPLACE FUNCTION public.upsert_content_progress(
+  p_user_id UUID,
+  p_content_id TEXT,
+  p_content_type TEXT,
+  p_status TEXT,
+  p_progress_pct INTEGER,
+  p_updated_at TIMESTAMPTZ
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY INVOKER
+AS $$
+BEGIN
+  INSERT INTO public.content_progress (
+    user_id, content_id, content_type, status, progress_pct, completed_at, updated_at
+  ) VALUES (
+    p_user_id,
+    p_content_id,
+    p_content_type,
+    p_status,
+    p_progress_pct,
+    CASE WHEN p_status = 'completed' THEN p_updated_at ELSE NULL END,
+    p_updated_at
+  )
+  ON CONFLICT (user_id, content_id, content_type) DO UPDATE SET
+    status = CASE
+      WHEN public._status_rank(EXCLUDED.status) > public._status_rank(content_progress.status)
+        THEN EXCLUDED.status
+      ELSE content_progress.status
+    END,
+    progress_pct = GREATEST(content_progress.progress_pct, EXCLUDED.progress_pct),
+    updated_at = GREATEST(content_progress.updated_at, p_updated_at),
+    -- Set completed_at once, when status first advances to 'completed'.
+    -- Once set, it's never overwritten (preserves the original completion time).
+    completed_at = COALESCE(
+      content_progress.completed_at,
+      CASE
+        WHEN public._status_rank(EXCLUDED.status) > public._status_rank(content_progress.status)
+         AND EXCLUDED.status = 'completed'
+          THEN p_updated_at
+        ELSE NULL
+      END
+    );
+END;
+$$;
+
+-- upsert_video_progress: GREATEST on watched_seconds, duration_seconds, updated_at;
+-- LWW on last_position (may rewind when user scrubs back).
+-- watched_percent is a generated column — recomputes automatically.
+-- Note: last_position is NOT a parameter per story spec. Initial insert seeds it from
+-- watched_seconds; subsequent calls leave it unchanged via the upsert SET list.
+-- (If a future story needs explicit last_position, add an overload then.)
+CREATE OR REPLACE FUNCTION public.upsert_video_progress(
+  p_user_id UUID,
+  p_video_id TEXT,
+  p_watched_seconds INTEGER,
+  p_duration_seconds INTEGER,
+  p_updated_at TIMESTAMPTZ
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY INVOKER
+AS $$
+BEGIN
+  INSERT INTO public.video_progress (
+    user_id, video_id, watched_seconds, duration_seconds, last_position, updated_at
+  ) VALUES (
+    p_user_id,
+    p_video_id,
+    p_watched_seconds,
+    p_duration_seconds,
+    p_watched_seconds,
+    p_updated_at
+  )
+  ON CONFLICT (user_id, video_id) DO UPDATE SET
+    watched_seconds = GREATEST(video_progress.watched_seconds, EXCLUDED.watched_seconds),
+    duration_seconds = GREATEST(video_progress.duration_seconds, EXCLUDED.duration_seconds),
+    -- last_position LWW: keep existing (this function doesn't accept a position param).
+    -- Direct UPDATEs or a future overload may set it explicitly.
+    last_position = video_progress.last_position,
+    updated_at = GREATEST(video_progress.updated_at, p_updated_at);
+END;
+$$;
+
 COMMIT;
