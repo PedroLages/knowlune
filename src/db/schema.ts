@@ -46,6 +46,33 @@ import type {
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA } from './checkpoint'
 
+/**
+ * Sync queue entry — tracks pending push to Supabase.
+ * Inserted by `syncableWrite()` (E92-S04), drained by the upload engine (E92-S05).
+ */
+export interface SyncQueueEntry {
+  id?: number
+  tableName: string
+  recordId: string
+  operation: 'put' | 'add' | 'delete'
+  payload: unknown
+  attempts: number
+  status: 'pending' | 'uploading' | 'dead-letter'
+  createdAt: string
+  updatedAt: string
+  lastError?: string
+}
+
+/**
+ * Sync metadata — per-table checkpoint for incremental download.
+ * Keyed by `table` (either a Dexie table name or the `__global__` sentinel).
+ */
+export interface SyncMetadataEntry {
+  table: string
+  lastSyncTimestamp?: string
+  lastUploadedKey?: string
+}
+
 /** Typed Dexie database interface for ElearningDB */
 export type ElearningDatabase = Dexie & {
   importedCourses: EntityTable<ImportedCourse, 'id'>
@@ -98,6 +125,9 @@ export type ElearningDatabase = Dexie & {
   chatConversations: EntityTable<ChatConversation, 'id'>
   transcriptEmbeddings: EntityTable<TranscriptEmbedding, 'id'>
   learnerModels: EntityTable<LearnerModel, 'id'>
+  // v52: Sync foundation (E92-S02)
+  syncQueue: EntityTable<SyncQueueEntry, 'id'>
+  syncMetadata: EntityTable<SyncMetadataEntry, 'table'>
 }
 
 /**
@@ -1337,6 +1367,136 @@ function _declareLegacyMigrations(database: Dexie): void {
   database.version(51).stores({
     learnerModels: 'id, courseId',
   })
+
+  // v52: Sync Foundation (E92-S02)
+  // Adds `userId` and compound `[userId+updatedAt]` indexes to every syncable
+  // Dexie table so the sync engine (E92-S05/S06) can run efficient "records
+  // modified since last checkpoint" range scans per user. Also creates the
+  // `syncQueue` and `syncMetadata` tables used by `syncableWrite()` (E92-S04)
+  // and the upload/download engine.
+  //
+  // Excluded tables (local-only / cache / server-authoritative):
+  //   courseThumbnails, videoCaptions, entitlements, youtubeVideoCache,
+  //   youtubeTranscripts, youtubeChapters, courseEmbeddings, bookFiles,
+  //   transcriptEmbeddings, screenshots
+  //
+  // Upgrade callback stamps a static `updatedAt = migrationNow` on records
+  // that don't already have one. `userId` backfill runs post-open from
+  // `src/lib/sync/backfill.ts` after auth hydration (see E92-S08 for the
+  // sign-in re-invocation hook).
+  database
+    .version(52)
+    .stores({
+      importedCourses: 'id, name, importedAt, status, *tags, source, userId, [userId+updatedAt]',
+      importedVideos: 'id, courseId, filename, youtubeVideoId, userId, [userId+updatedAt]',
+      importedPdfs: 'id, courseId, filename, userId, [userId+updatedAt]',
+      progress: '[courseId+videoId], courseId, videoId, userId, [userId+updatedAt]',
+      bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt, userId, [userId+updatedAt]',
+      notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt, userId, [userId+updatedAt]',
+      studySessions:
+        'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime, userId, [userId+updatedAt]',
+      contentProgress: '[courseId+itemId], courseId, itemId, status, userId, [userId+updatedAt]',
+      challenges: 'id, type, deadline, createdAt, userId, [userId+updatedAt]',
+      embeddings: 'noteId, createdAt, userId, [userId+updatedAt]',
+      aiUsageEvents: 'id, featureType, timestamp, courseId, userId, [userId+updatedAt]',
+      reviewRecords: 'id, noteId, due, last_review, userId, [userId+updatedAt]',
+      courseReminders: 'id, courseId, userId, [userId+updatedAt]',
+      quizzes: 'id, lessonId, createdAt, transcriptHash, userId, [userId+updatedAt]',
+      quizAttempts: 'id, quizId, [quizId+completedAt], completedAt, userId, [userId+updatedAt]',
+      authors: 'id, name, createdAt, userId, [userId+updatedAt]',
+      careerPaths: 'id, userId, [userId+updatedAt]',
+      pathEnrollments: 'id, pathId, status, userId, [userId+updatedAt]',
+      flashcards: 'id, courseId, noteId, due, createdAt, userId, [userId+updatedAt]',
+      learningPaths: 'id, createdAt, userId, [userId+updatedAt]',
+      learningPathEntries: 'id, [pathId+courseId], pathId, userId, [userId+updatedAt]',
+      notifications: 'id, type, createdAt, readAt, dismissedAt, userId, [userId+updatedAt]',
+      notificationPreferences: 'id, userId, [userId+updatedAt]',
+      studySchedules: 'id, courseId, learningPathId, enabled, userId, [userId+updatedAt]',
+      books: 'id, title, author, format, status, createdAt, lastOpenedAt, series, userId, [userId+updatedAt]',
+      bookHighlights:
+        'id, bookId, color, flashcardId, createdAt, lastReviewedAt, reviewRating, userId, [userId+updatedAt]',
+      audioBookmarks: 'id, bookId, chapterIndex, timestamp, createdAt, userId, [userId+updatedAt]',
+      opdsCatalogs: 'id, name, url, createdAt, userId, [userId+updatedAt]',
+      audiobookshelfServers: 'id, name, url, status, lastSyncedAt, userId, [userId+updatedAt]',
+      chapterMappings: '[epubBookId+audioBookId], epubBookId, audioBookId, userId, [userId+updatedAt]',
+      vocabularyItems: 'id, bookId, masteryLevel, createdAt, userId, [userId+updatedAt]',
+      shelves: 'id, name, isDefault, sortOrder, createdAt, userId, [userId+updatedAt]',
+      bookShelves: 'id, bookId, shelfId, [bookId+shelfId], addedAt, userId, [userId+updatedAt]',
+      readingQueue: 'id, bookId, sortOrder, addedAt, userId, [userId+updatedAt]',
+      audioClips: 'id, bookId, chapterId, createdAt, sortOrder, userId, [userId+updatedAt]',
+      bookReviews: 'id, bookId, createdAt, userId, [userId+updatedAt]',
+      chatConversations: 'id, [courseId+videoId], courseId, updatedAt, userId, [userId+updatedAt]',
+      learnerModels: 'id, courseId, userId, [userId+updatedAt]',
+      // Sync infrastructure tables
+      syncQueue: '++id, status, [tableName+recordId], createdAt',
+      syncMetadata: 'table',
+    })
+    .upgrade(async (tx) => {
+      const migrationNow = new Date().toISOString()
+      const SYNCABLE_TABLES_V52 = [
+        'importedCourses',
+        'importedVideos',
+        'importedPdfs',
+        'progress',
+        'bookmarks',
+        'notes',
+        'studySessions',
+        'contentProgress',
+        'challenges',
+        'embeddings',
+        'aiUsageEvents',
+        'reviewRecords',
+        'courseReminders',
+        'quizzes',
+        'quizAttempts',
+        'authors',
+        'careerPaths',
+        'pathEnrollments',
+        'flashcards',
+        'learningPaths',
+        'learningPathEntries',
+        'notifications',
+        'notificationPreferences',
+        'studySchedules',
+        'books',
+        'bookHighlights',
+        'audioBookmarks',
+        'opdsCatalogs',
+        'audiobookshelfServers',
+        'chapterMappings',
+        'vocabularyItems',
+        'shelves',
+        'bookShelves',
+        'readingQueue',
+        'audioClips',
+        'bookReviews',
+        'chatConversations',
+        'learnerModels',
+      ] as const
+
+      // Stamp `updatedAt` on records that lack it. `userId` is intentionally NOT
+      // set here — it's backfilled post-open by `backfillUserId()` once the
+      // Zustand auth store has hydrated (avoids Dexie-open / auth-hydration
+      // race). Idempotent: records that already have `updatedAt` are left alone.
+      await Promise.all(
+        SYNCABLE_TABLES_V52.map((tableName) =>
+          tx
+            .table(tableName)
+            .toCollection()
+            .modify((record: Record<string, unknown>) => {
+              if (!record.updatedAt) {
+                record.updatedAt = migrationNow
+              }
+            })
+            .catch(() => {
+              // Tolerate tables that haven't been used yet (empty / schema-only).
+              // Per-table failure should not abort the whole migration; Dexie
+              // will surface hard errors (e.g. schema mismatch) through the
+              // outer promise regardless.
+            })
+        )
+      )
+    })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }

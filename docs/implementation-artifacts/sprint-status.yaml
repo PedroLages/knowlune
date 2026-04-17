@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-13  # E71 marked done — all 3 stories shipped
+last_updated: 2026-04-17  # E92-S02 review — Dexie v52 migration + sync infrastructure
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -1141,7 +1141,7 @@ development_status:
   # Sync engine core, P0 tables (progress, sessions), table registry, offline handling, auth integration
   epic-92: backlog
   92-1-supabase-p0-migrations-and-extensions: done
-  92-2-dexie-v52-migration-and-sync-infrastructure: backlog
+  92-2-dexie-v52-migration-and-sync-infrastructure: review
   92-3-sync-table-registry-and-field-mapping: backlog
   92-4-syncable-write-wrapper: backlog
   92-5-sync-engine-upload-phase: backlog

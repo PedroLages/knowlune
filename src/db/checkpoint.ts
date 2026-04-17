@@ -1,7 +1,7 @@
 /**
- * Dexie Migration Checkpoint — v38
+ * Dexie Migration Checkpoint — v52
  *
- * This file provides a frozen snapshot of the complete IndexedDB schema at version 38.
+ * This file provides a frozen snapshot of the complete IndexedDB schema at version 52.
  * Fresh installs skip the incremental version declarations and create the full
  * schema in a single step. Existing users at lower versions still run incremental
  * migrations through the legacy version chain in schema.ts.
@@ -20,14 +20,14 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 51
+export const CHECKPOINT_VERSION = 52
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
- * This is the result of applying all migrations v1–v38 on a fresh database.
+ * This is the result of applying all migrations v1–v52 on a fresh database.
  *
  * IMPORTANT: This must exactly match the schema produced by running all
- * 41 incremental migrations. The unit test `schema-checkpoint.test.ts`
+ * incremental migrations. The unit test `schema-checkpoint.test.ts`
  * enforces this invariant.
  *
  * Note: `courses` table was dropped in v30 (E89-S01) — dead regular course system removed.
@@ -42,56 +42,69 @@ export const CHECKPOINT_VERSION = 51
  * v42 (E109-S01): vocabularyItems table for vocabulary tracking.
  * v44 (E110-S01): shelves + bookShelves tables for Smart Shelves.
  * v45 (E110-S02): series index added to books for series grouping.
+ * v46 (E110-S03): readingQueue table.
+ * v47 (E111-S01): audioClips table.
+ * v48 (E113-S01): bookReviews table.
+ * v49 (E57-S03): chatConversations table.
+ * v50 (E57-S05): transcriptEmbeddings table.
+ * v51 (E72-S01): learnerModels table.
+ * v52 (E92-S02): sync foundation — `userId` + `[userId+updatedAt]` indexes on all
+ *                syncable tables; new `syncQueue` and `syncMetadata` tables.
  */
 export const CHECKPOINT_SCHEMA: Record<string, string> = {
-  importedCourses: 'id, name, importedAt, status, *tags, source',
-  importedVideos: 'id, courseId, filename, youtubeVideoId',
-  importedPdfs: 'id, courseId, filename',
-  progress: '[courseId+videoId], courseId, videoId',
-  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
-  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  importedCourses: 'id, name, importedAt, status, *tags, source, userId, [userId+updatedAt]',
+  importedVideos: 'id, courseId, filename, youtubeVideoId, userId, [userId+updatedAt]',
+  importedPdfs: 'id, courseId, filename, userId, [userId+updatedAt]',
+  progress: '[courseId+videoId], courseId, videoId, userId, [userId+updatedAt]',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt, userId, [userId+updatedAt]',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt, userId, [userId+updatedAt]',
   screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
-  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
-  contentProgress: '[courseId+itemId], courseId, itemId, status',
-  challenges: 'id, type, deadline, createdAt',
-  embeddings: 'noteId, createdAt',
+  studySessions:
+    'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime, userId, [userId+updatedAt]',
+  contentProgress: '[courseId+itemId], courseId, itemId, status, userId, [userId+updatedAt]',
+  challenges: 'id, type, deadline, createdAt, userId, [userId+updatedAt]',
+  embeddings: 'noteId, createdAt, userId, [userId+updatedAt]',
   courseThumbnails: 'courseId',
-  aiUsageEvents: 'id, featureType, timestamp, courseId',
-  reviewRecords: 'id, noteId, due, last_review',
-  courseReminders: 'id, courseId',
-  quizzes: 'id, lessonId, createdAt, transcriptHash',
-  quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+  aiUsageEvents: 'id, featureType, timestamp, courseId, userId, [userId+updatedAt]',
+  reviewRecords: 'id, noteId, due, last_review, userId, [userId+updatedAt]',
+  courseReminders: 'id, courseId, userId, [userId+updatedAt]',
+  quizzes: 'id, lessonId, createdAt, transcriptHash, userId, [userId+updatedAt]',
+  quizAttempts: 'id, quizId, [quizId+completedAt], completedAt, userId, [userId+updatedAt]',
   videoCaptions: '[courseId+videoId], courseId, videoId',
-  authors: 'id, name, createdAt',
-  careerPaths: 'id',
-  pathEnrollments: 'id, pathId, status',
-  flashcards: 'id, courseId, noteId, due, createdAt',
+  authors: 'id, name, createdAt, userId, [userId+updatedAt]',
+  careerPaths: 'id, userId, [userId+updatedAt]',
+  pathEnrollments: 'id, pathId, status, userId, [userId+updatedAt]',
+  flashcards: 'id, courseId, noteId, due, createdAt, userId, [userId+updatedAt]',
   entitlements: 'userId',
-  learningPaths: 'id, createdAt',
-  learningPathEntries: 'id, [pathId+courseId], pathId',
+  learningPaths: 'id, createdAt, userId, [userId+updatedAt]',
+  learningPathEntries: 'id, [pathId+courseId], pathId, userId, [userId+updatedAt]',
   youtubeVideoCache: 'videoId, expiresAt',
   youtubeTranscripts: '[courseId+videoId], courseId, videoId, status',
   youtubeChapters: 'id, courseId, order',
-  notifications: 'id, type, createdAt, readAt, dismissedAt',
-  notificationPreferences: 'id',
+  notifications: 'id, type, createdAt, readAt, dismissedAt, userId, [userId+updatedAt]',
+  notificationPreferences: 'id, userId, [userId+updatedAt]',
   courseEmbeddings: 'courseId',
-  studySchedules: 'id, courseId, learningPathId, enabled',
-  books: 'id, title, author, format, status, createdAt, lastOpenedAt, series',
-  bookHighlights: 'id, bookId, color, flashcardId, createdAt, lastReviewedAt, reviewRating',
+  studySchedules: 'id, courseId, learningPathId, enabled, userId, [userId+updatedAt]',
+  books: 'id, title, author, format, status, createdAt, lastOpenedAt, series, userId, [userId+updatedAt]',
+  bookHighlights:
+    'id, bookId, color, flashcardId, createdAt, lastReviewedAt, reviewRating, userId, [userId+updatedAt]',
   bookFiles: '[bookId+filename], bookId',
-  audioBookmarks: 'id, bookId, chapterIndex, timestamp, createdAt',
-  opdsCatalogs: 'id, name, url, createdAt',
-  audiobookshelfServers: 'id, name, url, status, lastSyncedAt',
-  chapterMappings: '[epubBookId+audioBookId], epubBookId, audioBookId',
-  vocabularyItems: 'id, bookId, masteryLevel, createdAt',
-  shelves: 'id, name, isDefault, sortOrder, createdAt',
-  bookShelves: 'id, bookId, shelfId, [bookId+shelfId], addedAt',
-  readingQueue: 'id, bookId, sortOrder, addedAt',
-  audioClips: 'id, bookId, chapterId, createdAt, sortOrder',
-  bookReviews: 'id, bookId, createdAt',
-  chatConversations: 'id, [courseId+videoId], courseId, updatedAt',
+  audioBookmarks: 'id, bookId, chapterIndex, timestamp, createdAt, userId, [userId+updatedAt]',
+  opdsCatalogs: 'id, name, url, createdAt, userId, [userId+updatedAt]',
+  audiobookshelfServers: 'id, name, url, status, lastSyncedAt, userId, [userId+updatedAt]',
+  chapterMappings: '[epubBookId+audioBookId], epubBookId, audioBookId, userId, [userId+updatedAt]',
+  vocabularyItems: 'id, bookId, masteryLevel, createdAt, userId, [userId+updatedAt]',
+  shelves: 'id, name, isDefault, sortOrder, createdAt, userId, [userId+updatedAt]',
+  bookShelves: 'id, bookId, shelfId, [bookId+shelfId], addedAt, userId, [userId+updatedAt]',
+  readingQueue: 'id, bookId, sortOrder, addedAt, userId, [userId+updatedAt]',
+  audioClips: 'id, bookId, chapterId, createdAt, sortOrder, userId, [userId+updatedAt]',
+  bookReviews: 'id, bookId, createdAt, userId, [userId+updatedAt]',
+  chatConversations: 'id, [courseId+videoId], courseId, updatedAt, userId, [userId+updatedAt]',
   transcriptEmbeddings: 'id, [courseId+videoId], courseId, createdAt',
-  learnerModels: 'id, courseId',
+  learnerModels: 'id, courseId, userId, [userId+updatedAt]',
+  // v52 (E92-S02): sync infrastructure tables
+  syncQueue: '++id, status, [tableName+recordId], createdAt',
+  syncMetadata: 'table',
 }
 
 // v42 (E109-S01): vocabularyItems table added
@@ -104,3 +117,7 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
 // v49 (E57-S03): chatConversations table for tutor chat persistence
 // v50 (E57-S05): transcriptEmbeddings table for RAG-grounded tutor answers
 // v51 (E72-S01): learnerModels table for persistent per-course learner profiles
+// v52 (E92-S02): userId + [userId+updatedAt] on all syncable tables; syncQueue + syncMetadata.
+//                Excluded: screenshots, courseThumbnails, videoCaptions, entitlements,
+//                youtubeVideoCache, youtubeTranscripts, youtubeChapters, courseEmbeddings,
+//                bookFiles, transcriptEmbeddings.
