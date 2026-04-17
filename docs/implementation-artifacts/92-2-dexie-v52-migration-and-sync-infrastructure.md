@@ -4,9 +4,22 @@ story_name: 'Dexie v52 Migration and Sync Infrastructure'
 status: review
 started: 2026-04-17
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-04-17
-review_gates_passed: []
+review_gates_passed:
+  - build
+  - lint
+  - type-check
+  - format-check-skipped
+  - unit-tests
+  - e2e-tests-skipped
+  - bundle-analysis
+  - design-review-skipped
+  - code-review
+  - code-review-testing
+  - performance-benchmark
+  - security-review
+  - exploratory-qa-skipped
 burn_in_validated: false
 ---
 
@@ -139,7 +152,7 @@ See [story-template.md](./story-template.md) for the full pre-review checklist. 
 
 ## Design Review Feedback
 
-[Populated by /review-story]
+Skipped — no UI changes (pure schema migration).
 
 ## Code Review Feedback
 
