@@ -1140,7 +1140,7 @@ development_status:
   # Epic 92: Sync Foundation — "Continue Where I Left Off"
   # Sync engine core, P0 tables (progress, sessions), table registry, offline handling, auth integration
   epic-92: backlog
-  92-1-supabase-p0-migrations-and-extensions: review
+  92-1-supabase-p0-migrations-and-extensions: done
   92-2-dexie-v52-migration-and-sync-infrastructure: backlog
   92-3-sync-table-registry-and-field-mapping: backlog
   92-4-syncable-write-wrapper: backlog
