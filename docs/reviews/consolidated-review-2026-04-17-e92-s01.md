@@ -1,53 +1,67 @@
 ## Review Summary: E92-S01 -- Unknown Story
+
 Date: 2026-04-17
 
 ### Pre-checks
+
 - No pre-check data available
 
 ### Design Review
+
 WARNINGS -- 1 medium
 Report: docs/reviews/design/design-review-2026-04-12-e111-s03.md
 
 ### Code Review (Architecture)
+
 WARNINGS -- 2 medium
 Report: docs/reviews/code/code-review-2026-04-14-e62-s04.md
 
 ### Code Review (Testing)
+
 WARNINGS -- 2 high, 4 medium
 
 ### Edge Case Review
+
 Not dispatched
 
 ### Performance Benchmark
+
 PASS
 Report: docs/reviews/performance/performance-benchmark-2026-04-14-e62-s04.md
 
 ### Security Review
+
 PASS
 
 ### Exploratory QA
+
 PASS
 Report: docs/reviews/qa/exploratory-qa-2026-04-11-e107-s05.md
 
 ### OpenAI Adversarial Review
+
 ERROR
 
 ### GLM Adversarial Review
+
 FAIL -- 1 high, 2 medium
 Report: docs/reviews/code/glm-code-review-2026-04-12-e110-s03.md
 
 ### Deduplication Scan
+
 Skipped
 
 ### Consolidated Findings
 
 #### Blockers (must fix)
+
 - unknown: Optimistic UI update before persistence. `addToQueue` sets state before `await db.readingQueue.put(entry)`. If the DB write fails, the user briefly sees the item added then it vanishes on rollback. Same pattern in `removeFromQueue`, `reorderQueue`, and `removeAllBookEntries`. Fix: move all `set()` calls after the successful `await db.*()` calls. (src/stores/useReadingQueueStore.ts:65) [Consensus: 85]
 - unknown: Optimistic `deleteClip` rollback is broken — rollback restores stale snapshot, silently undoing concurrent successful mutations (data-loss). Fix: re-insert only the deleted clip, or re-fetch from Dexie on failure. (src/stores/useAudioClipStore.ts:96) [Consensus: 88]
 - unknown: Race condition in `addClip` — duplicate sortOrder values under concurrent calls. Fix: wrap read-compute-write in a Dexie transaction, or compute sortOrder from already-loaded in-memory state. (src/stores/useAudioClipStore.ts:70) [Consensus: 95]
 - unknown: `loadClips` silently swallows errors — `isLoaded` never set to `true` on query failure, permanently disabling the store. Fix: set `isLoaded: true` in the catch block (with `clips: []`) or introduce a distinct `error` state. (src/stores/useAudioClipStore.ts:53) [Consensus: 90]
 
 #### High Priority (should fix)
+
 - unknown: ABS progress sync (useAudiobookshelfProgressSync) floods console with 188+ repeated 429 errors when playback position changes via clip seek — no rate limiting or backoff on 429 responses. Pre-existing issue, not introduced by E111-S01. [Consensus: 85]
 - unknown: AC-1 E2E test verifies toggle persistence and active-indicator visibility but does not exercise the actual silence detection loop (RAF tick, threshold crossing, audio seek). The test passes even if Web Audio API detection is entirely non-functional. No test path covers the full skip event emission. (tests/e2e/story-e111-s02.spec.ts:73) [Consensus: 82]
 - unknown: AC-4 (drag-and-drop reorder) has zero test coverage. No E2E test exercises the reorderQueue store action or verifies that the UI order changes persist after reload. [Consensus: 80]
@@ -56,12 +70,12 @@ Skipped
 - unknown: AC-7 test only covers marking status as 'finished' via dropdown. The AC states '100% progress' as the trigger, but the implementation only emits book:finished on status change — not when progress reaches 100. The test does not cover the progress=100 path, nor is there documentation that it is intentionally excluded. (tests/e2e/story-e110-s03.spec.ts:131) [Consensus: 85]
 - unknown: Cancel recording button touch target is 25x44px — below the 44x44px minimum. Missing min-w-[44px] on the cancel button in ClipButton. On touch devices users will frequently miss this target during time-sensitive clip recording. (src/app/components/audiobook/ClipButton.tsx:119) [Consensus: 90]
 - unknown: Drag handle and remove buttons are missing type="button". Without it, buttons default to type="submit" per the HTML spec when inside a form ancestor, creating a latent form-submit regression risk. (src/app/components/library/ReadingQueue.tsx:86) [Consensus: 100]
-- unknown: ETA formula avgPagesPerDay = (avgSpeedPagesPerHour * (totalSeconds / 3600)) / (sessionCount / 7) is mathematically incorrect. It divides total pages by sessions-per-week ratio rather than computing actual daily reading rate, producing wildly inaccurate ETAs. (src/services/ReadingStatsService.ts:136) [Consensus: 85]
+- unknown: ETA formula avgPagesPerDay = (avgSpeedPagesPerHour \* (totalSeconds / 3600)) / (sessionCount / 7) is mathematically incorrect. It divides total pages by sessions-per-week ratio rather than computing actual daily reading rate, producing wildly inaccurate ETAs. (src/services/ReadingStatsService.ts:136) [Consensus: 85]
 - unknown: Error fallback object in ReadingStatsSection catch block is missing required avgReadingSpeedPagesPerHour property from ReadingStats interface. TypeScript type violation. (src/app/components/reports/ReadingStatsSection.tsx:71) [Consensus: 92]
 - unknown: IDB 'object store not found' errors on first page load before DB upgrade completes caused navigation away from audiobook player, blocking all clip functionality in the initial session. [Consensus: 70]
 - unknown: Invalid ARIA: <li role="option"> wraps a <button> child in the speed popover. The ARIA spec prohibits interactive elements inside `option` roles. Screen readers (NVDA, VoiceOver) will double-announce each item as both an option and a button, confusing learners. (src/app/components/audiobook/SpeedControl.tsx:56) [Consensus: 100]
 - unknown: Keyboard shortcuts [ and ] for speed adjustment only call setPlaybackRate() but do NOT call updateBookPlaybackSpeed(). Speed changes via keyboard are not persisted per-book to IndexedDB, violating AC-5. The SpeedControl popover correctly calls both. Fix: add updateBookPlaybackSpeed(book.id, newRate) after each setPlaybackRate call in both keyboard shortcut actions. (src/app/components/audiobook/AudiobookRenderer.tsx:266) [Consensus: 100]
-- unknown: Module-level AudioContext singletons (_mediaSource, _analyser) are never re-bound when the underlying HTMLAudioElement changes (new book). The second book's audio bypasses the analyser entirely — silence detection reads zeroed buffers from a disconnected stale source. (src/app/hooks/useSilenceDetection.ts:21) [Consensus: 88]
+- unknown: Module-level AudioContext singletons (\_mediaSource, \_analyser) are never re-bound when the underlying HTMLAudioElement changes (new book). The second book's audio bypasses the analyser entirely — silence detection reads zeroed buffers from a disconnected stale source. (src/app/hooks/useSilenceDetection.ts:21) [Consensus: 88]
 - unknown: Optimistic `updateClipTitle` rollback has same stale-snapshot problem — concurrent mutations can be silently overwritten on failure. Fix: re-fetch from Dexie on failure. (src/stores/useAudioClipStore.ts:82) [Consensus: 85]
 - unknown: Potential infinite silence skip loop: useSilenceDetection.ts skips only 0.1s (SKIP_LOOKAHEAD_S) per trigger then resets silenceStartRef.current to null, which immediately re-detects silence and fires another skip ~6 times/second until non-silent audio is reached. The diff was truncated so the fix could not be confirmed in source. Causes constant UI flashing, degraded playback, and high CPU. [Consensus: 72]
 - unknown: RLS isolation test (AC3) covers direct SELECT and upsert-via-function but does not verify service-role bypass paths or SECURITY DEFINER escalation vectors relevant to downstream sync stories. [Consensus: 75]
@@ -80,6 +94,7 @@ Skipped
 - unknown: useSilenceDetection production hook uses Date.now() directly in setLastSkip (line 129). This is benign in production but makes the lastSkip.timestamp field non-deterministic if a unit test is ever written for the detection loop. (src/app/hooks/useSilenceDetection.ts:129) [Consensus: 100]
 
 #### Medium (fix when possible)
+
 - unknown: AC-2 E2E test verifies element attachment and ARIA attributes but does not verify the indicator shows the correct text after a skip event (e.g., 'Skipped 2.3s silence'). The display logic of SilenceSkipIndicator (text formatting, 2000ms hide timer, rapid-skip reset) has no unit test. (tests/e2e/story-e111-s02.spec.ts:99) [Consensus: 75]
 - unknown: AC-2 only tests the dropdown (book-more-actions) add path. The right-click ContextMenu path (context-menu-queue-toggle) — the primary desktop UX surface — has no test. (tests/e2e/story-e110-s03.spec.ts:62) [Consensus: 72]
 - unknown: AC-3 clips panel test does not verify empty-state message ('No clips yet...') — only checks panel is visible. Empty state is an implicit AC per test quality framework. (tests/e2e/regression/story-e111-s01.spec.ts:193) [Consensus: 72]
@@ -116,13 +131,13 @@ Skipped
 - unknown: The Skip Silence switch and Auto-Bookmark on Stop switch both have adjacent description paragraphs not linked via aria-describedby. Keyboard/AT users receive no programmatic description when the switch receives focus. (src/app/components/audiobook/AudiobookSettingsPanel.tsx:116) [Consensus: 92]
 - unknown: `reorderClips` writes every clip's sortOrder on each drag, issuing N Dexie puts. Fix: only update the two clips that actually changed sortOrder. (src/stores/useAudioClipStore.ts:106) [Consensus: 75]
 - unknown: `reorderQueue` issues N individual `update()` calls inside a transaction. For large queues this is N separate write operations. Consider using `bulkPut` for efficiency. (src/stores/useReadingQueueStore.ts:96) [Consensus: 100]
-- unknown: addClip returns-id test uses toBeTruthy() + typeof string — would pass for any non-empty string. Should assert UUID format with a regex. (src/stores/__tests__/useAudioClipStore.test.ts:120) [Consensus: 70]
+- unknown: addClip returns-id test uses toBeTruthy() + typeof string — would pass for any non-empty string. Should assert UUID format with a regex. (src/stores/**tests**/useAudioClipStore.test.ts:120) [Consensus: 70]
 - unknown: bookMap is rebuilt on every render; useMemo would clarify intent and avoid unnecessary work. (src/app/components/library/ReadingQueue.tsx:163) [Consensus: 100]
 - unknown: computeAverageReadingSpeed sums totalPages from ALL finished books but only counts session duration from last 90 days. Old books without recent sessions inflate speed unrealistically. (src/services/ReadingStatsService.ts:56) [Consensus: 72]
 - unknown: fadeOutAndPause has no cancellation mechanism. If user cancels timer during 5s fade, rAF loop continues and eventually pauses audio. Fix: return a cancel function that calls cancelAnimationFrame and restores volume. (src/app/hooks/useSleepTimer.ts:21) [Consensus: 72]
 - unknown: formatSpeed uses '×' (Unicode U+00D7) in SpeedControl.tsx but 'x' (ASCII letter) in AudiobookSettingsPanel.tsx. The player speed button shows '1.5×' while settings presets show '1.5x', creating a visual mismatch. Screen readers also announce them differently. (src/app/components/audiobook/AudiobookSettingsPanel.tsx:45) [Consensus: 99]
-- unknown: getReadingStats test only checks typeof — no behavioral test for the main aggregation entry point. (src/services/__tests__/ReadingStatsService.test.ts:180) [Consensus: 75]
-- unknown: getTimeOfDayPattern has zero behavioral tests — only an existence check. AC4 bucketing logic is completely untested. (src/services/__tests__/ReadingStatsService.test.ts:300) [Consensus: 78]
+- unknown: getReadingStats test only checks typeof — no behavioral test for the main aggregation entry point. (src/services/**tests**/ReadingStatsService.test.ts:180) [Consensus: 75]
+- unknown: getTimeOfDayPattern has zero behavioral tests — only an existence check. AC4 bucketing logic is completely untested. (src/services/**tests**/ReadingStatsService.test.ts:300) [Consensus: 78]
 - unknown: loadQueue uses isLoaded guard but never resets it, preventing DB refresh on re-navigation. Single-tab assumption should be documented. (src/stores/useReadingQueueStore.ts:38) [Consensus: 75]
 - unknown: study_sessions has no uniqueness constraint on (user_id, started_at) and no ON CONFLICT guard. Client retries on network failure would insert duplicate sessions. (supabase/migrations/20260413000001_p0_sync_foundation.sql:68) [Consensus: 65]
 - unknown: updateBookPlaybackSpeed in useBookStore has no dedicated unit tests. The error rollback path (Dexie failure), the toast.error call, and the out-of-range validation guard (speed < 0.5 or > 3.0 silently dropped) have zero test coverage. (src/stores/useBookStore.ts:333) [Consensus: 74]
@@ -131,6 +146,7 @@ Skipped
 - unknown: v47 Dexie migration may omit prior tables — Dexie requires all tables to be re-declared in each version's `.stores()` call or it will drop unlisted tables on upgrade from v46. (src/db/schema.ts:87) [Consensus: 70]
 
 #### Low (improve when convenient)
+
 - unknown: AC-6 console error filter is narrow — only checks for 'treemap', 'color', 'NaN'. Other rendering errors would be missed. (tests/e2e/story-e62-s04.spec.ts:381) [Consensus: 65]
 - unknown: E2E AC-4 test (story-e111-s03.spec.ts:122-123) asserts chapter-progress-bar is 'not.toBeVisible()' but the element may be absent from DOM entirely in countdown mode. This assertion succeeds whether the element is hidden or non-existent; a stricter assertion (count() === 0 or toBeHidden with attached state) would make the intent explicit. [Consensus: 80]
 - unknown: E2E test for AC-1 (story-e111-s03.spec.ts:73) is titled 'AC-1/AC-3' but only asserts the badge shows 'EOC' — it does not verify that audio actually fades out or pauses at a chapter boundary. The actual fade+pause behavior for AC-1 is validated only at the unit level (useSleepTimer.test.ts:111-141). For full AC-1 confidence an E2E assertion such as checking audio.paused or the player UI entering a paused state after a dispatched chapterend event would be preferred. [Consensus: 80]
@@ -141,6 +157,7 @@ Skipped
 - unknown: setTimeout(() => inputRef.current?.focus(), 50) for post-render focus is a minor anti-pattern. Low practical risk but useEffect or flushSync would be more deterministic. (src/app/components/audiobook/ClipListPanel.tsx:79) [Consensus: 90]
 
 #### Nits (optional)
+
 - unknown: AC-4 does not verify decay date text — only checks retention progress bar aria-label. (tests/e2e/story-e62-s04.spec.ts:306) [Consensus: 70]
 - unknown: AC-8 accessibility test verifies ARIA label and role but does not test keyboard-only interaction flow (Tab focus, Enter/Space to open speed popover, arrow key navigation). (tests/e2e/story-e111-s02.spec.ts:192) [Consensus: 60]
 - unknown: Cover image uses alt="" (decorative) — this is intentional and correct per WCAG F39 since the book title immediately follows in text. Documented as verified. (src/app/components/library/ReadingQueue.tsx:43) [Consensus: 100]
@@ -159,13 +176,13 @@ Skipped
 - unknown: Visible label 'Chapter progress' (line 109) does not exactly match the aria-label 'Current chapter progress' (line 116). Sighted and AT users read slightly different text for the same control. (src/app/components/audiobook/SleepTimer.tsx:109) [Consensus: 95]
 - unknown: [Recurring] Multiple h-3.5 w-3.5 instances should use size-3.5 Tailwind v4 shorthand. (src/app/components/library/BookContextMenu.tsx:92) [Consensus: 80]
 - unknown: [Recurring] String interpolation for conditional className instead of cn() in AudiobookSettingsPanel speed preset buttons and sleep timer option buttons. (src/app/components/audiobook/AudiobookSettingsPanel.tsx:99) [Consensus: 65]
-- unknown: _status_rank(NULL) returns 0 silently via ELSE branch. A future caller passing NULL status would not receive an error. (supabase/migrations/20260413000001_p0_sync_foundation.sql:149) [Consensus: 100]
+- unknown: \_status_rank(NULL) returns 0 silently via ELSE branch. A future caller passing NULL status would not receive an error. (supabase/migrations/20260413000001_p0_sync_foundation.sql:149) [Consensus: 100]
 - unknown: handleBookmarkDeleted calls onBookmarkChange() inside a setState updater — side effects inside updaters are unsafe in concurrent React. Also has an empty dep array so it captures a stale onBookmarkChange reference. (src/app/components/audiobook/AudiobookRenderer.tsx:133) [Consensus: 80]
 - unknown: last_position = video_progress.last_position is a no-op on conflict — last_position is effectively immutable after first insert via this function, despite the 'LWW' comment. Not a security issue; flagged because a future caller believing LWW semantics hold could be surprised. Correctness/clarity, not a vulnerability. (supabase/migrations/20260413000001_p0_sync_foundation.sql:243) [Consensus: 60]
 - unknown: new Date() in service functions creates implicit time dependency. Tests cover this with vi.useFakeTimers() but the coupling is worth noting. (src/services/ReadingStatsService.ts:64) [Consensus: 65]
 - unknown: progress_pct=100 with status='in_progress' is schema-valid but semantically inconsistent. No verification covers this combination. (supabase/migrations/20260413000001_p0_sync_foundation.sql:42) [Consensus: 65]
 - unknown: testAudiobook and testAudiobookB are defined as inline literal objects rather than using factories from tests/support/fixtures/factories/. (tests/e2e/story-e111-s02.spec.ts:20) [Consensus: 60]
 
-
 ### Verdict
+
 BLOCKED -- fix 4 blocker(s) first

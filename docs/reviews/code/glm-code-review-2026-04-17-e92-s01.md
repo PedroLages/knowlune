@@ -27,6 +27,7 @@ No blockers found in the story artifacts that are visible.
 - **[`docs/implementation-artifacts/sessions/e92-s01-checkpoint.md` (entire)] (confidence: 60)**: The checkpoint file is a near-exact duplicate of the story artifact (`92-1-supabase-p0-migrations-and-extensions.md`). The "Key Decisions", "Approaches Tried", "Current State", and "Resumption Notes" sections are copy-pasted verbatim. This creates a maintenance risk where the two files can diverge. Consider having the checkpoint reference the story artifact rather than duplicating it.
 
 ---
+
 Issues found: 1 | Blockers: 0 | High: 0 | Medium: 1 | Nits: 1
 
 **Note:** The migration SQL file content (`20260413000001_p0_sync_foundation.sql`, 248 lines) is the critical artifact for this review but was truncated in the provided diff. A complete review of the actual SQL — particularly the `upsert_content_progress` and `upsert_video_progress` function bodies, RLS policy definitions, and the generated column expression for `watched_percent` — would require the full file content. The findings above are based solely on the story documentation and architectural decisions described.

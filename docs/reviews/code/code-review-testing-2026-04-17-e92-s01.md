@@ -10,15 +10,15 @@
 
 ### AC Coverage Table
 
-| AC# | Description | SQL Verification | E2E/Unit Test | Verdict |
-|-----|-------------|-----------------|---------------|---------|
-| 1 | All 4 extensions visible in `pg_extension` | Task 6.1 — `pg_extension` returns 4 rows on titan | N/A (DB layer) | Covered |
-| 2 | `content_progress`, `study_sessions`, `video_progress` exist with correct schema | Task 6.1 — schema verified on titan | N/A (DB layer) | Covered |
-| 3 | RLS blocks cross-user access on all P0 tables | Task 6.3 — two-user RLS isolation test (cross-user SELECT = 0 rows; cross-user upsert rejected by WITH CHECK) | N/A (DB layer) | Covered |
-| 4 | `upsert_content_progress()` is monotonic on status and progress_pct | Task 6.4 — completed→not_started stays completed; 80→60 stays 80 | N/A (DB layer) | Covered |
-| 5 | `upsert_video_progress()` is monotonic on watched_seconds | Task 6.4 — 500→200 stays 500 | N/A (DB layer) | Covered |
-| 6 | Migration is idempotent | Task 6.5 — applied twice, no errors | N/A (DB layer) | Covered |
-| 7 | `updated_at` on `content_progress`/`video_progress` is client-driven; no `moddatetime` trigger | Task 6.2 — 0 user triggers on both tables; Task 6.4 — older timestamp ignored | N/A (DB layer) | Covered |
+| AC# | Description                                                                                    | SQL Verification                                                                                              | E2E/Unit Test  | Verdict |
+| --- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------- | ------- |
+| 1   | All 4 extensions visible in `pg_extension`                                                     | Task 6.1 — `pg_extension` returns 4 rows on titan                                                             | N/A (DB layer) | Covered |
+| 2   | `content_progress`, `study_sessions`, `video_progress` exist with correct schema               | Task 6.1 — schema verified on titan                                                                           | N/A (DB layer) | Covered |
+| 3   | RLS blocks cross-user access on all P0 tables                                                  | Task 6.3 — two-user RLS isolation test (cross-user SELECT = 0 rows; cross-user upsert rejected by WITH CHECK) | N/A (DB layer) | Covered |
+| 4   | `upsert_content_progress()` is monotonic on status and progress_pct                            | Task 6.4 — completed→not_started stays completed; 80→60 stays 80                                              | N/A (DB layer) | Covered |
+| 5   | `upsert_video_progress()` is monotonic on watched_seconds                                      | Task 6.4 — 500→200 stays 500                                                                                  | N/A (DB layer) | Covered |
+| 6   | Migration is idempotent                                                                        | Task 6.5 — applied twice, no errors                                                                           | N/A (DB layer) | Covered |
+| 7   | `updated_at` on `content_progress`/`video_progress` is client-driven; no `moddatetime` trigger | Task 6.2 — 0 user triggers on both tables; Task 6.4 — older timestamp ignored                                 | N/A (DB layer) | Covered |
 
 **Coverage**: 7/7 ACs fully covered | 0 gaps | 0 partial
 
@@ -59,4 +59,5 @@ None.
 5. **`video_progress` with `watched_seconds > duration_seconds` on INSERT (not update)**: The generated column caps `watched_percent` at 100.00 (verified in Task 6.6), but the row itself stores `watched_seconds > duration_seconds`. The CHECK only enforces `>= 0` for each independently. A future query that compares `watched_seconds` to `duration_seconds` without going through `watched_percent` could behave unexpectedly.
 
 ---
+
 ACs: 7 covered / 7 total | Findings: 7 | Blockers: 0 | High: 2 | Medium: 2 | Nits: 3

@@ -6,20 +6,21 @@
 
 ### Phases Executed
 
-| Phase | Name | Triggered By | Findings |
-|-------|------|-------------|----------|
-| 1 | Attack Surface | Always | 3 vectors identified |
-| 2 | Secrets Scan | Always | Clean |
-| 3 | OWASP Top 10 | Always | Reviewed with STRIDE overlay |
-| 4 | Dependencies | package.json unchanged | N/A |
-| 5 | Auth & Access | RLS policies changed | 0 findings |
-| 6 | STRIDE | New schema/functions | 1 finding (Tampering) |
-| 7 | Configuration | vite/env unchanged | N/A |
-| 8 | Config Security | Always-on | Clean |
+| Phase | Name            | Triggered By           | Findings                     |
+| ----- | --------------- | ---------------------- | ---------------------------- |
+| 1     | Attack Surface  | Always                 | 3 vectors identified         |
+| 2     | Secrets Scan    | Always                 | Clean                        |
+| 3     | OWASP Top 10    | Always                 | Reviewed with STRIDE overlay |
+| 4     | Dependencies    | package.json unchanged | N/A                          |
+| 5     | Auth & Access   | RLS policies changed   | 0 findings                   |
+| 6     | STRIDE          | New schema/functions   | 1 finding (Tampering)        |
+| 7     | Configuration   | vite/env unchanged     | N/A                          |
+| 8     | Config Security | Always-on              | Clean                        |
 
 ### Attack Surface Changes
 
 New Postgres attack surface introduced:
+
 1. **4 extensions enabled**: `moddatetime`, `pgcrypto`, `vector`, `supabase_vault` — all standard, no risky extensions (`plpython3u`, `file_fdw`, `dblink`, `pg_read_server_files` absent).
 2. **3 new tables with RLS**: `content_progress`, `study_sessions`, `video_progress` — all `auth.users(id) ON DELETE CASCADE`.
 3. **3 new SQL functions**: `_status_rank` (IMMUTABLE), `upsert_content_progress`, `upsert_video_progress` — all SECURITY **INVOKER** (not DEFINER).
@@ -27,9 +28,11 @@ New Postgres attack surface introduced:
 ### Findings
 
 #### Blockers
+
 _None._
 
 #### High Priority
+
 _None._
 
 #### Medium (fix when possible)
@@ -54,30 +57,31 @@ _None._
 - **supabase/migrations/20260413000001_p0_sync_foundation.sql:243** (confidence: 60): `last_position = video_progress.last_position` is a no-op on conflict — `last_position` is effectively immutable after first insert via this function. Not a security issue; flagged because the comment says "LWW" but the behavior is "write-once". A future caller believing LWW semantics hold could be surprised. Cross-referenced as a correctness/UX item, not a security blocker.
 
 ### Secrets Scan
+
 Clean — no API keys, tokens, passwords, or credentials present in the SQL migration or any companion doc. `.mcp.json` not modified. No `.env*` files tracked in this diff.
 
 ### OWASP / Threat Coverage
 
-| Category | Applicable? | Finding? | Details |
-|----------|-------------|----------|---------|
-| CS1: Broken Client-Side Access Control | No | — | Server-side RLS is the enforcement layer here. |
-| CS2: Client-Side Injection | No | — | No client code in this diff. |
-| CS3: Sensitive Data in Client Storage | No | — | Schema-only migration. |
-| CS5: Client-Side Integrity | No | — | N/A for DB migration. |
-| CS7: Client-Side Security Logging | No | — | N/A. |
-| CS9: Client-Side Communication | No | — | N/A. |
-| A01: Broken Access Control (RLS) | Yes | No | All 3 tables `ENABLE ROW LEVEL SECURITY`. `content_progress` and `video_progress` use `FOR ALL` with both `USING` and `WITH CHECK` on `auth.uid() = user_id`. `study_sessions` has only `FOR INSERT (WITH CHECK)` and `FOR SELECT (USING)` — RLS default-deny correctly blocks UPDATE/DELETE (immutable log). |
-| A03: Injection | Yes | No | Generated column `watched_percent` uses a fixed arithmetic expression on same-row columns — no dynamic SQL, no injection surface. Functions use parameterized values, no `EXECUTE`. |
-| A04: Insecure Design | Yes | Medium | Client-controlled `p_updated_at` with `GREATEST` allows self-tampering (see finding above). |
-| A05: Security Misconfiguration | Yes | No | Extensions are all standard Supabase-approved (`pgcrypto`, `moddatetime`, `vector`, `supabase_vault`). No `plpython3u`/`file_fdw`/`dblink`. |
-| A07: Identification & Auth Failures | Yes | No | `auth.uid()` used correctly; FKs to `auth.users` with `ON DELETE CASCADE` ensure orphan cleanup on user deletion. |
-| A08: Data Integrity | Yes | No | CHECK constraints on `content_type`, `status`, `progress_pct (0-100)`, non-negative integers. `_status_rank` returns 0 for unknown (belt-and-suspenders vs CHECK). |
-| STRIDE: Spoofing | Yes | No | RLS `WITH CHECK (auth.uid() = user_id)` blocks spoofing `p_user_id` in function calls (SECURITY INVOKER runs RLS). |
-| STRIDE: Tampering | Yes | Medium | See `p_updated_at` future-pin finding. |
-| STRIDE: Repudiation | Yes | No | `study_sessions` is append-only (INSERT-only RLS) — provides audit trail for sessions. |
-| STRIDE: Information Disclosure | Yes | No | RLS isolates reads to `auth.uid() = user_id`. No cross-user selects. |
-| STRIDE: DoS | Yes | No | User-scoped via RLS (self-DoS only). Indexes prevent scan-based DoS. |
-| STRIDE: Elevation of Privilege | Yes | No | No `SECURITY DEFINER` functions. All functions run as invoker. |
+| Category                               | Applicable? | Finding? | Details                                                                                                                                                                                                                                                                                                       |
+| -------------------------------------- | ----------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CS1: Broken Client-Side Access Control | No          | —        | Server-side RLS is the enforcement layer here.                                                                                                                                                                                                                                                                |
+| CS2: Client-Side Injection             | No          | —        | No client code in this diff.                                                                                                                                                                                                                                                                                  |
+| CS3: Sensitive Data in Client Storage  | No          | —        | Schema-only migration.                                                                                                                                                                                                                                                                                        |
+| CS5: Client-Side Integrity             | No          | —        | N/A for DB migration.                                                                                                                                                                                                                                                                                         |
+| CS7: Client-Side Security Logging      | No          | —        | N/A.                                                                                                                                                                                                                                                                                                          |
+| CS9: Client-Side Communication         | No          | —        | N/A.                                                                                                                                                                                                                                                                                                          |
+| A01: Broken Access Control (RLS)       | Yes         | No       | All 3 tables `ENABLE ROW LEVEL SECURITY`. `content_progress` and `video_progress` use `FOR ALL` with both `USING` and `WITH CHECK` on `auth.uid() = user_id`. `study_sessions` has only `FOR INSERT (WITH CHECK)` and `FOR SELECT (USING)` — RLS default-deny correctly blocks UPDATE/DELETE (immutable log). |
+| A03: Injection                         | Yes         | No       | Generated column `watched_percent` uses a fixed arithmetic expression on same-row columns — no dynamic SQL, no injection surface. Functions use parameterized values, no `EXECUTE`.                                                                                                                           |
+| A04: Insecure Design                   | Yes         | Medium   | Client-controlled `p_updated_at` with `GREATEST` allows self-tampering (see finding above).                                                                                                                                                                                                                   |
+| A05: Security Misconfiguration         | Yes         | No       | Extensions are all standard Supabase-approved (`pgcrypto`, `moddatetime`, `vector`, `supabase_vault`). No `plpython3u`/`file_fdw`/`dblink`.                                                                                                                                                                   |
+| A07: Identification & Auth Failures    | Yes         | No       | `auth.uid()` used correctly; FKs to `auth.users` with `ON DELETE CASCADE` ensure orphan cleanup on user deletion.                                                                                                                                                                                             |
+| A08: Data Integrity                    | Yes         | No       | CHECK constraints on `content_type`, `status`, `progress_pct (0-100)`, non-negative integers. `_status_rank` returns 0 for unknown (belt-and-suspenders vs CHECK).                                                                                                                                            |
+| STRIDE: Spoofing                       | Yes         | No       | RLS `WITH CHECK (auth.uid() = user_id)` blocks spoofing `p_user_id` in function calls (SECURITY INVOKER runs RLS).                                                                                                                                                                                            |
+| STRIDE: Tampering                      | Yes         | Medium   | See `p_updated_at` future-pin finding.                                                                                                                                                                                                                                                                        |
+| STRIDE: Repudiation                    | Yes         | No       | `study_sessions` is append-only (INSERT-only RLS) — provides audit trail for sessions.                                                                                                                                                                                                                        |
+| STRIDE: Information Disclosure         | Yes         | No       | RLS isolates reads to `auth.uid() = user_id`. No cross-user selects.                                                                                                                                                                                                                                          |
+| STRIDE: DoS                            | Yes         | No       | User-scoped via RLS (self-DoS only). Indexes prevent scan-based DoS.                                                                                                                                                                                                                                          |
+| STRIDE: Elevation of Privilege         | Yes         | No       | No `SECURITY DEFINER` functions. All functions run as invoker.                                                                                                                                                                                                                                                |
 
 ### What's Done Well
 
@@ -88,4 +92,5 @@ Clean — no API keys, tokens, passwords, or credentials present in the SQL migr
 5. **Generated column `watched_percent`** with `LEAST(100, ...)` clamp is injection-free and handles the `duration_seconds = 0` edge case cleanly.
 
 ---
+
 Phases: 5/8 | Findings: 3 total | Blockers: 0 | High: 0 | Medium: 1 | Info: 2 | False positives filtered: 0
