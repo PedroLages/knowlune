@@ -170,8 +170,25 @@ BEGIN
 END $$;
 
 -- ─── AC3: RLS isolation. Must run inside a single transaction per the
--- `auth.uid()` lesson (set_config is_local=true only applies for the current txn). ──
+-- `auth.uid()` lesson (set_config is_local=true only applies for the current txn).
+-- CRITICAL: seed userB rows FIRST (as service_role, which bypasses RLS) so the
+-- cross-user assertions below are real tests. Without seeded userB rows, the
+-- count/UPDATE/DELETE against `user_id = userB` would return 0 even if RLS were
+-- disabled — a false pass. ──
 BEGIN;
+  -- Seed userB rows as service_role (bypasses RLS).
+  SET LOCAL ROLE service_role;
+  INSERT INTO public.content_progress (user_id, content_id, content_type, status, progress_pct, updated_at)
+    VALUES ('00000000-0000-0000-0000-e92501000002', 'e92s01-verify-rls-b1', 'course', 'in_progress', 25, now())
+    ON CONFLICT (user_id, content_id, content_type) DO NOTHING;
+  INSERT INTO public.video_progress (user_id, video_id, watched_seconds, duration_seconds, last_position, updated_at)
+    VALUES ('00000000-0000-0000-0000-e92501000002', 'e92s01-verify-rls-vb1', 100, 1000, 100, now())
+    ON CONFLICT (user_id, video_id) DO NOTHING;
+  INSERT INTO public.study_sessions (user_id, started_at, duration_seconds, client_request_id)
+    VALUES ('00000000-0000-0000-0000-e92501000002', now(), 300, '22222222-2222-2222-2222-222222222222')
+    ON CONFLICT (user_id, client_request_id) DO NOTHING;
+
+  -- Switch to userA and assert RLS hides userB's rows.
   SET LOCAL ROLE authenticated;
   SELECT set_config('request.jwt.claims',
     '{"sub":"00000000-0000-0000-0000-e92501000001","role":"authenticated"}', true);
@@ -187,39 +204,29 @@ BEGIN;
     END IF;
     SELECT count(*) INTO v_cross FROM public.content_progress
       WHERE user_id = '00000000-0000-0000-0000-e92501000002';
-    IF v_cross <> 0 THEN
-      RAISE EXCEPTION 'AC3 FAIL: userA saw userB content_progress rows (%)', v_cross;
-    END IF;
+    ASSERT v_cross = 0, 'RLS leak: userB content_progress rows visible to userA';
 
     SELECT count(*) INTO v_cross FROM public.video_progress
       WHERE user_id = '00000000-0000-0000-0000-e92501000002';
-    IF v_cross <> 0 THEN
-      RAISE EXCEPTION 'AC3 FAIL: userA saw userB video_progress rows';
-    END IF;
+    ASSERT v_cross = 0, 'RLS leak: userB video_progress rows visible to userA';
 
     SELECT count(*) INTO v_cross FROM public.study_sessions
       WHERE user_id = '00000000-0000-0000-0000-e92501000002';
-    IF v_cross <> 0 THEN
-      RAISE EXCEPTION 'AC3 FAIL: userA saw userB study_sessions rows';
-    END IF;
+    ASSERT v_cross = 0, 'RLS leak: userB study_sessions rows visible to userA';
 
     -- Cross-user UPDATE should affect 0 rows (RLS filters before UPDATE).
     UPDATE public.content_progress SET progress_pct = 1
       WHERE user_id = '00000000-0000-0000-0000-e92501000002';
     GET DIAGNOSTICS v_cross = ROW_COUNT;
-    IF v_cross <> 0 THEN
-      RAISE EXCEPTION 'AC3 FAIL: userA cross-user UPDATE affected % rows', v_cross;
-    END IF;
+    ASSERT v_cross = 0, 'RLS leak: userA cross-user UPDATE affected rows';
 
     -- Cross-user DELETE should affect 0 rows.
     DELETE FROM public.content_progress
       WHERE user_id = '00000000-0000-0000-0000-e92501000002';
     GET DIAGNOSTICS v_cross = ROW_COUNT;
-    IF v_cross <> 0 THEN
-      RAISE EXCEPTION 'AC3 FAIL: userA cross-user DELETE affected % rows', v_cross;
-    END IF;
+    ASSERT v_cross = 0, 'RLS leak: userA cross-user DELETE affected rows';
   END $$;
-ROLLBACK;
+ROLLBACK;  -- discards the seeded userB rows; no cleanup needed
 
 -- AC3: anon role has no access
 BEGIN;
@@ -246,6 +253,60 @@ ROLLBACK;
 -- (Supabase admin/server key). This is expected behavior — service_role is only used
 -- server-side from trusted contexts (edge functions, admin tooling). It is NOT tested
 -- here because testing "bypass works" would be a tautology.
+
+-- ─── AC6: idempotency — target objects exist exactly once ──────────────────
+-- The full initial migration is not re-runnable by design (CREATE TABLE without
+-- IF NOT EXISTS), but the fixup migration uses guarded patterns (IF NOT EXISTS
+-- on columns, pg_constraint guards on constraints, CREATE OR REPLACE on funcs).
+-- Assert each target object exists exactly once — catches accidental duplicates
+-- from misapplied migrations.
+DO $$
+DECLARE v_count INT;
+BEGIN
+  SELECT count(*) INTO v_count FROM pg_constraint
+    WHERE conname = 'content_progress_pct_status_consistent';
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'AC6 FAIL: content_progress_pct_status_consistent count = % (expected 1)', v_count;
+  END IF;
+
+  SELECT count(*) INTO v_count FROM pg_constraint
+    WHERE conname = 'study_sessions_user_client_request_unique';
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'AC6 FAIL: study_sessions_user_client_request_unique count = % (expected 1)', v_count;
+  END IF;
+
+  SELECT count(*) INTO v_count FROM pg_proc
+    WHERE proname = '_status_rank' AND pronamespace = 'public'::regnamespace;
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'AC6 FAIL: public._status_rank count = % (expected 1)', v_count;
+  END IF;
+
+  SELECT count(*) INTO v_count FROM pg_proc
+    WHERE proname = 'upsert_content_progress' AND pronamespace = 'public'::regnamespace;
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'AC6 FAIL: public.upsert_content_progress count = % (expected 1)', v_count;
+  END IF;
+
+  SELECT count(*) INTO v_count FROM pg_proc
+    WHERE proname = 'upsert_video_progress' AND pronamespace = 'public'::regnamespace;
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'AC6 FAIL: public.upsert_video_progress count = % (expected 1)', v_count;
+  END IF;
+
+  SELECT count(*) INTO v_count FROM pg_class
+    WHERE relname IN ('content_progress','study_sessions','video_progress')
+      AND relnamespace = 'public'::regnamespace AND relkind = 'r';
+  IF v_count <> 3 THEN
+    RAISE EXCEPTION 'AC6 FAIL: E92-S01 tables count = % (expected 3)', v_count;
+  END IF;
+
+  SELECT count(*) INTO v_count FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'study_sessions'
+      AND column_name = 'client_request_id';
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'AC6 FAIL: study_sessions.client_request_id count = % (expected 1)', v_count;
+  END IF;
+END $$;
 
 -- ─── Cleanup ────────────────────────────────────────────────────────────────
 DELETE FROM public.content_progress WHERE content_id LIKE 'e92s01-verify-%';

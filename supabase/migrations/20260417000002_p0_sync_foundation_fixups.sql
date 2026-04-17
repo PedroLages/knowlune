@@ -29,8 +29,10 @@ END $$;
 
 -- ─── Fix 10: content_progress semantic consistency ──────────────────────────
 -- progress_pct=100 with status='in_progress' is semantically inconsistent — if you've
--- consumed 100% you're done. Enforce via CHECK. NOT VALID so existing rows don't block
--- (titan verification data was already cleaned, but this is defensive).
+-- consumed 100% you're done. Enforce via CHECK. Use NOT VALID so any preexisting
+-- inconsistent rows don't block the migration; new/updated rows are still enforced.
+-- Two-step approach: add NOT VALID here; a later migration runs VALIDATE CONSTRAINT
+-- once data has been cleaned (AC-level data audit is out of scope for this fixup).
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -39,7 +41,8 @@ BEGIN
   ) THEN
     ALTER TABLE public.content_progress
       ADD CONSTRAINT content_progress_pct_status_consistent
-      CHECK (NOT (progress_pct = 100 AND status = 'in_progress'));
+      CHECK (NOT (progress_pct = 100 AND status = 'in_progress'))
+      NOT VALID;
   END IF;
 END $$;
 
