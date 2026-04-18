@@ -5,7 +5,7 @@ color: red
 memory: project
 background: true
 effort: medium
-argument-hint: "[idea | docs/plans/*-plan.md | docs/brainstorms/*-requirements.md | docs/implementation-artifacts/stories/E##-S##*.md | E## (epic-loop) | bug description] [--cross-model] [--autopilot] [--headless]"
+argument-hint: "[idea | docs/plans/*-plan.md | docs/brainstorms/*-requirements.md | docs/implementation-artifacts/stories/E##-S##*.md | E## (epic-loop) | bug description] [--cross-model] [--autopilot] [--headless] [--epic-closeout=standard|full|skip]"
 ---
 
 # CE Orchestrator
@@ -254,13 +254,33 @@ When classifier returns `stage: epic-loop` (input matches `^E\d+$`), run all sto
 
 5. **Epic tracking file:** write `.context/compound-engineering/ce-runs/epic-<E##>-<YYYY-MM-DD>.md` with frontmatter `type: epic-loop, storiesTotal, storiesCompleted, storiesAborted, prUrls[]`. Updated after each story completes.
 
-6. **Terminal state:** after all stories complete (or user halts), print summary banner:
+6. **Epic closeout (v4)** — runs after the final story merges. Mode controlled by `--epic-closeout=standard|full|skip` (default `standard`). Skipped entirely for single-story input (closeout only makes sense after an epic).
+
+   **Standard (default):**
+   - `sprint-status-checker` (haiku) → verifies epic fully complete, surfaces orphaned/in-progress stories.
+   - `known-issues-triage` (haiku) → lists `open` items added to `docs/known-issues.yaml` during this epic; categorizes each as `schedule-future | wont-fix | fix-now-chore` based on severity + scope. Writes summary to epic tracking file.
+   - `retrospective-dispatcher` (opus, extended thinking) → runs `bmad-retrospective` to extract patterns into `docs/engineering-patterns.md`, update memory files, and emit `docs/solutions/` entries where applicable. **Runs last** so it reviews final epic state including closeout results.
+
+   **Full** (`--epic-closeout=full`) — adds before retrospective:
+   - `testarch-trace-dispatcher` (sonnet) → requirements-to-tests traceability matrix.
+   - `testarch-nfr-dispatcher` (sonnet) → non-functional requirements validation.
+   - `review-adversarial-dispatcher` (opus, extended thinking) → cynical critique of epic scope + implementation.
+
+   **Skip** (`--epic-closeout=skip`) — bypasses entire closeout. Tracking file marks `closeoutStatus: skipped`.
+
+   All closeout dispatches are sequential (not parallel) and additive — failures log warnings and continue, never halt. In unattended mode, closeout runs with zero prompts (haiku/sonnet/opus all return structured output).
+
+   **Why closeout compounds the next run:** `bmad-retrospective` writes patterns to `docs/engineering-patterns.md` → next epic's `/ce:plan` reads them via repo-research-analyst; memory updates surface via Phase 0.5 `episodic-memory-searcher`; `docs/solutions/` entries inform `/ce:compound` and future plan critics. Without closeout, each epic starts cold.
+
+7. **Terminal state:** after closeout completes (or is skipped), print summary banner:
 
    ```text
    Epic <E##> — <X> of <N> stories shipped
    PRs merged: <list>
    Aborted/escalated: <list>
-   Next: /bmad-retrospective E## (suggested)
+   Closeout: <standard|full|skipped>
+   Patterns extracted: <count from retrospective>
+   Next epic will start warmer thanks to this run's compounding.
    ```
 
 **Plan-gate preservation:** each story still pauses at its own plan approval — epic-loop never batch-approves. If you want a single approval for the whole epic, that's a future feature (deferred).
