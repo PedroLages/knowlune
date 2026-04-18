@@ -49,6 +49,7 @@ describe('ElearningDB schema', () => {
     expect(db.name).toBe('ElearningDB')
     // courses table dropped in v30 (E89-S01)
     // syncQueue, syncMetadata added in v52 (E92-S02)
+    // searchFrecency added in v53 (E117-S02)
     expect(db.tables.map(t => t.name).sort()).toEqual([
       'aiUsageEvents',
       'audioBookmarks',
@@ -89,6 +90,7 @@ describe('ElearningDB schema', () => {
       'readingQueue',
       'reviewRecords',
       'screenshots',
+      'searchFrecency',
       'shelves',
       'studySchedules',
       'studySessions',
@@ -103,8 +105,56 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 52', () => {
-    expect(db.verno).toBe(52)
+  it('should be at version 53', () => {
+    expect(db.verno).toBe(53)
+  })
+
+  it('should have searchFrecency table with compound primary key [entityType+entityId] (v53)', () => {
+    const table = db.searchFrecency
+    expect(table).toBeDefined()
+    expect(table.schema.primKey.src).toBe('[entityType+entityId]')
+    const indexNames = table.schema.indexes.map(i => i.name).sort()
+    expect(indexNames).toContain('entityType')
+    expect(indexNames).toContain('lastOpenedAt')
+  })
+
+  it('should support put/get/bulkGet on searchFrecency (v53)', async () => {
+    const nowIso = '2026-04-18T12:00:00.000Z'
+    await db.searchFrecency.put({
+      entityType: 'course',
+      entityId: 'c1',
+      openCount: 1,
+      lastOpenedAt: nowIso,
+    })
+
+    const row = await db.searchFrecency.get(['course', 'c1'])
+    expect(row).toEqual({
+      entityType: 'course',
+      entityId: 'c1',
+      openCount: 1,
+      lastOpenedAt: nowIso,
+    })
+
+    // Overwrite (same compound key) — not duplicate
+    await db.searchFrecency.put({
+      entityType: 'course',
+      entityId: 'c1',
+      openCount: 2,
+      lastOpenedAt: nowIso,
+    })
+    const count = await db.searchFrecency.count()
+    expect(count).toBe(1)
+
+    // Secondary index query
+    await db.searchFrecency.put({
+      entityType: 'book',
+      entityId: 'b1',
+      openCount: 1,
+      lastOpenedAt: nowIso,
+    })
+    const books = await db.searchFrecency.where('entityType').equals('book').toArray()
+    expect(books).toHaveLength(1)
+    expect(books[0].entityId).toBe('b1')
   })
 
   it('should have entitlements table with userId as primary key', () => {

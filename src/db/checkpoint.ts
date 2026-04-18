@@ -20,7 +20,14 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 52
+export const CHECKPOINT_VERSION = 53
+
+/**
+ * Shared `searchFrecency` index string. Used by both the v53 `.stores()` call
+ * in `schema.ts` and `CHECKPOINT_SCHEMA` below so the two declarations cannot
+ * drift by a single character.
+ */
+export const SEARCH_FRECENCY_INDEXES = '[entityType+entityId], entityType, lastOpenedAt'
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
@@ -50,6 +57,8 @@ export const CHECKPOINT_VERSION = 52
  * v51 (E72-S01): learnerModels table.
  * v52 (E92-S02): sync foundation — `userId` + `[userId+updatedAt]` indexes on all
  *                syncable tables; new `syncQueue` and `syncMetadata` tables.
+ * v53 (E117-S02): searchFrecency table for unified-search frecency counters.
+ *                 Local-only (no userId) — device-local ranking signal.
  */
 export const CHECKPOINT_SCHEMA: Record<string, string> = {
   importedCourses: 'id, name, importedAt, status, *tags, source, userId, [userId+updatedAt]',
@@ -107,6 +116,8 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   // v52 (E92-S02): sync infrastructure tables
   syncQueue: '++id, status, [tableName+recordId], createdAt',
   syncMetadata: 'table',
+  // v53 (E117-S02): unified-search frecency counters (local-only, no userId).
+  searchFrecency: SEARCH_FRECENCY_INDEXES,
 }
 
 // v42 (E109-S01): vocabularyItems table added
@@ -123,3 +134,5 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
 //                Excluded: screenshots, courseThumbnails, videoCaptions, entitlements,
 //                youtubeVideoCache, youtubeTranscripts, youtubeChapters, courseEmbeddings,
 //                bookFiles, transcriptEmbeddings.
+// v53 (E117-S02): searchFrecency table for unified-search ranking.
+//                Local-only (no userId, not in SYNCABLE_TABLES, not in sync backfill).
