@@ -13,7 +13,7 @@
  *   - `lww`          — last-write-wins on `updatedAt`
  *   - `monotonic`    — `Math.max()` on monotonic fields, LWW on others
  *   - `insert-only`  — add if absent, never overwrite
- *   - `conflict-copy`— duplicate when timestamps within 5s and content differs
+ *   - `conflict-copy`— inline-field: remote wins, local saved as conflictCopy snapshot (E93-S03)
  *
  * **Public API:**
  *   - `syncEngine.nudge(): void`                                  — debounced upload trigger
@@ -35,6 +35,8 @@ import type { SyncQueueEntry } from '@/db/schema'
 import { supabase } from '@/lib/auth/supabase'
 import { toCamelCase } from './fieldMapper'
 import { getTableEntry, tableRegistry } from './tableRegistry'
+import { applyConflictCopy } from './conflictResolvers'
+import type { Note } from '@/data/types'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -493,9 +495,17 @@ async function _applyInsertOnly(
 }
 
 /**
- * Apply conflict-copy strategy: if both versions exist, differ in content,
- * and were modified within 5 seconds of each other, save both — tagging the
- * server version as a conflict copy. Otherwise fall back to LWW.
+ * Apply conflict-copy strategy: when remote wins on timestamp AND content
+ * differs, preserve the local version as a JSONB snapshot (`conflictCopy`)
+ * on the winning remote note rather than silently discarding it.
+ * Otherwise fall back to LWW.
+ *
+ * Replaces the E93-S01 stub that created a duplicate Dexie record with a
+ * new UUID. The inline-field approach avoids ghost entries in the notes list.
+ *
+ * Detection: remote wins when `remote.updatedAt > local.updatedAt`.
+ * Content check: `remote.content !== local.content` (string equality).
+ * Exact-same-timestamp writes are treated as no-conflict (fall through to LWW).
  */
 async function _applyConflictCopy(
   table: Table<Record<string, unknown>>,
@@ -503,34 +513,29 @@ async function _applyConflictCopy(
   record: Record<string, unknown>,
 ): Promise<void> {
   if (!local) {
+    // New record — no conflict possible.
     await table.put(record)
     return
   }
 
-  const serverTs = new Date(record['updatedAt'] as string).getTime()
-  const localTs = new Date(local['updatedAt'] as string).getTime()
-  const deltaMs = Math.abs(serverTs - localTs)
+  const remoteUpdatedAt = record['updatedAt'] as string
+  const localUpdatedAt = local['updatedAt'] as string
+  const remoteContent = record['content'] as string
+  const localContent = local['content'] as string
 
-  // Shallow content equality check — exclude updatedAt (timestamps always differ).
-  const { updatedAt: _sts, ...serverContent } = record as { updatedAt: unknown } & Record<string, unknown>
-  const { updatedAt: _lts, ...localContent } = local as { updatedAt: unknown } & Record<string, unknown>
-  const contentDiffers = JSON.stringify(serverContent) !== JSON.stringify(localContent)
+  const remoteWins = remoteUpdatedAt > localUpdatedAt
+  const contentDiffers = remoteContent !== localContent
 
-  if (contentDiffers && deltaMs <= 5000) {
-    // Conflict: concurrent edits within 5s with different content.
-    // Keep local as authoritative; create a conflict copy of the server version.
-    const conflictCopyId = crypto.randomUUID()
-    await table.put({
-      ...record,
-      id: conflictCopyId,
-      conflictCopy: true,
-      conflictSourceId: record['id'],
-    })
-    // Intentional: local record is NOT overwritten — this device's version is kept.
+  if (remoteWins && contentDiffers) {
+    // Intentional: conflict-copy tables bypass bare LWW — applyConflictCopy
+    // preserves the losing local version in conflictCopy rather than silently
+    // discarding it.
+    const merged = applyConflictCopy(local as Note, record as Note)
+    await table.put(merged as unknown as Record<string, unknown>)
     return
   }
 
-  // No conflict — apply LWW.
+  // No conflict (same timestamp, same content, or local wins) — apply LWW.
   await _applyLww(table, local, record)
 }
 

@@ -125,8 +125,17 @@ describe('tableRegistry — conflict strategies', () => {
     expect(getTableEntry('challenges')?.conflictStrategy).toBe('monotonic')
   })
 
-  it('notes has lww strategy', () => {
-    expect(getTableEntry('notes')?.conflictStrategy).toBe('lww')
+  it('notes has conflict-copy strategy (E93-S03)', () => {
+    expect(getTableEntry('notes')?.conflictStrategy).toBe('conflict-copy')
+  })
+
+  it('notes fieldMap has three entries: deleted, conflictCopy, conflictSourceId (E93-S03)', () => {
+    const entry = getTableEntry('notes')
+    expect(entry?.fieldMap).toMatchObject({
+      deleted: 'soft_deleted',
+      conflictCopy: 'conflict_copy',
+      conflictSourceId: 'conflict_source_id',
+    })
   })
 
   it('flashcards has lww strategy', () => {

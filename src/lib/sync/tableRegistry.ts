@@ -111,15 +111,25 @@ const progress: TableRegistryEntry = {
 // ---------------------------------------------------------------------------
 
 /**
- * `notes` uses `deleted → soft_deleted` field rename for the Supabase column.
+ * `notes` uses conflict-copy strategy (E93-S03): when remote wins on timestamp
+ * AND content differs, the local version is preserved as a JSONB snapshot in
+ * `conflict_copy` rather than silently discarded.
+ *
+ * Field map:
+ *   - `deleted → soft_deleted` (NFR24 rename)
+ *   - `conflictCopy → conflict_copy` (JSONB — auto camelCase would produce
+ *     `conflict_copy` too, but explicit entry ensures upload direction is correct)
+ *   - `conflictSourceId → conflict_source_id` (TEXT)
  */
 const notes: TableRegistryEntry = {
   dexieTable: 'notes',
   supabaseTable: 'notes',
-  conflictStrategy: 'lww',
+  conflictStrategy: 'conflict-copy',
   priority: 1,
   fieldMap: {
     deleted: 'soft_deleted',
+    conflictCopy: 'conflict_copy',
+    conflictSourceId: 'conflict_source_id',
   },
 }
 
