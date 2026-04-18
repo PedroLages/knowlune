@@ -18,7 +18,7 @@
  * Authors follow `getMergedAuthors` so the unified index matches what the
  * Authors page renders (pre-seeded + imported).
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { getMergedAuthors } from '@/lib/authors'
@@ -40,6 +40,7 @@ import {
   type SearchOptions,
   type UnifiedSearchResult,
 } from '@/lib/unifiedSearch'
+import { applyFrecency, type FrecencyRow } from '@/lib/searchFrecency'
 import type {
   ImportedCourse,
   ImportedVideo,
@@ -107,11 +108,34 @@ function commitSnapshot<T extends { id: string; updatedAt?: string }>(
   }
 }
 
+export interface SearchBestMatchesOptions {
+  /** Final cap on the Best Matches row list. Defaults to 3. */
+  limit?: number
+  /**
+   * Initial MiniSearch pool passed through `applyFrecency`. Bounded so a
+   * power-user with thousands of frecency rows still only does one
+   * `bulkGet` of a manageable size. Defaults to 50.
+   */
+  poolSize?: number
+}
+
 export interface UnifiedSearchHook {
   /** True once the initial Promise.allSettled bootstrap has resolved. */
   ready: boolean
   /** Search the combined index (returns [] when not ready). */
   search: (query: string, opts?: SearchOptions) => UnifiedSearchResult[]
+  /**
+   * Run a ranking-aware search intended for the palette's "Best Matches"
+   * section. Applies the frecency multiplier (capped at 2.0) over a bounded
+   * pool of MiniSearch results. Returns `[]` when not ready or on empty query.
+   *
+   * Does NOT affect the main `search()` path — grouped sections stay on pure
+   * MiniSearch relevance for predictable scan-reading order.
+   */
+  searchBestMatches: (
+    query: string,
+    opts?: SearchBestMatchesOptions
+  ) => Promise<UnifiedSearchResult[]>
 }
 
 /**
@@ -235,12 +259,49 @@ export function useUnifiedSearchIndex(): UnifiedSearchHook {
     }
   }, [ready])
 
+  // `searchBestMatches` — runs pure-relevance search, joins against
+  // `db.searchFrecency` for the result ids, applies the capped multiplier,
+  // sorts desc, and truncates to `limit`. Stable identity across renders
+  // while `ready` doesn't change so palette memos don't thrash.
+  const searchBestMatches = useCallback(
+    async (
+      query: string,
+      opts?: SearchBestMatchesOptions
+    ): Promise<UnifiedSearchResult[]> => {
+      if (!ready) return []
+      const q = query.trim()
+      if (!q) return []
+      const poolSize = opts?.poolSize ?? 50
+      const limit = opts?.limit ?? 3
+      const pool = unifiedSearch(q, { limit: poolSize })
+      if (pool.length === 0) return []
+      const keys: [EntityType, string][] = pool.map(r => [r.type, r.id])
+      let rows: (FrecencyRow | undefined)[]
+      try {
+        rows = await db.searchFrecency.bulkGet(keys)
+      } catch (err) {
+        // silent-catch-ok: frecency read failure degrades to pure relevance
+        console.error('[unified-search] searchFrecency.bulkGet failed:', err)
+        return pool.slice(0, limit)
+      }
+      const map = new Map<string, FrecencyRow>()
+      rows.forEach((row, i) => {
+        if (row) map.set(`${keys[i][0]}:${keys[i][1]}`, row)
+      })
+      const ranked = applyFrecency(pool, map, Date.now())
+      ranked.sort((a, b) => b.score - a.score)
+      return ranked.slice(0, limit)
+    },
+    [ready]
+  )
+
   return useMemo<UnifiedSearchHook>(
     () => ({
       ready,
       search: (query, opts) => (ready ? unifiedSearch(query, opts) : []),
+      searchBestMatches,
     }),
-    [ready]
+    [ready, searchBestMatches]
   )
 }
 
