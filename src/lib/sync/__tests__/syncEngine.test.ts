@@ -103,9 +103,12 @@ import { syncEngine } from '../syncEngine'
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** Deterministic ID counter — reset in beforeEach to avoid cross-test bleed. */
+let _idCounter = 1
+
 function makeEntry(overrides: Partial<SyncQueueEntry> = {}): SyncQueueEntry {
   return {
-    id: Math.floor(Math.random() * 10000) + 1,
+    id: _idCounter++,
     tableName: 'notes',
     recordId: 'rec-1',
     operation: 'put',
@@ -128,6 +131,7 @@ function setQueueEntries(entries: SyncQueueEntry[]) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  _idCounter = 1
 
   // Restore default mock implementations after clearAllMocks resets them.
   mockUpsert.mockResolvedValue({ error: null })
@@ -756,6 +760,41 @@ describe('successful upload', () => {
     await vi.advanceTimersByTimeAsync(201)
 
     expect(mockBulkDelete).toHaveBeenCalledWith([1, 2, 3])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Tests: delete operation through upload path
+// ---------------------------------------------------------------------------
+
+describe('delete operation upload', () => {
+  it('upserts delete payload (id-only) for LWW table — verifies operation type is not special-cased', async () => {
+    vi.useFakeTimers()
+    const entry = makeEntry({ id: 1, operation: 'delete', payload: { id: 'rec-1' } })
+    setQueueEntries([entry])
+
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    // Delete operations are handled identically to put/add by the upload engine —
+    // the payload { id: 'rec-1' } is upserted/inserted per the table's conflict strategy.
+    expect(mockUpsert).toHaveBeenCalledWith(
+      [{ id: 'rec-1' }],
+      { onConflict: 'id' },
+    )
+    expect(mockBulkDelete).toHaveBeenCalledWith([1])
+  })
+
+  it('inserts delete payload for insert-only table', async () => {
+    vi.useFakeTimers()
+    const entry = makeEntry({ id: 1, tableName: 'studySessions', operation: 'delete', payload: { id: 'sess-1' } })
+    setQueueEntries([entry])
+
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    expect(mockInsert).toHaveBeenCalledWith([{ id: 'sess-1' }])
+    expect(mockUpsert).not.toHaveBeenCalled()
   })
 })
 

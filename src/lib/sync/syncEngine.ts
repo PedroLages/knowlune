@@ -14,7 +14,8 @@
  * **Internal API (E92-S05):**
  *   - `syncEngine._setRunning(value: boolean): void`
  *
- * Pure module — no React imports. Safe to import anywhere.
+ * Pure module — no React or Zustand imports. Imports Dexie (db) and Supabase
+ * client for upload. Safe to import in any non-React context.
  *
  * @module syncEngine
  * @since E92-S05
@@ -275,9 +276,7 @@ async function _uploadBatch(
           const { error } = await supabase.rpc(rpc.rpcName, params)
           if (error) {
             const isNetworkError = false
-            const singleEntry = [entry]
-            const singlePayload = [payload]
-            await _handleBatchError(singleEntry, error, isNetworkError, async () => {
+            await _handleBatchError([entry], error, isNetworkError, async () => {
               const { error: retryError } = await supabase!.rpc(rpc.rpcName, params)
               if (!retryError) {
                 await db.syncQueue.bulkDelete([entry.id!])
@@ -286,7 +285,6 @@ async function _uploadBatch(
               return false
             })
             // Continue processing remaining entries in this batch.
-            void singlePayload // suppress unused variable
             continue
           }
           await db.syncQueue.bulkDelete([entry.id!])
