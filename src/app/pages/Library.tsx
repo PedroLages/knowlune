@@ -12,7 +12,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { useSearchParams, useParams, useLocation } from 'react-router'
+import { recordVisit } from '@/lib/searchFrecency'
 import { FormatTabs } from '@/app/components/library/FormatTabs'
 // LibraryShelves is available at '@/app/components/library/LibraryShelves' — mount once real shelf data is wired
 import { SmartGroupedView } from '@/app/components/library/SmartGroupedView'
@@ -67,6 +68,17 @@ import { useKeyboardShortcuts } from '@/app/hooks/useKeyboardShortcuts'
 
 export function Library() {
   const isOnline = useOnlineStatus()
+  // R19: record a visit whenever the library renders for a specific book —
+  // this is the common landing path (`/library/:bookId`), NOT BookReader.
+  // Skipped for palette-initiated navigations to avoid openCount double-counting.
+  const { bookId: libraryBookId } = useParams<{ bookId: string }>()
+  const libraryLocation = useLocation()
+  useEffect(() => {
+    if (!libraryBookId || libraryBookId === 'undefined') return
+    const state = libraryLocation.state as { __viaPalette?: boolean } | null
+    if (state?.__viaPalette === true) return
+    void recordVisit('book', libraryBookId)
+  }, [libraryBookId, libraryLocation.state])
   const [importOpen, setImportOpen] = useState(false)
   const [droppedFile, setDroppedFile] = useState<File | null>(null)
   const [editingBook, setEditingBook] = useState<Book | null>(null)

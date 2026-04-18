@@ -27,7 +27,8 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router'
+import { useParams, useNavigate, useLocation, Link } from 'react-router'
+import { recordVisit } from '@/lib/searchFrecency'
 import {
   ArrowLeft,
   ChevronLeft,
@@ -83,6 +84,16 @@ import { suggestNextCourse } from '@/lib/courseSuggestion'
 export function UnifiedLessonPlayer() {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // R19: record visit on direct navigation. Skipped for palette-initiated
+  // navigations to avoid openCount double-counting.
+  useEffect(() => {
+    if (!lessonId || lessonId === 'undefined') return
+    const state = location.state as { __viaPalette?: boolean } | null
+    if (state?.__viaPalette === true) return
+    void recordVisit('lesson', lessonId)
+  }, [lessonId, location.state])
   const { adapter, loading, error } = useCourseAdapter(courseId)
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)

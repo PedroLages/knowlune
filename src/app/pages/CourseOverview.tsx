@@ -9,7 +9,8 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router'
+import { useParams, useNavigate, useLocation, Link } from 'react-router'
+import { recordVisit } from '@/lib/searchFrecency'
 import {
   ArrowLeft,
   BookOpen,
@@ -130,6 +131,17 @@ function groupByChapter(videos: ImportedVideo[], chapters: YouTubeCourseChapter[
 export function CourseOverview() {
   const { courseId } = useParams<{ courseId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // R19: record visit on direct navigation. Skipped for palette-initiated
+  // navigations (which already called `recordVisit` in handleResultSelect)
+  // to avoid systematic openCount double-counting.
+  useEffect(() => {
+    if (!courseId || courseId === 'undefined') return
+    const state = location.state as { __viaPalette?: boolean } | null
+    if (state?.__viaPalette === true) return
+    void recordVisit('course', courseId)
+  }, [courseId, location.state])
 
   const { adapter, loading: adapterLoading, error: adapterError } = useCourseAdapter(courseId)
   const course = adapter?.getCourse()
