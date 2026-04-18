@@ -3,24 +3,102 @@ import { supabase } from '@/lib/auth/supabase'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { hydrateSettingsFromSupabase } from '@/lib/settings'
 import { backfillUserId } from '@/lib/sync/backfill'
+import { syncEngine } from '@/lib/sync/syncEngine'
+import { clearSyncState } from '@/lib/sync/clearSyncState'
+import { hasUnlinkedRecords } from '@/lib/sync/hasUnlinkedRecords'
 
 /**
  * E43-S04: Subscribes to Supabase auth state changes and manages session lifecycle.
  *
  * Handles:
- * - SIGNED_IN / INITIAL_SESSION: sets session, hydrates settings from user_metadata
+ * - SIGNED_IN / INITIAL_SESSION: sets session, hydrates settings from user_metadata,
+ *   then either shows the LinkDataDialog (unlinked records detected) or starts sync.
  * - TOKEN_REFRESHED: silently updates session (no UI)
- * - SIGNED_OUT: distinguishes user-initiated vs system-initiated (session expiry)
- *   - User-initiated: clears state, no banner
- *   - System-initiated: sets sessionExpired flag for banner display
+ * - SIGNED_OUT: distinguishes user-initiated vs system-initiated (session expiry);
+ *   stops sync engine and clears sync state (queue + cursors).
  *
  * Replaces the useEffect at App.tsx lines 66-79 (E19-S01).
+ *
+ * @param options.onUnlinkedDetected  Called with the userId when local data exists
+ *   that is not linked to the signing-in user. App.tsx shows the LinkDataDialog in
+ *   response. syncEngine.start() is deferred until the user resolves the dialog.
+ *   If omitted, sync starts immediately (safe default).
+ *
+ * @see LinkDataDialog  – shown by App.tsx when this callback fires.
+ * @since E92-S08
  */
-export function useAuthLifecycle(): void {
+
+const LINKED_FLAG_PREFIX = 'sync:linked:'
+
+export interface UseAuthLifecycleOptions {
+  /** Called with the userId when unlinked local records are detected on sign-in. */
+  onUnlinkedDetected?: (userId: string) => void
+}
+
+export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions = {}): void {
   useEffect(() => {
     if (!supabase) return
 
     let ignore = false
+
+    /**
+     * Core sign-in handler shared by both the onAuthStateChange callback and
+     * the getSession() fallback path.
+     *
+     * 1. Hydrates settings.
+     * 2. If the user already linked this device (localStorage flag): start sync + backfill.
+     * 3. Otherwise: check for unlinked records.
+     *    - Has unlinked → call onUnlinkedDetected; syncEngine.start() deferred.
+     *    - No unlinked → backfill (idempotent) + start sync immediately.
+     */
+    async function handleSignIn(userId: string, userMetadata: Record<string, unknown>) {
+      if (ignore) return
+
+      hydrateSettingsFromSupabase(userMetadata)
+
+      // Fast-path: this device already went through the dialog for this userId.
+      const alreadyLinked = localStorage.getItem(`${LINKED_FLAG_PREFIX}${userId}`) === 'true'
+      if (alreadyLinked) {
+        // silent-catch-ok — backfill is idempotent and self-healing.
+        backfillUserId(userId).catch((err) => {
+          console.error('[useAuthLifecycle] backfillUserId (fast-path) failed:', err)
+        })
+        syncEngine.start(userId).catch((err) => {
+          console.error('[useAuthLifecycle] syncEngine.start (fast-path) failed:', err)
+        })
+        return
+      }
+
+      // Check whether any local records are not yet linked to this userId.
+      let unlinked = false
+      try {
+        unlinked = await hasUnlinkedRecords(userId)
+      } catch (err) {
+        // silent-catch-ok: gate is best-effort. On failure, default to showing
+        // the dialog so the user can decide — safer than silently overwriting.
+        console.error('[useAuthLifecycle] hasUnlinkedRecords failed:', err)
+        unlinked = true
+      }
+
+      if (ignore) return
+
+      if (unlinked && onUnlinkedDetected) {
+        // Defer syncEngine.start() — the dialog handlers (Link / Start fresh)
+        // will call it after the user resolves their choice.
+        onUnlinkedDetected(userId)
+      } else {
+        // No unlinked records (or no dialog handler): backfill + start sync now.
+        // silent-catch-ok — backfill is self-healing; next sign-in retries.
+        backfillUserId(userId).catch((err) => {
+          console.error('[useAuthLifecycle] backfillUserId failed:', err)
+        })
+        syncEngine.start(userId).catch((err) => {
+          console.error('[useAuthLifecycle] syncEngine.start failed:', err)
+        })
+        // Mark this device as linked so the dialog is not shown again.
+        localStorage.setItem(`${LINKED_FLAG_PREFIX}${userId}`, 'true')
+      }
+    }
 
     const {
       data: { subscription },
@@ -38,6 +116,15 @@ export function useAuthLifecycle(): void {
           // System-initiated (refresh token expired) — show expiry banner
           useAuthStore.setState({ sessionExpired: true })
         }
+
+        // Stop sync and discard the in-flight upload queue + download cursors.
+        // Local content records (notes, books, etc.) are intentionally kept —
+        // the next sign-in will offer the Link/Start-fresh dialog.
+        syncEngine.stop()
+        clearSyncState().catch((err) => {
+          // silent-catch-ok: state is best-effort; next sign-in clears again.
+          console.error('[useAuthLifecycle] clearSyncState failed:', err)
+        })
       }
 
       // Clear sessionExpired on successful re-authentication
@@ -51,12 +138,8 @@ export function useAuthLifecycle(): void {
 
       // Hydrate localStorage settings from Supabase user_metadata on sign-in
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-        hydrateSettingsFromSupabase(session.user.user_metadata)
-        // E92-S02: stamp userId on existing pre-auth records. Idempotent.
-        // Fire-and-forget — the UI should not block on backfill completion.
-        // silent-catch-ok — backfill is self-healing; next sign-in retries.
-        backfillUserId(session.user.id).catch(err => {
-          console.error('[useAuthLifecycle] backfillUserId failed:', err)
+        handleSignIn(session.user.id, session.user.user_metadata ?? {}).catch((err) => {
+          console.error('[useAuthLifecycle] handleSignIn (onAuthStateChange) failed:', err)
         })
       }
     })
@@ -71,10 +154,8 @@ export function useAuthLifecycle(): void {
       const state = useAuthStore.getState()
       state.setSession(session)
       if (session?.user) {
-        hydrateSettingsFromSupabase(session.user.user_metadata)
-        // silent-catch-ok — backfill is self-healing; next sign-in retries.
-        backfillUserId(session.user.id).catch(err => {
-          console.error('[useAuthLifecycle] backfillUserId failed:', err)
+        handleSignIn(session.user.id, session.user.user_metadata ?? {}).catch((err) => {
+          console.error('[useAuthLifecycle] handleSignIn (getSession) failed:', err)
         })
       }
     })
@@ -88,5 +169,5 @@ export function useAuthLifecycle(): void {
       ignore = true
       subscription.unsubscribe()
     }
-  }, [])
+  }, [onUnlinkedDetected])
 }

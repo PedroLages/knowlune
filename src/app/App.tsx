@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { RouterProvider } from 'react-router'
 import { ThemeProvider } from 'next-themes'
@@ -23,6 +23,7 @@ import { useContentDensity } from '@/hooks/useContentDensity'
 import { MotionConfig } from 'motion/react'
 import { useAuthLifecycle } from '@/app/hooks/useAuthLifecycle'
 import { useSyncLifecycle } from '@/app/hooks/useSyncLifecycle'
+import { LinkDataDialog } from '@/app/components/sync/LinkDataDialog'
 import { initNotificationService, destroyNotificationService } from '@/services/NotificationService'
 import { useNotificationPrefsStore } from '@/stores/useNotificationPrefsStore'
 
@@ -65,8 +66,19 @@ export default function App() {
     initWizard()
   }, [initWizard])
 
+  // E92-S08: State for the non-dismissible "link your data" dialog shown on first sign-in
+  // when the device has local records not yet linked to the signed-in account.
+  const [linkDialogUserId, setLinkDialogUserId] = useState<string | null>(null)
+
+  // Stable callback — useAuthLifecycle's dependency array includes this.
+  // useCallback with [] ensures the effect never re-registers unnecessarily.
+  const handleUnlinkedDetected = useCallback((userId: string) => {
+    setLinkDialogUserId(userId)
+  }, [])
+
   // E43-S04: Auth lifecycle hook — session expiry detection, token refresh, settings hydration
-  useAuthLifecycle()
+  // E92-S08: onUnlinkedDetected defers syncEngine.start() until dialog resolves
+  useAuthLifecycle({ onUnlinkedDetected: handleUnlinkedDetected })
   // E92-S07: Sync triggers, offline handling, store refresh registrations
   useSyncLifecycle()
 
@@ -106,6 +118,14 @@ export default function App() {
           <RouterProvider router={router} />
           <Toaster />
           <WelcomeWizard />
+          {/* E92-S08: Non-dismissible dialog on first sign-in with pre-existing local data */}
+          {linkDialogUserId && (
+            <LinkDataDialog
+              open={true}
+              userId={linkDialogUserId}
+              onResolved={() => setLinkDialogUserId(null)}
+            />
+          )}
           {import.meta.env.PROD && <PWAUpdatePrompt />}
           <PWAInstallBanner />
           {process.env.NODE_ENV === 'development' && createPortal(<Agentation />, document.body)}
