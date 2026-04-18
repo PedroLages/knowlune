@@ -197,6 +197,15 @@ test.describe('E117-S03: prefix filters', () => {
     await expect(page.getByTestId('search-scope-chip')).toContainText('Courses')
   })
 
+  test('Authors HeaderSearchButton opens palette scoped to authors', async ({ page }) => {
+    await navigateAndWait(page, '/authors')
+    await page.getByTestId('header-search-btn-author').click()
+
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: TIMEOUTS.LONG })
+    await expect(page.getByTestId('search-scope-chip')).toBeVisible({ timeout: TIMEOUTS.LONG })
+    await expect(page.getByTestId('search-scope-chip')).toContainText('Authors')
+  })
+
   // ─── Regression: Cmd+K still opens unscoped palette ──────────────────────
 
   test('Cmd+K opens unscoped palette (Story 1 regression)', async ({ page }) => {

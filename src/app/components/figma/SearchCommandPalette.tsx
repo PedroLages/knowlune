@@ -12,13 +12,12 @@ import {
   Info,
   FileText,
   StickyNote,
-  User,
-  Highlighter,
   ChevronDown,
   ChevronRight,
   Sparkles,
   Clock,
 } from 'lucide-react'
+import { SECTION_ORDER, TYPE_BADGE_LABEL, TYPE_BADGE_CLASS } from '@/app/components/figma/searchSections'
 import {
   CommandDialog,
   CommandInput,
@@ -53,38 +52,7 @@ const SECTION_COLLAPSED_LIMIT = 5
 /** Maximum rows rendered per section after the user expands it. */
 const SECTION_EXPANDED_LIMIT = 50
 
-/** Per-entity-type rendering config — fixed order, heading, icon. */
-export const SECTION_ORDER: Array<{ type: EntityType; heading: string; icon: typeof GraduationCap }> = [
-  { type: 'course', heading: 'Courses', icon: GraduationCap },
-  { type: 'book', heading: 'Books', icon: BookOpen },
-  { type: 'lesson', heading: 'Lessons', icon: FileText },
-  { type: 'note', heading: 'Notes', icon: StickyNote },
-  { type: 'highlight', heading: 'Book Highlights', icon: Highlighter },
-  { type: 'author', heading: 'Authors', icon: User },
-]
-
-const TYPE_BADGE_LABEL: Record<EntityType, string> = {
-  course: 'Course',
-  book: 'Book',
-  lesson: 'Lesson',
-  note: 'Note',
-  highlight: 'Highlight',
-  author: 'Author',
-}
-
-/**
- * Per-entity-type badge tinting. Uses only tokens defined in theme.css.
- * Opacity modifiers (`/10`) on color tokens are valid Tailwind and pass
- * the design-tokens/no-hardcoded-colors ESLint rule.
- */
-const TYPE_BADGE_CLASS: Record<EntityType, string> = {
-  course: 'bg-brand-soft text-brand-soft-foreground',
-  book: 'bg-success-soft text-success',
-  lesson: 'bg-warning/10 text-warning',
-  note: 'bg-muted text-muted-foreground',
-  highlight: 'bg-success/10 text-success',
-  author: 'bg-secondary text-secondary-foreground',
-}
+// SECTION_ORDER, TYPE_BADGE_LABEL, TYPE_BADGE_CLASS imported from searchSections.ts
 
 // ────────────────────────────────────────────────────────────────────────────
 // Static navigation pages (always shown when query is empty)
@@ -794,8 +762,10 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
   const displayedRecentHits = recentHits.slice(0, RECENT_OPENED_MAX)
   const hasRecentOpened = displayedRecentHits.length > 0
   // Fresh-install welcome: both empty-state rows are definitively empty.
+  // Guard !scope: a HeaderSearchButton open on an empty index should not show
+  // "nothing here yet" while the Courses chip is visible.
   const showWelcomeCopy =
-    isEmptyQuery && !isLoadingEmptyState && !hasContinueLearning && !hasRecentOpened
+    isEmptyQuery && !scope && !isLoadingEmptyState && !hasContinueLearning && !hasRecentOpened
   // Suppress Pages when welcome copy is visible — a 9-item nav list
   // contradicts the "nothing here yet" message.
   const showPages = !showWelcomeCopy && !scope
@@ -898,8 +868,9 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
           </div>
         )}
 
-        {/* Prefix-hint row — shown once until dismissed; empty-query unscoped only. */}
-        {isEmptyQuery && !scope && !hintDismissed && !showWelcomeCopy && (
+        {/* Prefix-hint row — shown once until dismissed; empty-query unscoped only.
+            Gate on !isLoadingEmptyState to avoid flash before welcome copy resolves. */}
+        {isEmptyQuery && !scope && !hintDismissed && !showWelcomeCopy && !isLoadingEmptyState && (
           <div
             className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground border-b"
             data-testid="search-prefix-hint"

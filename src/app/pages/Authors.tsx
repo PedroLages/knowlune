@@ -103,15 +103,18 @@ export function Authors() {
                 : `Meet the ${allAuthors.length} experts behind your learning journey`}
           </p>
         </div>
-        <Button
-          variant="brand"
-          className="shrink-0 gap-1.5"
-          onClick={() => setCreateOpen(true)}
-          data-testid="add-author-button"
-        >
-          <Plus className="size-4" aria-hidden="true" />
-          Add Author
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <HeaderSearchButton scope="author" />
+          <Button
+            variant="brand"
+            className="gap-1.5"
+            onClick={() => setCreateOpen(true)}
+            data-testid="add-author-button"
+          >
+            <Plus className="size-4" aria-hidden="true" />
+            Add Author
+          </Button>
+        </div>
       </div>
 
       {/* Featured Author Layout (single author) */}
@@ -131,10 +134,9 @@ export function Authors() {
         />
       )}
 
-      {/* Sort Bar + Search Button (multi-author only) */}
+      {/* Sort Bar (multi-author only) */}
       {allAuthors.length > 1 && (
         <div className="mb-6 flex flex-col sm:flex-row gap-3 justify-end">
-          <HeaderSearchButton scope="author" />
           <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
             <SelectTrigger
               className="w-full sm:w-48"

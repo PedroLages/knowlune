@@ -2,7 +2,7 @@ import { Search } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { usePaletteController } from '@/app/components/figma/PaletteControllerContext'
 import type { EntityType } from '@/lib/unifiedSearch'
-import { SECTION_ORDER } from '@/app/components/figma/SearchCommandPalette'
+import { SECTION_ORDER } from '@/app/components/figma/searchSections'
 
 interface HeaderSearchButtonProps {
   scope: EntityType
