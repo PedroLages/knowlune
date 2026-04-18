@@ -27,6 +27,7 @@ import { useBookmarkStore } from '@/stores/useBookmarkStore'
 import { useSyncStatusStore } from '@/app/stores/useSyncStatusStore'
 import { useFlashcardStore } from '@/stores/useFlashcardStore'
 import { vectorStorePersistence } from '@/ai/vector-store'
+import { useVocabularyStore } from '@/stores/useVocabularyStore'
 
 /** Interval between periodic nudge calls (ms). */
 const NUDGE_INTERVAL_MS = 30_000
@@ -64,6 +65,15 @@ export function useSyncLifecycle(): void {
     // uploadOnly is later removed (E97+ or future bidirectional scenario).
     syncEngine.registerStoreRefresh('embeddings', () =>
       vectorStorePersistence.loadAll()
+    )
+
+    // Intentional: bookHighlights store refresh uses a no-op because
+    // loadHighlightsForBook() requires a mandatory bookId argument — no loadAll()
+    // variant exists. Highlights are re-loaded on next book navigation.
+    syncEngine.registerStoreRefresh('bookHighlights', () => Promise.resolve())
+
+    syncEngine.registerStoreRefresh('vocabularyItems', () =>
+      useVocabularyStore.getState().loadAllItems()
     )
 
     // Intentional: contentProgress store refresh is NOT registered here.

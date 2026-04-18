@@ -12,6 +12,8 @@ import { create } from 'zustand'
 import type { BookHighlight, HighlightColor } from '@/data/types'
 import { db } from '@/db/schema'
 import { appEventBus } from '@/lib/eventBus'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
+import { persistWithRetry } from '@/lib/persistWithRetry'
 
 interface HighlightStoreState {
   highlights: BookHighlight[]
@@ -52,7 +54,9 @@ export const useHighlightStore = create<HighlightStoreState>((set, get) => ({
     set(state => ({ highlights: [...state.highlights, highlight] }))
 
     try {
-      await db.bookHighlights.put(highlight)
+      await persistWithRetry(() =>
+        syncableWrite('bookHighlights', 'put', highlight as unknown as SyncableRecord)
+      )
       appEventBus.emit({
         type: 'highlight:created',
         highlightId: highlight.id,
@@ -80,7 +84,9 @@ export const useHighlightStore = create<HighlightStoreState>((set, get) => ({
     }))
 
     try {
-      await db.bookHighlights.update(highlightId, { ...updates, updatedAt })
+      await persistWithRetry(() =>
+        syncableWrite('bookHighlights', 'put', merged as unknown as SyncableRecord)
+      )
       appEventBus.emit({ type: 'highlight:updated', highlightId, bookId: prev.bookId })
     } catch {
       // Rollback
@@ -103,7 +109,9 @@ export const useHighlightStore = create<HighlightStoreState>((set, get) => ({
     }))
 
     try {
-      await db.bookHighlights.delete(highlightId)
+      await persistWithRetry(() =>
+        syncableWrite('bookHighlights', 'delete', highlightId)
+      )
       appEventBus.emit({ type: 'highlight:deleted', highlightId, bookId: highlight.bookId })
     } catch {
       // Rollback

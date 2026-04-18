@@ -12,6 +12,8 @@ import { create } from 'zustand'
 import { toast } from 'sonner'
 import type { VocabularyItem } from '@/data/types'
 import { db } from '@/db/schema'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
+import { persistWithRetry } from '@/lib/persistWithRetry'
 
 interface VocabularyStoreState {
   items: VocabularyItem[]
@@ -66,7 +68,9 @@ export const useVocabularyStore = create<VocabularyStoreState>((set, get) => ({
   addItem: async (item: VocabularyItem) => {
     set(state => ({ items: [item, ...state.items] }))
     try {
-      await db.vocabularyItems.put(item)
+      await persistWithRetry(() =>
+        syncableWrite('vocabularyItems', 'put', item as unknown as SyncableRecord)
+      )
     } catch {
       // Rollback optimistic update
       set(state => ({ items: state.items.filter(i => i.id !== item.id) }))
@@ -81,7 +85,12 @@ export const useVocabularyStore = create<VocabularyStoreState>((set, get) => ({
       items: state.items.map(i => (i.id === id ? { ...i, ...fullUpdates } : i)),
     }))
     try {
-      await db.vocabularyItems.update(id, fullUpdates)
+      const existing = await db.vocabularyItems.get(id)
+      if (!existing) return
+      const merged = { ...existing, ...fullUpdates }
+      await persistWithRetry(() =>
+        syncableWrite('vocabularyItems', 'put', merged as unknown as SyncableRecord)
+      )
     } catch {
       set({ items: prev })
       toast.error('Failed to update vocabulary item')
@@ -92,7 +101,7 @@ export const useVocabularyStore = create<VocabularyStoreState>((set, get) => ({
     const prev = get().items
     set(state => ({ items: state.items.filter(i => i.id !== id) }))
     try {
-      await db.vocabularyItems.delete(id)
+      await persistWithRetry(() => syncableWrite('vocabularyItems', 'delete', id))
     } catch {
       set({ items: prev })
       toast.error('Failed to delete vocabulary item')
@@ -110,7 +119,12 @@ export const useVocabularyStore = create<VocabularyStoreState>((set, get) => ({
       items: state.items.map(i => (i.id === id ? { ...i, ...updates } : i)),
     }))
     try {
-      await db.vocabularyItems.update(id, updates)
+      const existing = await db.vocabularyItems.get(id)
+      if (!existing) return
+      const merged = { ...existing, ...updates }
+      await persistWithRetry(() =>
+        syncableWrite('vocabularyItems', 'put', merged as unknown as SyncableRecord)
+      )
     } catch {
       set({ items: prev })
       toast.error('Failed to update mastery level')
@@ -125,7 +139,12 @@ export const useVocabularyStore = create<VocabularyStoreState>((set, get) => ({
       items: state.items.map(i => (i.id === id ? { ...i, ...updates } : i)),
     }))
     try {
-      await db.vocabularyItems.update(id, updates)
+      const existing = await db.vocabularyItems.get(id)
+      if (!existing) return
+      const merged = { ...existing, ...updates }
+      await persistWithRetry(() =>
+        syncableWrite('vocabularyItems', 'put', merged as unknown as SyncableRecord)
+      )
     } catch {
       set({ items: prev })
       toast.error('Failed to reset mastery level')
