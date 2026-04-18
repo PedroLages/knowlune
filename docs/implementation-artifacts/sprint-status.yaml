@@ -1142,8 +1142,9 @@ development_status:
   epic-92: backlog
   92-1-supabase-p0-migrations-and-extensions: done
   92-2-dexie-v52-migration-and-sync-infrastructure: done
-  92-3-sync-table-registry-and-field-mapping: backlog
-  92-4-syncable-write-wrapper: backlog
+  92-3-sync-table-registry-and-field-mapping: done  # structural work complete; schema-alignment gaps split to 92-3.5
+  92-3.5-sync-registry-schema-alignment-audit: backlog  # blocks 92-4; addresses ce:review todos 002..010 from run 20260417-234545-6551d3b0
+  92-4-syncable-write-wrapper: backlog  # BLOCKED by 92-3.5
   92-5-sync-engine-upload-phase: backlog
   92-6-sync-engine-download-and-apply-phase: backlog
   92-7-sync-triggers-and-offline-handling: backlog
