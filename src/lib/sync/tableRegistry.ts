@@ -66,6 +66,19 @@ export interface TableRegistryEntry {
   insertOnly?: boolean
   /** If true, this table is temporarily excluded from sync */
   skipSync?: boolean
+  /**
+   * If true, this table only uploads to Supabase — no rows are downloaded to
+   * Dexie. The download phase skips this table entirely.
+   *
+   * Design rationale: upload-only tables (e.g. `embeddings`) are generated
+   * client-side. There is no meaningful download direction — either the device
+   * already holds the embedding locally or it will regenerate. Uploading avoids
+   * expensive re-generation on a new device.
+   *
+   * Note: upload-only tables have no download phase, so the `lastSyncTimestamp`
+   * cursor is never advanced for these tables. This is correct behavior.
+   */
+  uploadOnly?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -163,12 +176,29 @@ const reviewRecords: TableRegistryEntry = {
   fieldMap: {},
 }
 
+/**
+ * `embeddings` stores 384-dim vectors generated client-side for semantic search.
+ * Upload-only: device generates embedding → uploads to Supabase `embeddings` table.
+ * No download direction is needed — each device either has the embedding locally
+ * (generated it) or will regenerate. Uploading avoids expensive re-generation.
+ *
+ * LWW is trivially correct for deterministic vectors: the same note+model always
+ * produces the same vector, so there are no meaningful conflicts.
+ *
+ * Field map:
+ *   - `noteId → note_id` (non-obvious: PK is noteId in Dexie, note_id FK in Supabase)
+ *   - `embedding → vector` (Supabase pgvector column is named `vector`, not `embedding`)
+ */
 const embeddings: TableRegistryEntry = {
   dexieTable: 'embeddings',
   supabaseTable: 'embeddings',
   conflictStrategy: 'lww',
   priority: 1,
-  fieldMap: {},
+  fieldMap: {
+    noteId: 'note_id',
+    embedding: 'vector',
+  },
+  uploadOnly: true,
 }
 
 const bookHighlights: TableRegistryEntry = {

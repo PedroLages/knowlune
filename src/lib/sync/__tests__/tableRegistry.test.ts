@@ -269,6 +269,63 @@ describe('tableRegistry — skipSync field', () => {
 })
 
 // ---------------------------------------------------------------------------
+// E93-S05 — embeddings uploadOnly flag and fieldMap
+// ---------------------------------------------------------------------------
+
+describe('tableRegistry — embeddings upload-only (E93-S05)', () => {
+  it('embeddings entry has uploadOnly: true', () => {
+    expect(getTableEntry('embeddings')?.uploadOnly).toBe(true)
+  })
+
+  it('embeddings fieldMap maps noteId to note_id', () => {
+    expect(getTableEntry('embeddings')?.fieldMap).toMatchObject({
+      noteId: 'note_id',
+    })
+  })
+
+  it('embeddings fieldMap maps embedding to vector', () => {
+    expect(getTableEntry('embeddings')?.fieldMap).toMatchObject({
+      embedding: 'vector',
+    })
+  })
+
+  it('uploadOnly is absent (falsy) on non-embeddings entries', () => {
+    expect(getTableEntry('notes')?.uploadOnly).toBeFalsy()
+    expect(getTableEntry('flashcards')?.uploadOnly).toBeFalsy()
+    expect(getTableEntry('bookmarks')?.uploadOnly).toBeFalsy()
+  })
+
+  it('uploadOnly is optional and can be assigned to a TableRegistryEntry', () => {
+    const entry: TableRegistryEntry = {
+      dexieTable: 'test-upload-only',
+      supabaseTable: 'test_upload_only',
+      conflictStrategy: 'lww',
+      priority: 1,
+      fieldMap: {},
+      uploadOnly: true,
+    }
+    expect(entry.uploadOnly).toBe(true)
+  })
+
+  it('embeddings toSnakeCase produces note_id and vector keys', () => {
+    const entry = getTableEntry('embeddings')!
+    const sample = {
+      id: 'uuid-1',
+      noteId: 'note-abc',
+      embedding: [0.1, 0.2, 0.3],
+      createdAt: '2026-04-18T00:00:00Z',
+    }
+    const snaked = toSnakeCase(entry, sample)
+
+    expect(snaked).toHaveProperty('note_id', 'note-abc')
+    expect(snaked).toHaveProperty('vector', [0.1, 0.2, 0.3])
+    expect(snaked).not.toHaveProperty('noteId')
+    expect(snaked).not.toHaveProperty('embedding')
+    expect(snaked).toHaveProperty('created_at', '2026-04-18T00:00:00Z')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // AC3/AC4 / 3.9 — Round-trip field mapping
 // ---------------------------------------------------------------------------
 

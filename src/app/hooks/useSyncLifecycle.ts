@@ -26,6 +26,7 @@ import { useNoteStore } from '@/stores/useNoteStore'
 import { useBookmarkStore } from '@/stores/useBookmarkStore'
 import { useSyncStatusStore } from '@/app/stores/useSyncStatusStore'
 import { useFlashcardStore } from '@/stores/useFlashcardStore'
+import { vectorStorePersistence } from '@/ai/vector-store'
 
 /** Interval between periodic nudge calls (ms). */
 const NUDGE_INTERVAL_MS = 30_000
@@ -56,6 +57,13 @@ export function useSyncLifecycle(): void {
 
     syncEngine.registerStoreRefresh('flashcards', () =>
       useFlashcardStore.getState().loadFlashcards()
+    )
+
+    // upload-only: embeddings are not downloaded from Supabase, so this callback
+    // is a no-op during normal sync. Registered for API symmetry and in case
+    // uploadOnly is later removed (E97+ or future bidirectional scenario).
+    syncEngine.registerStoreRefresh('embeddings', () =>
+      vectorStorePersistence.loadAll()
     )
 
     // Intentional: contentProgress store refresh is NOT registered here.
