@@ -58,14 +58,18 @@ export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps
   // Fetch counts when dialog opens
   useEffect(() => {
     if (!open || !userId) return
+    let ignore = false
     setCounts(null)
     countUnlinkedRecords(userId)
-      .then(setCounts)
+      .then((result) => {
+        if (!ignore) setCounts(result)
+      })
       .catch((err) => {
         // silent-catch-ok: counts are best-effort display data; dialog still
         // shows resolution choices even with empty counts.
         console.error('[LinkDataDialog] countUnlinkedRecords failed:', err)
       })
+    return () => { ignore = true }
   }, [open, userId])
 
   async function handleLink() {
