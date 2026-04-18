@@ -11,6 +11,7 @@ import {
 import { embeddingPipeline } from '@/ai/embeddingPipeline'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
 import { triggerNoteLinkSuggestions } from '@/ai/knowledgeGaps/noteLinkSuggestions'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 interface NoteState {
   notes: Note[]
@@ -23,8 +24,8 @@ interface NoteState {
   saveNote: (note: Note) => Promise<void>
   addNote: (note: Note) => Promise<void>
   deleteNote: (noteId: string) => Promise<void>
-  softDelete: (noteId: string) => void
-  restoreNote: (noteId: string) => void
+  softDelete: (noteId: string) => Promise<void>
+  restoreNote: (noteId: string) => Promise<void>
   getNoteForLesson: (courseId: string, videoId: string) => Note | undefined
 }
 
@@ -83,7 +84,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.notes.put(note)
+        await syncableWrite('notes', 'put', note as unknown as SyncableRecord)
       })
       if (existingIndex >= 0) {
         updateDocInIndex(toSearchableNote(note))
@@ -121,7 +122,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.notes.add(note)
+        await syncableWrite('notes', 'add', note as unknown as SyncableRecord)
       })
       addDocToIndex(toSearchableNote(note))
       if (supportsWorkers()) {
@@ -151,7 +152,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.notes.delete(noteId)
+        await syncableWrite('notes', 'delete', noteId)
       })
       removeDocFromIndex(noteId, 'note')
       if (supportsWorkers()) {
@@ -171,22 +172,48 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     }
   },
 
-  softDelete: (noteId: string) => {
+  softDelete: async (noteId: string) => {
     const { notes } = get()
-    set({
-      notes: notes.map(n =>
-        n.id === noteId ? { ...n, deleted: true, deletedAt: new Date().toISOString() } : n
-      ),
-      error: null,
-    })
+
+    try {
+      await persistWithRetry(async () => {
+        const existing = await db.notes.get(noteId)
+        if (!existing) return
+        const mergedNote: Note = { ...existing, deleted: true, deletedAt: new Date().toISOString() }
+        await syncableWrite('notes', 'put', mergedNote as unknown as SyncableRecord)
+      })
+      // Optimistic state update applied after successful persist
+      set({
+        notes: notes.map(n =>
+          n.id === noteId ? { ...n, deleted: true, deletedAt: new Date().toISOString() } : n
+        ),
+        error: null,
+      })
+    } catch (error) {
+      set({ error: 'Failed to soft delete note' })
+      console.error('[NoteStore] Failed to soft delete note:', error)
+    }
   },
 
-  restoreNote: (noteId: string) => {
+  restoreNote: async (noteId: string) => {
     const { notes } = get()
-    set({
-      notes: notes.map(n => (n.id === noteId ? { ...n, deleted: false, deletedAt: undefined } : n)),
-      error: null,
-    })
+
+    try {
+      await persistWithRetry(async () => {
+        const existing = await db.notes.get(noteId)
+        if (!existing) return
+        const mergedNote: Note = { ...existing, deleted: false, deletedAt: undefined }
+        await syncableWrite('notes', 'put', mergedNote as unknown as SyncableRecord)
+      })
+      // Optimistic state update applied after successful persist
+      set({
+        notes: notes.map(n => (n.id === noteId ? { ...n, deleted: false, deletedAt: undefined } : n)),
+        error: null,
+      })
+    } catch (error) {
+      set({ error: 'Failed to restore note' })
+      console.error('[NoteStore] Failed to restore note:', error)
+    }
   },
 
   getNoteForLesson: (courseId: string, videoId: string) => {

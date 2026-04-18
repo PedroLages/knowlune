@@ -246,7 +246,9 @@ describe('loadNotesByCourse error handling', () => {
 describe('addNote error handling', () => {
   it('should rollback on DB failure', async () => {
     const { db } = await import('@/db')
-    vi.spyOn(db.notes, 'add').mockRejectedValue(new Error('Write fail'))
+    // syncableWrite routes through db.table(tableName) — spy on that table reference
+    const notesTable = db.table('notes')
+    vi.spyOn(notesTable, 'add').mockRejectedValue(new Error('Write fail'))
 
     const note = makeNote()
     await act(async () => {
@@ -266,7 +268,9 @@ describe('saveNote error handling', () => {
     })
 
     const { db } = await import('@/db')
-    vi.spyOn(db.notes, 'put').mockRejectedValue(new Error('fail'))
+    // syncableWrite routes through db.table(tableName) — spy on that table reference
+    const notesTable = db.table('notes')
+    vi.spyOn(notesTable, 'put').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
       await useNoteStore.getState().saveNote({ ...note, content: 'Updated' })
@@ -285,7 +289,9 @@ describe('deleteNote error handling', () => {
     })
 
     const { db } = await import('@/db')
-    vi.spyOn(db.notes, 'delete').mockRejectedValue(new Error('fail'))
+    // syncableWrite routes through db.table(tableName) — spy on that table reference
+    const notesTable = db.table('notes')
+    vi.spyOn(notesTable, 'delete').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
       await useNoteStore.getState().deleteNote(note.id)
@@ -303,8 +309,8 @@ describe('softDelete', () => {
       await useNoteStore.getState().addNote(note)
     })
 
-    act(() => {
-      useNoteStore.getState().softDelete(note.id)
+    await act(async () => {
+      await useNoteStore.getState().softDelete(note.id)
     })
 
     const state = useNoteStore.getState()
@@ -321,8 +327,8 @@ describe('softDelete', () => {
     })
     expect(useNoteStore.getState().notes).toHaveLength(1)
 
-    act(() => {
-      useNoteStore.getState().softDelete(note.id)
+    await act(async () => {
+      await useNoteStore.getState().softDelete(note.id)
     })
 
     expect(useNoteStore.getState().notes).toHaveLength(1)
@@ -336,15 +342,15 @@ describe('restoreNote', () => {
       await useNoteStore.getState().addNote(note)
     })
 
-    act(() => {
-      useNoteStore.getState().softDelete(note.id)
+    await act(async () => {
+      await useNoteStore.getState().softDelete(note.id)
     })
 
     const deletedNote = useNoteStore.getState().notes.find(n => n.id === note.id)
     expect(deletedNote!.deleted).toBe(true)
 
-    act(() => {
-      useNoteStore.getState().restoreNote(note.id)
+    await act(async () => {
+      await useNoteStore.getState().restoreNote(note.id)
     })
 
     const restoredNote = useNoteStore.getState().notes.find(n => n.id === note.id)
@@ -359,15 +365,15 @@ describe('restoreNote', () => {
       await useNoteStore.getState().addNote(note)
     })
 
-    act(() => {
-      useNoteStore.getState().softDelete(note.id)
+    await act(async () => {
+      await useNoteStore.getState().softDelete(note.id)
     })
 
     const deletedNote = useNoteStore.getState().notes.find(n => n.id === note.id)
     expect(deletedNote!.deletedAt).toBeDefined()
 
-    act(() => {
-      useNoteStore.getState().restoreNote(note.id)
+    await act(async () => {
+      await useNoteStore.getState().restoreNote(note.id)
     })
 
     const restoredNote = useNoteStore.getState().notes.find(n => n.id === note.id)
