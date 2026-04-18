@@ -92,6 +92,7 @@ const MONOTONIC_RPC: Record<string, MonotonicRpc> = {
       user_id: 'p_user_id',
       id: 'p_vocabulary_item_id',
       mastery_level: 'p_mastery_level',
+      last_reviewed_at: 'p_last_reviewed_at',
       book_id: 'p_book_id',
       word: 'p_word',
       updated_at: 'p_updated_at',

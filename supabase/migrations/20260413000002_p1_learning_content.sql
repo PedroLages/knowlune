@@ -484,8 +484,9 @@ CREATE TRIGGER set_updated_at
 -- far-future client timestamps from pinning the incremental sync cursor permanently.
 -- SQLSTATE 42501 (insufficient_privilege) is semantically correct for authz failure.
 -- p_book_id and p_word are NOT NULL in vocabulary_items — required on INSERT.
--- p_context, p_definition, p_note, p_highlight_id, p_last_reviewed_at are nullable
--- and default to NULL; excluded from ON CONFLICT DO UPDATE (immutable once set).
+-- p_context, p_definition, p_note, p_highlight_id are nullable and default to NULL;
+-- excluded from ON CONFLICT DO UPDATE (immutable once set).
+-- p_last_reviewed_at is nullable and included in ON CONFLICT DO UPDATE (mutable).
 CREATE OR REPLACE FUNCTION public.upsert_vocabulary_mastery(
   p_user_id            UUID,
   p_vocabulary_item_id UUID,
@@ -523,8 +524,9 @@ BEGIN
     p_mastery_level, v_clamped
   )
   ON CONFLICT (id) DO UPDATE SET
-    mastery_level = GREATEST(vocabulary_items.mastery_level, EXCLUDED.mastery_level),
-    updated_at    = GREATEST(vocabulary_items.updated_at, v_clamped);
+    mastery_level    = GREATEST(vocabulary_items.mastery_level, EXCLUDED.mastery_level),
+    last_reviewed_at = EXCLUDED.last_reviewed_at,
+    updated_at       = GREATEST(vocabulary_items.updated_at, v_clamped);
   -- book_id and word are intentionally excluded from DO UPDATE (immutable once set).
 END;
 $$;

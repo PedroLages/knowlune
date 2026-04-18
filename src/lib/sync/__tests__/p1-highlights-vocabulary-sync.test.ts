@@ -175,7 +175,7 @@ describe('E93-S06 sync wiring — vocabularyItems', () => {
     expect(putEntry!.status).toBe('pending')
   })
 
-  it('advanceMastery → syncQueue has put entry; masteryLevel incremented in Dexie record', async () => {
+  it('advanceMastery → syncQueue has put entry; masteryLevel incremented and lastReviewedAt set in Dexie record and payload', async () => {
     const item = makeVocabItem({ masteryLevel: 0 })
     await useVocabularyStore.getState().addItem(item)
 
@@ -186,11 +186,21 @@ describe('E93-S06 sync wiring — vocabularyItems', () => {
 
     const stored = await db.vocabularyItems.get(item.id)
     expect(stored?.masteryLevel).toBe(1)
+    // lastReviewedAt must be stamped on the Dexie record so it flows into the
+    // syncQueue payload and eventually maps to p_last_reviewed_at via the
+    // MONOTONIC_RPC paramMap (R1 fix).
+    expect(stored?.lastReviewedAt).toBeDefined()
 
     const entries = await getQueueEntries('vocabularyItems')
     const putEntry = entries.find(e => e.operation === 'put')
     expect(putEntry).toBeDefined()
     expect(putEntry!.status).toBe('pending')
+    // Verify last_reviewed_at is present in the snake_case queue payload so the
+    // sync engine can map it to p_last_reviewed_at via MONOTONIC_RPC paramMap
+    // (R1 fix: last_reviewed_at was missing from paramMap, so it was never
+    // forwarded to the RPC and the DB column was never updated).
+    const payload = putEntry!.payload as Record<string, unknown>
+    expect(payload.last_reviewed_at).toBeDefined()
   })
 
   it('resetMastery → syncQueue has put entry; masteryLevel: 0 in Dexie record', async () => {
