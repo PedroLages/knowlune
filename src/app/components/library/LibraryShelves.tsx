@@ -82,7 +82,7 @@ export function LibraryShelves() {
           headingLevel="h2"
           headingId={RECENTLY_ADDED_HEADING_ID}
           data-testid="shelf-recently-added"
-          actionSlot={<ShelfSeeAllLink href="/library?sort=recent" />}
+          actionSlot={<ShelfSeeAllLink />}
         >
           {recentlyAddedMock.map(item => (
             <ShelfMockTile key={item.id} item={item} />
@@ -97,7 +97,7 @@ export function LibraryShelves() {
           headingLevel="h2"
           headingId={CONTINUE_READING_HEADING_ID}
           data-testid="shelf-continue-reading"
-          actionSlot={<ShelfSeeAllLink href="/library?filter=in-progress" />}
+          actionSlot={<ShelfSeeAllLink />}
         >
           {continueReadingMock.map(item => (
             <ShelfMockTile key={item.id} item={item} />
