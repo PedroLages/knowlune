@@ -6,9 +6,10 @@ import { SYNCABLE_TABLES } from './backfill'
  * linked to `newUserId` (i.e. records where `userId` is missing/null or
  * belongs to a different account).
  *
- * Uses `Promise.any()` for fast short-circuit — resolves as soon as the first
- * table with unlinked records is found. P0 tables are checked first because
- * they are most likely to have records in normal usage.
+ * Checks P0 tables first (most likely to have data), then remaining tables.
+ * Uses a shared `found` flag so Promise.all short-circuits logically the
+ * moment the first unlinked record is discovered — ES2020-compatible
+ * alternative to `Promise.any()` (which requires ES2021).
  *
  * Called before `syncEngine.start()` on sign-in to determine whether the
  * `LinkDataDialog` should be shown (E92-S08).
@@ -18,42 +19,39 @@ import { SYNCABLE_TABLES } from './backfill'
  */
 export async function hasUnlinkedRecords(newUserId: string): Promise<boolean> {
   // P0 first, then all others in SYNCABLE_TABLES order.
-  // Ordering matters: Promise.any short-circuits on the first resolve, so
-  // checking frequently-populated tables first gives the fastest answer.
+  // Checking frequently-populated tables first maximises the chance of an
+  // early flag-set, skipping subsequent async work.
   const P0_TABLES = ['contentProgress', 'studySessions', 'progress']
   const remaining = SYNCABLE_TABLES.filter((t) => !P0_TABLES.includes(t))
   const orderedTables = [...P0_TABLES, ...remaining]
 
-  async function checkTable(tableName: string): Promise<void> {
-    try {
-      const count = await db
-        .table(tableName)
-        .filter(
-          (r: Record<string, unknown>) =>
-            r.userId === null || r.userId === undefined || r.userId !== newUserId,
-        )
-        .count()
-      if (count > 0) {
-        // Resolve this promise → Promise.any will resolve with void and return true.
-        return
-      }
-    } catch (err) {
-      // Table absent or query failed — treat as no records.
-      // Intentional: a missing table is not an error condition; the migration
-      // that creates it may not have run yet on this device.
-      console.warn(`[hasUnlinkedRecords] Table "${tableName}" check failed:`, err)
-    }
-    // No unlinked records in this table — reject so Promise.any can try others.
-    throw new Error(`no-unlinked:${tableName}`)
-  }
+  // Shared flag: set to true as soon as any table has unlinked records.
+  // ES2020-compatible alternative to Promise.any() (ES2021).
+  let found = false
 
-  try {
-    // Promise.any resolves as soon as any checkTable promise resolves (i.e.
-    // a table has unlinked records). If all reject, AggregateError is thrown.
-    await Promise.any(orderedTables.map(checkTable))
-    return true
-  } catch {
-    // AggregateError — all tables had no unlinked records or were empty.
-    return false
-  }
+  await Promise.all(
+    orderedTables.map(async (tableName) => {
+      // Skip remaining async work once we know the answer.
+      if (found) return
+      try {
+        const count = await db
+          .table(tableName)
+          .filter(
+            (r: Record<string, unknown>) =>
+              r.userId === null || r.userId === undefined || r.userId !== newUserId,
+          )
+          .count()
+        if (count > 0) {
+          found = true
+        }
+      } catch (err) {
+        // Table absent or query failed — treat as no records.
+        // Intentional: a missing table is not an error condition; the migration
+        // that creates it may not have run yet on this device.
+        console.warn(`[hasUnlinkedRecords] Table "${tableName}" check failed:`, err)
+      }
+    }),
+  )
+
+  return found
 }
