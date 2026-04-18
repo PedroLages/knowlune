@@ -1543,6 +1543,30 @@ function _declareLegacyMigrations(database: Dexie): void {
     .upgrade(async _tx => {
       // No backfill. Table is new; Dexie creates it on first open at v53.
     })
+
+  // v54 (E93-S05): Backfill `id` on existing `embeddings` records.
+  // The `Embedding` type now requires `id: string` so that syncableWrite can
+  // use it as the Supabase upsert conflict key (targeting `id` in the upload
+  // payload). Records created before this migration lack `id` — backfill with
+  // crypto.randomUUID() to make them uploadable.
+  //
+  // ES2020-safe: uses for...of + await per record (no Promise.any).
+  // Idempotent: records that already have `id` are left unchanged.
+  // Schema string unchanged — `id` is not indexed (used only as upsert key).
+  database
+    .version(54)
+    .stores({
+      // No schema change — just backfilling data.
+    })
+    .upgrade(async tx => {
+      const embeddingsTable = tx.table('embeddings')
+      const records = await embeddingsTable.toArray()
+      for (const record of records) {
+        if (!record.id) {
+          await embeddingsTable.update(record.noteId, { id: crypto.randomUUID() })
+        }
+      }
+    })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }

@@ -623,6 +623,12 @@ async function _doDownload(): Promise<void> {
 
   for (const entry of tableRegistry) {
     if (entry.skipSync) continue
+    // upload-only tables have no download phase — embeddings are generated
+    // locally, not pulled from server. The lastSyncTimestamp cursor is never
+    // advanced for these tables (no download = no cursor update). This is
+    // correct: when a new device signs in, it will either find embeddings it
+    // uploaded itself or regenerate them locally.
+    if (entry.uploadOnly) continue
 
     // Read incremental cursor.
     const meta = await db.syncMetadata.get(entry.dexieTable)

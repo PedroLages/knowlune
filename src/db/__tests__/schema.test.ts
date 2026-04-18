@@ -105,8 +105,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 53', () => {
-    expect(db.verno).toBe(53)
+  it('should be at version 54', () => {
+    expect(db.verno).toBe(54)
   })
 
   it('should have searchFrecency table with compound primary key [entityType+entityId] (v53)', () => {
