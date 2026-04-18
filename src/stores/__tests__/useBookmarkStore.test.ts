@@ -277,7 +277,9 @@ describe('loadLessonBookmarks error handling', () => {
 describe('addBookmark error handling', () => {
   it('should rollback on DB failure', async () => {
     const { db } = await import('@/db')
-    vi.spyOn(db.bookmarks, 'add').mockRejectedValue(new Error('Write fail'))
+    // syncableWrite routes through db.table(tableName) — spy on that table reference
+    const bookmarksTable = db.table('bookmarks')
+    vi.spyOn(bookmarksTable, 'add').mockRejectedValue(new Error('Write fail'))
 
     await act(async () => {
       await useBookmarkStore.getState().addBookmark('c1', 'l1', 60, 'Test')
@@ -303,7 +305,9 @@ describe('updateBookmarkLabel edge cases', () => {
     const bookmarkId = useBookmarkStore.getState().bookmarks[0].id
 
     const { db } = await import('@/db')
-    vi.spyOn(db.bookmarks, 'update').mockRejectedValue(new Error('fail'))
+    // syncableWrite now uses fetch-then-put; spy on db.table('bookmarks').put
+    const bookmarksTable = db.table('bookmarks')
+    vi.spyOn(bookmarksTable, 'put').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
       await useBookmarkStore.getState().updateBookmarkLabel(bookmarkId, 'New label')
@@ -321,7 +325,9 @@ describe('deleteBookmark error handling', () => {
     const bookmarkId = useBookmarkStore.getState().bookmarks[0].id
 
     const { db } = await import('@/db')
-    vi.spyOn(db.bookmarks, 'delete').mockRejectedValue(new Error('fail'))
+    // syncableWrite routes through db.table(tableName) — spy on that table reference
+    const bookmarksTable = db.table('bookmarks')
+    vi.spyOn(bookmarksTable, 'delete').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
       await useBookmarkStore.getState().deleteBookmark(bookmarkId)
