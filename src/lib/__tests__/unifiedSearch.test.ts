@@ -83,7 +83,7 @@ function makeBook(overrides: Partial<Book> = {}): Book {
     status: 'unread',
     tags: ['databases', 'distributed'],
     chapters: [],
-    source: 'local',
+    source: { type: 'local', opfsPath: '/books/b1' },
     progress: 0,
     createdAt: '2026-01-01T00:00:00Z',
     ...overrides,
@@ -109,7 +109,7 @@ function makeHighlight(overrides: Partial<BookHighlight> = {}): BookHighlight {
     bookId: 'b1',
     textAnchor: 'Replication is the heart of distributed systems',
     color: 'yellow',
-    position: { kind: 'page', value: 0 },
+    position: { type: 'page', pageNumber: 1 },
     createdAt: '2026-01-01T00:00:00Z',
     ...overrides,
   }

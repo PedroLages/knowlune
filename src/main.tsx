@@ -52,23 +52,71 @@ const deferInit = (fn: () => void) => {
 }
 
 deferInit(async () => {
-  const [
-    { db },
-    { migrateBookmarksFromLocalStorage },
-    { buildCourseLookup, initializeSearchIndex },
-  ] = await Promise.all([import('@/db'), import('@/lib/bookmarks'), import('@/lib/noteSearch')])
+  const [{ db }, { migrateBookmarksFromLocalStorage }, unifiedSearch, { getMergedAuthors }] =
+    await Promise.all([
+      import('@/db'),
+      import('@/lib/bookmarks'),
+      import('@/lib/unifiedSearch'),
+      import('@/lib/authors'),
+    ])
 
   // Fire-and-forget: migrate any legacy localStorage bookmarks to IndexedDB
   migrateBookmarksFromLocalStorage()
 
-  // Initialize Dexie, then build search index
+  // Open Dexie, then build the unified search index across all six entity
+  // types. Per-entity isolation via Promise.allSettled: if one table throws,
+  // the others still index and the palette degrades gracefully.
   db.open()
     .then(async () => {
-      // Build course/lesson lookup maps for search enrichment (empty — regular courses removed in E89-S01)
-      buildCourseLookup([])
+      const tableReads = await Promise.allSettled([
+        db.importedCourses.toArray(),
+        db.importedVideos.toArray(),
+        db.authors.toArray(),
+        db.books.toArray(),
+        db.notes.toArray(),
+        db.bookHighlights.toArray(),
+      ])
 
-      const notes = await db.notes.toArray()
-      initializeSearchIndex(notes)
+      const [coursesR, videosR, authorsR, booksR, notesR, highlightsR] = tableReads
+
+      const courses = coursesR.status === 'fulfilled' ? coursesR.value : []
+      const videos = videosR.status === 'fulfilled' ? videosR.value : []
+      const storeAuthors = authorsR.status === 'fulfilled' ? authorsR.value : []
+      const books = booksR.status === 'fulfilled' ? booksR.value : []
+      const notes = notesR.status === 'fulfilled' ? notesR.value : []
+      const highlights = highlightsR.status === 'fulfilled' ? highlightsR.value : []
+
+      // Log any individual failures so graceful degradation is observable.
+      const labels = ['courses', 'videos', 'authors', 'books', 'notes', 'highlights'] as const
+      tableReads.forEach((result, i) => {
+        if (result.status === 'rejected') {
+          console.error(`[unified-search] failed to index ${labels[i]}:`, result.reason)
+        }
+      })
+
+      // Seed course / lesson lookup maps BEFORE indexing notes so the note
+      // docs carry their parent course name + lesson title.
+      for (const c of courses) unifiedSearch.registerCourseName(c.id, c.name)
+      const courseNameById = new Map(courses.map(c => [c.id, c.name]))
+      for (const v of videos) {
+        unifiedSearch.registerLessonTitle(v.id, v.filename || v.youtubeVideoId || v.id)
+      }
+
+      const bookTitleById = new Map(books.map(b => [b.id, b.title]))
+      const mergedAuthors = getMergedAuthors(storeAuthors)
+
+      const docs = [
+        ...courses.map(c => unifiedSearch.toSearchableCourse(c)),
+        ...videos.map(v => unifiedSearch.toSearchableLesson(v, courseNameById.get(v.courseId))),
+        ...mergedAuthors.map(a => unifiedSearch.toSearchableAuthor(a)),
+        ...books.map(b => unifiedSearch.toSearchableBook(b)),
+        ...notes.map(n => unifiedSearch.toSearchableNote(n)),
+        ...highlights.map(h =>
+          unifiedSearch.toSearchableHighlight(h, bookTitleById.get(h.bookId))
+        ),
+      ]
+
+      unifiedSearch.initializeUnifiedSearch(docs)
     })
     .catch(async error => {
       console.error('[Migration] Failed:', error)
