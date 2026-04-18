@@ -12,6 +12,8 @@ import { test, expect } from '../support/fixtures'
 import { navigateAndWait } from '../support/helpers/navigation'
 import { TIMEOUTS } from '../utils/constants'
 import { closeSidebar } from '../support/fixtures/constants/sidebar-constants'
+import { seedRecentList } from '../helpers/seedSearchFrecency'
+import { FIXED_DATE } from '../utils/test-time'
 
 async function openCommandPalette(page: Parameters<typeof navigateAndWait>[0]) {
   await page.keyboard.press('Meta+k')
@@ -46,21 +48,10 @@ test.describe('E117-S02: empty state', () => {
 
   test('Recently opened rows render from localStorage', async ({ page }) => {
     await navigateAndWait(page, '/')
-    await page.evaluate(() => {
-      const hits = [
-        {
-          type: 'course',
-          id: 'recent-course-a',
-          openedAt: '2026-04-18T00:00:00.000Z',
-        },
-        {
-          type: 'book',
-          id: 'recent-book-b',
-          openedAt: '2026-04-18T00:00:00.000Z',
-        },
-      ]
-      localStorage.setItem('knowlune.recentSearchHits.v1', JSON.stringify(hits))
-    })
+    await seedRecentList(page, [
+      { type: 'course', id: 'recent-course-a', openedAt: FIXED_DATE },
+      { type: 'book', id: 'recent-book-b', openedAt: FIXED_DATE },
+    ])
 
     await openCommandPalette(page)
 
@@ -77,14 +68,12 @@ test.describe('E117-S02: empty state', () => {
 
   test('Recently opened caps at 5 rows', async ({ page }) => {
     await navigateAndWait(page, '/')
-    await page.evaluate(() => {
-      const hits = Array.from({ length: 7 }, (_, i) => ({
-        type: 'course',
-        id: `r-${i}`,
-        openedAt: `2026-04-18T00:00:0${i}.000Z`,
-      }))
-      localStorage.setItem('knowlune.recentSearchHits.v1', JSON.stringify(hits))
-    })
+    const hits = Array.from({ length: 7 }, (_, i) => ({
+      type: 'course' as const,
+      id: `r-${i}`,
+      openedAt: FIXED_DATE,
+    }))
+    await seedRecentList(page, hits)
 
     await openCommandPalette(page)
 

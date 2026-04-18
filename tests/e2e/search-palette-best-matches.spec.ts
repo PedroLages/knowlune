@@ -15,6 +15,7 @@ import { navigateAndWait } from '../support/helpers/navigation'
 import { TIMEOUTS } from '../utils/constants'
 import { closeSidebar } from '../support/fixtures/constants/sidebar-constants'
 import { FIXED_DATE } from '../utils/test-time'
+import { seedFrecency } from '../helpers/seedSearchFrecency'
 
 async function openCommandPalette(page: Parameters<typeof navigateAndWait>[0]) {
   await page.keyboard.press('Meta+k')
@@ -62,38 +63,6 @@ async function seedCourse(
   }, course)
 }
 
-/** Seed a single searchFrecency row. */
-async function seedFrecency(
-  page: Parameters<typeof navigateAndWait>[0],
-  row: { entityType: string; entityId: string; openCount: number; lastOpenedAt: string }
-) {
-  // eslint-disable-next-line test-patterns/use-seeding-helpers -- E117-S02 seed; Unit 6 refactors
-  await page.evaluate(async r => {
-    await new Promise<void>((resolve, reject) => {
-      const req = indexedDB.open('ElearningDB')
-      req.onsuccess = () => {
-        const db = req.result
-        if (!db.objectStoreNames.contains('searchFrecency')) {
-          db.close()
-          reject(new Error('searchFrecency store missing — is the DB at v53?'))
-          return
-        }
-        const tx = db.transaction('searchFrecency', 'readwrite')
-        tx.objectStore('searchFrecency').put(r)
-        tx.oncomplete = () => {
-          db.close()
-          resolve()
-        }
-        tx.onerror = () => {
-          db.close()
-          reject(tx.error)
-        }
-      }
-      req.onerror = () => reject(req.error)
-    })
-  }, row)
-}
-
 test.describe('E117-S02: Best Matches ranking', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(sidebarState => {
@@ -109,18 +78,10 @@ test.describe('E117-S02: Best Matches ranking', () => {
     await navigateAndWait(page, '/')
     await seedCourse(page, { id: 'bm-course-a', name: 'TypeScript Fundamentals' })
     await seedCourse(page, { id: 'bm-course-b', name: 'TypeScript Advanced' })
-    await seedFrecency(page, {
-      entityType: 'course',
-      entityId: 'bm-course-a',
-      openCount: 5,
-      lastOpenedAt: FIXED_DATE,
-    })
-    await seedFrecency(page, {
-      entityType: 'course',
-      entityId: 'bm-course-b',
-      openCount: 1,
-      lastOpenedAt: FIXED_DATE,
-    })
+    await seedFrecency(page, [
+      { entityType: 'course', entityId: 'bm-course-a', openCount: 5, lastOpenedAt: FIXED_DATE },
+      { entityType: 'course', entityId: 'bm-course-b', openCount: 1, lastOpenedAt: FIXED_DATE },
+    ])
     await page.reload({ waitUntil: 'domcontentloaded' })
 
     await openCommandPalette(page)
@@ -140,12 +101,9 @@ test.describe('E117-S02: Best Matches ranking', () => {
   }) => {
     await navigateAndWait(page, '/')
     await seedCourse(page, { id: 'bm-dedup-a', name: 'React Patterns' })
-    await seedFrecency(page, {
-      entityType: 'course',
-      entityId: 'bm-dedup-a',
-      openCount: 3,
-      lastOpenedAt: FIXED_DATE,
-    })
+    await seedFrecency(page, [
+      { entityType: 'course', entityId: 'bm-dedup-a', openCount: 3, lastOpenedAt: FIXED_DATE },
+    ])
     await page.reload({ waitUntil: 'domcontentloaded' })
 
     await openCommandPalette(page)
