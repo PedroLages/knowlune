@@ -30,6 +30,7 @@ import {
 } from '@/app/components/ui/command'
 import { Badge } from '@/app/components/ui/badge'
 import { truncateSnippet, highlightMatches, buildHighlightPatterns } from '@/lib/searchUtils'
+import { parsePrefix } from '@/lib/searchPrefix'
 import { db } from '@/db/schema'
 import { useUnifiedSearchIndex } from '@/lib/useUnifiedSearchIndex'
 import type { EntityType, UnifiedSearchResult } from '@/lib/unifiedSearch'
@@ -197,6 +198,10 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
+  // Scope state — null means no prefix filter active.
+  const [scope, setScope] = useState<EntityType | null>(null)
+  // aria-live announcement for scope entry/exit (reuses 400ms settle from D-MED-1).
+  const [scopeAnnouncement, setScopeAnnouncement] = useState('')
   // Live-region announcement debounced separately from search — 400ms pause
   // before updating prevents SR verbosity on every keystroke (D-MED-1).
   const [announcedCount, setAnnouncedCount] = useState<number | null>(null)
@@ -237,6 +242,8 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
     } else {
       setSearchQuery('')
       setDebouncedQuery('')
+      setScope(null)
+      setScopeAnnouncement('')
       setAnnouncedCount(null)
       setExpandedSections(new Set())
       setRemovedIds(new Set())
@@ -264,6 +271,37 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
     }, 150)
     return () => clearTimeout(timer)
   }, [searchQuery])
+
+  // Announce scope entry/exit to screen readers using the same 400ms settle.
+  useEffect(() => {
+    if (!open) return
+    const sectionConfig = scope ? SECTION_ORDER.find(s => s.type === scope) : null
+    const text = sectionConfig ? `Scoped to ${sectionConfig.heading}` : (scope === null && scopeAnnouncement ? 'Scope cleared' : '')
+    if (!text) return
+    const timer = setTimeout(() => setScopeAnnouncement(text), 400)
+    return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope, open])
+
+  /** Handle input change — parse prefix at position 0 to set scope. */
+  const handleInputChange = (value: string) => {
+    if (scope === null) {
+      const parsed = parsePrefix(value)
+      if (parsed) {
+        setScope(parsed.scope)
+        setSearchQuery(parsed.rest.trimStart())
+        return
+      }
+    }
+    setSearchQuery(value)
+  }
+
+  /** Backspace on empty input exits scope mode. */
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && scope !== null && searchQuery === '') {
+      setScope(null)
+    }
+  }
 
   // ─── Continue Learning — one-shot query gated on open + empty query ─────
   //
@@ -723,8 +761,31 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
       contentClassName="max-sm:inset-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:max-w-full max-sm:rounded-none max-sm:h-full max-sm:w-full"
     >
       <CommandInput
-        placeholder="Search pages, courses, books, lessons, notes, highlights..."
-        onValueChange={setSearchQuery}
+        placeholder={scope ? '' : 'Search pages, courses, books, lessons, notes, highlights...'}
+        onValueChange={handleInputChange}
+        onKeyDown={handleInputKeyDown}
+        value={searchQuery}
+        prefix={
+          scope ? (
+            <span className="flex items-center gap-0.5 shrink-0">
+              <Badge
+                className={`text-[10px] px-1.5 py-0 h-5 rounded-r-none ${TYPE_BADGE_CLASS[scope]}`}
+                data-testid="search-scope-chip"
+              >
+                {SECTION_ORDER.find(s => s.type === scope)?.heading}
+              </Badge>
+              <button
+                type="button"
+                onClick={() => setScope(null)}
+                className={`h-5 px-0.5 rounded-l-none text-[10px] leading-none flex items-center ${TYPE_BADGE_CLASS[scope]} opacity-70 hover:opacity-100`}
+                aria-label="Clear scope filter"
+                data-testid="search-scope-chip-clear"
+              >
+                ×
+              </button>
+            </span>
+          ) : undefined
+        }
       />
       {/* Polite live region for screen readers — announces result count.
           Pluralized and debounced to a 400ms pause to limit SR verbosity. */}
@@ -736,6 +797,17 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
         data-testid="search-result-count"
       >
         {announcementText}
+      </div>
+      {/* Scope entry/exit announcements — separate live region so they don't
+          clobber the result-count announcer (Inv. 7). */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        data-testid="search-scope-announcement"
+      >
+        {scopeAnnouncement}
       </div>
       <CommandList>
         {/* CommandEmpty only rendered for typed-query empty state; the
