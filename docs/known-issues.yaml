@@ -1095,3 +1095,11 @@ issues:
     scheduled_for: null
     fixed_by: null
     notes: "JSDoc says fallback is 'library-shelf-row' which confuses non-shelf-row callers. Expand JSDoc to clarify caller responsibility for setting data-testid."
+
+  - id: KI-E93-S01-F4
+    story: E93-S01
+    severity: LOW
+    description: "search_similar_notes computes vector distance expression twice (SELECT + ORDER BY). Wrapping in subquery would be cleaner."
+    status: open
+    addedAt: "2026-04-18"
+    resolution: schedule-future
