@@ -407,7 +407,7 @@ export function Notes() {
           <button
             type="button"
             className="mt-2 inline-flex items-center gap-1.5 min-h-[44px] px-2 rounded-md bg-warning/10 text-warning-foreground border border-warning/30 hover:bg-warning/20 transition-colors text-xs font-medium"
-            aria-label="Note has a sync conflict"
+            aria-label="Resolve sync conflict"
             onClick={() => setConflictNoteId(item.note.id)}
           >
             <AlertTriangle aria-hidden="true" className="size-4" />
