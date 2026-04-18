@@ -399,43 +399,27 @@ Fire-and-forget `checkpoint-dispatcher` (haiku) at each completed phase: post-cl
 
 ## Phase 3 — Close out
 
-### 3.1 Compound gate (decide timing)
+### 3.1 Compound — run automatically post-merge
 
-Use **AskUserQuestion**:
+Since the PR was merged immediately in 2.5, dispatch `ce-compound-dispatcher` (model: opus) now — no user prompt needed:
 
 ```text
-Question: "Run /ce:compound now to document lessons, or defer to post-merge?"
+Invoke ce:compound via the Skill tool.
 
-Options:
-  1. Defer to post-merge (Recommended) — lessons from shipped code are most durable; PR body has a checkbox reminder
-  2. Run /ce:compound now — capture implementation lessons before review may change them
-  3. Skip — this PR has no surprising lessons worth compounding
+Context to pass to ce:compound:
+- Plan: <planPath>
+- PR URL: <prUrl>
+- Branch: <branch>
+- Focus: implementation lessons from this run — what was non-obvious, what approaches failed, what invariants the solution relies on.
+
+Let ce:compound run its normal interview + write docs/solutions/<category>/<slug>-YYYY-MM-DD.md.
+
+Return ONLY: `{"solutionPath": "<path>"}` or `{"skipped": "<reason>"}`.
+
+/auto-answer autopilot
 ```
 
-Branch:
-
-- **Defer** → proceed to 3.2 with `compoundStatus: deferred`.
-- **Run now** → dispatch `ce-compound-dispatcher` (model: opus) before 3.2:
-
-  ```text
-  Invoke ce:compound via the Skill tool.
-
-  Context to pass to ce:compound:
-  - Plan: <planPath>
-  - PR URL: <prUrl>
-  - Branch: <branch>
-  - Focus: implementation lessons from this run — what was non-obvious, what approaches failed, what invariants the solution relies on.
-
-  Let ce:compound run its normal interview + write docs/solutions/<category>/<slug>-YYYY-MM-DD.md.
-
-  Return ONLY: `{"solutionPath": "<path>"}` or `{"skipped": "<reason>"}`.
-
-  /auto-answer autopilot
-  ```
-
-  Set `compoundStatus: run-pre-merge`, `solutionPath` tracked.
-
-- **Skip** → `compoundStatus: skipped`, no doc, no reminder.
+Set `compoundStatus: run-post-merge`, `solutionPath` tracked. On error: log warning, set `compoundStatus: skipped`, proceed to 3.2.
 
 ### 3.2 Final output
 
