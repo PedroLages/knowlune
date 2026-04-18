@@ -28,6 +28,8 @@ import {
 } from './ui/dropdown-menu'
 import { useTheme } from 'next-themes'
 import { SearchCommandPalette } from './figma/SearchCommandPalette'
+import { PaletteControllerProvider } from './figma/PaletteControllerContext'
+import type { EntityType } from '@/lib/unifiedSearch'
 import { KeyboardShortcutsDialog } from './figma/KeyboardShortcutsDialog'
 import { BottomNav } from './navigation/BottomNav'
 import { useStudyReminders } from '@/app/hooks/useStudyReminders'
@@ -239,6 +241,7 @@ export function Layout() {
   }, [isOnline])
 
   const [searchOpen, setSearchOpen] = useState(false)
+  const [paletteInitialScope, setPaletteInitialScope] = useState<EntityType | null>(null)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [settings, setSettings] = useState(getSettings())
 
@@ -671,12 +674,28 @@ export function Layout() {
           )}
           <SessionExpiredBanner isOffline={!isOnline} />
           <TrialReminderBanner />
-          <Outlet />
+          <PaletteControllerProvider
+            value={{
+              open: (scope?: EntityType) => {
+                setPaletteInitialScope(scope ?? null)
+                setSearchOpen(true)
+              },
+            }}
+          >
+            <Outlet />
+          </PaletteControllerProvider>
         </main>
       </div>
 
       {/* Search Command Palette */}
-      <SearchCommandPalette open={searchOpen} onOpenChange={setSearchOpen} />
+      <SearchCommandPalette
+        open={searchOpen}
+        onOpenChange={newOpen => {
+          setSearchOpen(newOpen)
+          if (!newOpen) setPaletteInitialScope(null)
+        }}
+        initialScope={paletteInitialScope}
+      />
 
       {/* Keyboard Shortcuts Dialog */}
       <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />

@@ -54,7 +54,7 @@ const SECTION_COLLAPSED_LIMIT = 5
 const SECTION_EXPANDED_LIMIT = 50
 
 /** Per-entity-type rendering config — fixed order, heading, icon. */
-const SECTION_ORDER: Array<{ type: EntityType; heading: string; icon: typeof GraduationCap }> = [
+export const SECTION_ORDER: Array<{ type: EntityType; heading: string; icon: typeof GraduationCap }> = [
   { type: 'course', heading: 'Courses', icon: GraduationCap },
   { type: 'book', heading: 'Books', icon: BookOpen },
   { type: 'lesson', heading: 'Lessons', icon: FileText },
@@ -192,9 +192,11 @@ const BEST_MATCHES_LIMIT = 3
 interface SearchCommandPaletteProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Pre-scope the palette on open. One-shot — consumed once then cleared by the open/close effect. */
+  initialScope?: EntityType | null
 }
 
-export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPaletteProps) {
+export function SearchCommandPalette({ open, onOpenChange, initialScope }: SearchCommandPaletteProps) {
   const navigate = useNavigate()
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -259,6 +261,14 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
       setContinueLearning(undefined)
     }
   }, [open])
+
+  // One-shot initialScope — seeds scope state when the palette opens pre-scoped.
+  // Consumed once; the open/close effect already clears scope on close.
+  useEffect(() => {
+    if (open && initialScope) {
+      setScope(initialScope)
+    }
+  }, [open, initialScope])
 
   // Cross-tab sync — re-read LS when another tab writes to the recent list.
   useEffect(() => {
