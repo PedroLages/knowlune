@@ -40,6 +40,7 @@ import {
   RECENT_LIST_KEY,
   type RecentHit,
 } from '@/lib/searchFrecency'
+import { readHintDismissed, writeHintDismissed } from '@/lib/searchHintDismiss'
 import { getMergedAuthors } from '@/lib/authors'
 import type { ImportedAuthor } from '@/data/types'
 
@@ -230,6 +231,8 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
   const [bestMatches, setBestMatches] = useState<UnifiedSearchResult[]>([])
   // Scoped top-50 — populated when scope is set and query is empty.
   const [scopedTopResults, setScopedTopResults] = useState<UnifiedSearchResult[]>([])
+  // Prefix-hint dismissal — lazy LS read once at mount.
+  const [hintDismissed, setHintDismissed] = useState<boolean>(() => readHintDismissed())
 
   const highlightPatterns = useMemo(() => buildHighlightPatterns(debouncedQuery), [debouncedQuery])
 
@@ -750,6 +753,11 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
     })
   }
 
+  const handleDismissHint = () => {
+    writeHintDismissed()
+    setHintDismissed(true)
+  }
+
   // Static pages are filtered by cmdk's default when no query; when a query is
   // present, we bypass cmdk's filter (shouldFilter={false}) so MiniSearch
   // ranks results. The static Pages group matches by a simple substring test.
@@ -876,6 +884,29 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
               <kbd className="rounded bg-muted px-1 py-0.5 text-xs">Cmd+K</kbd>{' '}
               anytime to search.
             </p>
+          </div>
+        )}
+
+        {/* Prefix-hint row — shown once until dismissed; empty-query unscoped only. */}
+        {isEmptyQuery && !scope && !hintDismissed && !showWelcomeCopy && (
+          <div
+            className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground border-b"
+            data-testid="search-prefix-hint"
+          >
+            <span className="flex-1">
+              Tip: type <kbd className="rounded bg-muted px-1 py-0.5">c:</kbd>,{' '}
+              <kbd className="rounded bg-muted px-1 py-0.5">b:</kbd>,{' '}
+              <kbd className="rounded bg-muted px-1 py-0.5">l:</kbd> to filter by type.
+            </span>
+            <button
+              type="button"
+              onClick={handleDismissHint}
+              className="shrink-0 text-muted-foreground hover:text-foreground"
+              aria-label="Dismiss search tip"
+              data-testid="search-prefix-hint-dismiss"
+            >
+              ×
+            </button>
           </div>
         )}
 
