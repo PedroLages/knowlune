@@ -4,6 +4,9 @@ import { db } from '@/db'
 import type { ReviewRating, Flashcard, CardState } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { calculateNextReview, predictRetention, isDue } from '@/lib/spacedRepetition'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
+import { useAuthStore } from '@/stores/useAuthStore'
+import { supabase } from '@/lib/auth/supabase'
 
 export interface FlashcardSessionSummary {
   totalReviewed: number
@@ -85,7 +88,7 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.flashcards.add(newCard)
+        await syncableWrite('flashcards', 'add', newCard as unknown as SyncableRecord)
       })
       toast.success('Flashcard created')
     } catch (error) {
@@ -106,7 +109,7 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.flashcards.delete(id)
+        await syncableWrite('flashcards', 'delete', id)
       })
     } catch (error) {
       // Rollback
@@ -168,9 +171,34 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
       sessionRatings: [...sessionRatings, rating],
     })
 
+    // Capture review event UUID outside persistWithRetry so retries use the same UUID.
+    // A 23505 unique_violation on retry is swallowed as idempotent success.
+    const reviewEventId = crypto.randomUUID()
+
     try {
       await persistWithRetry(async () => {
-        await db.flashcards.put(updatedCard)
+        await syncableWrite('flashcards', 'put', updatedCard as unknown as SyncableRecord)
+
+        // Conditional Supabase INSERT for the review event — authenticated only.
+        // flashcard_reviews is Supabase-only (no Dexie table, no tableRegistry entry).
+        const user = useAuthStore.getState().user
+        if (user && supabase) {
+          const reviewEvent = {
+            id: reviewEventId,
+            user_id: user.id,
+            flashcard_id: currentCard.id,
+            rating,
+            reviewed_at: now.toISOString(),
+          }
+          const { error: insertError } = await supabase
+            .from('flashcard_reviews')
+            .insert(reviewEvent)
+
+          // Swallow 23505 unique_violation — same UUID on retry = idempotent success.
+          if (insertError && insertError.code !== '23505') {
+            throw insertError
+          }
+        }
       })
     } catch (error) {
       // Rollback — go back one step so user can retry

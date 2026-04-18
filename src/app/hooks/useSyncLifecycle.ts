@@ -25,6 +25,7 @@ import { useSessionStore } from '@/stores/useSessionStore'
 import { useNoteStore } from '@/stores/useNoteStore'
 import { useBookmarkStore } from '@/stores/useBookmarkStore'
 import { useSyncStatusStore } from '@/app/stores/useSyncStatusStore'
+import { useFlashcardStore } from '@/stores/useFlashcardStore'
 
 /** Interval between periodic nudge calls (ms). */
 const NUDGE_INTERVAL_MS = 30_000
@@ -52,6 +53,10 @@ export function useSyncLifecycle(): void {
     syncEngine.registerStoreRefresh('notes', () => useNoteStore.getState().loadNotes())
 
     syncEngine.registerStoreRefresh('bookmarks', () => useBookmarkStore.getState().loadBookmarks())
+
+    syncEngine.registerStoreRefresh('flashcards', () =>
+      useFlashcardStore.getState().loadFlashcards()
+    )
 
     // Intentional: contentProgress store refresh is NOT registered here.
     // useContentProgressStore.loadCourseProgress(courseId) requires a mandatory
