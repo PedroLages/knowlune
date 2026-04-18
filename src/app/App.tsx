@@ -22,6 +22,7 @@ import { useAccessibilityFont } from '@/hooks/useAccessibilityFont'
 import { useContentDensity } from '@/hooks/useContentDensity'
 import { MotionConfig } from 'motion/react'
 import { useAuthLifecycle } from '@/app/hooks/useAuthLifecycle'
+import { useSyncLifecycle } from '@/app/hooks/useSyncLifecycle'
 import { initNotificationService, destroyNotificationService } from '@/services/NotificationService'
 import { useNotificationPrefsStore } from '@/stores/useNotificationPrefsStore'
 
@@ -66,6 +67,8 @@ export default function App() {
 
   // E43-S04: Auth lifecycle hook — session expiry detection, token refresh, settings hydration
   useAuthLifecycle()
+  // E92-S07: Sync triggers, offline handling, store refresh registrations
+  useSyncLifecycle()
 
   // Load notification preferences before subscribing to domain events
   useEffect(() => {
