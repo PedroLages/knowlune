@@ -41,7 +41,7 @@ describe('ReaderFooter', () => {
       render(<ReaderFooter {...defaultProps} theme="sepia" />)
 
       const footer = screen.getByTestId('reader-footer')
-      expect(footer).toHaveClass('bg-[#f4ecd8]/60', 'text-[#3a2a1a]')
+      expect(footer).toHaveClass('bg-[#f4ecd8]/60', 'text-[#2d241e]')
     })
   })
 })

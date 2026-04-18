@@ -1,0 +1,138 @@
+{
+  "skill": "ce-orchestrator",
+  "version": "v3",
+  "note": "Trigger-accuracy evaluation suite. Run via skill-creator:skill-creator to measure trigger/non-trigger correctness and iterate on description. Target: >=80% true-positive rate, <=5% false-positive rate.",
+  "cases": [
+    {
+      "id": "trigger-bare-idea",
+      "shouldTrigger": true,
+      "prompt": "ship a keyboard shortcut help modal end-to-end — run the whole CE pipeline",
+      "expectedSkill": "ce-orchestrator",
+      "rationale": "Explicit request for end-to-end CE pipeline with unspecified stage; classic bare-idea entry point."
+    },
+    {
+      "id": "trigger-from-plan",
+      "shouldTrigger": true,
+      "prompt": "take docs/plans/2026-04-15-002-feat-search-plan.md and run it through to PR",
+      "expectedSkill": "ce-orchestrator",
+      "rationale": "Plan path + 'run it through to PR' signals downstream orchestration; plan-approval gate still applies."
+    },
+    {
+      "id": "trigger-bug-debug-path",
+      "shouldTrigger": true,
+      "prompt": "streak counter resets to 0 after midnight UTC — diagnose, fix, review, open PR",
+      "expectedSkill": "ce-orchestrator",
+      "rationale": "Bug description + multi-stage workflow (diagnose → fix → review → PR) matches the debug-input path with systematic-debugging preroll."
+    },
+    {
+      "id": "trigger-story-bridge",
+      "shouldTrigger": true,
+      "prompt": "ship docs/implementation-artifacts/stories/E92-S03.md through compound engineering",
+      "expectedSkill": "ce-orchestrator",
+      "rationale": "BMAD story path + 'compound engineering' → v2 story-to-brief bridge, then CE pipeline."
+    },
+    {
+      "id": "trigger-every-to-style",
+      "shouldTrigger": true,
+      "prompt": "run every.to's compound engineering workflow on this idea: dark-mode toggle",
+      "expectedSkill": "ce-orchestrator",
+      "rationale": "'every.to compound engineering workflow' is a direct reference to the pipeline this skill chains."
+    },
+    {
+      "id": "trigger-headless-automation",
+      "shouldTrigger": true,
+      "prompt": "run the CE pipeline headless from a shell script and give me the PR URL",
+      "expectedSkill": "ce-orchestrator",
+      "rationale": "Headless mode is a v2 feature of this skill specifically — JSON return contract for programmatic use."
+    },
+    {
+      "id": "trigger-autopilot-solo-dev",
+      "shouldTrigger": true,
+      "prompt": "ship 'add library continue-listening' in autopilot — only stop me for plan approval",
+      "expectedSkill": "ce-orchestrator",
+      "rationale": "v3 --autopilot flag explicitly preserves the plan gate. Request matches the semantics this skill owns."
+    },
+    {
+      "id": "trigger-from-requirements",
+      "shouldTrigger": true,
+      "prompt": "take docs/brainstorms/2026-04-10-search-refactor-requirements.md through plan + work + review + PR",
+      "expectedSkill": "ce-orchestrator",
+      "rationale": "Requirements doc + multi-stage chain = entry at /ce:plan. v2 classifier handles this shape."
+    },
+    {
+      "id": "trigger-with-cross-model",
+      "shouldTrigger": true,
+      "prompt": "run this plan end-to-end with cross-model review from openai and glm",
+      "expectedSkill": "ce-orchestrator",
+      "rationale": "Cross-model review flag is specific to ce-orchestrator; no other skill chains plan→work→review and supports it."
+    },
+    {
+      "id": "no-trigger-single-step-brainstorm",
+      "shouldTrigger": false,
+      "prompt": "brainstorm ideas for improving the course-import flow",
+      "expectedSkill": "ce-brainstorm",
+      "rationale": "Single-stage request — user wants /ce-brainstorm directly, not the full pipeline."
+    },
+    {
+      "id": "no-trigger-plan-only",
+      "shouldTrigger": false,
+      "prompt": "write a plan for adding dark mode",
+      "expectedSkill": "ce-plan",
+      "rationale": "Explicit single-stage: planning only. No pipeline signaled."
+    },
+    {
+      "id": "no-trigger-review-only",
+      "shouldTrigger": false,
+      "prompt": "review my current branch's changes",
+      "expectedSkill": "ce-review",
+      "rationale": "Review-only request. ce-orchestrator would overreach — it would re-plan, re-work, and re-review."
+    },
+    {
+      "id": "no-trigger-unrelated-format",
+      "shouldTrigger": false,
+      "prompt": "format my code",
+      "expectedSkill": null,
+      "rationale": "Unrelated utility request — must not over-trigger."
+    },
+    {
+      "id": "no-trigger-lfg-narrower",
+      "shouldTrigger": false,
+      "prompt": "run /lfg on the current plan",
+      "expectedSkill": "lfg",
+      "rationale": "User explicitly named /lfg. Should not hijack — ce-orchestrator only triggers when user asks for the full pipeline."
+    },
+    {
+      "id": "no-trigger-epic-level",
+      "shouldTrigger": false,
+      "prompt": "execute epic E92 from start to finish across all stories",
+      "expectedSkill": "epic-orchestrator",
+      "rationale": "Epic-level multi-story work is epic-orchestrator's domain. ce-orchestrator is single-story per invocation."
+    },
+    {
+      "id": "no-trigger-start-story-only",
+      "shouldTrigger": false,
+      "prompt": "/start-story E92-S05",
+      "expectedSkill": "start-story",
+      "rationale": "User explicitly invoked BMAD /start-story. ce-orchestrator should not preempt."
+    },
+    {
+      "id": "no-trigger-compound-only",
+      "shouldTrigger": false,
+      "prompt": "document the lessons from shipping the search refactor",
+      "expectedSkill": "ce-compound",
+      "rationale": "Post-merge lessons documentation is /ce-compound's job. ce-orchestrator defers to it via reminder, doesn't replace it."
+    }
+  ],
+  "assertions": {
+    "description": "Run via `python -m scripts.run_loop` (skill-creator). Targets below are v3 floor; description tuning should push higher.",
+    "targets": {
+      "truePositiveRate": 0.8,
+      "falsePositiveRate": 0.05
+    },
+    "knownFailureModes": [
+      "Confusion with /lfg — both chain plan→work→review. Disambiguation depends on upstream-stage signals (brainstorm/ideate) or explicit 'every.to' phrasing.",
+      "Confusion with epic-orchestrator — user requests covering 'ship this story' may match both. Epic-orchestrator wins when input is an epic ID; ce-orchestrator wins when input is a single idea/plan/story.",
+      "Over-triggering on 'compound engineering' phrase alone — the phrase is semantic, not contractual. Description must emphasize end-to-end pipeline, not just the words."
+    ]
+  }
+}

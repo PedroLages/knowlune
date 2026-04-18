@@ -4,6 +4,8 @@
 
 Per-story development loop with integrated quality gates. Three slash commands orchestrate the full cycle from branch creation to PR.
 
+**Alternative for new work:** `/ce-orchestrator "<idea>"` runs the Compound Engineering pipeline (brainstorm → plan → work → review → demo → PR) end-to-end with a single plan-approval gate. Use for net-new features where writing a BMAD story just to plan it is overhead; continue using `/start-story` → `/review-story` → `/finish-story` when the story already exists or when epic-level ceremony is needed. See [`.claude/skills/ce-orchestrator/SKILL.md`](../../skills/ce-orchestrator/SKILL.md).
+
 ## Commands
 
 | Command                 | Purpose                                                          |
