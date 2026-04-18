@@ -44,8 +44,10 @@ describe('LibraryShelves (E116-S03)', () => {
   it('renders a ShelfSeeAllLink within each shelf action slot', () => {
     render(<LibraryShelves />)
 
-    const seeAllLinks = screen.getAllByRole('link', { name: /See all/i })
-    expect(seeAllLinks.length).toBeGreaterThanOrEqual(2)
+    // ShelfSeeAllLink renders as <button> when no href is provided (in-page action variant).
+    // It renders as <a> (role="link") only when an href prop is supplied.
+    const seeAllButtons = screen.getAllByRole('button', { name: /See all/i })
+    expect(seeAllButtons.length).toBeGreaterThanOrEqual(2)
   })
 
   it('renders at least one card per shelf row', () => {
