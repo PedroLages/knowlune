@@ -43,7 +43,7 @@ export function useSyncLifecycle(): void {
     // the download phase of the initial sync notifies stores.
     // -------------------------------------------------------------------------
 
-    syncEngine.registerStoreRefresh('study_sessions', () =>
+    syncEngine.registerStoreRefresh('studySessions', () =>
       useSessionStore.getState().loadSessionStats()
     )
 

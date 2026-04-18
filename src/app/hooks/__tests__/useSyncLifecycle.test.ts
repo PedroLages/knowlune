@@ -262,13 +262,13 @@ describe('useSyncLifecycle', () => {
     expect(registerIndex).toBeLessThan(fullSyncIndex)
   })
 
-  it('registers store refresh with table name study_sessions', async () => {
+  it('registers store refresh with dexie table name studySessions', async () => {
     await act(async () => {
       renderHook(() => useSyncLifecycle())
     })
 
     expect(mockRegisterStoreRefresh).toHaveBeenCalledWith(
-      'study_sessions',
+      'studySessions',
       expect.any(Function)
     )
   })
