@@ -1426,9 +1426,6 @@ development_status:
 
   # ──────────────────────────────────────────────────
   # Epic 116: Library Page Primitives
-  # Source: CE pipeline (docs/brainstorms/2026-04-18-e116-s01-*)
-  # Shared shelf primitives for the Library page — extract pattern as consumer count grows
+  # Stories added incrementally as they're defined
   # ──────────────────────────────────────────────────
-  epic-116: in-progress
   116-1-library-shelf-row-primitive: done  # PR #338 merged 2026-04-18
-  epic-116-retrospective: optional
