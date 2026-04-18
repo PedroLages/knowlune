@@ -105,6 +105,7 @@ Detailed instructions are organized in `.claude/rules/` with smart path-specific
 - **[styling.md](.claude/rules/styling.md)** — Design tokens, Tailwind CSS v4, UI component library
 - **[automation.md](.claude/rules/automation.md)** — ESLint rules, git hooks, review agents (12 mechanisms)
 - **[workflows/story-workflow.md](.claude/rules/workflows/story-workflow.md)** — `/start-story`, `/review-story`, `/finish-story` commands
+- **[ce-orchestrator](.claude/skills/ce-orchestrator/SKILL.md)** — `/ce-orchestrator "<idea|story-path|plan-path>"` — full CE pipeline (brainstorm → plan → work → review → PR) with single plan-approval gate; preferred for net-new features over writing a BMAD story first
 
 ### Path-Specific Rules (Loaded Conditionally)
 

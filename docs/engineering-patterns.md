@@ -2,6 +2,23 @@
 
 Shared patterns extracted from retrospectives (Epics 5-9B). Read this before starting any story.
 
+## CE Orchestrator — Preferred Single-Feature Pipeline
+
+Use `/ce-orchestrator` as the entry point for any net-new feature, fix, or refactor where a BMAD story doesn't already exist. It chains brainstorm → plan → work → review → PR with a single hard human gate at plan approval.
+
+| Entry | Command | When |
+| --- | --- | --- |
+| Bare idea | `/ce-orchestrator "add keyboard shortcut help modal"` | New feature, no prior artifacts |
+| Existing story | `/ce-orchestrator docs/implementation-artifacts/E##-S##*.md` | BMAD story exists; bridges to CE plan |
+| Existing plan | `/ce-orchestrator docs/plans/YYYY-MM-DD-*-plan.md` | Skip brainstorm, go straight to gate |
+| Bug | `/ce-orchestrator "streak resets after midnight"` | Routes through systematic-debugging first |
+
+**Prefer this over `/lfg`** when the work needs upstream brainstorming or Knowlune's safety gates (bundle regression, ESLint design-tokens, port 5173 cleanup). Use `/lfg` only when a plan already exists and you want the narrower plan→work→review loop.
+
+**Epic-level:** use `/epic-orchestrator E##` for running all stories in an epic through the BMAD workflow.
+
+See: [`.claude/skills/ce-orchestrator/SKILL.md`](.claude/skills/ce-orchestrator/SKILL.md)
+
 ## IDB Cleanup in E2E Tests
 
 Always `await` IndexedDB cleanup in `afterEach`. Fire-and-forget causes flaky inter-test pollution.
