@@ -16,6 +16,8 @@ import {
   Highlighter,
   ChevronDown,
   ChevronRight,
+  Sparkles,
+  Clock,
 } from 'lucide-react'
 import {
   CommandDialog,
@@ -31,6 +33,14 @@ import { truncateSnippet, highlightMatches, buildHighlightPatterns } from '@/lib
 import { db } from '@/db/schema'
 import { useUnifiedSearchIndex } from '@/lib/useUnifiedSearchIndex'
 import type { EntityType, UnifiedSearchResult } from '@/lib/unifiedSearch'
+import {
+  recordVisit,
+  getRecentHits,
+  RECENT_LIST_KEY,
+  type RecentHit,
+} from '@/lib/searchFrecency'
+import { getMergedAuthors } from '@/lib/authors'
+import type { ImportedAuthor } from '@/data/types'
 
 // ────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -153,6 +163,27 @@ const navigationPages: PageItem[] = [
 ]
 
 // ────────────────────────────────────────────────────────────────────────────
+// Empty-state types
+// ────────────────────────────────────────────────────────────────────────────
+
+/** One row in the "Continue learning" empty-state section. */
+interface ContinueLearningItem {
+  type: 'course' | 'book'
+  id: string
+  title: string
+  subtitle?: string
+  /** ISO 8601 — used for ordering, not display. */
+  lastAt: string
+}
+
+/** Maximum rows rendered in the "Continue learning" section. */
+const CONTINUE_LEARNING_MAX = 2
+/** Maximum rows rendered in the "Recently opened" section. */
+const RECENT_OPENED_MAX = 5
+/** Number of Best Matches rows above the grouped sections. */
+const BEST_MATCHES_LIMIT = 3
+
+// ────────────────────────────────────────────────────────────────────────────
 // Component
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -173,7 +204,25 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
   const commandRootRef = useRef<HTMLDivElement | null>(null)
 
-  const { search } = useUnifiedSearchIndex()
+  const { search, searchBestMatches } = useUnifiedSearchIndex()
+
+  // ─── Empty-state state (palette-owned, not on the hook) ─────────────────
+  // Story 2 invariant: other hook consumers (Courses.tsx, Authors.tsx,
+  // Notes.tsx) must not re-render on palette-specific state changes.
+
+  // Recent hits — synchronous LS read on mount; re-read on cross-tab
+  // `storage` events and after `recordVisit` in this tab.
+  const [recentHits, setRecentHits] = useState<RecentHit[]>(() => getRecentHits())
+
+  // Continue Learning — `undefined` until the palette-open effect resolves,
+  // so we can discriminate "loading" from "definitively empty" and avoid
+  // flashing the welcome copy before Dexie answers.
+  const [continueLearning, setContinueLearning] = useState<
+    ContinueLearningItem[] | undefined
+  >(undefined)
+
+  // Best Matches (typed-query state).
+  const [bestMatches, setBestMatches] = useState<UnifiedSearchResult[]>([])
 
   const highlightPatterns = useMemo(() => buildHighlightPatterns(debouncedQuery), [debouncedQuery])
 
@@ -181,14 +230,32 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
   useEffect(() => {
     if (open) {
       previouslyFocusedRef.current = document.activeElement as HTMLElement
+      // Re-read LS on every open so a visit recorded in another tab while
+      // the palette was closed is reflected. The `storage` listener covers
+      // the live case; this covers the open-after-a-while case.
+      setRecentHits(getRecentHits())
     } else {
       setSearchQuery('')
       setDebouncedQuery('')
       setAnnouncedCount(null)
       setExpandedSections(new Set())
       setRemovedIds(new Set())
+      setBestMatches([])
+      // Drop Continue Learning so it re-derives on next open (handles
+      // progress updates that happened between open events).
+      setContinueLearning(undefined)
     }
   }, [open])
+
+  // Cross-tab sync — re-read LS when another tab writes to the recent list.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== RECENT_LIST_KEY) return
+      setRecentHits(getRecentHits())
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   // 150ms debounce for search
   useEffect(() => {
@@ -197,6 +264,139 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
     }, 150)
     return () => clearTimeout(timer)
   }, [searchQuery])
+
+  // ─── Continue Learning — one-shot query gated on open + empty query ─────
+  //
+  // Scope note: this is deliberately NOT a useLiveQuery on the hook. Running
+  // it on the hook would re-fire on every video playback tick across every
+  // hook consumer (Courses.tsx, Authors.tsx, Notes.tsx) even while the
+  // palette is closed. Gating on `open === true && debouncedQuery === ''`
+  // keeps it cold until needed.
+  useEffect(() => {
+    if (!open) return
+    if (debouncedQuery.trim().length > 0) return
+    if (continueLearning !== undefined) return // cached for this open lifetime
+
+    let ignore = false
+    void (async () => {
+      try {
+        const [courses, progressRows, books] = await Promise.all([
+          db.importedCourses.toArray(),
+          db.progress.toArray(),
+          // Non-indexed post-filter at projected scale — bounded by library size.
+          db.books
+            .where('lastOpenedAt')
+            .above('')
+            .reverse()
+            .filter(
+              b =>
+                b.status !== 'finished' &&
+                b.status !== 'abandoned' &&
+                (b.progress ?? 0) < 100
+            )
+            .limit(10)
+            .toArray(),
+        ])
+        if (ignore) return
+
+        // Build course-id → aggregate progress info map.
+        const progressByCourse = new Map<
+          string,
+          { anyStarted: boolean; maxUpdated?: string; maxCompleted?: string; completedCount: number }
+        >()
+        for (const row of progressRows) {
+          const entry = progressByCourse.get(row.courseId) ?? {
+            anyStarted: false,
+            maxUpdated: undefined,
+            maxCompleted: undefined,
+            completedCount: 0,
+          }
+          if ((row.currentTime ?? 0) > 0) entry.anyStarted = true
+          if (row.updatedAt && (!entry.maxUpdated || row.updatedAt > entry.maxUpdated)) {
+            entry.maxUpdated = row.updatedAt
+          }
+          if (row.completedAt && (!entry.maxCompleted || row.completedAt > entry.maxCompleted)) {
+            entry.maxCompleted = row.completedAt
+          }
+          if ((row.completionPercentage ?? 0) >= 90) entry.completedCount += 1
+          progressByCourse.set(row.courseId, entry)
+        }
+
+        const courseItems: ContinueLearningItem[] = []
+        for (const course of courses) {
+          const agg = progressByCourse.get(course.id)
+          if (!agg || !agg.anyStarted) continue
+          const videoCount = course.videoCount ?? 0
+          // Exclude fully-completed courses (>=100% completion).
+          if (videoCount > 0 && agg.completedCount >= videoCount) continue
+          const completionPercent =
+            videoCount > 0 ? Math.round((agg.completedCount / videoCount) * 100) : 0
+          if (completionPercent >= 100) continue
+          const lastAt = agg.maxUpdated ?? agg.maxCompleted ?? course.importedAt
+          courseItems.push({
+            type: 'course',
+            id: course.id,
+            title: course.name,
+            subtitle:
+              videoCount > 0
+                ? `${agg.completedCount} of ${videoCount} lessons · ${completionPercent}%`
+                : undefined,
+            lastAt,
+          })
+        }
+
+        const bookItems: ContinueLearningItem[] = books.map(b => ({
+          type: 'book' as const,
+          id: b.id,
+          title: b.title,
+          subtitle: b.author ? `${b.author} · ${b.progress ?? 0}%` : `${b.progress ?? 0}%`,
+          lastAt: b.lastOpenedAt ?? b.updatedAt ?? b.createdAt,
+        }))
+
+        // Merge, sort by most-recent, cap.
+        const merged = [...courseItems, ...bookItems]
+          .sort((a, b) => (a.lastAt < b.lastAt ? 1 : a.lastAt > b.lastAt ? -1 : 0))
+          .slice(0, CONTINUE_LEARNING_MAX)
+
+        if (!ignore) setContinueLearning(merged)
+      } catch (err) {
+        // silent-catch-ok: Continue Learning is a soft surface; fall back to []
+        console.error('[search-palette] continue-learning query failed:', err)
+        if (!ignore) setContinueLearning([])
+      }
+    })()
+
+    return () => {
+      ignore = true
+    }
+  }, [open, debouncedQuery, continueLearning])
+
+  // ─── Best Matches — runs on typed query, clears on empty ────────────────
+  useEffect(() => {
+    const q = debouncedQuery.trim()
+    if (!q) {
+      setBestMatches([])
+      return
+    }
+    let ignore = false
+    searchBestMatches(q, { limit: BEST_MATCHES_LIMIT })
+      .then(res => {
+        if (!ignore) setBestMatches(res)
+      })
+      .catch(err => {
+        // silent-catch-ok: Best Matches degrades to empty, grouped sections still render
+        console.error('[search-palette] searchBestMatches failed:', err)
+        if (!ignore) setBestMatches([])
+      })
+    return () => {
+      ignore = true
+    }
+  }, [debouncedQuery, searchBestMatches])
+
+  const bestMatchIds = useMemo(
+    () => new Set(bestMatches.map(r => `${r.type}:${r.id}`)),
+    [bestMatches]
+  )
 
   // Run unified search on debounced query; group by type.
   const groupedResults = useMemo(() => {
@@ -220,9 +420,18 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
   }, [debouncedQuery, search, removedIds])
 
   const hasActiveQuery = debouncedQuery.trim().length > 0
-  const totalResults = hasActiveQuery
-    ? SECTION_ORDER.reduce((acc, s) => acc + groupedResults[s.type].length, 0)
-    : 0
+  // Unique-id count across Best Matches + grouped sections. Best Matches is
+  // a subset of the same underlying result set, so the union produces the
+  // correct "N results" SR announcement.
+  const totalResults = useMemo(() => {
+    if (!hasActiveQuery) return 0
+    const ids = new Set<string>()
+    for (const s of SECTION_ORDER) {
+      for (const r of groupedResults[s.type]) ids.add(`${r.type}:${r.id}`)
+    }
+    for (const r of bestMatches) ids.add(`${r.type}:${r.id}`)
+    return ids.size
+  }, [hasActiveQuery, groupedResults, bestMatches])
 
   // Settle the live-region announcement after a 400ms pause so screen readers
   // don't read every intermediate count as the user types (D-MED-1).
@@ -324,8 +533,14 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
           break
         }
         case 'author': {
-          const row = await db.authors.get(result.id)
-          if (!row) exists = false
+          // Authors are validated against the merged projection (pre-seeded +
+          // imported), NOT raw `db.authors` — pre-seeded authors live only in
+          // the merged projection and would be falsely classified as deleted
+          // by a raw Dexie lookup. Story 1 latent-bug fix.
+          const storeAuthors = (await db.authors.toArray()) as ImportedAuthor[]
+          const merged = getMergedAuthors(storeAuthors)
+          const exists2 = merged.some(a => a.id === result.id)
+          if (!exists2) exists = false
           else path = `/authors/${result.id}`
           break
         }
@@ -346,8 +561,112 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
       return
     }
 
+    // Record the visit (LS + Dexie). Fire-and-forget — navigation must not
+    // block on the write. Optimistically update local `recentHits` so the
+    // palette's Recently-opened row reflects the new entry immediately on
+    // next open (cross-tab sync via `storage` listener covers other tabs).
+    void recordVisit(result.type, result.id).then(() => {
+      setRecentHits(getRecentHits())
+    })
+
     handleOpenChange(false)
-    navigate(path)
+    // `__viaPalette` tells Unit 5 route-mount effects to skip their own
+    // `recordVisit` so openCount is not double-counted.
+    navigate(path, { state: { __viaPalette: true } })
+  }
+
+  /**
+   * Continue Learning row select — always valid (we just queried Dexie).
+   * Records a visit, then navigates with the `__viaPalette` flag.
+   */
+  const handleContinueLearningSelect = (item: ContinueLearningItem) => {
+    const path =
+      item.type === 'course' ? `/courses/${item.id}` : `/library/${item.id}`
+    void recordVisit(item.type, item.id).then(() => {
+      setRecentHits(getRecentHits())
+    })
+    handleOpenChange(false)
+    navigate(path, { state: { __viaPalette: true } })
+  }
+
+  /**
+   * Recently Opened row select — validate against Dexie (the entry may refer
+   * to a deleted entity). Stale entries are purged from LS on the fly.
+   * For authors, validate against the merged projection (Story 1 latent-bug fix).
+   */
+  const handleRecentSelect = async (hit: RecentHit) => {
+    let path: string | null = null
+    let exists = true
+    try {
+      switch (hit.type) {
+        case 'course': {
+          const row = await db.importedCourses.get(hit.id)
+          if (!row) exists = false
+          else path = `/courses/${hit.id}`
+          break
+        }
+        case 'lesson': {
+          const row = await db.importedVideos.get(hit.id)
+          if (!row) exists = false
+          else path = `/courses/${row.courseId}/lessons/${hit.id}`
+          break
+        }
+        case 'book': {
+          const row = await db.books.get(hit.id)
+          if (!row) exists = false
+          else path = `/library/${hit.id}`
+          break
+        }
+        case 'note': {
+          const row = await db.notes.get(hit.id)
+          if (!row) exists = false
+          else
+            path = `/courses/${row.courseId}/lessons/${row.videoId}?panel=notes${
+              row.timestamp != null ? `&t=${row.timestamp}` : ''
+            }`
+          break
+        }
+        case 'highlight': {
+          const row = await db.bookHighlights.get(hit.id)
+          if (!row) exists = false
+          else
+            path = `/library/${row.bookId}/read?sourceHighlightId=${encodeURIComponent(hit.id)}`
+          break
+        }
+        case 'author': {
+          const storeAuthors = (await db.authors.toArray()) as ImportedAuthor[]
+          const merged = getMergedAuthors(storeAuthors)
+          if (!merged.some(a => a.id === hit.id)) exists = false
+          else path = `/authors/${hit.id}`
+          break
+        }
+      }
+    } catch (e) {
+      // silent-catch-ok: same deleted-entity fallback as handleResultSelect
+      console.warn('[search-palette] recent-hit existence check failed:', e)
+      exists = false
+    }
+
+    if (!exists || !path) {
+      toast.error('Item no longer available')
+      // Purge the stale entry from LS + local state.
+      const next = recentHits.filter(
+        h => !(h.type === hit.type && h.id === hit.id)
+      )
+      setRecentHits(next)
+      try {
+        localStorage.setItem(RECENT_LIST_KEY, JSON.stringify(next))
+      } catch {
+        // silent-catch-ok: LS purge is best-effort; user-visible toast already fired
+      }
+      return
+    }
+
+    void recordVisit(hit.type, hit.id).then(() => {
+      setRecentHits(getRecentHits())
+    })
+    handleOpenChange(false)
+    navigate(path, { state: { __viaPalette: true } })
   }
 
   const toggleExpand = (type: EntityType) => {
@@ -374,6 +693,21 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
   // Does at least one entity section have results? (controls whether empty
   // sections render a placeholder row or are suppressed — D-MED-6).
   const anyEntityHits = hasActiveQuery && totalResults > 0
+
+  // Empty-state decision variables. `continueLearning === undefined` means
+  // the Dexie query is still in flight — render Pages only and suppress the
+  // welcome copy to avoid a flash.
+  const isEmptyQuery = !hasActiveQuery
+  const isLoadingEmptyState = isEmptyQuery && continueLearning === undefined
+  const hasContinueLearning = (continueLearning?.length ?? 0) > 0
+  const displayedRecentHits = recentHits.slice(0, RECENT_OPENED_MAX)
+  const hasRecentOpened = displayedRecentHits.length > 0
+  // Fresh-install welcome: both empty-state rows are definitively empty.
+  const showWelcomeCopy =
+    isEmptyQuery && !isLoadingEmptyState && !hasContinueLearning && !hasRecentOpened
+  // Suppress Pages when welcome copy is visible — a 9-item nav list
+  // contradicts the "nothing here yet" message.
+  const showPages = !showWelcomeCopy
 
   return (
     <CommandDialog
@@ -404,11 +738,137 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
         {announcementText}
       </div>
       <CommandList>
-        <CommandEmpty>
-          {hasActiveQuery
-            ? 'No results found. Try different keywords or browse by tag.'
-            : 'No results found.'}
-        </CommandEmpty>
+        {/* CommandEmpty only rendered for typed-query empty state; the
+            palette's own empty-query render handles welcome copy and
+            continue-learning/recently-opened surfaces. */}
+        {hasActiveQuery && (
+          <CommandEmpty>
+            No results found. Try different keywords or browse by tag.
+          </CommandEmpty>
+        )}
+
+        {/* Welcome copy — fresh install, no imports, no opens. */}
+        {showWelcomeCopy && (
+          <div
+            className="flex flex-col items-center justify-center gap-2 px-6 py-10 text-center text-sm text-muted-foreground"
+            data-testid="search-welcome-copy"
+          >
+            <Sparkles className="size-6 text-muted-foreground" aria-hidden="true" />
+            <p>
+              Start by importing a course or adding a book. Press{' '}
+              <kbd className="rounded bg-muted px-1 py-0.5 text-xs">Cmd+K</kbd>{' '}
+              anytime to search.
+            </p>
+          </div>
+        )}
+
+        {/* Continue Learning — shown only on empty query, after Dexie resolves. */}
+        {isEmptyQuery && hasContinueLearning && continueLearning && (
+          <CommandGroup heading="Continue learning">
+            {continueLearning.map(item => {
+              const Icon = item.type === 'course' ? GraduationCap : BookOpen
+              return (
+                <CommandItem
+                  key={`cl:${item.type}:${item.id}`}
+                  value={`cl:${item.type}:${item.id}`}
+                  onSelect={() => handleContinueLearningSelect(item)}
+                  aria-label={`${item.title}, ${TYPE_BADGE_LABEL[item.type]}`}
+                  className="min-h-[44px]"
+                  data-testid={`search-continue-${item.type}-${item.id}`}
+                >
+                  <Icon className="mr-2 size-4 shrink-0" />
+                  <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                    <span className="text-sm truncate">{item.title}</span>
+                    {item.subtitle && (
+                      <span className="text-xs text-muted-foreground truncate">
+                        {item.subtitle}
+                      </span>
+                    )}
+                  </div>
+                  <Badge
+                    className={`ml-2 shrink-0 text-[10px] px-1.5 py-0 h-4 ${TYPE_BADGE_CLASS[item.type]}`}
+                  >
+                    {TYPE_BADGE_LABEL[item.type]}
+                  </Badge>
+                </CommandItem>
+              )
+            })}
+          </CommandGroup>
+        )}
+
+        {/* Recently Opened — shown only on empty query. Stale entries are
+            validated on select (not at render time) so render stays cheap. */}
+        {isEmptyQuery && hasRecentOpened && (
+          <CommandGroup heading="Recently opened">
+            {displayedRecentHits.map(hit => {
+              const sectionConfig = SECTION_ORDER.find(s => s.type === hit.type)
+              const Icon = sectionConfig?.icon ?? Clock
+              return (
+                <CommandItem
+                  key={`recent:${hit.type}:${hit.id}`}
+                  value={`recent:${hit.type}:${hit.id}`}
+                  onSelect={() => void handleRecentSelect(hit)}
+                  aria-label={`${hit.id}, ${TYPE_BADGE_LABEL[hit.type]}`}
+                  className="min-h-[44px]"
+                  data-testid={`search-recent-${hit.type}-${hit.id}`}
+                >
+                  <Icon className="mr-2 size-4 shrink-0" />
+                  <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                    <span className="text-sm truncate">{hit.id}</span>
+                  </div>
+                  <Badge
+                    className={`ml-2 shrink-0 text-[10px] px-1.5 py-0 h-4 ${TYPE_BADGE_CLASS[hit.type]}`}
+                  >
+                    {TYPE_BADGE_LABEL[hit.type]}
+                  </Badge>
+                </CommandItem>
+              )
+            })}
+          </CommandGroup>
+        )}
+
+        {/* Best Matches — typed query only, hidden when no matches. */}
+        {hasActiveQuery && bestMatches.length > 0 && (
+          <CommandGroup heading="Best Matches">
+            {bestMatches.map(r => {
+              const sectionConfig = SECTION_ORDER.find(s => s.type === r.type)
+              const Icon = sectionConfig?.icon ?? FileText
+              return (
+                <CommandItem
+                  // Distinct `value` prefix so cmdk treats the BM copy as a
+                  // separate selectable item from its duplicate (if any) in
+                  // the grouped section below.
+                  key={`bm:${r.type}:${r.id}`}
+                  value={`bm:${r.type}:${r.id}`}
+                  onSelect={() => handleResultSelect(r)}
+                  aria-label={`${r.displayTitle}, ${TYPE_BADGE_LABEL[r.type]}`}
+                  className="min-h-[44px]"
+                  data-testid={`search-best-match-${r.type}-${r.id}`}
+                >
+                  <Icon className="mr-2 size-4 shrink-0" />
+                  <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                    <span className="text-sm truncate">
+                      {highlightMatches(
+                        truncateSnippet(r.displayTitle),
+                        highlightPatterns
+                      )}
+                    </span>
+                    {r.subtitle && (
+                      <span className="text-xs text-muted-foreground truncate">
+                        {r.subtitle}
+                      </span>
+                    )}
+                  </div>
+                  <Badge
+                    className={`ml-2 shrink-0 text-[10px] px-1.5 py-0 h-4 ${TYPE_BADGE_CLASS[r.type]}`}
+                  >
+                    {TYPE_BADGE_LABEL[r.type]}
+                  </Badge>
+                </CommandItem>
+              )
+            })}
+          </CommandGroup>
+        )}
 
         {/* Unified entity sections (fixed order). Hidden when query is empty. */}
         {hasActiveQuery &&
@@ -448,39 +908,63 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
 
             return (
               <CommandGroup key={section.type} heading={section.heading}>
-                {shown.map(r => (
-                  <CommandItem
-                    key={`${r.type}:${r.id}`}
-                    value={`${r.type}:${r.id}`}
-                    onSelect={() => handleResultSelect(r)}
-                    // D-HIGH-3: meaningful accessible name composed of
-                    // "{displayTitle}, {type}" so AT announces the human
-                    // label instead of the synthetic "course:abc-123" value.
-                    aria-label={`${r.displayTitle}, ${TYPE_BADGE_LABEL[r.type]}`}
-                    // D-HIGH-4: 44×44px minimum touch target.
-                    className="min-h-[44px]"
-                    data-testid={`search-result-${r.type}-${r.id}`}
-                  >
-                    <SectionIcon className="mr-2 size-4 shrink-0" />
-                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                      <span className="text-sm truncate">
-                        {highlightMatches(truncateSnippet(r.displayTitle), highlightPatterns)}
-                      </span>
-                      {r.subtitle && (
-                        <span className="text-xs text-muted-foreground truncate">
-                          {r.subtitle}
-                        </span>
-                      )}
-                    </div>
-                    <Badge
-                      // D-MED-5: tinted per-type badge using theme tokens.
-                      // D-HIGH-3: no aria-label — visible text is sufficient.
-                      className={`ml-2 shrink-0 text-[10px] px-1.5 py-0 h-4 ${TYPE_BADGE_CLASS[r.type]}`}
+                {shown.map(r => {
+                  const dedupKey = `${r.type}:${r.id}`
+                  const isInBestMatches = bestMatchIds.has(dedupKey)
+                  // Dedup dimming (R-dedup): don't remove, dim via
+                  // `text-muted-foreground` on the title + `bg-muted`
+                  // badge tokens. Using opacity-* on OKLCH tokens would
+                  // produce unpredictable contrast per theme.
+                  const titleClass = isInBestMatches
+                    ? 'text-sm truncate text-muted-foreground'
+                    : 'text-sm truncate'
+                  const badgeClass = isInBestMatches
+                    ? 'ml-2 shrink-0 text-[10px] px-1.5 py-0 h-4 bg-muted text-muted-foreground'
+                    : `ml-2 shrink-0 text-[10px] px-1.5 py-0 h-4 ${TYPE_BADGE_CLASS[r.type]}`
+                  return (
+                    <CommandItem
+                      key={dedupKey}
+                      value={dedupKey}
+                      onSelect={() => handleResultSelect(r)}
+                      // D-HIGH-3: meaningful accessible name composed of
+                      // "{displayTitle}, {type}" so AT announces the human
+                      // label instead of the synthetic "course:abc-123" value.
+                      aria-label={`${r.displayTitle}, ${TYPE_BADGE_LABEL[r.type]}`}
+                      // Screen-reader equivalent of the sighted-user dimming cue.
+                      aria-description={
+                        isInBestMatches
+                          ? 'Also shown in Best Matches above'
+                          : undefined
+                      }
+                      data-in-best-matches={isInBestMatches || undefined}
+                      // D-HIGH-4: 44×44px minimum touch target.
+                      className="min-h-[44px]"
+                      data-testid={`search-result-${r.type}-${r.id}`}
                     >
-                      {TYPE_BADGE_LABEL[r.type]}
-                    </Badge>
-                  </CommandItem>
-                ))}
+                      <SectionIcon className="mr-2 size-4 shrink-0" />
+                      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                        <span className={titleClass}>
+                          {highlightMatches(
+                            truncateSnippet(r.displayTitle),
+                            highlightPatterns
+                          )}
+                        </span>
+                        {r.subtitle && (
+                          <span className="text-xs text-muted-foreground truncate">
+                            {r.subtitle}
+                          </span>
+                        )}
+                      </div>
+                      <Badge
+                        // D-MED-5: tinted per-type badge using theme tokens.
+                        // Dimmed rows drop to bg-muted / text-muted-foreground.
+                        className={badgeClass}
+                      >
+                        {TYPE_BADGE_LABEL[r.type]}
+                      </Badge>
+                    </CommandItem>
+                  )
+                })}
                 {hiddenCount > 0 && (
                   <CommandItem
                     key={`${section.type}-show-all`}
@@ -512,28 +996,30 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
             )
           })}
 
-        <CommandGroup heading="Pages">
-          {staticPagesFiltered.map(item => {
-            const Icon = item.icon
-            return (
-              <CommandItem
-                key={item.id}
-                value={item.id}
-                onSelect={() => handleStaticSelect(item.path)}
-                // D-HIGH-4: 44×44px minimum touch target.
-                className="min-h-[44px]"
-              >
-                <Icon className="mr-2 size-4 shrink-0" />
-                <span>{item.label}</span>
-                {item.id === 'page-settings' && (
-                  <CommandShortcut>
-                    <kbd>Cmd</kbd>+<kbd>,</kbd>
-                  </CommandShortcut>
-                )}
-              </CommandItem>
-            )
-          })}
-        </CommandGroup>
+        {showPages && (
+          <CommandGroup heading="Pages">
+            {staticPagesFiltered.map(item => {
+              const Icon = item.icon
+              return (
+                <CommandItem
+                  key={item.id}
+                  value={item.id}
+                  onSelect={() => handleStaticSelect(item.path)}
+                  // D-HIGH-4: 44×44px minimum touch target.
+                  className="min-h-[44px]"
+                >
+                  <Icon className="mr-2 size-4 shrink-0" />
+                  <span>{item.label}</span>
+                  {item.id === 'page-settings' && (
+                    <CommandShortcut>
+                      <kbd>Cmd</kbd>+<kbd>,</kbd>
+                    </CommandShortcut>
+                  )}
+                </CommandItem>
+              )
+            })}
+          </CommandGroup>
+        )}
       </CommandList>
     </CommandDialog>
   )

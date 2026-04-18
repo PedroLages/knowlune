@@ -21,7 +21,8 @@
  */
 // eslint-disable-next-line component-size/max-lines -- page orchestrator: coordinates reader subsystems (EPUB loading, position save, idle timer, keyboard nav, TOC, settings)
 import { lazy, Suspense, useEffect, useRef, useCallback, useState } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router'
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router'
+import { recordVisit } from '@/lib/searchFrecency'
 import type { Rendition } from 'epubjs'
 import type { NavItem } from 'epubjs'
 import { toast } from 'sonner'
@@ -83,6 +84,16 @@ function LoadingSkeleton({ message = 'Loading book...' }: { message?: string }) 
 export function BookReader() {
   const { bookId } = useParams<{ bookId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // R19: capture deep-links to the reader (e.g. /library/:bookId/read) that
+  // bypass the Library landing. Skipped for palette-initiated navigations.
+  useEffect(() => {
+    if (!bookId || bookId === 'undefined') return
+    const state = location.state as { __viaPalette?: boolean } | null
+    if (state?.__viaPalette === true) return
+    void recordVisit('book', bookId)
+  }, [bookId, location.state])
   const handleMinimize = useCallback(() => {
     if (window.history.length > 1) {
       navigate(-1)

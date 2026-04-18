@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable, type Table } from 'dexie'
+import type { EntityType } from '@/lib/unifiedSearch'
 import type {
   ImportedCourse,
   ImportedVideo,
@@ -44,7 +45,7 @@ import type {
   LearnerModel,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
-import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA } from './checkpoint'
+import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA, SEARCH_FRECENCY_INDEXES } from './checkpoint'
 
 /**
  * Sync queue entry — tracks pending push to Supabase.
@@ -71,6 +72,22 @@ export interface SyncMetadataEntry {
   table: string
   lastSyncTimestamp?: string
   lastUploadedKey?: string
+}
+
+/**
+ * Frecency row — persistent per-entity counter used by unified search to rank
+ * "Best Matches" above the grouped results (E117-S02).
+ *
+ * Compound primary key: `[entityType+entityId]` so a single entity maps to one row.
+ * Local-only: no `userId`, not in `SYNCABLE_TABLES`. Device-local ranking signal
+ * — cross-device sync is intentionally deferred (sync would make device-specific
+ * ranking shared, which isn't the desired semantic).
+ */
+export interface FrecencyRow {
+  entityType: EntityType
+  entityId: string
+  openCount: number
+  lastOpenedAt: string
 }
 
 /** Typed Dexie database interface for ElearningDB */
@@ -128,6 +145,8 @@ export type ElearningDatabase = Dexie & {
   // v52: Sync foundation (E92-S02)
   syncQueue: EntityTable<SyncQueueEntry, 'id'>
   syncMetadata: EntityTable<SyncMetadataEntry, 'table'>
+  // v53: Unified-search frecency counters (E117-S02). Compound PK: [entityType+entityId].
+  searchFrecency: Table<FrecencyRow, [string, string]>
 }
 
 /**
@@ -1510,6 +1529,19 @@ function _declareLegacyMigrations(database: Dexie): void {
             })
         )
       )
+    })
+
+  // v53 (E117-S02): Add `searchFrecency` table for unified-search ranking.
+  // Compound PK `[entityType+entityId]` so each entity has exactly one row.
+  // Local-only — intentionally NOT added to SYNCABLE_TABLES. No userId field.
+  // Upgrade body is empty: the table is new, there is nothing to backfill.
+  database
+    .version(53)
+    .stores({
+      searchFrecency: SEARCH_FRECENCY_INDEXES,
+    })
+    .upgrade(async _tx => {
+      // No backfill. Table is new; Dexie creates it on first open at v53.
     })
 } // end _declareLegacyMigrations
 

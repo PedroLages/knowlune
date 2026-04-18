@@ -231,6 +231,12 @@ export interface VideoProgress {
   completedAt?: string // ISO 8601
   /** Last-viewed PDF page (1-based). Used by PdfContent to restore position. */
   currentPage?: number
+  /**
+   * ISO 8601 — stamped by `syncableWrite` on every row mutation (post-v52 sync foundation).
+   * Captures "was touched" regardless of completion state; used by unified-search
+   * Continue Learning to order courses by most-recent activity.
+   */
+  updatedAt?: string
 }
 
 export interface VideoBookmark {

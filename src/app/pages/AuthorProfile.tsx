@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react'
-import { useParams, Link, useNavigate } from 'react-router'
+import { useState, useMemo, useEffect } from 'react'
+import { useParams, Link, useNavigate, useLocation } from 'react-router'
+import { recordVisit } from '@/lib/searchFrecency'
 import {
   BookOpen,
   Clock,
@@ -38,6 +39,16 @@ import { DeleteAuthorDialog } from '@/app/components/authors/DeleteAuthorDialog'
 export function AuthorProfile() {
   const { authorId } = useParams<{ authorId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // R19: record visit on direct navigation. Skipped for palette-initiated
+  // navigations to avoid openCount double-counting.
+  useEffect(() => {
+    if (!authorId || authorId === 'undefined') return
+    const state = location.state as { __viaPalette?: boolean } | null
+    if (state?.__viaPalette === true) return
+    void recordVisit('author', authorId)
+  }, [authorId, location.state])
   const { authors: storeAuthors, isLoaded, isLoading, loadAuthors } = useAuthorStore()
   const courses = useCourseStore(s => s.courses)
   const importedCourses = useCourseImportStore(state => state.importedCourses)
