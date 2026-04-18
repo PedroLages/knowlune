@@ -176,13 +176,175 @@ Do not paraphrase the user's notes. Do not read the plan back to the coordinator
 
 ---
 
-## 1. `ce-brainstorm-dispatcher` (Unit 2 — inline in SKILL.md §1.1)
+## 1. `input-classifier` (Unit 2 — v2 adaptive)
+
+**Role:** Detect which entry stage the user's input maps to. Fast classification, no code reading, no external calls beyond filesystem checks.
+
+**Model:** haiku
+
+**Inputs:** `$ARGUMENTS` string + repo root (`/Volumes/SSD/Dev/Apps/Knowlune`)
+
+**Prompt template:**
+
+```text
+You are the input-classifier for the CE orchestrator.
+
+User input:
+<<<
+<$ARGUMENTS>
+>>>
+
+Repo root: /Volumes/SSD/Dev/Apps/Knowlune
+
+Classify the input into ONE of these stages. Check in order; first match wins:
+
+1. If input is empty or whitespace only → `ERROR`
+2. If input matches regex `^docs/ideation/.+-\d{4}-\d{2}-\d{2}\.md$` AND the file exists → `brainstorm-from-ideation`
+3. If input matches regex `^docs/brainstorms/\d{4}-\d{2}-\d{2}-.+-requirements\.md$` AND the file exists → `plan`
+4. If input matches regex `^docs/plans/\d{4}-\d{2}-\d{2}-\d{3}-.+-plan\.md$` AND the file exists → `plan-approval`
+5. If input matches regex `^docs/implementation-artifacts/stories/E\d+-S\d+.*\.md$` AND the file exists → `story-to-brief`
+6. If input is a non-path string AND matches any of these bug-signal heuristics:
+   - Contains keywords (case-insensitive): bug, error, broken, fails, crashes, regression, reset, leak
+   - Starts with verb: fix, debug, diagnose, investigate
+   Then → `debug`
+7. Otherwise (any non-empty non-path string) → `brainstorm`
+
+Confidence:
+- `high`: rule 2-5 matched (path + file exists — unambiguous) OR rule 7 fallthrough on clearly descriptive idea (>20 chars, no bug keywords)
+- `medium`: rule 6 matched (bug heuristic) OR rule 7 fallthrough on short/ambiguous idea
+- `low`: input is path-shaped but file doesn't exist, OR input has mixed signals (e.g., contains both "bug" and "new feature")
+
+Return ONLY:
+```json
+{
+  "stage": "<one of: brainstorm | brainstorm-from-ideation | plan | plan-approval | story-to-brief | debug | ERROR>",
+  "resumeArtifact": "<path if rules 2-5 matched, else null>",
+  "rationale": "<one sentence: which rule fired and why>",
+  "confidence": "<high | medium | low>"
+}
+```
+
+Do not read file contents (just existence). Do not run git commands.
+
+/auto-answer autopilot
+```
+
+**Coordinator consumes:** the JSON verbatim. Branches on `stage`. On `low` confidence, surfaces to user via AskUserQuestion with top-2 alternatives.
+
+**Error handling:**
+
+- `stage: ERROR` (empty input) → exit with message `"Input required. Pass an idea string or one of: docs/ideation/*, docs/brainstorms/*, docs/plans/*, docs/implementation-artifacts/stories/E##-S##*.md"`.
+- Classifier returns malformed JSON → fallback to v1 minimal classifier (plan-path or bare idea); log warning for Unit 8 eval refinement.
+
+---
+
+## 1a. `ce-brainstorm-dispatcher` (Unit 2 — inline in SKILL.md §1.1)
 
 Full template lives in SKILL.md Phase 1.1. Pending move here if SKILL.md body exceeds 500 lines.
 
 ## 2. `ce-plan-dispatcher` (Unit 2 — inline in SKILL.md §1.2)
 
 Full template lives in SKILL.md Phase 1.2.
+
+## 12. `story-to-brief` (Unit 2 full — v2)
+
+**Role:** Translate a BMAD story file into a CE-shaped requirements brief. Strategic source of truth (the story file) is never modified — this is a one-way bridge into the CE pipeline.
+
+**Model:** sonnet
+
+**Inputs:** `storyPath` (e.g., `docs/implementation-artifacts/stories/E92-S03.md`)
+
+**Prompt template:**
+
+````text
+You are the story-to-brief bridge for the CE orchestrator.
+
+BMAD story: <storyPath>
+
+Read the story with the Read tool. Extract:
+1. **Title** — story title
+2. **Story ID** — e.g., "E92-S03"
+3. **Problem / user value** — what the story solves, for whom
+4. **Acceptance criteria** — verbatim AC list
+5. **Out of scope** — explicit non-goals from the story
+6. **Dependencies** — prerequisites, blocked-by
+7. **Context** — any technical notes, links to prior art
+
+Write a requirements doc at `docs/brainstorms/YYYY-MM-DD-<storyId-lowercase>-<kebab-slug>-requirements.md` using today's date. Use the CE brainstorm format:
+
+```markdown
+---
+title: "<Story title>"
+type: requirements
+status: active
+date: YYYY-MM-DD
+origin: <storyPath>
+bmad_story_id: <storyId>
+---
+
+# <Title>
+
+## Problem frame
+
+<problem + user value>
+
+## Scope
+
+### In scope
+<AC bullet list — verbatim>
+
+### Out of scope
+<verbatim non-goals + "anything not listed in AC">
+
+## Key decisions
+
+<any architectural notes from the story — leave empty if none>
+
+## Dependencies
+
+<dependencies list>
+
+## Open questions
+
+*None yet — surface in ce:plan if any emerge.*
+
+## Sources
+
+- Origin: [<storyPath>](<storyPath>)
+```
+
+Rules:
+- Never modify the original story file.
+- Never paraphrase ACs — copy them verbatim. Reviewers of the generated plan need to see the exact contract.
+- If the story has `Status: done` in its frontmatter, stop with `{"error": "story already done — cannot bridge"}`.
+- If the story has `status: draft` or missing AC, stop with `{"error": "story incomplete — fill AC section before running ce-orchestrator"}`.
+
+Return ONLY:
+```json
+{
+  "requirementsPath": "<the brainstorm doc path>",
+  "storyId": "<e.g., E92-S03>"
+}
+```
+
+Or on error: `{"error": "<reason>"}`.
+
+/auto-answer autopilot
+````
+
+**Coordinator consumes:** `{requirementsPath, storyId}`. Feeds `requirementsPath` into `ce-plan-dispatcher` as its normal input. `storyId` goes into tracking-file frontmatter for cross-reference.
+
+**Error handling:**
+
+- `{error: "story already done"}` → surface to user, halt. They likely meant to reopen/clone the story.
+- `{error: "story incomplete"}` → surface to user with guidance to fill AC, halt.
+- Requirements doc write fails (disk full, permissions) → surface error, halt. No retry — coordinator is not stateful enough to safely retry file writes.
+
+**Why sonnet and not opus:** translation from one structured doc format to another is mechanical with small judgment calls (which context bullet is technical note vs. AC dependency). Opus would be overkill; haiku might flatten nuance. Sonnet hits the sweet spot.
+
+**Why preserve the original story:** BMAD stories are the strategic layer (sprint status, epic tracking, retros). If `ce-orchestrator` mutated them, a run would change sprint state in surprising ways. Keeping the story read-only means the CE pipeline is additive — story still exists, now there's a brainstorm doc pointing back at it.
+
+---
 
 ## 5. `ce-work-dispatcher` (Unit 2 — inline in SKILL.md §2.1)
 

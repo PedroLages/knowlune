@@ -12,7 +12,7 @@ argument-hint: "[idea | docs/plans/*-plan.md] [--cross-model] [--autopilot (v3)]
 
 Drives a single unit of work end-to-end through the Compound Engineering pipeline with one hard human gate at **plan approval**. Terminal state: **PR created** (not merged). After merge, run `/ce-compound` to close the loop.
 
-**Status:** v1 — happy-path only. Adaptive entry, story-file bridge, tracking file, headless mode, `--autopilot`, and supporting-skill integrations land in v2–v3. See [plan](../../../../Users/pedro/.claude/plans/want-you-to-majestic-rabin.md).
+**Status:** v2 — adaptive entry + tracking file + headless JSON mode + BMAD story-file bridge. `--autopilot` and supporting-skill integrations (`episodic-memory`, `/techdebt`, `/design-review`, `/checkpoint`, `superpowers:systematic-debugging`) land in v3. See [plan](../../../../Users/pedro/.claude/plans/want-you-to-majestic-rabin.md).
 
 ## Usage
 
@@ -51,7 +51,26 @@ Immediately create the v1 todo list, first item `in_progress`:
 4. Phase 2 — /ce:work
 5. Phase 2 — pre-checks + /ce:review loop
 6. Phase 2 — demo-reel + PR
-7. Phase 3 — compound reminder + exit
+7. Phase 3 — compound gate + finalize + exit
+
+### 0.1b Tracking file init or resume (v2)
+
+Full spec: [references/tracking-file-schema.md](references/tracking-file-schema.md).
+
+1. Compute slug (from plan filename if plan-path input, else short hash of input text).
+2. Check if `.context/compound-engineering/ce-runs/{slug}-{YYYY-MM-DD}.md` exists.
+3. **If exists with non-terminal `status`:**
+   - AskUserQuestion (skipped in `--headless`, defaults to `Start fresh`):
+     - `Resume from <stage>` (Recommended)
+     - `Start fresh (archive previous as .abandoned.md)`
+     - `Abort`
+   - Resume: read frontmatter, rehydrate TodoWrite from `stagesCompleted`, jump to `stage`, skip sub-agents whose output artifacts already exist.
+   - Start fresh: `git mv` old file to `{slug}-{date}.abandoned.md`, create new.
+4. **If no existing file (or terminal status):** write fresh tracking file with `status: active`, `stage: phase-0`, `startedAt: <ISO now>`, `schemaVersion: 1`.
+
+### 0.1c Update tracking file on every phase boundary
+
+After each sub-agent returns success, coordinator updates frontmatter (`stage`, `updatedAt`, `artifacts.*`, `stagesCompleted`) and appends a short `## Phase N.N — <name>` body section. Must happen before dispatching the next sub-agent — protects against context compaction dropping state.
 
 ### 0.2 Capture last-green SHA
 
@@ -75,20 +94,43 @@ Print a one-shot banner before dispatching anything:
 ╰─────────────────────────────────────────────╯
 ```
 
-### 0.4 Classify (v1 minimal classifier)
+### 0.4 Classify (v2 adaptive classifier)
 
-- If `$ARGUMENTS` matches `docs/plans/*-plan.md` AND the path exists → stage = `plan-approval`, `planPath = <arg>`, skip brainstorm+plan.
-- Else if `$ARGUMENTS` is a non-empty string → stage = `brainstorm`, feed the string to `/ce:brainstorm`.
-- Else → surface error: `"Input required. Pass an idea string or a path to docs/plans/*-plan.md."` and exit.
+Dispatch `input-classifier` sub-agent (model: haiku) with the user's `$ARGUMENTS` string and repo root. Full prompt in [references/sub-agent-prompts.md § 1](references/sub-agent-prompts.md). Returns:
 
-Everything else (ideation docs, brainstorm docs, bug descriptions, BMAD story paths) returns a friendly v2-landing-pad message and exits:
-
-```text
-Input shape "{shape}" is supported in v2. For now:
-  • Bug? → run /ce:debug manually, then pass the resulting plan here.
-  • Existing brainstorm? → run /ce:plan manually, then pass the resulting plan here.
-  • BMAD story? → synthesize a plan via /ce:plan first.
+```json
+{
+  "stage": "brainstorm" | "brainstorm-from-ideation" | "plan" | "plan-approval" | "story-to-brief" | "debug",
+  "resumeArtifact": "<path or null>",
+  "rationale": "<one sentence>",
+  "confidence": "high | medium | low"
+}
 ```
+
+**Classification matrix:**
+
+| Input shape | Detection rule | → Stage | Next dispatch |
+|---|---|---|---|
+| Empty / whitespace | — | ERROR | Exit with friendly message |
+| Matches `docs/ideation/*-YYYY-MM-DD.md` (path exists) | glob + file test | `brainstorm-from-ideation` | `ce-brainstorm-dispatcher` with ideation path |
+| Matches `docs/brainstorms/YYYY-MM-DD-*-requirements.md` (path exists) | glob + file test | `plan` | `ce-plan-dispatcher` with requirements path |
+| Matches `docs/plans/YYYY-MM-DD-NNN-*-plan.md` (path exists) | glob + file test | `plan-approval` | `plan-summarizer`, skip to gate |
+| Matches `docs/implementation-artifacts/stories/E##-S##*.md` (path exists) | regex + file test | `story-to-brief` | `story-to-brief` sub-agent → `ce-plan-dispatcher` |
+| Non-path string with bug signal (keywords: `bug\|error\|broken\|fails\|crashes\|regression\|reset`, or starts with `fix\|debug\|diagnose`) | heuristic match | `debug` | `ce-debug-dispatcher` (prompt instructs systematic-debugging) |
+| Non-path string, any other content | fallthrough | `brainstorm` | `ce-brainstorm-dispatcher` with idea |
+
+**Low-confidence fallback:** if classifier returns `confidence: low`, surface to user via AskUserQuestion with the classifier's top-2 guesses + `None — abort and rethink`. User disambiguates in one click.
+
+**Story-file path handling (`stage: story-to-brief`):**
+
+When the classifier returns this stage, dispatch the `story-to-brief` sub-agent (model: sonnet — see [sub-agent-prompts.md § 12](references/sub-agent-prompts.md#12-story-to-brief-v2)) with the story path. It:
+
+1. Reads the BMAD story file.
+2. Extracts title, AC, context, dependencies, out-of-scope.
+3. Writes `docs/brainstorms/YYYY-MM-DD-e##-s##-<slug>-requirements.md` in the CE brainstorm format.
+4. Returns `{requirementsPath}`.
+
+Pipeline then continues from Phase 1.2 (`/ce:plan`) with that requirements path — same as if the user had run `/ce:brainstorm` themselves on the idea behind the story. The original BMAD story file is **not modified** — it remains the strategic source of truth.
 
 ## Phase 1 — Upstream (brainstorm → plan → approval)
 
@@ -379,9 +421,22 @@ Compound:     <see table below>
 | `run-pre-merge` | `Captured pre-merge → <solutionPath>` | No additional reminder (already done) |
 | `skipped` | `Skipped by user` | No reminder |
 
-### 3.3 Exit
+### 3.3 Finalize tracking file (v2)
 
-Mark all TodoWrite items complete. Exit with code 0 (or return JSON in headless mode — v2).
+Run `scripts/finalize-ce-run.sh <tracking-path> [--json]`:
+
+- Without `--json`: updates tracking frontmatter (`status: done`, appends summary section). Prints nothing to stdout.
+- With `--json` (headless mode only): emits a single-line JSON envelope to stdout matching the success shape in [references/headless-mode.md](references/headless-mode.md).
+
+### 3.4 Exit
+
+- **Interactive mode:** mark all TodoWrite items complete. Exit with code 0.
+- **Headless mode:** ensure the `finalize-ce-run.sh --json` output is the last thing written to stdout. Exit with code from [headless-mode.md exit code table](references/headless-mode.md#exit-code-table):
+  - `0` — `pr-created` or `pr-created-escalated`
+  - `2` — `aborted` (plan-confidence assertion failed)
+  - `3` — `review-escalated`
+  - `4` — `halted-at-<stage>`
+  - `10` — `internal-error`
 
 **Why the gate exists:** every.to's philosophy says compound is the step that produces compound gains — but only when the lessons are durable. Defer-by-default preserves durability (lessons come from shipped code), while "Run now" handles the case where implementation lessons were the point (e.g., the PR is about proving an approach, not shipping a feature).
 
@@ -401,6 +456,12 @@ Mark all TodoWrite items complete. Exit with code 0 (or return JSON in headless 
 ## References
 
 - Sub-agent model matrix: [references/sub-agent-models.md](references/sub-agent-models.md)
+- Sub-agent dispatch templates: [references/sub-agent-prompts.md](references/sub-agent-prompts.md) — input-classifier, plan-summarizer, plan-deepener, review-fixer, story-to-brief
+- Review loop semantics: [references/review-loop.md](references/review-loop.md)
+- Compound gate: [references/compound-reminder.md](references/compound-reminder.md)
+- Tracking file schema (v2): [references/tracking-file-schema.md](references/tracking-file-schema.md)
+- Headless mode (v2): [references/headless-mode.md](references/headless-mode.md)
+- Finalize script (v2): [scripts/finalize-ce-run.sh](scripts/finalize-ce-run.sh)
 - Plan (full design): [`want-you-to-majestic-rabin.md`](../../../../Users/pedro/.claude/plans/want-you-to-majestic-rabin.md)
 - Primary template: [`../epic-orchestrator/SKILL.md`](../epic-orchestrator/SKILL.md)
 - Shared discipline: [`../_shared/orchestrator-principles.md`](../_shared/orchestrator-principles.md)
