@@ -296,8 +296,7 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
     if (!text) return
     const timer = setTimeout(() => setScopeAnnouncement(text), 400)
     return () => clearTimeout(timer)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope, open])
+  }, [scope, open, scopeAnnouncement])
 
   /** Handle input change — parse prefix at position 0 to set scope. */
   const handleInputChange = (value: string) => {

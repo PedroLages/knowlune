@@ -1440,6 +1440,6 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-117: in-progress
   117-1-unified-search-index: done  # plan: docs/plans/2026-04-18-009-feat-unified-search-index-story-1-plan.md (PR #350 merged)
-  117-2-ranking-frecency-empty-state: in-progress  # plan: docs/plans/2026-04-18-010-feat-unified-search-ranking-empty-state-story-2-plan.md
-  117-3-prefix-filters-and-per-page-input-removal: backlog
+  117-2-ranking-frecency-empty-state: done  # plan: docs/plans/2026-04-18-010-feat-unified-search-ranking-empty-state-story-2-plan.md (PR #351 merged)
+  117-3-prefix-filters-and-per-page-input-removal: in-progress  # plan: docs/plans/2026-04-18-010-feat-unified-search-ranking-empty-state-story-2-plan.md
   epic-117-retrospective: optional
