@@ -1139,16 +1139,16 @@ development_status:
 
   # Epic 92: Sync Foundation — "Continue Where I Left Off"
   # Sync engine core, P0 tables (progress, sessions), table registry, offline handling, auth integration
-  epic-92: backlog
+  epic-92: done  # PRs #342-#348, completed 2026-04-18
   92-1-supabase-p0-migrations-and-extensions: done
   92-2-dexie-v52-migration-and-sync-infrastructure: done
-  92-3-sync-table-registry-and-field-mapping: ready-for-dev
-  92-4-syncable-write-wrapper: done
-  92-5-sync-engine-upload-phase: done
-  92-6-sync-engine-download-and-apply-phase: ready-for-dev
-  92-7-sync-triggers-and-offline-handling: done
+  92-3-sync-table-registry-and-field-mapping: done  # PR #342
+  92-4-syncable-write-wrapper: done  # PR #343
+  92-5-sync-engine-upload-phase: done  # PR #344
+  92-6-sync-engine-download-and-apply-phase: done  # PR #345
+  92-7-sync-triggers-and-offline-handling: done  # PR #346
   92-8-auth-lifecycle-integration-and-userid-backfill: done  # PR #347
-  92-9-wire-p0-stores-with-syncable-write: done
+  92-9-wire-p0-stores-with-syncable-write: done  # PR #348
   epic-92-retrospective: optional
 
   # Epic 93: Learning Content Sync — "My Notes and Cards Everywhere"
