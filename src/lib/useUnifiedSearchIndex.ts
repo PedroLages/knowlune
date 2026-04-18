@@ -41,6 +41,7 @@ import {
   type UnifiedSearchResult,
 } from '@/lib/unifiedSearch'
 import { applyFrecency, type FrecencyRow } from '@/lib/searchFrecency'
+import { getScopedTopResults } from '@/lib/searchScopedTop'
 import type {
   ImportedCourse,
   ImportedVideo,
@@ -136,6 +137,12 @@ export interface UnifiedSearchHook {
     query: string,
     opts?: SearchBestMatchesOptions
   ) => Promise<UnifiedSearchResult[]>
+  /**
+   * Return the top `limit` results for `type` ordered by frecency (most-recently-
+   * opened first), padded alphabetically with unopened corpus entries.
+   * Used by the palette's empty scoped-query branch (chip active, no text).
+   */
+  getTopByFrecency: (type: EntityType, limit: number) => Promise<UnifiedSearchResult[]>
 }
 
 /**
@@ -295,13 +302,22 @@ export function useUnifiedSearchIndex(): UnifiedSearchHook {
     [ready]
   )
 
+  const getTopByFrecency = useCallback(
+    (type: EntityType, limit: number) => {
+      if (!ready) return Promise.resolve([])
+      return getScopedTopResults(type, limit)
+    },
+    [ready]
+  )
+
   return useMemo<UnifiedSearchHook>(
     () => ({
       ready,
       search: (query, opts) => (ready ? unifiedSearch(query, opts) : []),
       searchBestMatches,
+      getTopByFrecency,
     }),
-    [ready, searchBestMatches]
+    [ready, searchBestMatches, getTopByFrecency]
   )
 }
 

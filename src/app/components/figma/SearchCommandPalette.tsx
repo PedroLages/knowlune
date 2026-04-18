@@ -209,7 +209,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
   const commandRootRef = useRef<HTMLDivElement | null>(null)
 
-  const { search, searchBestMatches } = useUnifiedSearchIndex()
+  const { search, searchBestMatches, getTopByFrecency } = useUnifiedSearchIndex()
 
   // ─── Empty-state state (palette-owned, not on the hook) ─────────────────
   // Story 2 invariant: other hook consumers (Courses.tsx, Authors.tsx,
@@ -228,6 +228,8 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
 
   // Best Matches (typed-query state).
   const [bestMatches, setBestMatches] = useState<UnifiedSearchResult[]>([])
+  // Scoped top-50 — populated when scope is set and query is empty.
+  const [scopedTopResults, setScopedTopResults] = useState<UnifiedSearchResult[]>([])
 
   const highlightPatterns = useMemo(() => buildHighlightPatterns(debouncedQuery), [debouncedQuery])
 
@@ -248,6 +250,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
       setExpandedSections(new Set())
       setRemovedIds(new Set())
       setBestMatches([])
+      setScopedTopResults([])
       // Drop Continue Learning so it re-derives on next open (handles
       // progress updates that happened between open events).
       setContinueLearning(undefined)
@@ -431,12 +434,41 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
     }
   }, [debouncedQuery, searchBestMatches])
 
+  // ─── Scoped top-50 — runs when scope set + query empty ─────────────────
+  useEffect(() => {
+    if (!scope || debouncedQuery.trim().length > 0) {
+      setScopedTopResults([])
+      return
+    }
+    let ignore = false
+    getTopByFrecency(scope, 50)
+      .then(res => {
+        if (!ignore) setScopedTopResults(res.filter(r => !removedIds.has(`${r.type}:${r.id}`)))
+      })
+      .catch(err => {
+        console.error('[search-palette] getTopByFrecency failed:', err)
+        if (!ignore) setScopedTopResults([])
+      })
+    return () => {
+      ignore = true
+    }
+  }, [scope, debouncedQuery, getTopByFrecency, removedIds])
+
   const bestMatchIds = useMemo(
     () => new Set(bestMatches.map(r => `${r.type}:${r.id}`)),
     [bestMatches]
   )
 
-  // Run unified search on debounced query; group by type.
+  // Scoped-typed results — when a scope is active AND there is a query.
+  const scopedTypedResults = useMemo<UnifiedSearchResult[]>(() => {
+    const q = debouncedQuery.trim()
+    if (!scope || !q) return []
+    return search(q, { types: [scope], limit: 300 }).filter(
+      r => !removedIds.has(`${r.type}:${r.id}`)
+    )
+  }, [scope, debouncedQuery, search, removedIds])
+
+  // Run unified search on debounced query; group by type (unscoped mode).
   const groupedResults = useMemo(() => {
     const q = debouncedQuery.trim()
     const groups: Record<EntityType, UnifiedSearchResult[]> = {
@@ -447,7 +479,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
       highlight: [],
       author: [],
     }
-    if (!q) return groups
+    if (!q || scope) return groups
     const all = search(q, { limit: 300 })
     for (const r of all) {
       if (removedIds.has(`${r.type}:${r.id}`)) continue
@@ -455,13 +487,12 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
       if (bucket) bucket.push(r)
     }
     return groups
-  }, [debouncedQuery, search, removedIds])
+  }, [debouncedQuery, scope, search, removedIds])
 
   const hasActiveQuery = debouncedQuery.trim().length > 0
-  // Unique-id count across Best Matches + grouped sections. Best Matches is
-  // a subset of the same underlying result set, so the union produces the
-  // correct "N results" SR announcement.
+  // Unique-id count for the SR announcement.
   const totalResults = useMemo(() => {
+    if (scope && hasActiveQuery) return scopedTypedResults.length
     if (!hasActiveQuery) return 0
     const ids = new Set<string>()
     for (const s of SECTION_ORDER) {
@@ -469,7 +500,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
     }
     for (const r of bestMatches) ids.add(`${r.type}:${r.id}`)
     return ids.size
-  }, [hasActiveQuery, groupedResults, bestMatches])
+  }, [scope, hasActiveQuery, scopedTypedResults, groupedResults, bestMatches])
 
   // Settle the live-region announcement after a 400ms pause so screen readers
   // don't read every intermediate count as the user types (D-MED-1).
@@ -482,12 +513,15 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
     return () => clearTimeout(timer)
   }, [hasActiveQuery, totalResults])
 
+  const scopeHeading = scope ? SECTION_ORDER.find(s => s.type === scope)?.heading : null
   const announcementText =
     announcedCount == null
       ? ''
-      : announcedCount === 1
-        ? '1 result'
-        : `${announcedCount} results`
+      : scopeHeading
+        ? `${announcedCount} ${scopeHeading}`
+        : announcedCount === 1
+          ? '1 result'
+          : `${announcedCount} results`
 
   /**
    * Home/End keyboard support (D-MED-3). cmdk handles arrows only — we
@@ -745,7 +779,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
     isEmptyQuery && !isLoadingEmptyState && !hasContinueLearning && !hasRecentOpened
   // Suppress Pages when welcome copy is visible — a 9-item nav list
   // contradicts the "nothing here yet" message.
-  const showPages = !showWelcomeCopy
+  const showPages = !showWelcomeCopy && !scope
 
   return (
     <CommandDialog
@@ -810,10 +844,21 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
         {scopeAnnouncement}
       </div>
       <CommandList>
-        {/* CommandEmpty only rendered for typed-query empty state; the
-            palette's own empty-query render handles welcome copy and
-            continue-learning/recently-opened surfaces. */}
-        {hasActiveQuery && (
+        {/* CommandEmpty — different messages for scoped vs unscoped zero results. */}
+        {hasActiveQuery && scope && scopedTypedResults.length === 0 && (
+          <CommandEmpty data-testid="search-scoped-empty">
+            No matches in {scopeHeading}.{' '}
+            <button
+              type="button"
+              onClick={() => { setScope(null); setSearchQuery('') }}
+              className="underline text-brand-soft-foreground"
+            >
+              Clear filter
+            </button>{' '}
+            to search everywhere.
+          </CommandEmpty>
+        )}
+        {hasActiveQuery && !scope && (
           <CommandEmpty>
             No results found. Try different keywords or browse by tag.
           </CommandEmpty>
@@ -834,8 +879,8 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
           </div>
         )}
 
-        {/* Continue Learning — shown only on empty query, after Dexie resolves. */}
-        {isEmptyQuery && hasContinueLearning && continueLearning && (
+        {/* Continue Learning — shown only on empty query (unscoped), after Dexie resolves. */}
+        {isEmptyQuery && !scope && hasContinueLearning && continueLearning && (
           <CommandGroup heading="Continue learning">
             {continueLearning.map(item => {
               const Icon = item.type === 'course' ? GraduationCap : BookOpen
@@ -868,9 +913,8 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
           </CommandGroup>
         )}
 
-        {/* Recently Opened — shown only on empty query. Stale entries are
-            validated on select (not at render time) so render stays cheap. */}
-        {isEmptyQuery && hasRecentOpened && (
+        {/* Recently Opened — shown only on empty query (unscoped). */}
+        {isEmptyQuery && !scope && hasRecentOpened && (
           <CommandGroup heading="Recently opened">
             {displayedRecentHits.map(hit => {
               const sectionConfig = SECTION_ORDER.find(s => s.type === hit.type)
@@ -899,8 +943,62 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
           </CommandGroup>
         )}
 
+        {/* Scoped empty-query — chip active, no text: frecency top-50. */}
+        {scope && !hasActiveQuery && scopedTopResults.length > 0 && (
+          <CommandGroup heading={scopeHeading ?? undefined} data-testid="search-scoped-top">
+            {scopedTopResults.map(r => {
+              const SectionIcon = SECTION_ORDER.find(s => s.type === r.type)?.icon ?? FileText
+              return (
+                <CommandItem
+                  key={`scoped:${r.type}:${r.id}`}
+                  value={`scoped:${r.type}:${r.id}`}
+                  onSelect={() => void handleResultSelect(r)}
+                  aria-label={`${r.displayTitle}, ${TYPE_BADGE_LABEL[r.type]}`}
+                  className="min-h-[44px]"
+                  data-testid={`search-scoped-top-${r.type}-${r.id}`}
+                >
+                  <SectionIcon className="mr-2 size-4 shrink-0" />
+                  <span className="text-sm truncate flex-1 min-w-0">{r.displayTitle}</span>
+                </CommandItem>
+              )
+            })}
+          </CommandGroup>
+        )}
+
+        {/* Scoped typed-query — chip active + text: filtered single group. */}
+        {scope && hasActiveQuery && scopedTypedResults.length > 0 && (
+          <CommandGroup heading={scopeHeading ?? undefined} data-testid="search-scoped-typed">
+            {scopedTypedResults.map(r => {
+              const SectionIcon = SECTION_ORDER.find(s => s.type === r.type)?.icon ?? FileText
+              return (
+                <CommandItem
+                  key={`scopedq:${r.type}:${r.id}`}
+                  value={`scopedq:${r.type}:${r.id}`}
+                  onSelect={() => void handleResultSelect(r)}
+                  aria-label={`${r.displayTitle}, ${TYPE_BADGE_LABEL[r.type]}`}
+                  className="min-h-[44px]"
+                  data-testid={`search-scoped-typed-${r.type}-${r.id}`}
+                >
+                  <SectionIcon className="mr-2 size-4 shrink-0" />
+                  <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                    <span className="text-sm truncate">
+                      {highlightMatches(truncateSnippet(r.displayTitle), highlightPatterns)}
+                    </span>
+                    {r.subtitle && (
+                      <span className="text-xs text-muted-foreground truncate">{r.subtitle}</span>
+                    )}
+                  </div>
+                  <Badge className={`ml-2 shrink-0 text-[10px] px-1.5 py-0 h-4 ${TYPE_BADGE_CLASS[r.type]}`}>
+                    {TYPE_BADGE_LABEL[r.type]}
+                  </Badge>
+                </CommandItem>
+              )
+            })}
+          </CommandGroup>
+        )}
+
         {/* Best Matches — typed query only, hidden when no matches. */}
-        {hasActiveQuery && bestMatches.length > 0 && (
+        {hasActiveQuery && !scope && bestMatches.length > 0 && (
           <CommandGroup heading="Best Matches">
             {bestMatches.map(r => {
               const sectionConfig = SECTION_ORDER.find(s => s.type === r.type)
@@ -942,8 +1040,8 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
           </CommandGroup>
         )}
 
-        {/* Unified entity sections (fixed order). Hidden when query is empty. */}
-        {hasActiveQuery &&
+        {/* Unified entity sections (fixed order). Hidden when query is empty or scoped. */}
+        {hasActiveQuery && !scope &&
           SECTION_ORDER.map(section => {
             const rows = groupedResults[section.type]
             const expanded = expandedSections.has(section.type)
