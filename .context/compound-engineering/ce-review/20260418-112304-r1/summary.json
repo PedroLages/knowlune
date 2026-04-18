@@ -1,0 +1,83 @@
+{
+  "run_id": "20260418-112304-r1",
+  "mode": "headless",
+  "branch": "feature/e116-s03-library-page-shelf-integration",
+  "base": "87c97e81ece0799d39191b93b3c2b00d868c4310",
+  "plan": "docs/plans/2026-04-18-003-feat-library-page-shelf-integration-plan.md",
+  "plan_source": "explicit",
+  "verdict": "Ready with fixes",
+  "applied_fixes": [],
+  "findings": [
+    {
+      "id": "F1",
+      "title": "Mock book data ships to production users on /library",
+      "severity": "MEDIUM",
+      "file": "src/app/components/library/LibraryShelves.tsx",
+      "line": 27,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "reviewer": "correctness,maintainability",
+      "confidence": 0.85,
+      "why_it_matters": "LibraryShelves is rendered unconditionally inside Library.tsx and displays hardcoded fake titles (The Pragmatic Programmer, Deep Work, Sapiens, etc.) that are not in the user's actual library. End users on /library will see books they do not own and cannot open, which is misleading UX. The plan scopes this as a 'demonstration' shelf, but the integration wires it into the production page with no feature flag or empty-state fallback.",
+      "evidence": [
+        "src/app/pages/Library.tsx L411-412: <LibraryShelves /> rendered unconditionally",
+        "src/app/components/library/LibraryShelves.tsx L27-38: hardcoded mock titles and authors",
+        "ShelfSeeAllLink href='/library?sort=recent' and '/library?filter=in-progress' point to query params the page does not handle"
+      ],
+      "suggested_fix": "Either (a) gate LibraryShelves behind an env/feature flag, (b) wire to real book store data (useBookStore) with empty-state handling, or (c) explicitly mark the page as a dev-only preview. Also confirm the see-all query-string routes are supported before the link ships."
+    },
+    {
+      "id": "F2",
+      "title": "ShelfSeeAllLink targets unimplemented query-string routes",
+      "severity": "LOW",
+      "file": "src/app/components/library/LibraryShelves.tsx",
+      "line": 84,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "reviewer": "correctness",
+      "confidence": 0.75,
+      "why_it_matters": "The hrefs '/library?sort=recent' and '/library?filter=in-progress' are passed to ShelfSeeAllLink but Library.tsx does not appear to read 'sort' or 'filter' from useSearchParams. Clicking 'See all' will reload the same page with no observable effect, creating a dead interaction.",
+      "evidence": [
+        "LibraryShelves.tsx L84: href='/library?sort=recent'",
+        "LibraryShelves.tsx L97: href='/library?filter=in-progress'",
+        "Library.tsx imports useSearchParams but no handler for these keys was introduced in this diff"
+      ],
+      "suggested_fix": "Either implement sort/filter query-param handling in Library.tsx or point the links at a known-valid route (or # placeholder with onClick preventing nav until implemented)."
+    },
+    {
+      "id": "F3",
+      "title": "Plan deviation: shelf data placed in separate component, not inline in Library.tsx",
+      "severity": "NIT",
+      "file": "src/app/components/library/LibraryShelves.tsx",
+      "line": 1,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "reviewer": "project-standards",
+      "confidence": 0.9,
+      "why_it_matters": "Plan Unit 1 specifies 'Define two inline const arrays in Library.tsx' and 'Modify: src/app/pages/Library.tsx'. Implementation instead extracted a new LibraryShelves.tsx component. The deviation is arguably better (smaller Library.tsx blast radius, testable in isolation) but was not recorded in the plan's Implementation Units checkboxes or Key Technical Decisions.",
+      "evidence": [
+        "Plan line 95-96: 'Modify: src/app/pages/Library.tsx' (no new file listed)",
+        "Plan line 100: 'Define two inline const arrays'",
+        "Diff adds new file LibraryShelves.tsx instead"
+      ],
+      "suggested_fix": "Update the plan or the story's Dev Notes to capture the extraction decision so the artifact trail stays accurate."
+    },
+    {
+      "id": "F4",
+      "title": "Unit test file path differs from plan (LibraryShelves.test.tsx vs Library.shelves.test.tsx)",
+      "severity": "NIT",
+      "file": "src/app/components/library/__tests__/LibraryShelves.test.tsx",
+      "line": 1,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "reviewer": "testing,project-standards",
+      "confidence": 0.95,
+      "why_it_matters": "Plan Unit 1 specifies the test file as 'src/app/pages/__tests__/Library.shelves.test.tsx'. Implementation places it at 'src/app/components/library/__tests__/LibraryShelves.test.tsx'. This is consistent with F3 (component extraction) — the test colocates with the component rather than the page. Flagged for trace completeness.",
+      "evidence": [
+        "Plan line 96: 'Test: src/app/pages/__tests__/Library.shelves.test.tsx'",
+        "Actual: src/app/components/library/__tests__/LibraryShelves.test.tsx"
+      ],
+      "suggested_fix": "Update plan or story notes to reflect the colocation decision."
+    }
+  ]
+}

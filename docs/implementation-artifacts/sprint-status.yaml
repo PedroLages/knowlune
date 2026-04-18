@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-18  # E116-S01 LibraryShelfRow primitive shipped (PR #338)
+last_updated: 2026-04-18  # E116 retrospective completed
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -1428,6 +1428,8 @@ development_status:
   # Epic 116: Library Page Primitives
   # Stories added incrementally as they're defined
   # ──────────────────────────────────────────────────
+  epic-116: done
   116-1-library-shelf-row-primitive: done  # PR #338 merged 2026-04-18
-  116-2-library-shelf-heading-improvements: planned
-  116-3-library-page-shelf-integration: planned
+  116-2-library-shelf-heading-improvements: done  # finishedAt: 2026-04-18, PR #339 merged
+  116-3-library-page-shelf-integration: done  # finishedAt: 2026-04-18, PR #340 merged
+  epic-116-retrospective: done  # Retro saved 2026-04-18: docs/implementation-artifacts/epic-116-retro-2026-04-18.md

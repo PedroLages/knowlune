@@ -959,3 +959,90 @@ await db.notes.toCollection().filter(r => !r.userId).modify(stamp)
 This is slower (full table scan vs index lookup), but it's the only reliable way to target "field not present" records. In steady state after backfill, the filter returns 0 rows so the performance cost is negligible.
 
 **Case study:** E92-S02 — first draft of `backfillUserId` used `.where('userId').equals(undefined)` and silently backfilled nothing. Switching to `.filter(r => !r.userId)` fixed it.
+
+## Primitive-First Decomposition for Page Features
+
+When building a multi-section page feature (shelves, grids, dashboards), ship the atomic primitives in their own stories **before** the story that integrates them into a route. Split by blast radius, not by file count.
+
+**Pattern:**
+1. S01/S02 — build atomic primitives in isolation (`LibraryShelfRow`, `LibraryShelfHeading`, `ShelfSeeAllLink`). Each has its own PR, tests, and review.
+2. S0N — integrate primitives into the parent container and mount on the route.
+
+**Why it works:** Review feedback on a primitive changes one file; feedback after integration can cascade through every consumer. By the time the integration story lands, the primitives are already hardened.
+
+**Case study:** E116 shipped three PRs in a single CE orchestrator run (#338/#339/#340). S03's review focused entirely on integration concerns (mock data, mount gating) because S01/S02 had already cleared the primitive-level concerns.
+
+## Barrel Export as Module Public API
+
+For a feature module with 2+ related components, create `src/app/components/<module>/index.ts` as the public API surface. Consumers import from the barrel; deep imports into specific files are treated as private.
+
+```typescript
+// src/app/components/library/index.ts
+export { LibraryShelfRow, type LibraryShelfRowProps } from './LibraryShelfRow'
+export { LibraryShelfHeading, type LibraryShelfHeadingProps } from './LibraryShelfHeading'
+export { ShelfSeeAllLink, type ShelfSeeAllLinkProps } from './ShelfSeeAllLink'
+```
+
+**Benefits:**
+- Consumers stay stable when internal files are renamed/split.
+- Makes the module's API surface explicit — anything not exported from the barrel is internal.
+- Prevents "which path do I import from" coupling.
+
+**Case study:** E116-S02 established `src/app/components/library/index.ts`; E116-S03's Library page integration imports exclusively from the barrel.
+
+## Deferred Mount for Feature-Complete-but-Unwired Components
+
+Ship a component fully built (tests, docs, review-clean) but do **not** mount it unconditionally on its route until real data wiring is ready. Prevents mock/placeholder data from reaching production.
+
+**Pattern:**
+```tsx
+// Library.tsx
+{shelvesReady && <LibraryShelves data={realData} />}
+// or simply: do not import/render LibraryShelves on the route yet
+```
+
+**Trigger:** Any story that ships a UI component whose real data source is a future story. Ship the component, gate the mount.
+
+**Case study:** E116-S03 R1 caught mock data about to ship to production (MEDIUM). Fix was to gate the `<LibraryShelves />` mount behind a real-data readiness check rather than delete the component.
+
+## Dynamic Semantic Heading Tag
+
+For heading primitives that must adapt to their document outline (`h2` inside a page, `h3` inside a section, `h4` inside a modal), accept a `headingLevel` prop and render via dynamic tag.
+
+```tsx
+type HeadingLevel = 'h2' | 'h3' | 'h4'
+
+interface LibraryShelfHeadingProps {
+  headingLevel?: HeadingLevel
+  // ...
+}
+
+export function LibraryShelfHeading({ headingLevel = 'h3', ...props }: LibraryShelfHeadingProps) {
+  const Tag = headingLevel
+  return <Tag className="...">{...}</Tag>
+}
+```
+
+**Why:** Semantic heading level should match outline depth (a11y + SEO), but the visual styling is usually identical across `h2`/`h3`/`h4`. Dynamic tag decouples semantics from style and stays TypeScript-safe — the union type narrows to valid intrinsic elements, so consumers cannot pass arbitrary strings.
+
+**Case study:** E116-S02 `LibraryShelfHeading` accepts `headingLevel: 'h2' | 'h3' | 'h4'` and shelves inside different page contexts pick the right level without duplicating the component.
+
+## Link-or-Button Duality for Action Components
+
+Action components that may be either a navigation link (`href`) or an in-page action (`onClick`) should render **the correct underlying element** based on which prop is provided — never an `<a>` with `onClick` and no href, and never a `<button>` styled as a link.
+
+```tsx
+export function ShelfSeeAllLink({ href, onClick, label, ...props }: ShelfSeeAllLinkProps) {
+  if (href) {
+    return <a href={href} {...props}>{label}</a>
+  }
+  return <button type="button" onClick={onClick} {...props}>{label}</button>
+}
+```
+
+**Critical details:**
+- `<button>` branch MUST include `type="button"` — default is `type="submit"` which triggers accidental form submission when nested inside any `<form>`.
+- Component must require `href XOR onClick` at the type level (or at runtime) — otherwise consumers hit silent "nothing happens on click" bugs.
+- a11y: when `label` is ambiguous (e.g., just "See all"), consumers should pass a descriptive `aria-label`. Consider requiring it via types when `label` is below a readability threshold.
+
+**Case study:** E116-S02 `ShelfSeeAllLink`. Deferred known-issue: aria-label pass-through when label differs from default "See all".
