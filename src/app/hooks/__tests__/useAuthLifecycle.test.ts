@@ -1,6 +1,6 @@
-// E43-S04: Tests for useAuthLifecycle hook
+// E43-S04 / E92-S08: Tests for useAuthLifecycle hook
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 
 // ---------------------------------------------------------------------------
@@ -26,9 +26,36 @@ vi.mock('@/lib/settings', () => ({
   hydrateSettingsFromSupabase: vi.fn(),
 }))
 
+vi.mock('@/lib/sync/backfill', () => ({
+  backfillUserId: vi.fn().mockResolvedValue({ tablesProcessed: 0, recordsStamped: 0, tablesFailed: [] }),
+  SYNCABLE_TABLES: ['notes', 'books'],
+}))
+
+vi.mock('@/lib/sync/syncEngine', () => ({
+  syncEngine: {
+    start: vi.fn().mockResolvedValue(undefined),
+    stop: vi.fn(),
+  },
+}))
+
+vi.mock('@/lib/sync/clearSyncState', () => ({
+  clearSyncState: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('@/lib/sync/hasUnlinkedRecords', () => ({
+  // Default: no unlinked records — tests override as needed
+  hasUnlinkedRecords: vi.fn().mockResolvedValue(false),
+}))
+
+// ---------------------------------------------------------------------------
 // Import after mocks
+// ---------------------------------------------------------------------------
 import { useAuthLifecycle } from '../useAuthLifecycle'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { syncEngine } from '@/lib/sync/syncEngine'
+import { clearSyncState } from '@/lib/sync/clearSyncState'
+import { hasUnlinkedRecords } from '@/lib/sync/hasUnlinkedRecords'
+import { backfillUserId } from '@/lib/sync/backfill'
 
 const makeSession = (userId = 'user-1'): Session =>
   ({
@@ -37,10 +64,29 @@ const makeSession = (userId = 'user-1'): Session =>
     refresh_token: 'refresh',
   }) as unknown as Session
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function resetMocks() {
+  vi.mocked(hasUnlinkedRecords).mockResolvedValue(false)
+  vi.mocked(backfillUserId).mockResolvedValue({ tablesProcessed: 0, recordsStamped: 0, tablesFailed: [] })
+  vi.mocked(syncEngine.start).mockResolvedValue(undefined)
+  vi.mocked(syncEngine.stop).mockReturnValue(undefined as unknown as void)
+  vi.mocked(clearSyncState).mockResolvedValue(undefined)
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 describe('useAuthLifecycle', () => {
   beforeEach(() => {
     authChangeCallback = null
     mockUnsubscribe.mockClear()
+    vi.clearAllMocks()
+    resetMocks()
+    localStorage.clear()
     // Reset auth store to defaults
     useAuthStore.setState({
       user: null,
@@ -55,12 +101,14 @@ describe('useAuthLifecycle', () => {
     vi.restoreAllMocks()
   })
 
+  // ── Existing auth state tests (E43-S04) ────────────────────────────────────
+
   it('sets sessionExpired on system-initiated SIGNED_OUT', () => {
     renderHook(() => useAuthLifecycle())
     expect(authChangeCallback).toBeTruthy()
 
     // Simulate system-initiated sign-out (no _userInitiatedSignOut flag)
-    authChangeCallback!('SIGNED_OUT', null)
+    act(() => { authChangeCallback!('SIGNED_OUT', null) })
 
     expect(useAuthStore.getState().sessionExpired).toBe(true)
   })
@@ -70,7 +118,7 @@ describe('useAuthLifecycle', () => {
     useAuthStore.setState({ _userInitiatedSignOut: true })
 
     renderHook(() => useAuthLifecycle())
-    authChangeCallback!('SIGNED_OUT', null)
+    act(() => { authChangeCallback!('SIGNED_OUT', null) })
 
     expect(useAuthStore.getState().sessionExpired).toBe(false)
     // Flag should be cleared after consumption
@@ -81,7 +129,7 @@ describe('useAuthLifecycle', () => {
     renderHook(() => useAuthLifecycle())
 
     const session = makeSession()
-    authChangeCallback!('TOKEN_REFRESHED', session)
+    act(() => { authChangeCallback!('TOKEN_REFRESHED', session) })
 
     const state = useAuthStore.getState()
     // Session should be updated
@@ -93,20 +141,20 @@ describe('useAuthLifecycle', () => {
     expect(state._userInitiatedSignOut).toBe(false)
   })
 
-  it('clears sessionExpired on SIGNED_IN', () => {
+  it('clears sessionExpired on SIGNED_IN', async () => {
     useAuthStore.setState({ sessionExpired: true })
 
     renderHook(() => useAuthLifecycle())
-    authChangeCallback!('SIGNED_IN', makeSession())
+    act(() => { authChangeCallback!('SIGNED_IN', makeSession()) })
 
     expect(useAuthStore.getState().sessionExpired).toBe(false)
   })
 
-  it('clears sessionExpired on INITIAL_SESSION', () => {
+  it('clears sessionExpired on INITIAL_SESSION', async () => {
     useAuthStore.setState({ sessionExpired: true })
 
     renderHook(() => useAuthLifecycle())
-    authChangeCallback!('INITIAL_SESSION', makeSession())
+    act(() => { authChangeCallback!('INITIAL_SESSION', makeSession()) })
 
     expect(useAuthStore.getState().sessionExpired).toBe(false)
   })
@@ -115,5 +163,87 @@ describe('useAuthLifecycle', () => {
     const { unmount } = renderHook(() => useAuthLifecycle())
     unmount()
     expect(mockUnsubscribe).toHaveBeenCalledTimes(1)
+  })
+
+  // ── E92-S08: sync lifecycle on SIGNED_OUT ──────────────────────────────────
+
+  it('stops syncEngine on SIGNED_OUT', () => {
+    renderHook(() => useAuthLifecycle())
+    act(() => { authChangeCallback!('SIGNED_OUT', null) })
+    expect(syncEngine.stop).toHaveBeenCalled()
+  })
+
+  it('calls clearSyncState on SIGNED_OUT', async () => {
+    renderHook(() => useAuthLifecycle())
+    act(() => { authChangeCallback!('SIGNED_OUT', null) })
+    // clearSyncState is async — wait for it
+    await vi.waitFor(() => expect(clearSyncState).toHaveBeenCalled())
+  })
+
+  // ── E92-S08: sync lifecycle on SIGNED_IN — no unlinked records ────────────
+
+  it('starts syncEngine when no unlinked records exist', async () => {
+    vi.mocked(hasUnlinkedRecords).mockResolvedValue(false)
+
+    renderHook(() => useAuthLifecycle())
+    act(() => { authChangeCallback!('SIGNED_IN', makeSession('user-1')) })
+
+    await vi.waitFor(() => expect(syncEngine.start).toHaveBeenCalledWith('user-1'))
+  })
+
+  it('calls backfillUserId when no unlinked records exist', async () => {
+    vi.mocked(hasUnlinkedRecords).mockResolvedValue(false)
+
+    renderHook(() => useAuthLifecycle())
+    act(() => { authChangeCallback!('SIGNED_IN', makeSession('user-1')) })
+
+    await vi.waitFor(() => expect(backfillUserId).toHaveBeenCalledWith('user-1'))
+  })
+
+  it('sets the localStorage linked flag when no unlinked records', async () => {
+    vi.mocked(hasUnlinkedRecords).mockResolvedValue(false)
+
+    renderHook(() => useAuthLifecycle())
+    act(() => { authChangeCallback!('SIGNED_IN', makeSession('user-1')) })
+
+    await vi.waitFor(() => {
+      expect(localStorage.getItem('sync:linked:user-1')).toBe('true')
+    })
+  })
+
+  // ── E92-S08: sync lifecycle on SIGNED_IN — unlinked records exist ──────────
+
+  it('calls onUnlinkedDetected when unlinked records exist', async () => {
+    vi.mocked(hasUnlinkedRecords).mockResolvedValue(true)
+    const onUnlinkedDetected = vi.fn()
+
+    renderHook(() => useAuthLifecycle({ onUnlinkedDetected }))
+    act(() => { authChangeCallback!('SIGNED_IN', makeSession('user-1')) })
+
+    await vi.waitFor(() => expect(onUnlinkedDetected).toHaveBeenCalledWith('user-1'))
+  })
+
+  it('does NOT start syncEngine when unlinked records exist (deferred to dialog)', async () => {
+    vi.mocked(hasUnlinkedRecords).mockResolvedValue(true)
+    const onUnlinkedDetected = vi.fn()
+
+    renderHook(() => useAuthLifecycle({ onUnlinkedDetected }))
+    act(() => { authChangeCallback!('SIGNED_IN', makeSession('user-1')) })
+
+    await vi.waitFor(() => expect(onUnlinkedDetected).toHaveBeenCalled())
+    expect(syncEngine.start).not.toHaveBeenCalled()
+  })
+
+  // ── E92-S08: fast-path for already-linked device ───────────────────────────
+
+  it('skips hasUnlinkedRecords and starts sync immediately when linked flag is set', async () => {
+    localStorage.setItem('sync:linked:user-1', 'true')
+
+    renderHook(() => useAuthLifecycle())
+    act(() => { authChangeCallback!('SIGNED_IN', makeSession('user-1')) })
+
+    await vi.waitFor(() => expect(syncEngine.start).toHaveBeenCalledWith('user-1'))
+    // hasUnlinkedRecords should NOT be called — fast path skips it
+    expect(hasUnlinkedRecords).not.toHaveBeenCalled()
   })
 })
