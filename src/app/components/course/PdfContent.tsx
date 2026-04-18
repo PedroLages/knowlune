@@ -13,6 +13,7 @@ import { Link } from 'react-router'
 import { FileWarning, FolderSearch, RefreshCw, ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/db/schema'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
 import { revokeObjectUrl } from '@/lib/courseAdapter'
 import { PdfViewer } from '@/app/components/figma/PdfViewer'
 import { Button } from '@/app/components/ui/button'
@@ -201,24 +202,25 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
     (page: number, _totalPages: number) => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
       saveTimerRef.current = setTimeout(() => {
+        // E92-S09: syncableWrite routes to Supabase video_progress via
+        // upsert_video_progress() (monotonic on watchedSeconds). Unify the
+        // previous two-branch update/put logic into a single put that spreads
+        // any existing record so currentTime/completionPercentage are
+        // preserved when only the PDF currentPage changes.
         db.progress
           .where('[courseId+videoId]')
           .equals([courseId, lessonId])
           .first()
           .then(async existing => {
-            if (existing) {
-              await db.progress.update([courseId, lessonId] as unknown as string, {
-                currentPage: page,
-              })
-            } else {
-              await db.progress.put({
-                courseId,
-                videoId: lessonId,
+            await syncableWrite('progress', 'put', {
+              ...(existing ?? {
                 currentTime: 0,
                 completionPercentage: 0,
-                currentPage: page,
-              })
-            }
+              }),
+              courseId,
+              videoId: lessonId,
+              currentPage: page,
+            })
           })
           .catch(() => {
             // silent-catch-ok — page save is non-critical

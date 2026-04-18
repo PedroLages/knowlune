@@ -5,6 +5,31 @@ import { persistWithRetry } from '@/lib/persistWithRetry'
 import { calculateQualityScore } from '@/lib/qualityScore'
 import { appEventBus } from '@/lib/eventBus'
 import { getCurrentStreak } from '@/lib/studyLog'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
+
+/**
+ * E92-S09: studySessions is an INSERT-only P0 sync table.
+ *
+ * Design decision (documented per AC2/Task 2.4, simpler-alternative path):
+ * - `startSession` keeps direct `db.studySessions.add(...)` — local-only,
+ *   no queue entry. userId stamping at this stage isn't required because the
+ *   terminal write in `endSession` re-stamps before enqueueing.
+ * - Intermediate mutations (`pauseSession`, `resumeSession`, `heartbeat`)
+ *   stay as direct `db.studySessions.put(...)` — transient local state that
+ *   must NOT be enqueued. The upload is INSERT-only and we want a single
+ *   terminal upload with the final, closed session state.
+ * - `endSession` enqueues the upload via `syncableWrite('studySessions',
+ *   'put', closedSession)` with the final state (duration, quality score).
+ *   Dexie put updates the existing local row; the queue entry feeds the
+ *   upload engine (E92-S05), which honours `insertOnly: true` → Supabase
+ *   upsert becomes INSERT ... ON CONFLICT DO NOTHING.
+ * - `recoverOrphanedSessions` closes each orphaned session and enqueues the
+ *   upload via `syncableWrite('studySessions', 'put', closedSession)` — the
+ *   session is already closed, so this captures the final local state.
+ *
+ * Supabase RLS (E92-S01) rejects UPDATE/DELETE on historical rows so
+ * re-enqueue of the same session id is harmless.
+ */
 
 interface SessionState {
   activeSession: StudySession | null
@@ -76,6 +101,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
+        // E92-S09: local-only write. The INSERT-only Supabase upload happens
+        // once at endSession — enqueueing here would upload a zero-duration
+        // session before the user finished. Keeping direct db.add also
+        // preserves the unique-id constraint error path (crypto.randomUUID
+        // collisions, though astronomically unlikely, still throw here).
         await db.studySessions.add(newSession)
       })
     } catch (error) {
@@ -152,6 +182,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
+        // E92-S09: local-only Dexie update; sync is INSERT-only and the
+        // row is uploaded once at endSession (or orphan recovery).
         await db.studySessions.put(updatedSession)
       })
     } catch (error) {
@@ -214,9 +246,17 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       : sessionWithDuration
 
     // Persist to database async (fire-and-forget for beforeunload compatibility)
-    // If this fails, orphan recovery will handle it on next load
+    // If this fails, orphan recovery will handle it on next load.
+    // E92-S09: syncableWrite stamps userId/updatedAt + enqueues a single
+    // upload entry for the terminal session state. Supabase upload engine
+    // honours tableRegistry.studySessions.insertOnly → INSERT ON CONFLICT
+    // DO NOTHING, so re-enqueue on orphan recovery is harmless.
     persistWithRetry(async () => {
-      await db.studySessions.put(closedSession)
+      await syncableWrite(
+        'studySessions',
+        'put',
+        closedSession as unknown as SyncableRecord,
+      )
     })
       .then(() => {
         // Notify listeners (e.g., momentum scores) that session data changed
@@ -300,7 +340,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           duration: Math.max(session.duration, totalSeconds), // Use calculated if greater
         }
 
-        await db.studySessions.put(closedSession)
+        // E92-S09: recovered sessions are closed → enqueue the terminal
+        // INSERT-only upload. Supabase upsert with ON CONFLICT DO NOTHING
+        // makes this idempotent if the row was already enqueued previously.
+        await syncableWrite(
+          'studySessions',
+          'put',
+          closedSession as unknown as SyncableRecord,
+        )
       }
 
       console.log(`[SessionStore] Recovered ${orphanedSessions.length} orphaned session(s)`)

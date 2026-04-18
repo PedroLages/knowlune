@@ -5,6 +5,15 @@ import { persistWithRetry } from '@/lib/persistWithRetry'
 import { markLessonComplete, markLessonIncomplete } from '@/lib/progress'
 import { appEventBus } from '@/lib/eventBus'
 import { MILESTONE_THRESHOLD } from '@/services/NotificationService'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
+
+// E92-S09: P0 contentProgress table is wired through syncableWrite.
+// - syncableWrite stamps userId/updatedAt and enqueues a Supabase upload entry.
+// - tableRegistry marks contentProgress with no stripFields/vaultFields (AC7),
+//   so the full record is serialized to Supabase content_progress.
+// - The transactional batch is replaced by a sequential loop of syncableWrite
+//   calls wrapped in persistWithRetry; atomicity across the cascade is best-effort
+//   (matches the pattern expected by the E92-S05 upload engine).
 
 interface ContentProgressState {
   /** Map of `courseId:itemId` → status for fast lookups */
@@ -113,18 +122,28 @@ export const useContentProgressStore = create<ContentProgressState>((set, get) =
 
     try {
       await persistWithRetry(async () => {
-        await db.transaction('rw', db.contentProgress, async () => {
-          const itemRecord: ContentProgress = {
-            courseId,
-            itemId,
-            status,
-            updatedAt: now,
-          }
-          await db.contentProgress.put(itemRecord)
-          for (const record of cascadeRecords) {
-            await db.contentProgress.put(record)
-          }
-        })
+        // E92-S09: syncableWrite stamps userId/updatedAt + enqueues upload.
+        // P0 table, no stripFields. Sequential loop (chosen over a Dexie
+        // transaction wrapper) because syncableWrite needs to enqueue each
+        // record; keeps the call pattern consistent with E92-S05 upload engine.
+        const itemRecord: ContentProgress = {
+          courseId,
+          itemId,
+          status,
+          updatedAt: now,
+        }
+        await syncableWrite(
+          'contentProgress',
+          'put',
+          itemRecord as unknown as SyncableRecord,
+        )
+        for (const record of cascadeRecords) {
+          await syncableWrite(
+            'contentProgress',
+            'put',
+            record as unknown as SyncableRecord,
+          )
+        }
       })
 
       // E60-S03 + E43-S07: Side-effect checks (notification triggers)

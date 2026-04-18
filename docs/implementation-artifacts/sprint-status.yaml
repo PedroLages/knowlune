@@ -1148,7 +1148,7 @@ development_status:
   92-6-sync-engine-download-and-apply-phase: ready-for-dev
   92-7-sync-triggers-and-offline-handling: done
   92-8-auth-lifecycle-integration-and-userid-backfill: done  # PR #347
-  92-9-wire-p0-stores-with-syncable-write: backlog
+  92-9-wire-p0-stores-with-syncable-write: done
   epic-92-retrospective: optional
 
   # Epic 93: Learning Content Sync — "My Notes and Cards Everywhere"
