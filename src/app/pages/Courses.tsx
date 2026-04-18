@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Card } from '@/app/components/ui/card'
 import { VirtualizedGrid } from '@/app/components/VirtualizedGrid'
-import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
 import {
   Select,
@@ -12,7 +11,7 @@ import {
 } from '@/app/components/ui/select'
 import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { StatusFilter } from '@/app/components/figma/StatusFilter'
-import { Search, FolderOpen, BookOpen, Youtube } from 'lucide-react'
+import { FolderOpen, BookOpen, Youtube } from 'lucide-react'
 import { getImportedCourseCompletionPercent } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
@@ -21,7 +20,7 @@ import { BulkImportDialog } from '@/app/components/figma/BulkImportDialog'
 import { YouTubeImportDialog } from '@/app/components/figma/YouTubeImportDialog'
 import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
-import { useUnifiedSearchIndex } from '@/lib/useUnifiedSearchIndex'
+import { HeaderSearchButton } from '@/app/components/figma/HeaderSearchButton'
 
 import type { LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
@@ -29,14 +28,6 @@ import type { MomentumScore } from '@/lib/momentum'
 type SortMode = 'recent' | 'momentum'
 
 export function Courses() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
-
-  // Debounce search filtering by 250ms so filtering doesn't run on every keystroke
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 250)
-    return () => clearTimeout(timer)
-  }, [searchQuery])
   const [selectedStatuses, setSelectedStatuses] = useState<LearnerCourseStatus[]>([])
   const [sortMode, setSortMode] = useState<SortMode>('recent')
   const [wizardOpen, setWizardOpen] = useState(false)
@@ -113,33 +104,10 @@ export function Courses() {
   // Keep legacy allTags for ImportedCourseCard (imported-only tags)
   const allTags = useMemo(() => getAllTags(), [getAllTags])
 
-  const { ready: searchReady, search: unifiedSearch } = useUnifiedSearchIndex()
-
   const filteredImportedCourses = useMemo(() => {
-    let courses = importedCourses
-
-    if (debouncedSearch.trim()) {
-      // Use the unified index (typo-tolerant, field-boosted) when ready.
-      // Fall back to the legacy substring filter if the index is still
-      // bootstrapping so the UI stays responsive during first paint.
-      if (searchReady) {
-        const results = unifiedSearch(debouncedSearch, { types: ['course'] })
-        const matchedIds = new Set(results.map(r => r.id))
-        courses = courses.filter(c => matchedIds.has(c.id))
-      } else {
-        const q = debouncedSearch.toLowerCase()
-        courses = courses.filter(
-          c => c.name.toLowerCase().includes(q) || c.tags.some(t => t.toLowerCase().includes(q))
-        )
-      }
-    }
-
-    if (selectedStatuses.length > 0) {
-      courses = courses.filter(c => selectedStatuses.includes(c.status))
-    }
-
-    return courses
-  }, [importedCourses, debouncedSearch, selectedStatuses, searchReady, unifiedSearch])
+    if (selectedStatuses.length === 0) return importedCourses
+    return importedCourses.filter(c => selectedStatuses.includes(c.status))
+  }, [importedCourses, selectedStatuses])
 
   // AC1-AC4 (E1C-S05): Sort imported courses by momentum or importedAt
   const sortedImportedCourses = useMemo(() => {
@@ -240,33 +208,9 @@ export function Courses() {
         </Card>
       ) : (
         <>
-          <Card className="bg-card rounded-2xl border-0 shadow-sm p-6 mb-6">
-            <div className="flex gap-4 items-center">
-              <div className="relative flex-1 min-w-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
-                <Input
-                  type="text"
-                  name="course-search"
-                  autoComplete="off"
-                  placeholder="Search for courses…"
-                  aria-label="Search courses"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-muted border-0"
-                />
-              </div>
-              <Button
-                variant="brand"
-                onClick={() => {
-                  setSearchQuery('')
-                  setDebouncedSearch('')
-                }}
-                aria-label={searchQuery ? 'Clear search' : 'Search courses'}
-              >
-                {searchQuery ? 'Clear' : 'Search'}
-              </Button>
-            </div>
-          </Card>
+          <div className="flex justify-end mb-4">
+            <HeaderSearchButton scope="course" />
+          </div>
 
           {/* AC5 (E1C-S05): Sort dropdown alongside filters */}
           <div className="flex flex-wrap gap-x-6 gap-y-2 items-start">
@@ -292,8 +236,7 @@ export function Courses() {
           </div>
 
           {/* Imported Courses Section */}
-          {(importedCourses.length > 0 || !searchQuery.trim()) && (
-            <div className="mb-8">
+          <div className="mb-8">
               <h2 className="text-xl font-semibold mb-4">Imported Courses</h2>
               {importedCourses.length === 0 ? (
                 <div
@@ -317,8 +260,7 @@ export function Courses() {
                 </div>
               ) : filteredImportedCourses.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  No imported courses match your{' '}
-                  {selectedStatuses.length > 0 ? 'filters' : 'search'}
+                  No imported courses match your filters
                 </div>
               ) : (
                 <VirtualizedGrid
@@ -337,7 +279,6 @@ export function Courses() {
                 />
               )}
             </div>
-          )}
         </>
       )}
     </div>

@@ -148,6 +148,12 @@ vi.mock('@/stores/useAuthorStore', () => ({
     }),
 }))
 
+vi.mock('@/app/components/figma/HeaderSearchButton', () => ({
+  HeaderSearchButton: ({ scope }: { scope: string }) => (
+    <button data-testid={`header-search-btn-${scope}`}>Search</button>
+  ),
+}))
+
 vi.mock('@/lib/authors', () => ({
   getAuthorForCourse: () => undefined,
   getAuthorForImportedCourse: () => undefined,
