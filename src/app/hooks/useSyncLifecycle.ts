@@ -1,0 +1,173 @@
+/**
+ * E92-S07: Sync trigger hook — event-driven sync lifecycle.
+ *
+ * Registers store refresh callbacks on the sync engine BEFORE the first
+ * fullSync(), then wires up all event sources:
+ *   - App mount  → fullSync()
+ *   - 30s timer  → nudge() [if navigator.onLine]
+ *   - tab focus  → nudge() [if visible + navigator.onLine]
+ *   - online     → fullSync() (reconnection recovery)
+ *   - offline    → setStatus('offline') (no engine pause — that is E92-S08)
+ *   - beforeunload → sendBeacon (structural scaffolding — endpoint is future work)
+ *
+ * Scope boundaries:
+ *   - Does NOT call syncEngine.start() or syncEngine.stop() — those are E92-S08.
+ *   - Does NOT register contentProgress store refresh — loadCourseProgress()
+ *     requires a mandatory courseId argument; no loadAll() variant exists (S07).
+ *   - /api/sync-beacon endpoint does not exist — sendBeacon silently fails.
+ *
+ * Called from App.tsx root so triggers are active for the entire app session.
+ */
+
+import { useEffect, useRef } from 'react'
+import { syncEngine } from '@/lib/sync/syncEngine'
+import { useSessionStore } from '@/stores/useSessionStore'
+import { useSyncStatusStore } from '@/app/stores/useSyncStatusStore'
+
+/** Interval between periodic nudge calls (ms). */
+const NUDGE_INTERVAL_MS = 30_000
+
+/** Maximum sendBeacon payload size (bytes). Browsers reject larger payloads. */
+const BEACON_MAX_BYTES = 64_000
+
+export function useSyncLifecycle(): void {
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+
+    const { setStatus, markSyncComplete } = useSyncStatusStore.getState()
+
+    // -------------------------------------------------------------------------
+    // Store refresh registrations — MUST happen before first fullSync() so that
+    // the download phase of the initial sync notifies stores.
+    // -------------------------------------------------------------------------
+
+    syncEngine.registerStoreRefresh('studySessions', () =>
+      useSessionStore.getState().loadSessionStats()
+    )
+
+    // Intentional: contentProgress store refresh is NOT registered here.
+    // useContentProgressStore.loadCourseProgress(courseId) requires a mandatory
+    // courseId argument — no loadAll() variant exists in S07. The store will
+    // refresh on next route navigation. A global loadAll() can be added to
+    // useContentProgressStore in a later story if cross-session refresh is needed.
+
+    // -------------------------------------------------------------------------
+    // Initial fullSync on mount
+    // -------------------------------------------------------------------------
+
+    setStatus('syncing')
+    syncEngine
+      .fullSync()
+      .then(() => {
+        if (!mountedRef.current) return
+        markSyncComplete()
+      })
+      .catch((err: unknown) => {
+        if (!mountedRef.current) return
+        console.error('[useSyncLifecycle] Initial fullSync failed:', err)
+        setStatus('error')
+      })
+
+    // -------------------------------------------------------------------------
+    // Periodic nudge — 30 second interval
+    // -------------------------------------------------------------------------
+
+    const intervalId = setInterval(() => {
+      // Intentional: guard prevents nudge calls when offline. The engine's own
+      // _started guard also fires, but checking navigator.onLine first avoids
+      // queuing a debounced upload that would immediately fail.
+      if (navigator.onLine) {
+        syncEngine.nudge()
+      }
+    }, NUDGE_INTERVAL_MS)
+
+    // -------------------------------------------------------------------------
+    // Tab visibility change → nudge on becoming visible
+    // -------------------------------------------------------------------------
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        syncEngine.nudge()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // -------------------------------------------------------------------------
+    // Network online → reconnection full sync
+    // -------------------------------------------------------------------------
+
+    const handleOnline = () => {
+      const { setStatus: setState, markSyncComplete: markComplete } =
+        useSyncStatusStore.getState()
+      setState('syncing')
+      syncEngine
+        .fullSync()
+        .then(() => {
+          if (!mountedRef.current) return
+          markComplete()
+        })
+        .catch((err: unknown) => {
+          if (!mountedRef.current) return
+          console.error('[useSyncLifecycle] Reconnection fullSync failed:', err)
+          setState('error')
+        })
+    }
+    window.addEventListener('online', handleOnline)
+
+    // -------------------------------------------------------------------------
+    // Network offline → update status store (no engine pause — that is E92-S08)
+    // -------------------------------------------------------------------------
+
+    const handleOffline = () => {
+      useSyncStatusStore.getState().setStatus('offline')
+    }
+    window.addEventListener('offline', handleOffline)
+
+    // -------------------------------------------------------------------------
+    // Before unload → sendBeacon for pending queue entries
+    //
+    // Intentional: beacon endpoint is future work — this call silently fails.
+    // The pattern is structural scaffolding: when /api/sync-beacon is eventually
+    // implemented, remove this comment and add the endpoint test.
+    //
+    // Intentional: Dexie reads inside beforeunload are async and cannot be
+    // awaited before page unload. The beacon may carry stale data or fail
+    // entirely — this is a known browser limitation of beforeunload + IndexedDB.
+    // -------------------------------------------------------------------------
+
+    const handleBeforeUnload = () => {
+      if (!navigator.sendBeacon) return
+
+      // Fire-and-forget Dexie read — result may not arrive before page unload.
+      void (async () => {
+        try {
+          const pending = await import('@/db').then(({ db: d }) =>
+            d.syncQueue.where('status').equals('pending').toArray()
+          )
+          const payload = JSON.stringify(pending)
+          if (payload.length < BEACON_MAX_BYTES) {
+            navigator.sendBeacon('/api/sync-beacon', payload)
+          }
+        } catch {
+          // Intentional: silent failure — beacon is best-effort pre-unload flush.
+        }
+      })()
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    // -------------------------------------------------------------------------
+    // Cleanup — remove all listeners and clear the interval
+    // -------------------------------------------------------------------------
+
+    return () => {
+      mountedRef.current = false
+      clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [])
+}
