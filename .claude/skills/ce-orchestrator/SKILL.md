@@ -137,6 +137,22 @@ When the classifier returns this stage, dispatch the `story-to-brief` sub-agent 
 
 Pipeline then continues from Phase 1.2 (`/ce:plan`) with that requirements path — same as if the user had run `/ce:brainstorm` themselves on the idea behind the story. The original BMAD story file is **not modified** — it remains the strategic source of truth.
 
+**Sprint-status tracking (v4):** immediately after `story-to-brief` returns, dispatch `sprint-status-updater` (haiku) to mark the story `in-progress` in `docs/implementation-artifacts/sprint-status.yaml`. Mirrors what `/start-story` does. Prompt:
+
+```text
+Update docs/implementation-artifacts/sprint-status.yaml.
+Find the entry for story id "<E##-S##>". Set:
+  status: in-progress
+  startedAt: <ISO now>
+  branch: <current branch name from `git branch --show-current`>
+If the entry doesn't exist, return `{"error": "story not in sprint-status"}` — do NOT create a new entry.
+Return ONLY: `{"updated": true}` or `{"error": "<reason>"}`.
+
+/auto-answer autopilot
+```
+
+On error: log warning, proceed. Sprint tracking is additive bookkeeping — never halts the pipeline.
+
 ### 0.5 Episodic-memory context recall (v3)
 
 After classifier returns, before any Phase 1 dispatch: dispatch `episodic-memory-searcher` (haiku) to retrieve prior sessions on this topic. See [references/autonomy-boundary.md § 0.5](references/autonomy-boundary.md#05-episodic-memory-context-recall-phase-0-before-brainstorm) and [references/sub-agent-prompts.md § 13](references/sub-agent-prompts.md#13-episodic-memory-searcher-v3).
@@ -268,21 +284,39 @@ The single sacred checkpoint. Every.to: "silence is not approval" — default op
 
 **Full flow spec:** [references/sub-agent-prompts.md § Plan-approval gate flow](references/sub-agent-prompts.md#plan-approval-gate-flow-phase-13-full-spec). Summary below.
 
-1. Dispatch `plan-summarizer` (model: haiku) on `planPath` → get ≤300-word digest.
-2. Display digest in terminal. Use **AskUserQuestion**:
-   - `Approve (Recommended)` → Phase 2
-   - `Request changes` → enter deepen loop
-   - `Abort` → tracking.status = `aborted`, exit
-3. **Deepen loop** (max 2 rounds):
-   - Prompt for user notes via AskUserQuestion free-text.
-   - Dispatch `ce-plan-deepener` (model: opus) with `{planPath, userNotes}` → ce:plan runs in interactive deepening mode and mutates the plan in place.
-   - Re-dispatch `plan-summarizer` → fresh digest.
-   - Ask again: `Approve` / `Request more changes (if round < 2)` / `Abort`.
-4. After 2 rounds without approval: offer `Proceed with unresolved notes (appended to plan)` or `Abort`.
+1. **Dispatch in parallel:**
+   - `plan-summarizer` (model: haiku) on `planPath` → ≤300-word digest.
+   - `plan-critic` (model: opus) on `planPath` + origin doc → adversarial multi-lens review (v4).
+2. **plan-critic** runs `compound-engineering:document-review` internally across 5 lenses — Coherence, Feasibility, Scope-alignment, Testability, AC-traceability — and returns:
 
-**Never bypass this gate in v1.** `--headless` treatment (gate → confidence assertion) lands in v2. `--autopilot` flag (v3) explicitly does NOT skip this gate — only cosmetic choices.
+   ```json
+   {
+     "confidenceScore": 0-100,
+     "verdict": "approve | request-changes | reject",
+     "blockers": [{"lens": "...", "issue": "...", "severity": "high|medium"}],
+     "strengths": ["..."],
+     "summary": "<=150 words"
+   }
+   ```
+
+3. Display digest + critic verdict together. Use **AskUserQuestion**:
+   - `Approve (Recommended)` → Phase 2
+   - `Request changes` → deepen loop
+   - `Abort` → tracking.status = `aborted`, exit
+4. **Deepen loop** (max 2 rounds):
+   - Prompt for user notes via AskUserQuestion free-text. If `plan-critic` returned blockers, pre-fill notes with the blocker list so the deepener addresses them.
+   - Dispatch `ce-plan-deepener` (model: opus) with `{planPath, userNotes}` → ce:plan runs in interactive deepening mode and mutates the plan in place.
+   - Re-dispatch `plan-summarizer` + `plan-critic` → fresh digest + verdict.
+   - Ask again: `Approve` / `Request more changes (if round < 2)` / `Abort`.
+5. After 2 rounds without approval: offer `Proceed with unresolved notes (appended to plan)` or `Abort`.
+
+**Autopilot auto-approve path (v4):** when `--autopilot` is set AND `plan-critic.confidenceScore >= 85` AND `plan-critic.blockers.length == 0` AND `plan-critic.verdict == "approve"` → coordinator bypasses the AskUserQuestion step and proceeds to Phase 2. Tracking marks `planApproval: auto-approved-by-critic`. All other autopilot cases still require the human click.
+
+**Never bypass this gate without critic consent.** `--headless` treatment asserts `confidenceScore >= 85` and aborts if the critic says reject. The sacred property (every.to: "silence is not approval") holds: approval is always explicit — either human click or critic-authorized with full audit trail.
 
 **Why max 2 rounds:** if a plan needs 3+ refinements, the original requirements were likely wrong — better to abort and re-brainstorm than force a bad plan through.
+
+**Why 85 threshold:** leaves headroom for the critic's own uncertainty. 100 would require perfection; below 80 would approve plans with material gaps. 85 empirically splits "ship with confidence" from "human judgment needed" on our sample runs.
 
 ### 1.4 TodoWrite update
 
@@ -453,6 +487,22 @@ Return ONLY: `{"prUrl": "<url>", "merged": true}` or `{"prUrl": "<url>", "merged
 
 /auto-answer autopilot
 ```
+
+**Sprint-status tracking — post-merge (v4):** if the original input was a story file (`storyId` recorded in tracking), dispatch `sprint-status-updater` (haiku) after the merge returns `merged: true`:
+
+```text
+Update docs/implementation-artifacts/sprint-status.yaml.
+Find story "<E##-S##>". Set:
+  status: done
+  finishedAt: <ISO now>
+  prUrl: <prUrl>
+  mergedAt: <ISO now>
+Return ONLY: `{"updated": true}` or `{"error": "<reason>"}`.
+
+/auto-answer autopilot
+```
+
+On error: log warning, do NOT halt — the merge succeeded; sprint tracking is additive. Non-story inputs (bare ideas, bug descriptions) skip this dispatch — nothing to update.
 
 ### 2.6 Phase-boundary checkpoints (v3)
 
