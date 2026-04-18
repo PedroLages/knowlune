@@ -25,7 +25,7 @@ vi.mock('@/lib/sync/countUnlinkedRecords', () => ({
 }))
 
 vi.mock('@/lib/sync/backfill', () => ({
-  backfillUserId: vi.fn().mockResolvedValue(undefined),
+  backfillUserId: vi.fn().mockResolvedValue({ tablesProcessed: 0, recordsStamped: 0, tablesFailed: [] }),
   SYNCABLE_TABLES: ['notes', 'books'],
 }))
 
@@ -83,12 +83,16 @@ beforeEach(() => {
     flashcards: 0,
     other: 0,
   })
-  vi.mocked(backfillUserId).mockResolvedValue(undefined)
+  vi.mocked(backfillUserId).mockResolvedValue({
+    tablesProcessed: 0,
+    recordsStamped: 0,
+    tablesFailed: [],
+  })
   vi.mocked(syncEngine.start).mockResolvedValue(undefined)
   vi.mocked(clearSyncState).mockResolvedValue(undefined)
   vi.mocked(db.table).mockReturnValue({
     clear: vi.fn().mockResolvedValue(undefined),
-  } as ReturnType<typeof db.table>)
+  } as unknown as ReturnType<typeof db.table>)
   // Ensure window.confirm returns true by default (user confirms)
   vi.spyOn(window, 'confirm').mockReturnValue(true)
 })
