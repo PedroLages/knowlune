@@ -21,6 +21,7 @@ import { BulkImportDialog } from '@/app/components/figma/BulkImportDialog'
 import { YouTubeImportDialog } from '@/app/components/figma/YouTubeImportDialog'
 import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
+import { useUnifiedSearchIndex } from '@/lib/useUnifiedSearchIndex'
 
 import type { LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
@@ -112,14 +113,25 @@ export function Courses() {
   // Keep legacy allTags for ImportedCourseCard (imported-only tags)
   const allTags = useMemo(() => getAllTags(), [getAllTags])
 
-  const filteredImportedCourses = (() => {
+  const { ready: searchReady, search: unifiedSearch } = useUnifiedSearchIndex()
+
+  const filteredImportedCourses = useMemo(() => {
     let courses = importedCourses
 
     if (debouncedSearch.trim()) {
-      const q = debouncedSearch.toLowerCase()
-      courses = courses.filter(
-        c => c.name.toLowerCase().includes(q) || c.tags.some(t => t.toLowerCase().includes(q))
-      )
+      // Use the unified index (typo-tolerant, field-boosted) when ready.
+      // Fall back to the legacy substring filter if the index is still
+      // bootstrapping so the UI stays responsive during first paint.
+      if (searchReady) {
+        const results = unifiedSearch(debouncedSearch, { types: ['course'] })
+        const matchedIds = new Set(results.map(r => r.id))
+        courses = courses.filter(c => matchedIds.has(c.id))
+      } else {
+        const q = debouncedSearch.toLowerCase()
+        courses = courses.filter(
+          c => c.name.toLowerCase().includes(q) || c.tags.some(t => t.toLowerCase().includes(q))
+        )
+      }
     }
 
     if (selectedStatuses.length > 0) {
@@ -127,7 +139,7 @@ export function Courses() {
     }
 
     return courses
-  })()
+  }, [importedCourses, debouncedSearch, selectedStatuses, searchReady, unifiedSearch])
 
   // AC1-AC4 (E1C-S05): Sort imported courses by momentum or importedAt
   const sortedImportedCourses = useMemo(() => {
