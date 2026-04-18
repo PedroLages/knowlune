@@ -14,6 +14,7 @@
  */
 
 import { Children, type ReactNode } from 'react'
+import { LibraryShelfHeading } from '@/app/components/library/LibraryShelfHeading'
 
 export interface LibraryShelfRowProps {
   /** Lucide-style icon component (e.g., `Clock`, `Headphones`) */
@@ -44,7 +45,7 @@ function isChildrenEmpty(children: ReactNode): boolean {
 }
 
 export function LibraryShelfRow({
-  icon: Icon,
+  icon,
   label,
   count,
   subtitle,
@@ -59,33 +60,14 @@ export function LibraryShelfRow({
 
   return (
     <section className="mb-8" data-testid={testId ?? 'library-shelf-row'}>
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h3
-            className="flex items-center gap-2 text-lg font-semibold text-foreground"
-            data-testid={testId ? `${testId}-heading` : 'library-shelf-row-heading'}
-          >
-            <Icon className="size-5" aria-hidden="true" />
-            <span className="truncate">{label}</span>
-            {typeof count === 'number' && (
-              <span className="font-normal text-muted-foreground">({count})</span>
-            )}
-          </h3>
-          {subtitle && (
-            <p className="text-sm text-muted-foreground" data-testid={testId ? `${testId}-subtitle` : 'library-shelf-row-subtitle'}>
-              {subtitle}
-            </p>
-          )}
-        </div>
-        {actionSlot && (
-          <div
-            className="shrink-0"
-            data-testid={testId ? `${testId}-actions` : 'library-shelf-row-actions'}
-          >
-            {actionSlot}
-          </div>
-        )}
-      </div>
+      <LibraryShelfHeading
+        icon={icon}
+        label={label}
+        count={count}
+        subtitle={subtitle}
+        actionSlot={actionSlot}
+        data-testid={testId}
+      />
 
       <div
         className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 -mx-2 px-2 scroll-smooth"

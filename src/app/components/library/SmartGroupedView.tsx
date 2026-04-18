@@ -15,6 +15,7 @@ import { LocalSeriesCard } from '@/app/components/library/LocalSeriesCard'
 import { BookContextMenu } from '@/app/components/library/BookContextMenu'
 import { BookCard } from '@/app/components/library/BookCard'
 import { BookListItem } from '@/app/components/library/BookListItem'
+import { LibraryShelfHeading } from '@/app/components/library/LibraryShelfHeading'
 import type { Book, LocalSeriesGroup } from '@/data/types'
 
 type FormatTab = 'all' | 'audiobooks' | 'ebooks'
@@ -53,28 +54,6 @@ function BookList({ books, onEdit }: { books: Book[]; onEdit: (book: Book) => vo
   )
 }
 
-function SectionHeading({
-  icon: Icon,
-  label,
-  count,
-  testId,
-}: {
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-  count: number
-  testId: string
-}) {
-  return (
-    <h3
-      className="flex items-center gap-2 text-lg font-semibold text-foreground mb-4"
-      data-testid={testId}
-    >
-      <Icon className="size-5" aria-hidden="true" />
-      {label} <span className="text-muted-foreground font-normal">({count})</span>
-    </h3>
-  )
-}
-
 function CollapsibleSection({
   books,
   onEdit,
@@ -97,7 +76,12 @@ function CollapsibleSection({
 
   return (
     <div className="mb-8">
-      <SectionHeading icon={icon} label={label} count={books.length} testId={testId} />
+      <LibraryShelfHeading
+        icon={icon}
+        label={label}
+        count={books.length}
+        data-testid={testId}
+      />
       <BooksView books={displayedBooks} onEdit={onEdit} />
       {books.length > SECTION_LIMIT && !expanded && (
         <button
