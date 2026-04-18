@@ -72,7 +72,7 @@ describe('E93-S02 P1 sync wiring — notes', () => {
 
     const stored = await db.notes.get(note.id)
     expect(stored).toBeDefined()
-    expect((stored as Record<string, unknown>).userId).toBe(TEST_USER_ID)
+    expect((stored as unknown as Record<string, unknown>).userId).toBe(TEST_USER_ID)
 
     const queue = await db.syncQueue.toArray()
     const entries = queue.filter(q => q.tableName === 'notes')
@@ -210,7 +210,7 @@ describe('E93-S02 P1 sync wiring — bookmarks', () => {
 
     const bookmarks = await db.bookmarks.toArray()
     expect(bookmarks).toHaveLength(1)
-    expect((bookmarks[0] as Record<string, unknown>).userId).toBe(TEST_USER_ID)
+    expect((bookmarks[0] as unknown as Record<string, unknown>).userId).toBe(TEST_USER_ID)
     expect(bookmarks[0].updatedAt).toBeDefined()
 
     const queue = await db.syncQueue.toArray()
