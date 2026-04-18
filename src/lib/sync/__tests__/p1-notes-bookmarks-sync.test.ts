@@ -21,6 +21,7 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach } from 'vitest'
 import Dexie from 'dexie'
 import { vi } from 'vitest'
+import type { Note } from '@/data/types'
 
 let useNoteStore: (typeof import('@/stores/useNoteStore'))['useNoteStore']
 let useBookmarkStore: (typeof import('@/stores/useBookmarkStore'))['useBookmarkStore']
@@ -30,6 +31,24 @@ let db: (typeof import('@/db'))['db']
 const TEST_USER_ID = 'user-e93-s02'
 const TEST_COURSE_ID = 'course-p1'
 const TEST_LESSON_ID = 'lesson-p1'
+
+function makeNote(overrides?: Partial<Note>): Note {
+  return {
+    id: crypto.randomUUID(),
+    courseId: TEST_COURSE_ID,
+    videoId: TEST_LESSON_ID,
+    content: 'Integration test note',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    tags: [],
+    ...overrides,
+  }
+}
+
+async function getQueueEntries(table: string) {
+  const queue = await db.syncQueue.toArray()
+  return queue.filter(q => q.tableName === table)
+}
 
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
@@ -58,15 +77,7 @@ beforeEach(async () => {
 
 describe('E93-S02 P1 sync wiring — notes', () => {
   it('saveNote produces a syncQueue put entry for tableName: notes', async () => {
-    const note = {
-      id: crypto.randomUUID(),
-      courseId: TEST_COURSE_ID,
-      videoId: TEST_LESSON_ID,
-      content: 'Integration test note',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      tags: [],
-    }
+    const note = makeNote()
 
     await useNoteStore.getState().saveNote(note)
 
@@ -74,8 +85,7 @@ describe('E93-S02 P1 sync wiring — notes', () => {
     expect(stored).toBeDefined()
     expect((stored as unknown as Record<string, unknown>).userId).toBe(TEST_USER_ID)
 
-    const queue = await db.syncQueue.toArray()
-    const entries = queue.filter(q => q.tableName === 'notes')
+    const entries = await getQueueEntries('notes')
     expect(entries.length).toBeGreaterThanOrEqual(1)
     const putEntry = entries.find(e => e.operation === 'put')
     expect(putEntry).toBeDefined()
@@ -83,38 +93,21 @@ describe('E93-S02 P1 sync wiring — notes', () => {
   })
 
   it('addNote produces a syncQueue add entry for tableName: notes', async () => {
-    const note = {
-      id: crypto.randomUUID(),
-      courseId: TEST_COURSE_ID,
-      videoId: TEST_LESSON_ID,
-      content: 'New note via addNote',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      tags: [],
-    }
+    const note = makeNote({ content: 'New note via addNote' })
 
     await useNoteStore.getState().addNote(note)
 
     const stored = await db.notes.get(note.id)
     expect(stored).toBeDefined()
 
-    const queue = await db.syncQueue.toArray()
-    const entries = queue.filter(q => q.tableName === 'notes')
+    const entries = await getQueueEntries('notes')
     const addEntry = entries.find(e => e.operation === 'add')
     expect(addEntry).toBeDefined()
     expect(addEntry!.status).toBe('pending')
   })
 
   it('deleteNote produces a syncQueue delete entry with payload: { id: noteId }', async () => {
-    const note = {
-      id: crypto.randomUUID(),
-      courseId: TEST_COURSE_ID,
-      videoId: TEST_LESSON_ID,
-      content: 'Note to delete',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      tags: [],
-    }
+    const note = makeNote({ content: 'Note to delete' })
 
     await useNoteStore.getState().addNote(note)
     await useNoteStore.getState().deleteNote(note.id)
@@ -122,71 +115,53 @@ describe('E93-S02 P1 sync wiring — notes', () => {
     const stored = await db.notes.get(note.id)
     expect(stored).toBeUndefined()
 
-    const queue = await db.syncQueue.toArray()
-    const deleteEntry = queue.find(q => q.tableName === 'notes' && q.operation === 'delete')
+    const entries = await getQueueEntries('notes')
+    const deleteEntry = entries.find(e => e.operation === 'delete')
     expect(deleteEntry).toBeDefined()
     expect(deleteEntry!.payload).toEqual({ id: note.id })
   })
 
   it('softDelete fieldMap rename: queue payload has soft_deleted (not deleted)', async () => {
-    const noteId = crypto.randomUUID()
-    const note = {
-      id: noteId,
-      courseId: TEST_COURSE_ID,
-      videoId: TEST_LESSON_ID,
-      content: 'Soft delete test',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      tags: [],
-    }
+    const note = makeNote({ content: 'Soft delete test' })
 
     await useNoteStore.getState().addNote(note)
 
     // Clear queue from addNote so we can isolate softDelete entry
     await db.syncQueue.clear()
 
-    await useNoteStore.getState().softDelete(noteId)
+    await useNoteStore.getState().softDelete(note.id)
 
     // Dexie record has deleted: true
-    const stored = await db.notes.get(noteId)
+    const stored = await db.notes.get(note.id)
     expect(stored?.deleted).toBe(true)
     expect(stored?.deletedAt).toBeDefined()
 
     // Queue entry payload must use fieldMap rename: soft_deleted (not deleted)
-    const queue = await db.syncQueue.toArray()
-    const softDeleteEntry = queue.find(q => q.tableName === 'notes' && q.operation === 'put')
+    const entries = await getQueueEntries('notes')
+    const softDeleteEntry = entries.find(e => e.operation === 'put')
     expect(softDeleteEntry).toBeDefined()
     expect(softDeleteEntry!.payload.soft_deleted).toBe(true)
     expect('deleted' in softDeleteEntry!.payload).toBe(false) // fieldMap rename verified
   })
 
   it('restoreNote after softDelete: queue payload has soft_deleted: false', async () => {
-    const noteId = crypto.randomUUID()
-    const note = {
-      id: noteId,
-      courseId: TEST_COURSE_ID,
-      videoId: TEST_LESSON_ID,
-      content: 'Restore test',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      tags: [],
-    }
+    const note = makeNote({ content: 'Restore test' })
 
     await useNoteStore.getState().addNote(note)
-    await useNoteStore.getState().softDelete(noteId)
+    await useNoteStore.getState().softDelete(note.id)
 
     // Clear queue to isolate restoreNote entry
     await db.syncQueue.clear()
 
-    await useNoteStore.getState().restoreNote(noteId)
+    await useNoteStore.getState().restoreNote(note.id)
 
     // Dexie record has deleted: false
-    const stored = await db.notes.get(noteId)
+    const stored = await db.notes.get(note.id)
     expect(stored?.deleted).toBe(false)
 
     // Queue entry payload has soft_deleted: false
-    const queue = await db.syncQueue.toArray()
-    const restoreEntry = queue.find(q => q.tableName === 'notes' && q.operation === 'put')
+    const entries = await getQueueEntries('notes')
+    const restoreEntry = entries.find(e => e.operation === 'put')
     expect(restoreEntry).toBeDefined()
     expect(restoreEntry!.payload.soft_deleted).toBe(false)
   })
@@ -194,8 +169,7 @@ describe('E93-S02 P1 sync wiring — notes', () => {
   it('softDelete on non-existent noteId: no queue entry created, no error thrown', async () => {
     await expect(useNoteStore.getState().softDelete('nonexistent-id')).resolves.toBeUndefined()
 
-    const queue = await db.syncQueue.toArray()
-    const notesEntries = queue.filter(q => q.tableName === 'notes')
+    const notesEntries = await getQueueEntries('notes')
     expect(notesEntries).toHaveLength(0)
   })
 })
@@ -213,8 +187,8 @@ describe('E93-S02 P1 sync wiring — bookmarks', () => {
     expect((bookmarks[0] as unknown as Record<string, unknown>).userId).toBe(TEST_USER_ID)
     expect(bookmarks[0].updatedAt).toBeDefined()
 
-    const queue = await db.syncQueue.toArray()
-    const addEntry = queue.find(q => q.tableName === 'bookmarks' && q.operation === 'add')
+    const bookmarkEntries = await getQueueEntries('bookmarks')
+    const addEntry = bookmarkEntries.find(e => e.operation === 'add')
     expect(addEntry).toBeDefined()
     expect(addEntry!.status).toBe('pending')
   })
@@ -229,8 +203,8 @@ describe('E93-S02 P1 sync wiring — bookmarks', () => {
 
     await useBookmarkStore.getState().updateBookmarkLabel(bookmarkId, 'Updated label')
 
-    const queue = await db.syncQueue.toArray()
-    const putEntry = queue.find(q => q.tableName === 'bookmarks' && q.operation === 'put')
+    const bookmarkEntries = await getQueueEntries('bookmarks')
+    const putEntry = bookmarkEntries.find(e => e.operation === 'put')
     expect(putEntry).toBeDefined()
     // Verify it's a full record (fetch-then-put), not just { label }
     expect(putEntry!.payload).toMatchObject({
@@ -251,8 +225,8 @@ describe('E93-S02 P1 sync wiring — bookmarks', () => {
     const stored = await db.bookmarks.get(bookmarkId)
     expect(stored).toBeUndefined()
 
-    const queue = await db.syncQueue.toArray()
-    const deleteEntry = queue.find(q => q.tableName === 'bookmarks' && q.operation === 'delete')
+    const bookmarkEntries = await getQueueEntries('bookmarks')
+    const deleteEntry = bookmarkEntries.find(e => e.operation === 'delete')
     expect(deleteEntry).toBeDefined()
     expect(deleteEntry!.payload).toEqual({ id: bookmarkId })
   })
@@ -260,8 +234,7 @@ describe('E93-S02 P1 sync wiring — bookmarks', () => {
   it('updateBookmarkLabel on non-existent bookmarkId: no queue entry created', async () => {
     await useBookmarkStore.getState().updateBookmarkLabel('nonexistent-id', 'New label')
 
-    const queue = await db.syncQueue.toArray()
-    const bookmarkEntries = queue.filter(q => q.tableName === 'bookmarks')
+    const bookmarkEntries = await getQueueEntries('bookmarks')
     expect(bookmarkEntries).toHaveLength(0)
   })
 })
@@ -274,23 +247,14 @@ describe('E93-S02 P1 sync wiring — unauthenticated writes', () => {
   it('unauthenticated note save: Dexie record created, zero syncQueue entries for notes', async () => {
     useAuthStore.setState({ user: null } as Partial<ReturnType<typeof useAuthStore.getState>>)
 
-    const note = {
-      id: crypto.randomUUID(),
-      courseId: TEST_COURSE_ID,
-      videoId: TEST_LESSON_ID,
-      content: 'Offline note',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      tags: [],
-    }
+    const note = makeNote({ content: 'Offline note' })
 
     await useNoteStore.getState().addNote(note)
 
     const stored = await db.notes.get(note.id)
     expect(stored).toBeDefined()
 
-    const queue = await db.syncQueue.toArray()
-    const notesEntries = queue.filter(q => q.tableName === 'notes')
+    const notesEntries = await getQueueEntries('notes')
     expect(notesEntries).toHaveLength(0)
   })
 
@@ -302,8 +266,7 @@ describe('E93-S02 P1 sync wiring — unauthenticated writes', () => {
     const bookmarks = await db.bookmarks.toArray()
     expect(bookmarks).toHaveLength(1)
 
-    const queue = await db.syncQueue.toArray()
-    const bookmarkEntries = queue.filter(q => q.tableName === 'bookmarks')
+    const bookmarkEntries = await getQueueEntries('bookmarks')
     expect(bookmarkEntries).toHaveLength(0)
   })
 })
