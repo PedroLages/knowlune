@@ -173,22 +173,22 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   },
 
   softDelete: async (noteId: string) => {
-    const { notes } = get()
+    const deletedAt = new Date().toISOString()
 
     try {
       await persistWithRetry(async () => {
         const existing = await db.notes.get(noteId)
         if (!existing) return
-        const mergedNote: Note = { ...existing, deleted: true, deletedAt: new Date().toISOString() }
+        const mergedNote: Note = { ...existing, deleted: true, deletedAt }
         await syncableWrite('notes', 'put', mergedNote as unknown as SyncableRecord)
       })
       // Optimistic state update applied after successful persist
-      set({
-        notes: notes.map(n =>
-          n.id === noteId ? { ...n, deleted: true, deletedAt: new Date().toISOString() } : n
+      set(state => ({
+        notes: state.notes.map(n =>
+          n.id === noteId ? { ...n, deleted: true, deletedAt } : n
         ),
         error: null,
-      })
+      }))
     } catch (error) {
       set({ error: 'Failed to soft delete note' })
       console.error('[NoteStore] Failed to soft delete note:', error)
@@ -196,8 +196,6 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   },
 
   restoreNote: async (noteId: string) => {
-    const { notes } = get()
-
     try {
       await persistWithRetry(async () => {
         const existing = await db.notes.get(noteId)
@@ -206,10 +204,10 @@ export const useNoteStore = create<NoteState>((set, get) => ({
         await syncableWrite('notes', 'put', mergedNote as unknown as SyncableRecord)
       })
       // Optimistic state update applied after successful persist
-      set({
-        notes: notes.map(n => (n.id === noteId ? { ...n, deleted: false, deletedAt: undefined } : n)),
+      set(state => ({
+        notes: state.notes.map(n => (n.id === noteId ? { ...n, deleted: false, deletedAt: undefined } : n)),
         error: null,
-      })
+      }))
     } catch (error) {
       set({ error: 'Failed to restore note' })
       console.error('[NoteStore] Failed to restore note:', error)
