@@ -10,6 +10,7 @@ import {
   Info,
   Download,
   BookmarkIcon,
+  AlertTriangle,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/app/components/ui/utils'
@@ -47,6 +48,7 @@ import { formatTimestamp } from '@/lib/format'
 import { stripHtml } from '@/lib/textUtils'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
 import { VirtualizedList } from '@/app/components/VirtualizedList'
+import { NoteConflictDialog } from '@/app/components/notes/NoteConflictDialog'
 import type { Note } from '@/data/types'
 
 // Lazy-loaded heavy components (TipTap renderer pulls ~400KB, QAChatPanel pulls AI infra)
@@ -114,6 +116,7 @@ export function Notes() {
   const [sortOption, setSortOption] = useState<SortOption>('most-recent')
   const [availableTags, setAvailableTags] = useState<string[]>([])
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null)
+  const [conflictNoteId, setConflictNoteId] = useState<string | null>(null)
   const [useSemanticSearch, setUseSemanticSearch] = useState(false)
   const [semanticResults, setSemanticResults] = useState<Array<{ noteId: string; score: number }>>(
     []
@@ -398,6 +401,19 @@ export function Notes() {
             {highlightMatches(item.plainPreview, highlightPatterns)}
           </p>
         </div>
+
+        {/* Conflict badge — visible when conflictCopy is an active object (E93-S03) */}
+        {item.note.conflictCopy != null && (
+          <button
+            type="button"
+            className="mt-2 inline-flex items-center gap-1.5 min-h-[44px] px-2 rounded-md bg-warning/10 text-warning-foreground border border-warning/30 hover:bg-warning/20 transition-colors text-xs font-medium"
+            aria-label="Note has a sync conflict"
+            onClick={() => setConflictNoteId(item.note.id)}
+          >
+            <AlertTriangle aria-hidden="true" className="size-4" />
+            Sync conflict
+          </button>
+        )}
 
         {/* Tags + timestamp — outside role="button" to avoid nested interactives */}
         <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -709,6 +725,19 @@ export function Notes() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Conflict resolution dialog — rendered outside TabsContent to avoid z-index issues */}
+      {conflictNoteId != null && (() => {
+        const conflictNote = notes.find(n => n.id === conflictNoteId)
+        return conflictNote && conflictNote.conflictCopy != null ? (
+          <NoteConflictDialog
+            note={conflictNote}
+            open={conflictNoteId != null}
+            onOpenChange={open => { if (!open) setConflictNoteId(null) }}
+            onResolved={() => setConflictNoteId(null)}
+          />
+        ) : null
+      })()}
     </TooltipProvider>
   )
 }
