@@ -14,6 +14,8 @@ import {
   StickyNote,
   User,
   Highlighter,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react'
 import {
   CommandDialog,
@@ -56,6 +58,20 @@ const TYPE_BADGE_LABEL: Record<EntityType, string> = {
   note: 'Note',
   highlight: 'Highlight',
   author: 'Author',
+}
+
+/**
+ * Per-entity-type badge tinting. Uses only tokens defined in theme.css.
+ * Opacity modifiers (`/10`) on color tokens are valid Tailwind and pass
+ * the design-tokens/no-hardcoded-colors ESLint rule.
+ */
+const TYPE_BADGE_CLASS: Record<EntityType, string> = {
+  course: 'bg-brand-soft text-brand-soft-foreground',
+  book: 'bg-success-soft text-success',
+  lesson: 'bg-warning/10 text-warning',
+  note: 'bg-muted text-muted-foreground',
+  highlight: 'bg-success/10 text-success',
+  author: 'bg-secondary text-secondary-foreground',
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -150,8 +166,12 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
+  // Live-region announcement debounced separately from search — 400ms pause
+  // before updating prevents SR verbosity on every keystroke (D-MED-1).
+  const [announcedCount, setAnnouncedCount] = useState<number | null>(null)
   const [expandedSections, setExpandedSections] = useState<Set<EntityType>>(new Set())
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
+  const commandRootRef = useRef<HTMLDivElement | null>(null)
 
   const { search } = useUnifiedSearchIndex()
 
@@ -164,6 +184,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
     } else {
       setSearchQuery('')
       setDebouncedQuery('')
+      setAnnouncedCount(null)
       setExpandedSections(new Set())
       setRemovedIds(new Set())
     }
@@ -202,6 +223,44 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
   const totalResults = hasActiveQuery
     ? SECTION_ORDER.reduce((acc, s) => acc + groupedResults[s.type].length, 0)
     : 0
+
+  // Settle the live-region announcement after a 400ms pause so screen readers
+  // don't read every intermediate count as the user types (D-MED-1).
+  useEffect(() => {
+    if (!hasActiveQuery) {
+      setAnnouncedCount(null)
+      return
+    }
+    const timer = setTimeout(() => setAnnouncedCount(totalResults), 400)
+    return () => clearTimeout(timer)
+  }, [hasActiveQuery, totalResults])
+
+  const announcementText =
+    announcedCount == null
+      ? ''
+      : announcedCount === 1
+        ? '1 result'
+        : `${announcedCount} results`
+
+  /**
+   * Home/End keyboard support (D-MED-3). cmdk handles arrows only — we
+   * intercept Home/End to jump to the first/last `[cmdk-item]` in the list.
+   */
+  const handleCommandKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Home' && e.key !== 'End') return
+    const root = commandRootRef.current
+    if (!root) return
+    const items = root.querySelectorAll<HTMLElement>(
+      '[cmdk-item]:not([data-disabled="true"])'
+    )
+    if (items.length === 0) return
+    e.preventDefault()
+    const target = e.key === 'Home' ? items[0] : items[items.length - 1]
+    target.scrollIntoView({ block: 'nearest' })
+    // cmdk tracks selection via data-value on the item; dispatch a mousemove
+    // so cmdk marks it selected (matches the library's own hover semantics).
+    target.dispatchEvent(new Event('mousemove', { bubbles: true }))
+  }
 
   const handleOpenChange = (newOpen: boolean) => {
     onOpenChange(newOpen)
@@ -312,6 +371,10 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
     })
   }, [debouncedQuery])
 
+  // Does at least one entity section have results? (controls whether empty
+  // sections render a placeholder row or are suppressed — D-MED-6).
+  const anyEntityHits = hasActiveQuery && totalResults > 0
+
   return (
     <CommandDialog
       open={open}
@@ -319,12 +382,18 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
       title="Search"
       description="Search for pages, courses, books, lessons, notes, highlights, and authors"
       shouldFilter={false}
+      commandRef={commandRootRef}
+      onCommandKeyDown={handleCommandKeyDown}
+      // D-MED-2: full-screen on mobile viewports (<640px). Overrides the
+      // default DialogContent sizing so the palette fills the viewport.
+      contentClassName="max-sm:inset-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:max-w-full max-sm:rounded-none max-sm:h-full max-sm:w-full"
     >
       <CommandInput
         placeholder="Search pages, courses, books, lessons, notes, highlights..."
         onValueChange={setSearchQuery}
       />
-      {/* Polite live region for screen readers — announces result count */}
+      {/* Polite live region for screen readers — announces result count.
+          Pluralized and debounced to a 400ms pause to limit SR verbosity. */}
       <div
         role="status"
         aria-live="polite"
@@ -332,9 +401,9 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
         className="sr-only"
         data-testid="search-result-count"
       >
-        {hasActiveQuery ? `${totalResults} results` : ''}
+        {announcementText}
       </div>
-      <CommandList role="listbox">
+      <CommandList>
         <CommandEmpty>
           {hasActiveQuery
             ? 'No results found. Try different keywords or browse by tag.'
@@ -345,12 +414,37 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
         {hasActiveQuery &&
           SECTION_ORDER.map(section => {
             const rows = groupedResults[section.type]
-            if (rows.length === 0) return null
             const expanded = expandedSections.has(section.type)
             const limit = expanded ? SECTION_EXPANDED_LIMIT : SECTION_COLLAPSED_LIMIT
             const shown = rows.slice(0, limit)
             const hiddenCount = rows.length - shown.length
             const SectionIcon = section.icon
+
+            // D-MED-6: when other sections have hits, render empty sections
+            // with a disabled placeholder so the user knows that section was
+            // searched. When ALL sections are empty, fall through to
+            // <CommandEmpty> instead.
+            if (rows.length === 0) {
+              if (!anyEntityHits) return null
+              return (
+                <CommandGroup key={section.type} heading={section.heading}>
+                  <CommandItem
+                    key={`${section.type}-empty`}
+                    value={`${section.type}-empty`}
+                    disabled
+                    // min-h-[44px] keeps the row within the 44×44 touch target
+                    // guideline even though it's disabled (D-HIGH-4).
+                    className="min-h-[44px] cursor-default text-muted-foreground"
+                    data-testid={`search-empty-${section.type}`}
+                  >
+                    <SectionIcon className="mr-2 size-4 shrink-0 opacity-50" />
+                    <span className="text-xs">
+                      {section.heading} — no matches
+                    </span>
+                  </CommandItem>
+                </CommandGroup>
+              )
+            }
 
             return (
               <CommandGroup key={section.type} heading={section.heading}>
@@ -359,7 +453,12 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
                     key={`${r.type}:${r.id}`}
                     value={`${r.type}:${r.id}`}
                     onSelect={() => handleResultSelect(r)}
-                    role="option"
+                    // D-HIGH-3: meaningful accessible name composed of
+                    // "{displayTitle}, {type}" so AT announces the human
+                    // label instead of the synthetic "course:abc-123" value.
+                    aria-label={`${r.displayTitle}, ${TYPE_BADGE_LABEL[r.type]}`}
+                    // D-HIGH-4: 44×44px minimum touch target.
+                    className="min-h-[44px]"
                     data-testid={`search-result-${r.type}-${r.id}`}
                   >
                     <SectionIcon className="mr-2 size-4 shrink-0" />
@@ -374,9 +473,9 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
                       )}
                     </div>
                     <Badge
-                      variant="secondary"
-                      className="ml-2 shrink-0 text-[10px] px-1.5 py-0 h-4"
-                      aria-label={TYPE_BADGE_LABEL[r.type]}
+                      // D-MED-5: tinted per-type badge using theme tokens.
+                      // D-HIGH-3: no aria-label — visible text is sufficient.
+                      className={`ml-2 shrink-0 text-[10px] px-1.5 py-0 h-4 ${TYPE_BADGE_CLASS[r.type]}`}
                     >
                       {TYPE_BADGE_LABEL[r.type]}
                     </Badge>
@@ -387,10 +486,25 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
                     key={`${section.type}-show-all`}
                     value={`${section.type}-show-all`}
                     onSelect={() => toggleExpand(section.type)}
+                    // D-HIGH-2: disclosure affordance — expand state exposed
+                    // to AT, chevron icon reflects open/closed visually,
+                    // aria-label includes the expansion state.
+                    aria-expanded={expanded}
+                    aria-label={`Show all ${rows.length} ${section.heading.toLowerCase()}, ${
+                      expanded ? 'expanded' : 'collapsed'
+                    }`}
+                    // D-HIGH-4: 44×44px minimum touch target.
+                    className="min-h-[44px]"
                     data-testid={`search-show-all-${section.type}`}
                   >
+                    {expanded ? (
+                      <ChevronDown className="mr-2 size-4 shrink-0 transition-transform" />
+                    ) : (
+                      <ChevronRight className="mr-2 size-4 shrink-0 transition-transform" />
+                    )}
                     <span className="text-xs text-muted-foreground">
-                      Show all {rows.length} {section.heading.toLowerCase()}
+                      {expanded ? 'Show fewer' : `Show all ${rows.length}`}{' '}
+                      {section.heading.toLowerCase()}
                     </span>
                   </CommandItem>
                 )}
@@ -406,7 +520,8 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
                 key={item.id}
                 value={item.id}
                 onSelect={() => handleStaticSelect(item.path)}
-                role="option"
+                // D-HIGH-4: 44×44px minimum touch target.
+                className="min-h-[44px]"
               >
                 <Icon className="mr-2 size-4 shrink-0" />
                 <span>{item.label}</span>

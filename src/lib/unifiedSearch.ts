@@ -363,6 +363,38 @@ export function isInitialized(): boolean {
 }
 
 /**
+ * Return the set of original (non-prefixed) ids currently stored in the index
+ * for the given entity type. Used by `useUnifiedSearchIndex` to seed its
+ * per-table snapshot refs so the first reconcile pass doesn't re-add docs
+ * that `main.tsx` already bulk-loaded at boot.
+ */
+export function getIndexedIds(type: EntityType): Set<string> {
+  const out = new Set<string>()
+  if (!initialized) return out
+  const prefix = `${type}:`
+  // MiniSearch stores docs keyed by `_searchId`. The library exposes
+  // `documentCount` but not an iterator; however `has()` + `search('')`
+  // both fail for our purposes. We iterate the internal store via the
+  // public `toJSON()` API which returns the document registry.
+  // Falling back to a cheap empty-set is acceptable if the shape changes.
+  try {
+    const json = miniSearch.toJSON() as { storedFields?: Record<string, unknown> }
+    const stored = json?.storedFields
+    if (stored) {
+      for (const searchId of Object.keys(stored)) {
+        if (searchId.startsWith(prefix)) {
+          out.add(searchId.slice(prefix.length))
+        }
+      }
+    }
+  } catch {
+    // silent-catch-ok: if the internal JSON shape changes we just return
+    // an empty seed — the worst case is a one-time re-add of existing docs.
+  }
+  return out
+}
+
+/**
  * Add a doc. Safe to call repeatedly — swallows the "already in index" error
  * via the same `discard`-in-try/catch pattern used by legacy noteSearch.
  */
