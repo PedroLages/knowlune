@@ -5,14 +5,14 @@ color: red
 memory: project
 background: true
 effort: medium
-argument-hint: "[idea | docs/plans/*-plan.md] [--cross-model] [--autopilot (v3)] [--headless (v2)]"
+argument-hint: "[idea | docs/plans/*-plan.md | docs/brainstorms/*-requirements.md | docs/implementation-artifacts/stories/E##-S##*.md | bug description] [--cross-model] [--autopilot] [--headless]"
 ---
 
 # CE Orchestrator
 
 Drives a single unit of work end-to-end through the Compound Engineering pipeline with one hard human gate at **plan approval**. Terminal state: **PR created** (not merged). After merge, run `/ce-compound` to close the loop.
 
-**Status:** v2 — adaptive entry + tracking file + headless JSON mode + BMAD story-file bridge. `--autopilot` and supporting-skill integrations (`episodic-memory`, `/techdebt`, `/design-review`, `/checkpoint`, `superpowers:systematic-debugging`) land in v3. See [plan](../../../../Users/pedro/.claude/plans/want-you-to-majestic-rabin.md).
+**Status:** v3 — adaptive entry + tracking file + headless JSON mode + BMAD story-file bridge + `--autopilot` flag + supporting-skill integrations (`episodic-memory`, `/techdebt`, `/design-review`, `/checkpoint`, `superpowers:systematic-debugging`). See [plan](../../../../Users/pedro/.claude/plans/want-you-to-majestic-rabin.md).
 
 ## Usage
 
@@ -20,9 +20,11 @@ Drives a single unit of work end-to-end through the Compound Engineering pipelin
 /ce-orchestrator "add keyboard shortcut help modal"                # bare idea → full pipeline
 /ce-orchestrator docs/plans/2026-04-15-002-feat-search-plan.md     # existing plan → plan-approval gate → rest
 /ce-orchestrator "<input>" --cross-model                           # add Knowlune review-story swarm in parallel (v1)
+/ce-orchestrator "<input>" --autopilot                             # auto-answer cosmetic choices; plan + R3 gates stay hard (v3)
+/ce-orchestrator --headless "<input>"                              # no AskUserQuestion; returns single-line JSON (v2)
 ```
 
-Inputs outside v1 scope error with a friendly message pointing to the manual CE skills.
+Full input shape matrix in Phase 0.4 classifier table.
 
 ## Orchestrator Discipline
 
@@ -132,6 +134,20 @@ When the classifier returns this stage, dispatch the `story-to-brief` sub-agent 
 
 Pipeline then continues from Phase 1.2 (`/ce:plan`) with that requirements path — same as if the user had run `/ce:brainstorm` themselves on the idea behind the story. The original BMAD story file is **not modified** — it remains the strategic source of truth.
 
+### 0.5 Episodic-memory context recall (v3)
+
+After classifier returns, before any Phase 1 dispatch: dispatch `episodic-memory-searcher` (haiku) to retrieve prior sessions on this topic. See [references/autonomy-boundary.md § 0.5](references/autonomy-boundary.md#05-episodic-memory-context-recall-phase-0-before-brainstorm) and [references/sub-agent-prompts.md § 13](references/sub-agent-prompts.md#13-episodic-memory-searcher-v3).
+
+- **Returns:** `{relatedSessions, topMatch}` — append to tracking `supportingSkills.episodicMemory`.
+- **If `topMatch` non-null:** pass as a 1-line context hint in the next `ce-brainstorm-dispatcher` or `ce-plan-dispatcher` prompt body.
+- **Failure:** log warning, proceed silently. Never halts.
+
+### 0.6 Bug path — systematic-debugging handoff (v3)
+
+When classifier returns `stage: debug`, dispatch `ce-debug-dispatcher` (opus) instead of invoking `/ce:debug` directly. The dispatcher runs `superpowers:systematic-debugging` first, then synthesizes a CE requirements brief the pipeline can plan against. See [references/autonomy-boundary.md § Bug path](references/autonomy-boundary.md#bug-path-superpowerssystematic-debugging-phase-04-debug-stage) and [sub-agent-prompts.md § 17](references/sub-agent-prompts.md#17-ce-debug-dispatcher-v3).
+
+Returns `{requirementsPath, rootCause}`. Pipeline continues from Phase 1.2 `/ce:plan` using the brief — identical to the story-to-brief flow.
+
 ## Phase 1 — Upstream (brainstorm → plan → approval)
 
 ### 1.1 Brainstorm (skip if input was a plan path)
@@ -240,6 +256,15 @@ Do not read back code. Do not read back full diffs.
 - **Returns:** `{commitShas, branch, modifiedFiles}`.
 - **Guardrail:** `/ce:work` does NOT invoke `/ce:review` internally (verified 2026-04-18). Outer review loop is safe, not a double-run.
 
+### 2.1.5 Techdebt pre-review dedup scan (v3)
+
+Between `/ce:work` and pre-checks: dispatch `techdebt-dedup-dispatcher` (sonnet). See [references/autonomy-boundary.md § 2.1.5](references/autonomy-boundary.md#215-techdebt-pre-review-dedup-scan-phase-2-between-cework-and-cereview) and [sub-agent-prompts.md § 14](references/sub-agent-prompts.md#14-techdebt-dedup-dispatcher-v3).
+
+- `duplicatesFound == 0` → proceed silently to pre-checks.
+- `--autopilot` → auto-extract safe duplicates; coordinator commits the extraction (`chore(ce-techdebt): …`) before proceeding.
+- Non-autopilot → AskUserQuestion `Extract | Skip | Abort`. `Extract` runs `/techdebt` in auto mode; coordinator commits.
+- Failure → log warning, proceed. Never halts.
+
 ### 2.2 Pre-checks (Knowlune gates)
 
 Dispatch `pre-checks-runner` sub-agent:
@@ -307,6 +332,8 @@ After the loop exits green (or escalated), append residual LOW/NIT to `docs/know
 
 **Optional `--cross-model`:** run Knowlune's `code-review` subagent (via Task, not `/ce-review`) in parallel with step 1 of Round 1 only. Merge findings before evaluating counts. Not re-run on R2/R3.
 
+**Parallel `/design-review` for UI diffs (v3):** if `modifiedFiles` contains `src/**/*.tsx`, `src/**/*.css`, `src/app/pages/**`, or `src/app/components/**`, dispatch `design-review-dispatcher` (opus) in parallel with step 1 of Round 1 only. Merge its findings into the R1 fixer input. See [autonomy-boundary.md § 2.3b](references/autonomy-boundary.md#23b-parallel-design-review-dispatch-phase-2-alongside-cereview) and [sub-agent-prompts.md § 15](references/sub-agent-prompts.md#15-design-review-dispatcher-v3). Playwright unavailable → log warning, continue with `/ce:review` only.
+
 ### 2.4 Demo-reel classifier → conditional capture
 
 Dispatch `demo-reel-classifier` sub-agent:
@@ -359,6 +386,10 @@ Return ONLY: `{"prUrl": "<url>"}`.
 
 /auto-answer autopilot
 ```
+
+### 2.6 Phase-boundary checkpoints (v3)
+
+Fire-and-forget `checkpoint-dispatcher` (haiku) at each completed phase: post-classifier, post-plan-approval, post-work, post-review-loop, post-PR, post-compound-gate. Coordinator does **not** await the response — tracking file is the primary source of truth; checkpoint is additive durability for multi-day runs. See [autonomy-boundary.md § Phase boundary checkpoints](references/autonomy-boundary.md#phase-boundary-checkpoints-via-checkpoint) and [sub-agent-prompts.md § 16](references/sub-agent-prompts.md#16-checkpoint-dispatcher-v3).
 
 ## Phase 3 — Close out
 
@@ -461,6 +492,7 @@ Run `scripts/finalize-ce-run.sh <tracking-path> [--json]`:
 - Compound gate: [references/compound-reminder.md](references/compound-reminder.md)
 - Tracking file schema (v2): [references/tracking-file-schema.md](references/tracking-file-schema.md)
 - Headless mode (v2): [references/headless-mode.md](references/headless-mode.md)
+- Autonomy boundary + supporting-skill integrations (v3): [references/autonomy-boundary.md](references/autonomy-boundary.md)
 - Finalize script (v2): [scripts/finalize-ce-run.sh](scripts/finalize-ce-run.sh)
 - Plan (full design): [`want-you-to-majestic-rabin.md`](../../../../Users/pedro/.claude/plans/want-you-to-majestic-rabin.md)
 - Primary template: [`../epic-orchestrator/SKILL.md`](../epic-orchestrator/SKILL.md)
@@ -473,4 +505,4 @@ Run `scripts/finalize-ce-run.sh <tracking-path> [--json]`:
 
 - **v1 (this file):** bare idea | plan path → pipeline → PR. Plan gate hard. Review loop zero-tolerance. Demo-reel conditional. Compound reminder. `--cross-model` flag.
 - **v2 (Unit 2 full + Unit 6):** adaptive classifier adds ideation/brainstorm/bug/story-file entries. Persistent tracking file. Resume semantics. `--headless` JSON mode.
-- **v3 (Units 7–8):** `episodic-memory:search-conversations` Phase 0. `/techdebt` pre-review scan. `/design-review` parallel dispatch for UI. `/checkpoint` at phase boundaries. `superpowers:systematic-debugging` on bug path. `--autopilot` flag (cosmetic choices only). Skill-creator evals + description optimization.
+- **v3 (Units 7–8, this file):** `episodic-memory:search-conversations` at Phase 0.5. `/techdebt` pre-review dedup scan at Phase 2.1.5. `/design-review` parallel dispatch at Phase 2.3b for UI diffs. `/checkpoint` at Phase 2.6 boundaries (fire-and-forget). `superpowers:systematic-debugging` on bug path at Phase 0.6. `--autopilot` flag auto-answers cosmetic prompts only (plan gate + R3 gate remain hard — see [autonomy-boundary.md](references/autonomy-boundary.md)). Expanded eval coverage.

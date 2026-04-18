@@ -23,6 +23,12 @@ Authoritative templates for every Task-dispatched sub-agent. Loaded on-demand fr
 | 9 | `demo-reel-classifier` | haiku | 5 |
 | 10 | `ce-demo-reel-dispatcher` | sonnet | 5 |
 | 11 | `ce-git-commit-push-pr-dispatcher` | sonnet | 5 |
+| 12 | `story-to-brief` | sonnet | 2 (v2) |
+| 13 | **`episodic-memory-searcher`** | haiku | **7 (v3)** |
+| 14 | **`techdebt-dedup-dispatcher`** | sonnet | **7 (v3)** |
+| 15 | **`design-review-dispatcher`** | opus | **7 (v3)** |
+| 16 | **`checkpoint-dispatcher`** | haiku | **7 (v3)** |
+| 17 | **`ce-debug-dispatcher`** | opus | **7 (v3)** |
 
 Sections marked with the Unit that introduced them. Earlier Units leave stubs; later Units fill them in.
 
@@ -429,6 +435,289 @@ Full template lives in SKILL.md Phase 2.4.
 ## 11. `ce-git-commit-push-pr-dispatcher` (Unit 5 — inline in SKILL.md §2.5)
 
 Full template lives in SKILL.md Phase 2.5.
+
+---
+
+---
+
+## 13. `episodic-memory-searcher` (Unit 7 — v3)
+
+**Role:** Surface prior Claude Code sessions on the same topic so Phase 1 (brainstorm/plan) starts warm.
+
+**Model:** haiku
+
+**Inputs:** `userInput` (raw string from $ARGUMENTS), `slug` (computed in Phase 0)
+
+**Prompt template:**
+
+```text
+You are the episodic-memory-searcher for the CE orchestrator.
+
+Topic (user input): "<userInput>"
+Slug: <slug>
+
+Steps:
+1. Use the Skill tool to invoke `episodic-memory:search-conversations` with the topic string.
+2. Filter results to conversations from the last 180 days where the topic clearly relates (same feature name, same bug, same subsystem).
+3. For each match, produce one line: "<YYYY-MM-DD>: <one-sentence summary of what that session produced or learned>".
+4. Cap at 3 most-relevant matches.
+
+Return ONLY:
+```json
+{
+  "relatedSessions": [
+    {"date": "YYYY-MM-DD", "summary": "<line>", "relevance": "high|medium|low"}
+  ],
+  "topMatch": "<the single most relevant one-line summary, or null if none>"
+}
+```
+
+If the episodic-memory tool is unavailable or returns no results: `{"relatedSessions": [], "topMatch": null}`.
+If the tool errors: `{"error": "<reason>", "relatedSessions": []}` — still return the empty array so the coordinator can treat it as "no context" and proceed.
+
+Do not read back full conversation transcripts. Do not quote more than one line per session.
+
+/auto-answer autopilot
+```
+
+**Coordinator consumes:** `{relatedSessions, topMatch}`. Appends to tracking `supportingSkills.episodicMemory`. Passes `topMatch` (if non-null) as a 1-line context hint in the `ce-brainstorm-dispatcher` or `ce-plan-dispatcher` prompt body.
+
+**Failure behavior:** `{error}` or empty array → log warning, proceed. Never halts.
+
+---
+
+## 14. `techdebt-dedup-dispatcher` (Unit 7 — v3)
+
+**Role:** Run `/techdebt` Phase 1–2 against the diff produced by `/ce:work` to catch duplication before review agents do.
+
+**Model:** sonnet
+
+**Inputs:** `lastGreenSha`, `autopilot` (bool)
+
+**Prompt template:**
+
+```text
+You are the techdebt-dedup-dispatcher for the CE orchestrator.
+
+Baseline: <lastGreenSha>
+Autopilot mode: <true|false>
+
+Steps:
+1. Use the Skill tool to invoke `techdebt` with argument: "scan diff from <lastGreenSha> to HEAD for duplicates. Report only — do not extract in this pass."
+2. Parse its Phase 1–2 output (duplicate detection phase; ignore Phase 3+ which would extract).
+3. Determine extraction recommendation:
+   - If `techdebt` flagged any duplicate as `safety: unsafe` → `extractRecommendation: "skip"`.
+   - Else if autopilot == true → `extractRecommendation: "auto-extract"`, then invoke `techdebt` again in auto-extract mode limited to safe duplicates.
+   - Else → `extractRecommendation: "ask-user"`.
+4. If auto-extract ran: capture `filesChanged` (from git status --porcelain) and return them. Do NOT commit — coordinator commits.
+
+Return ONLY:
+```json
+{
+  "duplicatesFound": <int>,
+  "summary": ["<one-line per duplicate, max 5>"],
+  "extractRecommendation": "skip|ask-user|auto-extract",
+  "autoExtracted": <bool>,
+  "filesChanged": ["<path>"]
+}
+```
+
+On error (techdebt unavailable, invalid diff): `{"error": "<reason>", "duplicatesFound": 0}`.
+
+Do not read back refactored code. Do not commit. Do not touch files outside src/.
+
+/auto-answer autopilot
+```
+
+**Coordinator consumes:** Branches on `duplicatesFound` and `extractRecommendation`. On `ask-user` path: AskUserQuestion `Extract | Skip | Abort`. On `auto-extract` with `filesChanged` non-empty: coordinator runs `git add -A && git commit -m "chore(ce-techdebt): extract <N> duplicates"` before proceeding.
+
+**Failure behavior:** `{error}` → log warning, proceed to pre-checks. Never halts.
+
+---
+
+## 15. `design-review-dispatcher` (Unit 7 — v3)
+
+**Role:** Parallel dispatch of Knowlune's `/design-review` agent during Round 1 of the review loop, for UI diffs.
+
+**Model:** opus (UI judgment + accessibility reasoning)
+
+**Inputs:** `modifiedFiles`, `lastGreenSha`, `planPath`
+
+**Precondition enforced by coordinator:** only dispatch if `modifiedFiles` contains any `src/**/*.tsx`, `src/**/*.css`, `src/app/pages/**`, or `src/app/components/**`.
+
+**Prompt template:**
+
+```text
+You are the design-review-dispatcher for the CE orchestrator.
+
+Plan context: <planPath>
+Modified UI files:
+<<<
+<list of matching files>
+>>>
+Baseline SHA: <lastGreenSha>
+
+Steps:
+1. Use the Skill tool to invoke `design-review` with the diff scope <lastGreenSha>..HEAD.
+2. Let it open Playwright, navigate the affected routes, test responsive breakpoints (mobile 375px, tablet 768px, desktop 1440px), check accessibility (keyboard nav, contrast, ARIA).
+3. When it emits `docs/reviews/design/*.md`, capture the path.
+4. Parse its severity counts.
+
+Return ONLY:
+```json
+{
+  "reportPath": "<path>",
+  "findingsCount": {"blocker": <n>, "high": <n>, "medium": <n>, "low": <n>},
+  "findings": [
+    {"id": "...", "severity": "...", "file": "...", "description": "...", "suggestedFix": "..."}
+  ]
+}
+```
+
+On error (Playwright MCP unavailable, dev server won't start, browser crash):
+  `{"error": "<reason>", "reportPath": null, "findingsCount": {...zeros...}, "findings": []}`.
+
+Do not halt the pipeline on error — return empty findings array.
+Do not re-run `/ce:review` or other review skills; that's the coordinator's job.
+
+/auto-answer autopilot
+```
+
+**Coordinator consumes:** Merges `findings` array into the Round 1 fixer input (union with `/ce:review` findings). Appends `reportPath` to tracking `supportingSkills.designReview`.
+
+**Failure behavior:** `{error}` → log warning, continue with `/ce:review` findings only. Never halts.
+
+**Why opus:** design findings often require judgment ("is this contrast failure actually failing because of the token or because of the page background?"). Sonnet misses nuance; haiku hallucinates.
+
+---
+
+## 16. `checkpoint-dispatcher` (Unit 7 — v3)
+
+**Role:** Fire-and-forget checkpoint at phase boundaries. Redundant with tracking file; belt-and-suspenders for multi-day runs.
+
+**Model:** haiku
+
+**Inputs:** `phase` (e.g., `post-plan-approval`), `trackingPath`, `slug`
+
+**Prompt template:**
+
+```text
+You are the checkpoint-dispatcher for the CE orchestrator.
+
+Phase: <phase>
+Tracking: <trackingPath>
+Slug: <slug>
+
+Steps:
+1. Use the Skill tool to invoke `checkpoint`.
+2. Pass it a brief context note: "CE orchestrator phase boundary: <phase> for run <slug>. See tracking: <trackingPath>".
+3. Let checkpoint save its standard context snapshot.
+
+Return ONLY: `{"checkpointPath": "<path>"}` or `{"error": "<reason>"}`.
+
+Do not read back the checkpoint contents. Do not wait for user confirmation.
+
+/auto-answer autopilot
+```
+
+**Coordinator consumes:** Dispatches via `Task(..., run_in_background: true)` and **does not await the response**. Continues to next phase immediately. If response eventually arrives, append `{phase, path}` to `supportingSkills.checkpoints` in tracking file.
+
+**Failure behavior:** Silent. Tracking file already has state; checkpoint is additive.
+
+---
+
+## 17. `ce-debug-dispatcher` (Unit 7 — v3)
+
+**Role:** Bug-input entry point. Invokes `superpowers:systematic-debugging` first, emits a CE-shaped requirements doc, then hands off to `/ce:plan`.
+
+**Model:** opus
+
+**Inputs:** `bugDescription` (raw user input), `slug`
+
+**Prompt template:**
+
+```text
+You are the ce-debug-dispatcher for the CE orchestrator.
+
+Bug description:
+<<<
+<bugDescription>
+>>>
+
+Slug: <slug>
+
+Steps:
+1. Use the Skill tool to invoke `superpowers:systematic-debugging` with the bug description.
+2. Let it perform: reproduction attempt, observation, hypothesis generation, minimal test, root-cause isolation.
+3. Synthesize findings into a CE requirements brief at `docs/brainstorms/YYYY-MM-DD-debug-<slug>-requirements.md` with this structure:
+
+```markdown
+---
+title: "fix: <bug one-liner>"
+type: requirements
+status: active
+date: YYYY-MM-DD
+origin: systematic-debugging
+---
+
+# fix: <bug one-liner>
+
+## Problem frame
+<hypothesized root cause, not the symptom>
+
+## Scope
+
+### In scope
+- <reproduction steps as AC>
+- <verification steps as AC>
+- <minimal-change fix at <file:line>>
+
+### Out of scope
+- Any refactoring beyond the root-cause fix
+- Unrelated bugs surfaced during investigation
+
+## Key decisions
+- Root cause: <one-line from systematic-debugging>
+- Chosen fix approach: <one-line>
+- Rejected alternatives: <bullet, with why>
+
+## Dependencies
+<if any — else "none">
+
+## Sources
+- Bug report: <original description, verbatim, in blockquote>
+- Systematic-debugging skill output: <inline summary>
+```
+
+4. Fall-back: if `superpowers:systematic-debugging` is unavailable, fall back to `/ce:debug` directly and synthesize the brief from its output. Log this fallback in tracking.
+
+Return ONLY:
+```json
+{
+  "requirementsPath": "<path>",
+  "rootCause": "<one line>",
+  "usedFallback": <true|false>
+}
+```
+
+Or on error: `{"error": "<reason>"}`.
+
+Rules:
+- Never propose more than one fix approach per brief.
+- Never scope-creep: if the investigation reveals unrelated bugs, note them in an appendix, do NOT add them to AC.
+- Never skip the reproduction step — if the bug cannot be reproduced, return `{"error": "cannot-reproduce"}` and let the user decide.
+
+/auto-answer autopilot
+```
+
+**Coordinator consumes:** `{requirementsPath, rootCause, usedFallback}`. Feeds `requirementsPath` into `ce-plan-dispatcher` — same mechanical flow as `story-to-brief`. Surfaces `rootCause` in the Phase 1 banner.
+
+**Failure behavior:**
+
+- `{error: "cannot-reproduce"}` → AskUserQuestion: `Proceed with unreproduced bug (risky)` / `Abort and gather more info`. Hard gate; never autopilot-skipped.
+- `{error}` other → halt, tracking stage `halted-at-debug`.
+
+**Why opus:** root cause analysis is deep-reasoning work. Sonnet will often fixate on the first hypothesis; opus genuinely compares alternatives.
 
 ---
 
