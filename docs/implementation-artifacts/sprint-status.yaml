@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-13  # E71 marked done — all 3 stories shipped
+last_updated: 2026-04-18  # E116-S01 LibraryShelfRow primitive shipped (PR #338)
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -1423,3 +1423,12 @@ development_status:
   epic-115: done
   115-1-custom-reading-challenges: done
   epic-115-retrospective: done
+
+  # ──────────────────────────────────────────────────
+  # Epic 116: Library Page Primitives
+  # Source: CE pipeline (docs/brainstorms/2026-04-18-e116-s01-*)
+  # Shared shelf primitives for the Library page — extract pattern as consumer count grows
+  # ──────────────────────────────────────────────────
+  epic-116: in-progress
+  116-1-library-shelf-row-primitive: done  # PR #338 merged 2026-04-18
+  epic-116-retrospective: optional
