@@ -140,9 +140,12 @@ describe('setItemStatus', () => {
         .setItemStatus('c1', 'les-1', 'completed', mockModules)
     })
 
-    // Mock db to throw on next put
+    // E92-S09: writes now route through syncableWrite → db.table('contentProgress').put.
+    // Mock both call paths so the rollback fires regardless of which API persistWithRetry hits.
     const originalPut = db.contentProgress.put.bind(db.contentProgress)
     vi.spyOn(db.contentProgress, 'put').mockRejectedValue(new Error('DB write failed'))
+    const originalTablePut = db.table('contentProgress').put.bind(db.table('contentProgress'))
+    vi.spyOn(db.table('contentProgress'), 'put').mockRejectedValue(new Error('DB write failed'))
 
     await act(async () => {
       await useContentProgressStore
@@ -165,8 +168,9 @@ describe('setItemStatus', () => {
       }
     }
 
-    // Restore original
+    // Restore originals
     vi.mocked(db.contentProgress.put).mockImplementation(originalPut)
+    vi.mocked(db.table('contentProgress').put).mockImplementation(originalTablePut)
   })
 })
 

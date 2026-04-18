@@ -23,6 +23,7 @@ import { EmptyState } from '@/app/components/EmptyState'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { PdfViewer } from '@/app/components/figma/PdfViewer'
 import { db } from '@/db/schema'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
 import { revokeObjectUrl } from '@/lib/courseAdapter'
 import type { ImportedPdf } from '@/data/types'
 
@@ -145,24 +146,25 @@ function PdfSection({ pdf, courseId, isOpen, onToggle }: PdfSectionProps) {
     (page: number, _totalPages: number) => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
       saveTimerRef.current = setTimeout(() => {
+        // E92-S09: syncableWrite routes to Supabase video_progress via
+        // upsert_video_progress() (monotonic on watchedSeconds). Unify the
+        // previous two-branch update/put logic into a single put that spreads
+        // any existing record so currentTime/completionPercentage are
+        // preserved when only the PDF currentPage changes.
         db.progress
           .where('[courseId+videoId]')
           .equals([courseId, pdf.id])
           .first()
           .then(async existing => {
-            if (existing) {
-              await db.progress.update([courseId, pdf.id] as unknown as string, {
-                currentPage: page,
-              })
-            } else {
-              await db.progress.put({
-                courseId,
-                videoId: pdf.id,
+            await syncableWrite('progress', 'put', {
+              ...(existing ?? {
                 currentTime: 0,
                 completionPercentage: 0,
-                currentPage: page,
-              })
-            }
+              }),
+              courseId,
+              videoId: pdf.id,
+              currentPage: page,
+            })
           })
           .catch(() => {
             // silent-catch-ok — page save is non-critical
