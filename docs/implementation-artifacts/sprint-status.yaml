@@ -1146,7 +1146,7 @@ development_status:
   92-4-syncable-write-wrapper: done
   92-5-sync-engine-upload-phase: done
   92-6-sync-engine-download-and-apply-phase: ready-for-dev
-  92-7-sync-triggers-and-offline-handling: backlog
+  92-7-sync-triggers-and-offline-handling: done
   92-8-auth-lifecycle-integration-and-userid-backfill: backlog
   92-9-wire-p0-stores-with-syncable-write: backlog
   epic-92-retrospective: optional
