@@ -119,7 +119,7 @@ const progress: TableRegistryEntry = {
  *   - `deleted → soft_deleted` (NFR24 rename)
  *   - `conflictCopy → conflict_copy` (JSONB — auto camelCase would produce
  *     `conflict_copy` too, but explicit entry ensures upload direction is correct)
- *   - `conflictSourceId → conflict_source_id` (TEXT)
+ *   - `conflictNoteId → conflict_source_id` (TEXT)
  */
 const notes: TableRegistryEntry = {
   dexieTable: 'notes',
@@ -129,7 +129,7 @@ const notes: TableRegistryEntry = {
   fieldMap: {
     deleted: 'soft_deleted',
     conflictCopy: 'conflict_copy',
-    conflictSourceId: 'conflict_source_id',
+    conflictNoteId: 'conflict_source_id',
   },
 }
 

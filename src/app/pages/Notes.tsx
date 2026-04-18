@@ -531,6 +531,11 @@ export function Notes() {
     )
   }
 
+  // Derived: the note that currently has an open conflict dialog (if any)
+  const conflictNote = conflictNoteId != null
+    ? notes.find(n => n.id === conflictNoteId) ?? null
+    : null
+
   return (
     <TooltipProvider>
       <div className="space-y-6">
@@ -727,17 +732,14 @@ export function Notes() {
       </div>
 
       {/* Conflict resolution dialog — rendered outside TabsContent to avoid z-index issues */}
-      {conflictNoteId != null && (() => {
-        const conflictNote = notes.find(n => n.id === conflictNoteId)
-        return conflictNote && conflictNote.conflictCopy != null ? (
-          <NoteConflictDialog
-            note={conflictNote}
-            open={conflictNoteId != null}
-            onOpenChange={open => { if (!open) setConflictNoteId(null) }}
-            onResolved={() => setConflictNoteId(null)}
-          />
-        ) : null
-      })()}
+      {conflictNote != null && conflictNote.conflictCopy != null && (
+        <NoteConflictDialog
+          note={conflictNote}
+          open
+          onOpenChange={open => { if (!open) setConflictNoteId(null) }}
+          onResolved={() => setConflictNoteId(null)}
+        />
+      )}
     </TooltipProvider>
   )
 }

@@ -129,12 +129,12 @@ describe('tableRegistry — conflict strategies', () => {
     expect(getTableEntry('notes')?.conflictStrategy).toBe('conflict-copy')
   })
 
-  it('notes fieldMap has three entries: deleted, conflictCopy, conflictSourceId (E93-S03)', () => {
+  it('notes fieldMap has three entries: deleted, conflictCopy, conflictNoteId (E93-S03)', () => {
     const entry = getTableEntry('notes')
     expect(entry?.fieldMap).toMatchObject({
       deleted: 'soft_deleted',
       conflictCopy: 'conflict_copy',
-      conflictSourceId: 'conflict_source_id',
+      conflictNoteId: 'conflict_source_id',
     })
   })
 

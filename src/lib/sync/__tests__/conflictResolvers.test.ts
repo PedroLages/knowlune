@@ -64,13 +64,13 @@ describe('applyConflictCopy', () => {
     expect(result.conflictCopy?.savedAt).toBe('2026-01-01T09:00:00.000Z')
   })
 
-  it('sets conflictSourceId to local.id', () => {
+  it('sets conflictNoteId to local.id', () => {
     const local = makeNote({ id: 'note-local-id' })
     const remote = makeNote({ id: 'note-remote-id' })
 
     const result = applyConflictCopy(local, remote)
 
-    expect(result.conflictSourceId).toBe('note-local-id')
+    expect(result.conflictNoteId).toBe('note-local-id')
   })
 
   // --- Edge cases ---

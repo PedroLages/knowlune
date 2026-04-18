@@ -46,7 +46,7 @@ export function NoteConflictDialog({ note, open, onOpenChange, onResolved }: Not
       await saveNote({
         ...note,
         conflictCopy: null,
-        conflictSourceId: null,
+        conflictNoteId: null,
         updatedAt: new Date().toISOString(),
       })
       onResolved()
@@ -73,7 +73,7 @@ export function NoteConflictDialog({ note, open, onOpenChange, onResolved }: Not
         content: note.conflictCopy.content,
         tags: note.conflictCopy.tags,
         conflictCopy: null,
-        conflictSourceId: null,
+        conflictNoteId: null,
         updatedAt: new Date().toISOString(),
       })
       onResolved()

@@ -148,7 +148,7 @@ export function NoteCard({ note, courseId, courseName, lessonTitle, onDelete }: 
             <button
               type="button"
               className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] rounded-md bg-warning/10 text-warning-foreground border border-warning/30 hover:bg-warning/20 transition-colors"
-              aria-label="Note has a sync conflict"
+              aria-label="Resolve sync conflict"
               onClick={() => setShowConflictDialog(true)}
             >
               <AlertTriangle aria-hidden="true" className="size-4" />

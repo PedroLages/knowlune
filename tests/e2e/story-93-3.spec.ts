@@ -125,11 +125,12 @@ test.describe('E93-S03: Note Conflict Preservation', () => {
 
   // ── Test 5: "Use Other Version" resolution ───────────────────────────────
 
-  test('"Use Other Version" resolves conflict — badge disappears', async ({ page }) => {
+  test('"Use Other Version" resolves conflict — badge disappears and content replaced in IndexedDB', async ({ page }) => {
     // Seed a fresh note for this test
+    const useOtherNoteId = 'note-e93-s03-use-other'
     const freshNote = {
       ...CONFLICT_NOTE,
-      id: 'note-e93-s03-use-other',
+      id: useOtherNoteId,
     }
     await seedNotes(page, [freshNote])
     await page.reload()
@@ -147,6 +148,33 @@ test.describe('E93-S03: Note Conflict Preservation', () => {
 
     // Conflict badge should be gone
     await expect(page.getByRole('button', { name: /sync conflict/i })).not.toBeVisible()
+
+    // Verify content was replaced by conflictCopy.content in Dexie
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- reading Dexie state post-resolution
+    const noteInDexie = await page.evaluate(async (id: string) => {
+      return new Promise<{ content: string; conflictCopy: unknown } | null>((resolve, reject) => {
+        const req = indexedDB.open('ElearningDB')
+        req.onsuccess = () => {
+          const db = req.result
+          const tx = db.transaction('notes', 'readonly')
+          const store = tx.objectStore('notes')
+          const getReq = store.get(id)
+          getReq.onsuccess = () => {
+            db.close()
+            const note = getReq.result
+            resolve(note ? { content: note.content, conflictCopy: note.conflictCopy } : null)
+          }
+          getReq.onerror = () => { db.close(); reject(getReq.error) }
+        }
+        req.onerror = () => reject(req.error)
+      })
+    }, useOtherNoteId)
+
+    expect(noteInDexie).not.toBeNull()
+    // Content should now be the losing (other) version's content
+    expect(noteInDexie?.content).toBe(LOSING_CONTENT)
+    // conflictCopy should be cleared
+    expect(noteInDexie?.conflictCopy).toBeNull()
   })
 
   // ── Test 6: Resolved note has conflictCopy: null in IndexedDB ───────────

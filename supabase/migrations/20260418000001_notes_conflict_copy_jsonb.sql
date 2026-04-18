@@ -20,7 +20,7 @@ ALTER TABLE public.notes
 ALTER TABLE public.notes
   ALTER COLUMN conflict_copy DROP DEFAULT;
 
--- Step 3: Change type from BOOLEAN to JSONB (all existing FALSE values become NULL)
+-- Step 3: Change type from BOOLEAN to JSONB (all existing boolean values become NULL)
 ALTER TABLE public.notes
   ALTER COLUMN conflict_copy TYPE JSONB USING NULL;
 

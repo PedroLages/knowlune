@@ -28,9 +28,11 @@ export function applyConflictCopy(local: Note, remote: Note): Note {
     ...remote,
     conflictCopy: {
       content: local.content,
-      tags: local.tags,
+      // Guard: default to [] if local.tags is undefined (e.g. old record from
+      // before tags were added). Prevents runtime errors in NoteConflictDialog.
+      tags: local.tags ?? [],
       savedAt: local.updatedAt,
     },
-    conflictSourceId: local.id,
+    conflictNoteId: local.id,
   }
 }

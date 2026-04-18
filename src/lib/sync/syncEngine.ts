@@ -530,7 +530,12 @@ async function _applyConflictCopy(
     // Intentional: conflict-copy tables bypass bare LWW — applyConflictCopy
     // preserves the losing local version in conflictCopy rather than silently
     // discarding it.
-    const merged = applyConflictCopy(local as unknown as Note, record as unknown as Note)
+    // If conflictCopy already exists, newest remote wins — previous snapshot is
+    // replaced. Unresolved conflicts are superseded by the latest remote version.
+    // Guard: ensure tags array is present on both sides before delegating to resolver.
+    const localNote = local as unknown as Note
+    const remoteNote = { ...record, tags: (record['tags'] as string[] | undefined) ?? [] } as unknown as Note
+    const merged = applyConflictCopy(localNote, remoteNote)
     await table.put(merged as unknown as Record<string, unknown>)
     return
   }

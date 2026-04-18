@@ -141,7 +141,7 @@ export interface Note {
    * TEXT (not UUID) because remote device ids may not be valid UUIDs.
    * `undefined` when absent; `null` when cleared after resolution.
    */
-  conflictSourceId?: string | null
+  conflictNoteId?: string | null
 }
 
 // --- Imported Course Types (Story 1.1) ---
