@@ -2,7 +2,12 @@ import { create } from 'zustand'
 import { db } from '@/db'
 import type { Note } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
-import { addToIndex, updateInIndex, removeFromIndex } from '@/lib/noteSearch'
+import {
+  addToIndex as addDocToIndex,
+  updateInIndex as updateDocInIndex,
+  removeFromIndex as removeDocFromIndex,
+  toSearchableNote,
+} from '@/lib/unifiedSearch'
 import { embeddingPipeline } from '@/ai/embeddingPipeline'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
 import { triggerNoteLinkSuggestions } from '@/ai/knowledgeGaps/noteLinkSuggestions'
@@ -81,9 +86,9 @@ export const useNoteStore = create<NoteState>((set, get) => ({
         await db.notes.put(note)
       })
       if (existingIndex >= 0) {
-        updateInIndex(note)
+        updateDocInIndex(toSearchableNote(note))
       } else {
-        addToIndex(note)
+        addDocToIndex(toSearchableNote(note))
       }
       if (supportsWorkers()) {
         embeddingPipeline
@@ -118,7 +123,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       await persistWithRetry(async () => {
         await db.notes.add(note)
       })
-      addToIndex(note)
+      addDocToIndex(toSearchableNote(note))
       if (supportsWorkers()) {
         embeddingPipeline
           .indexNote(note)
@@ -148,7 +153,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       await persistWithRetry(async () => {
         await db.notes.delete(noteId)
       })
-      removeFromIndex(noteId)
+      removeDocFromIndex(noteId, 'note')
       if (supportsWorkers()) {
         embeddingPipeline
           .removeNote(noteId)

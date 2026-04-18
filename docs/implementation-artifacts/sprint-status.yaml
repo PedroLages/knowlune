@@ -1431,3 +1431,15 @@ development_status:
   116-1-library-shelf-row-primitive: done  # PR #338 merged 2026-04-18
   116-2-library-shelf-heading-improvements: planned
   116-3-library-page-shelf-integration: planned
+
+  # ──────────────────────────────────────────────────
+  # Epic 117: Global Search Upgrade
+  # Source: docs/brainstorms/2026-04-18-global-search-upgrade-requirements.md
+  # Unified MiniSearch index across 6 entity types, typo-tolerant palette,
+  # per-page search sharing, frecency ranking, type-prefix filters (3 stories)
+  # ──────────────────────────────────────────────────
+  epic-117: in-progress
+  117-1-unified-search-index: in-progress  # plan: docs/plans/2026-04-18-009-feat-unified-search-index-story-1-plan.md
+  117-2-ranking-frecency-empty-state: backlog
+  117-3-prefix-filters-and-per-page-input-removal: backlog
+  epic-117-retrospective: optional

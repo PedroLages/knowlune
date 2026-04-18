@@ -959,3 +959,188 @@ await db.notes.toCollection().filter(r => !r.userId).modify(stamp)
 This is slower (full table scan vs index lookup), but it's the only reliable way to target "field not present" records. In steady state after backfill, the filter returns 0 rows so the performance cost is negligible.
 
 **Case study:** E92-S02 — first draft of `backfillUserId` used `.where('userId').equals(undefined)` and silently backfilled nothing. Switching to `.filter(r => !r.userId)` fixed it.
+
+## JSONB + GIN for Schema-Flexible Columns
+
+When a Postgres/Supabase column needs to hold schema-divergent data from multiple sources (imported courses from different providers, AI-generated annotations over time, per-user experiment flags), reach for `JSONB` + a `GIN` index instead of:
+
+- Adding nullable polymorphic columns for each source
+- Creating a separate table per integration
+- Storing opaque JSON text that the database can't query into
+
+**When it pays off:**
+- The shape of the data varies by source but all sources share a parent entity (e.g., `importedCourses.metadata JSONB` where YouTube/Udemy/Coursera each contribute different fields)
+- You need to query *into* the JSON (e.g., "find all courses where `metadata->>'platform' = 'youtube'`")
+- Schema churn from `ALTER TABLE ADD COLUMN` per new source is becoming painful
+
+**When to reach for a proper column instead:**
+- The field is always present and always queried — use a typed column
+- The field has referential integrity needs (foreign keys)
+- The query pattern is a simple equality check on a hot path — typed column + B-tree is faster than JSONB + GIN
+
+**Pattern:**
+```sql
+ALTER TABLE imported_courses ADD COLUMN metadata JSONB NOT NULL DEFAULT '{}';
+CREATE INDEX imported_courses_metadata_gin ON imported_courses USING GIN (metadata);
+
+-- Now queryable at speed:
+SELECT * FROM imported_courses WHERE metadata @> '{"platform":"youtube"}';
+SELECT * FROM imported_courses WHERE metadata->'tags' ? 'postgres';
+```
+
+**Note:** This pattern is already partially in use in E92 (`messages JSONB`, `preferences JSONB`) but without GIN indexes because those columns aren't queried into. New columns that WILL be queried into should add the GIN index from the start.
+
+**Reference:** `docs/brainstorms/2026-04-18-postgres-server-platform-requirements.md` §4.3 documents this as an accepted design pattern for future Postgres-backed features.
+
+## `vi.hoisted()` for Shared Vitest Mock Factories
+
+When a Vitest test needs to mock multiple modules that all reference the same underlying spy (e.g., `db.table.toArray()` used by both `syncEngine` and `syncableWrite`), define the spies with `vi.hoisted()` once and reference them from every `vi.mock()` factory. This avoids the "factory cannot access outer variable" error that occurs when a `vi.mock()` factory closes over a `const` declared above it — because `vi.mock()` calls are hoisted to the top of the file, but `const` declarations are not.
+
+```typescript
+// ✅ Correct — spies hoisted with vi.hoisted(), reused across mocks
+const { mockToArray, mockBulkDelete, mockFrom } = vi.hoisted(() => ({
+  mockToArray: vi.fn().mockResolvedValue([]),
+  mockBulkDelete: vi.fn().mockResolvedValue(undefined),
+  mockFrom: vi.fn().mockReturnValue({ upsert: vi.fn(), insert: vi.fn() }),
+}))
+
+vi.mock('@/db', () => ({
+  db: { syncQueue: { toArray: mockToArray, bulkDelete: mockBulkDelete } },
+}))
+vi.mock('@/lib/supabase', () => ({
+  supabase: { from: mockFrom },
+}))
+
+// ❌ Wrong — ReferenceError at test load: "Cannot access 'mockToArray' before initialization"
+const mockToArray = vi.fn().mockResolvedValue([])
+vi.mock('@/db', () => ({ db: { syncQueue: { toArray: mockToArray } } }))
+```
+
+**When to use:**
+- Any Vitest suite that mocks 2+ modules sharing spy state
+- Any test that reaches into mock internals via `mockReturnValue` / `mockResolvedValue` between `it()` blocks (spies declared with `vi.hoisted()` can be mutated inside `beforeEach` without remount)
+
+**When not to use:**
+- Single-mock tests — a plain `vi.fn()` declared above the `vi.mock()` is slightly clearer when only one factory needs it (Vitest's hoisting is transparent for this case)
+
+**Case study:** E92-S05 — `syncEngine.test.ts` needed to coordinate 9 spies across `@/db`, `@/lib/supabase`, `@/stores/useAuthStore`, and `navigator.locks`. Initial implementation hit hoisting ReferenceErrors until the entire spy set was wrapped in a single `vi.hoisted()` block. Reference: `src/lib/sync/__tests__/syncEngine.test.ts:18-55`.
+
+## `ignore` Flag Cleanup for Async `useEffect`
+
+When a React effect performs an async fetch whose result writes to component state, a stale response can land after the component has unmounted or its deps have changed — causing a "setState on unmounted component" warning and, worse, stale data flashing into the UI. Guard the state setter with a locally-scoped `ignore` flag that the effect cleanup flips to `true`.
+
+```typescript
+// ✅ Correct — stale response short-circuits before touching state
+useEffect(() => {
+  if (!open || !userId) return
+  let ignore = false
+  setCounts(null)
+  countUnlinkedRecords(userId)
+    .then((result) => {
+      if (!ignore) setCounts(result)
+    })
+    .catch((err) => {
+      console.error('[LinkDataDialog] countUnlinkedRecords failed:', err)
+    })
+  return () => { ignore = true }
+}, [open, userId])
+
+// ❌ Wrong — no guard; late resolution overwrites newer state or leaks on unmount
+useEffect(() => {
+  countUnlinkedRecords(userId).then(setCounts)
+}, [open, userId])
+```
+
+**Why this beats AbortController for Dexie/IndexedDB calls:**
+- Dexie and other IDB wrappers typically don't accept an `AbortSignal`, so cancellation has to happen at the consumer, not the producer.
+- The pattern is local, synchronous, and obvious in diff review — no signal plumbing required.
+
+**When to use:**
+- Any `useEffect` that performs async work and writes to React state on success
+- Especially when the dep array changes frequently (dialog open/close, userId changes, search inputs)
+
+**When not to use:**
+- Effects that only call imperative APIs with no state writes afterwards (e.g., `fetch()` whose response is intentionally ignored)
+- Effects where the underlying API does accept an `AbortSignal` — prefer real cancellation over flag-based suppression
+
+**Case study:** E92-S08 — `LinkDataDialog` fires `countUnlinkedRecords(userId)` each time the dialog opens. Without the `ignore` flag, closing and reopening the dialog for a different user could surface the previous user's counts for a frame. Reference: `src/app/components/sync/LinkDataDialog.tsx:59-73`.
+
+## Module-Level `Map` Registry in Pure Modules
+
+When a "pure" module (no React imports, no Zustand, no side-effectful singletons) needs to let other modules register callbacks — e.g., the sync engine letting each store register a "refresh me after download" hook — use a module-level `Map` keyed by a string identifier. Do not import the Zustand store into the pure module to call it directly.
+
+```typescript
+// syncEngine.ts — pure module
+const _storeRefreshRegistry = new Map<string, () => Promise<void>>()
+
+export const syncEngine = {
+  registerStoreRefresh(tableName: string, callback: () => Promise<void>) {
+    _storeRefreshRegistry.set(tableName, callback)
+  },
+  // …engine calls callback by tableName after applying downloaded records
+}
+
+// useSyncLifecycle.ts — impure (React/Zustand) module, wires the registry
+useEffect(() => {
+  syncEngine.registerStoreRefresh('notes', () =>
+    useNoteStore.getState().loadNotes(),
+  )
+}, [])
+```
+
+**Why a Map instead of importing the store:**
+- Importing `useNoteStore` into `syncEngine.ts` would pull Dexie's `db` import into the test environment at module load, which triggers `Dexie.open()` in jsdom and creates hard-to-mock side effects.
+- The registry keeps `syncEngine.ts` mockable with `vi.mock('@/db', ...)` alone — no store mocking needed.
+- Circular dependency risk drops to zero: pure module never imports its consumers.
+
+**When to use:**
+- Any module that is imported by unit tests under a jsdom/node environment and must stay framework-free
+- Any pub/sub seam where the consumer count is known-bounded (small number of stores, tables, or channels)
+
+**When not to use:**
+- Event buses with unbounded subscribers — prefer a typed `EventEmitter` or RxJS Subject
+- Registries where ordering matters — `Map` preserves insertion order but doesn't support priority
+
+**Case study:** E92-S05/S07 — `syncEngine` registers per-table refresh callbacks via `registerStoreRefresh(tableName, callback)`; `useSyncLifecycle` wires the P0 stores in one `useEffect`. Keeping the registry in-module let the S05 test suite mock only `@/db` and `@/lib/supabase`. Reference: `src/lib/sync/syncEngine.ts:137` (registry) and `src/lib/sync/syncEngine.ts:880-882` (public API).
+
+## Single Write Path for Synced Mutations
+
+When a Dexie table participates in Supabase sync, every caller must write through one wrapper function — not directly via `db.<table>.put()` / `.add()` / `.delete()`. The wrapper owns metadata stamping (`userId`, `updatedAt`), optimistic local write, field stripping (non-serializable handles, vault credentials), queue enqueue, and engine nudge. Scattering those responsibilities across stores leaks them.
+
+```typescript
+// ✅ Correct — stores write through the wrapper
+import { syncableWrite } from '@/lib/sync/syncableWrite'
+
+async function saveProgress(entry: ContentProgress) {
+  await syncableWrite('contentProgress', 'put', entry)
+}
+
+// ❌ Wrong — direct Dexie write bypasses metadata stamping and queue enqueue
+async function saveProgress(entry: ContentProgress) {
+  await db.contentProgress.put(entry) // no userId, no updatedAt, no sync queue entry
+}
+```
+
+**The wrapper guarantees:**
+1. **Metadata stamping** — `userId` from `useAuthStore.getState()`, `updatedAt` from a single `new Date().toISOString()` captured once per call.
+2. **Optimistic local write** — Dexie write happens immediately; failures propagate to the caller.
+3. **Field stripping** — `toSnakeCase()` drops `stripFields` (browser handles) and `vaultFields` (credentials) before the payload is queued.
+4. **Queue enqueue** — `SyncQueueEntry` inserted only when `userId` is present and `skipQueue` is not set.
+5. **Engine nudge** — `syncEngine.nudge()` triggers a debounced upload cycle.
+
+**Error-handling contract:**
+- Dexie write failure → rethrow (fatal; caller surfaces to the user).
+- Queue insert failure → log + swallow (non-fatal; Dexie is the source of truth; the next full sync scan reconciles).
+
+**When to use:**
+- Every mutation of a table registered in `tableRegistry.ts`
+- Both authenticated and unauthenticated flows — the wrapper internally skips the queue when no `userId` is present, but still stamps `updatedAt`
+
+**When not to use:**
+- Reads (`get`, `where().toArray()`) — the wrapper is write-only
+- Tables explicitly excluded from sync (e.g., local-only scratch tables that are never in `tableRegistry`)
+- One-time backfill scripts that need to set `userId` without enqueuing every row — use `skipQueue: true`
+
+**Enforcement:** Today the rule is convention + review. A future ESLint rule (tracked as tech debt) will flag direct `db.<synced-table>.put/add/delete` calls outside `syncableWrite.ts` itself.
+
+**Case study:** E92-S04 introduced `syncableWrite`; E92-S09 wired the P0 stores (`contentProgress`, `studySessions`, `progress`) through it. PRs #343 and #348. Reference: `src/lib/sync/syncableWrite.ts:66-166`.

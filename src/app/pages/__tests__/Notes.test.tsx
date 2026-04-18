@@ -20,8 +20,8 @@ vi.mock('@/stores/useNoteStore', () => ({
     }),
 }))
 
-vi.mock('@/lib/noteSearch', () => ({
-  searchNotesWithContext: () => [],
+vi.mock('@/lib/unifiedSearch', () => ({
+  search: () => [],
 }))
 
 vi.mock('@/lib/progress', () => ({

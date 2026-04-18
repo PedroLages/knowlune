@@ -1,7 +1,12 @@
 import { Course, Note } from '@/data/types'
 import { db } from '@/db'
 import { logStudyAction, getStudyLog } from './studyLog'
-import { addToIndex, updateInIndex, removeFromIndex } from '@/lib/noteSearch'
+import {
+  addToIndex as addDocToIndex,
+  updateInIndex as updateDocInIndex,
+  removeFromIndex as removeDocFromIndex,
+  toSearchableNote,
+} from '@/lib/unifiedSearch'
 import { triggerNoteLinkSuggestions } from '@/ai/knowledgeGaps/noteLinkSuggestions'
 import { unlockSidebarItem } from '@/app/hooks/useProgressiveDisclosure'
 
@@ -321,7 +326,7 @@ export async function saveNote(
         ...(videoTimestamp !== undefined ? { timestamp: videoTimestamp } : {}),
       }
       await db.notes.update(existing.id, updated)
-      updateInIndex(updated)
+      updateDocInIndex(toSearchableNote(updated))
     } else {
       const newNote: Note = {
         id: crypto.randomUUID(),
@@ -334,7 +339,7 @@ export async function saveNote(
         tags: normalizedTags,
       }
       await db.notes.add(newNote)
-      addToIndex(newNote)
+      addDocToIndex(toSearchableNote(newNote))
     }
 
     logStudyAction({ type: 'note_saved', courseId, lessonId, timestamp: new Date().toISOString() })
@@ -396,7 +401,7 @@ export async function addNote(
 
   try {
     await db.notes.add(newNote)
-    addToIndex(newNote)
+    addDocToIndex(toSearchableNote(newNote))
     logStudyAction({ type: 'note_saved', courseId, lessonId, timestamp: new Date().toISOString() })
     unlockSidebarItem('note-created')
   } catch (error) {
@@ -416,7 +421,7 @@ export async function deleteNote(
 ): Promise<void> {
   try {
     await db.notes.delete(noteId)
-    removeFromIndex(noteId)
+    removeDocFromIndex(noteId, 'note')
   } catch (error) {
     console.error('[Progress] Failed to delete note from Dexie:', error)
   }

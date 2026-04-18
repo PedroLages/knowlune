@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router'
+import { toast } from 'sonner'
 import {
   LayoutDashboard,
   BookOpen,
@@ -10,8 +11,11 @@ import {
   Settings,
   Info,
   FileText,
-  PlayCircle,
   StickyNote,
+  User,
+  Highlighter,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react'
 import {
   CommandDialog,
@@ -23,33 +27,70 @@ import {
   CommandShortcut,
 } from '@/app/components/ui/command'
 import { Badge } from '@/app/components/ui/badge'
-import { useCourseStore } from '@/stores/useCourseStore'
-import { useBookStore } from '@/stores/useBookStore'
-import type { Course } from '@/data/types'
-import { searchNotesWithContext, type NoteSearchResult } from '@/lib/noteSearch'
 import { truncateSnippet, highlightMatches, buildHighlightPatterns } from '@/lib/searchUtils'
 import { db } from '@/db/schema'
-import {
-  HighlightSearchResult,
-  type HighlightSearchResultData,
-} from '@/app/components/search/HighlightSearchResult'
+import { useUnifiedSearchIndex } from '@/lib/useUnifiedSearchIndex'
+import type { EntityType, UnifiedSearchResult } from '@/lib/unifiedSearch'
 
-interface SearchItem {
+// ────────────────────────────────────────────────────────────────────────────
+// Constants
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Maximum rows rendered per section before the "Show all N" affordance. */
+const SECTION_COLLAPSED_LIMIT = 5
+/** Maximum rows rendered per section after the user expands it. */
+const SECTION_EXPANDED_LIMIT = 50
+
+/** Per-entity-type rendering config — fixed order, heading, icon. */
+const SECTION_ORDER: Array<{ type: EntityType; heading: string; icon: typeof GraduationCap }> = [
+  { type: 'course', heading: 'Courses', icon: GraduationCap },
+  { type: 'book', heading: 'Books', icon: BookOpen },
+  { type: 'lesson', heading: 'Lessons', icon: FileText },
+  { type: 'note', heading: 'Notes', icon: StickyNote },
+  { type: 'highlight', heading: 'Book Highlights', icon: Highlighter },
+  { type: 'author', heading: 'Authors', icon: User },
+]
+
+const TYPE_BADGE_LABEL: Record<EntityType, string> = {
+  course: 'Course',
+  book: 'Book',
+  lesson: 'Lesson',
+  note: 'Note',
+  highlight: 'Highlight',
+  author: 'Author',
+}
+
+/**
+ * Per-entity-type badge tinting. Uses only tokens defined in theme.css.
+ * Opacity modifiers (`/10`) on color tokens are valid Tailwind and pass
+ * the design-tokens/no-hardcoded-colors ESLint rule.
+ */
+const TYPE_BADGE_CLASS: Record<EntityType, string> = {
+  course: 'bg-brand-soft text-brand-soft-foreground',
+  book: 'bg-success-soft text-success',
+  lesson: 'bg-warning/10 text-warning',
+  note: 'bg-muted text-muted-foreground',
+  highlight: 'bg-success/10 text-success',
+  author: 'bg-secondary text-secondary-foreground',
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Static navigation pages (always shown when query is empty)
+// ────────────────────────────────────────────────────────────────────────────
+
+interface PageItem {
   id: string
   label: string
-  sublabel?: string
   path: string
-  group: 'Pages' | 'Courses' | 'Lessons'
   icon: React.ComponentType<{ className?: string }>
   keywords: string[]
 }
 
-const navigationPages: SearchItem[] = [
+const navigationPages: PageItem[] = [
   {
     id: 'page-overview',
     label: 'Overview',
     path: '/',
-    group: 'Pages',
     icon: LayoutDashboard,
     keywords: ['overview', 'dashboard', 'home'],
   },
@@ -57,7 +98,6 @@ const navigationPages: SearchItem[] = [
     id: 'page-my-courses',
     label: 'My Courses',
     path: '/my-class',
-    group: 'Pages',
     icon: BookOpen,
     keywords: ['courses', 'progress', 'class', 'my'],
   },
@@ -65,7 +105,6 @@ const navigationPages: SearchItem[] = [
     id: 'page-courses',
     label: 'Courses',
     path: '/courses',
-    group: 'Pages',
     icon: GraduationCap,
     keywords: ['courses', 'catalog', 'all'],
   },
@@ -73,7 +112,6 @@ const navigationPages: SearchItem[] = [
     id: 'page-notes',
     label: 'Notes & Bookmarks',
     path: '/notes',
-    group: 'Pages',
     icon: StickyNote,
     keywords: ['notes', 'bookmarks', 'library', 'resources', 'files'],
   },
@@ -81,7 +119,6 @@ const navigationPages: SearchItem[] = [
     id: 'page-about',
     label: 'About',
     path: '/authors',
-    group: 'Pages',
     icon: Info,
     keywords: ['about', 'authors', 'instructors', 'info'],
   },
@@ -89,7 +126,6 @@ const navigationPages: SearchItem[] = [
     id: 'page-reports-study',
     label: 'Study Analytics',
     path: '/reports?tab=study',
-    group: 'Pages',
     icon: BarChart3,
     keywords: ['reports', 'study', 'analytics', 'stats', 'lessons', 'completion'],
   },
@@ -97,7 +133,6 @@ const navigationPages: SearchItem[] = [
     id: 'page-reports-quizzes',
     label: 'Quiz Analytics',
     path: '/reports?tab=quizzes',
-    group: 'Pages',
     icon: ClipboardList,
     keywords: ['reports', 'quiz', 'analytics', 'quizzes', 'performance', 'score'],
   },
@@ -105,7 +140,6 @@ const navigationPages: SearchItem[] = [
     id: 'page-reports-ai',
     label: 'AI Analytics',
     path: '/reports?tab=ai',
-    group: 'Pages',
     icon: BrainCircuit,
     keywords: ['reports', 'ai', 'analytics', 'artificial intelligence', 'insights'],
   },
@@ -113,49 +147,14 @@ const navigationPages: SearchItem[] = [
     id: 'page-settings',
     label: 'Settings',
     path: '/settings',
-    group: 'Pages',
     icon: Settings,
     keywords: ['settings', 'preferences', 'config'],
   },
 ]
 
-function buildSearchIndex(allCourses: Course[]): SearchItem[] {
-  const items: SearchItem[] = [...navigationPages]
-
-  for (const course of allCourses) {
-    items.push({
-      id: `course-${course.id}`,
-      label: course.shortTitle || course.title,
-      sublabel: `${course.totalLessons} lessons · ${course.estimatedHours}h`,
-      path: `/courses/${course.id}`,
-      group: 'Courses',
-      icon: GraduationCap,
-      keywords: [course.title.toLowerCase(), course.shortTitle.toLowerCase(), ...course.tags],
-    })
-
-    for (const mod of course.modules) {
-      for (const lesson of mod.lessons) {
-        const hasVideo = lesson.resources.some(r => r.type === 'video')
-        items.push({
-          id: `lesson-${course.id}-${lesson.id}`,
-          label: lesson.title,
-          sublabel: `${course.shortTitle} · ${mod.title}`,
-          path: `/courses/${course.id}/lessons/${lesson.id}`,
-          group: 'Lessons',
-          icon: hasVideo ? PlayCircle : FileText,
-          keywords: [
-            lesson.title.toLowerCase(),
-            mod.title.toLowerCase(),
-            course.shortTitle.toLowerCase(),
-            ...lesson.keyTopics,
-          ],
-        })
-      }
-    }
-  }
-
-  return items
-}
+// ────────────────────────────────────────────────────────────────────────────
+// Component
+// ────────────────────────────────────────────────────────────────────────────
 
 interface SearchCommandPaletteProps {
   open: boolean
@@ -164,23 +163,17 @@ interface SearchCommandPaletteProps {
 
 export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPaletteProps) {
   const navigate = useNavigate()
-  const allCourses = useCourseStore(s => s.courses)
-  const allBooks = useBookStore(s => s.books)
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
-  const [noteResults, setNoteResults] = useState<NoteSearchResult[]>([])
-  const [highlightResults, setHighlightResults] = useState<HighlightSearchResultData[]>([])
+  // Live-region announcement debounced separately from search — 400ms pause
+  // before updating prevents SR verbosity on every keystroke (D-MED-1).
+  const [announcedCount, setAnnouncedCount] = useState<number | null>(null)
+  const [expandedSections, setExpandedSections] = useState<Set<EntityType>>(new Set())
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
+  const commandRootRef = useRef<HTMLDivElement | null>(null)
 
-  const searchIndex = useMemo(() => buildSearchIndex(allCourses), [allCourses])
-
-  const commandFilter = useCallback((value: string, search: string) => {
-    // Note and highlight items are managed by async search — always show them
-    if (value.startsWith('note:') || value.startsWith('highlight:')) return 1
-    // Default filtering for pages/courses/lessons
-    if (!search) return 1
-    return value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
-  }, [])
+  const { search } = useUnifiedSearchIndex()
 
   const highlightPatterns = useMemo(() => buildHighlightPatterns(debouncedQuery), [debouncedQuery])
 
@@ -191,12 +184,13 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
     } else {
       setSearchQuery('')
       setDebouncedQuery('')
-      setNoteResults([])
-      setHighlightResults([])
+      setAnnouncedCount(null)
+      setExpandedSections(new Set())
+      setRemovedIds(new Set())
     }
   }, [open])
 
-  // 150ms debounce for note search
+  // 150ms debounce for search
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery)
@@ -204,52 +198,69 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
     return () => clearTimeout(timer)
   }, [searchQuery])
 
-  // Run MiniSearch on debounced query
+  // Run unified search on debounced query; group by type.
+  const groupedResults = useMemo(() => {
+    const q = debouncedQuery.trim()
+    const groups: Record<EntityType, UnifiedSearchResult[]> = {
+      course: [],
+      book: [],
+      lesson: [],
+      note: [],
+      highlight: [],
+      author: [],
+    }
+    if (!q) return groups
+    const all = search(q, { limit: 300 })
+    for (const r of all) {
+      if (removedIds.has(`${r.type}:${r.id}`)) continue
+      const bucket = groups[r.type]
+      if (bucket) bucket.push(r)
+    }
+    return groups
+  }, [debouncedQuery, search, removedIds])
+
+  const hasActiveQuery = debouncedQuery.trim().length > 0
+  const totalResults = hasActiveQuery
+    ? SECTION_ORDER.reduce((acc, s) => acc + groupedResults[s.type].length, 0)
+    : 0
+
+  // Settle the live-region announcement after a 400ms pause so screen readers
+  // don't read every intermediate count as the user types (D-MED-1).
   useEffect(() => {
-    if (!debouncedQuery.trim()) {
-      setNoteResults([])
+    if (!hasActiveQuery) {
+      setAnnouncedCount(null)
       return
     }
-    setNoteResults(searchNotesWithContext(debouncedQuery))
-  }, [debouncedQuery])
+    const timer = setTimeout(() => setAnnouncedCount(totalResults), 400)
+    return () => clearTimeout(timer)
+  }, [hasActiveQuery, totalResults])
 
-  // Search book highlights on debounced query (E86-S03)
-  useEffect(() => {
-    const q = debouncedQuery.trim().toLowerCase()
-    if (!q) {
-      setHighlightResults([])
-      return
-    }
+  const announcementText =
+    announcedCount == null
+      ? ''
+      : announcedCount === 1
+        ? '1 result'
+        : `${announcedCount} results`
 
-    let ignore = false
-    db.bookHighlights
-      .filter(h => h.textAnchor.toLowerCase().includes(q))
-      .limit(5)
-      .toArray()
-      .then(matches => {
-        if (ignore) return
-        const results: HighlightSearchResultData[] = matches.map(h => {
-          const book = allBooks.find(b => b.id === h.bookId)
-          return {
-            id: h.id,
-            text: h.textAnchor,
-            bookId: h.bookId,
-            bookTitle: book?.title ?? 'Unknown Book',
-            color: h.color,
-            chapterHref: h.chapterHref,
-            cfiRange: h.cfiRange,
-          }
-        })
-        setHighlightResults(results)
-      })
-      .catch(() => {
-        // silent-catch-ok: highlight search failure degrades gracefully (no results shown)
-        if (!ignore) setHighlightResults([])
-      })
-    return () => {
-      ignore = true
-    }
-  }, [debouncedQuery, allBooks])
+  /**
+   * Home/End keyboard support (D-MED-3). cmdk handles arrows only — we
+   * intercept Home/End to jump to the first/last `[cmdk-item]` in the list.
+   */
+  const handleCommandKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Home' && e.key !== 'End') return
+    const root = commandRootRef.current
+    if (!root) return
+    const items = root.querySelectorAll<HTMLElement>(
+      '[cmdk-item]:not([data-disabled="true"])'
+    )
+    if (items.length === 0) return
+    e.preventDefault()
+    const target = e.key === 'Home' ? items[0] : items[items.length - 1]
+    target.scrollIntoView({ block: 'nearest' })
+    // cmdk tracks selection via data-value on the item; dispatch a mousemove
+    // so cmdk marks it selected (matches the library's own hover semantics).
+    target.dispatchEvent(new Event('mousemove', { bubbles: true }))
+  }
 
   const handleOpenChange = (newOpen: boolean) => {
     onOpenChange(newOpen)
@@ -258,49 +269,140 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
     }
   }
 
-  const handleSelect = (path: string) => {
+  const handleStaticSelect = (path: string) => {
     handleOpenChange(false)
     navigate(path)
   }
 
-  const handleNoteSelect = (result: NoteSearchResult) => {
-    handleOpenChange(false)
-    let path = `/courses/${result.courseId}/lessons/${result.videoId}?panel=notes`
-    if (result.timestamp != null) {
-      path += `&t=${result.timestamp}`
+  /**
+   * Navigate to a unified-search result. If the underlying entity has been
+   * deleted between index time and select time, surface a toast + remove the
+   * stale row from the local result set so the palette can stay open.
+   */
+  const handleResultSelect = async (result: UnifiedSearchResult) => {
+    let path: string | null = null
+    let exists = true
+
+    try {
+      switch (result.type) {
+        case 'course': {
+          const row = await db.importedCourses.get(result.id)
+          if (!row) exists = false
+          else path = `/courses/${result.id}`
+          break
+        }
+        case 'lesson': {
+          const row = await db.importedVideos.get(result.id)
+          if (!row) exists = false
+          else path = `/courses/${row.courseId}/lessons/${result.id}`
+          break
+        }
+        case 'book': {
+          const row = await db.books.get(result.id)
+          if (!row) exists = false
+          else path = `/library/${result.id}`
+          break
+        }
+        case 'note': {
+          const row = await db.notes.get(result.id)
+          if (!row) exists = false
+          else {
+            let p = `/courses/${row.courseId}/lessons/${row.videoId}?panel=notes`
+            if (row.timestamp != null) p += `&t=${row.timestamp}`
+            path = p
+          }
+          break
+        }
+        case 'highlight': {
+          const row = await db.bookHighlights.get(result.id)
+          if (!row) exists = false
+          else {
+            const params = new URLSearchParams()
+            params.set('sourceHighlightId', result.id)
+            path = `/library/${row.bookId}/read?${params.toString()}`
+          }
+          break
+        }
+        case 'author': {
+          const row = await db.authors.get(result.id)
+          if (!row) exists = false
+          else path = `/authors/${result.id}`
+          break
+        }
+      }
+    } catch (e) {
+      // silent-catch-ok: deleted entity handled via toast + result refresh
+      console.warn('[search-palette] existence check failed:', e)
+      exists = false
     }
+
+    if (!exists || !path) {
+      toast.error('Item no longer available')
+      setRemovedIds(prev => {
+        const next = new Set(prev)
+        next.add(`${result.type}:${result.id}`)
+        return next
+      })
+      return
+    }
+
+    handleOpenChange(false)
     navigate(path)
   }
 
-  // Navigate to highlight in EPUB reader (E86-S03)
-  const handleHighlightSelect = (result: HighlightSearchResultData) => {
-    handleOpenChange(false)
-    const params = new URLSearchParams()
-    params.set('sourceHighlightId', result.id)
-    navigate(`/library/${result.bookId}/read?${params.toString()}`)
+  const toggleExpand = (type: EntityType) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev)
+      if (next.has(type)) next.delete(type)
+      else next.add(type)
+      return next
+    })
   }
 
-  // Group items
-  const pages = searchIndex.filter(item => item.group === 'Pages')
-  const courses = searchIndex.filter(item => item.group === 'Courses')
-  const lessons = searchIndex.filter(item => item.group === 'Lessons')
+  // Static pages are filtered by cmdk's default when no query; when a query is
+  // present, we bypass cmdk's filter (shouldFilter={false}) so MiniSearch
+  // ranks results. The static Pages group matches by a simple substring test.
+  const staticPagesFiltered = useMemo(() => {
+    const q = debouncedQuery.trim().toLowerCase()
+    if (!q) return navigationPages
+    return navigationPages.filter(p => {
+      const haystack = [p.label, ...p.keywords].join(' ').toLowerCase()
+      return haystack.includes(q)
+    })
+  }, [debouncedQuery])
 
-  const hasNoteResults = noteResults.length > 0
-  const hasHighlightResults = highlightResults.length > 0
-  const hasActiveQuery = debouncedQuery.trim().length > 0
+  // Does at least one entity section have results? (controls whether empty
+  // sections render a placeholder row or are suppressed — D-MED-6).
+  const anyEntityHits = hasActiveQuery && totalResults > 0
 
   return (
     <CommandDialog
       open={open}
       onOpenChange={handleOpenChange}
       title="Search"
-      description="Search for pages, courses, lessons, notes, and book highlights"
-      filter={commandFilter}
+      description="Search for pages, courses, books, lessons, notes, highlights, and authors"
+      shouldFilter={false}
+      commandRef={commandRootRef}
+      onCommandKeyDown={handleCommandKeyDown}
+      // D-MED-2: full-screen on mobile viewports (<640px). Overrides the
+      // default DialogContent sizing so the palette fills the viewport.
+      contentClassName="max-sm:inset-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:max-w-full max-sm:rounded-none max-sm:h-full max-sm:w-full"
     >
       <CommandInput
-        placeholder="Search pages, courses, lessons, notes, highlights..."
+        placeholder="Search pages, courses, books, lessons, notes, highlights..."
         onValueChange={setSearchQuery}
       />
+      {/* Polite live region for screen readers — announces result count.
+          Pluralized and debounced to a 400ms pause to limit SR verbosity. */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        data-testid="search-result-count"
+      >
+        {announcementText}
+      </div>
       <CommandList>
         <CommandEmpty>
           {hasActiveQuery
@@ -308,65 +410,118 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
             : 'No results found.'}
         </CommandEmpty>
 
-        {hasNoteResults && (
-          <CommandGroup heading="Notes">
-            {noteResults.map(result => (
-              <CommandItem
-                key={result.id}
-                value={`note:${result.id}`}
-                onSelect={() => handleNoteSelect(result)}
-              >
-                <StickyNote className="mr-2 size-4 shrink-0 text-gold" />
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className="text-sm truncate">
-                    {highlightMatches(truncateSnippet(result.content), highlightPatterns)}
-                  </span>
-                  <span className="text-xs text-muted-foreground truncate">
-                    {result.courseName}
-                    {result.videoTitle ? ` · ${result.videoTitle}` : ''}
-                  </span>
-                  {result.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-0.5">
-                      {result.tags.map(tag => (
-                        <Badge
-                          key={tag}
-                          variant="secondary"
-                          className="text-[10px] px-1.5 py-0 h-4"
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
+        {/* Unified entity sections (fixed order). Hidden when query is empty. */}
+        {hasActiveQuery &&
+          SECTION_ORDER.map(section => {
+            const rows = groupedResults[section.type]
+            const expanded = expandedSections.has(section.type)
+            const limit = expanded ? SECTION_EXPANDED_LIMIT : SECTION_COLLAPSED_LIMIT
+            const shown = rows.slice(0, limit)
+            const hiddenCount = rows.length - shown.length
+            const SectionIcon = section.icon
 
-        {hasHighlightResults && (
-          <CommandGroup heading="Book Highlights">
-            {highlightResults.map(result => (
-              <CommandItem
-                key={result.id}
-                value={`highlight:${result.id}`}
-                onSelect={() => handleHighlightSelect(result)}
-                data-testid={`highlight-search-result-${result.id}`}
-              >
-                <HighlightSearchResult result={result} patterns={highlightPatterns} />
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
+            // D-MED-6: when other sections have hits, render empty sections
+            // with a disabled placeholder so the user knows that section was
+            // searched. When ALL sections are empty, fall through to
+            // <CommandEmpty> instead.
+            if (rows.length === 0) {
+              if (!anyEntityHits) return null
+              return (
+                <CommandGroup key={section.type} heading={section.heading}>
+                  <CommandItem
+                    key={`${section.type}-empty`}
+                    value={`${section.type}-empty`}
+                    disabled
+                    // min-h-[44px] keeps the row within the 44×44 touch target
+                    // guideline even though it's disabled (D-HIGH-4).
+                    className="min-h-[44px] cursor-default text-muted-foreground"
+                    data-testid={`search-empty-${section.type}`}
+                  >
+                    <SectionIcon className="mr-2 size-4 shrink-0 opacity-50" />
+                    <span className="text-xs">
+                      {section.heading} — no matches
+                    </span>
+                  </CommandItem>
+                </CommandGroup>
+              )
+            }
+
+            return (
+              <CommandGroup key={section.type} heading={section.heading}>
+                {shown.map(r => (
+                  <CommandItem
+                    key={`${r.type}:${r.id}`}
+                    value={`${r.type}:${r.id}`}
+                    onSelect={() => handleResultSelect(r)}
+                    // D-HIGH-3: meaningful accessible name composed of
+                    // "{displayTitle}, {type}" so AT announces the human
+                    // label instead of the synthetic "course:abc-123" value.
+                    aria-label={`${r.displayTitle}, ${TYPE_BADGE_LABEL[r.type]}`}
+                    // D-HIGH-4: 44×44px minimum touch target.
+                    className="min-h-[44px]"
+                    data-testid={`search-result-${r.type}-${r.id}`}
+                  >
+                    <SectionIcon className="mr-2 size-4 shrink-0" />
+                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                      <span className="text-sm truncate">
+                        {highlightMatches(truncateSnippet(r.displayTitle), highlightPatterns)}
+                      </span>
+                      {r.subtitle && (
+                        <span className="text-xs text-muted-foreground truncate">
+                          {r.subtitle}
+                        </span>
+                      )}
+                    </div>
+                    <Badge
+                      // D-MED-5: tinted per-type badge using theme tokens.
+                      // D-HIGH-3: no aria-label — visible text is sufficient.
+                      className={`ml-2 shrink-0 text-[10px] px-1.5 py-0 h-4 ${TYPE_BADGE_CLASS[r.type]}`}
+                    >
+                      {TYPE_BADGE_LABEL[r.type]}
+                    </Badge>
+                  </CommandItem>
+                ))}
+                {hiddenCount > 0 && (
+                  <CommandItem
+                    key={`${section.type}-show-all`}
+                    value={`${section.type}-show-all`}
+                    onSelect={() => toggleExpand(section.type)}
+                    // D-HIGH-2: disclosure affordance — expand state exposed
+                    // to AT, chevron icon reflects open/closed visually,
+                    // aria-label includes the expansion state.
+                    aria-expanded={expanded}
+                    aria-label={`Show all ${rows.length} ${section.heading.toLowerCase()}, ${
+                      expanded ? 'expanded' : 'collapsed'
+                    }`}
+                    // D-HIGH-4: 44×44px minimum touch target.
+                    className="min-h-[44px]"
+                    data-testid={`search-show-all-${section.type}`}
+                  >
+                    {expanded ? (
+                      <ChevronDown className="mr-2 size-4 shrink-0 transition-transform" />
+                    ) : (
+                      <ChevronRight className="mr-2 size-4 shrink-0 transition-transform" />
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {expanded ? 'Show fewer' : `Show all ${rows.length}`}{' '}
+                      {section.heading.toLowerCase()}
+                    </span>
+                  </CommandItem>
+                )}
+              </CommandGroup>
+            )
+          })}
 
         <CommandGroup heading="Pages">
-          {pages.map(item => {
+          {staticPagesFiltered.map(item => {
             const Icon = item.icon
             return (
               <CommandItem
                 key={item.id}
-                value={[item.label, ...item.keywords].join(' ')}
-                onSelect={() => handleSelect(item.path)}
+                value={item.id}
+                onSelect={() => handleStaticSelect(item.path)}
+                // D-HIGH-4: 44×44px minimum touch target.
+                className="min-h-[44px]"
               >
                 <Icon className="mr-2 size-4 shrink-0" />
                 <span>{item.label}</span>
@@ -375,48 +530,6 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
                     <kbd>Cmd</kbd>+<kbd>,</kbd>
                   </CommandShortcut>
                 )}
-              </CommandItem>
-            )
-          })}
-        </CommandGroup>
-
-        <CommandGroup heading="Courses">
-          {courses.map(item => {
-            const Icon = item.icon
-            return (
-              <CommandItem
-                key={item.id}
-                value={[item.label, ...item.keywords].join(' ')}
-                onSelect={() => handleSelect(item.path)}
-              >
-                <Icon className="mr-2 size-4 shrink-0" />
-                <div className="flex flex-col">
-                  <span>{item.label}</span>
-                  {item.sublabel && (
-                    <span className="text-xs text-muted-foreground">{item.sublabel}</span>
-                  )}
-                </div>
-              </CommandItem>
-            )
-          })}
-        </CommandGroup>
-
-        <CommandGroup heading="Lessons">
-          {lessons.map(item => {
-            const Icon = item.icon
-            return (
-              <CommandItem
-                key={item.id}
-                value={[item.label, ...item.keywords].join(' ')}
-                onSelect={() => handleSelect(item.path)}
-              >
-                <Icon className="mr-2 size-4 shrink-0" />
-                <div className="flex flex-col">
-                  <span>{item.label}</span>
-                  {item.sublabel && (
-                    <span className="text-xs text-muted-foreground">{item.sublabel}</span>
-                  )}
-                </div>
               </CommandItem>
             )
           })}

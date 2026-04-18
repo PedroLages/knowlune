@@ -12,6 +12,7 @@ import {
   Search,
   Trash2,
   Users,
+  X,
 } from 'lucide-react'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
@@ -34,6 +35,7 @@ import { useCourseStore } from '@/stores/useCourseStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
 import { getMergedAuthors, getAvatarSrc, getInitials, type AuthorView } from '@/lib/authors'
+import { useUnifiedSearchIndex } from '@/lib/useUnifiedSearchIndex'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
 import { DeleteAuthorDialog } from '@/app/components/authors/DeleteAuthorDialog'
@@ -55,14 +57,22 @@ export function Authors() {
   // Merge pre-seeded + imported authors into unified view
   const allAuthors = useMemo(() => getMergedAuthors(storeAuthors), [storeAuthors])
 
-  // Filter by search query
+  const { ready: searchReady, search: unifiedSearch } = useUnifiedSearchIndex()
+
+  // Filter by search query. Prefer the unified index (typo-tolerant,
+  // field-boosted) once it's ready; fall back to substring while booting.
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return allAuthors
+    if (searchReady) {
+      const results = unifiedSearch(searchQuery, { types: ['author'] })
+      const matchedIds = new Set(results.map(r => r.id))
+      return allAuthors.filter(a => matchedIds.has(a.id))
+    }
     const q = searchQuery.toLowerCase()
     return allAuthors.filter(
       a => a.name.toLowerCase().includes(q) || a.specialties.some(s => s.toLowerCase().includes(q))
     )
-  }, [allAuthors, searchQuery])
+  }, [allAuthors, searchQuery, searchReady, unifiedSearch])
 
   // Sort
   const sorted = useMemo(() => {
@@ -154,10 +164,21 @@ export function Authors() {
               placeholder="Search authors by name or specialty..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-9 pr-10"
               aria-label="Search authors"
               data-testid="author-search-input"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+                data-testid="author-search-clear"
+                className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            )}
           </div>
           <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
             <SelectTrigger

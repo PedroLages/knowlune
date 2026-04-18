@@ -35,7 +35,7 @@ import { Skeleton } from '@/app/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import { BookmarksSection } from '@/app/components/figma/BookmarksSection'
 import { useNoteStore } from '@/stores/useNoteStore'
-import { searchNotesWithContext } from '@/lib/noteSearch'
+import { useUnifiedSearchIndex } from '@/lib/useUnifiedSearchIndex'
 import { getAllNoteTags } from '@/lib/progress'
 import { highlightMatches, buildHighlightPatterns } from '@/lib/searchUtils'
 import { exportNoteAsMarkdown } from '@/lib/noteExport'
@@ -118,6 +118,10 @@ export function Notes() {
   const [semanticResults, setSemanticResults] = useState<Array<{ noteId: string; score: number }>>(
     []
   )
+
+  // Unified search hook — falls back to substring match over content/tags
+  // while the index is still warming up (mirrors Courses.tsx pattern).
+  const { ready: searchReady, search: unifiedSearch } = useUnifiedSearchIndex()
 
   // Build lookup maps from course data
   const { courseNames, lessonTitles } = useMemo(() => {
@@ -256,16 +260,30 @@ export function Notes() {
 
   // Apply search filter (text or semantic)
   const searchResultIds = useMemo(() => {
-    if (!debouncedQuery.trim()) return null
+    const q = debouncedQuery.trim()
+    if (!q) return null
     if (useSemanticSearch && semanticResults.length > 0) {
       return new Set(semanticResults.map(r => r.noteId))
     }
     if (!useSemanticSearch) {
-      const results = searchNotesWithContext(debouncedQuery)
-      return new Set(results.map(r => r.id))
+      if (searchReady) {
+        const results = unifiedSearch(debouncedQuery, { types: ['note'] })
+        return new Set(results.map(r => r.id))
+      }
+      // Fallback: index not ready yet — substring match over content/tags.
+      const needle = q.toLowerCase()
+      return new Set(
+        notes
+          .filter(n => {
+            const content = stripHtml(n.content).toLowerCase()
+            if (content.includes(needle)) return true
+            return n.tags.some(t => t.toLowerCase().includes(needle))
+          })
+          .map(n => n.id)
+      )
     }
     return null
-  }, [debouncedQuery, useSemanticSearch, semanticResults])
+  }, [debouncedQuery, useSemanticSearch, semanticResults, searchReady, unifiedSearch, notes])
 
   // Apply tag filter (client-side from already-loaded notes array)
   const tagFilteredIds = useMemo(() => {
