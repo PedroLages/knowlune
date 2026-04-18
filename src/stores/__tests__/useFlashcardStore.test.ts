@@ -106,7 +106,12 @@ describe('createFlashcard', () => {
   })
 
   it('should rollback optimistic update on persist failure', async () => {
-    vi.spyOn(db.flashcards, 'add').mockRejectedValue(new Error('DB full'))
+    // syncableWrite uses db.table('flashcards').add() — spy on db.table to intercept.
+    vi.spyOn(db, 'table').mockReturnValue({
+      add: vi.fn().mockRejectedValue(new Error('DB full')),
+      put: vi.fn().mockRejectedValue(new Error('DB full')),
+      delete: vi.fn().mockRejectedValue(new Error('DB full')),
+    } as unknown as ReturnType<typeof db.table>)
 
     await useFlashcardStore.getState().createFlashcard('Q', 'A', 'course-1')
 

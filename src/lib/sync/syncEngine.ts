@@ -36,6 +36,7 @@ import { supabase } from '@/lib/auth/supabase'
 import { toCamelCase } from './fieldMapper'
 import { getTableEntry, tableRegistry } from './tableRegistry'
 import { applyConflictCopy } from './conflictResolvers'
+import { replayFlashcardReviews } from './flashcardReplayService'
 import type { Note } from '@/data/types'
 
 // ---------------------------------------------------------------------------
@@ -583,6 +584,15 @@ async function _applyRecord(
     default:
       // Intentional: 'skip' and any future unknown strategies are no-ops here.
       console.warn(`[syncEngine] Unknown conflict strategy "${entry.conflictStrategy}" for table "${entry.dexieTable}" — skipping.`)
+  }
+
+  // Post-apply hook: replay FSRS review log for flashcards that have been reviewed.
+  // Guard: only call for the 'flashcards' table and only when last_review is set.
+  // New (never-reviewed) cards have no review log — replaying them would be a no-op
+  // Supabase query that could also overwrite a fresh local card with default FSRS state.
+  // replayFlashcardReviews swallows its own errors, so failures here are non-fatal.
+  if (entry.dexieTable === 'flashcards' && record['lastReview']) {
+    await replayFlashcardReviews(record['id'] as string)
   }
 }
 
