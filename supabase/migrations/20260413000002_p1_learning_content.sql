@@ -525,7 +525,7 @@ BEGIN
   )
   ON CONFLICT (id) DO UPDATE SET
     mastery_level    = GREATEST(vocabulary_items.mastery_level, EXCLUDED.mastery_level),
-    last_reviewed_at = EXCLUDED.last_reviewed_at,
+    last_reviewed_at = COALESCE(EXCLUDED.last_reviewed_at, vocabulary_items.last_reviewed_at),
     updated_at       = GREATEST(vocabulary_items.updated_at, v_clamped);
   -- book_id and word are intentionally excluded from DO UPDATE (immutable once set).
 END;
