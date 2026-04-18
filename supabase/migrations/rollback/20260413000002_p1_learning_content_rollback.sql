@@ -21,7 +21,7 @@ BEGIN;
 -- ─── Functions ───────────────────────────────────────────────────────────────
 -- Drop functions first — they reference tables but DROP FUNCTION is non-blocking.
 DROP FUNCTION IF EXISTS public.search_similar_notes(UUID, vector(384), INT);
-DROP FUNCTION IF EXISTS public.upsert_vocabulary_mastery(UUID, UUID, INT, TIMESTAMPTZ);
+DROP FUNCTION IF EXISTS public.upsert_vocabulary_mastery(UUID, UUID, TEXT, TEXT, INT, TIMESTAMPTZ, TEXT, TEXT, TEXT, UUID, TIMESTAMPTZ);
 
 -- ─── Tables (reverse dependency order) ──────────────────────────────────────
 -- FK holders must be dropped before FK targets.

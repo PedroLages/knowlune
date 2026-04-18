@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS public.flashcards (
   id             UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id        UUID         NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   course_id      TEXT         NOT NULL,
-  note_id        UUID,
+  note_id        UUID         REFERENCES public.notes(id) ON DELETE SET NULL,
   source_type    TEXT         CHECK (source_type IN ('course', 'book')),
   source_book_id TEXT,
   source_highlight_id TEXT,
@@ -337,12 +337,19 @@ CREATE INDEX IF NOT EXISTS idx_audio_bookmarks_user_created
 
 ALTER TABLE public.audio_bookmarks ENABLE ROW LEVEL SECURITY;
 
+-- INSERT + SELECT policies only — audio_bookmarks are immutable events (no UPDATE/DELETE).
 DROP POLICY IF EXISTS "Users access own audio_bookmarks" ON public.audio_bookmarks;
-CREATE POLICY "Users access own audio_bookmarks"
+DROP POLICY IF EXISTS "insert_own_audio_bookmarks" ON public.audio_bookmarks;
+DROP POLICY IF EXISTS "select_own_audio_bookmarks" ON public.audio_bookmarks;
+CREATE POLICY "insert_own_audio_bookmarks"
   ON public.audio_bookmarks
-  FOR ALL
-  USING (auth.uid() = user_id)
+  FOR INSERT
   WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "select_own_audio_bookmarks"
+  ON public.audio_bookmarks
+  FOR SELECT
+  USING (auth.uid() = user_id);
 
 
 -- ─── Unit 9: audio_clips ────────────────────────────────────────────────────
@@ -476,11 +483,21 @@ CREATE TRIGGER set_updated_at
 -- Timestamp clamp: LEAST(p_updated_at, now() + interval '5 minutes') prevents
 -- far-future client timestamps from pinning the incremental sync cursor permanently.
 -- SQLSTATE 42501 (insufficient_privilege) is semantically correct for authz failure.
+-- p_book_id and p_word are NOT NULL in vocabulary_items — required on INSERT.
+-- p_context, p_definition, p_note, p_highlight_id, p_last_reviewed_at are nullable
+-- and default to NULL; excluded from ON CONFLICT DO UPDATE (immutable once set).
 CREATE OR REPLACE FUNCTION public.upsert_vocabulary_mastery(
-  p_user_id           UUID,
+  p_user_id            UUID,
   p_vocabulary_item_id UUID,
-  p_mastery_level     INT,
-  p_updated_at        TIMESTAMPTZ
+  p_book_id            TEXT,
+  p_word               TEXT,
+  p_mastery_level      INT,
+  p_updated_at         TIMESTAMPTZ,
+  p_context            TEXT        DEFAULT NULL,
+  p_definition         TEXT        DEFAULT NULL,
+  p_note               TEXT        DEFAULT NULL,
+  p_highlight_id       UUID        DEFAULT NULL,
+  p_last_reviewed_at   TIMESTAMPTZ DEFAULT NULL
 )
 RETURNS VOID
 LANGUAGE plpgsql
@@ -495,22 +512,33 @@ BEGIN
       USING ERRCODE = '42501';
   END IF;
 
-  INSERT INTO public.vocabulary_items (id, user_id, mastery_level, updated_at)
-  VALUES (p_vocabulary_item_id, p_user_id, p_mastery_level, v_clamped)
+  INSERT INTO public.vocabulary_items (
+    id, user_id, book_id, word,
+    context, definition, note, highlight_id, last_reviewed_at,
+    mastery_level, updated_at
+  )
+  VALUES (
+    p_vocabulary_item_id, p_user_id, p_book_id, p_word,
+    p_context, p_definition, p_note, p_highlight_id, p_last_reviewed_at,
+    p_mastery_level, v_clamped
+  )
   ON CONFLICT (id) DO UPDATE SET
     mastery_level = GREATEST(vocabulary_items.mastery_level, EXCLUDED.mastery_level),
     updated_at    = GREATEST(vocabulary_items.updated_at, v_clamped);
+  -- book_id and word are intentionally excluded from DO UPDATE (immutable once set).
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.upsert_vocabulary_mastery(UUID, UUID, INT, TIMESTAMPTZ)
+REVOKE EXECUTE ON FUNCTION public.upsert_vocabulary_mastery(UUID, UUID, TEXT, TEXT, INT, TIMESTAMPTZ, TEXT, TEXT, TEXT, UUID, TIMESTAMPTZ)
   FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.upsert_vocabulary_mastery(UUID, UUID, INT, TIMESTAMPTZ)
+GRANT EXECUTE ON FUNCTION public.upsert_vocabulary_mastery(UUID, UUID, TEXT, TEXT, INT, TIMESTAMPTZ, TEXT, TEXT, TEXT, UUID, TIMESTAMPTZ)
   TO authenticated;
 
-COMMENT ON FUNCTION public.upsert_vocabulary_mastery(UUID, UUID, INT, TIMESTAMPTZ) IS
+COMMENT ON FUNCTION public.upsert_vocabulary_mastery(UUID, UUID, TEXT, TEXT, INT, TIMESTAMPTZ, TEXT, TEXT, TEXT, UUID, TIMESTAMPTZ) IS
   'Monotonic vocabulary mastery upsert: mastery_level only advances (GREATEST), '
   'updated_at GREATEST with 5-minute future clamp to protect sync cursor. '
+  'p_book_id and p_word are required (NOT NULL columns); nullable fields default to NULL. '
+  'book_id and word excluded from ON CONFLICT DO UPDATE (immutable once set). '
   'SECURITY DEFINER: authz enforced by entry guard p_user_id IS DISTINCT FROM auth.uid(). '
   'RAISE on authz failure aborts the caller transaction (SQLSTATE 42501).';
 
