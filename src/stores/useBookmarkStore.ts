@@ -3,6 +3,7 @@ import { db } from '@/db'
 import type { VideoBookmark } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { formatBookmarkTimestamp } from '@/lib/bookmarks'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 interface BookmarkState {
   bookmarks: VideoBookmark[]
@@ -87,7 +88,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.bookmarks.add(bookmark)
+        await syncableWrite('bookmarks', 'add', bookmark as unknown as SyncableRecord)
       })
     } catch (error) {
       // Rollback on failure
@@ -114,7 +115,10 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.bookmarks.update(bookmarkId, { label })
+        // Fetch inside persistWithRetry so retries always re-read the latest record
+        const existing = await db.bookmarks.get(bookmarkId)
+        if (!existing) return
+        await syncableWrite('bookmarks', 'put', { ...existing, label } as unknown as SyncableRecord)
       })
     } catch (error) {
       // Rollback on failure
@@ -138,7 +142,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.bookmarks.delete(bookmarkId)
+        await syncableWrite('bookmarks', 'delete', bookmarkId)
       })
     } catch (error) {
       // Rollback on failure

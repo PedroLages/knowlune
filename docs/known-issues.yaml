@@ -1103,3 +1103,18 @@ issues:
     status: open
     addedAt: "2026-04-18"
     resolution: schedule-future
+
+  - id: KI-E93-S02-L01
+    story: E93-S02
+    severity: LOW
+    description: "addBookmark optimistic object missing updatedAt field — state inconsistent with persisted shape until next loadBookmarks()"
+    status: open
+    addedAt: "2026-04-18"
+    resolution: schedule-future
+  - id: KI-E93-S02-L02
+    story: E93-S02
+    severity: LOW
+    description: "p1-notes-bookmarks-sync.test.ts import order for useAuthStore is implicit and fragile post vi.resetModules() — needs comment"
+    status: open
+    addedAt: "2026-04-18"
+    resolution: schedule-future

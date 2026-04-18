@@ -15,6 +15,8 @@ const {
   mockMarkSyncComplete,
   mockRefreshPendingCount,
   mockLoadSessionStats,
+  mockLoadNotes,
+  mockLoadBookmarks,
 } = vi.hoisted(() => ({
   mockFullSync: vi.fn().mockResolvedValue(undefined),
   mockNudge: vi.fn(),
@@ -23,6 +25,8 @@ const {
   mockMarkSyncComplete: vi.fn(),
   mockRefreshPendingCount: vi.fn(),
   mockLoadSessionStats: vi.fn().mockResolvedValue(undefined),
+  mockLoadNotes: vi.fn().mockResolvedValue(undefined),
+  mockLoadBookmarks: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('@/lib/sync/syncEngine', () => ({
@@ -47,6 +51,22 @@ vi.mock('@/stores/useSessionStore', () => ({
   useSessionStore: {
     getState: vi.fn(() => ({
       loadSessionStats: mockLoadSessionStats,
+    })),
+  },
+}))
+
+vi.mock('@/stores/useNoteStore', () => ({
+  useNoteStore: {
+    getState: vi.fn(() => ({
+      loadNotes: mockLoadNotes,
+    })),
+  },
+}))
+
+vi.mock('@/stores/useBookmarkStore', () => ({
+  useBookmarkStore: {
+    getState: vi.fn(() => ({
+      loadBookmarks: mockLoadBookmarks,
     })),
   },
 }))
@@ -271,6 +291,45 @@ describe('useSyncLifecycle', () => {
       'studySessions',
       expect.any(Function)
     )
+  })
+
+  it('registers notes and bookmarks store refreshes before calling fullSync', async () => {
+    const callOrder: string[] = []
+    mockRegisterStoreRefresh.mockImplementation((tableName: string) => {
+      callOrder.push(`register:${tableName}`)
+    })
+    mockFullSync.mockImplementation(async () => {
+      callOrder.push('fullSync')
+    })
+
+    await act(async () => {
+      renderHook(() => useSyncLifecycle())
+    })
+
+    const notesIndex = callOrder.indexOf('register:notes')
+    const bookmarksIndex = callOrder.indexOf('register:bookmarks')
+    const fullSyncIndex = callOrder.indexOf('fullSync')
+
+    expect(notesIndex).toBeGreaterThanOrEqual(0)
+    expect(bookmarksIndex).toBeGreaterThanOrEqual(0)
+    expect(notesIndex).toBeLessThan(fullSyncIndex)
+    expect(bookmarksIndex).toBeLessThan(fullSyncIndex)
+  })
+
+  it('registers store refresh with dexie table name notes', async () => {
+    await act(async () => {
+      renderHook(() => useSyncLifecycle())
+    })
+
+    expect(mockRegisterStoreRefresh).toHaveBeenCalledWith('notes', expect.any(Function))
+  })
+
+  it('registers store refresh with dexie table name bookmarks', async () => {
+    await act(async () => {
+      renderHook(() => useSyncLifecycle())
+    })
+
+    expect(mockRegisterStoreRefresh).toHaveBeenCalledWith('bookmarks', expect.any(Function))
   })
 
   // -------------------------------------------------------------------------

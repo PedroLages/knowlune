@@ -246,6 +246,7 @@ export interface VideoBookmark {
   timestamp: number // seconds
   label: string
   createdAt: string // ISO 8601
+  updatedAt?: string // ISO 8601 — stamped by syncableWrite on every mutation (E93-S02)
 }
 
 export interface Screenshot {

@@ -22,6 +22,8 @@
 import { useEffect, useRef } from 'react'
 import { syncEngine } from '@/lib/sync/syncEngine'
 import { useSessionStore } from '@/stores/useSessionStore'
+import { useNoteStore } from '@/stores/useNoteStore'
+import { useBookmarkStore } from '@/stores/useBookmarkStore'
 import { useSyncStatusStore } from '@/app/stores/useSyncStatusStore'
 
 /** Interval between periodic nudge calls (ms). */
@@ -46,6 +48,10 @@ export function useSyncLifecycle(): void {
     syncEngine.registerStoreRefresh('studySessions', () =>
       useSessionStore.getState().loadSessionStats()
     )
+
+    syncEngine.registerStoreRefresh('notes', () => useNoteStore.getState().loadNotes())
+
+    syncEngine.registerStoreRefresh('bookmarks', () => useBookmarkStore.getState().loadBookmarks())
 
     // Intentional: contentProgress store refresh is NOT registered here.
     // useContentProgressStore.loadCourseProgress(courseId) requires a mandatory
