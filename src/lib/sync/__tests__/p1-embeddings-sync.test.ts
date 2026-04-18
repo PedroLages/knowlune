@@ -108,6 +108,26 @@ describe('E93-S05 embeddings sync — authenticated writes', () => {
     expect(payload).toHaveProperty('created_at')
   })
 
+  it('re-embed same noteId: id is reused and vector is updated', async () => {
+    const vector1 = makeTestEmbedding(0.001)
+    await vectorStorePersistence.saveEmbedding(TEST_NOTE_ID, vector1)
+
+    const record1 = await db.embeddings.get(TEST_NOTE_ID)
+    expect(record1).toBeDefined()
+    const originalId = record1!.id
+
+    const vector2 = makeTestEmbedding(0.002)
+    await vectorStorePersistence.saveEmbedding(TEST_NOTE_ID, vector2)
+
+    const record2 = await db.embeddings.get(TEST_NOTE_ID)
+    expect(record2).toBeDefined()
+    // id must be reused — not a new UUID — so Supabase upsert conflicts on id
+    expect(record2!.id).toBe(originalId)
+    // vector must be updated to vector2
+    expect(record2!.embedding).toEqual(vector2)
+    expect(record2!.embedding).not.toEqual(vector1)
+  })
+
   it('removeEmbedding while authenticated: syncQueue delete entry created', async () => {
     const embedding = makeTestEmbedding()
     await vectorStorePersistence.saveEmbedding(TEST_NOTE_ID, embedding)

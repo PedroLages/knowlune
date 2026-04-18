@@ -37,8 +37,13 @@ export class VectorStorePersistence {
     // preventing a stale IndexedDB record with no in-memory counterpart.
     this.store.insert(noteId, embedding)
     try {
+      // Reuse the existing Dexie record's id if one exists, so that repeated calls
+      // for the same noteId always upsert the same Supabase row (conflict on `id`).
+      // Generating a new UUID on every call would create duplicate remote rows.
+      const existing = await db.embeddings.get(noteId)
+      const id = existing?.id ?? crypto.randomUUID()
       const record: Embedding = {
-        id: crypto.randomUUID(),
+        id,
         noteId,
         embedding,
         createdAt: new Date().toISOString(),
@@ -55,6 +60,10 @@ export class VectorStorePersistence {
 
   /** Remove embedding for a deleted note. Removes from both IndexedDB and in-memory store. */
   async removeEmbedding(noteId: string): Promise<void> {
+    // Silent no-op when record is not found: Supabase has ON DELETE CASCADE on
+    // notes.id → embeddings.note_id, so any orphaned remote rows are cleaned up
+    // automatically when the parent note is deleted. No explicit delete needed.
+    //
     // Look up the Dexie record to get its stable `id` for the sync queue entry.
     // The Dexie table is keyed on `noteId`, so the actual Dexie delete must use
     // `noteId` — but the syncQueue `recordId` must use `id` (the Supabase PK).
