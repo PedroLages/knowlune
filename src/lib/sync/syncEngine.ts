@@ -530,7 +530,7 @@ async function _applyConflictCopy(
     // Intentional: conflict-copy tables bypass bare LWW — applyConflictCopy
     // preserves the losing local version in conflictCopy rather than silently
     // discarding it.
-    const merged = applyConflictCopy(local as Note, record as Note)
+    const merged = applyConflictCopy(local as unknown as Note, record as unknown as Note)
     await table.put(merged as unknown as Record<string, unknown>)
     return
   }

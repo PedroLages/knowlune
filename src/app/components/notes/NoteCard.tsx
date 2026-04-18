@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { ChevronDown, ChevronUp, Pencil, Trash2, X, Clock, Download } from 'lucide-react'
+import { ChevronDown, ChevronUp, Pencil, Trash2, X, Clock, Download, AlertTriangle } from 'lucide-react'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import { NoteEditor } from './NoteEditor'
 import { ReadOnlyContent } from './ReadOnlyContent'
+import { NoteConflictDialog } from './NoteConflictDialog'
 import { useNoteStore } from '@/stores/useNoteStore'
 import { formatTimestamp } from '@/lib/format'
 import { stripHtml } from '@/lib/textUtils'
@@ -39,6 +40,7 @@ type ViewState = 'collapsed' | 'expanded' | 'editing'
 
 export function NoteCard({ note, courseId, courseName, lessonTitle, onDelete }: NoteCardProps) {
   const [viewState, setViewState] = useState<ViewState>('collapsed')
+  const [showConflictDialog, setShowConflictDialog] = useState(false)
   const saveNote = useNoteStore(s => s.saveNote)
   const cancelRef = useRef(false)
 
@@ -140,20 +142,44 @@ export function NoteCard({ note, courseId, courseName, lessonTitle, onDelete }: 
           </div>
         </div>
 
-        <button
-          type="button"
-          className="relative z-10 shrink-0 inline-flex items-center justify-center size-11 rounded-md hover:bg-accent transition-colors"
-          aria-expanded={viewState !== 'collapsed'}
-          aria-label={viewState === 'collapsed' ? 'Expand note' : 'Collapse note'}
-          onClick={toggleExpand}
-        >
-          {viewState === 'collapsed' ? (
-            <ChevronDown aria-hidden="true" className="size-4" />
-          ) : (
-            <ChevronUp aria-hidden="true" className="size-4" />
+        <div className="relative z-10 flex items-center gap-1 shrink-0">
+          {/* Conflict badge — visible when conflictCopy is an active object (not null/undefined) */}
+          {note.conflictCopy != null && (
+            <button
+              type="button"
+              className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] rounded-md bg-warning/10 text-warning-foreground border border-warning/30 hover:bg-warning/20 transition-colors"
+              aria-label="Note has a sync conflict"
+              onClick={() => setShowConflictDialog(true)}
+            >
+              <AlertTriangle aria-hidden="true" className="size-4" />
+            </button>
           )}
-        </button>
+
+          <button
+            type="button"
+            className="inline-flex items-center justify-center size-11 rounded-md hover:bg-accent transition-colors"
+            aria-expanded={viewState !== 'collapsed'}
+            aria-label={viewState === 'collapsed' ? 'Expand note' : 'Collapse note'}
+            onClick={toggleExpand}
+          >
+            {viewState === 'collapsed' ? (
+              <ChevronDown aria-hidden="true" className="size-4" />
+            ) : (
+              <ChevronUp aria-hidden="true" className="size-4" />
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Conflict resolution dialog */}
+      {showConflictDialog && note.conflictCopy != null && (
+        <NoteConflictDialog
+          note={note}
+          open={showConflictDialog}
+          onOpenChange={setShowConflictDialog}
+          onResolved={() => setShowConflictDialog(false)}
+        />
+      )}
 
       {/* Expanded view */}
       {viewState === 'expanded' && (
