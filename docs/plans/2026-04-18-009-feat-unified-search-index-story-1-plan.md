@@ -1,12 +1,12 @@
 ---
-title: "feat: Unified Search Index (Story 1 of Global Search Upgrade)"
+title: "feat: Unified Search Index (E117-S01)"
 type: feat
 status: active
 date: 2026-04-18
+epic: E117
+story: E117-S01
 origin: docs/brainstorms/2026-04-18-global-search-upgrade-requirements.md
 ---
-
-# feat: Unified Search Index (Story 1 of Global Search Upgrade)
 
 ## Overview
 
@@ -200,7 +200,7 @@ Grouped rendering order (origin §5.2.2, fixed): Courses → Books → Lessons �
 - Single MiniSearch instance configured with `idField: '_searchId'` (synthetic, `${type}:${id}`) to avoid collisions across entity tables.
 - `fields`: union of all searchable fields with per-entity boosts mapped via `searchOptions.boost`.
 - `storeFields`: at minimum `id`, `type`, `parentId`, `parentTitle`, `displayTitle`, `subtitle` — enough to render a result row and build a route without re-querying Dexie.
-- Six `toSearchable<Entity>` helpers map raw Dexie records to the shared document shape. Notes helper reuses `noteSearch.ts` field config exactly.
+- Six `toSearchable<Entity>` helpers map raw Dexie records to the shared document shape. Notes helper reuses `noteSearch.ts` field config exactly. **Authors helper takes `getMergedAuthors(storeAuthors)` output** — not raw `db.authors` — so the index matches what the Authors page renders. This is established in Unit 1 so tests lock the right contract from the start (not overridden later in Unit 4).
 - Public surface: `initializeUnifiedSearch(docs: SearchableDoc[])`, `addToIndex(doc)`, `updateInIndex(doc)`, `removeFromIndex(id)`, `search(query, { types?: EntityType[], limit?: number })`.
 
 **Execution note:** Implement test-first for the `search()` public surface and the mapping helpers. Each entity type's shape is a known contract; tests should fail before the mapper exists.
@@ -301,7 +301,7 @@ Grouped rendering order (origin §5.2.2, fixed): Courses → Books → Lessons �
 - Debounce applied at the batch level (300ms trailing) so a bulk import doesn't fire six update calls per keystroke.
 - `ready` flips to `true` after the first `Promise.allSettled` resolves (regardless of partial failures — graceful degradation).
 - `search(query, opts)` delegates to `unifiedSearch.search()` but guards on `ready === false` (returns empty + quickly-resolving state).
-- Bootstrap in `src/main.tsx`: `deferInit(async () => { const [courses, authors, videos, books, notes, highlights] = await Promise.allSettled([...]); await initializeUnifiedSearch([...flatten successful results]); })`. Each failed entity logs `console.error('[unified-search] failed to index <entity>:', err)`.
+- Bootstrap in `src/main.tsx`: `deferInit(async () => { const results = await Promise.allSettled([db.importedCourses.toArray(), ...]); const docs = results.flatMap(r => r.status === 'fulfilled' ? r.value : []); await initializeUnifiedSearch(docs); })`. Each rejected result logs `console.error('[unified-search] failed to index <entity>:', result.reason)`. Note: `Promise.allSettled` returns `{status: 'fulfilled', value}` or `{status: 'rejected', reason}` wrappers — never unpack with array destructuring directly.
 
 **Execution note:** Test-first for the diff algorithm (Unit 3's novel complexity). Hook-level tests follow.
 
@@ -398,7 +398,7 @@ Grouped rendering order (origin §5.2.2, fixed): Courses → Books → Lessons �
 - New `docs/solutions/` entries expected on landing: "MiniSearch incremental updates via Dexie liveQuery", "cmdk global filter bypass gotchas", "requestIdleCallback Safari < 16.4 fallback behavior". These close the gap identified by the learnings researcher (empty corpus today).
 - `docs/engineering-patterns.md`: add a "Unified Search Index" section cross-referencing this pattern for future similar work.
 - README / CLAUDE.md: no change.
-- Sprint tracking: add to `docs/implementation-artifacts/sprint-status.yaml` when branching.
+- Sprint tracking: **E117-S01** added to `docs/implementation-artifacts/sprint-status.yaml` under new Epic 117 (Global Search Upgrade). Story 1 of 3 (Story 2: ranking/frecency; Story 3: prefix filters + input removal).
 
 ## Sources & References
 
