@@ -1,7 +1,5 @@
 import { db } from '@/db'
 
-import { tableRegistry } from './tableRegistry'
-
 /**
  * Backfill `userId` (and `updatedAt` if missing) on existing records in every
  * syncable Dexie table. Invoked from the auth lifecycle after SIGNED_IN /
@@ -18,16 +16,52 @@ import { tableRegistry } from './tableRegistry'
  * previous user's records remain in IndexedDB until a purge is added (tracked
  * for E92-S08); downstream queries in E92-S05/S06 MUST filter by userId.
  *
- * Scope: derived from `tableRegistry` (E92-S03). Every entry in the registry
- * participates in backfill regardless of its `skipSync` flag — partitioning
- * records by user is a local-data concern distinct from whether the table is
- * uploaded to Supabase. (For example, `reviewRecords` is `skipSync: true`
- * but still needs `userId` stamping.)
+ * Scope: the 38-table syncable list matches E92-S03's forthcoming table
+ * registry. When E92-S03 lands, replace `SYNCABLE_TABLES` with
+ * `tableRegistry.entries.map(e => e.dexieTable)`.
  */
 
-export const SYNCABLE_TABLES: readonly string[] = Object.freeze(
-  Object.keys(tableRegistry),
-)
+// TODO(E92-S03): replace with tableRegistry.entries.map(e => e.dexieTable)
+export const SYNCABLE_TABLES: readonly string[] = [
+  'importedCourses',
+  'importedVideos',
+  'importedPdfs',
+  'progress',
+  'bookmarks',
+  'notes',
+  'studySessions',
+  'contentProgress',
+  'challenges',
+  'embeddings',
+  'aiUsageEvents',
+  'reviewRecords',
+  'courseReminders',
+  'quizzes',
+  'quizAttempts',
+  'authors',
+  'careerPaths',
+  'pathEnrollments',
+  'flashcards',
+  'learningPaths',
+  'learningPathEntries',
+  'notifications',
+  'notificationPreferences',
+  'studySchedules',
+  'books',
+  'bookHighlights',
+  'audioBookmarks',
+  'opdsCatalogs',
+  'audiobookshelfServers',
+  'chapterMappings',
+  'vocabularyItems',
+  'shelves',
+  'bookShelves',
+  'readingQueue',
+  'audioClips',
+  'bookReviews',
+  'chatConversations',
+  'learnerModels',
+] as const
 
 export interface BackfillUserIdResult {
   tablesProcessed: number
