@@ -5,20 +5,22 @@ color: red
 memory: project
 background: true
 effort: medium
-argument-hint: "[idea | docs/plans/*-plan.md | docs/brainstorms/*-requirements.md | docs/implementation-artifacts/stories/E##-S##*.md | bug description] [--cross-model] [--autopilot] [--headless]"
+argument-hint: "[idea | docs/plans/*-plan.md | docs/brainstorms/*-requirements.md | docs/implementation-artifacts/stories/E##-S##*.md | E## (epic-loop) | bug description] [--cross-model] [--autopilot] [--headless]"
 ---
 
 # CE Orchestrator
 
-Drives a single unit of work end-to-end through the Compound Engineering pipeline with one hard human gate at **plan approval**. Terminal state: **PR created** (not merged). After merge, run `/ce-compound` to close the loop.
+Drives a single unit of work end-to-end through the Compound Engineering pipeline with one hard human gate at **plan approval**. Terminal state: **PR created + auto-merged** (via `gh pr merge --merge --admin`). `ce:compound` runs automatically post-merge.
 
-**Status:** v3 — adaptive entry + tracking file + headless JSON mode + BMAD story-file bridge + `--autopilot` flag + supporting-skill integrations (`episodic-memory`, `/techdebt`, `/design-review`, `/checkpoint`, `superpowers:systematic-debugging`). See [plan](../../../../Users/pedro/.claude/plans/want-you-to-majestic-rabin.md).
+**Status:** v4 — epic-loop runner (`/ce-orchestrator E##`) + auto-merge PR + auto-run compound. Builds on v3 (adaptive entry, tracking file, headless JSON, BMAD story-file bridge, `--autopilot`, supporting-skill integrations).
 
 ## Usage
 
 ```text
 /ce-orchestrator "add keyboard shortcut help modal"                # bare idea → full pipeline
 /ce-orchestrator docs/plans/2026-04-15-002-feat-search-plan.md     # existing plan → plan-approval gate → rest
+/ce-orchestrator docs/implementation-artifacts/E116-S01*.md        # single story (BMAD bridge)
+/ce-orchestrator E116                                              # epic-loop: run all remaining stories in E116 sequentially (v4)
 /ce-orchestrator "<input>" --cross-model                           # add Knowlune review-story swarm in parallel (v1)
 /ce-orchestrator "<input>" --autopilot                             # auto-answer cosmetic choices; plan + R3 gates stay hard (v3)
 /ce-orchestrator --headless "<input>"                              # no AskUserQuestion; returns single-line JSON (v2)
@@ -102,7 +104,7 @@ Dispatch `input-classifier` sub-agent (model: haiku) with the user's `$ARGUMENTS
 
 ```json
 {
-  "stage": "brainstorm" | "brainstorm-from-ideation" | "plan" | "plan-approval" | "story-to-brief" | "debug",
+  "stage": "brainstorm" | "brainstorm-from-ideation" | "plan" | "plan-approval" | "story-to-brief" | "debug" | "epic-loop",
   "resumeArtifact": "<path or null>",
   "rationale": "<one sentence>",
   "confidence": "high | medium | low"
@@ -114,6 +116,7 @@ Dispatch `input-classifier` sub-agent (model: haiku) with the user's `$ARGUMENTS
 | Input shape | Detection rule | → Stage | Next dispatch |
 |---|---|---|---|
 | Empty / whitespace | — | ERROR | Exit with friendly message |
+| Matches `^E\d+$` (epic id, no story suffix) | regex | `epic-loop` | Phase 0.7 epic-loop runner |
 | Matches `docs/ideation/*-YYYY-MM-DD.md` (path exists) | glob + file test | `brainstorm-from-ideation` | `ce-brainstorm-dispatcher` with ideation path |
 | Matches `docs/brainstorms/YYYY-MM-DD-*-requirements.md` (path exists) | glob + file test | `plan` | `ce-plan-dispatcher` with requirements path |
 | Matches `docs/plans/YYYY-MM-DD-NNN-*-plan.md` (path exists) | glob + file test | `plan-approval` | `plan-summarizer`, skip to gate |
@@ -147,6 +150,64 @@ After classifier returns, before any Phase 1 dispatch: dispatch `episodic-memory
 When classifier returns `stage: debug`, dispatch `ce-debug-dispatcher` (opus) instead of invoking `/ce:debug` directly. The dispatcher runs `superpowers:systematic-debugging` first, then synthesizes a CE requirements brief the pipeline can plan against. See [references/autonomy-boundary.md § Bug path](references/autonomy-boundary.md#bug-path-superpowerssystematic-debugging-phase-04-debug-stage) and [sub-agent-prompts.md § 17](references/sub-agent-prompts.md#17-ce-debug-dispatcher-v3).
 
 Returns `{requirementsPath, rootCause}`. Pipeline continues from Phase 1.2 `/ce:plan` using the brief — identical to the story-to-brief flow.
+
+### 0.7 Epic-loop runner (v4)
+
+When classifier returns `stage: epic-loop` (input matches `^E\d+$`), run all stories in the epic sequentially — one `ce-orchestrator` pass per story.
+
+**Flow:**
+
+1. Dispatch `epic-story-resolver` sub-agent (model: haiku):
+
+   ```text
+   Read docs/implementation-artifacts/sprint-status.yaml. Find the epic with id "<E##>".
+
+   Return a JSON array of stories in execution order, filtered to status != done:
+   [
+     {"id": "E##-S##", "title": "...", "status": "planned|in-progress", "storyPath": "<path or null>"}
+   ]
+
+   Resolve storyPath by checking both:
+   - docs/implementation-artifacts/stories/<id>*.md
+   - docs/implementation-artifacts/<id>*.md (flat layout)
+
+   If no stories remain, return `{"empty": true, "reason": "epic already complete"}`.
+
+   /auto-answer autopilot
+   ```
+
+2. **Banner the epic:** print list of stories with count + estimated total token cost (per-story estimate × count).
+
+3. **Pre-flight gate (single AskUserQuestion):**
+
+   ```text
+   Question: "Run all <N> remaining stories in <E##>? Each story will still pause at its own plan-approval gate."
+   Options:
+     1. Run all (Recommended)
+     2. Run only first story (preview)
+     3. Abort
+   ```
+
+   In `--headless` mode: skip prompt, run all.
+
+4. **Sequential loop** — for each story in order:
+   - If `storyPath` exists: recursively invoke ce-orchestrator with that path (goes through Phase 0.4 classifier → `story-to-brief` stage → rest of pipeline with its own plan gate).
+   - If `storyPath` is null: dispatch `bmad-create-story` sub-agent first to materialize the story file, then proceed.
+   - After each story: read its tracking file status. If `status: aborted | reverted | review-escalated`, halt the epic loop and surface to user via AskUserQuestion: `Continue to next story | Halt epic`.
+   - PRs auto-merge per 2.5, so each story's changes land on main before the next story starts — preserving story dependencies.
+
+5. **Epic tracking file:** write `.context/compound-engineering/ce-runs/epic-<E##>-<YYYY-MM-DD>.md` with frontmatter `type: epic-loop, storiesTotal, storiesCompleted, storiesAborted, prUrls[]`. Updated after each story completes.
+
+6. **Terminal state:** after all stories complete (or user halts), print summary banner:
+
+   ```text
+   Epic <E##> — <X> of <N> stories shipped
+   PRs merged: <list>
+   Aborted/escalated: <list>
+   Next: /bmad-retrospective E## (suggested)
+   ```
+
+**Plan-gate preservation:** each story still pauses at its own plan approval — epic-loop never batch-approves. If you want a single approval for the whole epic, that's a future feature (deferred).
 
 ## Phase 1 — Upstream (brainstorm → plan → approval)
 
