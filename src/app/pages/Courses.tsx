@@ -152,17 +152,20 @@ export function Courses() {
             </p>
           )}
         </div>
-        {totalCourses > 0 && (
-          <Button
-            variant="brand"
-            onClick={handleOpenBulkImport}
-            className="hover:scale-[1.02] hover:shadow-md rounded-xl transition-[transform,box-shadow] duration-200"
-            data-testid="import-course-btn"
-          >
-            <FolderOpen className="size-4 mr-2" />
-            Import Course
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <HeaderSearchButton scope="course" />
+          {totalCourses > 0 && (
+            <Button
+              variant="brand"
+              onClick={handleOpenBulkImport}
+              className="hover:scale-[1.02] hover:shadow-md rounded-xl transition-[transform,box-shadow] duration-200"
+              data-testid="import-course-btn"
+            >
+              <FolderOpen className="size-4 mr-2" />
+              Import Course
+            </Button>
+          )}
+        </div>
       </div>
 
       <ImportWizardDialog open={wizardOpen} onOpenChange={setWizardOpen} />
@@ -208,10 +211,6 @@ export function Courses() {
         </Card>
       ) : (
         <>
-          <div className="flex justify-end mb-4">
-            <HeaderSearchButton scope="course" />
-          </div>
-
           {/* AC5 (E1C-S05): Sort dropdown alongside filters */}
           <div className="flex flex-wrap gap-x-6 gap-y-2 items-start">
             {importedCourses.length > 0 && (

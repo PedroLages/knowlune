@@ -19,14 +19,14 @@ export interface ParsedPrefix {
 /**
  * Parse a position-0 prefix from raw input.
  *
- * Rules (per §5.3):
+ * Rules:
  *  - Must start at position 0 (leading space → null).
- *  - Must be a known single lowercase character + colon.
- *  - Must have at least one trailing character (space or non-space).
+ *  - Must be a known single lowercase character + colon (minimum 2 chars).
+ *  - Rest may be empty — `c:` alone enters scoped mode with empty query.
  *  - Returns null for all other inputs.
  */
 export function parsePrefix(raw: string): ParsedPrefix | null {
-  if (raw.length < 3) return null
+  if (raw.length < 2) return null
   if (raw[1] !== ':') return null
   const char = raw[0]
   const type = PREFIX_MAP[char]

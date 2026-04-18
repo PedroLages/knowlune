@@ -133,8 +133,12 @@ test.describe('E117-S03: prefix filters', () => {
     // Ensure hint is not dismissed
     await page.evaluate(() => localStorage.removeItem('knowlune.searchPrefixHintDismissed.v1'))
 
-    // Need at least one piece of content so we're not in welcome-copy mode
-    await seedCourse(page, { id: 'hintc1', name: 'Hint Test Course' })
+    // Seed recent-hits LS so showWelcomeCopy is false (palette has recent content)
+    await page.evaluate(
+      ([key, date]) =>
+        localStorage.setItem(key, JSON.stringify([{ type: 'course', id: 'hintc1', openedAt: date }])),
+      ['knowlune.recentSearchHits.v1', FIXED_DATE]
+    )
 
     await openCommandPalette(page)
 
@@ -145,7 +149,11 @@ test.describe('E117-S03: prefix filters', () => {
   test('dismissing hint persists across palette re-open', async ({ page }) => {
     await navigateAndWait(page, '/')
     await page.evaluate(() => localStorage.removeItem('knowlune.searchPrefixHintDismissed.v1'))
-    await seedCourse(page, { id: 'hintc2', name: 'Dismiss Test Course' })
+    await page.evaluate(
+      ([key, date]) =>
+        localStorage.setItem(key, JSON.stringify([{ type: 'course', id: 'hintc2', openedAt: date }])),
+      ['knowlune.recentSearchHits.v1', FIXED_DATE]
+    )
 
     await openCommandPalette(page)
     await expect(page.getByTestId('search-prefix-hint')).toBeVisible({ timeout: TIMEOUTS.LONG })

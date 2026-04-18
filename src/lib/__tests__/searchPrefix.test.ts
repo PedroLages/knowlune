@@ -38,9 +38,9 @@ describe('parsePrefix', () => {
     expect(parsePrefix('x: foo')).toBeNull()
   })
 
-  it('returns null when input is too short (colon only, no trailing content)', () => {
-    // "c:" is length 2, fails the length < 3 guard
-    expect(parsePrefix('c:')).toBeNull()
+  it('parses c: with empty rest (bare prefix enters scoped mode)', () => {
+    // "c:" triggers scope with empty query — enables Backspace-to-exit AC
+    expect(parsePrefix('c:')).toEqual({ scope: 'course', rest: '' })
   })
 
   it('returns null when leading space is present (literal-content escape)', () => {

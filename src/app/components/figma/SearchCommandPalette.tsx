@@ -296,7 +296,9 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
     if (!text) return
     const timer = setTimeout(() => setScopeAnnouncement(text), 400)
     return () => clearTimeout(timer)
-  }, [scope, open, scopeAnnouncement])
+  // scopeAnnouncement intentionally omitted — including it would create an
+  // infinite loop: set → effect re-fires → set again.
+  }, [scope, open])
 
   /** Handle input change — parse prefix at position 0 to set scope. */
   const handleInputChange = (value: string) => {
