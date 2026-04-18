@@ -181,6 +181,7 @@ vi.mock('@/lib/sync/fieldMapper', () => ({
 
 // Import after mocks.
 import { syncEngine } from '../syncEngine'
+import { getTableEntry, tableRegistry } from '../tableRegistry'
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -520,5 +521,112 @@ describe('start() / stop() / fullSync() lifecycle', () => {
 
     syncEngine.stop()
     expect(syncEngine.currentUserId).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// conflict-copy strategy tests
+// ---------------------------------------------------------------------------
+
+describe('conflict-copy strategy', () => {
+  const defaultNotesEntry = { dexieTable: 'notes', supabaseTable: 'notes', conflictStrategy: 'lww' as const, priority: 1 as const, fieldMap: {} }
+  const conflictCopyEntry = {
+    dexieTable: 'notes',
+    supabaseTable: 'notes',
+    conflictStrategy: 'conflict-copy' as const,
+    priority: 1 as const,
+    fieldMap: {},
+  }
+
+  let notesEntryIndex: number
+
+  beforeEach(() => {
+    // Find the notes entry in the mocked tableRegistry array and replace it with
+    // the conflict-copy variant so _doDownload iterates the right strategy.
+    notesEntryIndex = tableRegistry.findIndex(e => e.dexieTable === 'notes')
+    if (notesEntryIndex >= 0) tableRegistry.splice(notesEntryIndex, 1, conflictCopyEntry)
+
+    // Override getTableEntry to return conflict-copy strategy for notes.
+    vi.mocked(getTableEntry).mockImplementation((name: string) => {
+      if (name === 'notes') return conflictCopyEntry
+      return undefined
+    })
+  })
+
+  afterEach(() => {
+    // Restore the default notes entry in the tableRegistry array.
+    if (notesEntryIndex >= 0) tableRegistry.splice(notesEntryIndex, 1, defaultNotesEntry)
+
+    // Restore default getTableEntry mock (lww for notes).
+    vi.mocked(getTableEntry).mockImplementation((name: string) => {
+      const reg: Record<string, object> = {
+        studySessions: { dexieTable: 'studySessions', supabaseTable: 'study_sessions', conflictStrategy: 'insert-only', priority: 0, fieldMap: {}, insertOnly: true },
+        progress: { dexieTable: 'progress', supabaseTable: 'video_progress', conflictStrategy: 'monotonic', priority: 0, fieldMap: {}, monotonicFields: ['watchedSeconds'] },
+        notes: defaultNotesEntry,
+      }
+      return reg[name] as ReturnType<typeof getTableEntry>
+    })
+  })
+
+  it('remote wins + content differs → conflictCopy set, updatedAt matches remote', async () => {
+    const localNote = { id: 'n-cc-1', content: '<p>local version</p>', tags: ['local'], updatedAt: '2026-04-17T10:00:00Z' }
+    const remoteNote = { id: 'n-cc-1', content: '<p>remote version</p>', tags: ['remote'], updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }
+
+    mockNotesGet.mockResolvedValue(localNote)
+    setTableRows('notes', [remoteNote])
+
+    await syncEngine.fullSync()
+
+    expect(mockNotesPut).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: '<p>remote version</p>',
+        updatedAt: '2026-04-18T10:00:00Z',
+        conflictCopy: expect.objectContaining({
+          content: '<p>local version</p>',
+          savedAt: '2026-04-17T10:00:00Z',
+        }),
+      }),
+    )
+  })
+
+  it('remote wins + identical content → conflictCopy NOT set (no false alarm)', async () => {
+    const sharedContent = '<p>same content</p>'
+    const localNote = { id: 'n-cc-2', content: sharedContent, tags: [], updatedAt: '2026-04-17T10:00:00Z' }
+    const remoteNote = { id: 'n-cc-2', content: sharedContent, tags: [], updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }
+
+    mockNotesGet.mockResolvedValue(localNote)
+    setTableRows('notes', [remoteNote])
+
+    await syncEngine.fullSync()
+
+    // LWW fallback — no conflictCopy should be attached
+    expect(mockNotesPut).toHaveBeenCalledWith(
+      expect.not.objectContaining({ conflictCopy: expect.objectContaining({ content: expect.anything() }) }),
+    )
+  })
+
+  it('local wins (local.updatedAt > remote.updatedAt) → conflictCopy stays null', async () => {
+    const localNote = { id: 'n-cc-3', content: '<p>local newer</p>', tags: [], updatedAt: '2026-04-18T12:00:00Z' }
+    const remoteNote = { id: 'n-cc-3', content: '<p>remote older</p>', tags: [], updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }
+
+    mockNotesGet.mockResolvedValue(localNote)
+    setTableRows('notes', [remoteNote])
+
+    await syncEngine.fullSync()
+
+    // Local wins → no write
+    expect(mockNotesPut).not.toHaveBeenCalled()
+  })
+
+  it('new record (no local) → conflictCopy stays null', async () => {
+    mockNotesGet.mockResolvedValue(undefined)
+    const remoteNote = { id: 'n-cc-4', content: '<p>brand new</p>', tags: [], updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }
+    setTableRows('notes', [remoteNote])
+
+    await syncEngine.fullSync()
+
+    expect(mockNotesPut).toHaveBeenCalledWith(
+      expect.not.objectContaining({ conflictCopy: expect.anything() }),
+    )
   })
 })

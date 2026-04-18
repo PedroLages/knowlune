@@ -1156,7 +1156,7 @@ development_status:
   # Depends on: E92 (sync engine)
   epic-93: in-progress
   93-1-p1-supabase-migrations: in-progress
-  93-2-wire-notes-and-bookmarks-with-sync: backlog
+  93-2-wire-notes-and-bookmarks-with-sync: done  # PR #354
   93-3-note-conflict-preservation: backlog
   93-4-flashcard-sync-with-fsrs-review-log-replay: backlog
   93-5-embeddings-sync-with-pgvector: backlog

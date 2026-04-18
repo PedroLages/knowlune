@@ -22,6 +22,24 @@ vi.mock('@/stores/useNoteStore', () => ({
 
 vi.mock('@/lib/unifiedSearch', () => ({
   search: () => [],
+  isInitialized: () => false,
+  getIndexedIds: () => new Set(),
+  addToIndex: vi.fn(),
+  updateInIndex: vi.fn(),
+  removeFromIndex: vi.fn(),
+  toSearchableCourse: vi.fn(),
+  toSearchableLesson: vi.fn(),
+  toSearchableAuthor: vi.fn(),
+  toSearchableBook: vi.fn(),
+  toSearchableNote: vi.fn(),
+  toSearchableHighlight: vi.fn(),
+}))
+
+vi.mock('@/lib/useUnifiedSearchIndex', () => ({
+  useUnifiedSearchIndex: () => ({
+    ready: true,
+    search: () => [],
+  }),
 }))
 
 vi.mock('@/lib/progress', () => ({

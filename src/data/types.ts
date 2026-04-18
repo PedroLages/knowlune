@@ -127,6 +127,21 @@ export interface Note {
   deleted?: boolean // Soft delete flag (NFR24)
   deletedAt?: string // ISO 8601 timestamp of soft deletion (NFR24)
   linkedNoteIds?: string[] // Bidirectional note links (E9B-S04)
+  /**
+   * Snapshot of the losing version when a sync conflict is detected (E93-S03).
+   * - `undefined` — field absent (old records, no conflict ever occurred)
+   * - `null`      — conflict was resolved; field explicitly cleared
+   * - object      — conflict is active; badge should be shown
+   *
+   * `savedAt` is ISO 8601 — the losing version's `updatedAt` at conflict time.
+   */
+  conflictCopy?: { content: string; tags: string[]; savedAt: string } | null
+  /**
+   * ID of the device/note that produced the losing version (E93-S03).
+   * TEXT (not UUID) because remote device ids may not be valid UUIDs.
+   * `undefined` when absent; `null` when cleared after resolution.
+   */
+  conflictNoteId?: string | null
 }
 
 // --- Imported Course Types (Story 1.1) ---
