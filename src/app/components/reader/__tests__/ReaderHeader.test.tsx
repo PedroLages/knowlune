@@ -110,7 +110,7 @@ describe('ReaderHeader', () => {
       render(<ReaderHeader {...defaultProps} theme="sepia" />)
 
       const header = screen.getByTestId('reader-header')
-      expect(header).toHaveClass('bg-[#f4ecd8]/60', 'text-[#3a2a1a]')
+      expect(header).toHaveClass('bg-[#f4ecd8]/60', 'text-[#2d241e]')
     })
 
     it('applies dark theme colors', () => {

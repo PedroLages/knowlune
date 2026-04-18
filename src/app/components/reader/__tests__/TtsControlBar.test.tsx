@@ -46,7 +46,7 @@ describe('TtsControlBar', () => {
       render(<TtsControlBar {...defaultProps} theme="sepia" />)
 
       const bar = screen.getByTestId('tts-control-bar')
-      expect(bar).toHaveClass('bg-[#f4ecd8]/98', 'text-[#3a2a1a]')
+      expect(bar).toHaveClass('bg-[#f4ecd8]/98', 'text-[#2d241e]')
     })
   })
 })

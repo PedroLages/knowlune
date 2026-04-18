@@ -33,7 +33,7 @@ describe('getReaderThemeColors', () => {
     const schemes: ColorScheme[] = ['professional', 'vibrant', 'clean']
     for (const scheme of schemes) {
       const colors = getReaderThemeColors('sepia', scheme)
-      expect(colors).toEqual({ background: '#f4ecd8', foreground: '#3a2a1a' })
+      expect(colors).toEqual({ background: '#f4ecd8', foreground: '#2d241e' })
     }
   })
 
@@ -91,7 +91,7 @@ describe('getReaderChromeClasses', () => {
   it('returns Tailwind classes for sepia theme', () => {
     const classes = getReaderChromeClasses('sepia', 'professional')
     expect(classes.bg).toBe('bg-[#f4ecd8]')
-    expect(classes.text).toBe('text-[#3a2a1a]')
+    expect(classes.text).toBe('text-[#2d241e]')
   })
 
   it('returns ReaderChromeClasses type for all combinations', () => {

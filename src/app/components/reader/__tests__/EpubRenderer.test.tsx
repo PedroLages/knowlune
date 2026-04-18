@@ -318,7 +318,7 @@ describe('EpubRenderer', () => {
       expect(mockRendition.themes.default).toHaveBeenCalledWith({
         body: expect.objectContaining({
           background: '#f4ecd8',
-          color: '#3a2a1a',
+          color: '#2d241e',
         }),
       })
     })
