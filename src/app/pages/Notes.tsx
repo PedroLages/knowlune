@@ -35,7 +35,7 @@ import { Skeleton } from '@/app/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import { BookmarksSection } from '@/app/components/figma/BookmarksSection'
 import { useNoteStore } from '@/stores/useNoteStore'
-import { searchNotesWithContext } from '@/lib/noteSearch'
+import { search as unifiedSearch } from '@/lib/unifiedSearch'
 import { getAllNoteTags } from '@/lib/progress'
 import { highlightMatches, buildHighlightPatterns } from '@/lib/searchUtils'
 import { exportNoteAsMarkdown } from '@/lib/noteExport'
@@ -261,7 +261,7 @@ export function Notes() {
       return new Set(semanticResults.map(r => r.noteId))
     }
     if (!useSemanticSearch) {
-      const results = searchNotesWithContext(debouncedQuery)
+      const results = unifiedSearch(debouncedQuery, { types: ['note'] })
       return new Set(results.map(r => r.id))
     }
     return null
