@@ -28,6 +28,23 @@ Drives a single unit of work end-to-end through the Compound Engineering pipelin
 
 Full input shape matrix in Phase 0.4 classifier table.
 
+## Headless Mode Defaults (v4)
+
+When `runMode == unattended` (i.e., `--headless`), every AskUserQuestion in the pipeline becomes an automatic decision logged to the tracking file. Exhaustive list so there are no surprise deadlocks:
+
+| Gate | Phase | Interactive default | Headless default | Rationale |
+| --- | --- | --- | --- | --- |
+| Tracking file resume vs fresh | 0.1b | Prompt | `Start fresh` (archive previous) | Avoids silently resuming stale state |
+| Low-confidence classifier fallback | 0.4 | Prompt with top-2 guesses | Pick classifier's top guess, log confidence | If classifier top guess is wrong, pipeline will surface via plan-critic anyway |
+| Epic pre-flight (run all / first / abort) | 0.7 step 3 | Prompt | `Run all` | User opted into unattended — they want all |
+| Inter-story halt (after abort/revert/escalate) | 0.7 step 4 | Prompt | Auto-continue to next story; append to `abortedStories[]` | Deadlock-free; full audit in tracking file |
+| Plan-approval gate | 1.3 | Prompt | Assert `confidenceScore >= 85 && verdict == approve && blockers == 0` — else abort story | Critic is the human proxy; threshold is the contract |
+| Plan deepen loop unresolved notes (round 2 exhausted) | 1.3 step 5 | Prompt | `Abort` this story | Don't ship a plan the critic couldn't sign off on |
+| Techdebt extract duplicates | 2.1.5 | Prompt | `Extract if safe` (same as `--autopilot`) | Cosmetic; safe extractions improve the codebase |
+| R3 review escalation | 2.3 | Prompt | `Halt (preserve state)` + story abort | Never ship a red tree; safe default |
+
+**Rule:** any gate not in this table MUST NOT use AskUserQuestion — otherwise headless mode deadlocks. When adding a new gate, add its row here first.
+
 ## Orchestrator Discipline
 
 **See:** [../\_shared/orchestrator-principles.md](../_shared/orchestrator-principles.md)
@@ -90,13 +107,34 @@ Print a one-shot banner before dispatching anything:
 
 ```text
 ╭─────────────────────────────────────────────╮
-│ CE Orchestrator — v1 happy-path             │
+│ CE Orchestrator — v4                        │
 │ Input:        <input, truncated to 60ch>    │
-│ Plan gate:    HARD (human approval required)│
-│ Terminal:     PR created (not merged)       │
-│ Est. tokens:  ~500k–1M (see refs for breakdown) │
+│ Mode:         <interactive|autopilot|unattended>│
+│ Terminal:     PR merged + ce:compound run   │
+│ Est. tokens:  ~500k–1M per story            │
 ╰─────────────────────────────────────────────╯
 ```
+
+### 0.3b Mode-select prompt (v4)
+
+**If no explicit flag was passed** (`--autopilot`, `--headless`, or both), dispatch AskUserQuestion once before proceeding:
+
+```text
+Question: "How do you want to run this?"
+Options:
+  1. Interactive (Recommended) — pause at every gate for review
+  2. Autopilot — auto-answer cosmetic choices; plan-gate still pauses unless plan-critic scores ≥85 with no blockers
+  3. Unattended (autopilot + headless) — fully automated; critic gates plan approval; aborted stories roll into next; safe to close terminal
+```
+
+Set internal flags based on selection:
+- Option 1 → `autopilot=false, headless=false`
+- Option 2 → `autopilot=true, headless=false`
+- Option 3 → `autopilot=true, headless=true`
+
+Tracking file records the chosen mode in `runMode`. If flags were passed explicitly on the CLI, skip this prompt and log `runMode: explicit-flag`.
+
+**Why ask up front:** the commitment is hours (epic-loop: hours × N stories). One prompt up-front beats N prompts mid-run. Also makes unattended mode discoverable — many users don't know `--headless` exists.
 
 ### 0.4 Classify (v2 adaptive classifier)
 
@@ -209,7 +247,9 @@ When classifier returns `stage: epic-loop` (input matches `^E\d+$`), run all sto
 4. **Sequential loop** — for each story in order:
    - If `storyPath` exists: recursively invoke ce-orchestrator with that path (goes through Phase 0.4 classifier → `story-to-brief` stage → rest of pipeline with its own plan gate).
    - If `storyPath` is null: dispatch `bmad-create-story` sub-agent first to materialize the story file, then proceed.
-   - After each story: read its tracking file status. If `status: aborted | reverted | review-escalated`, halt the epic loop and surface to user via AskUserQuestion: `Continue to next story | Halt epic`.
+   - After each story: read its tracking file status. Handle non-green terminal status:
+     - **Interactive / autopilot mode** → AskUserQuestion: `Continue to next story | Halt epic | Revert all + halt`.
+     - **Unattended (headless) mode** → auto-continue to next story; append the abort reason to the epic tracking file's `abortedStories[]` array. Epic keeps running. Rationale: headless runs are unattended by definition — blocking on a prompt deadlocks the whole epic. The abort is recorded with full audit trail for post-run triage.
    - PRs auto-merge per 2.5, so each story's changes land on main before the next story starts — preserving story dependencies.
 
 5. **Epic tracking file:** write `.context/compound-engineering/ce-runs/epic-<E##>-<YYYY-MM-DD>.md` with frontmatter `type: epic-loop, storiesTotal, storiesCompleted, storiesAborted, prUrls[]`. Updated after each story completes.
