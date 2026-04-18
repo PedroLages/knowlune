@@ -999,3 +999,99 @@ issues:
     scheduled_for: e92-hotfix
     fixed_by: null
     notes: "Pre-existing finding from ce:review security-reviewer — out of scope for E92-S01 (predates this story). handle_new_user_entitlement runs as SECURITY DEFINER trigger on auth.users but does not pin search_path, leaving it vulnerable to search_path-based privilege escalation. Fix: add `SET search_path = public, pg_temp` to the function definition. Schedule as standalone hotfix story before E95 (when credential storage goes live)."
+
+  - id: KI-082
+    type: code
+    summary: "LibraryShelfRow.tsx JSDoc stale — references SectionHeading which no longer exists after LibraryShelfHeading extraction"
+    file: "src/app/components/library/LibraryShelfRow.tsx:10"
+    severity: low
+    discovered_by: E116-S01
+    discovered_on: 2026-04-18
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Update JSDoc: 'Uses the shared LibraryShelfHeading primitive so the heading stays visually consistent with SmartGroupedView's section headers.'"
+
+  - id: KI-083
+    type: code
+    summary: "SmartGroupedView ungrouped fallback heading not migrated to LibraryShelfHeading primitive"
+    file: "src/app/components/library/SmartGroupedView.tsx:161-166"
+    severity: low
+    discovered_by: E116-S01
+    discovered_on: 2026-04-18
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Will drift if LibraryShelfHeading primitive styles evolve. Fix: make LibraryShelfHeading icon optional, then migrate ungrouped heading to use the primitive."
+
+  - id: KI-084
+    type: code
+    summary: "isChildrenEmpty() guard has first-line null/undefined/false checks which are slightly redundant"
+    file: "src/app/components/library/LibraryShelfRow.tsx"
+    severity: low
+    discovered_by: E116-S01
+    discovered_on: 2026-04-18
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Could simplify to Children.count(children) === 0. No behavior change — deferred for future refactor."
+
+  - id: KI-085
+    type: design
+    summary: "LibraryShelfHeading icon prop is required; callers without meaningful icon are blocked"
+    file: "src/app/components/library/LibraryShelfHeading.tsx"
+    severity: low
+    discovered_by: E116-S01
+    discovered_on: 2026-04-18
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Make icon optional with conditional render to unblock heading-only use cases."
+
+  - id: KI-086
+    type: accessibility
+    summary: "LibraryShelfHeading count '(n)' inside h3 read literally by screen readers"
+    file: "src/app/components/library/LibraryShelfHeading.tsx"
+    severity: low
+    discovered_by: E116-S01
+    discovered_on: 2026-04-18
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Add aria-label refinement when count is present, e.g. aria-label='30 items in this section'."
+
+  - id: KI-087
+    type: code
+    summary: "LibraryShelfRow Children.map uses index as React key — acceptable for static content, risky for reorder"
+    file: "src/app/components/library/LibraryShelfRow.tsx"
+    severity: low
+    discovered_by: E116-S01
+    discovered_on: 2026-04-18
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Acceptable for static content, but could break if shuffle/reorder via actionSlot is added later. Consider refactoring when reorder feature lands."
+
+  - id: KI-088
+    type: code
+    summary: "Import type inconsistency: mix of React.ComponentType global and import type {ReactNode}"
+    file: "src/app/components/library/LibraryShelfRow.tsx"
+    severity: low
+    discovered_by: E116-S01
+    discovered_on: 2026-04-18
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Normalize to import type { ComponentType, ReactNode } from 'react'."
+
+  - id: KI-089
+    type: documentation
+    summary: "LibraryShelfHeading data-testid JSDoc fallback confuses non-shelf-row callers"
+    file: "src/app/components/library/LibraryShelfHeading.tsx"
+    severity: low
+    discovered_by: E116-S01
+    discovered_on: 2026-04-18
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "JSDoc says fallback is 'library-shelf-row' which confuses non-shelf-row callers. Expand JSDoc to clarify caller responsibility for setting data-testid."

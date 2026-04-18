@@ -25,18 +25,15 @@
 import { test } from '@playwright/test'
 
 test.describe('LibraryShelfRow primitive (E116-S01)', () => {
-  test.fixme(
-    'full behavioral coverage — deferred to Library integration story',
-    async () => {
-      // Intentionally empty. Behavioral coverage is deferred to the Library
-      // integration story, where the shelf is rendered on a real route and
-      // can be exercised end-to-end.
-      //
-      // When that story lands, replace this fixme with real assertions:
-      //   - navigate to the Library page
-      //   - assert `library-shelf-row-scroller` is visible
-      //   - assert the scroller has `snap-x` and `snap-mandatory` classes
-      //   - optionally: verify horizontal scroll + snap-to-card behavior
-    },
-  )
+  test.fixme('full behavioral coverage — deferred to Library integration story', async () => {
+    // Intentionally empty. Behavioral coverage is deferred to the Library
+    // integration story, where the shelf is rendered on a real route and
+    // can be exercised end-to-end.
+    //
+    // When that story lands, replace this fixme with real assertions:
+    //   - navigate to the Library page
+    //   - assert `library-shelf-row-scroller` is visible
+    //   - assert the scroller has `snap-x` and `snap-mandatory` classes
+    //   - optionally: verify horizontal scroll + snap-to-card behavior
+  })
 })

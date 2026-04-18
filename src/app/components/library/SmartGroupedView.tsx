@@ -76,12 +76,7 @@ function CollapsibleSection({
 
   return (
     <div className="mb-8">
-      <LibraryShelfHeading
-        icon={icon}
-        label={label}
-        count={books.length}
-        data-testid={testId}
-      />
+      <LibraryShelfHeading icon={icon} label={label} count={books.length} data-testid={testId} />
       <BooksView books={displayedBooks} onEdit={onEdit} />
       {books.length > SECTION_LIMIT && !expanded && (
         <button
@@ -149,11 +144,25 @@ export function SmartGroupedView({
             <>
               {/* Audiobooks section */}
               {audiobooks.length > 0 && (
-                <CollapsibleSection books={audiobooks} onEdit={onEdit} viewMode={viewMode} icon={Headphones} label="Audiobooks" testId="section-heading-audiobooks" />
+                <CollapsibleSection
+                  books={audiobooks}
+                  onEdit={onEdit}
+                  viewMode={viewMode}
+                  icon={Headphones}
+                  label="Audiobooks"
+                  testId="section-heading-audiobooks"
+                />
               )}
               {/* Ebooks section */}
               {ebooks.length > 0 && (
-                <CollapsibleSection books={ebooks} onEdit={onEdit} viewMode={viewMode} icon={BookOpen} label="Ebooks" testId="section-heading-ebooks" />
+                <CollapsibleSection
+                  books={ebooks}
+                  onEdit={onEdit}
+                  viewMode={viewMode}
+                  icon={BookOpen}
+                  label="Ebooks"
+                  testId="section-heading-ebooks"
+                />
               )}
             </>
           ) : (
@@ -162,7 +171,8 @@ export function SmartGroupedView({
                 className="text-lg font-semibold text-foreground mb-4"
                 data-testid="ungrouped-heading"
               >
-                Ungrouped <span className="text-muted-foreground font-normal">({ungrouped.length})</span>
+                Ungrouped{' '}
+                <span className="text-muted-foreground font-normal">({ungrouped.length})</span>
               </h3>
               <BooksView books={ungrouped} onEdit={onEdit} />
             </>

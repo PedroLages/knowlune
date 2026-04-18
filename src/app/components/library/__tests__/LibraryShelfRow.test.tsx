@@ -69,7 +69,9 @@ describe('LibraryShelfRow', () => {
       renderShelf({
         children: [
           null,
-          <div key="a" data-testid="truthy-child">Truthy</div>,
+          <div key="a" data-testid="truthy-child">
+            Truthy
+          </div>,
           false,
         ],
       })
@@ -192,9 +194,15 @@ describe('LibraryShelfRow', () => {
     it('wraps each truthy child in a snap-start shrink-0 container', () => {
       renderShelf({
         children: [
-          <div key="a" data-testid="child-a">A</div>,
-          <div key="b" data-testid="child-b">B</div>,
-          <div key="c" data-testid="child-c">C</div>,
+          <div key="a" data-testid="child-a">
+            A
+          </div>,
+          <div key="b" data-testid="child-b">
+            B
+          </div>,
+          <div key="c" data-testid="child-c">
+            C
+          </div>,
         ],
       })
       const scroller = screen.getByTestId('library-shelf-row-scroller')
@@ -209,9 +217,13 @@ describe('LibraryShelfRow', () => {
     it('skips falsy children so the wrapper count matches truthy-child count', () => {
       renderShelf({
         children: [
-          <div key="a" data-testid="child-a">A</div>,
+          <div key="a" data-testid="child-a">
+            A
+          </div>,
           null,
-          <div key="b" data-testid="child-b">B</div>,
+          <div key="b" data-testid="child-b">
+            B
+          </div>,
         ],
       })
       const scroller = screen.getByTestId('library-shelf-row-scroller')
