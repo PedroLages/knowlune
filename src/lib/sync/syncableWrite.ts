@@ -89,28 +89,23 @@ export async function syncableWrite<T extends SyncableRecord>(
   // [3] Stamp metadata and perform the Dexie write.
   // The Dexie write is always performed regardless of auth state — this ensures
   // local-only writes (unauthenticated) are still persisted immediately.
-  try {
-    if (operation === 'delete') {
-      // For delete, `record` is the string id.
-      await db.table(tableName).delete(record as string)
-    } else {
-      // For put/add, stamp the record before writing.
-      const stampedRecord = {
-        ...(record as T),
-        userId,
-        updatedAt: now,
-      }
-      if (operation === 'put') {
-        await db.table(tableName).put(stampedRecord)
-      } else {
-        await db.table(tableName).add(stampedRecord)
-      }
+  // Intentional: Dexie write failures propagate to the caller (fatal). No queue
+  // entry is created on failure, so there is no orphaned sync state to clean up.
+  if (operation === 'delete') {
+    // For delete, `record` is the string id.
+    await db.table(tableName).delete(record as string)
+  } else {
+    // For put/add, stamp the record before writing.
+    const stampedRecord = {
+      ...(record as T),
+      userId,
+      updatedAt: now,
     }
-  } catch (err) {
-    // Intentional: Dexie write failure is fatal — rethrow so the caller can
-    // surface the error to the user (e.g., via toast). No queue entry was
-    // created, so there is no orphaned sync state to clean up.
-    throw err
+    if (operation === 'put') {
+      await db.table(tableName).put(stampedRecord)
+    } else {
+      await db.table(tableName).add(stampedRecord)
+    }
   }
 
   // [4] Queue guard — skip if unauthenticated or caller opted out.

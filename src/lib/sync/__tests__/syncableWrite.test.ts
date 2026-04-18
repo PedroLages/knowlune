@@ -83,7 +83,7 @@ describe('syncableWrite', () => {
       put: mockPut,
       add: mockAdd,
       delete: mockDelete,
-    } as ReturnType<typeof db.table>)
+    } as unknown as ReturnType<typeof db.table>)
   })
 
   // -------------------------------------------------------------------------
