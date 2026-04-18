@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { FormatTabs } from '@/app/components/library/FormatTabs'
+import { LibraryShelves } from '@/app/components/library/LibraryShelves'
 import { SmartGroupedView } from '@/app/components/library/SmartGroupedView'
 import {
   BookOpen,
@@ -407,6 +408,9 @@ export function Library() {
         {/* Yearly goal progress bar — only visible when yearly goal is set */}
         <YearlyGoalProgress />
       </div>
+
+      {/* E116-S03: Shelf integration — always-visible demonstration shelves */}
+      <LibraryShelves />
 
       {/* Empty state */}
       {books.length === 0 && (

@@ -55,6 +55,11 @@ export interface LibraryShelfHeadingProps {
    * back to `library-shelf-row` for consistency with LibraryShelfRow.
    */
   'data-testid'?: string
+  /**
+   * Optional `id` applied to the rendered heading element. Enables
+   * `<section aria-labelledby={...}>` linkage from landmark wrappers.
+   */
+  id?: string
 }
 
 export function LibraryShelfHeading({
@@ -66,6 +71,7 @@ export function LibraryShelfHeading({
   headingLevel = 'h3',
   className,
   'data-testid': testId,
+  id,
 }: LibraryShelfHeadingProps) {
   const headingTestId = testId ? `${testId}-heading` : 'library-shelf-row-heading'
   const subtitleTestId = testId ? `${testId}-subtitle` : 'library-shelf-row-subtitle'
@@ -77,6 +83,7 @@ export function LibraryShelfHeading({
     <div className={cn('mb-4 flex items-start justify-between gap-3', className)}>
       <div className="flex min-w-0 flex-col gap-1">
         <Tag
+          id={id}
           className="flex items-center gap-2 text-lg font-semibold text-foreground"
           data-testid={headingTestId}
         >
