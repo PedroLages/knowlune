@@ -1,30 +1,40 @@
 /**
- * Sync Engine — E92-S05 (upload phase)
+ * Sync Engine — E92-S05 (upload phase) + E92-S06 (download phase)
  *
- * Replaces the E92-S04 no-op stub with a working upload engine. Reads from
- * `syncQueue` (Dexie), coalesces duplicates, batches to Supabase, retries
- * transient failures with exponential back-off, and dead-letters permanent ones.
- * Concurrent upload cycles are serialized via `navigator.locks`; a module-level
- * boolean is the fallback for Safari ≤15.3.
+ * Upload phase (E92-S05): Reads from `syncQueue` (Dexie), coalesces duplicates,
+ * batches to Supabase, retries transient failures with exponential back-off, and
+ * dead-letters permanent ones. Concurrent upload cycles are serialized via
+ * `navigator.locks`; a module-level boolean is the fallback for Safari ≤15.3.
  *
- * **Public API — unchanged from S04:**
- *   - `syncEngine.nudge(): void` — debounced (200ms) upload trigger
- *   - `syncEngine.isRunning: boolean` — true when an upload cycle is active
+ * Download phase (E92-S06): Per-table incremental fetch from Supabase using
+ * `syncMetadata.lastSyncTimestamp` as a cursor. Downloaded rows are converted
+ * from snake_case to camelCase via `fieldMapper.toCamelCase()` and applied to
+ * Dexie using the conflict strategy declared in `tableRegistry.ts`:
+ *   - `lww`          — last-write-wins on `updatedAt`
+ *   - `monotonic`    — `Math.max()` on monotonic fields, LWW on others
+ *   - `insert-only`  — add if absent, never overwrite
+ *   - `conflict-copy`— duplicate when timestamps within 5s and content differs
  *
- * **Internal API (E92-S05):**
- *   - `syncEngine._setRunning(value: boolean): void`
+ * **Public API:**
+ *   - `syncEngine.nudge(): void`                                  — debounced upload trigger
+ *   - `syncEngine.start(userId: string): Promise<void>`           — begin sync lifecycle
+ *   - `syncEngine.stop(): void`                                   — halt sync
+ *   - `syncEngine.fullSync(): Promise<void>`                      — upload then download
+ *   - `syncEngine.registerStoreRefresh(table, cb): void`          — register Zustand refresh
+ *   - `syncEngine.isRunning: boolean`
  *
- * Pure module — no React or Zustand imports. Imports Dexie (db) and Supabase
- * client for upload. Safe to import in any non-React context.
+ * Pure module — no React or Zustand imports. Safe to import in any non-React context.
  *
  * @module syncEngine
- * @since E92-S05
+ * @since E92-S05 (upload), E92-S06 (download)
  */
 
+import type { Table } from 'dexie'
 import { db } from '@/db'
 import type { SyncQueueEntry } from '@/db/schema'
 import { supabase } from '@/lib/auth/supabase'
-import { getTableEntry } from './tableRegistry'
+import { toCamelCase } from './fieldMapper'
+import { getTableEntry, tableRegistry } from './tableRegistry'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -91,6 +101,40 @@ let _debounceTimer: ReturnType<typeof setTimeout> | null = null
  * Intentional: two-path guard to handle the safari edge case.
  */
 let _uploadInFlight = false
+
+// ---------------------------------------------------------------------------
+// E92-S06: Lifecycle state
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether the sync engine is active. Defaults to `true` for backward
+ * compatibility with E92-S05 upload tests that call `nudge()` without
+ * first calling `start()`. Set to `false` by `stop()`; restored to `true`
+ * by `start()`.
+ */
+let _started = true
+
+/**
+ * Current authenticated user ID — set by `syncEngine.start()`.
+ * Exposed via `syncEngine.currentUserId` for E92-S08 (backfill and
+ * per-user query filtering).
+ */
+let _userId: string | null = null
+
+// ---------------------------------------------------------------------------
+// E92-S06: Store refresh registry
+//
+// Maps Dexie table names to callbacks registered by Zustand stores (or hooks).
+// The download phase calls the registered callback after applying records for a
+// table, so stores can invalidate their in-memory state. Registration happens in
+// E92-S07 (`useSyncLifecycle.ts`).
+//
+// Intentional: kept as a Map (not a Zustand import) to keep syncEngine.ts a
+// pure module — importing Zustand stores here would trigger Dexie.open() in the
+// Vitest jsdom environment and create circular dependency risks.
+// ---------------------------------------------------------------------------
+
+const _storeRefreshRegistry = new Map<string, () => Promise<void>>()
 
 // ---------------------------------------------------------------------------
 // Helper — chunk array into fixed-size batches
@@ -348,6 +392,319 @@ async function _uploadBatch(
 }
 
 // ---------------------------------------------------------------------------
+// E92-S06: Apply helpers — conflict strategy implementations
+// ---------------------------------------------------------------------------
+
+/**
+ * Retrieve a local Dexie record by id, handling compound-PK tables.
+ *
+ * When `entry.compoundPkFields` is defined, the compound key array is built
+ * from the record's field values and `.where().equals().first()` is used.
+ * Otherwise falls back to `.get(record.id)`.
+ *
+ * Intentional: `progress` table lacks `compoundPkFields` in tableRegistry
+ * (pre-existing known gap R1-PE-01 from E92-S02). Falls through to `get(record.id)`,
+ * which may miss records if the id is not a stable PK. Tracked in known-issues.
+ */
+async function _getLocalRecord(
+  table: Table<Record<string, unknown>>,
+  entry: ReturnType<typeof getTableEntry>,
+  record: Record<string, unknown>,
+): Promise<Record<string, unknown> | undefined> {
+  if (!entry) return undefined
+
+  if (entry.compoundPkFields && entry.compoundPkFields.length > 0) {
+    const keyValues = entry.compoundPkFields.map((f) => record[f])
+    // Dexie compound key lookup: where(['a','b']).equals([va, vb]).first()
+    return (table as unknown as { where: (fields: string[]) => { equals: (values: unknown[]) => { first: () => Promise<Record<string, unknown> | undefined> } } })
+      .where(entry.compoundPkFields)
+      .equals(keyValues)
+      .first()
+  }
+
+  return table.get(record['id'] as string)
+}
+
+/**
+ * Apply LWW (last-write-wins) strategy: overwrite local only when the
+ * downloaded record has a strictly newer `updatedAt`.
+ */
+async function _applyLww(
+  table: Table<Record<string, unknown>>,
+  local: Record<string, unknown> | undefined,
+  record: Record<string, unknown>,
+): Promise<void> {
+  if (!local) {
+    await table.put(record)
+    return
+  }
+
+  const serverTs = new Date(record['updatedAt'] as string).getTime()
+  const localTs = new Date(local['updatedAt'] as string).getTime()
+
+  if (serverTs > localTs) {
+    await table.put(record)
+    // server is newer — overwrite local
+  }
+  // client newer or equal → no-op (client wins ties)
+}
+
+/**
+ * Apply monotonic strategy: for each `monotonicField`, keep `Math.max()` of
+ * local and server values. LWW decides which record's non-monotonic fields win.
+ */
+async function _applyMonotonic(
+  table: Table<Record<string, unknown>>,
+  local: Record<string, unknown> | undefined,
+  record: Record<string, unknown>,
+  monotonicFields: string[],
+): Promise<void> {
+  if (!local) {
+    await table.put(record)
+    return
+  }
+
+  const serverTs = new Date(record['updatedAt'] as string).getTime()
+  const localTs = new Date(local['updatedAt'] as string).getTime()
+
+  // Determine which record is the LWW winner for non-monotonic fields.
+  const base: Record<string, unknown> = serverTs > localTs ? { ...record } : { ...local }
+
+  // Overlay monotonic fields: always use Math.max of both values.
+  for (const field of monotonicFields) {
+    const serverVal = Number(record[field] ?? 0)
+    const localVal = Number(local[field] ?? 0)
+    base[field] = Math.max(serverVal, localVal)
+  }
+
+  await table.put(base)
+}
+
+/**
+ * Apply insert-only strategy: add the record if absent; never overwrite.
+ */
+async function _applyInsertOnly(
+  table: Table<Record<string, unknown>>,
+  local: Record<string, unknown> | undefined,
+  record: Record<string, unknown>,
+): Promise<void> {
+  if (local) return // already present — insert-only records are immutable
+  await table.add(record)
+}
+
+/**
+ * Apply conflict-copy strategy: if both versions exist, differ in content,
+ * and were modified within 5 seconds of each other, save both — tagging the
+ * server version as a conflict copy. Otherwise fall back to LWW.
+ */
+async function _applyConflictCopy(
+  table: Table<Record<string, unknown>>,
+  local: Record<string, unknown> | undefined,
+  record: Record<string, unknown>,
+): Promise<void> {
+  if (!local) {
+    await table.put(record)
+    return
+  }
+
+  const serverTs = new Date(record['updatedAt'] as string).getTime()
+  const localTs = new Date(local['updatedAt'] as string).getTime()
+  const deltaMs = Math.abs(serverTs - localTs)
+
+  // Shallow content equality check — exclude updatedAt (timestamps always differ).
+  const { updatedAt: _sts, ...serverContent } = record as { updatedAt: unknown } & Record<string, unknown>
+  const { updatedAt: _lts, ...localContent } = local as { updatedAt: unknown } & Record<string, unknown>
+  const contentDiffers = JSON.stringify(serverContent) !== JSON.stringify(localContent)
+
+  if (contentDiffers && deltaMs <= 5000) {
+    // Conflict: concurrent edits within 5s with different content.
+    // Keep local as authoritative; create a conflict copy of the server version.
+    const conflictCopyId = crypto.randomUUID()
+    await table.put({
+      ...record,
+      id: conflictCopyId,
+      conflictCopy: true,
+      conflictSourceId: record['id'],
+    })
+    // Intentional: local record is NOT overwritten — this device's version is kept.
+    return
+  }
+
+  // No conflict — apply LWW.
+  await _applyLww(table, local, record)
+}
+
+/**
+ * Route a single downloaded record to the correct apply strategy based on the
+ * table's `conflictStrategy`. Throws on Dexie write failure so `_doDownload`
+ * can catch per-record and continue.
+ */
+async function _applyRecord(
+  entry: NonNullable<ReturnType<typeof getTableEntry>>,
+  record: Record<string, unknown>,
+): Promise<void> {
+  // Intentional: dynamic table access — Dexie's TypeScript types don't expose a
+  // typed index signature. Cast via `unknown` to avoid `any`.
+  const table = (db as unknown as Record<string, Table<Record<string, unknown>>>)[entry.dexieTable]
+  if (!table) {
+    console.error(`[syncEngine] Dexie table "${entry.dexieTable}" not found — skipping record.`)
+    return
+  }
+
+  const local = await _getLocalRecord(table, entry, record)
+
+  switch (entry.conflictStrategy) {
+    case 'lww':
+      await _applyLww(table, local, record)
+      break
+
+    case 'monotonic':
+      await _applyMonotonic(table, local, record, entry.monotonicFields ?? [])
+      break
+
+    case 'insert-only':
+      await _applyInsertOnly(table, local, record)
+      break
+
+    case 'conflict-copy':
+      await _applyConflictCopy(table, local, record)
+      break
+
+    default:
+      // Intentional: 'skip' and any future unknown strategies are no-ops here.
+      console.warn(`[syncEngine] Unknown conflict strategy "${entry.conflictStrategy}" for table "${entry.dexieTable}" — skipping.`)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// E92-S06: Core download cycle
+// ---------------------------------------------------------------------------
+
+/**
+ * Download all syncable tables from Supabase, in registry priority order.
+ * For each table:
+ *   1. Reads `lastSyncTimestamp` from `syncMetadata` (null → full download).
+ *   2. Fetches rows updated since the cursor (or all rows if null).
+ *   3. Converts each row from snake_case to camelCase via `toCamelCase`.
+ *   4. Applies each record using the table's conflict strategy.
+ *   5. Advances `syncMetadata.lastSyncTimestamp` to the max `updated_at` seen.
+ *   6. Calls any registered store refresh callback for the table.
+ *
+ * Per-record errors are caught individually — one bad record doesn't abort
+ * the table. Per-table Supabase errors are caught — one bad table doesn't
+ * abort the download.
+ */
+async function _doDownload(): Promise<void> {
+  // Intentional: supabase null-guard — env vars may be missing in dev/test.
+  if (!supabase) {
+    console.warn('[syncEngine] Supabase client is null — skipping download cycle.')
+    return
+  }
+
+  for (const entry of tableRegistry) {
+    if (entry.skipSync) continue
+
+    // Read incremental cursor.
+    const meta = await db.syncMetadata.get(entry.dexieTable)
+    const cursor = meta?.lastSyncTimestamp ?? null
+
+    // Build Supabase query — chain .gte() only when cursor is present.
+    let query = supabase
+      .from(entry.supabaseTable)
+      .select('*')
+      .order('updated_at', { ascending: true })
+
+    if (cursor !== null) {
+      query = query.gte('updated_at', cursor)
+    }
+
+    const { data: rows, error } = await query
+
+    if (error) {
+      console.error(
+        `[syncEngine] Download error for table "${entry.supabaseTable}":`,
+        error.message,
+      )
+      continue // skip to next table
+    }
+
+    if (!rows || rows.length === 0) continue
+
+    // Apply each row with per-record error isolation.
+    let maxUpdatedAt: string | null = null
+
+    for (const row of rows) {
+      const rowUpdatedAt = row['updated_at'] as string | undefined
+      if (rowUpdatedAt && (maxUpdatedAt === null || rowUpdatedAt > maxUpdatedAt)) {
+        maxUpdatedAt = rowUpdatedAt
+      }
+
+      const record = toCamelCase(entry, row as Record<string, unknown>)
+
+      try {
+        await _applyRecord(entry, record)
+      } catch (err) {
+        console.error(
+          `[syncEngine] Error applying record from "${entry.dexieTable}":`,
+          err,
+        )
+        // Intentional: continue processing remaining records — one bad record
+        // should not abort the whole table.
+      }
+    }
+
+    // Advance the cursor to the max updated_at seen in this batch.
+    if (maxUpdatedAt !== null) {
+      await db.syncMetadata.put({
+        table: entry.dexieTable,
+        lastSyncTimestamp: maxUpdatedAt,
+      })
+    }
+
+    // Notify registered Zustand store (if any) to reload from Dexie.
+    const refreshFn = _storeRefreshRegistry.get(entry.dexieTable)
+    if (refreshFn) {
+      await refreshFn().catch((err) =>
+        console.warn(`[syncEngine] Store refresh failed for "${entry.dexieTable}":`, err),
+      )
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// E92-S06: fullSync — upload then download
+// ---------------------------------------------------------------------------
+
+/**
+ * Run a full sync cycle: flush pending writes (upload) then pull server changes
+ * (download). Upload runs first so that unsynced local writes are sent before
+ * the server snapshot is fetched — preventing a stale server record from
+ * overwriting a more recent local edit on the next LWW comparison.
+ *
+ * Each phase is wrapped individually so an upload failure does not cancel the
+ * download (best-effort: local records will win on LWW in the next cycle).
+ *
+ * Intentional: fullSync does NOT check `_started` — it can be called
+ * independently by tests and E92-S07 without requiring `start()` first.
+ * The individual phase functions (`_doUpload`, `_doDownload`) each have their
+ * own null guard for the Supabase client.
+ */
+async function _doFullSync(): Promise<void> {
+  try {
+    await _doUpload()
+  } catch (err) {
+    console.error('[syncEngine] Upload phase error during fullSync:', err)
+    // Intentional: continue to download even if upload failed.
+  }
+
+  try {
+    await _doDownload()
+  } catch (err) {
+    console.error('[syncEngine] Download phase error during fullSync:', err)
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Core upload cycle
 // ---------------------------------------------------------------------------
 
@@ -428,8 +785,13 @@ export const syncEngine = {
   /**
    * Signal the engine to run an upload cycle soon.
    * Debounced 200ms — multiple rapid calls collapse into a single cycle.
+   * No-op when the engine has not been started via `start()`.
    */
   nudge(): void {
+    // Intentional: guard prevents nudge from triggering uploads before auth,
+    // and stops residual nudge calls after stop() is called.
+    if (!_started) return
+
     if (_debounceTimer !== null) {
       clearTimeout(_debounceTimer)
     }
@@ -452,5 +814,70 @@ export const syncEngine = {
    */
   _setRunning(value: boolean): void {
     _isRunning = value
+  },
+
+  // ---------------------------------------------------------------------------
+  // E92-S06: Lifecycle API
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Start the sync engine for the given user. Runs an initial `fullSync()`
+   * immediately, then enables periodic nudges from `useSyncLifecycle` (E92-S07).
+   *
+   * Calling `start()` again while already running updates the userId and
+   * triggers another fullSync — safe to call on session refresh.
+   */
+  async start(userId: string): Promise<void> {
+    _userId = userId
+    _started = true
+    await _doFullSync()
+  },
+
+  /**
+   * Stop the sync engine. Cancels any pending debounce timer and marks the
+   * engine as stopped. Any in-flight upload lock cycle will complete naturally
+   * (locks cannot be forcibly cancelled), but no new cycles will start.
+   */
+  stop(): void {
+    _started = false
+    _userId = null
+    if (_debounceTimer !== null) {
+      clearTimeout(_debounceTimer)
+      _debounceTimer = null
+    }
+  },
+
+  /**
+   * Run a full sync cycle (upload then download) immediately.
+   * Can be called without `start()` — useful for tests and E92-S07 triggers.
+   * Does not propagate exceptions to the caller.
+   */
+  async fullSync(): Promise<void> {
+    await _doFullSync()
+  },
+
+  // ---------------------------------------------------------------------------
+  // E92-S06: Store refresh registry
+  // ---------------------------------------------------------------------------
+
+  /**
+   * The currently authenticated user ID — set by `start()`, cleared by `stop()`.
+   * Used by E92-S08 for userId backfill and per-user scoping.
+   */
+  get currentUserId(): string | null {
+    return _userId
+  },
+
+  /**
+   * Register a callback that the download engine will call after applying
+   * downloaded records for `tableName`. Used by `useSyncLifecycle` (E92-S07)
+   * to connect Dexie table updates to Zustand store reloads without importing
+   * stores into this pure module.
+   *
+   * Example:
+   *   syncEngine.registerStoreRefresh('notes', () => useNoteStore.getState().loadNotes())
+   */
+  registerStoreRefresh(tableName: string, callback: () => Promise<void>): void {
+    _storeRefreshRegistry.set(tableName, callback)
   },
 }
