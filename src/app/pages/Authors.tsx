@@ -9,15 +9,12 @@ import {
   Import,
   Pencil,
   Plus,
-  Search,
   Trash2,
   Users,
-  X,
 } from 'lucide-react'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
-import { Input } from '@/app/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Separator } from '@/app/components/ui/separator'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -35,7 +32,7 @@ import { useCourseStore } from '@/stores/useCourseStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
 import { getMergedAuthors, getAvatarSrc, getInitials, type AuthorView } from '@/lib/authors'
-import { useUnifiedSearchIndex } from '@/lib/useUnifiedSearchIndex'
+import { HeaderSearchButton } from '@/app/components/figma/HeaderSearchButton'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
 import { DeleteAuthorDialog } from '@/app/components/authors/DeleteAuthorDialog'
@@ -48,7 +45,6 @@ export function Authors() {
   const [createOpen, setCreateOpen] = useState(false)
   const [editAuthor, setEditAuthor] = useState<ImportedAuthor | undefined>()
   const [deleteAuthor, setDeleteAuthor] = useState<ImportedAuthor | undefined>()
-  const [searchQuery, setSearchQuery] = useState('')
   const [sortMode, setSortMode] = useState<SortMode>('alphabetical')
 
   // Lazy-load author store on mount (deferred — not critical for initial app load)
@@ -57,26 +53,9 @@ export function Authors() {
   // Merge pre-seeded + imported authors into unified view
   const allAuthors = useMemo(() => getMergedAuthors(storeAuthors), [storeAuthors])
 
-  const { ready: searchReady, search: unifiedSearch } = useUnifiedSearchIndex()
-
-  // Filter by search query. Prefer the unified index (typo-tolerant,
-  // field-boosted) once it's ready; fall back to substring while booting.
-  const filtered = useMemo(() => {
-    if (!searchQuery.trim()) return allAuthors
-    if (searchReady) {
-      const results = unifiedSearch(searchQuery, { types: ['author'] })
-      const matchedIds = new Set(results.map(r => r.id))
-      return allAuthors.filter(a => matchedIds.has(a.id))
-    }
-    const q = searchQuery.toLowerCase()
-    return allAuthors.filter(
-      a => a.name.toLowerCase().includes(q) || a.specialties.some(s => s.toLowerCase().includes(q))
-    )
-  }, [allAuthors, searchQuery, searchReady, unifiedSearch])
-
   // Sort
   const sorted = useMemo(() => {
-    const copy = [...filtered]
+    const copy = [...allAuthors]
     switch (sortMode) {
       case 'alphabetical':
         return copy.sort((a, b) => a.name.localeCompare(b.name))
@@ -87,7 +66,7 @@ export function Authors() {
       default:
         return copy
     }
-  }, [filtered, sortMode])
+  }, [allAuthors, sortMode])
 
   if (isLoading && !isLoaded) {
     return (
@@ -96,9 +75,9 @@ export function Authors() {
           <Skeleton className="h-8 w-48 mb-2" />
           <Skeleton className="h-5 w-72" />
         </div>
-        {/* Search/sort skeleton */}
-        <div className="mb-6 flex gap-3">
-          <Skeleton className="h-10 flex-1" />
+        {/* Sort skeleton */}
+        <div className="mb-6 flex gap-3 justify-end">
+          <Skeleton className="h-10 w-32" />
           <Skeleton className="h-10 w-44" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--content-gap)]">
@@ -124,15 +103,18 @@ export function Authors() {
                 : `Meet the ${allAuthors.length} experts behind your learning journey`}
           </p>
         </div>
-        <Button
-          variant="brand"
-          className="shrink-0 gap-1.5"
-          onClick={() => setCreateOpen(true)}
-          data-testid="add-author-button"
-        >
-          <Plus className="size-4" aria-hidden="true" />
-          Add Author
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <HeaderSearchButton scope="author" />
+          <Button
+            variant="brand"
+            className="gap-1.5"
+            onClick={() => setCreateOpen(true)}
+            data-testid="add-author-button"
+          >
+            <Plus className="size-4" aria-hidden="true" />
+            Add Author
+          </Button>
+        </div>
       </div>
 
       {/* Featured Author Layout (single author) */}
@@ -152,34 +134,9 @@ export function Authors() {
         />
       )}
 
-      {/* Search & Sort Bar (multi-author only) */}
+      {/* Sort Bar (multi-author only) */}
       {allAuthors.length > 1 && (
-        <div className="mb-6 flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <Input
-              placeholder="Search authors by name or specialty..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="pl-9 pr-10"
-              aria-label="Search authors"
-              data-testid="author-search-input"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                aria-label="Clear search"
-                data-testid="author-search-clear"
-                className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <X className="size-4" aria-hidden="true" />
-              </button>
-            )}
-          </div>
+        <div className="mb-6 flex flex-col sm:flex-row gap-3 justify-end">
           <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
             <SelectTrigger
               className="w-full sm:w-48"
@@ -234,21 +191,8 @@ export function Authors() {
         </Card>
       )}
 
-      {/* No search results (multi-author only) */}
-      {allAuthors.length > 1 && sorted.length === 0 && searchQuery.trim() && (
-        <Card className="rounded-2xl border-0 shadow-sm">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Search className="size-12 text-muted-foreground/50 mb-4" aria-hidden="true" />
-            <h2 className="text-lg font-semibold mb-2">No Authors Found</h2>
-            <p className="text-muted-foreground max-w-md">
-              No authors match &ldquo;{searchQuery}&rdquo;. Try a different search term.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Author Grid (multi-author only, virtualized) */}
-      {allAuthors.length > 1 && sorted.length > 0 && (
+      {allAuthors.length > 1 && (
         <VirtualizedGrid
           items={sorted}
           getItemKey={author => author.id}

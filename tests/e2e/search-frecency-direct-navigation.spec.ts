@@ -93,15 +93,18 @@ test.describe('E117-S02 Unit 5: direct-navigation recordVisit', () => {
     // Navigate directly — no palette involved.
     await page.goto('/courses/direct-nav-course-a')
 
-    // Give the route-mount effect a moment to fire.
+    // Wait for the route to render, then poll until the async Dexie write lands.
     await expect(page.getByRole('main')).toBeVisible({ timeout: TIMEOUTS.LONG })
 
-    const row = (await readFrecencyRow(page, [
-      'course',
-      'direct-nav-course-a',
-    ])) as { openCount: number } | null
-    expect(row).not.toBeNull()
-    expect(row!.openCount).toBeGreaterThanOrEqual(1)
+    // recordVisit is fire-and-forget (void); poll until the write commits.
+    await expect(async () => {
+      const row = (await readFrecencyRow(page, [
+        'course',
+        'direct-nav-course-a',
+      ])) as { openCount: number } | null
+      expect(row).not.toBeNull()
+      expect(row!.openCount).toBeGreaterThanOrEqual(1)
+    }).toPass({ timeout: TIMEOUTS.LONG })
 
     const recent = await page.evaluate(() =>
       localStorage.getItem('knowlune.recentSearchHits.v1')

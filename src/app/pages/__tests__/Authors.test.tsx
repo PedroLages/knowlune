@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import type { ImportedAuthor } from '@/data/types'
@@ -61,6 +60,12 @@ vi.mock('@/stores/useCourseImportStore', () => ({
         getAllTags: () => [],
       }),
     }
+  ),
+}))
+
+vi.mock('@/app/components/figma/HeaderSearchButton', () => ({
+  HeaderSearchButton: ({ scope }: { scope: string }) => (
+    <button data-testid={`header-search-btn-${scope}`}>Search</button>
   ),
 }))
 
@@ -212,35 +217,14 @@ describe('Authors page', () => {
       })
     })
 
-    it('renders search input', () => {
+    it('renders HeaderSearchButton scoped to author (AC 25)', () => {
       renderAuthors()
-      expect(screen.getByTestId('author-search-input')).toBeInTheDocument()
+      expect(screen.getByTestId('header-search-btn-author')).toBeInTheDocument()
     })
 
-    it('filters authors by name', async () => {
-      const user = userEvent.setup()
+    it('does not render a per-page search input (AC 24)', () => {
       renderAuthors()
-      const input = screen.getByTestId('author-search-input')
-      await user.type(input, 'Alice')
-      expect(screen.getByText('Alice Johnson')).toBeInTheDocument()
-      expect(screen.queryByText('Bob Smith')).not.toBeInTheDocument()
-    })
-
-    it('filters authors by specialty', async () => {
-      const user = userEvent.setup()
-      renderAuthors()
-      const input = screen.getByTestId('author-search-input')
-      await user.type(input, 'React')
-      expect(screen.queryByText('Alice Johnson')).not.toBeInTheDocument()
-      expect(screen.getByText('Bob Smith')).toBeInTheDocument()
-    })
-
-    it('shows no results message when search matches nothing', async () => {
-      const user = userEvent.setup()
-      renderAuthors()
-      const input = screen.getByTestId('author-search-input')
-      await user.type(input, 'ZZZ nonexistent')
-      expect(screen.getByText('No Authors Found')).toBeInTheDocument()
+      expect(screen.queryByTestId('author-search-input')).not.toBeInTheDocument()
     })
   })
 

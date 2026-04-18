@@ -363,33 +363,56 @@ export function isInitialized(): boolean {
 }
 
 /**
+ * Walk the MiniSearch stored-fields registry and collect ids/docs for a given type.
+ * MiniSearch v7 stores documents keyed by a numeric internal id in both
+ * `documentIds` (numeric → _searchId) and `storedFields` (numeric → fields).
+ * Returns an empty Map if the index is not initialized or if the internal shape changes.
+ */
+function walkStoredForType(
+  type: EntityType
+): Map<string, { displayTitle: string }> {
+  const out = new Map<string, { displayTitle: string }>()
+  if (!initialized) return out
+  const prefix = `${type}:`
+  try {
+    const json = miniSearch.toJSON() as {
+      documentIds?: Record<string, string>
+      storedFields?: Record<string, { displayTitle?: string }>
+    }
+    const { documentIds, storedFields } = json ?? {}
+    if (!documentIds || !storedFields) return out
+    for (const [numericKey, searchId] of Object.entries(documentIds)) {
+      if (!searchId.startsWith(prefix)) continue
+      const fields = storedFields[numericKey]
+      out.set(searchId.slice(prefix.length), {
+        displayTitle: fields?.displayTitle ?? searchId.slice(prefix.length),
+      })
+    }
+  } catch {
+    // silent-catch-ok: internal JSON shape changed → return empty map.
+  }
+  return out
+}
+
+/**
  * Return the set of original (non-prefixed) ids currently stored in the index
  * for the given entity type. Used by `useUnifiedSearchIndex` to seed its
  * per-table snapshot refs so the first reconcile pass doesn't re-add docs
  * that `main.tsx` already bulk-loaded at boot.
  */
 export function getIndexedIds(type: EntityType): Set<string> {
-  const out = new Set<string>()
-  if (!initialized) return out
-  const prefix = `${type}:`
-  // MiniSearch stores docs keyed by `_searchId`. The library exposes
-  // `documentCount` but not an iterator; however `has()` + `search('')`
-  // both fail for our purposes. We iterate the internal store via the
-  // public `toJSON()` API which returns the document registry.
-  // Falling back to a cheap empty-set is acceptable if the shape changes.
-  try {
-    const json = miniSearch.toJSON() as { storedFields?: Record<string, unknown> }
-    const stored = json?.storedFields
-    if (stored) {
-      for (const searchId of Object.keys(stored)) {
-        if (searchId.startsWith(prefix)) {
-          out.add(searchId.slice(prefix.length))
-        }
-      }
-    }
-  } catch {
-    // silent-catch-ok: if the internal JSON shape changes we just return
-    // an empty seed — the worst case is a one-time re-add of existing docs.
+  return new Set(walkStoredForType(type).keys())
+}
+
+/**
+ * Return id → displayTitle entries for every doc of `type` currently in the index.
+ * Used by `getTopByFrecency` to build the alphabetical corpus pad without re-querying Dexie.
+ */
+export function getCorpusEntries(type: EntityType): Map<string, string> {
+  const raw = walkStoredForType(type)
+  const out = new Map<string, string>()
+  for (const [id, { displayTitle }] of raw) {
+    out.set(id, displayTitle)
   }
   return out
 }
