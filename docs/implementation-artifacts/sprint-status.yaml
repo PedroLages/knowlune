@@ -1429,3 +1429,5 @@ development_status:
   # Stories added incrementally as they're defined
   # ──────────────────────────────────────────────────
   116-1-library-shelf-row-primitive: done  # PR #338 merged 2026-04-18
+  116-2-library-shelf-heading-improvements: planned
+  116-3-library-page-shelf-integration: planned
