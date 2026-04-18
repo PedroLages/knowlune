@@ -14,7 +14,10 @@
  */
 
 import { Children, type ReactNode } from 'react'
-import { LibraryShelfHeading } from '@/app/components/library/LibraryShelfHeading'
+import {
+  LibraryShelfHeading,
+  type LibraryShelfHeadingLevel,
+} from '@/app/components/library/LibraryShelfHeading'
 
 export interface LibraryShelfRowProps {
   /** Lucide-style icon component (e.g., `Clock`, `Headphones`) */
@@ -29,6 +32,18 @@ export interface LibraryShelfRowProps {
   actionSlot?: ReactNode
   /** Cards or book tiles to render in the horizontal scroller */
   children?: ReactNode
+  /**
+   * Semantic heading level for the internal `LibraryShelfHeading`. Passed
+   * through to the primitive so page-level integrations (E116-S03) can
+   * promote the heading to `h2` when the shelf is a top-level section
+   * without restyling. Defaults to `'h3'` to preserve prior behaviour.
+   */
+  headingLevel?: LibraryShelfHeadingLevel
+  /**
+   * Optional explicit `id` applied to the heading element. Enables
+   * `<section aria-labelledby={...}>` landmark wiring at call-sites.
+   */
+  headingId?: string
   /** Optional data-testid for E2E/unit tests */
   'data-testid'?: string
 }
@@ -51,6 +66,8 @@ export function LibraryShelfRow({
   subtitle,
   actionSlot,
   children,
+  headingLevel,
+  headingId,
   'data-testid': testId,
 }: LibraryShelfRowProps) {
   // AC2: return null when children is empty
@@ -66,6 +83,8 @@ export function LibraryShelfRow({
         count={count}
         subtitle={subtitle}
         actionSlot={actionSlot}
+        headingLevel={headingLevel}
+        id={headingId}
         data-testid={testId}
       />
 
