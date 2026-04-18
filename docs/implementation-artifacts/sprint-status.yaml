@@ -1143,7 +1143,7 @@ development_status:
   92-1-supabase-p0-migrations-and-extensions: done
   92-2-dexie-v52-migration-and-sync-infrastructure: done
   92-3-sync-table-registry-and-field-mapping: ready-for-dev
-  92-4-syncable-write-wrapper: in-progress
+  92-4-syncable-write-wrapper: done
   92-5-sync-engine-upload-phase: backlog
   92-6-sync-engine-download-and-apply-phase: backlog
   92-7-sync-triggers-and-offline-handling: backlog
