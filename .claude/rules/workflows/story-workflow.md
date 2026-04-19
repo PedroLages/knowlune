@@ -59,7 +59,7 @@ git stash push -u -m "WIP before E##-S##"
    - Build (`npm run build`)
    - Bundle analysis (compare against performance baseline — blocks on >25% regression)
    - Lint (`npm run lint` with auto-fix)
-   - Type check (`npx tsc --noEmit` with auto-fix)
+   - Type check (`npx tsc --noEmit` with auto-fix) — catches type regressions esbuild misses during the dev build
    - Format check (`npx prettier --check` with auto-fix)
    - Unit tests (`npm run test:unit`)
    - E2E tests (Chromium only: smoke specs + current story spec)
