@@ -8,6 +8,14 @@
  * - Uses encrypted API keys from aiConfiguration
  * - Sanitizes payloads (no PII or metadata)
  * - 30-second timeout on AI requests
+ *
+ * Tracking note (E96-S03): trackAIUsage instrumentation is NOT applicable here.
+ * `generateVideoSummary` is an async generator that yields streaming chunks; it
+ * has no single success/error boundary where durationMs can be captured.
+ * Instrumentation is the responsibility of the call-site component (e.g.
+ * TranscriptPanel) which already wraps the generator in a try/finally and knows
+ * the full elapsed time. Adding tracking inside the generator would produce
+ * partial-stream durations and duplicate events.
  */
 
 import { sanitizeAIRequestPayload } from './aiConfiguration'

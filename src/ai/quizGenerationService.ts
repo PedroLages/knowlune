@@ -24,6 +24,7 @@ import {
   isFeatureEnabled,
 } from '@/lib/aiConfiguration'
 import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
+import { trackAIUsage } from '@/lib/aiEventTracking'
 import { chunkTranscript, type TranscriptChunk } from './quizChunker'
 import {
   buildQuizPrompt,
@@ -99,6 +100,26 @@ export async function generateQuizForLesson(
   options: QuizGenerationOptions = {}
 ): Promise<QuizGenerationResult> {
   const { bloomsLevel = 'remember', questionsPerChunk = 4, signal, regenerate = false } = options
+  const startTime = Date.now()
+
+  // E96-S03: Track AI usage (fire-and-forget).
+  // `AIFeatureType` enum does not yet have a distinct 'quiz_generation' entry
+  // and we intentionally do not extend the enum in this story (would require
+  // a Supabase schema change). Using the closest-fit feature ('knowledge_gaps')
+  // and tagging granularity via `metadata.subFeature` per plan M1.
+  const emitTracking = (
+    status: 'success' | 'error',
+    extra: Record<string, unknown> = {}
+  ): void => {
+    trackAIUsage('knowledge_gaps', {
+      courseId,
+      durationMs: Date.now() - startTime,
+      status,
+      metadata: { subFeature: 'quiz_generation', lessonId, bloomsLevel, ...extra },
+    }).catch(() => {
+      // silent-catch-ok: analytics must never disrupt AI features
+    })
+  }
 
   // Check AI consent
   if (!isFeatureEnabled('noteQA')) {
@@ -108,6 +129,7 @@ export async function generateQuizForLesson(
   // Check Ollama config
   const ollamaConfig = getOllamaConfig()
   if (!ollamaConfig) {
+    emitTracking('error', { errorCode: 'ollama_not_configured' })
     return { quiz: null, cached: false, error: 'Ollama not configured' }
   }
 
@@ -118,6 +140,7 @@ export async function generateQuizForLesson(
     .first()
 
   if (!transcript || transcript.status !== 'done' || !transcript.fullText) {
+    emitTracking('error', { errorCode: 'no_transcript' })
     return { quiz: null, cached: false, error: 'No valid transcript available' }
   }
 
@@ -135,6 +158,7 @@ export async function generateQuizForLesson(
   // Stage 1: Chunk transcript
   const chunks = await chunkTranscript(lessonId, courseId)
   if (chunks.length === 0) {
+    emitTracking('error', { errorCode: 'no_chunks' })
     return { quiz: null, cached: false, error: 'Transcript produced no chunks' }
   }
 
@@ -144,6 +168,7 @@ export async function generateQuizForLesson(
 
   for (const chunk of chunks) {
     if (signal?.aborted) {
+      emitTracking('error', { errorCode: 'cancelled' })
       return { quiz: null, cached: false, error: 'Generation cancelled' }
     }
 
@@ -165,6 +190,11 @@ export async function generateQuizForLesson(
   }
 
   if (allQuestions.length === 0) {
+    emitTracking('error', {
+      errorCode: 'all_chunks_failed',
+      chunksProcessed: chunks.length,
+      chunksFailed,
+    })
     return {
       quiz: null,
       cached: false,
@@ -183,6 +213,11 @@ export async function generateQuizForLesson(
     await syncableWrite('quizzes', 'put', quiz as unknown as SyncableRecord)
   } catch (err) {
     console.warn(LOG_PREFIX, 'Failed to store quiz:', (err as Error).message)
+    emitTracking('error', {
+      errorCode: 'storage_failed',
+      chunksProcessed: chunks.length,
+      chunksFailed,
+    })
     return {
       quiz,
       cached: false,
@@ -191,6 +226,12 @@ export async function generateQuizForLesson(
       chunksFailed,
     }
   }
+
+  emitTracking('success', {
+    chunksProcessed: chunks.length,
+    chunksFailed,
+    questionCount: allQuestions.length,
+  })
 
   return {
     quiz,
