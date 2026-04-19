@@ -79,7 +79,7 @@ describe('saveCourseThumbnail', () => {
   })
 
   it('handles all valid ThumbnailSource values', async () => {
-    const sources = ['auto', 'local', 'url', 'ai'] as const
+    const sources = ['auto', 'local', 'url', 'ai', 'server'] as const
     for (const source of sources) {
       await mod.saveCourseThumbnail(`course-${source}`, new Blob([source]), source)
       const record = await db.courseThumbnails.get(`course-${source}`)

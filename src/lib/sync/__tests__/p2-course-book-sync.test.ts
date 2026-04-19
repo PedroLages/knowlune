@@ -18,7 +18,7 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach } from 'vitest'
 import Dexie from 'dexie'
 import { vi } from 'vitest'
-import type { ImportedCourse, ImportedAuthor, Book } from '@/data/types'
+import type { ImportedCourse, Book } from '@/data/types'
 
 let useCourseImportStore: (typeof import('@/stores/useCourseImportStore'))['useCourseImportStore']
 let useAuthorStore: (typeof import('@/stores/useAuthorStore'))['useAuthorStore']
@@ -47,17 +47,6 @@ function makeCourse(overrides?: Partial<ImportedCourse>): ImportedCourse {
   }
 }
 
-function makeAuthor(overrides?: Partial<ImportedAuthor>): ImportedAuthor {
-  return {
-    id: crypto.randomUUID(),
-    name: 'Test Author',
-    courseIds: [],
-    isPreseeded: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    ...overrides,
-  }
-}
 
 function makeBook(overrides?: Partial<Book>): Book {
   return {

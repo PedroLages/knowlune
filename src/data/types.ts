@@ -275,7 +275,7 @@ export interface Screenshot {
   createdAt: string // ISO 8601
 }
 
-export type ThumbnailSource = 'auto' | 'local' | 'url' | 'ai'
+export type ThumbnailSource = 'auto' | 'local' | 'url' | 'ai' | 'server'
 
 export interface CourseThumbnail {
   courseId: string // Primary key

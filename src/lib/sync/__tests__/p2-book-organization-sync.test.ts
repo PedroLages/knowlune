@@ -326,8 +326,6 @@ describe('E94-S03 P2 sync wiring — unauthenticated writes', () => {
 
 function makeShelf(overrides: Partial<Shelf> & Pick<Shelf, 'id' | 'name'>): Shelf {
   return {
-    id: overrides.id,
-    name: overrides.name,
     isDefault: overrides.isDefault ?? false,
     sortOrder: overrides.sortOrder ?? 0,
     createdAt: overrides.createdAt ?? new Date().toISOString(),

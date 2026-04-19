@@ -1,6 +1,10 @@
 /// <reference types="vite/client" />
 /// <reference types="vite-plugin-pwa/client" />
 
+// Vite query-suffix dynamic imports used in tests for mock variants
+// (e.g., `import('../module?null-client')` returns a test-only variant).
+declare module '*?null-client'
+
 interface ImportMetaEnv {
   readonly VITE_API_URL?: string
   // Add more env variables here as needed
