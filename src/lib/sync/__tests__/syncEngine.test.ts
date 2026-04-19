@@ -27,6 +27,8 @@ const {
   mockGetSession,
   mockLockRequest,
   mockUploadStorageFilesForTable,
+  mockDownloadStorageFilesForTable,
+  registryEntries,
 } = vi.hoisted(() => {
   const mockUpsert = vi.fn().mockResolvedValue({ error: null })
   const mockInsert = vi.fn().mockResolvedValue({ error: null })
@@ -47,6 +49,17 @@ const {
   const mockUpdate = vi.fn().mockResolvedValue(undefined)
   const mockLockRequest = vi.fn()
   const mockUploadStorageFilesForTable = vi.fn().mockResolvedValue(undefined)
+  const mockDownloadStorageFilesForTable = vi.fn().mockResolvedValue(undefined)
+
+  const registryEntries = [
+    { dexieTable: 'notes', supabaseTable: 'notes', conflictStrategy: 'lww', priority: 1, fieldMap: {} },
+    { dexieTable: 'studySessions', supabaseTable: 'study_sessions', conflictStrategy: 'insert-only', priority: 0, fieldMap: {}, insertOnly: true },
+    { dexieTable: 'contentProgress', supabaseTable: 'content_progress', conflictStrategy: 'monotonic', priority: 0, fieldMap: {} },
+    { dexieTable: 'progress', supabaseTable: 'video_progress', conflictStrategy: 'monotonic', priority: 0, fieldMap: {} },
+    { dexieTable: 'challenges', supabaseTable: 'challenges', conflictStrategy: 'monotonic', priority: 3, fieldMap: {} },
+    { dexieTable: 'books', supabaseTable: 'books', conflictStrategy: 'lww', priority: 2, fieldMap: {} },
+    { dexieTable: 'importedCourses', supabaseTable: 'imported_courses', conflictStrategy: 'lww', priority: 2, fieldMap: {} },
+  ]
 
   return {
     mockToArray,
@@ -60,6 +73,8 @@ const {
     mockGetSession,
     mockLockRequest,
     mockUploadStorageFilesForTable,
+    mockDownloadStorageFilesForTable,
+    registryEntries,
   }
 })
 
@@ -77,6 +92,13 @@ vi.mock('@/db', () => ({
       }),
       bulkDelete: mockBulkDelete,
       update: mockUpdate,
+    },
+    syncMetadata: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+    },
+    shelves: {
+      toArray: vi.fn().mockResolvedValue([]),
     },
   },
 }))
@@ -97,17 +119,15 @@ vi.mock('@/lib/sync/storageSync', () => ({
   STORAGE_TABLES: new Set(['importedCourses', 'authors', 'importedPdfs', 'books']),
 }))
 
+vi.mock('@/lib/sync/storageDownload', () => ({
+  downloadStorageFilesForTable: mockDownloadStorageFilesForTable,
+  STORAGE_DOWNLOAD_TABLES: new Set(['importedCourses', 'authors', 'importedPdfs', 'books']),
+}))
+
 vi.mock('@/lib/sync/tableRegistry', () => ({
+  tableRegistry: registryEntries,
   getTableEntry: vi.fn((tableName: string) => {
-    const registry: Record<string, object> = {
-      notes: { dexieTable: 'notes', supabaseTable: 'notes', conflictStrategy: 'lww', priority: 1, fieldMap: {} },
-      studySessions: { dexieTable: 'studySessions', supabaseTable: 'study_sessions', conflictStrategy: 'insert-only', priority: 0, fieldMap: {}, insertOnly: true },
-      contentProgress: { dexieTable: 'contentProgress', supabaseTable: 'content_progress', conflictStrategy: 'monotonic', priority: 0, fieldMap: {} },
-      progress: { dexieTable: 'progress', supabaseTable: 'video_progress', conflictStrategy: 'monotonic', priority: 0, fieldMap: {} },
-      challenges: { dexieTable: 'challenges', supabaseTable: 'challenges', conflictStrategy: 'monotonic', priority: 3, fieldMap: {} },
-      books: { dexieTable: 'books', supabaseTable: 'books', conflictStrategy: 'lww', priority: 2, fieldMap: {} },
-    }
-    return registry[tableName]
+    return registryEntries.find((e: { dexieTable: string }) => e.dexieTable === tableName)
   }),
 }))
 
@@ -157,11 +177,19 @@ beforeEach(() => {
   mockBulkDelete.mockResolvedValue(undefined)
   mockUpdate.mockResolvedValue(undefined)
 
+  const mockOrder = vi.fn()
+  const mockGte = vi.fn().mockResolvedValue({ data: [], error: null })
+  mockOrder.mockReturnValue({ gte: mockGte, then: mockGte.then?.bind(mockGte) })
+  // Make order() also thenable so _doDownload can await it without .gte()
+  Object.assign(mockOrder, { then: (_res: (v: unknown) => unknown) => Promise.resolve({ data: [], error: null }).then(_res) })
+  const mockSelect = vi.fn().mockReturnValue({ order: mockOrder })
+
   mockFrom.mockReturnValue({
     upsert: mockUpsert,
     insert: mockInsert,
-    select: vi.fn().mockResolvedValue({ data: [], error: null }),
+    select: mockSelect,
   })
+  mockDownloadStorageFilesForTable.mockResolvedValue(undefined)
 
   // Set up navigator.locks mock — lock always acquired (callback gets a truthy lock object).
   mockLockRequest.mockImplementation(
@@ -995,5 +1023,67 @@ describe('legacy empty-recordId backfill', () => {
       }),
     )
     warnSpy.mockRestore()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// E94-S05: storageDownload hook smoke tests
+// ---------------------------------------------------------------------------
+
+describe('_doDownload — storageDownload hook (E94-S05)', () => {
+  it('integration smoke: _doDownload with importedCourses row → downloadStorageFilesForTable called with correct tableName and userId', async () => {
+    const courseRecord = {
+      id: 'course-1',
+      user_id: 'test-user-id',
+      thumbnail_url: 'https://abcdefgh.supabase.co/storage/v1/object/public/course-thumbnails/p.jpg',
+      updated_at: '2024-01-01T00:00:00.000Z',
+    }
+
+    // importedCourses is in registryEntries — make Supabase return one row for it.
+    // Use a table-aware from() so only importedCourses returns data; others return [].
+    const courseResult = { data: [courseRecord], error: null }
+    const emptyResult = { data: [], error: null }
+
+    mockFrom.mockImplementation((table: string) => {
+      const result = table === 'imported_courses' ? courseResult : emptyResult
+      // Build a thenable `order()` chain. _doDownload awaits order() (no cursor since
+      // syncMetadata.get returns undefined).
+      const order = vi.fn().mockResolvedValue(result)
+      const gte = vi.fn().mockReturnValue(order)
+      return {
+        upsert: mockUpsert,
+        insert: mockInsert,
+        select: vi.fn().mockReturnValue({ order, gte }),
+      }
+    })
+
+    // importedCourses needs a Dexie table stub for _applyRecord (dynamic access).
+    // The db mock already has importedCourses from Unit 1 db mock setup above —
+    // but since the mock is shared, add a minimal put to avoid errors.
+    const { db: mockDb } = await import('@/db')
+    Object.assign(mockDb as Record<string, unknown>, {
+      importedCourses: {
+        get: vi.fn().mockResolvedValue(undefined),
+        put: vi.fn().mockResolvedValue(undefined),
+      },
+    })
+
+    await syncEngine.start('test-user-id')
+
+    // downloadStorageFilesForTable should have been called for importedCourses.
+    const downloadCalls = mockDownloadStorageFilesForTable.mock.calls
+    const courseCall = downloadCalls.find(([tableName]) => tableName === 'importedCourses')
+    expect(courseCall).toBeDefined()
+    expect(courseCall?.[2]).toBe('test-user-id')
+  })
+
+  it('integration: _doDownload for notes table → downloadStorageFilesForTable NOT called (notes is not a file-bearing table)', async () => {
+    await syncEngine.start('test-user-id')
+
+    // downloadStorageFilesForTable should NOT have been called for 'notes'.
+    const notesCalls = mockDownloadStorageFilesForTable.mock.calls.filter(
+      ([tableName]) => tableName === 'notes',
+    )
+    expect(notesCalls).toHaveLength(0)
   })
 })

@@ -323,7 +323,8 @@ const importedPdfs: TableRegistryEntry = {
   conflictStrategy: 'lww',
   priority: 2,
   fieldMap: {},
-  stripFields: ['fileHandle'],
+  // photoBlob/fileBlob: server-fetched blob, not uploadable (E94-S05)
+  stripFields: ['fileHandle', 'fileBlob'],
 }
 
 /**
@@ -335,7 +336,8 @@ const authors: TableRegistryEntry = {
   conflictStrategy: 'lww',
   priority: 2,
   fieldMap: {},
-  stripFields: ['photoHandle'],
+  // photoBlob/fileBlob: server-fetched blob, not uploadable (E94-S05)
+  stripFields: ['photoHandle', 'photoBlob'],
 }
 
 /**
