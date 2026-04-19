@@ -507,9 +507,9 @@ async function _uploadBatch(
  * from the record's field values and `.where().equals().first()` is used.
  * Otherwise falls back to `.get(record.id)`.
  *
- * Intentional: `progress` table lacks `compoundPkFields` in tableRegistry
- * (pre-existing known gap R1-PE-01 from E92-S02). Falls through to `get(record.id)`,
- * which may miss records if the id is not a stable PK. Tracked in known-issues.
+ * Note: `progress` table now declares compoundPkFields: ['courseId', 'videoId']
+ * (resolved in post-E93 cleanup — was R1-PE-01 from E92-S02). Download and
+ * upload directions now agree on the logical PK for video progress.
  */
 async function _getLocalRecord(
   table: Table<Record<string, unknown>>,
