@@ -11,7 +11,7 @@ import { MomentumBadge } from './MomentumBadge'
 import { AtRiskBadge } from './AtRiskBadge'
 import { CompletionEstimate } from './CompletionEstimate'
 import { VideoPlayer } from './VideoPlayer'
-import { CardCover, CoverProgressBar, CompletionOverlay } from './courseCardShell'
+import { CardCover, CoverProgressBar, CompletionOverlay } from './CourseCardShell'
 import { getProgress } from '@/lib/progress'
 import { getResourceUrl } from '@/lib/media'
 import { cn } from '@/app/components/ui/utils'
@@ -32,15 +32,31 @@ const categoryLabels: Record<CourseCategory, string> = {
   'research-library': 'Research Library',
 }
 
+// category palette — semantic per-category color, no design token equivalent
 const categoryColors: Record<CourseCategory, string> = {
-  'behavioral-analysis': 'bg-emerald-100 text-emerald-700',
+  'behavioral-analysis': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   'influence-authority': 'bg-brand-soft text-brand-soft-foreground',
-  'confidence-mastery': 'bg-amber-100 text-amber-700',
-  'operative-training': 'bg-red-100 text-red-700',
-  'research-library': 'bg-purple-100 text-purple-700',
+  'confidence-mastery': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  'operative-training': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  'research-library': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
 }
 
 // ── Helper functions ────────────────────────────────────────────────
+
+const COVER_WIDTHS = [320, 640, 768, 1024, 1280] as const
+
+function buildSrcSet(coverImage: string, ext: 'webp' | 'png' = 'webp'): string {
+  return COVER_WIDTHS.map(w => `${coverImage}-${w}w.${ext} ${w}w`).join(', ')
+}
+
+function EmptyCoverFallback() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/50 dark:to-indigo-950/50">
+      <BookOpen className="size-16 text-brand" />
+    </div>
+  )
+}
+
 
 function formatRelativeTime(isoDate: string): string {
   const now = new Date()
@@ -357,7 +373,7 @@ export function CourseCard({
                 e.stopPropagation()
               }}
               aria-label="Course details"
-              className="absolute bottom-2 right-2 z-20 rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
+              className="absolute bottom-2 right-2 z-20 rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
             >
               <Info className="size-4" />
             </button>
@@ -381,7 +397,7 @@ export function CourseCard({
           <PopoverTrigger asChild>
             <button
               aria-label="Course details"
-              className="rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
+              className="rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
             >
               <Info className="size-4" />
             </button>
@@ -404,13 +420,7 @@ export function CourseCard({
         <picture className="absolute inset-0 w-full h-full">
           <source
             type="image/webp"
-            srcSet={`
-              ${course.coverImage}-320w.webp 320w,
-              ${course.coverImage}-640w.webp 640w,
-              ${course.coverImage}-768w.webp 768w,
-              ${course.coverImage}-1024w.webp 1024w,
-              ${course.coverImage}-1280w.webp 1280w
-            `}
+            srcSet={buildSrcSet(course.coverImage)}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
           <img
@@ -421,19 +431,13 @@ export function CourseCard({
           />
         </picture>
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/50 dark:to-indigo-950/50">
-          <BookOpen className="size-16 text-brand" />
-        </div>
+        <EmptyCoverFallback />
       )
     }
 
     // library + overview
     if (!course.coverImage) {
-      return (
-        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/50 dark:to-indigo-950/50">
-          <BookOpen className="size-16 text-brand" />
-        </div>
-      )
+      return <EmptyCoverFallback />
     }
 
     if (variant === 'library') {
@@ -441,24 +445,12 @@ export function CourseCard({
         <picture className="absolute inset-0 w-full h-full">
           <source
             type="image/webp"
-            srcSet={`
-              ${course.coverImage}-320w.webp 320w,
-              ${course.coverImage}-640w.webp 640w,
-              ${course.coverImage}-768w.webp 768w,
-              ${course.coverImage}-1024w.webp 1024w,
-              ${course.coverImage}-1280w.webp 1280w
-            `}
+            srcSet={buildSrcSet(course.coverImage)}
             sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
           />
           <img
             src={`${course.coverImage}-768w.png`}
-            srcSet={`
-              ${course.coverImage}-320w.png 320w,
-              ${course.coverImage}-640w.png 640w,
-              ${course.coverImage}-768w.png 768w,
-              ${course.coverImage}-1024w.png 1024w,
-              ${course.coverImage}-1280w.png 1280w
-            `}
+            srcSet={buildSrcSet(course.coverImage, 'png')}
             sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
             alt={course.title}
             className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
@@ -472,13 +464,7 @@ export function CourseCard({
       <picture className="absolute inset-0 w-full h-full">
         <source
           type="image/webp"
-          srcSet={`
-            ${course.coverImage}-320w.webp 320w,
-            ${course.coverImage}-640w.webp 640w,
-            ${course.coverImage}-768w.webp 768w,
-            ${course.coverImage}-1024w.webp 1024w,
-            ${course.coverImage}-1280w.webp 1280w
-          `}
+          srcSet={buildSrcSet(course.coverImage)}
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
         />
         <img
@@ -510,7 +496,7 @@ export function CourseCard({
     switch (variant) {
       case 'library':
         return (
-          <div className="mt-3 px-1 flex flex-col">
+          <div className="mt-3 px-1 flex flex-col min-h-32">
             <h3
               className="font-semibold text-sm leading-tight line-clamp-2 group-hover:text-brand transition-colors"
               data-testid="course-card-title"
@@ -568,7 +554,7 @@ export function CourseCard({
 
       case 'overview':
         return (
-          <div className="mt-3 px-1 flex flex-col">
+          <div className="mt-3 px-1 flex flex-col min-h-24">
             <h3
               className="font-semibold text-sm leading-tight line-clamp-2 group-hover:text-brand transition-colors"
               data-testid="course-card-title"

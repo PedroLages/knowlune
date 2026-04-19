@@ -62,7 +62,7 @@ import {
 import { formatCourseDuration, formatFileSize, getResolutionLabel } from '@/lib/format'
 import { MomentumBadge } from './MomentumBadge'
 import { ProgressRing } from './ProgressRing'
-import { CardCover, CoverProgressBar, PlayOverlay, CompletionOverlay } from './courseCardShell'
+import { CardCover, CoverProgressBar, PlayOverlay, CompletionOverlay } from './CourseCardShell'
 import type { ImportedCourse, ImportedVideo, LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
 
@@ -128,6 +128,7 @@ export function ImportedCourseCard({
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const statusBadgeRef = useRef<HTMLButtonElement>(null)
+  const startingRef = useRef(false)
   const thumbnailUrl = thumbnailUrls[course.id] ?? course.youtubeThumbnailUrl ?? null
 
   // Lazy-load thumbnail: only render <img> when card enters viewport (E1B-S04 AC5)
@@ -187,6 +188,11 @@ export function ImportedCourseCard({
     if (e.target !== e.currentTarget) return
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
+      if (course.status === 'not-started' && !readOnly) {
+        // Start the course (mirrors PlayOverlay click)
+        void handleStartStudying(e as unknown as React.MouseEvent)
+        return
+      }
       navigate(`/courses/${course.id}/overview`)
     }
   }
@@ -241,10 +247,26 @@ export function ImportedCourseCard({
 
   const isLoading = searching || videoLoading
 
-  function handleStartStudying(e: React.MouseEvent) {
+  // Derive a single completion state to avoid Play+Complete overlay collision when
+  // cross-device sync produces inconsistent (status='not-started', completion=100%) pairs.
+  const isCompleted = course.status === 'completed' || completionPercent === 100
+  const showPlay = course.status === 'not-started' && !isCompleted && !readOnly
+
+  async function handleStartStudying(e: React.MouseEvent) {
     e.stopPropagation()
-    handleStatusChange('active')
-    navigate(`/courses/${course.id}/overview`)
+    if (startingRef.current) return
+    startingRef.current = true
+    try {
+      await updateCourseStatus(course.id, 'active')
+      const { importError } = useCourseImportStore.getState()
+      if (importError) {
+        toast.error(importError)
+        return
+      }
+      navigate(`/courses/${course.id}/overview`)
+    } finally {
+      startingRef.current = false
+    }
   }
 
   return (
@@ -282,8 +304,8 @@ export function ImportedCourseCard({
               className="absolute inset-0 w-full h-full object-cover"
             />
           )}
-          {/* Inline video preview */}
-          {showPreview && previewBlobUrl && (
+          {/* Inline video preview — suppressed on not-started cards so it doesn't compete with PlayOverlay */}
+          {showPreview && previewBlobUrl && !showPlay && (
             // width/height attrs prevent the browser from using intrinsic video dimensions before layout.
             // This was the root cause of the pixelated/cropped preview on non-16:9 source videos.
             <video
@@ -307,20 +329,20 @@ export function ImportedCourseCard({
           {/* Completion/progress badge — top-left */}
           {completionPercent === 100 ? (
             <div
-              className="absolute top-3 left-3 z-20 bg-success text-success-foreground rounded-full px-3 py-1 text-xs font-bold shadow-lg flex items-center gap-1"
+              className="absolute top-3 left-3 z-30 bg-success text-success-foreground rounded-full px-3 py-1 text-xs font-bold shadow-lg flex items-center gap-1"
               data-testid="completion-badge"
             >
               <CheckCircle2 className="size-3" aria-hidden="true" />
               Complete
             </div>
           ) : completionPercent > 0 ? (
-            <div className="absolute top-3 left-3 z-20" data-testid="completion-ring">
+            <div className="absolute top-3 left-3 z-30" data-testid="completion-ring">
               <ProgressRing percent={completionPercent} size={40} strokeWidth={3} />
             </div>
           ) : null}
 
           {/* Status dropdown — top-right */}
-          <div className="absolute top-3 right-3 z-20">
+          <div className="absolute top-3 right-3 z-30">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -397,15 +419,16 @@ export function ImportedCourseCard({
 
           {/* Info button — bottom-right, hover-revealed */}
           <div
-            className="absolute bottom-3 right-3 z-20"
+            className="absolute bottom-3 right-3 z-30"
             onClick={e => { e.preventDefault(); e.stopPropagation() }}
           >
             <Popover open={infoOpen} onOpenChange={setInfoOpen}>
               <PopoverTrigger asChild>
                 <button
+                  data-testid="course-info-button"
                   onClick={e => e.stopPropagation()}
                   aria-label="Course details"
-                  className="rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
+                  className="rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
                 >
                   <Info className="size-4" />
                 </button>
@@ -414,7 +437,6 @@ export function ImportedCourseCard({
                 <div className="space-y-3">
                   <div>
                     <h4 className="font-semibold text-sm leading-tight">{course.name}</h4>
-                    {/* Import date moved here from body — frees a body line for the stats row */}
                     <p className="text-xs text-muted-foreground mt-1">
                       Imported {new Date(course.importedAt).toLocaleDateString()}
                     </p>
@@ -460,6 +482,7 @@ export function ImportedCourseCard({
                   {course.videoCount > 0 && (
                     <Button
                       size="sm"
+                      data-testid="course-preview-video-btn"
                       className="w-full gap-2 hover:brightness-110 active:scale-95 transition-all"
                       onClick={e => {
                         e.stopPropagation()
@@ -479,12 +502,13 @@ export function ImportedCourseCard({
           {/* Camera overlay — only shown when not-started (mutually exclusive with Play overlay) */}
           {!readOnly && status !== 'not-started' && (
             <button
+              data-testid="course-thumbnail-edit-btn"
               onClick={e => {
                 e.stopPropagation()
                 setThumbnailPickerOpen(true)
               }}
               aria-label="Change thumbnail"
-              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none z-10"
+              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-200 flex items-center justify-center focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none z-10"
             >
               <Camera className="size-8 text-white drop-shadow" aria-hidden="true" />
             </button>
@@ -492,21 +516,23 @@ export function ImportedCourseCard({
 
           {/* Play overlay — only on not-started courses */}
           <PlayOverlay
-            show={status === 'not-started' && !readOnly}
+            show={showPlay}
             onClick={handleStartStudying}
             data-testid="start-course-btn"
             aria-label={`Start studying "${course.name}"`}
           />
 
           {/* Full completion overlay */}
-          <CompletionOverlay show={completionPercent === 100} />
+          <CompletionOverlay show={isCompleted} />
 
           {/* Cover-edge progress bar */}
-          <CoverProgressBar progress={completionPercent} />
+          <div data-testid="completion-progress-bar" className="contents">
+            <CoverProgressBar progress={completionPercent} />
+          </div>
         </CardCover>
 
         {/* Card body */}
-        <div className="mt-3 px-1">
+        <div className="mt-3 px-1 min-h-32 flex flex-col">
             <h3
               data-testid="course-card-title"
               className="font-bold text-sm leading-tight mb-1 line-clamp-2 group-hover:text-brand transition-colors"
@@ -543,7 +569,6 @@ export function ImportedCourseCard({
                 Unknown Author
               </p>
             )}
-            {/* "Imported DATE" moved to info popover — frees body for stats row */}
             <div className="flex items-center gap-1.5 mt-1 mb-2">
               <span aria-live="polite" className="contents">
                 {analysisStatus === 'analyzing' && (
