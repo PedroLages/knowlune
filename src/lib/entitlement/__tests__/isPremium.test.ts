@@ -375,6 +375,64 @@ describe('useIsPremium', () => {
     expect(result.current.tier).toBe('trial')
   })
 
+  it('FR4: server is always validated even when a fresh cache exists', async () => {
+    // Fresh cache (2 days old) should short-circuit rendering to premium,
+    // but the hook must still call the server to confirm the tier is current.
+    const freshCache = makeCachedEntitlement({
+      cachedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    })
+    mockGetCachedEntitlement.mockResolvedValue(freshCache)
+    mockServerResponse({
+      user_id: 'user-123',
+      tier: 'premium',
+      stripe_customer_id: 'cus_123',
+      stripe_subscription_id: 'sub_123',
+      plan_id: 'plan_monthly',
+      expires_at: '2026-04-25T00:00:00.000Z',
+    })
+
+    const { result } = renderHook(() => useIsPremium())
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
+
+    // Server-authoritative contract: `.from('entitlements')` must be invoked
+    // regardless of cache freshness. Assert the call happened; the number of
+    // calls is an implementation detail we intentionally don't pin.
+    await waitFor(() => {
+      expect(mockSupabaseFrom).toHaveBeenCalled()
+    })
+    expect(mockSupabaseFrom).toHaveBeenCalledWith('entitlements')
+    expect(result.current.isPremium).toBe(true)
+    expect(result.current.tier).toBe('premium')
+  })
+
+  it('FR6: propagates trial_end and had_trial through the hook return value', async () => {
+    mockGetCachedEntitlement.mockResolvedValue(null)
+    mockServerResponse({
+      user_id: 'user-123',
+      tier: 'trial',
+      stripe_customer_id: null,
+      stripe_subscription_id: null,
+      plan_id: null,
+      expires_at: null,
+      trial_end: '2026-06-01T00:00:00.000Z',
+      had_trial: true,
+    })
+
+    const { result } = renderHook(() => useIsPremium())
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
+
+    expect(result.current.isPremium).toBe(true)
+    expect(result.current.tier).toBe('trial')
+    expect(result.current.trialEnd).toBe('2026-06-01T00:00:00.000Z')
+    expect(result.current.hadTrial).toBe(true)
+  })
+
   it('AC4: auto-revalidates on online event', async () => {
     mockGetCachedEntitlement.mockResolvedValue(null)
     mockServerResponse({
