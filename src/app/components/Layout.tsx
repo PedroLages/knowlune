@@ -44,6 +44,7 @@ import { getSettings } from '@/lib/settings'
 import { getInitials } from '@/lib/textUtils'
 import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 import { NotificationCenter } from './figma/NotificationCenter'
+import { SyncStatusIndicator } from './sync/SyncStatusIndicator'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { toast } from 'sonner'
@@ -557,6 +558,7 @@ export function Layout() {
           {/* User Actions */}
           <div className="flex items-center gap-4">
             <TrialIndicator />
+            <SyncStatusIndicator />
             <Button
               variant="ghost"
               size="icon"

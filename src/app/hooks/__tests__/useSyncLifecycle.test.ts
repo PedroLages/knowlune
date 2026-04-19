@@ -125,15 +125,29 @@ describe('useSyncLifecycle', () => {
     expect(mockMarkSyncComplete).toHaveBeenCalledTimes(1)
   })
 
-  it('sets status to error when mount fullSync rejects', async () => {
-    mockFullSync.mockRejectedValueOnce(new Error('network error'))
+  it('sets status to error with classified message when mount fullSync rejects', async () => {
+    mockFullSync.mockRejectedValueOnce(new Error('fetch failed'))
 
     await act(async () => {
       renderHook(() => useSyncLifecycle())
     })
 
-    expect(mockSetStatus).toHaveBeenCalledWith('error')
+    // E97-S01: setStatus now receives a classified message alongside 'error'.
+    expect(mockSetStatus).toHaveBeenCalledWith('error', 'Network error')
     expect(mockMarkSyncComplete).not.toHaveBeenCalled()
+  })
+
+  it('refreshes pendingCount on the 30s interval tick', async () => {
+    await act(async () => {
+      renderHook(() => useSyncLifecycle())
+    })
+
+    mockRefreshPendingCount.mockClear()
+    await act(async () => {
+      vi.advanceTimersByTime(30_000)
+    })
+
+    expect(mockRefreshPendingCount).toHaveBeenCalledTimes(1)
   })
 
   // -------------------------------------------------------------------------
