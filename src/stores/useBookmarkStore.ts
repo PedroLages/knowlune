@@ -76,6 +76,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
       timestamp: Math.floor(timestamp),
       label: label || formatBookmarkTimestamp(timestamp),
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
 
     const { bookmarks } = get()

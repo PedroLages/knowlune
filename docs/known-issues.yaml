@@ -1100,21 +1100,22 @@ issues:
     story: E93-S01
     severity: LOW
     description: "search_similar_notes computes vector distance expression twice (SELECT + ORDER BY). Wrapping in subquery would be cleaner."
-    status: open
+    status: wont-fix
     addedAt: "2026-04-18"
-    resolution: schedule-future
+    resolution: wont-fix
 
   - id: KI-E93-S02-L01
     story: E93-S02
     severity: LOW
     description: "addBookmark optimistic object missing updatedAt field — state inconsistent with persisted shape until next loadBookmarks()"
-    status: open
+    status: fixed
     addedAt: "2026-04-18"
-    resolution: schedule-future
+    resolution: fixed
+    fixed_by: "chore(E93): closeout — known-issues triage + fix addBookmark optimistic updatedAt"
   - id: KI-E93-S02-L02
     story: E93-S02
     severity: LOW
     description: "p1-notes-bookmarks-sync.test.ts import order for useAuthStore is implicit and fragile post vi.resetModules() — needs comment"
-    status: open
+    status: wont-fix
     addedAt: "2026-04-18"
-    resolution: schedule-future
+    resolution: wont-fix
