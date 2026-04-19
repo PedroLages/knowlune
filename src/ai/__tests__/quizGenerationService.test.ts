@@ -15,6 +15,7 @@ const {
   mockChaptersSortBy,
   mockFetch,
   mockDigest,
+  mockSyncableWrite,
 } = vi.hoisted(() => ({
   mockTranscriptFirst: vi.fn(),
   mockQuizzesWhere: vi.fn(),
@@ -22,6 +23,7 @@ const {
   mockChaptersSortBy: vi.fn(),
   mockFetch: vi.fn(),
   mockDigest: vi.fn().mockResolvedValue(new ArrayBuffer(32)),
+  mockSyncableWrite: vi.fn(),
 }))
 
 vi.mock('@/lib/aiConfiguration', () => ({
@@ -29,6 +31,13 @@ vi.mock('@/lib/aiConfiguration', () => ({
   getOllamaSelectedModel: vi.fn(),
   isOllamaDirectConnection: vi.fn(() => false),
   isFeatureEnabled: vi.fn(() => true),
+}))
+
+// E96-S02: quiz persistence now routes through syncableWrite. Forward calls
+// to mockQuizzesPut so existing assertions that inspect the stored quiz
+// payload keep working.
+vi.mock('@/lib/sync/syncableWrite', () => ({
+  syncableWrite: mockSyncableWrite,
 }))
 
 vi.mock('@/db/schema', () => ({
@@ -134,6 +143,16 @@ beforeEach(() => {
   mockQuizzesWhere.mockResolvedValue([])
   mockQuizzesPut.mockResolvedValue(undefined)
   mockChaptersSortBy.mockResolvedValue([])
+  // E96-S02: forward syncableWrite('quizzes', 'put', quiz) calls onto
+  // mockQuizzesPut(quiz) so existing assertions on the stored payload keep
+  // working without rewriting each test.
+  mockSyncableWrite.mockImplementation(
+    async (_table: string, operation: string, record: unknown) => {
+      if (operation === 'put' || operation === 'add') {
+        await mockQuizzesPut(record)
+      }
+    }
+  )
 })
 
 describe('generateQuizForLesson', () => {

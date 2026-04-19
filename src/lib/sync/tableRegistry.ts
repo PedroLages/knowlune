@@ -485,6 +485,16 @@ const notifications: TableRegistryEntry = {
   fieldMap: {},
 }
 
+/**
+ * `careerPaths` — registry entry + Dexie schema present, but no production
+ * UI write sites exist yet (verified via grep of `db.careerPaths.*` in src/
+ * during E96-S02 Phase 0 audit). The entry is retained so the download
+ * engine can seed Dexie from any pre-existing Supabase rows; when a write
+ * site is introduced (future career-path feature story), wire it through
+ * `syncableWrite('careerPaths', 'put' | 'add' | 'delete', ...)` following
+ * the `useLearningPathStore` pattern. No stub Zustand store created — nothing
+ * to wire until a real writer emerges.
+ */
 const careerPaths: TableRegistryEntry = {
   dexieTable: 'careerPaths',
   supabaseTable: 'career_paths',
@@ -493,6 +503,11 @@ const careerPaths: TableRegistryEntry = {
   fieldMap: {},
 }
 
+/**
+ * `pathEnrollments` — see `careerPaths` note. Same status: schema + registry
+ * entry present, no production write sites, wiring deferred to the story
+ * that introduces the writer.
+ */
 const pathEnrollments: TableRegistryEntry = {
   dexieTable: 'pathEnrollments',
   supabaseTable: 'path_enrollments',

@@ -23,6 +23,7 @@ import {
   isOllamaDirectConnection,
   isFeatureEnabled,
 } from '@/lib/aiConfiguration'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 import { chunkTranscript, type TranscriptChunk } from './quizChunker'
 import {
   buildQuizPrompt,
@@ -177,7 +178,9 @@ export async function generateQuizForLesson(
   const quiz = buildQuiz(lessonId, allQuestions, transcriptHash, bloomsLevel, ollamaConfig.model)
 
   try {
-    await db.quizzes.put(quiz)
+    // E96-S02: route through syncableWrite so the generated quiz is enqueued
+    // for Supabase upload. `quizzes` registry entry uses LWW conflict strategy.
+    await syncableWrite('quizzes', 'put', quiz as unknown as SyncableRecord)
   } catch (err) {
     console.warn(LOG_PREFIX, 'Failed to store quiz:', (err as Error).message)
     return {
