@@ -1618,6 +1618,26 @@ function _declareLegacyMigrations(database: Dexie): void {
     .upgrade(async _tx => {
       // No backfill. Table is new; first successful RPC populates it.
     })
+
+  // v57 (E95-S05): Credential-off-the-row bump for `opdsCatalogs` and
+  // `audiobookshelfServers`. The TypeScript types `OpdsCatalog` /
+  // `AudiobookshelfServer` no longer expose `auth.password` / `apiKey`
+  // respectively — the compiler enforces the invariant. Legacy stored rows
+  // may still carry these fields until the post-boot migration in
+  // `src/lib/credentials/migrateCredentialsToVault.ts` uploads them to
+  // Supabase Vault and clears them from Dexie.
+  //
+  // No index change: Dexie stores arbitrary object fields regardless of the
+  // schema string. The upgrade body is a no-op — it exists solely as a
+  // version marker so future versions stack after it.
+  database
+    .version(57)
+    .stores({})
+    .upgrade(async _tx => {
+      // No backfill. The credential clear step runs post-boot from
+      // migrateCredentialsToVault() after the user authenticates — Dexie
+      // upgrade callbacks cannot read auth state (see reference_dexie_4_quirks).
+    })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }

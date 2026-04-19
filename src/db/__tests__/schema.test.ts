@@ -106,8 +106,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 56 (E95-S04: readingStreakCache table)', () => {
-    expect(db.verno).toBe(56)
+  it('should be at version 57 (E95-S05: credential-off-the-row marker)', () => {
+    expect(db.verno).toBe(57)
   })
 
   it('should have searchFrecency table with compound primary key [entityType+entityId] (v53)', () => {

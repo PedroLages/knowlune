@@ -52,7 +52,7 @@ import {
   type OpdsBreadcrumb,
 } from '@/services/OpdsService'
 import type { Book, OpdsCatalog } from '@/data/types'
-import { readCredential } from '@/lib/vaultCredentials'
+import { getOpdsPassword } from '@/lib/credentials/opdsPasswordResolver'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -316,7 +316,7 @@ export function OpdsBrowser({ open, onOpenChange, initialCatalogId }: OpdsBrowse
   /** Resolves the full auth object including the Vault-stored password. */
   const resolveAuth = useCallback(async (catalog: OpdsCatalog) => {
     if (!catalog.auth?.username) return undefined
-    const password = await readCredential('opds-catalog', catalog.id)
+    const password = await getOpdsPassword(catalog.id)
     return { username: catalog.auth.username, password: password ?? '' }
   }, [])
 

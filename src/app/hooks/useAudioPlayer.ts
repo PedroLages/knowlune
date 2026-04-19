@@ -26,8 +26,8 @@ import {
   closePlaybackSession,
 } from '@/services/AudiobookshelfService'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
-import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 import { getChapterStartTime } from '@/lib/audiobook-utils'
+import { getAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
 
 const AUTO_REWIND_THRESHOLD_MS = 30_000 // 30 seconds
 const AUTO_REWIND_SECONDS = 5 // seconds to rewind on resume
@@ -307,10 +307,10 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
         const absItemId = book.absItemId
         const auth = book.source.auth
         let apiKey = auth && 'bearer' in auth ? auth.bearer : ''
-        // Fallback: look up API key from server store for books synced before auth was persisted
+        // Fallback: resolve through the vault broker for books synced before
+        // the credential was persisted on the Book record (E95-S05).
         if (!apiKey && book.absServerId) {
-          const server = useAudiobookshelfStore.getState().getServerById(book.absServerId)
-          apiKey = server?.apiKey ?? ''
+          apiKey = (await getAbsApiKey(book.absServerId)) ?? ''
         }
 
         if (!absItemId || !apiKey) {

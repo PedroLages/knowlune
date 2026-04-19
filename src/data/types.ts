@@ -870,35 +870,73 @@ export interface AudioClip {
   updatedAt?: string // ISO 8601 — stamped by syncableWrite
 }
 
-/** OPDS catalog connection configuration (E88-S01) */
+/**
+ * OPDS catalog connection configuration (E88-S01).
+ *
+ * Credential invariant (E95-S05): the nested `auth` object carries `username`
+ * only. The password lives in Supabase Vault and must be read through
+ * `getOpdsPassword(catalogId)` / `useOpdsPassword(catalogId)` from
+ * `src/lib/credentials/opdsPasswordResolver.ts`. Direct reads of the
+ * legacy `password` field are no longer typed — the compiler enforces the
+ * credential-off-the-row invariant.
+ */
 export interface OpdsCatalog {
   id: string // UUID v4
   name: string // User-assigned display name
   url: string // OPDS catalog root URL
   auth?: {
     username: string
-    // Password is optional — stored in Supabase Vault (E95-S02).
-    // Dexie rows do NOT contain this field after E95-S02 migration.
-    password?: string
+    // Password intentionally omitted — routed through Supabase Vault
+    // (E95-S02 broker). Use `getOpdsPassword(catalogId)` to read it.
   }
   lastSynced?: string // ISO 8601
   createdAt: string // ISO 8601
+  userId?: string | null // stamped by syncableWrite (E95-S05)
+  updatedAt?: string // stamped by syncableWrite (E95-S05)
 }
 
-/** Audiobookshelf server connection configuration (E101-S01) */
+/**
+ * Audiobookshelf server connection configuration (E101-S01).
+ *
+ * Credential invariant (E95-S05): `apiKey` is no longer part of the row
+ * shape. It lives in Supabase Vault and must be read through
+ * `getAbsApiKey(serverId)` / `useAbsApiKey(serverId)` from
+ * `src/lib/credentials/absApiKeyResolver.ts`. Direct reads of the legacy
+ * `apiKey` field are no longer typed — the compiler enforces the
+ * credential-off-the-row invariant (KI-E95-S02-L01).
+ */
 export interface AudiobookshelfServer {
   id: string // UUID v4
   name: string // User-friendly label (e.g., "Home Server")
   url: string // Base URL (e.g., "http://192.168.1.50:13378")
-  // apiKey is optional — stored in Supabase Vault (E95-S02).
-  // Dexie rows do NOT contain this field after E95-S02 migration.
-  // Read-path migration (hooks, components) tracked as KI-E95-S02-L01.
-  apiKey?: string // Bearer token from ABS Settings > Users > API Keys
   libraryIds: string[] // Selected ABS library IDs to sync
   status: 'connected' | 'offline' | 'auth-failed'
   lastSyncedAt?: string // ISO date of last successful catalog fetch
   createdAt: string // ISO 8601
   updatedAt: string // ISO 8601
+}
+
+/**
+ * Legacy OPDS catalog row shape — used ONLY by the E95-S05 post-boot
+ * credential-to-Vault migration to read the pre-migration `auth.password`
+ * field and null it out. Do not use elsewhere.
+ * @internal
+ */
+export interface LegacyOpdsCatalog extends Omit<OpdsCatalog, 'auth'> {
+  auth?: {
+    username: string
+    password?: string
+  }
+}
+
+/**
+ * Legacy Audiobookshelf server row shape — used ONLY by the E95-S05
+ * post-boot credential-to-Vault migration to read the pre-migration
+ * `apiKey` field and null it out. Do not use elsewhere.
+ * @internal
+ */
+export interface LegacyAudiobookshelfServer extends AudiobookshelfServer {
+  apiKey?: string
 }
 
 // ABS REST API response shapes (E101-S01)

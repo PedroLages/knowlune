@@ -26,6 +26,8 @@ import { useOpdsCatalogStore } from '@/stores/useOpdsCatalogStore'
 import { validateCatalog } from '@/services/OpdsService'
 import { toastSuccess } from '@/lib/toastHelpers'
 import type { OpdsCatalog } from '@/data/types'
+import { checkCredential } from '@/lib/vaultCredentials'
+import { getOpdsPassword } from '@/lib/credentials/opdsPasswordResolver'
 import { CatalogListView } from './CatalogListView'
 import { CatalogForm, type CatalogFormTestResult } from './CatalogForm'
 import { DeleteCatalogDialog } from './DeleteCatalogDialog'
@@ -98,7 +100,13 @@ export function OpdsCatalogSettings({ open, onOpenChange, onBrowse }: OpdsCatalo
       setName(catalog.name)
       setUrl(catalog.url)
       setUsername(catalog.auth?.username ?? '')
-      setPassword(catalog.auth?.password ?? '')
+      // Never pre-populate the password field with the plaintext — only
+      // probe "is a credential configured?" so the Test/Save flow can fall
+      // back to the vault-stored value when the user leaves the field
+      // blank. checkCredential is non-throwing; the flag simply stays
+      // false if the broker is unreachable.
+      setPassword('')
+      void checkCredential('opds-catalog', catalog.id)
       setMode('edit')
     },
     [resetForm]
@@ -117,9 +125,14 @@ export function OpdsCatalogSettings({ open, onOpenChange, onBrowse }: OpdsCatalo
     setIsTesting(true)
     setTestResult(null)
 
+    let effectivePassword = password.trim()
+    if (!effectivePassword && editingId && username.trim()) {
+      // Fall back to the vault-stored password when the user didn't retype.
+      effectivePassword = (await getOpdsPassword(editingId)) ?? ''
+    }
     const auth =
-      username.trim() || password.trim()
-        ? { username: username.trim(), password: password.trim() }
+      username.trim() || effectivePassword
+        ? { username: username.trim(), password: effectivePassword }
         : undefined
 
     const result = await validateCatalog(url.trim(), auth)
@@ -138,7 +151,7 @@ export function OpdsCatalogSettings({ open, onOpenChange, onBrowse }: OpdsCatalo
     }
 
     setIsTesting(false)
-  }, [url, username, password, name])
+  }, [url, username, password, name, editingId])
 
   const handleSave = useCallback(async () => {
     if (!name.trim()) {
@@ -151,23 +164,28 @@ export function OpdsCatalogSettings({ open, onOpenChange, onBrowse }: OpdsCatalo
     }
 
     setIsSaving(true)
-    const auth =
-      username.trim() || password.trim()
-        ? { username: username.trim(), password: password.trim() }
+    const trimmedPassword = password.trim() || undefined
+    const storedAuth =
+      username.trim()
+        ? { username: username.trim() }
         : undefined
 
     if (mode === 'edit' && editingId) {
-      await updateCatalog(editingId, { name: name.trim(), url: url.trim(), auth })
+      await updateCatalog(
+        editingId,
+        { name: name.trim(), url: url.trim(), auth: storedAuth },
+        trimmedPassword,
+      )
       toastSuccess.saved('Catalog updated')
     } else {
       const newCatalog: OpdsCatalog = {
         id: crypto.randomUUID(),
         name: name.trim(),
         url: url.trim(),
-        auth,
+        auth: storedAuth,
         createdAt: new Date().toISOString(),
       }
-      await addCatalog(newCatalog)
+      await addCatalog(newCatalog, trimmedPassword)
       toastSuccess.saved('Catalog added')
     }
 

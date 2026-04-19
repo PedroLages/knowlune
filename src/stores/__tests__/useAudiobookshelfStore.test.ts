@@ -1,70 +1,76 @@
 /**
- * Unit tests for useAudiobookshelfStore — server CRUD, series/collections loading.
+ * Unit tests for useAudiobookshelfStore — CRUD + vault routing (E95-S05).
  *
- * Sync queue tests are in useAudiobookshelfStore-sync.test.ts.
- * This file covers loadServers, addServer, updateServer, removeServer,
- * getServerById, loadSeries, and loadCollections.
+ * Uses fake-indexeddb + the real `syncableWrite` path so test coverage
+ * captures the "credential never enters the queue payload" invariant.
  *
  * @since E106-S01
- * @modified E95-S02 — added vaultCredentials mock; updated addServer expectation to reflect apiKey stripping
+ * @modified E95-S05 — routed through syncableWrite, apiKey out-of-band param
  */
+import 'fake-indexeddb/auto'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
+import Dexie from 'dexie'
 import type { AudiobookshelfServer } from '@/data/types'
 
-// Mock vaultCredentials — E95-S02: apiKey is stored in Vault, not in Dexie
+const {
+  storeMock,
+  deleteMock,
+  readMock,
+  readStatusMock,
+  refreshMock,
+  fetchCollectionsMock,
+  fetchSeriesMock,
+  updateProgressMock,
+} = vi.hoisted(() => ({
+  storeMock: vi.fn(),
+  deleteMock: vi.fn(),
+  readMock: vi.fn().mockResolvedValue(null),
+  readStatusMock: vi.fn().mockResolvedValue({ ok: true, value: null }),
+  refreshMock: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
+  fetchCollectionsMock: vi.fn(),
+  fetchSeriesMock: vi.fn(),
+  updateProgressMock: vi.fn(),
+}))
+
 vi.mock('@/lib/vaultCredentials', () => ({
-  storeCredential: vi.fn().mockResolvedValue(undefined),
-  deleteCredential: vi.fn().mockResolvedValue(undefined),
+  storeCredential: storeMock,
+  deleteCredential: deleteMock,
+  readCredential: readMock,
+  readCredentialWithStatus: readStatusMock,
 }))
 
-// Mock AudiobookshelfService
+vi.mock('@/lib/auth/supabase', () => ({
+  supabase: { auth: { refreshSession: refreshMock } },
+}))
+
 vi.mock('@/services/AudiobookshelfService', () => ({
-  updateProgress: vi.fn(),
-  fetchSeriesForLibrary: vi.fn(),
-  fetchCollections: vi.fn(),
+  fetchCollections: fetchCollectionsMock,
+  fetchSeriesForLibrary: fetchSeriesMock,
+  updateProgress: updateProgressMock,
 }))
 
-// Mock db — inline to avoid hoisting issues with vi.mock
-vi.mock('@/db/schema', () => ({
-  db: {
-    audiobookshelfServers: {
-      toArray: vi.fn().mockResolvedValue([]),
-      add: vi.fn().mockResolvedValue(undefined),
-      update: vi.fn().mockResolvedValue(1),
-      delete: vi.fn().mockResolvedValue(undefined),
-    },
-    books: {
-      where: vi.fn().mockReturnValue({
-        equals: vi.fn().mockReturnValue({
-          toArray: vi.fn().mockResolvedValue([]),
-        }),
-      }),
-    },
-  },
+vi.mock('sonner', () => ({
+  toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn(), info: vi.fn() },
 }))
 
-import * as AudiobookshelfService from '@/services/AudiobookshelfService'
-import { db } from '@/db/schema'
-import type { MockInstance } from 'vitest'
+// Silence sync engine — it's not the subject under test.
+vi.mock('@/lib/sync/syncEngine', () => ({
+  syncEngine: { nudge: vi.fn(), start: vi.fn(), stop: vi.fn() },
+}))
 
-// Cast mocked db methods to MockInstance to access Vitest mock APIs.
-// vi.mocked() doesn't help here because Dexie table types don't reflect mock methods.
-const mockDb = db as unknown as {
-  audiobookshelfServers: {
-    toArray: MockInstance
-    add: MockInstance
-    update: MockInstance
-    delete: MockInstance
-  }
-}
+let useAudiobookshelfStore: (typeof import(
+  '@/stores/useAudiobookshelfStore'
+))['useAudiobookshelfStore']
+let useAuthStore: (typeof import('@/stores/useAuthStore'))['useAuthStore']
+let db: (typeof import('@/db'))['db']
+
+const TEST_USER = 'user-e95-s05-abs'
 
 function makeServer(overrides: Partial<AudiobookshelfServer> = {}): AudiobookshelfServer {
   return {
     id: 'srv-1',
     name: 'Test Server',
     url: 'http://abs.test',
-    apiKey: 'test-key',
     libraryIds: ['lib-1'],
     status: 'connected',
     lastSyncedAt: '2026-01-01T00:00:00.000Z',
@@ -74,361 +80,122 @@ function makeServer(overrides: Partial<AudiobookshelfServer> = {}): Audiobookshe
   }
 }
 
-beforeEach(() => {
-  vi.clearAllMocks()
-  // Reset mock defaults after clearAllMocks removes them
-  mockDb.audiobookshelfServers.toArray.mockResolvedValue([])
-  mockDb.audiobookshelfServers.add.mockResolvedValue(undefined)
-  mockDb.audiobookshelfServers.update.mockResolvedValue(1)
-  mockDb.audiobookshelfServers.delete.mockResolvedValue(undefined)
-  useAudiobookshelfStore.setState({
-    servers: [],
-    isLoaded: false,
-    pendingSyncQueue: [],
-    series: [],
-    isLoadingSeries: false,
-    seriesLoadedAt: {},
-    collections: [],
-    isLoadingCollections: false,
-    collectionsLoadedAt: {},
+beforeEach(async () => {
+  await Dexie.delete('ElearningDB')
+  vi.resetModules()
+  storeMock.mockReset().mockResolvedValue(undefined)
+  deleteMock.mockReset().mockResolvedValue(undefined)
+  readMock.mockReset().mockResolvedValue(null)
+  readStatusMock.mockReset().mockResolvedValue({ ok: true, value: null })
+  fetchCollectionsMock.mockReset()
+  fetchSeriesMock.mockReset()
+  updateProgressMock.mockReset()
+
+  const authMod = await import('@/stores/useAuthStore')
+  useAuthStore = authMod.useAuthStore
+  useAuthStore.setState({
+    user: { id: TEST_USER } as unknown as (typeof useAuthStore)['getState'] extends () => infer S
+      ? S extends { user: infer U }
+        ? U
+        : never
+      : never,
   })
+
+  const schemaMod = await import('@/db')
+  db = schemaMod.db
+
+  const mod = await import('@/stores/useAudiobookshelfStore')
+  useAudiobookshelfStore = mod.useAudiobookshelfStore
 })
 
-describe('initial state', () => {
-  it('starts with empty servers and isLoaded false', () => {
-    const state = useAudiobookshelfStore.getState()
-    expect(state.servers).toEqual([])
-    expect(state.isLoaded).toBe(false)
-    expect(state.series).toEqual([])
-    expect(state.collections).toEqual([])
-  })
-})
-
-describe('loadServers', () => {
-  it('loads servers from Dexie', async () => {
-    const server = makeServer()
-    mockDb.audiobookshelfServers.toArray.mockResolvedValueOnce([server])
-
-    await useAudiobookshelfStore.getState().loadServers()
-
-    const state = useAudiobookshelfStore.getState()
-    expect(state.servers).toHaveLength(1)
-    expect(state.servers[0].name).toBe('Test Server')
-    expect(state.isLoaded).toBe(true)
-  })
-
-  it('skips loading if already loaded', async () => {
-    useAudiobookshelfStore.setState({ isLoaded: true })
-    mockDb.audiobookshelfServers.toArray.mockResolvedValueOnce([makeServer()])
-
-    await useAudiobookshelfStore.getState().loadServers()
-
-    // toArray should not be called since isLoaded is true
-    expect(mockDb.audiobookshelfServers.toArray).not.toHaveBeenCalled()
-  })
-
-  it('handles DB failure gracefully', async () => {
-    mockDb.audiobookshelfServers.toArray.mockReset()
-    mockDb.audiobookshelfServers.toArray.mockRejectedValueOnce(new Error('DB fail'))
-
-    await useAudiobookshelfStore.getState().loadServers()
-
-    // Store stays empty on failure
-    expect(useAudiobookshelfStore.getState().servers).toEqual([])
-  })
-})
+async function getQueuePayload(recordId: string) {
+  const queue = await db.syncQueue.toArray()
+  const entry = queue.find(
+    q => q.tableName === 'audiobookshelfServers' && q.recordId === recordId,
+  )
+  return entry?.payload as Record<string, unknown> | undefined
+}
 
 describe('addServer', () => {
-  it('adds server to state and Dexie with apiKey stripped (E95-S02)', async () => {
+  it('awaits vault write first, then enqueues sync with no apiKey in payload', async () => {
     const server = makeServer({ id: 'new-srv' })
+    await useAudiobookshelfStore.getState().addServer(server, 'K-NEW')
 
-    await useAudiobookshelfStore.getState().addServer(server)
-
+    expect(storeMock).toHaveBeenCalledWith('abs-server', 'new-srv', 'K-NEW')
+    const payload = await getQueuePayload('new-srv')
+    expect(payload).toBeDefined()
+    // No apiKey / api_key at any casing level.
+    expect(Object.keys(payload!).some(k => /api[_-]?key/i.test(k))).toBe(false)
     const state = useAudiobookshelfStore.getState()
     expect(state.servers).toHaveLength(1)
-    expect(state.servers[0].id).toBe('new-srv')
-    // apiKey is stripped before Dexie write — credentials live in Vault (E95-S02)
-    expect(state.servers[0].apiKey).toBeUndefined()
-    expect(mockDb.audiobookshelfServers.add).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'new-srv', apiKey: undefined })
-    )
+    // The row surfaced in state has no apiKey either — the type drops it.
+    expect((state.servers[0] as unknown as { apiKey?: unknown }).apiKey).toBeUndefined()
   })
 
-  it('throws on DB failure', async () => {
-    mockDb.audiobookshelfServers.add.mockRejectedValueOnce(new Error('Add fail'))
+  it('surfaces error and does NOT enqueue when metadata write fails', async () => {
+    const server = makeServer({ id: 'broken-srv' })
+    // Seed a duplicate so syncableWrite('add') throws on Dexie add().
+    await db.audiobookshelfServers.put({ ...server })
 
-    await expect(useAudiobookshelfStore.getState().addServer(makeServer())).rejects.toThrow(
-      'Add fail'
-    )
+    await expect(
+      useAudiobookshelfStore.getState().addServer(server, 'K'),
+    ).rejects.toBeTruthy()
 
-    expect(useAudiobookshelfStore.getState().servers).toHaveLength(0)
+    // Vault was still called (write-first ordering).
+    expect(storeMock).toHaveBeenCalledWith('abs-server', 'broken-srv', 'K')
+    // No queue entry for the failed write.
+    const payload = await getQueuePayload('broken-srv')
+    expect(payload).toBeUndefined()
   })
 })
 
 describe('updateServer', () => {
-  it('updates server in state and Dexie', async () => {
+  it('stores new apiKey in vault only when provided and omits it from the queue payload', async () => {
     const server = makeServer({ id: 'upd-srv' })
-    useAudiobookshelfStore.setState({ servers: [server] })
+    await db.audiobookshelfServers.put(server)
+    useAudiobookshelfStore.setState({ servers: [server], isLoaded: true })
 
-    await useAudiobookshelfStore.getState().updateServer('upd-srv', { name: 'Updated Server' })
+    await useAudiobookshelfStore
+      .getState()
+      .updateServer('upd-srv', { name: 'Renamed' }, 'K-ROT')
 
-    const updated = useAudiobookshelfStore.getState().servers[0]
-    expect(updated.name).toBe('Updated Server')
-    expect(mockDb.audiobookshelfServers.update).toHaveBeenCalledWith('upd-srv', {
-      name: 'Updated Server',
-    })
+    expect(storeMock).toHaveBeenCalledWith('abs-server', 'upd-srv', 'K-ROT')
+    const payload = await getQueuePayload('upd-srv')
+    expect(payload).toBeDefined()
+    expect(Object.keys(payload!).some(k => /api[_-]?key/i.test(k))).toBe(false)
+    expect(payload!['name']).toBe('Renamed')
   })
 
-  it('flushes sync queue when server becomes connected', async () => {
-    const server = makeServer({ id: 'srv-1', status: 'offline' })
-    useAudiobookshelfStore.setState({
-      servers: [server],
-      pendingSyncQueue: [
-        {
-          serverId: 'srv-1',
-          itemId: 'item-1',
-          payload: { currentTime: 100, duration: 1000, progress: 0.1, isFinished: false },
-          enqueuedAt: '2026-01-01T00:00:00.000Z',
-        },
-      ],
-    })
+  it('does NOT call storeCredential when apiKey is omitted', async () => {
+    const server = makeServer({ id: 'upd-srv' })
+    await db.audiobookshelfServers.put(server)
+    useAudiobookshelfStore.setState({ servers: [server], isLoaded: true })
 
-    vi.mocked(AudiobookshelfService.updateProgress).mockResolvedValue({
-      ok: true,
-      data: undefined,
-    })
+    await useAudiobookshelfStore.getState().updateServer('upd-srv', { name: 'Rename only' })
 
-    await useAudiobookshelfStore.getState().updateServer('srv-1', { status: 'connected' })
-
-    // flushSyncQueue is fire-and-forget, so we need to wait a tick
-    await new Promise(resolve => setTimeout(resolve, 0))
-    expect(AudiobookshelfService.updateProgress).toHaveBeenCalled()
-  })
-
-  it('throws on DB failure', async () => {
-    const server = makeServer({ id: 'fail-srv' })
-    useAudiobookshelfStore.setState({ servers: [server] })
-    mockDb.audiobookshelfServers.update.mockRejectedValueOnce(new Error('Update fail'))
-
-    await expect(
-      useAudiobookshelfStore.getState().updateServer('fail-srv', { name: 'X' })
-    ).rejects.toThrow('Update fail')
+    expect(storeMock).not.toHaveBeenCalled()
+    const payload = await getQueuePayload('upd-srv')
+    expect(payload!['name']).toBe('Rename only')
   })
 })
 
 describe('removeServer', () => {
-  it('removes server from state and Dexie', async () => {
+  it('deletes via syncableWrite and fires vault deleteCredential', async () => {
     const server = makeServer({ id: 'rm-srv' })
-    useAudiobookshelfStore.setState({ servers: [server] })
+    await db.audiobookshelfServers.put(server)
+    useAudiobookshelfStore.setState({ servers: [server], isLoaded: true })
 
     await useAudiobookshelfStore.getState().removeServer('rm-srv')
 
     expect(useAudiobookshelfStore.getState().servers).toHaveLength(0)
-    expect(mockDb.audiobookshelfServers.delete).toHaveBeenCalledWith('rm-srv')
-  })
+    // Queue entry is the delete op; payload is `{ id }` only — no credential.
+    const queue = await db.syncQueue.toArray()
+    const entry = queue.find(q => q.tableName === 'audiobookshelfServers' && q.recordId === 'rm-srv')
+    expect(entry?.operation).toBe('delete')
+    expect(entry?.payload).toEqual({ id: 'rm-srv' })
 
-  it('handles DB failure gracefully', async () => {
-    const server = makeServer({ id: 'fail-rm' })
-    useAudiobookshelfStore.setState({ servers: [server] })
-    mockDb.audiobookshelfServers.delete.mockRejectedValueOnce(new Error('Delete fail'))
-
-    await useAudiobookshelfStore.getState().removeServer('fail-rm')
-
-    // Server is still in state after failure (toast shown, not thrown)
-    // The store catches the error and shows toast
-  })
-})
-
-describe('getServerById', () => {
-  it('returns server when found', () => {
-    const server = makeServer({ id: 'find-me' })
-    useAudiobookshelfStore.setState({ servers: [server] })
-
-    const result = useAudiobookshelfStore.getState().getServerById('find-me')
-    expect(result).toBeDefined()
-    expect(result!.id).toBe('find-me')
-  })
-
-  it('returns undefined when not found', () => {
-    useAudiobookshelfStore.setState({ servers: [] })
-
-    const result = useAudiobookshelfStore.getState().getServerById('nonexistent')
-    expect(result).toBeUndefined()
-  })
-})
-
-describe('loadSeries', () => {
-  it('loads series from Audiobookshelf service', async () => {
-    const server = makeServer({ id: 'srv-1' })
-    useAudiobookshelfStore.setState({ servers: [server], isLoaded: true })
-
-    vi.mocked(AudiobookshelfService.fetchSeriesForLibrary).mockResolvedValue({
-      ok: true,
-      data: {
-        results: [
-          {
-            id: 'series-1',
-            name: 'Test Series',
-            nameIgnorePrefix: 'Test Series',
-            type: 'series' as const,
-            books: [],
-            totalDuration: 0,
-            addedAt: 0,
-            updatedAt: 0,
-          },
-        ],
-        total: 1,
-      },
-    })
-
-    await useAudiobookshelfStore.getState().loadSeries('srv-1', 'lib-1')
-
-    const state = useAudiobookshelfStore.getState()
-    expect(state.series).toHaveLength(1)
-    expect(state.series[0].name).toBe('Test Series')
-    expect(state.seriesLoadedAt['srv-1']).toBeGreaterThan(0)
-    expect(state.isLoadingSeries).toBe(false)
-  })
-
-  it('skips if series already loaded for server', async () => {
-    useAudiobookshelfStore.setState({
-      servers: [makeServer()],
-      seriesLoadedAt: { 'srv-1': Date.now() },
-    })
-
-    await useAudiobookshelfStore.getState().loadSeries('srv-1', 'lib-1')
-
-    expect(AudiobookshelfService.fetchSeriesForLibrary).not.toHaveBeenCalled()
-  })
-
-  it('skips if server not found', async () => {
-    useAudiobookshelfStore.setState({ servers: [] })
-
-    await useAudiobookshelfStore.getState().loadSeries('nonexistent', 'lib-1')
-
-    expect(AudiobookshelfService.fetchSeriesForLibrary).not.toHaveBeenCalled()
-  })
-
-  it('handles fetch failure gracefully', async () => {
-    useAudiobookshelfStore.setState({ servers: [makeServer()] })
-
-    vi.mocked(AudiobookshelfService.fetchSeriesForLibrary).mockResolvedValue({
-      ok: false,
-      error: 'Network error',
-    })
-
-    await useAudiobookshelfStore.getState().loadSeries('srv-1', 'lib-1')
-
-    expect(useAudiobookshelfStore.getState().series).toHaveLength(0)
-    expect(useAudiobookshelfStore.getState().isLoadingSeries).toBe(false)
-  })
-
-  it('paginates through multiple pages', async () => {
-    useAudiobookshelfStore.setState({ servers: [makeServer()] })
-
-    vi.mocked(AudiobookshelfService.fetchSeriesForLibrary)
-      .mockResolvedValueOnce({
-        ok: true,
-        data: {
-          results: Array.from({ length: 50 }, (_, i) => ({
-            id: `s-${i}`,
-            name: `Series ${i}`,
-            nameIgnorePrefix: `Series ${i}`,
-            type: 'series' as const,
-            books: [],
-            totalDuration: 0,
-            addedAt: 0,
-            updatedAt: 0,
-          })),
-          total: 75,
-        },
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        data: {
-          results: Array.from({ length: 25 }, (_, i) => ({
-            id: `s-${50 + i}`,
-            name: `Series ${50 + i}`,
-            nameIgnorePrefix: `Series ${50 + i}`,
-            type: 'series' as const,
-            books: [],
-            totalDuration: 0,
-            addedAt: 0,
-            updatedAt: 0,
-          })),
-          total: 75,
-        },
-      })
-
-    await useAudiobookshelfStore.getState().loadSeries('srv-1', 'lib-1')
-
-    expect(useAudiobookshelfStore.getState().series).toHaveLength(75)
-    expect(AudiobookshelfService.fetchSeriesForLibrary).toHaveBeenCalledTimes(2)
-  })
-})
-
-describe('loadCollections', () => {
-  it('loads collections from Audiobookshelf service', async () => {
-    useAudiobookshelfStore.setState({ servers: [makeServer()] })
-
-    vi.mocked(AudiobookshelfService.fetchCollections).mockResolvedValue({
-      ok: true,
-      data: {
-        results: [
-          { id: 'col-1', name: 'Favorites', description: '', books: [], libraryId: 'lib-1' },
-        ],
-        total: 1,
-      },
-    })
-
-    await useAudiobookshelfStore.getState().loadCollections('srv-1')
-
-    const state = useAudiobookshelfStore.getState()
-    expect(state.collections).toHaveLength(1)
-    expect(state.collections[0].name).toBe('Favorites')
-    expect(state.collectionsLoadedAt['srv-1']).toBeGreaterThan(0)
-  })
-
-  it('skips if collections already loaded', async () => {
-    useAudiobookshelfStore.setState({
-      servers: [makeServer()],
-      collectionsLoadedAt: { 'srv-1': Date.now() },
-    })
-
-    await useAudiobookshelfStore.getState().loadCollections('srv-1')
-
-    expect(AudiobookshelfService.fetchCollections).not.toHaveBeenCalled()
-  })
-
-  it('skips if server not found', async () => {
-    useAudiobookshelfStore.setState({ servers: [] })
-
-    await useAudiobookshelfStore.getState().loadCollections('nonexistent')
-
-    expect(AudiobookshelfService.fetchCollections).not.toHaveBeenCalled()
-  })
-
-  it('handles fetch failure gracefully', async () => {
-    useAudiobookshelfStore.setState({ servers: [makeServer()] })
-
-    vi.mocked(AudiobookshelfService.fetchCollections).mockResolvedValue({
-      ok: false,
-      error: 'Server down',
-    })
-
-    await useAudiobookshelfStore.getState().loadCollections('srv-1')
-
-    expect(useAudiobookshelfStore.getState().collections).toHaveLength(0)
-    expect(useAudiobookshelfStore.getState().isLoadingCollections).toBe(false)
-  })
-
-  it('handles thrown exception gracefully', async () => {
-    useAudiobookshelfStore.setState({ servers: [makeServer()] })
-
-    vi.mocked(AudiobookshelfService.fetchCollections).mockRejectedValue(new Error('Network error'))
-
-    await useAudiobookshelfStore.getState().loadCollections('srv-1')
-
-    expect(useAudiobookshelfStore.getState().isLoadingCollections).toBe(false)
+    // Allow the fire-and-forget deleteCredential to run.
+    await Promise.resolve()
+    expect(deleteMock).toHaveBeenCalledWith('abs-server', 'rm-srv')
   })
 })

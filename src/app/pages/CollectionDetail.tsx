@@ -18,6 +18,7 @@ import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 import { useBookStore } from '@/stores/useBookStore'
 import { getCoverUrl } from '@/services/AudiobookshelfService'
 import type { Book } from '@/data/types'
+import { useAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
 
 type SortMode = 'recent' | 'progress'
 
@@ -37,6 +38,10 @@ export function CollectionDetail() {
 
   const collection = collections.find(c => c.id === collectionId)
   const server = servers.find(s => s.status === 'connected')
+  // Resolve the connected server's apiKey — render covers only once the
+  // resolver returns a value. A null resolution falls through to the
+  // BookCard placeholder path.
+  const { value: apiKey } = useAbsApiKey(server?.id)
 
   const bookMap = useMemo(() => {
     if (!collection) return new Map<string, Book>()
@@ -67,7 +72,7 @@ export function CollectionDetail() {
   const total = collection.books.length
   const coverUrls = collection.books
     .slice(0, 4)
-    .map(b => (server ? getCoverUrl(server.url, b.id, server.apiKey) : null))
+    .map(b => (server && apiKey ? getCoverUrl(server.url, b.id, apiKey) : null))
   const completedCount = collection.books.filter(b => {
     const local = bookMap.get(b.id)
     return local && (local.status === 'finished' || local.progress >= 100)

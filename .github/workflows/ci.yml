@@ -50,6 +50,9 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      - name: E95-S05 credential grep gate
+        run: bash scripts/grep-gate-credentials.sh
+
   format:
     name: Format Check
     runs-on: ubuntu-latest
