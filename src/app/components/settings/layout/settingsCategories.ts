@@ -1,4 +1,13 @@
-import { Shield, User, Palette, GraduationCap, Bell, Plug, type LucideIcon } from 'lucide-react'
+import {
+  Shield,
+  User,
+  Palette,
+  GraduationCap,
+  Bell,
+  Plug,
+  RefreshCw,
+  type LucideIcon,
+} from 'lucide-react'
 
 export type SettingsCategorySlug =
   | 'account'
@@ -7,6 +16,7 @@ export type SettingsCategorySlug =
   | 'learning'
   | 'notifications'
   | 'integrations'
+  | 'sync'
 
 export interface SettingsCategory {
   slug: SettingsCategorySlug
@@ -51,6 +61,12 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
     label: 'Integrations & Data',
     description: 'AI, YouTube, export, import, and storage',
     icon: Plug,
+  },
+  {
+    slug: 'sync',
+    label: 'Sync',
+    description: 'Cloud sync controls and data management',
+    icon: RefreshCw,
   },
 ]
 

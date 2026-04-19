@@ -42,6 +42,13 @@ function getModifiedCategories(): Set<SettingsCategorySlug> {
     modified.add('learning')
   }
 
+  // Sync (E97-S02): flag when user has disabled auto-sync. `undefined` is
+  // treated as default-enabled so legacy localStorage payloads do not appear
+  // modified on first load.
+  if (s.autoSyncEnabled === false) {
+    modified.add('sync')
+  }
+
   return modified
 }
 

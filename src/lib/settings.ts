@@ -53,6 +53,15 @@ export interface AppSettings {
   readingLineHeight?: ReadingLineHeight
   /** Reading mode default theme. Default: 'auto'. */
   readingTheme?: ReadingTheme
+  /**
+   * Whether cloud auto-sync is enabled. Default: true (undefined treated as true
+   * for backward compatibility with pre-E97 localStorage payloads).
+   *
+   * E97-S02: persisted to localStorage only — NOT synced to Supabase
+   * (intentional: avoids the "sync the sync setting" chicken-and-egg problem;
+   * each device controls its own sync posture).
+   */
+  autoSyncEnabled?: boolean
 }
 
 export const DISPLAY_DEFAULTS = {
@@ -80,6 +89,7 @@ const defaults: AppSettings = {
   readingFontSize: '1x',
   readingLineHeight: 1.5,
   readingTheme: 'auto',
+  autoSyncEnabled: true,
 }
 
 const VALID_CONTENT_DENSITY: ContentDensity[] = ['default', 'spacious']

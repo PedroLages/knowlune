@@ -66,6 +66,7 @@ describe('settings', () => {
         readingFontSize: '1x',
         readingLineHeight: 1.5,
         readingTheme: 'auto',
+        autoSyncEnabled: true,
       })
     })
 
@@ -87,6 +88,7 @@ describe('settings', () => {
         readingFontSize: '1x',
         readingLineHeight: 1.5,
         readingTheme: 'auto',
+        autoSyncEnabled: true,
       })
     })
 
@@ -170,6 +172,7 @@ describe('settings', () => {
         readingFontSize: '1x',
         readingLineHeight: 1.5,
         readingTheme: 'auto',
+        autoSyncEnabled: true,
       })
     })
 

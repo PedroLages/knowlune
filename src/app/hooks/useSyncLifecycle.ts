@@ -22,6 +22,8 @@
 import { useEffect, useRef } from 'react'
 import { syncEngine } from '@/lib/sync/syncEngine'
 import { classifyError } from '@/lib/sync/classifyError'
+import { getSettings } from '@/lib/settings'
+import { useAuthStore } from '@/stores/useAuthStore'
 import { useSessionStore } from '@/stores/useSessionStore'
 import { useNoteStore } from '@/stores/useNoteStore'
 import { useBookmarkStore } from '@/stores/useBookmarkStore'
@@ -43,11 +45,22 @@ const NUDGE_INTERVAL_MS = 30_000
 /** Maximum sendBeacon payload size (bytes). Browsers reject larger payloads. */
 const BEACON_MAX_BYTES = 64_000
 
+/**
+ * Read the current `autoSyncEnabled` preference, treating `undefined` (legacy
+ * localStorage payloads with no such field) as the default-on value.
+ */
+function isAutoSyncEnabled(): boolean {
+  return getSettings().autoSyncEnabled !== false
+}
+
 export function useSyncLifecycle(): void {
   const mountedRef = useRef(true)
+  // Ref lets event handlers read the live value without a re-render hook cycle.
+  const autoSyncEnabledRef = useRef(isAutoSyncEnabled())
 
   useEffect(() => {
     mountedRef.current = true
+    autoSyncEnabledRef.current = isAutoSyncEnabled()
 
     const { setStatus, markSyncComplete } = useSyncStatusStore.getState()
 
@@ -165,27 +178,34 @@ export function useSyncLifecycle(): void {
     // useContentProgressStore in a later story if cross-session refresh is needed.
 
     // -------------------------------------------------------------------------
-    // Initial fullSync on mount
+    // Initial fullSync on mount — gated on autoSyncEnabled (E97-S02).
+    // When disabled, we skip the initial sync entirely so a user who has
+    // explicitly paused sync does not trigger a fullSync on every reload.
     // -------------------------------------------------------------------------
 
-    setStatus('syncing')
-    syncEngine
-      .fullSync()
-      .then(() => {
-        if (!mountedRef.current) return
-        markSyncComplete()
-      })
-      .catch((err: unknown) => {
-        if (!mountedRef.current) return
-        console.error('[useSyncLifecycle] Initial fullSync failed:', err)
-        setStatus('error', classifyError(err))
-      })
+    if (autoSyncEnabledRef.current) {
+      setStatus('syncing')
+      syncEngine
+        .fullSync()
+        .then(() => {
+          if (!mountedRef.current) return
+          markSyncComplete()
+        })
+        .catch((err: unknown) => {
+          if (!mountedRef.current) return
+          console.error('[useSyncLifecycle] Initial fullSync failed:', err)
+          setStatus('error', classifyError(err))
+        })
+    }
 
     // -------------------------------------------------------------------------
     // Periodic nudge — 30 second interval
     // -------------------------------------------------------------------------
 
     const intervalId = setInterval(() => {
+      // E97-S02: guard on the live preference rather than unregistering the
+      // interval, so the hook reacts to runtime toggles without a remount.
+      if (!autoSyncEnabledRef.current) return
       // Intentional: guard prevents nudge calls when offline. The engine's own
       // _started guard also fires, but checking navigator.onLine first avoids
       // queuing a debounced upload that would immediately fail.
@@ -203,6 +223,7 @@ export function useSyncLifecycle(): void {
     // -------------------------------------------------------------------------
 
     const handleVisibilityChange = () => {
+      if (!autoSyncEnabledRef.current) return
       if (document.visibilityState === 'visible' && navigator.onLine) {
         syncEngine.nudge()
       }
@@ -214,6 +235,7 @@ export function useSyncLifecycle(): void {
     // -------------------------------------------------------------------------
 
     const handleOnline = () => {
+      if (!autoSyncEnabledRef.current) return
       const { setStatus: setState, markSyncComplete: markComplete } =
         useSyncStatusStore.getState()
       setState('syncing')
@@ -273,6 +295,36 @@ export function useSyncLifecycle(): void {
     window.addEventListener('beforeunload', handleBeforeUnload)
 
     // -------------------------------------------------------------------------
+    // Settings update → react to auto-sync toggle at runtime (E97-S02).
+    // Refreshes the ref and starts or stops the engine so the user does not
+    // need to reload after flipping the Sync Settings switch.
+    // -------------------------------------------------------------------------
+
+    const handleSettingsUpdate = () => {
+      const next = isAutoSyncEnabled()
+      if (next === autoSyncEnabledRef.current) return
+      autoSyncEnabledRef.current = next
+      const userId = useAuthStore.getState().user?.id
+      if (next) {
+        if (userId) {
+          // silent-catch-ok — start() errors surface via useSyncStatusStore
+          // status='error' on the next fullSync attempt; the indicator owns
+          // the user-visible surface for sync lifecycle failures.
+          void syncEngine.start(userId).catch((err: unknown) => {
+            console.error('[useSyncLifecycle] start after re-enable failed:', err)
+          })
+          // F2: trigger a fullSync to pick up any changes missed while paused.
+          void syncEngine.fullSync().catch((err: unknown) => {
+            console.error('[useSyncLifecycle] fullSync after re-enable failed:', err)
+          })
+        }
+      } else {
+        syncEngine.stop()
+      }
+    }
+    window.addEventListener('settingsUpdated', handleSettingsUpdate)
+
+    // -------------------------------------------------------------------------
     // Cleanup — remove all listeners and clear the interval
     // -------------------------------------------------------------------------
 
@@ -283,6 +335,7 @@ export function useSyncLifecycle(): void {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
       window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('settingsUpdated', handleSettingsUpdate)
     }
   }, [])
 }

@@ -1298,3 +1298,31 @@ issues:
       Schedule for a future maintenance epic: add db.youtubeChapters.where('courseId')
       .equals(courseId).delete() to the course-delete path. Alternatively, fold into
       the broader orphan-cleanup sweep if one lands.
+
+  - id: KI-E97-S02-L01
+    summary: "handleSyncNow useCallback missing user.id dep — future edits could silently capture stale ref"
+    story: E97-S02
+    severity: low
+    status: open
+    decision: schedule-future
+
+  - id: KI-E97-S02-L02
+    summary: "E2E window.__syncEngine__ shims may silently no-op if not exposed — mock-injection unverified"
+    story: E97-S02
+    severity: low
+    status: open
+    decision: schedule-future
+
+  - id: KI-E97-S02-L03
+    summary: "Sync nav entry visible when signed-out renders empty pane; consider placeholder or auth-gate"
+    story: E97-S02
+    severity: low
+    status: open
+    decision: schedule-future
+
+  - id: KI-E97-S02-L04
+    summary: "computeTotalSyncedItems runs Promise.all count() on every lastSyncAt change (30s); debounce for large DBs"
+    story: E97-S02
+    severity: low
+    status: open
+    decision: schedule-future

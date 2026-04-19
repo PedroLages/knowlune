@@ -15,6 +15,7 @@ import { AppearanceSection } from '../sections/AppearanceSection'
 import { LearningSection } from '../sections/LearningSection'
 import { NotificationsSection } from '../sections/NotificationsSection'
 import { IntegrationsDataSection } from '../sections/IntegrationsDataSection'
+import { SyncSection } from '../sections/SyncSection'
 
 interface SettingsLayoutProps {
   modifiedCategories?: Set<SettingsCategorySlug>
@@ -28,6 +29,7 @@ const SECTION_COMPONENTS: Record<SettingsCategorySlug, React.ComponentType> = {
   learning: LearningSection,
   notifications: NotificationsSection,
   integrations: IntegrationsDataSection,
+  sync: SyncSection,
 }
 
 export function SettingsLayout({ modifiedCategories, onSearchOpen }: SettingsLayoutProps) {
