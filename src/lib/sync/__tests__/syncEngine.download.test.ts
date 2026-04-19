@@ -156,7 +156,10 @@ vi.mock('@/lib/auth/supabase', () => ({
       }
     }),
     rpc: vi.fn().mockResolvedValue({ error: null }),
-    auth: { refreshSession: vi.fn().mockResolvedValue({ data: {}, error: null }) },
+    auth: {
+      refreshSession: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: 'test-user-id' } } }, error: null }),
+    },
   },
 }))
 
@@ -177,6 +180,11 @@ vi.mock('@/lib/sync/fieldMapper', () => ({
   // Identity pass-through — tests provide pre-converted records.
   toCamelCase: vi.fn((_entry: unknown, row: Record<string, unknown>) => row),
   toSnakeCase: vi.fn((_entry: unknown, record: Record<string, unknown>) => record),
+}))
+
+vi.mock('@/lib/sync/storageSync', () => ({
+  uploadStorageFilesForTable: vi.fn().mockResolvedValue(undefined),
+  STORAGE_TABLES: new Set(['importedCourses', 'authors', 'importedPdfs', 'books']),
 }))
 
 // Import after mocks.

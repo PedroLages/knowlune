@@ -24,7 +24,9 @@ const {
   mockInsert,
   mockRpc,
   mockRefreshSession,
+  mockGetSession,
   mockLockRequest,
+  mockUploadStorageFilesForTable,
 } = vi.hoisted(() => {
   const mockUpsert = vi.fn().mockResolvedValue({ error: null })
   const mockInsert = vi.fn().mockResolvedValue({ error: null })
@@ -36,10 +38,15 @@ const {
   })
   const mockRpc = vi.fn().mockResolvedValue({ error: null })
   const mockRefreshSession = vi.fn().mockResolvedValue({ data: {}, error: null })
+  const mockGetSession = vi.fn().mockResolvedValue({
+    data: { session: { user: { id: 'test-user-id' } } },
+    error: null,
+  })
   const mockToArray = vi.fn().mockResolvedValue([])
   const mockBulkDelete = vi.fn().mockResolvedValue(undefined)
   const mockUpdate = vi.fn().mockResolvedValue(undefined)
   const mockLockRequest = vi.fn()
+  const mockUploadStorageFilesForTable = vi.fn().mockResolvedValue(undefined)
 
   return {
     mockToArray,
@@ -50,7 +57,9 @@ const {
     mockInsert,
     mockRpc,
     mockRefreshSession,
+    mockGetSession,
     mockLockRequest,
+    mockUploadStorageFilesForTable,
   }
 })
 
@@ -78,8 +87,14 @@ vi.mock('@/lib/auth/supabase', () => ({
     rpc: mockRpc,
     auth: {
       refreshSession: mockRefreshSession,
+      getSession: mockGetSession,
     },
   },
+}))
+
+vi.mock('@/lib/sync/storageSync', () => ({
+  uploadStorageFilesForTable: mockUploadStorageFilesForTable,
+  STORAGE_TABLES: new Set(['importedCourses', 'authors', 'importedPdfs', 'books']),
 }))
 
 vi.mock('@/lib/sync/tableRegistry', () => ({

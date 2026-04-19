@@ -43,6 +43,7 @@ supabase/*
 !supabase/migrations/
 !supabase/functions/
 !supabase/tests/
+!supabase/storage-setup.sql
 StudyGy-Dashboard/
 
 # Git worktrees
