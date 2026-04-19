@@ -1,10 +1,20 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useAudiobookPrefsStore } from '@/stores/useAudiobookPrefsStore'
 
+// ── Mock saveSettingsToSupabase for dual-write tests (E95-S01) ────────────────
+// vi.hoisted() ensures the variable is initialized before vi.mock factory runs.
+const { mockSaveSettingsToSupabase } = vi.hoisted(() => ({
+  mockSaveSettingsToSupabase: vi.fn(),
+}))
+vi.mock('@/lib/settings', () => ({
+  saveSettingsToSupabase: mockSaveSettingsToSupabase,
+}))
+
 const STORAGE_KEY = 'knowlune:audiobook-prefs-v1'
 
 beforeEach(() => {
   localStorage.clear()
+  mockSaveSettingsToSupabase.mockReset()
   useAudiobookPrefsStore.setState({
     defaultSpeed: 1.0,
     skipSilence: false,
@@ -165,5 +175,38 @@ describe('per-book speed preservation (AC-7)', () => {
 
     // Per-book speed should be unchanged
     expect(useAudioPlayerStore.getState().playbackRate).toBe(1.75)
+  })
+})
+
+// ── E95-S01: Supabase dual-write ─────────────────────────────────────────────
+
+describe('Supabase dual-write (E95-S01)', () => {
+  it('setDefaultSpeed calls saveSettingsToSupabase with validated speed', () => {
+    useAudiobookPrefsStore.getState().setDefaultSpeed(1.5)
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ defaultSpeed: 1.5 })
+  })
+
+  it('setDefaultSpeed with invalid speed saves validated value (1.0)', () => {
+    useAudiobookPrefsStore.getState().setDefaultSpeed(99)
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ defaultSpeed: 1.0 })
+  })
+
+  it('toggleSkipSilence calls saveSettingsToSupabase with toggled value', () => {
+    useAudiobookPrefsStore.getState().toggleSkipSilence()
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ skipSilence: true })
+
+    mockSaveSettingsToSupabase.mockClear()
+    useAudiobookPrefsStore.getState().toggleSkipSilence()
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ skipSilence: false })
+  })
+
+  it('setDefaultSleepTimer calls saveSettingsToSupabase', () => {
+    useAudiobookPrefsStore.getState().setDefaultSleepTimer(30)
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ defaultSleepTimer: 30 })
+  })
+
+  it('toggleAutoBookmark calls saveSettingsToSupabase with toggled value', () => {
+    useAudiobookPrefsStore.getState().toggleAutoBookmark()
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ autoBookmarkOnStop: true })
   })
 })

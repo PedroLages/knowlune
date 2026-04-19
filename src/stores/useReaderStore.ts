@@ -8,6 +8,7 @@
  * @module useReaderStore
  */
 import { create } from 'zustand'
+import { saveSettingsToSupabase } from '@/lib/settings'
 
 export type ReaderTheme = 'light' | 'sepia' | 'dark'
 export type ReaderFontFamily = 'default' | 'serif' | 'sans' | 'mono'
@@ -181,6 +182,7 @@ export const useReaderStore = create<ReaderStoreState>((set, get) => {
       const s = get()
       saveSettings({ ...getSettingsFromState(s), theme })
       set({ theme })
+      void saveSettingsToSupabase({ readingTheme: theme })
     },
 
     setFontSize: size => {
@@ -188,12 +190,14 @@ export const useReaderStore = create<ReaderStoreState>((set, get) => {
       const s = get()
       saveSettings({ ...getSettingsFromState(s), fontSize: clamped })
       set({ fontSize: clamped })
+      void saveSettingsToSupabase({ readingFontSize: clamped })
     },
 
     setFontFamily: family => {
       const s = get()
       saveSettings({ ...getSettingsFromState(s), fontFamily: family })
       set({ fontFamily: family })
+      // fontFamily is not in the JSONB field map — localStorage-only
     },
 
     setLineHeight: height => {
@@ -201,6 +205,7 @@ export const useReaderStore = create<ReaderStoreState>((set, get) => {
       const s = get()
       saveSettings({ ...getSettingsFromState(s), lineHeight: clamped })
       set({ lineHeight: clamped })
+      void saveSettingsToSupabase({ readingLineHeight: clamped })
     },
 
     setLetterSpacing: spacing => {
@@ -208,6 +213,7 @@ export const useReaderStore = create<ReaderStoreState>((set, get) => {
       const s = get()
       saveSettings({ ...getSettingsFromState(s), letterSpacing: clamped })
       set({ letterSpacing: clamped })
+      // letterSpacing is not in the JSONB field map — localStorage-only
     },
 
     setWordSpacing: spacing => {
@@ -215,18 +221,21 @@ export const useReaderStore = create<ReaderStoreState>((set, get) => {
       const s = get()
       saveSettings({ ...getSettingsFromState(s), wordSpacing: clamped })
       set({ wordSpacing: clamped })
+      // wordSpacing is not in the JSONB field map — localStorage-only
     },
 
     setReadingRulerEnabled: enabled => {
       const s = get()
       saveSettings({ ...getSettingsFromState(s), readingRulerEnabled: enabled })
       set({ readingRulerEnabled: enabled })
+      void saveSettingsToSupabase({ readingRuler: enabled })
     },
 
     setScrollMode: enabled => {
       const s = get()
       saveSettings({ ...getSettingsFromState(s), scrollMode: enabled })
       set({ scrollMode: enabled })
+      void saveSettingsToSupabase({ scrollMode: enabled })
     },
 
     setDualPage: enabled => {

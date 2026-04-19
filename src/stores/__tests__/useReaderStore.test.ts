@@ -6,9 +6,63 @@
  *
  * @since E114-S01
  */
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from 'react'
 import { useReaderStore } from '../useReaderStore'
+
+// ── Mock saveSettingsToSupabase for dual-write tests (E95-S01) ────────────────
+// vi.hoisted() ensures the variable is initialized before vi.mock factory runs.
+const { mockSaveSettingsToSupabase } = vi.hoisted(() => ({
+  mockSaveSettingsToSupabase: vi.fn(),
+}))
+vi.mock('@/lib/settings', () => ({
+  saveSettingsToSupabase: mockSaveSettingsToSupabase,
+}))
+
+describe('useReaderStore — Supabase dual-write (E95-S01)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    mockSaveSettingsToSupabase.mockReset()
+    act(() => {
+      useReaderStore.getState().resetSettings()
+    })
+  })
+
+  it('setTheme calls saveSettingsToSupabase with readingTheme key', () => {
+    act(() => useReaderStore.getState().setTheme('sepia'))
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ readingTheme: 'sepia' })
+  })
+
+  it('setFontSize calls saveSettingsToSupabase with readingFontSize key', () => {
+    act(() => useReaderStore.getState().setFontSize(120))
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ readingFontSize: 120 })
+  })
+
+  it('setLineHeight calls saveSettingsToSupabase with clamped readingLineHeight', () => {
+    act(() => useReaderStore.getState().setLineHeight(1.8))
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ readingLineHeight: 1.8 })
+  })
+
+  it('setReadingRulerEnabled calls saveSettingsToSupabase with readingRuler key', () => {
+    act(() => useReaderStore.getState().setReadingRulerEnabled(true))
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ readingRuler: true })
+  })
+
+  it('setScrollMode calls saveSettingsToSupabase with scrollMode key', () => {
+    act(() => useReaderStore.getState().setScrollMode(true))
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ scrollMode: true })
+  })
+
+  it('setFontFamily does NOT call saveSettingsToSupabase (localStorage-only)', () => {
+    act(() => useReaderStore.getState().setFontFamily('serif'))
+    expect(mockSaveSettingsToSupabase).not.toHaveBeenCalled()
+  })
+
+  it('resetSettings does NOT call saveSettingsToSupabase', () => {
+    act(() => useReaderStore.getState().resetSettings())
+    expect(mockSaveSettingsToSupabase).not.toHaveBeenCalled()
+  })
+})
 
 describe('useReaderStore — accessibility settings (E114-S01)', () => {
   beforeEach(() => {

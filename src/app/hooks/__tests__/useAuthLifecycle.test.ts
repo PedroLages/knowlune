@@ -23,7 +23,7 @@ vi.mock('@/lib/auth/supabase', () => ({
 }))
 
 vi.mock('@/lib/settings', () => ({
-  hydrateSettingsFromSupabase: vi.fn(),
+  hydrateSettingsFromSupabase: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('@/lib/sync/backfill', () => ({

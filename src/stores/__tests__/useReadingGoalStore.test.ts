@@ -8,6 +8,12 @@
  */
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 
+// ── Mock saveSettingsToSupabase for dual-write tests (E95-S01) ────────────────
+const mockSaveSettingsToSupabase = vi.fn()
+vi.mock('@/lib/settings', () => ({
+  saveSettingsToSupabase: mockSaveSettingsToSupabase,
+}))
+
 const FIXED_DATE = new Date('2026-03-23T10:00:00.000Z')
 
 let useReadingGoalStore: (typeof import('@/stores/useReadingGoalStore'))['useReadingGoalStore']
@@ -16,6 +22,7 @@ beforeEach(async () => {
   vi.useFakeTimers()
   vi.setSystemTime(FIXED_DATE)
   localStorage.clear()
+  mockSaveSettingsToSupabase.mockReset()
   vi.resetModules()
   const mod = await import('@/stores/useReadingGoalStore')
   useReadingGoalStore = mod.useReadingGoalStore
@@ -360,5 +367,50 @@ describe('checkYearlyGoalReached', () => {
     expect(useReadingGoalStore.getState().checkYearlyGoalReached(11)).toBe(false)
     expect(useReadingGoalStore.getState().checkYearlyGoalReached(12)).toBe(true)
     expect(useReadingGoalStore.getState().checkYearlyGoalReached(13)).toBe(false) // Past threshold
+  })
+})
+
+// ── E95-S01: Supabase dual-write ─────────────────────────────────────────────
+
+describe('saveGoal — Supabase dual-write (E95-S01)', () => {
+  it('calls saveSettingsToSupabase with goal fields (no streak fields)', () => {
+    useReadingGoalStore.getState().saveGoal({
+      dailyType: 'pages',
+      dailyTarget: 20,
+      yearlyBookTarget: 24,
+    })
+
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({
+      dailyType: 'pages',
+      dailyTarget: 20,
+      yearlyBookTarget: 24,
+    })
+  })
+
+  it('does NOT include streak fields in the Supabase patch', () => {
+    useReadingGoalStore.getState().saveGoal({
+      dailyType: 'minutes',
+      dailyTarget: 30,
+      yearlyBookTarget: 12,
+    })
+
+    const callArgs = mockSaveSettingsToSupabase.mock.calls[0][0]
+    expect(callArgs).not.toHaveProperty('currentStreak')
+    expect(callArgs).not.toHaveProperty('longestStreak')
+    expect(callArgs).not.toHaveProperty('lastMetDate')
+    expect(callArgs).not.toHaveProperty('currentReadingStreak')
+    expect(callArgs).not.toHaveProperty('longestReadingStreak')
+  })
+
+  it('clearGoal does NOT call saveSettingsToSupabase', () => {
+    useReadingGoalStore.getState().saveGoal({
+      dailyType: 'minutes',
+      dailyTarget: 30,
+      yearlyBookTarget: 12,
+    })
+    mockSaveSettingsToSupabase.mockClear()
+
+    useReadingGoalStore.getState().clearGoal()
+    expect(mockSaveSettingsToSupabase).not.toHaveBeenCalled()
   })
 })

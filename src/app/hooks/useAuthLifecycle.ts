@@ -54,7 +54,7 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
     async function handleSignIn(userId: string, userMetadata: Record<string, unknown>) {
       if (ignore) return
 
-      hydrateSettingsFromSupabase(userMetadata)
+      await hydrateSettingsFromSupabase(userMetadata, userId)
 
       // Fast-path: this device already went through the dialog for this userId.
       const alreadyLinked = localStorage.getItem(`${LINKED_FLAG_PREFIX}${userId}`) === 'true'

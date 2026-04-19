@@ -1,8 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-// Mock saveSettings since it touches the full settings module
+// Mock saveSettings and saveSettingsToSupabase since they touch the full settings module
+// vi.hoisted() ensures the variable is initialized before vi.mock factory runs.
+const { mockSaveSettingsToSupabase } = vi.hoisted(() => ({
+  mockSaveSettingsToSupabase: vi.fn(),
+}))
 vi.mock('@/lib/settings', () => ({
   saveSettings: vi.fn(),
+  saveSettingsToSupabase: mockSaveSettingsToSupabase,
 }))
 
 import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
@@ -13,6 +18,7 @@ const mockSaveSettings = vi.mocked(saveSettings)
 beforeEach(() => {
   localStorage.clear()
   vi.clearAllMocks()
+  mockSaveSettingsToSupabase.mockReset()
   useEngagementPrefsStore.setState({
     achievements: true,
     streaks: true,
@@ -139,5 +145,39 @@ describe('loadPersistedPrefs', () => {
     vi.resetModules()
     const { useEngagementPrefsStore: fresh } = await import('@/stores/useEngagementPrefsStore')
     expect(fresh.getState().achievements).toBe(true)
+  })
+})
+
+// ── E95-S01: Supabase dual-write ─────────────────────────────────────────────
+
+describe('setPreference — Supabase dual-write (E95-S01)', () => {
+  it('setPreference("colorScheme") calls saveSettingsToSupabase with colorScheme key', () => {
+    useEngagementPrefsStore.getState().setPreference('colorScheme', 'vibrant')
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ colorScheme: 'vibrant' })
+  })
+
+  it('setPreference("achievements") calls saveSettingsToSupabase with achievementsEnabled key', () => {
+    useEngagementPrefsStore.getState().setPreference('achievements', false)
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ achievementsEnabled: false })
+  })
+
+  it('setPreference("streaks") calls saveSettingsToSupabase with streaksEnabled key', () => {
+    useEngagementPrefsStore.getState().setPreference('streaks', false)
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ streaksEnabled: false })
+  })
+
+  it('setPreference("badges") does NOT call saveSettingsToSupabase (localStorage-only)', () => {
+    useEngagementPrefsStore.getState().setPreference('badges', false)
+    expect(mockSaveSettingsToSupabase).not.toHaveBeenCalled()
+  })
+
+  it('setPreference("animations") does NOT call saveSettingsToSupabase (localStorage-only)', () => {
+    useEngagementPrefsStore.getState().setPreference('animations', false)
+    expect(mockSaveSettingsToSupabase).not.toHaveBeenCalled()
+  })
+
+  it('resetToDefaults does NOT call saveSettingsToSupabase', () => {
+    useEngagementPrefsStore.getState().resetToDefaults()
+    expect(mockSaveSettingsToSupabase).not.toHaveBeenCalled()
   })
 })

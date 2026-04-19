@@ -8,6 +8,7 @@
  * @since E108-S04
  */
 import { create } from 'zustand'
+import { saveSettingsToSupabase } from '@/lib/settings'
 
 const STORAGE_KEY = 'knowlune:audiobook-prefs-v1'
 
@@ -96,21 +97,25 @@ export const useAudiobookPrefsStore = create<AudiobookPrefsStore>((set, get) => 
     const validated = VALID_SPEEDS_SET.has(speed) ? speed : defaults.defaultSpeed
     set({ defaultSpeed: validated })
     persistPrefs(getPrefsFromState(get()))
+    void saveSettingsToSupabase({ defaultSpeed: validated })
   },
 
   toggleSkipSilence: () => {
     set(s => ({ skipSilence: !s.skipSilence }))
     // Read from get() after set() to capture the toggled value
     persistPrefs(getPrefsFromState(get()))
+    void saveSettingsToSupabase({ skipSilence: get().skipSilence })
   },
 
   setDefaultSleepTimer: (timer: SleepTimerDefault) => {
     set({ defaultSleepTimer: timer })
     persistPrefs(getPrefsFromState(get()))
+    void saveSettingsToSupabase({ defaultSleepTimer: timer })
   },
 
   toggleAutoBookmark: () => {
     set(s => ({ autoBookmarkOnStop: !s.autoBookmarkOnStop }))
     persistPrefs(getPrefsFromState(get()))
+    void saveSettingsToSupabase({ autoBookmarkOnStop: get().autoBookmarkOnStop })
   },
 }))
