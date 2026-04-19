@@ -12,6 +12,7 @@ import { create } from 'zustand'
 import { toast } from 'sonner'
 import type { Shelf, BookShelfEntry } from '@/data/types'
 import { db } from '@/db/schema'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 /** Returns current ISO timestamp — extracted for consistency and testability */
 const now = () => new Date().toISOString()
@@ -111,7 +112,7 @@ export const useShelfStore = create<ShelfStoreState>((set, get) => ({
     set(state => ({ shelves: [...state.shelves, shelf] }))
 
     try {
-      await db.shelves.put(shelf)
+      await syncableWrite('shelves', 'put', shelf as unknown as SyncableRecord)
       toast.success(`Shelf "${trimmed}" created`)
       return shelf
     } catch {
@@ -154,7 +155,20 @@ export const useShelfStore = create<ShelfStoreState>((set, get) => ({
     }))
 
     try {
-      await db.shelves.update(shelfId, { name: trimmed, updatedAt: timestamp })
+      // Fetch-then-put pattern — syncableWrite doesn't support partial updates.
+      // We need the full record so the uploaded payload isn't a partial patch.
+      const existing = await db.shelves.get(shelfId)
+      if (!existing) {
+        // Row vanished between optimistic update and Dexie read; bail cleanly.
+        const shelves = await db.shelves.toArray()
+        set({ shelves })
+        return
+      }
+      await syncableWrite('shelves', 'put', {
+        ...existing,
+        name: trimmed,
+        updatedAt: timestamp,
+      } as unknown as SyncableRecord)
       toast.success(`Shelf renamed to "${trimmed}"`)
     } catch {
       const shelves = await db.shelves.toArray()
@@ -179,10 +193,15 @@ export const useShelfStore = create<ShelfStoreState>((set, get) => ({
     }))
 
     try {
-      await db.transaction('rw', db.shelves, db.bookShelves, async () => {
-        await db.bookShelves.where('shelfId').equals(shelfId).delete()
-        await db.shelves.delete(shelfId)
-      })
+      // syncableWrite does not support multi-table transactions. Delete the
+      // child bookShelves rows first (each routed through syncableWrite so
+      // Supabase sees the cascade), then delete the shelf itself. If any
+      // individual delete fails, the catch rollbacks the optimistic UI state.
+      const memberships = await db.bookShelves.where('shelfId').equals(shelfId).toArray()
+      for (const entry of memberships) {
+        await syncableWrite('bookShelves', 'delete', entry.id)
+      }
+      await syncableWrite('shelves', 'delete', shelfId)
       toast.success(`Shelf "${shelf.name}" deleted`)
     } catch {
       const shelves = await db.shelves.toArray()
@@ -209,7 +228,7 @@ export const useShelfStore = create<ShelfStoreState>((set, get) => ({
     set(state => ({ bookShelves: [...state.bookShelves, entry] }))
 
     try {
-      await db.bookShelves.put(entry)
+      await syncableWrite('bookShelves', 'put', entry as unknown as SyncableRecord)
       const shelf = get().shelves.find(s => s.id === shelfId)
       if (shelf) {
         toast.success(`Added to "${shelf.name}"`)
@@ -232,7 +251,7 @@ export const useShelfStore = create<ShelfStoreState>((set, get) => ({
     }))
 
     try {
-      await db.bookShelves.delete(entry.id)
+      await syncableWrite('bookShelves', 'delete', entry.id)
       const shelf = get().shelves.find(s => s.id === shelfId)
       if (shelf) toast.success(`Removed from "${shelf.name}"`)
     } catch {
@@ -255,11 +274,16 @@ export const useShelfStore = create<ShelfStoreState>((set, get) => ({
   },
 
   removeAllBookEntries: async (bookId: string) => {
+    // Snapshot the entries to delete BEFORE the optimistic set() so we can
+    // route each through syncableWrite (which enqueues a delete per id).
+    const entriesToDelete = get().bookShelves.filter(bs => bs.bookId === bookId)
     set(state => ({
       bookShelves: state.bookShelves.filter(bs => bs.bookId !== bookId),
     }))
     try {
-      await db.bookShelves.where('bookId').equals(bookId).delete()
+      for (const entry of entriesToDelete) {
+        await syncableWrite('bookShelves', 'delete', entry.id)
+      }
     } catch {
       const bookShelves = await db.bookShelves.toArray()
       set({ bookShelves })

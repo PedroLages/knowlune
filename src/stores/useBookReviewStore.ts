@@ -12,6 +12,7 @@ import { create } from 'zustand'
 import { toast } from 'sonner'
 import type { BookReview } from '@/data/types'
 import { db } from '@/db/schema'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 const now = () => new Date().toISOString()
 
@@ -68,7 +69,7 @@ export const useBookReviewStore = create<BookReviewStoreState>((set, get) => ({
     }))
 
     try {
-      await db.bookReviews.put(review)
+      await syncableWrite('bookReviews', 'put', review as unknown as SyncableRecord)
     } catch {
       set({ reviews: snapshot }) // rollback to pre-optimistic snapshot
       toast.error('Failed to save rating')
@@ -93,7 +94,7 @@ export const useBookReviewStore = create<BookReviewStoreState>((set, get) => ({
     }))
 
     try {
-      await db.bookReviews.put(review)
+      await syncableWrite('bookReviews', 'put', review as unknown as SyncableRecord)
     } catch {
       set({ reviews: snapshot }) // rollback to pre-optimistic snapshot
       toast.error('Failed to save review')
@@ -109,7 +110,7 @@ export const useBookReviewStore = create<BookReviewStoreState>((set, get) => ({
     set(state => ({ reviews: state.reviews.filter(r => r.bookId !== bookId) }))
 
     try {
-      await db.bookReviews.delete(existing.id)
+      await syncableWrite('bookReviews', 'delete', existing.id)
       toast.success('Review removed')
     } catch {
       set({ reviews: snapshot }) // rollback to pre-optimistic snapshot
