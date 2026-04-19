@@ -30,6 +30,15 @@ vi.mock('@/db', () => ({
   },
 }))
 
+// Mock the sync-aware write wrapper so ConversationHistorySheet.handleDelete
+// resolves successfully and invokes the onDelete prop. Without this, the
+// real syncableWrite tries to call db.table(...).delete(...) — which is not
+// on the @/db mock — and the resulting throw is swallowed by handleDelete's
+// try/catch, so onDelete is never reached.
+vi.mock('@/lib/sync/syncableWrite', () => ({
+  syncableWrite: vi.fn().mockResolvedValue(undefined),
+}))
+
 // Mock sonner toast
 vi.mock('sonner', () => ({
   toast: { error: vi.fn() },
@@ -322,7 +331,8 @@ describe('ConversationHistorySheet — delete conversation', () => {
   it('confirming AlertDialog calls the delete handler', async () => {
     renderSheet()
     fireEvent.click(screen.getByTestId('delete-conversation-btn'))
-    // There may be multiple Delete buttons (trigger + action), pick the AlertDialogAction
+    // There may be multiple Delete buttons (trigger + action); pick the
+    // AlertDialogAction (last in document order).
     const allDeleteBtns = screen.getAllByRole('button', { name: /^delete$/i })
     const confirmBtn = allDeleteBtns[allDeleteBtns.length - 1]
     fireEvent.click(confirmBtn)
