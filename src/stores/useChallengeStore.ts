@@ -202,7 +202,19 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
     if (!rows || rows.length === 0) return
     // Direct Dexie write — NEVER through syncableWrite. The remote is already
     // authoritative in Supabase; enqueueing here would create an echo loop.
-    await db.challenges.bulkPut(rows)
+    //
+    // F1 monotonic guard (E96-S02): for currentProgress, never regress a local
+    // value that is ahead of the remote snapshot. This protects offline mutations
+    // that are still queued in syncQueue — a plain bulkPut would overwrite them.
+    for (const remoteRow of rows) {
+      const local = await db.challenges.get(remoteRow.id)
+      if (local !== undefined && local.currentProgress > remoteRow.currentProgress) {
+        // Local is ahead — keep the local currentProgress, merge everything else.
+        await db.challenges.put({ ...remoteRow, currentProgress: local.currentProgress })
+      } else {
+        await db.challenges.put(remoteRow)
+      }
+    }
     const challenges = await db.challenges.orderBy('createdAt').reverse().toArray()
     set({ challenges })
   },

@@ -209,6 +209,12 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   },
 
   deletePath: async (pathId: string) => {
+    // Capture snapshot before any mutation for rollback on failure.
+    const prevState = get()
+    const prevPaths = prevState.paths
+    const prevEntries = prevState.entries
+    const prevActivePath = prevState.activePath
+
     // Collect the entries to delete *before* the syncableWrite calls so we
     // can enqueue each one. We cannot use a Dexie transaction here because
     // syncableWrite spans Dexie + syncQueue; enqueueing happens outside the
@@ -217,13 +223,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       await db.learningPathEntries.where('pathId').equals(pathId).primaryKeys()
     ) as string[]
 
-    await persistWithRetry(async () => {
-      for (const entryId of entryIds) {
-        await syncableWrite('learningPathEntries', 'delete', entryId)
-      }
-      await syncableWrite('learningPaths', 'delete', pathId)
-    })
-
+    // Optimistic update
     set(state => {
       const remaining = state.paths.filter(p => p.id !== pathId)
       return {
@@ -233,6 +233,26 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         error: null,
       }
     })
+
+    try {
+      await persistWithRetry(async () => {
+        for (const entryId of entryIds) {
+          await syncableWrite('learningPathEntries', 'delete', entryId)
+        }
+        await syncableWrite('learningPaths', 'delete', pathId)
+      })
+    } catch (error) {
+      // Rollback to full snapshot preserving original state.
+      console.error('[LearningPathStore] Failed to delete path:', error)
+      set({
+        paths: prevPaths,
+        entries: prevEntries,
+        activePath: prevActivePath,
+        error: 'Failed to delete learning path',
+      })
+      toast.error('Failed to delete learning path')
+      throw error
+    }
   },
 
   setActivePath: (pathId: string) => {

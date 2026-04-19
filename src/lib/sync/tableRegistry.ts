@@ -20,6 +20,13 @@
  *   'skip'         — Table opted out of sync (future use)
  *
  * Pure module — no Dexie, Zustand, or React imports. Safe to import anywhere.
+ *
+ * E96-S02 note (F2): The plan's Unit 2 referenced regenerating
+ * `src/lib/supabase/types.ts` via `supabase gen types`. That file does not
+ * exist in this project — TypeScript table shapes live in `@/data/types`
+ * directly. No import of `src/lib/supabase/types.ts` exists anywhere in the
+ * source tree; Unit 2 was a no-op. Types are intentionally hand-maintained
+ * alongside the Dexie schema in `src/data/types.ts`.
  */
 
 export interface TableRegistryEntry {

@@ -61,9 +61,11 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
 
       // E96-S02: fan-out hydrate for the 9 P3/P4 LWW Dexie tables. Uses
       // Promise.allSettled internally — per-table failures are logged and
-      // swallowed, matching the settings-hydrate error posture. Fire-and-
-      // forget so slow Supabase queries don't block the sync-engine start.
-      hydrateP3P4FromSupabase(userId).catch(err => {
+      // swallowed, matching the settings-hydrate error posture.
+      // F3 fix: await before syncEngine.start() so download-phase bulkPuts
+      // do not race with syncEngine writes (mirrors hydrateSettingsFromSupabase
+      // ordering pattern).
+      await hydrateP3P4FromSupabase(userId).catch(err => {
         console.error('[useAuthLifecycle] hydrateP3P4FromSupabase failed:', err)
       })
 
