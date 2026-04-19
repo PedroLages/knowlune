@@ -113,7 +113,6 @@ describe('addChallenge', () => {
   })
 
   it('should rollback on persistence failure', async () => {
-    const { db } = await import('@/db')
     const swModule = await import('@/lib/sync/syncableWrite'); vi.spyOn(swModule, 'syncableWrite').mockRejectedValue(new Error('DB write failed'))
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
@@ -183,7 +182,6 @@ describe('deleteChallenge', () => {
       })
     })
 
-    const { db } = await import('@/db')
     const id = useChallengeStore.getState().challenges[0].id
     const swModuleD = await import('@/lib/sync/syncableWrite'); vi.spyOn(swModuleD, 'syncableWrite').mockRejectedValue(new Error('DB delete failed'))
     vi.spyOn(console, 'error').mockImplementation(() => {})

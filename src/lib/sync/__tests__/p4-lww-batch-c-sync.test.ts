@@ -17,7 +17,7 @@
 import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Dexie from 'dexie'
-import type { Quiz } from '@/data/types'
+import type { Quiz } from '@/types/quiz'
 
 let syncableWriteModule: typeof import('@/lib/sync/syncableWrite')
 let useAuthStore: (typeof import('@/stores/useAuthStore'))['useAuthStore']

@@ -67,7 +67,7 @@ describe('E96-S02 LWW batch B — challenges', () => {
   it('addChallenge enqueues a syncQueue add entry for challenges', async () => {
     await useChallengeStore.getState().addChallenge({
       name: 'Streak 7',
-      type: 'study_streak',
+      type: 'streak',
       targetValue: 7,
       deadline: '2026-12-31T00:00:00.000Z',
     })
@@ -80,7 +80,7 @@ describe('E96-S02 LWW batch B — challenges', () => {
   it('deleteChallenge enqueues a syncQueue delete entry for challenges', async () => {
     await useChallengeStore.getState().addChallenge({
       name: 'To delete',
-      type: 'study_streak',
+      type: 'streak',
       targetValue: 5,
       deadline: '2026-12-31T00:00:00.000Z',
     })
@@ -97,7 +97,7 @@ describe('E96-S02 LWW batch B — challenges', () => {
     const remote: Challenge = {
       id: 'challenge-remote-1',
       name: 'Remote Challenge',
-      type: 'study_streak',
+      type: 'streak',
       targetValue: 10,
       deadline: '2026-12-31T00:00:00.000Z',
       createdAt: new Date().toISOString(),
@@ -125,6 +125,7 @@ describe('E96-S02 LWW batch B — challenges', () => {
 
 describe('E96-S02 LWW batch B — courseReminders', () => {
   function makeReminder(overrides: Partial<CourseReminder> = {}): CourseReminder {
+    const now = new Date().toISOString()
     return {
       id: crypto.randomUUID(),
       courseId: 'course-1',
@@ -132,7 +133,8 @@ describe('E96-S02 LWW batch B — courseReminders', () => {
       enabled: true,
       days: ['monday', 'wednesday'],
       time: '09:00',
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
       ...overrides,
     }
   }

@@ -22,8 +22,8 @@
 import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Dexie from 'dexie'
-import type { AIUsageEvent, Quiz } from '@/data/types'
-import type { QuizAttempt } from '@/types/quiz'
+import type { AIUsageEvent } from '@/data/types'
+import type { Quiz, QuizAttempt } from '@/types/quiz'
 
 let useQuizStore: (typeof import('@/stores/useQuizStore'))['useQuizStore']
 let useAuthStore: (typeof import('@/stores/useAuthStore'))['useAuthStore']

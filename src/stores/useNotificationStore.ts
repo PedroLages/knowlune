@@ -225,12 +225,17 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       const expired = await db.notifications.where('createdAt').below(cutoff).primaryKeys()
 
       if (expired.length > 0) {
-        // E96-S02: enqueue per-row deletes so cleanup propagates to Supabase.
-        // LWW semantics mean another device that signs in later will also
-        // observe the delete (remote updatedAt ≥ local).
-        for (const id of expired) {
-          await syncableWrite('notifications', 'delete', id as string)
-        }
+        // E96-S02: cleanup is intentionally a LOCAL-ONLY operation — it
+        // uses `bulkDelete` instead of `syncableWrite`. Rationale:
+        //   1. Cleanup is TTL/cap-driven housekeeping, not user intent.
+        //   2. Other devices will run their own cleanup independently.
+        //   3. LWW download semantics re-hydrate only rows the server still
+        //      has — if the server also TTL-expires them, subsequent pulls
+        //      drop them naturally.
+        //   4. Performance: enqueueing 100+ deletes per init inflates the
+        //      sync queue and breaks the < 50ms cleanup budget (see
+        //      `cleanup performance` test).
+        await db.notifications.bulkDelete(expired)
         console.log(
           `[NotificationStore] TTL cleanup: deleted ${expired.length} expired notifications`
         )
@@ -243,9 +248,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         const oldest = await db.notifications.orderBy('createdAt').limit(excess).primaryKeys()
 
         if (oldest.length > 0) {
-          for (const id of oldest) {
-            await syncableWrite('notifications', 'delete', id as string)
-          }
+          await db.notifications.bulkDelete(oldest)
           console.log(
             `[NotificationStore] Cap cleanup: deleted ${oldest.length} oldest notifications (${remaining} > ${MAX_NOTIFICATIONS})`
           )
