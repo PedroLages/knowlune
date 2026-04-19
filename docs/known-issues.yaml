@@ -1147,6 +1147,50 @@ issues:
       invariant — AudiobookshelfServer / OpdsCatalog types drop the credential fields.
       CI grep gate (scripts/grep-gate-credentials.sh) blocks regression.
 
+  - id: KI-E95-S04-L01
+    story: E95-S04
+    severity: MEDIUM
+    description: >
+      Users whose daily goal type is 'pages' (not 'time') see (0, 0, null) as their
+      streak after the E95-S04 server-side streak migration. The Supabase migration
+      initialises the streak row from the existing Dexie state, but the pages-goal
+      accumulation path was not included in the backfill query — leaving streak_count,
+      longest_streak, and last_activity_date all null for this cohort. The UI falls
+      back to showing zeros. Correct streak history is preserved in Dexie; the
+      Supabase row just needs a one-time backfill from client-side data on next boot.
+    file: "src/stores/useStreakStore.ts"
+    status: open
+    addedAt: "2026-04-19"
+    epic: E95
+    follow_up: "Schedule for post-beta epic: add pages-goal branch to the streak backfill migration or trigger a client-side re-upload of streak data on first authenticated boot."
+    triageDecision: schedule-future
+    triageReason: >
+      Real bug but affects only the pages-goal cohort (minority of users) and has
+      no data loss — Dexie streak history is intact. Fix requires a targeted backfill
+      or client-side upload trigger. Not blocking beta launch.
+
+  - id: KI-E95-S04-L02
+    story: E95-S04
+    severity: LOW
+    description: >
+      After a sync commit that writes a new streak row to Supabase, the in-memory
+      useStreakStore state is not immediately rehydrated from the committed value.
+      The store reflects the correct data only on the next cold boot (when
+      hydrateSettingsFromSupabase runs). Intermediate UI renders show pre-commit
+      optimistic state, which is correct in practice but not sourced from the
+      canonical committed row until next boot.
+    file: "src/stores/useStreakStore.ts"
+    status: open
+    addedAt: "2026-04-19"
+    epic: E95
+    follow_up: "Post-sync-commit callback could call streak store refresh; or add a sync engine storeRefresh registration for the streak table."
+    triageDecision: schedule-future
+    triageReason: >
+      Cold-boot-only rehydration is consistent with how all other P3 LWW stores
+      work in this codebase. No user-visible incorrect data — optimistic state
+      and committed state match for non-pages-goal users. Low effort to fix but
+      no urgency before beta.
+
   - id: KI-E95-S05-L01
     story: E95-S05
     severity: MEDIUM
@@ -1162,3 +1206,10 @@ issues:
     addedAt: "2026-04-19"
     epic: E95
     follow_up: "Schedule for post-beta follow-up: wire catalogId lookup through getOpdsPassword() at EPUB download time"
+    triageDecision: schedule-future
+    triageReason: >
+      Grep gate already prevents regression (new call sites blocked). Only affects
+      legacy pre-E95-S02 imports with inline passwords. Full fix requires async
+      catalogId lookup at EPUB download time — moderate effort. Not blocking beta
+      since affected books still download (legacy field is still present on the
+      source object for those rows). Schedule for first post-beta maintenance epic.

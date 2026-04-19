@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-19  # E95-S05 in progress — OPDS/ABS server connection sync + KI-E95-S02-L01 closed
+last_updated: 2026-04-19  # E95 complete — all 6 stories shipped (PRs #369-#375)
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -1181,13 +1181,13 @@ development_status:
   # Epic 95: Settings & Security Sync — "My Preferences Follow Me"
   # Settings sync (reader/audiobook/reading goals), Vault for all credentials, entitlements, streaks
   # Depends on: E92 (sync engine)
-  epic-95: in-progress  # PRs #369-#371 shipped (95-1 to 95-3); 95-4/5/6 remain backlog
+  epic-95: done  # All 6 stories shipped (PRs #369-#375)
   95-1-full-settings-sync-expansion: done  # PR #369
   95-2-api-keys-and-all-credentials-via-supabase-vault: done  # PR #370
   95-3-server-authoritative-entitlements: done  # PR #371
-  95-4-server-side-streak-calculation: backlog
-  95-5-opds-and-abs-server-connection-sync: backlog
-  95-6-notification-preferences-sync: backlog
+  95-4-server-side-streak-calculation: done  # PR #373
+  95-5-opds-and-abs-server-connection-sync: done  # PR #374
+  95-6-notification-preferences-sync: done  # PR #375
   epic-95-retrospective: optional
 
   # Epic 96: Remaining Tables & Features Sync — "Everything Everywhere"

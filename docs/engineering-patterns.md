@@ -1249,3 +1249,93 @@ The download engine's delta sync queries `WHERE updated_at > last_sync_at`. Appe
 **Rule:** Before registering any table in the sync registry, answer: "Can rows be updated after insertion?" If no, set `cursorColumn: 'created_at'` and `appendOnly: true`. Using `updated_at` on an append-only table is a silent regression — all existing rows are skipped on first sync.
 
 **Case study:** E93-S07 — `audio_bookmarks` uses `created_at` only; the standard `updated_at` cursor caused the download engine to skip every row. Reference: `docs/solutions/sync/e93-closeout-sync-patterns-2026-04-18.md`.
+
+## Vault Broker Pattern for Credential Storage in Sync Tables
+
+When a synced Dexie table contains a credential (API key, password), the credential must never appear in Postgres rows or the `syncQueue` payload. Route it through the Supabase Vault broker instead.
+
+**The three-part contract:**
+
+1. **Type enforcement** — drop the credential field from the TypeScript type after the Vault migration. `vaultFields` in `tableRegistry` is defence-in-depth (strips the field even on a bad cast), but the TypeScript type is the primary guard. The compiler flags every call site that tries to read the field.
+
+2. **Write ordering: vault-first, metadata-second.** Call `storeCredential(kind, serverId, secret)` before `syncableWrite(...)`. If the vault write fails, abort and surface an error — do not write the row without its credential. If the row write fails after a successful vault write, the vault entry is orphaned but harmless (no row references it). Log `sync.vault.potential_orphan` telemetry and clean up with a reconciler later.
+
+3. **One-shot backwards-compat migration.** Legacy rows that still carry the credential inline (before the Vault migration landed) cannot be migrated inside a Dexie `.upgrade()` callback (auth state is not available at upgrade time — see "Dexie Upgrade Callbacks Cannot Read Async Auth State"). Run the migration as a post-boot hook after sign-in, iterate both tables in one pass, retry per-server, and use a `db.kv` flag to mark completion so it never runs twice.
+
+```typescript
+// Write path — vault first, row second
+async function addServer(server: AudiobookshelfServer, apiKey: string) {
+  const stored = await storeCredential('abs-api-key', server.id, apiKey)
+  if (!stored) throw new Error('Vault write failed')
+  await syncableWrite('audiobookshelfServers', 'put', server)
+  // apiKey is NOT on server; syncableWrite's vaultFields strips it if somehow present
+}
+
+// Read path — async resolver with per-session cache
+const cache = new Map<string, string>()
+export async function getAbsApiKey(serverId: string): Promise<string | null> {
+  if (cache.has(serverId)) return cache.get(serverId)!
+  const key = await readCredential('abs-api-key', serverId)
+  if (key) cache.set(serverId, key)
+  return key ?? null
+}
+```
+
+**Resolver placement:** one file per credential kind under `src/lib/credentials/`. Each exports a bare async function (`getAbsApiKey`) and a React hook (`useAbsApiKey`) for render-time consumers that need reactive updates.
+
+**Cache invalidation:** clear on sign-out. Users have at most a handful of servers — unbounded per-session Map is appropriate; no LRU needed.
+
+**Case study:** E95-S02 (vault broker implementation) and E95-S05 (all 25 ABS/OPDS read-call-sites migrated, grep gate added). Reference: `src/lib/credentials/`, `src/lib/vaultCredentials.ts`, `scripts/grep-gate-credentials.sh`.
+
+## Singleton PK Translation via `fieldMap` — `id: 'singleton'` → Supabase `user_id`
+
+Dexie stores that hold exactly one document per user (preferences, settings, streak state) use the string literal `'singleton'` as the Dexie PK. Supabase represents the same row with `user_id UUID PRIMARY KEY`. The sync engine's `fieldMap` handles the translation so neither the store nor the migration needs special-casing.
+
+```typescript
+// tableRegistry.ts entry
+{
+  tableName: 'notificationPreferences',
+  supabaseTable: 'notification_preferences',
+  fieldMap: { id: 'user_id' },          // Dexie 'singleton' → Supabase user_id
+  upsertConflictColumns: 'user_id',      // ON CONFLICT (user_id) DO UPDATE
+  conflictTarget: 'user_id',
+}
+```
+
+**Why this works:** `syncableWrite` calls `toSnakeCase(record, fieldMap)` which renames `id` to `user_id` in the upload payload. The download path reverses the mapping when applying the remote row back to Dexie, restoring the `id: 'singleton'` key.
+
+**Rules:**
+
+- Always set `upsertConflictColumns` to the Supabase PK column name when `fieldMap` remaps `id`. Without it the upsert falls back to the Dexie PK literal (`'singleton'`), producing `ON CONFLICT (singleton)` which fails.
+- The Dexie schema must declare the table with `id` as the first column in the schema string: `db.version(N).stores({ notificationPreferences: 'id, ...' })`.
+- Do not add a `moddatetime` trigger on LWW-synced singleton tables — the client is the authoritative timestamp source.
+
+**Case study:** E95-S06 — `notificationPreferences` entry. Prior art: `chapterMappings` uses the same pattern with a composite `upsertConflictColumns`. Reference: `src/lib/sync/tableRegistry.ts`.
+
+## LWW Hydration with `isAllDefaults` Guard for First-Install Race
+
+When a singleton preferences table is hydrated from Supabase on login, a naive `remote.updated_at > local.updated_at` comparison can silently discard a valid remote record. This happens when the app writes a local defaults row milliseconds before or after the remote row's `updated_at` — both timestamps may be within the same second, and the comparison direction is undefined.
+
+**Fix:** supplement the timestamp comparison with an `isAllDefaults` guard. If local prefs are bitwise-equal to the factory defaults, remote always wins regardless of timestamps.
+
+```typescript
+function hydrateNotificationPrefs(remote: NotificationPreferences) {
+  const local = useNotificationPrefsStore.getState().prefs
+  const localIsDefaults = isAllDefaults(local)   // deep-equal to DEFAULTS object
+  const remoteIsNewer = remote.updatedAt >= local.updatedAt  // inclusive >=
+
+  if (localIsDefaults || remoteIsNewer) {
+    // validate before applying
+    const safePrefs = applyRemotePrefs(remote, local)
+    useNotificationPrefsStore.getState().hydrateFromRemote(safePrefs)
+  }
+}
+```
+
+**Why `>=` (inclusive) instead of `>`:** Same-second first-install race — the default row is written locally and the upload resolves almost simultaneously with the remote row being returned. Strict `>` keeps the local default and discards the remote record.
+
+**Why `isAllDefaults` is needed at all:** Even with `>=`, a default row written at `T=0` and a remote row written at `T=0` (same millisecond) produces a tie that `>=` resolves in remote's favour. But `isAllDefaults` makes the intent explicit and handles the case where local prefs are not just defaults but have not diverged from them in any meaningful way.
+
+**Input validation during hydration:** Before applying remote values, validate any constrained fields (e.g., `quietHoursStart`/`quietHoursEnd` matching `HHMM_RE`). Malformed values are discarded; the local value is preserved for that field only.
+
+**Case study:** E95-S06 — `notificationPreferences` hydration in `src/lib/settings.ts`. Reference: `docs/plans/2026-04-19-016-feat-e95-s06-notification-preferences-sync-plan.md` §Key Technical Decisions.
