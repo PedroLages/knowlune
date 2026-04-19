@@ -1221,3 +1221,59 @@ issues:
       catalogId lookup at EPUB download time — moderate effort. Not blocking beta
       since affected books still download (legacy field is still present on the
       source object for those rows). Schedule for first post-beta maintenance epic.
+
+  - id: KI-E96-S04-L01
+    storyId: E96-S04
+    summary: "youtubeChapters not synced to Supabase — deferred as wont-fix (derivable, zero-mutation)"
+    severity: low
+    status: wont-fix
+    addedAt: "2026-04-19"
+    epic: E96
+    triageDecision: wont-fix
+    triageReason: >
+      The youtubeChapters Dexie store is create-once, zero-mutation data deterministically
+      derivable from already-synced upstream importedCourses + importedVideos + YouTube
+      metadata. No post-import editor exists; no cross-device authored state to preserve.
+      Matches the precedent-following exclusion pattern used by youtubeVideoCache,
+      youtubeTranscripts, courseEmbeddings, transcriptEmbeddings, videoCaptions, bookFiles,
+      and courseThumbnails. Full audit rationale lives at
+      docs/brainstorms/2026-04-19-e96-s04-youtube-chapters-sync-evaluation-requirements.md.
+    notes: |
+      Re-open triggers (any one flips this to implement-now):
+        - A post-import chapter editor ships (user can rename, reorder, split, merge, or
+          delete chapters) — chapters become authored content with cross-device state.
+        - Chapter progress, bookmarks, or notes are attached to chapter IDs (rather than
+          videoId + timestamp) such that losing the chapter ID breaks referential
+          integrity across devices.
+        - Chapter extraction becomes non-deterministic (e.g., LLM-generated chapter
+          titles where users would lose personalization on re-import).
+      Verified 2026-04-19 via grep 'chapterId' across src/: no synced table references
+      youtubeChapters.id as an FK. The only chapterId field on a synced table is on
+      audioClips (book/audiobook chapters, unrelated to YouTube chapters; stores chapter
+      title/slug string, not a youtubeChapters.id reference). All other chapterId
+      occurrences are in-memory wizard state (useYouTubeImportStore, YouTubeChapterEditor)
+      or unrelated audiobook rendering (AudiobookRenderer, ClipButton).
+
+  - id: KI-E96-S04-L02
+    storyId: E96-S04
+    summary: "youtubeChapters orphan when parent importedCourse is deleted — missing cascade delete"
+    severity: low
+    status: open
+    addedAt: "2026-04-19"
+    epic: E96
+    triageDecision: schedule-future
+    triageReason: >
+      Pre-existing bug discovered during E96-S04 sync evaluation audit. The sole write
+      site at src/stores/useYouTubeImportStore.ts:352 uses db.youtubeChapters.bulkAdd
+      during course import, but no delete path exists — not even on course deletion.
+      Chapters for a deleted importedCourse remain in Dexie indefinitely. Impact is
+      minimal because (a) chapters are read only when fetched by courseId (orphans are
+      invisible, not returned by any UI query), (b) volume is tiny (3–20 rows per
+      deleted video, tens of courses per heavy user), and (c) the store is local-only
+      so the orphan bloat does not propagate across devices. Unrelated to the sync
+      decision captured in KI-E96-S04-L01.
+    file: "src/stores/useYouTubeImportStore.ts"
+    follow_up: >
+      Schedule for a future maintenance epic: add db.youtubeChapters.where('courseId')
+      .equals(courseId).delete() to the course-delete path. Alternatively, fold into
+      the broader orphan-cleanup sweep if one lands.
