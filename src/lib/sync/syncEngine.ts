@@ -646,14 +646,20 @@ async function _doDownload(): Promise<void> {
     const meta = await db.syncMetadata.get(entry.dexieTable)
     const cursor = meta?.lastSyncTimestamp ?? null
 
+    // Determine the cursor column — defaults to 'updated_at'.
+    // Tables like `audio_bookmarks` have no `updated_at` column and must use
+    // `created_at` instead. The `cursorField` registry override enables this
+    // without per-table special-casing in the engine.
+    const cursorCol = entry.cursorField ?? 'updated_at'
+
     // Build Supabase query — chain .gte() only when cursor is present.
     let query = supabase
       .from(entry.supabaseTable)
       .select('*')
-      .order('updated_at', { ascending: true })
+      .order(cursorCol, { ascending: true })
 
     if (cursor !== null) {
-      query = query.gte('updated_at', cursor)
+      query = query.gte(cursorCol, cursor)
     }
 
     const { data: rows, error } = await query
@@ -672,7 +678,7 @@ async function _doDownload(): Promise<void> {
     let maxUpdatedAt: string | null = null
 
     for (const row of rows) {
-      const rowUpdatedAt = row['updated_at'] as string | undefined
+      const rowUpdatedAt = row[cursorCol] as string | undefined
       if (rowUpdatedAt && (maxUpdatedAt === null || rowUpdatedAt > maxUpdatedAt)) {
         maxUpdatedAt = rowUpdatedAt
       }

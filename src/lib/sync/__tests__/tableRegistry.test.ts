@@ -244,6 +244,50 @@ describe('tableRegistry — monotonic fields', () => {
 })
 
 // ---------------------------------------------------------------------------
+// E93-S07 — audioBookmarks append-only invariants
+// ---------------------------------------------------------------------------
+
+describe('tableRegistry — audioBookmarks append-only (E93-S07)', () => {
+  it('audioBookmarks has conflictStrategy: insert-only', () => {
+    expect(getTableEntry('audioBookmarks')?.conflictStrategy).toBe('insert-only')
+  })
+
+  it('audioBookmarks has insertOnly: true', () => {
+    expect(getTableEntry('audioBookmarks')?.insertOnly).toBe(true)
+  })
+
+  it('audioBookmarks has cursorField: created_at', () => {
+    expect(getTableEntry('audioBookmarks')?.cursorField).toBe('created_at')
+  })
+
+  it('audioBookmarks.stripFields contains updatedAt', () => {
+    expect(getTableEntry('audioBookmarks')?.stripFields).toContain('updatedAt')
+  })
+
+  it('audioClips remains lww with no cursorField override', () => {
+    const entry = getTableEntry('audioClips')
+    expect(entry?.conflictStrategy).toBe('lww')
+    expect(entry?.cursorField).toBeUndefined()
+  })
+
+  it('audioBookmarks toSnakeCase does not include updated_at in payload', () => {
+    const entry = getTableEntry('audioBookmarks')!
+    const sample = {
+      id: 'bm-1',
+      bookId: 'book-1',
+      chapterIndex: 0,
+      timestamp: 42,
+      createdAt: '2026-04-18T10:00:00Z',
+      updatedAt: '2026-04-18T10:00:00Z', // spurious stamp from syncableWrite
+    }
+    const snaked = toSnakeCase(entry, sample)
+
+    expect(snaked).not.toHaveProperty('updated_at')
+    expect(snaked).toHaveProperty('created_at', '2026-04-18T10:00:00Z')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // AC10 / 3.13 — skipSync field exists on interface (TypeScript assignability)
 // ---------------------------------------------------------------------------
 

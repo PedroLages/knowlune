@@ -61,6 +61,7 @@ export function BookmarkListPanel({
 
   const handleDelete = async (id: string) => {
     try {
+      // sync: local-only — audioBookmarks insertOnly; hard deletes are not propagated to Supabase
       await db.audioBookmarks.delete(id)
       setBookmarks(prev => prev.filter(b => b.id !== id))
       onBookmarkDeleted?.(id)

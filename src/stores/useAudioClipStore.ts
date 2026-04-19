@@ -6,6 +6,9 @@
  *
  * Modeled on useReadingQueueStore (reorder) and useBookmarkStore (optimistic updates).
  *
+ * E93-S07: All write operations route through syncableWrite wrapped in
+ * persistWithRetry so changes are enqueued for Supabase upload.
+ *
  * @module useAudioClipStore
  * @since E111-S01
  */
@@ -15,9 +18,8 @@ import { toast } from 'sonner'
 import { arrayMove } from '@dnd-kit/sortable'
 import type { AudioClip } from '@/data/types'
 import { db } from '@/db/schema'
-
-/** Returns current ISO timestamp — extracted for consistency and testability */
-const now = () => new Date().toISOString()
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
+import { persistWithRetry } from '@/lib/persistWithRetry'
 
 interface AudioClipStoreState {
   clips: AudioClip[]
@@ -52,7 +54,7 @@ export const useAudioClipStore = create<AudioClipStoreState>((set, get) => ({
     const clip: AudioClip = {
       id: crypto.randomUUID(),
       sortOrder: maxOrder + 1,
-      createdAt: now(),
+      createdAt: new Date().toISOString(),
       ...clipData,
     }
 
@@ -60,7 +62,7 @@ export const useAudioClipStore = create<AudioClipStoreState>((set, get) => ({
     set({ clips: [...clips, clip] })
 
     try {
-      await db.audioClips.put(clip)
+      await persistWithRetry(() => syncableWrite('audioClips', 'put', clip as unknown as SyncableRecord))
       toast.success('Clip saved')
       return clip.id
     } catch {
@@ -82,7 +84,9 @@ export const useAudioClipStore = create<AudioClipStoreState>((set, get) => ({
     set({ clips: clips.map(c => (c.id === clipId ? { ...c, title } : c)) })
 
     try {
-      await db.audioClips.update(clipId, { title })
+      const existing = await db.audioClips.get(clipId)
+      if (!existing) return
+      await persistWithRetry(() => syncableWrite('audioClips', 'put', { ...existing, title } as unknown as SyncableRecord))
     } catch {
       // Rollback on failure
       set({
@@ -100,7 +104,7 @@ export const useAudioClipStore = create<AudioClipStoreState>((set, get) => ({
     set({ clips: clips.filter(c => c.id !== clipId) })
 
     try {
-      await db.audioClips.delete(clipId)
+      await persistWithRetry(() => syncableWrite('audioClips', 'delete', clipId))
     } catch {
       // Rollback on failure
       if (clipToDelete) {
@@ -124,9 +128,14 @@ export const useAudioClipStore = create<AudioClipStoreState>((set, get) => ({
     set({ clips: reordered })
 
     try {
-      await db.transaction('rw', db.audioClips, async () => {
+      // Expand transaction scope to include db.syncQueue so syncableWrite can
+      // insert queue entries inside the transaction without "table not in transaction" errors.
+      await db.transaction('rw', db.audioClips, db.syncQueue, async () => {
         for (const clip of reordered) {
-          await db.audioClips.update(clip.id, { sortOrder: clip.sortOrder })
+          const existing = await db.audioClips.get(clip.id)
+          if (existing) {
+            await syncableWrite('audioClips', 'put', { ...existing, sortOrder: clip.sortOrder } as unknown as SyncableRecord)
+          }
         }
       })
     } catch {
