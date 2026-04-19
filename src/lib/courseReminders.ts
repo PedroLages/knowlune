@@ -6,6 +6,7 @@ import {
   hasNotifiedToday,
   markNotifiedToday,
 } from '@/lib/studyReminders'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 // ── Constants ──
 
@@ -34,18 +35,50 @@ export async function getCourseRemindersByCourse(courseId: string): Promise<Cour
 }
 
 export async function saveCourseReminder(reminder: CourseReminder): Promise<void> {
-  await db.courseReminders.put(reminder)
+  // E96-S02: route through syncableWrite so the change is enqueued for
+  // Supabase upload. syncableWrite stamps `updatedAt` itself — callers must
+  // NOT pre-stamp or the LWW comparison drifts.
+  await syncableWrite(
+    'courseReminders',
+    'put',
+    reminder as unknown as SyncableRecord,
+  )
   window.dispatchEvent(new Event('course-reminders-updated'))
 }
 
 export async function deleteCourseReminder(id: string): Promise<void> {
-  await db.courseReminders.delete(id)
+  await syncableWrite('courseReminders', 'delete', id)
   window.dispatchEvent(new Event('course-reminders-updated'))
 }
 
 export async function toggleCourseReminder(id: string, enabled: boolean): Promise<void> {
-  const now = new Date().toISOString()
-  await db.courseReminders.update(id, { enabled, updatedAt: now })
+  // syncableWrite requires a full record for 'put' — read the existing row,
+  // merge the toggle, and let syncableWrite stamp `updatedAt`.
+  const existing = await db.courseReminders.get(id)
+  if (!existing) return
+  await syncableWrite(
+    'courseReminders',
+    'put',
+    { ...existing, enabled } as unknown as SyncableRecord,
+  )
+  window.dispatchEvent(new Event('course-reminders-updated'))
+}
+
+/**
+ * Replace Dexie collection from a validated remote snapshot.
+ *
+ * E96-S02: called by `hydrateP3P4FromSupabase`. Pure setter — writes Dexie
+ * via `bulkPut` directly (never `syncableWrite`) to avoid echo-looping
+ * through the sync queue.
+ *
+ * AC5 disposition: isAllDefaults guard is vacuously satisfied for
+ * `courseReminders` — it is a collection keyed by id, not a singleton.
+ */
+export async function hydrateCourseRemindersFromRemote(
+  rows: CourseReminder[],
+): Promise<void> {
+  if (!rows || rows.length === 0) return
+  await db.courseReminders.bulkPut(rows)
   window.dispatchEvent(new Event('course-reminders-updated'))
 }
 
