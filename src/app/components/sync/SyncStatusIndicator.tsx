@@ -256,6 +256,8 @@ export function SyncStatusIndicator(): React.ReactElement {
                 variant="brand"
                 size="sm"
                 onClick={handleRetry}
+                disabled={status === 'syncing'}
+                aria-disabled={status === 'syncing'}
                 aria-label="Retry sync now"
                 className="w-full gap-2"
                 data-testid="sync-retry-button"
