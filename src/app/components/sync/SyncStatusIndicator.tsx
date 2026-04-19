@@ -161,6 +161,8 @@ export function SyncStatusIndicator(): React.ReactElement {
       console.error('[SyncStatusIndicator] Retry fullSync failed:', err)
       setStatus('error', message)
       toast.error(message)
+      // Refresh badge so it reflects actual queue depth after failed retry.
+      await refreshPendingCount()
     }
   }
 
@@ -179,11 +181,15 @@ export function SyncStatusIndicator(): React.ReactElement {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
+      {/* Polite live region: announces only on transitions into error/offline.
+          Placed OUTSIDE the button so it doesn't override the native button
+          role or produce chatty SR announcements on every 30s nudge cycle. */}
+      <span className="sr-only" aria-live="polite" role="status">
+        {liveMessage}
+      </span>
       <PopoverTrigger asChild>
         <button
           type="button"
-          role="status"
-          aria-live="polite"
           aria-label={ariaLabel}
           data-testid="sync-status-indicator"
           data-sync-status={status}
@@ -206,12 +212,6 @@ export function SyncStatusIndicator(): React.ReactElement {
               {pendingCount > 99 ? '99+' : pendingCount}
             </Badge>
           )}
-          {/* Polite live region: announces only on transitions into error/offline.
-              No role=status or aria-live here — those are on the outer button to
-              avoid WAI-ARIA double-announcement from nested live regions. */}
-          <span className="sr-only">
-            {liveMessage}
-          </span>
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72">

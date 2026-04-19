@@ -76,20 +76,24 @@ describe('<SyncStatusIndicator />', () => {
     cleanup()
   })
 
-  it('renders trigger with role=status and the synced aria-label', () => {
+  it('renders trigger with the synced aria-label and live region with role=status', () => {
     resetStore({ status: 'synced' })
     render(<SyncStatusIndicator />)
-    const trigger = screen.getByRole('status', { name: /sync status: synced/i })
+    // Button carries the accessible name via aria-label (no role override).
+    const trigger = screen.getByTestId('sync-status-indicator')
     expect(trigger).toBeInTheDocument()
+    expect(trigger).toHaveAttribute('aria-label', expect.stringMatching(/sync status: synced/i))
     expect(trigger).toHaveAttribute('data-sync-status', 'synced')
+    // Sibling live region carries role=status (not the button).
+    const liveRegion = document.querySelector('[role="status"][aria-live="polite"]')
+    expect(liveRegion).toBeInTheDocument()
   })
 
   it('renders offline label and icon when status is offline', () => {
     resetStore({ status: 'offline' })
     render(<SyncStatusIndicator />)
-    expect(
-      screen.getByRole('status', { name: /sync status: offline/i })
-    ).toBeInTheDocument()
+    const trigger = screen.getByTestId('sync-status-indicator')
+    expect(trigger).toHaveAttribute('aria-label', expect.stringMatching(/sync status: offline/i))
   })
 
   it('renders syncing label with animated spinner (no reduced motion)', () => {
@@ -102,7 +106,8 @@ describe('<SyncStatusIndicator />', () => {
   it('renders error label and data-sync-status=error', () => {
     resetStore({ status: 'error', lastError: 'Network error' })
     render(<SyncStatusIndicator />)
-    const trigger = screen.getByRole('status', { name: /sync status: sync error/i })
+    const trigger = screen.getByTestId('sync-status-indicator')
+    expect(trigger).toHaveAttribute('aria-label', expect.stringMatching(/sync status: sync error/i))
     expect(trigger).toHaveAttribute('data-sync-status', 'error')
   })
 

@@ -14,6 +14,7 @@
 import { test, expect } from '../support/fixtures'
 import { dismissOnboarding } from '../helpers/dismiss-onboarding'
 import { FIXED_DATE } from '../utils/test-time'
+import { seedSyncQueue } from '../support/helpers/indexeddb-seed'
 
 test.describe('E97-S01: Sync Status Indicator', () => {
   test.beforeEach(async ({ page }) => {
@@ -22,10 +23,16 @@ test.describe('E97-S01: Sync Status Indicator', () => {
     await page.waitForLoadState('domcontentloaded')
   })
 
-  test('indicator renders in header with role=status', async ({ page }) => {
+  test('indicator renders in header and live region carries role=status', async ({ page }) => {
+    // The button itself no longer carries role=status (that overrides the native
+    // button role). The polite live region (a sibling sr-only span) holds it.
     const indicator = page.getByTestId('sync-status-indicator')
     await expect(indicator).toBeVisible()
-    await expect(indicator).toHaveAttribute('role', 'status')
+    // Button must NOT override its own role — aria-label provides the accessible name.
+    await expect(indicator).not.toHaveAttribute('role', 'status')
+    // Sibling live region exists and carries role=status.
+    const liveRegion = page.locator('[role="status"][aria-live="polite"]')
+    await expect(liveRegion).toBeAttached()
   })
 
   test('clicking the indicator opens the Popover with status copy', async ({ page }) => {
@@ -37,26 +44,13 @@ test.describe('E97-S01: Sync Status Indicator', () => {
   })
 
   test('badge shows the pendingCount when syncQueue has pending rows', async ({ page }) => {
-    // Seed syncQueue directly via native IndexedDB — bypasses module bundler
-    // restrictions that make dynamic import('/src/db.ts') fail in browser context.
-    await page.evaluate(async (fixedIso) => {
-      await new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open('ElearningDB')
-        request.onerror = () => reject(request.error)
-        request.onsuccess = () => {
-          const db = request.result
-          const tx = db.transaction('syncQueue', 'readwrite')
-          const store = tx.objectStore('syncQueue')
-          // Clear existing rows then add 3 pending entries.
-          store.clear()
-          store.put({ id: 'q-1', table: 'notes', op: 'upsert', status: 'pending', createdAt: fixedIso })
-          store.put({ id: 'q-2', table: 'notes', op: 'upsert', status: 'pending', createdAt: fixedIso })
-          store.put({ id: 'q-3', table: 'notes', op: 'upsert', status: 'pending', createdAt: fixedIso })
-          tx.oncomplete = () => { db.close(); resolve() }
-          tx.onerror = () => reject(tx.error)
-        }
-      })
-    }, FIXED_DATE)
+    // Seed syncQueue via shared helper (follows test-patterns.md mandate — no
+    // inline raw indexedDB.open() blocks in spec files).
+    await seedSyncQueue(page, [
+      { id: 'q-1', table: 'notes', op: 'upsert', status: 'pending', createdAt: FIXED_DATE },
+      { id: 'q-2', table: 'notes', op: 'upsert', status: 'pending', createdAt: FIXED_DATE },
+      { id: 'q-3', table: 'notes', op: 'upsert', status: 'pending', createdAt: FIXED_DATE },
+    ])
 
     // Opening the popover triggers refreshPendingCount.
     await page.getByTestId('sync-status-indicator').click()
@@ -123,26 +117,27 @@ test.describe('E97-S01: Sync Status Indicator', () => {
   test('reduced-motion emulation removes animate-spin from the icon', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
 
-    // Force the indicator into 'syncing' via the exposed store.
-    await page.evaluate(async () => {
-      const mod = await import(
-        '/src/app/stores/useSyncStatusStore.ts' as string
-      ).catch(() => null)
-      if (mod && typeof mod.useSyncStatusStore?.setState === 'function') {
-        mod.useSyncStatusStore.setState({ status: 'syncing' })
+    // Force the indicator into 'syncing' via the dev-only window.__syncStatusStore
+    // shim (useSyncStatusStore.ts exposes this in non-production builds).
+    // Wait until the store is available (it mounts after app hydration).
+    await page.waitForFunction(() => !!(window as Record<string, unknown>).__syncStatusStore)
+    await page.evaluate(() => {
+      const store = (window as Record<string, unknown>).__syncStatusStore as {
+        setState: (partial: Record<string, unknown>) => void
       }
+      store.setState({ status: 'syncing' })
     })
 
-    // Wait for status to reflect syncing OR for it to remain synced (store may
-    // not be importable this way in all bundlers). In either case, icon must
-    // not carry animate-spin under reduced motion.
+    // Wait for the data-sync-status attribute to confirm the component re-rendered
+    // with the injected status. This is the authoritative signal — the attribute
+    // is set directly from the store's status value in SyncStatusIndicator.tsx.
     await page.waitForFunction(() => {
-      const icon = document.querySelector('[data-testid="sync-status-icon"]')
-      if (!icon) return false
-      const cls = icon.getAttribute('class') ?? ''
-      return !cls.includes('animate-spin')
+      const el = document.querySelector('[data-testid="sync-status-indicator"]')
+      return el?.getAttribute('data-sync-status') === 'syncing'
     })
 
+    // Under prefers-reduced-motion, the syncing icon swaps to a static Cloud
+    // icon (no Loader2) so animate-spin must be absent.
     const icon = page.getByTestId('sync-status-icon')
     const cls = await icon.getAttribute('class')
     expect(cls ?? '').not.toContain('animate-spin')

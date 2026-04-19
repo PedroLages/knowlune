@@ -303,3 +303,17 @@ export async function seedBookHighlights(
 export async function seedAudioClips(page: Page, clips: Record<string, unknown>[]): Promise<void> {
   await seedIndexedDBStore(page, 'ElearningDB', 'audioClips', clips)
 }
+
+/**
+ * Seeds the syncQueue object store in ElearningDB.
+ * Convenience wrapper around seedIndexedDBStore.
+ *
+ * @param page - Playwright Page instance
+ * @param rows - Array of syncQueue records ({ id, table, op, status, createdAt, ... })
+ */
+export async function seedSyncQueue(
+  page: Page,
+  rows: Record<string, unknown>[]
+): Promise<void> {
+  await seedIndexedDBStore(page, 'ElearningDB', 'syncQueue', rows)
+}

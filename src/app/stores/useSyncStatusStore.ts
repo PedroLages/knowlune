@@ -85,3 +85,11 @@ export const useSyncStatusStore = create<SyncStatusState>((set) => ({
     }
   },
 }))
+
+// Expose store on window in development / test builds so E2E tests can
+// directly drive status transitions without relying on fragile dynamic imports.
+// Tree-shaken in production builds (import.meta.env.PROD is false in dev/test).
+if (!import.meta.env.PROD) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window as any).__syncStatusStore = useSyncStatusStore
+}
