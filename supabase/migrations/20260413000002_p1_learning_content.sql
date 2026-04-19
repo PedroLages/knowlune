@@ -14,6 +14,7 @@
 --   6. book_highlights 7. vocabulary_items 8. audio_bookmarks
 --   9. audio_clips    10. chat_conversations  11. learner_models
 --  12. upsert_vocabulary_mastery() function
+--  12b. reset_vocabulary_mastery() function (R3 BLOCKER fix — bypasses GREATEST)
 --  13. search_similar_notes() function
 --
 -- Key non-obvious invariants:
@@ -22,6 +23,7 @@
 --   - audio_bookmarks has NO updated_at column and NO moddatetime trigger (immutable)
 --   - chat_conversations.created_at_epoch is BIGINT (epoch ms), not TIMESTAMPTZ
 --   - upsert_vocabulary_mastery uses GREATEST monotonic logic + timestamp clamp
+--   - reset_vocabulary_mastery bypasses GREATEST for unconditional masteryLevel=0 reset
 --   - search_similar_notes uses plpgsql (not sql) to enable auth guard RAISE
 --   - vector extension already installed by P0 migration — NOT re-created here
 --
@@ -484,8 +486,9 @@ CREATE TRIGGER set_updated_at
 -- far-future client timestamps from pinning the incremental sync cursor permanently.
 -- SQLSTATE 42501 (insufficient_privilege) is semantically correct for authz failure.
 -- p_book_id and p_word are NOT NULL in vocabulary_items — required on INSERT.
--- p_context, p_definition, p_note, p_highlight_id, p_last_reviewed_at are nullable
--- and default to NULL; excluded from ON CONFLICT DO UPDATE (immutable once set).
+-- p_context, p_definition, p_note, p_highlight_id are nullable and default to NULL;
+-- excluded from ON CONFLICT DO UPDATE (immutable once set).
+-- p_last_reviewed_at is nullable and included in ON CONFLICT DO UPDATE (mutable).
 CREATE OR REPLACE FUNCTION public.upsert_vocabulary_mastery(
   p_user_id            UUID,
   p_vocabulary_item_id UUID,
@@ -523,8 +526,9 @@ BEGIN
     p_mastery_level, v_clamped
   )
   ON CONFLICT (id) DO UPDATE SET
-    mastery_level = GREATEST(vocabulary_items.mastery_level, EXCLUDED.mastery_level),
-    updated_at    = GREATEST(vocabulary_items.updated_at, v_clamped);
+    mastery_level    = GREATEST(vocabulary_items.mastery_level, EXCLUDED.mastery_level),
+    last_reviewed_at = COALESCE(EXCLUDED.last_reviewed_at, vocabulary_items.last_reviewed_at),
+    updated_at       = GREATEST(vocabulary_items.updated_at, v_clamped);
   -- book_id and word are intentionally excluded from DO UPDATE (immutable once set).
 END;
 $$;
@@ -540,6 +544,52 @@ COMMENT ON FUNCTION public.upsert_vocabulary_mastery(UUID, UUID, TEXT, TEXT, INT
   'p_book_id and p_word are required (NOT NULL columns); nullable fields default to NULL. '
   'book_id and word excluded from ON CONFLICT DO UPDATE (immutable once set). '
   'SECURITY DEFINER: authz enforced by entry guard p_user_id IS DISTINCT FROM auth.uid(). '
+  'RAISE on authz failure aborts the caller transaction (SQLSTATE 42501).';
+
+
+-- ─── Unit 12b: reset_vocabulary_mastery() ──────────────────────────────────
+-- SECURITY DEFINER function for unconditional mastery reset (masteryLevel → 0).
+-- Required because upsert_vocabulary_mastery uses GREATEST monotonic logic which
+-- silently ignores reset calls (masteryLevel=0) when the server value is higher,
+-- causing permanent Dexie/Supabase divergence (R3 BLOCKER fix).
+-- p_updated_at is applied directly (no GREATEST clamp) — the caller controls the
+-- reset timestamp. A 5-minute future clamp still prevents clock-skew abuse.
+-- auth guard uses IS DISTINCT FROM (handles NULL auth.uid() correctly).
+CREATE OR REPLACE FUNCTION public.reset_vocabulary_mastery(
+  p_id          UUID,
+  p_user_id     UUID,
+  p_updated_at  TIMESTAMPTZ
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_clamped TIMESTAMPTZ := LEAST(p_updated_at, now() + interval '5 minutes');
+BEGIN
+  IF auth.uid() IS DISTINCT FROM p_user_id THEN
+    RAISE EXCEPTION 'forbidden: p_user_id does not match authenticated user'
+      USING ERRCODE = '42501';
+  END IF;
+  UPDATE public.vocabulary_items
+  SET mastery_level    = 0,
+      last_reviewed_at = NULL,
+      updated_at       = v_clamped
+  WHERE id = p_id AND user_id = p_user_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.reset_vocabulary_mastery(UUID, UUID, TIMESTAMPTZ)
+  FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.reset_vocabulary_mastery(UUID, UUID, TIMESTAMPTZ)
+  TO authenticated;
+
+COMMENT ON FUNCTION public.reset_vocabulary_mastery(UUID, UUID, TIMESTAMPTZ) IS
+  'Unconditional vocabulary mastery reset to 0. Bypasses the GREATEST monotonic '
+  'guard in upsert_vocabulary_mastery so that resetMastery calls always take effect '
+  'on the server, preventing Dexie/Supabase divergence. '
+  'SECURITY DEFINER: authz enforced by entry guard auth.uid() IS DISTINCT FROM p_user_id. '
   'RAISE on authz failure aborts the caller transaction (SQLSTATE 42501).';
 
 
