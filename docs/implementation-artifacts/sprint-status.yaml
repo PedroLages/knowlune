@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-18  # E92-S05 story file created (ready-for-dev)
+last_updated: 2026-04-18  # E93 epic closeout — all 8 stories marked done (PRs #353-#360)
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -1154,15 +1154,15 @@ development_status:
   # Epic 93: Learning Content Sync — "My Notes and Cards Everywhere"
   # Notes, bookmarks, flashcards (FSRS), embeddings, book highlights, vocab, audio bookmarks, tutor data
   # Depends on: E92 (sync engine)
-  epic-93: in-progress
-  93-1-p1-supabase-migrations: in-progress
+  epic-93: done  # PRs #353-#360, completed 2026-04-18
+  93-1-p1-supabase-migrations: done  # PR #353
   93-2-wire-notes-and-bookmarks-with-sync: done  # PR #354
-  93-3-note-conflict-preservation: backlog
-  93-4-flashcard-sync-with-fsrs-review-log-replay: backlog
-  93-5-embeddings-sync-with-pgvector: backlog
-  93-6-book-highlights-and-vocabulary-sync: backlog
-  93-7-audio-bookmarks-and-audio-clips-sync: backlog
-  93-8-chat-conversations-and-learner-models-sync: backlog
+  93-3-note-conflict-preservation: done  # PR #355
+  93-4-flashcard-sync-with-fsrs-review-log-replay: done  # PR #356
+  93-5-embeddings-sync-with-pgvector: done  # PR #357
+  93-6-book-highlights-and-vocabulary-sync: done  # PR #358
+  93-7-audio-bookmarks-and-audio-clips-sync: done  # PR #359
+  93-8-chat-conversations-and-learner-models-sync: done  # PR #360
   epic-93-retrospective: optional
 
   # Epic 94: Course & Book Library Sync — "My Library on Any Device"
