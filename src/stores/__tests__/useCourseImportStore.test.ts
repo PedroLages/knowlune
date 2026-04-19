@@ -213,8 +213,8 @@ describe('updateCourseStatus', () => {
 
 describe('addImportedCourse error handling', () => {
   it('should rollback on DB failure', async () => {
-    const { db } = await import('@/db')
-    vi.spyOn(db.importedCourses, 'add').mockRejectedValue(new Error('Write fail'))
+    const syncMod = await import('@/lib/sync/syncableWrite')
+    vi.spyOn(syncMod, 'syncableWrite').mockRejectedValue(new Error('Write fail'))
 
     const course = makeCourse({ name: 'Failing course' })
     await act(async () => {
@@ -233,8 +233,8 @@ describe('removeImportedCourse error handling', () => {
       await useCourseImportStore.getState().addImportedCourse(course)
     })
 
-    const { db } = await import('@/db')
-    vi.spyOn(db.importedCourses, 'delete').mockRejectedValue(new Error('fail'))
+    const syncMod = await import('@/lib/sync/syncableWrite')
+    vi.spyOn(syncMod, 'syncableWrite').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
       await useCourseImportStore.getState().removeImportedCourse(course.id)
@@ -298,8 +298,8 @@ describe('updateCourseTags', () => {
       await useCourseImportStore.getState().addImportedCourse(course)
     })
 
-    const { db } = await import('@/db')
-    vi.spyOn(db.importedCourses, 'update').mockRejectedValue(new Error('fail'))
+    const syncMod = await import('@/lib/sync/syncableWrite')
+    vi.spyOn(syncMod, 'syncableWrite').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
       await useCourseImportStore.getState().updateCourseTags(course.id, ['new'])
@@ -317,8 +317,8 @@ describe('updateCourseStatus error handling', () => {
       await useCourseImportStore.getState().addImportedCourse(course)
     })
 
-    const { db } = await import('@/db')
-    vi.spyOn(db.importedCourses, 'update').mockRejectedValue(new Error('fail'))
+    const syncMod = await import('@/lib/sync/syncableWrite')
+    vi.spyOn(syncMod, 'syncableWrite').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
       await useCourseImportStore.getState().updateCourseStatus(course.id, 'completed')
@@ -365,8 +365,8 @@ describe('updateCourseDetails', () => {
       await useCourseImportStore.getState().addImportedCourse(course)
     })
 
-    const { db } = await import('@/db')
-    vi.spyOn(db.importedCourses, 'update').mockRejectedValue(new Error('fail'))
+    const syncMod = await import('@/lib/sync/syncableWrite')
+    vi.spyOn(syncMod, 'syncableWrite').mockRejectedValue(new Error('fail'))
 
     const result = await act(async () => {
       return useCourseImportStore.getState().updateCourseDetails(course.id, { name: 'Changed' })
@@ -490,8 +490,8 @@ describe('renameTagGlobally', () => {
       await useCourseImportStore.getState().addImportedCourse(c1)
     })
 
-    const { db } = await import('@/db')
-    vi.spyOn(db.importedCourses, 'update').mockRejectedValue(new Error('fail'))
+    const syncMod = await import('@/lib/sync/syncableWrite')
+    vi.spyOn(syncMod, 'syncableWrite').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
       await useCourseImportStore.getState().renameTagGlobally('react', 'reactjs')
@@ -537,8 +537,8 @@ describe('deleteTagGlobally', () => {
       await useCourseImportStore.getState().addImportedCourse(c1)
     })
 
-    const { db } = await import('@/db')
-    vi.spyOn(db.importedCourses, 'update').mockRejectedValue(new Error('fail'))
+    const syncMod = await import('@/lib/sync/syncableWrite')
+    vi.spyOn(syncMod, 'syncableWrite').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
       await useCourseImportStore.getState().deleteTagGlobally('react')

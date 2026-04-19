@@ -786,6 +786,13 @@ export interface Book {
   series?: string // Series name for grouping (E110-S02)
   seriesSequence?: string // Position within series, e.g. "1", "2.5" (E110-S02)
   playbackSpeed?: number // Per-book speed memory — overrides global default (E111-S02)
+  // E94-S02: flat serializable fields for Supabase upload. `source` is a discriminated
+  // union that may contain a FileSystemFileHandle — Postgres cannot store it.
+  // `sourceType` and `sourceUrl` are populated at write time; `source` is stripped
+  // from the upload payload by the table registry. Optional for backward compatibility
+  // with Dexie rows written before E94-S02 and for records downloaded from Supabase.
+  sourceType?: string // 'local' | 'remote' | 'fileHandle'
+  sourceUrl?: string | null // remote URL for 'remote' sources; null for local/fileHandle
 }
 
 // --- Book Review Types (E113) ---

@@ -102,8 +102,8 @@ describe('addAuthor', () => {
   })
 
   it('should rollback on persistence failure', async () => {
-    const { db } = await import('@/db')
-    vi.spyOn(db.authors, 'add').mockRejectedValue(new Error('DB write failed'))
+    const syncMod = await import('@/lib/sync/syncableWrite')
+    vi.spyOn(syncMod, 'syncableWrite').mockRejectedValue(new Error('DB write failed'))
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
     await expect(
@@ -195,9 +195,9 @@ describe('updateAuthor', () => {
       })
     })
 
-    const { db } = await import('@/db')
+    const syncMod = await import('@/lib/sync/syncableWrite')
     const id = useAuthorStore.getState().authors[0].id
-    vi.spyOn(db.authors, 'put').mockRejectedValue(new Error('DB write failed'))
+    vi.spyOn(syncMod, 'syncableWrite').mockRejectedValue(new Error('DB write failed'))
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
     await expect(
@@ -266,9 +266,9 @@ describe('deleteAuthor', () => {
       })
     })
 
-    const { db } = await import('@/db')
+    const syncMod = await import('@/lib/sync/syncableWrite')
     const id = useAuthorStore.getState().authors[0].id
-    vi.spyOn(db.authors, 'delete').mockRejectedValue(new Error('DB delete failed'))
+    vi.spyOn(syncMod, 'syncableWrite').mockRejectedValue(new Error('DB delete failed'))
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
     await expect(useAuthorStore.getState().deleteAuthor(id)).rejects.toThrow('DB delete failed')

@@ -341,6 +341,13 @@ const authors: TableRegistryEntry = {
 /**
  * `books` tracks reading progress monotonically via the `progress` field
  * (a 0–100 percentage value).
+ *
+ * E94-S02: `source` is a ContentSource discriminated union that may contain a
+ * FileSystemFileHandle — not serializable for Postgres. Strip it from upload payloads.
+ * The flat fields `sourceType` and `sourceUrl` are written at write time and carry
+ * the serializable equivalent. Downloaded records from Supabase will have
+ * `source_type`/`source_url` (camelCased to `sourceType`/`sourceUrl`) but no `source`
+ * field — this is acceptable for MVP browse/metadata display.
  */
 const books: TableRegistryEntry = {
   dexieTable: 'books',
@@ -349,6 +356,7 @@ const books: TableRegistryEntry = {
   priority: 2,
   fieldMap: {},
   monotonicFields: ['progress'],
+  stripFields: ['source'],
 }
 
 const bookReviews: TableRegistryEntry = {

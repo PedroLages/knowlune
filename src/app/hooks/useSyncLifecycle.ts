@@ -29,6 +29,9 @@ import { useFlashcardStore } from '@/stores/useFlashcardStore'
 import { vectorStorePersistence } from '@/ai/vector-store'
 import { useVocabularyStore } from '@/stores/useVocabularyStore'
 import { useAudioClipStore } from '@/stores/useAudioClipStore'
+import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useAuthorStore } from '@/stores/useAuthorStore'
+import { useBookStore } from '@/stores/useBookStore'
 
 /** Interval between periodic nudge calls (ms). */
 const NUDGE_INTERVAL_MS = 30_000
@@ -97,6 +100,35 @@ export function useSyncLifecycle(): void {
     // learnerModels are loaded per-course via learnerModelService.getLearnerModel
     // — no global loadAll() exists. Same no-op rationale as chatConversations.
     syncEngine.registerStoreRefresh('learnerModels', () => Promise.resolve())
+
+    // -------------------------------------------------------------------------
+    // P2 store refresh registrations — E94-S02
+    // All three importedCourses/Videos/Pdfs callbacks trigger loadImportedCourses()
+    // because the course store re-queries all child records on next navigation.
+    // -------------------------------------------------------------------------
+
+    syncEngine.registerStoreRefresh('importedCourses', () =>
+      useCourseImportStore.getState().loadImportedCourses()
+    )
+
+    syncEngine.registerStoreRefresh('importedVideos', () =>
+      useCourseImportStore.getState().loadImportedCourses()
+    )
+
+    syncEngine.registerStoreRefresh('importedPdfs', () =>
+      useCourseImportStore.getState().loadImportedCourses()
+    )
+
+    // Reset isLoaded to force reload past the early-return guard before calling load.
+    syncEngine.registerStoreRefresh('authors', async () => {
+      useAuthorStore.setState({ isLoaded: false })
+      await useAuthorStore.getState().loadAuthors()
+    })
+
+    syncEngine.registerStoreRefresh('books', async () => {
+      useBookStore.setState({ isLoaded: false })
+      await useBookStore.getState().loadBooks()
+    })
 
     // Intentional: contentProgress store refresh is NOT registered here.
     // useContentProgressStore.loadCourseProgress(courseId) requires a mandatory

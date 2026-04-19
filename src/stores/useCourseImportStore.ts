@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { db } from '@/db'
 import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
+import type { SyncableRecord } from '@/lib/sync/syncableWrite'
 import { appEventBus } from '@/lib/eventBus'
 import {
   saveCourseThumbnail,
@@ -70,7 +72,7 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.importedCourses.add(course)
+        await syncableWrite('importedCourses', 'add', course as unknown as SyncableRecord)
       })
 
       // E43-S07: Emit import-finished event for notification
@@ -103,16 +105,17 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.transaction(
-          'rw',
-          [db.importedCourses, db.importedVideos, db.importedPdfs, db.courseThumbnails],
-          async () => {
-            await db.importedCourses.delete(courseId)
-            await db.importedVideos.where('courseId').equals(courseId).delete()
-            await db.importedPdfs.where('courseId').equals(courseId).delete()
-            await deleteCourseThumbnail(courseId)
-          }
-        )
+        // Fetch child IDs before deletion so each gets its own queue entry
+        const childVideos = await db.importedVideos.where('courseId').equals(courseId).toArray()
+        const childPdfs = await db.importedPdfs.where('courseId').equals(courseId).toArray()
+        for (const v of childVideos) {
+          await syncableWrite('importedVideos', 'delete', v.id)
+        }
+        for (const p of childPdfs) {
+          await syncableWrite('importedPdfs', 'delete', p.id)
+        }
+        await syncableWrite('importedCourses', 'delete', courseId)
+        await deleteCourseThumbnail(courseId)
       })
 
       // Revoke thumbnail object URL to free memory
@@ -167,7 +170,9 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.importedCourses.update(courseId, { tags: normalized })
+        const current = await db.importedCourses.get(courseId)
+        if (!current) return
+        await syncableWrite('importedCourses', 'put', { ...current, tags: normalized } as unknown as SyncableRecord)
       })
       // Refresh embedding after successful tag update (fire-and-forget, E52-S04)
       const updated = get().importedCourses.find(c => c.id === courseId)
@@ -203,7 +208,9 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.importedCourses.update(courseId, { status })
+        const current = await db.importedCourses.get(courseId)
+        if (!current) return
+        await syncableWrite('importedCourses', 'put', { ...current, status } as unknown as SyncableRecord)
       })
     } catch (error) {
       // Rollback on failure
@@ -240,7 +247,9 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.importedCourses.update(courseId, patch)
+        const current = await db.importedCourses.get(courseId)
+        if (!current) return
+        await syncableWrite('importedCourses', 'put', { ...current, ...patch } as unknown as SyncableRecord)
       })
       // Refresh embedding after successful metadata update (fire-and-forget, E52-S04)
       const updated = get().importedCourses.find(c => c.id === courseId)
@@ -352,11 +361,11 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.transaction('rw', db.importedCourses, async () => {
-          for (const course of updatedCourses) {
-            await db.importedCourses.update(course.id, { tags: course.tags })
-          }
-        })
+        // Sequential syncableWrite per course — loses transaction atomicity but
+        // gains per-record queue entries (E94-S02 tradeoff, see plan §Key Technical Decisions)
+        for (const course of updatedCourses) {
+          await syncableWrite('importedCourses', 'put', course as unknown as SyncableRecord)
+        }
       })
       return isMerge ? 'merged' : 'renamed'
     } catch (error) {
@@ -398,11 +407,11 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.transaction('rw', db.importedCourses, async () => {
-          for (const course of updatedCourses) {
-            await db.importedCourses.update(course.id, { tags: course.tags })
-          }
-        })
+        // Sequential syncableWrite per course — loses transaction atomicity but
+        // gains per-record queue entries (E94-S02 tradeoff, see plan §Key Technical Decisions)
+        for (const course of updatedCourses) {
+          await syncableWrite('importedCourses', 'put', course as unknown as SyncableRecord)
+        }
       })
     } catch (error) {
       // Rollback

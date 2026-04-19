@@ -3,6 +3,8 @@ import { toast } from 'sonner'
 import { db } from '@/db'
 import type { ImportedAuthor } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
+import type { SyncableRecord } from '@/lib/sync/syncableWrite'
 import { toastWithUndo, toastError } from '@/lib/toastHelpers'
 import { resolvePhotoHandle, revokePhotoUrl } from '@/lib/authorPhotoResolver'
 
@@ -116,7 +118,7 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.authors.add(author)
+        await syncableWrite('authors', 'add', author as unknown as SyncableRecord)
       })
       return author
     } catch (error) {
@@ -149,7 +151,7 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.authors.put(updated)
+        await syncableWrite('authors', 'put', updated as unknown as SyncableRecord)
       })
     } catch (error) {
       // Rollback on failure
@@ -176,7 +178,7 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.authors.delete(id)
+        await syncableWrite('authors', 'delete', id)
       })
 
       // Revoke object URL to prevent memory leak
@@ -188,7 +190,8 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
         toastWithUndo({
           message: `Author "${deletedAuthor.name}" deleted`,
           onUndo: async () => {
-            await db.authors.add(deletedAuthor)
+            // Re-enqueue the restored author for upload via syncableWrite
+            await syncableWrite('authors', 'add', deletedAuthor as unknown as SyncableRecord)
             // Restore at original index position
             const current = get().authors
             const restored = [...current]
@@ -234,7 +237,7 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.authors.put(updated)
+        await syncableWrite('authors', 'put', updated as unknown as SyncableRecord)
       })
     } catch (error) {
       set({ authors, error: 'Failed to link course to author' })
@@ -263,7 +266,7 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.authors.put(updated)
+        await syncableWrite('authors', 'put', updated as unknown as SyncableRecord)
       })
     } catch (error) {
       set({ authors, error: 'Failed to unlink course from author' })
