@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { saveSettings } from '@/lib/settings'
+import { saveSettings, saveSettingsToSupabase } from '@/lib/settings'
 
 const STORAGE_KEY = 'levelup-engagement-prefs-v1'
 
@@ -80,6 +80,15 @@ export const useEngagementPrefsStore = create<EngagementPrefsStore>((set, get) =
     if (key === 'colorScheme') {
       saveSettings({ colorScheme: value as ColorScheme })
       window.dispatchEvent(new Event('settingsUpdated'))
+    }
+    // Supabase sync — only for the three keys in the JSONB field map.
+    // badges and animations remain localStorage-only.
+    if (key === 'achievements') {
+      void saveSettingsToSupabase({ achievementsEnabled: value as boolean })
+    } else if (key === 'streaks') {
+      void saveSettingsToSupabase({ streaksEnabled: value as boolean })
+    } else if (key === 'colorScheme') {
+      void saveSettingsToSupabase({ colorScheme: value as ColorScheme })
     }
   },
 

@@ -15,6 +15,7 @@
  */
 import { create } from 'zustand'
 import type { ReadingGoal } from '@/data/types'
+import { saveSettingsToSupabase } from '@/lib/settings'
 
 const STORAGE_KEY = 'knowlune:reading-goals'
 const STREAK_KEY = 'knowlune:reading-goal-streak'
@@ -105,6 +106,12 @@ export const useReadingGoalStore = create<ReadingGoalState>((set, get) => ({
       // silent-catch-ok: storage quota
     }
     set({ goal, hasGoal: true })
+    // Streak fields (currentStreak, longestStreak, lastMetDate) are intentionally excluded — E95-S04.
+    void saveSettingsToSupabase({
+      dailyType: goal.dailyType,
+      dailyTarget: goal.dailyTarget,
+      yearlyBookTarget: goal.yearlyBookTarget,
+    })
   },
 
   clearGoal: () => {

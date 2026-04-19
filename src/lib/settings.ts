@@ -146,14 +146,67 @@ export function saveSettings(
   return updated
 }
 
+// ─── Supabase user_settings preference sync ──────────────────────────────────
+
+/**
+ * JSONB key map for the user_settings table.
+ * Only the fields listed here are persisted to Supabase; all others remain
+ * localStorage-only. Streak fields are intentionally excluded (E95-S04).
+ */
+export type UserSettingsPatch = {
+  // useReaderStore
+  readingTheme?: string
+  readingFontSize?: number
+  readingLineHeight?: number
+  readingRuler?: boolean
+  scrollMode?: boolean
+  // useAudiobookPrefsStore
+  defaultSpeed?: number
+  skipSilence?: boolean
+  defaultSleepTimer?: string | number
+  autoBookmarkOnStop?: boolean
+  // useReadingGoalStore (no streak fields)
+  dailyType?: string
+  dailyTarget?: number
+  yearlyBookTarget?: number
+  // useEngagementPrefsStore
+  achievementsEnabled?: boolean
+  streaksEnabled?: boolean
+  colorScheme?: string
+}
+
+/**
+ * Fire-and-forget push of a preference key-patch to the Supabase user_settings table.
+ * If the user is not authenticated, returns immediately (anonymous / offline path).
+ * Errors are swallowed with a console.warn — localStorage is still the offline fallback.
+ *
+ * Usage at call sites: `void saveSettingsToSupabase({ readingTheme: 'sepia' })`
+ */
+export async function saveSettingsToSupabase(patch: UserSettingsPatch): Promise<void> {
+  if (!supabase) return
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return
+  const { error } = await supabase.rpc('merge_user_settings', {
+    p_user_id: user.id,
+    p_patch: patch,
+  })
+  if (error) {
+    // silent-catch-ok — offline-first: localStorage save already succeeded.
+    console.warn('[settings] Supabase save failed:', error)
+  }
+}
+
 /**
  * Hydrate localStorage settings from Supabase user_metadata on login.
  * Only overwrites displayName/bio if Supabase has data and localStorage is at defaults.
  * Called from the auth state listener in App.tsx.
  */
-export function hydrateSettingsFromSupabase(
-  userMetadata: Record<string, unknown> | undefined
-): void {
+export async function hydrateSettingsFromSupabase(
+  userMetadata: Record<string, unknown> | undefined,
+  userId?: string
+): Promise<void> {
   if (!userMetadata) return
 
   const current = getSettings()
@@ -192,6 +245,120 @@ export function hydrateSettingsFromSupabase(
     // Save without syncing back to Supabase (data came from there)
     saveSettings(updates, { syncToSupabase: false })
     window.dispatchEvent(new Event('settingsUpdated'))
+  }
+
+  // ── Hydrate per-user preference stores from user_settings table ──────────
+  // Best-effort: errors are silently swallowed so profile hydration above always applies.
+  if (!userId || !supabase) return
+  try {
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('settings')
+      .eq('user_id', userId)
+      .single()
+
+    if (error) {
+      // PGRST116 = no rows returned (new user, row not yet created) — not an error.
+      if (error.code !== 'PGRST116') {
+        console.warn('[settings] Supabase user_settings fetch failed:', error)
+      }
+      return
+    }
+
+    const s = data?.settings
+    if (!s || typeof s !== 'object') return
+
+    // Lazy imports — Zustand stores are singleton modules; getState() is safe outside React.
+    const [
+      { useReaderStore },
+      { useAudiobookPrefsStore },
+      { useReadingGoalStore },
+      { useEngagementPrefsStore },
+    ] = await Promise.all([
+      import('@/stores/useReaderStore'),
+      import('@/stores/useAudiobookPrefsStore'),
+      import('@/stores/useReadingGoalStore'),
+      import('@/stores/useEngagementPrefsStore'),
+    ])
+
+    // ── useReaderStore ──
+    if (typeof s.readingTheme === 'string') {
+      const valid = ['light', 'sepia', 'dark']
+      if (valid.includes(s.readingTheme)) {
+        useReaderStore.getState().setTheme(s.readingTheme as import('@/stores/useReaderStore').ReaderTheme)
+      }
+    }
+    if (typeof s.readingFontSize === 'number' && s.readingFontSize >= 80 && s.readingFontSize <= 200) {
+      useReaderStore.getState().setFontSize(s.readingFontSize)
+    }
+    if (typeof s.readingLineHeight === 'number' && s.readingLineHeight >= 1.2 && s.readingLineHeight <= 2.0) {
+      useReaderStore.getState().setLineHeight(s.readingLineHeight)
+    }
+    if (typeof s.readingRuler === 'boolean') {
+      useReaderStore.getState().setReadingRulerEnabled(s.readingRuler)
+    }
+    if (typeof s.scrollMode === 'boolean') {
+      useReaderStore.getState().setScrollMode(s.scrollMode)
+    }
+
+    // ── useAudiobookPrefsStore ──
+    if (typeof s.defaultSpeed === 'number') {
+      useAudiobookPrefsStore.getState().setDefaultSpeed(s.defaultSpeed)
+    }
+    if (typeof s.skipSilence === 'boolean') {
+      const current = useAudiobookPrefsStore.getState().skipSilence
+      if (current !== s.skipSilence) {
+        useAudiobookPrefsStore.getState().toggleSkipSilence()
+      }
+    }
+    if (s.defaultSleepTimer !== undefined) {
+      const validTimers = new Set(['off', 15, 30, 45, 60, 'end-of-chapter'])
+      if (validTimers.has(s.defaultSleepTimer as string | number)) {
+        useAudiobookPrefsStore.getState().setDefaultSleepTimer(
+          s.defaultSleepTimer as import('@/stores/useAudiobookPrefsStore').SleepTimerDefault
+        )
+      }
+    }
+    if (typeof s.autoBookmarkOnStop === 'boolean') {
+      const current = useAudiobookPrefsStore.getState().autoBookmarkOnStop
+      if (current !== s.autoBookmarkOnStop) {
+        useAudiobookPrefsStore.getState().toggleAutoBookmark()
+      }
+    }
+
+    // ── useReadingGoalStore (no streak fields) ──
+    const hasGoalData =
+      typeof s.dailyType === 'string' ||
+      typeof s.dailyTarget === 'number' ||
+      typeof s.yearlyBookTarget === 'number'
+    if (hasGoalData) {
+      const existingGoal = useReadingGoalStore.getState().goal
+      useReadingGoalStore.getState().saveGoal({
+        dailyType: (typeof s.dailyType === 'string' ? s.dailyType : existingGoal?.dailyType ?? 'minutes') as import('@/data/types').ReadingGoal['dailyType'],
+        dailyTarget: typeof s.dailyTarget === 'number' ? s.dailyTarget : (existingGoal?.dailyTarget ?? 30),
+        yearlyBookTarget: typeof s.yearlyBookTarget === 'number' ? s.yearlyBookTarget : (existingGoal?.yearlyBookTarget ?? 12),
+      })
+    }
+
+    // ── useEngagementPrefsStore ──
+    if (typeof s.achievementsEnabled === 'boolean') {
+      useEngagementPrefsStore.getState().setPreference('achievements', s.achievementsEnabled)
+    }
+    if (typeof s.streaksEnabled === 'boolean') {
+      useEngagementPrefsStore.getState().setPreference('streaks', s.streaksEnabled)
+    }
+    if (typeof s.colorScheme === 'string') {
+      const validSchemes = ['professional', 'vibrant', 'clean']
+      if (validSchemes.includes(s.colorScheme)) {
+        useEngagementPrefsStore.getState().setPreference(
+          'colorScheme',
+          s.colorScheme as import('@/stores/useEngagementPrefsStore').ColorScheme
+        )
+      }
+    }
+  } catch (err) {
+    // silent-catch-ok — hydration is best-effort; localStorage fallback is always active.
+    console.warn('[settings] hydrateSettingsFromSupabase store hydration failed:', err)
   }
 }
 

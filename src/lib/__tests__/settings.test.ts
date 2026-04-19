@@ -14,9 +14,29 @@ Object.defineProperty(window, 'location', {
   writable: true,
 })
 
+// ── Supabase mock shared by saveSettingsToSupabase and hydrateSettingsFromSupabase tests ──
+// Must use vi.hoisted so variables are available when vi.mock factory runs (hoisting requirement).
+const { mockRpc, mockFrom, mockGetUser } = vi.hoisted(() => ({
+  mockRpc: vi.fn(),
+  mockFrom: vi.fn(),
+  mockGetUser: vi.fn(),
+}))
+
+vi.mock('@/lib/auth/supabase', () => ({
+  supabase: {
+    auth: {
+      getUser: mockGetUser,
+      updateUser: vi.fn().mockResolvedValue({ error: null }),
+    },
+    rpc: mockRpc,
+    from: mockFrom,
+  },
+}))
+
 import {
   getSettings,
   saveSettings,
+  saveSettingsToSupabase,
   exportAllData,
   importAllData,
   resetAllData,
@@ -544,16 +564,129 @@ describe('settings', () => {
       }
     })
 
-    it('does not dispatch settingsUpdated event when no updates needed', () => {
+    it('does not dispatch settingsUpdated event when no updates needed', async () => {
       saveSettings({ displayName: 'Already Set' })
       const handler = vi.fn()
       window.addEventListener('settingsUpdated', handler)
       try {
-        hydrateSettingsFromSupabase({ full_name: 'Ignored' })
+        await hydrateSettingsFromSupabase({ full_name: 'Ignored' })
         expect(handler).not.toHaveBeenCalled()
       } finally {
         window.removeEventListener('settingsUpdated', handler)
       }
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // saveSettingsToSupabase — Supabase RPC integration
+  // ---------------------------------------------------------------------------
+
+  describe('saveSettingsToSupabase', () => {
+    beforeEach(() => {
+      mockRpc.mockReset()
+      mockGetUser.mockReset()
+    })
+
+    it('calls supabase.rpc with correct args when authenticated', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } } })
+      mockRpc.mockResolvedValue({ error: null })
+
+      await saveSettingsToSupabase({ readingTheme: 'sepia' })
+
+      expect(mockRpc).toHaveBeenCalledWith('merge_user_settings', {
+        p_user_id: 'user-123',
+        p_patch: { readingTheme: 'sepia' },
+      })
+    })
+
+    it('does not call supabase.rpc when user is null (anonymous)', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: null } })
+
+      await saveSettingsToSupabase({ readingTheme: 'sepia' })
+
+      expect(mockRpc).not.toHaveBeenCalled()
+    })
+
+    it('does not throw when supabase.rpc rejects (swallows error)', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } } })
+      mockRpc.mockResolvedValue({ error: new Error('network error') })
+
+      await expect(saveSettingsToSupabase({ defaultSpeed: 1.5 })).resolves.toBeUndefined()
+    })
+
+    it('passes full patch object to rpc', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-abc' } } })
+      mockRpc.mockResolvedValue({ error: null })
+
+      await saveSettingsToSupabase({ dailyType: 'pages', dailyTarget: 20, yearlyBookTarget: 24 })
+
+      expect(mockRpc).toHaveBeenCalledWith('merge_user_settings', {
+        p_user_id: 'user-abc',
+        p_patch: { dailyType: 'pages', dailyTarget: 20, yearlyBookTarget: 24 },
+      })
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // hydrateSettingsFromSupabase — user_settings store hydration (E95-S01)
+  // ---------------------------------------------------------------------------
+
+  describe('hydrateSettingsFromSupabase — user_settings store hydration', () => {
+    beforeEach(() => {
+      mockFrom.mockReset()
+      mockGetUser.mockReset()
+    })
+
+    it('returns early without fetching when userId is not provided', async () => {
+      await hydrateSettingsFromSupabase({ full_name: 'User' })
+      expect(mockFrom).not.toHaveBeenCalled()
+    })
+
+    it('calls supabase.from(user_settings) when userId is provided', async () => {
+      const mockSingle = vi.fn().mockResolvedValue({ data: null, error: { code: 'PGRST116' } })
+      const mockEq = vi.fn(() => ({ single: mockSingle }))
+      const mockSelect = vi.fn(() => ({ eq: mockEq }))
+      mockFrom.mockReturnValue({ select: mockSelect })
+
+      await hydrateSettingsFromSupabase({}, 'user-123')
+
+      expect(mockFrom).toHaveBeenCalledWith('user_settings')
+      expect(mockSelect).toHaveBeenCalledWith('settings')
+      expect(mockEq).toHaveBeenCalledWith('user_id', 'user-123')
+    })
+
+    it('silently ignores PGRST116 (no row) without throwing', async () => {
+      const mockSingle = vi.fn().mockResolvedValue({ data: null, error: { code: 'PGRST116' } })
+      const mockEq = vi.fn(() => ({ single: mockSingle }))
+      const mockSelect = vi.fn(() => ({ eq: mockEq }))
+      mockFrom.mockReturnValue({ select: mockSelect })
+
+      await expect(hydrateSettingsFromSupabase({}, 'user-123')).resolves.toBeUndefined()
+    })
+
+    it('warns and returns on non-PGRST116 error without throwing', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: 'OTHER_ERROR', message: 'connection failed' },
+      })
+      const mockEq = vi.fn(() => ({ single: mockSingle }))
+      const mockSelect = vi.fn(() => ({ eq: mockEq }))
+      mockFrom.mockReturnValue({ select: mockSelect })
+
+      await expect(hydrateSettingsFromSupabase({}, 'user-123')).resolves.toBeUndefined()
+      expect(warnSpy).toHaveBeenCalled()
+      warnSpy.mockRestore()
+    })
+
+    it('returns early without applying stores when data.settings is null', async () => {
+      const mockSingle = vi.fn().mockResolvedValue({ data: { settings: null }, error: null })
+      const mockEq = vi.fn(() => ({ single: mockSingle }))
+      const mockSelect = vi.fn(() => ({ eq: mockEq }))
+      mockFrom.mockReturnValue({ select: mockSelect })
+
+      // Should not throw even when settings is null
+      await expect(hydrateSettingsFromSupabase({}, 'user-123')).resolves.toBeUndefined()
     })
   })
 })
