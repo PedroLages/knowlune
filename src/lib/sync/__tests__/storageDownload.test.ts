@@ -24,8 +24,11 @@ const {
   mockImportedPdfsUpdate,
   mockBooksGet,
   mockBooksUpdate,
+  mockBookFilesWhere,
   mockCreateSignedUrl,
   mockStoreCoverFile,
+  mockStoreBookFile,
+  mockReadBookFile,
 } = vi.hoisted(() => {
   const mockCourseThumbnailsGet = vi.fn()
   const mockCourseThumbnailsPut = vi.fn().mockResolvedValue(undefined)
@@ -35,8 +38,14 @@ const {
   const mockImportedPdfsUpdate = vi.fn().mockResolvedValue(undefined)
   const mockBooksGet = vi.fn()
   const mockBooksUpdate = vi.fn().mockResolvedValue(undefined)
+  // db.bookFiles.where('bookId').equals(bookId).toArray()
+  const mockBookFilesToArray = vi.fn().mockResolvedValue([])
+  const mockBookFilesEquals = vi.fn().mockReturnValue({ toArray: mockBookFilesToArray })
+  const mockBookFilesWhere = vi.fn().mockReturnValue({ equals: mockBookFilesEquals })
   const mockCreateSignedUrl = vi.fn()
   const mockStoreCoverFile = vi.fn().mockResolvedValue('indexeddb')
+  const mockStoreBookFile = vi.fn().mockResolvedValue('/knowlune/books/book1')
+  const mockReadBookFile = vi.fn().mockResolvedValue(null)
 
   return {
     mockCourseThumbnailsGet,
@@ -47,8 +56,11 @@ const {
     mockImportedPdfsUpdate,
     mockBooksGet,
     mockBooksUpdate,
+    mockBookFilesWhere,
     mockCreateSignedUrl,
     mockStoreCoverFile,
+    mockStoreBookFile,
+    mockReadBookFile,
   }
 })
 
@@ -70,6 +82,9 @@ vi.mock('@/db', () => ({
       get: mockBooksGet,
       update: mockBooksUpdate,
     },
+    bookFiles: {
+      where: mockBookFilesWhere,
+    },
   },
 }))
 
@@ -86,6 +101,8 @@ vi.mock('@/lib/auth/supabase', () => ({
 vi.mock('@/services/OpfsStorageService', () => ({
   opfsStorageService: {
     storeCoverFile: mockStoreCoverFile,
+    storeBookFile: mockStoreBookFile,
+    readBookFile: mockReadBookFile,
   },
 }))
 
@@ -253,6 +270,103 @@ describe('downloadStorageFilesForTable — books', () => {
 
     expect(mockFetch).not.toHaveBeenCalled()
     expect(mockStoreCoverFile).not.toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// books — _downloadBookFile (E94-S07)
+// ---------------------------------------------------------------------------
+
+describe('downloadStorageFilesForTable — books file download (E94-S07)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // Default: no local presence — forces download path
+    mockReadBookFile.mockResolvedValue(null)
+    // Default: no IDB rows
+    const mockToArray = vi.fn().mockResolvedValue([])
+    const mockEquals = vi.fn().mockReturnValue({ toArray: mockToArray })
+    mockBookFilesWhere.mockReturnValue({ equals: mockEquals })
+    // Default: cover not present (so _downloadBookCover returns early)
+    mockBooksGet.mockResolvedValue({ id: 'record-1' })
+    mockStoreBookFile.mockResolvedValue('/knowlune/books/record-1')
+  })
+
+  it('happy path: Supabase fileUrl, no local IDB rows, OPFS absent → fetch called, storeBookFile called, db.books.update NOT called', async () => {
+    const blob = makeBlob(500, 'application/epub+zip')
+    mockOkFetch(blob)
+
+    const record = makeRecord({
+      fileUrl: `${SUPABASE_URL}/book-files/user1/record-1/book.epub`,
+    })
+
+    await downloadStorageFilesForTable('books', [record], 'user1')
+
+    expect(mockFetch).toHaveBeenCalledOnce()
+    expect(mockStoreBookFile).toHaveBeenCalledWith(
+      'record-1',
+      expect.any(File),
+    )
+    // Critically: db.books.update must NOT be called for fileUrl
+    expect(mockBooksUpdate).not.toHaveBeenCalled()
+  })
+
+  it('edge case: record.fileUrl is null → download skipped entirely', async () => {
+    const record = makeRecord({ fileUrl: null })
+    await downloadStorageFilesForTable('books', [record], 'user1')
+    expect(mockFetch).not.toHaveBeenCalled()
+    expect(mockStoreBookFile).not.toHaveBeenCalled()
+  })
+
+  it('edge case: record.fileUrl starts with opfs:// (not a Supabase URL) → download skipped', async () => {
+    const record = makeRecord({ fileUrl: 'opfs:///knowlune/books/record-1/book.epub' })
+    await downloadStorageFilesForTable('books', [record], 'user1')
+    expect(mockFetch).not.toHaveBeenCalled()
+    expect(mockStoreBookFile).not.toHaveBeenCalled()
+  })
+
+  it('edge case: IDB bookFiles rows already exist for bookId → fetch NOT called (IDB presence check)', async () => {
+    const existingRow = { bookId: 'record-1', filename: 'book.epub', blob: makeBlob() }
+    const mockToArray = vi.fn().mockResolvedValue([existingRow])
+    const mockEquals = vi.fn().mockReturnValue({ toArray: mockToArray })
+    mockBookFilesWhere.mockReturnValue({ equals: mockEquals })
+
+    const record = makeRecord({
+      fileUrl: `${SUPABASE_URL}/book-files/user1/record-1/book.epub`,
+    })
+
+    await downloadStorageFilesForTable('books', [record], 'user1')
+    expect(mockFetch).not.toHaveBeenCalled()
+    expect(mockStoreBookFile).not.toHaveBeenCalled()
+  })
+
+  it('edge case: OPFS file already present → fetch NOT called (OPFS presence check)', async () => {
+    mockReadBookFile.mockResolvedValue(new File([new Uint8Array(100)], 'book.epub'))
+
+    const record = makeRecord({
+      fileUrl: `${SUPABASE_URL}/book-files/user1/record-1/book.epub`,
+    })
+
+    await downloadStorageFilesForTable('books', [record], 'user1')
+    expect(mockFetch).not.toHaveBeenCalled()
+    expect(mockStoreBookFile).not.toHaveBeenCalled()
+  })
+
+  it('error path (non-fatal): storeBookFile throws → outer try/catch absorbs; next record processed normally', async () => {
+    const blob = makeBlob(500, 'application/epub+zip')
+    mockOkFetch(blob)
+    mockStoreBookFile.mockRejectedValue(new Error('QuotaExceededError'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const record = makeRecord({
+      fileUrl: `${SUPABASE_URL}/book-files/user1/record-1/book.epub`,
+    })
+
+    await expect(downloadStorageFilesForTable('books', [record], 'user1')).resolves.toBeUndefined()
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[storageDownload]'),
+      expect.any(Error),
+    )
+    warnSpy.mockRestore()
   })
 })
 

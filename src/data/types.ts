@@ -795,6 +795,8 @@ export interface Book {
   // with Dexie rows written before E94-S02 and for records downloaded from Supabase.
   sourceType?: string // 'local' | 'remote' | 'fileHandle'
   sourceUrl?: string | null // remote URL for 'remote' sources; null for local/fileHandle
+  // E94-S07: Storage URL for primary book file; null until first sync upload
+  fileUrl?: string | null
 }
 
 // --- Book Review Types (E113) ---

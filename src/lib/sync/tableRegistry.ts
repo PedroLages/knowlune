@@ -363,9 +363,13 @@ const books: TableRegistryEntry = {
   supabaseTable: 'books',
   conflictStrategy: 'monotonic',
   priority: 2,
-  fieldMap: {},
+  // E94-S07: fileUrl maps to file_url column added by 20260421000001_books_file_url.sql.
+  fieldMap: { fileUrl: 'file_url' },
   monotonicFields: ['progress'],
-  stripFields: ['source'],
+  // E94-S07: fileUrl must be stripped from standard sync payloads — a device with
+  // fileUrl: null must not overwrite a valid Storage URL set by another device.
+  // The only path that writes fileUrl to Supabase is _uploadBookFile's direct update.
+  stripFields: ['source', 'fileUrl'],
 }
 
 const bookReviews: TableRegistryEntry = {

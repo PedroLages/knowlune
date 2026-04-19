@@ -494,6 +494,27 @@ describe('fieldMapper — vaultFields are removed', () => {
 })
 
 // ---------------------------------------------------------------------------
+// E94-S07 — books.fileUrl stripFields + fieldMap
+// ---------------------------------------------------------------------------
+
+describe('tableRegistry — books fileUrl (E94-S07)', () => {
+  it('books.stripFields contains fileUrl', () => {
+    const entry = getTableEntry('books')
+    expect(entry?.stripFields).toContain('fileUrl')
+  })
+
+  it('books.stripFields still contains source', () => {
+    const entry = getTableEntry('books')
+    expect(entry?.stripFields).toContain('source')
+  })
+
+  it('books.fieldMap maps fileUrl to file_url', () => {
+    const entry = getTableEntry('books')
+    expect(entry?.fieldMap).toMatchObject({ fileUrl: 'file_url' })
+  })
+})
+
+// ---------------------------------------------------------------------------
 // getTableEntry helper
 // ---------------------------------------------------------------------------
 

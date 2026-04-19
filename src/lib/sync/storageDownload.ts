@@ -70,6 +70,7 @@ export async function downloadStorageFilesForTable(
           break
         case 'books':
           await _downloadBookCover(record, userId)
+          await _downloadBookFile(record, userId) // E94-S07
           break
       }
     } catch (err) {
@@ -188,6 +189,49 @@ async function _downloadBookCover(
 
   // Update the local record so useBookCoverUrl renders from OPFS on next mount.
   await db.books.update(bookId, { coverUrl: `opfs-cover://${bookId}` })
+}
+
+/**
+ * Download the primary book binary file from Supabase Storage and store it
+ * locally via opfsStorageService (OPFS with automatic IDB fallback).
+ *
+ * Local-presence checks (two-stage):
+ *   A. db.bookFiles IDB rows (bookId) — file stored as IDB fallback blob
+ *   B. opfsStorageService.readBookFile — file stored in OPFS
+ * Either hit → return early (idempotent; no re-fetch).
+ *
+ * Does NOT update db.books.fileUrl — the fieldMap: { fileUrl: 'file_url' }
+ * from tableRegistry already set it to the remote HTTPS URL via the table-row
+ * sync path. Overwriting with an OPFS path would break the remote URL reference.
+ *
+ * @since E94-S07
+ */
+async function _downloadBookFile(
+  record: Record<string, unknown>,
+  _userId: string,
+): Promise<void> {
+  const fileUrl = record['fileUrl'] as string | undefined
+  if (!fileUrl || !_isSupabaseStorageUrl(fileUrl)) return
+
+  const bookId = record['id'] as string
+
+  // Local-presence check A: IDB fallback rows.
+  const idbRows = await db.bookFiles.where('bookId').equals(bookId).toArray()
+  if (idbRows.length > 0) return
+
+  // Local-presence check B: OPFS.
+  const opfsFile = await opfsStorageService.readBookFile(`/knowlune/books/${bookId}`, bookId)
+  if (opfsFile) return
+
+  const pathInfo = _extractStoragePath(fileUrl)
+  if (!pathInfo) return
+
+  const blob = await _fetchWithSignedFallback(fileUrl, pathInfo.bucket, pathInfo.path)
+
+  const filename = decodeURIComponent(fileUrl.split('/').pop() ?? 'book.epub')
+  await opfsStorageService.storeBookFile(bookId, new File([blob], filename, { type: blob.type }))
+
+  // Do NOT update db.books.fileUrl — fieldMap writeback already set it to the remote URL.
 }
 
 // ---------------------------------------------------------------------------
