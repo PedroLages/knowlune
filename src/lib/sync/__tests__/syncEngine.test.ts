@@ -59,6 +59,15 @@ const {
     { dexieTable: 'challenges', supabaseTable: 'challenges', conflictStrategy: 'monotonic', priority: 3, fieldMap: {} },
     { dexieTable: 'books', supabaseTable: 'books', conflictStrategy: 'lww', priority: 2, fieldMap: {} },
     { dexieTable: 'importedCourses', supabaseTable: 'imported_courses', conflictStrategy: 'lww', priority: 2, fieldMap: {} },
+    {
+      dexieTable: 'chapterMappings',
+      supabaseTable: 'chapter_mappings',
+      conflictStrategy: 'lww',
+      priority: 2,
+      fieldMap: { epubBookId: 'epub_book_id', audioBookId: 'audio_book_id', computedAt: 'computed_at', deleted: 'deleted' },
+      compoundPkFields: ['epubBookId', 'audioBookId'],
+      upsertConflictColumns: 'epub_book_id,audio_book_id,user_id',
+    },
   ]
 
   return {
@@ -578,6 +587,44 @@ describe('strategy routing', () => {
     // The known entry is still uploaded.
     expect(mockUpsert).toHaveBeenCalledTimes(1)
     errorSpy.mockRestore()
+  })
+
+  it('uses upsertConflictColumns for compound-PK tables (chapterMappings)', async () => {
+    vi.useFakeTimers()
+    setQueueEntries([
+      makeEntry({
+        tableName: 'chapterMappings',
+        recordId: 'epub-1\u001faudio-1',
+        payload: {
+          epub_book_id: 'epub-1',
+          audio_book_id: 'audio-1',
+          user_id: 'user-123',
+          mappings: [],
+          updated_at: '2026-04-20T00:00:00Z',
+        },
+      }),
+    ])
+
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.any(Array),
+      { onConflict: 'epub_book_id,audio_book_id,user_id' },
+    )
+  })
+
+  it('still uses onConflict: id for tables without upsertConflictColumns (notes regression)', async () => {
+    vi.useFakeTimers()
+    setQueueEntries([makeEntry({ tableName: 'notes' })])
+
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.any(Array),
+      { onConflict: 'id' },
+    )
   })
 })
 

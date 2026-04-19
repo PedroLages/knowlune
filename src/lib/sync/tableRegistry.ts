@@ -86,6 +86,13 @@ export interface TableRegistryEntry {
    * The download engine uses this value for both `.order()` and `.gte()` calls.
    */
   cursorField?: string
+  /**
+   * Override the columns used in the Supabase upsert `onConflict` clause.
+   * Defaults to `'id'` when absent. Use for tables whose PK spans multiple
+   * columns and does not include a standalone `id` column (e.g. `chapter_mappings`
+   * whose PK is `(epub_book_id, audio_book_id, user_id)`).
+   */
+  upsertConflictColumns?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -406,14 +413,23 @@ const readingQueue: TableRegistryEntry = {
 
 /**
  * `chapterMappings` uses a compound PK across epubBookId and audioBookId.
+ * Upload uses `upsertConflictColumns` to target all three PK columns
+ * (epub_book_id, audio_book_id, user_id) instead of the default `id`.
+ * Soft-delete: `deleted: true` records are removed from Dexie in _applyRecord.
  */
 const chapterMappings: TableRegistryEntry = {
   dexieTable: 'chapterMappings',
   supabaseTable: 'chapter_mappings',
   conflictStrategy: 'lww',
   priority: 2,
-  fieldMap: {},
+  fieldMap: {
+    epubBookId: 'epub_book_id',
+    audioBookId: 'audio_book_id',
+    computedAt: 'computed_at',
+    deleted: 'deleted',
+  },
   compoundPkFields: ['epubBookId', 'audioBookId'],
+  upsertConflictColumns: 'epub_book_id,audio_book_id,user_id',
 }
 
 // ---------------------------------------------------------------------------

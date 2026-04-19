@@ -1037,9 +1037,13 @@ export interface ChapterMapping {
 export interface ChapterMappingRecord {
   epubBookId: string // FK to Book.id (format: 'epub')
   audioBookId: string // FK to Book.id (format: 'audiobook')
+  /** Stamped by syncableWrite on every write (E94-S06) */
+  userId?: string | null
   mappings: ChapterMapping[]
   computedAt: string // ISO 8601
   updatedAt: string // ISO 8601
+  /** Soft-delete flag — true means the mapping was deleted and should not be shown (E94-S06) */
+  deleted?: boolean
 }
 
 /** Message in a tutor chat conversation (persisted to Dexie) */

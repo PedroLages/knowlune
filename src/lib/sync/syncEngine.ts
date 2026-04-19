@@ -460,15 +460,16 @@ async function _uploadBatch(
         console.warn(
           `[syncEngine] No monotonic RPC for table "${tableEntry.supabaseTable}" — falling back to generic upsert. Implement dedicated RPC in E93–E96.`,
         )
+        const conflictColMono = tableEntry.upsertConflictColumns ?? 'id'
         const { error } = await supabase
           .from(tableEntry.supabaseTable)
-          .upsert(payloads, { onConflict: 'id' })
+          .upsert(payloads, { onConflict: conflictColMono })
         if (error) {
           const isNetworkError = false
           await _handleBatchError(entries, error, isNetworkError, async () => {
             const { error: retryError } = await supabase!
               .from(tableEntry.supabaseTable)
-              .upsert(payloads, { onConflict: 'id' })
+              .upsert(payloads, { onConflict: conflictColMono })
             if (!retryError) {
               await db.syncQueue.bulkDelete(entries.map((e) => e.id!))
               return true
@@ -479,16 +480,19 @@ async function _uploadBatch(
         }
       }
     } else {
-      // Default: LWW, conflict-copy, or any other — upsert with conflict on 'id'.
+      // Default: LWW, conflict-copy, or any other — upsert with conflict resolution.
+      // For compound-PK tables (e.g. chapter_mappings), upsertConflictColumns overrides
+      // the default 'id' target. All other tables continue to use onConflict: 'id'.
+      const conflictCol = tableEntry.upsertConflictColumns ?? 'id'
       const { error } = await supabase
         .from(tableEntry.supabaseTable)
-        .upsert(payloads, { onConflict: 'id' })
+        .upsert(payloads, { onConflict: conflictCol })
       if (error) {
         const isNetworkError = false
         await _handleBatchError(entries, error, isNetworkError, async () => {
           const { error: retryError } = await supabase!
             .from(tableEntry.supabaseTable)
-            .upsert(payloads, { onConflict: 'id' })
+            .upsert(payloads, { onConflict: conflictCol })
           if (!retryError) {
             await db.syncQueue.bulkDelete(entries.map((e) => e.id!))
             return true
@@ -676,6 +680,26 @@ async function _applyRecord(
   const table = (db as unknown as Record<string, Table<Record<string, unknown>>>)[entry.dexieTable]
   if (!table) {
     console.error(`[syncEngine] Dexie table "${entry.dexieTable}" not found — skipping record.`)
+    return
+  }
+
+  // Soft-delete guard: if the downloaded record is marked deleted, remove it
+  // from Dexie instead of applying it as a live record. This handles compound-PK
+  // tables (e.g. chapterMappings) and simple-PK tables uniformly.
+  // Guard fires only on `deleted === true` (strict) — absence or false is normal apply.
+  // Note: `notes` uses `soft_deleted` (not `deleted`) so this guard never fires for notes.
+  if (record['deleted'] === true) {
+    if (entry.compoundPkFields && entry.compoundPkFields.length > 0) {
+      const keyValues = entry.compoundPkFields.map((f) => record[f])
+      // Cast mirrors the pattern used in _getLocalRecord — Dexie's TypeScript types
+      // don't expose compound-key where() overloads; the runtime call is correct.
+      await (table as unknown as { where: (fields: string[]) => { equals: (values: unknown[]) => { delete: () => Promise<number> } } })
+        .where(entry.compoundPkFields)
+        .equals(keyValues)
+        .delete()
+    } else {
+      await table.delete(record['id'] as string)
+    }
     return
   }
 
