@@ -1197,7 +1197,7 @@ development_status:
   96-1-p3-p4-supabase-migrations: backlog
   96-2-wire-p3-p4-stores-with-syncable-write: backlog
   96-3-ai-usage-events-course-reminders-and-notifications-sync: backlog
-  96-4-youtube-chapters-sync-evaluation: backlog
+  96-4-youtube-chapters-sync-evaluation: done  # docs-only closeout, see KI-E96-S04-L01 (defer wont-fix); KI-E96-S04-L02 logs separate cascade-delete bug
   epic-96-retrospective: optional
 
   # Epic 97: Sync UX Polish — "Sync That Just Works"
