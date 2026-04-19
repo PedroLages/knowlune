@@ -89,6 +89,7 @@ export function PostSessionBookmarkReview({
   const handleNoteSave = useCallback(async (id: string) => {
     const trimmed = (editingNotesRef.current[id] ?? '').trim()
     try {
+      // sync: local-only — audio_bookmarks has no updated_at column; note edits cannot be LWW-synced
       await db.audioBookmarks.update(id, { note: trimmed || undefined })
       // Update local state to reflect saved note
       setBookmarks(prev =>

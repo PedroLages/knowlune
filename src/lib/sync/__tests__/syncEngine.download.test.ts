@@ -630,3 +630,81 @@ describe('conflict-copy strategy', () => {
     )
   })
 })
+
+// ---------------------------------------------------------------------------
+// E93-S07 — cursorField override in _doDownload
+// ---------------------------------------------------------------------------
+
+describe('cursorField override (E93-S07)', () => {
+  // We test cursorField by injecting a custom registry entry into the mocked
+  // tableRegistry array. The 'notes' table is repurposed as the test subject.
+
+  const defaultNotesEntry = {
+    dexieTable: 'notes',
+    supabaseTable: 'notes',
+    conflictStrategy: 'lww' as const,
+    priority: 1 as const,
+    fieldMap: {},
+  }
+  const notesWithCursorField = {
+    ...defaultNotesEntry,
+    cursorField: 'created_at',
+  }
+
+  let notesEntryIndex: number
+
+  beforeEach(() => {
+    notesEntryIndex = tableRegistry.findIndex(e => e.dexieTable === 'notes')
+    if (notesEntryIndex >= 0) tableRegistry.splice(notesEntryIndex, 1, notesWithCursorField)
+  })
+
+  afterEach(() => {
+    if (notesEntryIndex >= 0) tableRegistry.splice(notesEntryIndex, 1, defaultNotesEntry)
+  })
+
+  it('uses cursorField column for order when entry specifies cursorField', async () => {
+    // Provide rows with created_at, not updated_at
+    downloadResults['notes'] = {
+      data: [{ id: 'n-cf-1', created_at: '2026-04-18T10:00:00Z' }],
+      error: null,
+    }
+
+    const { supabase } = await import('@/lib/auth/supabase')
+    await syncEngine.fullSync()
+
+    // The from() call should have used 'created_at' in order()
+    const fromCall = vi.mocked(supabase!.from).mock.calls.find(c => c[0] === 'notes')
+    expect(fromCall).toBeDefined()
+  })
+
+  it('advances syncMetadata cursor using created_at value when cursorField: created_at', async () => {
+    downloadResults['notes'] = {
+      data: [
+        { id: 'n-cf-2', created_at: '2026-04-18T09:00:00Z' },
+        { id: 'n-cf-3', created_at: '2026-04-18T11:00:00Z' },
+      ],
+      error: null,
+    }
+
+    await syncEngine.fullSync()
+
+    // Cursor must be advanced to max created_at (not updated_at, which is absent)
+    expect(mockSyncMetadataPut).toHaveBeenCalledWith(
+      expect.objectContaining({ table: 'notes', lastSyncTimestamp: '2026-04-18T11:00:00Z' }),
+    )
+  })
+
+  it('full download (cursor null) proceeds without .gte() — existing behavior preserved', async () => {
+    mockSyncMetadataGet.mockResolvedValue(undefined) // cursor = null → no .gte()
+
+    downloadResults['notes'] = {
+      data: [{ id: 'n-cf-4', created_at: '2026-04-18T08:00:00Z' }],
+      error: null,
+    }
+
+    await expect(syncEngine.fullSync()).resolves.not.toThrow()
+    expect(mockSyncMetadataPut).toHaveBeenCalledWith(
+      expect.objectContaining({ table: 'notes', lastSyncTimestamp: '2026-04-18T08:00:00Z' }),
+    )
+  })
+})

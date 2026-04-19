@@ -856,6 +856,7 @@ export interface AudioClip {
   title?: string // user-assigned label
   sortOrder: number // 0-based display order (for DnD reordering)
   createdAt: string // ISO 8601
+  updatedAt?: string // ISO 8601 — stamped by syncableWrite
 }
 
 /** OPDS catalog connection configuration (E88-S01) */

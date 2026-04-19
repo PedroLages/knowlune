@@ -18,6 +18,7 @@ import { Button } from '@/app/components/ui/button'
 import { db } from '@/db/schema'
 import { formatAudioTime } from '@/app/hooks/useAudioPlayer'
 import type { AudioBookmark } from '@/data/types'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 /** Bookmarks within this many seconds of currentTime are considered "at this position" */
 const PROXIMITY_THRESHOLD_S = 3
@@ -91,6 +92,7 @@ export function BookmarkButton({
     if (existing) {
       // Toggle off — remove existing bookmark
       try {
+        // sync: local-only — audioBookmarks insertOnly; delete not propagated to Supabase
         await db.audioBookmarks.delete(existing.id)
         setIsNearBookmark(false)
         onBookmarkDeleted?.(existing.id)
@@ -113,7 +115,7 @@ export function BookmarkButton({
     }
 
     try {
-      await db.audioBookmarks.add(record)
+      await syncableWrite('audioBookmarks', 'add', record as unknown as SyncableRecord)
       setIsNearBookmark(true)
       setPendingId(id)
       setNote('')
@@ -132,6 +134,7 @@ export function BookmarkButton({
     const trimmed = note.trim()
     if (trimmed) {
       try {
+        // sync: local-only — audio_bookmarks has no updated_at column; note edits cannot be LWW-synced
         await db.audioBookmarks.update(pendingId, { note: trimmed })
       } catch {
         // silent-catch-ok: note is optional, loss is non-fatal

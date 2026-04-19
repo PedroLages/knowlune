@@ -28,6 +28,7 @@ import { useSyncStatusStore } from '@/app/stores/useSyncStatusStore'
 import { useFlashcardStore } from '@/stores/useFlashcardStore'
 import { vectorStorePersistence } from '@/ai/vector-store'
 import { useVocabularyStore } from '@/stores/useVocabularyStore'
+import { useAudioClipStore } from '@/stores/useAudioClipStore'
 
 /** Interval between periodic nudge calls (ms). */
 const NUDGE_INTERVAL_MS = 30_000
@@ -74,6 +75,18 @@ export function useSyncLifecycle(): void {
 
     syncEngine.registerStoreRefresh('vocabularyItems', () =>
       useVocabularyStore.getState().loadAllItems()
+    )
+
+    // audioBookmarks are loaded per-book on navigation — no global loadAll exists.
+    // A no-op is correct: after fullSync, the next book navigation will re-query Dexie
+    // and pick up any downloaded bookmarks automatically.
+    syncEngine.registerStoreRefresh('audioBookmarks', () => Promise.resolve())
+
+    // audioClips are scoped per-book. Load with empty string so the guard
+    // (isLoaded && loadedBookId === bookId) never matches '' in practice.
+    // The next book navigation will reload the correct clips.
+    syncEngine.registerStoreRefresh('audioClips', () =>
+      useAudioClipStore.getState().loadClips('')
     )
 
     // Intentional: contentProgress store refresh is NOT registered here.

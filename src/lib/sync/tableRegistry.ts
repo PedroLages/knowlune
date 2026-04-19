@@ -79,6 +79,13 @@ export interface TableRegistryEntry {
    * cursor is never advanced for these tables. This is correct behavior.
    */
   uploadOnly?: boolean
+  /**
+   * Override the column used as the incremental download cursor.
+   * Defaults to `updated_at` when absent. Use for tables that have no
+   * `updated_at` column (e.g. `audio_bookmarks` which uses `created_at`).
+   * The download engine uses this value for both `.order()` and `.gte()` calls.
+   */
+  cursorField?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -218,12 +225,26 @@ const vocabularyItems: TableRegistryEntry = {
   monotonicFields: ['masteryLevel'],
 }
 
+/**
+ * `audioBookmarks` is an immutable append-only event log: once created a record
+ * is never updated or deleted on the server. Key invariants:
+ *   - No `updated_at` column in Supabase — `cursorField` must be `'created_at'`.
+ *   - `conflictStrategy: 'insert-only'` + `insertOnly: true` → upload engine uses
+ *     `INSERT ... ON CONFLICT DO NOTHING`.
+ *   - `stripFields: ['updatedAt']` prevents the spurious `updatedAt` stamp added by
+ *     `syncableWrite` from being included in the Supabase INSERT payload (the column
+ *     doesn't exist in Postgres — it would cause a column-not-found error).
+ *   - Hard deletes and note edits remain local-only (no `updated_at` → LWW impossible).
+ */
 const audioBookmarks: TableRegistryEntry = {
   dexieTable: 'audioBookmarks',
   supabaseTable: 'audio_bookmarks',
-  conflictStrategy: 'lww',
+  conflictStrategy: 'insert-only',
   priority: 1,
   fieldMap: {},
+  insertOnly: true,
+  cursorField: 'created_at',
+  stripFields: ['updatedAt'],
 }
 
 const audioClips: TableRegistryEntry = {
