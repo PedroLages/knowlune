@@ -25,6 +25,8 @@ import {
   HardDrive,
   Key,
   GraduationCap,
+  RefreshCw,
+  Cloud,
   type LucideIcon,
 } from 'lucide-react'
 import type { SettingsCategorySlug } from './settingsCategories'
@@ -348,6 +350,29 @@ export const SETTINGS_SEARCH_INDEX: SettingsSearchEntry[] = [
     description: 'Permanently delete everything',
     keywords: ['reset', 'wipe', 'clear', 'delete all', 'danger'],
     category: 'integrations',
+    icon: Trash2,
+  },
+
+  // Sync
+  {
+    label: 'Auto-sync',
+    description: 'Pause or resume automatic cloud sync',
+    keywords: ['sync', 'auto-sync', 'cloud', 'backup', 'pause', 'resume'],
+    category: 'sync',
+    icon: RefreshCw,
+  },
+  {
+    label: 'Sync Now',
+    description: 'Manually trigger a cloud sync',
+    keywords: ['sync', 'cloud', 'manual', 'refresh', 'force'],
+    category: 'sync',
+    icon: Cloud,
+  },
+  {
+    label: 'Clear local data and re-sync',
+    description: 'Wipe local data and re-download from cloud',
+    keywords: ['sync', 'reset', 'clear data', 'wipe', 'rehydrate', 'danger'],
+    category: 'sync',
     icon: Trash2,
   },
 ]

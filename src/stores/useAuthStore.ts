@@ -150,3 +150,11 @@ export const useAuthStore = create<AuthStore>(set => ({
     set({ sessionExpired: false })
   },
 }))
+
+// Expose the store on window in development / test builds so E2E tests can
+// drive auth state directly without spinning up a real Supabase session.
+// Tree-shaken in production builds (import.meta.env.PROD is false in dev/test).
+if (typeof window !== 'undefined' && !import.meta.env.PROD) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window as any).__authStore = useAuthStore
+}
