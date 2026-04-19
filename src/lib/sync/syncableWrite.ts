@@ -82,6 +82,57 @@ export async function syncableWrite<T extends SyncableRecord>(
     )
   }
 
+  // [1a] recordId guard — validate before any Dexie write so the
+  // "throw = zero partial state" invariant holds. For 'delete' the `record`
+  // argument is the id string; for 'put' / 'add' it is the record's `id`
+  // property. A missing / empty / whitespace-only id is a caller bug — same
+  // severity as an unknown table — and would otherwise enqueue an
+  // undeliverable upload job. Mirrors the unknown-table message shape so
+  // downstream log scrapers can match on the `[syncableWrite]` prefix.
+  //
+  // Compound-PK tables (e.g. contentProgress, audioCueAlignments) have no
+  // single `id` field — the upload engine identifies rows by the compound
+  // key values inside the payload. For those, synthesize a stable recordId
+  // from the compound fields so syncQueue.recordId is still meaningful, and
+  // skip the empty-id throw for put/add (delete is not currently used for
+  // compound-PK tables — the synthesized recordId would not be available
+  // from the bare string the caller passes).
+  let recordId: string
+  if (operation === 'delete') {
+    const id = record as string | null | undefined
+    if (typeof id !== 'string' || id.trim() === '') {
+      throw new Error(
+        `[syncableWrite] Empty recordId for table "${tableName}" ` +
+          `(operation "${operation}"). A non-empty id is required.`,
+      )
+    }
+    recordId = id
+  } else if (entry.compoundPkFields && entry.compoundPkFields.length > 0) {
+    const rec = record as SyncableRecord | null | undefined
+    const parts = entry.compoundPkFields.map((field) => {
+      const value = rec?.[field]
+      return typeof value === 'string' || typeof value === 'number'
+        ? String(value)
+        : ''
+    })
+    if (parts.some((p) => p.trim() === '')) {
+      throw new Error(
+        `[syncableWrite] Empty recordId for table "${tableName}" ` +
+          `(operation "${operation}"). A non-empty id is required.`,
+      )
+    }
+    recordId = parts.join(':')
+  } else {
+    const id = (record as SyncableRecord | null | undefined)?.id
+    if (typeof id !== 'string' || id.trim() === '') {
+      throw new Error(
+        `[syncableWrite] Empty recordId for table "${tableName}" ` +
+          `(operation "${operation}"). A non-empty id is required.`,
+      )
+    }
+    recordId = id
+  }
+
   // [2] Auth — read inside the function body to avoid stale closures.
   // Intentional: getState() is the correct pattern for reading Zustand outside React.
   const userId = useAuthStore.getState().user?.id ?? null
@@ -116,17 +167,9 @@ export async function syncableWrite<T extends SyncableRecord>(
     return
   }
 
-  // [5] Build the queue payload and enqueue.
+  // [5] Build the queue payload and enqueue. `recordId` was derived and
+  // validated above (step [1a]) — reuse here so the two paths cannot drift.
   try {
-    // `recordId` is the primary key used by the upload engine to coalesce
-    // duplicate queue entries for the same record.
-    // TODO(E92-S05): the upload engine must validate that recordId is non-empty
-    // before uploading — a missing `id` on the record is a caller bug.
-    const recordId =
-      operation === 'delete'
-        ? (record as string)
-        : ((record as SyncableRecord).id ?? '')
-
     // Build the Supabase-compatible payload.
     // `toSnakeCase` automatically strips both `stripFields` (non-serializable
     // browser handles) and `vaultFields` (credentials that must never reach

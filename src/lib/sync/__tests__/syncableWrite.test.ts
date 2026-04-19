@@ -93,9 +93,9 @@ describe('syncableWrite', () => {
   describe('authenticated put', () => {
     it('calls db.table().put() with the stamped record', async () => {
       const record = { id: 'rec-1', someField: 'value' }
-      await syncableWrite('contentProgress', 'put', record)
+      await syncableWrite('notes', 'put', record)
 
-      expect(db.table).toHaveBeenCalledWith('contentProgress')
+      expect(db.table).toHaveBeenCalledWith('notes')
       expect(mockPut).toHaveBeenCalledWith(
         expect.objectContaining({
           id: 'rec-1',
@@ -108,11 +108,11 @@ describe('syncableWrite', () => {
 
     it('creates a syncQueue entry with correct fields', async () => {
       const record = { id: 'rec-1', someField: 'value' }
-      await syncableWrite('contentProgress', 'put', record)
+      await syncableWrite('notes', 'put', record)
 
       expect(mockSyncQueueAdd).toHaveBeenCalledWith(
         expect.objectContaining({
-          tableName: 'contentProgress',
+          tableName: 'notes',
           recordId: 'rec-1',
           operation: 'put',
           attempts: 0,
@@ -124,7 +124,7 @@ describe('syncableWrite', () => {
     })
 
     it('calls syncEngine.nudge() after enqueueing', async () => {
-      await syncableWrite('contentProgress', 'put', { id: 'rec-1' })
+      await syncableWrite('notes', 'put', { id: 'rec-1' })
       expect(mockNudge).toHaveBeenCalledTimes(1)
     })
   })
@@ -197,23 +197,23 @@ describe('syncableWrite', () => {
     beforeEach(() => setAuth(null))
 
     it('still calls db.table().put() (Dexie write succeeds)', async () => {
-      await syncableWrite('contentProgress', 'put', { id: 'rec-3' })
+      await syncableWrite('notes', 'put', { id: 'rec-3' })
       expect(mockPut).toHaveBeenCalledTimes(1)
     })
 
     it('does NOT create a syncQueue entry', async () => {
-      await syncableWrite('contentProgress', 'put', { id: 'rec-3' })
+      await syncableWrite('notes', 'put', { id: 'rec-3' })
       expect(mockSyncQueueAdd).not.toHaveBeenCalled()
     })
 
     it('does NOT call syncEngine.nudge()', async () => {
-      await syncableWrite('contentProgress', 'put', { id: 'rec-3' })
+      await syncableWrite('notes', 'put', { id: 'rec-3' })
       expect(mockNudge).not.toHaveBeenCalled()
     })
 
     it('does not throw', async () => {
       await expect(
-        syncableWrite('contentProgress', 'put', { id: 'rec-3' }),
+        syncableWrite('notes', 'put', { id: 'rec-3' }),
       ).resolves.toBeUndefined()
     })
   })
@@ -224,17 +224,17 @@ describe('syncableWrite', () => {
 
   describe('skipQueue: true', () => {
     it('calls db.table().put() (Dexie write still happens)', async () => {
-      await syncableWrite('contentProgress', 'put', { id: 'rec-4' }, { skipQueue: true })
+      await syncableWrite('notes', 'put', { id: 'rec-4' }, { skipQueue: true })
       expect(mockPut).toHaveBeenCalledTimes(1)
     })
 
     it('does NOT create a syncQueue entry', async () => {
-      await syncableWrite('contentProgress', 'put', { id: 'rec-4' }, { skipQueue: true })
+      await syncableWrite('notes', 'put', { id: 'rec-4' }, { skipQueue: true })
       expect(mockSyncQueueAdd).not.toHaveBeenCalled()
     })
 
     it('does NOT call syncEngine.nudge()', async () => {
-      await syncableWrite('contentProgress', 'put', { id: 'rec-4' }, { skipQueue: true })
+      await syncableWrite('notes', 'put', { id: 'rec-4' }, { skipQueue: true })
       expect(mockNudge).not.toHaveBeenCalled()
     })
   })
@@ -325,6 +325,99 @@ describe('syncableWrite', () => {
   })
 
   // -------------------------------------------------------------------------
+  // Error path — empty / missing recordId (guard — E92-S05 follow-up)
+  // -------------------------------------------------------------------------
+
+  describe('empty recordId guard', () => {
+    it('throws when put record has id: ""', async () => {
+      await expect(
+        syncableWrite('notes', 'put', { id: '' }),
+      ).rejects.toThrow(
+        '[syncableWrite] Empty recordId for table "notes" (operation "put")',
+      )
+    })
+
+    it('throws when put record has id: "   " (whitespace)', async () => {
+      await expect(
+        syncableWrite('notes', 'put', { id: '   ' }),
+      ).rejects.toThrow(/Empty recordId/)
+    })
+
+    it('throws when add record is missing id', async () => {
+      await expect(
+        syncableWrite('studySessions', 'add', { field: 'x' }),
+      ).rejects.toThrow(/Empty recordId.*operation "add"/)
+    })
+
+    it('throws when delete record is the empty string', async () => {
+      await expect(
+        syncableWrite('notes', 'delete', ''),
+      ).rejects.toThrow(/Empty recordId.*operation "delete"/)
+    })
+
+    it('does NOT touch Dexie or syncQueue when guard throws on put', async () => {
+      await expect(
+        syncableWrite('notes', 'put', { id: '' }),
+      ).rejects.toThrow()
+      expect(mockPut).not.toHaveBeenCalled()
+      expect(mockSyncQueueAdd).not.toHaveBeenCalled()
+    })
+
+    it('does NOT touch Dexie or syncQueue when guard throws on delete', async () => {
+      await expect(
+        syncableWrite('notes', 'delete', '   '),
+      ).rejects.toThrow()
+      expect(mockDelete).not.toHaveBeenCalled()
+      expect(mockSyncQueueAdd).not.toHaveBeenCalled()
+    })
+
+    it('unauthenticated write with valid id still performs the Dexie write (guard does not block auth-skip path)', async () => {
+      setAuth(null)
+      await syncableWrite('notes', 'put', { id: 'ok' })
+      expect(mockPut).toHaveBeenCalledTimes(1)
+      expect(mockSyncQueueAdd).not.toHaveBeenCalled()
+    })
+
+    // Compound-PK tables (e.g. contentProgress, audioCueAlignments) — guard
+    // should derive recordId from the compound fields and accept the write.
+    it('accepts compound-PK puts when all compound fields are present', async () => {
+      await syncableWrite('contentProgress', 'put', {
+        courseId: 'course-1',
+        itemId: 'item-1',
+        status: 'completed',
+      })
+      expect(mockPut).toHaveBeenCalledTimes(1)
+      expect(mockSyncQueueAdd).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tableName: 'contentProgress',
+          recordId: 'course-1:item-1',
+        }),
+      )
+    })
+
+    it('throws when a compound-PK field is missing', async () => {
+      await expect(
+        syncableWrite('contentProgress', 'put', {
+          courseId: 'course-1',
+          // itemId missing
+          status: 'completed',
+        }),
+      ).rejects.toThrow(/Empty recordId.*"contentProgress"/)
+      expect(mockPut).not.toHaveBeenCalled()
+    })
+
+    it('throws when a compound-PK field is the empty string', async () => {
+      await expect(
+        syncableWrite('contentProgress', 'put', {
+          courseId: '',
+          itemId: 'item-1',
+          status: 'completed',
+        }),
+      ).rejects.toThrow(/Empty recordId.*"contentProgress"/)
+    })
+  })
+
+  // -------------------------------------------------------------------------
   // Error path — Dexie write failure (fatal)
   // -------------------------------------------------------------------------
 
@@ -334,7 +427,7 @@ describe('syncableWrite', () => {
       mockPut.mockRejectedValueOnce(dexieError)
 
       await expect(
-        syncableWrite('contentProgress', 'put', { id: 'rec-5' }),
+        syncableWrite('notes', 'put', { id: 'rec-5' }),
       ).rejects.toThrow('IndexedDB write failed')
     })
 
@@ -342,7 +435,7 @@ describe('syncableWrite', () => {
       mockPut.mockRejectedValueOnce(new Error('Dexie error'))
 
       await expect(
-        syncableWrite('contentProgress', 'put', { id: 'rec-5' }),
+        syncableWrite('notes', 'put', { id: 'rec-5' }),
       ).rejects.toThrow()
       expect(mockSyncQueueAdd).not.toHaveBeenCalled()
     })
@@ -357,13 +450,13 @@ describe('syncableWrite', () => {
       mockSyncQueueAdd.mockRejectedValueOnce(new Error('Queue full'))
 
       await expect(
-        syncableWrite('contentProgress', 'put', { id: 'rec-6' }),
+        syncableWrite('notes', 'put', { id: 'rec-6' }),
       ).resolves.toBeUndefined()
     })
 
     it('still completes the Dexie write before the queue failure', async () => {
       mockSyncQueueAdd.mockRejectedValueOnce(new Error('Queue full'))
-      await syncableWrite('contentProgress', 'put', { id: 'rec-6' })
+      await syncableWrite('notes', 'put', { id: 'rec-6' })
 
       expect(mockPut).toHaveBeenCalledTimes(1)
     })
@@ -375,8 +468,8 @@ describe('syncableWrite', () => {
 
   describe('nudge() integration', () => {
     it('calls nudge exactly once per authenticated write', async () => {
-      await syncableWrite('contentProgress', 'put', { id: 'a' })
-      await syncableWrite('contentProgress', 'put', { id: 'b' })
+      await syncableWrite('notes', 'put', { id: 'a' })
+      await syncableWrite('notes', 'put', { id: 'b' })
       expect(mockNudge).toHaveBeenCalledTimes(2)
     })
 
@@ -384,7 +477,7 @@ describe('syncableWrite', () => {
       // nudge is called from within the try block after syncQueue.add —
       // if add throws, the catch swallows and nudge is not reached.
       mockSyncQueueAdd.mockRejectedValueOnce(new Error('Queue full'))
-      await syncableWrite('contentProgress', 'put', { id: 'c' })
+      await syncableWrite('notes', 'put', { id: 'c' })
       expect(mockNudge).not.toHaveBeenCalled()
     })
   })

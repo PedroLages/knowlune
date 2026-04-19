@@ -124,6 +124,10 @@ const progress: TableRegistryEntry = {
   priority: 0,
   fieldMap: {},
   monotonicFields: ['watchedSeconds'],
+  // Logical PK is [courseId+videoId] (per R1-PE-01 — Dexie schema declares
+  // 'courseId' but the real key is compound). Declared here so syncableWrite's
+  // recordId guard can synthesize a meaningful queue identifier.
+  compoundPkFields: ['courseId', 'videoId'],
 }
 
 // ---------------------------------------------------------------------------
