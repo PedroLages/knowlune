@@ -1,4 +1,6 @@
 import { db } from '@/db'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
+import type { SyncableRecord } from '@/lib/sync/syncableWrite'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useImportProgressStore } from '@/stores/useImportProgressStore'
 import { useNotificationStore } from '@/stores/useNotificationStore'
@@ -420,16 +422,19 @@ export async function persistScannedCourse(
   }
 
   try {
-    // Persist to Dexie.js atomically (course + videos + pdfs)
-    await db.transaction(
-      'rw',
-      [db.importedCourses, db.importedVideos, db.importedPdfs],
-      async () => {
-        await db.importedCourses.add(course)
-        if (videos.length > 0) await db.importedVideos.bulkAdd(videos)
-        if (pdfs.length > 0) await db.importedPdfs.bulkAdd(pdfs)
-      }
-    )
+    // E94-S02: Use syncableWrite instead of db.transaction so each record gets
+    // a sync queue entry. Atomicity across course/video/pdf is sacrificed — each
+    // record is individually atomic. If interrupted mid-import, partial records
+    // may exist locally without queue entries; an upload scan can detect these.
+    // The handles (directoryHandle, coverImageHandle, fileHandle) are stripped
+    // from the upload payload by the table registry automatically.
+    await syncableWrite('importedCourses', 'add', course as unknown as SyncableRecord)
+    for (const video of videos) {
+      await syncableWrite('importedVideos', 'add', video as unknown as SyncableRecord)
+    }
+    for (const pdf of pdfs) {
+      await syncableWrite('importedPdfs', 'add', pdf as unknown as SyncableRecord)
+    }
   } catch (error) {
     const message = `Failed to save "${course.name}" to your library. Please try again.`
     console.error('[Import] Persist transaction failed:', error)
@@ -471,8 +476,11 @@ export async function persistScannedCourse(
         }
 
         if (Object.keys(updates).length > 1) {
-          // More than just updatedAt
-          await db.authors.update(authorId, updates)
+          // More than just updatedAt — fetch-then-put so syncableWrite has the full record
+          const fullAuthor = await db.authors.get(authorId)
+          if (fullAuthor) {
+            await syncableWrite('authors', 'put', { ...fullAuthor, ...updates } as unknown as SyncableRecord)
+          }
         }
       }
     } catch (error) {

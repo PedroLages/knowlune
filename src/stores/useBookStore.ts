@@ -11,13 +11,32 @@
 
 import { create } from 'zustand'
 import { toast } from 'sonner'
-import type { Book, BookStatus, LocalSeriesGroup } from '@/data/types'
+import type { Book, BookStatus, ContentSource, LocalSeriesGroup } from '@/data/types'
 import { db } from '@/db/schema'
 import { opfsStorageService } from '@/services/OpfsStorageService'
 import { useShelfStore } from '@/stores/useShelfStore'
 import { useReadingQueueStore } from '@/stores/useReadingQueueStore'
 import { appEventBus } from '@/lib/eventBus'
 import { unlockSidebarItem } from '@/app/hooks/useProgressiveDisclosure'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
+import type { SyncableRecord } from '@/lib/sync/syncableWrite'
+
+/**
+ * Decomposes the Book.source discriminated union into flat serializable fields
+ * for Supabase upload. The `source` field itself is stripped from the upload
+ * payload by the table registry (E94-S02).
+ */
+function decomposeSource(source: ContentSource): { sourceType: string; sourceUrl: string | null } {
+  if (source.type === 'remote') {
+    return { sourceType: 'remote', sourceUrl: source.url }
+  }
+  if (source.type === 'fileHandle') {
+    // FileSystemFileHandle is non-serializable — URL is not available
+    return { sourceType: 'fileHandle', sourceUrl: null }
+  }
+  // 'local' — opfsPath is a local path, not a network URL
+  return { sourceType: 'local', sourceUrl: null }
+}
 
 export type SortOption = 'recent' | 'title-asc' | 'author-asc' | 'progress' | 'duration'
 
@@ -111,11 +130,16 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
         }
       }
 
-      await db.books.put(book)
+      // Decompose source union into flat serializable fields before upload (E94-S02)
+      const { sourceType, sourceUrl } = decomposeSource(book.source)
+      const bookWithFlats: Book = { ...book, sourceType, sourceUrl }
+      // Use 'put' (upsert) to match original db.books.put() semantics — importBook
+      // is called for both initial import and re-import of the same book ID.
+      await syncableWrite('books', 'put', bookWithFlats as unknown as SyncableRecord)
 
       // Filter-then-append to prevent duplicate IDs in memory
       set(state => ({
-        books: [...state.books.filter(b => b.id !== book.id), book],
+        books: [...state.books.filter(b => b.id !== book.id), bookWithFlats],
       }))
 
       // Unlock sidebar item
@@ -139,7 +163,10 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     }))
 
     try {
-      await db.books.update(bookId, updates)
+      const current = await db.books.get(bookId)
+      if (current) {
+        await syncableWrite('books', 'put', { ...current, ...updates } as unknown as SyncableRecord)
+      }
       // Emit book:finished so reading goal store can check yearly goal
       if (status === 'finished' && finishedAt) {
         appEventBus.emit({ type: 'book:finished', bookId, finishedAt })
@@ -170,8 +197,9 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       // intentional cross-store cascade — shelf/queue cleanup on book delete
       await useShelfStore.getState().removeAllBookEntries(bookId)
       await useReadingQueueStore.getState().removeAllBookEntries(bookId)
+      // bookHighlights are wired separately by useHighlightStore (E93-S06) — direct Dexie call is correct here
       await db.bookHighlights.where('bookId').equals(bookId).delete()
-      await db.books.delete(bookId)
+      await syncableWrite('books', 'delete', bookId)
 
       // OPFS cleanup is best-effort — partial cleanup is acceptable (AC4)
       try {
@@ -294,7 +322,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     }))
 
     try {
-      await db.books.update(bookId, { ...updates, updatedAt: merged.updatedAt })
+      await syncableWrite('books', 'put', merged as unknown as SyncableRecord)
       toast.success('Book details updated')
     } catch {
       // Rollback on failure — reload from DB
@@ -315,11 +343,15 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       ),
     }))
     try {
-      await db.books.update(bookId, {
-        currentPosition: position,
-        progress,
-        lastOpenedAt: now,
-      } as Parameters<typeof db.books.update>[1])
+      const current = await db.books.get(bookId)
+      if (current) {
+        await syncableWrite('books', 'put', {
+          ...current,
+          currentPosition: position,
+          progress,
+          lastOpenedAt: now,
+        } as unknown as SyncableRecord)
+      }
     } catch (err) {
       console.error('[BookStore] Failed to update position:', err)
       // Rollback only the affected book using captured previous state
@@ -346,9 +378,17 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       ),
     }))
     try {
-      await db.books.update(bookId, { playbackSpeed: speed, updatedAt: now } as Parameters<
-        typeof db.books.update
-      >[1])
+      const current = await db.books.get(bookId)
+      if (current) {
+        // skipQueue: true — playback speed is a high-churn preference with low sync value.
+        // Dexie is updated locally without creating a sync queue entry.
+        await syncableWrite(
+          'books',
+          'put',
+          { ...current, playbackSpeed: speed, updatedAt: now } as unknown as SyncableRecord,
+          { skipQueue: true },
+        )
+      }
     } catch (err) {
       console.error('[BookStore] Failed to save playback speed:', err)
       // Rollback only the affected book
@@ -375,15 +415,17 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       }),
     }))
     try {
-      // Wrap both updates in a single transaction for atomicity
-      await db.transaction('rw', db.books, async () => {
-        await db.books.update(bookIdA, { linkedBookId: bookIdB, updatedAt: now } as Parameters<
-          typeof db.books.update
-        >[1])
-        await db.books.update(bookIdB, { linkedBookId: bookIdA, updatedAt: now } as Parameters<
-          typeof db.books.update
-        >[1])
-      })
+      // Sequential syncableWrite — each book gets its own queue entry.
+      // Atomicity across both books is sacrificed; each link update is individually
+      // meaningful so partial success is acceptable (E94-S02 tradeoff).
+      const currentA = await db.books.get(bookIdA)
+      const currentB = await db.books.get(bookIdB)
+      if (currentA) {
+        await syncableWrite('books', 'put', { ...currentA, linkedBookId: bookIdB, updatedAt: now } as unknown as SyncableRecord)
+      }
+      if (currentB) {
+        await syncableWrite('books', 'put', { ...currentB, linkedBookId: bookIdA, updatedAt: now } as unknown as SyncableRecord)
+      }
     } catch (err) {
       console.error('[BookStore] Failed to link books:', err)
       // Rollback only the affected books using captured previous state
@@ -412,15 +454,15 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       }),
     }))
     try {
-      // Intentional: atomic transaction so both sides of the link are cleared together
-      await db.transaction('rw', db.books, async () => {
-        await db.books.update(bookIdA, { linkedBookId: undefined, updatedAt: now } as Parameters<
-          typeof db.books.update
-        >[1])
-        await db.books.update(bookIdB, { linkedBookId: undefined, updatedAt: now } as Parameters<
-          typeof db.books.update
-        >[1])
-      })
+      // Sequential syncableWrite — each book gets its own queue entry (E94-S02 tradeoff)
+      const currentA = await db.books.get(bookIdA)
+      const currentB = await db.books.get(bookIdB)
+      if (currentA) {
+        await syncableWrite('books', 'put', { ...currentA, linkedBookId: undefined, updatedAt: now } as unknown as SyncableRecord)
+      }
+      if (currentB) {
+        await syncableWrite('books', 'put', { ...currentB, linkedBookId: undefined, updatedAt: now } as unknown as SyncableRecord)
+      }
     } catch (err) {
       console.error('[BookStore] Failed to unlink books:', err)
       // Rollback only the affected books using captured previous state
@@ -436,6 +478,10 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
   },
 
   upsertAbsBook: async (book: Book) => {
+    // E94-S02: ABS sync is excluded from syncableWrite wiring. ABS paths are
+    // server-authoritative bulk operations that require a merge/purge pattern
+    // (bulkPut + bulkDelete) incompatible with per-record syncableWrite.
+    // A dedicated E94+ story will wire ABS sync with the correct reconciliation strategy.
     try {
       // Build Map for O(1) lookup instead of linear scan
       const absKeyMap = new Map<string, Book>()
@@ -468,6 +514,8 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
   },
 
   bulkUpsertAbsBooks: async (newBooks: Book[]) => {
+    // E94-S02: ABS sync is excluded from syncableWrite wiring — same rationale as
+    // upsertAbsBook above. Kept as direct Dexie writes intentionally.
     if (newBooks.length === 0) return { removedCount: 0 }
     try {
       // Build Map<absServerId:absItemId, Book> for O(1) dedup lookup

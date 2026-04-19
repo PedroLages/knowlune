@@ -24,6 +24,8 @@ import type { YouTubeUrlParseResult } from '@/lib/youtubeUrlParser'
 import type { VideoChapter } from '@/lib/youtubeRuleBasedGrouping'
 import { db } from '@/db'
 import { persistWithRetry } from '@/lib/persistWithRetry'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
+import type { SyncableRecord } from '@/lib/sync/syncableWrite'
 
 // --- Types ---
 
@@ -338,21 +340,19 @@ export const useYouTubeImportStore = create<YouTubeImportState>((set, get) => ({
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         }))
 
-      // Persist everything in a single transaction
+      // E94-S02: Use syncableWrite for importedCourses and importedVideos so they
+      // produce sync queue entries. youtubeChapters and youtubeVideoCache are not
+      // P2 sync tables — keep them as direct Dexie writes.
       await persistWithRetry(async () => {
-        await db.transaction(
-          'rw',
-          [db.importedCourses, db.importedVideos, db.youtubeChapters, db.youtubeVideoCache],
-          async () => {
-            await db.importedCourses.add(course)
-            await db.importedVideos.bulkAdd(videoRecords)
-            if (chapterRecords.length > 0) {
-              await db.youtubeChapters.bulkAdd(chapterRecords)
-            }
-            // Upsert cache records (they may already exist from metadata fetch)
-            await db.youtubeVideoCache.bulkPut(cacheRecords)
-          }
-        )
+        await syncableWrite('importedCourses', 'add', course as unknown as SyncableRecord)
+        for (const video of videoRecords) {
+          await syncableWrite('importedVideos', 'add', video as unknown as SyncableRecord)
+        }
+        if (chapterRecords.length > 0) {
+          await db.youtubeChapters.bulkAdd(chapterRecords)
+        }
+        // Upsert cache records (they may already exist from metadata fetch)
+        await db.youtubeVideoCache.bulkPut(cacheRecords)
       })
 
       set({ isSaving: false })

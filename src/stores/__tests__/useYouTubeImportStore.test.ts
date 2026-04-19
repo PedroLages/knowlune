@@ -399,9 +399,9 @@ describe('saveCourse', () => {
     useYouTubeImportStore.getState().updateVideoMetadata('v1', { metadata: meta, status: 'loaded' })
     useYouTubeImportStore.getState().setChapters([])
 
-    // Mock db to throw
-    const dbMod = await import('@/db')
-    vi.spyOn(dbMod.db.importedCourses, 'add').mockRejectedValue(new Error('Disk full'))
+    // Mock syncableWrite to throw (YouTube import now routes through syncableWrite)
+    const syncMod = await import('@/lib/sync/syncableWrite')
+    vi.spyOn(syncMod, 'syncableWrite').mockRejectedValue(new Error('Disk full'))
 
     const result = await act(async () => {
       return useYouTubeImportStore.getState().saveCourse({
@@ -423,8 +423,9 @@ describe('saveCourse', () => {
     useYouTubeImportStore.getState().updateVideoMetadata('v1', { metadata: meta, status: 'loaded' })
     useYouTubeImportStore.getState().setChapters([])
 
-    const dbMod = await import('@/db')
-    vi.spyOn(dbMod.db.importedCourses, 'add').mockRejectedValue('string error')
+    // Mock syncableWrite to throw a non-Error (YouTube import now routes through syncableWrite)
+    const syncMod = await import('@/lib/sync/syncableWrite')
+    vi.spyOn(syncMod, 'syncableWrite').mockRejectedValue('string error')
 
     const result = await act(async () => {
       return useYouTubeImportStore.getState().saveCourse({
