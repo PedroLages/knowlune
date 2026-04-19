@@ -114,6 +114,8 @@ export function AIConfigurationSettings() {
   const testResultTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   const [decryptedApiKey, setDecryptedApiKey] = useState<string | null>(null)
+  // AC3: whether ANY provider has a credential in Vault (async check)
+  const [hasAnyProviderKey, setHasAnyProviderKey] = useState<boolean>(false)
 
   const isOllama = settings.provider === 'ollama'
 
@@ -151,6 +153,11 @@ export function AIConfigurationSettings() {
       }
     }
   }, [])
+
+  // Check if any provider has a credential in Vault (async — updates on configuration changes)
+  useEffect(() => {
+    getConfiguredProviderIds().then(ids => setHasAnyProviderKey(ids.length > 0))
+  }, [settings.provider, settings.providerKeys, settings.apiKeyEncrypted])
 
   // Decrypt API key for model discovery when connected (non-Ollama providers)
   useEffect(() => {
@@ -440,7 +447,7 @@ export function AIConfigurationSettings() {
   const isConnected = settings.connectionStatus === 'connected'
   const hasError = settings.connectionStatus === 'error'
   // AC3: Show consent/override sections when ANY provider has a configured key
-  const hasAnyProviderKey = getConfiguredProviderIds().length > 0
+  // hasAnyProviderKey is loaded asynchronously via useEffect above
   const showFeatureSettings = isConnected || hasAnyProviderKey
   const ollamaSaveDisabled = isValidating || !ollamaUrl.trim()
 

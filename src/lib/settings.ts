@@ -360,6 +360,61 @@ export async function hydrateSettingsFromSupabase(
     // silent-catch-ok — hydration is best-effort; localStorage fallback is always active.
     console.warn('[settings] hydrateSettingsFromSupabase store hydration failed:', err)
   }
+
+  // ── Legacy AI provider key migration (E95-S02) ────────────────────────────
+  // One-time opportunistic migration: decrypt Web Crypto-encrypted keys from
+  // localStorage and store them in Supabase Vault.
+  //
+  // This only works on the originating device (Web Crypto key is device-local,
+  // stored in IndexedDB by cryptoKeyStore.ts). On a new device with no localStorage
+  // data, there is nothing to migrate — the user must re-enter credentials once.
+  //
+  // Migration is idempotent: if the Vault already has the key, storeCredential
+  // will update it (harmless). After migration, remove from localStorage blob.
+  try {
+    const aiRaw = localStorage.getItem('ai-configuration')
+    if (aiRaw) {
+      const aiConfig = JSON.parse(aiRaw) as Record<string, unknown>
+
+      // Check providerKeys map (E90-S03 multi-provider keys)
+      const providerKeys = aiConfig.providerKeys as
+        | Record<string, { iv: string; encryptedData: string }>
+        | undefined
+      if (providerKeys && typeof providerKeys === 'object') {
+        const { decryptData, storeCredential } = await Promise.all([
+          import('@/lib/crypto').then(m => ({ decryptData: m.decryptData })),
+          import('@/lib/vaultCredentials').then(m => ({ storeCredential: m.storeCredential })),
+        ]).then(([c, v]) => ({ decryptData: c.decryptData, storeCredential: v.storeCredential }))
+
+        const updatedProviderKeys = { ...providerKeys }
+        let anyMigrated = false
+
+        for (const [providerId, keyData] of Object.entries(providerKeys)) {
+          if (!keyData?.iv || !keyData?.encryptedData) continue
+          try {
+            const plaintext = await decryptData(keyData.iv, keyData.encryptedData)
+            if (plaintext) {
+              await storeCredential('ai-provider', providerId, plaintext)
+              delete updatedProviderKeys[providerId]
+              anyMigrated = true
+              console.log('[settings] Migrated legacy AI key for provider:', providerId)
+            }
+          } catch (decryptErr) {
+            // silent-catch-ok — key may be on a different device; skip, user can re-enter
+            console.warn('[settings] Legacy AI key migration failed for provider:', providerId, decryptErr)
+          }
+        }
+
+        if (anyMigrated) {
+          const updated = { ...aiConfig, providerKeys: updatedProviderKeys }
+          localStorage.setItem('ai-configuration', JSON.stringify(updated))
+        }
+      }
+    }
+  } catch (migrationErr) {
+    // silent-catch-ok — migration is opportunistic; main hydration already completed.
+    console.warn('[settings] Legacy AI key migration error:', migrationErr)
+  }
 }
 
 /**

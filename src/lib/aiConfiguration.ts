@@ -15,6 +15,7 @@ import type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefau
 import { PROVIDER_DEFAULTS, FEATURE_DEFAULTS } from './modelDefaults'
 import type { DiscoveredModel } from './modelDiscovery'
 import { getFreeTierDefaultModel } from './modelDiscovery.static'
+import { checkCredential, storeCredential } from './vaultCredentials'
 
 // Re-export for convenience — consumers can import from aiConfiguration
 export type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefaults'
@@ -506,7 +507,9 @@ export async function getDecryptedApiKeyForProvider(
 }
 
 /**
- * Encrypts and stores an API key for a specific provider in the `providerKeys` map.
+ * Encrypts and stores an API key for a specific provider in Supabase Vault.
+ * Also stores an encrypted copy in localStorage's `providerKeys` map as a
+ * device-local fallback (device-local Web Crypto key — not cross-device).
  *
  * Dispatches the `ai-configuration-updated` custom event for cross-tab sync.
  * Does NOT modify the legacy `apiKeyEncrypted` field — that is preserved as-is.
@@ -524,9 +527,17 @@ export async function saveProviderApiKey(
   provider: AIProviderId,
   apiKey: string
 ): Promise<AIConfigurationSettings> {
+  // Store in Supabase Vault (cross-device, encrypted at rest)
+  // Fire-and-forget with error logging — localStorage is fallback
+  storeCredential('ai-provider', provider, apiKey).catch(err => {
+    console.warn('[aiConfiguration] Vault store failed for provider', provider, err)
+  })
+
   const encrypted = await encryptData(apiKey)
   const current = getAIConfiguration()
 
+  // Remove from localStorage providerKeys after Vault store is initiated
+  // (Vault write is fire-and-forget; localStorage encrypted copy remains as device-local fallback)
   const updatedProviderKeys: Partial<Record<AIProviderId, EncryptedData>> = {
     ...current.providerKeys,
     [provider]: encrypted,
@@ -611,28 +622,50 @@ export async function clearFeatureModelOverride(
 }
 
 /**
- * Returns a list of provider IDs that have a configured API key (or are the global provider).
- * Ollama is included if it has a server URL configured.
+ * Returns a list of provider IDs that have a credential configured in Vault.
+ * Falls back to checking localStorage `providerKeys` for device-local keys.
+ * Ollama is included if it has a server URL configured (URL is not a Vault credential).
+ *
+ * Async because Vault checks require a network call to the Edge Function.
+ * Uses Promise.allSettled (ES2020 — not Promise.any) to check all providers in parallel.
  */
-export function getConfiguredProviderIds(): AIProviderId[] {
+export async function getConfiguredProviderIds(): Promise<AIProviderId[]> {
   const config = getAIConfiguration()
+  const knownProviders = Object.keys(config.providerKeys ?? {}) as AIProviderId[]
+
+  // Add the global provider as a candidate
+  const candidates = new Set<AIProviderId>([config.provider, ...knownProviders])
+
+  // Check Vault for each candidate in parallel (ES2020: Promise.allSettled)
+  const results = await Promise.allSettled(
+    Array.from(candidates).map(async (provider): Promise<AIProviderId | null> => {
+      const configured = await checkCredential('ai-provider', provider)
+      return configured ? provider : null
+    })
+  )
+
   const configured = new Set<AIProviderId>()
+  for (const result of results) {
+    if (result.status === 'fulfilled' && result.value !== null) {
+      configured.add(result.value)
+    }
+  }
 
-  // Global provider is always available
-  configured.add(config.provider)
-
-  // Providers with keys in providerKeys
-  if (config.providerKeys) {
+  // Device-local fallback: if Vault returned nothing (unauthenticated / offline),
+  // fall back to checking localStorage providerKeys
+  if (configured.size === 0 && config.providerKeys) {
     for (const [id, keyData] of Object.entries(config.providerKeys)) {
       if (keyData) {
         configured.add(id as AIProviderId)
       }
     }
+    // Legacy key covers the global provider
+    if (config.apiKeyEncrypted) {
+      configured.add(config.provider)
+    }
   }
 
-  // Legacy key covers the global provider (already added above)
-
-  // Ollama is available if server URL is configured
+  // Ollama uses server URL (not a Vault credential)
   if (config.ollamaSettings?.serverUrl) {
     configured.add('ollama')
   }
