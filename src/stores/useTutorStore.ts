@@ -10,6 +10,8 @@
 
 import { create } from 'zustand'
 import { db } from '@/db'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
+import type { SyncableRecord } from '@/lib/sync/syncableWrite'
 import { toast } from 'sonner'
 import type { TutorMode, TranscriptStatus } from '@/ai/tutor/types'
 import type { ChatMessage } from '@/ai/rag/types'
@@ -303,9 +305,9 @@ export const useTutorStore = create<TutorState>((set, get) => ({
 
   clearConversation: () => {
     const { conversationId } = get()
-    // Delete from Dexie if we have a persisted conversation
+    // Delete from Dexie (and enqueue sync delete) if we have a persisted conversation
     if (conversationId) {
-      db.chatConversations.delete(conversationId).catch((error: unknown) => {
+      syncableWrite('chatConversations', 'delete', conversationId).catch((error: unknown) => {
         console.error('Failed to clear conversation from Dexie:', error)
         // silent-catch-ok — clearing UI state is the priority; delete failure is non-blocking
       })
@@ -335,7 +337,8 @@ export const useTutorStore = create<TutorState>((set, get) => ({
         // Validate messages blob (EC-HIGH: corruption guard)
         if (!Array.isArray(conv.messages)) {
           toast.error('Conversation data was corrupted. Starting fresh.')
-          await db.chatConversations.delete(conv.id)
+          // Propagate corruption delete to Supabase; LWW will re-download if remote is intact.
+          await syncableWrite('chatConversations', 'delete', conv.id)
           set({ messages: [], conversationId: null })
           return
         }
@@ -368,13 +371,14 @@ export const useTutorStore = create<TutorState>((set, get) => ({
 
     try {
       if (conversationId) {
-        // Update existing conversation
-        await db.chatConversations.update(conversationId, {
-          messages: tutorMessages,
-          mode,
-          hintLevel,
-          updatedAt: now,
-        })
+        // Update existing conversation — fetch-then-put pattern (syncableWrite requires full record)
+        const existing = await db.chatConversations.get(conversationId)
+        if (!existing) return // Guard: conversation deleted externally — return early
+        await syncableWrite(
+          'chatConversations',
+          'put',
+          { ...existing, messages: tutorMessages, mode, hintLevel, updatedAt: now } as unknown as SyncableRecord,
+        )
       } else {
         // Create new conversation
         const id = crypto.randomUUID()
@@ -388,7 +392,7 @@ export const useTutorStore = create<TutorState>((set, get) => ({
           createdAt: now,
           updatedAt: now,
         }
-        await db.chatConversations.add(conversation)
+        await syncableWrite('chatConversations', 'add', conversation as unknown as SyncableRecord)
         set({ conversationId: id })
       }
     } catch {

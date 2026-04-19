@@ -1062,8 +1062,12 @@ export interface ChatConversation {
   messages: TutorMessage[]
   /** Epoch ms — when conversation was started */
   createdAt: number
-  /** Epoch ms — last message added */
-  updatedAt: number
+  /**
+   * Epoch ms when originally written by the app. After a syncableWrite, this
+   * field is overwritten with an ISO string by the sync engine's metadata
+   * stamp. Always coerce via `toEpochMs(updatedAt)` before arithmetic.
+   */
+  updatedAt: number | string
 }
 
 /** Vocabulary level for learner model assessment */

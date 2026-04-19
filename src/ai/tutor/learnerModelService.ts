@@ -8,6 +8,8 @@
  */
 
 import { db } from '@/db'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
+import type { SyncableRecord } from '@/lib/sync/syncableWrite'
 import type { LearnerModel, ConceptAssessment } from '@/data/types'
 
 /**
@@ -45,7 +47,7 @@ export async function getOrCreateLearnerModel(courseId: string): Promise<Learner
     updatedAt: now,
   }
 
-  await db.learnerModels.add(model)
+  await syncableWrite('learnerModels', 'add', model as unknown as SyncableRecord)
   return model
 }
 
@@ -120,7 +122,7 @@ export async function updateLearnerModel(
     updatedAt: now,
   }
 
-  await db.learnerModels.put(merged)
+  await syncableWrite('learnerModels', 'put', merged as unknown as SyncableRecord)
   return merged
 }
 
@@ -145,7 +147,7 @@ export async function replaceLearnerModelFields(
     updatedAt: now,
   }
 
-  await db.learnerModels.put(replaced)
+  await syncableWrite('learnerModels', 'put', replaced as unknown as SyncableRecord)
   return replaced
 }
 
@@ -155,6 +157,6 @@ export async function replaceLearnerModelFields(
 export async function clearLearnerModel(courseId: string): Promise<void> {
   const existing = await getLearnerModel(courseId)
   if (existing) {
-    await db.learnerModels.delete(existing.id)
+    await syncableWrite('learnerModels', 'delete', existing.id)
   }
 }

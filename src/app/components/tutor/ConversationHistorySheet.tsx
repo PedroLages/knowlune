@@ -35,9 +35,9 @@ import {
   TooltipTrigger,
 } from '@/app/components/ui/tooltip'
 import { toast } from 'sonner'
-import { db } from '@/db'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
 import { MODE_LABELS } from '@/ai/tutor/modeLabels'
-import { formatTimestamp, extractTopics, extractModes } from './conversationUtils'
+import { formatTimestamp, extractTopics, extractModes, toEpochMs } from './conversationUtils'
 import type { ChatConversation } from '@/data/types'
 
 interface ConversationHistorySheetProps {
@@ -173,7 +173,7 @@ export function ConversationHistorySheet({
     const thisLesson: ChatConversation[] = []
     const otherLessons: ChatConversation[] = []
 
-    const sorted = [...conversations].sort((a, b) => b.updatedAt - a.updatedAt)
+    const sorted = [...conversations].sort((a, b) => toEpochMs(b.updatedAt) - toEpochMs(a.updatedAt))
 
     for (const conv of sorted) {
       if (conv.courseId === courseId && conv.videoId === currentLessonId) {
@@ -188,7 +188,7 @@ export function ConversationHistorySheet({
 
   const handleDelete = async (conversationId: string) => {
     try {
-      await db.chatConversations.delete(conversationId)
+      await syncableWrite('chatConversations', 'delete', conversationId)
       onDelete(conversationId)
     } catch {
       toast.error('Failed to delete conversation.')
