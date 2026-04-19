@@ -1,8 +1,8 @@
 ---
 story_id: E95-S04
 story_name: "Server-Side Streak Calculation"
-status: ready-for-dev
-started:
+status: in-progress
+started: 2026-04-19
 completed:
 reviewed: false
 review_started:

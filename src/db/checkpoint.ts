@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 53
+export const CHECKPOINT_VERSION = 56
 
 /**
  * Shared `searchFrecency` index string. Used by both the v53 `.stores()` call
@@ -59,6 +59,10 @@ export const SEARCH_FRECENCY_INDEXES = '[entityType+entityId], entityType, lastO
  *                syncable tables; new `syncQueue` and `syncMetadata` tables.
  * v53 (E117-S02): searchFrecency table for unified-search frecency counters.
  *                 Local-only (no userId) — device-local ranking signal.
+ * v54 (E93-S05): embeddings.id backfill (no schema change).
+ * v55 (E94-S05): authors.photoBlob + importedPdfs.fileBlob optional fields (no index change).
+ * v56 (E95-S04): readingStreakCache table for optimistic server-streak render.
+ *                Local-only cache of the `compute_reading_streak` RPC result; not synced.
  */
 export const CHECKPOINT_SCHEMA: Record<string, string> = {
   importedCourses: 'id, name, importedAt, status, *tags, source, userId, [userId+updatedAt]',
@@ -118,6 +122,8 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   syncMetadata: 'table',
   // v53 (E117-S02): unified-search frecency counters (local-only, no userId).
   searchFrecency: SEARCH_FRECENCY_INDEXES,
+  // v56 (E95-S04): local cache of server-computed reading streak (local-only, per-user).
+  readingStreakCache: 'userId, cachedAt',
 }
 
 // v42 (E109-S01): vocabularyItems table added
@@ -136,3 +142,5 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
 //                bookFiles, transcriptEmbeddings.
 // v53 (E117-S02): searchFrecency table for unified-search ranking.
 //                Local-only (no userId, not in SYNCABLE_TABLES, not in sync backfill).
+// v56 (E95-S04): readingStreakCache table for locally-cached server streak results.
+//                Local-only (keyed by userId but per-device-cache; not synced).
