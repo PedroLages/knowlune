@@ -164,6 +164,96 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 // ---------------------------------------------------------------------------
+// Helper — backfill legacy empty recordId in syncQueue (one-shot upgrade)
+// ---------------------------------------------------------------------------
+
+/**
+ * Pre-d220cb7d builds wrote `syncQueue` entries with `recordId = ''` for any
+ * compound-PK table (`progress`, `contentProgress`, `chapterMappings`) because
+ * those records have no single `id` field. After the d220cb7d guard landed,
+ * fresh writes synthesize a non-empty recordId — but legacy entries already in
+ * the IndexedDB queue still have `''`.
+ *
+ * Without this backfill, the first post-upgrade `_coalesceQueue()` call would
+ * see every legacy compound-PK entry under the same key (`'progress:'`) and
+ * collapse them to one row — silent data loss for users who studied multiple
+ * courses/videos offline before upgrading. (ADV-02 from R1 review.)
+ *
+ * For each pending entry where recordId is empty AND the table has
+ * compoundPkFields, synthesize the recordId from the payload using the same
+ * format `syncableWrite` uses (parts joined by the unit separator). If the
+ * payload is missing the compound fields, mark the entry as `dead-letter` —
+ * it cannot be uploaded anyway and would be silently lost in coalesce.
+ */
+async function _backfillLegacyEmptyRecordIds(): Promise<void> {
+  // Cheap fast-path: scan only `pending` entries, only those with empty
+  // recordId. In a healthy queue this returns zero rows on every call.
+  const candidates = await db.syncQueue
+    .where('status')
+    .equals('pending')
+    .and((e) => e.recordId === '')
+    .toArray()
+
+  if (candidates.length === 0) return
+
+  let backfilled = 0
+  let deadLettered = 0
+  const now = new Date().toISOString()
+
+  for (const entry of candidates) {
+    const tableEntry = getTableEntry(entry.tableName)
+    const compoundFields = tableEntry?.compoundPkFields
+
+    if (!compoundFields || compoundFields.length === 0) {
+      // No compound PK to recover from — entry is unrecoverable.
+      // Mark dead-letter so coalesce ignores it instead of collapsing.
+      await db.syncQueue.update(entry.id!, {
+        status: 'dead-letter',
+        lastError: 'Empty recordId on non-compound-PK table (legacy pre-d220cb7d entry)',
+        updatedAt: now,
+      })
+      deadLettered++
+      continue
+    }
+
+    const payload = entry.payload as Record<string, unknown> | null | undefined
+    const parts = compoundFields.map((field) => {
+      // Payloads were snake_cased before storage — try both forms.
+      const snake = field.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`)
+      const value = payload?.[field] ?? payload?.[snake]
+      return typeof value === 'string' || typeof value === 'number'
+        ? String(value)
+        : ''
+    })
+
+    if (parts.some((p) => p.trim() === '')) {
+      await db.syncQueue.update(entry.id!, {
+        status: 'dead-letter',
+        lastError: 'Empty recordId; payload missing compound PK fields (legacy pre-d220cb7d entry)',
+        updatedAt: now,
+      })
+      deadLettered++
+      continue
+    }
+
+    // Use unit-separator join — must match syncableWrite's format exactly.
+    const newRecordId = parts.join('\u001f')
+    await db.syncQueue.update(entry.id!, {
+      recordId: newRecordId,
+      updatedAt: now,
+    })
+    backfilled++
+  }
+
+  if (backfilled > 0 || deadLettered > 0) {
+    console.warn(
+      `[syncEngine] Legacy queue backfill: ${backfilled} recordId(s) recovered, ` +
+        `${deadLettered} entry/entries dead-lettered (unrecoverable).`,
+    )
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Helper — coalesce duplicate queue entries
 // ---------------------------------------------------------------------------
 
@@ -758,6 +848,11 @@ async function _doUpload(): Promise<void> {
     console.warn('[syncEngine] Supabase client is null — skipping upload cycle.')
     return
   }
+
+  // One-shot upgrade: synthesize recordId for any legacy compound-PK entries
+  // written before the d220cb7d guard. Must run BEFORE coalesce — otherwise
+  // legacy entries with recordId='' collapse under one shared key. (ADV-02.)
+  await _backfillLegacyEmptyRecordIds()
 
   const coalesced = await _coalesceQueue()
   if (coalesced.length === 0) return

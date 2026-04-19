@@ -340,19 +340,37 @@ describe('syncableWrite', () => {
     it('throws when put record has id: "   " (whitespace)', async () => {
       await expect(
         syncableWrite('notes', 'put', { id: '   ' }),
+      ).rejects.toThrow(
+        '[syncableWrite] Empty recordId for table "notes" (operation "put")',
+      )
+    })
+
+    it('throws when put record id is only a tab character', async () => {
+      await expect(
+        syncableWrite('notes', 'put', { id: '\t' }),
+      ).rejects.toThrow(/Empty recordId/)
+    })
+
+    it('throws when put record id is only a non-breaking space (\\u00A0)', async () => {
+      await expect(
+        syncableWrite('notes', 'put', { id: '\u00a0' }),
       ).rejects.toThrow(/Empty recordId/)
     })
 
     it('throws when add record is missing id', async () => {
       await expect(
         syncableWrite('studySessions', 'add', { field: 'x' }),
-      ).rejects.toThrow(/Empty recordId.*operation "add"/)
+      ).rejects.toThrow(
+        '[syncableWrite] Empty recordId for table "studySessions" (operation "add")',
+      )
     })
 
     it('throws when delete record is the empty string', async () => {
       await expect(
         syncableWrite('notes', 'delete', ''),
-      ).rejects.toThrow(/Empty recordId.*operation "delete"/)
+      ).rejects.toThrow(
+        '[syncableWrite] Empty recordId for table "notes" (operation "delete")',
+      )
     })
 
     it('does NOT touch Dexie or syncQueue when guard throws on put', async () => {
@@ -390,7 +408,7 @@ describe('syncableWrite', () => {
       expect(mockSyncQueueAdd).toHaveBeenCalledWith(
         expect.objectContaining({
           tableName: 'contentProgress',
-          recordId: 'course-1:item-1',
+          recordId: 'course-1\u001fitem-1',
         }),
       )
     })
@@ -402,7 +420,9 @@ describe('syncableWrite', () => {
           // itemId missing
           status: 'completed',
         }),
-      ).rejects.toThrow(/Empty recordId.*"contentProgress"/)
+      ).rejects.toThrow(
+        '[syncableWrite] Empty recordId for table "contentProgress" (operation "put")',
+      )
       expect(mockPut).not.toHaveBeenCalled()
     })
 
@@ -413,7 +433,29 @@ describe('syncableWrite', () => {
           itemId: 'item-1',
           status: 'completed',
         }),
-      ).rejects.toThrow(/Empty recordId.*"contentProgress"/)
+      ).rejects.toThrow(
+        '[syncableWrite] Empty recordId for table "contentProgress" (operation "put")',
+      )
+    })
+
+    // Compound-PK collision resistance: with the prior ':' delimiter, two
+    // semantically distinct rows could synthesize the same recordId if any
+    // field contained a ':'. The unit-separator delimiter (\u001f) cannot
+    // appear in user-supplied IDs (URIs, slugs, UUIDs). (ADV-04 from R1.)
+    it('does not collide on compound PK fields containing ":"', async () => {
+      const writeA = syncableWrite('chapterMappings', 'put', {
+        epubBookId: 'urn:isbn:123',
+        audioBookId: 'abs-1',
+      })
+      const writeB = syncableWrite('chapterMappings', 'put', {
+        epubBookId: 'urn',
+        audioBookId: 'isbn:123:abs-1',
+      })
+      await Promise.all([writeA, writeB])
+      const calls = mockSyncQueueAdd.mock.calls.map(
+        (c) => (c[0] as { recordId: string }).recordId,
+      )
+      expect(new Set(calls).size).toBe(2)
     })
   })
 

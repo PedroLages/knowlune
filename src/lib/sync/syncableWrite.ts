@@ -121,7 +121,10 @@ export async function syncableWrite<T extends SyncableRecord>(
           `(operation "${operation}"). A non-empty id is required.`,
       )
     }
-    recordId = parts.join(':')
+    // Unit separator (U+001F) — guaranteed not to appear in user-supplied IDs
+    // (URIs, slugs, UUIDs). Joining on ':' would let `urn:isbn:123` collide
+    // with split-elsewhere variants (ADV-04 from R1 review).
+    recordId = parts.join('\u001f')
   } else {
     const id = (record as SyncableRecord | null | undefined)?.id
     if (typeof id !== 'string' || id.trim() === '') {
