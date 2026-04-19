@@ -168,6 +168,21 @@ describe('runCredentialsToVaultMigration', () => {
     expect(toastWarn).toHaveBeenCalledTimes(1)
   })
 
+  it('preserves legacy apiKey and does not set done flag when checkCredential returns false', async () => {
+    storeMock.mockResolvedValue(undefined)
+    checkMock.mockResolvedValue(false)
+    await seedLegacyAbs('abs-unverified', 'KEY-UNVERIFIED')
+    const summary = await runCredentialsToVaultMigration()
+    // Vault write appeared to succeed but confirmation failed → counts as failed
+    expect(summary.failed).toBeGreaterThanOrEqual(1)
+    // Legacy field must NOT be cleared — data would be lost otherwise
+    const stored = (await db.audiobookshelfServers.get('abs-unverified')) as Record<string, unknown>
+    expect(stored.apiKey).toBe('KEY-UNVERIFIED')
+    // Migration must NOT be marked done so it retries on next boot
+    const flag = await db.syncMetadata.get('migrations.credentialsToVault.v1')
+    expect(flag?.value).toBeUndefined()
+  })
+
   it('in-flight guard prevents concurrent duplicate runs', async () => {
     storeMock.mockResolvedValue(undefined)
     await seedLegacyAbs('abs-1', 'K1')
