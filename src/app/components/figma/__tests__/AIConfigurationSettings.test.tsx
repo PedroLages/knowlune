@@ -10,7 +10,7 @@ vi.mock('@/lib/aiConfiguration', () => ({
   getAIConfiguration: () => mockGetAIConfiguration(),
   saveAIConfiguration: (...args: unknown[]) => mockSaveAIConfiguration(...args),
   testAIConnection: (...args: unknown[]) => mockTestAIConnection(...args),
-  getConfiguredProviderIds: () => [],
+  getConfiguredProviderIds: () => Promise.resolve([]),
   getDecryptedApiKeyForProvider: vi.fn().mockResolvedValue(null),
   saveProviderApiKey: vi.fn().mockResolvedValue(undefined),
   deleteProviderApiKey: vi.fn().mockResolvedValue(undefined),
