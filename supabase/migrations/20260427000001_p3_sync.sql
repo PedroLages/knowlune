@@ -170,7 +170,6 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   user_id        UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   type           TEXT        NOT NULL,
   title          TEXT        NOT NULL,
-  body           TEXT,                       -- optional — display body (maps to `message`)
   message        TEXT        NOT NULL,
   action_url     TEXT,
   read_at        TIMESTAMPTZ,
