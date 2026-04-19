@@ -515,6 +515,44 @@ describe('tableRegistry — books fileUrl (E94-S07)', () => {
 })
 
 // ---------------------------------------------------------------------------
+// E95-S06 — notificationPreferences singleton PK translation
+// ---------------------------------------------------------------------------
+
+describe('tableRegistry — notificationPreferences (E95-S06)', () => {
+  it('fieldMap maps id → user_id (singleton → Supabase PK)', () => {
+    const entry = getTableEntry('notificationPreferences')
+    expect(entry?.fieldMap).toMatchObject({ id: 'user_id' })
+  })
+
+  it('upsertConflictColumns targets user_id', () => {
+    const entry = getTableEntry('notificationPreferences')
+    expect(entry?.upsertConflictColumns).toBe('user_id')
+  })
+
+  it('toSnakeCase produces user_id (not id) in payload', () => {
+    const entry = getTableEntry('notificationPreferences')!
+    const sample = {
+      id: 'singleton',
+      courseComplete: true,
+      streakMilestone: false,
+      quietHoursEnabled: true,
+      quietHoursStart: '22:00',
+      quietHoursEnd: '07:00',
+      updatedAt: '2026-04-19T00:00:00.000Z',
+    }
+    const snaked = toSnakeCase(entry, sample)
+
+    expect(snaked).toHaveProperty('user_id', 'singleton')
+    expect(snaked).not.toHaveProperty('id')
+    expect(snaked).toHaveProperty('course_complete', true)
+    expect(snaked).toHaveProperty('streak_milestone', false)
+    expect(snaked).toHaveProperty('quiet_hours_enabled', true)
+    expect(snaked).toHaveProperty('quiet_hours_start', '22:00')
+    expect(snaked).toHaveProperty('quiet_hours_end', '07:00')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // getTableEntry helper
 // ---------------------------------------------------------------------------
 
