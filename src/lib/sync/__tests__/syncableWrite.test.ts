@@ -348,13 +348,17 @@ describe('syncableWrite', () => {
     it('throws when put record id is only a tab character', async () => {
       await expect(
         syncableWrite('notes', 'put', { id: '\t' }),
-      ).rejects.toThrow(/Empty recordId/)
+      ).rejects.toThrow(
+        '[syncableWrite] Empty recordId for table "notes" (operation "put")',
+      )
     })
 
     it('throws when put record id is only a non-breaking space (\\u00A0)', async () => {
       await expect(
         syncableWrite('notes', 'put', { id: '\u00a0' }),
-      ).rejects.toThrow(/Empty recordId/)
+      ).rejects.toThrow(
+        '[syncableWrite] Empty recordId for table "notes" (operation "put")',
+      )
     })
 
     it('throws when add record is missing id', async () => {
