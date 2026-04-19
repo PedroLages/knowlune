@@ -313,6 +313,10 @@ export function useSyncLifecycle(): void {
           void syncEngine.start(userId).catch((err: unknown) => {
             console.error('[useSyncLifecycle] start after re-enable failed:', err)
           })
+          // F2: trigger a fullSync to pick up any changes missed while paused.
+          void syncEngine.fullSync().catch((err: unknown) => {
+            console.error('[useSyncLifecycle] fullSync after re-enable failed:', err)
+          })
         }
       } else {
         syncEngine.stop()

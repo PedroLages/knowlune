@@ -146,8 +146,20 @@ export function SyncSection() {
 
   // Refresh pendingCount immediately when the panel mounts so the user sees
   // a current number instead of whatever the last lifecycle tick recorded.
+  // Also re-refresh when lastSyncAt advances (post-sync) or when the tab
+  // becomes visible again (F5: pendingCount can grow while auto-sync is paused).
   useEffect(() => {
     void useSyncStatusStore.getState().refreshPendingCount()
+  }, [lastSyncAt])
+
+  useEffect(() => {
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        void useSyncStatusStore.getState().refreshPendingCount()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange)
   }, [])
 
   const relativeLastSync = useMemo(() => {
@@ -189,6 +201,7 @@ export function SyncSection() {
 
   const handleSyncNow = useCallback(async () => {
     if (busy) return
+    if (useSyncStatusStore.getState().status === 'syncing') return
     setBusy(true)
     try {
       useSyncStatusStore.getState().setStatus('syncing')

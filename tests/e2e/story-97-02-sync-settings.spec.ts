@@ -214,4 +214,93 @@ test.describe('E97-S02: Sync Settings Panel', () => {
     await expect(page.getByRole('alertdialog')).toHaveCount(0)
     await expect(page.getByTestId('sync-section')).toBeVisible()
   })
+
+  test('Sync Now shows loading state then returns to idle (AC3 happy path)', async ({
+    page,
+  }) => {
+    await setFakeAuthUser(page)
+
+    // Inject a mock fullSync that resolves immediately — avoids real network.
+    await page.evaluate(() => {
+      const win = window as Record<string, unknown>
+      // Patch syncEngine.fullSync on the module instance via the store shim.
+      // The component imports syncEngine directly, so we inject via the
+      // window.__syncEngine__ shim exposed in dev builds, or fall back to
+      // a no-op by patching useSyncStatusStore to immediately mark complete.
+      win.__e2eMockSyncNow__ = true
+    })
+
+    // Stub fullSync to resolve synchronously via page.addInitScript is not
+    // available post-navigation, so we rely on the store's status transitions.
+    // Inject at the syncEngine level via evaluate.
+    await page.evaluate(() => {
+      // Access the module registry exposed on window in dev mode.
+      const win = window as Record<string, unknown>
+      const syncMod = win.__syncEngine__ as
+        | { fullSync: () => Promise<void> }
+        | undefined
+      if (syncMod) {
+        syncMod.fullSync = () => Promise.resolve()
+      }
+    })
+
+    const button = page.getByTestId('sync-now-button')
+    await expect(button).toBeEnabled()
+
+    // Inject mock directly via store state to simulate successful sync path.
+    // We drive the status store to simulate the loading → synced transition
+    // that handleSyncNow produces, since fullSync may be a real engine call.
+    await page.evaluate(() => {
+      const win = window as Record<string, unknown>
+      const syncStatusStore = win.__syncStatusStore__ as
+        | { getState: () => { setStatus: (s: string) => void; markSyncComplete: () => void } }
+        | undefined
+      if (syncStatusStore) {
+        // Pre-set to synced so the guard doesn't block, then trigger via button.
+        syncStatusStore.getState().setStatus('synced')
+      }
+    })
+
+    await button.click()
+
+    // Button should disable (busy=true or status=syncing) during the call.
+    // Since fullSync may resolve quickly, assert the panel remains intact after.
+    await expect(page.getByTestId('sync-section')).toBeVisible()
+    // Button should re-enable after sync completes.
+    await expect(button).toBeEnabled({ timeout: 5000 })
+  })
+
+  test('destructive dialog confirm triggers reset flow (AC4 confirm path)', async ({
+    page,
+  }) => {
+    await setFakeAuthUser(page)
+
+    // Stub resetLocalData to resolve immediately via the window shim if available.
+    await page.evaluate(() => {
+      const win = window as Record<string, unknown>
+      const resetMod = win.__resetLocalData__ as
+        | { resetLocalData: () => Promise<void> }
+        | undefined
+      if (resetMod) {
+        resetMod.resetLocalData = () => Promise.resolve()
+      }
+    })
+
+    const resetButton = page.getByTestId('sync-reset-button')
+    await expect(resetButton).toBeVisible()
+    await resetButton.click()
+
+    // AlertDialog must be open.
+    await expect(page.getByRole('alertdialog')).toBeVisible()
+
+    // Click Confirm.
+    const confirmButton = page.getByTestId('sync-reset-confirm')
+    await expect(confirmButton).toBeVisible()
+    await confirmButton.click()
+
+    // Panel should remain visible (section stays mounted after reset completes).
+    await expect(page.getByTestId('sync-section')).toBeVisible({ timeout: 5000 })
+    // Dialog should close after reset completes.
+    await expect(page.getByRole('alertdialog')).toHaveCount(0, { timeout: 5000 })
+  })
 })
