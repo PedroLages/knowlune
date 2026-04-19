@@ -106,7 +106,8 @@ export function useAudiobookshelfSync() {
         source: {
           type: 'remote',
           url: server.url.replace(/\/+$/, ''),
-          auth: { bearer: server.apiKey },
+          // apiKey may be undefined after E95-S02 (stored in Vault — KI-E95-S02-L01)
+          auth: server.apiKey ? { bearer: server.apiKey } : undefined,
         },
         totalDuration: duration,
         progress: 0,
@@ -136,6 +137,14 @@ export function useAudiobookshelfSync() {
       const LIMIT = 50
 
       try {
+        // Temporary guard (KI-E95-S02-L01): apiKey is undefined after E95-S02 migration.
+        if (!server.apiKey) {
+          console.warn('[useAudiobookshelfSync] syncCatalog: apiKey unavailable — sync skipped (KI-E95-S02-L01)')
+          syncingServers.current.delete(server.id)
+          setState(prev => ({ ...prev, isSyncing: false }))
+          return
+        }
+
         // Fetch ALL pages for each selected library (not just page 0)
         const allMappedBooks: Book[] = []
         let totalItems = 0

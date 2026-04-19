@@ -6,10 +6,17 @@
  * getServerById, loadSeries, and loadCollections.
  *
  * @since E106-S01
+ * @modified E95-S02 — added vaultCredentials mock; updated addServer expectation to reflect apiKey stripping
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 import type { AudiobookshelfServer } from '@/data/types'
+
+// Mock vaultCredentials — E95-S02: apiKey is stored in Vault, not in Dexie
+vi.mock('@/lib/vaultCredentials', () => ({
+  storeCredential: vi.fn().mockResolvedValue(undefined),
+  deleteCredential: vi.fn().mockResolvedValue(undefined),
+}))
 
 // Mock AudiobookshelfService
 vi.mock('@/services/AudiobookshelfService', () => ({
@@ -132,7 +139,7 @@ describe('loadServers', () => {
 })
 
 describe('addServer', () => {
-  it('adds server to state and Dexie', async () => {
+  it('adds server to state and Dexie with apiKey stripped (E95-S02)', async () => {
     const server = makeServer({ id: 'new-srv' })
 
     await useAudiobookshelfStore.getState().addServer(server)
@@ -140,7 +147,11 @@ describe('addServer', () => {
     const state = useAudiobookshelfStore.getState()
     expect(state.servers).toHaveLength(1)
     expect(state.servers[0].id).toBe('new-srv')
-    expect(mockDb.audiobookshelfServers.add).toHaveBeenCalledWith(server)
+    // apiKey is stripped before Dexie write — credentials live in Vault (E95-S02)
+    expect(state.servers[0].apiKey).toBeUndefined()
+    expect(mockDb.audiobookshelfServers.add).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'new-srv', apiKey: undefined })
+    )
   })
 
   it('throws on DB failure', async () => {

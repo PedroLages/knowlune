@@ -2,12 +2,19 @@
  * Unit tests for useOpdsCatalogStore — CRUD operations and error handling.
  *
  * @since E88-S01
+ * @modified E95-S02 — added vaultCredentials mock; credentials stripped from Dexie writes
  */
 import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from 'react'
 import Dexie from 'dexie'
 import type { OpdsCatalog } from '@/data/types'
+
+// Mock vaultCredentials — E95-S02: passwords stored in Vault, not in Dexie
+vi.mock('@/lib/vaultCredentials', () => ({
+  storeCredential: vi.fn().mockResolvedValue(undefined),
+  deleteCredential: vi.fn().mockResolvedValue(undefined),
+}))
 
 let useOpdsCatalogStore: (typeof import('@/stores/useOpdsCatalogStore'))['useOpdsCatalogStore']
 

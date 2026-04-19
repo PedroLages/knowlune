@@ -734,7 +734,7 @@ export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'orange'
 
 /** Authentication for remote content sources */
 export type RemoteAuth =
-  | { username: string; password: string } // OPDS Basic Auth (E88)
+  | { username: string; password?: string } // OPDS Basic Auth — password optional after E95-S02 (stored in Vault)
   | { bearer: string } // ABS Bearer token (E101)
 
 /** Where the file content lives */
@@ -877,10 +877,9 @@ export interface OpdsCatalog {
   url: string // OPDS catalog root URL
   auth?: {
     username: string
-    // NOTE: Password stored in plaintext — acceptable for local-first architecture
-    // where data never leaves the device. Must be encrypted before any cloud sync
-    // or backup feature is introduced (tracked for pre-sync encryption work).
-    password: string
+    // Password is optional — stored in Supabase Vault (E95-S02).
+    // Dexie rows do NOT contain this field after E95-S02 migration.
+    password?: string
   }
   lastSynced?: string // ISO 8601
   createdAt: string // ISO 8601
@@ -891,10 +890,10 @@ export interface AudiobookshelfServer {
   id: string // UUID v4
   name: string // User-friendly label (e.g., "Home Server")
   url: string // Base URL (e.g., "http://192.168.1.50:13378")
-  // NOTE: API key stored in plaintext — acceptable for local-first architecture
-  // where data never leaves the device. Must be encrypted before any cloud sync
-  // or backup feature is introduced (tracked for pre-sync encryption work).
-  apiKey: string // Bearer token from ABS Settings > Users > API Keys
+  // apiKey is optional — stored in Supabase Vault (E95-S02).
+  // Dexie rows do NOT contain this field after E95-S02 migration.
+  // Read-path migration (hooks, components) tracked as KI-E95-S02-L01.
+  apiKey?: string // Bearer token from ABS Settings > Users > API Keys
   libraryIds: string[] // Selected ABS library IDs to sync
   status: 'connected' | 'offline' | 'auth-failed'
   lastSyncedAt?: string // ISO date of last successful catalog fetch

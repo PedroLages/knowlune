@@ -69,10 +69,12 @@ export function useAudiobookshelfProgressSync({
 
     const server = useAudiobookshelfStore.getState().getServerById(book.absServerId)
     if (!server) return // Fire-and-forget — never block book opening
+    // Temporary guard (KI-E95-S02-L01): apiKey is undefined after E95-S02 migration.
+    if (!server.apiKey) return
     ;(async () => {
       const result = await AudiobookshelfService.fetchProgress(
         server.url,
-        server.apiKey,
+        server.apiKey!,
         book.absItemId!
       )
 
@@ -89,7 +91,7 @@ export function useAudiobookshelfProgressSync({
           book.currentPosition?.type === 'time' ? book.currentPosition.seconds : 0
         if (localSeconds > 0 && book.totalDuration && book.totalDuration > 0) {
           // silent-catch-ok: push is best-effort
-          AudiobookshelfService.updateProgress(server.url, server.apiKey, book.absItemId!, {
+          AudiobookshelfService.updateProgress(server.url, server.apiKey!, book.absItemId!, {
             currentTime: localSeconds,
             duration: book.totalDuration,
             progress: localSeconds / book.totalDuration,
@@ -135,7 +137,7 @@ export function useAudiobookshelfProgressSync({
         // Local is ahead — push to ABS (fire-and-forget)
         if (book.totalDuration && book.totalDuration > 0) {
           // silent-catch-ok: push is best-effort
-          AudiobookshelfService.updateProgress(server.url, server.apiKey, book.absItemId!, {
+          AudiobookshelfService.updateProgress(server.url, server.apiKey!, book.absItemId!, {
             currentTime: localSeconds,
             duration: book.totalDuration,
             progress: localSeconds / book.totalDuration,
@@ -153,6 +155,8 @@ export function useAudiobookshelfProgressSync({
 
     const server = useAudiobookshelfStore.getState().getServerById(book.absServerId)
     if (!server) return
+    // Temporary guard (KI-E95-S02-L01): apiKey is undefined after E95-S02 migration.
+    if (!server.apiKey) return
 
     const seconds = currentTime
     if (!seconds || seconds <= 0) return

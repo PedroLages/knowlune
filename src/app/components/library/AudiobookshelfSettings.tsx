@@ -68,6 +68,7 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
   const [deleteTarget, setDeleteTarget] = useState<AudiobookshelfServer | null>(null)
 
   // Track existing API key for edit mode (so we only update if user types a new one)
+  // After E95-S02, apiKey may be undefined (stored in Vault); defaults to empty string.
   const [existingApiKey, setExistingApiKey] = useState<string>('')
 
   useEffect(() => {
@@ -100,7 +101,8 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
       setName(server.name)
       setUrl(server.url)
       setApiKey('') // Never pre-fill raw API key — show placeholder
-      setExistingApiKey(server.apiKey)
+      // After E95-S02, apiKey is undefined in Dexie (stored in Vault); fallback to empty string.
+      setExistingApiKey(server.apiKey ?? '')
       setSelectedLibraryIds(server.libraryIds)
       setMode('edit')
     },
