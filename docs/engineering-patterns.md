@@ -1339,3 +1339,124 @@ function hydrateNotificationPrefs(remote: NotificationPreferences) {
 **Input validation during hydration:** Before applying remote values, validate any constrained fields (e.g., `quietHoursStart`/`quietHoursEnd` matching `HHMM_RE`). Malformed values are discarded; the local value is preserved for that field only.
 
 **Case study:** E95-S06 — `notificationPreferences` hydration in `src/lib/settings.ts`. Reference: `docs/plans/2026-04-19-016-feat-e95-s06-notification-preferences-sync-plan.md` §Key Technical Decisions.
+
+## Insert-Only RLS: Separate INSERT + SELECT Policies (No `FOR ALL`)
+
+Append-only tables (`ai_usage_events`, event logs, immutable audit rows) must enforce immutability at the database layer, not just via client convention. The common shortcut `CREATE POLICY … FOR ALL USING (user_id = auth.uid())` also grants UPDATE and DELETE, so a future bug or compromised client can mutate or erase rows that were meant to be permanent.
+
+```sql
+-- ✅ Correct — explicit, minimal grants; no UPDATE/DELETE policy exists
+CREATE POLICY "ai_usage_events_insert_own"
+  ON public.ai_usage_events FOR INSERT
+  WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "ai_usage_events_select_own"
+  ON public.ai_usage_events FOR SELECT
+  USING (user_id = auth.uid());
+
+-- ❌ Wrong — FOR ALL silently allows UPDATE and DELETE
+CREATE POLICY "ai_usage_events_all" ON public.ai_usage_events
+  FOR ALL USING (user_id = auth.uid());
+```
+
+**Pair with the cursor-column rule:** Append-only tables also need `cursorColumn: 'created_at'` in `tableRegistry.ts` (see "Append-Only Tables Must Use `created_at` as Sync Cursor") — the index should be `(user_id, created_at)` rather than `(user_id, updated_at)` because no `updated_at` column exists.
+
+**Rule:** Whenever you create an `appendOnly: true` table, write two separate RLS policies (INSERT, SELECT). Never use `FOR ALL` on an append-only table. Grep for `FOR ALL` in `supabase/migrations/` on every schema review.
+
+**Case study:** E96-S01 — 2 P4 insert-only tables (`ai_usage_events`, `course_reminders`) shipped with split INSERT/SELECT policies and `(user_id, created_at)` cursor indexes. Reference: `docs/solutions/sync/e96-closeout-sync-patterns-2026-04-19.md`.
+
+## Monotonic Field Hydration Guard — Per-Row Read-Before-Write
+
+Tables with monotonically-increasing fields (e.g., `challenges.currentProgress`, streak counters, XP totals) must not be hydrated with a plain `bulkPut`. When a user makes offline progress that is still sitting in `syncQueue`, a naive download-phase `bulkPut(remoteRows)` overwrites local progress with the stale server value before the queued upload drains. The regression is silent — the store just snaps backwards.
+
+```typescript
+// ❌ Wrong — plain bulkPut regresses currentProgress when local > remote
+async function hydrateChallengesFromRemote(rows: ChallengeRow[]) {
+  await db.challenges.bulkPut(rows)
+}
+
+// ✅ Correct — per-row merge, keep local if local value is ahead
+async function hydrateChallengesFromRemote(rows: ChallengeRow[]) {
+  const merged = await Promise.all(
+    rows.map(async (remote) => {
+      const local = await db.challenges.get(remote.id)
+      if (!local) return remote
+      return {
+        ...remote,
+        currentProgress: Math.max(local.currentProgress ?? 0, remote.currentProgress ?? 0),
+      }
+    })
+  )
+  await db.challenges.bulkPut(merged)
+}
+```
+
+**Rule:** Any hydrator that populates a monotonic field must do a per-row read-before-write and keep the local value if `local > remote`. Document the monotonic field set in the hydrator comment so future refactors preserve the guard.
+
+**Complementary server-side pattern:** The server-side version is "GREATEST Monotonic Guard Requires a Separate Reset RPC" (above) — together they protect monotonic fields on both sides of the wire.
+
+**Case study:** E96-S02 — `hydrateP3P4FromSupabase` guards `challenges.currentProgress`. Reference: `docs/solutions/sync/e96-closeout-sync-patterns-2026-04-19.md`.
+
+## Echo-Loop Invariant: Assert Zero `syncQueue` Rows, Not Zero `syncableWrite` Calls
+
+Hydration paths (download → local) must never re-enqueue rows they just received from the server. The common test — "spy on `syncableWrite` and assert it was not called" — is too loose: hydrators correctly use `db.<table>.bulkPut()` directly (not `syncableWrite`) because the rows are already authoritative. The spy passes, but a future refactor that calls `syncQueue.add()` directly would also pass while silently creating an echo loop.
+
+```typescript
+// ❌ Loose — spy passes even if hydrator bypasses syncableWrite and writes syncQueue directly
+const writeSpy = vi.spyOn(syncableWriteModule, 'syncableWrite')
+await hydrateP3P4FromSupabase(remoteRows)
+expect(writeSpy).not.toHaveBeenCalled()
+
+// ✅ Tight — assert the queue itself is empty, which is the real invariant
+await hydrateP3P4FromSupabase(remoteRows)
+const queuedCount = await db.syncQueue.count()
+expect(queuedCount).toBe(0)
+```
+
+**Rule:** Hydration tests assert the invariant at the `syncQueue` layer, not the `syncableWrite` layer. `bulkPut` is the allowed hydrate primitive; the only forbidden behaviour is producing a new `syncQueue` entry during a download phase.
+
+**Case study:** E96-S02 echo-loop test suite for `hydrateP3P4FromSupabase`. Reference: `docs/solutions/sync/e96-closeout-sync-patterns-2026-04-19.md`.
+
+## Hydration Ordering: `await` Fan-Out Before `syncEngine.start()`
+
+The sync engine starts a debounced upload loop as soon as `syncEngine.start()` is called. If hydration fan-outs (e.g., `hydrateP3P4FromSupabase`) are dispatched but not awaited before `start()`, their download-phase `bulkPut` calls can race with the engine's upload cycle — producing inconsistent Dexie state, lost writes, or spurious queue entries when the engine reads mid-bulkPut.
+
+```typescript
+// ❌ Wrong — fire-and-forget hydration racing with engine start
+hydrateP3P4FromSupabase()
+syncEngine.start()
+
+// ✅ Correct — every hydrator awaited before engine starts
+await Promise.all([
+  hydrateP0FromSupabase(),
+  hydrateP1FromSupabase(),
+  hydrateP2FromSupabase(),
+  hydrateP3P4FromSupabase(),
+])
+syncEngine.start()
+```
+
+**Rule:** All hydration fan-outs must resolve before `syncEngine.start()`. Use `Promise.all` (not `Promise.allSettled` — a hydration failure should halt boot rather than ship a partially-populated local DB). If a hydrator is optional or best-effort, wrap it explicitly with `.catch()` inside the array so the contract is visible at the call site.
+
+**Case study:** E96-S02 post-login bootstrap in `src/lib/sync/bootstrap.ts`. Reference: `docs/solutions/sync/e96-closeout-sync-patterns-2026-04-19.md`.
+
+## Local-Only Exclusion Pattern for Derivable Data
+
+Not every Dexie table belongs in the sync registry. Create-once, zero-mutation, deterministically-derivable stores (`youtubeChapters`, transcripts, TTS cache, video metadata cache) should be **explicitly** documented as local-only with a "re-open trigger" that explains how the data is regenerated after a DB wipe or device change. Silent omission from `tableRegistry.ts` leaves the next auditor asking the same question a year later.
+
+**The three criteria for local-only exclusion:**
+
+1. **Create-once** — rows are inserted during a deterministic bootstrap (first time a user opens a YouTube video, requests a transcript, etc.) and never edited afterwards.
+2. **Zero-mutation** — no UI affordance updates the row; no background job rewrites it.
+3. **Deterministically derivable** — the data can be regenerated from an external source (YouTube API, TTS service, remote file) with the same result.
+
+If all three hold, the table is local-only. Add an entry to `docs/architecture/sync-exclusions.md` (or the equivalent registry doc) that records:
+
+- Table name and Dexie schema version
+- Why it is excluded (cite the three criteria)
+- Re-open trigger: what user action or bootstrap step regenerates the data
+- FK grep evidence: no other synced table references the PK (prevents cross-table regression)
+
+**Rule:** Never silently omit a table from `tableRegistry.ts`. Either register it for sync or document the exclusion with all three criteria and the re-open trigger. Exclusion must be a positive decision, not a default.
+
+**Case study:** E96-S04 — `youtubeChapters` evaluated and excluded; `chapterId` FK grep across all synced tables confirmed no cross-references. Reference: `docs/solutions/sync/e96-closeout-sync-patterns-2026-04-19.md`.
