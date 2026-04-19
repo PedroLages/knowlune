@@ -43,6 +43,7 @@ import {
 } from '@/app/components/ui/alert-dialog'
 import { useSyncStatusStore } from '@/app/stores/useSyncStatusStore'
 import { syncEngine } from '@/lib/sync/syncEngine'
+import { runFullSync } from '@/lib/sync/runFullSync'
 import { resetLocalData } from '@/lib/sync/resetLocalData'
 import { tableRegistry } from '@/lib/sync/tableRegistry'
 import { getSettings, saveSettings } from '@/lib/settings'
@@ -177,23 +178,21 @@ export function SyncSection() {
     (next: boolean) => {
       setAutoSyncEnabled(next)
       saveSettings({ autoSyncEnabled: next })
-      // Broadcast so the lifecycle hook (and any other listeners) react.
+      // Broadcast so the lifecycle hook (useSyncLifecycle) reacts and owns all
+      // engine start/stop transitions. We only call stop() directly here to give
+      // an immediate halt on toggle-off; start() is intentionally omitted because
+      // useSyncLifecycle already handles it via settingsUpdated — a direct call
+      // here would be a duplicate that could corrupt lifecycle state.
       window.dispatchEvent(new Event('settingsUpdated'))
       if (!user) return
-      try {
-        if (next) {
-          void syncEngine.start(user.id).catch((err) => {
-            console.error('[SyncSection] start after toggle failed:', err)
-            toastError.saveFailed(classifyError(err))
-          })
-        } else {
+      if (!next) {
+        try {
           syncEngine.stop()
+        } catch (err) {
+          // silent-catch-ok — the preference is already persisted; surface engine
+          // stop errors only in the console. The user's intent (toggle) succeeded.
+          console.error('[SyncSection] stop engine on toggle-off failed:', err)
         }
-      } catch (err) {
-        // silent-catch-ok — the preference is already persisted; surface engine
-        // transition errors only in the console. The user's intent (toggle)
-        // succeeded from their perspective.
-        console.error('[SyncSection] toggle engine transition failed:', err)
       }
     },
     [user]
@@ -204,18 +203,17 @@ export function SyncSection() {
     if (useSyncStatusStore.getState().status === 'syncing') return
     setBusy(true)
     try {
-      useSyncStatusStore.getState().setStatus('syncing')
-      await syncEngine.fullSync()
-      useSyncStatusStore.getState().markSyncComplete()
-      void useSyncStatusStore.getState().refreshPendingCount()
+      // runFullSync() owns the setStatus/fullSync/markSyncComplete/catch pattern
+      // and is shared with SyncStatusIndicator.handleRetry.
+      await runFullSync()
       // Recompute item count — fullSync may have downloaded new rows.
       void computeTotalSyncedItems().then(setTotalItems)
       toastSuccess.saved('Sync complete')
-    } catch (err) {
-      console.error('[SyncSection] Sync Now failed:', err)
-      const message = classifyError(err)
-      useSyncStatusStore.getState().setStatus('error', message)
-      toastError.saveFailed(message)
+    } catch (message) {
+      // runFullSync() already called setStatus('error', message) and re-threw
+      // the classified string. We just need to surface it to the user.
+      console.error('[SyncSection] Sync Now failed:', message)
+      toastError.saveFailed(message as string)
     } finally {
       setBusy(false)
     }

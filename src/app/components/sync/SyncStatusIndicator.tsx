@@ -5,7 +5,7 @@
  *   - A single icon trigger (44×44 min touch target) colored by sync status.
  *   - An optional badge showing the pending queue depth.
  *   - A Popover with last-sync time, queue depth copy, and (when status is
- *     'error') a Retry now button that invokes syncEngine.fullSync().
+ *     'error') a Retry now button that invokes the shared runFullSync() utility.
  *
  * See `docs/plans/2026-04-19-021-feat-e97-s01-sync-status-indicator-header-plan.md`.
  */
@@ -27,8 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
 import { useSyncStatusStore, type SyncStatus } from '@/app/stores/useSyncStatusStore'
-import { syncEngine } from '@/lib/sync/syncEngine'
-import { classifyError } from '@/lib/sync/classifyError'
+import { runFullSync } from '@/lib/sync/runFullSync'
 
 interface StatusConfigEntry {
   /** Icon for the trigger in steady state. Spinner overrides this when syncing. */
@@ -142,27 +141,23 @@ export function SyncStatusIndicator(): React.ReactElement {
   }, [open])
 
   // Retry handler — guarded against racing the periodic/online fullSync. If
-  // the engine is already syncing (isLoading), early return so we don't stamp
-  // a duplicate setStatus and corrupt the lifecycle.
+  // the engine is already syncing, early return so we don't stamp a duplicate
+  // setStatus and corrupt the lifecycle.
+  // The setStatus/fullSync/markSyncComplete/catch pattern is shared with
+  // SyncSection.handleSyncNow via runFullSync() to avoid duplication.
   async function handleRetry(): Promise<void> {
     const current = useSyncStatusStore.getState().status
     if (current === 'syncing') return // race guard: already in-flight
 
-    const { setStatus, markSyncComplete, refreshPendingCount } =
-      useSyncStatusStore.getState()
-
-    setStatus('syncing')
     try {
-      await syncEngine.fullSync()
-      markSyncComplete()
-      await refreshPendingCount()
-    } catch (err) {
-      const message = classifyError(err)
-      console.error('[SyncStatusIndicator] Retry fullSync failed:', err)
-      setStatus('error', message)
-      toast.error(message)
+      await runFullSync()
+    } catch (message) {
+      // runFullSync() already called setStatus('error', message) and re-threw
+      // the classified string. We just need to surface it to the user.
+      console.error('[SyncStatusIndicator] Retry fullSync failed:', message)
+      toast.error(message as string)
       // Refresh badge so it reflects actual queue depth after failed retry.
-      await refreshPendingCount()
+      await useSyncStatusStore.getState().refreshPendingCount()
     }
   }
 
