@@ -8,10 +8,19 @@
 import type { TutorMessage } from '@/data/types'
 import type { TutorMode } from '@/ai/tutor/types'
 
+/**
+ * Coerce a `ChatConversation.updatedAt` value (epoch ms number OR ISO string
+ * stamped by syncableWrite) to a reliable epoch-ms number for arithmetic.
+ */
+export function toEpochMs(updatedAt: number | string): number {
+  return typeof updatedAt === 'number' ? updatedAt : new Date(updatedAt).getTime()
+}
+
 /** Format timestamp as relative date string */
-export function formatTimestamp(epochMs: number, now = new Date()): string {
-  const date = new Date(epochMs)
-  const diffMs = now.getTime() - epochMs
+export function formatTimestamp(epochMs: number | string, now = new Date()): string {
+  const ms = toEpochMs(epochMs)
+  const date = new Date(ms)
+  const diffMs = now.getTime() - ms
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
   const timeStr = date.toLocaleTimeString(undefined, {
@@ -33,9 +42,10 @@ export function formatTimestamp(epochMs: number, now = new Date()): string {
 }
 
 /** Format timestamp for the prompt display (with "at" phrasing) */
-export function formatPromptTimestamp(epochMs: number, now = new Date()): string {
-  const date = new Date(epochMs)
-  const diffMs = now.getTime() - epochMs
+export function formatPromptTimestamp(epochMs: number | string, now = new Date()): string {
+  const ms = toEpochMs(epochMs)
+  const date = new Date(ms)
+  const diffMs = now.getTime() - ms
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
   const timeStr = date.toLocaleTimeString(undefined, {

@@ -10,6 +10,7 @@ import { useState, useCallback, useEffect, type SetStateAction } from 'react'
 import { useTutorStore } from '@/stores/useTutorStore'
 import { db } from '@/db'
 import { isConversationStale } from './ContinueConversationPrompt'
+import { toEpochMs } from './conversationUtils'
 import type { ChatConversation } from '@/data/types'
 import type { TutorMode } from '@/ai/tutor/types'
 import type { ChatMessage } from '@/ai/rag/types'
@@ -96,7 +97,7 @@ export function useConversationHistory({
               c.courseId === courseId &&
               isConversationStale(c.updatedAt)
           )
-          .sort((a, b) => b.updatedAt - a.updatedAt)[0] ?? null
+          .sort((a, b) => toEpochMs(b.updatedAt) - toEpochMs(a.updatedAt))[0] ?? null
       : null
 
   const handleContinueConversation = useCallback(

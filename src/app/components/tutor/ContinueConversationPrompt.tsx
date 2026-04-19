@@ -9,7 +9,7 @@
 import { useMemo } from 'react'
 import { MessageSquare } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
-import { formatPromptTimestamp, extractTopics, extractModes } from './conversationUtils'
+import { formatPromptTimestamp, extractTopics, extractModes, toEpochMs } from './conversationUtils'
 import type { ChatConversation } from '@/data/types'
 import { MODE_LABELS } from '@/ai/tutor/modeLabels'
 
@@ -20,9 +20,12 @@ interface ContinueConversationPromptProps {
 }
 
 
-/** Check if conversation is older than 5 minutes */
-export function isConversationStale(updatedAt: number, now: number = Date.now()): boolean {
-  return now - updatedAt > 5 * 60 * 1000
+/**
+ * Check if conversation is older than 5 minutes.
+ * Accepts epoch ms or ISO string (syncableWrite stamps ISO strings on existing records).
+ */
+export function isConversationStale(updatedAt: number | string, now: number = Date.now()): boolean {
+  return now - toEpochMs(updatedAt) > 5 * 60 * 1000
 }
 
 export function ContinueConversationPrompt({
