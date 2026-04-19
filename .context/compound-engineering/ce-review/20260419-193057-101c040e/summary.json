@@ -1,0 +1,22 @@
+{
+  "runId": "R2-20260419-193057-101c040e",
+  "branch": "feature/e95-s05-opds-abs-server-connection-sync",
+  "commit": "7a9b4620",
+  "mode": "headless",
+  "verdict": "Ready with fixes",
+  "blockers": 0,
+  "high": 0,
+  "medium": 1,
+  "low": 0,
+  "nit": 0,
+  "findings": [
+    {
+      "id": "R2-M-01",
+      "severity": "MEDIUM",
+      "file": "src/lib/credentials/__tests__/migrateCredentialsToVault.test.ts",
+      "line": 44,
+      "summary": "No test covers checkCredential returning false — the core BLOCKER-01 fix path is untested",
+      "suggestedFix": "Add: checkMock.mockResolvedValue(false) test asserting failed=1, apiKey preserved, migration not marked done"
+    }
+  ]
+}

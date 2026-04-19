@@ -4,6 +4,7 @@ import { db } from '@/db'
 import type { LearningPath, LearningPathEntry } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { trackAIUsage } from '@/lib/aiEventTracking'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 interface LearningPathState {
   // Multi-path state (E26-S01/S02)
@@ -44,6 +45,23 @@ interface LearningPathState {
 
   // Helpers
   getEntriesForPath: (pathId: string) => LearningPathEntry[]
+
+  /**
+   * Replace Dexie + in-memory collections from a validated remote snapshot.
+   *
+   * E96-S02: called by `hydrateP3P4FromSupabase` after a Supabase pull. Pure
+   * setter from the sync engine's perspective — uses `db.<table>.bulkPut`
+   * directly (never `syncableWrite`) so it does NOT enqueue any syncQueue
+   * rows. See E93 retrospective — echo loops are the top regression vector.
+   *
+   * AC5 disposition: `isAllDefaults` guard is vacuously satisfied for both
+   * `learningPaths` and `learningPathEntries` — neither is a singleton. Rows
+   * are union-merged via `bulkPut` keyed by id.
+   */
+  hydrateFromRemote: (snapshot: {
+    paths?: LearningPath[]
+    entries?: LearningPathEntry[]
+  }) => Promise<void>
 }
 
 export const useLearningPathStore = create<LearningPathState>((set, get) => ({
@@ -95,7 +113,11 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.learningPaths.add(path)
+        await syncableWrite(
+          'learningPaths',
+          'add',
+          path as unknown as SyncableRecord,
+        )
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to create path:', error)
@@ -116,6 +138,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     const now = new Date().toISOString()
     const prevPaths = get().paths
     const prevActivePath = get().activePath
+    const existing = prevPaths.find(p => p.id === pathId)
+    if (!existing) return
 
     // Optimistic update
     set(state => ({
@@ -129,7 +153,13 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.learningPaths.update(pathId, { name, updatedAt: now })
+        // syncableWrite needs the full record — read-merge-put so the
+        // registry-driven LWW comparison works against a complete row.
+        await syncableWrite(
+          'learningPaths',
+          'put',
+          { ...existing, name } as unknown as SyncableRecord,
+        )
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to rename path:', error)
@@ -146,6 +176,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     const now = new Date().toISOString()
     const prevPaths = get().paths
     const prevActivePath = get().activePath
+    const existing = prevPaths.find(p => p.id === pathId)
+    if (!existing) return
 
     // Optimistic update
     set(state => ({
@@ -159,7 +191,11 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.learningPaths.update(pathId, { description, updatedAt: now })
+        await syncableWrite(
+          'learningPaths',
+          'put',
+          { ...existing, description } as unknown as SyncableRecord,
+        )
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to update description:', error)
@@ -173,11 +209,19 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   },
 
   deletePath: async (pathId: string) => {
+    // Collect the entries to delete *before* the syncableWrite calls so we
+    // can enqueue each one. We cannot use a Dexie transaction here because
+    // syncableWrite spans Dexie + syncQueue; enqueueing happens outside the
+    // table-scoped transaction.
+    const entryIds = (
+      await db.learningPathEntries.where('pathId').equals(pathId).primaryKeys()
+    ) as string[]
+
     await persistWithRetry(async () => {
-      await db.transaction('rw', db.learningPaths, db.learningPathEntries, async () => {
-        await db.learningPaths.delete(pathId)
-        await db.learningPathEntries.where('pathId').equals(pathId).delete()
-      })
+      for (const entryId of entryIds) {
+        await syncableWrite('learningPathEntries', 'delete', entryId)
+      }
+      await syncableWrite('learningPaths', 'delete', pathId)
     })
 
     set(state => {
@@ -236,10 +280,19 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.transaction('rw', db.learningPathEntries, db.learningPaths, async () => {
-          await db.learningPathEntries.add(entry)
-          await db.learningPaths.update(pathId, { updatedAt: new Date().toISOString() })
-        })
+        await syncableWrite(
+          'learningPathEntries',
+          'add',
+          entry as unknown as SyncableRecord,
+        )
+        const existingPath = await db.learningPaths.get(pathId)
+        if (existingPath) {
+          await syncableWrite(
+            'learningPaths',
+            'put',
+            existingPath as unknown as SyncableRecord,
+          )
+        }
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to add course to path:', error)
@@ -279,14 +332,23 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.transaction('rw', db.learningPathEntries, db.learningPaths, async () => {
-          await db.learningPathEntries.delete(entryToRemove.id)
-          // Update positions of remaining entries
-          for (const entry of remaining) {
-            await db.learningPathEntries.update(entry.id, { position: entry.position })
-          }
-          await db.learningPaths.update(pathId, { updatedAt: new Date().toISOString() })
-        })
+        await syncableWrite('learningPathEntries', 'delete', entryToRemove.id)
+        // Update positions of remaining entries — one put per row.
+        for (const entry of remaining) {
+          await syncableWrite(
+            'learningPathEntries',
+            'put',
+            entry as unknown as SyncableRecord,
+          )
+        }
+        const existingPath = await db.learningPaths.get(pathId)
+        if (existingPath) {
+          await syncableWrite(
+            'learningPaths',
+            'put',
+            existingPath as unknown as SyncableRecord,
+          )
+        }
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to remove course from path:', error)
@@ -323,15 +385,21 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     }))
 
     await persistWithRetry(async () => {
-      await db.transaction('rw', db.learningPathEntries, db.learningPaths, async () => {
-        for (const entry of updated) {
-          await db.learningPathEntries.update(entry.id, {
-            position: entry.position,
-            isManuallyOrdered: entry.isManuallyOrdered,
-          })
-        }
-        await db.learningPaths.update(pathId, { updatedAt: new Date().toISOString() })
-      })
+      for (const entry of updated) {
+        await syncableWrite(
+          'learningPathEntries',
+          'put',
+          entry as unknown as SyncableRecord,
+        )
+      }
+      const existingPath = await db.learningPaths.get(pathId)
+      if (existingPath) {
+        await syncableWrite(
+          'learningPaths',
+          'put',
+          existingPath as unknown as SyncableRecord,
+        )
+      }
     }).catch(error => {
       console.error('[LearningPathStore] Failed to persist reordering:', error)
       set({ error: 'Failed to save reordering' })
@@ -364,9 +432,14 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       }
       const pathId = targetPath!.id
 
-      // Clear existing entries for this path
+      // Clear existing entries for this path — enqueue deletes one-at-a-time.
+      const existingEntryIds = (
+        await db.learningPathEntries.where('pathId').equals(pathId).primaryKeys()
+      ) as string[]
       await persistWithRetry(async () => {
-        await db.learningPathEntries.where('pathId').equals(pathId).delete()
+        for (const entryId of existingEntryIds) {
+          await syncableWrite('learningPathEntries', 'delete', entryId)
+        }
       })
       set(state => ({
         entries: state.entries.filter(e => e.pathId !== pathId),
@@ -404,15 +477,28 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       const now = new Date().toISOString()
 
       await persistWithRetry(async () => {
-        await db.transaction('rw', db.learningPathEntries, db.learningPaths, async () => {
-          // Clear any partial streaming entries
-          await db.learningPathEntries.where('pathId').equals(pathId).delete()
-          await db.learningPathEntries.bulkAdd(finalEntries)
-          await db.learningPaths.update(pathId, {
-            updatedAt: now,
-            isAIGenerated: true,
-          })
-        })
+        // Clear any partial streaming entries.
+        const partialIds = (
+          await db.learningPathEntries.where('pathId').equals(pathId).primaryKeys()
+        ) as string[]
+        for (const entryId of partialIds) {
+          await syncableWrite('learningPathEntries', 'delete', entryId)
+        }
+        for (const entry of finalEntries) {
+          await syncableWrite(
+            'learningPathEntries',
+            'add',
+            entry as unknown as SyncableRecord,
+          )
+        }
+        const existingPath = await db.learningPaths.get(pathId)
+        if (existingPath) {
+          await syncableWrite(
+            'learningPaths',
+            'put',
+            { ...existingPath, isAIGenerated: true } as unknown as SyncableRecord,
+          )
+        }
       })
 
       set(state => ({
@@ -457,8 +543,13 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     }))
 
     try {
+      const entryIds = (
+        await db.learningPathEntries.where('pathId').equals(pathId).primaryKeys()
+      ) as string[]
       await persistWithRetry(async () => {
-        await db.learningPathEntries.where('pathId').equals(pathId).delete()
+        for (const entryId of entryIds) {
+          await syncableWrite('learningPathEntries', 'delete', entryId)
+        }
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to clear path:', error)
@@ -501,16 +592,21 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     }))
 
     await persistWithRetry(async () => {
-      await db.transaction('rw', db.learningPathEntries, db.learningPaths, async () => {
-        for (const entry of updated) {
-          await db.learningPathEntries.update(entry.id, {
-            position: entry.position,
-            justification: entry.justification,
-            isManuallyOrdered: false,
-          })
-        }
-        await db.learningPaths.update(pathId, { updatedAt: now, isAIGenerated: true })
-      })
+      for (const entry of updated) {
+        await syncableWrite(
+          'learningPathEntries',
+          'put',
+          entry as unknown as SyncableRecord,
+        )
+      }
+      const existingPath = await db.learningPaths.get(pathId)
+      if (existingPath) {
+        await syncableWrite(
+          'learningPaths',
+          'put',
+          { ...existingPath, isAIGenerated: true } as unknown as SyncableRecord,
+        )
+      }
     }).catch(error => {
       console.error('[LearningPathStore] Failed to apply AI order:', error)
       set({ error: 'Failed to save AI-suggested order' })
@@ -521,5 +617,29 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     return get()
       .entries.filter(e => e.pathId === pathId)
       .sort((a, b) => a.position - b.position)
+  },
+
+  hydrateFromRemote: async ({ paths, entries } = {}) => {
+    // Direct Dexie write — NEVER through syncableWrite. The remote is already
+    // authoritative in Supabase; enqueueing here would create an echo loop.
+    if (paths && paths.length > 0) {
+      await db.learningPaths.bulkPut(paths)
+    }
+    if (entries && entries.length > 0) {
+      await db.learningPathEntries.bulkPut(entries)
+    }
+    if ((paths && paths.length > 0) || (entries && entries.length > 0)) {
+      // Refresh in-memory cache from Dexie to reflect the merged state.
+      const freshPaths = await db.learningPaths.toArray()
+      const freshEntries = await db.learningPathEntries.toArray()
+      const sorted = freshPaths.sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      )
+      set(state => ({
+        paths: sorted,
+        entries: freshEntries,
+        activePath: state.activePath ?? sorted[0] ?? null,
+      }))
+    }
   },
 }))
