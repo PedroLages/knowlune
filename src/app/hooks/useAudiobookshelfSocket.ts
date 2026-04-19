@@ -109,6 +109,8 @@ export function useAudiobookshelfSocket({
   // Connect/disconnect on server/item changes
   useEffect(() => {
     if (!server || !activeItemId) return
+    // Temporary guard (KI-E95-S02-L01): apiKey is undefined after E95-S02 migration.
+    if (!server.apiKey) return
 
     const connection = AudiobookshelfService.connectSocket(server.url, server.apiKey, {
       onReady: () => {

@@ -89,8 +89,11 @@ export function WhisperSettings() {
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const testResultTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  // Detect which cloud providers have API keys configured
-  const configuredProviders = getConfiguredProviderIds()
+  // Detect which cloud providers have API keys configured (async — Vault check)
+  const [configuredProviders, setConfiguredProviders] = useState<AIProviderId[]>([])
+  useEffect(() => {
+    getConfiguredProviderIds().then(setConfiguredProviders)
+  }, [])
   const cloudProvidersWithKeys = WHISPER_CLOUD_PROVIDERS.filter(p =>
     configuredProviders.includes(p)
   )

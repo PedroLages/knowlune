@@ -99,9 +99,11 @@ export function FeatureModelOverridePanel({
     }
   }, [])
 
-  // Fetch configured providers (refresh when keys change)
+  // Fetch configured providers (async — Vault check; refresh when keys change)
   useEffect(() => {
-    const refresh = () => setConfiguredProviders(getConfiguredProviderIds())
+    const refresh = () => {
+      getConfiguredProviderIds().then(setConfiguredProviders)
+    }
     refresh()
     window.addEventListener('ai-configuration-updated', refresh)
     return () => window.removeEventListener('ai-configuration-updated', refresh)

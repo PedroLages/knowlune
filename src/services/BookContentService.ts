@@ -128,7 +128,7 @@ class BookContentService {
       }
 
       const headers: Record<string, string> = {}
-      if (source.auth && 'username' in source.auth) {
+      if (source.auth && 'username' in source.auth && source.auth.password) {
         // Issue 2: Warn if credentials are sent over plain HTTP (RFC 7617 security)
         if (/^http:\/\//i.test(source.url)) {
           console.warn(
@@ -137,6 +137,8 @@ class BookContentService {
           )
         }
         // Issue 1: Use TextEncoder to handle non-ASCII credentials (RFC 7617 compliance)
+        // Note: password may be absent for books imported after E95-S02 (stored in Vault).
+        // Full read-path migration (look up via catalogId at read-time) is future work.
         const credentials = `${source.auth.username}:${source.auth.password}`
         const encoded = new TextEncoder().encode(credentials)
         const base64 = btoa(String.fromCharCode(...encoded))

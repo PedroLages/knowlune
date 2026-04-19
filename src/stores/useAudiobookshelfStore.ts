@@ -15,6 +15,7 @@ import type { AudiobookshelfServer, AbsSeries, AbsCollection } from '@/data/type
 import { db } from '@/db/schema'
 import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 import { useBookStore } from '@/stores/useBookStore'
+import { storeCredential, deleteCredential } from '@/lib/vaultCredentials'
 
 /** TTL for supplementary data (collections, series) — 5 minutes */
 const SUPPLEMENTARY_CACHE_TTL = 5 * 60 * 1000
@@ -77,8 +78,16 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
 
   addServer: async (server: AudiobookshelfServer) => {
     try {
-      await db.audiobookshelfServers.add(server)
-      set(state => ({ servers: [...state.servers, server] }))
+      // Store apiKey in Vault (fire-and-forget — Dexie write continues even if Vault fails)
+      if (server.apiKey) {
+        void storeCredential('abs-server', server.id, server.apiKey).catch(err => {
+          console.warn('[AudiobookshelfStore] Vault storeCredential failed for server:', server.id, err)
+        })
+      }
+      // Strip apiKey from Dexie record — credentials live in Vault (E95-S02)
+      const dexieRecord: AudiobookshelfServer = { ...server, apiKey: undefined }
+      await db.audiobookshelfServers.add(dexieRecord)
+      set(state => ({ servers: [...state.servers, dexieRecord] }))
     } catch (err) {
       console.error('[AudiobookshelfStore] Failed to add server:', err)
       toast.error('Failed to save Audiobookshelf server.')
@@ -88,9 +97,20 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
 
   updateServer: async (id: string, updates: Partial<Omit<AudiobookshelfServer, 'id'>>) => {
     try {
-      await db.audiobookshelfServers.update(id, updates)
+      // Store apiKey in Vault if provided (fire-and-forget — Dexie write continues)
+      if (updates.apiKey) {
+        void storeCredential('abs-server', id, updates.apiKey).catch(err => {
+          console.warn('[AudiobookshelfStore] Vault storeCredential failed for server:', id, err)
+        })
+      }
+      // Strip apiKey from Dexie updates — credentials live in Vault (E95-S02)
+      // Do NOT include apiKey in the in-memory update either; the existing value is preserved.
+      const dexieUpdates: Partial<Omit<AudiobookshelfServer, 'id' | 'apiKey'>> = Object.fromEntries(
+        Object.entries(updates).filter(([k]) => k !== 'apiKey')
+      ) as Partial<Omit<AudiobookshelfServer, 'id' | 'apiKey'>>
+      await db.audiobookshelfServers.update(id, dexieUpdates)
       set(state => ({
-        servers: state.servers.map(s => (s.id === id ? { ...s, ...updates } : s)),
+        servers: state.servers.map(s => (s.id === id ? { ...s, ...dexieUpdates } : s)),
       }))
 
       // Flush pending sync queue when server transitions to 'connected' (E102-S01)
@@ -124,6 +144,11 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       }))
       // Refresh the book store so the UI reflects the deletion
       await useBookStore.getState().loadBooks()
+      // Delete credential from Vault after Dexie delete (fire-and-forget)
+      void deleteCredential('abs-server', id).catch(err => {
+        // silent-catch-ok — Dexie delete already succeeded; Vault cleanup is best-effort
+        console.warn('[AudiobookshelfStore] Vault deleteCredential failed for server:', id, err)
+      })
       toast.success(`Server removed along with ${absBooks.length} synced books`)
     } catch (err) {
       console.error('[AudiobookshelfStore] Failed to remove server:', err)
@@ -159,6 +184,13 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
         continue
       }
 
+      // Temporary guard (KI-E95-S02-L01): apiKey is undefined after E95-S02 migration.
+      if (!server.apiKey) {
+        console.warn('[AudiobookshelfStore] flushSyncQueue: apiKey unavailable — skipping progress sync (KI-E95-S02-L01)')
+        remaining.push(item)
+        continue
+      }
+
       const result = await AudiobookshelfService.updateProgress(
         server.url,
         server.apiKey,
@@ -183,6 +215,12 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
     if (get().isLoadingSeries) return
     const server = get().servers.find(s => s.id === serverId)
     if (!server) return
+    // Temporary guard (KI-E95-S02-L01): apiKey is undefined after E95-S02 migration.
+    // Read-path migration (via Vault readCredential) is tracked separately.
+    if (!server.apiKey) {
+      console.warn('[AudiobookshelfStore] loadSeries: apiKey unavailable — API call skipped (KI-E95-S02-L01)')
+      return
+    }
 
     set({ isLoadingSeries: true })
     try {
@@ -247,6 +285,12 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
     if (get().isLoadingCollections) return
     const server = get().servers.find(s => s.id === serverId)
     if (!server) return
+    // Temporary guard (KI-E95-S02-L01): apiKey is undefined after E95-S02 migration.
+    // Read-path migration (via Vault readCredential) is tracked separately.
+    if (!server.apiKey) {
+      console.warn('[AudiobookshelfStore] loadCollections: apiKey unavailable — API call skipped (KI-E95-S02-L01)')
+      return
+    }
 
     set({ isLoadingCollections: true })
     try {

@@ -52,6 +52,7 @@ import {
   type OpdsBreadcrumb,
 } from '@/services/OpdsService'
 import type { Book, OpdsCatalog } from '@/data/types'
+import { readCredential } from '@/lib/vaultCredentials'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -312,12 +313,20 @@ export function OpdsBrowser({ open, onOpenChange, initialCatalogId }: OpdsBrowse
   // Track current feed URL for breadcrumb navigation
   const [currentFeedUrl, setCurrentFeedUrl] = useState<string>('')
 
+  /** Resolves the full auth object including the Vault-stored password. */
+  const resolveAuth = useCallback(async (catalog: OpdsCatalog) => {
+    if (!catalog.auth?.username) return undefined
+    const password = await readCredential('opds-catalog', catalog.id)
+    return { username: catalog.auth.username, password: password ?? '' }
+  }, [])
+
   const fetchFeed = useCallback(async (url: string, catalog: OpdsCatalog) => {
     setIsLoading(true)
     setError(null)
     setFeedState(null)
 
-    const result = await fetchCatalogEntries(url, catalog.auth)
+    const auth = await resolveAuth(catalog)
+    const result = await fetchCatalogEntries(url, auth)
 
     if (result.ok) {
       setFeedState({
@@ -384,7 +393,8 @@ export function OpdsBrowser({ open, onOpenChange, initialCatalogId }: OpdsBrowse
     if (!feedState?.nextPageUrl || !selectedCatalog) return
 
     setIsLoadingMore(true)
-    const result = await fetchCatalogEntries(feedState.nextPageUrl, selectedCatalog.auth)
+    const auth = await resolveAuth(selectedCatalog)
+    const result = await fetchCatalogEntries(feedState.nextPageUrl, auth)
 
     if (result.ok) {
       setFeedState(prev =>
@@ -444,8 +454,10 @@ export function OpdsBrowser({ open, onOpenChange, initialCatalogId }: OpdsBrowse
           // credentials change, existing books will retain stale creds until the user
           // re-imports them. Credential refresh / re-sync from catalog is tracked as
           // future work (look up at read-time via catalogId).
+          // Auth stored in Vault (E95-S02) — do NOT copy password into Book record.
+          // BookContentService reads credential from Vault at download time via catalogId lookup.
           auth: selectedCatalog.auth
-            ? { username: selectedCatalog.auth.username, password: selectedCatalog.auth.password }
+            ? { username: selectedCatalog.auth.username }
             : undefined,
         },
         progress: 0,

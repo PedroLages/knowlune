@@ -1119,3 +1119,23 @@ issues:
     status: wont-fix
     addedAt: "2026-04-18"
     resolution: wont-fix
+
+  - id: KI-E95-S02-L01
+    story: E95-S02
+    severity: medium
+    description: >
+      ABS server apiKey read-path not migrated to Vault. 20+ call sites in hooks
+      (useAudiobookshelfSocket, useAudiobookshelfProgressSync, useAudiobookshelfSync),
+      components (AudiobookshelfSettings), and store-internal calls (flushSyncQueue)
+      still access server.apiKey directly from Dexie/Zustand state. These will receive
+      undefined after E95-S02 migration until read-path migration is done.
+      In-store calls (loadSeries, loadCollections, flushSyncQueue) have temporary
+      guards that skip the API call with a console.warn.
+    workaround: Users with existing ABS server connections will need to re-enter API
+      key after E95-S02 deploys, until read-path migration completes. ABS library
+      sync, series/collections loading, and progress sync will be non-functional
+      until then.
+    status: open
+    addedAt: "2026-04-19"
+    epic: E95
+    follow_up: "separate coordinated refactor of reactive hooks and store internals"
