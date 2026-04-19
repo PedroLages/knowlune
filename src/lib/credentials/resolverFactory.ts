@@ -42,6 +42,13 @@ export interface ResolverHookResult {
  * function rather than the generic factory result.
  */
 export function createCredentialResolver(kind: CachedCredentialKind) {
+  /**
+   * Tracks the last known outcome per `${kind}:${id}` key.
+   * This separates "auth-failed" from "transient error / unauthenticated"
+   * so `useValue` can set `authFailed` without racing the cache.
+   */
+  const lastReason = new Map<string, 'ok' | 'auth-failed' | 'error'>()
+
   async function get(id: string | undefined | null): Promise<string | null> {
     if (!id) return null
 
@@ -63,18 +70,23 @@ export function createCredentialResolver(kind: CachedCredentialKind) {
       result = await readCredentialWithStatus(kind, id)
     }
 
+    const reasonKey = `${kind}:${id}`
+
     if (result.ok) {
       credentialCache.set(kind, id, result.value)
+      lastReason.set(reasonKey, 'ok')
       return result.value
     }
 
     if (result.reason === 'auth-failed') {
       emitTelemetry('sync.credential.auth_failed', { kind, id })
+      lastReason.set(reasonKey, 'auth-failed')
       // Do not cache — next session / re-auth should try again.
       return null
     }
 
     // network/unknown error or unauthenticated — do not cache; let next call retry.
+    lastReason.set(reasonKey, 'error')
     return null
   }
 
@@ -106,12 +118,14 @@ export function createCredentialResolver(kind: CachedCredentialKind) {
       ;(async () => {
         const value = await get(id)
         if (reqId !== requestIdRef.current) return
+        // Use the explicit lastReason map to distinguish "auth-failed" from
+        // transient network/unauthenticated errors — both result in null+no-cache
+        // but only auth-failed should surface the "re-enter credentials" banner.
+        const reasonKey = `${kind}:${id}`
         setState({
           value,
           loading: false,
-          // If we ended with null but the cache does NOT hold a null entry,
-          // the resolver hit the auth-failed path (we never cache those).
-          authFailed: value === null && credentialCache.get(kind, id) === undefined,
+          authFailed: lastReason.get(reasonKey) === 'auth-failed',
         })
       })()
     }, [id])

@@ -25,8 +25,8 @@
 
 import { toast } from 'sonner'
 import { db } from '@/db/schema'
-import type { LegacyAudiobookshelfServer, LegacyOpdsCatalog } from '@/data/types'
-import { storeCredential, type CredentialType } from '@/lib/vaultCredentials'
+import type { AudiobookshelfServer, LegacyAudiobookshelfServer, LegacyOpdsCatalog, OpdsCatalog } from '@/data/types'
+import { storeCredential, checkCredential, type CredentialType } from '@/lib/vaultCredentials'
 import { emitTelemetry } from './telemetry'
 
 const MIGRATION_FLAG_KEY = 'migrations.credentialsToVault.v1'
@@ -84,34 +84,47 @@ async function collectLegacyRows(): Promise<LegacyRow[]> {
 }
 
 async function clearLegacyField(row: LegacyRow): Promise<void> {
-  // Intentional: use raw Dexie .update() rather than syncableWrite —
+  // Intentional: use raw Dexie .put() rather than syncableWrite —
   // this is a local-only clear of a removed field. Pushing the row through
   // syncableWrite would stamp a fresh `updatedAt` and upload a metadata row
   // whose only change is "remove a field Supabase never had anyway",
   // polluting the sync queue with no-op entries.
+  //
+  // We use .put() instead of .update() because Dexie .update() with
+  // `undefined` values is a no-op in real browsers (fake-indexeddb masks
+  // this). .put() with the field omitted reliably removes it from the row.
   if (row.table === 'audiobookshelfServers') {
-    await db.audiobookshelfServers.update(row.id, {
-      apiKey: undefined,
-    } as unknown as Parameters<typeof db.audiobookshelfServers.update>[1])
+    const existing = (await db.audiobookshelfServers.get(row.id)) as unknown as LegacyAudiobookshelfServer | undefined
+    if (!existing) return
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { apiKey: _drop, ...rest } = existing
+    await db.audiobookshelfServers.put(rest as AudiobookshelfServer)
   } else {
-    // For OPDS, clear the nested password only — keep the username.
+    // For OPDS, clear the nested password only — keep the username and authType.
     const existing = (await db.opdsCatalogs.get(row.id)) as unknown as LegacyOpdsCatalog | undefined
     if (!existing) return
-    const nextAuth = existing.auth ? { username: existing.auth.username } : undefined
-    await db.opdsCatalogs.update(row.id, {
-      auth: nextAuth,
-    } as unknown as Parameters<typeof db.opdsCatalogs.update>[1])
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { auth: legacyAuth, ...restCatalog } = existing
+    const nextAuth = legacyAuth?.username ? { username: legacyAuth.username } : undefined
+    const next: OpdsCatalog = nextAuth ? { ...restCatalog, auth: nextAuth } : { ...restCatalog }
+    await db.opdsCatalogs.put(next)
   }
 }
 
 async function migrateRow(row: LegacyRow): Promise<'uploaded' | 'failed'> {
   try {
-    // storeCredential is non-throwing but can no-op on auth/network errors.
-    // We re-read the row afterwards to verify by deletion — but the cleaner
-    // signal is: if storeCredential returned without error AND the clear
-    // step succeeded, count it as uploaded. Since storeCredential currently
-    // swallows errors we emit telemetry both ways for observability.
+    // storeCredential is non-throwing but resolves void on vault-write
+    // failure (it only console.warns). Verify the write landed before
+    // clearing the legacy field — otherwise the credential is lost silently.
     await storeCredential(row.kind, row.id, row.secret)
+
+    const confirmed = await checkCredential(row.kind, row.id)
+    if (!confirmed) {
+      throw new Error(
+        `Vault write could not be confirmed for ${row.kind}:${row.id} — aborting clear to preserve legacy field`,
+      )
+    }
+
     await clearLegacyField(row)
     emitTelemetry('sync.migration.credential_uploaded', { kind: row.kind, id: row.id })
     failureCounts.delete(row.id)

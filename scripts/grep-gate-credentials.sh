@@ -14,6 +14,7 @@ PATTERNS=(
   'server\??\.apiKey'
   'catalog\.auth\?\.password'
   'catalog\.auth\.password'
+  'source\.auth\.password'
 )
 
 # Files that legitimately mention the pattern inside a comment (the
@@ -21,6 +22,7 @@ PATTERNS=(
 ALLOWLIST=(
   'src/lib/credentials/absApiKeyResolver.ts'
   'src/lib/credentials/opdsPasswordResolver.ts'
+  'src/services/BookContentService.ts'
 )
 
 exit_code=0

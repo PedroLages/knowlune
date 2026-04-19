@@ -8,13 +8,15 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import Dexie from 'dexie'
 
-const { storeMock, toastWarn } = vi.hoisted(() => ({
+const { storeMock, checkMock, toastWarn } = vi.hoisted(() => ({
   storeMock: vi.fn(),
+  checkMock: vi.fn(),
   toastWarn: vi.fn(),
 }))
 
 vi.mock('@/lib/vaultCredentials', () => ({
   storeCredential: storeMock,
+  checkCredential: checkMock,
   deleteCredential: vi.fn(),
   readCredential: vi.fn(),
   readCredentialWithStatus: vi.fn(),
@@ -37,6 +39,9 @@ beforeEach(async () => {
   await Dexie.delete('ElearningDB')
   vi.resetModules()
   storeMock.mockReset()
+  checkMock.mockReset()
+  // By default, checkCredential confirms the vault write succeeded.
+  checkMock.mockResolvedValue(true)
   toastWarn.mockReset()
   const schema = await import('@/db/schema')
   db = schema.db

@@ -1146,3 +1146,19 @@ issues:
       getOpdsPassword / useOpdsPassword in src/lib/credentials/). TypeScript enforces the
       invariant — AudiobookshelfServer / OpdsCatalog types drop the credential fields.
       CI grep gate (scripts/grep-gate-credentials.sh) blocks regression.
+
+  - id: KI-E95-S05-L01
+    story: E95-S05
+    severity: MEDIUM
+    description: >
+      Book.source.auth.password read-path in BookContentService not yet migrated to
+      vault-lookup-by-catalogId. Affects OPDS book downloads for legacy imports (books
+      imported before E95-S02 where password was stored inline on the source object).
+      The call site is marked with `vault-migration-deferred: KI-E95-S05-L01` and
+      allowlisted in the grep gate (scripts/grep-gate-credentials.sh) so new additions
+      are blocked. Full migration requires a catalogId→Vault read-path at download time.
+    file: "src/services/BookContentService.ts:131"
+    status: open
+    addedAt: "2026-04-19"
+    epic: E95
+    follow_up: "Schedule for post-beta follow-up: wire catalogId lookup through getOpdsPassword() at EPUB download time"
