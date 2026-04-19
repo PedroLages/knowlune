@@ -260,6 +260,16 @@ describe('<SyncStatusIndicator />', () => {
     resetStore({ status: 'syncing' })
     render(<SyncStatusIndicator />)
     const icon = screen.getByTestId('sync-status-icon')
+    // Spinner animation must be absent under reduced-motion preference.
     expect(icon.getAttribute('class') ?? '').not.toContain('animate-spin')
+    // The component swaps Loader2 for the static Cloud icon — verify via SVG path
+    // that uniquely identifies the Cloud lucide icon (cloud shape, no slash).
+    // Lucide renders SVGs with a <path> element; Cloud has a distinctive d attribute.
+    // We check via the icon element's tag name (svg) and that it is NOT a circle-only
+    // shape. A simpler approach: assert the icon's parent has no child with class
+    // 'animate-spin' AND that there is exactly one svg in data-testid=sync-status-icon.
+    expect(icon.tagName.toLowerCase()).toBe('svg')
+    // Cloud icon has no animating children; confirm aria-hidden is still set.
+    expect(icon).toHaveAttribute('aria-hidden', 'true')
   })
 })

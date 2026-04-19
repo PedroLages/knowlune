@@ -37,42 +37,25 @@ test.describe('E97-S01: Sync Status Indicator', () => {
   })
 
   test('badge shows the pendingCount when syncQueue has pending rows', async ({ page }) => {
-    // Seed syncQueue directly via Dexie — 3 pending rows with distinct ids.
+    // Seed syncQueue directly via native IndexedDB — bypasses module bundler
+    // restrictions that make dynamic import('/src/db.ts') fail in browser context.
     await page.evaluate(async (fixedIso) => {
-      const { db } = await import('/src/db.ts' as string).catch(() => ({ db: null }))
-      // Fallback: use the global window.__db if exposed; otherwise open Dexie by name.
-      type DbLike = {
-        syncQueue: {
-          bulkPut: (rows: unknown[]) => Promise<void>
-          clear: () => Promise<void>
+      await new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('ElearningDB')
+        request.onerror = () => reject(request.error)
+        request.onsuccess = () => {
+          const db = request.result
+          const tx = db.transaction('syncQueue', 'readwrite')
+          const store = tx.objectStore('syncQueue')
+          // Clear existing rows then add 3 pending entries.
+          store.clear()
+          store.put({ id: 'q-1', table: 'notes', op: 'upsert', status: 'pending', createdAt: fixedIso })
+          store.put({ id: 'q-2', table: 'notes', op: 'upsert', status: 'pending', createdAt: fixedIso })
+          store.put({ id: 'q-3', table: 'notes', op: 'upsert', status: 'pending', createdAt: fixedIso })
+          tx.oncomplete = () => { db.close(); resolve() }
+          tx.onerror = () => reject(tx.error)
         }
-      }
-      const target: DbLike | null =
-        (db as DbLike | null) ??
-        ((window as unknown as { __db?: DbLike }).__db ?? null)
-
-      if (!target) {
-        // Open Dexie by known database name as a last resort.
-        const Dexie = (await import('/node_modules/dexie/dist/modern/dexie.mjs' as string))
-          .default
-        const handle = new Dexie('knowlune')
-        await handle.open()
-        const tbl = handle.table('syncQueue')
-        await tbl.clear()
-        await tbl.bulkPut([
-          { id: 'q-1', table: 'notes', op: 'upsert', status: 'pending', createdAt: fixedIso },
-          { id: 'q-2', table: 'notes', op: 'upsert', status: 'pending', createdAt: fixedIso },
-          { id: 'q-3', table: 'notes', op: 'upsert', status: 'pending', createdAt: fixedIso },
-        ])
-        return
-      }
-
-      await target.syncQueue.clear()
-      await target.syncQueue.bulkPut([
-        { id: 'q-1', table: 'notes', op: 'upsert', status: 'pending', createdAt: fixedIso },
-        { id: 'q-2', table: 'notes', op: 'upsert', status: 'pending', createdAt: fixedIso },
-        { id: 'q-3', table: 'notes', op: 'upsert', status: 'pending', createdAt: fixedIso },
-      ])
+      })
     }, FIXED_DATE)
 
     // Opening the popover triggers refreshPendingCount.

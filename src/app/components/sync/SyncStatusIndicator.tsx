@@ -206,8 +206,10 @@ export function SyncStatusIndicator(): React.ReactElement {
               {pendingCount > 99 ? '99+' : pendingCount}
             </Badge>
           )}
-          {/* Polite live region: announces only on transitions into error/offline. */}
-          <span className="sr-only" aria-live="polite" role="status">
+          {/* Polite live region: announces only on transitions into error/offline.
+              No role=status or aria-live here — those are on the outer button to
+              avoid WAI-ARIA double-announcement from nested live regions. */}
+          <span className="sr-only">
             {liveMessage}
           </span>
         </button>
