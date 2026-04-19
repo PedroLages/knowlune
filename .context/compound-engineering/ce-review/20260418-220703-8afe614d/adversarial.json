@@ -1,0 +1,49 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "title": "upsert_vocabulary_mastery: INSERT missing required fields causes runtime failure",
+      "severity": "P1",
+      "file": "supabase/migrations/20260413000002_p1_learning_content.sql",
+      "line": 498,
+      "why_it_matters": "Cross-reviewer confirmation of the correctness finding. An attacker or buggy client calling upsert_vocabulary_mastery for a new vocabulary item ID will receive SQLSTATE 23502 (NOT NULL constraint violation on book_id/word), not 42501. This leaks schema information (column names in error message). More importantly, the upsert semantics are broken for new items — the function name implies it creates-or-updates but it can only update.",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "confidence": 0.90,
+      "suggested_fix": "Expand function signature to include book_id TEXT, word TEXT, and other NOT NULL columns needed for a first-insert, or add a pre-flight SELECT to determine if the row exists and error cleanly if not.",
+      "evidence": [
+        "vocabulary_items.book_id TEXT NOT NULL (no default) at line 284",
+        "vocabulary_items.word TEXT NOT NULL (no default) at line 286",
+        "upsert function INSERT at line 498 provides only (id, user_id, mastery_level, updated_at)"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "audio_bookmarks FOR ALL RLS allows DELETE on append-only table",
+      "severity": "P2",
+      "file": "supabase/migrations/20260413000002_p1_learning_content.sql",
+      "line": 341,
+      "why_it_matters": "Cross-reviewer confirmation of the security finding. audio_bookmarks is documented as immutable but FOR ALL RLS permits authenticated users to delete their own bookmarks. This creates a data integrity risk: if the sync engine downloads audio bookmarks and a client deletes them locally, the delete will propagate to Supabase and permanently destroy listening history data.",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "confidence": 0.85,
+      "suggested_fix": "Replace FOR ALL with split INSERT + SELECT policies (matching flashcard_reviews at lines 184-194).",
+      "evidence": [
+        "Line 341: FOR ALL policy on audio_bookmarks",
+        "Line 320: header documents audio_bookmarks as 'Immutable event'",
+        "No DELETE protection at DB level despite immutability claim"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "SECURITY DEFINER function ownership: both functions are owned by the creating role. If that role has broad privileges beyond authenticated users, the security boundary depends entirely on the IS DISTINCT FROM guard. The guard is correctly implemented but a postgres superuser executing the function bypasses it.",
+    "p_limit INT DEFAULT 10 in search_similar_notes has no upper bound. A caller passing p_limit=1000000 could cause excessive memory allocation in a single query."
+  ],
+  "testing_gaps": [
+    "Test that audio_bookmarks DELETE by authenticated user fails after policy fix",
+    "Test upsert_vocabulary_mastery with new item UUID — should succeed after fix or fail with clear error"
+  ]
+}

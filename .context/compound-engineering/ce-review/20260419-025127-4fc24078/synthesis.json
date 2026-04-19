@@ -1,0 +1,30 @@
+{
+  "run_id": "20260419-025127-4fc24078",
+  "branch": "feature/e93-s08-chat-conversations-learner-models-sync",
+  "base": "cadcf90cf649dfc9a55e536c732f69f8305f1001",
+  "plan": "docs/plans/2026-04-18-019-feat-e93-s08-chat-conversations-learner-models-sync-plan.md",
+  "mode": "autofix",
+  "reviewers": ["correctness", "testing", "maintainability", "project-standards", "reliability", "adversarial", "kieran-typescript", "agent-native-reviewer", "learnings-researcher"],
+  "verdict": "Ready with fixes applied",
+  "findings_total": 1,
+  "findings_applied": 1,
+  "findings_residual": 0,
+  "applied_fixes": [
+    {
+      "title": "ChatConversation.updatedAt type mismatch causes NaN arithmetic after syncableWrite stamp",
+      "severity": "P1",
+      "files_changed": ["src/data/types.ts", "src/app/components/tutor/conversationUtils.ts", "src/app/components/tutor/ContinueConversationPrompt.tsx", "src/app/components/tutor/ConversationHistorySheet.tsx", "src/app/components/tutor/useConversationHistory.ts"],
+      "fix_description": "Widened ChatConversation.updatedAt to number|string, added toEpochMs() coercion helper, updated all arithmetic consumers"
+    }
+  ],
+  "requirements_trace": {
+    "R1": "met",
+    "R2": "met",
+    "R3": "met",
+    "R4": "met",
+    "R5": "met",
+    "R6": "met",
+    "R7": "met",
+    "R8": "met"
+  }
+}

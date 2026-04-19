@@ -1,0 +1,5 @@
+{
+  "gaps": [
+    "useSyncStatusStore is accessible via getState() from any agent context — no gaps. The store has no React dependency."
+  ]
+}

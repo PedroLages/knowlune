@@ -1,0 +1,68 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "title": "Repeat-sync silently overwrites unresolved conflictCopy",
+      "severity": "P2",
+      "file": "src/lib/sync/syncEngine.ts",
+      "line": 529,
+      "why_it_matters": "If a user has an active (unresolved) conflictCopy and the sync downloads a newer remote version while the dialog is open, applyConflictCopy replaces the existing conflictCopy snapshot. The user's previously preserved conflict is silently lost. On the next render, the dialog shows different conflict content than what the user was reviewing.",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "In _applyConflictCopy, check if local already has a conflictCopy before overwriting. If local.conflictCopy is already set and unresolved, either preserve it (keep oldest pending conflict) or merge. Add a comment documenting the chosen policy.",
+      "confidence": 0.75,
+      "evidence": [
+        "syncEngine.ts line 529: `if (remoteWins && contentDiffers)` → calls `applyConflictCopy(local, record)` unconditionally, regardless of whether `local['conflictCopy']` is already set",
+        "applyConflictCopy returns `{ ...remote, conflictCopy: { content: local.content, tags: local.tags, savedAt: local.updatedAt } }` — this always overwrites any existing conflictCopy on the winning record",
+        "No guard in _applyConflictCopy or applyConflictCopy checks `local.conflictCopy != null`"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "syncEngine.download.test.ts has no conflict-copy strategy tests",
+      "severity": "P2",
+      "file": "src/lib/sync/__tests__/syncEngine.download.test.ts",
+      "line": 166,
+      "why_it_matters": "The download test mock uses `conflictStrategy: 'lww'` for notes (line 166), not `'conflict-copy'`. The test file header claims to cover conflict-copy but there are zero describe blocks or test cases exercising the `_applyConflictCopy` branch via `_applyRecord`. Bugs in the integration path between _applyRecord and _applyConflictCopy (e.g., table lookup, field casting) are invisible to automated testing.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "suggested_fix": "Add a `describe('conflict-copy conflict strategy')` block in syncEngine.download.test.ts with: (1) remote wins + content differs → conflictCopy set on put, (2) remote wins + same content → LWW fallback, (3) local wins → LWW no-op, (4) no local record → plain put.",
+      "confidence": 0.95,
+      "evidence": [
+        "syncEngine.download.test.ts line 166: `const notes = { dexieTable: 'notes', supabaseTable: 'notes', conflictStrategy: 'lww', priority: 1, fieldMap: {} }` — strategy is 'lww', not 'conflict-copy'",
+        "grep output confirms zero occurrences of 'conflict-copy', 'conflictCopy', '_applyConflictCopy', or 'conflict_copy' in the test file body (only in the comment on line 4)",
+        "The _applyRecord switch in syncEngine.ts line 574 dispatches to _applyConflictCopy for 'conflict-copy' strategy — this code path is untested at integration level"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "handleKeepCurrent bumps updatedAt unnecessarily on resolution",
+      "severity": "P3",
+      "file": "src/app/components/notes/NoteConflictDialog.tsx",
+      "line": 191,
+      "why_it_matters": "Setting `updatedAt: new Date().toISOString()` on Keep Current means the resolved note gets a timestamp LATER than both the remote winner and the conflictCopy. This is intentional (asserts local wins on next sync) but has an observable side effect: `formatRelativeDate` on NoteCard will show the resolution timestamp, not the note's last-edited time. Minor UX confabulation: the note shows 'edited just now' when the user only dismissed a conflict dialog.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "suggested_fix": "Optionally, preserve the original note.updatedAt when keeping current (only clear conflictCopy/conflictSourceId). The sync LWW logic will still work correctly since local already has a higher timestamp from prior writes.",
+      "confidence": 0.70,
+      "evidence": [
+        "NoteConflictDialog.tsx line 191: `updatedAt: new Date().toISOString()` is spread into the saveNote call inside handleKeepCurrent",
+        "NoteCard.tsx line 70: `{formatRelativeDate(note.updatedAt)}` — this relative date reflects the bump",
+        "The bump is semantically correct for sync purposes but visually misleading for content-edit tracking"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "String comparison `remoteUpdatedAt > localUpdatedAt` for ISO 8601 is correct for UTC strings but would break if either value lacks the 'Z' suffix or uses a locale-specific format. The app always uses toISOString() which produces UTC, so this is low risk.",
+    "conflictSourceId is set to local.id (note ID) but the type comment says 'device/note ID'. If this field is later used for device tracking, the semantics are wrong."
+  ],
+  "testing_gaps": [
+    "No syncEngine integration test for conflict-copy strategy (confirmed absence in syncEngine.download.test.ts)",
+    "No E2E test verifying that 'Use Other Version' changes the displayed note content to the conflictCopy.content value",
+    "No test for the repeat-conflict scenario (local already has unresolved conflictCopy when next sync arrives)"
+  ]
+}

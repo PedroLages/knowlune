@@ -1,0 +1,10 @@
+{
+  "reviewer": "agent-native-reviewer",
+  "findings": [],
+  "notes": [
+    "This is a pure SQL migration — no TypeScript, no API endpoints, no agent-accessible features added. No agent-native concerns.",
+    "The SECURITY DEFINER functions upsert_vocabulary_mastery and search_similar_notes will be callable from Supabase Edge Functions or server-side code. Function signatures and REVOKE/GRANT patterns are correctly set for the authenticated role."
+  ],
+  "residual_risks": [],
+  "testing_gaps": []
+}

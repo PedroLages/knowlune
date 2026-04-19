@@ -1,0 +1,65 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "title": "upsert_vocabulary_mastery omits required NOT NULL fields on INSERT",
+      "severity": "P1",
+      "file": "supabase/migrations/20260413000002_p1_learning_content.sql",
+      "line": 498,
+      "why_it_matters": "The INSERT in upsert_vocabulary_mastery only provides (id, user_id, mastery_level, updated_at). vocabulary_items has NOT NULL columns book_id (TEXT NOT NULL) and word (TEXT NOT NULL) with no DEFAULT. On a fresh insert (first time a vocab item is seen), the INSERT will fail with SQLSTATE 23502 (not_null_violation) because book_id and word have no default and are not supplied. This means the function cannot create new vocabulary items — it can only update existing ones, silently failing to upsert new items.",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "confidence": 0.92,
+      "suggested_fix": "Add p_book_id TEXT, p_word TEXT, p_context TEXT DEFAULT NULL parameters to the function signature and include them in the INSERT VALUES clause. On conflict, only update mastery_level and updated_at (book_id and word are immutable once set). Alternatively, document that callers are responsible for pre-creating the row, but this breaks upsert semantics.",
+      "evidence": [
+        "Line 283: `book_id TEXT NOT NULL` and `word TEXT NOT NULL` — no DEFAULT on either column",
+        "Line 498: `INSERT INTO public.vocabulary_items (id, user_id, mastery_level, updated_at) VALUES (...)` — omits book_id and word",
+        "SQLSTATE 23502 would be raised: 'null value in column book_id of relation vocabulary_items violates not-null constraint'"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "search_similar_notes double-evaluates vector distance expression",
+      "severity": "P3",
+      "file": "supabase/migrations/20260413000002_p1_learning_content.sql",
+      "line": 543,
+      "why_it_matters": "The ORDER BY clause repeats `e.vector <=> p_query_vector` which is the same expression already computed in SELECT. pgvector does not guarantee expression deduplication across SELECT and ORDER BY in plpgsql RETURN QUERY — depending on the execution plan, this may compute the distance twice per row (no functional error, but unnecessary CPU cost at scale). Minor perf concern only.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.70,
+      "suggested_fix": "Wrap as a subquery or CTE: `SELECT note_id, distance FROM (SELECT e.note_id, (e.vector <=> p_query_vector)::FLOAT AS distance FROM ...) sub ORDER BY distance ASC LIMIT p_limit`. This makes the ORDER BY reference the computed alias, not recompute the expression.",
+      "evidence": [
+        "Line 542: `(e.vector <=> p_query_vector)::FLOAT AS distance` in SELECT",
+        "Line 549: `ORDER BY e.vector <=> p_query_vector ASC` — same expression, not the alias `distance`"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "flashcards.note_id has no FK constraint to notes table",
+      "severity": "P2",
+      "file": "supabase/migrations/20260413000002_p1_learning_content.sql",
+      "line": 121,
+      "why_it_matters": "flashcards.note_id is nullable UUID but lacks a REFERENCES public.notes(id) constraint. When a note is deleted, associated flashcards retain stale note_id values. This breaks any client logic that joins flashcards.note_id to notes — orphaned flashcard references are invisible at DB level. Contrasts with embeddings.note_id which has the correct ON DELETE CASCADE FK.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.78,
+      "suggested_fix": "Add `note_id UUID REFERENCES public.notes(id) ON DELETE SET NULL` to flashcards. Since note_id is nullable, SET NULL on delete preserves the flashcard while clearing the stale reference. If cascade delete is desired instead, use ON DELETE CASCADE. Decision depends on product intent — advisory until intentionality is confirmed.",
+      "evidence": [
+        "Line 121: `note_id UUID,` — no REFERENCES constraint",
+        "Compare line 205: `note_id UUID NOT NULL REFERENCES public.notes(id) ON DELETE CASCADE` in embeddings — FK is used there"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "flashcard_reviews.rating has no CHECK constraint (e.g., CHECK (rating BETWEEN 1 AND 4)) — invalid FSRS ratings could corrupt FSRS scheduling",
+    "book_highlights.review_rating is unconstrained TEXT — plan noted 'keep/dismiss' as valid values but no CHECK was added"
+  ],
+  "testing_gaps": [
+    "No test for upsert_vocabulary_mastery with new item (INSERT path) — would catch the missing NOT NULL fields",
+    "No test for search_similar_notes with p_limit=0 (edge: LIMIT 0 is valid SQL but returns empty; ensure client handles it)"
+  ]
+}

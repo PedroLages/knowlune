@@ -164,6 +164,103 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 // ---------------------------------------------------------------------------
+// Helper — backfill legacy empty recordId in syncQueue (in-place mutation)
+// ---------------------------------------------------------------------------
+
+/**
+ * Pre-d220cb7d builds wrote `syncQueue` entries with `recordId = ''` for any
+ * compound-PK table (`progress`, `contentProgress`, `chapterMappings`) because
+ * those records have no single `id` field. After the d220cb7d guard landed,
+ * fresh writes synthesize a non-empty recordId — but legacy entries already in
+ * the IndexedDB queue still have `''`.
+ *
+ * Without this backfill, the first post-upgrade `_coalesceQueue()` call would
+ * see every legacy compound-PK entry under the same key (`'progress:'`) and
+ * collapse them all to one row — silent data loss for users who studied
+ * multiple courses/videos offline before upgrading. (ADV-02 from R1 review.)
+ *
+ * Operates on the array `_coalesceQueue` already loaded — no extra DB read.
+ * Mutates each affected entry's `recordId` field in place AND persists the
+ * change to Dexie so the next process restart sees the recovered value.
+ * Entries whose payload is missing compound PK fields are marked `dead-letter`
+ * (unrecoverable) and excluded from the returned array, preventing coalesce
+ * collapse.
+ *
+ * @returns Filtered list with backfilled recordIds and dead-letter entries removed.
+ */
+async function _backfillLegacyEmptyRecordIds(
+  entries: SyncQueueEntry[],
+): Promise<SyncQueueEntry[]> {
+  // Fast path: no legacy data — most cycles in a healthy queue.
+  if (entries.every((e) => e.recordId !== '')) return entries
+
+  let backfilled = 0
+  let deadLettered = 0
+  const now = new Date().toISOString()
+  const survivors: SyncQueueEntry[] = []
+
+  for (const entry of entries) {
+    if (entry.recordId !== '') {
+      survivors.push(entry)
+      continue
+    }
+
+    const tableEntry = getTableEntry(entry.tableName)
+    const compoundFields = tableEntry?.compoundPkFields
+
+    if (!compoundFields || compoundFields.length === 0) {
+      // No compound PK to recover from — entry is unrecoverable.
+      await db.syncQueue.update(entry.id!, {
+        status: 'dead-letter',
+        lastError: 'Empty recordId on non-compound-PK table (legacy pre-d220cb7d entry)',
+        updatedAt: now,
+      })
+      deadLettered++
+      continue
+    }
+
+    const payload = entry.payload as Record<string, unknown> | null | undefined
+    const parts = compoundFields.map((field) => {
+      // Payloads were snake_cased before storage — try both forms.
+      const snake = field.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`)
+      const value = payload?.[field] ?? payload?.[snake]
+      return typeof value === 'string' || typeof value === 'number'
+        ? String(value)
+        : ''
+    })
+
+    if (parts.some((p) => p.trim() === '')) {
+      await db.syncQueue.update(entry.id!, {
+        status: 'dead-letter',
+        lastError: 'Empty recordId; payload missing compound PK fields (legacy pre-d220cb7d entry)',
+        updatedAt: now,
+      })
+      deadLettered++
+      continue
+    }
+
+    // Use unit-separator join — must match syncableWrite's format exactly.
+    const newRecordId = parts.join('\u001f')
+    await db.syncQueue.update(entry.id!, {
+      recordId: newRecordId,
+      updatedAt: now,
+    })
+    entry.recordId = newRecordId
+    survivors.push(entry)
+    backfilled++
+  }
+
+  if (backfilled > 0 || deadLettered > 0) {
+    console.warn(
+      `[syncEngine] Legacy queue backfill: ${backfilled} recordId(s) recovered, ` +
+        `${deadLettered} entry/entries dead-lettered (unrecoverable).`,
+    )
+  }
+
+  return survivors
+}
+
+// ---------------------------------------------------------------------------
 // Helper — coalesce duplicate queue entries
 // ---------------------------------------------------------------------------
 
@@ -179,7 +276,12 @@ function chunk<T>(arr: T[], size: number): T[][] {
 async function _coalesceQueue(): Promise<SyncQueueEntry[]> {
   // toArray() then sort in JS — Dexie 4: sortBy on WhereClause returns Promise<T[]>,
   // but using toArray() + manual sort is the safe, Dexie-4-compatible path.
-  const entries = await db.syncQueue.where('status').equals('pending').toArray()
+  const rawEntries = await db.syncQueue.where('status').equals('pending').toArray()
+
+  // Backfill legacy empty recordIds in-place before keying. Operates on the
+  // already-loaded array — no extra DB read. Returns survivors only
+  // (unrecoverable entries dead-lettered and dropped). (ADV-02 from R1.)
+  const entries = await _backfillLegacyEmptyRecordIds(rawEntries)
   entries.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 
   const latest = new Map<string, SyncQueueEntry>()
@@ -417,9 +519,9 @@ async function _uploadBatch(
  * from the record's field values and `.where().equals().first()` is used.
  * Otherwise falls back to `.get(record.id)`.
  *
- * Intentional: `progress` table lacks `compoundPkFields` in tableRegistry
- * (pre-existing known gap R1-PE-01 from E92-S02). Falls through to `get(record.id)`,
- * which may miss records if the id is not a stable PK. Tracked in known-issues.
+ * Note: `progress` table now declares compoundPkFields: ['courseId', 'videoId']
+ * (resolved in post-E93 cleanup — was R1-PE-01 from E92-S02). Download and
+ * upload directions now agree on the logical PK for video progress.
  */
 async function _getLocalRecord(
   table: Table<Record<string, unknown>>,

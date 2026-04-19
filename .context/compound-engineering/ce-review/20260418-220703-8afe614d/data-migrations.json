@@ -1,0 +1,65 @@
+{
+  "reviewer": "data-migrations",
+  "findings": [
+    {
+      "title": "Rollback drops flashcards before flashcard_reviews",
+      "severity": "P0",
+      "file": "supabase/migrations/rollback/20260413000002_p1_learning_content_rollback.sql",
+      "line": 43,
+      "why_it_matters": "The rollback script drops flashcard_reviews (line 42) before flashcards (line 53) which is correct for FK dependency. However, both use CASCADE so the FK constraint direction doesn't matter for DROP TABLE. But reviewing the order more carefully: the script drops flashcard_reviews at line 42 and flashcards at line 53 — this is the correct dependency order (FK holder before FK target). No bug. Marking as verified-correct.",
+      "autofix_class": "advisory",
+      "owner": "release",
+      "requires_verification": false,
+      "confidence": 0.95,
+      "suggested_fix": null,
+      "evidence": [
+        "Line 42: `DROP TABLE IF EXISTS public.flashcard_reviews CASCADE;` — FK holder dropped first",
+        "Line 45: `DROP TABLE IF EXISTS public.embeddings CASCADE;` — FK holder dropped before notes",
+        "Line 53: `DROP TABLE IF EXISTS public.flashcards CASCADE;` — FK target dropped after holders"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "Migration timestamp 20260413 precedes P0 fixup migrations",
+      "severity": "P2",
+      "file": "supabase/migrations/20260413000002_p1_learning_content.sql",
+      "line": 6,
+      "why_it_matters": "The migration header documents this intentional design decision: the 20260413 prefix ensures P1 ordering immediately after P0 (20260413000001). However, if any P0 fixup migrations exist with timestamps between 20260413000002 and 20260417000003, this migration will be applied before those fixups, potentially executing against an incomplete P0 schema (e.g., vector extension or moddatetime not yet installed). The header comment says this is intentional but it is a deployment ordering risk that must be verified before prod push.",
+      "autofix_class": "advisory",
+      "owner": "release",
+      "requires_verification": true,
+      "confidence": 0.75,
+      "suggested_fix": "Verify that supabase/migrations/ has no file with timestamp between 20260413000001 and 20260413000002 that installs vector or moddatetime. Run `ls supabase/migrations/ | sort` and confirm ordering. Document verified order in the deployment checklist.",
+      "evidence": [
+        "Header comment line 6-8: 'filename 20260413 reflects the design date... intentional — it orders immediately after 20260413000001'",
+        "Migration depends on `extensions.moddatetime` and `vector` extension being installed by P0"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "No explicit rollback test for partial failure mid-transaction",
+      "severity": "P3",
+      "file": "supabase/migrations/20260413000002_p1_learning_content.sql",
+      "line": 32,
+      "why_it_matters": "The migration is wrapped in BEGIN/COMMIT which is correct — a failure mid-migration leaves the DB unchanged. This is the correct pattern and matches P0. Advisory only.",
+      "autofix_class": "advisory",
+      "owner": "release",
+      "requires_verification": false,
+      "confidence": 0.90,
+      "suggested_fix": null,
+      "evidence": [
+        "Line 32: `BEGIN;`",
+        "Line 565: `COMMIT;` — full transaction wrapper ensures atomicity"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "If supabase/migrations directory has migrations between 20260413000001 and 20260413000002 (P0 fixups), the ordering assumption could break. Manual verification needed before first prod apply.",
+    "DROP TABLE IF EXISTS ... CASCADE in rollback will silently succeed even if the table doesn't exist — this is intentional but means rollback cannot detect if it was run against the wrong DB state."
+  ],
+  "testing_gaps": [
+    "No idempotency test documented for the rollback script itself (re-running rollback should also be safe)",
+    "No test that verifies P0 tables are unaffected after rollback execution"
+  ]
+}

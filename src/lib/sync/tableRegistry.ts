@@ -113,9 +113,11 @@ const studySessions: TableRegistryEntry = {
 /**
  * `progress` stores VideoProgress records in Dexie but maps to `video_progress`
  * in Supabase (different name — not an automatic camelCase conversion).
- * Note: the Dexie schema declares this as EntityTable<VideoProgress, 'courseId'>
- * but the actual PK is compound [courseId+videoId] — tracked as a known issue
- * from E92-S02 code review (R1-PE-01). Do not fix as part of E92-S03.
+ * The Dexie schema declares this as EntityTable<VideoProgress, 'courseId'>
+ * but the actual PK is compound [courseId+videoId]. Resolved in post-E93
+ * cleanup — was R1-PE-01 from E92-S02. `compoundPkFields` below is the
+ * authoritative declaration consumed by both upload (syncableWrite recordId
+ * synthesis) and download (_getLocalRecord compound-key lookup).
  */
 const progress: TableRegistryEntry = {
   dexieTable: 'progress',
@@ -124,6 +126,7 @@ const progress: TableRegistryEntry = {
   priority: 0,
   fieldMap: {},
   monotonicFields: ['watchedSeconds'],
+  compoundPkFields: ['courseId', 'videoId'],
 }
 
 // ---------------------------------------------------------------------------

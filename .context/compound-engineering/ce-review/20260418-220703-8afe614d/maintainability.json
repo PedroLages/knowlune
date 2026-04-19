@@ -1,0 +1,24 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "title": "Trigger name set_updated_at reused across 9 tables — DROP TRIGGER order-sensitive",
+      "severity": "P3",
+      "file": "supabase/migrations/20260413000002_p1_learning_content.sql",
+      "line": 72,
+      "why_it_matters": "Every table reuses the trigger name `set_updated_at`. This is fine per PostgreSQL — trigger names are table-scoped, not schema-scoped. Each `DROP TRIGGER IF EXISTS set_updated_at ON public.<table>` targets the specific table. No functional issue. Advisory: future engineers unfamiliar with PostgreSQL trigger scoping may be confused by the repeated name.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.85,
+      "suggested_fix": null,
+      "evidence": [
+        "Line 72-75: `DROP TRIGGER IF EXISTS set_updated_at ON public.notes` — table-scoped correctly",
+        "Matching P0 migration pattern — consistent naming is correct here"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [],
+  "testing_gaps": []
+}

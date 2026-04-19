@@ -1,0 +1,8 @@
+{
+  "reviewer": "maintainability",
+  "findings": [],
+  "residual_risks": [
+    "mountedRef.current is reset to true in useEffect body (after initial render), which is redundant since useRef(true) sets it to true on first render — harmless but slightly misleading"
+  ],
+  "testing_gaps": []
+}

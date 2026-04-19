@@ -1,0 +1,9 @@
+{
+  "reviewer": "julik-frontend-races",
+  "findings": [],
+  "residual_risks": [
+    "mountedRef guard only prevents state updates after unmount, but the fullSync promise itself continues running — acceptable since syncEngine is module-level and stateless from React's perspective",
+    "Event listener functions are stable closures (defined inside useEffect) so no stale closure issues"
+  ],
+  "testing_gaps": []
+}

@@ -1,0 +1,65 @@
+{
+  "reviewer": "security",
+  "findings": [
+    {
+      "title": "SECURITY DEFINER functions: search_path correctly pinned",
+      "severity": "P3",
+      "file": "supabase/migrations/20260413000002_p1_learning_content.sql",
+      "line": 488,
+      "why_it_matters": "Both SECURITY DEFINER functions use SET search_path = public, pg_temp. This is correct and prevents search_path hijacking attacks. No finding — flagging as verified-correct advisory.",
+      "autofix_class": "advisory",
+      "owner": "release",
+      "requires_verification": false,
+      "confidence": 0.95,
+      "suggested_fix": null,
+      "evidence": [
+        "Line 488: `SET search_path = public, pg_temp` on upsert_vocabulary_mastery",
+        "Line 573: `SET search_path = public, pg_temp` on search_similar_notes"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "RLS FOR ALL policy permits DELETE on audio_bookmarks (immutable events)",
+      "severity": "P2",
+      "file": "supabase/migrations/20260413000002_p1_learning_content.sql",
+      "line": 341,
+      "why_it_matters": "audio_bookmarks is designed as an immutable event log (no updated_at, no mutation path). However, the RLS policy is FOR ALL (covers SELECT, INSERT, UPDATE, DELETE). A client with a bug or a compromised client could DELETE audio bookmark records. For true immutability, the policy should be split into INSERT + SELECT only — matching the flashcard_reviews pattern used for the other append-only table.",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "confidence": 0.82,
+      "suggested_fix": "Replace `FOR ALL` on audio_bookmarks with split INSERT WITH CHECK and SELECT USING policies (matching flashcard_reviews pattern at lines 184-194). Remove any UPDATE/DELETE policies.",
+      "evidence": [
+        "Line 341: `CREATE POLICY \"Users access own audio_bookmarks\" ON public.audio_bookmarks FOR ALL ...` ",
+        "Line 320: comment says `-- Audiobook chapter bookmarks. Immutable event — no updated_at column`",
+        "Compare lines 184-194: flashcard_reviews uses split INSERT+SELECT policies for its append-only design"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "p_mastery_level has no bounds check in upsert_vocabulary_mastery",
+      "severity": "P2",
+      "file": "supabase/migrations/20260413000002_p1_learning_content.sql",
+      "line": 498,
+      "why_it_matters": "The vocabulary_items table has CHECK (mastery_level BETWEEN 0 AND 3). If upsert_vocabulary_mastery is called with p_mastery_level=-1 or p_mastery_level=5, the INSERT will fail with a CHECK constraint violation (SQLSTATE 23514) but only after the authz guard passes. More critically, the GREATEST logic for the ON CONFLICT path does not enforce the CHECK — a caller passing mastery_level=99 could try to set it higher (though the CHECK would catch it). A function-level validation guard before the DML would give a clearer error and prevent unnecessary DML that aborts.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.72,
+      "suggested_fix": "Add before the INSERT: `IF p_mastery_level NOT BETWEEN 0 AND 3 THEN RAISE EXCEPTION 'invalid mastery_level: must be 0-3' USING ERRCODE = '22023'; END IF;`",
+      "evidence": [
+        "Line 292: `mastery_level INT NOT NULL DEFAULT 0 CHECK (mastery_level BETWEEN 0 AND 3)` — DB-level constraint exists",
+        "Line 501: `mastery_level = GREATEST(vocabulary_items.mastery_level, EXCLUDED.mastery_level)` — no upper-bound guard on EXCLUDED.mastery_level"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "SECURITY DEFINER functions owned by the migration-running role (usually postgres superuser) — if the role changes, function privilege escalation could occur. Standard Supabase practice but worth noting in deployment docs.",
+    "book_highlights.flashcard_id is nullable UUID with no FK — if a flashcard is deleted by another user or in a concurrent session, stale UUIDs are silently preserved"
+  ],
+  "testing_gaps": [
+    "No test for unauthenticated (anon role) attempt to call upsert_vocabulary_mastery — should return 42501",
+    "No test for cross-user call to search_similar_notes (p_user_id differs from auth.uid()) — should return 42501"
+  ]
+}

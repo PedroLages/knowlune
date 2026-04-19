@@ -822,3 +822,163 @@ describe('_setRunning / isRunning', () => {
     expect(syncEngine.isRunning).toBe(false)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Tests: legacy empty-recordId backfill (post-E93 cleanup)
+//
+// The backfill is a private helper inside _coalesceQueue. It runs on every
+// upload cycle, mutates entries in place, and persists changes via
+// db.syncQueue.update. We exercise its three branches via the public
+// upload pipeline and assert on Dexie + Supabase mock calls.
+// ---------------------------------------------------------------------------
+
+describe('legacy empty-recordId backfill', () => {
+  it('passes a healthy queue through unchanged (no update calls, no warnings)', async () => {
+    vi.useFakeTimers()
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    setQueueEntries([
+      makeEntry({ recordId: 'rec-A' }),
+      makeEntry({ recordId: 'rec-B' }),
+    ])
+
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    expect(mockUpdate).not.toHaveBeenCalled()
+    expect(warnSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('Legacy queue backfill'),
+    )
+    warnSpy.mockRestore()
+  })
+
+  it('synthesizes recordId from compound PK fields (camelCase payload)', async () => {
+    vi.useFakeTimers()
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    // Override the registry mock for this test to expose compoundPkFields.
+    const { getTableEntry } = await import('@/lib/sync/tableRegistry')
+    vi.mocked(getTableEntry).mockReturnValueOnce({
+      dexieTable: 'progress',
+      supabaseTable: 'video_progress',
+      conflictStrategy: 'monotonic',
+      priority: 0,
+      fieldMap: {},
+      compoundPkFields: ['courseId', 'videoId'],
+    })
+
+    setQueueEntries([
+      makeEntry({
+        id: 100,
+        tableName: 'progress',
+        recordId: '',
+        payload: { courseId: 'c-1', videoId: 'v-1', watchedSeconds: 42 },
+      }),
+    ])
+
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    // The first update call is the backfill: status remains pending,
+    // recordId synthesized as 'c-1\u001fv-1'.
+    expect(mockUpdate).toHaveBeenCalledWith(
+      100,
+      expect.objectContaining({ recordId: 'c-1\u001fv-1' }),
+    )
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/Legacy queue backfill: 1 recordId\(s\) recovered/),
+    )
+    warnSpy.mockRestore()
+  })
+
+  it('synthesizes recordId from compound PK fields (snake_case payload fallback)', async () => {
+    vi.useFakeTimers()
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { getTableEntry } = await import('@/lib/sync/tableRegistry')
+    vi.mocked(getTableEntry).mockReturnValueOnce({
+      dexieTable: 'contentProgress',
+      supabaseTable: 'content_progress',
+      conflictStrategy: 'monotonic',
+      priority: 0,
+      fieldMap: {},
+      compoundPkFields: ['courseId', 'itemId'],
+    })
+
+    setQueueEntries([
+      makeEntry({
+        id: 200,
+        tableName: 'contentProgress',
+        recordId: '',
+        // Payload was snake_cased on store — backfill must still find the values.
+        payload: { course_id: 'c-2', item_id: 'i-2' },
+      }),
+    ])
+
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      200,
+      expect.objectContaining({ recordId: 'c-2\u001fi-2' }),
+    )
+    warnSpy.mockRestore()
+  })
+
+  it('dead-letters legacy entries on non-compound-PK tables', async () => {
+    vi.useFakeTimers()
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    setQueueEntries([
+      makeEntry({ id: 300, tableName: 'notes', recordId: '' }),
+    ])
+
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      300,
+      expect.objectContaining({
+        status: 'dead-letter',
+        lastError: expect.stringContaining('non-compound-PK table'),
+      }),
+    )
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/Legacy queue backfill: .* dead-lettered/),
+    )
+    warnSpy.mockRestore()
+  })
+
+  it('dead-letters compound-PK entries whose payload is missing the PK fields', async () => {
+    vi.useFakeTimers()
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { getTableEntry } = await import('@/lib/sync/tableRegistry')
+    vi.mocked(getTableEntry).mockReturnValueOnce({
+      dexieTable: 'progress',
+      supabaseTable: 'video_progress',
+      conflictStrategy: 'monotonic',
+      priority: 0,
+      fieldMap: {},
+      compoundPkFields: ['courseId', 'videoId'],
+    })
+
+    setQueueEntries([
+      makeEntry({
+        id: 400,
+        tableName: 'progress',
+        recordId: '',
+        // Missing videoId in any form.
+        payload: { courseId: 'c-3', watchedSeconds: 17 },
+      }),
+    ])
+
+    syncEngine.nudge()
+    await vi.advanceTimersByTimeAsync(201)
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      400,
+      expect.objectContaining({
+        status: 'dead-letter',
+        lastError: expect.stringContaining('payload missing compound PK fields'),
+      }),
+    )
+    warnSpy.mockRestore()
+  })
+})

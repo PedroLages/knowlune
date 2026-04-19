@@ -1,0 +1,27 @@
+{
+  "reviewer": "learnings-researcher",
+  "findings": [],
+  "learnings": [
+    {
+      "pattern": "Timestamp clamp on SECURITY DEFINER upsert functions",
+      "source": "Established in E92-S01 R4 (20260417000003_p0_sync_foundation_r4.sql)",
+      "relevance": "upsert_vocabulary_mastery correctly applies LEAST(p_updated_at, now() + interval '5 minutes') — matches the documented pattern",
+      "status": "applied_correctly"
+    },
+    {
+      "pattern": "IS DISTINCT FROM auth.uid() for authz guard",
+      "source": "E92-S01 R4, docs/solutions/ pattern for SECURITY DEFINER functions",
+      "relevance": "Both functions use IS DISTINCT FROM (not !=) — handles NULL auth.uid() correctly. Applied correctly.",
+      "status": "applied_correctly"
+    },
+    {
+      "pattern": "Append-only tables use split INSERT + SELECT RLS policies",
+      "source": "P0 migration study_sessions pattern, E92-S03 design decision",
+      "relevance": "flashcard_reviews correctly uses split policies. audio_bookmarks is documented as append-only but uses FOR ALL — inconsistent with the established pattern. This is a known-pattern violation.",
+      "status": "violation_detected",
+      "violation_location": "audio_bookmarks line 341 — uses FOR ALL instead of split INSERT+SELECT"
+    }
+  ],
+  "residual_risks": [],
+  "testing_gaps": []
+}

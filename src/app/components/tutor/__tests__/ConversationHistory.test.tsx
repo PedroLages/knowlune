@@ -17,6 +17,7 @@ import { ContinueConversationPrompt } from '../ContinueConversationPrompt'
 import { useTutorKeyboardShortcuts } from '../useTutorKeyboardShortcuts'
 import type { ChatConversation } from '@/data/types'
 import { renderHook } from '@testing-library/react'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
 
 const FIXED_DATE = new Date('2026-01-15T12:00:00Z')
 const FIXED_MS = FIXED_DATE.getTime()
@@ -28,6 +29,15 @@ vi.mock('@/db', () => ({
       delete: vi.fn().mockResolvedValue(undefined),
     },
   },
+}))
+
+// Mock the sync-aware write wrapper so ConversationHistorySheet.handleDelete
+// resolves successfully and invokes the onDelete prop. Without this, the
+// real syncableWrite tries to call db.table(...).delete(...) — which is not
+// on the @/db mock — and the resulting throw is swallowed by handleDelete's
+// try/catch, so onDelete is never reached.
+vi.mock('@/lib/sync/syncableWrite', () => ({
+  syncableWrite: vi.fn().mockResolvedValue(undefined),
 }))
 
 // Mock sonner toast
@@ -322,13 +332,22 @@ describe('ConversationHistorySheet — delete conversation', () => {
   it('confirming AlertDialog calls the delete handler', async () => {
     renderSheet()
     fireEvent.click(screen.getByTestId('delete-conversation-btn'))
-    // There may be multiple Delete buttons (trigger + action), pick the AlertDialogAction
+    // There may be multiple Delete buttons (trigger + action); pick the
+    // AlertDialogAction (last in document order).
     const allDeleteBtns = screen.getAllByRole('button', { name: /^delete$/i })
     const confirmBtn = allDeleteBtns[allDeleteBtns.length - 1]
     fireEvent.click(confirmBtn)
     await waitFor(() => {
       expect(onDelete).toHaveBeenCalledTimes(1)
     })
+    // Assert argument shape of the syncableWrite call so a contract
+    // regression (e.g., passing the conversation object instead of the id)
+    // fails the test even though the module is mocked. (ADV-05 from R1.)
+    expect(vi.mocked(syncableWrite)).toHaveBeenCalledWith(
+      'chatConversations',
+      'delete',
+      'conv-del',
+    )
   })
 
   it('canceling AlertDialog does NOT call the delete handler', () => {

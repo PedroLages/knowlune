@@ -1,0 +1,137 @@
+{
+  "runId": "20260418-220703-8afe614d",
+  "mode": "headless",
+  "scope": "feature/e93-s01-p1-supabase-migrations vs main (44fdff7b)",
+  "intent": "Create SQL migration 20260413000002_p1_learning_content.sql adding 11 P1 learning-content tables + 2 SECURITY DEFINER functions to Supabase. Pure SQL story, prerequisite for all E93 sync wiring stories.",
+  "plan": "docs/plans/2026-04-18-012-feat-e93-s01-p1-supabase-migrations-plan.md",
+  "planSource": "explicit",
+  "verdict": "Not ready",
+  "verdictReason": "P1 bug: upsert_vocabulary_mastery INSERT omits required NOT NULL columns (book_id, word) causing runtime failure for new items. P2 security gap: audio_bookmarks uses FOR ALL RLS on an immutable-event table, permitting DELETE. Both require fixes before merge.",
+  "reviewers": [
+    "correctness (always)",
+    "testing (always)",
+    "maintainability (always)",
+    "project-standards (always)",
+    "agent-native-reviewer (always)",
+    "learnings-researcher (always)",
+    "security -- SECURITY DEFINER functions + auth.uid() guards",
+    "data-migrations -- SQL migration files present",
+    "adversarial -- auth + data mutations + >50 executable lines",
+    "reliability -- transaction integrity, append-only tables"
+  ],
+  "appliedFixes": [],
+  "findings": [
+    {
+      "id": "F1",
+      "title": "upsert_vocabulary_mastery INSERT omits required NOT NULL fields",
+      "severity": "P1",
+      "file": "supabase/migrations/20260413000002_p1_learning_content.sql",
+      "line": 498,
+      "confidence": 0.92,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "reviewers": ["correctness", "adversarial"],
+      "suggested_fix": "Expand function signature to include p_book_id TEXT, p_word TEXT, and other required NOT NULL columns (context TEXT DEFAULT NULL, definition TEXT DEFAULT NULL, note TEXT DEFAULT NULL, highlight_id UUID DEFAULT NULL, last_reviewed_at TIMESTAMPTZ DEFAULT NULL). Add them to the INSERT VALUES and omit them from ON CONFLICT DO UPDATE (they are immutable once set).",
+      "why_it_matters": "vocabulary_items has book_id TEXT NOT NULL and word TEXT NOT NULL with no DEFAULT. The INSERT in the function provides only (id, user_id, mastery_level, updated_at). Any call that inserts a new item will fail with SQLSTATE 23502, making the upsert function unable to create new vocabulary items — only update existing ones.",
+      "evidence": [
+        "Line 283-286: book_id TEXT NOT NULL, word TEXT NOT NULL — no defaults",
+        "Line 498: INSERT only provides (id, user_id, mastery_level, updated_at)"
+      ]
+    },
+    {
+      "id": "F2",
+      "title": "audio_bookmarks FOR ALL RLS allows DELETE on immutable table",
+      "severity": "P2",
+      "file": "supabase/migrations/20260413000002_p1_learning_content.sql",
+      "line": 341,
+      "confidence": 0.85,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "reviewers": ["security", "adversarial", "learnings-researcher"],
+      "suggested_fix": "Replace the FOR ALL policy with split INSERT WITH CHECK and SELECT USING policies matching the flashcard_reviews pattern (lines 184-194). Remove any UPDATE/DELETE capability on this table.",
+      "why_it_matters": "audio_bookmarks is documented as an immutable event log, but FOR ALL RLS allows authenticated users to DELETE their own records. If the sync engine propagates deletes, audio listening history could be permanently destroyed.",
+      "evidence": [
+        "Line 341: CREATE POLICY ... FOR ALL on audio_bookmarks",
+        "Line 320-321: header documents audio_bookmarks as 'Immutable event'",
+        "Lines 184-194: flashcard_reviews (also append-only) correctly uses split INSERT+SELECT"
+      ]
+    },
+    {
+      "id": "F3",
+      "title": "flashcards.note_id lacks FK constraint to notes",
+      "severity": "P2",
+      "file": "supabase/migrations/20260413000002_p1_learning_content.sql",
+      "line": 121,
+      "confidence": 0.78,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "reviewers": ["correctness"],
+      "suggested_fix": "Add REFERENCES public.notes(id) ON DELETE SET NULL to flashcards.note_id (nullable FK, SET NULL on note delete preserves flashcard). If CASCADE is preferred, use ON DELETE CASCADE.",
+      "why_it_matters": "Deleting a note leaves stale note_id UUIDs in flashcards. Client joins on flashcards.note_id will silently return orphaned references. Contrast: embeddings.note_id has the correct FK.",
+      "evidence": [
+        "Line 121: note_id UUID, -- no REFERENCES constraint",
+        "Line 205: embeddings.note_id has REFERENCES public.notes(id) ON DELETE CASCADE"
+      ]
+    },
+    {
+      "id": "F4",
+      "title": "search_similar_notes double-evaluates vector distance expression",
+      "severity": "P3",
+      "file": "supabase/migrations/20260413000002_p1_learning_content.sql",
+      "line": 543,
+      "confidence": 0.70,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "reviewers": ["correctness"],
+      "suggested_fix": "Wrap as subquery: SELECT note_id, distance FROM (SELECT e.note_id, (e.vector <=> p_query_vector)::FLOAT AS distance FROM ...) sub ORDER BY distance ASC LIMIT p_limit",
+      "why_it_matters": "ORDER BY repeats the distance expression rather than referencing the alias. Minor CPU cost at scale; no functional error.",
+      "evidence": [
+        "Line 542: (e.vector <=> p_query_vector)::FLOAT AS distance",
+        "Line 549: ORDER BY e.vector <=> p_query_vector ASC (not the alias)"
+      ]
+    }
+  ],
+  "preExistingFindings": [],
+  "requirementsCompleteness": {
+    "R1": "met",
+    "R2": "met",
+    "R3": "met",
+    "R4": "partial -- audio_bookmarks uses FOR ALL instead of INSERT+SELECT (immutable event table)",
+    "R5": "met",
+    "R6": "partial -- upsert_vocabulary_mastery INSERT path broken for new items (missing NOT NULL fields)",
+    "R7": "met",
+    "R8": "met",
+    "R9": "met",
+    "R10": "met",
+    "R11": "met",
+    "R12": "met"
+  },
+  "learnings": [
+    "Timestamp clamp on SECURITY DEFINER upsert functions: correctly applied (LEAST pattern from E92-S01 R4)",
+    "IS DISTINCT FROM auth.uid() guard: correctly applied in both functions",
+    "Known pattern violation: audio_bookmarks should use split INSERT+SELECT RLS (same as flashcard_reviews and study_sessions) — used FOR ALL instead"
+  ],
+  "residualRisks": [
+    "flashcard_reviews.rating has no CHECK constraint — invalid FSRS ratings could corrupt scheduling",
+    "book_highlights.review_rating is unconstrained TEXT — 'keep'/'dismiss' enum not enforced",
+    "search_similar_notes p_limit has no upper bound — large limits could cause memory pressure",
+    "Migration timestamp ordering (20260413 design-date prefix) must be verified against any existing P0 fixup migrations before prod apply"
+  ],
+  "testingGaps": [
+    "Idempotency: apply migration twice — no errors on second run",
+    "HNSW index existence: SELECT indexname FROM pg_indexes WHERE tablename='embeddings' AND indexname='idx_embeddings_vector_hnsw'",
+    "INSERT-only enforcement on flashcard_reviews: UPDATE should return 0 rows affected",
+    "Monotonic mastery: insert mastery_level=2, call upsert with level=1, verify stays 2",
+    "Timestamp clamp: upsert with p_updated_at = now() + interval '1 day', verify updated_at <= now() + 5 min",
+    "auth guard test: call upsert_vocabulary_mastery with p_user_id != auth.uid() → expect SQLSTATE 42501"
+  ],
+  "artifact": ".context/compound-engineering/ce-review/20260418-220703-8afe614d/"
+}

@@ -1,0 +1,11 @@
+{
+  "reviewer": "reliability",
+  "findings": [],
+  "residual_risks": [
+    "Concurrent fullSync() calls possible when online event fires while mount fullSync is still in progress — syncEngine uses navigator.locks for serialization, so this is safe by design",
+    "handleOnline closes over stale setStatus/markComplete vs reading from getState() on each call — currently reads getState() inline so not stale, design is correct"
+  ],
+  "testing_gaps": [
+    "No test for concurrent online event during in-progress mount fullSync (acceptable given serialization is in syncEngine)"
+  ]
+}

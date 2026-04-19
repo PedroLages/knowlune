@@ -1,0 +1,10 @@
+{
+  "reviewer": "learnings-researcher",
+  "relevant_past_solutions": [
+    {
+      "file": "docs/solutions/sync/e93-s02-notes-bookmarks-sync-wiring-2026-04-18.md",
+      "relevance": "E93-S02 documented stale closure bugs in Zustand stores (softDelete/restoreNote). The same pattern is present in NoteConflictDialog's handleUseOtherVersion which reads `note.conflictCopy` from a closed-over prop. The E93-S02 fix used functional set form for Zustand. NoteConflictDialog uses a prop-based approach which is safe for React re-render semantics but worth noting."
+    }
+  ],
+  "summary": "Prior sync bugs (E93-S02) involved stale closures in Zustand stores. The current PR avoids Zustand closures in conflictResolvers (pure module) and uses React prop-based closure in the dialog component, which is safe per React semantics. No directly applicable past bugs found that would be triggered by this change."
+}

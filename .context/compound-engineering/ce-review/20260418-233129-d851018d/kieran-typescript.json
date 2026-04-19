@@ -1,0 +1,48 @@
+{
+  "reviewer": "kieran-typescript",
+  "findings": [
+    {
+      "title": "Double type assertion `as unknown as Note` masks field shape mismatch",
+      "severity": "P2",
+      "file": "src/lib/sync/syncEngine.ts",
+      "line": 533,
+      "why_it_matters": "Casting `local as unknown as Note` and `record as unknown as Note` silently bypasses TypeScript's ability to catch field mismatches between the Dexie row shape (Record<string,unknown>) and the Note interface. If a downloaded record from Supabase is missing required Note fields (e.g., no `tags` array after toCamelCase), applyConflictCopy will create a conflictCopy.tags that is undefined, which will propagate to IDB and potentially crash the dialog render.",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Add a narrow type guard or zod/assertion check before casting: verify `record['tags']` is an array and `record['content']` is a string before invoking applyConflictCopy. Alternatively, make _applyConflictCopy work with Record<string,unknown> directly without casting to Note.",
+      "confidence": 0.72,
+      "evidence": [
+        "syncEngine.ts line 533: `applyConflictCopy(local as unknown as Note, record as unknown as Note)` — double assertion bypasses all type checking",
+        "conflictResolvers.ts line 29: `tags: local.tags` — if local.tags is undefined (missing from IDB record), conflictCopy.tags will be undefined, not []",
+        "NoteConflictDialog.tsx line 264: `conflictCopy?.content.replace(...)` — if conflictCopy.content is undefined, this throws TypeError"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "Note.conflictCopy undefined/null semantic is correct but unusual",
+      "severity": "P3",
+      "file": "src/data/types.ts",
+      "line": 465,
+      "why_it_matters": "The three-state semantic (undefined=never conflicted, null=resolved, object=active) is well documented in the type comment. However, all UI checks use `!= null` which also catches undefined. If any code path attempts to serialize `conflictCopy: undefined` to JSON (e.g., for localStorage or postMessage), the field is silently dropped. This could cause a conflict to reappear after serialization round-trip.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "suggested_fix": "The current usage is safe for IDB and Supabase (which handle undefined correctly). If the Note type is ever used in JSON serialization contexts, normalize conflictCopy: undefined → null before serialization.",
+      "confidence": 0.62,
+      "evidence": [
+        "types.ts line 465: `conflictCopy?: { content: string; tags: string[]; savedAt: string } | null` — optional means undefined is allowed",
+        "NoteCard.tsx line 88: `note.conflictCopy != null` — correctly handles both undefined and null (badge hidden in both cases)",
+        "No serialization path currently converts Note to JSON string, so risk is theoretical"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "conflictResolvers.ts is correctly a pure module (no Dexie/Supabase/React imports). The `import type { Note }` is type-only and stripped at compile time. Purity constraint is met.",
+    "The explicit fieldMap entry for conflictCopy is redundant with auto camelCase but harmless — TypeScript type safety is unaffected."
+  ],
+  "testing_gaps": [
+    "No test for applyConflictCopy receiving a local record with undefined tags (missing field from older IDB schema)"
+  ]
+}
