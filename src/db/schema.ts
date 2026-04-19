@@ -154,6 +154,25 @@ export type ElearningDatabase = Dexie & {
   syncMetadata: EntityTable<SyncMetadataEntry, 'table'>
   // v53: Unified-search frecency counters (E117-S02). Compound PK: [entityType+entityId].
   searchFrecency: Table<FrecencyRow, [string, string]>
+  // v56 (E95-S04): Last-known server-computed reading streak, keyed by userId.
+  readingStreakCache: EntityTable<ReadingStreakCacheRow, 'userId'>
+}
+
+/**
+ * Locally-cached last-known server-computed reading streak (E95-S04).
+ *
+ * Written by the store's `hydrateStreak()` action after every successful RPC.
+ * Read on cold-boot for an optimistic render before the network round-trip
+ * completes. Never a source of truth — the server (via
+ * `compute_reading_streak`) is always authoritative.
+ */
+export interface ReadingStreakCacheRow {
+  userId: string
+  currentStreak: number
+  longestStreak: number
+  lastMetDate: string | null
+  /** Unix millis of the last successful hydration. Used for staleness checks. */
+  cachedAt: number
 }
 
 /**
@@ -1585,6 +1604,19 @@ function _declareLegacyMigrations(database: Dexie): void {
     .stores({})
     .upgrade(async _tx => {
       // No backfill required — optional fields added to existing tables.
+    })
+
+  // v56 (E95-S04): Add `readingStreakCache` table for the server-authoritative
+  // streak hydration flow. Keyed by `userId` so the cache survives account
+  // switches. Local-only: not added to SYNCABLE_TABLES — the signal itself is
+  // already server-authoritative (sync would double-bounce the same row).
+  database
+    .version(56)
+    .stores({
+      readingStreakCache: 'userId, cachedAt',
+    })
+    .upgrade(async _tx => {
+      // No backfill. Table is new; first successful RPC populates it.
     })
 } // end _declareLegacyMigrations
 

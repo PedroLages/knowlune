@@ -1,17 +1,40 @@
 /**
- * Unit tests for useReadingGoalStore — reading goals with localStorage persistence.
+ * Unit tests for useReadingGoalStore.
  *
- * Tests loadGoal, saveGoal, clearGoal, checkDailyGoalMet (streak logic),
- * and checkYearlyGoalReached.
+ * Since E95-S04 the streak is server-authoritative:
+ *   - `checkDailyGoalMet` / `checkPagesGoalMet` are deprecated no-ops.
+ *   - Streak is never written to localStorage.
+ *   - `hydrateStreak()` is the single entry-point for advancing state,
+ *     and it reads from IDB cache then overwrites with the RPC result.
  *
- * @since E106-S01
+ * Goals themselves (dailyType/dailyTarget/yearlyBookTarget) still round-trip
+ * through localStorage and Supabase user_settings.
+ *
+ * @since E106-S01 (original), E95-S04 (server-authoritative streak)
  */
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 
-// ── Mock saveSettingsToSupabase for dual-write tests (E95-S01) ────────────────
+// ── Mocks — must precede the store import so module-load captures them ──────
 const mockSaveSettingsToSupabase = vi.fn()
 vi.mock('@/lib/settings', () => ({
   saveSettingsToSupabase: mockSaveSettingsToSupabase,
+}))
+
+const mockHydrateStreakFromSupabase = vi.fn()
+vi.mock('@/lib/streak', () => ({
+  hydrateStreakFromSupabase: (...args: unknown[]) => mockHydrateStreakFromSupabase(...args),
+}))
+
+const mockGetCachedStreak = vi.fn()
+const mockCacheStreak = vi.fn()
+const mockClearCachedStreak = vi.fn()
+const mockIsStale = vi.fn()
+vi.mock('@/lib/streakCache', () => ({
+  getCachedStreak: (...args: unknown[]) => mockGetCachedStreak(...args),
+  cacheStreak: (...args: unknown[]) => mockCacheStreak(...args),
+  clearCachedStreak: (...args: unknown[]) => mockClearCachedStreak(...args),
+  isStale: (...args: unknown[]) => mockIsStale(...args),
+  DEFAULT_STALE_THRESHOLD_MS: 24 * 60 * 60 * 1000,
 }))
 
 const FIXED_DATE = new Date('2026-03-23T10:00:00.000Z')
@@ -23,6 +46,11 @@ beforeEach(async () => {
   vi.setSystemTime(FIXED_DATE)
   localStorage.clear()
   mockSaveSettingsToSupabase.mockReset()
+  mockHydrateStreakFromSupabase.mockReset()
+  mockGetCachedStreak.mockReset().mockResolvedValue(undefined)
+  mockCacheStreak.mockReset().mockResolvedValue(undefined)
+  mockClearCachedStreak.mockReset().mockResolvedValue(undefined)
+  mockIsStale.mockReset().mockReturnValue(false)
   vi.resetModules()
   const mod = await import('@/stores/useReadingGoalStore')
   useReadingGoalStore = mod.useReadingGoalStore
@@ -60,13 +88,17 @@ describe('loadGoal', () => {
     expect(state.hasGoal).toBe(true)
   })
 
-  it('loads streak from localStorage', () => {
-    const streak = { currentStreak: 5, longestStreak: 10, lastMetDate: '2026-03-22' }
-    localStorage.setItem('knowlune:reading-goal-streak', JSON.stringify(streak))
+  it('ignores forged streak values in legacy localStorage key (E95-S04)', () => {
+    localStorage.setItem(
+      'knowlune:reading-goal-streak',
+      JSON.stringify({ currentStreak: 9999, longestStreak: 9999, lastMetDate: '2026-03-22' })
+    )
 
     useReadingGoalStore.getState().loadGoal()
 
-    expect(useReadingGoalStore.getState().streak).toEqual(streak)
+    expect(useReadingGoalStore.getState().streak.currentStreak).toBe(0)
+    expect(useReadingGoalStore.getState().streak.longestStreak).toBe(0)
+    expect(useReadingGoalStore.getState().streak.lastMetDate).toBeNull()
   })
 
   it('handles missing localStorage gracefully', () => {
@@ -98,7 +130,6 @@ describe('saveGoal', () => {
     expect(state.goal?.updatedAt).toBe(FIXED_DATE.toISOString())
     expect(state.hasGoal).toBe(true)
 
-    // Verify localStorage
     const stored = JSON.parse(localStorage.getItem('knowlune:reading-goals')!)
     expect(stored.dailyTarget).toBe(30)
   })
@@ -121,7 +152,7 @@ describe('saveGoal', () => {
 })
 
 describe('clearGoal', () => {
-  it('removes goal and streak from state and localStorage', () => {
+  it('removes goal and resets streak', () => {
     useReadingGoalStore.getState().saveGoal({
       dailyType: 'minutes',
       dailyTarget: 30,
@@ -136,208 +167,47 @@ describe('clearGoal', () => {
     expect(state.hasGoal).toBe(false)
     expect(state.streak.currentStreak).toBe(0)
     expect(localStorage.getItem('knowlune:reading-goals')).toBeNull()
-    expect(localStorage.getItem('knowlune:reading-goal-streak')).toBeNull()
   })
 })
 
-describe('checkDailyGoalMet', () => {
-  it('returns false when no goal is set', () => {
-    const result = useReadingGoalStore.getState().checkDailyGoalMet(60)
-    expect(result).toBe(false)
+// ── E95-S04: checkDailyGoalMet / checkPagesGoalMet are deprecated no-ops ────
+describe('deprecated checkDailyGoalMet / checkPagesGoalMet (E95-S04)', () => {
+  it('checkDailyGoalMet always returns false, even when goal is met', () => {
+    useReadingGoalStore.getState().saveGoal({
+      dailyType: 'minutes',
+      dailyTarget: 30,
+      yearlyBookTarget: 12,
+    })
+
+    expect(useReadingGoalStore.getState().checkDailyGoalMet(60)).toBe(false)
+    expect(useReadingGoalStore.getState().streak.currentStreak).toBe(0)
   })
 
-  it('returns false when dailyType is pages (not minutes)', () => {
+  it('checkPagesGoalMet always returns false', () => {
     useReadingGoalStore.getState().saveGoal({
       dailyType: 'pages',
       dailyTarget: 20,
       yearlyBookTarget: 12,
     })
-    const result = useReadingGoalStore.getState().checkDailyGoalMet(60)
-    expect(result).toBe(false)
+    expect(useReadingGoalStore.getState().checkPagesGoalMet(40)).toBe(false)
   })
 
-  it('returns false when target not met', () => {
+  it('does NOT write to the legacy localStorage streak key', () => {
     useReadingGoalStore.getState().saveGoal({
       dailyType: 'minutes',
       dailyTarget: 30,
       yearlyBookTarget: 12,
     })
-    const result = useReadingGoalStore.getState().checkDailyGoalMet(20)
-    expect(result).toBe(false)
-  })
-
-  it('returns true and starts streak when goal met for the first time', () => {
-    useReadingGoalStore.getState().saveGoal({
-      dailyType: 'minutes',
-      dailyTarget: 30,
-      yearlyBookTarget: 12,
-    })
-
-    const result = useReadingGoalStore.getState().checkDailyGoalMet(30)
-
-    expect(result).toBe(true)
-    const streak = useReadingGoalStore.getState().streak
-    expect(streak.currentStreak).toBe(1)
-    expect(streak.longestStreak).toBe(1)
-    expect(streak.lastMetDate).toBe('2026-03-23')
-  })
-
-  it('returns false when already credited today', () => {
-    useReadingGoalStore.getState().saveGoal({
-      dailyType: 'minutes',
-      dailyTarget: 30,
-      yearlyBookTarget: 12,
-    })
-
-    useReadingGoalStore.getState().checkDailyGoalMet(30) // First call
-    const result = useReadingGoalStore.getState().checkDailyGoalMet(60) // Second call same day
-
-    expect(result).toBe(false)
-  })
-
-  it('increments streak for consecutive days', () => {
-    useReadingGoalStore.getState().saveGoal({
-      dailyType: 'minutes',
-      dailyTarget: 30,
-      yearlyBookTarget: 12,
-    })
-
-    // Day 1: March 22
-    vi.setSystemTime(new Date('2026-03-22T10:00:00.000Z'))
-    useReadingGoalStore.getState().checkDailyGoalMet(30)
-
-    // Day 2: March 23 (consecutive)
-    vi.setSystemTime(new Date('2026-03-23T10:00:00.000Z'))
-    const result = useReadingGoalStore.getState().checkDailyGoalMet(45)
-
-    expect(result).toBe(true)
-    expect(useReadingGoalStore.getState().streak.currentStreak).toBe(2)
-    expect(useReadingGoalStore.getState().streak.longestStreak).toBe(2)
-  })
-
-  it('resets streak when days are not consecutive', () => {
-    useReadingGoalStore.getState().saveGoal({
-      dailyType: 'minutes',
-      dailyTarget: 30,
-      yearlyBookTarget: 12,
-    })
-
-    // Day 1: March 20
-    vi.setSystemTime(new Date('2026-03-20T10:00:00.000Z'))
-    useReadingGoalStore.getState().checkDailyGoalMet(30)
-
-    // Day 3: March 23 (skipped a day)
-    vi.setSystemTime(new Date('2026-03-23T10:00:00.000Z'))
-    useReadingGoalStore.getState().checkDailyGoalMet(30)
-
-    expect(useReadingGoalStore.getState().streak.currentStreak).toBe(1)
-    expect(useReadingGoalStore.getState().streak.longestStreak).toBe(1)
-  })
-
-  it('preserves longestStreak even when current resets', () => {
-    useReadingGoalStore.getState().saveGoal({
-      dailyType: 'minutes',
-      dailyTarget: 30,
-      yearlyBookTarget: 12,
-    })
-
-    // Build 3-day streak
-    vi.setSystemTime(new Date('2026-03-20T10:00:00.000Z'))
-    useReadingGoalStore.getState().checkDailyGoalMet(30)
-    vi.setSystemTime(new Date('2026-03-21T10:00:00.000Z'))
-    useReadingGoalStore.getState().checkDailyGoalMet(30)
-    vi.setSystemTime(new Date('2026-03-22T10:00:00.000Z'))
-    useReadingGoalStore.getState().checkDailyGoalMet(30)
-    expect(useReadingGoalStore.getState().streak.longestStreak).toBe(3)
-
-    // Skip a day, start new streak
-    vi.setSystemTime(new Date('2026-03-25T10:00:00.000Z'))
-    useReadingGoalStore.getState().checkDailyGoalMet(30)
-
-    expect(useReadingGoalStore.getState().streak.currentStreak).toBe(1)
-    expect(useReadingGoalStore.getState().streak.longestStreak).toBe(3) // Preserved
-  })
-
-  it('persists streak to localStorage', () => {
-    useReadingGoalStore.getState().saveGoal({
-      dailyType: 'minutes',
-      dailyTarget: 30,
-      yearlyBookTarget: 12,
-    })
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
 
     useReadingGoalStore.getState().checkDailyGoalMet(30)
+    useReadingGoalStore.getState().checkPagesGoalMet(30)
 
-    const stored = JSON.parse(localStorage.getItem('knowlune:reading-goal-streak')!)
-    expect(stored.currentStreak).toBe(1)
-    expect(stored.lastMetDate).toBe('2026-03-23')
-  })
-})
-
-describe('checkPagesGoalMet', () => {
-  it('returns false when no goal is set', () => {
-    const result = useReadingGoalStore.getState().checkPagesGoalMet(30)
-    expect(result).toBe(false)
-  })
-
-  it('returns false when dailyType is minutes (not pages)', () => {
-    useReadingGoalStore.getState().saveGoal({
-      dailyType: 'minutes',
-      dailyTarget: 30,
-      yearlyBookTarget: 12,
-    })
-    const result = useReadingGoalStore.getState().checkPagesGoalMet(50)
-    expect(result).toBe(false)
-  })
-
-  it('returns false when target not met', () => {
-    useReadingGoalStore.getState().saveGoal({
-      dailyType: 'pages',
-      dailyTarget: 20,
-      yearlyBookTarget: 12,
-    })
-    const result = useReadingGoalStore.getState().checkPagesGoalMet(10)
-    expect(result).toBe(false)
-  })
-
-  it('returns false when dailyTarget is 0 (zero target edge case)', () => {
-    useReadingGoalStore.getState().saveGoal({
-      dailyType: 'pages',
-      dailyTarget: 0,
-      yearlyBookTarget: 12,
-    })
-    // A target of 0 is meaningless and must not credit the streak.
-    // Without an explicit guard, pagesToday(0) >= target(0) would be true and credit incorrectly.
-    const result = useReadingGoalStore.getState().checkPagesGoalMet(0)
-    expect(result).toBe(false)
-  })
-
-  it('returns true and starts streak when goal met for the first time', () => {
-    useReadingGoalStore.getState().saveGoal({
-      dailyType: 'pages',
-      dailyTarget: 20,
-      yearlyBookTarget: 12,
-    })
-
-    const result = useReadingGoalStore.getState().checkPagesGoalMet(20)
-
-    expect(result).toBe(true)
-    const streak = useReadingGoalStore.getState().streak
-    expect(streak.currentStreak).toBe(1)
-    expect(streak.longestStreak).toBe(1)
-    expect(streak.lastMetDate).toBe('2026-03-23')
-  })
-
-  it('returns false when already credited today', () => {
-    useReadingGoalStore.getState().saveGoal({
-      dailyType: 'pages',
-      dailyTarget: 20,
-      yearlyBookTarget: 12,
-    })
-
-    useReadingGoalStore.getState().checkPagesGoalMet(20) // First call
-    const result = useReadingGoalStore.getState().checkPagesGoalMet(40) // Second call same day
-
-    expect(result).toBe(false)
+    const streakWrites = setItem.mock.calls.filter(
+      ([key]) => key === 'knowlune:reading-goal-streak'
+    )
+    expect(streakWrites.length).toBe(0)
+    setItem.mockRestore()
   })
 })
 
@@ -366,11 +236,11 @@ describe('checkYearlyGoalReached', () => {
 
     expect(useReadingGoalStore.getState().checkYearlyGoalReached(11)).toBe(false)
     expect(useReadingGoalStore.getState().checkYearlyGoalReached(12)).toBe(true)
-    expect(useReadingGoalStore.getState().checkYearlyGoalReached(13)).toBe(false) // Past threshold
+    expect(useReadingGoalStore.getState().checkYearlyGoalReached(13)).toBe(false)
   })
 })
 
-// ── E95-S01: Supabase dual-write ─────────────────────────────────────────────
+// ── E95-S01: Supabase dual-write ────────────────────────────────────────────
 
 describe('saveGoal — Supabase dual-write (E95-S01)', () => {
   it('calls saveSettingsToSupabase with goal fields (no streak fields)', () => {
@@ -398,8 +268,6 @@ describe('saveGoal — Supabase dual-write (E95-S01)', () => {
     expect(callArgs).not.toHaveProperty('currentStreak')
     expect(callArgs).not.toHaveProperty('longestStreak')
     expect(callArgs).not.toHaveProperty('lastMetDate')
-    expect(callArgs).not.toHaveProperty('currentReadingStreak')
-    expect(callArgs).not.toHaveProperty('longestReadingStreak')
   })
 
   it('clearGoal does NOT call saveSettingsToSupabase', () => {
@@ -412,5 +280,166 @@ describe('saveGoal — Supabase dual-write (E95-S01)', () => {
 
     useReadingGoalStore.getState().clearGoal()
     expect(mockSaveSettingsToSupabase).not.toHaveBeenCalled()
+  })
+})
+
+// ── E95-S04: hydrateStreak ──────────────────────────────────────────────────
+
+describe('hydrateStreak (E95-S04)', () => {
+  it('no-ops for anonymous users', async () => {
+    useReadingGoalStore.getState().saveGoal({
+      dailyType: 'minutes',
+      dailyTarget: 30,
+      yearlyBookTarget: 12,
+    })
+
+    await useReadingGoalStore.getState().hydrateStreak(null)
+
+    expect(mockHydrateStreakFromSupabase).not.toHaveBeenCalled()
+    expect(mockGetCachedStreak).not.toHaveBeenCalled()
+  })
+
+  it('no-ops when no goal is set', async () => {
+    await useReadingGoalStore.getState().hydrateStreak('user-1')
+    expect(mockHydrateStreakFromSupabase).not.toHaveBeenCalled()
+  })
+
+  it('populates streak from server on success and caches the result', async () => {
+    useReadingGoalStore.getState().saveGoal({
+      dailyType: 'minutes',
+      dailyTarget: 30,
+      yearlyBookTarget: 12,
+    })
+    mockHydrateStreakFromSupabase.mockResolvedValueOnce({
+      currentStreak: 7,
+      longestStreak: 12,
+      lastMetDate: '2026-03-23',
+    })
+
+    await useReadingGoalStore.getState().hydrateStreak('user-1')
+
+    const streak = useReadingGoalStore.getState().streak
+    expect(streak.currentStreak).toBe(7)
+    expect(streak.longestStreak).toBe(12)
+    expect(streak.lastMetDate).toBe('2026-03-23')
+    expect(streak.isStale).toBe(false)
+    expect(mockCacheStreak).toHaveBeenCalledWith('user-1', {
+      currentStreak: 7,
+      longestStreak: 12,
+      lastMetDate: '2026-03-23',
+    })
+  })
+
+  it('always calls the server, even when a fresh cache exists (E95-S03 pattern)', async () => {
+    useReadingGoalStore.getState().saveGoal({
+      dailyType: 'minutes',
+      dailyTarget: 30,
+      yearlyBookTarget: 12,
+    })
+    mockGetCachedStreak.mockResolvedValueOnce({
+      userId: 'user-1',
+      currentStreak: 4,
+      longestStreak: 9,
+      lastMetDate: '2026-03-22',
+      cachedAt: Date.now() - 60 * 1000,
+    })
+    mockIsStale.mockReturnValueOnce(false)
+    mockHydrateStreakFromSupabase.mockResolvedValueOnce({
+      currentStreak: 5,
+      longestStreak: 9,
+      lastMetDate: '2026-03-23',
+    })
+
+    await useReadingGoalStore.getState().hydrateStreak('user-1')
+
+    expect(mockHydrateStreakFromSupabase).toHaveBeenCalledTimes(1)
+    expect(useReadingGoalStore.getState().streak.currentStreak).toBe(5)
+  })
+
+  it('renders optimistically from cache before the server responds', async () => {
+    useReadingGoalStore.getState().saveGoal({
+      dailyType: 'minutes',
+      dailyTarget: 30,
+      yearlyBookTarget: 12,
+    })
+    mockGetCachedStreak.mockResolvedValueOnce({
+      userId: 'user-1',
+      currentStreak: 3,
+      longestStreak: 8,
+      lastMetDate: '2026-03-22',
+      cachedAt: Date.now() - 1000,
+    })
+    mockIsStale.mockReturnValueOnce(false)
+
+    // Server call never resolves — we only assert the optimistic step.
+    mockHydrateStreakFromSupabase.mockImplementationOnce(() => new Promise(() => {}))
+
+    const promise = useReadingGoalStore.getState().hydrateStreak('user-1')
+    // Allow the cache-read microtask to flush.
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(useReadingGoalStore.getState().streak.currentStreak).toBe(3)
+    expect(useReadingGoalStore.getState().streak.lastMetDate).toBe('2026-03-22')
+    // Discard the still-pending promise to keep the test runner happy.
+    void promise
+  })
+
+  it('flags isStale when server fails (keeps cached values)', async () => {
+    useReadingGoalStore.getState().saveGoal({
+      dailyType: 'minutes',
+      dailyTarget: 30,
+      yearlyBookTarget: 12,
+    })
+    mockGetCachedStreak.mockResolvedValueOnce({
+      userId: 'user-1',
+      currentStreak: 3,
+      longestStreak: 8,
+      lastMetDate: '2026-03-22',
+      cachedAt: Date.now() - 25 * 60 * 60 * 1000,
+    })
+    mockIsStale.mockReturnValueOnce(true)
+    mockHydrateStreakFromSupabase.mockResolvedValueOnce(null)
+
+    await useReadingGoalStore.getState().hydrateStreak('user-1')
+
+    const streak = useReadingGoalStore.getState().streak
+    expect(streak.currentStreak).toBe(3)
+    expect(streak.isStale).toBe(true)
+    expect(mockCacheStreak).not.toHaveBeenCalled()
+  })
+})
+
+// ── E95-S04: one-time legacy localStorage cleanup ───────────────────────────
+
+describe('legacy streak cleanup (E95-S04)', () => {
+  it('removes the legacy streak key and sets the cleanup flag on first module load', async () => {
+    // The top-level beforeEach already called vi.resetModules + localStorage.clear.
+    // Simulate a user who had a forged streak before upgrading.
+    localStorage.setItem(
+      'knowlune:reading-goal-streak',
+      JSON.stringify({ currentStreak: 9999 })
+    )
+    localStorage.removeItem('knowlune:e95-s04-streak-cleanup')
+
+    vi.resetModules()
+    await import('@/stores/useReadingGoalStore')
+
+    expect(localStorage.getItem('knowlune:reading-goal-streak')).toBeNull()
+    expect(localStorage.getItem('knowlune:e95-s04-streak-cleanup')).toBe('1')
+  })
+
+  it('does not re-run the cleanup once the flag is set', async () => {
+    localStorage.setItem('knowlune:e95-s04-streak-cleanup', '1')
+    const removeItem = vi.spyOn(Storage.prototype, 'removeItem')
+
+    vi.resetModules()
+    await import('@/stores/useReadingGoalStore')
+
+    const legacyRemovals = removeItem.mock.calls.filter(
+      ([k]) => k === 'knowlune:reading-goal-streak'
+    )
+    expect(legacyRemovals.length).toBe(0)
+    removeItem.mockRestore()
   })
 })

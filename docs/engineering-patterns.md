@@ -1145,6 +1145,50 @@ async function saveProgress(entry: ContentProgress) {
 
 **Case study:** E92-S04 introduced `syncableWrite`; E92-S09 wired the P0 stores (`contentProgress`, `studySessions`, `progress`) through it. PRs #343 and #348. Reference: `src/lib/sync/syncableWrite.ts:66-166`.
 
+## Compound-PK recordId Synthesis — Unit Separator Join
+
+Compound-PK tables (`progress`, `contentProgress`, `chapterMappings`) declare `compoundPkFields: string[]` in `tableRegistry.ts`. `syncableWrite` synthesizes `syncQueue.recordId` by joining those field values with `\u001f` (ASCII unit separator). Printable delimiters (`:`, `/`, `-`) risk collision with user-supplied ids like URIs, paths, and UUIDs. `\u001f` is collision-safe by construction because it cannot appear in URIs, slugs, or UUIDs.
+
+```typescript
+// src/lib/sync/syncableWrite.ts
+if (entry.compoundPkFields && entry.compoundPkFields.length > 0) {
+  const parts = entry.compoundPkFields.map((f) => String(record[f]))
+  if (parts.some((p) => !p.trim())) throw new Error(/* empty recordId */)
+  recordId = parts.join('\u001f')
+}
+```
+
+**Symmetry requirement:** The download path (`syncEngine._getLocalRecord`) must use the identical `\u001f` join when deriving a recordId from field values. Drift between upload/download silently breaks `syncQueue` coalescing.
+
+**Empty-part guard:** Throw if any compound field is empty or whitespace — do not enqueue a partial recordId that collides with a differently-partial row.
+
+Case study: PR #361 post-E93 cleanup — resolved R1-PE-01 (missing `compoundPkFields` declaration on the `progress` table). Full narrative: `docs/solutions/best-practices/compound-pk-recordid-synthesis-in-syncable-write-2026-04-19.md`.
+
+## Fail-Closed Destructive Migrations (Session GUC + RLS Audit)
+
+When a Supabase migration must `DELETE` rows to satisfy a new constraint (UNIQUE, CHECK, FK), every row destruction must be (a) gated on per-session operator acknowledgement, and (b) recoverable from a durable audit trail. Four layered safeguards — each addresses a real failure mode surfaced during the embeddings UNIQUE(note_id) migration:
+
+**1. Session-scoped GUC gate with `pg_settings.source = 'session'` check.** Don't trust `current_setting('my.flag') = 'on'` alone — that flag can persist via `ALTER ROLE` or `postgresql.conf`. Verify the source was `session` (set by `SET LOCAL` in the current transaction):
+
+```sql
+SELECT source INTO v_allow_source FROM pg_settings WHERE name = 'knowlune.allow_dedup';
+IF v_allow_flag IS DISTINCT FROM 'on' OR v_allow_source IS DISTINCT FROM 'session' THEN
+  RAISE EXCEPTION 'Silent dedup not allowed. Run SET LOCAL … in this session.';
+END IF;
+```
+
+**2. Durable audit table, not just `RAISE WARNING`.** Log aggregators truncate long messages (CloudWatch 256KB, Datadog 1MB). Write deleted-row provenance to a permanent `public._<feature>_audit_<date>` table before the DELETE so reconciliation does not depend on log capture.
+
+**3. RLS + REVOKE ALL on the audit table.** Supabase's `ALTER DEFAULT PRIVILEGES` grants `SELECT` to `anon` and `authenticated` on new `public` tables. Without explicit `REVOKE ALL` + `ENABLE ROW LEVEL SECURITY` (with zero policies), PostgREST exposes per-row `user_id ↔ <pk>` correlation cross-tenant.
+
+**4. Bounded `EXCLUSIVE` lock with `lock_timeout`.** `LOCK TABLE … IN EXCLUSIVE MODE` + `SET LOCAL lock_timeout = '3s'` blocks concurrent writes without stalling reads, and fails fast if long readers block the deploy. Note: `ADD CONSTRAINT UNIQUE` upgrades to `ACCESS EXCLUSIVE` briefly — schedule during off-peak.
+
+**Tie-break on freshness, not id.** When picking the survivor row in `DISTINCT ON`, `ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id`. UUID lexicographic order picks randomly and can orphan the id the client's local record points to.
+
+**Idempotent `ADD CONSTRAINT`.** Wrap in `DO $$ IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = …) THEN ALTER TABLE … ADD CONSTRAINT … END IF $$;`.
+
+Reference implementation: `supabase/migrations/20260419000001_embeddings_unique_note_id.sql`. Full architectural narrative with each safeguard mapped to the review finding that forced it: `docs/solutions/best-practices/fail-closed-destructive-migrations-with-session-scoped-guc-2026-04-19.md`.
+
 ## GREATEST Monotonic Guard Requires a Separate Reset RPC
 
 Supabase upserts that use `GREATEST(existing, incoming)` to enforce monotonic advancement silently swallow intentional resets. When a user explicitly sends `mastery_score = 0`, `GREATEST(current_value, 0)` keeps the existing value — the reset is a no-op with no error or exception.

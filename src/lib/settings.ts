@@ -262,11 +262,28 @@ export async function hydrateSettingsFromSupabase(
       if (error.code !== 'PGRST116') {
         console.warn('[settings] Supabase user_settings fetch failed:', error)
       }
+      // E95-S04: still kick off a streak hydration — the user may have a goal
+      // from a prior session in localStorage even if user_settings is empty.
+      if (userId) {
+        const { useReadingGoalStore: readingGoalStoreForStreak } = await import(
+          '@/stores/useReadingGoalStore'
+        )
+        await readingGoalStoreForStreak.getState().hydrateStreak(userId)
+      }
       return
     }
 
     const s = data?.settings
-    if (!s || typeof s !== 'object') return
+    if (!s || typeof s !== 'object') {
+      // E95-S04: same early-streak-hydration rationale as above.
+      if (userId) {
+        const { useReadingGoalStore: readingGoalStoreForStreak } = await import(
+          '@/stores/useReadingGoalStore'
+        )
+        await readingGoalStoreForStreak.getState().hydrateStreak(userId)
+      }
+      return
+    }
 
     // Lazy imports — Zustand stores are singleton modules; getState() is safe outside React.
     const [
@@ -338,6 +355,14 @@ export async function hydrateSettingsFromSupabase(
         dailyTarget: typeof s.dailyTarget === 'number' ? s.dailyTarget : (existingGoal?.dailyTarget ?? 30),
         yearlyBookTarget: typeof s.yearlyBookTarget === 'number' ? s.yearlyBookTarget : (existingGoal?.yearlyBookTarget ?? 12),
       })
+    }
+
+    // E95-S04: hydrate the server-authoritative reading streak. Must run
+    // AFTER the goal is known (saveGoal above) so hydrateStreak has the
+    // dailyType/dailyTarget to pass to the RPC. Best-effort — errors are
+    // swallowed inside hydrateStreak itself.
+    if (userId) {
+      await useReadingGoalStore.getState().hydrateStreak(userId)
     }
 
     // ── useEngagementPrefsStore ──

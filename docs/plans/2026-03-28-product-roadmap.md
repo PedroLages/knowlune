@@ -1687,6 +1687,12 @@ Competitive research (2026-03-29) identified 6 high-impact features that are **p
 
 - [ ] **E57: AI Tutoring Phase 1-2 (5 stories)** — Coursera Coach pattern. Tutor tab in LessonPlayer, Socratic hint ladder, RAG-grounded answers. **2-week validation gate after.**
 
+### Batch F — "Audiobook Player Polish" (7 stories)
+
+> Close the UX gap with mature audiobook clients (Overcast, Audiobooth) — compounds E108 Audiobookshelf investment. Sequence **after beta launch**, before E56. Plan: [`2026-04-19-004-feat-e109-audiobook-player-polish-plan.md`](2026-04-19-004-feat-e109-audiobook-player-polish-plan.md)
+
+- [ ] **E109: Audiobook Player Polish (7 stories)** — Configurable skip intervals, smart rewind (after pause + on interruption), audio fade-out on sleep timer, automatic sleep timer scheduling, speed-adjusted time remaining, reorderable player controls.
+
 ### Future (unchanged)
 - [ ] **ML Phase 2 (E52 full):** Deferred — Bloom's, transcript chunker, embedding recs. Only after E52 validates usage.
 - [ ] **PKM Export phases 2-3:** Obsidian vault export — builds on E53 *(needs epic)*
