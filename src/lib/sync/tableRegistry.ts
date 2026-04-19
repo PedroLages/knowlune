@@ -269,6 +269,11 @@ const chatConversations: TableRegistryEntry = {
   },
 }
 
+/**
+ * `learnerModels` stores per-course AI learner profiles. Upserted on the
+ * Supabase side via `ON CONFLICT (user_id, course_id) DO UPDATE` — the sync
+ * engine's upload phase handles this automatically with `.upsert()`.
+ */
 const learnerModels: TableRegistryEntry = {
   dexieTable: 'learnerModels',
   supabaseTable: 'learner_models',

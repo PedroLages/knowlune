@@ -89,6 +89,15 @@ export function useSyncLifecycle(): void {
       useAudioClipStore.getState().loadClips('')
     )
 
+    // chatConversations are loaded per-course context in useTutorStore on navigation
+    // — no global loadAll() exists. A no-op is correct: after fullSync, the next
+    // lesson navigation will re-query Dexie and pick up downloaded conversations.
+    syncEngine.registerStoreRefresh('chatConversations', () => Promise.resolve())
+
+    // learnerModels are loaded per-course via learnerModelService.getLearnerModel
+    // — no global loadAll() exists. Same no-op rationale as chatConversations.
+    syncEngine.registerStoreRefresh('learnerModels', () => Promise.resolve())
+
     // Intentional: contentProgress store refresh is NOT registered here.
     // useContentProgressStore.loadCourseProgress(courseId) requires a mandatory
     // courseId argument — no loadAll() variant exists in S07. The store will

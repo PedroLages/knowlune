@@ -35,7 +35,7 @@ import {
   TooltipTrigger,
 } from '@/app/components/ui/tooltip'
 import { toast } from 'sonner'
-import { db } from '@/db'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
 import { MODE_LABELS } from '@/ai/tutor/modeLabels'
 import { formatTimestamp, extractTopics, extractModes } from './conversationUtils'
 import type { ChatConversation } from '@/data/types'
@@ -188,7 +188,7 @@ export function ConversationHistorySheet({
 
   const handleDelete = async (conversationId: string) => {
     try {
-      await db.chatConversations.delete(conversationId)
+      await syncableWrite('chatConversations', 'delete', conversationId)
       onDelete(conversationId)
     } catch {
       toast.error('Failed to delete conversation.')
