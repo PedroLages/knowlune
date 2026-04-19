@@ -367,6 +367,12 @@ const bookReviews: TableRegistryEntry = {
   fieldMap: {},
 }
 
+// E94-S03: `shelves` MUST appear before `bookShelves` in the registry array.
+// The download-phase dedup + remap hook in `syncEngine._doDownload` populates
+// `syncMetadata['shelfDedupMap:{userId}']` while processing `shelves`, and then
+// uses that map to rewrite `shelfId` on incoming `bookShelves` rows. Reversing
+// the order would break the remap. The test `tableRegistry.test.ts` asserts
+// `shelves` index < `bookShelves` index.
 const shelves: TableRegistryEntry = {
   dexieTable: 'shelves',
   supabaseTable: 'shelves',
@@ -375,6 +381,7 @@ const shelves: TableRegistryEntry = {
   fieldMap: {},
 }
 
+// E94-S03: see ordering invariant documented on `shelves` above.
 const bookShelves: TableRegistryEntry = {
   dexieTable: 'bookShelves',
   supabaseTable: 'book_shelves',
@@ -383,12 +390,16 @@ const bookShelves: TableRegistryEntry = {
   fieldMap: {},
 }
 
+// E94-S03: Dexie-side field `sortOrder` is translated to Supabase column
+// `position` on upload and back on download. The server-side UNIQUE
+// (user_id, position) constraint is DEFERRABLE INITIALLY DEFERRED so reorder
+// transactions can swap values across rows.
 const readingQueue: TableRegistryEntry = {
   dexieTable: 'readingQueue',
   supabaseTable: 'reading_queue',
   conflictStrategy: 'lww',
   priority: 2,
-  fieldMap: {},
+  fieldMap: { sortOrder: 'position' },
 }
 
 /**

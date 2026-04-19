@@ -32,6 +32,9 @@ import { useAudioClipStore } from '@/stores/useAudioClipStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useBookStore } from '@/stores/useBookStore'
+import { useBookReviewStore } from '@/stores/useBookReviewStore'
+import { useShelfStore } from '@/stores/useShelfStore'
+import { useReadingQueueStore } from '@/stores/useReadingQueueStore'
 
 /** Interval between periodic nudge calls (ms). */
 const NUDGE_INTERVAL_MS = 30_000
@@ -128,6 +131,30 @@ export function useSyncLifecycle(): void {
     syncEngine.registerStoreRefresh('books', async () => {
       useBookStore.setState({ isLoaded: false })
       await useBookStore.getState().loadBooks()
+    })
+
+    // E94-S03: P2 library-organization refresh callbacks.
+    syncEngine.registerStoreRefresh('bookReviews', async () => {
+      useBookReviewStore.setState({ isLoaded: false })
+      await useBookReviewStore.getState().loadReviews()
+    })
+
+    // `shelves` and `bookShelves` are both owned by useShelfStore — loadShelves
+    // re-queries both tables. Registering both keys ensures the callback fires
+    // regardless of which table the download engine processed last.
+    syncEngine.registerStoreRefresh('shelves', async () => {
+      useShelfStore.setState({ isLoaded: false })
+      await useShelfStore.getState().loadShelves()
+    })
+
+    syncEngine.registerStoreRefresh('bookShelves', async () => {
+      useShelfStore.setState({ isLoaded: false })
+      await useShelfStore.getState().loadShelves()
+    })
+
+    syncEngine.registerStoreRefresh('readingQueue', async () => {
+      useReadingQueueStore.setState({ isLoaded: false })
+      await useReadingQueueStore.getState().loadQueue()
     })
 
     // Intentional: contentProgress store refresh is NOT registered here.

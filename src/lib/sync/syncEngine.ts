@@ -37,7 +37,8 @@ import { toCamelCase } from './fieldMapper'
 import { getTableEntry, tableRegistry } from './tableRegistry'
 import { applyConflictCopy } from './conflictResolvers'
 import { replayFlashcardReviews } from './flashcardReplayService'
-import type { Note } from '@/data/types'
+import { dedupDefaultShelves } from './defaultShelfDedup'
+import type { Note, Shelf } from '@/data/types'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -776,6 +777,62 @@ async function _doDownload(): Promise<void> {
 
     if (!rows || rows.length === 0) continue
 
+    // Convert once so pre-apply hooks and the apply loop share the same shape.
+    const camelRecords: Record<string, unknown>[] = rows.map(
+      (r) => toCamelCase(entry, r as Record<string, unknown>),
+    )
+
+    // E94-S03: Default-shelf dedup hook.
+    // On `shelves` download, collapse incoming default shelves that match an
+    // existing local default by normalized name. Skipped remote rows are
+    // mapped into `syncMetadata['shelfDedupMap:{userId}']` so the subsequent
+    // `bookShelves` branch can rewrite `shelfId` references to the local id.
+    //
+    // Registry ordering invariant: `shelves` MUST appear before `bookShelves`.
+    // Documented on both entries in `tableRegistry.ts`.
+    let recordsToApply: Record<string, unknown>[] = camelRecords
+    if (entry.dexieTable === 'shelves' && _userId) {
+      try {
+        const local = (await db.shelves.toArray()) as unknown as Shelf[]
+        const incoming = camelRecords as unknown as Shelf[]
+        const { toInsert, toSkip, mergedIdMap } = dedupDefaultShelves(incoming, local)
+        if (toSkip.length > 0 || Object.keys(mergedIdMap).length > 0) {
+          console.debug(
+            `[syncEngine] defaultShelfDedup: skipped ${toSkip.length} incoming defaults, mapped ${Object.keys(mergedIdMap).length} remote → local ids.`,
+          )
+          const key = `shelfDedupMap:${_userId}`
+          const existing = await db.syncMetadata.get(key)
+          const prior =
+            (existing?.value as Record<string, string> | undefined) ?? {}
+          await db.syncMetadata.put({
+            table: key,
+            value: { ...prior, ...mergedIdMap },
+          })
+        }
+        recordsToApply = toInsert as unknown as Record<string, unknown>[]
+      } catch (err) {
+        // Fail-open on dedup: worst case is a duplicate shelf row, not data loss.
+        console.error('[syncEngine] defaultShelfDedup failed; applying unchanged:', err)
+      }
+    } else if (entry.dexieTable === 'bookShelves' && _userId) {
+      try {
+        const key = `shelfDedupMap:${_userId}`
+        const meta = await db.syncMetadata.get(key)
+        const map = (meta?.value as Record<string, string> | undefined) ?? {}
+        if (Object.keys(map).length > 0) {
+          recordsToApply = camelRecords.map((rec) => {
+            const shelfId = rec['shelfId'] as string | undefined
+            if (shelfId && map[shelfId]) {
+              return { ...rec, shelfId: map[shelfId] }
+            }
+            return rec
+          })
+        }
+      } catch (err) {
+        console.error('[syncEngine] bookShelves remap failed; applying unchanged:', err)
+      }
+    }
+
     // Apply each row with per-record error isolation.
     let maxUpdatedAt: string | null = null
 
@@ -784,9 +841,9 @@ async function _doDownload(): Promise<void> {
       if (rowUpdatedAt && (maxUpdatedAt === null || rowUpdatedAt > maxUpdatedAt)) {
         maxUpdatedAt = rowUpdatedAt
       }
+    }
 
-      const record = toCamelCase(entry, row as Record<string, unknown>)
-
+    for (const record of recordsToApply) {
       try {
         await _applyRecord(entry, record)
       } catch (err) {

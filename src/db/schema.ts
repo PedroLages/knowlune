@@ -66,12 +66,19 @@ export interface SyncQueueEntry {
 
 /**
  * Sync metadata — per-table checkpoint for incremental download.
- * Keyed by `table` (either a Dexie table name or the `__global__` sentinel).
+ * Keyed by `table` (either a Dexie table name or the `__global__` sentinel,
+ * or arbitrary sync-engine keys like `shelfDedupMap:{userId}` for E94-S03).
  */
 export interface SyncMetadataEntry {
   table: string
   lastSyncTimestamp?: string
   lastUploadedKey?: string
+  /**
+   * Arbitrary JSON-serializable value for sync-engine-scoped metadata that
+   * is not a per-table cursor. Used by E94-S03 to persist the default-shelf
+   * id remap (`shelfDedupMap:{userId}` keys → `{ [remoteId]: localId }`).
+   */
+  value?: unknown
 }
 
 /**

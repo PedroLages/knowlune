@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { arrayMove } from '@dnd-kit/sortable'
 import type { ReadingQueueEntry } from '@/data/types'
 import { db } from '@/db/schema'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 /** Returns current ISO timestamp — extracted for consistency and testability */
 const now = () => new Date().toISOString()
@@ -59,7 +60,7 @@ export const useReadingQueueStore = create<ReadingQueueStoreState>((set, get) =>
     set(state => ({ entries: [...state.entries, entry] }))
 
     try {
-      await db.readingQueue.put(entry)
+      await syncableWrite('readingQueue', 'put', entry as unknown as SyncableRecord)
       toast.success('Added to reading queue')
     } catch {
       const entries = await db.readingQueue.orderBy('sortOrder').toArray()
@@ -78,7 +79,7 @@ export const useReadingQueueStore = create<ReadingQueueStoreState>((set, get) =>
     }))
 
     try {
-      await db.readingQueue.delete(entry.id)
+      await syncableWrite('readingQueue', 'delete', entry.id)
     } catch {
       const entries = await db.readingQueue.orderBy('sortOrder').toArray()
       set({ entries })
@@ -98,11 +99,15 @@ export const useReadingQueueStore = create<ReadingQueueStoreState>((set, get) =>
     set({ entries: reordered })
 
     try {
-      await db.transaction('rw', db.readingQueue, async () => {
-        for (const entry of reordered) {
-          await db.readingQueue.update(entry.id, { sortOrder: entry.sortOrder })
-        }
-      })
+      // Sequential awaits — same ordering semantics as the original Dexie
+      // transaction, but routed through syncableWrite so each reorder step
+      // produces an upload queue entry. fieldMap translates sortOrder → position
+      // in the queue payload; Supabase-side the UNIQUE (user_id, position)
+      // constraint is DEFERRABLE so the server transaction can tolerate the
+      // transient swap state.
+      for (const entry of reordered) {
+        await syncableWrite('readingQueue', 'put', { ...entry } as unknown as SyncableRecord)
+      }
     } catch {
       const entries = await db.readingQueue.orderBy('sortOrder').toArray()
       set({ entries })
@@ -119,11 +124,16 @@ export const useReadingQueueStore = create<ReadingQueueStoreState>((set, get) =>
   },
 
   removeAllBookEntries: async (bookId: string) => {
+    // Snapshot the entries to delete BEFORE the optimistic set() so each
+    // row can be routed through syncableWrite (enqueuing a delete per id).
+    const entriesToDelete = get().entries.filter(e => e.bookId === bookId)
     set(state => ({
       entries: state.entries.filter(e => e.bookId !== bookId),
     }))
     try {
-      await db.readingQueue.where('bookId').equals(bookId).delete()
+      for (const entry of entriesToDelete) {
+        await syncableWrite('readingQueue', 'delete', entry.id)
+      }
     } catch {
       const entries = await db.readingQueue.orderBy('sortOrder').toArray()
       set({ entries })
