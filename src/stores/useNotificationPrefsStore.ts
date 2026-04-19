@@ -98,7 +98,11 @@ export const useNotificationPrefsStore = create<NotificationPrefsState>((set, ge
         // The `id` field remains `'singleton'`; the registry's
         // `fieldMap: { id: 'user_id' }` translates it to `user_id` on upload.
         const defaults: NotificationPreferences = { ...DEFAULTS }
-        await syncableWrite('notificationPreferences', 'put', defaults)
+        await syncableWrite(
+          'notificationPreferences',
+          'put',
+          defaults as unknown as Record<string, unknown> & { id: string },
+        )
         // Re-read from Dexie so the in-memory state reflects the stamped
         // `userId` + `updatedAt` fields applied by `syncableWrite`.
         const stored = await db.notificationPreferences.get('singleton')
@@ -122,7 +126,11 @@ export const useNotificationPrefsStore = create<NotificationPrefsState>((set, ge
     }
 
     try {
-      await syncableWrite('notificationPreferences', 'put', next)
+      await syncableWrite(
+        'notificationPreferences',
+        'put',
+        next as unknown as Record<string, unknown> & { id: string },
+      )
       // Re-read so in-memory `updatedAt` matches the Dexie-persisted stamp.
       const stored = await db.notificationPreferences.get('singleton')
       set({ prefs: stored ?? next })
@@ -144,7 +152,11 @@ export const useNotificationPrefsStore = create<NotificationPrefsState>((set, ge
     }
 
     try {
-      await syncableWrite('notificationPreferences', 'put', next)
+      await syncableWrite(
+        'notificationPreferences',
+        'put',
+        next as unknown as Record<string, unknown> & { id: string },
+      )
       const stored = await db.notificationPreferences.get('singleton')
       set({ prefs: stored ?? next })
     } catch (error) {
