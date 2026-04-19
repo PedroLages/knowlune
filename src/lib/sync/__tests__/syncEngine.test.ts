@@ -188,7 +188,7 @@ beforeEach(() => {
 
   const mockOrder = vi.fn()
   const mockGte = vi.fn().mockResolvedValue({ data: [], error: null })
-  mockOrder.mockReturnValue({ gte: mockGte, then: mockGte.then?.bind(mockGte) })
+  mockOrder.mockReturnValue({ gte: mockGte })
   // Make order() also thenable so _doDownload can await it without .gte()
   Object.assign(mockOrder, { then: (_res: (v: unknown) => unknown) => Promise.resolve({ data: [], error: null }).then(_res) })
   const mockSelect = vi.fn().mockReturnValue({ order: mockOrder })
@@ -1108,7 +1108,7 @@ describe('_doDownload — storageDownload hook (E94-S05)', () => {
     // The db mock already has importedCourses from Unit 1 db mock setup above —
     // but since the mock is shared, add a minimal put to avoid errors.
     const { db: mockDb } = await import('@/db')
-    Object.assign(mockDb as Record<string, unknown>, {
+    Object.assign(mockDb as unknown as Record<string, unknown>, {
       importedCourses: {
         get: vi.fn().mockResolvedValue(undefined),
         put: vi.fn().mockResolvedValue(undefined),

@@ -434,7 +434,7 @@ Checks (run in order, halt on first failure):
 1. Kill any process on port 5173: `lsof -ti:5173 | xargs kill 2>/dev/null || true`
 2. `npm run build` — must succeed.
 3. `npm run lint` — must succeed (ESLint; design-tokens rule is ERROR level).
-4. `npx tsc --noEmit` — must succeed.
+4. `npx tsc --noEmit` — must succeed. Non-optional: esbuild performs type-erasure, not type-checking, so `npm run build` can pass while types are broken. Skipping this gate is how type regressions reach main.
 5. Bundle-size regression check: compare against docs/implementation-artifacts/performance-baseline.json if it exists; flag if dist increases >25%.
 
 Return ONLY: `{"passed": true}` OR `{"passed": false, "failedCheck": "<name>", "details": "<one-line summary>"}`.
