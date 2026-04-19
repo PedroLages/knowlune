@@ -21,11 +21,13 @@ const {
   mockAuthorsGet,
   mockImportedPdfsGet,
   mockBooksGet,
+  mockBooksUpdate,
   mockDbFrom,
   mockDbUpdate,
   mockDbEq,
   mockUploadBlob,
   mockGetCoverUrl,
+  mockReadBookFile,
 } = vi.hoisted(() => {
   const mockDbEq = vi.fn().mockReturnThis()
   const mockDbUpdate = vi.fn().mockReturnValue({ eq: mockDbEq })
@@ -35,20 +37,24 @@ const {
   const mockAuthorsGet = vi.fn()
   const mockImportedPdfsGet = vi.fn()
   const mockBooksGet = vi.fn()
+  const mockBooksUpdate = vi.fn().mockResolvedValue(undefined)
 
   const mockUploadBlob = vi.fn().mockResolvedValue({ url: 'https://cdn.example.com/path', path: 'path' })
   const mockGetCoverUrl = vi.fn()
+  const mockReadBookFile = vi.fn()
 
   return {
     mockCourseThumbnailsGet,
     mockAuthorsGet,
     mockImportedPdfsGet,
     mockBooksGet,
+    mockBooksUpdate,
     mockDbFrom,
     mockDbUpdate,
     mockDbEq,
     mockUploadBlob,
     mockGetCoverUrl,
+    mockReadBookFile,
   }
 })
 
@@ -57,7 +63,7 @@ vi.mock('@/db', () => ({
     courseThumbnails: { get: mockCourseThumbnailsGet },
     authors: { get: mockAuthorsGet },
     importedPdfs: { get: mockImportedPdfsGet },
-    books: { get: mockBooksGet },
+    books: { get: mockBooksGet, update: mockBooksUpdate },
   },
 }))
 
@@ -66,7 +72,7 @@ vi.mock('@/lib/auth/supabase', () => ({
 }))
 
 vi.mock('@/services/OpfsStorageService', () => ({
-  opfsStorageService: { getCoverUrl: mockGetCoverUrl },
+  opfsStorageService: { getCoverUrl: mockGetCoverUrl, readBookFile: mockReadBookFile },
 }))
 
 vi.mock('../storageUpload', () => ({
@@ -352,10 +358,179 @@ describe('uploadStorageFilesForTable — books', () => {
 })
 
 // ---------------------------------------------------------------------------
+// books — _uploadBookFile (E94-S07)
+// ---------------------------------------------------------------------------
+
+describe('uploadStorageFilesForTable — books file upload (E94-S07)', () => {
+  const FILE_URL = 'https://cdn.example.com/book.epub'
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUploadBlob.mockResolvedValue({ url: FILE_URL, path: 'user1/book1/book.epub' })
+    mockDbUpdate.mockReturnValue({ eq: mockDbEq })
+    mockDbFrom.mockReturnValue({ update: mockDbUpdate })
+    mockDbEq.mockReturnThis()
+    // Default: no cover URL so _uploadBookCover returns early without touching uploadBlob
+    mockGetCoverUrl.mockResolvedValue(null)
+  })
+
+  it('happy path (local): source.type=local → readBookFile called, uploadBlob called with book-files bucket, db.books.update called with fileUrl, Supabase update called', async () => {
+    const file = new File([new Uint8Array(100)], 'book.epub', { type: 'application/epub+zip' })
+    mockReadBookFile.mockResolvedValue(file)
+    mockBooksGet.mockResolvedValue({ id: 'book1', source: { type: 'local', opfsPath: '/knowlune/books/book1' } })
+
+    const entry = makeEntry({ tableName: 'books', recordId: 'book1' })
+    await uploadStorageFilesForTable('books', [entry], 'user1')
+
+    expect(mockReadBookFile).toHaveBeenCalledWith('/knowlune/books/book1', 'book1')
+    expect(mockUploadBlob).toHaveBeenCalledWith(
+      'book-files',
+      'user1/book1/book.epub',
+      file,
+      { maxSizeBytes: 209_715_200 },
+    )
+    expect(mockBooksUpdate).toHaveBeenCalledWith('book1', { fileUrl: FILE_URL })
+    expect(mockDbFrom).toHaveBeenCalledWith('books')
+    expect(mockDbUpdate).toHaveBeenCalledWith({ file_url: FILE_URL })
+  })
+
+  it('happy path (fileHandle): source.type=fileHandle → handle.getFile() called, blob uploaded, URL written back', async () => {
+    const file = new File([new Uint8Array(200)], 'book.pdf', { type: 'application/pdf' })
+    const mockHandle = { getFile: vi.fn().mockResolvedValue(file) }
+    mockBooksGet.mockResolvedValue({ id: 'book1', source: { type: 'fileHandle', handle: mockHandle } })
+
+    const entry = makeEntry({ tableName: 'books', recordId: 'book1' })
+    await uploadStorageFilesForTable('books', [entry], 'user1')
+
+    expect(mockHandle.getFile).toHaveBeenCalledOnce()
+    expect(mockUploadBlob).toHaveBeenCalledWith(
+      'book-files',
+      'user1/book1/book.pdf',
+      file,
+      { maxSizeBytes: 209_715_200 },
+    )
+    expect(mockBooksUpdate).toHaveBeenCalledWith('book1', { fileUrl: FILE_URL })
+  })
+
+  it('edge case (already https): book.fileUrl starts with https:// → uploadBlob NOT called, no Dexie/Supabase update', async () => {
+    mockBooksGet.mockResolvedValue({
+      id: 'book1',
+      fileUrl: 'https://cdn.supabase.com/existing/book.epub',
+      source: { type: 'local', opfsPath: '/books/book1' },
+    })
+
+    const entry = makeEntry({ tableName: 'books', recordId: 'book1' })
+    await uploadStorageFilesForTable('books', [entry], 'user1')
+
+    expect(mockUploadBlob).not.toHaveBeenCalled()
+    expect(mockBooksUpdate).not.toHaveBeenCalled()
+  })
+
+  it('edge case (indexeddb sentinel): book.fileUrl="indexeddb" → does NOT block upload (https guard does not match)', async () => {
+    const file = new File([new Uint8Array(100)], 'book.epub', { type: 'application/epub+zip' })
+    mockReadBookFile.mockResolvedValue(file)
+    mockBooksGet.mockResolvedValue({
+      id: 'book1',
+      fileUrl: 'indexeddb',
+      source: { type: 'local', opfsPath: '/knowlune/books/book1' },
+    })
+
+    const entry = makeEntry({ tableName: 'books', recordId: 'book1' })
+    await uploadStorageFilesForTable('books', [entry], 'user1')
+
+    expect(mockReadBookFile).toHaveBeenCalledOnce()
+    expect(mockUploadBlob).toHaveBeenCalledOnce()
+  })
+
+  it('edge case (remote): source.type=remote → return early, no upload', async () => {
+    mockBooksGet.mockResolvedValue({
+      id: 'book1',
+      source: { type: 'remote', url: 'https://example.com/book.epub' },
+    })
+
+    const entry = makeEntry({ tableName: 'books', recordId: 'book1' })
+    await uploadStorageFilesForTable('books', [entry], 'user1')
+
+    expect(mockUploadBlob).not.toHaveBeenCalled()
+    expect(mockBooksUpdate).not.toHaveBeenCalled()
+  })
+
+  it('edge case (no Dexie record): db.books.get returns undefined → return early, no upload', async () => {
+    mockBooksGet.mockResolvedValue(undefined)
+
+    const entry = makeEntry({ tableName: 'books', recordId: 'book1' })
+    await uploadStorageFilesForTable('books', [entry], 'user1')
+
+    expect(mockUploadBlob).not.toHaveBeenCalled()
+  })
+
+  it('error path (stale fileHandle): handle.getFile() throws DOMException → skipped silently, no error thrown, no warn from inner catch', async () => {
+    const mockHandle = { getFile: vi.fn().mockRejectedValue(new DOMException('stale')) }
+    mockBooksGet.mockResolvedValue({ id: 'book1', source: { type: 'fileHandle', handle: mockHandle } })
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const entry = makeEntry({ tableName: 'books', recordId: 'book1' })
+    await uploadStorageFilesForTable('books', [entry], 'user1')
+
+    expect(mockUploadBlob).not.toHaveBeenCalled()
+    // Stale handle is a silent return, not a thrown error — inner file catch not reached.
+    expect(warnSpy).not.toHaveBeenCalled()
+    warnSpy.mockRestore()
+  })
+
+  it('error path (size limit): uploadBlob throws RangeError → caught by inner file catch, console.warn emitted, no rethrow', async () => {
+    const file = new File([new Uint8Array(100)], 'huge.epub', { type: 'application/epub+zip' })
+    mockReadBookFile.mockResolvedValue(file)
+    mockBooksGet.mockResolvedValue({ id: 'book1', source: { type: 'local', opfsPath: '/books/book1' } })
+    mockUploadBlob.mockRejectedValue(new RangeError('blob exceeds 200 MB limit'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const entry = makeEntry({ tableName: 'books', recordId: 'book1' })
+    await expect(uploadStorageFilesForTable('books', [entry], 'user1')).resolves.toBeUndefined()
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[storageSync] File upload failed',
+      'book1',
+      expect.any(RangeError),
+    )
+    expect(mockBooksUpdate).not.toHaveBeenCalled()
+    warnSpy.mockRestore()
+  })
+
+  it('integration (independence): cover throws → file upload still runs; outer loop proceeds', async () => {
+    const file = new File([new Uint8Array(100)], 'book.epub', { type: 'application/epub+zip' })
+    mockReadBookFile.mockResolvedValue(file)
+    // Book has an opfs cover (triggers _uploadBookCover) and a local source (triggers _uploadBookFile)
+    mockBooksGet.mockResolvedValue({
+      id: 'book1',
+      coverUrl: 'opfs-cover://book1',
+      source: { type: 'local', opfsPath: '/books/book1' },
+    })
+    // getCoverUrl succeeds but fetch (for cover blob) throws — simulates cover upload failure
+    mockGetCoverUrl.mockResolvedValue('blob:http://localhost/abc')
+    mockFetch.mockRejectedValue(new Error('network error'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const entry = makeEntry({ tableName: 'books', recordId: 'book1' })
+    await expect(uploadStorageFilesForTable('books', [entry], 'user1')).resolves.toBeUndefined()
+
+    // File upload was attempted despite cover failure
+    expect(mockReadBookFile).toHaveBeenCalledOnce()
+    // uploadBlob called exactly once — for the file (cover threw before uploadBlob)
+    expect(mockUploadBlob).toHaveBeenCalledOnce()
+    expect(mockUploadBlob).toHaveBeenCalledWith('book-files', expect.any(String), file, expect.any(Object))
+
+    warnSpy.mockRestore()
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Non-target table
 // ---------------------------------------------------------------------------
 
 describe('uploadStorageFilesForTable — non-target table', () => {
+  beforeEach(() => vi.clearAllMocks())
+
   it('integration: non-target table name → returns without dispatching any upload', async () => {
     const entry = makeEntry({ tableName: 'notes', recordId: 'note1' })
     await expect(

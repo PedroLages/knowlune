@@ -40,6 +40,7 @@ const SIZE_LIMITS = {
   avatars: 1_000_000,              // 1 MB
   pdfs: 100_000_000,               // 100 MB
   'book-covers': 2_000_000,        // 2 MB
+  'book-files': 209_715_200,       // 200 MB
 } as const
 
 // ---------------------------------------------------------------------------
@@ -78,7 +79,18 @@ export async function uploadStorageFilesForTable(
           await _uploadPdfFile(entry, userId)
           break
         case 'books':
-          await _uploadBookCover(entry, userId)
+          // E94-S07: cover and file uploads are independent — one failing must not
+          // prevent the other from running. Each has its own try/catch.
+          try {
+            await _uploadBookCover(entry, userId)
+          } catch (err) {
+            console.warn('[storageSync] Cover upload failed', entry.recordId, err)
+          }
+          try {
+            await _uploadBookFile(entry, userId)
+          } catch (err) {
+            console.warn('[storageSync] File upload failed', entry.recordId, err)
+          }
           break
       }
     } catch (err) {
@@ -161,6 +173,60 @@ async function _uploadPdfFile(entry: SyncQueueEntry, userId: string): Promise<vo
     .from('imported_pdfs')
     .update({ file_url: url })
     .eq('id', pdfId)
+    .eq('user_id', userId)
+}
+
+/**
+ * Upload the primary book binary file (EPUB, PDF, audiobook) to the `book-files` bucket.
+ *
+ * Source dispatch:
+ *   - 'local'      → reads from OPFS via opfsStorageService (internally falls back to IDB)
+ *   - 'fileHandle' → calls source.handle.getFile(); stale handle (DOMException) → return silently
+ *   - 'remote'     → no uploadable local binary; return early
+ *
+ * Idempotency: if book.fileUrl already starts with 'https://', the file was already
+ * uploaded from this or another device — skip. The 'indexeddb' sentinel (set by
+ * storeBookFile) does NOT start with 'https://' so upload proceeds correctly.
+ *
+ * @since E94-S07
+ */
+async function _uploadBookFile(entry: SyncQueueEntry, userId: string): Promise<void> {
+  const bookId = entry.recordId
+  const book = await db.books.get(bookId)
+  if (!book || !book.source) return
+
+  // Idempotency: already uploaded from this or another device.
+  if (book.fileUrl?.startsWith('https://')) return
+
+  let file: File | null = null
+
+  if (book.source.type === 'local') {
+    file = await opfsStorageService.readBookFile(book.source.opfsPath, bookId)
+  } else if (book.source.type === 'fileHandle') {
+    try {
+      file = await book.source.handle.getFile()
+    } catch {
+      // Stale handle (DOMException after page reload) — expected, not an error.
+      return
+    }
+  } else {
+    // 'remote' — no uploadable local binary.
+    return
+  }
+
+  if (!file) return
+
+  const filename = file.name || 'book.epub'
+  const path = `${userId}/${bookId}/${filename}`
+  const { url } = await uploadBlob('book-files', path, file, {
+    maxSizeBytes: SIZE_LIMITS['book-files'],
+  })
+
+  await db.books.update(bookId, { fileUrl: url })
+  await supabase!
+    .from('books')
+    .update({ file_url: url })
+    .eq('id', bookId)
     .eq('user_id', userId)
 }
 
