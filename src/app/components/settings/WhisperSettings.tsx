@@ -92,7 +92,13 @@ export function WhisperSettings() {
   // Detect which cloud providers have API keys configured (async — Vault check)
   const [configuredProviders, setConfiguredProviders] = useState<AIProviderId[]>([])
   useEffect(() => {
-    getConfiguredProviderIds().then(setConfiguredProviders)
+    let ignore = false
+    getConfiguredProviderIds().then(ids => {
+      if (!ignore) setConfiguredProviders(ids)
+    })
+    return () => {
+      ignore = true
+    }
   }, [])
   const cloudProvidersWithKeys = WHISPER_CLOUD_PROVIDERS.filter(p =>
     configuredProviders.includes(p)

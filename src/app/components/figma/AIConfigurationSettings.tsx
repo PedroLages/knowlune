@@ -156,7 +156,13 @@ export function AIConfigurationSettings() {
 
   // Check if any provider has a credential in Vault (async — updates on configuration changes)
   useEffect(() => {
-    getConfiguredProviderIds().then(ids => setHasAnyProviderKey(ids.length > 0))
+    let ignore = false
+    getConfiguredProviderIds().then(ids => {
+      if (!ignore) setHasAnyProviderKey(ids.length > 0)
+    })
+    return () => {
+      ignore = true
+    }
   }, [settings.provider, settings.providerKeys, settings.apiKeyEncrypted])
 
   // Decrypt API key for model discovery when connected (non-Ollama providers)
