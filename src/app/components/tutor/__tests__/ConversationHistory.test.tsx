@@ -17,6 +17,7 @@ import { ContinueConversationPrompt } from '../ContinueConversationPrompt'
 import { useTutorKeyboardShortcuts } from '../useTutorKeyboardShortcuts'
 import type { ChatConversation } from '@/data/types'
 import { renderHook } from '@testing-library/react'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
 
 const FIXED_DATE = new Date('2026-01-15T12:00:00Z')
 const FIXED_MS = FIXED_DATE.getTime()
@@ -339,6 +340,14 @@ describe('ConversationHistorySheet — delete conversation', () => {
     await waitFor(() => {
       expect(onDelete).toHaveBeenCalledTimes(1)
     })
+    // Assert argument shape of the syncableWrite call so a contract
+    // regression (e.g., passing the conversation object instead of the id)
+    // fails the test even though the module is mocked. (ADV-05 from R1.)
+    expect(vi.mocked(syncableWrite)).toHaveBeenCalledWith(
+      'chatConversations',
+      'delete',
+      'conv-del',
+    )
   })
 
   it('canceling AlertDialog does NOT call the delete handler', () => {
