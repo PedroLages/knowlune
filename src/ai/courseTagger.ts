@@ -15,6 +15,7 @@ import {
   getOllamaSelectedModel,
   isOllamaDirectConnection,
 } from '@/lib/aiConfiguration'
+import { trackAIUsage } from '@/lib/aiEventTracking'
 
 /** Result from AI course tagging */
 export interface CourseTagResult {
@@ -166,8 +167,25 @@ export async function generateCourseTags(
   courseMetadata: { title: string; fileNames: string[] },
   signal?: AbortSignal
 ): Promise<CourseTagResult> {
+  const startTime = Date.now()
+  // E96-S03: track AI usage (fire-and-forget).
+  // `AIFeatureType` does not have a 'course_tagging' entry and we do not
+  // extend the enum in this story (Supabase schema change). Using the
+  // closest-fit 'auto_analysis' feature and tagging granularity via
+  // `metadata.subFeature` per plan M1.
+  const emit = (status: 'success' | 'error', extra: Record<string, unknown> = {}): void => {
+    trackAIUsage('auto_analysis', {
+      durationMs: Date.now() - startTime,
+      status,
+      metadata: { subFeature: 'course_tagging', ...extra },
+    }).catch(() => {
+      // silent-catch-ok
+    })
+  }
+
   const ollamaConfig = getOllamaConfig()
   if (!ollamaConfig) {
+    emit('error', { errorCode: 'ollama_not_configured' })
     return { tags: [] }
   }
 
@@ -184,6 +202,13 @@ export async function generateCourseTags(
   })
 
   const tags = parseTagResponse(content ?? undefined)
+  if (content === null) {
+    emit('error', { errorCode: 'ollama_request_failed' })
+  } else if (tags.length === 0) {
+    emit('error', { errorCode: 'parse_failed' })
+  } else {
+    emit('success', { tagCount: tags.length })
+  }
   return { tags }
 }
 
@@ -327,8 +352,23 @@ export async function generateCourseDescription(
   courseMetadata: { title: string; fileNames: string[] },
   signal?: AbortSignal
 ): Promise<CourseDescriptionResult> {
+  const startTime = Date.now()
+  // E96-S03: track AI usage (fire-and-forget).
+  // Description generation is the same Ollama-backed flow as tagging; share
+  // the 'auto_analysis' feature slot with a distinct `subFeature` per plan M1.
+  const emit = (status: 'success' | 'error', extra: Record<string, unknown> = {}): void => {
+    trackAIUsage('auto_analysis', {
+      durationMs: Date.now() - startTime,
+      status,
+      metadata: { subFeature: 'course_description', ...extra },
+    }).catch(() => {
+      // silent-catch-ok
+    })
+  }
+
   const ollamaConfig = getOllamaConfig()
   if (!ollamaConfig) {
+    emit('error', { errorCode: 'ollama_not_configured' })
     return { description: '' }
   }
 
@@ -345,6 +385,13 @@ export async function generateCourseDescription(
   })
 
   const description = parseDescriptionResponse(content ?? undefined)
+  if (content === null) {
+    emit('error', { errorCode: 'ollama_request_failed' })
+  } else if (description === '') {
+    emit('error', { errorCode: 'parse_failed' })
+  } else {
+    emit('success', { descriptionLength: description.length })
+  }
   return { description }
 }
 

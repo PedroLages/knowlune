@@ -147,8 +147,11 @@ beforeEach(() => {
   // mockQuizzesPut(quiz) so existing assertions on the stored payload keep
   // working without rewriting each test.
   mockSyncableWrite.mockImplementation(
-    async (_table: string, operation: string, record: unknown) => {
-      if (operation === 'put' || operation === 'add') {
+    async (table: string, operation: string, record: unknown) => {
+      // Only forward `quizzes` writes onto `mockQuizzesPut`. E96-S03 added
+      // `trackAIUsage` calls that route through syncableWrite for the
+      // `aiUsageEvents` table — those MUST NOT increment the quiz-put counter.
+      if (table === 'quizzes' && (operation === 'put' || operation === 'add')) {
         await mockQuizzesPut(record)
       }
     }
