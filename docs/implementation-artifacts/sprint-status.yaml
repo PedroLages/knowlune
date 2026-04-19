@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-18  # E93 epic closeout — all 8 stories marked done (PRs #353-#360)
+last_updated: 2026-04-19  # E94-S01 through E95-S03 shipped (PRs #362-#371)
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -1168,23 +1168,23 @@ development_status:
   # Epic 94: Course & Book Library Sync — "My Library on Any Device"
   # Course metadata, book library, shelves, reviews, Storage buckets, chapter mappings, book files
   # Depends on: E92 (sync engine)
-  epic-94: backlog
-  94-1-p2-supabase-migrations-courses-videos-pdfs-authors-books: backlog
-  94-2-course-and-book-metadata-sync-with-field-stripping: backlog
-  94-3-book-reviews-shelves-and-reading-queue-sync: backlog
-  94-4-supabase-storage-bucket-setup-and-file-upload: backlog
-  94-5-file-download-on-new-device: backlog
-  94-6-chapter-mappings-sync: backlog
-  94-7-book-files-storage-integration: backlog
+  epic-94: done  # PRs #362-#368, completed 2026-04-19
+  94-1-p2-supabase-migrations-courses-videos-pdfs-authors-books: done  # PR #362
+  94-2-course-and-book-metadata-sync-with-field-stripping: done  # PR #363
+  94-3-book-reviews-shelves-and-reading-queue-sync: done  # PR #364
+  94-4-supabase-storage-bucket-setup-and-file-upload: done  # PR #365
+  94-5-file-download-on-new-device: done  # PR #366
+  94-6-chapter-mappings-sync: done  # PR #367
+  94-7-book-files-storage-integration: done  # PR #368
   epic-94-retrospective: optional
 
   # Epic 95: Settings & Security Sync — "My Preferences Follow Me"
   # Settings sync (reader/audiobook/reading goals), Vault for all credentials, entitlements, streaks
   # Depends on: E92 (sync engine)
-  epic-95: backlog
-  95-1-full-settings-sync-expansion: backlog
-  95-2-api-keys-and-all-credentials-via-supabase-vault: backlog
-  95-3-server-authoritative-entitlements: backlog
+  epic-95: in-progress  # PRs #369-#371 shipped (95-1 to 95-3); 95-4/5/6 remain backlog
+  95-1-full-settings-sync-expansion: done  # PR #369
+  95-2-api-keys-and-all-credentials-via-supabase-vault: done  # PR #370
+  95-3-server-authoritative-entitlements: done  # PR #371
   95-4-server-side-streak-calculation: backlog
   95-5-opds-and-abs-server-connection-sync: backlog
   95-6-notification-preferences-sync: backlog
