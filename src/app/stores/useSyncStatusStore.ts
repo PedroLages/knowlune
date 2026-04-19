@@ -15,7 +15,8 @@
  *   status: SyncStatus
  *   pendingCount: number
  *   lastSyncAt: Date | null
- *   setStatus(s): void
+ *   lastError: string | null
+ *   setStatus(s, error?): void
  *   markSyncComplete(): void
  *   refreshPendingCount(): Promise<void>
  */
@@ -25,6 +26,9 @@ import { db } from '@/db'
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error'
 
+/** Default user-safe error message when classification does not produce one. */
+const DEFAULT_ERROR_MESSAGE = 'Sync failed'
+
 interface SyncStatusState {
   /** Current sync status — drives UI indicator in E97-S01 */
   status: SyncStatus
@@ -32,10 +36,23 @@ interface SyncStatusState {
   pendingCount: number
   /** Timestamp of last completed sync — displayed in E97-S02 settings panel */
   lastSyncAt: Date | null
+  /**
+   * Last user-safe classified error message — drives the error panel in
+   * E97-S01's SyncStatusIndicator popover. Cleared by markSyncComplete.
+   * Intentionally NOT cleared by setStatus('syncing') so that an interim
+   * Retry click preserves the prior diagnostic until the retry actually
+   * succeeds.
+   */
+  lastError: string | null
 
-  /** Set the sync status directly. No side effects. */
-  setStatus: (status: SyncStatus) => void
-  /** Called by useSyncLifecycle after a successful fullSync(). */
+  /**
+   * Set the sync status directly. When status is 'error', the optional
+   * `error` argument is persisted to `lastError` (falling back to a generic
+   * message). For non-error statuses, `lastError` is preserved so a transient
+   * retry-click does not wipe the prior diagnostic.
+   */
+  setStatus: (status: SyncStatus, error?: string) => void
+  /** Called by useSyncLifecycle after a successful fullSync(). Clears lastError. */
   markSyncComplete: () => void
   /**
    * Query syncQueue for pending entries and update pendingCount.
@@ -48,13 +65,24 @@ export const useSyncStatusStore = create<SyncStatusState>((set) => ({
   status: 'synced',
   pendingCount: 0,
   lastSyncAt: null,
+  lastError: null,
 
-  setStatus: (status) => set({ status }),
+  setStatus: (status, error) => {
+    if (status === 'error') {
+      set({ status, lastError: error ?? DEFAULT_ERROR_MESSAGE })
+    } else {
+      // Intentional: lastError is NOT cleared on 'syncing'/'offline'/'synced'
+      // via setStatus. Only markSyncComplete clears it, so that a Retry's
+      // interim 'syncing' state keeps the prior error visible until success.
+      set({ status })
+    }
+  },
 
   markSyncComplete: () =>
     set({
       status: 'synced',
       lastSyncAt: new Date(),
+      lastError: null,
     }),
 
   refreshPendingCount: async () => {

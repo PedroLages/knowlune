@@ -21,6 +21,7 @@
 
 import { useEffect, useRef } from 'react'
 import { syncEngine } from '@/lib/sync/syncEngine'
+import { classifyError } from '@/lib/sync/classifyError'
 import { useSessionStore } from '@/stores/useSessionStore'
 import { useNoteStore } from '@/stores/useNoteStore'
 import { useBookmarkStore } from '@/stores/useBookmarkStore'
@@ -177,7 +178,7 @@ export function useSyncLifecycle(): void {
       .catch((err: unknown) => {
         if (!mountedRef.current) return
         console.error('[useSyncLifecycle] Initial fullSync failed:', err)
-        setStatus('error')
+        setStatus('error', classifyError(err))
       })
 
     // -------------------------------------------------------------------------
@@ -191,6 +192,10 @@ export function useSyncLifecycle(): void {
       if (navigator.onLine) {
         syncEngine.nudge()
       }
+      // E97-S01: opportunistically refresh pendingCount so the header badge
+      // stays in sync with passive queue drift between lifecycle transitions.
+      // Fire-and-forget; refreshPendingCount swallows its own Dexie errors.
+      void useSyncStatusStore.getState().refreshPendingCount()
     }, NUDGE_INTERVAL_MS)
 
     // -------------------------------------------------------------------------
@@ -221,7 +226,7 @@ export function useSyncLifecycle(): void {
         .catch((err: unknown) => {
           if (!mountedRef.current) return
           console.error('[useSyncLifecycle] Reconnection fullSync failed:', err)
-          setState('error')
+          setState('error', classifyError(err))
         })
     }
     window.addEventListener('online', handleOnline)
