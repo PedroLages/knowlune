@@ -223,6 +223,7 @@ export interface ImportedPdf {
   path: string
   pageCount: number
   fileHandle: FileSystemFileHandle
+  fileBlob?: Blob // Server-fetched file blob (E94-S05)
 }
 
 // --- Content Completion Status (Story 4.1) ---
@@ -494,6 +495,7 @@ export interface ImportedAuthor {
   shortBio?: string // Brief one-liner description
   photoUrl?: string // URL or object URL for display (optional)
   photoHandle?: FileSystemFileHandle // Optional: local file handle for photo
+  photoBlob?: Blob // Server-fetched photo blob (E94-S05)
   courseIds: string[] // Linked imported course IDs
   specialties?: string[] // Specialty tags (E25-S01 AC5)
   yearsExperience?: number // Professional experience in years
@@ -1035,9 +1037,13 @@ export interface ChapterMapping {
 export interface ChapterMappingRecord {
   epubBookId: string // FK to Book.id (format: 'epub')
   audioBookId: string // FK to Book.id (format: 'audiobook')
+  /** Stamped by syncableWrite on every write (E94-S06) */
+  userId?: string | null
   mappings: ChapterMapping[]
   computedAt: string // ISO 8601
   updatedAt: string // ISO 8601
+  /** Soft-delete flag — true means the mapping was deleted and should not be shown (E94-S06) */
+  deleted?: boolean
 }
 
 /** Message in a tutor chat conversation (persisted to Dexie) */

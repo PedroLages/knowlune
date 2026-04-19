@@ -1574,6 +1574,18 @@ function _declareLegacyMigrations(database: Dexie): void {
         }
       }
     })
+
+  // v55 (E94-S05): Add optional `photoBlob` to `authors` and `fileBlob` to
+  // `importedPdfs` for server-fetched binary assets. No index changes needed —
+  // both fields are optional and not indexed.
+  // Upgrade body is a no-op: new fields are optional, Dexie writes them on
+  // first put/update after this version is opened.
+  database
+    .version(55)
+    .stores({})
+    .upgrade(async _tx => {
+      // No backfill required — optional fields added to existing tables.
+    })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }

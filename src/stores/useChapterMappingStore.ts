@@ -13,6 +13,7 @@ import { create } from 'zustand'
 import { toast } from 'sonner'
 import type { ChapterMappingRecord } from '@/data/types'
 import { db } from '@/db/schema'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 interface ChapterMappingStoreState {
   mappings: ChapterMappingRecord[]
@@ -35,7 +36,9 @@ export const useChapterMappingStore = create<ChapterMappingStoreState>((set, get
   loadMappings: async () => {
     if (get().isLoaded) return
     try {
-      const mappings = await db.chapterMappings.toArray()
+      const all = await db.chapterMappings.toArray()
+      // Filter out soft-deleted records (downloaded from sync or pending upload).
+      const mappings = all.filter(m => !m.deleted)
       set({ mappings, isLoaded: true })
     } catch (err) {
       console.error('[ChapterMappingStore] Failed to load mappings:', err)
@@ -50,7 +53,9 @@ export const useChapterMappingStore = create<ChapterMappingStoreState>((set, get
         audioBookId,
         ...record,
       }
-      await db.chapterMappings.put(fullRecord)
+      // syncableWrite stamps userId and updatedAt automatically.
+      // Cast via unknown: ChapterMappingRecord lacks [key: string]: unknown but satisfies the runtime contract.
+      await syncableWrite('chapterMappings', 'put', fullRecord as unknown as SyncableRecord)
       set(state => ({
         mappings: [
           ...state.mappings.filter(
@@ -71,7 +76,13 @@ export const useChapterMappingStore = create<ChapterMappingStoreState>((set, get
 
   deleteMapping: async (epubBookId, audioBookId) => {
     try {
-      await db.chapterMappings.delete([epubBookId, audioBookId])
+      const existing = get().mappings.find(
+        m => m.epubBookId === epubBookId && m.audioBookId === audioBookId,
+      )
+      if (!existing) return
+      // Soft-delete: mark as deleted via syncableWrite so the deletion propagates
+      // to other devices. syncableWrite stamps userId and updatedAt.
+      await syncableWrite('chapterMappings', 'put', { ...existing, deleted: true } as unknown as SyncableRecord)
       set(state => ({
         mappings: state.mappings.filter(
           m => !(m.epubBookId === epubBookId && m.audioBookId === audioBookId)

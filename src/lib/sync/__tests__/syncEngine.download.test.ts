@@ -37,6 +37,7 @@ const {
     study_sessions: { data: [], error: null },
     video_progress: { data: [], error: null },
     notes: { data: [], error: null },
+    chapter_mappings: { data: [], error: null },
   }
 
   const mockSyncMetadataGet = vi.fn().mockResolvedValue(undefined)
@@ -119,7 +120,7 @@ vi.mock('@/db', () => ({
     shelves: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
     bookShelves: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
     readingQueue: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    chapterMappings: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined), where: vi.fn().mockReturnValue({ equals: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(undefined) }) }) },
+    chapterMappings: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined), delete: vi.fn().mockResolvedValue(1), where: vi.fn().mockReturnValue({ equals: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(undefined), delete: vi.fn().mockResolvedValue(1) }) }) },
     learningPaths: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
     learningPathEntries: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
     challenges: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
@@ -167,10 +168,19 @@ vi.mock('@/lib/sync/tableRegistry', () => {
   const studySessions = { dexieTable: 'studySessions', supabaseTable: 'study_sessions', conflictStrategy: 'insert-only', priority: 0, fieldMap: {}, insertOnly: true }
   const progress = { dexieTable: 'progress', supabaseTable: 'video_progress', conflictStrategy: 'monotonic', priority: 0, fieldMap: {}, monotonicFields: ['watchedSeconds'] }
   const notes = { dexieTable: 'notes', supabaseTable: 'notes', conflictStrategy: 'lww', priority: 1, fieldMap: {} }
+  const chapterMappings = {
+    dexieTable: 'chapterMappings',
+    supabaseTable: 'chapter_mappings',
+    conflictStrategy: 'lww',
+    priority: 2,
+    fieldMap: { epubBookId: 'epub_book_id', audioBookId: 'audio_book_id', computedAt: 'computed_at', deleted: 'deleted' },
+    compoundPkFields: ['epubBookId', 'audioBookId'],
+    upsertConflictColumns: 'epub_book_id,audio_book_id,user_id',
+  }
   return {
-    tableRegistry: [studySessions, progress, notes],
+    tableRegistry: [studySessions, progress, notes, chapterMappings],
     getTableEntry: vi.fn((name: string) => {
-      const reg: Record<string, object> = { studySessions, progress, notes }
+      const reg: Record<string, object> = { studySessions, progress, notes, chapterMappings }
       return reg[name]
     }),
   }
@@ -205,6 +215,7 @@ function clearTableRows() {
   downloadResults['study_sessions'] = { data: [], error: null }
   downloadResults['video_progress'] = { data: [], error: null }
   downloadResults['notes'] = { data: [], error: null }
+  downloadResults['chapter_mappings'] = { data: [], error: null }
 }
 
 // ---------------------------------------------------------------------------
@@ -714,5 +725,76 @@ describe('cursorField override (E93-S07)', () => {
     expect(mockSyncMetadataPut).toHaveBeenCalledWith(
       expect.objectContaining({ table: 'notes', lastSyncTimestamp: '2026-04-18T08:00:00Z' }),
     )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Soft-delete guard in _applyRecord (E94-S06)
+// ---------------------------------------------------------------------------
+
+describe('soft-delete guard in _applyRecord', () => {
+  it('deletes compound-PK record from Dexie when downloaded record has deleted: true', async () => {
+    const { db: mockDb } = await import('@/db')
+    const mockChapterMappings = (mockDb as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>)['chapterMappings']
+    const mockWhere = mockChapterMappings['where'] as ReturnType<typeof vi.fn>
+    const mockDelete = vi.fn().mockResolvedValue(1)
+    mockWhere.mockReturnValue({ equals: vi.fn().mockReturnValue({ delete: mockDelete, first: vi.fn().mockResolvedValue(undefined) }) })
+
+    downloadResults['chapter_mappings'] = {
+      data: [{
+        epubBookId: 'epub-a',
+        audioBookId: 'audio-b',
+        deleted: true,
+        updatedAt: '2026-04-20T10:00:00Z',
+        updated_at: '2026-04-20T10:00:00Z',
+      }],
+      error: null,
+    }
+
+    await syncEngine.fullSync()
+
+    expect(mockWhere).toHaveBeenCalledWith(['epubBookId', 'audioBookId'])
+    expect(mockDelete).toHaveBeenCalled()
+    expect(mockChapterMappings['put']).not.toHaveBeenCalled()
+  })
+
+  it('applies normally (put) for chapter mapping record with deleted: false', async () => {
+    const { db: mockDb } = await import('@/db')
+    const mockChapterMappings = (mockDb as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>)['chapterMappings']
+
+    downloadResults['chapter_mappings'] = {
+      data: [{
+        epubBookId: 'epub-a',
+        audioBookId: 'audio-b',
+        deleted: false,
+        mappings: [],
+        updatedAt: '2026-04-20T10:00:00Z',
+        updated_at: '2026-04-20T10:00:00Z',
+      }],
+      error: null,
+    }
+
+    await syncEngine.fullSync()
+
+    // Guard did not fire — put was called (LWW applies normally).
+    expect(mockChapterMappings['put']).toHaveBeenCalled()
+  })
+
+  it('does not fire soft-delete guard for notes (uses soft_deleted field, not deleted)', async () => {
+    // Notes use `soft_deleted` mapped to `deleted` on upload — their camelCase
+    // field after toCamelCase is `softDeleted`, not `deleted`. The guard checks
+    // record['deleted'], which would be undefined for notes — guard does not fire.
+    setTableRows('notes', [{
+      id: 'n-soft',
+      soft_deleted: true,  // notes DB column
+      softDeleted: true,   // camelCase post-fieldMapper (identity mock)
+      updatedAt: '2026-04-20T10:00:00Z',
+      updated_at: '2026-04-20T10:00:00Z',
+    }])
+
+    await syncEngine.fullSync()
+
+    // notes.put was called (not skipped) because record['deleted'] is undefined.
+    expect(mockNotesPut).toHaveBeenCalled()
   })
 })

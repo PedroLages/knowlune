@@ -39,6 +39,7 @@ import { applyConflictCopy } from './conflictResolvers'
 import { replayFlashcardReviews } from './flashcardReplayService'
 import { dedupDefaultShelves } from './defaultShelfDedup'
 import { uploadStorageFilesForTable, STORAGE_TABLES } from './storageSync'
+import { downloadStorageFilesForTable, STORAGE_DOWNLOAD_TABLES } from './storageDownload'
 import type { Note, Shelf } from '@/data/types'
 
 // ---------------------------------------------------------------------------
@@ -459,15 +460,16 @@ async function _uploadBatch(
         console.warn(
           `[syncEngine] No monotonic RPC for table "${tableEntry.supabaseTable}" — falling back to generic upsert. Implement dedicated RPC in E93–E96.`,
         )
+        const conflictColMono = tableEntry.upsertConflictColumns ?? 'id'
         const { error } = await supabase
           .from(tableEntry.supabaseTable)
-          .upsert(payloads, { onConflict: 'id' })
+          .upsert(payloads, { onConflict: conflictColMono })
         if (error) {
           const isNetworkError = false
           await _handleBatchError(entries, error, isNetworkError, async () => {
             const { error: retryError } = await supabase!
               .from(tableEntry.supabaseTable)
-              .upsert(payloads, { onConflict: 'id' })
+              .upsert(payloads, { onConflict: conflictColMono })
             if (!retryError) {
               await db.syncQueue.bulkDelete(entries.map((e) => e.id!))
               return true
@@ -478,16 +480,19 @@ async function _uploadBatch(
         }
       }
     } else {
-      // Default: LWW, conflict-copy, or any other — upsert with conflict on 'id'.
+      // Default: LWW, conflict-copy, or any other — upsert with conflict resolution.
+      // For compound-PK tables (e.g. chapter_mappings), upsertConflictColumns overrides
+      // the default 'id' target. All other tables continue to use onConflict: 'id'.
+      const conflictCol = tableEntry.upsertConflictColumns ?? 'id'
       const { error } = await supabase
         .from(tableEntry.supabaseTable)
-        .upsert(payloads, { onConflict: 'id' })
+        .upsert(payloads, { onConflict: conflictCol })
       if (error) {
         const isNetworkError = false
         await _handleBatchError(entries, error, isNetworkError, async () => {
           const { error: retryError } = await supabase!
             .from(tableEntry.supabaseTable)
-            .upsert(payloads, { onConflict: 'id' })
+            .upsert(payloads, { onConflict: conflictCol })
           if (!retryError) {
             await db.syncQueue.bulkDelete(entries.map((e) => e.id!))
             return true
@@ -678,6 +683,26 @@ async function _applyRecord(
     return
   }
 
+  // Soft-delete guard: if the downloaded record is marked deleted, remove it
+  // from Dexie instead of applying it as a live record. This handles compound-PK
+  // tables (e.g. chapterMappings) and simple-PK tables uniformly.
+  // Guard fires only on `deleted === true` (strict) — absence or false is normal apply.
+  // Note: `notes` uses `soft_deleted` (not `deleted`) so this guard never fires for notes.
+  if (record['deleted'] === true) {
+    if (entry.compoundPkFields && entry.compoundPkFields.length > 0) {
+      const keyValues = entry.compoundPkFields.map((f) => record[f])
+      // Cast mirrors the pattern used in _getLocalRecord — Dexie's TypeScript types
+      // don't expose compound-key where() overloads; the runtime call is correct.
+      await (table as unknown as { where: (fields: string[]) => { equals: (values: unknown[]) => { delete: () => Promise<number> } } })
+        .where(entry.compoundPkFields)
+        .equals(keyValues)
+        .delete()
+    } else {
+      await table.delete(record['id'] as string)
+    }
+    return
+  }
+
   const local = await _getLocalRecord(table, entry, record)
 
   switch (entry.conflictStrategy) {
@@ -863,6 +888,20 @@ async function _doDownload(): Promise<void> {
         table: entry.dexieTable,
         lastSyncTimestamp: maxUpdatedAt,
       })
+    }
+
+    // E94-S05: After row application and cursor advance, download binary assets
+    // for file-bearing tables. Non-fatal — wrapped in .catch() so a blob fetch
+    // failure never prevents the store refresh or the next table's download.
+    // Guard: _userId mirrors the upload-side guard at line ~955 in _doUpload.
+    if (STORAGE_DOWNLOAD_TABLES.has(entry.dexieTable) && _userId) {
+      await downloadStorageFilesForTable(entry.dexieTable, recordsToApply, _userId).catch(
+        (err) =>
+          console.warn(
+            `[syncEngine] Storage download failed for "${entry.dexieTable}":`,
+            err,
+          ),
+      )
     }
 
     // Notify registered Zustand store (if any) to reload from Dexie.

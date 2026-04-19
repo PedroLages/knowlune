@@ -527,4 +527,79 @@ describe('syncableWrite', () => {
       expect(mockNudge).not.toHaveBeenCalled()
     })
   })
+
+  // -------------------------------------------------------------------------
+  // Compound-PK table (chapterMappings) — E94-S06
+  // -------------------------------------------------------------------------
+
+  describe('compound-PK: chapterMappings', () => {
+    it('synthesizes recordId from compound PK fields using unit separator', async () => {
+      await syncableWrite('chapterMappings', 'put', {
+        epubBookId: 'epub-1',
+        audioBookId: 'audio-1',
+        mappings: [],
+        computedAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '',
+      })
+
+      expect(mockSyncQueueAdd).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tableName: 'chapterMappings',
+          recordId: 'epub-1\u001faudio-1',
+          operation: 'put',
+        }),
+      )
+    })
+
+    it('stamps userId on the Dexie write', async () => {
+      await syncableWrite('chapterMappings', 'put', {
+        epubBookId: 'epub-1',
+        audioBookId: 'audio-1',
+        mappings: [],
+        computedAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '',
+      })
+
+      expect(mockPut).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-123',
+          epubBookId: 'epub-1',
+          audioBookId: 'audio-1',
+        }),
+      )
+    })
+
+    it('soft-delete path: put with deleted: true produces a put queue entry with payload.deleted === true', async () => {
+      await syncableWrite('chapterMappings', 'put', {
+        epubBookId: 'epub-1',
+        audioBookId: 'audio-1',
+        mappings: [],
+        computedAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '',
+        deleted: true,
+      })
+
+      const call = mockSyncQueueAdd.mock.calls[0][0] as { operation: string; payload: Record<string, unknown> }
+      expect(call.operation).toBe('put')
+      expect(call.payload.deleted).toBe(true)
+      // db.table().put is called (not delete) — Dexie still persists the record
+      expect(mockPut).toHaveBeenCalledTimes(1)
+      expect(mockDelete).not.toHaveBeenCalled()
+    })
+
+    it('unauthenticated: Dexie write succeeds, no queue entry', async () => {
+      setAuth(null)
+
+      await syncableWrite('chapterMappings', 'put', {
+        epubBookId: 'epub-2',
+        audioBookId: 'audio-2',
+        mappings: [],
+        computedAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '',
+      })
+
+      expect(mockPut).toHaveBeenCalledTimes(1)
+      expect(mockSyncQueueAdd).not.toHaveBeenCalled()
+    })
+  })
 })
