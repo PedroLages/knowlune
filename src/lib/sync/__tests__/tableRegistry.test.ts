@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 import { tableRegistry, getTableEntry, type TableRegistryEntry } from '../tableRegistry'
 import { toSnakeCase, toCamelCase } from '../fieldMapper'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 // ---------------------------------------------------------------------------
 // AC2 / 3.12 — All 38 tables registered
@@ -565,5 +571,55 @@ describe('getTableEntry', () => {
   it('returns undefined for an unknown table', () => {
     expect(getTableEntry('flashcard_reviews')).toBeUndefined()
     expect(getTableEntry('nonExistentTable')).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// E96-S01 — P3/P4 Supabase migration coverage guardrail
+// ---------------------------------------------------------------------------
+
+describe('tableRegistry — P3/P4 Supabase migrations (E96-S01)', () => {
+  it('P3/P4 sync tables have corresponding Supabase migrations', () => {
+    // The 11 Dexie tables whose Postgres counterparts land in E96-S01.
+    const p3p4DexieTables = [
+      'learningPaths',
+      'learningPathEntries',
+      'challenges',
+      'courseReminders',
+      'notifications',
+      'careerPaths',
+      'pathEnrollments',
+      'studySchedules',
+      'quizzes',
+      'quizAttempts',
+      'aiUsageEvents',
+    ]
+
+    // Guardrail 1: each dexieTable has a registry entry with a supabaseTable.
+    // If someone removes one of these from the registry, this fails with a
+    // clear message naming the missing table.
+    const missingFromRegistry = p3p4DexieTables.filter((t) => !getTableEntry(t)?.supabaseTable)
+    expect(missingFromRegistry).toEqual([])
+
+    // Guardrail 2: concatenate both migration files and assert every
+    // supabaseTable is present as `CREATE TABLE IF NOT EXISTS public.<name>`.
+    // If a registry rename lands without the matching migration edit, this
+    // fails with the offending supabaseTable name.
+    const migrationsDir = join(__dirname, '..', '..', '..', '..', 'supabase', 'migrations')
+    const p3Sql = readFileSync(join(migrationsDir, '20260427000001_p3_sync.sql'), 'utf-8')
+    const p4Sql = readFileSync(join(migrationsDir, '20260427000002_p4_sync.sql'), 'utf-8')
+    const combined = p3Sql + '\n' + p4Sql
+
+    const missingTables = p3p4DexieTables
+      .map((dexieTable) => ({
+        dexieTable,
+        supabaseTable: getTableEntry(dexieTable)!.supabaseTable,
+      }))
+      .filter(
+        ({ supabaseTable }) =>
+          !combined.includes(`CREATE TABLE IF NOT EXISTS public.${supabaseTable}`)
+      )
+
+    expect(missingTables).toEqual([])
   })
 })
