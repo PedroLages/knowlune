@@ -126,9 +126,13 @@ describe('ImportedCourseCard', () => {
     expect(screen.getByText('7 PDFs')).toBeInTheDocument()
   })
 
-  it('renders import date', () => {
-    renderCard({ importedAt: '2026-02-10T10:00:00Z' })
-    expect(screen.getByText(/Imported/)).toBeInTheDocument()
+  it('does not render import date in card body (moved to info popover)', () => {
+    // "Imported DATE" was moved from body to info popover to free a body line for stats
+    const { container } = renderCard({ importedAt: '2026-02-10T10:00:00Z' })
+    // The import date text should NOT appear in the main card body
+    // (it lives inside the popover which is not open by default)
+    const bodyText = container.querySelector('article')?.textContent ?? ''
+    expect(bodyText).not.toMatch(/^Imported \d/)
   })
 
   it('has accessible article with aria-label', () => {
@@ -143,16 +147,11 @@ describe('ImportedCourseCard', () => {
     expect(card).toBeInTheDocument()
   })
 
-  it('has elevated hover shadow', () => {
+  it('has hover lift and brand shadow on cover', () => {
     const { container } = renderCard()
-    const shadow = container.querySelector('.hover\\:shadow-2xl')
-    expect(shadow).toBeInTheDocument()
-  })
-
-  it('has hover scale effect', () => {
-    const { container } = renderCard()
-    const scaled = container.querySelector('.hover\\:\\[transform\\:scale\\(1\\.02\\)\\]')
-    expect(scaled).toBeInTheDocument()
+    // Cover uses -translate-y-2 lift matching BookCard's visual DNA (not scale on outer wrapper)
+    const lifted = container.querySelector('.group-hover\\:-translate-y-2')
+    expect(lifted).toBeInTheDocument()
   })
 
   it('has group-hover title color change', () => {
@@ -168,11 +167,10 @@ describe('ImportedCourseCard', () => {
     expect(focusable).toHaveClass('focus-visible:ring-2')
   })
 
-  it('respects prefers-reduced-motion', () => {
+  it('respects prefers-reduced-motion on cover lift', () => {
     const { container } = renderCard()
-    const motionSafe = container.querySelector(
-      '.motion-reduce\\:hover\\:\\[transform\\:scale\\(1\\)\\]'
-    )
+    // Cover lift uses motion-reduce:group-hover:-translate-y-0 to disable on motion-sensitive devices
+    const motionSafe = container.querySelector('.motion-reduce\\:group-hover\\:-translate-y-0')
     expect(motionSafe).toBeInTheDocument()
   })
 
@@ -331,6 +329,55 @@ describe('ImportedCourseCard', () => {
       // The current status item should contain a checkmark icon (extra SVG)
       const svgs = completedItem?.querySelectorAll('svg')
       expect(svgs?.length).toBeGreaterThanOrEqual(2) // status icon + checkmark
+    })
+  })
+
+  describe('Play overlay (Start Studying)', () => {
+    it('renders start-course-btn overlay for not-started course', () => {
+      renderCard({ status: 'not-started' })
+      expect(screen.getByTestId('start-course-btn')).toBeInTheDocument()
+    })
+
+    it('has accessible aria-label on Play overlay', () => {
+      renderCard({ status: 'not-started', name: 'My Course' })
+      const btn = screen.getByTestId('start-course-btn')
+      expect(btn).toHaveAttribute('aria-label', 'Start studying "My Course"')
+    })
+
+    it('does not render start-course-btn for active course', () => {
+      renderCard({ status: 'active' })
+      expect(screen.queryByTestId('start-course-btn')).toBeNull()
+    })
+
+    it('does not render start-course-btn for completed course', () => {
+      renderCard({ status: 'completed' })
+      expect(screen.queryByTestId('start-course-btn')).toBeNull()
+    })
+
+    it('does not render start-course-btn for paused course', () => {
+      renderCard({ status: 'paused' })
+      expect(screen.queryByTestId('start-course-btn')).toBeNull()
+    })
+
+    it('calls updateCourseStatus with active when Play overlay is clicked', async () => {
+      const user = userEvent.setup()
+      renderCard({ id: 'c1', status: 'not-started' })
+      const btn = screen.getByTestId('start-course-btn')
+      await user.click(btn)
+      expect(mockUpdateCourseStatus).toHaveBeenCalledWith('c1', 'active')
+    })
+
+    it('does not render start-course-btn when readOnly=true', () => {
+      render(
+        <MemoryRouter>
+          <ImportedCourseCard
+            course={makeCourse({ status: 'not-started' })}
+            allTags={[]}
+            readOnly
+          />
+        </MemoryRouter>
+      )
+      expect(screen.queryByTestId('start-course-btn')).toBeNull()
     })
   })
 
