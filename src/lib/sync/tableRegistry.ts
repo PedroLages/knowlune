@@ -20,6 +20,13 @@
  *   'skip'         — Table opted out of sync (future use)
  *
  * Pure module — no Dexie, Zustand, or React imports. Safe to import anywhere.
+ *
+ * E96-S02 note (F2): The plan's Unit 2 referenced regenerating
+ * `src/lib/supabase/types.ts` via `supabase gen types`. That file does not
+ * exist in this project — TypeScript table shapes live in `@/data/types`
+ * directly. No import of `src/lib/supabase/types.ts` exists anywhere in the
+ * source tree; Unit 2 was a no-op. Types are intentionally hand-maintained
+ * alongside the Dexie schema in `src/data/types.ts`.
  */
 
 export interface TableRegistryEntry {
@@ -485,6 +492,16 @@ const notifications: TableRegistryEntry = {
   fieldMap: {},
 }
 
+/**
+ * `careerPaths` — registry entry + Dexie schema present, but no production
+ * UI write sites exist yet (verified via grep of `db.careerPaths.*` in src/
+ * during E96-S02 Phase 0 audit). The entry is retained so the download
+ * engine can seed Dexie from any pre-existing Supabase rows; when a write
+ * site is introduced (future career-path feature story), wire it through
+ * `syncableWrite('careerPaths', 'put' | 'add' | 'delete', ...)` following
+ * the `useLearningPathStore` pattern. No stub Zustand store created — nothing
+ * to wire until a real writer emerges.
+ */
 const careerPaths: TableRegistryEntry = {
   dexieTable: 'careerPaths',
   supabaseTable: 'career_paths',
@@ -493,6 +510,11 @@ const careerPaths: TableRegistryEntry = {
   fieldMap: {},
 }
 
+/**
+ * `pathEnrollments` — see `careerPaths` note. Same status: schema + registry
+ * entry present, no production write sites, wiring deferred to the story
+ * that introduces the writer.
+ */
 const pathEnrollments: TableRegistryEntry = {
   dexieTable: 'pathEnrollments',
   supabaseTable: 'path_enrollments',

@@ -1,5 +1,6 @@
 import { db } from '@/db'
 import { isFeatureEnabled } from '@/lib/aiConfiguration'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 import type { AIFeatureType, AIUsageEvent } from '@/data/types'
 
 /** All trackable AI features (order matches dashboard display) */
@@ -67,7 +68,11 @@ export async function trackAIUsage(
       metadata: options.metadata,
     }
 
-    await db.aiUsageEvents.add(event)
+    // E96-S02: Route through syncableWrite so the event is enqueued for
+    // Supabase upload. `aiUsageEvents` is registry-flagged `insertOnly: true`;
+    // the upload engine enforces INSERT ... ON CONFLICT DO NOTHING. Call site
+    // uses the normal 'add' operation — no call-site flag required.
+    await syncableWrite('aiUsageEvents', 'add', event as unknown as SyncableRecord)
   } catch (error) {
     // Tracking must never block AI features
     console.warn('[AI Tracking] Failed to record event:', error)

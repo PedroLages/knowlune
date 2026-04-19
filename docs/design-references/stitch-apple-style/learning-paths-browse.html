@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Atelier - Learning Paths</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "inverse-surface": "#2e3034",
+                    "primary-fixed-dim": "#adc6ff",
+                    "inverse-primary": "#adc6ff",
+                    "surface-container": "#ededf2",
+                    "secondary": "#405e96",
+                    "tertiary-fixed": "#ffdbcc",
+                    "on-primary-fixed": "#001a41",
+                    "tertiary": "#9e3d00",
+                    "on-error-container": "#93000a",
+                    "on-secondary-fixed-variant": "#26467d",
+                    "tertiary-fixed-dim": "#ffb595",
+                    "secondary-fixed": "#d8e2ff",
+                    "surface-container-lowest": "#ffffff",
+                    "surface": "#f9f9fe",
+                    "primary-container": "#0070eb",
+                    "on-secondary-container": "#2d4c83",
+                    "on-background": "#1a1c1f",
+                    "on-error": "#ffffff",
+                    "on-tertiary": "#ffffff",
+                    "outline-variant": "#c1c6d7",
+                    "on-primary-fixed-variant": "#004493",
+                    "error-container": "#ffdad6",
+                    "secondary-container": "#a1befd",
+                    "outline": "#717786",
+                    "on-tertiary-fixed-variant": "#7c2e00",
+                    "surface-variant": "#e2e2e7",
+                    "surface-container-high": "#e7e8ed",
+                    "on-primary-container": "#fefcff",
+                    "error": "#ba1a1a",
+                    "background": "#f9f9fe",
+                    "on-tertiary-fixed": "#351000",
+                    "primary-fixed": "#d8e2ff",
+                    "on-secondary": "#ffffff",
+                    "secondary-fixed-dim": "#adc6ff",
+                    "surface-dim": "#d9dade",
+                    "tertiary-container": "#c64f00",
+                    "surface-tint": "#005bc1",
+                    "primary": "#0058bc",
+                    "on-surface": "#1a1c1f",
+                    "on-tertiary-container": "#fffbff",
+                    "on-secondary-fixed": "#001a41",
+                    "surface-bright": "#f9f9fe",
+                    "on-surface-variant": "#414755",
+                    "on-primary": "#ffffff",
+                    "surface-container-low": "#f3f3f8",
+                    "inverse-on-surface": "#f0f0f5",
+                    "surface-container-highest": "#e2e2e7"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "spacing": {},
+            "fontFamily": {
+                    "headline": [
+                            "Inter"
+                    ],
+                    "body": [
+                            "Inter"
+                    ],
+                    "label": [
+                            "Inter"
+                    ]
+            }
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-surface text-on-surface font-body antialiased min-h-screen flex flex-col md:flex-row">
+<!-- SideNavBar (Hidden on Mobile) -->
+<aside class="hidden md:flex flex-col gap-2 p-6 bg-slate-50/50 dark:bg-slate-950/50 backdrop-blur-xl h-screen w-64 fixed left-0 top-0 pt-24 no-border space-y-3 font-['Inter'] text-sm font-medium z-40">
+<div class="px-4 mb-6">
+<h2 class="text-lg font-black text-blue-600 tracking-tight">The Atelier</h2>
+<p class="text-slate-500 dark:text-slate-400 text-xs mt-1 uppercase tracking-widest">Learning Paths</p>
+</div>
+<nav class="flex-1 space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-full text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 shadow-sm transition-all active:scale-98" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">explore</span>
+<span>Browse</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/80 dark:hover:bg-slate-800/80 transition-all active:scale-98" href="#">
+<span class="material-symbols-outlined">auto_stories</span>
+<span>My Paths</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/80 dark:hover:bg-slate-800/80 transition-all active:scale-98" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span>Insights</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/80 dark:hover:bg-slate-800/80 transition-all active:scale-98" href="#">
+<span class="material-symbols-outlined">folder_open</span>
+<span>Resources</span>
+</a>
+</nav>
+<div class="mt-auto px-2">
+<button class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-full bg-gradient-to-tr from-primary to-primary-container text-on-primary font-medium shadow-[0_10px_30px_-5px_rgba(0,88,188,0.2)] hover:scale-[1.02] transition-transform">
+<span class="material-symbols-outlined text-sm">add</span>
+<span>Start New Path</span>
+</button>
+</div>
+</aside>
+<!-- TopNavBar (Visible on Mobile) -->
+<header class="md:hidden flex items-center justify-between w-full px-6 h-20 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl fixed top-0 left-0 right-0 z-50 shadow-[0_10px_30px_-5px_rgba(0,88,188,0.04)] font-['Inter'] antialiased text-slate-900 dark:text-slate-100">
+<h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">The Atelier</h1>
+<div class="flex items-center gap-4">
+<button class="text-slate-500 hover:text-blue-600 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="close up portrait of a young professional woman with natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1C4W6LE8A2LKMJPzQa0pkWNGrVs4jSQUBTUxNVJiVUNOs_ZPd3dgfw6DNl5hoO6tmwLi4cfFRBvzmE1WuNrq3AJKlghatlNe3KNXf3RMJzxZIvowTgg-4ZlA2f3YVDbgmL-2hMeXYIoC5EGEV7oA_kvfXyQmhedHv5aBBtjquuJOE925FNdpp4iZ2kb-UYGkCURyYL1ckL-mwb6rXdI2WBa34cZhPuCNUxnR_WyG1PUKwWnwK7OIO3hwZibUWdxzmEvjsKig1LEGn"/>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full max-w-7xl mx-auto pt-28 pb-32 px-6 md:pl-72 md:pr-12 md:py-24">
+<!-- Search & Filter Cluster -->
+<section class="mb-12 space-y-6">
+<div class="relative max-w-2xl">
+<span class="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full h-14 pl-14 pr-6 rounded-full bg-surface-container-low border-none focus:ring-0 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 text-on-surface placeholder:text-outline transition-all text-lg shadow-sm" placeholder="Search curated paths, topics, or authors..." type="text"/>
+</div>
+<div class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+<button class="px-6 py-2.5 rounded-full bg-primary text-on-primary font-medium whitespace-nowrap shadow-sm text-sm">All Paths</button>
+<button class="px-6 py-2.5 rounded-full bg-surface-container-highest text-on-surface-variant font-medium whitespace-nowrap hover:bg-surface-container transition-colors text-sm">In Progress</button>
+<button class="px-6 py-2.5 rounded-full bg-surface-container-highest text-on-surface-variant font-medium whitespace-nowrap hover:bg-surface-container transition-colors text-sm">Completed</button>
+<button class="px-6 py-2.5 rounded-full bg-surface-container-highest text-on-surface-variant font-medium whitespace-nowrap hover:bg-surface-container transition-colors text-sm">Bookmarked</button>
+</div>
+</section>
+<!-- Featured Hero Card -->
+<section class="mb-16">
+<div class="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-tr from-[#004bb0] to-[#007bfb] p-10 md:p-14 text-white shadow-[0_20px_60px_-10px_rgba(0,88,188,0.2)] group hover:scale-[1.01] transition-transform duration-500 ease-out">
+<div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&amp;fit=crop&amp;w=2000&amp;q=80')] opacity-10 mix-blend-overlay object-cover" data-alt="abstract architectural lines and light patterns in deep blue tones"></div>
+<div class="relative z-10 max-w-3xl flex flex-col items-start gap-6">
+<span class="px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold uppercase tracking-widest text-white border border-white/10">Recommended for You</span>
+<h2 class="text-4xl md:text-6xl font-headline font-bold leading-tight tracking-[-0.022em]">The Architecture of Minimalist UI Design</h2>
+<p class="text-lg md:text-xl text-white/80 font-body leading-relaxed max-w-2xl">Master the art of subtraction. Learn how to use whitespace, typography, and tonal hierarchy to create interfaces that feel effortless and premium.</p>
+<div class="flex items-center gap-6 mt-4">
+<div class="flex items-center gap-2 text-white/90">
+<span class="material-symbols-outlined text-xl">play_circle</span>
+<span class="text-sm font-medium">12 Lessons</span>
+</div>
+<div class="flex items-center gap-2 text-white/90">
+<span class="material-symbols-outlined text-xl">schedule</span>
+<span class="text-sm font-medium">4.5 Hours</span>
+</div>
+<div class="flex items-center gap-2 text-white/90">
+<span class="material-symbols-outlined text-xl">school</span>
+<span class="text-sm font-medium">Advanced</span>
+</div>
+</div>
+<button class="mt-6 px-8 py-4 rounded-full bg-white text-primary font-bold text-lg shadow-[0_10px_30px_-5px_rgba(0,0,0,0.1)] hover:bg-surface-container-lowest transition-colors flex items-center gap-3">
+                        Start Path
+                        <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Grid Section -->
+<section>
+<div class="flex items-end justify-between mb-8">
+<div>
+<h3 class="text-2xl font-headline font-bold text-on-surface tracking-tight">Curated Paths</h3>
+<p class="text-on-surface-variant mt-1 text-sm">Deep dives crafted by industry leaders.</p>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- Card 1 -->
+<div class="group flex flex-col bg-surface-container-low rounded-xl p-8 hover:bg-surface-container-lowest hover:shadow-[0_20px_60px_-10px_rgba(26,28,31,0.05)] hover:scale-[1.02] transition-all duration-300 ease-out cursor-pointer outline outline-1 outline-outline-variant/15">
+<div class="flex justify-between items-start mb-6">
+<div class="w-16 h-16 rounded-full bg-gradient-to-br from-tertiary-container to-tertiary flex items-center justify-center text-white shadow-sm">
+<span class="material-symbols-outlined text-3xl">brush</span>
+</div>
+<span class="px-3 py-1 rounded-full bg-surface-container-high text-primary text-xs font-bold uppercase tracking-widest">Beginner</span>
+</div>
+<h4 class="text-2xl font-headline font-bold text-on-surface mb-3 tracking-tight group-hover:text-primary transition-colors">Color Theory in Practice</h4>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-8 flex-1">Move beyond the color wheel. Understand psychological impact and how to build cohesive palettes that sing.</p>
+<div class="flex items-center justify-between pt-6 border-t border-outline-variant/15">
+<div class="flex -space-x-2">
+<img alt="Author avatar" class="w-8 h-8 rounded-full border-2 border-surface-container-low object-cover" data-alt="portrait of a woman smiling with soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCEnqqihotjv78QcNd6Wxm2mXqKLc1zHZyVaxSgJP5v11PvyKqjHu3G5ZbwIFy1Dy60uP-aPda1gMvrOUC_kqdNeNdhcrOX7mXRqdkVCQuAPEGp8MbKCLEAci14Vl4Nu1xFnIxp_Yinm-E-_68JdFs3c7SWef2a3Fh5vbQ1773Ct-IYUb5aiFr_JaI3qKbUYR8Dd_2_fTeOB6mezuks8ioPVne1G_rqTwRQpltM-YCr_cZYjFIkKwd6XG8eN0h1peR3q-xvt8wuN2Rn"/>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant text-sm font-medium">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">play_circle</span> 8</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">schedule</span> 2h</span>
+</div>
+</div>
+</div>
+<!-- Card 2 (In Progress) -->
+<div class="group flex flex-col bg-surface-container-lowest rounded-xl p-8 shadow-[0_10px_30px_-5px_rgba(0,88,188,0.02)] outline outline-1 outline-outline-variant/15 hover:shadow-[0_20px_60px_-10px_rgba(26,28,31,0.08)] hover:scale-[1.02] transition-all duration-300 ease-out cursor-pointer relative overflow-hidden">
+<!-- Progress Indication -->
+<div class="absolute top-0 left-0 w-full h-1 bg-surface-container-high">
+<div class="h-full bg-primary w-[45%]"></div>
+</div>
+<div class="flex justify-between items-start mb-6 mt-2">
+<div class="w-16 h-16 rounded-full bg-gradient-to-br from-primary-container to-primary flex items-center justify-center text-white shadow-sm">
+<span class="material-symbols-outlined text-3xl">view_quilt</span>
+</div>
+<span class="px-3 py-1 rounded-full bg-primary-container text-on-primary-container text-xs font-bold uppercase tracking-widest">Intermediate</span>
+</div>
+<h4 class="text-2xl font-headline font-bold text-on-surface mb-3 tracking-tight group-hover:text-primary transition-colors">Advanced Grid Systems</h4>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-8 flex-1">Break the standard 12-column rules. Learn asymmetrical balancing and baseline rhythms for editorial layouts.</p>
+<div class="flex items-center justify-between pt-6 border-t border-outline-variant/15">
+<div class="flex items-center gap-3">
+<img alt="Author avatar" class="w-8 h-8 rounded-full border-2 border-surface-container-lowest object-cover" data-alt="portrait of a man with glasses looking confident" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4Hu2K9fDVNAmxSP2Tmjr3HbzcREBvkRV0ExEf6sG8XaWvAusKLCkElsy_iR6KyGuyPn9MgKUo2znKiuTWOrag0xBpFgc549HhNoQ09gbTPYq98gPOg8og7Xszc3WqQRJQtxBScEzcM1wwf5ZeEmn-7Dw9z9LTc3V3QQylQd1m7av46fbhMD_Fy2uK6qC8Nw-PuTCfFOFiMdiptdu30s3W_YrtTx1U_mvFAxQQ8WPHswQNrlkYwekHFZ993qfiXvQlMJObzmjKRICn"/>
+<span class="text-sm font-medium text-primary">Continue (45%)</span>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant text-sm font-medium">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">play_circle</span> 16</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">schedule</span> 6h</span>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group flex flex-col bg-surface-container-low rounded-xl p-8 hover:bg-surface-container-lowest hover:shadow-[0_20px_60px_-10px_rgba(26,28,31,0.05)] hover:scale-[1.02] transition-all duration-300 ease-out cursor-pointer outline outline-1 outline-outline-variant/15">
+<div class="flex justify-between items-start mb-6">
+<div class="w-16 h-16 rounded-full bg-gradient-to-br from-secondary-container to-secondary flex items-center justify-center text-white shadow-sm">
+<span class="material-symbols-outlined text-3xl">animation</span>
+</div>
+<span class="px-3 py-1 rounded-full bg-primary text-on-primary text-xs font-bold uppercase tracking-widest">Advanced</span>
+</div>
+<h4 class="text-2xl font-headline font-bold text-on-surface mb-3 tracking-tight group-hover:text-primary transition-colors">Motion as Intent</h4>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-8 flex-1">Choreograph user journeys with purposeful micro-interactions. Stop moving things just because you can.</p>
+<div class="flex items-center justify-between pt-6 border-t border-outline-variant/15">
+<div class="flex -space-x-2">
+<img alt="Author avatar" class="w-8 h-8 rounded-full border-2 border-surface-container-low object-cover" data-alt="portrait of a focused young man in a creative studio setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9YkV7lfS6OzjD6CTFqiP75DWsY1vi_F_wbSSVCXV_Ki8FOwUuy4CM2YDJxpZWre5WTL3q5ogM-vZz6Bj3ohypW1nSudEQt4Os9zbcvOTEz6t87c_IB9xZ42AEJBxebNxfTF00Yc0LiQcMES3Q88BpLBs3SUhlCTfz4tQjpZM25DeBwiSEoEvlKCv9mOYh7fpoVHxdaRPI7wRTbCE4Oq-AjayHfIl2gAkejPZbauoxrxuyC3AK5R0B0EtlkQj1parpzx7Wk-LSMt8w"/>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant text-sm font-medium">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">play_circle</span> 24</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">schedule</span> 8h</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Visible on Mobile) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex items-center justify-around px-6 z-50 shadow-[0_-10px_30px_-5px_rgba(0,88,188,0.04)] pb-safe font-['Inter']">
+<button class="flex flex-col items-center justify-center gap-1 text-blue-600 dark:text-blue-400 font-semibold active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">explore</span>
+<span class="text-[10px] uppercase tracking-wider">Browse</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 text-slate-500 dark:text-slate-400 font-medium hover:text-slate-900 dark:hover:text-slate-100 transition-colors active:scale-95">
+<span class="material-symbols-outlined">auto_stories</span>
+<span class="text-[10px] uppercase tracking-wider">Paths</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 text-slate-500 dark:text-slate-400 font-medium hover:text-slate-900 dark:hover:text-slate-100 transition-colors active:scale-95">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-[10px] uppercase tracking-wider">Insights</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 text-slate-500 dark:text-slate-400 font-medium hover:text-slate-900 dark:hover:text-slate-100 transition-colors active:scale-95">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="text-[10px] uppercase tracking-wider">Resources</span>
+</button>
+</nav>
+</body></html>

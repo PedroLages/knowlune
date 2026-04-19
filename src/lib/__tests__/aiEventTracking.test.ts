@@ -16,6 +16,10 @@ vi.mock('@/lib/aiConfiguration', () => ({
   isFeatureEnabled: (...args: unknown[]) => mockIsFeatureEnabled(...args),
 }))
 
+// E96-S02: `trackAIUsage` now routes through `syncableWrite`; the DB mock below
+// still exposes `aiUsageEvents.add` so other DB-reading tests (getStats,
+// getTimeline) keep working, but the trackAIUsage write contract is asserted
+// against the `syncableWrite` spy instead.
 const mockAdd = vi.fn()
 const mockWhereBetween = vi.fn()
 const mockToArray = vi.fn()
@@ -36,6 +40,11 @@ vi.mock('@/db', () => ({
       }),
     },
   },
+}))
+
+const mockSyncableWrite = vi.fn()
+vi.mock('@/lib/sync/syncableWrite', () => ({
+  syncableWrite: (...args: unknown[]) => mockSyncableWrite(...args),
 }))
 
 // --- Import SUT after mocks ---
@@ -88,13 +97,13 @@ describe('aiEventTracking.ts', () => {
   })
 
   describe('trackAIUsage', () => {
-    it('adds event to IndexedDB when analytics is enabled', async () => {
+    it('enqueues event through syncableWrite when analytics is enabled', async () => {
       mockIsFeatureEnabled.mockReturnValue(true)
-      mockAdd.mockResolvedValue(undefined)
+      mockSyncableWrite.mockResolvedValue(undefined)
 
       await trackAIUsage('summary', { courseId: 'course-1', durationMs: 500 })
 
-      expect(mockAdd).toHaveBeenCalledWith({
+      expect(mockSyncableWrite).toHaveBeenCalledWith('aiUsageEvents', 'add', {
         id: 'test-uuid-1234',
         featureType: 'summary',
         courseId: 'course-1',
@@ -107,31 +116,41 @@ describe('aiEventTracking.ts', () => {
 
     it('defaults status to success when not specified', async () => {
       mockIsFeatureEnabled.mockReturnValue(true)
-      mockAdd.mockResolvedValue(undefined)
+      mockSyncableWrite.mockResolvedValue(undefined)
 
       await trackAIUsage('qa')
 
-      expect(mockAdd).toHaveBeenCalledWith(expect.objectContaining({ status: 'success' }))
+      expect(mockSyncableWrite).toHaveBeenCalledWith(
+        'aiUsageEvents',
+        'add',
+        expect.objectContaining({ status: 'success' })
+      )
     })
 
     it('uses provided status when specified', async () => {
       mockIsFeatureEnabled.mockReturnValue(true)
-      mockAdd.mockResolvedValue(undefined)
+      mockSyncableWrite.mockResolvedValue(undefined)
 
       await trackAIUsage('learning_path', { status: 'error' })
 
-      expect(mockAdd).toHaveBeenCalledWith(expect.objectContaining({ status: 'error' }))
+      expect(mockSyncableWrite).toHaveBeenCalledWith(
+        'aiUsageEvents',
+        'add',
+        expect.objectContaining({ status: 'error' })
+      )
     })
 
     it('includes metadata when provided', async () => {
       mockIsFeatureEnabled.mockReturnValue(true)
-      mockAdd.mockResolvedValue(undefined)
+      mockSyncableWrite.mockResolvedValue(undefined)
 
       await trackAIUsage('note_organization', {
         metadata: { noteCount: 5, method: 'auto' },
       })
 
-      expect(mockAdd).toHaveBeenCalledWith(
+      expect(mockSyncableWrite).toHaveBeenCalledWith(
+        'aiUsageEvents',
+        'add',
         expect.objectContaining({
           metadata: { noteCount: 5, method: 'auto' },
         })
@@ -143,12 +162,12 @@ describe('aiEventTracking.ts', () => {
 
       await trackAIUsage('summary')
 
-      expect(mockAdd).not.toHaveBeenCalled()
+      expect(mockSyncableWrite).not.toHaveBeenCalled()
     })
 
-    it('never throws on DB error (logs warning)', async () => {
+    it('never throws on write error (logs warning)', async () => {
       mockIsFeatureEnabled.mockReturnValue(true)
-      mockAdd.mockRejectedValue(new Error('DB write failed'))
+      mockSyncableWrite.mockRejectedValue(new Error('DB write failed'))
 
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
@@ -165,11 +184,13 @@ describe('aiEventTracking.ts', () => {
 
     it('accepts no options at all', async () => {
       mockIsFeatureEnabled.mockReturnValue(true)
-      mockAdd.mockResolvedValue(undefined)
+      mockSyncableWrite.mockResolvedValue(undefined)
 
       await trackAIUsage('knowledge_gaps')
 
-      expect(mockAdd).toHaveBeenCalledWith(
+      expect(mockSyncableWrite).toHaveBeenCalledWith(
+        'aiUsageEvents',
+        'add',
         expect.objectContaining({
           featureType: 'knowledge_gaps',
           courseId: undefined,

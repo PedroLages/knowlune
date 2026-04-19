@@ -1147,6 +1147,14 @@ issues:
       invariant — AudiobookshelfServer / OpdsCatalog types drop the credential fields.
       CI grep gate (scripts/grep-gate-credentials.sh) blocks regression.
 
+  - id: KI-E96-S02-L01
+    storyId: E96-S02
+    summary: "useQuizStore.hydrateFromRemote not implemented — quizzes hydrate via syncEngine download phase only, not post-auth fan-out"
+    severity: low
+    status: open
+    triageDecision: schedule-future
+    notes: "Add useQuizStore.hydrateFromRemote (bulkPut-based, no syncableWrite) + dispatch from hydrateP3P4FromSupabase in a follow-up story. syncEngine download phase covers the gap functionally."
+
   - id: KI-E95-S04-L01
     story: E95-S04
     severity: MEDIUM

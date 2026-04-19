@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Path Complete - Luminous Academy</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-container": "#2d4c83",
+                    "on-background": "#1a1c1f",
+                    "on-surface": "#1a1c1f",
+                    "on-tertiary-container": "#fffbff",
+                    "surface": "#f9f9fe",
+                    "background": "#f9f9fe",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-low": "#f3f3f8",
+                    "on-secondary-fixed-variant": "#26467d",
+                    "on-surface-variant": "#414755",
+                    "tertiary": "#9e3d00",
+                    "surface-variant": "#e2e2e7",
+                    "outline": "#717786",
+                    "secondary-container": "#a1befd",
+                    "on-error-container": "#93000a",
+                    "inverse-surface": "#2e3034",
+                    "on-secondary": "#ffffff",
+                    "surface-bright": "#f9f9fe",
+                    "primary-fixed-dim": "#adc6ff",
+                    "inverse-primary": "#adc6ff",
+                    "secondary": "#405e96",
+                    "primary-fixed": "#d8e2ff",
+                    "secondary-fixed": "#d8e2ff",
+                    "surface-tint": "#005bc1",
+                    "on-primary-fixed-variant": "#004493",
+                    "error-container": "#ffdad6",
+                    "on-tertiary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "primary-container": "#0070eb",
+                    "tertiary-container": "#c64f00",
+                    "primary": "#0058bc",
+                    "surface-container": "#ededf2",
+                    "on-primary": "#ffffff",
+                    "inverse-on-surface": "#f0f0f5",
+                    "on-primary-container": "#fefcff",
+                    "on-tertiary-fixed": "#351000",
+                    "outline-variant": "#c1c6d7",
+                    "on-primary-fixed": "#001a41",
+                    "error": "#ba1a1a",
+                    "surface-container-high": "#e7e8ed",
+                    "tertiary-fixed": "#ffdbcc",
+                    "tertiary-fixed-dim": "#ffb595",
+                    "surface-dim": "#d9dade",
+                    "secondary-fixed-dim": "#adc6ff",
+                    "on-secondary-fixed": "#001a41",
+                    "surface-container-highest": "#e2e2e7",
+                    "on-tertiary-fixed-variant": "#7c2e00"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "2xl": "1.5rem",
+                    "full": "9999px"
+            },
+            "spacing": {},
+            "fontFamily": {
+                    "headline": ["Inter", "sans-serif"],
+                    "body": ["Inter", "sans-serif"],
+                    "label": ["Inter", "sans-serif"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #f9f9fe; color: #1a1c1f; }
+        .glass-panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+        .ambient-shadow { box-shadow: 0 20px 40px rgba(26, 28, 31, 0.06); }
+        .gradient-text { background: linear-gradient(135deg, #0058bc, #0070eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased min-h-screen flex selection:bg-primary-fixed selection:text-on-primary-fixed overflow-x-hidden">
+<!-- Intent implies a completion state which is a focused, transient, transactional moment. 
+         Following "The Destination Rule" & "Automatic Suppression" mandates: "You MUST exclude the navigation shell if the page intent is: Linear/Transactional: Login, Sign-up, Onboarding, Checkout, or 'Success/Confirmation' splash screens."
+         Therefore, the TopNavBar and SideNavBar are explicitly suppressed to prioritize the success canvas. -->
+<main class="flex-1 min-h-screen relative overflow-y-auto">
+<!-- Abstract Background Celebration -->
+<div class="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+<div class="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-primary-fixed opacity-30 blur-[100px] animate-pulse"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-secondary-fixed opacity-20 blur-[120px]"></div>
+</div>
+<div class="max-w-4xl mx-auto px-6 py-20 relative z-10 flex flex-col items-center">
+<!-- Hero Section -->
+<div class="text-center mb-16 max-w-2xl">
+<div class="w-24 h-24 mx-auto mb-8 bg-surface-container-lowest rounded-2xl ambient-shadow flex items-center justify-center relative">
+<div class="absolute inset-0 bg-gradient-to-br from-primary to-primary-container opacity-10 rounded-2xl"></div>
+<span class="material-symbols-outlined text-5xl text-primary" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+</div>
+<h1 class="text-5xl md:text-6xl font-black tracking-tighter text-on-surface mb-6 gradient-text">Path Complete</h1>
+<p class="text-xl md:text-2xl text-on-surface-variant font-medium leading-relaxed mb-4">
+                    Congratulations! You finished <strong class="text-on-surface">React Mastery Path</strong>.
+                </p>
+<p class="text-body text-on-surface-variant">Your dedication to mastering advanced patterns and state management has paid off.</p>
+</div>
+<!-- Stats Row -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mb-16">
+<!-- Stat Card 1 -->
+<div class="bg-surface-container-lowest rounded-2xl p-8 flex flex-col items-center text-center ambient-shadow hover:-translate-y-1 transition-transform duration-300">
+<span class="material-symbols-outlined text-3xl text-secondary mb-4">check_circle</span>
+<h3 class="text-4xl font-bold tracking-tight text-on-surface mb-2">24</h3>
+<span class="text-sm font-medium text-on-surface-variant">Lessons Completed</span>
+</div>
+<!-- Stat Card 2 -->
+<div class="bg-surface-container-lowest rounded-2xl p-8 flex flex-col items-center text-center ambient-shadow hover:-translate-y-1 transition-transform duration-300">
+<span class="material-symbols-outlined text-3xl text-secondary mb-4">schedule</span>
+<h3 class="text-4xl font-bold tracking-tight text-on-surface mb-2">18</h3>
+<span class="text-sm font-medium text-on-surface-variant">Hours Learned</span>
+</div>
+<!-- Stat Card 3 -->
+<div class="bg-surface-container-lowest rounded-2xl p-8 flex flex-col items-center text-center ambient-shadow hover:-translate-y-1 transition-transform duration-300">
+<span class="material-symbols-outlined text-3xl text-secondary mb-4">local_fire_department</span>
+<h3 class="text-4xl font-bold tracking-tight text-on-surface mb-2">12</h3>
+<span class="text-sm font-medium text-on-surface-variant">Day Streak</span>
+</div>
+</div>
+<!-- Achievement Badge Card -->
+<div class="w-full max-w-2xl bg-surface-container-low rounded-2xl p-8 mb-16 relative overflow-hidden flex items-center gap-8 isolate">
+<div class="absolute inset-0 bg-gradient-to-r from-surface-container-low to-surface-container-highest opacity-50 z-0"></div>
+<div class="w-20 h-20 shrink-0 bg-surface-container-lowest rounded-full shadow-sm flex items-center justify-center z-10 relative">
+<img alt="Shiny golden award trophy with blue ribbons on clean white background" class="w-12 h-12 object-contain" data-alt="Shiny golden award trophy with blue ribbons on clean white background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvbW3D4d1al-yN_BO4MVWoRezshq2QTchq36VOySeBJUeHEwnS7Mc2JCHMgAvqiVwsnlm3zTzbieLgjCmLdcU3K4aot89Hxyre2T_0XsofhRtNPkaFIOB4a827KWhea_E2xabozW7ubTawsWPUvoEQKbqggRhUW84AB1kMgpNwgoO_7gqJNz0cugbN66_hWtnQvsSsIExBVsuNwtCODKuMVxsaNZGFPJpR9OqTt7wgGZFujeZ_a7ZJs-HYghK23chVOAQxdcB-z2Yt"/>
+</div>
+<div class="flex-1 z-10">
+<span class="text-xs font-bold text-primary tracking-widest uppercase mb-1 block">Badge Unlocked</span>
+<h3 class="text-2xl font-bold text-on-surface mb-1">React Mastery</h3>
+<p class="text-sm text-on-surface-variant">Completed October 24, 2023</p>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex flex-col sm:flex-row gap-4 mb-24 w-full max-w-md">
+<button class="flex-1 h-14 bg-surface-container-high text-on-surface font-semibold rounded-full flex items-center justify-center gap-2 hover:bg-surface-variant transition-colors duration-200 active:scale-95 shadow-sm">
+<span class="material-symbols-outlined text-lg">ios_share</span>
+                    Share Achievement
+                </button>
+<button class="flex-1 h-14 bg-gradient-to-br from-primary to-primary-container text-on-primary font-semibold rounded-full flex items-center justify-center gap-2 hover:shadow-lg transition-all duration-200 active:scale-95">
+                    Continue Learning
+                    <span class="material-symbols-outlined text-lg">arrow_forward</span>
+</button>
+</div>
+<!-- Next Suggestions -->
+<div class="w-full">
+<h2 class="text-lg font-bold text-on-surface mb-6">Suggested Next Paths</h2>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+<a class="bg-surface-container-lowest rounded-2xl p-6 ambient-shadow hover:-translate-y-1 transition-transform duration-300 block group" href="#">
+<div class="w-10 h-10 bg-secondary-fixed rounded-xl flex items-center justify-center mb-4 text-on-secondary-fixed group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">schema</span>
+</div>
+<h4 class="font-bold text-on-surface mb-1">Advanced Patterns</h4>
+<p class="text-xs text-on-surface-variant">Deep dive into design patterns.</p>
+</a>
+<a class="bg-surface-container-lowest rounded-2xl p-6 ambient-shadow hover:-translate-y-1 transition-transform duration-300 block group" href="#">
+<div class="w-10 h-10 bg-secondary-fixed rounded-xl flex items-center justify-center mb-4 text-on-secondary-fixed group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">hub</span>
+</div>
+<h4 class="font-bold text-on-surface mb-1">State Management</h4>
+<p class="text-xs text-on-surface-variant">Redux, Zustand, and Context.</p>
+</a>
+<a class="bg-surface-container-lowest rounded-2xl p-6 ambient-shadow hover:-translate-y-1 transition-transform duration-300 block group" href="#">
+<div class="w-10 h-10 bg-secondary-fixed rounded-xl flex items-center justify-center mb-4 text-on-secondary-fixed group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bug_report</span>
+</div>
+<h4 class="font-bold text-on-surface mb-1">Testing</h4>
+<p class="text-xs text-on-surface-variant">Jest and React Testing Library.</p>
+</a>
+</div>
+</div>
+</div>
+</main>
+</body></html>

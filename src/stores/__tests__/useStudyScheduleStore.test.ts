@@ -31,6 +31,9 @@ vi.mock('sonner', () => ({
 
 let useStudyScheduleStore: (typeof import('@/stores/useStudyScheduleStore'))['useStudyScheduleStore']
 let db: (typeof import('@/db/schema'))['db']
+// E96-S02: writes now route through syncableWrite. Error-path tests that
+// previously mocked Dexie table methods now mock this instead.
+let syncableWriteModule: typeof import('@/lib/sync/syncableWrite')
 
 function makeSchedule(overrides: Partial<StudySchedule> = {}): StudySchedule {
   return {
@@ -66,6 +69,7 @@ beforeEach(async () => {
   useStudyScheduleStore = storeModule.useStudyScheduleStore
   const dbModule = await import('@/db/schema')
   db = dbModule.db
+  syncableWriteModule = await import('@/lib/sync/syncableWrite')
 })
 
 describe('initial state', () => {
@@ -126,7 +130,7 @@ describe('addSchedule', () => {
   })
 
   it('returns undefined on DB failure', async () => {
-    vi.spyOn(db.studySchedules, 'add').mockRejectedValueOnce(new Error('Write fail'))
+    vi.spyOn(syncableWriteModule, 'syncableWrite').mockRejectedValueOnce(new Error('Write fail'))
 
     const result = await useStudyScheduleStore.getState().addSchedule({
       title: 'Fail Schedule',
@@ -200,7 +204,7 @@ describe('updateSchedule', () => {
   it('shows toast on DB failure', async () => {
     const schedule = makeSchedule({ id: 'fail-upd' })
     useStudyScheduleStore.setState({ schedules: [schedule] })
-    vi.spyOn(db.studySchedules, 'put').mockRejectedValueOnce(new Error('Write fail'))
+    vi.spyOn(syncableWriteModule, 'syncableWrite').mockRejectedValueOnce(new Error('Write fail'))
     const { toast } = await import('sonner')
 
     await useStudyScheduleStore.getState().updateSchedule('fail-upd', { title: 'X' })
@@ -233,7 +237,7 @@ describe('deleteSchedule', () => {
   it('shows toast on DB failure', async () => {
     const schedule = makeSchedule({ id: 'fail-del' })
     useStudyScheduleStore.setState({ schedules: [schedule] })
-    vi.spyOn(db.studySchedules, 'delete').mockRejectedValueOnce(new Error('Delete fail'))
+    vi.spyOn(syncableWriteModule, 'syncableWrite').mockRejectedValueOnce(new Error('Delete fail'))
     const { toast } = await import('sonner')
 
     await useStudyScheduleStore.getState().deleteSchedule('fail-del')

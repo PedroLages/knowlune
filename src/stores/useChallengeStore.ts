@@ -7,6 +7,7 @@ import { calculateProgress } from '@/lib/challengeProgress'
 import { detectChallengeMilestones } from '@/lib/challengeMilestones'
 import { toastWithUndo, toastError } from '@/lib/toastHelpers'
 import { appEventBus } from '@/lib/eventBus'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 interface NewChallengeData {
   name: string
@@ -25,6 +26,20 @@ interface ChallengeState {
   refreshAllProgress: () => Promise<Map<string, number[]>>
   addChallenge: (data: NewChallengeData) => Promise<void>
   deleteChallenge: (id: string) => Promise<void>
+
+  /**
+   * Replace Dexie + in-memory collection from a validated remote snapshot.
+   *
+   * E96-S02: called by `hydrateP3P4FromSupabase`. Pure setter — uses
+   * `db.challenges.bulkPut` directly (never `syncableWrite`) so it does NOT
+   * enqueue any syncQueue row. Echo-loop guard per E93 retrospective.
+   *
+   * AC5 disposition: `isAllDefaults` guard is vacuously satisfied —
+   * `challenges` is a collection keyed by id, not a singleton. Monotonic
+   * conflict resolution on `currentProgress` is applied by the upload engine
+   * during push, not at hydrate time.
+   */
+  hydrateFromRemote: (rows: Challenge[]) => Promise<void>
 }
 
 export const useChallengeStore = create<ChallengeState>((set, get) => ({
@@ -81,7 +96,17 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
         })
       )
 
-      await db.challenges.bulkPut(updated)
+      // E96-S02: enqueue each updated row individually through
+      // syncableWrite. The `challenges` registry entry uses
+      // `conflictStrategy: 'monotonic'` with `monotonicFields: ['currentProgress']`;
+      // monotonicity is enforced by the upload engine, not the call site.
+      for (const row of updated) {
+        await syncableWrite(
+          'challenges',
+          'put',
+          row as unknown as SyncableRecord,
+        )
+      }
       set({ challenges: updated })
     } catch (error) {
       console.error('[ChallengeStore] Failed to refresh progress:', error)
@@ -116,7 +141,11 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.challenges.add(challenge)
+        await syncableWrite(
+          'challenges',
+          'add',
+          challenge as unknown as SyncableRecord,
+        )
       })
     } catch (error) {
       // Rollback on failure
@@ -142,13 +171,17 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.challenges.delete(id)
+        await syncableWrite('challenges', 'delete', id)
       })
 
       toastWithUndo({
         message: `Challenge "${deletedChallenge.name}" deleted`,
         onUndo: async () => {
-          await db.challenges.add(deletedChallenge)
+          await syncableWrite(
+            'challenges',
+            'add',
+            deletedChallenge as unknown as SyncableRecord,
+          )
           set({ challenges: [...get().challenges, deletedChallenge] })
           toast.success('Challenge restored')
         },
@@ -163,5 +196,26 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
       toastError.deleteFailed('challenge')
       throw error
     }
+  },
+
+  hydrateFromRemote: async rows => {
+    if (!rows || rows.length === 0) return
+    // Direct Dexie write — NEVER through syncableWrite. The remote is already
+    // authoritative in Supabase; enqueueing here would create an echo loop.
+    //
+    // F1 monotonic guard (E96-S02): for currentProgress, never regress a local
+    // value that is ahead of the remote snapshot. This protects offline mutations
+    // that are still queued in syncQueue — a plain bulkPut would overwrite them.
+    for (const remoteRow of rows) {
+      const local = await db.challenges.get(remoteRow.id)
+      if (local !== undefined && local.currentProgress > remoteRow.currentProgress) {
+        // Local is ahead — keep the local currentProgress, merge everything else.
+        await db.challenges.put({ ...remoteRow, currentProgress: local.currentProgress })
+      } else {
+        await db.challenges.put(remoteRow)
+      }
+    }
+    const challenges = await db.challenges.orderBy('createdAt').reverse().toArray()
+    set({ challenges })
   },
 }))

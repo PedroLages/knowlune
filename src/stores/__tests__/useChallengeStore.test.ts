@@ -113,8 +113,7 @@ describe('addChallenge', () => {
   })
 
   it('should rollback on persistence failure', async () => {
-    const { db } = await import('@/db')
-    vi.spyOn(db.challenges, 'add').mockRejectedValue(new Error('DB write failed'))
+    const swModule = await import('@/lib/sync/syncableWrite'); vi.spyOn(swModule, 'syncableWrite').mockRejectedValue(new Error('DB write failed'))
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
     await expect(
@@ -183,9 +182,8 @@ describe('deleteChallenge', () => {
       })
     })
 
-    const { db } = await import('@/db')
     const id = useChallengeStore.getState().challenges[0].id
-    vi.spyOn(db.challenges, 'delete').mockRejectedValue(new Error('DB delete failed'))
+    const swModuleD = await import('@/lib/sync/syncableWrite'); vi.spyOn(swModuleD, 'syncableWrite').mockRejectedValue(new Error('DB delete failed'))
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
     await expect(useChallengeStore.getState().deleteChallenge(id)).rejects.toThrow(
@@ -365,7 +363,7 @@ describe('refreshAllProgress', () => {
     await db.challenges.add(challenge)
     useChallengeStore.setState({ challenges: [challenge] })
 
-    vi.spyOn(db.challenges, 'bulkPut').mockRejectedValue(new Error('DB write failed'))
+    const swModuleBP = await import('@/lib/sync/syncableWrite'); vi.spyOn(swModuleBP, 'syncableWrite').mockRejectedValue(new Error('DB write failed'))
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
     await act(async () => {
@@ -467,7 +465,7 @@ describe('refreshAllProgress', () => {
     await db.challenges.add(challenge)
     useChallengeStore.setState({ challenges: [challenge] })
 
-    vi.spyOn(db.challenges, 'bulkPut').mockRejectedValue(new Error('DB write failed'))
+    const swModuleBP = await import('@/lib/sync/syncableWrite'); vi.spyOn(swModuleBP, 'syncableWrite').mockRejectedValue(new Error('DB write failed'))
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
     let result: Map<string, number[]> = new Map()

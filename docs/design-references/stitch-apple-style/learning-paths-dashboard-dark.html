@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Digital Atelier - Learning Paths</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline": "#8c909f",
+                    "on-secondary-container": "#a0b5e5",
+                    "on-secondary-fixed": "#001a41",
+                    "on-tertiary-container": "#432100",
+                    "on-tertiary-fixed": "#2e1500",
+                    "secondary-fixed-dim": "#b1c6f8",
+                    "on-error-container": "#ffdad6",
+                    "surface-container": "#1e2023",
+                    "tertiary-fixed": "#ffdcc2",
+                    "surface-container-low": "#1a1c1f",
+                    "surface-container-highest": "#333538",
+                    "surface-tint": "#adc6ff",
+                    "background": "#111316",
+                    "error": "#ffb4ab",
+                    "inverse-on-surface": "#2f3034",
+                    "surface-container-lowest": "#0c0e11",
+                    "on-error": "#690005",
+                    "primary-fixed": "#d8e2ff",
+                    "primary-container": "#4b8eff",
+                    "surface-variant": "#333538",
+                    "on-tertiary": "#4d2700",
+                    "on-surface": "#e2e2e6",
+                    "surface": "#111316",
+                    "on-primary": "#002e69",
+                    "surface-dim": "#111316",
+                    "on-primary-fixed": "#001a41",
+                    "secondary-fixed": "#d8e2ff",
+                    "surface-bright": "#37393c",
+                    "surface-container-high": "#282a2d",
+                    "on-primary-container": "#00285c",
+                    "inverse-primary": "#005bc1",
+                    "tertiary-fixed-dim": "#ffb77b",
+                    "secondary-container": "#314670",
+                    "on-surface-variant": "#c2c6d6",
+                    "on-background": "#e2e2e6",
+                    "tertiary-container": "#d97800",
+                    "on-secondary": "#193058",
+                    "primary": "#adc6ff",
+                    "tertiary": "#ffb77b",
+                    "secondary": "#b1c6f8",
+                    "outline-variant": "#424753",
+                    "error-container": "#93000a",
+                    "on-secondary-fixed-variant": "#314670",
+                    "on-primary-fixed-variant": "#004494",
+                    "inverse-surface": "#e2e2e6",
+                    "primary-fixed-dim": "#adc6ff",
+                    "on-tertiary-fixed-variant": "#6d3a00"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen flex selection:bg-primary-container selection:text-on-primary-container">
+<!-- Side NavBar -->
+<nav class="fixed left-0 top-0 h-full w-72 bg-[#282a2d] shadow-[40px_0_80px_rgba(0,0,0,0.2)] flex flex-col gap-y-2 py-10 px-6 z-40 hidden md:flex">
+<div class="mb-10 px-4">
+<h1 class="text-lg font-bold text-[#e2e2e6] tracking-tight">Digital Atelier</h1>
+<p class="font-inter text-sm leading-relaxed text-outline">Design Scholar</p>
+</div>
+<div class="flex flex-col gap-y-2 flex-grow">
+<a class="flex items-center gap-4 text-[#909094] px-4 py-3 hover:bg-[#37393c] hover:text-[#e2e2e6] transition-all scale-100 hover:translate-x-1 duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">grid_view</span>
+<span class="font-inter text-sm leading-relaxed">Overview</span>
+</a>
+<a class="flex items-center gap-4 bg-[#37393c] text-[#e2e2e6] font-semibold rounded-lg px-4 py-3 scale-100 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+<span class="font-inter text-sm leading-relaxed">My Pathways</span>
+</a>
+<a class="flex items-center gap-4 text-[#909094] px-4 py-3 hover:bg-[#37393c] hover:text-[#e2e2e6] transition-all scale-100 hover:translate-x-1 duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">architecture</span>
+<span class="font-inter text-sm leading-relaxed">Skill Lab</span>
+</a>
+<a class="flex items-center gap-4 text-[#909094] px-4 py-3 hover:bg-[#37393c] hover:text-[#e2e2e6] transition-all scale-100 hover:translate-x-1 duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">bookmark</span>
+<span class="font-inter text-sm leading-relaxed">Library</span>
+</a>
+<a class="flex items-center gap-4 text-[#909094] px-4 py-3 hover:bg-[#37393c] hover:text-[#e2e2e6] transition-all scale-100 hover:translate-x-1 duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">tune</span>
+<span class="font-inter text-sm leading-relaxed">Settings</span>
+</a>
+</div>
+<div class="mt-auto">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-medium py-3 px-4 rounded-DEFAULT transition-all duration-300 hover:opacity-90 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">explore</span>
+<span>Explore More</span>
+</button>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 ml-0 md:ml-72 bg-surface-container-low min-h-screen relative p-6 md:p-12 lg:p-16">
+<!-- Mobile Top App Bar Equivalent (Hidden on MD+) -->
+<header class="md:hidden flex justify-between items-center mb-8 pb-4">
+<div>
+<h1 class="text-xl font-bold text-on-surface tracking-tight">Digital Atelier</h1>
+</div>
+<button class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</header>
+<div class="max-w-7xl mx-auto space-y-16">
+<!-- Hero / Continue Learning -->
+<section class="space-y-6">
+<div class="flex justify-between items-end">
+<h2 class="text-[3.5rem] leading-tight font-headline font-bold tracking-[-0.02em] text-on-surface">
+                        Continue Learning
+                    </h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Active Path Card 1 -->
+<div class="bg-surface-container-lowest rounded-xl p-8 relative overflow-hidden group shadow-[0_20px_40px_rgba(0,0,0,0.10)] transition-transform duration-300 hover:-translate-y-1">
+<div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none"></div>
+<div class="flex justify-between items-start mb-12 relative z-10">
+<div class="w-12 h-12 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">view_in_ar</span>
+</div>
+<span class="px-3 py-1 rounded-full bg-primary-container/20 text-primary text-[0.6875rem] font-medium tracking-[0.05em] uppercase">In Progress</span>
+</div>
+<div class="relative z-10">
+<h3 class="text-xl font-semibold text-on-surface mb-2">Spatial Computing Principles</h3>
+<div class="flex items-center gap-4 text-sm text-on-surface-variant mb-6">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">menu_book</span> 4/12 Lessons</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">schedule</span> 8h remaining</span>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-medium">
+<span class="text-primary">33% Completed</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-primary to-primary-container rounded-full w-1/3"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Active Path Card 2 -->
+<div class="bg-surface-container-lowest rounded-xl p-8 relative overflow-hidden group shadow-[0_20px_40px_rgba(0,0,0,0.10)] transition-transform duration-300 hover:-translate-y-1">
+<div class="flex justify-between items-start mb-12 relative z-10">
+<div class="w-12 h-12 rounded-lg bg-surface-container-highest flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">color_lens</span>
+</div>
+<span class="px-3 py-1 rounded-full bg-surface-container-highest text-on-surface-variant text-[0.6875rem] font-medium tracking-[0.05em] uppercase">Up Next</span>
+</div>
+<div class="relative z-10">
+<h3 class="text-xl font-semibold text-on-surface mb-2">Advanced Color Theory</h3>
+<div class="flex items-center gap-4 text-sm text-on-surface-variant mb-6">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">menu_book</span> 0/8 Lessons</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">schedule</span> 4h total</span>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-medium">
+<span class="text-on-surface-variant">0% Completed</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-secondary-fixed-dim rounded-full w-0"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- All Paths Bento Grid -->
+<section class="space-y-8">
+<h3 class="text-[0.6875rem] font-label font-bold tracking-[0.05em] uppercase text-outline">All Pathways</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Path Card: UI Architecture -->
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-[0_20px_40px_rgba(0,0,0,0.10)] group flex flex-col h-full hover:bg-surface-bright/30 transition-colors duration-300 cursor-pointer">
+<div class="flex items-start justify-between mb-8">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary-fixed-dim">
+<span class="material-symbols-outlined">dashboard_customize</span>
+</div>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface-variant text-[0.6875rem] font-medium tracking-wide">Foundation</span>
+</div>
+<div class="flex-grow">
+<h4 class="text-lg font-medium text-on-surface mb-2">UI Architecture</h4>
+<p class="text-sm text-on-surface-variant leading-relaxed mb-6">Master the structural principles of scalable interface design.</p>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-outline-variant/15">
+<div class="flex items-center gap-3 text-xs text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[1rem]">layers</span> 24 Modules</span>
+</div>
+<span class="text-xs font-medium text-primary">Start</span>
+</div>
+</div>
+<!-- Path Card: Micro-interactions -->
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-[0_20px_40px_rgba(0,0,0,0.10)] group flex flex-col h-full hover:bg-surface-bright/30 transition-colors duration-300 cursor-pointer">
+<div class="flex items-start justify-between mb-8">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined">animation</span>
+</div>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface-variant text-[0.6875rem] font-medium tracking-wide">Advanced</span>
+</div>
+<div class="flex-grow">
+<h4 class="text-lg font-medium text-on-surface mb-2">Micro-interactions</h4>
+<p class="text-sm text-on-surface-variant leading-relaxed mb-6">Design meaningful motion that guides user attention seamlessly.</p>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-outline-variant/15">
+<div class="flex items-center gap-3 text-xs text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[1rem]">layers</span> 16 Modules</span>
+</div>
+<span class="text-xs font-medium text-primary">Start</span>
+</div>
+</div>
+<!-- Path Card: Typography Systems -->
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-[0_20px_40px_rgba(0,0,0,0.10)] group flex flex-col h-full hover:bg-surface-bright/30 transition-colors duration-300 cursor-pointer">
+<div class="flex items-start justify-between mb-8">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">font_download</span>
+</div>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface-variant text-[0.6875rem] font-medium tracking-wide">Core</span>
+</div>
+<div class="flex-grow">
+<h4 class="text-lg font-medium text-on-surface mb-2">Typography Systems</h4>
+<p class="text-sm text-on-surface-variant leading-relaxed mb-6">Establish clear hierarchies using variable fonts and spacing.</p>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-outline-variant/15">
+<div class="flex items-center gap-3 text-xs text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[1rem]">layers</span> 12 Modules</span>
+</div>
+<span class="text-xs font-medium text-primary">Start</span>
+</div>
+</div>
+<!-- Featured Content Spotlight -->
+<div class="md:col-span-2 lg:col-span-3 bg-surface-container-high rounded-xl p-8 md:p-12 shadow-[0_20px_40px_rgba(0,0,0,0.10)] shadow-inner relative overflow-hidden flex flex-col md:flex-row items-center gap-8 md:gap-16">
+<div class="absolute right-0 top-0 w-1/2 h-full bg-gradient-to-l from-primary/10 to-transparent pointer-events-none"></div>
+<div class="flex-1 space-y-6 relative z-10">
+<span class="px-3 py-1 rounded-full bg-primary-container/20 text-primary text-[0.6875rem] font-medium tracking-[0.05em] uppercase">Masterclass</span>
+<h3 class="text-3xl font-bold tracking-tight text-on-surface">The Editorial Interface</h3>
+<p class="text-on-surface-variant text-base leading-relaxed max-w-xl">
+                                 A comprehensive deep dive into applying high-end editorial print principles to digital product design. Learn to use negative space, typographic scale, and structural asymmetry.
+                             </p>
+<div class="pt-2">
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary font-medium py-3 px-6 rounded-DEFAULT transition-all duration-300 hover:opacity-90 inline-flex items-center gap-2">
+<span>Begin Journey</span>
+<span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+<div class="w-full md:w-1/3 aspect-square rounded-lg bg-surface-container-lowest border border-outline-variant/15 flex items-center justify-center relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-br from-surface-container to-surface-container-lowest"></div>
+<span class="material-symbols-outlined text-6xl text-outline-variant/50 relative z-10" style="font-variation-settings: 'wght' 200;">auto_stories</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

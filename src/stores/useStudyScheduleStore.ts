@@ -4,6 +4,7 @@ import { db } from '@/db'
 import type { StudySchedule, DayOfWeek } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { supabase } from '@/lib/auth/supabase'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 /**
  * Generates a 40-character hex token (160-bit entropy) using Web Crypto API.
@@ -30,6 +31,22 @@ interface StudyScheduleState {
   ) => Promise<StudySchedule | undefined>
   updateSchedule: (id: string, updates: Partial<StudySchedule>) => Promise<void>
   deleteSchedule: (id: string) => Promise<void>
+
+  /**
+   * Replace Dexie + in-memory collection from a validated remote snapshot.
+   *
+   * E96-S02: called by `hydrateP3P4FromSupabase` after a Supabase pull. Pure
+   * setter from the sync engine's perspective — uses `db.<table>.bulkPut`
+   * directly (never `syncableWrite`) so it does NOT enqueue any syncQueue
+   * rows. Echo-loop risk is the primary regression vector for this wiring;
+   * see E93 retrospective and `p3-p4-lww-sync.test.ts` echo-loop assertions.
+   *
+   * AC5 disposition: isAllDefaults guard is vacuously satisfied for
+   * `studySchedules` — it is a collection keyed by id, not a singleton. Rows
+   * from the remote are union-merged via `bulkPut` (per-row LWW happens at
+   * upload time for next local mutation).
+   */
+  hydrateFromRemote: (rows: StudySchedule[]) => Promise<void>
 
   // Feed token
   loadFeedToken: () => Promise<void>
@@ -72,7 +89,11 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.studySchedules.add(newSchedule)
+        await syncableWrite(
+          'studySchedules',
+          'add',
+          newSchedule as unknown as SyncableRecord,
+        )
       })
       set(state => ({ schedules: [...state.schedules, newSchedule] }))
       return newSchedule
@@ -97,7 +118,11 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.studySchedules.put(updatedSchedule)
+        await syncableWrite(
+          'studySchedules',
+          'put',
+          updatedSchedule as unknown as SyncableRecord,
+        )
       })
       set(state => ({
         schedules: state.schedules.map(s => (s.id === id ? updatedSchedule : s)),
@@ -115,7 +140,7 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.studySchedules.delete(id)
+        await syncableWrite('studySchedules', 'delete', id)
       })
       set(state => ({
         schedules: state.schedules.filter(s => s.id !== id),
@@ -124,6 +149,16 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
       console.error('[StudyScheduleStore] Failed to delete schedule:', error)
       toast.error('Failed to delete study schedule')
     }
+  },
+
+  hydrateFromRemote: async rows => {
+    if (!rows || rows.length === 0) return
+    // Direct Dexie write — NEVER through syncableWrite. The remote is already
+    // authoritative in Supabase; enqueueing here would create an echo loop.
+    await db.studySchedules.bulkPut(rows)
+    // Refresh in-memory cache from Dexie to reflect the merged state.
+    const schedules = await db.studySchedules.toArray()
+    set({ schedules, isLoaded: true })
   },
 
   getSchedulesForDay: (day, enabledOnly = true) => {

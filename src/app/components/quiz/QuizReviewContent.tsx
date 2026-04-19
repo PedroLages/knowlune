@@ -11,6 +11,7 @@ import { ReviewQuestionGrid } from '@/app/components/quiz/ReviewQuestionGrid'
 import { Button } from '@/app/components/ui/button'
 import { Progress } from '@/app/components/ui/progress'
 import { db } from '@/db'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 interface QuizReviewContentProps {
   quiz: Quiz
@@ -78,7 +79,14 @@ export function QuizReviewContent({ quiz, attempt, courseId, lessonId }: QuizRev
           { questionId, feedback: value, timestamp: new Date().toISOString() },
         ]
 
-        await db.quizzes.update(quiz.id, { questionFeedback: updated })
+        // E96-S02: syncableWrite requires a full record — merge the
+        // questionFeedback patch into the existing row and route through it
+        // so the feedback change enqueues for Supabase upload.
+        await syncableWrite(
+          'quizzes',
+          'put',
+          { ...currentQuiz, questionFeedback: updated } as unknown as SyncableRecord,
+        )
       } catch (err) {
         console.warn('[QuizReview] Failed to save feedback:', (err as Error).message)
         toast.error('Failed to save feedback. Please try again.')

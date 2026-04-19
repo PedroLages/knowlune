@@ -335,8 +335,10 @@ describe('submitQuiz', () => {
     // Capture pre-submit progress for comparison
     const progressBefore = useQuizStore.getState().currentProgress
 
-    // Make db.quizAttempts.add throw
-    vi.spyOn(db.quizAttempts, 'add').mockRejectedValueOnce(new Error('DB error'))
+    // Make syncableWrite throw (E96-S02: quizAttempts now routes through
+    // syncableWrite instead of db.quizAttempts.add directly).
+    const syncModule = await import('@/lib/sync/syncableWrite')
+    vi.spyOn(syncModule, 'syncableWrite').mockRejectedValueOnce(new Error('DB error'))
 
     const { toast } = await import('sonner')
     const toastWithError = toast as typeof toast & { error: ReturnType<typeof vi.fn> }

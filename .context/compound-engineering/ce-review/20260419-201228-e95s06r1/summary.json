@@ -1,0 +1,25 @@
+{
+  "runId": "20260419-201228-e95s06r1",
+  "story": "E95-S06",
+  "branch": "feature/e95-s06-notification-preferences-sync",
+  "commit": "8a581f32",
+  "plan": "docs/plans/2026-04-19-016-feat-e95-s06-notification-preferences-sync-plan.md",
+  "mode": "headless",
+  "round": 1,
+  "verdict": "Ready to merge",
+  "counts": {
+    "blockers": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "nit": 1
+  },
+  "knowlune_checks": {
+    "hydrateFromRemote_no_syncQueue": "PASS — hydrateFromRemote is a pure zustand setter (useNotificationPrefsStore.ts:168-174); does NOT call syncableWrite or db.put. Explicitly asserted by useNotificationPrefsStore.test.ts:'is a pure setter — does NOT write to Dexie or the sync queue' and by p3-notification-preferences-sync.test.ts:'no-echo-loop invariant'.",
+    "isAllDefaults_guard": "PASS — settings.ts:545-551 iterates NOTIFICATION_TOGGLE_FIELDS (12 toggle fields) AND explicitly compares quietHoursEnabled/Start/End against DEFAULTS. Does not compare id or updatedAt (correct; those differ by construction). Returns true only when local state matches DEFAULTS exactly.",
+    "inclusive_timestamp_gte": "PASS — settings.ts:560 'remoteUpdatedAt >= localUpdatedAt'. Tested by p3-notification-preferences-sync.test.ts:'inclusive timestamp: equal timestamps → remote wins'.",
+    "RLS_all_ops": "PASS — FOR ALL policy at migration line 64 covers SELECT/INSERT/UPDATE/DELETE with USING + WITH CHECK (auth.uid() = user_id). Note: GRANT is SELECT/INSERT/UPDATE only (no DELETE), matching plan R3 — DELETE is grant-blocked by design, which is a defense-in-depth decision consistent with other LWW tables.",
+    "fieldMap_and_upsertConflict": "PASS — tableRegistry.ts:552-553: fieldMap: { id: 'user_id' } and upsertConflictColumns: 'user_id' both present. Integration test tableRegistry.test.ts asserts toSnakeCase produces user_id (not id) in payload."
+  },
+  "findings": []
+}

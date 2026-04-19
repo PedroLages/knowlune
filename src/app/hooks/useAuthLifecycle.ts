@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { supabase } from '@/lib/auth/supabase'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { hydrateSettingsFromSupabase } from '@/lib/settings'
+import { hydrateP3P4FromSupabase } from '@/lib/sync/hydrateP3P4'
 import { backfillUserId } from '@/lib/sync/backfill'
 import { syncEngine } from '@/lib/sync/syncEngine'
 import { clearSyncState } from '@/lib/sync/clearSyncState'
@@ -57,6 +58,16 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       if (ignore) return
 
       await hydrateSettingsFromSupabase(userMetadata, userId)
+
+      // E96-S02: fan-out hydrate for the 9 P3/P4 LWW Dexie tables. Uses
+      // Promise.allSettled internally — per-table failures are logged and
+      // swallowed, matching the settings-hydrate error posture.
+      // F3 fix: await before syncEngine.start() so download-phase bulkPuts
+      // do not race with syncEngine writes (mirrors hydrateSettingsFromSupabase
+      // ordering pattern).
+      await hydrateP3P4FromSupabase(userId).catch(err => {
+        console.error('[useAuthLifecycle] hydrateP3P4FromSupabase failed:', err)
+      })
 
       // E95-S05: one-shot credential-to-vault migration. Runs on every sign-in
       // until it has uploaded every legacy `apiKey` / `auth.password` value

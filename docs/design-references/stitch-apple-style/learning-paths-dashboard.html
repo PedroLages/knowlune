@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Knowlune Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-high": "#e7e8ed",
+                        "on-primary-container": "#c9d9ff",
+                        "inverse-primary": "#adc6ff",
+                        "on-tertiary-container": "#ffcfbb",
+                        "secondary": "#4b5e86",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container": "#ededf2",
+                        "on-tertiary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed": "#d8e2ff",
+                        "surface-dim": "#d9dade",
+                        "surface-container-low": "#f3f3f8",
+                        "tertiary-container": "#a33f00",
+                        "primary-container": "#005bc1",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed": "#ffdbcc",
+                        "secondary-container": "#bbcffd",
+                        "tertiary-fixed-dim": "#ffb595",
+                        "tertiary": "#7c2f00",
+                        "on-secondary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "outline": "#727784",
+                        "on-primary": "#ffffff",
+                        "primary-fixed-dim": "#adc6ff",
+                        "secondary-fixed-dim": "#b3c6f4",
+                        "on-secondary-fixed": "#021a3f",
+                        "surface-tint": "#005bc0",
+                        "on-tertiary-fixed-variant": "#7c2e00",
+                        "inverse-surface": "#2e3034",
+                        "on-background": "#1a1c1f",
+                        "surface-container-highest": "#e2e2e7",
+                        "on-secondary-fixed-variant": "#33466d",
+                        "background": "#f9f9fe",
+                        "primary": "#004494",
+                        "on-error-container": "#93000a",
+                        "surface-variant": "#e2e2e7",
+                        "surface": "#f9f9fe",
+                        "primary-fixed": "#d8e2ff",
+                        "surface-bright": "#f9f9fe",
+                        "outline-variant": "#c2c6d5",
+                        "inverse-on-surface": "#f0f0f5",
+                        "on-secondary-container": "#44587f",
+                        "on-tertiary-fixed": "#351000",
+                        "on-surface": "#1a1c1f",
+                        "on-primary-fixed": "#001a41",
+                        "on-surface-variant": "#424753",
+                        "on-primary-fixed-variant": "#004493"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "3xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    },
+                    boxShadow: {
+                        'ambient': '0 10px 40px rgba(0, 0, 0, 0.04)',
+                        'ambient-hover': '0 20px 60px rgba(0, 0, 0, 0.08)'
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.surface');
+            color: theme('colors.on-surface');
+            font-family: theme('fontFamily.body');
+            -webkit-font-smoothing: antialiased;
+        }
+        .glass-panel {
+            background: rgba(249, 249, 254, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .primary-gradient {
+            background: linear-gradient(180deg, theme('colors.primary-container') 0%, theme('colors.primary') 100%);
+        }
+        .text-tracking-director {
+            letter-spacing: 0.15em;
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden bg-surface text-on-surface">
+<!-- SideNavBar -->
+<nav class="h-screen w-72 fixed left-0 top-0 bg-surface-container-low bg-gradient-to-r from-[#f3f3f8] to-[#f9f9fe] flex flex-col p-6 gap-y-2 z-50">
+<div class="mb-8 px-4 mt-4">
+<h1 class="text-primary font-black tracking-widest text-2xl uppercase">KNOWLUNE</h1>
+<p class="text-on-surface-variant text-xs mt-1 font-medium tracking-wide">Learning Platform</p>
+</div>
+<div class="flex-1 space-y-2">
+<!-- Active Tab -->
+<a class="flex items-center gap-4 px-4 py-3 bg-surface-container-lowest text-primary shadow-ambient rounded-xl transition-all duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">grid_view</span>
+<span class="font-['Inter'] uppercase tracking-[0.2rem] text-[10px] font-bold">Dashboard</span>
+</a>
+<!-- Inactive Tabs -->
+<a class="flex items-center gap-4 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-lowest/50 rounded-xl transition-all duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-['Inter'] uppercase tracking-[0.2rem] text-[10px] font-bold">Courses</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-lowest/50 rounded-xl transition-all duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined">shelves</span>
+<span class="font-['Inter'] uppercase tracking-[0.2rem] text-[10px] font-bold">Library</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-lowest/50 rounded-xl transition-all duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined">military_tech</span>
+<span class="font-['Inter'] uppercase tracking-[0.2rem] text-[10px] font-bold">Achievements</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-lowest/50 rounded-xl transition-all duration-300 ease-in-out mt-auto" href="#">
+<span class="material-symbols-outlined">tune</span>
+<span class="font-['Inter'] uppercase tracking-[0.2rem] text-[10px] font-bold">Settings</span>
+</a>
+</div>
+</nav>
+<!-- Main Content -->
+<main class="ml-72 flex-1 h-screen overflow-y-auto px-12 py-10">
+<!-- TopAppBar / Header Area (Glassmorphism concept for top section) -->
+<header class="w-full sticky top-0 z-40 glass-panel no-border shadow-ambient flex items-center justify-between px-8 h-20 rounded-3xl mb-12 -mx-4">
+<h2 class="text-2xl font-bold tracking-tight text-on-surface">Welcome back, Alex.</h2>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+<img alt="User Profile" class="w-10 h-10 rounded-full object-cover ml-2 shadow-sm" data-alt="close up portrait of young professional male in soft studio lighting against neutral background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXUfgJXGfAwCR5k3GBKx1LTMh8QB9Fb4GcHfKrfEjcjf2guBnhdO5A3TZfm8Hps02g1bHoHjQJIsUvKjY7eBwA2GkzlUnT4MmAdjS48YOnZSl4AVkNhchVDgOglzFdoAmBYv4bVwDV_2yLOVG12c2XfalGtxKDMACE5Dn6TL5QWHVYK7XWnyIpdsGQ5pjlXSBC62lA0R1_cRLquk54MNEJYThQi-9GpRyJcp8Snw8XEtQzb-Yp8JGtTpv2rY85Z_h7lDnYH6DYHd_e"/>
+</div>
+</header>
+<div class="max-w-6xl mx-auto space-y-16 pb-20">
+<!-- Continue Learning Section -->
+<section>
+<h3 class="font-label text-sm uppercase text-tracking-director font-bold text-on-surface-variant mb-6">Continue Learning</h3>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<!-- Path Card 1 -->
+<div class="bg-surface-container-lowest rounded-3xl p-6 shadow-ambient hover:shadow-ambient-hover transition-all duration-300 flex items-center gap-6 group cursor-pointer">
+<div class="w-20 h-20 rounded-2xl overflow-hidden shrink-0 bg-surface-container-low flex items-center justify-center relative">
+<img alt="Abstract pattern" class="w-full h-full object-cover opacity-80" data-alt="abstract flowing liquid 3d rendering in blue and white tones soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJk5ZWaafky_6sv-cuODdNUtaoNoVf8FvN4OVC7fneZCKzKgBLsicixwMy0WQVkk9GksXhnRZrwx0kHI_E4nG_VwQ7oifFmoRVYM-ZPHbRrPyXzvpTuYTy-iTlBr4rGcwjkJjol7pDK400aHvQfkdWvS0kO0cQ4EqhotSfmpmN6tEKBDVNIzUpSxC-C9lLrZ3e6-A6DFjugjPZyQLcuKJCqnOiNw4O0Ab8b2qURDBVUVV7pz8hKQEDvQf9HW5i4TXxRxU7aBlR8EpM"/>
+<div class="absolute inset-0 bg-primary/10 mix-blend-multiply"></div>
+</div>
+<div class="flex-1">
+<h4 class="text-lg font-semibold text-on-surface mb-1">Advanced UI Design Systems</h4>
+<p class="text-sm text-on-surface-variant mb-4">Module 3: Tokens &amp; Variables</p>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 65%"></div>
+</div>
+</div>
+<button class="w-12 h-12 rounded-full bg-surface-container-low text-primary flex items-center justify-center group-hover:bg-primary-container group-hover:text-on-primary transition-colors shrink-0">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+<!-- Path Card 2 -->
+<div class="bg-surface-container-lowest rounded-3xl p-6 shadow-ambient hover:shadow-ambient-hover transition-all duration-300 flex items-center gap-6 group cursor-pointer">
+<div class="w-20 h-20 rounded-2xl overflow-hidden shrink-0 bg-surface-container-low flex items-center justify-center relative">
+<img alt="Abstract tech" class="w-full h-full object-cover opacity-80 grayscale mix-blend-luminosity" data-alt="retro tech computing components close up macro shot soft lighting monochrome" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAztLFyuoyi_Z-vt5bzDuP0wuOTGZlPwV1zcj9O-HB4XwfMK14JfNTfxb14t9ugRD2dpOf8ILOyBddoZEjxXdlpgvLRHTGpGIlbY-LK3bimp5YOd6wir8VDxsrwWRzUU2ndCPSQHUJKcCMyFQc02SkiBtBIZvSrBH-Uylv78EIfd5J0z7XtiqU_vUS66_sMRL5yqv4so3d8otPPDS3MLRUFRbcMeNsswOcbEgiKszgs0M5GVa0TV5IuVwYLUTIKR1QkLxIf3kMaO3hm"/>
+<div class="absolute inset-0 bg-primary-container/20 mix-blend-overlay"></div>
+</div>
+<div class="flex-1">
+<h4 class="text-lg font-semibold text-on-surface mb-1">Functional Programming in TS</h4>
+<p class="text-sm text-on-surface-variant mb-4">Module 1: Pure Functions</p>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 15%"></div>
+</div>
+</div>
+<button class="w-12 h-12 rounded-full bg-surface-container-low text-primary flex items-center justify-center group-hover:bg-primary-container group-hover:text-on-primary transition-colors shrink-0">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+</div>
+</section>
+<!-- All Paths Bento Grid -->
+<section>
+<div class="flex items-center justify-between mb-8">
+<h3 class="font-label text-sm uppercase text-tracking-director font-bold text-on-surface-variant">ALL PATHS</h3>
+<button class="text-sm font-medium text-primary hover:text-primary-container transition-colors uppercase tracking-widest text-[10px]">Filter</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+<!-- Bento Item 1: In Progress -->
+<div class="bg-surface-container-lowest rounded-3xl p-8 shadow-ambient hover:-translate-y-1 transition-transform duration-300 flex flex-col justify-between min-h-[280px]">
+<div class="flex justify-between items-start mb-6">
+<div class="w-12 h-12 rounded-2xl bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-2xl">palette</span>
+</div>
+<span class="px-3 py-1 rounded-full bg-primary-fixed-dim text-on-primary-fixed-variant text-xs font-semibold uppercase tracking-wider">In Progress</span>
+</div>
+<div>
+<h4 class="text-xl font-bold text-on-surface mb-2 leading-tight">Mastering Color Theory</h4>
+<div class="flex items-center gap-4 text-sm text-on-surface-variant mb-6">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">menu_book</span> 12 Lessons</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">schedule</span> 4h 30m</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 45%"></div>
+</div>
+</div>
+</div>
+<!-- Bento Item 2: Not Started -->
+<div class="bg-surface-container-lowest rounded-3xl p-8 shadow-ambient hover:-translate-y-1 transition-transform duration-300 flex flex-col justify-between min-h-[280px]">
+<div class="flex justify-between items-start mb-6">
+<div class="w-12 h-12 rounded-2xl bg-surface-container-low flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-2xl">terminal</span>
+</div>
+<span class="px-3 py-1 rounded-full bg-surface-container-highest text-on-surface-variant text-xs font-semibold uppercase tracking-wider">Not Started</span>
+</div>
+<div>
+<h4 class="text-xl font-bold text-on-surface mb-2 leading-tight">React Performance Patterns</h4>
+<div class="flex items-center gap-4 text-sm text-on-surface-variant mb-6">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">menu_book</span> 8 Lessons</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">schedule</span> 3h 15m</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 0%"></div>
+</div>
+</div>
+</div>
+<!-- Bento Item 3: Completed -->
+<div class="bg-surface-container-lowest rounded-3xl p-8 shadow-ambient hover:-translate-y-1 transition-transform duration-300 flex flex-col justify-between min-h-[280px]">
+<div class="flex justify-between items-start mb-6">
+<div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">done_all</span>
+</div>
+<span class="px-3 py-1 rounded-full bg-primary text-on-primary text-xs font-semibold uppercase tracking-wider">Completed</span>
+</div>
+<div>
+<h4 class="text-xl font-bold text-on-surface mb-2 leading-tight">CSS Architecture</h4>
+<div class="flex items-center gap-4 text-sm text-on-surface-variant mb-6">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">menu_book</span> 15 Lessons</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">schedule</span> 5h 00m</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 100%"></div>
+</div>
+</div>
+</div>
+<!-- Bento Item 4: Not Started -->
+<div class="bg-surface-container-lowest rounded-3xl p-8 shadow-ambient hover:-translate-y-1 transition-transform duration-300 flex flex-col justify-between min-h-[280px]">
+<div class="flex justify-between items-start mb-6">
+<div class="w-12 h-12 rounded-2xl bg-surface-container-low flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-2xl">animation</span>
+</div>
+<span class="px-3 py-1 rounded-full bg-surface-container-highest text-on-surface-variant text-xs font-semibold uppercase tracking-wider">Not Started</span>
+</div>
+<div>
+<h4 class="text-xl font-bold text-on-surface mb-2 leading-tight">Micro-interactions in UI</h4>
+<div class="flex items-center gap-4 text-sm text-on-surface-variant mb-6">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">menu_book</span> 6 Lessons</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">schedule</span> 2h 45m</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 0%"></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

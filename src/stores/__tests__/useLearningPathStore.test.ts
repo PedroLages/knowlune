@@ -20,6 +20,9 @@ vi.mock('@/lib/aiEventTracking', () => ({
 
 let useLearningPathStore: (typeof import('@/stores/useLearningPathStore'))['useLearningPathStore']
 let db: (typeof import('@/db/schema'))['db']
+// E96-S02: writes now route through syncableWrite. Error-path tests that
+// previously mocked Dexie table methods now mock this instead.
+let syncableWriteModule: typeof import('@/lib/sync/syncableWrite')
 
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
@@ -28,6 +31,7 @@ beforeEach(async () => {
   useLearningPathStore = storeMod.useLearningPathStore
   const dbMod = await import('@/db/schema')
   db = dbMod.db
+  syncableWriteModule = await import('@/lib/sync/syncableWrite')
 })
 
 describe('useLearningPathStore initial state', () => {
@@ -113,7 +117,7 @@ describe('createPath', () => {
   })
 
   it('should rollback on DB error', async () => {
-    vi.spyOn(db.learningPaths, 'add').mockRejectedValue(new Error('Write fail'))
+    vi.spyOn(syncableWriteModule, 'syncableWrite').mockRejectedValue(new Error('Write fail'))
 
     try {
       await act(async () => {
@@ -148,7 +152,7 @@ describe('renamePath', () => {
     })
     const pathId = useLearningPathStore.getState().paths[0].id
 
-    vi.spyOn(db.learningPaths, 'update').mockRejectedValue(new Error('fail'))
+    vi.spyOn(syncableWriteModule, 'syncableWrite').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
       await useLearningPathStore.getState().renamePath(pathId, 'Renamed')
@@ -179,7 +183,7 @@ describe('updateDescription', () => {
     })
     const pathId = useLearningPathStore.getState().paths[0].id
 
-    vi.spyOn(db.learningPaths, 'update').mockRejectedValue(new Error('fail'))
+    vi.spyOn(syncableWriteModule, 'syncableWrite').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
       await useLearningPathStore.getState().updateDescription(pathId, 'New desc')
@@ -285,7 +289,7 @@ describe('addCourseToPath', () => {
     })
     const pathId = useLearningPathStore.getState().paths[0].id
 
-    vi.spyOn(db.learningPathEntries, 'add').mockRejectedValue(new Error('fail'))
+    vi.spyOn(syncableWriteModule, 'syncableWrite').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
       await useLearningPathStore.getState().addCourseToPath(pathId, 'c1', 'imported')
@@ -342,7 +346,7 @@ describe('removeCourseFromPath', () => {
       await useLearningPathStore.getState().addCourseToPath(pathId, 'c1', 'imported')
     })
 
-    vi.spyOn(db.learningPathEntries, 'delete').mockRejectedValue(new Error('fail'))
+    vi.spyOn(syncableWriteModule, 'syncableWrite').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
       await useLearningPathStore.getState().removeCourseFromPath(pathId, 'c1')
@@ -419,13 +423,18 @@ describe('clearPath', () => {
     })
     const pathId = useLearningPathStore.getState().paths[0].id
 
-    // Create a mock WhereClause to make the chained call work
-    const mockWhere = {
-      equals: vi.fn().mockReturnValue({
-        delete: vi.fn().mockRejectedValue(new Error('fail')),
-      }),
-    }
-    vi.spyOn(db.learningPathEntries, 'where').mockReturnValue(mockWhere as never)
+    // Seed at least one entry so clearPath has something to delete.
+    await db.learningPathEntries.add({
+      id: 'e-fail-1',
+      pathId,
+      courseId: 'c1',
+      courseType: 'imported',
+      position: 1,
+      isManuallyOrdered: false,
+    })
+
+    // Force the syncableWrite delete to fail.
+    vi.spyOn(syncableWriteModule, 'syncableWrite').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
       await useLearningPathStore.getState().clearPath(pathId)
@@ -571,7 +580,7 @@ describe('reorderCourse error handling', () => {
       await useLearningPathStore.getState().addCourseToPath(pathId, 'c2', 'imported')
     })
 
-    vi.spyOn(db.learningPathEntries, 'update').mockRejectedValue(new Error('fail'))
+    vi.spyOn(syncableWriteModule, 'syncableWrite').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
       await useLearningPathStore.getState().reorderCourse(pathId, 0, 1)
@@ -592,7 +601,7 @@ describe('applyAIOrder error handling', () => {
       await useLearningPathStore.getState().addCourseToPath(pathId, 'c1', 'imported')
     })
 
-    vi.spyOn(db.learningPathEntries, 'update').mockRejectedValue(new Error('fail'))
+    vi.spyOn(syncableWriteModule, 'syncableWrite').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
       await useLearningPathStore

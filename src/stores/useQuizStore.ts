@@ -16,6 +16,7 @@ import { toastError } from '@/lib/toastHelpers'
 import { getQuizPreferences } from '@/lib/quizPreferences'
 import { logStudyAction } from '@/lib/studyLog'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 interface QuizState {
   currentQuiz: Quiz | null
@@ -152,7 +153,16 @@ export const useQuizStore = create<QuizState>()(
 
         try {
           await persistWithRetry(async () => {
-            await db.quizAttempts.add(attempt)
+            // E96-S02: Route through syncableWrite so the attempt is enqueued
+            // for Supabase upload. `quizAttempts` is registry-flagged
+            // `insertOnly: true`; the upload engine enforces
+            // INSERT ... ON CONFLICT DO NOTHING. No update/delete paths exist
+            // for this table — attempts are immutable once created.
+            await syncableWrite(
+              'quizAttempts',
+              'add',
+              attempt as unknown as SyncableRecord,
+            )
           })
 
           // Cross-store: mark lesson complete only after successful DB write.

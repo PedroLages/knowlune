@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lucid Studio - Onboarding</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#eceef5",
+                        "secondary": "#595e72",
+                        "primary-fixed-dim": "#005be5",
+                        "on-error-container": "#6e0a12",
+                        "error-dim": "#67040d",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed-variant": "#555b6f",
+                        "secondary-fixed": "#dde2f9",
+                        "secondary-container": "#dde2f9",
+                        "on-primary-fixed-variant": "#dde3ff",
+                        "background": "#f9f9fe",
+                        "error": "#a83836",
+                        "on-tertiary-fixed": "#433056",
+                        "primary-fixed": "#0266ff",
+                        "surface-container-high": "#e5e8f0",
+                        "surface-tint": "#0055d7",
+                        "primary": "#0055d7",
+                        "on-secondary": "#f9f8ff",
+                        "surface-dim": "#d6dae3",
+                        "on-secondary-fixed": "#393f51",
+                        "on-surface-variant": "#5b5f67",
+                        "surface-bright": "#f9f9fe",
+                        "on-primary": "#f9f8ff",
+                        "on-surface": "#2e333a",
+                        "on-tertiary-container": "#57426a",
+                        "surface-container-highest": "#dfe2ec",
+                        "inverse-surface": "#0c0e12",
+                        "inverse-primary": "#5e8bff",
+                        "on-primary-fixed": "#ffffff",
+                        "tertiary-fixed": "#e8cdfd",
+                        "secondary-dim": "#4d5366",
+                        "tertiary": "#6c567f",
+                        "primary-container": "#0266ff",
+                        "surface": "#f9f9fe",
+                        "on-secondary-container": "#4c5164",
+                        "tertiary-dim": "#604a72",
+                        "tertiary-fixed-dim": "#dabfee",
+                        "error-container": "#fa746f",
+                        "outline": "#767b83",
+                        "on-tertiary-fixed-variant": "#614c74",
+                        "on-background": "#2e333a",
+                        "on-tertiary": "#fff6ff",
+                        "on-error": "#fff7f6",
+                        "outline-variant": "#aeb2bb",
+                        "surface-variant": "#dfe2ec",
+                        "on-primary-container": "#ffffff",
+                        "secondary-fixed-dim": "#cfd3eb",
+                        "primary-dim": "#004abe",
+                        "tertiary-container": "#e8cdfd",
+                        "inverse-on-surface": "#9c9da1",
+                        "surface-container-low": "#f2f3fa"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen antialiased selection:bg-primary-container selection:text-on-primary-container flex flex-col">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-[#f9f9fe]/80 dark:bg-slate-950/80 backdrop-blur-2xl font-['Inter'] antialiased tracking-[-0.02em] docked full-width top-0">
+<div class="flex justify-between items-center px-12 py-8 w-full max-w-7xl mx-auto">
+<div class="text-xl font-bold tracking-tighter text-slate-900 dark:text-white">Lucid Studio</div>
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-low hover:opacity-60 transition-all duration-300 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500">account_circle</span>
+</button>
+</div>
+</div>
+</nav>
+<!-- Main Canvas -->
+<main class="flex-grow pt-32 pb-24 px-6 md:px-12 max-w-4xl mx-auto w-full flex flex-col items-center">
+<!-- Progress Indicator -->
+<div class="w-full max-w-md h-1 bg-surface-variant rounded-full mb-16 overflow-hidden">
+<div class="h-full bg-primary w-1/3 rounded-full"></div>
+</div>
+<!-- Top Section -->
+<header class="text-center mb-20">
+<div class="w-32 h-32 mx-auto mb-8 rounded-xl bg-surface-container-lowest shadow-[0_20px_60px_-15px_rgba(46,51,58,0.06)] flex items-center justify-center">
+<img alt="Book stack" class="w-24 h-24 object-cover rounded-lg" data-alt="minimalist graphic illustration of a stack of books or learning materials in soft monochrome blue tones, high-end editorial style on a white background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzMpnoumvc4Mrj0quuLJ08G70f-ybbQcIC8MgL37yCzYfC_eLUkcUTOr5QPssUKQrIuI-nLmNv-wR7dD1Kwco3H-5FqbaIHC5tH7KDEvWp_dBj8mL-vpRiS4fwZi1t9c5jhKw7jKWVIdtGyK5Kos3jUo4by5iERV2A7ubBQz7szUklnNI5CMByTjDRUL3xyl8U4DnxCY-ZJh4SBxAJ3isM6qbC2apPeugbifF4M9AwquQ2B92ag5mAvSGtIc6Guz-h8N8xi6LPetNU"/>
+</div>
+<h1 class="font-headline text-[3.5rem] leading-tight font-bold tracking-[-0.02em] text-on-surface mb-4">Start Your Learning Journey</h1>
+<p class="font-body text-lg text-on-surface-variant max-w-lg mx-auto leading-relaxed">Let's personalize your path to mastery.</p>
+</header>
+<!-- Middle Section (Guided Picker Stepper) -->
+<section class="w-full space-y-16 mb-24">
+<!-- Step 1: Choose Topic -->
+<div class="space-y-6">
+<h2 class="font-headline text-2xl font-semibold tracking-[-0.01em]">Choose Topic</h2>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-6">
+<button class="bg-surface-container-lowest p-6 rounded-xl flex flex-col items-center justify-center gap-4 shadow-[0_20px_60px_-15px_rgba(46,51,58,0.06)] hover:bg-surface-container-high transition-colors active:scale-95 group">
+<span class="material-symbols-outlined text-3xl text-secondary group-hover:text-primary transition-colors">design_services</span>
+<span class="font-label font-medium text-on-surface">Design</span>
+</button>
+<button class="bg-primary text-on-primary p-6 rounded-xl flex flex-col items-center justify-center gap-4 shadow-[0_20px_60px_-15px_rgba(0,85,215,0.2)] active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-3xl">code</span>
+<span class="font-label font-medium">Coding</span>
+</button>
+<button class="bg-surface-container-lowest p-6 rounded-xl flex flex-col items-center justify-center gap-4 shadow-[0_20px_60px_-15px_rgba(46,51,58,0.06)] hover:bg-surface-container-high transition-colors active:scale-95 group">
+<span class="material-symbols-outlined text-3xl text-secondary group-hover:text-primary transition-colors">storefront</span>
+<span class="font-label font-medium text-on-surface">Business</span>
+</button>
+<button class="bg-surface-container-lowest p-6 rounded-xl flex flex-col items-center justify-center gap-4 shadow-[0_20px_60px_-15px_rgba(46,51,58,0.06)] hover:bg-surface-container-high transition-colors active:scale-95 group">
+<span class="material-symbols-outlined text-3xl text-secondary group-hover:text-primary transition-colors">campaign</span>
+<span class="font-label font-medium text-on-surface">Marketing</span>
+</button>
+<button class="bg-surface-container-lowest p-6 rounded-xl flex flex-col items-center justify-center gap-4 shadow-[0_20px_60px_-15px_rgba(46,51,58,0.06)] hover:bg-surface-container-high transition-colors active:scale-95 group">
+<span class="material-symbols-outlined text-3xl text-secondary group-hover:text-primary transition-colors">science</span>
+<span class="font-label font-medium text-on-surface">Science</span>
+</button>
+<button class="bg-surface-container-lowest p-6 rounded-xl flex flex-col items-center justify-center gap-4 shadow-[0_20px_60px_-15px_rgba(46,51,58,0.06)] hover:bg-surface-container-high transition-colors active:scale-95 group">
+<span class="material-symbols-outlined text-3xl text-secondary group-hover:text-primary transition-colors">edit_document</span>
+<span class="font-label font-medium text-on-surface">Writing</span>
+</button>
+</div>
+</div>
+<!-- Step 2: Select Level -->
+<div class="space-y-6">
+<h2 class="font-headline text-2xl font-semibold tracking-[-0.01em]">Select Level</h2>
+<div class="flex flex-wrap gap-4">
+<button class="px-8 py-4 rounded-full bg-surface-container text-on-surface-variant font-medium hover:bg-surface-container-high transition-colors">Beginner</button>
+<button class="px-8 py-4 rounded-full bg-primary text-on-primary font-medium shadow-[0_10px_30px_-10px_rgba(0,85,215,0.3)]">Intermediate</button>
+<button class="px-8 py-4 rounded-full bg-surface-container text-on-surface-variant font-medium hover:bg-surface-container-high transition-colors">Advanced</button>
+</div>
+</div>
+<!-- Step 3: Duration Goal -->
+<div class="space-y-6">
+<div class="flex justify-between items-end">
+<h2 class="font-headline text-2xl font-semibold tracking-[-0.01em]">Duration Goal</h2>
+<span class="font-label text-primary font-medium">8 Weeks</span>
+</div>
+<div class="bg-surface-container-lowest p-8 rounded-xl shadow-[0_20px_60px_-15px_rgba(46,51,58,0.06)]">
+<input class="w-full h-2 bg-surface-variant rounded-lg appearance-none cursor-pointer accent-primary" max="12" min="1" type="range" value="8"/>
+<div class="flex justify-between text-sm text-secondary mt-4 font-medium">
+<span>1 Week</span>
+<span>12 Weeks</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Bottom Section -->
+<section class="w-full space-y-8">
+<!-- Preview Card -->
+<div class="bg-surface-container-low rounded-xl p-8 border border-outline-variant/15 flex items-center justify-between shadow-[0_20px_60px_-15px_rgba(46,51,58,0.06)] relative overflow-hidden">
+<div class="absolute right-0 top-0 w-32 h-32 bg-primary/5 rounded-bl-full"></div>
+<div class="relative z-10">
+<p class="text-sm text-primary font-semibold mb-1 uppercase tracking-wider">AI Recommended</p>
+<h3 class="font-headline text-xl font-bold mb-2">Modern UI Design Fundamentals</h3>
+<div class="flex items-center gap-4 text-secondary text-sm font-medium">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">menu_book</span> 24 Lessons</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">calendar_today</span> 8 Weeks</span>
+</div>
+</div>
+<div class="w-16 h-16 bg-surface-container-lowest rounded-full flex items-center justify-center shadow-sm relative z-10">
+<span class="material-symbols-outlined text-primary text-2xl">auto_awesome</span>
+</div>
+</div>
+<!-- CTA -->
+<div class="flex justify-center pt-8">
+<button class="px-12 py-5 rounded-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-semibold text-lg shadow-[0_20px_60px_-15px_rgba(0,85,215,0.4)] hover:opacity-90 active:scale-95 transition-all">
+                    Create My Path
+                </button>
+</div>
+</section>
+</main>
+</body></html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lesson Player - React Mastery Path</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface": "#1a1c1f",
+                    "on-primary-fixed": "#001a41",
+                    "on-surface-variant": "#424753",
+                    "on-primary-fixed-variant": "#004493",
+                    "surface": "#f9f9fe",
+                    "surface-variant": "#e2e2e7",
+                    "on-error-container": "#93000a",
+                    "primary": "#004494",
+                    "primary-fixed": "#d8e2ff",
+                    "outline-variant": "#c2c6d5",
+                    "inverse-on-surface": "#f0f0f5",
+                    "surface-bright": "#f9f9fe",
+                    "on-tertiary-fixed": "#351000",
+                    "on-secondary-container": "#44587f",
+                    "on-tertiary-fixed-variant": "#7c2e00",
+                    "on-background": "#1a1c1f",
+                    "inverse-surface": "#2e3034",
+                    "surface-container-highest": "#e2e2e7",
+                    "background": "#f9f9fe",
+                    "on-secondary-fixed-variant": "#33466d",
+                    "outline": "#727784",
+                    "on-primary": "#ffffff",
+                    "surface-tint": "#005bc0",
+                    "primary-fixed-dim": "#adc6ff",
+                    "secondary-fixed-dim": "#b3c6f4",
+                    "on-secondary-fixed": "#021a3f",
+                    "tertiary-fixed-dim": "#ffb595",
+                    "tertiary": "#7c2f00",
+                    "error": "#ba1a1a",
+                    "on-secondary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "primary-container": "#005bc1",
+                    "secondary-container": "#bbcffd",
+                    "tertiary-fixed": "#ffdbcc",
+                    "on-tertiary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "surface-dim": "#d9dade",
+                    "secondary-fixed": "#d8e2ff",
+                    "tertiary-container": "#a33f00",
+                    "surface-container-low": "#f3f3f8",
+                    "on-primary-container": "#c9d9ff",
+                    "surface-container-high": "#e7e8ed",
+                    "secondary": "#4b5e86",
+                    "inverse-primary": "#adc6ff",
+                    "on-tertiary-container": "#ffcfbb",
+                    "surface-container": "#ededf2",
+                    "surface-container-lowest": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "spacing": {},
+            "fontFamily": {
+                    "headline": [
+                            "Inter"
+                    ],
+                    "body": [
+                            "Inter"
+                    ],
+                    "label": [
+                            "Inter"
+                    ]
+            }
+        },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9f9fe;
+            color: #1a1c1f;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased flex h-screen overflow-hidden">
+<!-- Path Progress Rail -->
+<div class="fixed top-0 left-0 w-full h-[4px] bg-surface-container-highest z-50">
+<div class="h-full bg-primary-container" style="width: 48%;"></div>
+</div>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col h-full overflow-y-auto mt-[4px]">
+<!-- Breadcrumb & Top Nav -->
+<nav class="flex justify-between items-center px-6 py-3 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl docked full-width top-0 z-40 sticky">
+<div class="flex items-center gap-2 font-['Inter'] text-sm tracking-tight font-medium text-slate-500">
+<span class="hover:text-slate-900 cursor-pointer transition-colors">React Mastery Path</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="hover:text-slate-900 cursor-pointer transition-colors">Module 2: Hooks</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="text-blue-600 font-semibold cursor-default">Lesson 3: useState Deep Dive</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-slate-500 hover:text-slate-900 transition-colors hover:bg-slate-100/50 dark:hover:bg-slate-800/50 rounded-full p-2 scale-95 duration-200">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<div class="tonal-shift bg-slate-100/50 dark:bg-slate-800/50 h-[2px] w-full absolute bottom-0 left-0"></div>
+</nav>
+<div class="max-w-6xl w-full mx-auto p-8 lg:p-12 pb-32 flex-1">
+<!-- Video Player Placeholder -->
+<div class="w-full aspect-video bg-surface-container-lowest rounded-xl shadow-[0_20px_60px_rgba(26,28,31,0.06)] relative overflow-hidden group mb-16">
+<!-- Placeholder Image -->
+<img alt="Video Placeholder" class="w-full h-full object-cover opacity-90" data-alt="close up of code on a computer screen with syntax highlighting in a dark themed editor" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnl_AUFyPHT8snjSFLmjACTAAw2yMwHN2sUJa2B8CqzJQqndr0OOj2pEeF9MMVRcpwM4q4omJkON7Dwj0rtR_3aYfXFveo9cosWLaVLNIJhIvrKbl2zFiryPIe7-chGzT1CL7s1kV7FZJii9tZYHGP-5yjbivGU60zX-fm-EUbTb_BjFnSBGXPz4GzY0y_Y-VbpQfs2BSVQW3v2y46jzQMtxiS6jZuZSKFgCHHysjpqXQPL0MXUGHB6oKs9dYFmFQ1mdPDqQH-HBGP"/>
+<!-- Overlay Gradient -->
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+<!-- Center Play Button -->
+<button class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-md text-white rounded-full p-6 hover:bg-white/30 transition-all duration-300 shadow-lg group-hover:scale-110">
+<span class="material-symbols-outlined fill text-5xl" data-icon="play_arrow" data-weight="fill" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<!-- Controls Bar -->
+<div class="absolute bottom-0 w-full p-6 text-white bg-gradient-to-t from-black/80 to-transparent flex flex-col gap-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+<!-- Progress Scrubber -->
+<div class="w-full h-1 bg-white/30 rounded-full cursor-pointer relative">
+<div class="absolute h-full bg-primary-container rounded-full w-1/3"></div>
+<div class="absolute h-3 w-3 bg-white rounded-full -top-1 shadow left-1/3 transform -translate-x-1/2"></div>
+</div>
+<div class="flex justify-between items-center text-sm font-label font-medium tracking-wide">
+<div class="flex items-center gap-4">
+<button class="hover:text-primary-container transition-colors"><span class="material-symbols-outlined" data-icon="pause">pause</span></button>
+<button class="hover:text-primary-container transition-colors"><span class="material-symbols-outlined" data-icon="volume_up">volume_up</span></button>
+<span>12:04 / 35:20</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="hover:text-primary-container transition-colors"><span class="material-symbols-outlined" data-icon="settings">settings</span></button>
+<button class="hover:text-primary-container transition-colors"><span class="material-symbols-outlined" data-icon="fullscreen">fullscreen</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Lesson Info -->
+<div class="max-w-4xl">
+<h1 class="text-[2.75rem] leading-[1.1] font-bold tracking-[-0.02em] mb-8 text-on-surface">useState Deep Dive</h1>
+<p class="text-base leading-[1.6] text-on-surface-variant mb-6 font-body">
+                    In this lesson, we explore the core principles of React's useState hook. Moving beyond simple counters, we'll examine how React batches state updates, handles complex objects and arrays, and the performance implications of deep rendering trees. By the end, you'll understand the mental model required to manage component-level state efficiently and predictably.
+                </p>
+<div class="flex gap-4 mb-12">
+<span class="inline-flex items-center px-4 py-2 rounded-full bg-surface-container text-on-surface font-label text-sm font-medium tracking-wide">
+<span class="material-symbols-outlined text-sm mr-2" data-icon="schedule">schedule</span> 35 Mins
+                    </span>
+<span class="inline-flex items-center px-4 py-2 rounded-full bg-surface-container text-on-surface font-label text-sm font-medium tracking-wide">
+<span class="material-symbols-outlined text-sm mr-2" data-icon="description">description</span> Transcript Available
+                    </span>
+</div>
+</div>
+</div>
+</main>
+<!-- Side Sidebar -->
+<aside class="hidden md:flex flex-col w-80 h-screen fixed right-0 bg-slate-50 dark:bg-slate-950 pt-[4px] shadow-[-10px_0_40px_rgba(0,0,0,0.02)] z-30 tonal-shift">
+<div class="p-6 pb-2 border-b-0">
+<h2 class="text-xl font-bold text-slate-900 dark:text-white mb-1">Module 2: Hooks</h2>
+<p class="text-sm text-slate-500 font-label tracking-wide uppercase">40% Completed</p>
+</div>
+<div class="flex flex-col gap-2 p-6 overflow-y-auto flex-1 font-['Inter'] text-sm">
+<!-- Item 1 -->
+<div class="flex items-center gap-3 p-3 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-300 cursor-pointer">
+<span class="material-symbols-outlined text-green-500 fill" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<div class="flex-1">
+<h4 class="font-medium">1. Introduction to Hooks</h4>
+<p class="text-xs opacity-70 mt-0.5">10:05</p>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex items-center gap-3 p-3 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-300 cursor-pointer">
+<span class="material-symbols-outlined text-green-500 fill" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<div class="flex-1">
+<h4 class="font-medium">2. The Rules of Hooks</h4>
+<p class="text-xs opacity-70 mt-0.5">15:30</p>
+</div>
+</div>
+<!-- Item 3 (Active) -->
+<div class="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 text-blue-600 font-bold rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.03)] transition-all duration-300 cursor-pointer relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-blue-600"></div>
+<span class="material-symbols-outlined fill" data-icon="play_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+<div class="flex-1 pl-1">
+<h4 class="font-bold">3. useState Deep Dive</h4>
+<p class="text-xs opacity-80 mt-0.5 font-normal">35:20</p>
+</div>
+</div>
+<!-- Item 4 -->
+<div class="flex items-center gap-3 p-3 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-300 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="radio_button_unchecked">radio_button_unchecked</span>
+<div class="flex-1">
+<h4 class="font-medium">4. useEffect Demystified</h4>
+<p class="text-xs opacity-70 mt-0.5">42:15</p>
+</div>
+</div>
+<!-- Item 5 -->
+<div class="flex items-center gap-3 p-3 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-300 opacity-60 cursor-not-allowed">
+<span class="material-symbols-outlined" data-icon="lock">lock</span>
+<div class="flex-1">
+<h4 class="font-medium">5. Module Quiz</h4>
+<p class="text-xs opacity-70 mt-0.5">10 Questions</p>
+</div>
+</div>
+</div>
+<div class="p-6">
+<button class="w-full py-3 px-4 rounded-full bg-surface-container-high text-on-surface font-semibold text-sm hover:bg-surface-variant transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span> Download Resources
+            </button>
+</div>
+</aside>
+<!-- Bottom Nav Bar -->
+<div class="fixed bottom-0 left-0 w-full md:w-[calc(100%-20rem)] flex justify-between items-center px-10 py-6 bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl z-50 rounded-t-[2.5rem] tonal-shift-layering surface-container-low shadow-[0_-10px_40px_rgba(0,0,0,0.04)] hidden md:flex">
+<button class="flex items-center gap-2 text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 rounded-full px-8 py-3 font-['Inter'] font-semibold text-xs tracking-widest uppercase hover:opacity-90 transition-opacity active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="arrow_back_ios">arrow_back_ios</span> Previous
+        </button>
+<button class="flex items-center gap-2 bg-blue-600 text-white rounded-full px-8 py-3 font-['Inter'] font-semibold text-xs tracking-widest uppercase hover:opacity-90 transition-opacity active:scale-95 duration-150 shadow-lg shadow-blue-600/20">
+            Next <span class="material-symbols-outlined" data-icon="arrow_forward_ios">arrow_forward_ios</span>
+</button>
+</div>
+</body></html>

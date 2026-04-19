@@ -4,6 +4,7 @@ import { ulid } from 'ulid'
 import { db } from '@/db'
 import type { Notification, NotificationType } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
+import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 /** Maximum number of notifications to retain after cleanup */
 const MAX_NOTIFICATIONS = 100
@@ -41,6 +42,18 @@ interface NotificationState {
   dismiss: (id: string) => Promise<void>
   /** Run TTL + cap cleanup (called during init before load) */
   cleanup: () => Promise<void>
+
+  /**
+   * Replace Dexie + in-memory collection from a validated remote snapshot.
+   *
+   * E96-S02: called by `hydrateP3P4FromSupabase`. Pure setter — uses
+   * `db.notifications.bulkPut` directly (never `syncableWrite`) so it does
+   * NOT enqueue any syncQueue row. Echo-loop guard per E93 retrospective.
+   *
+   * AC5 disposition: `isAllDefaults` guard is vacuously satisfied —
+   * `notifications` is a collection keyed by id, not a singleton.
+   */
+  hydrateFromRemote: (rows: Notification[]) => Promise<void>
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
@@ -92,7 +105,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.notifications.add(notification)
+        await syncableWrite(
+          'notifications',
+          'add',
+          notification as unknown as SyncableRecord,
+        )
       })
 
       // Update store state after successful persistence
@@ -115,7 +132,14 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.notifications.update(id, { readAt: now })
+        // syncableWrite requires a full record for 'put' — merge the patch
+        // over the existing in-memory row.
+        const next: Notification = { ...target, readAt: now }
+        await syncableWrite(
+          'notifications',
+          'put',
+          next as unknown as SyncableRecord,
+        )
       })
 
       // Update store state after successful persistence
@@ -132,13 +156,21 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   markAllRead: async () => {
     const now = new Date().toISOString()
     const { notifications } = get()
-    const unreadIds = notifications.filter(n => n.readAt === null).map(n => n.id)
+    const unread = notifications.filter(n => n.readAt === null)
 
-    if (unreadIds.length === 0) return
+    if (unread.length === 0) return
 
     try {
       await persistWithRetry(async () => {
-        await db.notifications.where('id').anyOf(unreadIds).modify({ readAt: now })
+        // Enqueue one put per unread row so each change syncs individually.
+        for (const n of unread) {
+          const next: Notification = { ...n, readAt: now }
+          await syncableWrite(
+            'notifications',
+            'put',
+            next as unknown as SyncableRecord,
+          )
+        }
       })
 
       // Update store state after successful persistence
@@ -163,7 +195,12 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.notifications.update(id, { dismissedAt: now })
+        const next: Notification = { ...target, dismissedAt: now }
+        await syncableWrite(
+          'notifications',
+          'put',
+          next as unknown as SyncableRecord,
+        )
       })
 
       // Remove from visible list after successful persistence
@@ -187,6 +224,16 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       const expired = await db.notifications.where('createdAt').below(cutoff).primaryKeys()
 
       if (expired.length > 0) {
+        // E96-S02: cleanup is intentionally a LOCAL-ONLY operation — it
+        // uses `bulkDelete` instead of `syncableWrite`. Rationale:
+        //   1. Cleanup is TTL/cap-driven housekeeping, not user intent.
+        //   2. Other devices will run their own cleanup independently.
+        //   3. LWW download semantics re-hydrate only rows the server still
+        //      has — if the server also TTL-expires them, subsequent pulls
+        //      drop them naturally.
+        //   4. Performance: enqueueing 100+ deletes per init inflates the
+        //      sync queue and breaks the < 50ms cleanup budget (see
+        //      `cleanup performance` test).
         await db.notifications.bulkDelete(expired)
         console.log(
           `[NotificationStore] TTL cleanup: deleted ${expired.length} expired notifications`
@@ -210,5 +257,18 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       // Cleanup failure is non-fatal — log and continue
       console.error('[NotificationStore] Cleanup failed:', error)
     }
+  },
+
+  hydrateFromRemote: async rows => {
+    if (!rows || rows.length === 0) return
+    // Direct Dexie write — NEVER through syncableWrite. Echo-loop guard.
+    await db.notifications.bulkPut(rows)
+    // Refresh visible list + unreadCount from Dexie.
+    const all = await db.notifications.toArray()
+    const visible = all
+      .filter(n => n.dismissedAt === null)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    const unreadCount = visible.filter(n => n.readAt === null).length
+    set({ notifications: visible, unreadCount })
   },
 }))
