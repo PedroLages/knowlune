@@ -250,6 +250,18 @@ export async function hydrateSettingsFromSupabase(
   // ── Hydrate per-user preference stores from user_settings table ──────────
   // Best-effort: errors are silently swallowed so profile hydration above always applies.
   if (!userId || !supabase) return
+
+  // E95-S06: hydrate useNotificationPrefsStore BEFORE the user_settings block
+  // so the early-return paths inside that try/catch (PGRST116, empty settings
+  // row) do not skip notification-preferences hydration.
+  try {
+    await hydrateNotificationPreferencesFromSupabase(userId)
+  } catch (err) {
+    // silent-catch-ok — a local default row is already persisted by init();
+    // the next local toggle will sync as usual.
+    console.warn('[settings] notification_preferences hydration failed:', err)
+  }
+
   try {
     const { data, error } = await supabase
       .from('user_settings')
@@ -440,6 +452,142 @@ export async function hydrateSettingsFromSupabase(
     // silent-catch-ok — migration is opportunistic; main hydration already completed.
     console.warn('[settings] Legacy AI key migration error:', migrationErr)
   }
+}
+
+// ─── E95-S06: notification_preferences hydration helper ─────────────────────
+
+/**
+ * List of known `NotificationPreferences` boolean toggle fields. Used to:
+ *   - detect whether the local store is at all-defaults (P2 guard below)
+ *   - filter unknown/extra remote fields before applying (R12)
+ */
+const NOTIFICATION_TOGGLE_FIELDS = [
+  'courseComplete',
+  'streakMilestone',
+  'importFinished',
+  'achievementUnlocked',
+  'reviewDue',
+  'srsDue',
+  'knowledgeDecay',
+  'recommendationMatch',
+  'milestoneApproaching',
+  'bookImported',
+  'bookDeleted',
+  'highlightReview',
+] as const
+
+/**
+ * Snake_case → camelCase map for the Supabase `notification_preferences` row.
+ * Explicit (not auto-derived from `camelToSnake`) so the allow-list also
+ * enforces R12 — unknown remote columns are silently dropped.
+ */
+const NOTIFICATION_SNAKE_TO_CAMEL: Record<string, keyof import('@/data/types').NotificationPreferences> = {
+  course_complete: 'courseComplete',
+  streak_milestone: 'streakMilestone',
+  import_finished: 'importFinished',
+  achievement_unlocked: 'achievementUnlocked',
+  review_due: 'reviewDue',
+  srs_due: 'srsDue',
+  knowledge_decay: 'knowledgeDecay',
+  recommendation_match: 'recommendationMatch',
+  milestone_approaching: 'milestoneApproaching',
+  book_imported: 'bookImported',
+  book_deleted: 'bookDeleted',
+  highlight_review: 'highlightReview',
+  quiet_hours_enabled: 'quietHoursEnabled',
+  quiet_hours_start: 'quietHoursStart',
+  quiet_hours_end: 'quietHoursEnd',
+}
+
+/**
+ * Hydrate `useNotificationPrefsStore` from the Supabase `notification_preferences`
+ * row on login.
+ *
+ * Decision matrix:
+ *   | Condition                                        | Outcome               |
+ *   |--------------------------------------------------|-----------------------|
+ *   | No remote row (new user / PGRST116)              | Skip (R10)            |
+ *   | Remote updated_at >= local updatedAt             | Apply remote (R8)     |
+ *   | Local is all-defaults (user never toggled)       | Apply remote (P2)     |
+ *   | Otherwise (local strictly newer)                 | Keep local            |
+ *
+ * Malformed `quiet_hours_start` / `quiet_hours_end` values (R11) are dropped
+ * and replaced with the store's DEFAULTS; unknown remote columns (R12) are
+ * ignored because only keys in `NOTIFICATION_SNAKE_TO_CAMEL` are copied.
+ *
+ * Errors are swallowed — the store already has a usable default row written
+ * by its init().
+ */
+async function hydrateNotificationPreferencesFromSupabase(userId: string): Promise<void> {
+  if (!supabase) return
+
+  const { data: remote, error } = await supabase
+    .from('notification_preferences')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) {
+    console.warn('[settings] notification_preferences fetch failed:', error)
+    return
+  }
+  if (!remote) return // R10: no remote row — let local defaults stand.
+
+  const { useNotificationPrefsStore, DEFAULTS, HHMM_RE } = await import(
+    '@/stores/useNotificationPrefsStore'
+  )
+  const localPrefs = useNotificationPrefsStore.getState().prefs
+
+  // P2 guard: when the local prefs exactly match DEFAULTS, the user has never
+  // made an explicit change on this device — remote always wins regardless of
+  // timestamps. Compares only the toggle + quiet-hours fields (not `id` /
+  // `updatedAt`, which differ by construction).
+  const isAllDefaults =
+    NOTIFICATION_TOGGLE_FIELDS.every(
+      field => localPrefs[field] === DEFAULTS[field],
+    ) &&
+    localPrefs.quietHoursEnabled === DEFAULTS.quietHoursEnabled &&
+    localPrefs.quietHoursStart === DEFAULTS.quietHoursStart &&
+    localPrefs.quietHoursEnd === DEFAULTS.quietHoursEnd
+
+  const remoteUpdatedAt =
+    typeof (remote as { updated_at?: unknown }).updated_at === 'string'
+      ? ((remote as { updated_at: string }).updated_at as string)
+      : ''
+  const localUpdatedAt = localPrefs.updatedAt
+
+  // R8: inclusive `>=` handles same-second first-install upload races.
+  const remoteWins = isAllDefaults || remoteUpdatedAt >= localUpdatedAt
+  if (!remoteWins) return
+
+  // Build the validated snapshot from the allow-list (R12). Unknown columns
+  // are silently dropped; missing columns fall back to DEFAULTS.
+  const validated = { ...DEFAULTS }
+  for (const [snake, camel] of Object.entries(NOTIFICATION_SNAKE_TO_CAMEL) as Array<
+    [string, keyof import('@/data/types').NotificationPreferences]
+  >) {
+    const raw = (remote as Record<string, unknown>)[snake]
+    if (camel === 'quietHoursStart' || camel === 'quietHoursEnd') {
+      // R11: validate HH:MM strings; fall back to defaults for malformed.
+      if (typeof raw === 'string' && HHMM_RE.test(raw)) {
+        ;(validated as Record<string, unknown>)[camel] = raw
+      }
+      continue
+    }
+    if (camel === 'quietHoursEnabled') {
+      if (typeof raw === 'boolean') validated.quietHoursEnabled = raw
+      continue
+    }
+    // Remaining keys are boolean toggle fields.
+    if (typeof raw === 'boolean') {
+      ;(validated as Record<string, unknown>)[camel] = raw
+    }
+  }
+  if (typeof remoteUpdatedAt === 'string' && remoteUpdatedAt.length > 0) {
+    validated.updatedAt = remoteUpdatedAt
+  }
+
+  useNotificationPrefsStore.getState().hydrateFromRemote(validated)
 }
 
 /**

@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { toast } from 'sonner'
 import { db } from '@/db'
 import type { NotificationPreferences, NotificationType } from '@/data/types'
-import { persistWithRetry } from '@/lib/persistWithRetry'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
 
 /** Map NotificationType → field name on NotificationPreferences */
 const TYPE_TO_FIELD: Record<NotificationType, keyof NotificationPreferences> = {
@@ -20,7 +20,7 @@ const TYPE_TO_FIELD: Record<NotificationType, keyof NotificationPreferences> = {
   'highlight-review': 'highlightReview', // E86-S02
 }
 
-const DEFAULTS: NotificationPreferences = {
+export const DEFAULTS: NotificationPreferences = {
   id: 'singleton',
   courseComplete: true,
   streakMilestone: true,
@@ -47,7 +47,7 @@ function getCurrentHHMM(): string {
 }
 
 /** Validate HH:MM format (00:00–23:59) */
-const HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/
+export const HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 function isValidHHMM(value: string): boolean {
   return HHMM_RE.test(value)
 }
@@ -66,6 +66,17 @@ interface NotificationPrefsState {
       Pick<NotificationPreferences, 'quietHoursEnabled' | 'quietHoursStart' | 'quietHoursEnd'>
     >
   ) => Promise<void>
+  /**
+   * Replace in-memory prefs from a validated remote snapshot.
+   *
+   * E95-S06: called by `hydrateSettingsFromSupabase` when the Supabase
+   * `notification_preferences` row is authoritative (remote ≥ local OR local
+   * is all-defaults). Pure setter — does NOT write to Dexie or the sync queue.
+   * The remote data is already persisted in Supabase; the local Dexie row will
+   * be updated on the next explicit toggle through `syncableWrite`, which is
+   * the only write path that touches the queue.
+   */
+  hydrateFromRemote: (remotePrefs: NotificationPreferences) => void
   /** Check if a notification type is enabled (safe default: true) */
   isTypeEnabled: (type: NotificationType) => boolean
   /** Check if current time falls within quiet hours */
@@ -82,11 +93,20 @@ export const useNotificationPrefsStore = create<NotificationPrefsState>((set, ge
       if (existing) {
         set({ prefs: existing, isLoaded: true })
       } else {
-        const defaults = { ...DEFAULTS, updatedAt: new Date().toISOString() }
-        await persistWithRetry(async () => {
-          await db.notificationPreferences.put(defaults)
-        })
-        set({ prefs: defaults, isLoaded: true })
+        // Construct defaults WITHOUT a manual `updatedAt` stamp —
+        // `syncableWrite` stamps `updatedAt: now` on every put/add.
+        // The `id` field remains `'singleton'`; the registry's
+        // `fieldMap: { id: 'user_id' }` translates it to `user_id` on upload.
+        const defaults: NotificationPreferences = { ...DEFAULTS }
+        await syncableWrite(
+          'notificationPreferences',
+          'put',
+          defaults as unknown as Record<string, unknown> & { id: string },
+        )
+        // Re-read from Dexie so the in-memory state reflects the stamped
+        // `userId` + `updatedAt` fields applied by `syncableWrite`.
+        const stored = await db.notificationPreferences.get('singleton')
+        set({ prefs: stored ?? defaults, isLoaded: true })
       }
     } catch (error) {
       console.error('[NotificationPrefsStore] Init failed:', error)
@@ -99,17 +119,21 @@ export const useNotificationPrefsStore = create<NotificationPrefsState>((set, ge
     const field = TYPE_TO_FIELD[type]
     if (!field) return
 
+    // Do NOT stamp `updatedAt` here — `syncableWrite` stamps it on write.
     const next: NotificationPreferences = {
       ...get().prefs,
       [field]: enabled,
-      updatedAt: new Date().toISOString(),
     }
 
     try {
-      await persistWithRetry(async () => {
-        await db.notificationPreferences.put(next)
-      })
-      set({ prefs: next })
+      await syncableWrite(
+        'notificationPreferences',
+        'put',
+        next as unknown as Record<string, unknown> & { id: string },
+      )
+      // Re-read so in-memory `updatedAt` matches the Dexie-persisted stamp.
+      const stored = await db.notificationPreferences.get('singleton')
+      set({ prefs: stored ?? next })
     } catch (error) {
       toast.error('Failed to update notification preference')
       console.error('[NotificationPrefsStore] Failed to update type toggle:', error)
@@ -121,21 +145,32 @@ export const useNotificationPrefsStore = create<NotificationPrefsState>((set, ge
     if (patch.quietHoursStart && !isValidHHMM(patch.quietHoursStart)) return
     if (patch.quietHoursEnd && !isValidHHMM(patch.quietHoursEnd)) return
 
+    // Do NOT stamp `updatedAt` here — `syncableWrite` stamps it on write.
     const next: NotificationPreferences = {
       ...get().prefs,
       ...patch,
-      updatedAt: new Date().toISOString(),
     }
 
     try {
-      await persistWithRetry(async () => {
-        await db.notificationPreferences.put(next)
-      })
-      set({ prefs: next })
+      await syncableWrite(
+        'notificationPreferences',
+        'put',
+        next as unknown as Record<string, unknown> & { id: string },
+      )
+      const stored = await db.notificationPreferences.get('singleton')
+      set({ prefs: stored ?? next })
     } catch (error) {
       toast.error('Failed to update quiet hours')
       console.error('[NotificationPrefsStore] Failed to update quiet hours:', error)
     }
+  },
+
+  hydrateFromRemote: (remotePrefs: NotificationPreferences) => {
+    // Pure setter: the remote data is authoritative in Supabase; writing it
+    // back to Dexie or the queue here would create an echo-loop on every
+    // sign-in. The next local toggle will sync through `syncableWrite` as
+    // usual, which is the single canonical write path.
+    set({ prefs: remotePrefs, isLoaded: true })
   },
 
   isTypeEnabled: (type: NotificationType): boolean => {

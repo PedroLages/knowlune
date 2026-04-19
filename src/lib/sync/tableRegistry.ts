@@ -536,12 +536,21 @@ const audiobookshelfServers: TableRegistryEntry = {
   vaultFields: ['apiKey'],
 }
 
+/**
+ * `notificationPreferences` is a singleton table: Dexie PK is the literal
+ * string `'singleton'`, Supabase PK is `user_id`. The `fieldMap: { id: 'user_id' }`
+ * translates the Dexie `id` field to the `user_id` column on upload, and
+ * `upsertConflictColumns: 'user_id'` targets the correct conflict column so
+ * the upload engine upserts the single row per user (instead of defaulting
+ * to `id`). Same mechanism as `chapterMappings`, simplified to a single PK.
+ */
 const notificationPreferences: TableRegistryEntry = {
   dexieTable: 'notificationPreferences',
   supabaseTable: 'notification_preferences',
   conflictStrategy: 'lww',
   priority: 3,
-  fieldMap: {},
+  fieldMap: { id: 'user_id' },
+  upsertConflictColumns: 'user_id',
 }
 
 // ---------------------------------------------------------------------------
