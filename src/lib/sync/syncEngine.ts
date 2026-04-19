@@ -39,6 +39,7 @@ import { applyConflictCopy } from './conflictResolvers'
 import { replayFlashcardReviews } from './flashcardReplayService'
 import { dedupDefaultShelves } from './defaultShelfDedup'
 import { uploadStorageFilesForTable, STORAGE_TABLES } from './storageSync'
+import { downloadStorageFilesForTable, STORAGE_DOWNLOAD_TABLES } from './storageDownload'
 import type { Note, Shelf } from '@/data/types'
 
 // ---------------------------------------------------------------------------
@@ -863,6 +864,20 @@ async function _doDownload(): Promise<void> {
         table: entry.dexieTable,
         lastSyncTimestamp: maxUpdatedAt,
       })
+    }
+
+    // E94-S05: After row application and cursor advance, download binary assets
+    // for file-bearing tables. Non-fatal — wrapped in .catch() so a blob fetch
+    // failure never prevents the store refresh or the next table's download.
+    // Guard: _userId mirrors the upload-side guard at line ~955 in _doUpload.
+    if (STORAGE_DOWNLOAD_TABLES.has(entry.dexieTable) && _userId) {
+      await downloadStorageFilesForTable(entry.dexieTable, recordsToApply, _userId).catch(
+        (err) =>
+          console.warn(
+            `[syncEngine] Storage download failed for "${entry.dexieTable}":`,
+            err,
+          ),
+      )
     }
 
     // Notify registered Zustand store (if any) to reload from Dexie.

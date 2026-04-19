@@ -105,8 +105,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 54', () => {
-    expect(db.verno).toBe(54)
+  it('should be at version 55 (E94-S05: photoBlob/fileBlob optional fields)', () => {
+    expect(db.verno).toBe(55)
   })
 
   it('should have searchFrecency table with compound primary key [entityType+entityId] (v53)', () => {
