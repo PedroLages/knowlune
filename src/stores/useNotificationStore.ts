@@ -156,14 +156,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   markAllRead: async () => {
     const now = new Date().toISOString()
     const { notifications } = get()
-    const unreadIds = notifications.filter(n => n.readAt === null).map(n => n.id)
+    const unread = notifications.filter(n => n.readAt === null)
 
-    if (unreadIds.length === 0) return
+    if (unread.length === 0) return
 
     try {
       await persistWithRetry(async () => {
         // Enqueue one put per unread row so each change syncs individually.
-        const unread = notifications.filter(n => n.readAt === null)
         for (const n of unread) {
           const next: Notification = { ...n, readAt: now }
           await syncableWrite(
