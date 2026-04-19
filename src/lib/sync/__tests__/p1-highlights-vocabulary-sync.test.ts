@@ -203,7 +203,10 @@ describe('E93-S06 sync wiring — vocabularyItems', () => {
     expect(payload.last_reviewed_at).toBeDefined()
   })
 
-  it('resetMastery → syncQueue has put entry; masteryLevel: 0 in Dexie record', async () => {
+  it('resetMastery → masteryLevel: 0 in Dexie record; NO syncQueue put entry (RPC path, not syncableWrite)', async () => {
+    // R3 BLOCKER fix: resetMastery now writes Dexie directly and calls the
+    // reset_vocabulary_mastery RPC instead of going through syncableWrite /
+    // upsert_vocabulary_mastery, which would silently ignore masteryLevel=0 via GREATEST.
     const item = makeVocabItem({ masteryLevel: 2 })
     await useVocabularyStore.getState().addItem(item)
 
@@ -217,12 +220,13 @@ describe('E93-S06 sync wiring — vocabularyItems', () => {
 
     const stored = await db.vocabularyItems.get(item.id)
     expect(stored?.masteryLevel).toBe(0)
-    expect(stored?.lastReviewedAt).toBeDefined()
+    // lastReviewedAt is cleared on reset (server function also sets it to NULL)
+    expect(stored?.lastReviewedAt == null).toBe(true)
 
+    // No put entry in syncQueue — resetMastery uses the direct RPC path
     const entries = await getQueueEntries('vocabularyItems')
     const putEntry = entries.find(e => e.operation === 'put')
-    expect(putEntry).toBeDefined()
-    expect(putEntry!.status).toBe('pending')
+    expect(putEntry).toBeUndefined()
   })
 
   it('deleteItem → Dexie record absent; syncQueue has delete entry with { id }', async () => {
@@ -297,5 +301,65 @@ describe('E93-S06 sync wiring — unauthenticated writes', () => {
 
     const entries = await getQueueEntries('vocabularyItems')
     expect(entries).toHaveLength(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// R3 BLOCKER regression: reset_vocabulary_mastery bypasses GREATEST
+// ---------------------------------------------------------------------------
+
+describe('E93-S06 R3 BLOCKER — resetMastery bypasses GREATEST monotonic guard', () => {
+  it('resetMastery on mastery=2 item → Dexie masteryLevel is 0, no syncQueue put entry (uses RPC path, not syncableWrite)', async () => {
+    // Simulate "device A had mastery=2 synced to server"
+    const item = makeVocabItem({ masteryLevel: 2 })
+    await useVocabularyStore.getState().addItem(item)
+    await db.vocabularyItems.update(item.id, { masteryLevel: 2 })
+    useVocabularyStore.setState({ items: [{ ...item, masteryLevel: 2 }] })
+
+    await db.syncQueue.clear()
+
+    await useVocabularyStore.getState().resetMastery(item.id)
+
+    // Dexie must reflect the reset — masteryLevel=0
+    const stored = await db.vocabularyItems.get(item.id)
+    expect(stored?.masteryLevel).toBe(0)
+    // lastReviewedAt cleared on reset
+    expect(stored?.lastReviewedAt == null).toBe(true)
+
+    // No 'put' entry in syncQueue — resetMastery now goes through the RPC path
+    // directly, not through upsert_vocabulary_mastery (which would be ignored
+    // by GREATEST when server already has mastery_level=2).
+    const entries = await getQueueEntries('vocabularyItems')
+    const putEntry = entries.find(e => e.operation === 'put')
+    expect(putEntry).toBeUndefined()
+  })
+
+  it('resetMastery then advanceMastery → Dexie masteryLevel ends at 1 (reset not ignored)', async () => {
+    // Simulate cross-device scenario:
+    //   Server: mastery=2 (from device A)
+    //   Device B: resetMastery → should become 0, then advanceMastery → should be 1
+    //   Without the fix, upsert_vocabulary_mastery GREATEST would ignore the reset,
+    //   and advanceMastery would advance from 2→3 instead of 0→1.
+    const item = makeVocabItem({ masteryLevel: 2 })
+    await useVocabularyStore.getState().addItem(item)
+    await db.vocabularyItems.update(item.id, { masteryLevel: 2 })
+    useVocabularyStore.setState({ items: [{ ...item, masteryLevel: 2 }] })
+
+    // Reset (should bring to 0)
+    await useVocabularyStore.getState().resetMastery(item.id)
+
+    const afterReset = await db.vocabularyItems.get(item.id)
+    expect(afterReset?.masteryLevel).toBe(0)
+
+    // Re-seed in-memory store to match Dexie (simulates store.loadItems after sync)
+    useVocabularyStore.setState({
+      items: [{ ...item, masteryLevel: 0, lastReviewedAt: undefined }],
+    })
+
+    // Advance (should go 0→1, not 2→3)
+    await useVocabularyStore.getState().advanceMastery(item.id)
+
+    const afterAdvance = await db.vocabularyItems.get(item.id)
+    expect(afterAdvance?.masteryLevel).toBe(1)
   })
 })

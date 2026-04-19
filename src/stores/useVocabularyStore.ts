@@ -14,6 +14,8 @@ import type { VocabularyItem } from '@/data/types'
 import { db } from '@/db/schema'
 import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 import { persistWithRetry } from '@/lib/persistWithRetry'
+import { supabase } from '@/lib/auth/supabase'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 interface VocabularyStoreState {
   items: VocabularyItem[]
@@ -134,17 +136,41 @@ export const useVocabularyStore = create<VocabularyStoreState>((set, get) => ({
   resetMastery: async (id: string) => {
     const prev = get().items
     const timestamp = now()
-    const updates = { masteryLevel: 0 as const, lastReviewedAt: timestamp, updatedAt: timestamp }
+    // lastReviewedAt is cleared on reset — server function also sets it to NULL.
+    const updates = { masteryLevel: 0 as const, lastReviewedAt: undefined, updatedAt: timestamp }
     set(state => ({
       items: state.items.map(i => (i.id === id ? { ...i, ...updates } : i)),
     }))
     try {
       const existing = await db.vocabularyItems.get(id)
       if (!existing) return
-      const merged = { ...existing, ...updates }
-      await persistWithRetry(() =>
-        syncableWrite('vocabularyItems', 'put', merged as unknown as SyncableRecord)
-      )
+
+      // Write Dexie directly (bypassing syncableWrite / MONOTONIC_RPC path) so the
+      // local record is updated immediately without enqueuing a 'put' that would
+      // flow through upsert_vocabulary_mastery and be silently ignored by GREATEST.
+      await persistWithRetry(async () => {
+        await db.vocabularyItems.update(id, {
+          masteryLevel: 0,
+          lastReviewedAt: undefined,
+          updatedAt: timestamp,
+        })
+      })
+
+      // Call the dedicated server-side reset RPC only when authenticated.
+      // This bypasses the GREATEST monotonic guard in upsert_vocabulary_mastery
+      // (R3 BLOCKER fix — prevents permanent Dexie/Supabase divergence).
+      const userId = useAuthStore.getState().user?.id ?? null
+      if (userId && supabase) {
+        const { error } = await supabase.rpc('reset_vocabulary_mastery', {
+          p_id: id,
+          p_user_id: userId,
+          p_updated_at: timestamp,
+        })
+        if (error) {
+          console.error('[useVocabularyStore] reset_vocabulary_mastery RPC failed:', error)
+          // Non-fatal: Dexie write succeeded. Sync engine will reconcile on next cycle.
+        }
+      }
     } catch {
       set({ items: prev })
       toast.error('Failed to reset mastery level')
