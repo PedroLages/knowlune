@@ -1,0 +1,32 @@
+{
+  "reviewer": "data-migrations",
+  "findings": [
+    {
+      "title": "Migration comment misstates what TRUE values become",
+      "severity": "P3",
+      "file": "supabase/migrations/20260418000001_notes_conflict_copy_jsonb.sql",
+      "line": 35,
+      "why_it_matters": "Step 3 comment says 'all existing FALSE values become NULL' but USING NULL converts ALL existing values (both TRUE and FALSE) to NULL. If any row had conflict_copy=TRUE (from E93-S01's old duplicate-UUID logic), those rows also become NULL silently. This is likely correct behavior (E93-S01 conflict copies are obsolete) but the comment is incomplete and could mislead future migration authors.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "suggested_fix": "Change comment to: 'all existing values (TRUE/FALSE) become NULL — old boolean conflict markers from E93-S01 are intentionally cleared'",
+      "confidence": 0.80,
+      "evidence": [
+        "Migration line 35 comment: `-- Step 3: Change type from BOOLEAN to JSONB (all existing FALSE values become NULL)`",
+        "USING NULL in ALTER COLUMN TYPE converts ALL rows to NULL, not just FALSE ones",
+        "E93-S01 migration created conflict_copy as BOOLEAN NOT NULL DEFAULT FALSE — some rows could theoretically have TRUE if E93-S01's duplicate-UUID logic ran before this migration"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "The three-step ALTER sequence (DROP NOT NULL → DROP DEFAULT → TYPE CHANGE USING NULL) is correct PostgreSQL procedure for this scenario. Each step is independently valid.",
+    "UUID→TEXT cast for conflict_source_id is safe: USING conflict_source_id::TEXT preserves existing UUID strings as text, and NULL values remain NULL.",
+    "No RLS policy changes are needed: the conflict columns inherit the existing notes RLS policies (user_id-based row ownership).",
+    "No index changes are needed: conflict_copy is a JSONB field, not expected to be indexed at this stage."
+  ],
+  "testing_gaps": [
+    "No SQL test or migration test verifies the three-step ALTER works correctly on a table with both TRUE and FALSE conflict_copy values"
+  ]
+}

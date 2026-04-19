@@ -1,0 +1,9 @@
+{
+  "reviewer": "adversarial",
+  "findings": [],
+  "residual_risks": [
+    "sendBeacon payload could contain sensitive sync queue data (user IDs, content IDs) sent to a non-existent endpoint — when the endpoint is implemented, it must be authenticated",
+    "fullSync on every online event could hammer Supabase if the device toggles online/offline rapidly — no rate limiting or debounce on the online handler"
+  ],
+  "testing_gaps": []
+}

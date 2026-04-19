@@ -1,0 +1,6 @@
+{
+  "learnings": [
+    "No prior solutions in docs/solutions/ directly address sync trigger patterns or Dexie table name vs Supabase table name confusion. The dexieTable/supabaseTable duality in tableRegistry.ts is a project-specific pattern worth documenting after this fix.",
+    "docs/engineering-patterns.md pattern 'Intentional: <reason>' is correctly applied in this diff for all silent-fail paths."
+  ]
+}

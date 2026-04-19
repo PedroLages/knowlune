@@ -1,0 +1,25 @@
+{
+  "runId": "R2-20260418",
+  "scope": "feature/e117-s01-unified-search-index vs main",
+  "baseCommit": "R1 fix commit 86cfc0f6",
+  "mode": "headless",
+  "r1FindingsVerified": {
+    "F001": { "status": "fixed", "evidence": "toDoc closures moved to useRef; useReconcile unwraps via isRef() at timer-fire time" },
+    "F002": { "status": "fixed", "evidence": "getIndexedIds() seeds per-table snap refs from already-indexed state at first mount" },
+    "F003": { "status": "fixed", "evidence": "Notes.tsx uses useUnifiedSearchIndex hook with substring content/tags fallback when !ready" },
+    "D-HIGH-1": { "status": "fixed", "evidence": "command.tsx has no explicit role='listbox' or role='option'; cmdk sets them" },
+    "D-HIGH-2": { "status": "fixed", "evidence": "Show-all row has aria-expanded + ChevronDown/ChevronRight icon + expansion label" },
+    "D-HIGH-3": { "status": "fixed", "evidence": "Badge aria-label removed; CommandItem has aria-label composed of displayTitle, type" },
+    "D-HIGH-4": { "status": "fixed", "evidence": "min-h-[44px] on result rows, show-all rows, static-page rows, empty-placeholder rows, Clear button" },
+    "D-MED-1": { "status": "fixed", "evidence": "Pluralized '1 result' / 'N results'; 400ms settle on announcedCount independent of 150ms search debounce" },
+    "D-MED-2": { "status": "fixed", "evidence": "contentClassName has max-sm:inset-0 max-sm:max-w-full max-sm:h-full max-sm:rounded-none (full-screen below 640px)" },
+    "D-MED-3": { "status": "fixed", "evidence": "handleCommandKeyDown intercepts Home/End and dispatches mousemove on first/last [cmdk-item]:not([data-disabled='true'])" },
+    "D-MED-4": { "status": "fixed", "evidence": "Authors.tsx adds Clear X button with aria-label='Clear search' and 44px touch target" },
+    "D-MED-5": { "status": "fixed", "evidence": "TYPE_BADGE_CLASS maps each EntityType to distinct theme-token classes (brand-soft, success-soft, warning, muted, success, secondary)" },
+    "D-MED-6": { "status": "fixed", "evidence": "Empty sections render a disabled placeholder 'Heading — no matches' when anyEntityHits is true" }
+  },
+  "newFindings": [],
+  "testsPassing": true,
+  "typecheckPassing": true,
+  "lintErrors": 0
+}

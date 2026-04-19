@@ -1,0 +1,30 @@
+{
+  "reviewer": "reliability",
+  "findings": [
+    {
+      "title": "handleUseOtherVersion null guard reads stale prop on race",
+      "severity": "P3",
+      "file": "src/app/components/notes/NoteConflictDialog.tsx",
+      "line": 203,
+      "why_it_matters": "handleUseOtherVersion checks `note.conflictCopy == null` at call time (from the closed-over prop). In React, closures are recreated on each render, so this check uses the prop value at the time the button was last rendered. If the background sync clears conflictCopy between the last render and the user's click, the guard correctly fires. However, if sync updates the Zustand store mid-async-operation (between `setIsUsingOther(true)` and `await saveNote(...)`), the stale `note` in the closure still has the original conflictCopy, and saveNote will restore it. This is an acceptable tradeoff for the race scenario since `saveNote` includes an optimistic update that will be overwritten on next sync.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "suggested_fix": "Document the race tolerance in a comment. Optionally, read fresh state from `useNoteStore.getState().notes.find(n => n.id === note.id)` at handler call time to get the latest conflictCopy value.",
+      "confidence": 0.60,
+      "evidence": [
+        "handleUseOtherVersion line 203: `if (note.conflictCopy == null)` — reads from closed-over prop, not live store",
+        "Between `setIsUsingOther(true)` (line 210) and `await saveNote(...)` (line 212), background sync could update the store and trigger a re-render — but the current handler still operates on the captured `note`",
+        "This is acceptable React behavior and the risk is low since the saveNote call will be overwritten by the next sync cycle"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "If saveNote throws inside handleKeepCurrent/handleUseOtherVersion, the catch block calls toast.error but does NOT call onResolved() or onOpenChange(false). The dialog stays open, showing loading state forever. The finally block resets isKeepingCurrent/isUsingOther, which restores the button — user can retry. This is acceptable UX.",
+    "The `persistWithRetry` wrapper inside saveNote handles transient IDB failures — single toast.error from dialog is appropriate."
+  ],
+  "testing_gaps": [
+    "No test for saveNote failure path in NoteConflictDialog (toast.error shown, dialog stays open, buttons re-enabled)"
+  ]
+}

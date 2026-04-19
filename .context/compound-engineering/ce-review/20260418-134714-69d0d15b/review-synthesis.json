@@ -1,0 +1,35 @@
+{
+  "runId": "20260418-134714-69d0d15b",
+  "mode": "headless",
+  "scope": "feature/e92-s07-sync-triggers-offline-handling vs main (2288dc5c)",
+  "intent": "Wire sync trigger events (mount, 30s, visibility, online/offline, beforeunload) and graceful offline handling for syncEngine. Create useSyncStatusStore and useSyncLifecycle hook.",
+  "verdict": "Ready with fixes",
+  "reviewers": ["correctness", "testing", "maintainability", "project-standards", "reliability", "kieran-typescript", "julik-frontend-races", "adversarial", "learnings-researcher", "agent-native-reviewer"],
+  "appliedFixes": [
+    {
+      "title": "Wrong table key in registerStoreRefresh call",
+      "file": "src/app/hooks/useSyncLifecycle.ts",
+      "line": 48,
+      "fix": "Changed 'study_sessions' to 'studySessions' (dexie table name)",
+      "severity": "P0"
+    },
+    {
+      "title": "Test asserts wrong table name in registerStoreRefresh",
+      "file": "src/app/hooks/__tests__/useSyncLifecycle.test.ts",
+      "line": 260,
+      "fix": "Updated assertion and description to expect 'studySessions'",
+      "severity": "P0"
+    }
+  ],
+  "residualFindings": [],
+  "advisoryFindings": [
+    "useSyncStatusStore has no unit tests (plan specified store test scenarios but they were only implemented for the hook)",
+    "fullSync on online event has no rate limiting — rapid online/offline toggling could hammer Supabase",
+    "sendBeacon payload will contain user data — endpoint must be authenticated when implemented"
+  ],
+  "planCompleteness": {
+    "R1": "met", "R2": "met", "R3": "met", "R4": "met", "R5": "met",
+    "R6": "met", "R7": "met", "R8": "met", "R9": "met", "R10": "met",
+    "R11": "met", "R12": "met"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "reviewer": "security",
+  "findings": [],
+  "residual_risks": [
+    "conflictCopy.content is displayed via `.replace(/<[^>]*>/g, '')` string substitution (not innerHTML) so XSS via injected tags is neutralized. JavaScript-URI strings like `javascript:alert(1)` are displayed as inert text. Safe.",
+    "The conflict resolution write (saveNote) goes through syncableWrite which enqueues the change. No direct DB mutation bypasses the normal auth/RLS path. Safe.",
+    "conflictSourceId is stored as TEXT (not UUID). If this field is later used for device attribution or access control, ensure validation is added at that time."
+  ],
+  "testing_gaps": []
+}

@@ -1,0 +1,33 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "title": "No automated tests — plan explicitly deferred to manual",
+      "severity": "P3",
+      "file": "supabase/migrations/20260413000002_p1_learning_content.sql",
+      "line": 1,
+      "why_it_matters": "Plan AC explicitly states 'No automated E2E tests — manual verification only'. The lack of automated migration tests is a known, documented tradeoff. The plan provides detailed verification SQL queries. This is advisory only — the decision is intentional and scoped.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.90,
+      "suggested_fix": null,
+      "evidence": [
+        "Plan scope: 'No automated E2E tests — manual verification only (see Verification below)'",
+        "Plan provides verification queries for each unit (11-table existence check, HNSW index check, etc.)"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "FSRS rating range for flashcard_reviews.rating is not validated by DB (no CHECK constraint) — invalid ratings could corrupt replay logic",
+    "search_similar_notes with p_limit > 100 has no server-side cap — large result sets could cause memory pressure in the Supabase environment"
+  ],
+  "testing_gaps": [
+    "Idempotency test: re-apply migration twice and verify no errors (plan specifies 'supabase db push --local twice')",
+    "HNSW index existence check: `SELECT indexname FROM pg_indexes WHERE tablename='embeddings' AND indexname='idx_embeddings_vector_hnsw'`",
+    "INSERT-only enforcement: `UPDATE public.flashcard_reviews SET rating=4 WHERE user_id=auth.uid()` should return 0 rows affected",
+    "Monotonic mastery: insert mastery_level=2, then call upsert with mastery_level=1, verify level stays 2",
+    "Timestamp clamp: upsert with p_updated_at = now() + interval '1 day', verify updated_at <= now() + interval '5 minutes'"
+  ]
+}

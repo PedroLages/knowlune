@@ -1,0 +1,48 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "title": "conflictSourceId semantic mismatch: note ID vs device ID",
+      "severity": "P2",
+      "file": "src/lib/sync/conflictResolvers.ts",
+      "line": 34,
+      "why_it_matters": "applyConflictCopy sets `conflictSourceId: local.id` (the losing note's ID — which is the same ID as the winning note). The type comment in types.ts says this field stores 'ID of the device/note that produced the losing version'. Setting it to the local note's own ID is semantically confusing: the field implies 'where did the losing content come from?' but local.id is the note being operated on, not a device identifier. If this field is later used for conflict provenance (e.g., 'conflict from device X'), it will always return the note's own ID, which is useless.",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "suggested_fix": "Either: (a) update the type comment to say this is the note ID (not device ID) and rename the field to conflictNoteId; or (b) pass the actual device ID from the sync context. If (a), update the comment in types.ts to match.",
+      "confidence": 0.72,
+      "evidence": [
+        "conflictResolvers.ts line 34: `conflictSourceId: local.id` — local is the losing Note, local.id is the note's own UUID",
+        "types.ts line 470: 'ID of the device/note that produced the losing version' — implies a device identifier",
+        "All notes share the same ID across devices (by design — videoId-keyed one-per-video); conflictSourceId=noteId conveys no device information"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "Conflict badge in NoteCard has no accessible description of what to do",
+      "severity": "P3",
+      "file": "src/app/components/notes/NoteCard.tsx",
+      "line": 91,
+      "why_it_matters": "The conflict badge button has `aria-label='Note has a sync conflict'` which describes state but not action. Screen reader users know there's a conflict but don't know that clicking opens a dialog to resolve it. This is a minor accessibility gap.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "suggested_fix": "Change aria-label to 'Resolve sync conflict — note was edited on two devices'",
+      "confidence": 0.68,
+      "evidence": [
+        "NoteCard.tsx line 91: `aria-label='Note has a sync conflict'` — describes state, not affordance",
+        "Notes.tsx line 388: `aria-label='Note has a sync conflict'` — same issue in the list view badge",
+        "WCAG 2.1 AA: button accessible names should describe the action, not just the state"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "The handleKeepCurrent path in NoteConflictDialog calls onResolved() before onOpenChange(false). If onResolved triggers a state update that unmounts the dialog before onOpenChange fires, React may warn about setting state on an unmounted component. In practice, both are synchronous React state setters and the order is fine.",
+    "No rate limiting or deduplication on conflict creation: if the sync engine downloads the same remote record 100 times (e.g., due to a sync bug), _applyConflictCopy could be called 100 times and each would overwrite the previous. The last one wins, which is acceptable."
+  ],
+  "testing_gaps": [
+    "No adversarial test for a conflict resolution where the network fails mid-save (saveNote throws after optimistic update applied)"
+  ]
+}

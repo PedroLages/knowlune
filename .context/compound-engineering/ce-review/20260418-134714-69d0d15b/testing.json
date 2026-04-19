@@ -1,0 +1,44 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "title": "Test asserts wrong table name in registerStoreRefresh",
+      "severity": "P0",
+      "file": "src/app/hooks/__tests__/useSyncLifecycle.test.ts",
+      "line": 260,
+      "why_it_matters": "The test expects 'study_sessions' but the correct Dexie key is 'studySessions'. Both the implementation and the test are wrong together, making the test a false green that actively masks the P0 correctness bug.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "suggested_fix": "Change expect line to: expect(mockRegisterStoreRefresh).toHaveBeenCalledWith('studySessions', expect.any(Function))",
+      "confidence": 0.99,
+      "evidence": [
+        "test line ~260: expect(mockRegisterStoreRefresh).toHaveBeenCalledWith('study_sessions', expect.any(Function))",
+        "This test passes currently because both the hook and the test use 'study_sessions', but the correct key is 'studySessions'"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "No test for refreshPendingCount in useSyncStatusStore",
+      "severity": "P3",
+      "file": "src/app/stores/useSyncStatusStore.ts",
+      "line": 60,
+      "why_it_matters": "refreshPendingCount has a Dexie query and silent catch path. Plan specifies 4 store test scenarios including this, but no store unit test file exists.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "suggested_fix": null,
+      "confidence": 0.72,
+      "evidence": [
+        "Plan Unit 1 specifies 4 test scenarios for useSyncStatusStore but no test file was created for the store itself",
+        "The store test scenarios were grouped into Unit 4 (hook tests only) — the store itself has no test coverage"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [],
+  "testing_gaps": [
+    "useSyncStatusStore has no unit tests — markSyncComplete, setStatus, refreshPendingCount are untested",
+    "beforeunload sendBeacon path is not tested (expected given async nature, but worth noting)"
+  ]
+}

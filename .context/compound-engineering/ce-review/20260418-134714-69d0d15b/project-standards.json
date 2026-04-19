@@ -1,0 +1,8 @@
+{
+  "reviewer": "project-standards",
+  "findings": [],
+  "residual_risks": [
+    "src/app/stores/ is a new directory — CLAUDE.md mentions src/stores/ as the canonical store location. The plan explicitly documents this decision (infrastructure vs domain state). No standards violation since the plan justifies it."
+  ],
+  "testing_gaps": []
+}

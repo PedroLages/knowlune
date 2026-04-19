@@ -1,0 +1,12 @@
+{
+  "reviewer": "project-standards",
+  "findings": [],
+  "residual_risks": [
+    "conflictResolvers.ts correctly uses named exports only, consistent with fieldMapper.ts and tableRegistry.ts conventions.",
+    "New component NoteConflictDialog.tsx follows existing component patterns (Dialog + Button variants, toast for errors).",
+    "No hardcoded Tailwind colors found — bg-warning/10, text-warning-foreground, border-warning/30 use design tokens.",
+    "Design token usage: variant='brand' for primary CTA in dialog footer. Correct.",
+    "Import alias @/ used consistently throughout new files."
+  ],
+  "testing_gaps": []
+}

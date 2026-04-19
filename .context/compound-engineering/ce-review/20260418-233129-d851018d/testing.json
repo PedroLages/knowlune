@@ -1,0 +1,69 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "title": "conflict-copy strategy entirely absent from syncEngine download tests",
+      "severity": "P2",
+      "file": "src/lib/sync/__tests__/syncEngine.download.test.ts",
+      "line": 166,
+      "why_it_matters": "The _applyConflictCopy branch in _applyRecord has no unit test coverage. The file claims conflict-copy coverage in its header comment but the mock registry sets notes to 'lww'. A regression in the integration between _applyRecord dispatch and _applyConflictCopy would be invisible.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "suggested_fix": "Add describe('conflict-copy strategy') with: remote wins+content differs→conflictCopy snapshot, remote wins+same content→LWW, local wins→LWW, new record→plain put.",
+      "confidence": 0.95,
+      "evidence": [
+        "Line 166 of syncEngine.download.test.ts: conflictStrategy: 'lww' — notes table mock does not exercise conflict-copy",
+        "No describe block or test case mentioning 'conflict-copy' or 'conflictCopy' in the 524-line test file",
+        "_applyConflictCopy at syncEngine.ts:510 is exercised only by conflictResolvers.test.ts at the pure-function level, not the integration dispatch level"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "E2E Test 5 does not verify content replaced on Use Other Version",
+      "severity": "P2",
+      "file": "tests/e2e/story-93-3.spec.ts",
+      "line": 128,
+      "why_it_matters": "Test 5 only checks that the badge disappears. It does not verify that the note content was actually replaced with conflictCopy.content (LOSING_CONTENT). If handleUseOtherVersion had a bug where it cleared conflictCopy but did not replace the content, Test 5 would still pass.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "suggested_fix": "After badge disappears, verify note content shows the losing version text using the Dexie check pattern (as in Test 6) or by checking the visible note text in the DOM.",
+      "confidence": 0.85,
+      "evidence": [
+        "Test 5 line 146: asserts `dialog not visible` and line 150: asserts `badge not visible` — no content assertion",
+        "handleUseOtherVersion in NoteConflictDialog.tsx lines 213-214 spreads `content: note.conflictCopy.content, tags: note.conflictCopy.tags` — these could be separately tested",
+        "Test 6 tests Dexie state for Keep Current but there is no Dexie-state test for Use Other Version"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "No E2E test for notes list view (Notes.tsx) conflict dialog flow",
+      "severity": "P3",
+      "file": "tests/e2e/story-93-3.spec.ts",
+      "line": 795,
+      "why_it_matters": "The E2E tests target the Notes.tsx list view (via /notes page). The conflict badge in Notes.tsx is a separate code path from NoteCard.tsx (different button implementation, different state management with conflictNoteId). The tests use `getByRole('button', { name: /sync conflict/i })` which could match either. If Notes.tsx has a bug where the badge triggers the wrong note's dialog, the tests would not catch it (only one note with a conflict is seeded).",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "suggested_fix": "Seed two notes with conflicts and verify the correct note's conflictCopy content appears in the dialog after clicking a specific badge.",
+      "confidence": 0.65,
+      "evidence": [
+        "Notes.tsx lines 386-396: conflict badge in VirtualizedList view with onClick={() => setConflictNoteId(item.note.id)}",
+        "NoteCard.tsx lines 88-96: separate conflict badge with onClick={() => setShowConflictDialog(true)}",
+        "Tests always seed exactly one conflict note, so multiple-badge disambiguation is never tested"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "conflictResolvers.test.ts covers applyConflictCopy well but does not test the case where local already has a non-null conflictCopy (repeat conflict scenario)",
+    "No test verifies that conflictSourceId is set correctly on the resolved record"
+  ],
+  "testing_gaps": [
+    "syncEngine.download.test.ts: no conflict-copy strategy tests",
+    "E2E Test 5: no content assertion for Use Other Version",
+    "No test for repeat-conflict (local.conflictCopy already set when new sync arrives)",
+    "No test for conflictSourceId being cleared to null after resolution"
+  ]
+}

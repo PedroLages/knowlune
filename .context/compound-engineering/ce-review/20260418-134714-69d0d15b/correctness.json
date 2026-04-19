@@ -1,0 +1,30 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "title": "Wrong table key in registerStoreRefresh call",
+      "severity": "P0",
+      "file": "src/app/hooks/useSyncLifecycle.ts",
+      "line": 48,
+      "why_it_matters": "syncEngine._storeRefreshRegistry.get(entry.dexieTable) is called with the Dexie table name ('studySessions'). Registering with 'study_sessions' (Supabase name) means the callback is stored under a key that never matches. Downloaded studySessions records will be applied to Dexie but the Zustand store will never be refreshed — stale UI after sync, silently broken.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "suggested_fix": "Change 'study_sessions' to 'studySessions' (the Dexie table name, matching tableRegistry.ts dexieTable field)",
+      "confidence": 0.99,
+      "evidence": [
+        "syncEngine.ts:665: const refreshFn = _storeRefreshRegistry.get(entry.dexieTable)",
+        "tableRegistry.ts:85: dexieTable: 'studySessions', supabaseTable: 'study_sessions'",
+        "useSyncLifecycle.ts:48: syncEngine.registerStoreRefresh('study_sessions', ...)",
+        "syncEngine.download.test.ts:412: syncEngine.registerStoreRefresh('notes', ...) — note uses dexieTable name"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "The test for store refresh registration asserts the table name is 'study_sessions' which will also pass incorrectly — both the implementation and the test use the wrong key, so the test does not catch the bug"
+  ],
+  "testing_gaps": [
+    "Test 'registers store refresh with table name study_sessions' uses the wrong expected value and should also be corrected to 'studySessions'"
+  ]
+}
