@@ -39,7 +39,11 @@
 --     1. `_embeddings_dedup_audit_<ts>` table (created in this migration) —
 --        the source of truth. Survives log-aggregator truncation that can
 --        drop the WARNING line if the deleted set is large (CloudWatch 256KB,
---        Datadog 1MB). (ADV-R2-01 from R2 adversarial review.)
+--        Datadog 1MB). RLS-enabled with zero policies + REVOKE ALL from
+--        anon/authenticated/PUBLIC, so PostgREST cannot expose the per-row
+--        user_id ↔ note_id correlation cross-tenant (ADV-R3-01 from R3
+--        adversarial review). Only the migration role / service_role can read.
+--        (ADV-R2-01 from R2 adversarial review.)
 --     2. `RAISE WARNING` line — convenience for operators reading deploy logs.
 --
 -- Concurrency (SEC-3):
@@ -116,6 +120,18 @@ BEGIN
     -- TEMP / UNLOGGED) so the data survives a server restart and is
     -- queryable post-migration. Operator can drop it manually after
     -- reconciliation completes. (ADV-R2-01 from R2 adversarial review.)
+    --
+    -- SECURITY (ADV-R3-01 from R3 adversarial review):
+    --   Supabase initializes new projects with `ALTER DEFAULT PRIVILEGES IN
+    --   SCHEMA public GRANT ALL ON TABLES TO anon, authenticated`. A naive
+    --   CREATE TABLE in `public` would inherit those grants and expose the
+    --   audit (containing per-row user_id ↔ note_id correlation) to every
+    --   authenticated user via PostgREST. We lock the table down at create
+    --   time:
+    --     1. REVOKE ALL from anon, authenticated, and PUBLIC.
+    --     2. ENABLE RLS with NO policies — denies all access by default.
+    --       The migration role (postgres / service_role) bypasses RLS, so
+    --       operators can still query the table for reconciliation.
     CREATE TABLE IF NOT EXISTS public._embeddings_dedup_audit_20260419 (
       deleted_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
       id          UUID        NOT NULL,
@@ -125,6 +141,12 @@ BEGIN
       updated_at  TIMESTAMPTZ,
       reason      TEXT        NOT NULL DEFAULT 'duplicate_note_id_dedup'
     );
+
+    REVOKE ALL ON public._embeddings_dedup_audit_20260419 FROM PUBLIC;
+    REVOKE ALL ON public._embeddings_dedup_audit_20260419 FROM anon;
+    REVOKE ALL ON public._embeddings_dedup_audit_20260419 FROM authenticated;
+    ALTER TABLE public._embeddings_dedup_audit_20260419 ENABLE ROW LEVEL SECURITY;
+    -- No policies created — RLS with zero policies denies all non-bypass roles.
 
     -- Tie-break on freshness (updated_at DESC, created_at DESC, id as final
     -- tiebreaker for determinism). DISTINCT ON returns the first row per
