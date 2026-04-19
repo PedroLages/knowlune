@@ -38,6 +38,7 @@ import { getTableEntry, tableRegistry } from './tableRegistry'
 import { applyConflictCopy } from './conflictResolvers'
 import { replayFlashcardReviews } from './flashcardReplayService'
 import { dedupDefaultShelves } from './defaultShelfDedup'
+import { uploadStorageFilesForTable, STORAGE_TABLES } from './storageSync'
 import type { Note, Shelf } from '@/data/types'
 
 // ---------------------------------------------------------------------------
@@ -918,6 +919,11 @@ async function _doUpload(): Promise<void> {
     return
   }
 
+  // Resolve userId once for storage upload calls (cached by the JS client).
+  // If unavailable, storage uploads are skipped (non-fatal — same as offline).
+  const { data: sessionData } = await supabase.auth.getSession()
+  const userId = sessionData?.session?.user?.id ?? null
+
   const coalesced = await _coalesceQueue()
   if (coalesced.length === 0) return
 
@@ -943,7 +949,12 @@ async function _doUpload(): Promise<void> {
 
     const batches = chunk(entries, BATCH_SIZE)
     for (const batch of batches) {
-      await _uploadBatch(batch, tableEntry)
+      const success = await _uploadBatch(batch, tableEntry)
+      // E94-S04: After confirmed row persistence, upload binary assets to Storage.
+      // Storage upload is non-fatal — errors are contained inside storageSync.ts.
+      if (success && userId && STORAGE_TABLES.has(tableName)) {
+        await uploadStorageFilesForTable(tableName, batch, userId)
+      }
     }
   }
 }
