@@ -215,7 +215,6 @@ export async function generateQuizForLesson(
     console.warn(LOG_PREFIX, 'Failed to store quiz:', (err as Error).message)
     emitTracking('error', {
       errorCode: 'storage_failed',
-      errorMessage: (err as Error).message,
       chunksProcessed: chunks.length,
       chunksFailed,
     })

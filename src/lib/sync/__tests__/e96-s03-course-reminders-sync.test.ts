@@ -1,3 +1,5 @@
+// Audit (E96-S03 Unit 2): All courseReminders mutations (save/toggle/delete) confirmed routed through syncableWrite in E96-S02. No direct db.courseReminders writes found outside the store.
+
 /**
  * e96-s03-course-reminders-sync.test.ts — E96-S03 integration test for the
  * courseReminders table.

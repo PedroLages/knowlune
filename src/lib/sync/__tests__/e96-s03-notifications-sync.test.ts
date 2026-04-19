@@ -1,3 +1,5 @@
+// Audit (E96-S03 Unit 3): All notification mutations (create/markRead/markAllRead/dismiss) confirmed routed through syncableWrite in E96-S02. Mutator names: create, markRead, markAllRead, dismiss (not addNotification).
+
 /**
  * e96-s03-notifications-sync.test.ts — E96-S03 integration test for the
  * notifications table.

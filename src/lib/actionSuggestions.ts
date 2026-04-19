@@ -1,3 +1,10 @@
+// Tracking note (E96-S03): trackAIUsage instrumentation is NOT applicable here.
+// `actionSuggestions.ts` is a pure deterministic utility — it performs no AI
+// or LLM calls. All logic is arithmetic (urgency scores, deduplication, sorting)
+// operating on pre-computed TopicWithScore objects supplied by the caller.
+// There is no network request, no model invocation, and therefore nothing to
+// instrument with trackAIUsage.
+
 // ── Types ───────────────────────────────────────────────────────
 
 export type ActionType = 'flashcard-review' | 'quiz-refresh' | 'lesson-rewatch'
