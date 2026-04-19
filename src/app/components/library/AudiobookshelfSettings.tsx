@@ -26,6 +26,8 @@ import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 import { testConnection, fetchLibraries } from '@/services/AudiobookshelfService'
 import { toastSuccess } from '@/lib/toastHelpers'
 import type { AudiobookshelfServer } from '@/data/types'
+import { checkCredential } from '@/lib/vaultCredentials'
+import { getAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
 import { AudiobookshelfServerListView } from './AudiobookshelfServerListView'
 import { AudiobookshelfServerForm, type AbsFormTestResult } from './AudiobookshelfServerForm'
 import { DeleteServerDialog } from './DeleteServerDialog'
@@ -67,9 +69,18 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<AudiobookshelfServer | null>(null)
 
-  // Track existing API key for edit mode (so we only update if user types a new one)
-  // After E95-S02, apiKey may be undefined (stored in Vault); defaults to empty string.
-  const [existingApiKey, setExistingApiKey] = useState<string>('')
+  // Track whether an existing API key is configured in the vault for the
+  // server being edited. We never load the plaintext into form state — we
+  // only ask "is a credential configured?" via checkCredential() so the UI
+  // can surface "already configured" messaging and skip the re-entry
+  // prompt when the user isn't rotating the key. When the user actually
+  // submits "Test Connection" or "Save" without a new apiKey typed in, we
+  // read the live credential once via getAbsApiKey and pass it to the ABS
+  // API (never stored in React state).
+  const [hasExistingApiKey, setHasExistingApiKey] = useState(false)
+  // Suppress unused-variable lint until the form passes this down for the
+  // placeholder copy update — tracked as a follow-up polish item.
+  void hasExistingApiKey
 
   useEffect(() => {
     if (open) {
@@ -84,7 +95,7 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
     setSelectedLibraryIds([])
     setTestResult(null)
     setEditingId(null)
-    setExistingApiKey('')
+    setHasExistingApiKey(false)
     setIsTesting(false)
     setIsSaving(false)
   }, [])
@@ -101,10 +112,13 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
       setName(server.name)
       setUrl(server.url)
       setApiKey('') // Never pre-fill raw API key — show placeholder
-      // After E95-S02, apiKey is undefined in Dexie (stored in Vault); fallback to empty string.
-      setExistingApiKey(server.apiKey ?? '')
       setSelectedLibraryIds(server.libraryIds)
       setMode('edit')
+      // Kick off a "configured?" probe so the UI can treat a blank apiKey
+      // input as "keep existing" rather than "clear credential".
+      checkCredential('abs-server', server.id)
+        .then(configured => setHasExistingApiKey(configured))
+        .catch(() => setHasExistingApiKey(false))
     },
     [resetForm]
   )
@@ -115,10 +129,15 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
   }, [resetForm])
 
   const handleTestConnection = useCallback(async () => {
-    const effectiveApiKey = apiKey.trim() || existingApiKey
     if (!url.trim()) {
       setTestResult({ ok: false, message: 'Please enter a server URL.' })
       return
+    }
+    // Resolve the effective apiKey: prefer the freshly typed value; otherwise
+    // fall back to the stored vault credential for the server being edited.
+    let effectiveApiKey = apiKey.trim()
+    if (!effectiveApiKey && editingId) {
+      effectiveApiKey = (await getAbsApiKey(editingId)) ?? ''
     }
     if (!effectiveApiKey) {
       setTestResult({ ok: false, message: 'Please enter an API key.' })
@@ -159,7 +178,7 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
     setSelectedLibraryIds(prev => (prev.length === 0 ? libResult.data.map(lib => lib.id) : prev))
 
     setIsTesting(false)
-  }, [url, apiKey, existingApiKey])
+  }, [url, apiKey, editingId])
 
   const handleLibraryToggle = useCallback((libraryId: string) => {
     setSelectedLibraryIds(prev =>
@@ -174,7 +193,6 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
     }
 
     setIsSaving(true)
-    const effectiveApiKey = apiKey.trim() || existingApiKey
     const now = new Date().toISOString()
 
     try {
@@ -184,27 +202,28 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
           url: url.trim(),
           libraryIds: selectedLibraryIds,
           status: 'connected',
-          updatedAt: now,
         }
-        // Only update API key if user typed a new one
-        if (apiKey.trim()) {
-          updates.apiKey = apiKey.trim()
-        }
-        await updateServer(editingId, updates)
+        const nextApiKey = apiKey.trim() || undefined
+        await updateServer(editingId, updates, nextApiKey)
         toastSuccess.saved('Server updated')
       } else {
+        const typedApiKey = apiKey.trim()
+        if (!typedApiKey) {
+          setTestResult({ ok: false, message: 'Please enter an API key.' })
+          setIsSaving(false)
+          return
+        }
         const newServer: AudiobookshelfServer = {
           id: crypto.randomUUID(),
           name: name.trim() || url.trim(),
           url: url.trim(),
-          apiKey: effectiveApiKey,
           libraryIds: selectedLibraryIds,
           status: 'connected',
           lastSyncedAt: undefined,
           createdAt: now,
           updatedAt: now,
         }
-        await addServer(newServer)
+        await addServer(newServer, typedApiKey)
         toastSuccess.saved('Server added')
       }
 
@@ -219,7 +238,6 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
     name,
     url,
     apiKey,
-    existingApiKey,
     selectedLibraryIds,
     mode,
     editingId,

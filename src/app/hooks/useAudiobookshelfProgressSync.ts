@@ -20,6 +20,7 @@ import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 import { useBookStore } from '@/stores/useBookStore'
 import { db } from '@/db/schema'
+import { getAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
 
 interface UseAbsProgressSyncOptions {
   book: Book
@@ -69,12 +70,12 @@ export function useAudiobookshelfProgressSync({
 
     const server = useAudiobookshelfStore.getState().getServerById(book.absServerId)
     if (!server) return // Fire-and-forget — never block book opening
-    // Temporary guard (KI-E95-S02-L01): apiKey is undefined after E95-S02 migration.
-    if (!server.apiKey) return
     ;(async () => {
+      const apiKey = await getAbsApiKey(server.id)
+      if (!apiKey) return
       const result = await AudiobookshelfService.fetchProgress(
         server.url,
-        server.apiKey!,
+        apiKey,
         book.absItemId!
       )
 
@@ -91,7 +92,7 @@ export function useAudiobookshelfProgressSync({
           book.currentPosition?.type === 'time' ? book.currentPosition.seconds : 0
         if (localSeconds > 0 && book.totalDuration && book.totalDuration > 0) {
           // silent-catch-ok: push is best-effort
-          AudiobookshelfService.updateProgress(server.url, server.apiKey!, book.absItemId!, {
+          AudiobookshelfService.updateProgress(server.url, apiKey, book.absItemId!, {
             currentTime: localSeconds,
             duration: book.totalDuration,
             progress: localSeconds / book.totalDuration,
@@ -137,7 +138,7 @@ export function useAudiobookshelfProgressSync({
         // Local is ahead — push to ABS (fire-and-forget)
         if (book.totalDuration && book.totalDuration > 0) {
           // silent-catch-ok: push is best-effort
-          AudiobookshelfService.updateProgress(server.url, server.apiKey!, book.absItemId!, {
+          AudiobookshelfService.updateProgress(server.url, apiKey, book.absItemId!, {
             currentTime: localSeconds,
             duration: book.totalDuration,
             progress: localSeconds / book.totalDuration,
@@ -155,8 +156,6 @@ export function useAudiobookshelfProgressSync({
 
     const server = useAudiobookshelfStore.getState().getServerById(book.absServerId)
     if (!server) return
-    // Temporary guard (KI-E95-S02-L01): apiKey is undefined after E95-S02 migration.
-    if (!server.apiKey) return
 
     const seconds = currentTime
     if (!seconds || seconds <= 0) return
@@ -168,26 +167,42 @@ export function useAudiobookshelfProgressSync({
       isFinished: seconds / book.totalDuration >= 0.99,
     }
 
-    // silent-catch-ok: sync is best-effort, queue on failure
-    AudiobookshelfService.updateProgress(server.url, server.apiKey, book.absItemId!, payload)
-      .then(result => {
-        if (!result.ok) {
-          // Server unreachable or error — enqueue for retry
-          useAudiobookshelfStore.getState().enqueueSyncItem({
-            serverId: book.absServerId!,
-            itemId: book.absItemId!,
-            payload,
-          })
-        }
-      })
-      .catch(() => {
-        // Network error — enqueue for retry
+    // Resolve apiKey through the vault broker (E95-S05). Credentials are no
+    // longer on the server row — the resolver caches per-session so the hot
+    // path (every pause) is a cache hit after the first call.
+    ;(async () => {
+      const apiKey = await getAbsApiKey(server.id)
+      if (!apiKey) {
+        // No credential available — enqueue and retry when the user signs in
+        // / the resolver recovers. silent-catch-ok: best-effort sync.
         useAudiobookshelfStore.getState().enqueueSyncItem({
           serverId: book.absServerId!,
           itemId: book.absItemId!,
           payload,
         })
-      })
+        return
+      }
+      // silent-catch-ok: sync is best-effort, queue on failure
+      AudiobookshelfService.updateProgress(server.url, apiKey, book.absItemId!, payload)
+        .then(result => {
+          if (!result.ok) {
+            // Server unreachable or error — enqueue for retry
+            useAudiobookshelfStore.getState().enqueueSyncItem({
+              serverId: book.absServerId!,
+              itemId: book.absItemId!,
+              payload,
+            })
+          }
+        })
+        .catch(() => {
+          // Network error — enqueue for retry
+          useAudiobookshelfStore.getState().enqueueSyncItem({
+            serverId: book.absServerId!,
+            itemId: book.absItemId!,
+            payload,
+          })
+        })
+    })()
   }, [book.absServerId, book.absItemId, book.totalDuration, book.source.type, currentTime])
 
   // Push when playback pauses (isPlaying transitions true → false)

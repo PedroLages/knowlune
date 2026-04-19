@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-19  # E94-S01 through E95-S04 shipped (PRs #362-#373)
+last_updated: 2026-04-19  # E95-S05 in progress — OPDS/ABS server connection sync + KI-E95-S02-L01 closed
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system

@@ -6,6 +6,8 @@ import { backfillUserId } from '@/lib/sync/backfill'
 import { syncEngine } from '@/lib/sync/syncEngine'
 import { clearSyncState } from '@/lib/sync/clearSyncState'
 import { hasUnlinkedRecords } from '@/lib/sync/hasUnlinkedRecords'
+import { credentialCache } from '@/lib/credentials/cache'
+import { runCredentialsToVaultMigration } from '@/lib/credentials/migrateCredentialsToVault'
 
 /**
  * E43-S04: Subscribes to Supabase auth state changes and manages session lifecycle.
@@ -55,6 +57,15 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       if (ignore) return
 
       await hydrateSettingsFromSupabase(userMetadata, userId)
+
+      // E95-S05: one-shot credential-to-vault migration. Runs on every sign-in
+      // until it has uploaded every legacy `apiKey` / `auth.password` value
+      // and marked itself `done` in `syncMetadata`. Idempotent; safe to await
+      // here because collecting & uploading a handful of rows is fast.
+      // silent-catch-ok — migration self-heals on next sign-in.
+      runCredentialsToVaultMigration().catch((err) => {
+        console.error('[useAuthLifecycle] runCredentialsToVaultMigration failed:', err)
+      })
 
       // Fast-path: this device already went through the dialog for this userId.
       const alreadyLinked = localStorage.getItem(`${LINKED_FLAG_PREFIX}${userId}`) === 'true'
@@ -121,6 +132,9 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
         // Local content records (notes, books, etc.) are intentionally kept —
         // the next sign-in will offer the Link/Start-fresh dialog.
         syncEngine.stop()
+        // E95-S05: drop cached server/catalog credentials on sign-out. The
+        // next authenticated session re-reads them through the vault broker.
+        credentialCache.clear()
         clearSyncState().catch((err) => {
           // silent-catch-ok: state is best-effort; next sign-in clears again.
           console.error('[useAuthLifecycle] clearSyncState failed:', err)

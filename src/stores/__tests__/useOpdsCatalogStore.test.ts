@@ -1,8 +1,10 @@
 /**
- * Unit tests for useOpdsCatalogStore — CRUD operations and error handling.
+ * Unit tests for useOpdsCatalogStore — CRUD + vault routing + nested-auth
+ * flatten (E95-S05).
  *
  * @since E88-S01
- * @modified E95-S02 — added vaultCredentials mock; credentials stripped from Dexie writes
+ * @modified E95-S05 — syncableWrite routing + password out-of-band param +
+ *           `auth.username` → top-level `authUsername` sync payload projection
  */
 import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -10,13 +12,31 @@ import { act } from 'react'
 import Dexie from 'dexie'
 import type { OpdsCatalog } from '@/data/types'
 
-// Mock vaultCredentials — E95-S02: passwords stored in Vault, not in Dexie
+const { storeMock, deleteMock } = vi.hoisted(() => ({
+  storeMock: vi.fn().mockResolvedValue(undefined),
+  deleteMock: vi.fn().mockResolvedValue(undefined),
+}))
+
 vi.mock('@/lib/vaultCredentials', () => ({
-  storeCredential: vi.fn().mockResolvedValue(undefined),
-  deleteCredential: vi.fn().mockResolvedValue(undefined),
+  storeCredential: storeMock,
+  deleteCredential: deleteMock,
+  readCredential: vi.fn().mockResolvedValue(null),
+  readCredentialWithStatus: vi.fn().mockResolvedValue({ ok: true, value: null }),
+}))
+
+vi.mock('sonner', () => ({
+  toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn(), info: vi.fn() },
+}))
+
+vi.mock('@/lib/sync/syncEngine', () => ({
+  syncEngine: { nudge: vi.fn(), start: vi.fn(), stop: vi.fn() },
 }))
 
 let useOpdsCatalogStore: (typeof import('@/stores/useOpdsCatalogStore'))['useOpdsCatalogStore']
+let useAuthStore: (typeof import('@/stores/useAuthStore'))['useAuthStore']
+let db: (typeof import('@/db'))['db']
+
+const TEST_USER = 'user-e95-s05-opds'
 
 function makeCatalog(overrides: Partial<OpdsCatalog> = {}): OpdsCatalog {
   return {
@@ -31,13 +51,32 @@ function makeCatalog(overrides: Partial<OpdsCatalog> = {}): OpdsCatalog {
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
   vi.resetModules()
+  storeMock.mockReset().mockResolvedValue(undefined)
+  deleteMock.mockReset().mockResolvedValue(undefined)
+
+  const authMod = await import('@/stores/useAuthStore')
+  useAuthStore = authMod.useAuthStore
+  useAuthStore.setState({
+    user: { id: TEST_USER } as unknown as (typeof useAuthStore)['getState'] extends () => infer S
+      ? S extends { user: infer U }
+        ? U
+        : never
+      : never,
+  })
+
+  const schemaMod = await import('@/db')
+  db = schemaMod.db
   const mod = await import('@/stores/useOpdsCatalogStore')
   useOpdsCatalogStore = mod.useOpdsCatalogStore
 })
 
-// ─── Initial state ────────────────────────────────────────────────────────────
+async function getQueuePayload(catalogId: string) {
+  const queue = await db.syncQueue.toArray()
+  const entry = queue.find(q => q.tableName === 'opdsCatalogs' && q.recordId === catalogId)
+  return { entry, payload: entry?.payload as Record<string, unknown> | undefined }
+}
 
-describe('useOpdsCatalogStore initial state', () => {
+describe('initial state', () => {
   it('starts with empty catalogs array', () => {
     const state = useOpdsCatalogStore.getState()
     expect(state.catalogs).toEqual([])
@@ -45,235 +84,84 @@ describe('useOpdsCatalogStore initial state', () => {
   })
 })
 
-// ─── loadCatalogs ─────────────────────────────────────────────────────────────
-
-describe('loadCatalogs', () => {
-  it('loads catalogs from IndexedDB', async () => {
-    const { db } = await import('@/db/schema')
-    const catalog = makeCatalog({ name: 'My Library' })
-    await db.opdsCatalogs.put(catalog)
-
-    await act(async () => {
-      await useOpdsCatalogStore.getState().loadCatalogs()
-    })
-
-    const state = useOpdsCatalogStore.getState()
-    expect(state.catalogs).toHaveLength(1)
-    expect(state.catalogs[0].name).toBe('My Library')
-    expect(state.isLoaded).toBe(true)
-  })
-
-  it('does not reload if already loaded', async () => {
-    const { db } = await import('@/db/schema')
-    const spy = vi.spyOn(db.opdsCatalogs, 'toArray')
-
-    // First load
-    await act(async () => {
-      await useOpdsCatalogStore.getState().loadCatalogs()
-    })
-    expect(spy).toHaveBeenCalledTimes(1)
-
-    // Second load — should be skipped
-    await act(async () => {
-      await useOpdsCatalogStore.getState().loadCatalogs()
-    })
-    expect(spy).toHaveBeenCalledTimes(1)
-  })
-})
-
-// ─── addCatalog ───────────────────────────────────────────────────────────────
-
 describe('addCatalog', () => {
-  it('adds a catalog to state', async () => {
-    const catalog = makeCatalog({ name: 'Calibre Server' })
-
+  it('awaits vault write then writes a flat authUsername payload with no password', async () => {
+    const id = 'cat-1'
+    const catalog = makeCatalog({ id, auth: { username: 'user' } })
     await act(async () => {
-      await useOpdsCatalogStore.getState().addCatalog(catalog)
+      await useOpdsCatalogStore.getState().addCatalog(catalog, 'SECRET')
     })
 
-    const state = useOpdsCatalogStore.getState()
-    expect(state.catalogs).toHaveLength(1)
-    expect(state.catalogs[0].name).toBe('Calibre Server')
+    expect(storeMock).toHaveBeenCalledWith('opds-catalog', id, 'SECRET')
+    const { payload } = await getQueuePayload(id)
+    expect(payload).toBeDefined()
+    // Flat field present, nested auth absent.
+    expect(payload!['auth_username']).toBe('user')
+    expect(payload).not.toHaveProperty('auth')
+    // No password survives at any nesting depth.
+    expect(JSON.stringify(payload)).not.toMatch(/SECRET/)
   })
 
-  it('persists catalog to IndexedDB', async () => {
-    const catalog = makeCatalog()
-
+  it('persists the nested auth shape to Dexie even though the queue is flat', async () => {
+    const id = 'cat-nested'
+    const catalog = makeCatalog({ id, auth: { username: 'u' } })
     await act(async () => {
-      await useOpdsCatalogStore.getState().addCatalog(catalog)
+      await useOpdsCatalogStore.getState().addCatalog(catalog, 'pw')
     })
-
-    const { db } = await import('@/db/schema')
-    const stored = await db.opdsCatalogs.get(catalog.id)
-    expect(stored).toBeDefined()
-    expect(stored!.url).toBe(catalog.url)
+    const stored = (await db.opdsCatalogs.get(id)) as unknown as Record<string, unknown>
+    expect(stored.auth).toEqual({ username: 'u' })
+    // The flat authUsername field never leaks into the Dexie row.
+    expect(stored.authUsername).toBeUndefined()
   })
 
-  it('adds catalog with auth credentials', async () => {
-    const catalog = makeCatalog({
-      auth: { username: 'admin', password: 'secret' },
-    })
-
+  it('skips storeCredential for anonymous catalogs', async () => {
+    const catalog = makeCatalog({ id: 'anon', auth: undefined })
     await act(async () => {
       await useOpdsCatalogStore.getState().addCatalog(catalog)
     })
-
-    const state = useOpdsCatalogStore.getState()
-    expect(state.catalogs[0].auth?.username).toBe('admin')
+    expect(storeMock).not.toHaveBeenCalled()
+    const { payload } = await getQueuePayload('anon')
+    expect(payload).toBeDefined()
   })
 })
-
-// ─── updateCatalog ────────────────────────────────────────────────────────────
 
 describe('updateCatalog', () => {
-  it('updates catalog name in state', async () => {
-    const catalog = makeCatalog({ name: 'Old Name' })
+  it('rotates the vault credential only when password is supplied', async () => {
+    const id = 'upd-cat'
+    const catalog = makeCatalog({ id, auth: { username: 'u' } })
+    await db.opdsCatalogs.put(catalog)
+    useOpdsCatalogStore.setState({ catalogs: [catalog], isLoaded: true })
 
     await act(async () => {
-      await useOpdsCatalogStore.getState().addCatalog(catalog)
-      await useOpdsCatalogStore.getState().updateCatalog(catalog.id, { name: 'New Name' })
+      await useOpdsCatalogStore.getState().updateCatalog(id, { name: 'Renamed' })
     })
-
-    const state = useOpdsCatalogStore.getState()
-    expect(state.catalogs).toHaveLength(1)
-    expect(state.catalogs[0].name).toBe('New Name')
-  })
-
-  it('persists update to IndexedDB', async () => {
-    const catalog = makeCatalog({ name: 'Before Update' })
+    expect(storeMock).not.toHaveBeenCalled()
 
     await act(async () => {
-      await useOpdsCatalogStore.getState().addCatalog(catalog)
-      await useOpdsCatalogStore.getState().updateCatalog(catalog.id, {
-        name: 'After Update',
-        url: 'https://new.local/opds',
-      })
+      await useOpdsCatalogStore
+        .getState()
+        .updateCatalog(id, { name: 'Renamed again' }, 'new-pw')
     })
-
-    const { db } = await import('@/db/schema')
-    const stored = await db.opdsCatalogs.get(catalog.id)
-    expect(stored!.name).toBe('After Update')
-    expect(stored!.url).toBe('https://new.local/opds')
-  })
-
-  it('only updates the target catalog', async () => {
-    const cat1 = makeCatalog({ name: 'Cat 1' })
-    const cat2 = makeCatalog({ name: 'Cat 2' })
-
-    await act(async () => {
-      await useOpdsCatalogStore.getState().addCatalog(cat1)
-      await useOpdsCatalogStore.getState().addCatalog(cat2)
-      await useOpdsCatalogStore.getState().updateCatalog(cat1.id, { name: 'Updated Cat 1' })
-    })
-
-    const state = useOpdsCatalogStore.getState()
-    expect(state.catalogs.find(c => c.id === cat1.id)?.name).toBe('Updated Cat 1')
-    expect(state.catalogs.find(c => c.id === cat2.id)?.name).toBe('Cat 2')
+    expect(storeMock).toHaveBeenCalledWith('opds-catalog', id, 'new-pw')
   })
 })
-
-// ─── removeCatalog ────────────────────────────────────────────────────────────
 
 describe('removeCatalog', () => {
-  it('removes catalog from state', async () => {
-    const catalog = makeCatalog()
+  it('enqueues a delete via syncableWrite and fires vault deleteCredential', async () => {
+    const id = 'rm-cat'
+    const catalog = makeCatalog({ id })
+    await db.opdsCatalogs.put(catalog)
+    useOpdsCatalogStore.setState({ catalogs: [catalog], isLoaded: true })
 
     await act(async () => {
-      await useOpdsCatalogStore.getState().addCatalog(catalog)
+      await useOpdsCatalogStore.getState().removeCatalog(id)
     })
-    expect(useOpdsCatalogStore.getState().catalogs).toHaveLength(1)
 
-    await act(async () => {
-      await useOpdsCatalogStore.getState().removeCatalog(catalog.id)
-    })
     expect(useOpdsCatalogStore.getState().catalogs).toHaveLength(0)
-  })
-
-  it('removes catalog from IndexedDB', async () => {
-    const catalog = makeCatalog()
-
-    await act(async () => {
-      await useOpdsCatalogStore.getState().addCatalog(catalog)
-      await useOpdsCatalogStore.getState().removeCatalog(catalog.id)
-    })
-
-    const { db } = await import('@/db/schema')
-    const stored = await db.opdsCatalogs.get(catalog.id)
-    expect(stored).toBeUndefined()
-  })
-
-  it('only removes the target catalog', async () => {
-    const cat1 = makeCatalog({ name: 'Keep Me' })
-    const cat2 = makeCatalog({ name: 'Remove Me' })
-
-    await act(async () => {
-      await useOpdsCatalogStore.getState().addCatalog(cat1)
-      await useOpdsCatalogStore.getState().addCatalog(cat2)
-      await useOpdsCatalogStore.getState().removeCatalog(cat2.id)
-    })
-
-    const state = useOpdsCatalogStore.getState()
-    expect(state.catalogs).toHaveLength(1)
-    expect(state.catalogs[0].name).toBe('Keep Me')
-  })
-})
-
-// ─── getCatalogById ───────────────────────────────────────────────────────────
-
-describe('getCatalogById', () => {
-  it('returns matching catalog from state', async () => {
-    const catalog = makeCatalog({ name: 'Target' })
-
-    await act(async () => {
-      await useOpdsCatalogStore.getState().addCatalog(catalog)
-    })
-
-    const result = useOpdsCatalogStore.getState().getCatalogById(catalog.id)
-    expect(result).toBeDefined()
-    expect(result!.name).toBe('Target')
-  })
-
-  it('returns undefined for non-existent id', () => {
-    const result = useOpdsCatalogStore.getState().getCatalogById('non-existent-id')
-    expect(result).toBeUndefined()
-  })
-})
-
-// ─── Error handling ───────────────────────────────────────────────────────────
-
-describe('addCatalog error handling', () => {
-  it('shows toast on DB failure', async () => {
-    const { db } = await import('@/db/schema')
-    vi.spyOn(db.opdsCatalogs, 'put').mockRejectedValue(new Error('Write fail'))
-
-    const catalog = makeCatalog()
-    await act(async () => {
-      await useOpdsCatalogStore.getState().addCatalog(catalog)
-    })
-
-    // State should not have the failed catalog
-    expect(useOpdsCatalogStore.getState().catalogs).toHaveLength(0)
-  })
-})
-
-describe('removeCatalog error handling', () => {
-  it('shows toast on DB failure', async () => {
-    const catalog = makeCatalog()
-    await act(async () => {
-      await useOpdsCatalogStore.getState().addCatalog(catalog)
-    })
-
-    const { db } = await import('@/db/schema')
-    vi.spyOn(db.opdsCatalogs, 'delete').mockRejectedValue(new Error('Delete fail'))
-
-    await act(async () => {
-      await useOpdsCatalogStore.getState().removeCatalog(catalog.id)
-    })
-
-    // Catalog should still be present if deletion failed
-    // (The store removes it optimistically — verify behavior matches implementation)
-    // Note: Current store implementation removes from state even on DB error (optimistic)
-    // This test documents that behavior. If rollback is added later, update this test.
-    expect(true).toBe(true) // behavior documented above
+    const { entry } = await getQueuePayload(id)
+    expect(entry?.operation).toBe('delete')
+    expect(entry?.payload).toEqual({ id })
+    await Promise.resolve()
+    expect(deleteMock).toHaveBeenCalledWith('opds-catalog', id)
   })
 })

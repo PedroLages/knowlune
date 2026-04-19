@@ -840,6 +840,20 @@ async function _doDownload(): Promise<void> {
         // Fail-open on dedup: worst case is a duplicate shelf row, not data loss.
         console.error('[syncEngine] defaultShelfDedup failed; applying unchanged:', err)
       }
+    } else if (entry.dexieTable === 'opdsCatalogs') {
+      // E95-S05: re-nest `authUsername` → `auth: { username }` so Dexie rows
+      // keep the canonical `OpdsCatalog` shape. Supabase stores the field
+      // flat as `auth_username` (toCamelCase already produced `authUsername`
+      // at the top level); Dexie consumers expect the nested object.
+      recordsToApply = camelRecords.map(rec => {
+        const authUsername = rec['authUsername'] as string | null | undefined
+        const { authUsername: _drop, ...rest } = rec
+        void _drop
+        if (typeof authUsername === 'string' && authUsername.length > 0) {
+          return { ...rest, auth: { username: authUsername } }
+        }
+        return rest
+      })
     } else if (entry.dexieTable === 'bookShelves' && _userId) {
       try {
         const key = `shelfDedupMap:${_userId}`
@@ -902,6 +916,23 @@ async function _doDownload(): Promise<void> {
             err,
           ),
       )
+    }
+
+    // E95-S05: emit hydration telemetry for the server-connection tables so
+    // we can observe cross-device fan-out latency. Fires once per table per
+    // download cycle, only when rows actually landed (recordsToApply > 0).
+    if (
+      (entry.dexieTable === 'audiobookshelfServers' ||
+        entry.dexieTable === 'opdsCatalogs') &&
+      recordsToApply.length > 0
+    ) {
+      // Intentional: using console.info keeps this self-contained until the
+      // global analytics client lands. Matches src/lib/credentials/telemetry.ts.
+      // eslint-disable-next-line no-console
+      console.info('[telemetry] sync.server_config.hydrated', {
+        table: entry.dexieTable,
+        count: recordsToApply.length,
+      })
     }
 
     // Notify registered Zustand store (if any) to reload from Dexie.

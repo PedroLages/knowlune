@@ -11,6 +11,20 @@ vi.mock('@/services/AudiobookshelfService', () => ({
   updateProgress: vi.fn(),
 }))
 
+// E95-S05: flushSyncQueue reads the apiKey through the ABS resolver.
+vi.mock('@/lib/credentials/absApiKeyResolver', () => ({
+  getAbsApiKey: vi.fn().mockResolvedValue('key'),
+  useAbsApiKey: vi.fn(),
+  invalidateAbsApiKey: vi.fn(),
+}))
+
+vi.mock('@/lib/vaultCredentials', () => ({
+  storeCredential: vi.fn().mockResolvedValue(undefined),
+  deleteCredential: vi.fn().mockResolvedValue(undefined),
+  readCredential: vi.fn().mockResolvedValue(null),
+  readCredentialWithStatus: vi.fn().mockResolvedValue({ ok: true, value: null }),
+}))
+
 // Mock db to avoid Dexie in unit tests
 vi.mock('@/db/schema', () => ({
   db: {
@@ -35,7 +49,6 @@ beforeEach(() => {
         id: 'srv-1',
         name: 'Test',
         url: 'http://abs.test',
-        apiKey: 'key',
         libraryIds: ['lib-1'],
         status: 'connected',
         lastSyncedAt: '2025-01-01T00:00:00.000Z',

@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 56
+export const CHECKPOINT_VERSION = 57
 
 /**
  * Shared `searchFrecency` index string. Used by both the v53 `.stores()` call
@@ -63,6 +63,10 @@ export const SEARCH_FRECENCY_INDEXES = '[entityType+entityId], entityType, lastO
  * v55 (E94-S05): authors.photoBlob + importedPdfs.fileBlob optional fields (no index change).
  * v56 (E95-S04): readingStreakCache table for optimistic server-streak render.
  *                Local-only cache of the `compute_reading_streak` RPC result; not synced.
+ * v57 (E95-S05): Credential-off-the-row marker for `opdsCatalogs` / `audiobookshelfServers`.
+ *                No schema/index change — the TypeScript types drop `auth.password` / `apiKey`,
+ *                and the post-boot `migrateCredentialsToVault()` clears legacy values from Dexie
+ *                once the user authenticates.
  */
 export const CHECKPOINT_SCHEMA: Record<string, string> = {
   importedCourses: 'id, name, importedAt, status, *tags, source, userId, [userId+updatedAt]',
@@ -144,3 +148,4 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
 //                Local-only (no userId, not in SYNCABLE_TABLES, not in sync backfill).
 // v56 (E95-S04): readingStreakCache table for locally-cached server streak results.
 //                Local-only (keyed by userId but per-device-cache; not synced).
+// v57 (E95-S05): Credential-off-the-row marker. No schema/index change — see schema.ts comment.

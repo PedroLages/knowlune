@@ -17,6 +17,7 @@ import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 import type { AbsSocketConnection } from '@/services/AudiobookshelfService'
 import { useBookStore } from '@/stores/useBookStore'
 import { db } from '@/db/schema'
+import { useAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
 
 interface UseAudiobookshelfSocketOptions {
   /** ABS server to connect to (null if book is not from ABS) */
@@ -106,13 +107,17 @@ export function useAudiobookshelfSocket({
     [activeItemId]
   )
 
+  // Resolve the server's apiKey through the vault broker (E95-S05). The hook
+  // re-runs when the resolved value changes so a credential rotation
+  // (`updateServer` with a new apiKey) reconnects the socket.
+  const { value: apiKey } = useAbsApiKey(server?.id)
+
   // Connect/disconnect on server/item changes
   useEffect(() => {
     if (!server || !activeItemId) return
-    // Temporary guard (KI-E95-S02-L01): apiKey is undefined after E95-S02 migration.
-    if (!server.apiKey) return
+    if (!apiKey) return
 
-    const connection = AudiobookshelfService.connectSocket(server.url, server.apiKey, {
+    const connection = AudiobookshelfService.connectSocket(server.url, apiKey, {
       onReady: () => {
         isConnectedRef.current = true
         forceUpdate.current += 1
@@ -138,7 +143,7 @@ export function useAudiobookshelfSocket({
       connectionRef.current = null
       isConnectedRef.current = false
     }
-  }, [server?.id, server?.url, server?.apiKey, activeItemId, handleProgressUpdate])
+  }, [server?.id, server?.url, apiKey, activeItemId, handleProgressUpdate])
 
   // Push progress periodically while playing (every 10s via socket)
   useEffect(() => {

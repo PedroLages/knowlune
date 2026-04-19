@@ -17,6 +17,7 @@ import { useBookStore } from '@/stores/useBookStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 import { getCoverUrl } from '@/services/AudiobookshelfService'
 import { cn } from '@/app/components/ui/utils'
+import { useAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
 
 /** Sort series books by sequence, null sequences go to end */
 function sortBySequence(books: AbsSeries['books']): AbsSeries['books'] {
@@ -69,6 +70,9 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
 
   // Get connected server for cover URLs
   const server = servers.find(s => s.status === 'connected')
+  // Resolve the apiKey through the vault broker (E95-S05). While the resolver
+  // is in flight, cover URLs fall back to the placeholder slot.
+  const { value: apiKey } = useAbsApiKey(server?.id)
 
   const toggleExpanded = () => setIsExpanded(prev => !prev)
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -100,7 +104,7 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
         <CoverCollageGrid
           coverUrls={sortedBooks
             .slice(0, 4)
-            .map(b => (server ? getCoverUrl(server.url, b.id, server.apiKey) : null))}
+            .map(b => (server && apiKey ? getCoverUrl(server.url, b.id, apiKey) : null))}
           alt={`${series.name} series covers`}
           className="size-14 flex-shrink-0"
         />
@@ -157,9 +161,9 @@ export const SeriesCard = memo(function SeriesCard({ series }: SeriesCardProps) 
               >
                 {/* Book icon or cover */}
                 <div className="w-12 h-16 flex-shrink-0 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
-                  {server ? (
+                  {server && apiKey ? (
                     <img
-                      src={getCoverUrl(server.url, absBook.id, server.apiKey)}
+                      src={getCoverUrl(server.url, absBook.id, apiKey)}
                       alt={`Cover of ${title}`}
                       loading="lazy"
                       className="h-full w-full object-cover"

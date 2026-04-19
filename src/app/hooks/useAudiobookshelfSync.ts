@@ -15,6 +15,7 @@ import type { AudiobookshelfServer, AbsLibraryItem, Book, BookChapter } from '@/
 import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 import { useBookStore } from '@/stores/useBookStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
+import { getAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
 
 interface SyncState {
   isSyncing: boolean
@@ -42,9 +43,14 @@ export function useAudiobookshelfSync() {
 
   /**
    * Map an ABS library item to a Book record.
+   *
+   * `apiKey` is passed in explicitly (read through `getAbsApiKey` by the
+   * caller) so this mapper stays synchronous. Callers that cannot resolve
+   * a credential pass `null`, which forces cover-URL / Bearer-auth paths
+   * to omit the credential — behavior matches the pre-E95-S05 guard.
    */
   const mapAbsItemToBook = useCallback(
-    (absItem: AbsLibraryItem, server: AudiobookshelfServer): Book => {
+    (absItem: AbsLibraryItem, server: AudiobookshelfServer, apiKey: string): Book => {
       const bookId = crypto.randomUUID()
 
       // Handle narrators — ABS list endpoint returns `narratorName` (string), not `narrators` (array)
@@ -87,7 +93,7 @@ export function useAudiobookshelfSync() {
           : (((absItem.media.metadata as Record<string, unknown>).authorName as string) ?? '')
 
       // Cover URL — routed through backend proxy (handles auth + CORS)
-      const coverUrl = AudiobookshelfService.getCoverUrl(server.url, absItem.id, server.apiKey)
+      const coverUrl = AudiobookshelfService.getCoverUrl(server.url, absItem.id, apiKey)
 
       // Duration: prefer metadata.duration, fallback to media.duration (newer ABS versions)
       const duration = absItem.media.metadata.duration || absItem.media.duration || undefined
@@ -106,8 +112,8 @@ export function useAudiobookshelfSync() {
         source: {
           type: 'remote',
           url: server.url.replace(/\/+$/, ''),
-          // apiKey may be undefined after E95-S02 (stored in Vault — KI-E95-S02-L01)
-          auth: server.apiKey ? { bearer: server.apiKey } : undefined,
+          // apiKey resolved at sync time via the vault broker (E95-S05).
+          auth: apiKey ? { bearer: apiKey } : undefined,
         },
         totalDuration: duration,
         progress: 0,
@@ -137,9 +143,11 @@ export function useAudiobookshelfSync() {
       const LIMIT = 50
 
       try {
-        // Temporary guard (KI-E95-S02-L01): apiKey is undefined after E95-S02 migration.
-        if (!server.apiKey) {
-          console.warn('[useAudiobookshelfSync] syncCatalog: apiKey unavailable — sync skipped (KI-E95-S02-L01)')
+        const apiKey = await getAbsApiKey(server.id)
+        if (!apiKey) {
+          console.warn(
+            '[useAudiobookshelfSync] syncCatalog: apiKey unavailable — sync skipped',
+          )
           syncingServers.current.delete(server.id)
           setState(prev => ({ ...prev, isSyncing: false }))
           return
@@ -156,7 +164,7 @@ export function useAudiobookshelfSync() {
           while (hasMore) {
             const result = await AudiobookshelfService.fetchLibraryItems(
               server.url,
-              server.apiKey,
+              apiKey,
               libId,
               { page: currentPage, limit: LIMIT }
             )
@@ -181,7 +189,7 @@ export function useAudiobookshelfSync() {
             totalItems = result.data.total
             for (const absItem of result.data.results) {
               if (absItem.mediaType && absItem.mediaType !== 'book') continue
-              allMappedBooks.push(mapAbsItemToBook(absItem, server))
+              allMappedBooks.push(mapAbsItemToBook(absItem, server, apiKey))
             }
 
             // Check if there are more pages

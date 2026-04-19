@@ -97,25 +97,59 @@ export async function readCredential(
   credentialType: CredentialType,
   credentialId: string
 ): Promise<string | null> {
-  if (!supabase) return null
+  const result = await readCredentialWithStatus(credentialType, credentialId)
+  return result.ok ? result.value : null
+}
+
+/**
+ * Discriminated-result variant of `readCredential` used by E95-S05
+ * resolvers so they can distinguish "not configured" from "auth failed"
+ * and drive the 401 retry / `status: 'auth-failed'` flow.
+ *
+ * Status values:
+ *   - `ok: true, value: string | null` — call succeeded; value may be null
+ *     when no credential is configured for this `(type, id)` pair.
+ *   - `ok: false, reason: 'unauthenticated'` — no Supabase user; callers
+ *     should stop (we cannot read the vault without a JWT).
+ *   - `ok: false, reason: 'auth-failed'` — the broker returned 401/403 or
+ *     an auth-shaped `AuthError`; the resolver retries once after a session
+ *     refresh before marking the row.
+ *   - `ok: false, reason: 'error'` — network / unknown failure; resolver
+ *     returns null but does NOT cache the miss.
+ */
+export type ReadCredentialResult =
+  | { ok: true; value: string | null }
+  | { ok: false; reason: 'unauthenticated' | 'auth-failed' | 'error'; message?: string }
+
+export async function readCredentialWithStatus(
+  credentialType: CredentialType,
+  credentialId: string,
+): Promise<ReadCredentialResult> {
+  if (!supabase) return { ok: false, reason: 'unauthenticated' }
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return null
+  if (!user) return { ok: false, reason: 'unauthenticated' }
 
   try {
     const { data, error } = await supabase.functions.invoke(
       `${FUNCTION_NAME}/read-credential${buildQuery(credentialType, credentialId)}`,
-      { method: 'GET' }
+      { method: 'GET' },
     )
     if (error) {
+      const status = (error as { status?: number; context?: { status?: number } }).status
+        ?? (error as { context?: { status?: number } }).context?.status
+      if (status === 401 || status === 403) {
+        return { ok: false, reason: 'auth-failed', message: error.message }
+      }
       console.warn('[vaultCredentials] readCredential failed:', error)
-      return null
+      return { ok: false, reason: 'error', message: error.message }
     }
-    return typeof data?.secret === 'string' ? data.secret : null
+    const value = typeof data?.secret === 'string' ? data.secret : null
+    return { ok: true, value }
   } catch (err) {
     console.warn('[vaultCredentials] readCredential error:', err)
-    return null
+    return { ok: false, reason: 'error', message: err instanceof Error ? err.message : String(err) }
   }
 }
 

@@ -20,6 +20,7 @@ import { CoverCollageGrid } from '@/app/components/library/CoverCollageGrid'
 import { useBookStore } from '@/stores/useBookStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 import { getCoverUrl } from '@/services/AudiobookshelfService'
+import { useAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
 
 interface CollectionCardProps {
   collection: AbsCollection
@@ -51,9 +52,12 @@ export const CollectionCard = memo(function CollectionCard({
 
   const total = collection.books.length
   const server = servers.find(s => s.status === 'connected')
+  // Resolve the apiKey through the vault broker (E95-S05). Covers render
+  // with the placeholder slot while the resolver is in flight.
+  const { value: apiKey } = useAbsApiKey(server?.id)
   const coverUrls = collection.books
     .slice(0, 4)
-    .map(b => (server ? getCoverUrl(server.url, b.id, server.apiKey) : null))
+    .map(b => (server && apiKey ? getCoverUrl(server.url, b.id, apiKey) : null))
 
   // ── Collapsed (compact vertical) ──────────────────────────────────────
   if (!expanded) {
@@ -163,9 +167,9 @@ export const CollectionCard = memo(function CollectionCard({
                 }}
               >
                 <div className="w-16 h-20 flex-shrink-0 rounded-md overflow-hidden bg-muted shadow-sm group-hover:shadow-md transition-shadow duration-200">
-                  {server ? (
+                  {server && apiKey ? (
                     <img
-                      src={getCoverUrl(server.url, absBook.id, server.apiKey)}
+                      src={getCoverUrl(server.url, absBook.id, apiKey)}
                       alt={`Cover of ${title}`}
                       loading="lazy"
                       className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300"
