@@ -1144,3 +1144,64 @@ async function saveProgress(entry: ContentProgress) {
 **Enforcement:** Today the rule is convention + review. A future ESLint rule (tracked as tech debt) will flag direct `db.<synced-table>.put/add/delete` calls outside `syncableWrite.ts` itself.
 
 **Case study:** E92-S04 introduced `syncableWrite`; E92-S09 wired the P0 stores (`contentProgress`, `studySessions`, `progress`) through it. PRs #343 and #348. Reference: `src/lib/sync/syncableWrite.ts:66-166`.
+
+## GREATEST Monotonic Guard Requires a Separate Reset RPC
+
+Supabase upserts that use `GREATEST(existing, incoming)` to enforce monotonic advancement silently swallow intentional resets. When a user explicitly sends `mastery_score = 0`, `GREATEST(current_value, 0)` keeps the existing value — the reset is a no-op with no error or exception.
+
+**Fix:** Provide a separate `SECURITY DEFINER` RPC for any operation that must bypass the monotonic guard:
+
+```sql
+CREATE OR REPLACE FUNCTION reset_flashcard_mastery(p_user_id uuid, p_card_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  UPDATE flashcard_progress
+  SET mastery_score = 0, updated_at = now()
+  WHERE user_id = p_user_id AND card_id = p_card_id;
+END;
+$$;
+```
+
+**Rule:** Whenever you add a `GREATEST`/`LEAST` guard to an upsert, document the intentional-reset escape hatch in the same migration. The guard and its bypass must ship together.
+
+**Case study:** E93-S06 R3 BLOCKER — `flashcard_progress` upsert with `GREATEST` guard silently discarded all "Reset Mastery" actions. Fixed by adding a dedicated `reset_flashcard_mastery` RPC. Reference: `docs/solutions/sync/e93-closeout-sync-patterns-2026-04-18.md`.
+
+## Upsert PK Reuse — Look Up Natural Key Before Generating UUID
+
+Any upsert that generates a fresh UUID on every call accumulates unbounded duplicate rows when the unique constraint is on the PK (the generated UUID) rather than on the natural key.
+
+```typescript
+// ❌ Wrong — generates a new PK on every call; inserts a fresh row every time
+await db.embeddings.put({ id: crypto.randomUUID(), sourceId, vector })
+
+// ✅ Correct — reuse the existing PK; only mint a UUID for truly new records
+const existing = await db.embeddings.where('sourceId').equals(sourceId).first()
+const id = existing?.id ?? crypto.randomUUID()
+await db.embeddings.put({ id, sourceId, vector, updatedAt: now })
+```
+
+Also add a natural-key unique constraint on the Supabase side so `ON CONFLICT (source_id) DO UPDATE` handles concurrent writes correctly.
+
+**Rule:** If a function generates a fresh UUID and immediately upserts it, verify the unique constraint is on the natural key (not just the PK). If it's PK-only, the function silently accumulates duplicates.
+
+**Case study:** E93-S05 BLOCKER — `saveEmbedding` called `crypto.randomUUID()` on every invocation; each note accumulated hundreds of duplicate rows. Reference: `docs/solutions/sync/e93-closeout-sync-patterns-2026-04-18.md`.
+
+## Append-Only Tables Must Use `created_at` as Sync Cursor
+
+The download engine's delta sync queries `WHERE updated_at > last_sync_at`. Append-only tables (e.g., `audio_bookmarks`, event logs) have no `updated_at` — they only insert. Using the default `updated_at` cursor silently skips all rows; the download completes with zero results and no error.
+
+**Fix:** Register append-only tables with `cursorColumn: 'created_at'` in the table registry:
+
+```typescript
+// tableRegistry.ts
+{
+  tableName: 'audio_bookmarks',
+  cursorColumn: 'created_at',  // ← not 'updated_at'
+  conflictTarget: 'id',
+  appendOnly: true,
+}
+```
+
+**Rule:** Before registering any table in the sync registry, answer: "Can rows be updated after insertion?" If no, set `cursorColumn: 'created_at'` and `appendOnly: true`. Using `updated_at` on an append-only table is a silent regression — all existing rows are skipped on first sync.
+
+**Case study:** E93-S07 — `audio_bookmarks` uses `created_at` only; the standard `updated_at` cursor caused the download engine to skip every row. Reference: `docs/solutions/sync/e93-closeout-sync-patterns-2026-04-18.md`.
