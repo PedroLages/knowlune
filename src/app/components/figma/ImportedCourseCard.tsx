@@ -42,7 +42,7 @@ import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
 import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { TagEditor } from '@/app/components/figma/TagEditor'
-import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
+import { VideoPlayer, type VideoPlayerHandle } from '@/app/components/figma/VideoPlayer'
 import { ThumbnailPickerDialog } from '@/app/components/figma/ThumbnailPickerDialog'
 import { EditCourseDialog } from '@/app/components/figma/EditCourseDialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
@@ -139,6 +139,7 @@ export function ImportedCourseCard({
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const statusBadgeRef = useRef<HTMLButtonElement>(null)
+  const previewPlayerRef = useRef<VideoPlayerHandle>(null)
   const startingRef = useRef(false)
   const thumbnailUrl = thumbnailUrls[course.id] ?? course.youtubeThumbnailUrl ?? null
 
@@ -164,6 +165,24 @@ export function ImportedCourseCard({
   const { blobUrl, error: videoError, loading: videoLoading } = useVideoFromHandle(videoHandle)
   const activePreviewHandle = showPreview ? previewHandle : undefined
   const { blobUrl: previewBlobUrl } = useVideoFromHandle(activePreviewHandle)
+
+  // Autoplay muted when the preview dialog opens with a resolved blobUrl.
+  // Mirrors Netflix/YouTube: the user clicked "Preview First Video", they expect
+  // playback to begin immediately, not to click Play again. Muted autoplay is
+  // the only form browsers allow without a prior user gesture — which we have,
+  // so the promise should resolve, but we still swallow errors gracefully.
+  useEffect(() => {
+    if (!previewOpen || !blobUrl) return
+    const video = previewPlayerRef.current?.getVideoElement()
+    if (!video) return
+    video.muted = true
+    const playPromise = video.play()
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {
+        // silent-catch-ok: autoplay-blocked is non-fatal — user can still click Play
+      })
+    }
+  }, [previewOpen, blobUrl])
 
   useEffect(() => {
     if (!showPreview || course.videoCount === 0) {
@@ -473,20 +492,24 @@ export function ImportedCourseCard({
                   </Badge>
 
                   <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                    <span className="flex items-center gap-1">
-                      <Video className="size-3.5" aria-hidden="true" />
-                      {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
-                    </span>
+                    {course.videoCount > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Video className="size-3.5" aria-hidden="true" />
+                        {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
+                      </span>
+                    )}
                     {course.totalDuration != null && course.totalDuration > 0 && (
                       <span className="flex items-center gap-1">
                         <Clock className="size-3.5" aria-hidden="true" />
                         {formatCourseDuration(course.totalDuration)}
                       </span>
                     )}
-                    <span className="flex items-center gap-1">
-                      <FileText className="size-3.5" aria-hidden="true" />
-                      {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
-                    </span>
+                    {course.pdfCount > 0 && (
+                      <span className="flex items-center gap-1">
+                        <FileText className="size-3.5" aria-hidden="true" />
+                        {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
+                      </span>
+                    )}
                     {course.totalFileSize != null && course.totalFileSize > 0 && (
                       <span className="text-muted-foreground/70">
                         {formatFileSize(course.totalFileSize)}
@@ -741,7 +764,17 @@ export function ImportedCourseCard({
       />
 
       <Dialog open={previewOpen} onOpenChange={handleDialogChange}>
-        <DialogContent className="max-w-3xl p-0 overflow-hidden rounded-2xl">
+        <DialogContent
+          className={cn(
+            'max-w-4xl p-0 overflow-hidden rounded-2xl',
+            // Re-style the default DialogClose (size-11 rounded-sm) into a
+            // rounded-lg muted affordance consistent with the rest of the app.
+            '[&>button:last-of-type]:size-9 [&>button:last-of-type]:rounded-lg',
+            '[&>button:last-of-type]:bg-muted/60 [&>button:last-of-type]:text-muted-foreground',
+            '[&>button:last-of-type]:hover:bg-muted [&>button:last-of-type]:hover:text-foreground',
+            '[&>button:last-of-type]:opacity-100 [&>button:last-of-type]:top-4 [&>button:last-of-type]:right-4'
+          )}
+        >
           <DialogHeader className="px-6 pt-5 pb-2">
             <DialogTitle>{course.name} — Preview</DialogTitle>
           </DialogHeader>
@@ -752,7 +785,7 @@ export function ImportedCourseCard({
             )}
             {!isLoading && !videoError && blobUrl && (
               <div className="aspect-video w-full">
-                <VideoPlayer src={blobUrl} title={firstVideo?.filename} />
+                <VideoPlayer ref={previewPlayerRef} src={blobUrl} title={firstVideo?.filename} />
               </div>
             )}
             {!isLoading && !videoError && !blobUrl && (
