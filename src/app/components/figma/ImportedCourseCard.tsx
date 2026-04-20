@@ -14,6 +14,7 @@ import {
   Loader2,
   Pencil,
   Clock,
+  X,
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Badge } from '@/app/components/ui/badge'
@@ -39,7 +40,13 @@ import {
   AlertDialogTitle,
 } from '@/app/components/ui/alert-dialog'
 import { toast } from 'sonner'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from '@/app/components/ui/dialog'
 import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { TagEditor } from '@/app/components/figma/TagEditor'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
@@ -751,39 +758,42 @@ export function ImportedCourseCard({
 
       <Dialog open={previewOpen} onOpenChange={handleDialogChange}>
         <DialogContent
+          hideClose
+          overlayClassName="bg-black/80"
           onOpenAutoFocus={e => e.preventDefault()}
-          className={cn(
-            'sm:max-w-[92vw] lg:max-w-6xl p-0 overflow-hidden rounded-2xl',
-            // Re-style the default DialogClose (size-11 rounded-sm) into a
-            // rounded-lg muted affordance consistent with the rest of the app.
-            // Also tame the browser focus ring — the default auto-focus on
-            // dialog open leaves a prominent blue outline that reads as noise.
-            '[&>button:last-of-type]:size-9 [&>button:last-of-type]:rounded-lg',
-            '[&>button:last-of-type]:bg-muted/60 [&>button:last-of-type]:text-muted-foreground',
-            '[&>button:last-of-type]:hover:bg-muted [&>button:last-of-type]:hover:text-foreground',
-            '[&>button:last-of-type]:opacity-100 [&>button:last-of-type]:top-4 [&>button:last-of-type]:right-4',
-            '[&>button:last-of-type]:focus:ring-0 [&>button:last-of-type]:focus:ring-offset-0',
-            '[&>button:last-of-type]:focus-visible:ring-2 [&>button:last-of-type]:focus-visible:ring-ring'
-          )}
+          className="sm:max-w-[92vw] lg:max-w-[85vw] p-0 overflow-visible border-0 shadow-none bg-transparent"
         >
-          <DialogHeader className="px-6 pt-5 pb-2">
+          {/* Title is redundant with the card that spawned the modal — keep
+              for screen readers but hide visually. */}
+          <DialogHeader className="sr-only">
             <DialogTitle>{course.name} — Preview</DialogTitle>
           </DialogHeader>
-          <div className="px-6 pb-6">
-            {isLoading && <Skeleton className="aspect-video w-full rounded-xl" />}
+          <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black shadow-2xl">
+            {isLoading && <Skeleton className="absolute inset-0 rounded-2xl" />}
             {!isLoading && videoError && (
-              <p className="text-destructive text-sm py-8 text-center">{videoError}</p>
+              <p className="absolute inset-0 flex items-center justify-center text-white/90 text-sm text-center px-6">
+                {videoError}
+              </p>
             )}
             {!isLoading && !videoError && blobUrl && (
-              <div className="aspect-video w-full">
-                <VideoPlayer src={blobUrl} title={firstVideo?.filename} autoplay />
-              </div>
+              <VideoPlayer src={blobUrl} title={firstVideo?.filename} autoplay />
             )}
             {!isLoading && !videoError && !blobUrl && (
-              <p className="text-muted-foreground text-sm py-8 text-center">
+              <p className="absolute inset-0 flex items-center justify-center text-white/70 text-sm text-center px-6">
                 No video found in this course.
               </p>
             )}
+            <DialogClose
+              aria-label="Close preview"
+              className={cn(
+                'absolute top-4 right-4 z-50 size-10 rounded-full flex items-center justify-center',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white',
+                'transition-opacity hover:opacity-90',
+                OVERLAY_SCRIM_CLASS
+              )}
+            >
+              <X className="size-5" aria-hidden="true" />
+            </DialogClose>
           </div>
         </DialogContent>
       </Dialog>

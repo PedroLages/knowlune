@@ -1,17 +1,29 @@
 import { Link, useNavigate } from 'react-router'
-import { Clock, Video, FileText, BookOpen, CheckCircle, Eye, Info } from 'lucide-react'
+import { Clock, Video, FileText, BookOpen, CheckCircle, Eye, Info, X } from 'lucide-react'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import { Progress } from '@/app/components/ui/progress'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from '@/app/components/ui/dialog'
 import { ProgressRing } from './ProgressRing'
 import { MomentumBadge } from './MomentumBadge'
 import { AtRiskBadge } from './AtRiskBadge'
 import { CompletionEstimate } from './CompletionEstimate'
 import { VideoPlayer } from './VideoPlayer'
-import { CardCover, CoverProgressBar, CompletionOverlay, CoverCornerChip } from './CourseCardShell'
+import {
+  CardCover,
+  CoverProgressBar,
+  CompletionOverlay,
+  CoverCornerChip,
+  OVERLAY_SCRIM_CLASS,
+} from './CourseCardShell'
 import { getProgress } from '@/lib/progress'
 import { getResourceUrl } from '@/lib/media'
 import { cn } from '@/app/components/ui/utils'
@@ -274,31 +286,34 @@ export function CourseCard({
   const previewDialog = (
     <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
       <DialogContent
+        hideClose
+        overlayClassName="bg-black/80"
         onOpenAutoFocus={e => e.preventDefault()}
-        className={cn(
-          'sm:max-w-[92vw] lg:max-w-6xl p-0 overflow-hidden rounded-2xl',
-          '[&>button:last-of-type]:size-9 [&>button:last-of-type]:rounded-lg',
-          '[&>button:last-of-type]:bg-muted/60 [&>button:last-of-type]:text-muted-foreground',
-          '[&>button:last-of-type]:hover:bg-muted [&>button:last-of-type]:hover:text-foreground',
-          '[&>button:last-of-type]:opacity-100 [&>button:last-of-type]:top-4 [&>button:last-of-type]:right-4',
-          '[&>button:last-of-type]:focus:ring-0 [&>button:last-of-type]:focus:ring-offset-0',
-          '[&>button:last-of-type]:focus-visible:ring-2 [&>button:last-of-type]:focus-visible:ring-ring'
-        )}
+        className="sm:max-w-[92vw] lg:max-w-[85vw] p-0 overflow-visible border-0 shadow-none bg-transparent"
       >
-        <DialogHeader className="px-6 pt-5 pb-2">
+        <DialogHeader className="sr-only">
           <DialogTitle>{course.title} — Preview</DialogTitle>
         </DialogHeader>
-        <div className="px-6 pb-6">
+        <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black shadow-2xl">
           {previewSrc && (
-            <div className="aspect-video w-full">
-              <VideoPlayer
-                src={previewSrc}
-                title={firstVideoResource?.title}
-                poster={course.coverImage ? `${course.coverImage}-768w.png` : undefined}
-                autoplay
-              />
-            </div>
+            <VideoPlayer
+              src={previewSrc}
+              title={firstVideoResource?.title}
+              poster={course.coverImage ? `${course.coverImage}-768w.png` : undefined}
+              autoplay
+            />
           )}
+          <DialogClose
+            aria-label="Close preview"
+            className={cn(
+              'absolute top-4 right-4 z-50 size-10 rounded-full flex items-center justify-center',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white',
+              'transition-opacity hover:opacity-90',
+              OVERLAY_SCRIM_CLASS
+            )}
+          >
+            <X className="size-5" aria-hidden="true" />
+          </DialogClose>
         </div>
       </DialogContent>
     </Dialog>
