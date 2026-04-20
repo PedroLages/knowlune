@@ -529,7 +529,7 @@ function FeaturedAuthorProfile({
       {totalCourseCount > 0 && (
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-4">Courses by {author.name}</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)]">
             {authorCourses.map(course => (
               <CourseCard
                 key={course.id}

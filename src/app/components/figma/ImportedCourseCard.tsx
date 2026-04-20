@@ -613,32 +613,46 @@ export function ImportedCourseCard({
               // the data-testid for any tests that rely on the fallback element.
               <span data-testid="course-card-unknown-author" className="sr-only" aria-hidden="true" />
             )}
-            <div className="flex items-center gap-1.5 mt-1 mb-2">
-              <span aria-live="polite" className="contents">
-                {analysisStatus === 'analyzing' && (
+            {(course.tags.length > 0 || analysisStatus === 'analyzing' || !readOnly) && (
+              <div className="flex items-center gap-1.5 mt-1 mb-2">
+                <span aria-live="polite" className="contents">
+                  {analysisStatus === 'analyzing' && (
+                    <span
+                      data-testid="ai-tagging-indicator"
+                      className="text-xs text-muted-foreground animate-pulse flex items-center gap-1"
+                    >
+                      <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+                      AI tagging...
+                    </span>
+                  )}
+                  {analysisStatus === 'complete' && course.tags.length > 0 && (
+                    <span className="sr-only">
+                      AI tagging complete. {course.tags.length} tags added.
+                    </span>
+                  )}
+                </span>
+                <TagBadgeList
+                  tags={course.tags}
+                  onRemove={readOnly ? undefined : handleRemoveTag}
+                  maxVisible={3}
+                />
+                {/* Hide the "+" affordance at rest when there are no tags yet — it reads
+                    as orphaned noise under the title. Reveals on hover/focus so the
+                    feature stays fully accessible and discoverable, and stays visible
+                    on touch devices which lack hover. */}
+                {!readOnly && (
                   <span
-                    data-testid="ai-tagging-indicator"
-                    className="text-xs text-muted-foreground animate-pulse flex items-center gap-1"
+                    className={cn(
+                      'inline-flex transition-opacity duration-200 motion-reduce:transition-none',
+                      course.tags.length === 0 &&
+                        'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100'
+                    )}
                   >
-                    <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-                    AI tagging...
+                    <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
                   </span>
                 )}
-                {analysisStatus === 'complete' && course.tags.length > 0 && (
-                  <span className="sr-only">
-                    AI tagging complete. {course.tags.length} tags added.
-                  </span>
-                )}
-              </span>
-              <TagBadgeList
-                tags={course.tags}
-                onRemove={readOnly ? undefined : handleRemoveTag}
-                maxVisible={3}
-              />
-              {!readOnly && (
-                <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
-              )}
-            </div>
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               {course.videoCount > 0 && (
                 <span data-testid="course-card-video-count" className="flex items-center gap-1">
