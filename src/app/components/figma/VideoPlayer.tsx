@@ -930,6 +930,14 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           onWaiting={handleWaiting}
           onCanPlay={handleCanPlay}
           onPlaying={handleCanPlay}
+          onPlay={() => {
+            setIsPlaying(true)
+            onPlayStateChange?.(true)
+          }}
+          onPause={() => {
+            setIsPlaying(false)
+            onPlayStateChange?.(false)
+          }}
           onProgress={handleProgress}
           onError={handleVideoError}
           onClick={togglePlayPause}

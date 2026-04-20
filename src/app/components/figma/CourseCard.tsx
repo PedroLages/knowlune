@@ -279,7 +279,9 @@ export function CourseCard({
           '[&>button:last-of-type]:size-9 [&>button:last-of-type]:rounded-lg',
           '[&>button:last-of-type]:bg-muted/60 [&>button:last-of-type]:text-muted-foreground',
           '[&>button:last-of-type]:hover:bg-muted [&>button:last-of-type]:hover:text-foreground',
-          '[&>button:last-of-type]:opacity-100 [&>button:last-of-type]:top-4 [&>button:last-of-type]:right-4'
+          '[&>button:last-of-type]:opacity-100 [&>button:last-of-type]:top-4 [&>button:last-of-type]:right-4',
+          '[&>button:last-of-type]:focus:ring-0 [&>button:last-of-type]:focus:ring-offset-0',
+          '[&>button:last-of-type]:focus-visible:ring-2 [&>button:last-of-type]:focus-visible:ring-ring'
         )}
       >
         <DialogHeader className="px-6 pt-5 pb-2">

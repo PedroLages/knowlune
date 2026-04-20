@@ -485,10 +485,14 @@ export function ImportedCourseCard({
                       <p className="text-xs text-muted-foreground">
                         Imported {new Date(course.importedAt).toLocaleDateString()}
                       </p>
-                      <Badge className={cn('border-0 text-[10px] gap-1 shrink-0', config.badgeClass)}>
-                        <StatusIcon className="size-3" aria-hidden="true" />
+                      <span
+                        className={cn(
+                          'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium leading-none shrink-0',
+                          config.badgeClass
+                        )}
+                      >
                         {config.label}
-                      </Badge>
+                      </span>
                     </div>
                   </div>
 
@@ -770,10 +774,14 @@ export function ImportedCourseCard({
             'max-w-4xl p-0 overflow-hidden rounded-2xl',
             // Re-style the default DialogClose (size-11 rounded-sm) into a
             // rounded-lg muted affordance consistent with the rest of the app.
+            // Also tame the browser focus ring — the default auto-focus on
+            // dialog open leaves a prominent blue outline that reads as noise.
             '[&>button:last-of-type]:size-9 [&>button:last-of-type]:rounded-lg',
             '[&>button:last-of-type]:bg-muted/60 [&>button:last-of-type]:text-muted-foreground',
             '[&>button:last-of-type]:hover:bg-muted [&>button:last-of-type]:hover:text-foreground',
-            '[&>button:last-of-type]:opacity-100 [&>button:last-of-type]:top-4 [&>button:last-of-type]:right-4'
+            '[&>button:last-of-type]:opacity-100 [&>button:last-of-type]:top-4 [&>button:last-of-type]:right-4',
+            '[&>button:last-of-type]:focus:ring-0 [&>button:last-of-type]:focus:ring-offset-0',
+            '[&>button:last-of-type]:focus-visible:ring-2 [&>button:last-of-type]:focus-visible:ring-ring'
           )}
         >
           <DialogHeader className="px-6 pt-5 pb-2">
