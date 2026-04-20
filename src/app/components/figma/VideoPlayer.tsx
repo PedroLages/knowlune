@@ -59,14 +59,14 @@ interface VideoPlayerProps {
   onLoadCaptions?: (file: File) => void
   onFocusNotes?: () => void
   /**
-   * When true, autoplay the video muted as soon as it can play, and sync
-   * the internal isMuted state so the volume icon renders correctly. Use
-   * for preview surfaces (e.g. the course card preview dialog) where the
-   * user has already clicked to initiate playback via a prior gesture.
-   * Browsers only allow autoplay when muted; if the promise rejects the
-   * error is swallowed and the user can click Play manually.
+   * When true, autoplay the video as soon as it can play — preferring
+   * audio-on. Used for preview surfaces (e.g. the course card preview
+   * dialog) where the user initiated playback via a prior click gesture.
+   * Browsers may block unmuted autoplay if the gesture token is stale;
+   * we catch that rejection and retry muted so the preview still plays.
+   * The isMuted state stays in sync with the actual fallback path.
    */
-  autoplayMuted?: boolean
+  autoplay?: boolean
 }
 
 export interface VideoPlayerHandle {
@@ -114,7 +114,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     onTheaterModeToggle,
     onLoadCaptions,
     onFocusNotes,
-    autoplayMuted = false,
+    autoplay = false,
   },
   ref
 ) {
@@ -150,7 +150,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(1)
-  const [isMuted, setIsMuted] = useState(autoplayMuted)
+  const [isMuted, setIsMuted] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showControls, setShowControls] = useState(true)
   const [announcement, setAnnouncement] = useState('')
@@ -215,25 +215,30 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     setLoopEnd(null)
   }, [src])
 
-  // Autoplay muted when the caller opts in (preview dialogs). Doing this
-  // inside the component keeps the DOM <video>.muted attribute and the
-  // internal isMuted React state in sync — a prior approach that poked
-  // videoRef.current.muted from a parent effect left isMuted=false while
-  // the element was actually muted, so clicking the volume icon needed
-  // two taps to unmute.
+  // Autoplay when the caller opts in (preview dialogs). Try unmuted first
+  // — the click that opened the dialog is a user gesture, so browsers
+  // usually allow audible playback. If the browser rejects (gesture token
+  // stale due to blob-load delay), fall back to muted autoplay. State is
+  // kept in sync with whichever path succeeded so the volume icon renders
+  // correctly and a single Unmute tap actually unmutes.
   useEffect(() => {
-    if (!autoplayMuted) return
+    if (!autoplay) return
     const video = videoRef.current
     if (!video) return
-    video.muted = true
-    setIsMuted(true)
+    video.muted = false
+    setIsMuted(false)
     const playPromise = video.play()
     if (playPromise && typeof playPromise.catch === 'function') {
       playPromise.catch(() => {
-        // silent-catch-ok: autoplay-blocked is non-fatal — user can click Play
+        // Audible autoplay blocked — retry muted so the preview still plays.
+        video.muted = true
+        setIsMuted(true)
+        video.play().catch(() => {
+          // silent-catch-ok: both paths blocked — user can click Play
+        })
       })
     }
-  }, [autoplayMuted, src])
+  }, [autoplay, src])
 
   // PiP enter/leave listeners
   useEffect(() => {

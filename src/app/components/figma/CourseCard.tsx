@@ -295,7 +295,7 @@ export function CourseCard({
                 src={previewSrc}
                 title={firstVideoResource?.title}
                 poster={course.coverImage ? `${course.coverImage}-768w.png` : undefined}
-                autoplayMuted
+                autoplay
               />
             </div>
           )}

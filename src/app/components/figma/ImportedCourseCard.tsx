@@ -776,7 +776,7 @@ export function ImportedCourseCard({
             )}
             {!isLoading && !videoError && blobUrl && (
               <div className="aspect-video w-full">
-                <VideoPlayer src={blobUrl} title={firstVideo?.filename} autoplayMuted />
+                <VideoPlayer src={blobUrl} title={firstVideo?.filename} autoplay />
               </div>
             )}
             {!isLoading && !videoError && !blobUrl && (
