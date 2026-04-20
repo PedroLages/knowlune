@@ -1,0 +1,33 @@
+# Knowlune titan compose stack — reference copy.
+# Deploy location on titan: /mnt/cache/docker/stacks/knowlune/docker-compose.yml
+# The real .env beside this file holds IMAGE_TAG plus runtime secrets (see README.md).
+#
+# Assumes a Traefik v3 instance already running on titan with a shared Docker network
+# (commonly "traefik" or "proxy") and a file-provider middleware chain named
+# `chain-public@file` (rate limit + CrowdSec). Adjust `networks:` to match titan.
+
+services:
+  knowlune:
+    image: ghcr.io/pedrolages/knowlune:${IMAGE_TAG:-main}
+    container_name: knowlune
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - traefik
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: traefik
+      traefik.http.routers.knowlune.rule: "Host(`knowlune.pedrolages.net`)"
+      traefik.http.routers.knowlune.entrypoints: web
+      traefik.http.routers.knowlune.middlewares: chain-public@file
+      traefik.http.services.knowlune.loadbalancer.server.port: "80"
+
+networks:
+  traefik:
+    external: true
