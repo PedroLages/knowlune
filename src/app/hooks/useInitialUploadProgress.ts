@@ -94,31 +94,9 @@ export function useInitialUploadProgress(
   useEffect(() => {
     if (!enabled || !userId) return
     let cancelled = false
-
-    async function snapshotAndStart() {
-      try {
-        const [pendingAtStart, unlinkedAtStart] = await Promise.all([
-          readPendingCount(),
-          computeUnlinkedCount(userId),
-        ])
-        const total = pendingAtStart + unlinkedAtStart
-        if (cancelled) return
-        snapshotTakenRef.current = true
-        totalRef.current = total
-        setState({
-          processed: 0,
-          total,
-          recentTable: null,
-          done: total === 0,
-          error: null,
-        })
-      } catch (err) {
-        if (cancelled) return
-        // silent-catch-ok — snapshot failure surfaces to state; poll loop retries.
-        console.error('[useInitialUploadProgress] snapshot failed:', err)
-        setState((prev) => ({ ...prev, error: err as Error }))
-      }
-    }
+    // intervalId is assigned after the snapshot resolves to guarantee the
+    // polling total is always the captured snapshot value (not 0).
+    let intervalId: ReturnType<typeof window.setInterval> | null = null
 
     async function tick() {
       if (cancelled) return
@@ -128,6 +106,8 @@ export function useInitialUploadProgress(
           readRecentPendingTable(),
         ])
         if (cancelled) return
+        // Always read from the ref — guarantees we use the snapshot total even
+        // if fullSync drains the queue before the first tick fires.
         const total = totalRef.current
         const processed = Math.max(0, Math.min(total, total - pendingNow))
         setState({
@@ -146,12 +126,68 @@ export function useInitialUploadProgress(
       }
     }
 
-    snapshotAndStart()
-    const intervalId = window.setInterval(tick, POLL_INTERVAL_MS)
+    async function snapshotAndStart() {
+      // F2 fix: capture the initial pending count BEFORE calling fullSync.
+      // This guarantees total > 0 when we enter the uploading state, preventing
+      // the race where fullSync drains the queue before our snapshot lands and
+      // `progress.total` is 0, causing the success transition to never fire.
+      try {
+        const [pendingAtStart, unlinkedAtStart] = await Promise.all([
+          readPendingCount(),
+          computeUnlinkedCount(userId),
+        ])
+        if (cancelled) return
+
+        const total = pendingAtStart + unlinkedAtStart
+
+        // AC5 silent-close path: no local data at snapshot time. Write the
+        // completion flag here before the wizard even starts uploading.
+        if (total === 0) {
+          snapshotTakenRef.current = true
+          totalRef.current = 0
+          setState({
+            processed: 0,
+            total: 0,
+            recentTable: null,
+            done: true,
+            error: null,
+          })
+          return
+        }
+
+        // Store the snapshot total in the ref BEFORE starting the poll loop.
+        // Later ticks always read totalRef.current so they use this stable value
+        // even if the queue has already been partially or fully drained by the
+        // time the first tick fires.
+        snapshotTakenRef.current = true
+        totalRef.current = total
+        setState({
+          processed: 0,
+          total,
+          recentTable: null,
+          done: false,
+          error: null,
+        })
+
+        // Only start polling AFTER the snapshot is captured.
+        if (!cancelled) {
+          intervalId = window.setInterval(tick, POLL_INTERVAL_MS)
+        }
+      } catch (err) {
+        if (cancelled) return
+        // silent-catch-ok — snapshot failure surfaces to state; poll loop retries.
+        console.error('[useInitialUploadProgress] snapshot failed:', err)
+        setState((prev) => ({ ...prev, error: err as Error }))
+      }
+    }
+
+    void snapshotAndStart()
 
     return () => {
       cancelled = true
-      window.clearInterval(intervalId)
+      if (intervalId !== null) {
+        window.clearInterval(intervalId)
+      }
     }
   }, [userId, enabled])
 
