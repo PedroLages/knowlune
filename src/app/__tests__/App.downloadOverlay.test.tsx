@@ -140,10 +140,11 @@ beforeEach(() => {
   })
 
   vi.mocked(useAuthStore).mockImplementation(
-    (selector?: (s: { user: typeof mockAuthUser }) => unknown) => {
-      const state = { user: mockAuthUser }
-      return selector ? selector(state) : (state as unknown as ReturnType<typeof useAuthStore>)
-    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ((selector?: (s: unknown) => unknown) => {
+      const state = { user: mockAuthUser, session: null, initialized: true, sessionExpired: false, _userInitiatedSignOut: false }
+      return selector ? selector(state) : state
+    }) as unknown as typeof useAuthStore,
   )
 
   vi.mocked(shouldShowDownloadOverlay).mockResolvedValue(false)
