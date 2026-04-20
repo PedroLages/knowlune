@@ -7,6 +7,19 @@ RUN npm ci
 
 COPY . .
 
+# Vite build-time env — statically replaced in the SPA bundle.
+# Pass via `docker build --build-arg VITE_SUPABASE_URL=... --build-arg VITE_SUPABASE_ANON_KEY=...`.
+# Optional: VITE_SENTRY_DSN, VITE_API_BASE_URL. Missing vars produce a no-op bundle path
+# (Sentry init is env-gated; Supabase calls will fail loudly at runtime if URL/key are blank).
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ARG VITE_SENTRY_DSN
+ARG VITE_API_BASE_URL
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL \
+    VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY \
+    VITE_SENTRY_DSN=$VITE_SENTRY_DSN \
+    VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 # Build the React SPA (output: dist/)
 RUN npm run build
 
