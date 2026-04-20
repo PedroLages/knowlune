@@ -585,35 +585,59 @@ export function ImportedCourseCard({
             >
               {course.name}
             </h3>
-            {authorData ? (
-              <button
-                type="button"
-                data-testid="course-card-author"
-                onClick={e => {
-                  e.stopPropagation()
-                  navigate(`/authors/${authorData.id}`)
-                }}
-                className="flex items-center gap-1.5 mb-1 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
-              >
-                <Avatar className="size-5">
-                  <AvatarImage {...getAvatarSrc(authorData.photoUrl ?? '', 20)} alt="" />
-                  <AvatarFallback className="text-[8px]">
-                    {authorData.name
-                      .split(' ')
-                      .map(n => n[0])
-                      .join('')
-                      .toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <span>{authorData.name}</span>
-              </button>
-            ) : (
-              // Author row is hidden when no author is set — exposing "Unknown Author"
-              // as user-facing text reads as a bug. A visually hidden span preserves
-              // the data-testid for any tests that rely on the fallback element.
-              <span data-testid="course-card-unknown-author" className="sr-only" aria-hidden="true" />
-            )}
-            {(course.tags.length > 0 || analysisStatus === 'analyzing' || !readOnly) && (
+            {/* Author + inline "+ add tag" row.
+                When there are no tags yet (and the card is editable), the tag-add
+                affordance folds into this row as a muted text trigger — avoiding
+                the standalone "+" button under the title. Hidden at rest and
+                revealed on hover/focus so empty cards stay visually calm.
+                When tags exist, they render in their own row below with the
+                original pill-style "+" for adding more. */}
+            <div className="flex items-center gap-2 mb-1 min-h-5">
+              {authorData ? (
+                <button
+                  type="button"
+                  data-testid="course-card-author"
+                  onClick={e => {
+                    e.stopPropagation()
+                    navigate(`/authors/${authorData.id}`)
+                  }}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
+                >
+                  <Avatar className="size-5">
+                    <AvatarImage {...getAvatarSrc(authorData.photoUrl ?? '', 20)} alt="" />
+                    <AvatarFallback className="text-[8px]">
+                      {authorData.name
+                        .split(' ')
+                        .map(n => n[0])
+                        .join('')
+                        .toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span>{authorData.name}</span>
+                </button>
+              ) : (
+                // Author row is hidden when no author is set — exposing "Unknown Author"
+                // as user-facing text reads as a bug. A visually hidden span preserves
+                // the data-testid for any tests that rely on the fallback element.
+                <span data-testid="course-card-unknown-author" className="sr-only" aria-hidden="true" />
+              )}
+              {!readOnly && course.tags.length === 0 && analysisStatus !== 'analyzing' && (
+                <>
+                  {authorData && (
+                    <span className="text-muted-foreground/40" aria-hidden="true">·</span>
+                  )}
+                  <span className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-200 motion-reduce:transition-none">
+                    <TagEditor
+                      variant="inline"
+                      currentTags={course.tags}
+                      allTags={allTags}
+                      onAddTag={handleAddTag}
+                    />
+                  </span>
+                </>
+              )}
+            </div>
+            {(course.tags.length > 0 || analysisStatus === 'analyzing') && (
               <div className="flex items-center gap-1.5 mt-1 mb-2">
                 <span aria-live="polite" className="contents">
                   {analysisStatus === 'analyzing' && (
@@ -636,20 +660,8 @@ export function ImportedCourseCard({
                   onRemove={readOnly ? undefined : handleRemoveTag}
                   maxVisible={3}
                 />
-                {/* Hide the "+" affordance at rest when there are no tags yet — it reads
-                    as orphaned noise under the title. Reveals on hover/focus so the
-                    feature stays fully accessible and discoverable, and stays visible
-                    on touch devices which lack hover. */}
-                {!readOnly && (
-                  <span
-                    className={cn(
-                      'inline-flex transition-opacity duration-200 motion-reduce:transition-none',
-                      course.tags.length === 0 &&
-                        'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100'
-                    )}
-                  >
-                    <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
-                  </span>
+                {!readOnly && course.tags.length > 0 && (
+                  <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
                 )}
               </div>
             )}

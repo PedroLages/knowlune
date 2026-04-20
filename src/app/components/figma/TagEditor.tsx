@@ -14,9 +14,15 @@ interface TagEditorProps {
   currentTags: string[]
   allTags: string[]
   onAddTag: (tag: string) => void
+  /**
+   * 'button' (default) renders the filled pill-button with a `+` icon.
+   * 'inline' renders a minimal text trigger ("+ add tag") suitable for appending
+   * inside existing rows (e.g. after the author name on a card).
+   */
+  variant?: 'button' | 'inline'
 }
 
-export function TagEditor({ currentTags, allTags, onAddTag }: TagEditorProps) {
+export function TagEditor({ currentTags, allTags, onAddTag, variant = 'button' }: TagEditorProps) {
   const [open, setOpen] = useState(false)
   const [inputValue, setInputValue] = useState('')
 
@@ -44,17 +50,30 @@ export function TagEditor({ currentTags, allTags, onAddTag }: TagEditorProps) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          data-testid="add-tag-button"
-          aria-label="Add topic tag"
-          onClick={e => e.stopPropagation()}
-          className="group inline-flex items-center justify-center rounded-full p-3 -m-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-        >
-          <span className="flex items-center justify-center rounded-full size-5 bg-secondary text-secondary-foreground group-hover:bg-secondary/80 transition-colors">
-            <Plus className="size-3" />
-          </span>
-        </button>
+        {variant === 'inline' ? (
+          <button
+            type="button"
+            data-testid="add-tag-button"
+            aria-label="Add topic tag"
+            onClick={e => e.stopPropagation()}
+            className="inline-flex items-center gap-0.5 text-xs text-muted-foreground/70 hover:text-brand transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded"
+          >
+            <Plus className="size-3" aria-hidden="true" />
+            <span>add tag</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            data-testid="add-tag-button"
+            aria-label="Add topic tag"
+            onClick={e => e.stopPropagation()}
+            className="group inline-flex items-center justify-center rounded-full p-3 -m-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+          >
+            <span className="flex items-center justify-center rounded-full size-5 bg-secondary text-secondary-foreground group-hover:bg-secondary/80 transition-colors">
+              <Plus className="size-3" />
+            </span>
+          </button>
+        )}
       </PopoverTrigger>
       <PopoverContent
         data-testid="tag-editor-popover"
