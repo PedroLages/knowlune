@@ -42,7 +42,7 @@ import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
 import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { TagEditor } from '@/app/components/figma/TagEditor'
-import { VideoPlayer, type VideoPlayerHandle } from '@/app/components/figma/VideoPlayer'
+import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
 import { ThumbnailPickerDialog } from '@/app/components/figma/ThumbnailPickerDialog'
 import { EditCourseDialog } from '@/app/components/figma/EditCourseDialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
@@ -139,7 +139,6 @@ export function ImportedCourseCard({
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const statusBadgeRef = useRef<HTMLButtonElement>(null)
-  const previewPlayerRef = useRef<VideoPlayerHandle>(null)
   const startingRef = useRef(false)
   const thumbnailUrl = thumbnailUrls[course.id] ?? course.youtubeThumbnailUrl ?? null
 
@@ -165,24 +164,6 @@ export function ImportedCourseCard({
   const { blobUrl, error: videoError, loading: videoLoading } = useVideoFromHandle(videoHandle)
   const activePreviewHandle = showPreview ? previewHandle : undefined
   const { blobUrl: previewBlobUrl } = useVideoFromHandle(activePreviewHandle)
-
-  // Autoplay muted when the preview dialog opens with a resolved blobUrl.
-  // Mirrors Netflix/YouTube: the user clicked "Preview First Video", they expect
-  // playback to begin immediately, not to click Play again. Muted autoplay is
-  // the only form browsers allow without a prior user gesture — which we have,
-  // so the promise should resolve, but we still swallow errors gracefully.
-  useEffect(() => {
-    if (!previewOpen || !blobUrl) return
-    const video = previewPlayerRef.current?.getVideoElement()
-    if (!video) return
-    video.muted = true
-    const playPromise = video.play()
-    if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch(() => {
-        // silent-catch-ok: autoplay-blocked is non-fatal — user can still click Play
-      })
-    }
-  }, [previewOpen, blobUrl])
 
   useEffect(() => {
     if (!showPreview || course.videoCount === 0) {
@@ -795,7 +776,7 @@ export function ImportedCourseCard({
             )}
             {!isLoading && !videoError && blobUrl && (
               <div className="aspect-video w-full">
-                <VideoPlayer ref={previewPlayerRef} src={blobUrl} title={firstVideo?.filename} />
+                <VideoPlayer src={blobUrl} title={firstVideo?.filename} autoplayMuted />
               </div>
             )}
             {!isLoading && !videoError && !blobUrl && (
