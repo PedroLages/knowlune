@@ -481,15 +481,16 @@ export function ImportedCourseCard({
                 <div className="space-y-3">
                   <div>
                     <h4 className="font-semibold text-sm leading-tight">{course.name}</h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Imported {new Date(course.importedAt).toLocaleDateString()}
-                    </p>
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      <p className="text-xs text-muted-foreground">
+                        Imported {new Date(course.importedAt).toLocaleDateString()}
+                      </p>
+                      <Badge className={cn('border-0 text-[10px] gap-1 shrink-0', config.badgeClass)}>
+                        <StatusIcon className="size-3" aria-hidden="true" />
+                        {config.label}
+                      </Badge>
+                    </div>
                   </div>
-
-                  <Badge className={cn('border-0 text-xs gap-1', config.badgeClass)}>
-                    <StatusIcon className="size-3" aria-hidden="true" />
-                    {config.label}
-                  </Badge>
 
                   <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                     {course.videoCount > 0 && (
