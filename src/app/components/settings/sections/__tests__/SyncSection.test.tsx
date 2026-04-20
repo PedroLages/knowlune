@@ -225,7 +225,7 @@ describe('<SyncSection />', () => {
     // The button is disabled when isSyncing=true (status=syncing), so click is a no-op.
     const button = screen.getByTestId('sync-now-button')
     expect(button).toBeDisabled()
-    await user.click(button, { force: true } as Parameters<typeof user.click>[1])
+    await user.click(button)
     expect(mockFullSync).not.toHaveBeenCalled()
   })
 

@@ -32,6 +32,11 @@ import { runCredentialsToVaultMigration } from '@/lib/credentials/migrateCredent
  */
 
 const LINKED_FLAG_PREFIX = 'sync:linked:'
+// E97-S03: Session-scoped dismissal flag for the initial upload wizard.
+// Cleared on SIGNED_OUT so the wizard reappears for the next session if the
+// upload still hasn't completed. The completion flag (sync:wizard:complete:*)
+// is permanent per device and is NOT cleared here.
+const WIZARD_DISMISSED_PREFIX = 'sync:wizard:dismissed:'
 
 export interface UseAuthLifecycleOptions {
   /** Called with the userId when unlinked local records are detected on sign-in. */
@@ -137,6 +142,20 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
         } else {
           // System-initiated (refresh token expired) — show expiry banner
           useAuthStore.setState({ sessionExpired: true })
+        }
+
+        // E97-S03: Clear the wizard dismissal flag for the just-signed-out
+        // user so the wizard can reappear on the next session (if still
+        // needed). Read the id from the store before setSession(null) clears it.
+        const signedOutUserId = state.user?.id
+        if (signedOutUserId) {
+          try {
+            localStorage.removeItem(`${WIZARD_DISMISSED_PREFIX}${signedOutUserId}`)
+          } catch (err) {
+            // silent-catch-ok — dismissal flag cleanup is best-effort; worst
+            // case the wizard suppresses once extra on next sign-in.
+            console.error('[useAuthLifecycle] dismissal flag cleanup failed:', err)
+          }
         }
 
         // Stop sync and discard the in-flight upload queue + download cursors.

@@ -1326,3 +1326,24 @@ issues:
     severity: low
     status: open
     decision: schedule-future
+
+  - id: KI-E97-S03-L01
+    summary: "Retry may hang in 'uploading' if fullSync rejects before status becomes 'syncing' (suppressErrorUntilSyncingRef never clears)"
+    story: E97-S03
+    severity: low
+    status: open
+    decision: schedule-future
+
+  - id: KI-E97-S03-L02
+    summary: "computeUnlinkedCount runs full .filter() scan per table on every snapshot — may compound snapshot race on low-end devices"
+    story: E97-S03
+    severity: low
+    status: open
+    decision: schedule-future
+
+  - id: KI-E97-S03-L03
+    summary: "E2E story-97-03.spec.ts uses page.waitForTimeout(500) — violates test-patterns/no-hard-waits; replace with waitForFunction"
+    story: E97-S03
+    severity: low
+    status: open
+    decision: schedule-future
