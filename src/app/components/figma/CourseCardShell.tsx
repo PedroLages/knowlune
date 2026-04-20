@@ -5,6 +5,11 @@ import { cn } from '@/app/components/ui/utils'
 // ── Internal shared primitives for CourseCard + ImportedCourseCard ───
 // Not exported from the figma barrel — imported directly by those two files only.
 
+// Glass/scrim treatment for overlays on cover imagery. Passes 4.5:1 contrast
+// regardless of thumbnail brightness. Reused by status pill and corner chips.
+// eslint-disable-next-line design-tokens/no-hardcoded-colors -- intentional overlay scrim over imagery
+const OVERLAY_SCRIM_CLASS = 'bg-black/60 text-white backdrop-blur-sm border border-white/10'
+
 interface CardCoverProps {
   heightClass: string
   children: ReactNode
@@ -108,4 +113,32 @@ function CompletionOverlay({ show }: CompletionOverlayProps) {
   )
 }
 
-export { CardCover, CoverProgressBar, PlayOverlay, CompletionOverlay }
+interface CoverCornerChipProps {
+  position: 'bottom-left' | 'bottom-right'
+  children: ReactNode
+  'data-testid'?: string
+}
+
+/**
+ * Small glassmorphic chip anchored to a cover corner. Used for duration
+ * (bottom-right) and resolution (bottom-left) overlays on course card covers.
+ * Sits at z-30 — above `CoverProgressBar` (z-20) and the base `<img>`.
+ * Follows YouTube/Vimeo corner-chip convention.
+ */
+function CoverCornerChip({ position, children, 'data-testid': testId }: CoverCornerChipProps) {
+  const positionClass = position === 'bottom-right' ? 'bottom-2 right-2' : 'bottom-2 left-2'
+  return (
+    <span
+      data-testid={testId}
+      className={cn(
+        'absolute z-30 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-none',
+        positionClass,
+        OVERLAY_SCRIM_CLASS
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
+export { CardCover, CoverProgressBar, PlayOverlay, CompletionOverlay, CoverCornerChip, OVERLAY_SCRIM_CLASS }

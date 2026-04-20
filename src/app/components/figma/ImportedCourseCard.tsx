@@ -53,16 +53,17 @@ import { useLazyVisible } from '@/hooks/useLazyVisible'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
 import { getAvatarSrc } from '@/lib/authors'
 import { db } from '@/db/schema'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/app/components/ui/tooltip'
 import { formatCourseDuration, formatFileSize, getResolutionLabel } from '@/lib/format'
 import { MomentumBadge } from './MomentumBadge'
 import { ProgressRing } from './ProgressRing'
-import { CardCover, CoverProgressBar, PlayOverlay, CompletionOverlay } from './CourseCardShell'
+import {
+  CardCover,
+  CoverProgressBar,
+  PlayOverlay,
+  CompletionOverlay,
+  CoverCornerChip,
+  OVERLAY_SCRIM_CLASS,
+} from './CourseCardShell'
 import type { ImportedCourse, ImportedVideo, LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
 
@@ -90,6 +91,16 @@ const statusConfig: Record<
     icon: PauseCircle,
     badgeClass: 'bg-muted text-muted-foreground',
   },
+}
+
+/**
+ * Trim minutes from course duration at card scale when hours >= 10.
+ * "134h 36m" → "134h"; "8h 24m" stays as-is.
+ */
+function formatCourseDurationCompact(totalSeconds: number): string {
+  const hours = Math.floor(Math.max(0, totalSeconds) / 3600)
+  if (hours >= 10) return `${hours}h`
+  return formatCourseDuration(totalSeconds)
 }
 
 interface ImportedCourseCardProps {
@@ -285,7 +296,7 @@ export function ImportedCourseCard({
           showPreview && videoReady && 'z-10'
         )}
       >
-        <CardCover heightClass="h-44">
+        <CardCover heightClass="aspect-video w-full">
           {/* Background: gradient placeholder or lazy-loaded thumbnail */}
           <div
             data-testid="course-card-placeholder"
@@ -301,7 +312,7 @@ export function ImportedCourseCard({
               alt=""
               aria-hidden="true"
               loading="lazy"
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             />
           )}
           {/* Inline video preview — suppressed on not-started cards so it doesn't compete with PlayOverlay */}
@@ -341,7 +352,10 @@ export function ImportedCourseCard({
             </div>
           ) : null}
 
-          {/* Status dropdown — top-right */}
+          {/* Status dropdown — top-right.
+              When status is 'active' (default on My Courses), show an icon-only
+              affordance instead of the pill — every card is active, so the label
+              adds noise. Other statuses render the pill with an overlay scrim. */}
           <div className="absolute top-3 right-3 z-30">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -352,15 +366,26 @@ export function ImportedCourseCard({
                     className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-full outline-none min-h-[44px] flex items-center"
                     aria-label={`Course status: ${config.label}. Click to change.`}
                   >
-                    <Badge
-                      className={cn(
-                        'border-0 text-xs gap-1 cursor-pointer hover:opacity-80 transition-opacity',
-                        config.badgeClass
-                      )}
-                    >
-                      <StatusIcon className="size-3" aria-hidden="true" />
-                      {config.label}
-                    </Badge>
+                    {status === 'active' ? (
+                      <span
+                        className={cn(
+                          'inline-flex items-center justify-center rounded-full p-1.5 cursor-pointer hover:opacity-80 transition-opacity',
+                          OVERLAY_SCRIM_CLASS
+                        )}
+                      >
+                        <StatusIcon className="size-3.5" aria-hidden="true" />
+                      </span>
+                    ) : (
+                      <Badge
+                        className={cn(
+                          'border-0 text-xs gap-1 cursor-pointer hover:opacity-80 transition-opacity',
+                          OVERLAY_SCRIM_CLASS
+                        )}
+                      >
+                        <StatusIcon className="size-3" aria-hidden="true" />
+                        {config.label}
+                      </Badge>
+                    )}
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
@@ -525,6 +550,27 @@ export function ImportedCourseCard({
           {/* Full completion overlay */}
           <CompletionOverlay show={isCompleted} />
 
+          {/* Resolution chip — bottom-left, only when ≥1080p (sub-HD is not a selling point) */}
+          {course.maxResolutionHeight != null && course.maxResolutionHeight >= 1080 && (
+            <CoverCornerChip position="bottom-left" data-testid="course-card-resolution">
+              {getResolutionLabel(course.maxResolutionHeight)}
+            </CoverCornerChip>
+          )}
+
+          {/* Duration chip — bottom-right (YouTube/Vimeo convention).
+              Hidden on hover so the hover-revealed info button (same corner)
+              has clear space. */}
+          {course.totalDuration != null && course.totalDuration > 0 && (
+            <span
+              className="transition-opacity duration-200 group-hover:opacity-0 [@media(hover:none)]:group-hover:opacity-100 motion-reduce:transition-none"
+            >
+              <CoverCornerChip position="bottom-right" data-testid="course-card-duration">
+                <Clock className="size-3" aria-hidden="true" />
+                {formatCourseDurationCompact(course.totalDuration)}
+              </CoverCornerChip>
+            </span>
+          )}
+
           {/* Cover-edge progress bar */}
           <div data-testid="completion-progress-bar" className="contents">
             <CoverProgressBar progress={completionPercent} />
@@ -562,12 +608,10 @@ export function ImportedCourseCard({
                 <span>{authorData.name}</span>
               </button>
             ) : (
-              <p
-                data-testid="course-card-unknown-author"
-                className="text-xs text-muted-foreground mb-1"
-              >
-                Unknown Author
-              </p>
+              // Author row is hidden when no author is set — exposing "Unknown Author"
+              // as user-facing text reads as a bug. A visually hidden span preserves
+              // the data-testid for any tests that rely on the fallback element.
+              <span data-testid="course-card-unknown-author" className="sr-only" aria-hidden="true" />
             )}
             <div className="flex items-center gap-1.5 mt-1 mb-2">
               <span aria-live="polite" className="contents">
@@ -596,48 +640,26 @@ export function ImportedCourseCard({
               )}
             </div>
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-              <span data-testid="course-card-video-count" className="flex items-center gap-1">
-                <Video className="size-3.5" aria-hidden="true" />
-                <span>
-                  {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
+              {course.videoCount > 0 && (
+                <span data-testid="course-card-video-count" className="flex items-center gap-1">
+                  <Video className="size-3.5" aria-hidden="true" />
+                  <span>
+                    {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
+                  </span>
                 </span>
-              </span>
-              {course.totalDuration != null && course.totalDuration > 0 && (
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span
-                        data-testid="course-card-duration"
-                        className="flex items-center gap-1 cursor-default"
-                      >
-                        <Clock className="size-3.5" aria-hidden="true" />
-                        <span>{formatCourseDuration(course.totalDuration)}</span>
-                      </span>
-                    </TooltipTrigger>
-                    {course.totalFileSize != null && course.totalFileSize > 0 && (
-                      <TooltipContent>
-                        <span data-testid="course-card-file-size">
-                          Total size: {formatFileSize(course.totalFileSize)}
-                        </span>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
               )}
-              <span data-testid="course-card-pdf-count" className="flex items-center gap-1">
-                <FileText className="size-3.5" aria-hidden="true" />
-                <span>
-                  {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
+              {course.pdfCount > 0 && (
+                <span data-testid="course-card-pdf-count" className="flex items-center gap-1">
+                  <FileText className="size-3.5" aria-hidden="true" />
+                  <span>
+                    {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
+                  </span>
                 </span>
-              </span>
-              {course.maxResolutionHeight != null && course.maxResolutionHeight > 0 && (
-                <Badge
-                  data-testid="course-card-resolution"
-                  variant="secondary"
-                  className="text-[10px] px-1.5 py-0 font-medium opacity-70"
-                >
-                  {getResolutionLabel(course.maxResolutionHeight)}
-                </Badge>
+              )}
+              {course.totalFileSize != null && course.totalFileSize > 0 && (
+                <span data-testid="course-card-file-size" className="text-muted-foreground/70">
+                  {formatFileSize(course.totalFileSize)}
+                </span>
               )}
             </div>
             {momentumScore && momentumScore.score > 0 && (
@@ -698,12 +720,14 @@ export function ImportedCourseCard({
             <DialogTitle>{course.name} — Preview</DialogTitle>
           </DialogHeader>
           <div className="px-6 pb-6">
-            {isLoading && <Skeleton className="h-64 w-full rounded-xl" />}
+            {isLoading && <Skeleton className="aspect-video w-full rounded-xl" />}
             {!isLoading && videoError && (
               <p className="text-destructive text-sm py-8 text-center">{videoError}</p>
             )}
             {!isLoading && !videoError && blobUrl && (
-              <VideoPlayer src={blobUrl} title={firstVideo?.filename} />
+              <div className="aspect-video w-full">
+                <VideoPlayer src={blobUrl} title={firstVideo?.filename} />
+              </div>
             )}
             {!isLoading && !videoError && !blobUrl && (
               <p className="text-muted-foreground text-sm py-8 text-center">

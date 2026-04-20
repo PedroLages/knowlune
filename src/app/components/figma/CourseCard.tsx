@@ -11,7 +11,7 @@ import { MomentumBadge } from './MomentumBadge'
 import { AtRiskBadge } from './AtRiskBadge'
 import { CompletionEstimate } from './CompletionEstimate'
 import { VideoPlayer } from './VideoPlayer'
-import { CardCover, CoverProgressBar, CompletionOverlay } from './CourseCardShell'
+import { CardCover, CoverProgressBar, CompletionOverlay, CoverCornerChip } from './CourseCardShell'
 import { getProgress } from '@/lib/progress'
 import { getResourceUrl } from '@/lib/media'
 import { cn } from '@/app/components/ui/utils'
@@ -279,11 +279,13 @@ export function CourseCard({
         </DialogHeader>
         <div className="px-6 pb-6">
           {previewSrc && (
-            <VideoPlayer
-              src={previewSrc}
-              title={firstVideoResource?.title}
-              poster={course.coverImage ? `${course.coverImage}-768w.png` : undefined}
-            />
+            <div className="aspect-video w-full">
+              <VideoPlayer
+                src={previewSrc}
+                title={firstVideoResource?.title}
+                poster={course.coverImage ? `${course.coverImage}-768w.png` : undefined}
+              />
+            </div>
           )}
         </div>
       </DialogContent>
@@ -412,7 +414,7 @@ export function CourseCard({
 
   // ── Thumbnail section ─────────────────────────────────────────────
 
-  const thumbnailHeight = variant === 'overview' ? 'h-32' : 'h-44'
+  const thumbnailHeight = 'aspect-video w-full'
 
   function renderThumbnailContent() {
     if (variant === 'progress') {
@@ -426,7 +428,7 @@ export function CourseCard({
           <img
             src={`${course.coverImage}-640w.webp`}
             alt={course.title}
-            className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             loading="lazy"
           />
         </picture>
@@ -453,7 +455,7 @@ export function CourseCard({
             srcSet={buildSrcSet(course.coverImage, 'png')}
             sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
             alt={course.title}
-            className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           />
         </picture>
       )
@@ -478,12 +480,23 @@ export function CourseCard({
   }
 
   function renderThumbnail() {
+    const showDurationChip = variant !== 'overview' && course.estimatedHours > 0
     return (
       <CardCover heightClass={thumbnailHeight}>
         {renderThumbnailContent()}
         {inlineVideoPreview}
         {renderThumbnailOverlays()}
         {renderInfoButton()}
+        {showDurationChip && (
+          <span
+            className="transition-opacity duration-200 group-hover:opacity-0 [@media(hover:none)]:group-hover:opacity-100 motion-reduce:transition-none"
+          >
+            <CoverCornerChip position="bottom-right" data-testid="course-card-duration">
+              <Clock className="size-3" aria-hidden="true" />
+              {course.estimatedHours}h
+            </CoverCornerChip>
+          </span>
+        )}
         <CoverProgressBar progress={completionPercent} />
         <CompletionOverlay show={isCompleted && variant !== 'progress'} />
       </CardCover>
@@ -523,18 +536,18 @@ export function CourseCard({
               </Link>
             )}
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-2">
-              <span className="flex items-center gap-1" data-testid="course-card-video-count">
-                <Video className="h-3.5 w-3.5" aria-hidden="true" />
-                {course.totalVideos} videos
-              </span>
-              <span className="flex items-center gap-1" data-testid="course-card-pdf-count">
-                <FileText className="h-3.5 w-3.5" aria-hidden="true" />
-                {course.totalPDFs} docs
-              </span>
-              <span className="flex items-center gap-1" data-testid="course-card-duration">
-                <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-                {course.estimatedHours}h
-              </span>
+              {course.totalVideos > 0 && (
+                <span className="flex items-center gap-1" data-testid="course-card-video-count">
+                  <Video className="h-3.5 w-3.5" aria-hidden="true" />
+                  {course.totalVideos} videos
+                </span>
+              )}
+              {course.totalPDFs > 0 && (
+                <span className="flex items-center gap-1" data-testid="course-card-pdf-count">
+                  <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+                  {course.totalPDFs} docs
+                </span>
+              )}
             </div>
             {completionEstimate && completionEstimate.remainingMinutes > 0 && (
               <div className="mt-2">
@@ -654,17 +667,18 @@ export function CourseCard({
             )}
 
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1" data-testid="course-card-video-count">
-                <Video className="h-3.5 w-3.5" aria-hidden="true" />
-                {course.totalVideos} videos
-              </span>
-              <span className="flex items-center gap-1" data-testid="course-card-pdf-count">
-                <FileText className="h-3.5 w-3.5" aria-hidden="true" />
-                {course.totalPDFs} docs
-              </span>
-              <span className="flex items-center gap-1" data-testid="course-card-duration">
-                <Clock className="h-3.5 w-3.5" aria-hidden="true" />~{course.estimatedHours}h
-              </span>
+              {course.totalVideos > 0 && (
+                <span className="flex items-center gap-1" data-testid="course-card-video-count">
+                  <Video className="h-3.5 w-3.5" aria-hidden="true" />
+                  {course.totalVideos} videos
+                </span>
+              )}
+              {course.totalPDFs > 0 && (
+                <span className="flex items-center gap-1" data-testid="course-card-pdf-count">
+                  <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+                  {course.totalPDFs} docs
+                </span>
+              )}
             </div>
 
             {status === 'in-progress' && (
