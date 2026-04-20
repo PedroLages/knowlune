@@ -761,7 +761,7 @@ export function ImportedCourseCard({
           hideClose
           overlayClassName="bg-black/80"
           onOpenAutoFocus={e => e.preventDefault()}
-          className="sm:max-w-[92vw] lg:max-w-[85vw] p-0 overflow-visible border-0 shadow-none bg-transparent"
+          className="sm:max-w-[92vw] lg:max-w-5xl p-0 overflow-visible border-0 shadow-none bg-transparent"
         >
           {/* Title is redundant with the card that spawned the modal — keep
               for screen readers but hide visually. */}

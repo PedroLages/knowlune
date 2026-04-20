@@ -289,7 +289,7 @@ export function CourseCard({
         hideClose
         overlayClassName="bg-black/80"
         onOpenAutoFocus={e => e.preventDefault()}
-        className="sm:max-w-[92vw] lg:max-w-[85vw] p-0 overflow-visible border-0 shadow-none bg-transparent"
+        className="sm:max-w-[92vw] lg:max-w-5xl p-0 overflow-visible border-0 shadow-none bg-transparent"
       >
         <DialogHeader className="sr-only">
           <DialogTitle>{course.title} — Preview</DialogTitle>
