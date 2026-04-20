@@ -1347,3 +1347,38 @@ issues:
     severity: low
     status: open
     decision: schedule-future
+
+  - id: KI-E97-S04-L01
+    summary: "Auto-close effect deps include inline onClose prop — timer resets on every parent re-render"
+    story: E97-S04
+    severity: low
+    status: open
+    decision: schedule-future
+
+  - id: KI-E97-S04-L02
+    summary: "Watchdog WATCHDOG_MS hard-coded — expensive fake-timer advances in tests; accept as prop with default"
+    story: E97-S04
+    severity: low
+    status: open
+    decision: schedule-future
+
+  - id: KI-E97-S04-L03
+    summary: "Engine-watcher operates during 'hydrating-p3p4' — broader than plan specifies; tighten guard to Phase B only"
+    story: E97-S04
+    severity: low
+    status: open
+    decision: schedule-future
+
+  - id: KI-E97-S04-L04
+    summary: "__mockHeadCounts scalar shim cannot simulate per-table partial failures — expand to map for E2E coverage"
+    story: E97-S04
+    severity: low
+    status: open
+    decision: schedule-future
+
+  - id: KI-E97-S04-L05
+    summary: "observedHydrate re-throws after failDownloading — potential duplicate error surfacing on rapid retries"
+    story: E97-S04
+    severity: low
+    status: open
+    decision: schedule-future

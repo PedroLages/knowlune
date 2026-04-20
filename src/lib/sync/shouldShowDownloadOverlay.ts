@@ -101,22 +101,52 @@ async function localHasData(userId: string): Promise<boolean> {
 }
 
 /**
+ * Resolve the Supabase column name used to filter rows by user for a given
+ * registry entry. Uses the entry's `fieldMap` to find the mapping for the
+ * Dexie `userId` field:
+ *   - Most tables: `userId` → auto-converted to `user_id` (not in fieldMap,
+ *     so default `'user_id'` applies).
+ *   - Singleton tables: `id` → `user_id` (in fieldMap). These share the same
+ *     column name but are excluded from counts via the singleton guard.
+ *
+ * If a future table ever maps `userId` to a different column (e.g. `owner_id`),
+ * adding `userId: 'owner_id'` to that entry's fieldMap will automatically route
+ * this function to the correct column without touching any call sites.
+ */
+function resolveUserColumn(entry: TableRegistryEntry): string {
+  // Check if fieldMap explicitly maps the userId field to a different column.
+  return entry.fieldMap['userId'] ?? 'user_id'
+}
+
+/**
  * Returns true if any Supabase HEAD count across the same filtered registry
  * tables returns a non-zero count. All-fail is treated as "unknown" →
  * returns false (safe default — don't mount the overlay on unknown state;
  * the watchdog would immediately complain otherwise).
+ *
+ * Singleton tables (those with `fieldMap.id === 'user_id'`) are excluded from
+ * the remote count — they are not representative of user data volume and a
+ * prior-user singleton would not appear for the current userId anyway. The
+ * exclusion keeps this function symmetric with `localHasData` (F2 fix).
+ *
+ * Uses `resolveUserColumn` to determine the correct filter column per table,
+ * so tables with non-standard user FK columns are handled correctly.
  */
 async function remoteHasAnyRows(userId: string): Promise<boolean> {
   if (!supabase) return false
   const client = supabase
-  const entries = getCountedTables()
+  // Exclude singleton tables (F2 fix — mirror localHasData exclusion).
+  const entries = getCountedTables().filter(
+    (entry) => entry.fieldMap['id'] !== 'user_id',
+  )
 
   const results = await Promise.allSettled(
     entries.map(async (entry) => {
+      const userCol = resolveUserColumn(entry)
       const { count, error } = await client
         .from(entry.supabaseTable)
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
+        .eq(userCol, userId)
       if (error) throw error
       return count ?? 0
     }),

@@ -72,7 +72,12 @@ describe('useDownloadProgress', () => {
       expect(result.current.total).toBe(5)
     })
     expect(result.current.error).toBe(false)
-    expect(result.current.totalTables).toBe(getCountedTables().length)
+    // totalTables excludes singleton tables (fieldMap.id === 'user_id'), so
+    // it is one less than getCountedTables().length (which includes singletons).
+    const expectedTables = getCountedTables().filter(
+      (e) => e.fieldMap['id'] !== 'user_id',
+    ).length
+    expect(result.current.totalTables).toBe(expectedTables)
   })
 
   it('advances processed as Dexie tables fill', async () => {

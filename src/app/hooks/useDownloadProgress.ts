@@ -30,6 +30,7 @@ import { db } from '@/db'
 import { supabase } from '@/lib/auth/supabase'
 import { getCountedTables } from '@/lib/sync/shouldShowDownloadOverlay'
 import { useDownloadStatusStore } from '@/app/stores/useDownloadStatusStore'
+import type { TableRegistryEntry } from '@/lib/sync/tableRegistry'
 
 export interface DownloadProgress {
   /** Items restored so far (clamped 0..total). */
@@ -64,9 +65,26 @@ const INITIAL_STATE: DownloadProgress = {
 }
 
 /**
+ * Resolve the Supabase column name used to filter rows by user for a given
+ * registry entry. Mirrors `resolveUserColumn` in shouldShowDownloadOverlay.
+ *
+ * Uses the entry's `fieldMap` to detect a non-default mapping for the Dexie
+ * `userId` field. If `fieldMap.userId` is present, that value is the Supabase
+ * column name; otherwise defaults to `'user_id'`. This ensures tables with
+ * non-standard user FK columns (e.g. future `owner_id` tables) are queried
+ * correctly without touching call sites.
+ */
+function resolveUserColumn(entry: TableRegistryEntry): string {
+  return entry.fieldMap['userId'] ?? 'user_id'
+}
+
+/**
  * Fire a single Supabase HEAD count query. Resolves to the integer count or
  * throws on error. Callers wrap with `Promise.allSettled` so one rejection
  * does not cancel the rest.
+ *
+ * Accepts an explicit `userColumn` parameter (resolved via `resolveUserColumn`)
+ * so each table's user FK column is used correctly (F2 fix).
  *
  * Dev/test escape hatch: if `window.__mockHeadCounts` is set (non-prod only),
  * returns that value instead of hitting Supabase. Tree-shaken in prod.
@@ -74,6 +92,7 @@ const INITIAL_STATE: DownloadProgress = {
 async function headCount(
   supabaseTable: string,
   userId: string,
+  userColumn: string = 'user_id',
 ): Promise<number> {
   if (!import.meta.env.PROD) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -86,7 +105,7 @@ async function headCount(
   const { count, error } = await supabase
     .from(supabaseTable)
     .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
+    .eq(userColumn, userId)
   if (error) throw error
   return count ?? 0
 }
@@ -95,11 +114,22 @@ async function headCount(
  * Sum local Dexie `.count()` across the same filtered registry entries.
  * Returns both the total and the per-table counts (used by the caller to
  * derive `recentTable` from the table with the largest delta since last tick).
+ *
+ * Applies the same strict userId filter as `localHasData` in
+ * shouldShowDownloadOverlay:
+ *   - Singleton tables (`fieldMap.id === 'user_id'`) are excluded — their Dexie
+ *     PK is `'singleton'`, not a userId, so counting them would inflate processed
+ *     counts if a prior user's singleton row persists on this device.
+ *   - Only rows where `rowUserId === userId` are counted; rows with no userId
+ *     field are excluded (pre-backfill singletons, cannot be user-scoped safely).
  */
 async function localCountAll(
   userId: string,
 ): Promise<{ total: number; perTable: Record<string, number> }> {
-  const entries = getCountedTables()
+  // Mirror the singleton exclusion from localHasData (F1 fix).
+  const entries = getCountedTables().filter(
+    (entry) => entry.fieldMap['id'] !== 'user_id',
+  )
   const results = await Promise.allSettled(
     entries.map(async (entry) => {
       try {
@@ -107,8 +137,11 @@ async function localCountAll(
           .table(entry.dexieTable)
           .filter((r: Record<string, unknown>) => {
             const rowUserId = r.userId
+            // Strict filter: only count rows explicitly belonging to this user.
+            // Rows with no userId (singleton or pre-backfill) cannot be safely
+            // attributed and are excluded (mirrors localHasData semantics).
             if (rowUserId === undefined || rowUserId === null || rowUserId === '') {
-              return true
+              return false
             }
             return rowUserId === userId
           })
@@ -222,13 +255,23 @@ export function useDownloadProgress(
     }
 
     async function snapshotAndStart() {
-      const entries = getCountedTables()
+      // Exclude singleton tables (fieldMap.id === 'user_id') from HEAD counts,
+      // mirroring localCountAll and remoteHasAnyRows (F2 fix — consistent
+      // userId scoping). Singletons contribute at most 1 row per user and a
+      // prior-user singleton would be filtered by the .eq() anyway, but
+      // excluding them keeps the counted-table set symmetric across all paths.
+      const entries = getCountedTables().filter(
+        (entry) => entry.fieldMap['id'] !== 'user_id',
+      )
       totalTablesRef.current = entries.length
 
       // Parallel HEAD counts with allSettled so a partial outage degrades
-      // gracefully (R5).
+      // gracefully (R5). resolveUserColumn selects the correct FK column per
+      // table so non-standard user columns don't silently reject (F2 fix).
       const results = await Promise.allSettled(
-        entries.map((entry) => headCount(entry.supabaseTable, userId)),
+        entries.map((entry) =>
+          headCount(entry.supabaseTable, userId, resolveUserColumn(entry)),
+        ),
       )
 
       // F4: Check cancelled BEFORE writing to any refs so rapid open/close
