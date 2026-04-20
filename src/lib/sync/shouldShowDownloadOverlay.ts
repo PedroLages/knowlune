@@ -49,25 +49,34 @@ export function getCountedTables(): readonly TableRegistryEntry[] {
  * tables. Used to short-circuit R6 — if local data exists, the overlay must
  * not appear regardless of remote state.
  *
+ * Singleton tables (those whose Dexie PK maps to `user_id` in Supabase, i.e.
+ * `fieldMap.id === 'user_id'`) are excluded from the emptiness probe. A
+ * singleton row from a prior user session (e.g. `notificationPreferences`
+ * stored with `id: 'singleton'`) would otherwise make `localHasData` return
+ * `true` for a brand-new user, suppressing the overlay incorrectly (F3 fix).
+ *
  * Errors on any single table count are swallowed (contribute 0), matching
  * the `hasUnlinkedRecords` / `computeUnlinkedCount` posture.
  */
 async function localHasData(userId: string): Promise<boolean> {
-  const entries = getCountedTables()
+  const entries = getCountedTables().filter(
+    // Exclude singleton tables: their Dexie PK is not a userId but is mapped
+    // to user_id in Supabase via fieldMap. A row from a prior user makes
+    // localHasData return true for a new user, suppressing the overlay.
+    (entry) => entry.fieldMap['id'] !== 'user_id',
+  )
   const results = await Promise.allSettled(
     entries.map(async (entry) => {
       try {
-        // Filter by userId when the row has one; tables that lack userId
-        // entirely are scoped-by-auth at write time — counting them raw is
-        // close enough to detect any local data.
         return await db
           .table(entry.dexieTable)
           .filter((r: Record<string, unknown>) => {
             const rowUserId = r.userId
-            // If row has no userId field at all, treat as "belongs to this user"
-            // (pre-backfill data that will be linked on next backfill pass).
+            // Only count rows that explicitly belong to this user. Rows with no
+            // userId field are skipped (they are singleton or pre-backfill rows
+            // whose user-scope cannot be determined safely).
             if (rowUserId === undefined || rowUserId === null || rowUserId === '') {
-              return true
+              return false
             }
             return rowUserId === userId
           })

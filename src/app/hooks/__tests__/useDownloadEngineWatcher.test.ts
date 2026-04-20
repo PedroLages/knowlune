@@ -177,4 +177,43 @@ describe('useDownloadEngineWatcher', () => {
 
     expect(useDownloadStatusStore.getState().status).toBe('complete')
   })
+
+  it('fast-path: immediately completes when sync status is already synced at Phase B entry', async () => {
+    // Set up: sync engine is already in 'synced' before Phase B starts.
+    useSyncStatusStore.setState({
+      status: 'synced',
+      pendingCount: 0,
+      lastSyncAt: null,
+      lastError: null,
+    })
+    // Start in hydrating-p3p4 (Phase A) so the watcher is active but not yet in Phase B.
+    useDownloadStatusStore.setState({
+      status: 'hydrating-p3p4',
+      lastError: null,
+      startedAt: Date.now(),
+    })
+
+    // Mount the hook while in hydrating-p3p4 — prevDownloadStatusRef initializes
+    // to null, then on first render records 'hydrating-p3p4' as the prev value.
+    const { rerender } = renderHook(() => useDownloadEngineWatcher('user-1', true))
+
+    // Stabilize: let the initial render settle prevDownloadStatusRef to 'hydrating-p3p4'.
+    await new Promise((r) => setTimeout(r, 10))
+
+    // Transition to Phase B — the fast-path useEffect detects the change from
+    // hydrating-p3p4 → downloading-p0p2 and immediately fires tryCompleteIfQueueDrained()
+    // since currentSyncStatus is already 'synced'.
+    act(() => {
+      useDownloadStatusStore.setState({
+        status: 'downloading-p0p2',
+        lastError: null,
+        startedAt: Date.now(),
+      })
+    })
+    rerender()
+
+    await waitFor(() => {
+      expect(useDownloadStatusStore.getState().status).toBe('complete')
+    })
+  })
 })

@@ -197,4 +197,45 @@ describe('useDownloadProgress', () => {
     // embeddings is uploadOnly — must be excluded
     expect(counted.find((e) => e.dexieTable === 'embeddings')).toBeUndefined()
   })
+
+  it('retry (incrementing retryNonce) re-runs the snapshot and clears error state', async () => {
+    // First render: ALL HEAD queries fail → error=true.
+    mockHeadCount.mockResolvedValue({ count: null, error: { message: 'fail' } })
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    let retryNonce = 0
+    const { result, rerender } = renderHook(() =>
+      useDownloadProgress(USER, true, retryNonce),
+    )
+
+    await waitFor(
+      () => {
+        expect(result.current.error).toBe(true)
+      },
+      { timeout: 2000 },
+    )
+
+    // Now fix the mock so HEAD queries succeed.
+    mockHeadCount.mockResolvedValue({ count: 5, error: null })
+
+    // Simulate retry by incrementing retryNonce.
+    retryNonce = 1
+    rerender()
+
+    await waitFor(
+      () => {
+        expect(result.current.error).toBe(false)
+      },
+      { timeout: 2000 },
+    )
+    // Should have re-snapshotted with new totals from the fixed mock.
+    await waitFor(
+      () => {
+        expect(result.current.total).toBeGreaterThan(0)
+      },
+      { timeout: 2000 },
+    )
+
+    errSpy.mockRestore()
+  })
 })

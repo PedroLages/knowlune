@@ -138,6 +138,7 @@ async function localCountAll(
 export function useDownloadProgress(
   userId: string,
   enabled: boolean,
+  retryNonce: number = 0,
 ): DownloadProgress {
   const [state, setState] = useState<DownloadProgress>(INITIAL_STATE)
 
@@ -159,6 +160,15 @@ export function useDownloadProgress(
       setState(INITIAL_STATE)
       return
     }
+
+    // Reset all refs when retryNonce changes so the hook re-snapshots HEAD
+    // counts from scratch rather than resuming with stale error state.
+    snapshotTakenRef.current = false
+    totalRef.current = 0
+    totalsFailedCountRef.current = 0
+    totalTablesRef.current = 0
+    lastPerTableRef.current = {}
+    setState(INITIAL_STATE)
 
     let cancelled = false
     let intervalId: number | null = null
@@ -220,6 +230,9 @@ export function useDownloadProgress(
       const results = await Promise.allSettled(
         entries.map((entry) => headCount(entry.supabaseTable, userId)),
       )
+
+      // F4: Check cancelled BEFORE writing to any refs so rapid open/close
+      // toggles cannot leak stale totals into a subsequent hook instance.
       if (cancelled) return
 
       let remoteTotal = 0
@@ -289,7 +302,7 @@ export function useDownloadProgress(
         window.clearInterval(intervalId)
       }
     }
-  }, [userId, enabled])
+  }, [userId, enabled, retryNonce])
 
   return state
 }

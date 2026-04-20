@@ -87,9 +87,10 @@ export function NewDeviceDownloadOverlay({
   const [retryNonce, setRetryNonce] = useState(0)
 
   // Mount watcher and progress hook while the overlay is open.
+  // retryNonce is passed as the third argument so the hook re-snapshots HEAD
+  // counts and resets all refs on each retry (F1 fix).
   useDownloadEngineWatcher(userId, open)
-  const progress = useDownloadProgress(userId, open)
-  void retryNonce // referenced so the hook re-runs on retry (progress hook keys via closure)
+  const progress = useDownloadProgress(userId, open, retryNonce)
 
   // Derived visual phase — store drives most of it, with the
   // `useDownloadProgress` all-HEAD-fail error taking precedence.
