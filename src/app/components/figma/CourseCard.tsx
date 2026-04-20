@@ -274,8 +274,9 @@ export function CourseCard({
   const previewDialog = (
     <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
       <DialogContent
+        onOpenAutoFocus={e => e.preventDefault()}
         className={cn(
-          'max-w-4xl p-0 overflow-hidden rounded-2xl',
+          'sm:max-w-[92vw] lg:max-w-6xl p-0 overflow-hidden rounded-2xl',
           '[&>button:last-of-type]:size-9 [&>button:last-of-type]:rounded-lg',
           '[&>button:last-of-type]:bg-muted/60 [&>button:last-of-type]:text-muted-foreground',
           '[&>button:last-of-type]:hover:bg-muted [&>button:last-of-type]:hover:text-foreground',

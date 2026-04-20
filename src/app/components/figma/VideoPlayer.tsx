@@ -857,6 +857,21 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     }
   }, [])
 
+  // Auto-hide controls when playback starts without a mouse interaction.
+  // resetControlsTimeout only arms the 3s hide-timer from mouse/touch/focus
+  // events — so programmatic play() (e.g. autoplay when a preview modal
+  // opens) previously left controls visible forever. Mirror the same guards
+  // used in resetControlsTimeout so menus/dialogs keep the chrome visible.
+  useEffect(() => {
+    if (!isPlaying) return
+    if (speedMenuOpen || shortcutsOpen || captionSettingsOpen) return
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
+    controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000)
+    return () => {
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
+    }
+  }, [isPlaying, speedMenuOpen, shortcutsOpen, captionSettingsOpen])
+
   // When controls auto-hide, move focus to the container so keyboard shortcuts remain active
   useEffect(() => {
     if (!showControls && containerRef.current?.contains(document.activeElement)) {

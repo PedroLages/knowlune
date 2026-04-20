@@ -770,8 +770,9 @@ export function ImportedCourseCard({
 
       <Dialog open={previewOpen} onOpenChange={handleDialogChange}>
         <DialogContent
+          onOpenAutoFocus={e => e.preventDefault()}
           className={cn(
-            'max-w-4xl p-0 overflow-hidden rounded-2xl',
+            'sm:max-w-[92vw] lg:max-w-6xl p-0 overflow-hidden rounded-2xl',
             // Re-style the default DialogClose (size-11 rounded-sm) into a
             // rounded-lg muted affordance consistent with the rest of the app.
             // Also tame the browser focus ring — the default auto-focus on
