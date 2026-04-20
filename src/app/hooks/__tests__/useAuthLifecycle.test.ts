@@ -246,4 +246,36 @@ describe('useAuthLifecycle', () => {
     // hasUnlinkedRecords should NOT be called — fast path skips it
     expect(hasUnlinkedRecords).not.toHaveBeenCalled()
   })
+
+  // ── E97-S03: dismissal flag cleanup on SIGNED_OUT ─────────────────────────
+
+  it('clears the wizard dismissal flag on SIGNED_OUT but keeps the completion flag', () => {
+    // Simulate a user who dismissed the wizard and also completed it at some
+    // prior point on this device.
+    useAuthStore.setState({
+      user: { id: 'user-1' } as unknown as Session['user'],
+      session: null,
+    })
+    localStorage.setItem('sync:wizard:dismissed:user-1', '2026-01-01T00:00:00.000Z')
+    localStorage.setItem('sync:wizard:complete:user-1', '2026-01-01T00:00:00.000Z')
+
+    renderHook(() => useAuthLifecycle())
+    act(() => {
+      authChangeCallback!('SIGNED_OUT', null)
+    })
+
+    expect(localStorage.getItem('sync:wizard:dismissed:user-1')).toBeNull()
+    // Completion flag survives — it is permanent per device.
+    expect(localStorage.getItem('sync:wizard:complete:user-1')).not.toBeNull()
+  })
+
+  it('tolerates SIGNED_OUT with no current user (no throw)', () => {
+    useAuthStore.setState({ user: null, session: null })
+    renderHook(() => useAuthLifecycle())
+    expect(() => {
+      act(() => {
+        authChangeCallback!('SIGNED_OUT', null)
+      })
+    }).not.toThrow()
+  })
 })
