@@ -559,6 +559,38 @@ describe('tableRegistry — notificationPreferences (E95-S06)', () => {
 })
 
 // ---------------------------------------------------------------------------
+// E97-S04 R2 — F2: user-scoped column invariant
+// Every non-skipSync, non-uploadOnly table must use 'user_id' as its effective
+// user FK column (either by default or via fieldMap.userId). This assertion
+// catches future schema drift where a new table introduces a non-standard user
+// FK column without updating resolveUserColumn / fieldMap.
+// ---------------------------------------------------------------------------
+
+describe('tableRegistry — user-scoped column invariant (E97-S04 R2)', () => {
+  it('every !skipSync && !uploadOnly table resolves to user_id as its user FK column', () => {
+    const syncable = tableRegistry.filter((e) => !e.skipSync && !e.uploadOnly)
+    const violations: string[] = []
+    for (const entry of syncable) {
+      // resolveUserColumn logic: fieldMap['userId'] ?? 'user_id'
+      const resolvedUserCol = entry.fieldMap['userId'] ?? 'user_id'
+      if (resolvedUserCol !== 'user_id') {
+        violations.push(
+          `${entry.dexieTable}: fieldMap.userId resolves to '${resolvedUserCol}' instead of 'user_id'`,
+        )
+      }
+    }
+    // Report all violations at once for actionable output.
+    expect(violations).toEqual([])
+  })
+
+  it('only notificationPreferences uses fieldMap.id → user_id (singleton pattern)', () => {
+    const singletons = tableRegistry.filter((e) => e.fieldMap['id'] === 'user_id')
+    const singletonNames = singletons.map((e) => e.dexieTable)
+    expect(singletonNames).toEqual(['notificationPreferences'])
+  })
+})
+
+// ---------------------------------------------------------------------------
 // getTableEntry helper
 // ---------------------------------------------------------------------------
 

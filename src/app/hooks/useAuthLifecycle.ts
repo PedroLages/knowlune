@@ -2,7 +2,8 @@ import { useEffect } from 'react'
 import { supabase } from '@/lib/auth/supabase'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { hydrateSettingsFromSupabase } from '@/lib/settings'
-import { hydrateP3P4FromSupabase } from '@/lib/sync/hydrateP3P4'
+import { observedHydrate } from '@/lib/sync/observedHydrate'
+import { useDownloadStatusStore } from '@/app/stores/useDownloadStatusStore'
 import { backfillUserId } from '@/lib/sync/backfill'
 import { syncEngine } from '@/lib/sync/syncEngine'
 import { clearSyncState } from '@/lib/sync/clearSyncState'
@@ -70,7 +71,11 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       // F3 fix: await before syncEngine.start() so download-phase bulkPuts
       // do not race with syncEngine writes (mirrors hydrateSettingsFromSupabase
       // ordering pattern).
-      await hydrateP3P4FromSupabase(userId).catch(err => {
+      // E97-S04: Wrapped in `observedHydrate` so `useDownloadStatusStore`
+      // tracks the lifecycle (`hydrating-p3p4` → `downloading-p0p2`). Hydrator
+      // contract unchanged — this wrapper only observes the phase transition
+      // and re-throws on rejection so the existing error log still fires.
+      await observedHydrate(userId).catch(err => {
         console.error('[useAuthLifecycle] hydrateP3P4FromSupabase failed:', err)
       })
 
@@ -156,6 +161,16 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
             // case the wizard suppresses once extra on next sign-in.
             console.error('[useAuthLifecycle] dismissal flag cleanup failed:', err)
           }
+        }
+
+        // E97-S04: Reset the new-device download lifecycle store so a stale
+        // `error` or active phase from a previous user does not bleed into
+        // the next sign-in (potentially for a different account).
+        try {
+          useDownloadStatusStore.getState().reset()
+        } catch (err) {
+          // silent-catch-ok — store reset is best-effort UI cleanup.
+          console.error('[useAuthLifecycle] download store reset failed:', err)
         }
 
         // Stop sync and discard the in-flight upload queue + download cursors.

@@ -96,7 +96,7 @@ export function useInitialUploadProgress(
     let cancelled = false
     // intervalId is assigned after the snapshot resolves to guarantee the
     // polling total is always the captured snapshot value (not 0).
-    let intervalId: ReturnType<typeof window.setInterval> | null = null
+    let intervalId: number | null = null
 
     async function tick() {
       if (cancelled) return
