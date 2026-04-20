@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   PauseCircle,
   PlayCircle,
-  Play,
   Eye,
   Info,
   Camera,
@@ -17,7 +16,6 @@ import {
   Clock,
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
-import { Card } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -64,7 +62,7 @@ import {
 import { formatCourseDuration, formatFileSize, getResolutionLabel } from '@/lib/format'
 import { MomentumBadge } from './MomentumBadge'
 import { ProgressRing } from './ProgressRing'
-import { Progress } from '@/app/components/ui/progress'
+import { CardCover, CoverProgressBar, PlayOverlay, CompletionOverlay } from './CourseCardShell'
 import type { ImportedCourse, ImportedVideo, LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
 
@@ -130,6 +128,7 @@ export function ImportedCourseCard({
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const statusBadgeRef = useRef<HTMLButtonElement>(null)
+  const startingRef = useRef(false)
   const thumbnailUrl = thumbnailUrls[course.id] ?? course.youtubeThumbnailUrl ?? null
 
   // Lazy-load thumbnail: only render <img> when card enters viewport (E1B-S04 AC5)
@@ -189,6 +188,11 @@ export function ImportedCourseCard({
     if (e.target !== e.currentTarget) return
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
+      if (course.status === 'not-started' && !readOnly) {
+        // Start the course (mirrors PlayOverlay click)
+        void handleStartStudying(e as unknown as React.MouseEvent)
+        return
+      }
       navigate(`/courses/${course.id}/overview`)
     }
   }
@@ -243,6 +247,28 @@ export function ImportedCourseCard({
 
   const isLoading = searching || videoLoading
 
+  // Derive a single completion state to avoid Play+Complete overlay collision when
+  // cross-device sync produces inconsistent (status='not-started', completion=100%) pairs.
+  const isCompleted = course.status === 'completed' || completionPercent === 100
+  const showPlay = course.status === 'not-started' && !isCompleted && !readOnly
+
+  async function handleStartStudying(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (startingRef.current) return
+    startingRef.current = true
+    try {
+      await updateCourseStatus(course.id, 'active')
+      const { importError } = useCourseImportStore.getState()
+      if (importError) {
+        toast.error(importError)
+        return
+      }
+      navigate(`/courses/${course.id}/overview`)
+    } finally {
+      startingRef.current = false
+    }
+  }
+
   return (
     <>
       <article
@@ -255,76 +281,68 @@ export function ImportedCourseCard({
         {...previewHandlers}
         data-preview={showPreview && videoReady ? '' : undefined}
         className={cn(
-          'group rounded-2xl cursor-default focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none hover:shadow-2xl hover:[transform:scale(1.02)] transition-shadow duration-300 motion-reduce:hover:[transform:scale(1)] h-full',
-          showPreview && videoReady && '[transform:scale(1.05)] z-10'
+          'group cursor-default focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none',
+          showPreview && videoReady && 'z-10'
         )}
       >
-        <Card className="bg-card rounded-2xl border-0 shadow-sm overflow-hidden h-full flex flex-col">
+        <CardCover heightClass="h-44">
+          {/* Background: gradient placeholder or lazy-loaded thumbnail */}
           <div
             data-testid="course-card-placeholder"
-            className="relative h-44 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center"
+            className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center"
           >
-            {/* Static thumbnail image — lazy-loaded for performance (E1B-S04 AC2+AC5) */}
-            {thumbnailUrl && !showPreview && isCardVisible && (
-              <img
-                src={thumbnailUrl}
-                alt=""
-                aria-hidden="true"
-                loading="lazy"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-            )}
-            {/* Gradient placeholder icon (shown when no thumbnail or not yet visible) — AC3 */}
             {(!thumbnailUrl || !isCardVisible) && !showPreview && (
               <FolderOpen className="size-16 text-emerald-300 dark:text-emerald-600" />
             )}
-            {/* Camera overlay — appears on hover to change thumbnail */}
-            {!readOnly && (
-              <button
-                onClick={e => {
-                  e.stopPropagation()
-                  setThumbnailPickerOpen(true)
-                }}
-                aria-label="Change thumbnail"
-                className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none z-10"
-              >
-                <Camera className="size-8 text-white drop-shadow" aria-hidden="true" />
-              </button>
-            )}
-            {/* Inline video preview */}
-            {showPreview && previewBlobUrl && (
-              <video
-                key={previewBlobUrl}
-                src={previewBlobUrl}
-                muted
-                autoPlay
-                playsInline
-                loop
-                preload="none"
-                aria-hidden="true"
-                onCanPlay={() => setVideoReady(true)}
-                className={cn(
-                  'absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-500',
-                  videoReady ? 'opacity-100' : 'opacity-0'
-                )}
-              />
-            )}
-            {/* Completion overlay — top-left (E43-S05) */}
-            {completionPercent === 100 ? (
-              <div
-                className="absolute top-3 left-3 z-20 bg-success text-success-foreground rounded-full px-3 py-1 text-xs font-bold shadow-lg flex items-center gap-1"
-                data-testid="completion-badge"
-              >
-                <CheckCircle2 className="size-3" aria-hidden="true" />
-                Complete
-              </div>
-            ) : completionPercent > 0 ? (
-              <div className="absolute top-3 left-3 z-20" data-testid="completion-ring">
-                <ProgressRing percent={completionPercent} size={40} strokeWidth={3} />
-              </div>
-            ) : null}
+          </div>
+          {thumbnailUrl && !showPreview && isCardVisible && (
+            <img
+              src={thumbnailUrl}
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          )}
+          {/* Inline video preview — suppressed on not-started cards so it doesn't compete with PlayOverlay */}
+          {showPreview && previewBlobUrl && !showPlay && (
+            // width/height attrs prevent the browser from using intrinsic video dimensions before layout.
+            // This was the root cause of the pixelated/cropped preview on non-16:9 source videos.
+            <video
+              key={previewBlobUrl}
+              src={previewBlobUrl}
+              muted
+              autoPlay
+              playsInline
+              loop
+              preload="none"
+              aria-hidden="true"
+              width="100%"
+              height="100%"
+              onCanPlay={() => setVideoReady(true)}
+              className={cn(
+                'absolute inset-0 block w-full h-full object-cover pointer-events-none transition-opacity duration-500',
+                videoReady ? 'opacity-100' : 'opacity-0'
+              )}
+            />
+          )}
+          {/* Completion/progress badge — top-left */}
+          {completionPercent === 100 ? (
+            <div
+              className="absolute top-3 left-3 z-30 bg-success text-success-foreground rounded-full px-3 py-1 text-xs font-bold shadow-lg flex items-center gap-1"
+              data-testid="completion-badge"
+            >
+              <CheckCircle2 className="size-3" aria-hidden="true" />
+              Complete
+            </div>
+          ) : completionPercent > 0 ? (
+            <div className="absolute top-3 left-3 z-30" data-testid="completion-ring">
+              <ProgressRing percent={completionPercent} size={40} strokeWidth={3} />
+            </div>
+          ) : null}
 
-            <div className="absolute top-3 right-3 z-20">
+          {/* Status dropdown — top-right */}
+          <div className="absolute top-3 right-3 z-30">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -399,15 +417,18 @@ export function ImportedCourseCard({
               </DropdownMenu>
             </div>
 
-            {/* Info button */}
+          {/* Info button — bottom-right, hover-revealed */}
+          <div
+            className="absolute bottom-3 right-3 z-30"
+            onClick={e => { e.preventDefault(); e.stopPropagation() }}
+          >
             <Popover open={infoOpen} onOpenChange={setInfoOpen}>
               <PopoverTrigger asChild>
                 <button
-                  onClick={e => {
-                    e.stopPropagation()
-                  }}
+                  data-testid="course-info-button"
+                  onClick={e => e.stopPropagation()}
                   aria-label="Course details"
-                  className="absolute bottom-3 right-3 z-20 rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
+                  className="rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
                 >
                   <Info className="size-4" />
                 </button>
@@ -461,6 +482,7 @@ export function ImportedCourseCard({
                   {course.videoCount > 0 && (
                     <Button
                       size="sm"
+                      data-testid="course-preview-video-btn"
                       className="w-full gap-2 hover:brightness-110 active:scale-95 transition-all"
                       onClick={e => {
                         e.stopPropagation()
@@ -476,10 +498,44 @@ export function ImportedCourseCard({
               </PopoverContent>
             </Popover>
           </div>
-          <div className="p-5">
+
+          {/* Camera overlay — only shown when not-started (mutually exclusive with Play overlay) */}
+          {!readOnly && status !== 'not-started' && (
+            <button
+              data-testid="course-thumbnail-edit-btn"
+              onClick={e => {
+                e.stopPropagation()
+                setThumbnailPickerOpen(true)
+              }}
+              aria-label="Change thumbnail"
+              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-200 flex items-center justify-center focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none z-10"
+            >
+              <Camera className="size-8 text-white drop-shadow" aria-hidden="true" />
+            </button>
+          )}
+
+          {/* Play overlay — only on not-started courses */}
+          <PlayOverlay
+            show={showPlay}
+            onClick={handleStartStudying}
+            data-testid="start-course-btn"
+            aria-label={`Start studying "${course.name}"`}
+          />
+
+          {/* Full completion overlay */}
+          <CompletionOverlay show={isCompleted} />
+
+          {/* Cover-edge progress bar */}
+          <div data-testid="completion-progress-bar" className="contents">
+            <CoverProgressBar progress={completionPercent} />
+          </div>
+        </CardCover>
+
+        {/* Card body */}
+        <div className="mt-3 px-1 min-h-32 flex flex-col">
             <h3
               data-testid="course-card-title"
-              className="font-bold text-base mb-1 line-clamp-2 group-hover:text-brand"
+              className="font-bold text-sm leading-tight mb-1 line-clamp-2 group-hover:text-brand transition-colors"
             >
               {course.name}
             </h3>
@@ -513,10 +569,7 @@ export function ImportedCourseCard({
                 Unknown Author
               </p>
             )}
-            <p className="text-sm text-muted-foreground mb-2">
-              Imported {new Date(course.importedAt).toLocaleDateString()}
-            </p>
-            <div className="flex items-center gap-1.5 mb-3">
+            <div className="flex items-center gap-1.5 mt-1 mb-2">
               <span aria-live="polite" className="contents">
                 {analysisStatus === 'analyzing' && (
                   <span
@@ -542,21 +595,6 @@ export function ImportedCourseCard({
                 <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
               )}
             </div>
-            {course.status === 'not-started' && !readOnly && (
-              <Button
-                size="sm"
-                variant="brand"
-                className="w-full mb-2"
-                data-testid="start-course-btn"
-                onClick={e => {
-                  e.stopPropagation()
-                  handleStatusChange('active')
-                }}
-              >
-                <Play className="size-3.5 mr-1.5" aria-hidden="true" />
-                Start Studying
-              </Button>
-            )}
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span data-testid="course-card-video-count" className="flex items-center gap-1">
                 <Video className="size-3.5" aria-hidden="true" />
@@ -602,18 +640,12 @@ export function ImportedCourseCard({
                 </Badge>
               )}
             </div>
-            {completionPercent > 0 && (
-              <div className="mt-2" data-testid="completion-progress-bar">
-                <Progress value={completionPercent} showLabel className="h-1.5" />
-              </div>
-            )}
             {momentumScore && momentumScore.score > 0 && (
               <div className="mt-2">
                 <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />
               </div>
             )}
-          </div>
-        </Card>
+        </div>
       </article>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

@@ -1,6 +1,5 @@
 import { Link, useNavigate } from 'react-router'
 import { Clock, Video, FileText, BookOpen, CheckCircle, Eye, Info } from 'lucide-react'
-import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import { Progress } from '@/app/components/ui/progress'
@@ -12,6 +11,7 @@ import { MomentumBadge } from './MomentumBadge'
 import { AtRiskBadge } from './AtRiskBadge'
 import { CompletionEstimate } from './CompletionEstimate'
 import { VideoPlayer } from './VideoPlayer'
+import { CardCover, CoverProgressBar, CompletionOverlay } from './CourseCardShell'
 import { getProgress } from '@/lib/progress'
 import { getResourceUrl } from '@/lib/media'
 import { cn } from '@/app/components/ui/utils'
@@ -32,15 +32,31 @@ const categoryLabels: Record<CourseCategory, string> = {
   'research-library': 'Research Library',
 }
 
+// category palette — semantic per-category color, no design token equivalent
 const categoryColors: Record<CourseCategory, string> = {
-  'behavioral-analysis': 'bg-emerald-100 text-emerald-700',
+  'behavioral-analysis': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   'influence-authority': 'bg-brand-soft text-brand-soft-foreground',
-  'confidence-mastery': 'bg-amber-100 text-amber-700',
-  'operative-training': 'bg-red-100 text-red-700',
-  'research-library': 'bg-purple-100 text-purple-700',
+  'confidence-mastery': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  'operative-training': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  'research-library': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
 }
 
 // ── Helper functions ────────────────────────────────────────────────
+
+const COVER_WIDTHS = [320, 640, 768, 1024, 1280] as const
+
+function buildSrcSet(coverImage: string, ext: 'webp' | 'png' = 'webp'): string {
+  return COVER_WIDTHS.map(w => `${coverImage}-${w}w.${ext} ${w}w`).join(', ')
+}
+
+function EmptyCoverFallback() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/50 dark:to-indigo-950/50">
+      <BookOpen className="size-16 text-brand" />
+    </div>
+  )
+}
+
 
 function formatRelativeTime(isoDate: string): string {
   const now = new Date()
@@ -156,6 +172,8 @@ export function CourseCard({
   // ── Shared sub-components ─────────────────────────────────────────
 
   const inlineVideoPreview = showPreview && previewSrc && (
+    // width/height attrs prevent the browser from using intrinsic video dimensions before layout.
+    // This was the root cause of the pixelated/cropped preview on non-16:9 source videos.
     <video
       key={previewSrc}
       src={previewSrc}
@@ -165,9 +183,11 @@ export function CourseCard({
       loop
       preload="none"
       aria-hidden="true"
+      width="100%"
+      height="100%"
       onCanPlay={() => setVideoReady(true)}
       className={cn(
-        'absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-500',
+        'absolute inset-0 block w-full h-full object-cover pointer-events-none transition-opacity duration-500',
         videoReady ? 'opacity-100' : 'opacity-0'
       )}
     />
@@ -286,7 +306,7 @@ export function CourseCard({
                 Complete
               </div>
             ) : completionPercent > 0 ? (
-              <div className="absolute top-3 right-3">
+              <div className="absolute top-3 right-3" data-testid="completion-ring">
                 <ProgressRing percent={completionPercent} size={40} strokeWidth={3} />
               </div>
             ) : null}
@@ -353,7 +373,7 @@ export function CourseCard({
                 e.stopPropagation()
               }}
               aria-label="Course details"
-              className="absolute bottom-2 right-2 z-20 rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
+              className="absolute bottom-2 right-2 z-20 rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
             >
               <Info className="size-4" />
             </button>
@@ -377,7 +397,7 @@ export function CourseCard({
           <PopoverTrigger asChild>
             <button
               aria-label="Course details"
-              className="rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
+              className="rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
             >
               <Info className="size-4" />
             </button>
@@ -394,98 +414,79 @@ export function CourseCard({
 
   const thumbnailHeight = variant === 'overview' ? 'h-32' : 'h-44'
 
-  function renderThumbnail() {
+  function renderThumbnailContent() {
     if (variant === 'progress') {
-      // progress variant: simpler <picture> + <img>, rounded top
-      return (
-        <div className="relative overflow-hidden rounded-t-[24px]">
-          <picture>
-            <source
-              type="image/webp"
-              srcSet={`
-                ${course.coverImage}-320w.webp 320w,
-                ${course.coverImage}-640w.webp 640w,
-                ${course.coverImage}-768w.webp 768w,
-                ${course.coverImage}-1024w.webp 1024w,
-                ${course.coverImage}-1280w.webp 1280w
-              `}
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            />
-            <img
-              src={`${course.coverImage}-640w.webp`}
-              alt={course.title}
-              className={`w-full ${thumbnailHeight} object-cover transition-transform duration-200 group-hover:scale-105`}
-              loading="lazy"
-            />
-          </picture>
-          {inlineVideoPreview}
-          {renderThumbnailOverlays()}
-          {renderInfoButton()}
-        </div>
+      return course.coverImage ? (
+        <picture className="absolute inset-0 w-full h-full">
+          <source
+            type="image/webp"
+            srcSet={buildSrcSet(course.coverImage)}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          />
+          <img
+            src={`${course.coverImage}-640w.webp`}
+            alt={course.title}
+            className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+            loading="lazy"
+          />
+        </picture>
+      ) : (
+        <EmptyCoverFallback />
       )
     }
 
-    // library + overview: gradient fallback + full responsive srcSet
+    // library + overview
+    if (!course.coverImage) {
+      return <EmptyCoverFallback />
+    }
+
+    if (variant === 'library') {
+      return (
+        <picture className="absolute inset-0 w-full h-full">
+          <source
+            type="image/webp"
+            srcSet={buildSrcSet(course.coverImage)}
+            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
+          />
+          <img
+            src={`${course.coverImage}-768w.png`}
+            srcSet={buildSrcSet(course.coverImage, 'png')}
+            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
+            alt={course.title}
+            className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+          />
+        </picture>
+      )
+    }
+
+    // overview
     return (
-      <div
-        className={`relative ${thumbnailHeight} bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/50 dark:to-indigo-950/50 flex items-center justify-center overflow-hidden`}
-      >
-        {course.coverImage ? (
-          variant === 'library' ? (
-            <picture className="absolute inset-0">
-              <source
-                type="image/webp"
-                srcSet={`
-                  ${course.coverImage}-320w.webp 320w,
-                  ${course.coverImage}-640w.webp 640w,
-                  ${course.coverImage}-768w.webp 768w,
-                  ${course.coverImage}-1024w.webp 1024w,
-                  ${course.coverImage}-1280w.webp 1280w
-                `}
-                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
-              />
-              <img
-                src={`${course.coverImage}-768w.png`}
-                srcSet={`
-                  ${course.coverImage}-320w.png 320w,
-                  ${course.coverImage}-640w.png 640w,
-                  ${course.coverImage}-768w.png 768w,
-                  ${course.coverImage}-1024w.png 1024w,
-                  ${course.coverImage}-1280w.png 1280w
-                `}
-                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
-                alt={course.title}
-                className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-              />
-            </picture>
-          ) : (
-            <picture className="absolute inset-0">
-              <source
-                type="image/webp"
-                srcSet={`
-                  ${course.coverImage}-320w.webp 320w,
-                  ${course.coverImage}-640w.webp 640w,
-                  ${course.coverImage}-768w.webp 768w,
-                  ${course.coverImage}-1024w.webp 1024w,
-                  ${course.coverImage}-1280w.webp 1280w
-                `}
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
-              />
-              <img
-                src={`${course.coverImage}-640w.webp`}
-                alt={course.title}
-                className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-                loading="lazy"
-              />
-            </picture>
-          )
-        ) : (
-          <BookOpen className="size-16 text-brand" />
-        )}
+      <picture className="absolute inset-0 w-full h-full">
+        <source
+          type="image/webp"
+          srcSet={buildSrcSet(course.coverImage)}
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+        />
+        <img
+          src={`${course.coverImage}-640w.webp`}
+          alt={course.title}
+          className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+          loading="lazy"
+        />
+      </picture>
+    )
+  }
+
+  function renderThumbnail() {
+    return (
+      <CardCover heightClass={thumbnailHeight}>
+        {renderThumbnailContent()}
         {inlineVideoPreview}
         {renderThumbnailOverlays()}
         {renderInfoButton()}
-      </div>
+        <CoverProgressBar progress={completionPercent} />
+        <CompletionOverlay show={isCompleted && variant !== 'progress'} />
+      </CardCover>
     )
   }
 
@@ -495,15 +496,19 @@ export function CourseCard({
     switch (variant) {
       case 'library':
         return (
-          <div className="p-5 flex flex-col flex-1">
-            <h3 className="font-semibold text-base mb-2 group-hover:text-brand transition-colors line-clamp-2">
+          <div className="mt-3 px-1 flex flex-col min-h-32">
+            <h3
+              className="font-semibold text-sm leading-tight line-clamp-2 group-hover:text-brand transition-colors"
+              data-testid="course-card-title"
+            >
               {course.title}
             </h3>
             {author && (
               <Link
                 to={`/authors/${author.id}`}
                 onClick={e => e.stopPropagation()}
-                className="flex items-center gap-1.5 mb-3 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
+                className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
+                data-testid="course-card-author"
               >
                 <Avatar className="size-5">
                   <AvatarImage {...getAvatarSrc(author.avatar, 20)} alt="" />
@@ -517,29 +522,28 @@ export function CourseCard({
                 <span>{author.name}</span>
               </Link>
             )}
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-auto mb-3">
-              <span className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-2">
+              <span className="flex items-center gap-1" data-testid="course-card-video-count">
                 <Video className="h-3.5 w-3.5" aria-hidden="true" />
                 {course.totalVideos} videos
               </span>
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1" data-testid="course-card-pdf-count">
                 <FileText className="h-3.5 w-3.5" aria-hidden="true" />
                 {course.totalPDFs} docs
               </span>
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1" data-testid="course-card-duration">
                 <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                 {course.estimatedHours}h
               </span>
             </div>
             {completionEstimate && completionEstimate.remainingMinutes > 0 && (
-              <div className="mb-2">
+              <div className="mt-2">
                 <CompletionEstimate
                   sessionsNeeded={completionEstimate.sessionsNeeded}
                   estimatedDays={completionEstimate.estimatedDays}
                 />
               </div>
             )}
-            <Progress value={completionPercent} showLabel className="h-1.5" />
             {momentumScore && momentumScore.score > 0 && (
               <div className="mt-2">
                 <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />
@@ -550,21 +554,19 @@ export function CourseCard({
 
       case 'overview':
         return (
-          <div className="p-5 flex-1 flex flex-col">
-            <Badge
-              variant="secondary"
-              className="mb-2 bg-brand-soft text-brand-soft-foreground w-fit"
+          <div className="mt-3 px-1 flex flex-col min-h-24">
+            <h3
+              className="font-semibold text-sm leading-tight line-clamp-2 group-hover:text-brand transition-colors"
+              data-testid="course-card-title"
             >
-              {formatCategory(course.category)}
-            </Badge>
-            <h3 className="font-semibold text-base line-clamp-2 mb-1 group-hover:text-brand transition-colors">
               {course.title}
             </h3>
             {author && (
               <Link
                 to={`/authors/${author.id}`}
                 onClick={e => e.stopPropagation()}
-                className="flex items-center gap-1.5 mb-2 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
+                className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
+                data-testid="course-card-author"
               >
                 <Avatar className="size-5">
                   <AvatarImage {...getAvatarSrc(author.avatar, 20)} alt="" />
@@ -578,7 +580,7 @@ export function CourseCard({
                 <span>{author.name}</span>
               </Link>
             )}
-            <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto">
+            <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
               <span className="flex items-center gap-1">
                 <Video className="h-3.5 w-3.5" aria-hidden="true" />
                 {totalLessons} {totalLessons === 1 ? 'lesson' : 'lessons'}
@@ -592,24 +594,19 @@ export function CourseCard({
               {!isInProgress && !isCompleted && (
                 <span className="text-muted-foreground">Not Started</span>
               )}
+              {isCompleted && (
+                <span className="flex items-center gap-1 text-success font-medium">
+                  <CheckCircle className="size-3" />
+                  Completed
+                </span>
+              )}
             </div>
-            {isInProgress && (
-              <div className="mt-3">
-                <Progress value={completionPercent} showLabel className="h-1.5" />
-              </div>
-            )}
-            {isCompleted && (
-              <div className="mt-3 flex items-center gap-2 text-sm text-success font-medium">
-                <CheckCircle className="size-4" />
-                Completed
-              </div>
-            )}
           </div>
         )
 
       case 'progress':
         return (
-          <div className="p-5 flex flex-col gap-3 flex-1">
+          <div className="mt-3 px-1 flex flex-col gap-2">
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="secondary" className="badge-entrance">
                 {categoryLabels[course.category] ?? course.category}
@@ -629,8 +626,9 @@ export function CourseCard({
             </div>
 
             <h3
-              className="font-semibold text-base line-clamp-2 group-hover:text-brand transition-colors"
+              className="font-semibold text-sm leading-tight line-clamp-2 group-hover:text-brand transition-colors"
               title={course.title}
+              data-testid="course-card-title"
             >
               {course.title}
             </h3>
@@ -640,6 +638,7 @@ export function CourseCard({
                 to={`/authors/${author.id}`}
                 onClick={e => e.stopPropagation()}
                 className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
+                data-testid="course-card-author"
               >
                 <Avatar className="size-5">
                   <AvatarImage {...getAvatarSrc(author.avatar, 20)} alt="" />
@@ -654,113 +653,99 @@ export function CourseCard({
               </Link>
             )}
 
-            <div className="flex flex-col gap-3 mt-auto">
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Video className="h-3.5 w-3.5" aria-hidden="true" />
-                  {course.totalVideos} videos
-                </span>
-                <span className="flex items-center gap-1">
-                  <FileText className="h-3.5 w-3.5" aria-hidden="true" />
-                  {course.totalPDFs} docs
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" aria-hidden="true" />~{course.estimatedHours}h
-                </span>
-              </div>
-
-              {status === 'in-progress' && (
-                <>
-                  <Progress value={completionPercent} showLabel className="h-2" />
-                  {lastAccessedAt && (
-                    <span className="text-xs text-muted-foreground">
-                      {formatRelativeTime(lastAccessedAt)}
-                    </span>
-                  )}
-                  <Button variant="brand" asChild className="button-press w-full">
-                    <Link to={lessonLink} onClick={e => e.stopPropagation()}>
-                      Resume Learning
-                    </Link>
-                  </Button>
-                </>
-              )}
-
-              {status === 'completed' && (
-                <>
-                  <p className="text-sm text-success font-medium">
-                    Completed · {totalLessons} lessons
-                  </p>
-                  <Button asChild variant="outline" className="button-press w-full">
-                    <Link to={lessonLink} onClick={e => e.stopPropagation()}>
-                      Review Course
-                    </Link>
-                  </Button>
-                </>
-              )}
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1" data-testid="course-card-video-count">
+                <Video className="h-3.5 w-3.5" aria-hidden="true" />
+                {course.totalVideos} videos
+              </span>
+              <span className="flex items-center gap-1" data-testid="course-card-pdf-count">
+                <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+                {course.totalPDFs} docs
+              </span>
+              <span className="flex items-center gap-1" data-testid="course-card-duration">
+                <Clock className="h-3.5 w-3.5" aria-hidden="true" />~{course.estimatedHours}h
+              </span>
             </div>
+
+            {status === 'in-progress' && (
+              <>
+                {/* Labeled body progress bar retained for MyClass — carries textual percentage */}
+                <Progress value={completionPercent} showLabel className="h-2" data-testid="completion-progress-bar" />
+                {lastAccessedAt && (
+                  <span className="text-xs text-muted-foreground">
+                    {formatRelativeTime(lastAccessedAt)}
+                  </span>
+                )}
+                <Button variant="brand" asChild className="button-press w-full">
+                  <Link to={lessonLink} onClick={e => e.stopPropagation()}>
+                    Resume Learning
+                  </Link>
+                </Button>
+              </>
+            )}
+
+            {status === 'completed' && (
+              <>
+                <p className="text-sm text-success font-medium">
+                  Completed · {totalLessons} lessons
+                </p>
+                <Button asChild variant="outline" className="button-press w-full">
+                  <Link to={lessonLink} onClick={e => e.stopPropagation()}>
+                    Review Course
+                  </Link>
+                </Button>
+              </>
+            )}
           </div>
         )
     }
   }
 
-  // ── Card shell ────────────────────────────────────────────────────
+  // ── Shared article shell ──────────────────────────────────────────
 
-  const cardShell = (
-    <Card
-      data-testid={`course-card-${course.id}`}
-      data-preview={showPreview && videoReady ? '' : undefined}
-      className={cn(
-        'group bg-card border-0 shadow-sm overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 motion-reduce:hover:scale-100 cursor-default h-full flex flex-col',
-        showPreview && videoReady && '!scale-[1.05] z-10',
-        variant === 'progress' &&
-          status === 'completed' &&
-          'border-green-200 dark:border-green-800',
-        variant === 'progress' && status === 'not-started' && 'opacity-80 hover:opacity-100'
-      )}
-    >
-      {variant === 'progress' ? (
-        <CardContent className="p-0 flex flex-col h-full">
-          {renderThumbnail()}
-          {renderBody()}
-        </CardContent>
-      ) : (
-        <>
-          {renderThumbnail()}
-          {renderBody()}
-        </>
-      )}
-    </Card>
+  const articleContent = (
+    <>
+      {renderThumbnail()}
+      {renderBody()}
+    </>
   )
 
   // ── Navigation wrapper ────────────────────────────────────────────
 
   if (variant === 'progress') {
-    // progress: Card onClick (inner Link buttons for Resume/Review)
     return (
       <>
-        <div
+        <article
+          data-testid={`course-card-${course.id}`}
+          data-preview={showPreview && videoReady ? '' : undefined}
           onClick={e => {
             guardNavigation(e)
             if (!e.defaultPrevented) navigate(lessonLink)
           }}
           {...previewHandlers}
-          className="h-full"
+          className={cn(
+            'group cursor-default',
+            showPreview && videoReady && 'z-10',
+            status === 'not-started' && 'opacity-80 hover:opacity-100'
+          )}
         >
-          {cardShell}
-        </div>
+          {articleContent}
+        </article>
         {previewDialog}
       </>
     )
   }
 
-  // library + overview: div onClick + navigate (avoids nested <a> from author link)
+  // library + overview
   return (
     <>
-      <div
+      <article
         role="link"
         tabIndex={0}
         aria-label={course.title}
         data-href={lessonLink}
+        data-testid={`course-card-${course.id}`}
+        data-preview={showPreview && videoReady ? '' : undefined}
         onClick={e => {
           guardNavigation(e)
           if (!e.defaultPrevented) navigate(lessonLink)
@@ -772,10 +757,10 @@ export function CourseCard({
           }
         }}
         {...previewHandlers}
-        className="rounded-2xl focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none block h-full cursor-pointer"
+        className="group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-2xl block cursor-pointer"
       >
-        {cardShell}
-      </div>
+        {articleContent}
+      </article>
       {previewDialog}
     </>
   )
