@@ -210,6 +210,22 @@ export default function App() {
     setDeferredOverlayReady(false)
   }, [authUser])
 
+  // Dev/test-only hook: expose a force-mount shim for E2E tests so they can
+  // exercise the overlay without requiring a seeded Supabase account. Tree-
+  // shaken in production builds.
+  useEffect(() => {
+    if (import.meta.env.PROD) return
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(window as any).__forceDownloadOverlay = (userId: string | null) => {
+      setDownloadOverlayUserId(userId)
+      setDeferredOverlayReady(Boolean(userId))
+    }
+    return () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (window as any).__forceDownloadOverlay
+    }
+  }, [])
+
   // E43-S04: Auth lifecycle hook — session expiry detection, token refresh, settings hydration
   // E92-S08: onUnlinkedDetected defers syncEngine.start() until dialog resolves
   useAuthLifecycle({ onUnlinkedDetected: handleUnlinkedDetected })

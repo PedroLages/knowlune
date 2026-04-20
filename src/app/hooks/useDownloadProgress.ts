@@ -67,11 +67,19 @@ const INITIAL_STATE: DownloadProgress = {
  * Fire a single Supabase HEAD count query. Resolves to the integer count or
  * throws on error. Callers wrap with `Promise.allSettled` so one rejection
  * does not cancel the rest.
+ *
+ * Dev/test escape hatch: if `window.__mockHeadCounts` is set (non-prod only),
+ * returns that value instead of hitting Supabase. Tree-shaken in prod.
  */
 async function headCount(
   supabaseTable: string,
   userId: string,
 ): Promise<number> {
+  if (!import.meta.env.PROD) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mock = (window as any).__mockHeadCounts as number | undefined
+    if (typeof mock === 'number') return mock
+  }
   if (!supabase) {
     throw new Error('Supabase client unavailable')
   }
@@ -153,7 +161,7 @@ export function useDownloadProgress(
     }
 
     let cancelled = false
-    let intervalId: ReturnType<typeof window.setInterval> | null = null
+    let intervalId: number | null = null
 
     async function tick() {
       if (cancelled) return
