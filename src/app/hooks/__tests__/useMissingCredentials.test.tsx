@@ -1,10 +1,15 @@
 /**
- * Tests for useMissingCredentials hook — E97-S05 Unit 2.
+ * Tests for MissingCredentialsProvider + useMissingCredentials hook — E97-S05 Unit 2.
+ *
+ * The polling loop lives in MissingCredentialsProvider; useMissingCredentials()
+ * reads from context. Tests render the provider as a wrapper so both
+ * production and test code exercise the same path.
  *
  * @since E97-S05
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import type { ReactNode } from 'react'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -52,7 +57,12 @@ vi.mock('@/lib/aiConfiguration', () => ({
   getAIConfiguration: mockGetAIConfiguration,
 }))
 
-import { useMissingCredentials } from '@/app/hooks/useMissingCredentials'
+import { MissingCredentialsProvider, useMissingCredentials } from '@/app/hooks/useMissingCredentials'
+
+// Wrapper that mounts the provider so useMissingCredentials can read context
+function wrapper({ children }: { children: ReactNode }) {
+  return <MissingCredentialsProvider>{children}</MissingCredentialsProvider>
+}
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -80,7 +90,7 @@ describe('useMissingCredentials', () => {
     const resolved = { missing: [{ kind: 'abs-server', id: 'srv-1', displayName: 'Home', status: 'missing' }], statusByKey: { 'abs-server:srv-1': 'missing' } }
     mockAggregate.mockResolvedValue(resolved)
 
-    const { result } = renderHook(() => useMissingCredentials())
+    const { result } = renderHook(() => useMissingCredentials(), { wrapper })
 
     // Initially loading
     expect(result.current.loading).toBe(true)
@@ -99,7 +109,7 @@ describe('useMissingCredentials', () => {
     mockUser.mockReturnValue(null)
     mockLastSyncAt.mockReturnValue(new Date())
 
-    const { result } = renderHook(() => useMissingCredentials())
+    const { result } = renderHook(() => useMissingCredentials(), { wrapper })
 
     await act(async () => {
       await Promise.resolve()
@@ -115,7 +125,7 @@ describe('useMissingCredentials', () => {
     mockUser.mockReturnValue({ id: 'user-1' })
     mockLastSyncAt.mockReturnValue(null)
 
-    const { result } = renderHook(() => useMissingCredentials())
+    const { result } = renderHook(() => useMissingCredentials(), { wrapper })
 
     await act(async () => {
       await Promise.resolve()
@@ -132,7 +142,7 @@ describe('useMissingCredentials', () => {
     mockLastSyncAt.mockReturnValue(new Date())
     mockAggregate.mockResolvedValue({ missing: [], statusByKey: {} })
 
-    renderHook(() => useMissingCredentials())
+    renderHook(() => useMissingCredentials(), { wrapper })
 
     await act(async () => {
       await Promise.resolve()
@@ -155,7 +165,7 @@ describe('useMissingCredentials', () => {
     mockLastSyncAt.mockReturnValue(new Date())
     mockAggregate.mockResolvedValue({ missing: [], statusByKey: {} })
 
-    renderHook(() => useMissingCredentials())
+    renderHook(() => useMissingCredentials(), { wrapper })
 
     await act(async () => {
       await Promise.resolve()
@@ -183,7 +193,7 @@ describe('useMissingCredentials', () => {
     mockLastSyncAt.mockReturnValue(new Date())
     mockAggregate.mockResolvedValue({ missing: [], statusByKey: {} })
 
-    renderHook(() => useMissingCredentials())
+    renderHook(() => useMissingCredentials(), { wrapper })
 
     await act(async () => {
       await Promise.resolve()
@@ -215,7 +225,7 @@ describe('useMissingCredentials', () => {
     mockLastSyncAt.mockReturnValue(new Date())
     mockAggregate.mockResolvedValue({ missing: [], statusByKey: {} })
 
-    renderHook(() => useMissingCredentials())
+    renderHook(() => useMissingCredentials(), { wrapper })
 
     await act(async () => {
       await Promise.resolve()
@@ -260,7 +270,7 @@ describe('useMissingCredentials', () => {
     mockLastSyncAt.mockReturnValue(new Date())
     mockAggregate.mockResolvedValue({ missing: [], statusByKey: {} })
 
-    renderHook(() => useMissingCredentials())
+    renderHook(() => useMissingCredentials(), { wrapper })
 
     await act(async () => {
       await Promise.resolve()
@@ -298,7 +308,7 @@ describe('useMissingCredentials', () => {
     mockLastSyncAt.mockReturnValue(new Date())
     mockAggregate.mockResolvedValue({ missing: [], statusByKey: {} })
 
-    const { unmount } = renderHook(() => useMissingCredentials())
+    const { unmount } = renderHook(() => useMissingCredentials(), { wrapper })
 
     await act(async () => {
       await Promise.resolve()

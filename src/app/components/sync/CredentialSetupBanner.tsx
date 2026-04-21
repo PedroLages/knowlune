@@ -208,17 +208,9 @@ export function CredentialSetupBanner() {
                       Ollama uses a server URL rather than a Vault credential, so it syncs
                       normally through your settings.
                     </p>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="p-0 h-auto text-xs text-muted-foreground"
-                      onClick={() => {
-                        // TODO: Help article (future)
-                        console.log('[CredentialSetupBanner] Learn more clicked — help article TBD')
-                      }}
-                    >
-                      Learn more
-                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      Help article coming soon.
+                    </p>
                   </div>
                 </PopoverContent>
               </Popover>

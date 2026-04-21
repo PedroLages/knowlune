@@ -75,6 +75,7 @@ interface CredentialSyncStatusBadgeProps {
   size?: 'sm' | 'md'
   showLabel?: boolean
   className?: string
+  'data-testid'?: string
 }
 
 // ─── Component ────────────────────────────────────────────────────────────
@@ -84,6 +85,7 @@ export function CredentialSyncStatusBadge({
   size = 'sm',
   showLabel = true,
   className,
+  'data-testid': testId,
 }: CredentialSyncStatusBadgeProps) {
   const config = STATUS_CONFIG[status]
   const { Icon, label, className: statusClass, tooltipTitle, tooltipBody } = config
@@ -97,7 +99,7 @@ export function CredentialSyncStatusBadge({
         <span
           role="img"
           aria-label={label}
-          data-testid={`credential-status-badge-${status}`}
+          data-testid={testId ?? `credential-status-badge-${status}`}
           className={cn(
             'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium select-none cursor-default',
             'focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',

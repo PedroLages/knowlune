@@ -85,6 +85,9 @@ export function OpdsCatalogSettings({ open, onOpenChange, onBrowse }: OpdsCatalo
     }
   }, [open, loadCatalogs])
 
+  // Stable ref so useDeepLinkFocus's onFocus closure always calls the latest handleOpenEdit
+  const handleOpenEditRef = useRef<(catalog: OpdsCatalog) => void>(() => {})
+
   // E97-S05 AC2: deep-link focus — opens edit form for the focused catalog and
   // focuses the password input field. Uses requestAnimationFrame to ensure the
   // input is mounted before focus (Radix dialog focus-trap may run concurrently).
@@ -97,9 +100,6 @@ export function OpdsCatalogSettings({ open, onOpenChange, onBrowse }: OpdsCatalo
       passwordInputRef.current?.focus()
     })
   })
-
-  // Stable ref so useDeepLinkFocus's onFocus closure always calls the latest handleOpenEdit
-  const handleOpenEditRef = useRef<(catalog: OpdsCatalog) => void>(() => {})
 
   const resetForm = useCallback(() => {
     setName('')

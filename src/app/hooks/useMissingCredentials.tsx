@@ -1,11 +1,11 @@
 /**
- * useMissingCredentials — E97-S05 Unit 2
+ * MissingCredentialsContext + MissingCredentialsProvider + useMissingCredentials — E97-S05 Unit 2
  *
- * React hook that subscribes to three data sources (auth, OPDS catalogs,
- * ABS servers), runs the credential status aggregator, and returns
- * { missing, statusByKey, loading }.
+ * A single shared polling loop (MissingCredentialsProvider) mounted once at App
+ * level drives the credential status aggregation. All consumers call
+ * useMissingCredentials() to read from context — no per-instance intervals.
  *
- * Lifecycle:
+ * Polling design (unchanged from original):
  * - First evaluation is gated on useSyncStatusStore.lastSyncAt !== null to
  *   prevent a flash on new-device sign-in before the first sync completes (AC1).
  * - Event-driven refreshes fire on `ai-configuration-updated` and Zustand
@@ -25,7 +25,8 @@
  * @since E97-S05
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useOpdsCatalogStore } from '@/stores/useOpdsCatalogStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
@@ -43,7 +44,22 @@ export interface MissingCredentialsResult {
   loading: boolean
 }
 
-export function useMissingCredentials(): MissingCredentialsResult {
+// ─── Context ──────────────────────────────────────────────────────────────────
+
+const MissingCredentialsContext = createContext<MissingCredentialsResult>({
+  missing: [],
+  statusByKey: {},
+  loading: true,
+})
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
+/**
+ * MissingCredentialsProvider — mount once at App level (above RouterProvider).
+ * Owns the single 120s polling loop; all consumers read from context via
+ * useMissingCredentials() without installing their own intervals.
+ */
+export function MissingCredentialsProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore(s => s.user)
   const catalogs = useOpdsCatalogStore(s => s.catalogs)
   const servers = useAudiobookshelfStore(s => s.servers)
@@ -185,5 +201,19 @@ export function useMissingCredentials(): MissingCredentialsResult {
     void runAggregate.current()
   }, [servers])
 
-  return { missing, statusByKey, loading }
+  return (
+    <MissingCredentialsContext.Provider value={{ missing, statusByKey, loading }}>
+      {children}
+    </MissingCredentialsContext.Provider>
+  )
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
+/**
+ * useMissingCredentials — reads credential status from MissingCredentialsContext.
+ * Requires MissingCredentialsProvider to be mounted above in the tree (App level).
+ */
+export function useMissingCredentials(): MissingCredentialsResult {
+  return useContext(MissingCredentialsContext)
 }

@@ -27,6 +27,7 @@ import { LinkDataDialog } from '@/app/components/sync/LinkDataDialog'
 import { InitialUploadWizard } from '@/app/components/sync/InitialUploadWizard'
 import { NewDeviceDownloadOverlay } from '@/app/components/sync/NewDeviceDownloadOverlay'
 import { CredentialSetupBanner } from '@/app/components/sync/CredentialSetupBanner'
+import { MissingCredentialsProvider } from '@/app/hooks/useMissingCredentials'
 import { shouldShowInitialUploadWizard } from '@/lib/sync/shouldShowInitialUploadWizard'
 import { shouldShowDownloadOverlay } from '@/lib/sync/shouldShowDownloadOverlay'
 import { useDownloadStatusStore } from '@/app/stores/useDownloadStatusStore'
@@ -265,6 +266,7 @@ export default function App() {
     <ErrorBoundary>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <MotionConfig reducedMotion={shouldReduceMotion ? 'always' : 'never'}>
+          <MissingCredentialsProvider>
           <RouterProvider router={router} />
           <Toaster />
           <WelcomeWizard />
@@ -300,6 +302,7 @@ export default function App() {
           {import.meta.env.PROD && <PWAUpdatePrompt />}
           <PWAInstallBanner />
           {process.env.NODE_ENV === 'development' && createPortal(<Agentation />, document.body)}
+          </MissingCredentialsProvider>
         </MotionConfig>
       </ThemeProvider>
     </ErrorBoundary>

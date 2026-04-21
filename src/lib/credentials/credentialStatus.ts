@@ -67,67 +67,36 @@ export async function aggregateCredentialStatus(input: AggregateInput): Promise<
   const statusByKey: Record<string, CredentialStatus> = {}
 
   // ─── AI providers ───────────────────────────────────────────────────────────
-  // Per-provider badge checks (AC3) — run in parallel
+  // Call getConfiguredProviderIds() once — it does the Vault fan-out internally.
+  // Reuse the result for both per-provider statusByKey population (badge rendering)
+  // and the banner trigger (user-level synthetic entry).
+  const configuredProviderIds = await getConfiguredProviderIds()
+  // Filter out ollama — it's not a Vault credential
+  const vaultConfiguredIds = configuredProviderIds.filter(id => id !== 'ollama')
+
+  // Per-provider badge status (AC3): build the candidate set from aiConfig, then
+  // classify each as vault / local / missing using the already-fetched vault result.
   const AI_PROVIDER_IDS = Object.keys(aiConfig.providerKeys ?? {}) as string[]
-  // Also include current provider and legacy provider
   const allAiCandidates = new Set<string>(AI_PROVIDER_IDS)
   if (aiConfig.provider && aiConfig.provider !== 'ollama') {
     allAiCandidates.add(aiConfig.provider)
   }
-  // Legacy apiKeyEncrypted maps to the selectedProvider
   if (aiConfig.apiKeyEncrypted && aiConfig.provider && aiConfig.provider !== 'ollama') {
     allAiCandidates.add(aiConfig.provider)
   }
 
-  // Check Vault in parallel for each non-Ollama candidate
-  const aiVaultChecks = await Promise.allSettled(
-    Array.from(allAiCandidates).map(async (providerId) => {
-      const configured = await checkCredential('ai-provider', providerId)
-      return { providerId, configured }
-    })
-  )
-
-  const aiVaultById = new Map<string, boolean>()
-  for (const result of aiVaultChecks) {
-    if (result.status === 'fulfilled') {
-      aiVaultById.set(result.value.providerId, result.value.configured)
-    } else {
-      // Network error — treat as missing for safety
-      // We can't extract providerId from rejected promise here, but Promise.allSettled
-      // preserves order, so we handle by index
-    }
-  }
-
-  // Re-process with index to handle failures
-  const aiCandidateArray = Array.from(allAiCandidates)
-  for (let i = 0; i < aiCandidateArray.length; i++) {
-    const providerId = aiCandidateArray[i]
-    const result = aiVaultChecks[i]
+  for (const providerId of allAiCandidates) {
     const key = `ai-provider:${providerId}`
-
-    if (result.status === 'fulfilled') {
-      const inVault = result.value.configured
-      if (inVault) {
-        statusByKey[key] = 'vault'
-      } else {
-        // Check local fallback
-        const hasLocal =
-          !!(aiConfig.providerKeys?.[providerId as keyof typeof aiConfig.providerKeys]) ||
-          (providerId === aiConfig.provider && !!aiConfig.apiKeyEncrypted)
-        statusByKey[key] = hasLocal ? 'local' : 'missing'
-      }
+    const inVault = (vaultConfiguredIds as string[]).includes(providerId)
+    if (inVault) {
+      statusByKey[key] = 'vault'
     } else {
-      // Network error — classify as missing (defensive)
-      statusByKey[key] = 'missing'
+      const hasLocal =
+        !!(aiConfig.providerKeys?.[providerId as keyof typeof aiConfig.providerKeys]) ||
+        (providerId === aiConfig.provider && !!aiConfig.apiKeyEncrypted)
+      statusByKey[key] = hasLocal ? 'local' : 'missing'
     }
   }
-
-  // User-level AI banner trigger (R1): one synthetic entry when Vault is empty
-  // AND user has local-only AI keys (providerKeys non-empty or legacy apiKeyEncrypted).
-  // Runs getConfiguredProviderIds() which already does the parallel Vault check.
-  const configuredProviderIds = await getConfiguredProviderIds()
-  // Filter out ollama — it's not a Vault credential
-  const vaultConfiguredIds = configuredProviderIds.filter(id => id !== 'ollama')
 
   const hasLocalAiKeys =
     Object.values(aiConfig.providerKeys ?? {}).some(k => !!k) ||
