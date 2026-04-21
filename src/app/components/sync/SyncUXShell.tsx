@@ -63,11 +63,21 @@ export function SyncUXShell({ children }: SyncUXShellProps) {
     span.textContent = ''
     const setTimer = setTimeout(() => {
       lrTimersRef.current.delete(setTimer)
+      // For assertive regions: remove aria-hidden before inserting content so
+      // AT picks up the announcement. Per WAI-ARIA guidance, assertive spans
+      // should start hidden to prevent spurious announcements on empty insertion.
+      if (politeness === 'assertive') {
+        span.removeAttribute('aria-hidden')
+      }
       span.textContent = message
       // Reset to empty after ≥150 ms so the region does not become stale.
       const resetTimer = setTimeout(() => {
         lrTimersRef.current.delete(resetTimer)
         span.textContent = ''
+        // Re-hide the assertive span when empty so AT ignores it.
+        if (politeness === 'assertive') {
+          span.setAttribute('aria-hidden', 'true')
+        }
       }, 150)
       lrTimersRef.current.add(resetTimer)
     }, 10)
@@ -267,8 +277,11 @@ export function SyncUXShell({ children }: SyncUXShellProps) {
             component owning its own aria-live span. */}
         <span className="sr-only" role="status" ref={politeRef} data-testid="sync-live-region-polite" />
         {/* Canonical assertive live region — role="alert" implies aria-live="assertive"
-            and aria-atomic="true". Used for urgent announcements only. */}
-        <span className="sr-only" role="alert" ref={assertiveRef} />
+            and aria-atomic="true". Used for urgent announcements only.
+            Starts aria-hidden="true" per WAI-ARIA guidance to avoid spurious AT
+            announcements on empty region insertion; announce() removes the attribute
+            when content is set and restores it after the 150ms reset. */}
+        <span className="sr-only" role="alert" ref={assertiveRef} aria-hidden="true" />
         {children}
         {/* E92-S08: Non-dismissible dialog on first sign-in with pre-existing local data */}
         {linkDialogUserId && (

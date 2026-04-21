@@ -36,7 +36,16 @@ vi.mock('sonner', () => ({
   },
 }))
 
+// Shared announce spy — replaced per-test in announcement tests.
+const mockAnnounceDefault = vi.fn()
+
+vi.mock('@/app/hooks/useLiveRegion', () => ({
+  LiveRegionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useLiveRegion: vi.fn(() => ({ announce: mockAnnounceDefault })),
+}))
+
 import { useSyncStatusStore } from '@/app/stores/useSyncStatusStore'
+import { useLiveRegion } from '@/app/hooks/useLiveRegion'
 import { SyncStatusIndicator } from '../SyncStatusIndicator'
 
 function resetStore(partial: Partial<ReturnType<typeof useSyncStatusStore.getState>> = {}) {
@@ -246,6 +255,48 @@ describe('<SyncStatusIndicator />', () => {
 
     // Race guard early-returned — fullSync should not have been invoked by Retry.
     expect(mockFullSync).not.toHaveBeenCalled()
+  })
+
+  it('announces "Sync recovered. All changes saved." when transitioning error → synced', async () => {
+    const mockAnnounce = vi.fn()
+    vi.mocked(useLiveRegion).mockImplementation(() => ({ announce: mockAnnounce }))
+
+    resetStore({ status: 'error', lastError: 'Network error' })
+    const { rerender } = render(<SyncStatusIndicator />)
+
+    // Transition to synced
+    act(() => {
+      useSyncStatusStore.setState({ status: 'synced', lastError: null })
+    })
+    rerender(<SyncStatusIndicator />)
+
+    await waitFor(() => {
+      expect(mockAnnounce).toHaveBeenCalledWith('Sync recovered. All changes saved.')
+    })
+
+    // Restore default mock for subsequent tests
+    vi.mocked(useLiveRegion).mockImplementation(() => ({ announce: mockAnnounceDefault }))
+  })
+
+  it('announces "Retrying sync…" when transitioning error → syncing', async () => {
+    const mockAnnounce = vi.fn()
+    vi.mocked(useLiveRegion).mockImplementation(() => ({ announce: mockAnnounce }))
+
+    resetStore({ status: 'error', lastError: 'Network error' })
+    const { rerender } = render(<SyncStatusIndicator />)
+
+    // Transition to syncing
+    act(() => {
+      useSyncStatusStore.setState({ status: 'syncing' })
+    })
+    rerender(<SyncStatusIndicator />)
+
+    await waitFor(() => {
+      expect(mockAnnounce).toHaveBeenCalledWith('Retrying sync\u2026')
+    })
+
+    // Restore default mock for subsequent tests
+    vi.mocked(useLiveRegion).mockImplementation(() => ({ announce: mockAnnounceDefault }))
   })
 
   it('uses static Cloud icon (no animate-spin) when prefers-reduced-motion is set', () => {

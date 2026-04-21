@@ -34,6 +34,11 @@ vi.mock('@/lib/toastHelpers', () => ({
   },
 }))
 
+vi.mock('@/app/hooks/useLiveRegion', () => ({
+  LiveRegionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useLiveRegion: () => ({ announce: vi.fn() }),
+}))
+
 // Zustand store mock — supports both selector call and getState().
 const storeState = {
   status: 'synced' as 'synced' | 'syncing' | 'error' | 'offline',

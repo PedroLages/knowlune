@@ -26,6 +26,11 @@ vi.mock('@/stores/useAuthStore', () => ({
     selector({ user: mockAuthUser() }),
 }))
 
+vi.mock('@/app/hooks/useLiveRegion', () => ({
+  LiveRegionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useLiveRegion: () => ({ announce: vi.fn() }),
+}))
+
 import { CredentialSetupBanner } from '../CredentialSetupBanner'
 
 const AI_ENTRY = { kind: 'ai-provider' as const, id: '__ai-section__', displayName: 'AI provider keys', status: 'missing' as const }
