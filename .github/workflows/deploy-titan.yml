@@ -65,13 +65,16 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    # Gated by TITAN_DEPLOY_ENABLED=true repo variable.
-    # Direct SSH to LAN IP (TITAN_SSH_HOST secret). Tailscale can be added
-    # later by staging TS_OAUTH_CLIENT_ID/SECRET and re-inserting the
-    # tailscale/github-action step before Deploy via SSH.
     if: ${{ vars.TITAN_DEPLOY_ENABLED == 'true' }}
 
     steps:
+      - name: Join tailnet
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         env:
