@@ -49,8 +49,9 @@ export function SyncUXShell({ children }: SyncUXShellProps) {
   // of managing their own aria-live regions.
   const politeRef = useRef<HTMLSpanElement>(null)
   const assertiveRef = useRef<HTMLSpanElement>(null)
-  // Pending timer IDs — cancelled on unmount to avoid setState-after-unmount.
-  const lrTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  // Pending timer IDs — stored in a Set so resolved IDs can be pruned and
+  // cancelled on unmount to avoid setState-after-unmount warnings.
+  const lrTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
 
   const announce = useCallback((message: string, politeness: LiveRegionPoliteness = 'polite') => {
     if (!message) return
@@ -61,21 +62,22 @@ export function SyncUXShell({ children }: SyncUXShellProps) {
     // WAI-ARIA clear→set pattern: clear first so repeat messages are picked up.
     span.textContent = ''
     const setTimer = setTimeout(() => {
+      lrTimersRef.current.delete(setTimer)
       span.textContent = message
       // Reset to empty after ≥150 ms so the region does not become stale.
       const resetTimer = setTimeout(() => {
+        lrTimersRef.current.delete(resetTimer)
         span.textContent = ''
       }, 150)
-      lrTimersRef.current.push(resetTimer)
+      lrTimersRef.current.add(resetTimer)
     }, 10)
-    lrTimersRef.current.push(setTimer)
+    lrTimersRef.current.add(setTimer)
   }, [])
 
   // Cancel all pending live-region timers on unmount.
   useEffect(() => {
-    const timers = lrTimersRef
     return () => {
-      timers.current.forEach(id => clearTimeout(id))
+      lrTimersRef.current.forEach(id => clearTimeout(id))
     }
   }, [])
 

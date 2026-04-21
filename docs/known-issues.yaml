@@ -1259,7 +1259,7 @@ issues:
     summary: "Live region silent on sync recovery (error→synced); SR users don't get confirmation retry succeeded"
     severity: low
     status: resolved
-    resolved_in: refactor/consolidate-aria-live-useliveregion
+    resolved_in: feature/ce-2026-04-21-consolidate-aria-live-regions
     decision: fixed
 
   - id: KI-E97-S01-L02
