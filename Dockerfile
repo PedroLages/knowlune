@@ -1,4 +1,4 @@
-# Stage 1: Build React SPA + compile server TypeScript
+# Stage 1: Build React SPA (server runs via tsx at runtime — see stage 2)
 FROM node:24-alpine AS builder
 WORKDIR /app
 
@@ -23,11 +23,8 @@ ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL \
 # Build the React SPA (output: dist/)
 RUN npm run build
 
-# Compile server TypeScript (output: server/dist/)
-RUN npx tsc -p server/tsconfig.json
 
-
-# Stage 2: Production image (Nginx + Node AI proxy)
+# Stage 2: Production image (Nginx + tsx server)
 FROM node:24-alpine
 WORKDIR /app
 
@@ -39,10 +36,14 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Copy Nginx config
 COPY nginx.conf /etc/nginx/http.d/default.conf
 
-# Copy compiled server
-COPY --from=builder /app/server/dist ./server/
+# Server runs from raw TS sources via tsx. It imports from src/ (shared
+# modelDefaults, types, ssrfProtection, icalFeedGenerator) and expects
+# the root tsconfig for `@/*` alias resolution.
+COPY --from=builder /app/server ./server/
+COPY --from=builder /app/src ./src/
+COPY --from=builder /app/tsconfig.json ./
 
-# Install production dependencies only
+# Install production dependencies only (tsx is in `dependencies`, so it stays).
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --omit=dev
 
