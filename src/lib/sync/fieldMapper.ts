@@ -67,12 +67,9 @@ function invertFieldMap(fieldMap: Record<string, string>): Record<string, string
  */
 export function toSnakeCase(
   entry: TableRegistryEntry,
-  record: Record<string, unknown>,
+  record: Record<string, unknown>
 ): Record<string, unknown> {
-  const stripSet = new Set<string>([
-    ...(entry.stripFields ?? []),
-    ...(entry.vaultFields ?? []),
-  ])
+  const stripSet = new Set<string>([...(entry.stripFields ?? []), ...(entry.vaultFields ?? [])])
 
   const result: Record<string, unknown> = {}
 
@@ -107,7 +104,7 @@ export function toSnakeCase(
  */
 export function toCamelCase(
   entry: TableRegistryEntry,
-  record: Record<string, unknown>,
+  record: Record<string, unknown>
 ): Record<string, unknown> {
   const reverseMap = invertFieldMap(entry.fieldMap)
 

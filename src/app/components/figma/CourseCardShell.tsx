@@ -62,7 +62,12 @@ interface PlayOverlayProps {
  * Visible on touch devices via `[@media(hover:none)]:opacity-100`.
  * Click handler must call stopPropagation before state transitions.
  */
-function PlayOverlay({ show, onClick, 'data-testid': testId, 'aria-label': ariaLabel }: PlayOverlayProps) {
+function PlayOverlay({
+  show,
+  onClick,
+  'data-testid': testId,
+  'aria-label': ariaLabel,
+}: PlayOverlayProps) {
   if (!show) return null
   return (
     <button

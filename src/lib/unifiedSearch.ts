@@ -237,10 +237,7 @@ export function toSearchableCourse(course: ImportedCourse): SearchableDoc {
   }
 }
 
-export function toSearchableLesson(
-  video: ImportedVideo,
-  parentCourseName?: string
-): SearchableDoc {
+export function toSearchableLesson(video: ImportedVideo, parentCourseName?: string): SearchableDoc {
   // Derive a title — `filename` is the source of truth for local imports;
   // YouTube imports may have richer metadata but still fall back safely.
   const title = video.filename || video.youtubeVideoId || video.id
@@ -368,9 +365,7 @@ export function isInitialized(): boolean {
  * `documentIds` (numeric → _searchId) and `storedFields` (numeric → fields).
  * Returns an empty Map if the index is not initialized or if the internal shape changes.
  */
-function walkStoredForType(
-  type: EntityType
-): Map<string, { displayTitle: string }> {
+function walkStoredForType(type: EntityType): Map<string, { displayTitle: string }> {
   const out = new Map<string, { displayTitle: string }>()
   if (!initialized) return out
   const prefix = `${type}:`

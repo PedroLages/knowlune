@@ -674,5 +674,5 @@ export const tableRegistry: TableRegistryEntry[] = [
  * Returns undefined if the table is not registered (e.g. flashcard_reviews).
  */
 export function getTableEntry(dexieTable: string): TableRegistryEntry | undefined {
-  return tableRegistry.find((e) => e.dexieTable === dexieTable)
+  return tableRegistry.find(e => e.dexieTable === dexieTable)
 }

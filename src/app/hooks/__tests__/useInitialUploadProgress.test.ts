@@ -90,7 +90,7 @@ describe('useInitialUploadProgress', () => {
     await addPending(3)
 
     // Wait for at least one poll cycle
-    await new Promise((r) => setTimeout(r, 700))
+    await new Promise(r => setTimeout(r, 700))
     expect(result.current.total).toBe(1)
     expect(result.current.processed).toBeGreaterThanOrEqual(0)
     expect(result.current.processed).toBeLessThanOrEqual(1)
@@ -114,7 +114,7 @@ describe('useInitialUploadProgress', () => {
     const { result } = renderHook(() => useInitialUploadProgress(USER, false))
 
     // Wait one poll cycle; state stays at initial zero values.
-    await new Promise((r) => setTimeout(r, 700))
+    await new Promise(r => setTimeout(r, 700))
     expect(result.current.total).toBe(0)
     expect(result.current.processed).toBe(0)
     expect(result.current.done).toBe(false)

@@ -236,48 +236,48 @@ export function Courses() {
 
           {/* Imported Courses Section */}
           <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-4">Imported Courses</h2>
-              {importedCourses.length === 0 ? (
-                <div
-                  data-testid="imported-courses-empty-state"
-                  className="flex items-center gap-3 rounded-xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground"
-                  role="region"
-                  aria-label="Import courses"
+            <h2 className="text-xl font-semibold mb-4">Imported Courses</h2>
+            {importedCourses.length === 0 ? (
+              <div
+                data-testid="imported-courses-empty-state"
+                className="flex items-center gap-3 rounded-xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground"
+                role="region"
+                aria-label="Import courses"
+              >
+                <FolderOpen className="size-5 shrink-0" aria-hidden="true" />
+                <span>No imported courses yet.</span>
+                <Button
+                  variant="link"
+                  size="sm"
+                  data-testid="import-first-course-cta"
+                  aria-label="Import your first course"
+                  onClick={handleOpenBulkImport}
+                  className="text-brand-soft-foreground h-auto p-0"
                 >
-                  <FolderOpen className="size-5 shrink-0" aria-hidden="true" />
-                  <span>No imported courses yet.</span>
-                  <Button
-                    variant="link"
-                    size="sm"
-                    data-testid="import-first-course-cta"
-                    aria-label="Import your first course"
-                    onClick={handleOpenBulkImport}
-                    className="text-brand-soft-foreground h-auto p-0"
-                  >
-                    Import a course &rarr;
-                  </Button>
-                </div>
-              ) : filteredImportedCourses.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No imported courses match your filters
-                </div>
-              ) : (
-                <VirtualizedGrid
-                  items={sortedImportedCourses}
-                  getItemKey={course => course.id}
-                  renderItem={course => (
-                    <ImportedCourseCard
-                      course={course}
-                      allTags={allTags}
-                      completionPercent={importedCompletionMap.get(course.id) ?? 0}
-                      momentumScore={momentumMap.get(course.id)}
-                    />
-                  )}
-                  data-testid="imported-courses-grid"
-                  gridClassName="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)]"
-                />
-              )}
-            </div>
+                  Import a course &rarr;
+                </Button>
+              </div>
+            ) : filteredImportedCourses.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No imported courses match your filters
+              </div>
+            ) : (
+              <VirtualizedGrid
+                items={sortedImportedCourses}
+                getItemKey={course => course.id}
+                renderItem={course => (
+                  <ImportedCourseCard
+                    course={course}
+                    allTags={allTags}
+                    completionPercent={importedCompletionMap.get(course.id) ?? 0}
+                    momentumScore={momentumMap.get(course.id)}
+                  />
+                )}
+                data-testid="imported-courses-grid"
+                gridClassName="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)]"
+              />
+            )}
+          </div>
         </>
       )}
     </div>

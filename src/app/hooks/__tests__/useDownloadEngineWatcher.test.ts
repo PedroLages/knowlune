@@ -58,7 +58,7 @@ describe('useDownloadEngineWatcher', () => {
 
     // Wait a tick for the async queue count to settle — if the watcher
     // mistakenly advanced, we would see `complete` here.
-    await new Promise((r) => setTimeout(r, 50))
+    await new Promise(r => setTimeout(r, 50))
     expect(useDownloadStatusStore.getState().status).toBe('downloading-p0p2')
   })
 
@@ -85,7 +85,7 @@ describe('useDownloadEngineWatcher', () => {
     })
 
     // Pending queue > 0 → watcher does NOT advance.
-    await new Promise((r) => setTimeout(r, 50))
+    await new Promise(r => setTimeout(r, 50))
     expect(useDownloadStatusStore.getState().status).toBe('downloading-p0p2')
 
     // Drain the queue and emit another synced cycle.
@@ -126,7 +126,7 @@ describe('useDownloadEngineWatcher', () => {
       useSyncStatusStore.getState().setStatus('offline')
     })
 
-    await new Promise((r) => setTimeout(r, 50))
+    await new Promise(r => setTimeout(r, 50))
     expect(useDownloadStatusStore.getState().status).toBe('downloading-p0p2')
   })
 
@@ -140,14 +140,12 @@ describe('useDownloadEngineWatcher', () => {
       useSyncStatusStore.getState().markSyncComplete()
     })
 
-    await new Promise((r) => setTimeout(r, 50))
+    await new Promise(r => setTimeout(r, 50))
     expect(useDownloadStatusStore.getState().status).toBe('downloading-p0p2')
   })
 
   it('unsubscribes on unmount', async () => {
-    const { unmount } = renderHook(() =>
-      useDownloadEngineWatcher('user-1', true),
-    )
+    const { unmount } = renderHook(() => useDownloadEngineWatcher('user-1', true))
     unmount()
 
     // After unmount, store transitions should have no effect.
@@ -158,7 +156,7 @@ describe('useDownloadEngineWatcher', () => {
       useSyncStatusStore.getState().markSyncComplete()
     })
 
-    await new Promise((r) => setTimeout(r, 50))
+    await new Promise(r => setTimeout(r, 50))
     expect(useDownloadStatusStore.getState().status).toBe('downloading-p0p2')
   })
 
@@ -198,7 +196,7 @@ describe('useDownloadEngineWatcher', () => {
     const { rerender } = renderHook(() => useDownloadEngineWatcher('user-1', true))
 
     // Stabilize: let the initial render settle prevDownloadStatusRef to 'hydrating-p3p4'.
-    await new Promise((r) => setTimeout(r, 10))
+    await new Promise(r => setTimeout(r, 10))
 
     // Transition to Phase B — the fast-path useEffect detects the change from
     // hydrating-p3p4 → downloading-p0p2 and immediately fires tryCompleteIfQueueDrained()

@@ -15,7 +15,12 @@ import type { LucideIcon } from 'lucide-react'
 
 type FormatTab = 'all' | 'audiobooks' | 'ebooks'
 
-const FORMAT_TABS: { value: FormatTab; label: string; icon?: LucideIcon; filterValue: string[] | undefined }[] = [
+const FORMAT_TABS: {
+  value: FormatTab
+  label: string
+  icon?: LucideIcon
+  filterValue: string[] | undefined
+}[] = [
   { value: 'all', label: 'All', filterValue: undefined },
   { value: 'audiobooks', label: 'Audiobooks', icon: Headphones, filterValue: ['audiobook'] },
   { value: 'ebooks', label: 'Ebooks', icon: BookOpen, filterValue: ['epub', 'pdf'] },
@@ -37,9 +42,10 @@ export function FormatTabs() {
 
   const counts = useMemo(() => {
     // Count against all books (ignoring current format filter) but respecting source filter
-    const sourceFiltered = filters.source && filters.source !== 'all'
-      ? books.filter(b => filters.source === 'audiobookshelf' ? b.absServerId : !b.absServerId)
-      : books
+    const sourceFiltered =
+      filters.source && filters.source !== 'all'
+        ? books.filter(b => (filters.source === 'audiobookshelf' ? b.absServerId : !b.absServerId))
+        : books
     return {
       all: sourceFiltered.length,
       audiobooks: sourceFiltered.filter(b => b.format === 'audiobook').length,

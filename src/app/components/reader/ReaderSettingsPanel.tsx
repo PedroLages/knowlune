@@ -110,7 +110,10 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
     <Sheet open={open} onOpenChange={open => !open && onClose()}>
       <SheetContent
         side={isMd ? 'right' : 'bottom'}
-        className={cn('overflow-y-auto px-4 pb-6 pt-0', isMd ? 'w-80 sm:max-w-80' : 'max-h-[85vh] rounded-t-2xl')}
+        className={cn(
+          'overflow-y-auto px-4 pb-6 pt-0',
+          isMd ? 'w-80 sm:max-w-80' : 'max-h-[85vh] rounded-t-2xl'
+        )}
         data-testid="reader-settings-panel"
       >
         <SheetHeader className="py-4 border-b border-border/50 mb-4">

@@ -34,7 +34,8 @@ const categoryLabels: Record<CourseCategory, string> = {
 
 // category palette — semantic per-category color, no design token equivalent
 const categoryColors: Record<CourseCategory, string> = {
-  'behavioral-analysis': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+  'behavioral-analysis':
+    'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   'influence-authority': 'bg-brand-soft text-brand-soft-foreground',
   'confidence-mastery': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
   'operative-training': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
@@ -56,7 +57,6 @@ function EmptyCoverFallback() {
     </div>
   )
 }
-
 
 function formatRelativeTime(isoDate: string): string {
   const now = new Date()
@@ -670,7 +670,12 @@ export function CourseCard({
             {status === 'in-progress' && (
               <>
                 {/* Labeled body progress bar retained for MyClass — carries textual percentage */}
-                <Progress value={completionPercent} showLabel className="h-2" data-testid="completion-progress-bar" />
+                <Progress
+                  value={completionPercent}
+                  showLabel
+                  className="h-2"
+                  data-testid="completion-progress-bar"
+                />
                 {lastAccessedAt && (
                   <span className="text-xs text-muted-foreground">
                     {formatRelativeTime(lastAccessedAt)}

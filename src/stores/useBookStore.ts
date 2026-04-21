@@ -386,7 +386,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
           'books',
           'put',
           { ...current, playbackSpeed: speed, updatedAt: now } as unknown as SyncableRecord,
-          { skipQueue: true },
+          { skipQueue: true }
         )
       }
     } catch (err) {
@@ -421,10 +421,18 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       const currentA = await db.books.get(bookIdA)
       const currentB = await db.books.get(bookIdB)
       if (currentA) {
-        await syncableWrite('books', 'put', { ...currentA, linkedBookId: bookIdB, updatedAt: now } as unknown as SyncableRecord)
+        await syncableWrite('books', 'put', {
+          ...currentA,
+          linkedBookId: bookIdB,
+          updatedAt: now,
+        } as unknown as SyncableRecord)
       }
       if (currentB) {
-        await syncableWrite('books', 'put', { ...currentB, linkedBookId: bookIdA, updatedAt: now } as unknown as SyncableRecord)
+        await syncableWrite('books', 'put', {
+          ...currentB,
+          linkedBookId: bookIdA,
+          updatedAt: now,
+        } as unknown as SyncableRecord)
       }
     } catch (err) {
       console.error('[BookStore] Failed to link books:', err)
@@ -458,10 +466,18 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
       const currentA = await db.books.get(bookIdA)
       const currentB = await db.books.get(bookIdB)
       if (currentA) {
-        await syncableWrite('books', 'put', { ...currentA, linkedBookId: undefined, updatedAt: now } as unknown as SyncableRecord)
+        await syncableWrite('books', 'put', {
+          ...currentA,
+          linkedBookId: undefined,
+          updatedAt: now,
+        } as unknown as SyncableRecord)
       }
       if (currentB) {
-        await syncableWrite('books', 'put', { ...currentB, linkedBookId: undefined, updatedAt: now } as unknown as SyncableRecord)
+        await syncableWrite('books', 'put', {
+          ...currentB,
+          linkedBookId: undefined,
+          updatedAt: now,
+        } as unknown as SyncableRecord)
       }
     } catch (err) {
       console.error('[BookStore] Failed to unlink books:', err)

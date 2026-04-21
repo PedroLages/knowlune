@@ -18,14 +18,14 @@ describe('tableRegistry — completeness', () => {
   })
 
   it('does not include flashcard_reviews (Supabase-only table)', () => {
-    const entry = tableRegistry.find((e) => e.dexieTable === 'flashcard_reviews')
+    const entry = tableRegistry.find(e => e.dexieTable === 'flashcard_reviews')
     expect(entry).toBeUndefined()
-    const entry2 = tableRegistry.find((e) => e.supabaseTable === 'flashcard_reviews')
+    const entry2 = tableRegistry.find(e => e.supabaseTable === 'flashcard_reviews')
     expect(entry2).toBeUndefined()
   })
 
   it('all entries have unique dexieTable names', () => {
-    const names = tableRegistry.map((e) => e.dexieTable)
+    const names = tableRegistry.map(e => e.dexieTable)
     const unique = new Set(names)
     expect(unique.size).toBe(tableRegistry.length)
   })
@@ -77,23 +77,23 @@ describe('tableRegistry — priority tiers', () => {
   ]
   const p4Tables = ['quizzes', 'quizAttempts', 'aiUsageEvents']
 
-  it.each(p0Tables)('%s has priority 0', (table) => {
+  it.each(p0Tables)('%s has priority 0', table => {
     expect(getTableEntry(table)?.priority).toBe(0)
   })
 
-  it.each(p1Tables)('%s has priority 1', (table) => {
+  it.each(p1Tables)('%s has priority 1', table => {
     expect(getTableEntry(table)?.priority).toBe(1)
   })
 
-  it.each(p2Tables)('%s has priority 2', (table) => {
+  it.each(p2Tables)('%s has priority 2', table => {
     expect(getTableEntry(table)?.priority).toBe(2)
   })
 
-  it.each(p3Tables)('%s has priority 3', (table) => {
+  it.each(p3Tables)('%s has priority 3', table => {
     expect(getTableEntry(table)?.priority).toBe(3)
   })
 
-  it.each(p4Tables)('%s has priority 4', (table) => {
+  it.each(p4Tables)('%s has priority 4', table => {
     expect(getTableEntry(table)?.priority).toBe(4)
   })
 })
@@ -392,7 +392,12 @@ describe('fieldMapper — round-trip conversion', () => {
 
   it('chatConversations: round-trip restores original record', () => {
     const entry = getTableEntry('chatConversations')!
-    const sample = { id: 'abc', courseId: '123', createdAt: 1700000000000, updatedAt: '2024-01-01T00:00:00Z' }
+    const sample = {
+      id: 'abc',
+      courseId: '123',
+      createdAt: 1700000000000,
+      updatedAt: '2024-01-01T00:00:00Z',
+    }
     const snaked = toSnakeCase(entry, sample)
     const camelized = toCamelCase(entry, snaked)
 
@@ -451,7 +456,7 @@ describe('fieldMapper — stripFields are removed', () => {
       id: 'ic1',
       title: 'My Course',
       directoryHandle: { kind: 'directory' }, // non-serializable mock
-      coverImageHandle: { kind: 'file' },      // non-serializable mock
+      coverImageHandle: { kind: 'file' }, // non-serializable mock
       updatedAt: '2024-01-01T00:00:00Z',
     }
     const snaked = toSnakeCase(entry, sample)
@@ -568,14 +573,14 @@ describe('tableRegistry — notificationPreferences (E95-S06)', () => {
 
 describe('tableRegistry — user-scoped column invariant (E97-S04 R2)', () => {
   it('every !skipSync && !uploadOnly table resolves to user_id as its user FK column', () => {
-    const syncable = tableRegistry.filter((e) => !e.skipSync && !e.uploadOnly)
+    const syncable = tableRegistry.filter(e => !e.skipSync && !e.uploadOnly)
     const violations: string[] = []
     for (const entry of syncable) {
       // resolveUserColumn logic: fieldMap['userId'] ?? 'user_id'
       const resolvedUserCol = entry.fieldMap['userId'] ?? 'user_id'
       if (resolvedUserCol !== 'user_id') {
         violations.push(
-          `${entry.dexieTable}: fieldMap.userId resolves to '${resolvedUserCol}' instead of 'user_id'`,
+          `${entry.dexieTable}: fieldMap.userId resolves to '${resolvedUserCol}' instead of 'user_id'`
         )
       }
     }
@@ -584,8 +589,8 @@ describe('tableRegistry — user-scoped column invariant (E97-S04 R2)', () => {
   })
 
   it('only notificationPreferences uses fieldMap.id → user_id (singleton pattern)', () => {
-    const singletons = tableRegistry.filter((e) => e.fieldMap['id'] === 'user_id')
-    const singletonNames = singletons.map((e) => e.dexieTable)
+    const singletons = tableRegistry.filter(e => e.fieldMap['id'] === 'user_id')
+    const singletonNames = singletons.map(e => e.dexieTable)
     expect(singletonNames).toEqual(['notificationPreferences'])
   })
 })
@@ -630,7 +635,7 @@ describe('tableRegistry — P3/P4 Supabase migrations (E96-S01)', () => {
     // Guardrail 1: each dexieTable has a registry entry with a supabaseTable.
     // If someone removes one of these from the registry, this fails with a
     // clear message naming the missing table.
-    const missingFromRegistry = p3p4DexieTables.filter((t) => !getTableEntry(t)?.supabaseTable)
+    const missingFromRegistry = p3p4DexieTables.filter(t => !getTableEntry(t)?.supabaseTable)
     expect(missingFromRegistry).toEqual([])
 
     // Guardrail 2: concatenate both migration files and assert every
@@ -643,7 +648,7 @@ describe('tableRegistry — P3/P4 Supabase migrations (E96-S01)', () => {
     const combined = p3Sql + '\n' + p4Sql
 
     const missingTables = p3p4DexieTables
-      .map((dexieTable) => ({
+      .map(dexieTable => ({
         dexieTable,
         supabaseTable: getTableEntry(dexieTable)!.supabaseTable,
       }))

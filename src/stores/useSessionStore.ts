@@ -252,11 +252,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // honours tableRegistry.studySessions.insertOnly → INSERT ON CONFLICT
     // DO NOTHING, so re-enqueue on orphan recovery is harmless.
     persistWithRetry(async () => {
-      await syncableWrite(
-        'studySessions',
-        'put',
-        closedSession as unknown as SyncableRecord,
-      )
+      await syncableWrite('studySessions', 'put', closedSession as unknown as SyncableRecord)
     })
       .then(() => {
         // Notify listeners (e.g., momentum scores) that session data changed
@@ -343,11 +339,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         // E92-S09: recovered sessions are closed → enqueue the terminal
         // INSERT-only upload. Supabase upsert with ON CONFLICT DO NOTHING
         // makes this idempotent if the row was already enqueued previously.
-        await syncableWrite(
-          'studySessions',
-          'put',
-          closedSession as unknown as SyncableRecord,
-        )
+        await syncableWrite('studySessions', 'put', closedSession as unknown as SyncableRecord)
       }
 
       console.log(`[SessionStore] Recovered ${orphanedSessions.length} orphaned session(s)`)

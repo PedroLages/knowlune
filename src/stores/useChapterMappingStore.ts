@@ -77,12 +77,15 @@ export const useChapterMappingStore = create<ChapterMappingStoreState>((set, get
   deleteMapping: async (epubBookId, audioBookId) => {
     try {
       const existing = get().mappings.find(
-        m => m.epubBookId === epubBookId && m.audioBookId === audioBookId,
+        m => m.epubBookId === epubBookId && m.audioBookId === audioBookId
       )
       if (!existing) return
       // Soft-delete: mark as deleted via syncableWrite so the deletion propagates
       // to other devices. syncableWrite stamps userId and updatedAt.
-      await syncableWrite('chapterMappings', 'put', { ...existing, deleted: true } as unknown as SyncableRecord)
+      await syncableWrite('chapterMappings', 'put', {
+        ...existing,
+        deleted: true,
+      } as unknown as SyncableRecord)
       set(state => ({
         mappings: state.mappings.filter(
           m => !(m.epubBookId === epubBookId && m.audioBookId === audioBookId)

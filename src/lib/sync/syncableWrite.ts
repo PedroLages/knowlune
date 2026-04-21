@@ -67,18 +67,18 @@ export async function syncableWrite<T extends SyncableRecord>(
   tableName: string,
   operation: 'put' | 'add' | 'delete',
   record: T | string,
-  options?: { skipQueue?: boolean },
+  options?: { skipQueue?: boolean }
 ): Promise<void> {
   // Capture timestamp once — used for both record stamping and queue entry.
   const now = new Date().toISOString()
 
   // [1] Registry lookup — required to build the queue payload correctly.
   // A missing entry is a programming error (the caller passed an unregistered table).
-  const entry = tableRegistry.find((e) => e.dexieTable === tableName)
+  const entry = tableRegistry.find(e => e.dexieTable === tableName)
   if (!entry) {
     throw new Error(
       `[syncableWrite] Unknown table: "${tableName}". ` +
-        `Add it to src/lib/sync/tableRegistry.ts before calling syncableWrite.`,
+        `Add it to src/lib/sync/tableRegistry.ts before calling syncableWrite.`
     )
   }
 
@@ -103,22 +103,20 @@ export async function syncableWrite<T extends SyncableRecord>(
     if (typeof id !== 'string' || id.trim() === '') {
       throw new Error(
         `[syncableWrite] Empty recordId for table "${tableName}" ` +
-          `(operation "${operation}"). A non-empty id is required.`,
+          `(operation "${operation}"). A non-empty id is required.`
       )
     }
     recordId = id
   } else if (entry.compoundPkFields && entry.compoundPkFields.length > 0) {
     const rec = record as SyncableRecord | null | undefined
-    const parts = entry.compoundPkFields.map((field) => {
+    const parts = entry.compoundPkFields.map(field => {
       const value = rec?.[field]
-      return typeof value === 'string' || typeof value === 'number'
-        ? String(value)
-        : ''
+      return typeof value === 'string' || typeof value === 'number' ? String(value) : ''
     })
-    if (parts.some((p) => p.trim() === '')) {
+    if (parts.some(p => p.trim() === '')) {
       throw new Error(
         `[syncableWrite] Empty recordId for table "${tableName}" ` +
-          `(operation "${operation}"). A non-empty id is required.`,
+          `(operation "${operation}"). A non-empty id is required.`
       )
     }
     // Unit separator (U+001F) — guaranteed not to appear in user-supplied IDs
@@ -130,7 +128,7 @@ export async function syncableWrite<T extends SyncableRecord>(
     if (typeof id !== 'string' || id.trim() === '') {
       throw new Error(
         `[syncableWrite] Empty recordId for table "${tableName}" ` +
-          `(operation "${operation}"). A non-empty id is required.`,
+          `(operation "${operation}"). A non-empty id is required.`
       )
     }
     recordId = id
@@ -204,9 +202,6 @@ export async function syncableWrite<T extends SyncableRecord>(
     // succeeded — optimistic local write is the source of truth. The sync
     // engine's next full scan (E92-S06 download) will detect and reconcile
     // any records that were written locally but not queued. Log for observability.
-    console.error(
-      '[syncableWrite] Queue insert failed — write succeeded, sync deferred:',
-      err,
-    )
+    console.error('[syncableWrite] Queue insert failed — write succeeded, sync deferred:', err)
   }
 }

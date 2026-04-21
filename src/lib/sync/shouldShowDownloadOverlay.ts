@@ -41,7 +41,7 @@ import { tableRegistry, type TableRegistryEntry } from './tableRegistry'
  * without touching this file.
  */
 export function getCountedTables(): readonly TableRegistryEntry[] {
-  return tableRegistry.filter((e) => !e.skipSync && !e.uploadOnly)
+  return tableRegistry.filter(e => !e.skipSync && !e.uploadOnly)
 }
 
 /**
@@ -63,10 +63,10 @@ async function localHasData(userId: string): Promise<boolean> {
     // Exclude singleton tables: their Dexie PK is not a userId but is mapped
     // to user_id in Supabase via fieldMap. A row from a prior user makes
     // localHasData return true for a new user, suppressing the overlay.
-    (entry) => entry.fieldMap['id'] !== 'user_id',
+    entry => entry.fieldMap['id'] !== 'user_id'
   )
   const results = await Promise.allSettled(
-    entries.map(async (entry) => {
+    entries.map(async entry => {
       try {
         return await db
           .table(entry.dexieTable)
@@ -86,11 +86,11 @@ async function localHasData(userId: string): Promise<boolean> {
         // other tables still counted.
         console.error(
           `[shouldShowDownloadOverlay] Dexie count failed for ${entry.dexieTable}:`,
-          err,
+          err
         )
         return 0
       }
-    }),
+    })
   )
   for (const r of results) {
     if (r.status === 'fulfilled' && r.value > 0) {
@@ -136,12 +136,10 @@ async function remoteHasAnyRows(userId: string): Promise<boolean> {
   if (!supabase) return false
   const client = supabase
   // Exclude singleton tables (F2 fix — mirror localHasData exclusion).
-  const entries = getCountedTables().filter(
-    (entry) => entry.fieldMap['id'] !== 'user_id',
-  )
+  const entries = getCountedTables().filter(entry => entry.fieldMap['id'] !== 'user_id')
 
   const results = await Promise.allSettled(
-    entries.map(async (entry) => {
+    entries.map(async entry => {
       const userCol = resolveUserColumn(entry)
       const { count, error } = await client
         .from(entry.supabaseTable)
@@ -149,7 +147,7 @@ async function remoteHasAnyRows(userId: string): Promise<boolean> {
         .eq(userCol, userId)
       if (error) throw error
       return count ?? 0
-    }),
+    })
   )
 
   for (const r of results) {
@@ -165,7 +163,7 @@ async function remoteHasAnyRows(userId: string): Promise<boolean> {
  * `userId`. Pure read-only — never writes.
  */
 export async function shouldShowDownloadOverlay(
-  userId: string | null | undefined,
+  userId: string | null | undefined
 ): Promise<boolean> {
   if (!userId) return false
 

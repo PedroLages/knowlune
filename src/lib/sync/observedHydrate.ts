@@ -34,9 +34,7 @@ import { useDownloadStatusStore } from '@/app/stores/useDownloadStatusStore'
  * @throws Re-throws the hydrator's rejection after stamping the store with
  *         an error transition.
  */
-export async function observedHydrate(
-  userId: string | null | undefined,
-): Promise<void> {
+export async function observedHydrate(userId: string | null | undefined): Promise<void> {
   if (!userId) return
 
   const store = useDownloadStatusStore.getState()
@@ -45,8 +43,7 @@ export async function observedHydrate(
   try {
     await hydrateP3P4FromSupabase(userId)
   } catch (err) {
-    const message =
-      err instanceof Error && err.message ? err.message : 'Hydration failed'
+    const message = err instanceof Error && err.message ? err.message : 'Hydration failed'
     // Read the store fresh — it may have been reset by a concurrent sign-out.
     useDownloadStatusStore.getState().failDownloading(message)
     throw err

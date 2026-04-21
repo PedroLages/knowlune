@@ -82,11 +82,10 @@ export function QuizReviewContent({ quiz, attempt, courseId, lessonId }: QuizRev
         // E96-S02: syncableWrite requires a full record — merge the
         // questionFeedback patch into the existing row and route through it
         // so the feedback change enqueues for Supabase upload.
-        await syncableWrite(
-          'quizzes',
-          'put',
-          { ...currentQuiz, questionFeedback: updated } as unknown as SyncableRecord,
-        )
+        await syncableWrite('quizzes', 'put', {
+          ...currentQuiz,
+          questionFeedback: updated,
+        } as unknown as SyncableRecord)
       } catch (err) {
         console.warn('[QuizReview] Failed to save feedback:', (err as Error).message)
         toast.error('Failed to save feedback. Please try again.')

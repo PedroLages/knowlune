@@ -257,7 +257,11 @@ export function EpubRenderer({
   return (
     <div
       ref={containerRef}
-      className={cn('relative h-full w-full px-6 pt-14 pb-20 md:px-16 lg:px-24', containerBg, animationClass)}
+      className={cn(
+        'relative h-full w-full px-6 pt-14 pb-20 md:px-16 lg:px-24',
+        containerBg,
+        animationClass
+      )}
       data-testid="epub-renderer"
       onTouchStart={scrollMode ? undefined : handleTouchStart}
       onTouchEnd={scrollMode ? undefined : handleTouchEnd}

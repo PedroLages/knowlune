@@ -33,7 +33,10 @@ const {
   downloadResults,
 } = vi.hoisted(() => {
   // Per-table download results — tests write here to control what each table returns.
-  const downloadResults: Record<string, { data: Record<string, unknown>[] | null; error: null | { message: string } }> = {
+  const downloadResults: Record<
+    string,
+    { data: Record<string, unknown>[] | null; error: null | { message: string } }
+  > = {
     study_sessions: { data: [], error: null },
     video_progress: { data: [], error: null },
     notes: { data: [], error: null },
@@ -100,41 +103,191 @@ vi.mock('@/db', () => ({
       put: vi.fn().mockResolvedValue(undefined),
     },
     // All other tables — stubs so dynamic table access in _applyRecord doesn't fail.
-    contentProgress: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined), where: vi.fn().mockReturnValue({ equals: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(undefined) }) }) },
-    bookmarks: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    flashcards: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    reviewRecords: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    embeddings: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    bookHighlights: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    vocabularyItems: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    audioBookmarks: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    audioClips: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    chatConversations: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    learnerModels: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    importedCourses: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    importedVideos: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    importedPdfs: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    authors: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    books: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    bookReviews: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    shelves: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    bookShelves: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    readingQueue: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    chapterMappings: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined), delete: vi.fn().mockResolvedValue(1), where: vi.fn().mockReturnValue({ equals: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(undefined), delete: vi.fn().mockResolvedValue(1) }) }) },
-    learningPaths: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    learningPathEntries: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    challenges: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    courseReminders: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    notifications: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    careerPaths: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    pathEnrollments: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    studySchedules: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    opdsCatalogs: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    audiobookshelfServers: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    notificationPreferences: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    quizzes: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    quizAttempts: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
-    aiUsageEvents: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn().mockResolvedValue(undefined), add: vi.fn().mockResolvedValue(undefined) },
+    contentProgress: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+      where: vi.fn().mockReturnValue({
+        equals: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(undefined) }),
+      }),
+    },
+    bookmarks: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    flashcards: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    reviewRecords: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    embeddings: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    bookHighlights: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    vocabularyItems: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    audioBookmarks: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    audioClips: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    chatConversations: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    learnerModels: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    importedCourses: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    importedVideos: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    importedPdfs: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    authors: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    books: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    bookReviews: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    shelves: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    bookShelves: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    readingQueue: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    chapterMappings: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+      delete: vi.fn().mockResolvedValue(1),
+      where: vi.fn().mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          first: vi.fn().mockResolvedValue(undefined),
+          delete: vi.fn().mockResolvedValue(1),
+        }),
+      }),
+    },
+    learningPaths: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    learningPathEntries: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    challenges: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    courseReminders: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    notifications: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    careerPaths: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    pathEnrollments: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    studySchedules: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    opdsCatalogs: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    audiobookshelfServers: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    notificationPreferences: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    quizzes: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    quizAttempts: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
+    aiUsageEvents: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+    },
   },
 }))
 
@@ -159,21 +312,48 @@ vi.mock('@/lib/auth/supabase', () => ({
     rpc: vi.fn().mockResolvedValue({ error: null }),
     auth: {
       refreshSession: vi.fn().mockResolvedValue({ data: {}, error: null }),
-      getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: 'test-user-id' } } }, error: null }),
+      getSession: vi
+        .fn()
+        .mockResolvedValue({ data: { session: { user: { id: 'test-user-id' } } }, error: null }),
     },
   },
 }))
 
 vi.mock('@/lib/sync/tableRegistry', () => {
-  const studySessions = { dexieTable: 'studySessions', supabaseTable: 'study_sessions', conflictStrategy: 'insert-only', priority: 0, fieldMap: {}, insertOnly: true }
-  const progress = { dexieTable: 'progress', supabaseTable: 'video_progress', conflictStrategy: 'monotonic', priority: 0, fieldMap: {}, monotonicFields: ['watchedSeconds'] }
-  const notes = { dexieTable: 'notes', supabaseTable: 'notes', conflictStrategy: 'lww', priority: 1, fieldMap: {} }
+  const studySessions = {
+    dexieTable: 'studySessions',
+    supabaseTable: 'study_sessions',
+    conflictStrategy: 'insert-only',
+    priority: 0,
+    fieldMap: {},
+    insertOnly: true,
+  }
+  const progress = {
+    dexieTable: 'progress',
+    supabaseTable: 'video_progress',
+    conflictStrategy: 'monotonic',
+    priority: 0,
+    fieldMap: {},
+    monotonicFields: ['watchedSeconds'],
+  }
+  const notes = {
+    dexieTable: 'notes',
+    supabaseTable: 'notes',
+    conflictStrategy: 'lww',
+    priority: 1,
+    fieldMap: {},
+  }
   const chapterMappings = {
     dexieTable: 'chapterMappings',
     supabaseTable: 'chapter_mappings',
     conflictStrategy: 'lww',
     priority: 2,
-    fieldMap: { epubBookId: 'epub_book_id', audioBookId: 'audio_book_id', computedAt: 'computed_at', deleted: 'deleted' },
+    fieldMap: {
+      epubBookId: 'epub_book_id',
+      audioBookId: 'audio_book_id',
+      computedAt: 'computed_at',
+      deleted: 'deleted',
+    },
     compoundPkFields: ['epubBookId', 'audioBookId'],
     upsertConflictColumns: 'epub_book_id,audio_book_id,user_id',
   }
@@ -206,7 +386,11 @@ import { getTableEntry, tableRegistry } from '../tableRegistry'
 // ---------------------------------------------------------------------------
 
 /** Set rows that Supabase will return for the given Supabase table name. */
-function setTableRows(supabaseTable: string, rows: Record<string, unknown>[], error: { message: string } | null = null) {
+function setTableRows(
+  supabaseTable: string,
+  rows: Record<string, unknown>[],
+  error: { message: string } | null = null
+) {
   downloadResults[supabaseTable] = { data: rows, error }
 }
 
@@ -239,7 +423,7 @@ beforeEach(() => {
   // navigator.locks — always grant lock for upload phase.
   mockLockRequest.mockImplementation(
     (_name: string, _opts: object, callback: (lock: object | null) => Promise<void>) =>
-      callback({ name: 'sync-upload' }),
+      callback({ name: 'sync-upload' })
   )
   Object.defineProperty(global.navigator, 'locks', {
     value: { request: mockLockRequest },
@@ -262,18 +446,32 @@ afterEach(() => {
 describe('LWW conflict strategy', () => {
   it('inserts when no local record exists', async () => {
     mockNotesGet.mockResolvedValue(undefined)
-    setTableRows('notes', [{ id: 'n-1', content: 'hello', updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }])
+    setTableRows('notes', [
+      {
+        id: 'n-1',
+        content: 'hello',
+        updatedAt: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+      },
+    ])
 
     await syncEngine.fullSync()
 
     expect(mockNotesPut).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'n-1', content: 'hello' }),
+      expect.objectContaining({ id: 'n-1', content: 'hello' })
     )
   })
 
   it('overwrites local when server record is newer', async () => {
     mockNotesGet.mockResolvedValue({ id: 'n-1', content: 'old', updatedAt: '2026-04-17T10:00:00Z' })
-    setTableRows('notes', [{ id: 'n-1', content: 'new', updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }])
+    setTableRows('notes', [
+      {
+        id: 'n-1',
+        content: 'new',
+        updatedAt: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+      },
+    ])
 
     await syncEngine.fullSync()
 
@@ -281,8 +479,19 @@ describe('LWW conflict strategy', () => {
   })
 
   it('keeps local when client record is newer (no-op)', async () => {
-    mockNotesGet.mockResolvedValue({ id: 'n-1', content: 'local', updatedAt: '2026-04-18T12:00:00Z' })
-    setTableRows('notes', [{ id: 'n-1', content: 'server', updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }])
+    mockNotesGet.mockResolvedValue({
+      id: 'n-1',
+      content: 'local',
+      updatedAt: '2026-04-18T12:00:00Z',
+    })
+    setTableRows('notes', [
+      {
+        id: 'n-1',
+        content: 'server',
+        updatedAt: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+      },
+    ])
 
     await syncEngine.fullSync()
 
@@ -306,30 +515,59 @@ describe('LWW conflict strategy', () => {
 
 describe('Monotonic conflict strategy', () => {
   it('preserves local monotonic field when server value is lower', async () => {
-    mockProgressGet.mockResolvedValue({ id: 'vid-1', watchedSeconds: 200, updatedAt: '2026-04-17T10:00:00Z' })
-    setTableRows('video_progress', [{ id: 'vid-1', watchedSeconds: 100, updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }])
+    mockProgressGet.mockResolvedValue({
+      id: 'vid-1',
+      watchedSeconds: 200,
+      updatedAt: '2026-04-17T10:00:00Z',
+    })
+    setTableRows('video_progress', [
+      {
+        id: 'vid-1',
+        watchedSeconds: 100,
+        updatedAt: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+      },
+    ])
 
     await syncEngine.fullSync()
 
     expect(mockProgressPut).toHaveBeenCalledWith(
-      expect.objectContaining({ watchedSeconds: 200 }), // Math.max(100, 200)
+      expect.objectContaining({ watchedSeconds: 200 }) // Math.max(100, 200)
     )
   })
 
   it('uses server monotonic field when server value is higher', async () => {
-    mockProgressGet.mockResolvedValue({ id: 'vid-1', watchedSeconds: 100, updatedAt: '2026-04-17T10:00:00Z' })
-    setTableRows('video_progress', [{ id: 'vid-1', watchedSeconds: 300, updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }])
+    mockProgressGet.mockResolvedValue({
+      id: 'vid-1',
+      watchedSeconds: 100,
+      updatedAt: '2026-04-17T10:00:00Z',
+    })
+    setTableRows('video_progress', [
+      {
+        id: 'vid-1',
+        watchedSeconds: 300,
+        updatedAt: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+      },
+    ])
 
     await syncEngine.fullSync()
 
     expect(mockProgressPut).toHaveBeenCalledWith(
-      expect.objectContaining({ watchedSeconds: 300 }), // Math.max(300, 100)
+      expect.objectContaining({ watchedSeconds: 300 }) // Math.max(300, 100)
     )
   })
 
   it('inserts when no local record exists', async () => {
     mockProgressGet.mockResolvedValue(undefined)
-    setTableRows('video_progress', [{ id: 'vid-1', watchedSeconds: 120, updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }])
+    setTableRows('video_progress', [
+      {
+        id: 'vid-1',
+        watchedSeconds: 120,
+        updatedAt: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+      },
+    ])
 
     await syncEngine.fullSync()
 
@@ -338,16 +576,29 @@ describe('Monotonic conflict strategy', () => {
 
   it('uses local non-monotonic fields when local is newer', async () => {
     // Local is newer → local non-monotonic fields win, monotonic takes max.
-    mockProgressGet.mockResolvedValue({ id: 'vid-1', watchedSeconds: 50, title: 'local-title', updatedAt: '2026-04-18T12:00:00Z' })
-    setTableRows('video_progress', [{ id: 'vid-1', watchedSeconds: 200, title: 'server-title', updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }])
+    mockProgressGet.mockResolvedValue({
+      id: 'vid-1',
+      watchedSeconds: 50,
+      title: 'local-title',
+      updatedAt: '2026-04-18T12:00:00Z',
+    })
+    setTableRows('video_progress', [
+      {
+        id: 'vid-1',
+        watchedSeconds: 200,
+        title: 'server-title',
+        updatedAt: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+      },
+    ])
 
     await syncEngine.fullSync()
 
     expect(mockProgressPut).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: 'local-title',   // local wins non-monotonic (local is newer)
-        watchedSeconds: 200,     // Math.max(50, 200)
-      }),
+        title: 'local-title', // local wins non-monotonic (local is newer)
+        watchedSeconds: 200, // Math.max(50, 200)
+      })
     )
   })
 })
@@ -359,7 +610,14 @@ describe('Monotonic conflict strategy', () => {
 describe('Insert-only conflict strategy', () => {
   it('inserts a new record when id is absent locally', async () => {
     mockStudySessionsGet.mockResolvedValue(undefined)
-    setTableRows('study_sessions', [{ id: 'sess-1', duration: 3600, updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }])
+    setTableRows('study_sessions', [
+      {
+        id: 'sess-1',
+        duration: 3600,
+        updatedAt: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+      },
+    ])
 
     await syncEngine.fullSync()
 
@@ -368,7 +626,14 @@ describe('Insert-only conflict strategy', () => {
 
   it('does NOT add or overwrite when id already exists locally', async () => {
     mockStudySessionsGet.mockResolvedValue({ id: 'sess-1', duration: 1800 })
-    setTableRows('study_sessions', [{ id: 'sess-1', duration: 3600, updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }])
+    setTableRows('study_sessions', [
+      {
+        id: 'sess-1',
+        duration: 3600,
+        updatedAt: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+      },
+    ])
 
     await syncEngine.fullSync()
 
@@ -390,7 +655,7 @@ describe('syncMetadata cursor', () => {
     await syncEngine.fullSync()
 
     expect(mockSyncMetadataPut).toHaveBeenCalledWith(
-      expect.objectContaining({ table: 'notes', lastSyncTimestamp: '2026-04-18T11:00:00Z' }),
+      expect.objectContaining({ table: 'notes', lastSyncTimestamp: '2026-04-18T11:00:00Z' })
     )
   })
 
@@ -409,7 +674,9 @@ describe('syncMetadata cursor', () => {
 describe('Error isolation', () => {
   it('skips a table with a Supabase error and continues to next table', async () => {
     setTableRows('study_sessions', [], { message: 'permission denied' })
-    setTableRows('notes', [{ id: 'n-1', updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }])
+    setTableRows('notes', [
+      { id: 'n-1', updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' },
+    ])
 
     await expect(syncEngine.fullSync()).resolves.not.toThrow()
 
@@ -431,7 +698,9 @@ describe('StoreRefreshRegistry', () => {
     const mockRefreshNotes = vi.fn().mockResolvedValue(undefined)
     syncEngine.registerStoreRefresh('notes', mockRefreshNotes)
 
-    setTableRows('notes', [{ id: 'n-1', updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }])
+    setTableRows('notes', [
+      { id: 'n-1', updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' },
+    ])
 
     await syncEngine.fullSync()
 
@@ -450,7 +719,9 @@ describe('StoreRefreshRegistry', () => {
 
   it('does not propagate a throwing refresh callback', async () => {
     syncEngine.registerStoreRefresh('notes', vi.fn().mockRejectedValue(new Error('store exploded')))
-    setTableRows('notes', [{ id: 'n-1', updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }])
+    setTableRows('notes', [
+      { id: 'n-1', updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' },
+    ])
 
     await expect(syncEngine.fullSync()).resolves.not.toThrow()
   })
@@ -462,7 +733,9 @@ describe('StoreRefreshRegistry', () => {
 
 describe('start() / stop() / fullSync() lifecycle', () => {
   it('start() triggers fullSync (download is attempted)', async () => {
-    setTableRows('notes', [{ id: 'n-1', updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }])
+    setTableRows('notes', [
+      { id: 'n-1', updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' },
+    ])
 
     await syncEngine.start('user-1')
 
@@ -524,7 +797,9 @@ describe('start() / stop() / fullSync() lifecycle', () => {
       throw new Error('upload lock error')
     })
 
-    setTableRows('notes', [{ id: 'n-1', updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }])
+    setTableRows('notes', [
+      { id: 'n-1', updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' },
+    ])
 
     await expect(syncEngine.fullSync()).resolves.not.toThrow()
 
@@ -548,7 +823,13 @@ describe('start() / stop() / fullSync() lifecycle', () => {
 // ---------------------------------------------------------------------------
 
 describe('conflict-copy strategy', () => {
-  const defaultNotesEntry = { dexieTable: 'notes', supabaseTable: 'notes', conflictStrategy: 'lww' as const, priority: 1 as const, fieldMap: {} }
+  const defaultNotesEntry = {
+    dexieTable: 'notes',
+    supabaseTable: 'notes',
+    conflictStrategy: 'lww' as const,
+    priority: 1 as const,
+    fieldMap: {},
+  }
   const conflictCopyEntry = {
     dexieTable: 'notes',
     supabaseTable: 'notes',
@@ -579,8 +860,22 @@ describe('conflict-copy strategy', () => {
     // Restore default getTableEntry mock (lww for notes).
     vi.mocked(getTableEntry).mockImplementation((name: string) => {
       const reg: Record<string, object> = {
-        studySessions: { dexieTable: 'studySessions', supabaseTable: 'study_sessions', conflictStrategy: 'insert-only', priority: 0, fieldMap: {}, insertOnly: true },
-        progress: { dexieTable: 'progress', supabaseTable: 'video_progress', conflictStrategy: 'monotonic', priority: 0, fieldMap: {}, monotonicFields: ['watchedSeconds'] },
+        studySessions: {
+          dexieTable: 'studySessions',
+          supabaseTable: 'study_sessions',
+          conflictStrategy: 'insert-only',
+          priority: 0,
+          fieldMap: {},
+          insertOnly: true,
+        },
+        progress: {
+          dexieTable: 'progress',
+          supabaseTable: 'video_progress',
+          conflictStrategy: 'monotonic',
+          priority: 0,
+          fieldMap: {},
+          monotonicFields: ['watchedSeconds'],
+        },
         notes: defaultNotesEntry,
       }
       return reg[name] as ReturnType<typeof getTableEntry>
@@ -588,8 +883,19 @@ describe('conflict-copy strategy', () => {
   })
 
   it('remote wins + content differs → conflictCopy set, updatedAt matches remote', async () => {
-    const localNote = { id: 'n-cc-1', content: '<p>local version</p>', tags: ['local'], updatedAt: '2026-04-17T10:00:00Z' }
-    const remoteNote = { id: 'n-cc-1', content: '<p>remote version</p>', tags: ['remote'], updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }
+    const localNote = {
+      id: 'n-cc-1',
+      content: '<p>local version</p>',
+      tags: ['local'],
+      updatedAt: '2026-04-17T10:00:00Z',
+    }
+    const remoteNote = {
+      id: 'n-cc-1',
+      content: '<p>remote version</p>',
+      tags: ['remote'],
+      updatedAt: '2026-04-18T10:00:00Z',
+      updated_at: '2026-04-18T10:00:00Z',
+    }
 
     mockNotesGet.mockResolvedValue(localNote)
     setTableRows('notes', [remoteNote])
@@ -604,14 +910,25 @@ describe('conflict-copy strategy', () => {
           content: '<p>local version</p>',
           savedAt: '2026-04-17T10:00:00Z',
         }),
-      }),
+      })
     )
   })
 
   it('remote wins + identical content → conflictCopy NOT set (no false alarm)', async () => {
     const sharedContent = '<p>same content</p>'
-    const localNote = { id: 'n-cc-2', content: sharedContent, tags: [], updatedAt: '2026-04-17T10:00:00Z' }
-    const remoteNote = { id: 'n-cc-2', content: sharedContent, tags: [], updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }
+    const localNote = {
+      id: 'n-cc-2',
+      content: sharedContent,
+      tags: [],
+      updatedAt: '2026-04-17T10:00:00Z',
+    }
+    const remoteNote = {
+      id: 'n-cc-2',
+      content: sharedContent,
+      tags: [],
+      updatedAt: '2026-04-18T10:00:00Z',
+      updated_at: '2026-04-18T10:00:00Z',
+    }
 
     mockNotesGet.mockResolvedValue(localNote)
     setTableRows('notes', [remoteNote])
@@ -620,13 +937,26 @@ describe('conflict-copy strategy', () => {
 
     // LWW fallback — no conflictCopy should be attached
     expect(mockNotesPut).toHaveBeenCalledWith(
-      expect.not.objectContaining({ conflictCopy: expect.objectContaining({ content: expect.anything() }) }),
+      expect.not.objectContaining({
+        conflictCopy: expect.objectContaining({ content: expect.anything() }),
+      })
     )
   })
 
   it('local wins (local.updatedAt > remote.updatedAt) → conflictCopy stays null', async () => {
-    const localNote = { id: 'n-cc-3', content: '<p>local newer</p>', tags: [], updatedAt: '2026-04-18T12:00:00Z' }
-    const remoteNote = { id: 'n-cc-3', content: '<p>remote older</p>', tags: [], updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }
+    const localNote = {
+      id: 'n-cc-3',
+      content: '<p>local newer</p>',
+      tags: [],
+      updatedAt: '2026-04-18T12:00:00Z',
+    }
+    const remoteNote = {
+      id: 'n-cc-3',
+      content: '<p>remote older</p>',
+      tags: [],
+      updatedAt: '2026-04-18T10:00:00Z',
+      updated_at: '2026-04-18T10:00:00Z',
+    }
 
     mockNotesGet.mockResolvedValue(localNote)
     setTableRows('notes', [remoteNote])
@@ -639,13 +969,19 @@ describe('conflict-copy strategy', () => {
 
   it('new record (no local) → conflictCopy stays null', async () => {
     mockNotesGet.mockResolvedValue(undefined)
-    const remoteNote = { id: 'n-cc-4', content: '<p>brand new</p>', tags: [], updatedAt: '2026-04-18T10:00:00Z', updated_at: '2026-04-18T10:00:00Z' }
+    const remoteNote = {
+      id: 'n-cc-4',
+      content: '<p>brand new</p>',
+      tags: [],
+      updatedAt: '2026-04-18T10:00:00Z',
+      updated_at: '2026-04-18T10:00:00Z',
+    }
     setTableRows('notes', [remoteNote])
 
     await syncEngine.fullSync()
 
     expect(mockNotesPut).toHaveBeenCalledWith(
-      expect.not.objectContaining({ conflictCopy: expect.anything() }),
+      expect.not.objectContaining({ conflictCopy: expect.anything() })
     )
   })
 })
@@ -709,7 +1045,7 @@ describe('cursorField override (E93-S07)', () => {
 
     // Cursor must be advanced to max created_at (not updated_at, which is absent)
     expect(mockSyncMetadataPut).toHaveBeenCalledWith(
-      expect.objectContaining({ table: 'notes', lastSyncTimestamp: '2026-04-18T11:00:00Z' }),
+      expect.objectContaining({ table: 'notes', lastSyncTimestamp: '2026-04-18T11:00:00Z' })
     )
   })
 
@@ -723,7 +1059,7 @@ describe('cursorField override (E93-S07)', () => {
 
     await expect(syncEngine.fullSync()).resolves.not.toThrow()
     expect(mockSyncMetadataPut).toHaveBeenCalledWith(
-      expect.objectContaining({ table: 'notes', lastSyncTimestamp: '2026-04-18T08:00:00Z' }),
+      expect.objectContaining({ table: 'notes', lastSyncTimestamp: '2026-04-18T08:00:00Z' })
     )
   })
 })
@@ -735,19 +1071,27 @@ describe('cursorField override (E93-S07)', () => {
 describe('soft-delete guard in _applyRecord', () => {
   it('deletes compound-PK record from Dexie when downloaded record has deleted: true', async () => {
     const { db: mockDb } = await import('@/db')
-    const mockChapterMappings = (mockDb as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>)['chapterMappings']
+    const mockChapterMappings = (
+      mockDb as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>
+    )['chapterMappings']
     const mockWhere = mockChapterMappings['where'] as ReturnType<typeof vi.fn>
     const mockDelete = vi.fn().mockResolvedValue(1)
-    mockWhere.mockReturnValue({ equals: vi.fn().mockReturnValue({ delete: mockDelete, first: vi.fn().mockResolvedValue(undefined) }) })
+    mockWhere.mockReturnValue({
+      equals: vi
+        .fn()
+        .mockReturnValue({ delete: mockDelete, first: vi.fn().mockResolvedValue(undefined) }),
+    })
 
     downloadResults['chapter_mappings'] = {
-      data: [{
-        epubBookId: 'epub-a',
-        audioBookId: 'audio-b',
-        deleted: true,
-        updatedAt: '2026-04-20T10:00:00Z',
-        updated_at: '2026-04-20T10:00:00Z',
-      }],
+      data: [
+        {
+          epubBookId: 'epub-a',
+          audioBookId: 'audio-b',
+          deleted: true,
+          updatedAt: '2026-04-20T10:00:00Z',
+          updated_at: '2026-04-20T10:00:00Z',
+        },
+      ],
       error: null,
     }
 
@@ -760,17 +1104,21 @@ describe('soft-delete guard in _applyRecord', () => {
 
   it('applies normally (put) for chapter mapping record with deleted: false', async () => {
     const { db: mockDb } = await import('@/db')
-    const mockChapterMappings = (mockDb as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>)['chapterMappings']
+    const mockChapterMappings = (
+      mockDb as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>
+    )['chapterMappings']
 
     downloadResults['chapter_mappings'] = {
-      data: [{
-        epubBookId: 'epub-a',
-        audioBookId: 'audio-b',
-        deleted: false,
-        mappings: [],
-        updatedAt: '2026-04-20T10:00:00Z',
-        updated_at: '2026-04-20T10:00:00Z',
-      }],
+      data: [
+        {
+          epubBookId: 'epub-a',
+          audioBookId: 'audio-b',
+          deleted: false,
+          mappings: [],
+          updatedAt: '2026-04-20T10:00:00Z',
+          updated_at: '2026-04-20T10:00:00Z',
+        },
+      ],
       error: null,
     }
 
@@ -784,13 +1132,15 @@ describe('soft-delete guard in _applyRecord', () => {
     // Notes use `soft_deleted` mapped to `deleted` on upload — their camelCase
     // field after toCamelCase is `softDeleted`, not `deleted`. The guard checks
     // record['deleted'], which would be undefined for notes — guard does not fire.
-    setTableRows('notes', [{
-      id: 'n-soft',
-      soft_deleted: true,  // notes DB column
-      softDeleted: true,   // camelCase post-fieldMapper (identity mock)
-      updatedAt: '2026-04-20T10:00:00Z',
-      updated_at: '2026-04-20T10:00:00Z',
-    }])
+    setTableRows('notes', [
+      {
+        id: 'n-soft',
+        soft_deleted: true, // notes DB column
+        softDeleted: true, // camelCase post-fieldMapper (identity mock)
+        updatedAt: '2026-04-20T10:00:00Z',
+        updated_at: '2026-04-20T10:00:00Z',
+      },
+    ])
 
     await syncEngine.fullSync()
 

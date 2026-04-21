@@ -456,9 +456,7 @@ export function OpdsBrowser({ open, onOpenChange, initialCatalogId }: OpdsBrowse
           // future work (look up at read-time via catalogId).
           // Auth stored in Vault (E95-S02) — do NOT copy password into Book record.
           // BookContentService reads credential from Vault at download time via catalogId lookup.
-          auth: selectedCatalog.auth
-            ? { username: selectedCatalog.auth.username }
-            : undefined,
+          auth: selectedCatalog.auth ? { username: selectedCatalog.auth.username } : undefined,
         },
         progress: 0,
         createdAt: new Date().toISOString(),

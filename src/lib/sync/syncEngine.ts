@@ -191,11 +191,9 @@ function chunk<T>(arr: T[], size: number): T[][] {
  *
  * @returns Filtered list with backfilled recordIds and dead-letter entries removed.
  */
-async function _backfillLegacyEmptyRecordIds(
-  entries: SyncQueueEntry[],
-): Promise<SyncQueueEntry[]> {
+async function _backfillLegacyEmptyRecordIds(entries: SyncQueueEntry[]): Promise<SyncQueueEntry[]> {
   // Fast path: no legacy data — most cycles in a healthy queue.
-  if (entries.every((e) => e.recordId !== '')) return entries
+  if (entries.every(e => e.recordId !== '')) return entries
 
   let backfilled = 0
   let deadLettered = 0
@@ -223,16 +221,14 @@ async function _backfillLegacyEmptyRecordIds(
     }
 
     const payload = entry.payload as Record<string, unknown> | null | undefined
-    const parts = compoundFields.map((field) => {
+    const parts = compoundFields.map(field => {
       // Payloads were snake_cased before storage — try both forms.
-      const snake = field.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`)
+      const snake = field.replace(/[A-Z]/g, m => `_${m.toLowerCase()}`)
       const value = payload?.[field] ?? payload?.[snake]
-      return typeof value === 'string' || typeof value === 'number'
-        ? String(value)
-        : ''
+      return typeof value === 'string' || typeof value === 'number' ? String(value) : ''
     })
 
-    if (parts.some((p) => p.trim() === '')) {
+    if (parts.some(p => p.trim() === '')) {
       await db.syncQueue.update(entry.id!, {
         status: 'dead-letter',
         lastError: 'Empty recordId; payload missing compound PK fields (legacy pre-d220cb7d entry)',
@@ -256,7 +252,7 @@ async function _backfillLegacyEmptyRecordIds(
   if (backfilled > 0 || deadLettered > 0) {
     console.warn(
       `[syncEngine] Legacy queue backfill: ${backfilled} recordId(s) recovered, ` +
-        `${deadLettered} entry/entries dead-lettered (unrecoverable).`,
+        `${deadLettered} entry/entries dead-lettered (unrecoverable).`
     )
   }
 
@@ -328,7 +324,7 @@ async function _handleBatchError(
   entries: SyncQueueEntry[],
   supabaseError: { status?: number; message?: string } | null,
   isNetworkError: boolean,
-  retryCallback: () => Promise<boolean>,
+  retryCallback: () => Promise<boolean>
 ): Promise<void> {
   const errStatus = supabaseError?.status
   const errMsg = supabaseError?.message ?? (isNetworkError ? 'Network error' : 'Unknown error')
@@ -368,7 +364,7 @@ async function _handleBatchError(
 async function _retryOrDeadLetter(
   entries: SyncQueueEntry[],
   errMsg: string,
-  now: string,
+  now: string
 ): Promise<void> {
   for (const entry of entries) {
     const newAttempts = entry.attempts + 1
@@ -400,12 +396,12 @@ async function _retryOrDeadLetter(
 
 async function _uploadBatch(
   entries: SyncQueueEntry[],
-  tableEntry: NonNullable<ReturnType<typeof getTableEntry>>,
+  tableEntry: NonNullable<ReturnType<typeof getTableEntry>>
 ): Promise<boolean> {
   // Intentional: supabase null-guard — will be null when env vars missing.
   if (!supabase) return false
 
-  const payloads = entries.map((e) => e.payload)
+  const payloads = entries.map(e => e.payload)
 
   try {
     if (tableEntry.insertOnly || tableEntry.conflictStrategy === 'insert-only') {
@@ -414,9 +410,11 @@ async function _uploadBatch(
       if (error) {
         const isNetworkError = false
         await _handleBatchError(entries, error, isNetworkError, async () => {
-          const { error: retryError } = await supabase!.from(tableEntry.supabaseTable).insert(payloads)
+          const { error: retryError } = await supabase!
+            .from(tableEntry.supabaseTable)
+            .insert(payloads)
           if (!retryError) {
-            await db.syncQueue.bulkDelete(entries.map((e) => e.id!))
+            await db.syncQueue.bulkDelete(entries.map(e => e.id!))
             return true
           }
           return false
@@ -458,7 +456,7 @@ async function _uploadBatch(
         // P2+ monotonic table without dedicated RPC — warn and fall back to upsert.
         // Intentional: correct behavior deferred to dedicated migration stories (E93–E96).
         console.warn(
-          `[syncEngine] No monotonic RPC for table "${tableEntry.supabaseTable}" — falling back to generic upsert. Implement dedicated RPC in E93–E96.`,
+          `[syncEngine] No monotonic RPC for table "${tableEntry.supabaseTable}" — falling back to generic upsert. Implement dedicated RPC in E93–E96.`
         )
         const conflictColMono = tableEntry.upsertConflictColumns ?? 'id'
         const { error } = await supabase
@@ -471,7 +469,7 @@ async function _uploadBatch(
               .from(tableEntry.supabaseTable)
               .upsert(payloads, { onConflict: conflictColMono })
             if (!retryError) {
-              await db.syncQueue.bulkDelete(entries.map((e) => e.id!))
+              await db.syncQueue.bulkDelete(entries.map(e => e.id!))
               return true
             }
             return false
@@ -494,7 +492,7 @@ async function _uploadBatch(
             .from(tableEntry.supabaseTable)
             .upsert(payloads, { onConflict: conflictCol })
           if (!retryError) {
-            await db.syncQueue.bulkDelete(entries.map((e) => e.id!))
+            await db.syncQueue.bulkDelete(entries.map(e => e.id!))
             return true
           }
           return false
@@ -504,7 +502,7 @@ async function _uploadBatch(
     }
 
     // Success — delete uploaded entries from the queue.
-    await db.syncQueue.bulkDelete(entries.map((e) => e.id!))
+    await db.syncQueue.bulkDelete(entries.map(e => e.id!))
     return true
   } catch (err: unknown) {
     // Network error (TypeError from fetch) — no HTTP status.
@@ -533,14 +531,22 @@ async function _uploadBatch(
 async function _getLocalRecord(
   table: Table<Record<string, unknown>>,
   entry: ReturnType<typeof getTableEntry>,
-  record: Record<string, unknown>,
+  record: Record<string, unknown>
 ): Promise<Record<string, unknown> | undefined> {
   if (!entry) return undefined
 
   if (entry.compoundPkFields && entry.compoundPkFields.length > 0) {
-    const keyValues = entry.compoundPkFields.map((f) => record[f])
+    const keyValues = entry.compoundPkFields.map(f => record[f])
     // Dexie compound key lookup: where(['a','b']).equals([va, vb]).first()
-    return (table as unknown as { where: (fields: string[]) => { equals: (values: unknown[]) => { first: () => Promise<Record<string, unknown> | undefined> } } })
+    return (
+      table as unknown as {
+        where: (fields: string[]) => {
+          equals: (values: unknown[]) => {
+            first: () => Promise<Record<string, unknown> | undefined>
+          }
+        }
+      }
+    )
       .where(entry.compoundPkFields)
       .equals(keyValues)
       .first()
@@ -556,7 +562,7 @@ async function _getLocalRecord(
 async function _applyLww(
   table: Table<Record<string, unknown>>,
   local: Record<string, unknown> | undefined,
-  record: Record<string, unknown>,
+  record: Record<string, unknown>
 ): Promise<void> {
   if (!local) {
     await table.put(record)
@@ -581,7 +587,7 @@ async function _applyMonotonic(
   table: Table<Record<string, unknown>>,
   local: Record<string, unknown> | undefined,
   record: Record<string, unknown>,
-  monotonicFields: string[],
+  monotonicFields: string[]
 ): Promise<void> {
   if (!local) {
     await table.put(record)
@@ -610,7 +616,7 @@ async function _applyMonotonic(
 async function _applyInsertOnly(
   table: Table<Record<string, unknown>>,
   local: Record<string, unknown> | undefined,
-  record: Record<string, unknown>,
+  record: Record<string, unknown>
 ): Promise<void> {
   if (local) return // already present — insert-only records are immutable
   await table.add(record)
@@ -632,7 +638,7 @@ async function _applyInsertOnly(
 async function _applyConflictCopy(
   table: Table<Record<string, unknown>>,
   local: Record<string, unknown> | undefined,
-  record: Record<string, unknown>,
+  record: Record<string, unknown>
 ): Promise<void> {
   if (!local) {
     // New record — no conflict possible.
@@ -656,7 +662,10 @@ async function _applyConflictCopy(
     // replaced. Unresolved conflicts are superseded by the latest remote version.
     // Guard: ensure tags array is present on both sides before delegating to resolver.
     const localNote = local as unknown as Note
-    const remoteNote = { ...record, tags: (record['tags'] as string[] | undefined) ?? [] } as unknown as Note
+    const remoteNote = {
+      ...record,
+      tags: (record['tags'] as string[] | undefined) ?? [],
+    } as unknown as Note
     const merged = applyConflictCopy(localNote, remoteNote)
     await table.put(merged as unknown as Record<string, unknown>)
     return
@@ -673,7 +682,7 @@ async function _applyConflictCopy(
  */
 async function _applyRecord(
   entry: NonNullable<ReturnType<typeof getTableEntry>>,
-  record: Record<string, unknown>,
+  record: Record<string, unknown>
 ): Promise<void> {
   // Intentional: dynamic table access — Dexie's TypeScript types don't expose a
   // typed index signature. Cast via `unknown` to avoid `any`.
@@ -690,10 +699,16 @@ async function _applyRecord(
   // Note: `notes` uses `soft_deleted` (not `deleted`) so this guard never fires for notes.
   if (record['deleted'] === true) {
     if (entry.compoundPkFields && entry.compoundPkFields.length > 0) {
-      const keyValues = entry.compoundPkFields.map((f) => record[f])
+      const keyValues = entry.compoundPkFields.map(f => record[f])
       // Cast mirrors the pattern used in _getLocalRecord — Dexie's TypeScript types
       // don't expose compound-key where() overloads; the runtime call is correct.
-      await (table as unknown as { where: (fields: string[]) => { equals: (values: unknown[]) => { delete: () => Promise<number> } } })
+      await (
+        table as unknown as {
+          where: (fields: string[]) => {
+            equals: (values: unknown[]) => { delete: () => Promise<number> }
+          }
+        }
+      )
         .where(entry.compoundPkFields)
         .equals(keyValues)
         .delete()
@@ -724,7 +739,9 @@ async function _applyRecord(
 
     default:
       // Intentional: 'skip' and any future unknown strategies are no-ops here.
-      console.warn(`[syncEngine] Unknown conflict strategy "${entry.conflictStrategy}" for table "${entry.dexieTable}" — skipping.`)
+      console.warn(
+        `[syncEngine] Unknown conflict strategy "${entry.conflictStrategy}" for table "${entry.dexieTable}" — skipping.`
+      )
   }
 
   // Post-apply hook: replay FSRS review log for flashcards that have been reviewed.
@@ -782,10 +799,7 @@ async function _doDownload(): Promise<void> {
     const cursorCol = entry.cursorField ?? 'updated_at'
 
     // Build Supabase query — chain .gte() only when cursor is present.
-    let query = supabase
-      .from(entry.supabaseTable)
-      .select('*')
-      .order(cursorCol, { ascending: true })
+    let query = supabase.from(entry.supabaseTable).select('*').order(cursorCol, { ascending: true })
 
     if (cursor !== null) {
       query = query.gte(cursorCol, cursor)
@@ -796,7 +810,7 @@ async function _doDownload(): Promise<void> {
     if (error) {
       console.error(
         `[syncEngine] Download error for table "${entry.supabaseTable}":`,
-        error.message,
+        error.message
       )
       continue // skip to next table
     }
@@ -804,8 +818,8 @@ async function _doDownload(): Promise<void> {
     if (!rows || rows.length === 0) continue
 
     // Convert once so pre-apply hooks and the apply loop share the same shape.
-    const camelRecords: Record<string, unknown>[] = rows.map(
-      (r) => toCamelCase(entry, r as Record<string, unknown>),
+    const camelRecords: Record<string, unknown>[] = rows.map(r =>
+      toCamelCase(entry, r as Record<string, unknown>)
     )
 
     // E94-S03: Default-shelf dedup hook.
@@ -824,12 +838,11 @@ async function _doDownload(): Promise<void> {
         const { toInsert, toSkip, mergedIdMap } = dedupDefaultShelves(incoming, local)
         if (toSkip.length > 0 || Object.keys(mergedIdMap).length > 0) {
           console.debug(
-            `[syncEngine] defaultShelfDedup: skipped ${toSkip.length} incoming defaults, mapped ${Object.keys(mergedIdMap).length} remote → local ids.`,
+            `[syncEngine] defaultShelfDedup: skipped ${toSkip.length} incoming defaults, mapped ${Object.keys(mergedIdMap).length} remote → local ids.`
           )
           const key = `shelfDedupMap:${_userId}`
           const existing = await db.syncMetadata.get(key)
-          const prior =
-            (existing?.value as Record<string, string> | undefined) ?? {}
+          const prior = (existing?.value as Record<string, string> | undefined) ?? {}
           await db.syncMetadata.put({
             table: key,
             value: { ...prior, ...mergedIdMap },
@@ -860,7 +873,7 @@ async function _doDownload(): Promise<void> {
         const meta = await db.syncMetadata.get(key)
         const map = (meta?.value as Record<string, string> | undefined) ?? {}
         if (Object.keys(map).length > 0) {
-          recordsToApply = camelRecords.map((rec) => {
+          recordsToApply = camelRecords.map(rec => {
             const shelfId = rec['shelfId'] as string | undefined
             if (shelfId && map[shelfId]) {
               return { ...rec, shelfId: map[shelfId] }
@@ -887,10 +900,7 @@ async function _doDownload(): Promise<void> {
       try {
         await _applyRecord(entry, record)
       } catch (err) {
-        console.error(
-          `[syncEngine] Error applying record from "${entry.dexieTable}":`,
-          err,
-        )
+        console.error(`[syncEngine] Error applying record from "${entry.dexieTable}":`, err)
         // Intentional: continue processing remaining records — one bad record
         // should not abort the whole table.
       }
@@ -909,12 +919,8 @@ async function _doDownload(): Promise<void> {
     // failure never prevents the store refresh or the next table's download.
     // Guard: _userId mirrors the upload-side guard at line ~955 in _doUpload.
     if (STORAGE_DOWNLOAD_TABLES.has(entry.dexieTable) && _userId) {
-      await downloadStorageFilesForTable(entry.dexieTable, recordsToApply, _userId).catch(
-        (err) =>
-          console.warn(
-            `[syncEngine] Storage download failed for "${entry.dexieTable}":`,
-            err,
-          ),
+      await downloadStorageFilesForTable(entry.dexieTable, recordsToApply, _userId).catch(err =>
+        console.warn(`[syncEngine] Storage download failed for "${entry.dexieTable}":`, err)
       )
     }
 
@@ -922,8 +928,7 @@ async function _doDownload(): Promise<void> {
     // we can observe cross-device fan-out latency. Fires once per table per
     // download cycle, only when rows actually landed (recordsToApply > 0).
     if (
-      (entry.dexieTable === 'audiobookshelfServers' ||
-        entry.dexieTable === 'opdsCatalogs') &&
+      (entry.dexieTable === 'audiobookshelfServers' || entry.dexieTable === 'opdsCatalogs') &&
       recordsToApply.length > 0
     ) {
       // Intentional: using console.info keeps this self-contained until the
@@ -938,8 +943,8 @@ async function _doDownload(): Promise<void> {
     // Notify registered Zustand store (if any) to reload from Dexie.
     const refreshFn = _storeRefreshRegistry.get(entry.dexieTable)
     if (refreshFn) {
-      await refreshFn().catch((err) =>
-        console.warn(`[syncEngine] Store refresh failed for "${entry.dexieTable}":`, err),
+      await refreshFn().catch(err =>
+        console.warn(`[syncEngine] Store refresh failed for "${entry.dexieTable}":`, err)
       )
     }
   }
@@ -1010,7 +1015,7 @@ async function _doUpload(): Promise<void> {
     if (!tableEntry) {
       // Intentional: unknown table — skip (caller bug, not a transient failure).
       console.error(
-        `[syncEngine] No registry entry for table "${tableName}" — skipping. Check tableRegistry.ts.`,
+        `[syncEngine] No registry entry for table "${tableName}" — skipping. Check tableRegistry.ts.`
       )
       continue
     }
@@ -1038,7 +1043,7 @@ async function _runUploadCycle(): Promise<void> {
     // Intentional: ifAvailable: true means the callback receives null if the
     // lock is already held — we skip rather than queue. This prevents multiple
     // concurrent upload cycles from stacking.
-    await navigator.locks.request('sync-upload', { ifAvailable: true }, async (lock) => {
+    await navigator.locks.request('sync-upload', { ifAvailable: true }, async lock => {
       if (!lock) return // lock not available — another cycle is running
       syncEngine._setRunning(true)
       try {
@@ -1081,7 +1086,7 @@ export const syncEngine = {
     }
     _debounceTimer = setTimeout(() => {
       _debounceTimer = null
-      _runUploadCycle().catch((err) => {
+      _runUploadCycle().catch(err => {
         console.error('[syncEngine] Upload cycle error:', err)
       })
     }, DEBOUNCE_MS)

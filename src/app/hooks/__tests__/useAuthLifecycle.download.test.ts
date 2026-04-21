@@ -19,12 +19,10 @@ const mockUnsubscribe = vi.fn()
 vi.mock('@/lib/auth/supabase', () => ({
   supabase: {
     auth: {
-      onAuthStateChange: vi.fn(
-        (cb: (event: AuthChangeEvent, session: Session | null) => void) => {
-          authChangeCallback = cb
-          return { data: { subscription: { unsubscribe: mockUnsubscribe } } }
-        },
-      ),
+      onAuthStateChange: vi.fn((cb: (event: AuthChangeEvent, session: Session | null) => void) => {
+        authChangeCallback = cb
+        return { data: { subscription: { unsubscribe: mockUnsubscribe } } }
+      }),
       getSession: vi.fn(() => Promise.resolve({ data: { session: null }, error: null })),
     },
   },
@@ -35,7 +33,9 @@ vi.mock('@/lib/settings', () => ({
 }))
 
 vi.mock('@/lib/sync/backfill', () => ({
-  backfillUserId: vi.fn().mockResolvedValue({ tablesProcessed: 0, recordsStamped: 0, tablesFailed: [] }),
+  backfillUserId: vi
+    .fn()
+    .mockResolvedValue({ tablesProcessed: 0, recordsStamped: 0, tablesFailed: [] }),
   SYNCABLE_TABLES: ['notes', 'books'],
 }))
 
@@ -164,8 +164,8 @@ describe('useAuthLifecycle — download lifecycle wiring (E97-S04)', () => {
     await vi.waitFor(() =>
       expect(errSpy).toHaveBeenCalledWith(
         '[useAuthLifecycle] hydrateP3P4FromSupabase failed:',
-        expect.any(Error),
-      ),
+        expect.any(Error)
+      )
     )
     errSpy.mockRestore()
   })

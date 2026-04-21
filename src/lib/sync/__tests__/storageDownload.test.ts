@@ -116,8 +116,7 @@ import { downloadStorageFilesForTable } from '../storageDownload'
 // Helpers
 // ---------------------------------------------------------------------------
 
-const SUPABASE_URL =
-  'https://abcdefgh.supabase.co/storage/v1/object/public'
+const SUPABASE_URL = 'https://abcdefgh.supabase.co/storage/v1/object/public'
 
 function makeRecord(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -167,7 +166,7 @@ describe('downloadStorageFilesForTable — importedCourses', () => {
 
     expect(mockFetch).toHaveBeenCalledOnce()
     expect(mockCourseThumbnailsPut).toHaveBeenCalledWith(
-      expect.objectContaining({ courseId: 'record-1', blob, source: 'server' }),
+      expect.objectContaining({ courseId: 'record-1', blob, source: 'server' })
     )
   })
 
@@ -302,10 +301,7 @@ describe('downloadStorageFilesForTable — books file download (E94-S07)', () =>
     await downloadStorageFilesForTable('books', [record], 'user1')
 
     expect(mockFetch).toHaveBeenCalledOnce()
-    expect(mockStoreBookFile).toHaveBeenCalledWith(
-      'record-1',
-      expect.any(File),
-    )
+    expect(mockStoreBookFile).toHaveBeenCalledWith('record-1', expect.any(File))
     // Critically: db.books.update must NOT be called for fileUrl
     expect(mockBooksUpdate).not.toHaveBeenCalled()
   })
@@ -364,7 +360,7 @@ describe('downloadStorageFilesForTable — books file download (E94-S07)', () =>
     await expect(downloadStorageFilesForTable('books', [record], 'user1')).resolves.toBeUndefined()
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('[storageDownload]'),
-      expect.any(Error),
+      expect.any(Error)
     )
     warnSpy.mockRestore()
   })
@@ -398,9 +394,7 @@ describe('downloadStorageFilesForTable — 403 signed URL fallback', () => {
 
     expect(mockFetch).toHaveBeenCalledTimes(2)
     expect(mockFetch).toHaveBeenNthCalledWith(2, 'https://signed.example.com/url')
-    expect(mockCourseThumbnailsPut).toHaveBeenCalledWith(
-      expect.objectContaining({ blob }),
-    )
+    expect(mockCourseThumbnailsPut).toHaveBeenCalledWith(expect.objectContaining({ blob }))
   })
 })
 
@@ -416,9 +410,8 @@ describe('downloadStorageFilesForTable — null supabase client', () => {
     vi.doMock('@/lib/auth/supabase', () => ({ supabase: null }))
 
     // Import a fresh copy of the module so the null mock takes effect.
-    const { downloadStorageFilesForTable: fn } = await import(
-      '../storageDownload?null-client'
-    ).catch(() => import('../storageDownload'))
+    const { downloadStorageFilesForTable: fn } =
+      await import('../storageDownload?null-client').catch(() => import('../storageDownload'))
 
     const record = makeRecord({
       thumbnailUrl: `${SUPABASE_URL}/course-thumbnails/user1/course1/thumbnail.jpg`,
@@ -456,12 +449,12 @@ describe('downloadStorageFilesForTable — network error isolation', () => {
     })
 
     await expect(
-      downloadStorageFilesForTable('importedCourses', [record], 'user1'),
+      downloadStorageFilesForTable('importedCourses', [record], 'user1')
     ).resolves.toBeUndefined()
 
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('[storageDownload]'),
-      expect.any(TypeError),
+      expect.any(TypeError)
     )
     expect(mockCourseThumbnailsPut).not.toHaveBeenCalled()
 

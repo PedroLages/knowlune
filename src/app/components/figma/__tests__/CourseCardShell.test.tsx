@@ -46,16 +46,12 @@ describe('PlayOverlay', () => {
   })
 
   it('renders button with aria-label when show=true', () => {
-    render(
-      <PlayOverlay show={true} onClick={vi.fn()} aria-label='Start studying "My Course"' />
-    )
+    render(<PlayOverlay show={true} onClick={vi.fn()} aria-label='Start studying "My Course"' />)
     expect(screen.getByRole('button', { name: /Start studying/i })).toBeInTheDocument()
   })
 
   it('renders button with explicit type="button" to prevent form submission', () => {
-    render(
-      <PlayOverlay show={true} onClick={vi.fn()} aria-label="Start" />
-    )
+    render(<PlayOverlay show={true} onClick={vi.fn()} aria-label="Start" />)
     expect(screen.getByRole('button')).toHaveAttribute('type', 'button')
   })
 
@@ -76,7 +72,12 @@ describe('PlayOverlay', () => {
 
   it('passes data-testid to the button', () => {
     render(
-      <PlayOverlay show={true} onClick={vi.fn()} data-testid="start-course-btn" aria-label="Start" />
+      <PlayOverlay
+        show={true}
+        onClick={vi.fn()}
+        data-testid="start-course-btn"
+        aria-label="Start"
+      />
     )
     expect(screen.getByTestId('start-course-btn')).toBeInTheDocument()
   })

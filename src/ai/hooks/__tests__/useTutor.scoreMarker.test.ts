@@ -141,7 +141,9 @@ beforeEach(async () => {
   })
 
   const { getLLMClient } = await import('@/ai/llm/factory')
-  const client = await (getLLMClient as unknown as () => Promise<{ streamCompletion: ReturnType<typeof vi.fn> }>)()
+  const client = await (
+    getLLMClient as unknown as () => Promise<{ streamCompletion: ReturnType<typeof vi.fn> }>
+  )()
   mockStreamCompletion = client.streamCompletion as ReturnType<typeof vi.fn>
 })
 
@@ -154,9 +156,9 @@ afterEach(() => {
 describe('useTutor — SCORE marker parsing', () => {
   it('SCORE: correct marker calls recordQuizAnswer(true)', async () => {
     useTutorStore.setState({ mode: 'quiz' })
-    mockStreamCompletion.mockReturnValue(makeStream([
-      'Great answer!\nSCORE: correct\nYou understood the concept.',
-    ]))
+    mockStreamCompletion.mockReturnValue(
+      makeStream(['Great answer!\nSCORE: correct\nYou understood the concept.'])
+    )
 
     const { result } = renderHook(() => useTutor(DEFAULT_OPTIONS))
     await act(async () => {
@@ -171,9 +173,9 @@ describe('useTutor — SCORE marker parsing', () => {
 
   it('SCORE: incorrect marker calls recordQuizAnswer(false)', async () => {
     useTutorStore.setState({ mode: 'quiz' })
-    mockStreamCompletion.mockReturnValue(makeStream([
-      'Not quite.\nSCORE: incorrect\nLet me explain.',
-    ]))
+    mockStreamCompletion.mockReturnValue(
+      makeStream(['Not quite.\nSCORE: incorrect\nLet me explain.'])
+    )
 
     const { result } = renderHook(() => useTutor(DEFAULT_OPTIONS))
     await act(async () => {
@@ -188,9 +190,7 @@ describe('useTutor — SCORE marker parsing', () => {
 
   it('does not call recordQuizAnswer in non-quiz mode', async () => {
     useTutorStore.setState({ mode: 'explain' })
-    mockStreamCompletion.mockReturnValue(makeStream([
-      'Here is an explanation.\nSCORE: correct',
-    ]))
+    mockStreamCompletion.mockReturnValue(makeStream(['Here is an explanation.\nSCORE: correct']))
 
     const { result } = renderHook(() => useTutor(DEFAULT_OPTIONS))
     await act(async () => {
@@ -205,9 +205,9 @@ describe('useTutor — SCORE marker parsing', () => {
 describe('useTutor — ASSESSMENT marker parsing', () => {
   it('ASSESSMENT: green marker calls recordDebugAssessment("green")', async () => {
     useTutorStore.setState({ mode: 'debug' })
-    mockStreamCompletion.mockReturnValue(makeStream([
-      'Your understanding looks solid.\nASSESSMENT: green',
-    ]))
+    mockStreamCompletion.mockReturnValue(
+      makeStream(['Your understanding looks solid.\nASSESSMENT: green'])
+    )
 
     const { result } = renderHook(() => useTutor(DEFAULT_OPTIONS))
     await act(async () => {
@@ -221,9 +221,9 @@ describe('useTutor — ASSESSMENT marker parsing', () => {
 
   it('ASSESSMENT: red marker records red assessment', async () => {
     useTutorStore.setState({ mode: 'debug' })
-    mockStreamCompletion.mockReturnValue(makeStream([
-      'There is a misconception here.\nASSESSMENT: red',
-    ]))
+    mockStreamCompletion.mockReturnValue(
+      makeStream(['There is a misconception here.\nASSESSMENT: red'])
+    )
 
     const { result } = renderHook(() => useTutor(DEFAULT_OPTIONS))
     await act(async () => {
@@ -237,9 +237,7 @@ describe('useTutor — ASSESSMENT marker parsing', () => {
 
   it('does not record assessment in non-debug mode', async () => {
     useTutorStore.setState({ mode: 'explain' })
-    mockStreamCompletion.mockReturnValue(makeStream([
-      'Some explanation.\nASSESSMENT: green',
-    ]))
+    mockStreamCompletion.mockReturnValue(makeStream(['Some explanation.\nASSESSMENT: green']))
 
     const { result } = renderHook(() => useTutor(DEFAULT_OPTIONS))
     await act(async () => {
@@ -252,9 +250,9 @@ describe('useTutor — ASSESSMENT marker parsing', () => {
 
   it('non-matching text does not trigger any marker parsing', async () => {
     useTutorStore.setState({ mode: 'quiz' })
-    mockStreamCompletion.mockReturnValue(makeStream([
-      'Here is a regular response with no markers.',
-    ]))
+    mockStreamCompletion.mockReturnValue(
+      makeStream(['Here is a regular response with no markers.'])
+    )
 
     const { result } = renderHook(() => useTutor(DEFAULT_OPTIONS))
     await act(async () => {

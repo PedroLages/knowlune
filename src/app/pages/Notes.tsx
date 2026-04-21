@@ -532,9 +532,8 @@ export function Notes() {
   }
 
   // Derived: the note that currently has an open conflict dialog (if any)
-  const conflictNote = conflictNoteId != null
-    ? notes.find(n => n.id === conflictNoteId) ?? null
-    : null
+  const conflictNote =
+    conflictNoteId != null ? (notes.find(n => n.id === conflictNoteId) ?? null) : null
 
   return (
     <TooltipProvider>
@@ -736,7 +735,9 @@ export function Notes() {
         <NoteConflictDialog
           note={conflictNote}
           open
-          onOpenChange={open => { if (!open) setConflictNoteId(null) }}
+          onOpenChange={open => {
+            if (!open) setConflictNoteId(null)
+          }}
           onResolved={() => setConflictNoteId(null)}
         />
       )}

@@ -158,9 +158,7 @@ describe('useQuizStore streak integration (E18-S05)', () => {
     // Simulate DB failure — E96-S02 routes quiz attempts through
     // syncableWrite; mock that instead of the raw Dexie table.
     const syncMod = await import('@/lib/sync/syncableWrite')
-    vi.spyOn(syncMod, 'syncableWrite').mockRejectedValueOnce(
-      new Error('IndexedDB quota exceeded')
-    )
+    vi.spyOn(syncMod, 'syncableWrite').mockRejectedValueOnce(new Error('IndexedDB quota exceeded'))
 
     await act(async () => {
       useQuizStore.getState().submitAnswer('q1', 'Paris')

@@ -479,7 +479,10 @@ export async function persistScannedCourse(
           // More than just updatedAt — fetch-then-put so syncableWrite has the full record
           const fullAuthor = await db.authors.get(authorId)
           if (fullAuthor) {
-            await syncableWrite('authors', 'put', { ...fullAuthor, ...updates } as unknown as SyncableRecord)
+            await syncableWrite('authors', 'put', {
+              ...fullAuthor,
+              ...updates,
+            } as unknown as SyncableRecord)
           }
         }
       }

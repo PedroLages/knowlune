@@ -98,10 +98,10 @@ function usePrefersReducedMotion(): boolean {
 }
 
 export function SyncStatusIndicator(): React.ReactElement {
-  const status = useSyncStatusStore((s) => s.status)
-  const pendingCount = useSyncStatusStore((s) => s.pendingCount)
-  const lastSyncAt = useSyncStatusStore((s) => s.lastSyncAt)
-  const lastError = useSyncStatusStore((s) => s.lastError)
+  const status = useSyncStatusStore(s => s.status)
+  const pendingCount = useSyncStatusStore(s => s.pendingCount)
+  const lastSyncAt = useSyncStatusStore(s => s.lastSyncAt)
+  const lastError = useSyncStatusStore(s => s.lastError)
 
   const [open, setOpen] = useState(false)
   const reducedMotion = usePrefersReducedMotion()

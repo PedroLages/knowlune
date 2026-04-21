@@ -343,84 +343,87 @@ export function ImportedCourseCard({
 
           {/* Status dropdown — top-right */}
           <div className="absolute top-3 right-3 z-30">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    ref={statusBadgeRef}
-                    data-testid="status-badge"
-                    onClick={e => e.stopPropagation()}
-                    className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-full outline-none min-h-[44px] flex items-center"
-                    aria-label={`Course status: ${config.label}. Click to change.`}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  ref={statusBadgeRef}
+                  data-testid="status-badge"
+                  onClick={e => e.stopPropagation()}
+                  className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-full outline-none min-h-[44px] flex items-center"
+                  aria-label={`Course status: ${config.label}. Click to change.`}
+                >
+                  <Badge
+                    className={cn(
+                      'border-0 text-xs gap-1 cursor-pointer hover:opacity-80 transition-opacity',
+                      config.badgeClass
+                    )}
                   >
-                    <Badge
-                      className={cn(
-                        'border-0 text-xs gap-1 cursor-pointer hover:opacity-80 transition-opacity',
-                        config.badgeClass
-                      )}
+                    <StatusIcon className="size-3" aria-hidden="true" />
+                    {config.label}
+                  </Badge>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
+                {(Object.entries(statusConfig) as [LearnerCourseStatus, typeof config][]).map(
+                  ([key, cfg]) => {
+                    const Icon = cfg.icon
+                    return (
+                      <DropdownMenuItem
+                        key={key}
+                        onClick={() => handleStatusChange(key)}
+                        className="gap-2"
+                      >
+                        <Icon className="size-4" aria-hidden="true" />
+                        {cfg.label}
+                        {key === status && (
+                          <CheckCircle2
+                            className="size-3.5 ml-auto text-brand"
+                            aria-hidden="true"
+                          />
+                        )}
+                      </DropdownMenuItem>
+                    )
+                  }
+                )}
+                {!readOnly && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      data-testid="edit-course-menu-item"
+                      className="gap-2 min-h-[44px]"
+                      onClick={e => {
+                        e.stopPropagation()
+                        setEditDialogOpen(true)
+                      }}
                     >
-                      <StatusIcon className="size-3" aria-hidden="true" />
-                      {config.label}
-                    </Badge>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
-                  {(Object.entries(statusConfig) as [LearnerCourseStatus, typeof config][]).map(
-                    ([key, cfg]) => {
-                      const Icon = cfg.icon
-                      return (
-                        <DropdownMenuItem
-                          key={key}
-                          onClick={() => handleStatusChange(key)}
-                          className="gap-2"
-                        >
-                          <Icon className="size-4" aria-hidden="true" />
-                          {cfg.label}
-                          {key === status && (
-                            <CheckCircle2
-                              className="size-3.5 ml-auto text-brand"
-                              aria-hidden="true"
-                            />
-                          )}
-                        </DropdownMenuItem>
-                      )
-                    }
-                  )}
-                  {!readOnly && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        data-testid="edit-course-menu-item"
-                        className="gap-2 min-h-[44px]"
-                        onClick={e => {
-                          e.stopPropagation()
-                          setEditDialogOpen(true)
-                        }}
-                      >
-                        <Pencil className="size-4" aria-hidden="true" />
-                        Edit details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        data-testid="delete-course-menu-item"
-                        variant="destructive"
-                        className="gap-2 min-h-[44px]"
-                        onClick={e => {
-                          e.stopPropagation()
-                          setDeleteDialogOpen(true)
-                        }}
-                      >
-                        <Trash2 className="size-4" aria-hidden="true" />
-                        Delete course
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                      <Pencil className="size-4" aria-hidden="true" />
+                      Edit details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      data-testid="delete-course-menu-item"
+                      variant="destructive"
+                      className="gap-2 min-h-[44px]"
+                      onClick={e => {
+                        e.stopPropagation()
+                        setDeleteDialogOpen(true)
+                      }}
+                    >
+                      <Trash2 className="size-4" aria-hidden="true" />
+                      Delete course
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
           {/* Info button — bottom-right, hover-revealed */}
           <div
             className="absolute bottom-3 right-3 z-30"
-            onClick={e => { e.preventDefault(); e.stopPropagation() }}
+            onClick={e => {
+              e.preventDefault()
+              e.stopPropagation()
+            }}
           >
             <Popover open={infoOpen} onOpenChange={setInfoOpen}>
               <PopoverTrigger asChild>
@@ -533,118 +536,118 @@ export function ImportedCourseCard({
 
         {/* Card body */}
         <div className="mt-3 px-1 min-h-32 flex flex-col">
-            <h3
-              data-testid="course-card-title"
-              className="font-bold text-sm leading-tight mb-1 line-clamp-2 group-hover:text-brand transition-colors"
+          <h3
+            data-testid="course-card-title"
+            className="font-bold text-sm leading-tight mb-1 line-clamp-2 group-hover:text-brand transition-colors"
+          >
+            {course.name}
+          </h3>
+          {authorData ? (
+            <button
+              type="button"
+              data-testid="course-card-author"
+              onClick={e => {
+                e.stopPropagation()
+                navigate(`/authors/${authorData.id}`)
+              }}
+              className="flex items-center gap-1.5 mb-1 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
             >
-              {course.name}
-            </h3>
-            {authorData ? (
-              <button
-                type="button"
-                data-testid="course-card-author"
-                onClick={e => {
-                  e.stopPropagation()
-                  navigate(`/authors/${authorData.id}`)
-                }}
-                className="flex items-center gap-1.5 mb-1 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
-              >
-                <Avatar className="size-5">
-                  <AvatarImage {...getAvatarSrc(authorData.photoUrl ?? '', 20)} alt="" />
-                  <AvatarFallback className="text-[8px]">
-                    {authorData.name
-                      .split(' ')
-                      .map(n => n[0])
-                      .join('')
-                      .toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <span>{authorData.name}</span>
-              </button>
-            ) : (
-              <p
-                data-testid="course-card-unknown-author"
-                className="text-xs text-muted-foreground mb-1"
-              >
-                Unknown Author
-              </p>
-            )}
-            <div className="flex items-center gap-1.5 mt-1 mb-2">
-              <span aria-live="polite" className="contents">
-                {analysisStatus === 'analyzing' && (
-                  <span
-                    data-testid="ai-tagging-indicator"
-                    className="text-xs text-muted-foreground animate-pulse flex items-center gap-1"
-                  >
-                    <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-                    AI tagging...
-                  </span>
-                )}
-                {analysisStatus === 'complete' && course.tags.length > 0 && (
-                  <span className="sr-only">
-                    AI tagging complete. {course.tags.length} tags added.
-                  </span>
-                )}
-              </span>
-              <TagBadgeList
-                tags={course.tags}
-                onRemove={readOnly ? undefined : handleRemoveTag}
-                maxVisible={3}
-              />
-              {!readOnly && (
-                <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-              <span data-testid="course-card-video-count" className="flex items-center gap-1">
-                <Video className="size-3.5" aria-hidden="true" />
-                <span>
-                  {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
-                </span>
-              </span>
-              {course.totalDuration != null && course.totalDuration > 0 && (
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span
-                        data-testid="course-card-duration"
-                        className="flex items-center gap-1 cursor-default"
-                      >
-                        <Clock className="size-3.5" aria-hidden="true" />
-                        <span>{formatCourseDuration(course.totalDuration)}</span>
-                      </span>
-                    </TooltipTrigger>
-                    {course.totalFileSize != null && course.totalFileSize > 0 && (
-                      <TooltipContent>
-                        <span data-testid="course-card-file-size">
-                          Total size: {formatFileSize(course.totalFileSize)}
-                        </span>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-              <span data-testid="course-card-pdf-count" className="flex items-center gap-1">
-                <FileText className="size-3.5" aria-hidden="true" />
-                <span>
-                  {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
-                </span>
-              </span>
-              {course.maxResolutionHeight != null && course.maxResolutionHeight > 0 && (
-                <Badge
-                  data-testid="course-card-resolution"
-                  variant="secondary"
-                  className="text-[10px] px-1.5 py-0 font-medium opacity-70"
+              <Avatar className="size-5">
+                <AvatarImage {...getAvatarSrc(authorData.photoUrl ?? '', 20)} alt="" />
+                <AvatarFallback className="text-[8px]">
+                  {authorData.name
+                    .split(' ')
+                    .map(n => n[0])
+                    .join('')
+                    .toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span>{authorData.name}</span>
+            </button>
+          ) : (
+            <p
+              data-testid="course-card-unknown-author"
+              className="text-xs text-muted-foreground mb-1"
+            >
+              Unknown Author
+            </p>
+          )}
+          <div className="flex items-center gap-1.5 mt-1 mb-2">
+            <span aria-live="polite" className="contents">
+              {analysisStatus === 'analyzing' && (
+                <span
+                  data-testid="ai-tagging-indicator"
+                  className="text-xs text-muted-foreground animate-pulse flex items-center gap-1"
                 >
-                  {getResolutionLabel(course.maxResolutionHeight)}
-                </Badge>
+                  <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+                  AI tagging...
+                </span>
               )}
-            </div>
-            {momentumScore && momentumScore.score > 0 && (
-              <div className="mt-2">
-                <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />
-              </div>
+              {analysisStatus === 'complete' && course.tags.length > 0 && (
+                <span className="sr-only">
+                  AI tagging complete. {course.tags.length} tags added.
+                </span>
+              )}
+            </span>
+            <TagBadgeList
+              tags={course.tags}
+              onRemove={readOnly ? undefined : handleRemoveTag}
+              maxVisible={3}
+            />
+            {!readOnly && (
+              <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
             )}
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            <span data-testid="course-card-video-count" className="flex items-center gap-1">
+              <Video className="size-3.5" aria-hidden="true" />
+              <span>
+                {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
+              </span>
+            </span>
+            {course.totalDuration != null && course.totalDuration > 0 && (
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      data-testid="course-card-duration"
+                      className="flex items-center gap-1 cursor-default"
+                    >
+                      <Clock className="size-3.5" aria-hidden="true" />
+                      <span>{formatCourseDuration(course.totalDuration)}</span>
+                    </span>
+                  </TooltipTrigger>
+                  {course.totalFileSize != null && course.totalFileSize > 0 && (
+                    <TooltipContent>
+                      <span data-testid="course-card-file-size">
+                        Total size: {formatFileSize(course.totalFileSize)}
+                      </span>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            <span data-testid="course-card-pdf-count" className="flex items-center gap-1">
+              <FileText className="size-3.5" aria-hidden="true" />
+              <span>
+                {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
+              </span>
+            </span>
+            {course.maxResolutionHeight != null && course.maxResolutionHeight > 0 && (
+              <Badge
+                data-testid="course-card-resolution"
+                variant="secondary"
+                className="text-[10px] px-1.5 py-0 font-medium opacity-70"
+              >
+                {getResolutionLabel(course.maxResolutionHeight)}
+              </Badge>
+            )}
+          </div>
+          {momentumScore && momentumScore.score > 0 && (
+            <div className="mt-2">
+              <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />
+            </div>
+          )}
         </div>
       </article>
 

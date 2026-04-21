@@ -36,11 +36,11 @@ export const STORAGE_TABLES = new Set(['importedCourses', 'authors', 'importedPd
 
 // Size limits mirror the bucket definitions in supabase/storage-setup.sql.
 const SIZE_LIMITS = {
-  'course-thumbnails': 500_000,    // 500 KB
-  avatars: 1_000_000,              // 1 MB
-  pdfs: 100_000_000,               // 100 MB
-  'book-covers': 2_000_000,        // 2 MB
-  'book-files': 209_715_200,       // 200 MB
+  'course-thumbnails': 500_000, // 500 KB
+  avatars: 1_000_000, // 1 MB
+  pdfs: 100_000_000, // 100 MB
+  'book-covers': 2_000_000, // 2 MB
+  'book-files': 209_715_200, // 200 MB
 } as const
 
 // ---------------------------------------------------------------------------
@@ -62,7 +62,7 @@ const SIZE_LIMITS = {
 export async function uploadStorageFilesForTable(
   tableName: string,
   entries: SyncQueueEntry[],
-  userId: string,
+  userId: string
 ): Promise<void> {
   if (!STORAGE_TABLES.has(tableName)) return
 
@@ -96,7 +96,7 @@ export async function uploadStorageFilesForTable(
     } catch (err) {
       console.warn(
         `[storageSync] Non-fatal upload failure for table "${tableName}", recordId "${entry.recordId}":`,
-        err,
+        err
       )
     }
   }
@@ -223,11 +223,7 @@ async function _uploadBookFile(entry: SyncQueueEntry, userId: string): Promise<v
   })
 
   await db.books.update(bookId, { fileUrl: url })
-  await supabase!
-    .from('books')
-    .update({ file_url: url })
-    .eq('id', bookId)
-    .eq('user_id', userId)
+  await supabase!.from('books').update({ file_url: url }).eq('id', bookId).eq('user_id', userId)
 }
 
 /** Upload book cover from OPFS if the coverUrl uses an opfs:// or opfs-cover:// prefix. */
@@ -260,9 +256,5 @@ async function _uploadBookCover(entry: SyncQueueEntry, userId: string): Promise<
     maxSizeBytes: SIZE_LIMITS['book-covers'],
   })
 
-  await supabase!
-    .from('books')
-    .update({ cover_url: url })
-    .eq('id', bookId)
-    .eq('user_id', userId)
+  await supabase!.from('books').update({ cover_url: url }).eq('id', bookId).eq('user_id', userId)
 }

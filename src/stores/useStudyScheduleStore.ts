@@ -89,11 +89,7 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await syncableWrite(
-          'studySchedules',
-          'add',
-          newSchedule as unknown as SyncableRecord,
-        )
+        await syncableWrite('studySchedules', 'add', newSchedule as unknown as SyncableRecord)
       })
       set(state => ({ schedules: [...state.schedules, newSchedule] }))
       return newSchedule
@@ -118,11 +114,7 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await syncableWrite(
-          'studySchedules',
-          'put',
-          updatedSchedule as unknown as SyncableRecord,
-        )
+        await syncableWrite('studySchedules', 'put', updatedSchedule as unknown as SyncableRecord)
       })
       set(state => ({
         schedules: state.schedules.map(s => (s.id === id ? updatedSchedule : s)),

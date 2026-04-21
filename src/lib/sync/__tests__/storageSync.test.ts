@@ -39,7 +39,9 @@ const {
   const mockBooksGet = vi.fn()
   const mockBooksUpdate = vi.fn().mockResolvedValue(undefined)
 
-  const mockUploadBlob = vi.fn().mockResolvedValue({ url: 'https://cdn.example.com/path', path: 'path' })
+  const mockUploadBlob = vi
+    .fn()
+    .mockResolvedValue({ url: 'https://cdn.example.com/path', path: 'path' })
   const mockGetCoverUrl = vi.fn()
   const mockReadBookFile = vi.fn()
 
@@ -120,7 +122,10 @@ function makeBlob(size = 100, type = 'image/jpeg'): Blob {
 describe('uploadStorageFilesForTable — importedCourses', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUploadBlob.mockResolvedValue({ url: 'https://cdn.example.com/thumbnail', path: 'user1/course1/thumbnail.jpg' })
+    mockUploadBlob.mockResolvedValue({
+      url: 'https://cdn.example.com/thumbnail',
+      path: 'user1/course1/thumbnail.jpg',
+    })
     mockDbUpdate.mockReturnValue({ eq: mockDbEq })
     mockDbFrom.mockReturnValue({ update: mockDbUpdate })
     mockDbEq.mockReturnThis()
@@ -137,10 +142,12 @@ describe('uploadStorageFilesForTable — importedCourses', () => {
       'course-thumbnails',
       'user1/course1/thumbnail.jpg',
       blob,
-      { maxSizeBytes: 500_000 },
+      { maxSizeBytes: 500_000 }
     )
     expect(mockDbFrom).toHaveBeenCalledWith('imported_courses')
-    expect(mockDbUpdate).toHaveBeenCalledWith({ thumbnail_url: 'https://cdn.example.com/thumbnail' })
+    expect(mockDbUpdate).toHaveBeenCalledWith({
+      thumbnail_url: 'https://cdn.example.com/thumbnail',
+    })
   })
 
   it('edge case: db.courseThumbnails.get returns undefined → skips upload silently, no error thrown', async () => {
@@ -148,7 +155,7 @@ describe('uploadStorageFilesForTable — importedCourses', () => {
 
     const entry = makeEntry({ tableName: 'importedCourses', recordId: 'course-missing' })
     await expect(
-      uploadStorageFilesForTable('importedCourses', [entry], 'user1'),
+      uploadStorageFilesForTable('importedCourses', [entry], 'user1')
     ).resolves.toBeUndefined()
     expect(mockUploadBlob).not.toHaveBeenCalled()
   })
@@ -169,11 +176,11 @@ describe('uploadStorageFilesForTable — importedCourses', () => {
 
     const entry = makeEntry({ tableName: 'importedCourses', recordId: 'course1' })
     await expect(
-      uploadStorageFilesForTable('importedCourses', [entry], 'user1'),
+      uploadStorageFilesForTable('importedCourses', [entry], 'user1')
     ).resolves.toBeUndefined()
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('[storageSync]'),
-      expect.any(RangeError),
+      expect.any(RangeError)
     )
     warnSpy.mockRestore()
   })
@@ -186,7 +193,10 @@ describe('uploadStorageFilesForTable — importedCourses', () => {
 describe('uploadStorageFilesForTable — authors', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUploadBlob.mockResolvedValue({ url: 'https://cdn.example.com/photo', path: 'user1/author1/photo.jpg' })
+    mockUploadBlob.mockResolvedValue({
+      url: 'https://cdn.example.com/photo',
+      path: 'user1/author1/photo.jpg',
+    })
     mockDbUpdate.mockReturnValue({ eq: mockDbEq })
     mockDbFrom.mockReturnValue({ update: mockDbUpdate })
     mockDbEq.mockReturnThis()
@@ -200,12 +210,9 @@ describe('uploadStorageFilesForTable — authors', () => {
     const entry = makeEntry({ tableName: 'authors', recordId: 'author1' })
     await uploadStorageFilesForTable('authors', [entry], 'user1')
 
-    expect(mockUploadBlob).toHaveBeenCalledWith(
-      'avatars',
-      'user1/author1/photo.jpg',
-      blob,
-      { maxSizeBytes: 1_000_000 },
-    )
+    expect(mockUploadBlob).toHaveBeenCalledWith('avatars', 'user1/author1/photo.jpg', blob, {
+      maxSizeBytes: 1_000_000,
+    })
     expect(mockDbFrom).toHaveBeenCalledWith('authors')
     expect(mockDbUpdate).toHaveBeenCalledWith({ photo_url: 'https://cdn.example.com/photo' })
   })
@@ -240,7 +247,10 @@ describe('uploadStorageFilesForTable — authors', () => {
 describe('uploadStorageFilesForTable — importedPdfs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUploadBlob.mockResolvedValue({ url: 'https://cdn.example.com/file.pdf', path: 'user1/pdf1/file.pdf' })
+    mockUploadBlob.mockResolvedValue({
+      url: 'https://cdn.example.com/file.pdf',
+      path: 'user1/pdf1/file.pdf',
+    })
     mockDbUpdate.mockReturnValue({ eq: mockDbEq })
     mockDbFrom.mockReturnValue({ update: mockDbUpdate })
     mockDbEq.mockReturnThis()
@@ -254,12 +264,9 @@ describe('uploadStorageFilesForTable — importedPdfs', () => {
     const entry = makeEntry({ tableName: 'importedPdfs', recordId: 'pdf1' })
     await uploadStorageFilesForTable('importedPdfs', [entry], 'user1')
 
-    expect(mockUploadBlob).toHaveBeenCalledWith(
-      'pdfs',
-      'user1/pdf1/file.pdf',
-      blob,
-      { maxSizeBytes: 100_000_000 },
-    )
+    expect(mockUploadBlob).toHaveBeenCalledWith('pdfs', 'user1/pdf1/file.pdf', blob, {
+      maxSizeBytes: 100_000_000,
+    })
     expect(mockDbFrom).toHaveBeenCalledWith('imported_pdfs')
     expect(mockDbUpdate).toHaveBeenCalledWith({ file_url: 'https://cdn.example.com/file.pdf' })
   })
@@ -285,7 +292,10 @@ describe('uploadStorageFilesForTable — importedPdfs', () => {
 describe('uploadStorageFilesForTable — books', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUploadBlob.mockResolvedValue({ url: 'https://cdn.example.com/cover.jpg', path: 'user1/book1/cover.jpg' })
+    mockUploadBlob.mockResolvedValue({
+      url: 'https://cdn.example.com/cover.jpg',
+      path: 'user1/book1/cover.jpg',
+    })
     mockDbUpdate.mockReturnValue({ eq: mockDbEq })
     mockDbFrom.mockReturnValue({ update: mockDbUpdate })
     mockDbEq.mockReturnThis()
@@ -303,12 +313,9 @@ describe('uploadStorageFilesForTable — books', () => {
     expect(mockGetCoverUrl).toHaveBeenCalledWith('book1')
     expect(mockFetch).toHaveBeenCalledWith('blob:http://localhost/abc123')
     expect(mockRevokeObjectURL).toHaveBeenCalledWith('blob:http://localhost/abc123')
-    expect(mockUploadBlob).toHaveBeenCalledWith(
-      'book-covers',
-      'user1/book1/cover.jpg',
-      blob,
-      { maxSizeBytes: 2_000_000 },
-    )
+    expect(mockUploadBlob).toHaveBeenCalledWith('book-covers', 'user1/book1/cover.jpg', blob, {
+      maxSizeBytes: 2_000_000,
+    })
     expect(mockDbFrom).toHaveBeenCalledWith('books')
     expect(mockDbUpdate).toHaveBeenCalledWith({ cover_url: 'https://cdn.example.com/cover.jpg' })
   })
@@ -377,18 +384,18 @@ describe('uploadStorageFilesForTable — books file upload (E94-S07)', () => {
   it('happy path (local): source.type=local → readBookFile called, uploadBlob called with book-files bucket, db.books.update called with fileUrl, Supabase update called', async () => {
     const file = new File([new Uint8Array(100)], 'book.epub', { type: 'application/epub+zip' })
     mockReadBookFile.mockResolvedValue(file)
-    mockBooksGet.mockResolvedValue({ id: 'book1', source: { type: 'local', opfsPath: '/knowlune/books/book1' } })
+    mockBooksGet.mockResolvedValue({
+      id: 'book1',
+      source: { type: 'local', opfsPath: '/knowlune/books/book1' },
+    })
 
     const entry = makeEntry({ tableName: 'books', recordId: 'book1' })
     await uploadStorageFilesForTable('books', [entry], 'user1')
 
     expect(mockReadBookFile).toHaveBeenCalledWith('/knowlune/books/book1', 'book1')
-    expect(mockUploadBlob).toHaveBeenCalledWith(
-      'book-files',
-      'user1/book1/book.epub',
-      file,
-      { maxSizeBytes: 209_715_200 },
-    )
+    expect(mockUploadBlob).toHaveBeenCalledWith('book-files', 'user1/book1/book.epub', file, {
+      maxSizeBytes: 209_715_200,
+    })
     expect(mockBooksUpdate).toHaveBeenCalledWith('book1', { fileUrl: FILE_URL })
     expect(mockDbFrom).toHaveBeenCalledWith('books')
     expect(mockDbUpdate).toHaveBeenCalledWith({ file_url: FILE_URL })
@@ -397,18 +404,18 @@ describe('uploadStorageFilesForTable — books file upload (E94-S07)', () => {
   it('happy path (fileHandle): source.type=fileHandle → handle.getFile() called, blob uploaded, URL written back', async () => {
     const file = new File([new Uint8Array(200)], 'book.pdf', { type: 'application/pdf' })
     const mockHandle = { getFile: vi.fn().mockResolvedValue(file) }
-    mockBooksGet.mockResolvedValue({ id: 'book1', source: { type: 'fileHandle', handle: mockHandle } })
+    mockBooksGet.mockResolvedValue({
+      id: 'book1',
+      source: { type: 'fileHandle', handle: mockHandle },
+    })
 
     const entry = makeEntry({ tableName: 'books', recordId: 'book1' })
     await uploadStorageFilesForTable('books', [entry], 'user1')
 
     expect(mockHandle.getFile).toHaveBeenCalledOnce()
-    expect(mockUploadBlob).toHaveBeenCalledWith(
-      'book-files',
-      'user1/book1/book.pdf',
-      file,
-      { maxSizeBytes: 209_715_200 },
-    )
+    expect(mockUploadBlob).toHaveBeenCalledWith('book-files', 'user1/book1/book.pdf', file, {
+      maxSizeBytes: 209_715_200,
+    })
     expect(mockBooksUpdate).toHaveBeenCalledWith('book1', { fileUrl: FILE_URL })
   })
 
@@ -466,7 +473,10 @@ describe('uploadStorageFilesForTable — books file upload (E94-S07)', () => {
 
   it('error path (stale fileHandle): handle.getFile() throws DOMException → skipped silently, no error thrown, no warn from inner catch', async () => {
     const mockHandle = { getFile: vi.fn().mockRejectedValue(new DOMException('stale')) }
-    mockBooksGet.mockResolvedValue({ id: 'book1', source: { type: 'fileHandle', handle: mockHandle } })
+    mockBooksGet.mockResolvedValue({
+      id: 'book1',
+      source: { type: 'fileHandle', handle: mockHandle },
+    })
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     const entry = makeEntry({ tableName: 'books', recordId: 'book1' })
@@ -481,7 +491,10 @@ describe('uploadStorageFilesForTable — books file upload (E94-S07)', () => {
   it('error path (size limit): uploadBlob throws RangeError → caught by inner file catch, console.warn emitted, no rethrow', async () => {
     const file = new File([new Uint8Array(100)], 'huge.epub', { type: 'application/epub+zip' })
     mockReadBookFile.mockResolvedValue(file)
-    mockBooksGet.mockResolvedValue({ id: 'book1', source: { type: 'local', opfsPath: '/books/book1' } })
+    mockBooksGet.mockResolvedValue({
+      id: 'book1',
+      source: { type: 'local', opfsPath: '/books/book1' },
+    })
     mockUploadBlob.mockRejectedValue(new RangeError('blob exceeds 200 MB limit'))
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
@@ -491,7 +504,7 @@ describe('uploadStorageFilesForTable — books file upload (E94-S07)', () => {
     expect(warnSpy).toHaveBeenCalledWith(
       '[storageSync] File upload failed',
       'book1',
-      expect.any(RangeError),
+      expect.any(RangeError)
     )
     expect(mockBooksUpdate).not.toHaveBeenCalled()
     warnSpy.mockRestore()
@@ -518,7 +531,12 @@ describe('uploadStorageFilesForTable — books file upload (E94-S07)', () => {
     expect(mockReadBookFile).toHaveBeenCalledOnce()
     // uploadBlob called exactly once — for the file (cover threw before uploadBlob)
     expect(mockUploadBlob).toHaveBeenCalledOnce()
-    expect(mockUploadBlob).toHaveBeenCalledWith('book-files', expect.any(String), file, expect.any(Object))
+    expect(mockUploadBlob).toHaveBeenCalledWith(
+      'book-files',
+      expect.any(String),
+      file,
+      expect.any(Object)
+    )
 
     warnSpy.mockRestore()
   })
@@ -533,9 +551,7 @@ describe('uploadStorageFilesForTable — non-target table', () => {
 
   it('integration: non-target table name → returns without dispatching any upload', async () => {
     const entry = makeEntry({ tableName: 'notes', recordId: 'note1' })
-    await expect(
-      uploadStorageFilesForTable('notes', [entry], 'user1'),
-    ).resolves.toBeUndefined()
+    await expect(uploadStorageFilesForTable('notes', [entry], 'user1')).resolves.toBeUndefined()
     expect(mockUploadBlob).not.toHaveBeenCalled()
     expect(mockDbFrom).not.toHaveBeenCalled()
   })

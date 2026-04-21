@@ -27,7 +27,9 @@ vi.mock('@/lib/settings', () => ({
 }))
 
 vi.mock('@/lib/sync/backfill', () => ({
-  backfillUserId: vi.fn().mockResolvedValue({ tablesProcessed: 0, recordsStamped: 0, tablesFailed: [] }),
+  backfillUserId: vi
+    .fn()
+    .mockResolvedValue({ tablesProcessed: 0, recordsStamped: 0, tablesFailed: [] }),
   SYNCABLE_TABLES: ['notes', 'books'],
 }))
 
@@ -70,7 +72,11 @@ const makeSession = (userId = 'user-1'): Session =>
 
 function resetMocks() {
   vi.mocked(hasUnlinkedRecords).mockResolvedValue(false)
-  vi.mocked(backfillUserId).mockResolvedValue({ tablesProcessed: 0, recordsStamped: 0, tablesFailed: [] })
+  vi.mocked(backfillUserId).mockResolvedValue({
+    tablesProcessed: 0,
+    recordsStamped: 0,
+    tablesFailed: [],
+  })
   vi.mocked(syncEngine.start).mockResolvedValue(undefined)
   vi.mocked(syncEngine.stop).mockReturnValue(undefined as unknown as void)
   vi.mocked(clearSyncState).mockResolvedValue(undefined)
@@ -108,7 +114,9 @@ describe('useAuthLifecycle', () => {
     expect(authChangeCallback).toBeTruthy()
 
     // Simulate system-initiated sign-out (no _userInitiatedSignOut flag)
-    act(() => { authChangeCallback!('SIGNED_OUT', null) })
+    act(() => {
+      authChangeCallback!('SIGNED_OUT', null)
+    })
 
     expect(useAuthStore.getState().sessionExpired).toBe(true)
   })
@@ -118,7 +126,9 @@ describe('useAuthLifecycle', () => {
     useAuthStore.setState({ _userInitiatedSignOut: true })
 
     renderHook(() => useAuthLifecycle())
-    act(() => { authChangeCallback!('SIGNED_OUT', null) })
+    act(() => {
+      authChangeCallback!('SIGNED_OUT', null)
+    })
 
     expect(useAuthStore.getState().sessionExpired).toBe(false)
     // Flag should be cleared after consumption
@@ -129,7 +139,9 @@ describe('useAuthLifecycle', () => {
     renderHook(() => useAuthLifecycle())
 
     const session = makeSession()
-    act(() => { authChangeCallback!('TOKEN_REFRESHED', session) })
+    act(() => {
+      authChangeCallback!('TOKEN_REFRESHED', session)
+    })
 
     const state = useAuthStore.getState()
     // Session should be updated
@@ -145,7 +157,9 @@ describe('useAuthLifecycle', () => {
     useAuthStore.setState({ sessionExpired: true })
 
     renderHook(() => useAuthLifecycle())
-    act(() => { authChangeCallback!('SIGNED_IN', makeSession()) })
+    act(() => {
+      authChangeCallback!('SIGNED_IN', makeSession())
+    })
 
     expect(useAuthStore.getState().sessionExpired).toBe(false)
   })
@@ -154,7 +168,9 @@ describe('useAuthLifecycle', () => {
     useAuthStore.setState({ sessionExpired: true })
 
     renderHook(() => useAuthLifecycle())
-    act(() => { authChangeCallback!('INITIAL_SESSION', makeSession()) })
+    act(() => {
+      authChangeCallback!('INITIAL_SESSION', makeSession())
+    })
 
     expect(useAuthStore.getState().sessionExpired).toBe(false)
   })
@@ -169,13 +185,17 @@ describe('useAuthLifecycle', () => {
 
   it('stops syncEngine on SIGNED_OUT', () => {
     renderHook(() => useAuthLifecycle())
-    act(() => { authChangeCallback!('SIGNED_OUT', null) })
+    act(() => {
+      authChangeCallback!('SIGNED_OUT', null)
+    })
     expect(syncEngine.stop).toHaveBeenCalled()
   })
 
   it('calls clearSyncState on SIGNED_OUT', async () => {
     renderHook(() => useAuthLifecycle())
-    act(() => { authChangeCallback!('SIGNED_OUT', null) })
+    act(() => {
+      authChangeCallback!('SIGNED_OUT', null)
+    })
     // clearSyncState is async — wait for it
     await vi.waitFor(() => expect(clearSyncState).toHaveBeenCalled())
   })
@@ -186,7 +206,9 @@ describe('useAuthLifecycle', () => {
     vi.mocked(hasUnlinkedRecords).mockResolvedValue(false)
 
     renderHook(() => useAuthLifecycle())
-    act(() => { authChangeCallback!('SIGNED_IN', makeSession('user-1')) })
+    act(() => {
+      authChangeCallback!('SIGNED_IN', makeSession('user-1'))
+    })
 
     await vi.waitFor(() => expect(syncEngine.start).toHaveBeenCalledWith('user-1'))
   })
@@ -195,7 +217,9 @@ describe('useAuthLifecycle', () => {
     vi.mocked(hasUnlinkedRecords).mockResolvedValue(false)
 
     renderHook(() => useAuthLifecycle())
-    act(() => { authChangeCallback!('SIGNED_IN', makeSession('user-1')) })
+    act(() => {
+      authChangeCallback!('SIGNED_IN', makeSession('user-1'))
+    })
 
     await vi.waitFor(() => expect(backfillUserId).toHaveBeenCalledWith('user-1'))
   })
@@ -204,7 +228,9 @@ describe('useAuthLifecycle', () => {
     vi.mocked(hasUnlinkedRecords).mockResolvedValue(false)
 
     renderHook(() => useAuthLifecycle())
-    act(() => { authChangeCallback!('SIGNED_IN', makeSession('user-1')) })
+    act(() => {
+      authChangeCallback!('SIGNED_IN', makeSession('user-1'))
+    })
 
     await vi.waitFor(() => {
       expect(localStorage.getItem('sync:linked:user-1')).toBe('true')
@@ -218,7 +244,9 @@ describe('useAuthLifecycle', () => {
     const onUnlinkedDetected = vi.fn()
 
     renderHook(() => useAuthLifecycle({ onUnlinkedDetected }))
-    act(() => { authChangeCallback!('SIGNED_IN', makeSession('user-1')) })
+    act(() => {
+      authChangeCallback!('SIGNED_IN', makeSession('user-1'))
+    })
 
     await vi.waitFor(() => expect(onUnlinkedDetected).toHaveBeenCalledWith('user-1'))
   })
@@ -228,7 +256,9 @@ describe('useAuthLifecycle', () => {
     const onUnlinkedDetected = vi.fn()
 
     renderHook(() => useAuthLifecycle({ onUnlinkedDetected }))
-    act(() => { authChangeCallback!('SIGNED_IN', makeSession('user-1')) })
+    act(() => {
+      authChangeCallback!('SIGNED_IN', makeSession('user-1'))
+    })
 
     await vi.waitFor(() => expect(onUnlinkedDetected).toHaveBeenCalled())
     expect(syncEngine.start).not.toHaveBeenCalled()
@@ -240,7 +270,9 @@ describe('useAuthLifecycle', () => {
     localStorage.setItem('sync:linked:user-1', 'true')
 
     renderHook(() => useAuthLifecycle())
-    act(() => { authChangeCallback!('SIGNED_IN', makeSession('user-1')) })
+    act(() => {
+      authChangeCallback!('SIGNED_IN', makeSession('user-1'))
+    })
 
     await vi.waitFor(() => expect(syncEngine.start).toHaveBeenCalledWith('user-1'))
     // hasUnlinkedRecords should NOT be called — fast path skips it

@@ -35,7 +35,12 @@ function formatConflictDate(iso: string): string {
   return `${datePart} ${timePart}`
 }
 
-export function NoteConflictDialog({ note, open, onOpenChange, onResolved }: NoteConflictDialogProps) {
+export function NoteConflictDialog({
+  note,
+  open,
+  onOpenChange,
+  onResolved,
+}: NoteConflictDialogProps) {
   const saveNote = useNoteStore(s => s.saveNote)
   const [isKeepingCurrent, setIsKeepingCurrent] = useState(false)
   const [isUsingOther, setIsUsingOther] = useState(false)
@@ -105,7 +110,9 @@ export function NoteConflictDialog({ note, open, onOpenChange, onResolved }: Not
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-2">
           {/* Current version (remote winner) */}
           <div className="rounded-xl border bg-card p-4 space-y-2">
-            <p className="text-xs font-semibold text-foreground uppercase tracking-wide">Current version</p>
+            <p className="text-xs font-semibold text-foreground uppercase tracking-wide">
+              Current version
+            </p>
             <p className="text-xs text-muted-foreground">{formatConflictDate(note.updatedAt)}</p>
             <p className="text-sm text-foreground line-clamp-8 whitespace-pre-wrap break-words">
               {note.content.replace(/<[^>]*>/g, '')}
@@ -114,7 +121,9 @@ export function NoteConflictDialog({ note, open, onOpenChange, onResolved }: Not
 
           {/* Other version (local snapshot) */}
           <div className="rounded-xl border bg-muted/40 p-4 space-y-2">
-            <p className="text-xs font-semibold text-foreground uppercase tracking-wide">Other version</p>
+            <p className="text-xs font-semibold text-foreground uppercase tracking-wide">
+              Other version
+            </p>
             <p className="text-xs text-muted-foreground">
               {conflictCopy ? formatConflictDate(conflictCopy.savedAt) : '—'}
             </p>
@@ -128,11 +137,7 @@ export function NoteConflictDialog({ note, open, onOpenChange, onResolved }: Not
           <Tooltip>
             <TooltipTrigger asChild>
               <span tabIndex={0}>
-                <Button
-                  variant="outline"
-                  disabled
-                  aria-label="Manual merge coming soon"
-                >
+                <Button variant="outline" disabled aria-label="Manual merge coming soon">
                   Merge
                 </Button>
               </span>
@@ -148,11 +153,7 @@ export function NoteConflictDialog({ note, open, onOpenChange, onResolved }: Not
             {isUsingOther ? 'Applying…' : 'Use Other Version'}
           </Button>
 
-          <Button
-            variant="brand"
-            onClick={handleKeepCurrent}
-            disabled={isLoading}
-          >
+          <Button variant="brand" onClick={handleKeepCurrent} disabled={isLoading}>
             {isKeepingCurrent ? 'Saving…' : 'Keep Current'}
           </Button>
         </DialogFooter>

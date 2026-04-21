@@ -6,14 +6,7 @@
  * stack.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import {
-  render,
-  screen,
-  fireEvent,
-  act,
-  cleanup,
-  waitFor,
-} from '@testing-library/react'
+import { render, screen, fireEvent, act, cleanup, waitFor } from '@testing-library/react'
 import type { DownloadProgress } from '@/app/hooks/useDownloadProgress'
 
 // Mutable progress state returned by the hook mock.
@@ -63,7 +56,9 @@ function resetProgress(overrides: Partial<DownloadProgress> = {}) {
   }
 }
 
-function resetStore(status: ReturnType<typeof useDownloadStatusStore.getState>['status'] = 'hydrating-p3p4') {
+function resetStore(
+  status: ReturnType<typeof useDownloadStatusStore.getState>['status'] = 'hydrating-p3p4'
+) {
   useDownloadStatusStore.setState({
     status,
     lastError: null,
@@ -87,11 +82,7 @@ afterEach(() => {
 describe('NewDeviceDownloadOverlay', () => {
   it('renders nothing when open=false', () => {
     const { container } = render(
-      <NewDeviceDownloadOverlay
-        open={false}
-        userId={USER}
-        onClose={vi.fn()}
-      />,
+      <NewDeviceDownloadOverlay open={false} userId={USER} onClose={vi.fn()} />
     )
     expect(container.querySelector('[data-testid="new-device-download-overlay"]')).toBeNull()
     // watcher was disabled
@@ -99,9 +90,7 @@ describe('NewDeviceDownloadOverlay', () => {
   })
 
   it('renders nothing when userId is empty', () => {
-    render(
-      <NewDeviceDownloadOverlay open userId="" onClose={vi.fn()} />,
-    )
+    render(<NewDeviceDownloadOverlay open userId="" onClose={vi.fn()} />)
     expect(screen.queryByTestId('new-device-download-overlay')).toBeNull()
   })
 
@@ -166,9 +155,7 @@ describe('NewDeviceDownloadOverlay', () => {
     fireEvent.click(screen.getByTestId('new-device-download-retry'))
 
     expect(useDownloadStatusStore.getState().status).toBe('hydrating-p3p4')
-    await waitFor(() =>
-      expect(mockObservedHydrate).toHaveBeenCalledWith(USER),
-    )
+    await waitFor(() => expect(mockObservedHydrate).toHaveBeenCalledWith(USER))
   })
 
   it('clicking Close in error phase calls onClose', () => {
@@ -211,9 +198,9 @@ describe('NewDeviceDownloadOverlay', () => {
 
     expect(screen.getByText(/\(partial counts\)/)).toBeInTheDocument()
     // Still a non-error phase
-    expect(
-      screen.getByTestId('new-device-download-overlay').getAttribute('data-phase'),
-    ).toBe('downloading-p0p2')
+    expect(screen.getByTestId('new-device-download-overlay').getAttribute('data-phase')).toBe(
+      'downloading-p0p2'
+    )
   })
 
   it('fires watchdog after 60s in an active phase', async () => {

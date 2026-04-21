@@ -65,9 +65,7 @@ describe('E95-S05 schema bump (v57)', () => {
       createdAt: '2026-01-01T00:00:00.000Z',
     } as unknown as Parameters<typeof db.opdsCatalogs.add>[0])
 
-    const rows = (await db.opdsCatalogs.toArray()) as unknown as Array<
-      Record<string, unknown>
-    >
+    const rows = (await db.opdsCatalogs.toArray()) as unknown as Array<Record<string, unknown>>
     expect(rows).toHaveLength(1)
     const auth = rows[0]['auth'] as Record<string, unknown>
     expect(auth['password']).toBe('legacy-pw')

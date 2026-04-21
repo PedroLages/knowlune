@@ -21,7 +21,7 @@ export type CredentialTelemetryEvent =
 
 export function emitTelemetry(
   event: CredentialTelemetryEvent,
-  payload: Record<string, unknown> = {},
+  payload: Record<string, unknown> = {}
 ): void {
   // Intentional: using console.info so it shows in prod logs but is visually
   // distinct from warnings/errors. Swap to a real analytics client later.

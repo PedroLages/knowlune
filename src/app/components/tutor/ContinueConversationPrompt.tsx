@@ -19,7 +19,6 @@ interface ContinueConversationPromptProps {
   onStartFresh: () => void
 }
 
-
 /**
  * Check if conversation is older than 5 minutes.
  * Accepts epoch ms or ISO string (syncableWrite stamps ISO strings on existing records).
@@ -35,7 +34,10 @@ export function ContinueConversationPrompt({
 }: ContinueConversationPromptProps) {
   const topics = useMemo(() => extractTopics(conversation.messages, 50, 3), [conversation.messages])
   const modes = useMemo(
-    () => extractModes(conversation.messages).map(m => MODE_LABELS[m] ?? m).join(', '),
+    () =>
+      extractModes(conversation.messages)
+        .map(m => MODE_LABELS[m] ?? m)
+        .join(', '),
     [conversation.messages]
   )
 
@@ -47,7 +49,10 @@ export function ContinueConversationPrompt({
       data-testid="continue-conversation-prompt"
     >
       <div className="flex items-start gap-3">
-        <MessageSquare className="size-5 text-brand-soft-foreground flex-shrink-0 mt-0.5" aria-hidden="true" />
+        <MessageSquare
+          className="size-5 text-brand-soft-foreground flex-shrink-0 mt-0.5"
+          aria-hidden="true"
+        />
         <div className="flex-1 min-w-0">
           <p className="font-medium text-foreground">Continue your previous conversation?</p>
           <p className="text-sm text-muted-foreground mt-1">

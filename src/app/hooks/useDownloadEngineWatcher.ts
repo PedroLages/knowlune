@@ -39,26 +39,20 @@ function tryCompleteIfQueueDrained(): void {
     .where('status')
     .equals('pending')
     .count()
-    .then((pending) => {
+    .then(pending => {
       if (pending === 0) {
         if (useDownloadStatusStore.getState().status === 'downloading-p0p2') {
           useDownloadStatusStore.getState().completeDownloading()
         }
       }
     })
-    .catch((err) => {
+    .catch(err => {
       // silent-catch-ok — worst case we wait for the next synced tick.
-      console.error(
-        '[useDownloadEngineWatcher] syncQueue count failed:',
-        err,
-      )
+      console.error('[useDownloadEngineWatcher] syncQueue count failed:', err)
     })
 }
 
-export function useDownloadEngineWatcher(
-  userId: string,
-  enabled: boolean,
-): void {
+export function useDownloadEngineWatcher(userId: string, enabled: boolean): void {
   const firstSyncingSeenRef = useRef(false)
   // Track previous downloadStatus to detect the exact moment we transition
   // INTO downloading-p0p2 (not just when it's the initial state on mount).
@@ -86,10 +80,7 @@ export function useDownloadEngineWatcher(
       // Only operate while we are in the download-p0p2 phase (or we've
       // handed off to success/error — no point in further work).
       const downloadStatus = useDownloadStatusStore.getState().status
-      if (
-        downloadStatus !== 'downloading-p0p2' &&
-        downloadStatus !== 'hydrating-p3p4'
-      ) {
+      if (downloadStatus !== 'downloading-p0p2' && downloadStatus !== 'hydrating-p3p4') {
         return
       }
 
@@ -113,8 +104,7 @@ export function useDownloadEngineWatcher(
         // but only if we're still in an active phase.
         const active = useDownloadStatusStore.getState().status
         if (active === 'downloading-p0p2' || active === 'hydrating-p3p4') {
-          const msg =
-            state.lastError ?? 'Sync failed during first cursor pass'
+          const msg = state.lastError ?? 'Sync failed during first cursor pass'
           useDownloadStatusStore.getState().failDownloading(msg)
         }
         return
@@ -140,7 +130,7 @@ export function useDownloadEngineWatcher(
   // not on initial mount (prevDownloadStatusRef guards against that). The
   // subscribe callback handles the normal path where syncing → synced happens
   // after Phase B has started.
-  const downloadStatus = useDownloadStatusStore((s) => s.status)
+  const downloadStatus = useDownloadStatusStore(s => s.status)
   useEffect(() => {
     if (!enabled || !userId) {
       // Don't update prevDownloadStatusRef here — the [userId, enabled] effect

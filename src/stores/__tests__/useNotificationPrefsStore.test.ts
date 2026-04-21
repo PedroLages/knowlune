@@ -31,7 +31,10 @@ let db: (typeof import('@/db/schema'))['db']
 /** Seed the auth store with a user id so syncableWrite enqueues queue entries. */
 function signIn(userId = 'user-1') {
   useAuthStore.setState({
-    user: { id: userId, email: 'test@example.com' } as unknown as import('@supabase/supabase-js').User,
+    user: {
+      id: userId,
+      email: 'test@example.com',
+    } as unknown as import('@supabase/supabase-js').User,
   })
 }
 

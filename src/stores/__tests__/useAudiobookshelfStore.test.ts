@@ -58,9 +58,7 @@ vi.mock('@/lib/sync/syncEngine', () => ({
   syncEngine: { nudge: vi.fn(), start: vi.fn(), stop: vi.fn() },
 }))
 
-let useAudiobookshelfStore: (typeof import(
-  '@/stores/useAudiobookshelfStore'
-))['useAudiobookshelfStore']
+let useAudiobookshelfStore: (typeof import('@/stores/useAudiobookshelfStore'))['useAudiobookshelfStore']
 let useAuthStore: (typeof import('@/stores/useAuthStore'))['useAuthStore']
 let db: (typeof import('@/db'))['db']
 
@@ -110,9 +108,7 @@ beforeEach(async () => {
 
 async function getQueuePayload(recordId: string) {
   const queue = await db.syncQueue.toArray()
-  const entry = queue.find(
-    q => q.tableName === 'audiobookshelfServers' && q.recordId === recordId,
-  )
+  const entry = queue.find(q => q.tableName === 'audiobookshelfServers' && q.recordId === recordId)
   return entry?.payload as Record<string, unknown> | undefined
 }
 
@@ -137,9 +133,7 @@ describe('addServer', () => {
     // Seed a duplicate so syncableWrite('add') throws on Dexie add().
     await db.audiobookshelfServers.put({ ...server })
 
-    await expect(
-      useAudiobookshelfStore.getState().addServer(server, 'K'),
-    ).rejects.toBeTruthy()
+    await expect(useAudiobookshelfStore.getState().addServer(server, 'K')).rejects.toBeTruthy()
 
     // Vault was still called (write-first ordering).
     expect(storeMock).toHaveBeenCalledWith('abs-server', 'broken-srv', 'K')
@@ -155,9 +149,7 @@ describe('updateServer', () => {
     await db.audiobookshelfServers.put(server)
     useAudiobookshelfStore.setState({ servers: [server], isLoaded: true })
 
-    await useAudiobookshelfStore
-      .getState()
-      .updateServer('upd-srv', { name: 'Renamed' }, 'K-ROT')
+    await useAudiobookshelfStore.getState().updateServer('upd-srv', { name: 'Renamed' }, 'K-ROT')
 
     expect(storeMock).toHaveBeenCalledWith('abs-server', 'upd-srv', 'K-ROT')
     const payload = await getQueuePayload('upd-srv')
@@ -190,7 +182,9 @@ describe('removeServer', () => {
     expect(useAudiobookshelfStore.getState().servers).toHaveLength(0)
     // Queue entry is the delete op; payload is `{ id }` only — no credential.
     const queue = await db.syncQueue.toArray()
-    const entry = queue.find(q => q.tableName === 'audiobookshelfServers' && q.recordId === 'rm-srv')
+    const entry = queue.find(
+      q => q.tableName === 'audiobookshelfServers' && q.recordId === 'rm-srv'
+    )
     expect(entry?.operation).toBe('delete')
     expect(entry?.payload).toEqual({ id: 'rm-srv' })
 

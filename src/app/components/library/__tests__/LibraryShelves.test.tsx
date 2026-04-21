@@ -56,8 +56,12 @@ describe('LibraryShelves (E116-S03)', () => {
     const recentScroller = screen.getByTestId('shelf-recently-added-scroller')
     const continueScroller = screen.getByTestId('shelf-continue-reading-scroller')
 
-    expect(within(recentScroller).getAllByTestId(/^shelf-mock-tile-/).length).toBeGreaterThanOrEqual(1)
-    expect(within(continueScroller).getAllByTestId(/^shelf-mock-tile-/).length).toBeGreaterThanOrEqual(1)
+    expect(
+      within(recentScroller).getAllByTestId(/^shelf-mock-tile-/).length
+    ).toBeGreaterThanOrEqual(1)
+    expect(
+      within(continueScroller).getAllByTestId(/^shelf-mock-tile-/).length
+    ).toBeGreaterThanOrEqual(1)
   })
 
   it('does not emit React key warnings on mount', () => {
@@ -66,7 +70,9 @@ describe('LibraryShelves (E116-S03)', () => {
     render(<LibraryShelves />)
 
     const keyWarnings = errorSpy.mock.calls.filter(call =>
-      call.some(arg => typeof arg === 'string' && /unique "key" prop|each child in a list/i.test(arg))
+      call.some(
+        arg => typeof arg === 'string' && /unique "key" prop|each child in a list/i.test(arg)
+      )
     )
     expect(keyWarnings).toEqual([])
   })

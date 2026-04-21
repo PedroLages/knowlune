@@ -15,9 +15,9 @@ vi.mock('@/lib/sync/syncEngine', () => ({
   syncEngine: { nudge: vi.fn(), start: vi.fn(), stop: vi.fn() },
 }))
 
-let syncableWrite: typeof import('@/lib/sync/syncableWrite')['syncableWrite']
-let useAuthStore: typeof import('@/stores/useAuthStore')['useAuthStore']
-let db: typeof import('@/db')['db']
+let syncableWrite: (typeof import('@/lib/sync/syncableWrite'))['syncableWrite']
+let useAuthStore: (typeof import('@/stores/useAuthStore'))['useAuthStore']
+let db: (typeof import('@/db'))['db']
 
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
@@ -25,7 +25,9 @@ beforeEach(async () => {
   const authMod = await import('@/stores/useAuthStore')
   useAuthStore = authMod.useAuthStore
   useAuthStore.setState({
-    user: { id: 'user-vault-defense' } as unknown as (typeof useAuthStore)['getState'] extends () => infer S
+    user: {
+      id: 'user-vault-defense',
+    } as unknown as (typeof useAuthStore)['getState'] extends () => infer S
       ? S extends { user: infer U }
         ? U
         : never
