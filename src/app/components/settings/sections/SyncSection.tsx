@@ -214,11 +214,7 @@ export function SyncSection() {
     } finally {
       setBusy(false)
     }
-    // KI-E97-S02-L01 / R1-P2.6: `user?.id` is included so that switching
-    // users re-binds the closure. `user` itself is not included because the
-    // Zustand auth-store selector returns a new reference on each render
-    // (even when the id is unchanged), which would churn the callback
-    // identity for every parent re-render.
+    // user?.id is a primitive: Object.is-stable across selector re-references even if user object identity changes
   }, [busy, user?.id])
 
   const handleConfirmReset = useCallback(async () => {
