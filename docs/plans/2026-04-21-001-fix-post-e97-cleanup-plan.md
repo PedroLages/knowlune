@@ -204,6 +204,21 @@ Not used — all fixes are local pattern corrections.
   state and `waitForFunction` expresses that directly.
 - **R6 prefers `user?.id` in deps over an eslint-disable.** Smaller risk
   surface; `user?.id` is already a primitive and is stable between renders.
+- **R2 enumerates candidate predicates per call site, not per-implementer
+  discretion.** Unit 2 lists Candidate A + Candidate B for each of the
+  two `waitForTimeout(500)` occurrences; a justification-comment fallback
+  is only permitted if both candidates have been attempted and documented
+  as unstable. This prevents the "add a comment and move on" anti-pattern
+  from perpetuating flake.
+- **R3 mandates per-test URL reset to prevent `?focus=` bleed-through.**
+  Unit 3's three new flows share the file-level `beforeEach` fixture, and
+  Flow A's `/library?focus=opds:<id>` navigation would leak into Flow B /
+  Flow C without an explicit `page.goto('/library')` reset at the top of
+  each new block (or inside a scoped `beforeEach`).
+- **R8 uses `??` (nullish coalescing), not `||`.** Unit 8 mandates
+  `watchdogMs ?? WATCHDOG_MS` so that `watchdogMs={0}` is treated as
+  "no prop" rather than "fire immediately"; a regression test locks in
+  this behavior.
 
 ## Open Questions
 
@@ -284,13 +299,45 @@ that satisfies `test-patterns/no-hard-waits`.
 - Modify: `tests/e2e/story-e97-s05-credential-sync-ux.spec.ts` (line ~80)
 
 **Approach:**
-- For each occurrence, read the surrounding test body to identify the DOM
-  signal being awaited.
-- Prefer `page.waitForFunction(...)` or `page.waitForSelector(...)` keyed
-  on `data-testid`, `data-phase`, or role.
-- If the wait is genuinely for an animation frame with no observable
-  signal, add a comment:
-  `// Intentional: waiting for <animation name> — no observable DOM signal`.
+
+Enumerate the DOM signal per call site — do NOT defer the predicate choice
+to implementer discretion. Each call site has a specific observable state
+that the current `waitForTimeout(500)` is masking:
+
+- **`tests/e2e/story-97-03.spec.ts:187`** — the test is awaiting the
+  one-shot wizard evaluation after `setFakeAuthUser(page)` so it can branch
+  on `wizard.count() > 0`. The evaluation writes one of two observable
+  signals:
+  - **Candidate A (preferred):** the wizard mounts —
+    `await page.getByTestId('initial-upload-wizard').waitFor({ state: 'attached', timeout: 2000 }).catch(() => {})`
+    followed by `wizard.count()` to branch, OR use
+    `page.waitForFunction(() => {
+       const el = document.querySelector('[data-testid=\"initial-upload-wizard\"]');
+       return el !== null || localStorage.getItem('sync:wizard:complete:test-user') !== null;
+     }, { timeout: 2000 })`.
+  - **Candidate B (fallback):** poll the completion flag directly —
+    `page.waitForFunction(() => localStorage.getItem('sync:wizard:complete:test-user') !== null || document.querySelector('[data-testid="initial-upload-wizard"]') !== null)`.
+
+- **`tests/e2e/story-e97-s05-credential-sync-ux.spec.ts:80`** — the test
+  is awaiting the banner evaluation pass so it can assert that no console
+  errors fired. The observable signals:
+  - **Candidate A (preferred):** wait for the post-evaluation DOM state —
+    `await expect(page.getByTestId('credential-setup-banner')).toHaveCount(0)`
+    (the evaluation has completed when the banner is definitively absent,
+    since `useMissingCredentials` has resolved to `[]`).
+  - **Candidate B (fallback):** `page.waitForFunction(() => document.readyState === 'complete' && !document.querySelector('[data-loading="credentials"]'))`
+    keyed on whatever loading sentinel the hook exposes, OR assert a
+    known-stable post-hydration element (e.g., the header status pill) is
+    visible before sampling console errors.
+
+**Justification-comment escape hatch (tightened):** A justification
+comment fallback (`// Intentional: waiting for <animation name> — no
+observable DOM signal`) is permitted ONLY IF **both** Candidate A and
+Candidate B above have been attempted in the implementer's local run and
+produced a flaky or unstable signal. The commit message (or a PR-thread
+note) must name which two predicates were tried and why each failed.
+Deferring to a comment without this dual-attempt evidence is rejected at
+review.
 
 **Patterns to follow:**
 - Existing `page.waitForFunction` usages in other E97 specs
@@ -322,12 +369,39 @@ under-tested.
 
 **Approach:**
 - Append three new `test(...)` blocks reusing the existing fixture.
+- **Each new `test(...)` block MUST begin with an explicit URL reset** to
+  prevent `?focus=` query-string bleed-through between Flow A, B, and C.
+  Use either an inline reset at the top of each block:
+  `await page.goto('/library')` (clears any lingering `?focus=` from the
+  previous block's navigation), OR add a scoped `beforeEach` inside a new
+  nested `describe` covering the three new flows:
+  ```ts
+  test.describe('E97-S05 deep-link edge flows', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.goto('/library') // reset URL/search params between flows
+    })
+    // ...three test(...) blocks
+  })
+  ```
 - Flow A: Navigate to `/library?focus=opds:<id>` with the OPDS edit dialog
   already open — assert the password input receives focus.
 - Flow B: Open the badge popover (hover or click) — assert `"Why?"`
   content text is present.
 - Flow C: Dispatch the banner's "Re-enter" action — assert the URL gains
   `?focus=opds:<id>` and the dialog opens.
+
+**Test isolation:**
+Playwright's browser-context isolation clears cookies, localStorage, and
+sessionStorage between tests, but it does NOT reset the in-memory URL of
+the page object across `test(...)` blocks that share the file-level
+`beforeEach` fixture. Flow A navigates to `/library?focus=opds:<id>`, so
+without an explicit reset Flow B / Flow C would inherit that search param
+and silently exercise the deep-link focus chain on the wrong flow. The
+`await page.goto('/library')` reset (or scoped `beforeEach`) is mandatory;
+additionally, if any flow writes to sessionStorage (e.g.,
+`knowlune:credential-banner-dismissed:<userId>`), the reset should include
+`await page.evaluate(() => sessionStorage.clear())` before the
+`page.goto` to prevent Flow A → Flow B dismissal-flag bleed-through.
 
 **Patterns to follow:**
 - Existing scenario structure in `story-e97-s05-credential-sync-ux.spec.ts`.
@@ -512,7 +586,11 @@ diffs small).
 **Approach:**
 - Add `watchdogMs?: number` to `NewDeviceDownloadOverlayProps`.
 - Replace `setTimeout(..., WATCHDOG_MS)` with
-  `setTimeout(..., watchdogMs ?? WATCHDOG_MS)`.
+  `setTimeout(..., watchdogMs ?? WATCHDOG_MS)` — **use the nullish
+  coalescing operator (`??`), NOT logical OR (`||`)**. The `??` form
+  treats only `null` and `undefined` as "no prop"; `||` would also
+  coerce `0` to the default, which silently breaks the `watchdogMs={0}`
+  contract (see edge case below).
 - Keep the `WATCHDOG_MS = 60_000` constant as the default.
 - In tests, pass `watchdogMs={50}` to exercise the watchdog path without
   `vi.useFakeTimers()`.
@@ -527,8 +605,14 @@ diffs small).
   behavioral tests still pass).
 - Happy path: `watchdogMs={50}` — watchdog fires within ~100 ms when no
   transition occurs.
-- Edge case: `watchdogMs={0}` is treated the same as no prop (optional —
-  only if the implementer wants to defend against it; low priority).
+- Edge case (required): `watchdogMs={0}` is explicitly treated the same
+  as no prop via the `??` operator — DO NOT use `||` which would fire
+  the watchdog immediately (0 ms timeout) and create a silent
+  production-footgun if any future caller ever passes `0`. Add a unit
+  test that mounts the overlay with `watchdogMs={0}`, advances time by
+  100 ms, and asserts the watchdog has NOT fired (i.e., the default
+  60_000 ms path is still in effect). This test must fail if the
+  implementation is changed to `|| WATCHDOG_MS`.
 
 **Verification:**
 - `npm run test:unit -- NewDeviceDownloadOverlay` passes.
