@@ -234,4 +234,59 @@ describe('NewDeviceDownloadOverlay', () => {
     render(<NewDeviceDownloadOverlay open userId={USER} onClose={vi.fn()} />)
     expect(watcherSpy).toHaveBeenCalledWith(USER, true)
   })
+
+  // KI-E97-S04-L01 / R7 regression guard: parent re-renders during the
+  // 250 ms success-close window must NOT cancel or reset the timer.
+  // Uses fake timers to assert timer firing is deterministic.
+  it('rerender mid-window with a fresh onClose does not reset the 250ms auto-close timer', () => {
+    vi.useFakeTimers()
+    resetStore('complete')
+    resetProgress({ processed: 10, total: 10, done: true })
+    const onClose1 = vi.fn()
+    const onClose2 = vi.fn()
+    const { rerender } = render(
+      <NewDeviceDownloadOverlay open userId={USER} onClose={onClose1} />,
+    )
+
+    // Advance less than SUCCESS_CLOSE_DELAY_MS (250 ms), then rerender with
+    // a NEW onClose identity (simulating an inline `() => {...}` from the
+    // parent re-rendering for an unrelated prop change).
+    act(() => {
+      vi.advanceTimersByTime(100)
+    })
+    rerender(<NewDeviceDownloadOverlay open userId={USER} onClose={onClose2} />)
+
+    // Advance the remaining 160 ms. If the effect had reset the timer on the
+    // onClose identity change, onClose2 would not yet have fired (we'd need
+    // another ~250 ms). With the onCloseRef latch, the original timer keeps
+    // ticking and fires at the 250 ms mark with the LATEST handler.
+    act(() => {
+      vi.advanceTimersByTime(160)
+    })
+
+    expect(onClose1).not.toHaveBeenCalled() // Latched — always calls latest.
+    expect(onClose2).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
+  })
+
+  it('unmounting during the 250ms success window cancels the auto-close timer', () => {
+    vi.useFakeTimers()
+    resetStore('complete')
+    resetProgress({ processed: 10, total: 10, done: true })
+    const onClose = vi.fn()
+    const { unmount } = render(
+      <NewDeviceDownloadOverlay open userId={USER} onClose={onClose} />,
+    )
+
+    act(() => {
+      vi.advanceTimersByTime(100)
+    })
+    unmount()
+    act(() => {
+      vi.advanceTimersByTime(1_000)
+    })
+
+    expect(onClose).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
 })

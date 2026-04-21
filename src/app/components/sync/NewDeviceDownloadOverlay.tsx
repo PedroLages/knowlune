@@ -119,6 +119,15 @@ export function NewDeviceDownloadOverlay({ open, userId, onClose }: NewDeviceDow
     }
   }, [open, progress.error, progress.errorMessage])
 
+  // KI-E97-S04-L01 / R7: Latch onClose in a ref so parent re-renders (with
+  // an inline `() => {...}` handler) do NOT reset the 250 ms auto-close
+  // timer. Mirrors the `firstSyncingSeenRef` pattern in
+  // `useDownloadEngineWatcher`.
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
+
   // Auto-close after success.
   useEffect(() => {
     if (!open) return
@@ -129,10 +138,14 @@ export function NewDeviceDownloadOverlay({ open, userId, onClose }: NewDeviceDow
       return
     }
     const timer = window.setTimeout(() => {
-      onClose()
+      onCloseRef.current()
     }, SUCCESS_CLOSE_DELAY_MS)
     return () => window.clearTimeout(timer)
-  }, [open, storeStatus, progress.done, progress.total, progress.processed, onClose])
+    // onClose intentionally omitted — it is read via onCloseRef so parent
+    // re-renders that hand us a fresh inline handler do not cancel or
+    // reset the 250 ms timer mid-window. See KI-E97-S04-L01.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, storeStatus, progress.done, progress.total, progress.processed])
 
   if (!open || !userId) return null
 
