@@ -143,9 +143,7 @@ push to `main` runs build-and-push **and** deploy.
 
 ## Rollback
 
-Open the GitHub Actions UI → the previous successful `Deploy to titan` run →
-"Re-run all jobs". That run pins its own `:sha-<short>` in titan's `.env`,
-pulls, and brings the stack up. End-to-end under 2 minutes.
+**One-click:** <https://github.com/PedroLages/Knowlune/actions/workflows/deploy-titan.yml> → pick prior green run → "Re-run all jobs". End-to-end under 2 minutes.
 
 Alternative (manual, on titan):
 
