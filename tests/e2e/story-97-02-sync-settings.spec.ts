@@ -64,12 +64,6 @@ async function clearFakeAuthUser(page: Page) {
 
 test.describe('E97-S02: Sync Settings Panel', () => {
   test.beforeEach(async ({ page }) => {
-    // Set __suppressSyncOverlays via addInitScript so the flag is present
-    // before first JS execution — guarantees SyncUXShell's wizard/overlay
-    // evaluation effects see it synchronously on the auth state change.
-    await page.addInitScript(() => {
-      window.__suppressSyncOverlays = true
-    })
     await dismissOnboarding(page)
     await page.goto('/settings?section=sync')
     await page.waitForLoadState('domcontentloaded')

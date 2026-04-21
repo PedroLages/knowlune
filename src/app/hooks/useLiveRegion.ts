@@ -50,7 +50,6 @@ export function useLiveRegion(): LiveRegionContextValue {
 
   if (!ctx) {
     if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
       console.warn(
         '[useLiveRegion] called outside SyncUXShell; announcements are no-ops. ' +
           'Wrap the component tree in SyncUXShell or provide a LiveRegionContext in tests.'
