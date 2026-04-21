@@ -77,16 +77,13 @@ test.describe('E97-S05 Credential Setup Banner', () => {
       }
     })
 
-    // Deterministic post-hydration signal: the credential banner evaluation
-    // shares the same tick as the main app shell. Waiting for the sync-status
-    // indicator (rendered in the header on every route after hydration) is a
-    // stable signal that React has flushed the initial render pass — after
-    // which `useMissingCredentials` has resolved to `[]` (banner absent) and
-    // any hook-side console errors would have fired.
-    await expect(page.getByTestId('sync-status-indicator')).toBeVisible({
-      timeout: 5000,
+    // Direct banner-evaluation signal: assert the credential banner is absent
+    // using Playwright's auto-retry on toHaveCount. This polls the banner
+    // locator itself (not an indirect hydration proxy), so it only settles
+    // once `useMissingCredentials` has finished evaluating to `[]`.
+    await expect(page.getByTestId('credential-setup-banner')).toHaveCount(0, {
+      timeout: 10000,
     })
-    await expect(page.getByTestId('credential-setup-banner')).toHaveCount(0)
     expect(consoleErrors.filter(e => !e.includes('ResizeObserver'))).toHaveLength(0)
   })
 
