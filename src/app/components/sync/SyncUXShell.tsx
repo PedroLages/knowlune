@@ -105,7 +105,7 @@ export function SyncUXShell({ children }: SyncUXShellProps) {
   const evaluateWizard = useCallback(async (userId: string) => {
     // __suppressSyncOverlays shim: test-only flag set before auth injection
     // to prevent wizard/overlay mounts intercepting pointer events (story-97-02).
-    if ((window as Record<string, unknown>).__suppressSyncOverlays) return
+    if ((window as unknown as Record<string, unknown>).__suppressSyncOverlays) return
     if (!userId) return
     if (evaluationInFlightRef.current === userId) return
     evaluationInFlightRef.current = userId
@@ -149,7 +149,7 @@ export function SyncUXShell({ children }: SyncUXShellProps) {
   // E97-S04: New-device download overlay gate.
   const evaluateDownloadOverlay = useCallback(async (userId: string) => {
     // __suppressSyncOverlays shim: test-only flag to prevent overlay mounting.
-    if ((window as Record<string, unknown>).__suppressSyncOverlays) return
+    if ((window as unknown as Record<string, unknown>).__suppressSyncOverlays) return
     if (!userId) return
     if (downloadEvaluationInFlightRef.current === userId) return
     downloadEvaluationInFlightRef.current = userId
