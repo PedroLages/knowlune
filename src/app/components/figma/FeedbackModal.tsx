@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -52,6 +52,14 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
   const { submit, status, error, fallbackText, mailtoHref, reset } = useFeedbackSubmit()
 
   const [copied, setCopied] = useState(false)
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  // Clear the "copied" timer on unmount to avoid state updates on unmounted component
+  useEffect(() => {
+    return () => {
+      clearTimeout(copiedTimerRef.current)
+    }
+  }, [])
 
   // Reset form state when modal closes
   useEffect(() => {
@@ -69,8 +77,11 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
   // Trigger success: notify parent then close
   useEffect(() => {
     if (status === 'success') {
-      onSuccess?.()
-      onOpenChange(false)
+      try {
+        onSuccess?.()
+      } finally {
+        onOpenChange(false)
+      }
     }
   }, [status, onSuccess, onOpenChange])
 
@@ -106,19 +117,20 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
     submit(fields)
   }
 
-  async function handleCopy() {
+  const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(fallbackText)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      clearTimeout(copiedTimerRef.current)
+      copiedTimerRef.current = setTimeout(() => setCopied(false), 2000)
     } catch {
       // silent-catch-ok: clipboard write may fail if permission denied — user can still select-all
     }
-  }
+  }, [fallbackText])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent aria-modal="true" className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Send Feedback</DialogTitle>
           <DialogDescription>
@@ -128,9 +140,15 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
 
         {/* Mode toggle — segmented control */}
         <div
-          role="group"
+          role="radiogroup"
           aria-label="Feedback type"
           className="flex rounded-lg bg-muted p-0.5 gap-0.5"
+          onKeyDown={(e: React.KeyboardEvent) => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+              e.preventDefault()
+              setMode(prev => (prev === 'bug' ? 'feedback' : 'bug'))
+            }
+          }}
         >
           <button
             type="button"

@@ -113,7 +113,7 @@ export function buildIssueBody(fields: FeedbackFormFields, ctx: FeedbackContext)
   ctxLines.push(`| App version | \`${ctx.version}\` |`)
   ctxLines.push(`| Timestamp | \`${ctx.timestamp}\` |`)
   if (ctx.userId) ctxLines.push(`| User ID | \`${ctx.userId}\` |`)
-  if (ctx.email) ctxLines.push(`| Email | \`${ctx.email}\` |`)
+  // Email omitted from issue body to avoid persisting PII; GitHub token attribution is sufficient
   if (ctx.sentryEventId) ctxLines.push(`| Sentry event | \`${ctx.sentryEventId}\` |`)
   ctxLines.push(`| User agent | \`${ctx.ua}\` |`)
 
@@ -128,13 +128,21 @@ export function buildIssueBody(fields: FeedbackFormFields, ctx: FeedbackContext)
 }
 
 /**
+ * Derive the issue title from the user-supplied fields.
+ * Centralises title logic used by both buildIssuePayload and useFeedbackSubmit (mailto subject).
+ */
+export function getIssueTitle(fields: FeedbackFormFields): string {
+  return fields.mode === 'bug' ? fields.title : (fields.title?.trim() || 'User feedback')
+}
+
+/**
  * Build the issue payload for the GitHub API (title + body + labels).
  */
 export function buildIssuePayload(
   fields: FeedbackFormFields,
   ctx: FeedbackContext
 ): { title: string; body: string; labels: string[] } {
-  const title = fields.mode === 'bug' ? fields.title : (fields.title?.trim() || 'User feedback')
+  const title = getIssueTitle(fields)
   const labels =
     fields.mode === 'bug' ? ['bug', 'beta-feedback'] : ['enhancement', 'beta-feedback']
 
