@@ -1258,9 +1258,9 @@ issues:
     story: E97-S01
     summary: "Live region silent on sync recovery (error→synced); SR users don't get confirmation retry succeeded"
     severity: low
-    status: scheduled
-    scheduled_for: cleanup-epic
-    decision: schedule-future
+    status: resolved
+    resolved_in: refactor/consolidate-aria-live-useliveregion
+    decision: fixed
 
   - id: KI-E97-S01-L02
     story: E97-S01

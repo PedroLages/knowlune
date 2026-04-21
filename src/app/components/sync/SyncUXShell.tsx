@@ -263,7 +263,7 @@ export function SyncUXShell({ children }: SyncUXShellProps) {
             No redundant aria-live attribute per WAI-ARIA implicit roles spec.
             All sync-UX announcements route through announce() rather than each
             component owning its own aria-live span. */}
-        <span className="sr-only" role="status" ref={politeRef} />
+        <span className="sr-only" role="status" ref={politeRef} data-testid="sync-live-region-polite" />
         {/* Canonical assertive live region — role="alert" implies aria-live="assertive"
             and aria-atomic="true". Used for urgent announcements only. */}
         <span className="sr-only" role="alert" ref={assertiveRef} />

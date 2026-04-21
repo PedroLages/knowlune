@@ -30,9 +30,9 @@ test.describe('E97-S01: Sync Status Indicator', () => {
     await expect(indicator).toBeVisible()
     // Button must NOT override its own role — aria-label provides the accessible name.
     await expect(indicator).not.toHaveAttribute('role', 'status')
-    // Canonical polite live region: role="status" implies aria-live="polite" per WAI-ARIA
-    // (no redundant aria-live attribute on the span). Scoped to sr-only spans only.
-    const liveRegion = page.locator('span[role="status"].sr-only')
+    // Canonical polite live region owned by SyncUXShell: role="status" implies
+    // aria-live="polite" per WAI-ARIA (no redundant aria-live attribute).
+    const liveRegion = page.getByTestId('sync-live-region-polite')
     await expect(liveRegion).toBeAttached()
   })
 
