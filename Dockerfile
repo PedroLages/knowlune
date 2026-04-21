@@ -2,7 +2,7 @@
 FROM node:24-alpine AS builder
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 
 COPY . .
@@ -43,7 +43,7 @@ COPY nginx.conf /etc/nginx/http.d/default.conf
 COPY --from=builder /app/server/dist ./server/
 
 # Install production dependencies only
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci --omit=dev
 
 # Entrypoint: Nginx (daemon) + Node server (foreground)
