@@ -92,7 +92,7 @@ function resolveUserColumn(entry: TableRegistryEntry): string {
 async function headCount(
   supabaseTable: string,
   userId: string,
-  userColumn: string = 'user_id',
+  userColumn: string = 'user_id'
 ): Promise<number> {
   if (!import.meta.env.PROD) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -124,14 +124,12 @@ async function headCount(
  *     field are excluded (pre-backfill singletons, cannot be user-scoped safely).
  */
 async function localCountAll(
-  userId: string,
+  userId: string
 ): Promise<{ total: number; perTable: Record<string, number> }> {
   // Mirror the singleton exclusion from localHasData (F1 fix).
-  const entries = getCountedTables().filter(
-    (entry) => entry.fieldMap['id'] !== 'user_id',
-  )
+  const entries = getCountedTables().filter(entry => entry.fieldMap['id'] !== 'user_id')
   const results = await Promise.allSettled(
-    entries.map(async (entry) => {
+    entries.map(async entry => {
       try {
         const count = await db
           .table(entry.dexieTable)
@@ -149,13 +147,10 @@ async function localCountAll(
         return { table: entry.dexieTable, count }
       } catch (err) {
         // silent-catch-ok — missing/broken table contributes 0; log once
-        console.error(
-          `[useDownloadProgress] Dexie count failed for ${entry.dexieTable}:`,
-          err,
-        )
+        console.error(`[useDownloadProgress] Dexie count failed for ${entry.dexieTable}:`, err)
         return { table: entry.dexieTable, count: 0 }
       }
-    }),
+    })
   )
   let total = 0
   const perTable: Record<string, number> = {}
@@ -171,7 +166,7 @@ async function localCountAll(
 export function useDownloadProgress(
   userId: string,
   enabled: boolean,
-  retryNonce: number = 0,
+  retryNonce: number = 0
 ): DownloadProgress {
   const [state, setState] = useState<DownloadProgress>(INITIAL_STATE)
 
@@ -215,7 +210,7 @@ export function useDownloadProgress(
         const remoteTotal = totalRef.current
         const processed = Math.max(
           0,
-          remoteTotal > 0 ? Math.min(remoteTotal, localTotal) : localTotal,
+          remoteTotal > 0 ? Math.min(remoteTotal, localTotal) : localTotal
         )
 
         // Derive recentTable by comparing per-tick deltas
@@ -234,11 +229,9 @@ export function useDownloadProgress(
         const storeStatus = useDownloadStatusStore.getState().status
         const done =
           storeStatus === 'complete' ||
-          (remoteTotal > 0 &&
-            processed >= remoteTotal &&
-            totalsFailedCountRef.current === 0)
+          (remoteTotal > 0 && processed >= remoteTotal && totalsFailedCountRef.current === 0)
 
-        setState((prev) => ({
+        setState(prev => ({
           ...prev,
           processed,
           total: remoteTotal,
@@ -260,18 +253,14 @@ export function useDownloadProgress(
       // userId scoping). Singletons contribute at most 1 row per user and a
       // prior-user singleton would be filtered by the .eq() anyway, but
       // excluding them keeps the counted-table set symmetric across all paths.
-      const entries = getCountedTables().filter(
-        (entry) => entry.fieldMap['id'] !== 'user_id',
-      )
+      const entries = getCountedTables().filter(entry => entry.fieldMap['id'] !== 'user_id')
       totalTablesRef.current = entries.length
 
       // Parallel HEAD counts with allSettled so a partial outage degrades
       // gracefully (R5). resolveUserColumn selects the correct FK column per
       // table so non-standard user columns don't silently reject (F2 fix).
       const results = await Promise.allSettled(
-        entries.map((entry) =>
-          headCount(entry.supabaseTable, userId, resolveUserColumn(entry)),
-        ),
+        entries.map(entry => headCount(entry.supabaseTable, userId, resolveUserColumn(entry)))
       )
 
       // F4: Check cancelled BEFORE writing to any refs so rapid open/close
@@ -301,8 +290,7 @@ export function useDownloadProgress(
           total: 0,
           done: false,
           error: true,
-          errorMessage:
-            'Could not determine remote totals — check your connection.',
+          errorMessage: 'Could not determine remote totals — check your connection.',
           recentTable: null,
           totalsFailedCount: failedCount,
           totalTables: entries.length,
@@ -313,10 +301,7 @@ export function useDownloadProgress(
 
       if (failedCount > 0) {
         // PARTIAL — log once, then continue with partial baseline.
-        console.warn(
-          '[useDownloadProgress] HEAD count failed for tables:',
-          failedTables,
-        )
+        console.warn('[useDownloadProgress] HEAD count failed for tables:', failedTables)
       }
 
       setState({

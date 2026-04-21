@@ -19,10 +19,7 @@ vi.mock('@/lib/auth/supabase', () => ({
   },
 }))
 
-import {
-  shouldShowDownloadOverlay,
-  getCountedTables,
-} from '../shouldShowDownloadOverlay'
+import { shouldShowDownloadOverlay, getCountedTables } from '../shouldShowDownloadOverlay'
 import { tableRegistry } from '../tableRegistry'
 
 const USER = 'user-1'
@@ -142,11 +139,11 @@ describe('getCountedTables', () => {
 
   it('excludes embeddings (uploadOnly)', () => {
     const counted = getCountedTables()
-    expect(counted.find((e) => e.dexieTable === 'embeddings')).toBeUndefined()
+    expect(counted.find(e => e.dexieTable === 'embeddings')).toBeUndefined()
   })
 
   it('includes representative P0-P4 tables', () => {
-    const counted = getCountedTables().map((e) => e.dexieTable)
+    const counted = getCountedTables().map(e => e.dexieTable)
     // P0
     expect(counted).toContain('contentProgress')
     expect(counted).toContain('studySessions')
@@ -164,7 +161,7 @@ describe('getCountedTables', () => {
 
   it('count matches tableRegistry minus excluded entries', () => {
     const counted = getCountedTables()
-    const excluded = tableRegistry.filter((e) => e.skipSync || e.uploadOnly)
+    const excluded = tableRegistry.filter(e => e.skipSync || e.uploadOnly)
     expect(counted.length).toBe(tableRegistry.length - excluded.length)
   })
 })

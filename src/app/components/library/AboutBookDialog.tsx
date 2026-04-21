@@ -70,7 +70,9 @@ export function AboutBookDialog({ book, open, onOpenChange }: AboutBookDialogPro
           {/* Cover and basic info */}
           <div className="flex gap-5">
             {/* Cover image with fallback */}
-            <div className={`w-32 ${book.format === 'audiobook' ? 'h-32' : 'h-48'} flex-shrink-0 rounded-xl overflow-hidden bg-muted`}>
+            <div
+              className={`w-32 ${book.format === 'audiobook' ? 'h-32' : 'h-48'} flex-shrink-0 rounded-xl overflow-hidden bg-muted`}
+            >
               {resolvedCoverUrl ? (
                 <img
                   src={resolvedCoverUrl}

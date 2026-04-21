@@ -275,7 +275,7 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
     await searchCovers(
       { title, author, isbn: isbn || undefined, asin: asin || undefined },
       book.format,
-      (providerResults) => {
+      providerResults => {
         if (controller.signal.aborted) return
         setSearchResults(prev => [...prev, ...providerResults])
       },
@@ -286,53 +286,67 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
   }, [book, title, author, isbn, asin])
 
   // Apply a selected search result: fetch cover + auto-fill blank fields
-  const handleSelectResult = useCallback(async (result: MetadataSearchResult) => {
-    // 1. Fetch and convert cover if available
-    if (result.coverUrl && /^https?:\/\//.test(result.coverUrl)) {
-      setIsFetchingCover(true)
-      try {
-        // Google Books CDN blocks browser-direct fetch (no CORS headers) — route through proxy
-        const fetchUrl = result.provider === 'google-books'
-          ? `/api/cover-proxy?url=${encodeURIComponent(result.coverUrl)}`
-          : result.coverUrl
-        const signal = abortControllerRef.current?.signal ?? AbortSignal.timeout(15_000)
-        const response = await fetch(fetchUrl, { signal })
-        if (response.ok) {
-          const blob = await response.blob()
-          const jpegBlob = await toJpeg(new File([blob], 'cover.jpg', { type: blob.type }))
-          const url = URL.createObjectURL(jpegBlob)
-          setSafeCoverPreviewUrl(url)
-          setNewCoverBlob(jpegBlob)
+  const handleSelectResult = useCallback(
+    async (result: MetadataSearchResult) => {
+      // 1. Fetch and convert cover if available
+      if (result.coverUrl && /^https?:\/\//.test(result.coverUrl)) {
+        setIsFetchingCover(true)
+        try {
+          // Google Books CDN blocks browser-direct fetch (no CORS headers) — route through proxy
+          const fetchUrl =
+            result.provider === 'google-books'
+              ? `/api/cover-proxy?url=${encodeURIComponent(result.coverUrl)}`
+              : result.coverUrl
+          const signal = abortControllerRef.current?.signal ?? AbortSignal.timeout(15_000)
+          const response = await fetch(fetchUrl, { signal })
+          if (response.ok) {
+            const blob = await response.blob()
+            const jpegBlob = await toJpeg(new File([blob], 'cover.jpg', { type: blob.type }))
+            const url = URL.createObjectURL(jpegBlob)
+            setSafeCoverPreviewUrl(url)
+            setNewCoverBlob(jpegBlob)
+          }
+        } catch {
+          toast.warning('Could not fetch cover image — try uploading manually.')
+          setShowSearchGrid(false)
+        } finally {
+          setIsFetchingCover(false)
         }
-      } catch {
-        toast.warning('Could not fetch cover image — try uploading manually.')
-        setShowSearchGrid(false)
-      } finally {
-        setIsFetchingCover(false)
       }
-    }
 
-    // 2. Auto-fill only blank fields (never overwrite existing user data)
-    const m = result.metadata
-    if (!author.trim() && m.author) setAuthor(m.author)
-    if (!description.trim() && m.description) setDescription(stripHtml(m.description))
-    if (!seriesName.trim() && m.series) setSeriesName(m.series)
-    if (!seriesSequence.trim() && m.seriesSequence) setSeriesSequence(m.seriesSequence)
-    if (!isbn.trim() && m.isbn) setIsbn(m.isbn)
-    if (!asin.trim() && m.asin) setAsin(m.asin)
-    if (!narrator.trim() && m.narrator) setNarrator(m.narrator)
+      // 2. Auto-fill only blank fields (never overwrite existing user data)
+      const m = result.metadata
+      if (!author.trim() && m.author) setAuthor(m.author)
+      if (!description.trim() && m.description) setDescription(stripHtml(m.description))
+      if (!seriesName.trim() && m.series) setSeriesName(m.series)
+      if (!seriesSequence.trim() && m.seriesSequence) setSeriesSequence(m.seriesSequence)
+      if (!isbn.trim() && m.isbn) setIsbn(m.isbn)
+      if (!asin.trim() && m.asin) setAsin(m.asin)
+      if (!narrator.trim() && m.narrator) setNarrator(m.narrator)
 
-    // 3. Auto-detect genre if not set
-    if (genre === NONE_GENRE && m.genres && m.genres.length > 0) {
-      const detected = detectGenre(m.genres)
-      if (detected !== 'Other') {
-        setGenre(detected)
-        setGenreChanged(true)
+      // 3. Auto-detect genre if not set
+      if (genre === NONE_GENRE && m.genres && m.genres.length > 0) {
+        const detected = detectGenre(m.genres)
+        if (detected !== 'Other') {
+          setGenre(detected)
+          setGenreChanged(true)
+        }
       }
-    }
 
-    setShowSearchGrid(false)
-  }, [author, description, seriesName, seriesSequence, isbn, asin, narrator, genre, setSafeCoverPreviewUrl])
+      setShowSearchGrid(false)
+    },
+    [
+      author,
+      description,
+      seriesName,
+      seriesSequence,
+      isbn,
+      asin,
+      narrator,
+      genre,
+      setSafeCoverPreviewUrl,
+    ]
+  )
 
   // Custom cover upload
   const handleCoverUpload = useCallback(
@@ -664,9 +678,10 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
               onAddTag={addTag}
               onRemoveTag={removeTag}
             />
-
-          </div>{/* end form fields */}
-        </div>{/* end scrollable body */}
+          </div>
+          {/* end form fields */}
+        </div>
+        {/* end scrollable body */}
 
         {/* Fixed footer with actions */}
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-border/20 shrink-0">

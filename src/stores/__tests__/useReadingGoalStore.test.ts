@@ -416,10 +416,7 @@ describe('legacy streak cleanup (E95-S04)', () => {
   it('removes the legacy streak key and sets the cleanup flag on first module load', async () => {
     // The top-level beforeEach already called vi.resetModules + localStorage.clear.
     // Simulate a user who had a forged streak before upgrading.
-    localStorage.setItem(
-      'knowlune:reading-goal-streak',
-      JSON.stringify({ currentStreak: 9999 })
-    )
+    localStorage.setItem('knowlune:reading-goal-streak', JSON.stringify({ currentStreak: 9999 }))
     localStorage.removeItem('knowlune:e95-s04-streak-cleanup')
 
     vi.resetModules()

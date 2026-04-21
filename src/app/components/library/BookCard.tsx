@@ -251,9 +251,7 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
           <p className="text-[10px] font-bold text-brand uppercase tracking-wider mt-0.5">NEW</p>
         )}
         {(book.progress ?? 0) > 0 && (book.progress ?? 0) < 100 && (
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            {book.progress}% complete
-          </p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">{book.progress}% complete</p>
         )}
         {book.totalPages != null && book.totalPages > 0 && (book.progress ?? 0) < 100 && (
           <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center justify-center gap-1">
@@ -262,7 +260,10 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
           </p>
         )}
         {book.totalDuration != null && book.totalDuration > 0 && (
-          <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center justify-center gap-1" data-testid={`duration-${book.id}`}>
+          <p
+            className="text-[10px] text-muted-foreground mt-0.5 flex items-center justify-center gap-1"
+            data-testid={`duration-${book.id}`}
+          >
             <Clock className="size-3" aria-hidden="true" />
             {formatDuration(book.totalDuration)}
           </p>
@@ -273,7 +274,10 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
           </div>
         ) : null}
         {book.linkedBookId && (
-          <p className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground mt-0.5" data-testid={`linked-format-badge-${book.id}`}>
+          <p
+            className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground mt-0.5"
+            data-testid={`linked-format-badge-${book.id}`}
+          >
             <ArrowRightLeft className="size-3 shrink-0" aria-hidden="true" />
             Also available as audiobook
           </p>

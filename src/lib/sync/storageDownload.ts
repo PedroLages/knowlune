@@ -51,7 +51,7 @@ export const STORAGE_DOWNLOAD_TABLES = new Set([
 export async function downloadStorageFilesForTable(
   tableName: string,
   records: Record<string, unknown>[],
-  userId: string,
+  userId: string
 ): Promise<void> {
   if (!supabase) return
   if (!STORAGE_DOWNLOAD_TABLES.has(tableName)) return
@@ -76,7 +76,7 @@ export async function downloadStorageFilesForTable(
     } catch (err) {
       console.warn(
         `[storageDownload] Non-fatal download failure for table "${tableName}", recordId "${record['id']}":`,
-        err,
+        err
       )
     }
   }
@@ -89,7 +89,7 @@ export async function downloadStorageFilesForTable(
 /** Download course thumbnail and store in db.courseThumbnails. */
 async function _downloadCourseThumbnail(
   record: Record<string, unknown>,
-  _userId: string,
+  _userId: string
 ): Promise<void> {
   const thumbnailUrl = record['thumbnailUrl'] as string | undefined
   if (!thumbnailUrl || !_isSupabaseStorageUrl(thumbnailUrl)) return
@@ -118,7 +118,7 @@ async function _downloadCourseThumbnail(
 /** Download author photo and store as `photoBlob` on the authors record. */
 async function _downloadAuthorPhoto(
   record: Record<string, unknown>,
-  _userId: string,
+  _userId: string
 ): Promise<void> {
   const photoUrl = record['photoUrl'] as string | undefined
   if (!photoUrl || !_isSupabaseStorageUrl(photoUrl)) return
@@ -137,10 +137,7 @@ async function _downloadAuthorPhoto(
 }
 
 /** Download PDF file blob and store as `fileBlob` on the importedPdfs record. */
-async function _downloadPdfFile(
-  record: Record<string, unknown>,
-  _userId: string,
-): Promise<void> {
+async function _downloadPdfFile(record: Record<string, unknown>, _userId: string): Promise<void> {
   const fileUrl = record['fileUrl'] as string | undefined
   if (!fileUrl || !_isSupabaseStorageUrl(fileUrl)) return
 
@@ -162,10 +159,7 @@ async function _downloadPdfFile(
  * Download book cover and store via opfsStorageService.
  * Updates `db.books.coverUrl` to `opfs-cover://{bookId}` after write.
  */
-async function _downloadBookCover(
-  record: Record<string, unknown>,
-  _userId: string,
-): Promise<void> {
+async function _downloadBookCover(record: Record<string, unknown>, _userId: string): Promise<void> {
   const coverUrl = record['coverUrl'] as string | undefined
   if (!coverUrl || !_isSupabaseStorageUrl(coverUrl)) return
 
@@ -173,11 +167,7 @@ async function _downloadBookCover(
 
   // Local-presence check — skip if cover is already locally stored.
   const book = await db.books.get(bookId)
-  if (
-    book?.coverUrl?.startsWith('opfs-cover://') ||
-    book?.coverUrl?.startsWith('opfs://')
-  )
-    return
+  if (book?.coverUrl?.startsWith('opfs-cover://') || book?.coverUrl?.startsWith('opfs://')) return
 
   const pathInfo = _extractStoragePath(coverUrl)
   if (!pathInfo) return
@@ -206,10 +196,7 @@ async function _downloadBookCover(
  *
  * @since E94-S07
  */
-async function _downloadBookFile(
-  record: Record<string, unknown>,
-  _userId: string,
-): Promise<void> {
+async function _downloadBookFile(record: Record<string, unknown>, _userId: string): Promise<void> {
   const fileUrl = record['fileUrl'] as string | undefined
   if (!fileUrl || !_isSupabaseStorageUrl(fileUrl)) return
 
@@ -296,7 +283,7 @@ function _extractStoragePath(publicUrl: string): { bucket: string; path: string 
 async function _fetchWithSignedFallback(
   url: string,
   bucket: string,
-  storagePath: string,
+  storagePath: string
 ): Promise<Blob> {
   const response = await fetch(url)
 
@@ -315,7 +302,7 @@ async function _fetchWithSignedFallback(
 
     if (!data?.signedUrl) {
       throw new Error(
-        `[storageDownload] createSignedUrl returned no URL for bucket "${bucket}" path "${storagePath}".`,
+        `[storageDownload] createSignedUrl returned no URL for bucket "${bucket}" path "${storagePath}".`
       )
     }
 
@@ -323,11 +310,9 @@ async function _fetchWithSignedFallback(
     if (r2.ok) return r2.blob()
 
     throw new Error(
-      `[storageDownload] Signed URL fetch failed with status ${r2.status} for "${storagePath}".`,
+      `[storageDownload] Signed URL fetch failed with status ${r2.status} for "${storagePath}".`
     )
   }
 
-  throw new Error(
-    `[storageDownload] Fetch failed with status ${response.status} for "${url}".`,
-  )
+  throw new Error(`[storageDownload] Fetch failed with status ${response.status} for "${url}".`)
 }

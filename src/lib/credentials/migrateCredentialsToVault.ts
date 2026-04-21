@@ -25,7 +25,12 @@
 
 import { toast } from 'sonner'
 import { db } from '@/db/schema'
-import type { AudiobookshelfServer, LegacyAudiobookshelfServer, LegacyOpdsCatalog, OpdsCatalog } from '@/data/types'
+import type {
+  AudiobookshelfServer,
+  LegacyAudiobookshelfServer,
+  LegacyOpdsCatalog,
+  OpdsCatalog,
+} from '@/data/types'
 import { storeCredential, checkCredential, type CredentialType } from '@/lib/vaultCredentials'
 import { emitTelemetry } from './telemetry'
 
@@ -65,10 +70,16 @@ interface LegacyRow {
 async function collectLegacyRows(): Promise<LegacyRow[]> {
   const rows: LegacyRow[] = []
 
-  const absRows = (await db.audiobookshelfServers.toArray()) as unknown as LegacyAudiobookshelfServer[]
+  const absRows =
+    (await db.audiobookshelfServers.toArray()) as unknown as LegacyAudiobookshelfServer[]
   for (const row of absRows) {
     if (typeof row.apiKey === 'string' && row.apiKey.length > 0) {
-      rows.push({ id: row.id, kind: 'abs-server', secret: row.apiKey, table: 'audiobookshelfServers' })
+      rows.push({
+        id: row.id,
+        kind: 'abs-server',
+        secret: row.apiKey,
+        table: 'audiobookshelfServers',
+      })
     }
   }
 
@@ -94,7 +105,9 @@ async function clearLegacyField(row: LegacyRow): Promise<void> {
   // `undefined` values is a no-op in real browsers (fake-indexeddb masks
   // this). .put() with the field omitted reliably removes it from the row.
   if (row.table === 'audiobookshelfServers') {
-    const existing = (await db.audiobookshelfServers.get(row.id)) as unknown as LegacyAudiobookshelfServer | undefined
+    const existing = (await db.audiobookshelfServers.get(row.id)) as unknown as
+      | LegacyAudiobookshelfServer
+      | undefined
     if (!existing) return
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { apiKey: _drop, ...rest } = existing
@@ -121,7 +134,7 @@ async function migrateRow(row: LegacyRow): Promise<'uploaded' | 'failed'> {
     const confirmed = await checkCredential(row.kind, row.id)
     if (!confirmed) {
       throw new Error(
-        `Vault write could not be confirmed for ${row.kind}:${row.id} — aborting clear to preserve legacy field`,
+        `Vault write could not be confirmed for ${row.kind}:${row.id} — aborting clear to preserve legacy field`
       )
     }
 
@@ -141,7 +154,7 @@ async function migrateRow(row: LegacyRow): Promise<'uploaded' | 'failed'> {
     if (count >= 3 && !toastFiredThisSession) {
       toastFiredThisSession = true
       toast.warning(
-        'Some connection credentials could not be synced to the cloud yet. We will retry next time you sign in.',
+        'Some connection credentials could not be synced to the cloud yet. We will retry next time you sign in.'
       )
     }
     return 'failed'

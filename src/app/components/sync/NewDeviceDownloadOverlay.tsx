@@ -18,12 +18,7 @@
  * @since E97-S04
  */
 import { useEffect, useRef, useState } from 'react'
-import {
-  CloudDownload,
-  CheckCircle2,
-  AlertTriangle,
-  RefreshCw,
-} from 'lucide-react'
+import { CloudDownload, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -38,11 +33,7 @@ import { useDownloadProgress } from '@/app/hooks/useDownloadProgress'
 import { useDownloadEngineWatcher } from '@/app/hooks/useDownloadEngineWatcher'
 import { observedHydrate } from '@/lib/sync/observedHydrate'
 
-type VisualPhase =
-  | 'hydrating-p3p4'
-  | 'downloading-p0p2'
-  | 'success'
-  | 'error'
+type VisualPhase = 'hydrating-p3p4' | 'downloading-p0p2' | 'success' | 'error'
 
 /** Watchdog — if the overlay stays in an active phase this long, surface an error. */
 const WATCHDOG_MS = 60_000
@@ -73,15 +64,23 @@ export interface NewDeviceDownloadOverlayProps {
   open: boolean
   userId: string
   onClose: () => void
+  /**
+   * KI-E97-S04-L02 / R8: Override the watchdog timeout (ms). Defaults to
+   * `WATCHDOG_MS` (60_000). Exposed primarily for tests that want to
+   * exercise the watchdog path without expensive fake-timer advances.
+   *
+   * Uses nullish coalescing (`??`): only `null`/`undefined` trigger the
+   * default. `watchdogMs={0}` is a valid value (fires on the next tick) —
+   * this is intentional so callers who want immediate firing can opt in.
+   * A `||` fallback would silently coerce `0` to the default (60_000) and
+   * hide the footgun; `??` preserves caller intent.
+   */
+  watchdogMs?: number
 }
 
-export function NewDeviceDownloadOverlay({
-  open,
-  userId,
-  onClose,
-}: NewDeviceDownloadOverlayProps) {
-  const storeStatus = useDownloadStatusStore((s) => s.status)
-  const storeError = useDownloadStatusStore((s) => s.lastError)
+export function NewDeviceDownloadOverlay({ open, userId, onClose, watchdogMs }: NewDeviceDownloadOverlayProps) {
+  const storeStatus = useDownloadStatusStore(s => s.status)
+  const storeError = useDownloadStatusStore(s => s.lastError)
 
   // Force a remount of the progress hook on retry so it re-snapshots HEAD counts.
   const [retryNonce, setRetryNonce] = useState(0)
@@ -99,20 +98,17 @@ export function NewDeviceDownloadOverlay({
   // Watchdog timer — arms when we enter an active phase, disarms on terminal.
   useEffect(() => {
     if (!open) return
-    const isActive =
-      storeStatus === 'hydrating-p3p4' || storeStatus === 'downloading-p0p2'
+    const isActive = storeStatus === 'hydrating-p3p4' || storeStatus === 'downloading-p0p2'
     if (!isActive) return
     const timer = window.setTimeout(() => {
       // Only fire if still active (no concurrent transition).
       const latest = useDownloadStatusStore.getState().status
       if (latest === 'hydrating-p3p4' || latest === 'downloading-p0p2') {
-        useDownloadStatusStore
-          .getState()
-          .failDownloading('Taking longer than expected.')
+        useDownloadStatusStore.getState().failDownloading('Taking longer than expected.')
       }
-    }, WATCHDOG_MS)
+    }, watchdogMs ?? WATCHDOG_MS)
     return () => window.clearTimeout(timer)
-  }, [open, storeStatus])
+  }, [open, storeStatus, watchdogMs])
 
   // Forward the all-HEAD-fail error to the store so Phase A/B observers
   // halt (there is no way to complete without a remote total).
@@ -126,8 +122,7 @@ export function NewDeviceDownloadOverlay({
         useDownloadStatusStore
           .getState()
           .failDownloading(
-            progress.errorMessage ??
-              'Could not determine remote totals — check your connection.',
+            progress.errorMessage ?? 'Could not determine remote totals — check your connection.'
           )
       }
     }
@@ -136,56 +131,58 @@ export function NewDeviceDownloadOverlay({
     }
   }, [open, progress.error, progress.errorMessage])
 
+  // KI-E97-S04-L01 / R7: Latch onClose in a ref so parent re-renders (with
+  // an inline `() => {...}` handler) do NOT reset the 250 ms auto-close
+  // timer. Mirrors the `firstSyncingSeenRef` pattern in
+  // `useDownloadEngineWatcher`.
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
+
   // Auto-close after success.
   useEffect(() => {
     if (!open) return
     if (storeStatus !== 'complete') return
     // Belt-and-suspenders: wait for processed >= total OR progress.done
     // before closing. A complete store with no remote total still closes.
-    if (
-      !progress.done &&
-      progress.total > 0 &&
-      progress.processed < progress.total
-    ) {
+    if (!progress.done && progress.total > 0 && progress.processed < progress.total) {
       return
     }
     const timer = window.setTimeout(() => {
-      onClose()
+      onCloseRef.current()
     }, SUCCESS_CLOSE_DELAY_MS)
     return () => window.clearTimeout(timer)
-  }, [open, storeStatus, progress.done, progress.total, progress.processed, onClose])
+    // onClose intentionally omitted — it is read via onCloseRef so parent
+    // re-renders that hand us a fresh inline handler do not cancel or
+    // reset the 250 ms timer mid-window. See KI-E97-S04-L01.
+  }, [open, storeStatus, progress.done, progress.total, progress.processed])
 
   if (!open || !userId) return null
 
   function handleRetry() {
-    setRetryNonce((n) => n + 1)
+    setRetryNonce(n => n + 1)
     // Reset store to hydrating-p3p4 so observers pick up the fresh run.
     useDownloadStatusStore.getState().startHydrating()
     // Re-run hydrate. observedHydrate re-stamps phases and re-throws on error,
     // which lands us back in error visual phase (same pattern as first run).
-    observedHydrate(userId).catch((err) => {
+    observedHydrate(userId).catch(err => {
       // silent-catch-ok — error surfaces via useDownloadStatusStore.lastError.
       console.error('[NewDeviceDownloadOverlay] retry hydrate failed:', err)
     })
   }
 
-  const percent =
-    progress.total > 0
-      ? Math.floor((progress.processed / progress.total) * 100)
-      : 0
+  const percent = progress.total > 0 ? Math.floor((progress.processed / progress.total) * 100) : 0
   const tableHint = humanizeTable(progress.recentTable)
   const isPartial =
-    progress.totalsFailedCount > 0 &&
-    progress.totalsFailedCount < progress.totalTables
+    progress.totalsFailedCount > 0 && progress.totalsFailedCount < progress.totalTables
   const errorMessage =
-    storeError ??
-    progress.errorMessage ??
-    'Something went wrong. Please try again.'
+    storeError ?? progress.errorMessage ?? 'Something went wrong. Please try again.'
 
   return (
     <Dialog
       open={open}
-      onOpenChange={(isOpen) => {
+      onOpenChange={isOpen => {
         // Non-dismissible during active phases — user must wait or hit an
         // error with explicit Close.
         if (!isOpen && (visualPhase === 'hydrating-p3p4' || visualPhase === 'downloading-p0p2')) {
@@ -210,8 +207,8 @@ export function NewDeviceDownloadOverlay({
                 <DialogTitle>Restoring your Knowlune library…</DialogTitle>
               </div>
               <DialogDescription>
-                We found your data in the cloud. Hang tight — we&apos;re bringing
-                everything back to this device.
+                We found your data in the cloud. Hang tight — we&apos;re bringing everything back to
+                this device.
               </DialogDescription>
             </DialogHeader>
 
@@ -237,8 +234,8 @@ export function NewDeviceDownloadOverlay({
                 <DialogTitle>Finishing sync — fetching your content…</DialogTitle>
               </div>
               <DialogDescription>
-                Your notes and settings are in. Now grabbing the rest of your
-                library — courses, books, and progress.
+                Your notes and settings are in. Now grabbing the rest of your library — courses,
+                books, and progress.
               </DialogDescription>
             </DialogHeader>
 
@@ -318,7 +315,7 @@ export function NewDeviceDownloadOverlay({
  */
 function derivePhase(
   storeStatus: ReturnType<typeof useDownloadStatusStore.getState>['status'],
-  headAllFailed: boolean,
+  headAllFailed: boolean
 ): VisualPhase {
   if (headAllFailed) return 'error'
   switch (storeStatus) {

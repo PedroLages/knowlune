@@ -84,7 +84,7 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       // and marked itself `done` in `syncMetadata`. Idempotent; safe to await
       // here because collecting & uploading a handful of rows is fast.
       // silent-catch-ok — migration self-heals on next sign-in.
-      runCredentialsToVaultMigration().catch((err) => {
+      runCredentialsToVaultMigration().catch(err => {
         console.error('[useAuthLifecycle] runCredentialsToVaultMigration failed:', err)
       })
 
@@ -92,10 +92,10 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       const alreadyLinked = localStorage.getItem(`${LINKED_FLAG_PREFIX}${userId}`) === 'true'
       if (alreadyLinked) {
         // silent-catch-ok — backfill is idempotent and self-healing.
-        backfillUserId(userId).catch((err) => {
+        backfillUserId(userId).catch(err => {
           console.error('[useAuthLifecycle] backfillUserId (fast-path) failed:', err)
         })
-        syncEngine.start(userId).catch((err) => {
+        syncEngine.start(userId).catch(err => {
           console.error('[useAuthLifecycle] syncEngine.start (fast-path) failed:', err)
         })
         return
@@ -121,10 +121,10 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       } else {
         // No unlinked records (or no dialog handler): backfill + start sync now.
         // silent-catch-ok — backfill is self-healing; next sign-in retries.
-        backfillUserId(userId).catch((err) => {
+        backfillUserId(userId).catch(err => {
           console.error('[useAuthLifecycle] backfillUserId failed:', err)
         })
-        syncEngine.start(userId).catch((err) => {
+        syncEngine.start(userId).catch(err => {
           console.error('[useAuthLifecycle] syncEngine.start failed:', err)
         })
         // Mark this device as linked so the dialog is not shown again.
@@ -180,7 +180,7 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
         // E95-S05: drop cached server/catalog credentials on sign-out. The
         // next authenticated session re-reads them through the vault broker.
         credentialCache.clear()
-        clearSyncState().catch((err) => {
+        clearSyncState().catch(err => {
           // silent-catch-ok: state is best-effort; next sign-in clears again.
           console.error('[useAuthLifecycle] clearSyncState failed:', err)
         })
@@ -197,7 +197,7 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
 
       // Hydrate localStorage settings from Supabase user_metadata on sign-in
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-        handleSignIn(session.user.id, session.user.user_metadata ?? {}).catch((err) => {
+        handleSignIn(session.user.id, session.user.user_metadata ?? {}).catch(err => {
           console.error('[useAuthLifecycle] handleSignIn (onAuthStateChange) failed:', err)
         })
       }
@@ -213,7 +213,7 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       const state = useAuthStore.getState()
       state.setSession(session)
       if (session?.user) {
-        handleSignIn(session.user.id, session.user.user_metadata ?? {}).catch((err) => {
+        handleSignIn(session.user.id, session.user.user_metadata ?? {}).catch(err => {
           console.error('[useAuthLifecycle] handleSignIn (getSession) failed:', err)
         })
       }

@@ -172,7 +172,10 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       await persistWithRetry(async () => {
         const current = await db.importedCourses.get(courseId)
         if (!current) return
-        await syncableWrite('importedCourses', 'put', { ...current, tags: normalized } as unknown as SyncableRecord)
+        await syncableWrite('importedCourses', 'put', {
+          ...current,
+          tags: normalized,
+        } as unknown as SyncableRecord)
       })
       // Refresh embedding after successful tag update (fire-and-forget, E52-S04)
       const updated = get().importedCourses.find(c => c.id === courseId)
@@ -210,7 +213,10 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       await persistWithRetry(async () => {
         const current = await db.importedCourses.get(courseId)
         if (!current) return
-        await syncableWrite('importedCourses', 'put', { ...current, status } as unknown as SyncableRecord)
+        await syncableWrite('importedCourses', 'put', {
+          ...current,
+          status,
+        } as unknown as SyncableRecord)
       })
     } catch (error) {
       // Rollback on failure
@@ -249,7 +255,10 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       await persistWithRetry(async () => {
         const current = await db.importedCourses.get(courseId)
         if (!current) return
-        await syncableWrite('importedCourses', 'put', { ...current, ...patch } as unknown as SyncableRecord)
+        await syncableWrite('importedCourses', 'put', {
+          ...current,
+          ...patch,
+        } as unknown as SyncableRecord)
       })
       // Refresh embedding after successful metadata update (fire-and-forget, E52-S04)
       const updated = get().importedCourses.find(c => c.id === courseId)

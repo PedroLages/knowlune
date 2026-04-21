@@ -27,9 +27,7 @@ import { tableRegistry } from './tableRegistry'
  * syncable Dexie table names. Previously an inline literal; now a computed
  * view over the registry so additions to tableRegistry automatically propagate.
  */
-export const SYNCABLE_TABLES: readonly string[] = tableRegistry.map(
-  (e) => e.dexieTable,
-)
+export const SYNCABLE_TABLES: readonly string[] = tableRegistry.map(e => e.dexieTable)
 
 export interface BackfillUserIdResult {
   tablesProcessed: number

@@ -84,9 +84,7 @@ export function useSyncLifecycle(): void {
     // upload-only: embeddings are not downloaded from Supabase, so this callback
     // is a no-op during normal sync. Registered for API symmetry and in case
     // uploadOnly is later removed (E97+ or future bidirectional scenario).
-    syncEngine.registerStoreRefresh('embeddings', () =>
-      vectorStorePersistence.loadAll()
-    )
+    syncEngine.registerStoreRefresh('embeddings', () => vectorStorePersistence.loadAll())
 
     // Intentional: bookHighlights store refresh uses a no-op because
     // loadHighlightsForBook() requires a mandatory bookId argument — no loadAll()
@@ -105,9 +103,7 @@ export function useSyncLifecycle(): void {
     // audioClips are scoped per-book. Load with empty string so the guard
     // (isLoaded && loadedBookId === bookId) never matches '' in practice.
     // The next book navigation will reload the correct clips.
-    syncEngine.registerStoreRefresh('audioClips', () =>
-      useAudioClipStore.getState().loadClips('')
-    )
+    syncEngine.registerStoreRefresh('audioClips', () => useAudioClipStore.getState().loadClips(''))
 
     // chatConversations are loaded per-course context in useTutorStore on navigation
     // — no global loadAll() exists. A no-op is correct: after fullSync, the next
@@ -236,8 +232,7 @@ export function useSyncLifecycle(): void {
 
     const handleOnline = () => {
       if (!autoSyncEnabledRef.current) return
-      const { setStatus: setState, markSyncComplete: markComplete } =
-        useSyncStatusStore.getState()
+      const { setStatus: setState, markSyncComplete: markComplete } = useSyncStatusStore.getState()
       setState('syncing')
       syncEngine
         .fullSync()

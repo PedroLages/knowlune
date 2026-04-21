@@ -31,15 +31,15 @@ const POLL_INTERVAL_MS = 500
 async function computeUnlinkedCount(userId: string): Promise<number> {
   let total = 0
   const results = await Promise.allSettled(
-    SYNCABLE_TABLES.map(async (tableName) => {
+    SYNCABLE_TABLES.map(async tableName => {
       return db
         .table(tableName)
         .filter(
           (r: Record<string, unknown>) =>
-            r.userId === null || r.userId === undefined || r.userId !== userId,
+            r.userId === null || r.userId === undefined || r.userId !== userId
         )
         .count()
-    }),
+    })
   )
   for (const r of results) {
     if (r.status === 'fulfilled') total += r.value
@@ -57,10 +57,7 @@ async function readRecentPendingTable(): Promise<string | null> {
   // (Dexie 4); volume is low because this only polls while the wizard is
   // open with active pending work. Callers swallow errors.
   try {
-    const rows = await db.syncQueue
-      .where('status')
-      .equals('pending')
-      .sortBy('updatedAt')
+    const rows = await db.syncQueue.where('status').equals('pending').sortBy('updatedAt')
     if (rows.length === 0) return null
     const newest = rows[rows.length - 1]
     return newest?.tableName ?? null
@@ -77,10 +74,7 @@ async function readRecentPendingTable(): Promise<string | null> {
  *                Lets callers mount the hook conditionally while still following
  *                rules-of-hooks.
  */
-export function useInitialUploadProgress(
-  userId: string,
-  enabled: boolean,
-): InitialUploadProgress {
+export function useInitialUploadProgress(userId: string, enabled: boolean): InitialUploadProgress {
   const [state, setState] = useState<InitialUploadProgress>({
     processed: 0,
     total: 0,
@@ -122,7 +116,7 @@ export function useInitialUploadProgress(
         // silent-catch-ok — tick failure is non-fatal; error surfaces in state
         // and the next poll retries.
         console.error('[useInitialUploadProgress] tick failed:', err)
-        setState((prev) => ({ ...prev, error: err as Error }))
+        setState(prev => ({ ...prev, error: err as Error }))
       }
     }
 
@@ -177,7 +171,7 @@ export function useInitialUploadProgress(
         if (cancelled) return
         // silent-catch-ok — snapshot failure surfaces to state; poll loop retries.
         console.error('[useInitialUploadProgress] snapshot failed:', err)
-        setState((prev) => ({ ...prev, error: err as Error }))
+        setState(prev => ({ ...prev, error: err as Error }))
       }
     }
 

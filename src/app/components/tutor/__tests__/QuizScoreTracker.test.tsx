@@ -25,7 +25,9 @@ describe('QuizScoreTracker', () => {
   })
 
   it('returns null when total === 0', () => {
-    const { container } = render(<QuizScoreTracker correct={0} total={0} lastAnswerCorrect={null} />)
+    const { container } = render(
+      <QuizScoreTracker correct={0} total={0} lastAnswerCorrect={null} />
+    )
     expect(container.firstChild).toBeNull()
   })
 

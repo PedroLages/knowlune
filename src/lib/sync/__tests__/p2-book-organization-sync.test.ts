@@ -129,9 +129,7 @@ describe('E94-S03 P2 sync wiring — shelves', () => {
     expect(shelf).toBeTruthy()
 
     const entries = await getQueueEntries('shelves')
-    const putEntry = entries.find(
-      e => e.operation === 'put' && e.recordId === shelf!.id,
-    )
+    const putEntry = entries.find(e => e.operation === 'put' && e.recordId === shelf!.id)
     expect(putEntry).toBeDefined()
     expect(putEntry!.payload.name).toBe('My Custom Shelf')
     expect(putEntry!.payload.is_default).toBe(false)
@@ -158,9 +156,7 @@ describe('E94-S03 P2 sync wiring — shelves', () => {
   })
 
   it('renameShelf on non-existent id: no queue entry created', async () => {
-    await useShelfStore
-      .getState()
-      .renameShelf('nonexistent-shelf-id', 'New Name')
+    await useShelfStore.getState().renameShelf('nonexistent-shelf-id', 'New Name')
 
     const entries = await getQueueEntries('shelves')
     expect(entries).toHaveLength(0)

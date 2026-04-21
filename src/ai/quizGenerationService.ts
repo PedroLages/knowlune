@@ -107,10 +107,7 @@ export async function generateQuizForLesson(
   // and we intentionally do not extend the enum in this story (would require
   // a Supabase schema change). Using the closest-fit feature ('knowledge_gaps')
   // and tagging granularity via `metadata.subFeature` per plan M1.
-  const emitTracking = (
-    status: 'success' | 'error',
-    extra: Record<string, unknown> = {}
-  ): void => {
+  const emitTracking = (status: 'success' | 'error', extra: Record<string, unknown> = {}): void => {
     trackAIUsage('knowledge_gaps', {
       courseId,
       durationMs: Date.now() - startTime,

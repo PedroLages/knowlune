@@ -77,9 +77,7 @@ export const RecentBookCard = memo(function RecentBookCard({ book }: RecentBookC
         <p className="text-xs font-semibold text-foreground leading-tight line-clamp-2 group-hover:text-brand transition-colors">
           {book.title}
         </p>
-        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-          {book.author}
-        </p>
+        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{book.author}</p>
       </div>
     </div>
   )

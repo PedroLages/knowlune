@@ -62,7 +62,9 @@ export const useAudioClipStore = create<AudioClipStoreState>((set, get) => ({
     set({ clips: [...clips, clip] })
 
     try {
-      await persistWithRetry(() => syncableWrite('audioClips', 'put', clip as unknown as SyncableRecord))
+      await persistWithRetry(() =>
+        syncableWrite('audioClips', 'put', clip as unknown as SyncableRecord)
+      )
       toast.success('Clip saved')
       return clip.id
     } catch {
@@ -86,7 +88,9 @@ export const useAudioClipStore = create<AudioClipStoreState>((set, get) => ({
     try {
       const existing = await db.audioClips.get(clipId)
       if (!existing) return
-      await persistWithRetry(() => syncableWrite('audioClips', 'put', { ...existing, title } as unknown as SyncableRecord))
+      await persistWithRetry(() =>
+        syncableWrite('audioClips', 'put', { ...existing, title } as unknown as SyncableRecord)
+      )
     } catch {
       // Rollback on failure
       set({
@@ -134,7 +138,10 @@ export const useAudioClipStore = create<AudioClipStoreState>((set, get) => ({
         for (const clip of reordered) {
           const existing = await db.audioClips.get(clip.id)
           if (existing) {
-            await syncableWrite('audioClips', 'put', { ...existing, sortOrder: clip.sortOrder } as unknown as SyncableRecord)
+            await syncableWrite('audioClips', 'put', {
+              ...existing,
+              sortOrder: clip.sortOrder,
+            } as unknown as SyncableRecord)
           }
         }
       })

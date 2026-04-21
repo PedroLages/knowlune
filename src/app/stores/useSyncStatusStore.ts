@@ -58,7 +58,7 @@ interface SyncStatusState {
   refreshPendingCount: () => Promise<void>
 }
 
-export const useSyncStatusStore = create<SyncStatusState>((set) => ({
+export const useSyncStatusStore = create<SyncStatusState>(set => ({
   status: 'synced',
   pendingCount: 0,
   lastSyncAt: null,

@@ -21,11 +21,7 @@ interface QuizScoreTrackerProps {
  * Sticky score badge with pulse animation on score changes.
  * Uses role="status" and aria-live="polite" for screen reader announcements.
  */
-export function QuizScoreTracker({
-  correct,
-  total,
-  lastAnswerCorrect,
-}: QuizScoreTrackerProps) {
+export function QuizScoreTracker({ correct, total, lastAnswerCorrect }: QuizScoreTrackerProps) {
   const [isPulsing, setIsPulsing] = useState(false)
   const prevTotalRef = useRef(total)
 
@@ -57,16 +53,10 @@ export function QuizScoreTracker({
       </span>
       {lastAnswerCorrect !== null && (
         <span
-          className={`flex items-center ${
-            lastAnswerCorrect ? 'text-success' : 'text-destructive'
-          }`}
+          className={`flex items-center ${lastAnswerCorrect ? 'text-success' : 'text-destructive'}`}
           aria-hidden="true"
         >
-          {lastAnswerCorrect ? (
-            <Check className="size-4" />
-          ) : (
-            <X className="size-4" />
-          )}
+          {lastAnswerCorrect ? <Check className="size-4" /> : <X className="size-4" />}
         </span>
       )}
     </div>

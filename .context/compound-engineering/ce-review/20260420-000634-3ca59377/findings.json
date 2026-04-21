@@ -1,0 +1,138 @@
+{
+  "runId": "20260420-000634-3ca59377",
+  "mode": "headless",
+  "branch": "feature/e97-s01-sync-status-indicator",
+  "base": "e3c2a3693544dbdef6707197a15ee28bfc54157e",
+  "plan": "docs/plans/2026-04-19-021-feat-e97-s01-sync-status-indicator-header-plan.md",
+  "appliedFixes": 0,
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "P1",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "confidence": 0.9,
+      "pre_existing": false,
+      "reviewer": "testing, correctness",
+      "file": "tests/e2e/story-97-01-sync-status-indicator.spec.ts",
+      "line": 42,
+      "title": "E2E badge-count seeding path is broken: wrong module path and wrong Dexie DB name",
+      "why_it_matters": "The test dynamically imports '/src/db.ts' which does not exist (actual path is '/src/db/index.ts' or '/src/db/schema.ts'). The catch fallback then opens Dexie with name 'knowlune', but the app's real DB is named 'ElearningDB' (see src/db/schema.ts:198). Both paths miss the real syncQueue table, so the badge assertion either passes for the wrong reason or never exercises refreshPendingCount. This false-positive test is worse than no coverage because it will not catch a regression in the badge display.",
+      "evidence": [
+        "tests/e2e/story-97-01-sync-status-indicator.spec.ts:42 — import('/src/db.ts')",
+        "tests/e2e/story-97-01-sync-status-indicator.spec.ts:58 — new Dexie('knowlune')",
+        "src/db/schema.ts:198 — const db = new Dexie('ElearningDB')",
+        "Precedent: tests/e2e/nfr67-reimport-fidelity.spec.ts:90 uses '/src/db/schema.ts'"
+      ],
+      "suggested_fix": "Replace dynamic import target with '/src/db/schema.ts' (matching nfr67 spec) and replace 'new Dexie(\"knowlune\")' fallback with 'new Dexie(\"ElearningDB\")'. Prefer reusing shared IndexedDB seeding helpers from tests/support/helpers/indexeddb-seed.ts to avoid this duplication per testing/test-patterns.md."
+    },
+    {
+      "id": "F2",
+      "severity": "P2",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "confidence": 0.85,
+      "pre_existing": false,
+      "reviewer": "correctness, reliability",
+      "file": "src/app/components/sync/SyncStatusIndicator.tsx",
+      "line": 210,
+      "title": "Duplicate role=status and aria-live regions cause WAI-ARIA conflict and potential double announcements",
+      "why_it_matters": "The outer <button> carries role=\"status\" and aria-live=\"polite\" (lines 185-186), and nested inside it is a second <span role=\"status\" aria-live=\"polite\"> (line 210). This creates two live regions; the aria-label on the outer button already narrates status, and the inner span separately narrates transitions — which can lead to double or conflicting announcements. Additionally, role=\"status\" on a button conflicts with the button's native role; screen readers may ignore one or the other unpredictably.",
+      "evidence": [
+        "src/app/components/sync/SyncStatusIndicator.tsx:185-187 — outer button has role/aria-live/aria-label",
+        "src/app/components/sync/SyncStatusIndicator.tsx:210-212 — nested span has role=status + aria-live=polite"
+      ],
+      "suggested_fix": "Remove role=\"status\" and aria-live=\"polite\" from the outer button (buttons are already focusable and announced via aria-label). Keep the inner sr-only live region as the single polite announcer for transitions into error/offline. Alternatively, render the live region as a sibling of the Popover, not inside the button, to avoid nested interactive/live-region semantics."
+    },
+    {
+      "id": "F3",
+      "severity": "P2",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "confidence": 0.8,
+      "pre_existing": false,
+      "reviewer": "correctness",
+      "file": "src/app/components/sync/SyncStatusIndicator.tsx",
+      "line": 147,
+      "title": "Retry race-guard is insufficient: between getState() and fullSync() call, lifecycle may start another sync",
+      "why_it_matters": "handleRetry reads status via getState() (line 148), early-returns if syncing, then calls setStatus('syncing') and awaits fullSync(). But the periodic/online fullSync in useSyncLifecycle also calls setStatus('syncing') and invokes syncEngine.fullSync(). There is no mutex between the two — the guard only catches a status already set to syncing. If the 30s tick fires a nudge() + a reconnection fullSync between handleRetry's check and fullSync() call, two concurrent fullSync invocations race. Plan.md §'Retry flow' even admits 'Concurrent nudges are already serialized by syncEngine._runUploadCycle via navigator.locks' — but fullSync vs nudge serialization is not verified.",
+      "evidence": [
+        "src/app/components/sync/SyncStatusIndicator.tsx:147-165 — handleRetry flow",
+        "src/app/hooks/useSyncLifecycle.ts:170-181 — lifecycle also invokes syncEngine.fullSync()",
+        "Plan notes lock-based serialization on uploads but not on fullSync cycles"
+      ],
+      "suggested_fix": "Either (a) add a module-level isFullSyncing flag in syncEngine with a single await-lock that both lifecycle and Retry share, or (b) change Retry to call a syncEngine.retry() wrapper that internally serializes against existing fullSync invocations. Add a unit test exercising concurrent lifecycle+Retry to lock in the guarantee."
+    },
+    {
+      "id": "F4",
+      "severity": "P2",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "confidence": 0.75,
+      "pre_existing": false,
+      "reviewer": "testing",
+      "file": "src/app/components/sync/__tests__/SyncStatusIndicator.test.tsx",
+      "line": 244,
+      "title": "Reduced-motion test does not verify the static Cloud fallback — it only asserts absence of animate-spin",
+      "why_it_matters": "Plan.md §'Reduced motion' explicitly requires swapping to a static Cloud icon under prefers-reduced-motion (for WCAG 2.3.3 compliance). The test only asserts the class no longer contains 'animate-spin'. Since all four steady-state configs (synced/error/offline) also lack animate-spin, this test would pass even if the component rendered CheckCircle2 or Loader2-without-spin — neither of which is the specified Cloud fallback. Coverage gap for a stated WCAG requirement.",
+      "evidence": [
+        "src/app/components/sync/__tests__/SyncStatusIndicator.test.tsx:244-264",
+        "docs/plans/...-plan.md §'Reduced motion' and §'Icon selection'"
+      ],
+      "suggested_fix": "Add an assertion that the rendered icon element matches the Cloud lucide icon (e.g., via data-testid + parent class containing 'lucide-cloud' or by rendering StatusIcon with a stable display-name check). Cover the inverse: with reduced-motion NOT set, the Loader2 spinner is used."
+    },
+    {
+      "id": "F5",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.7,
+      "pre_existing": false,
+      "reviewer": "maintainability",
+      "file": "src/app/components/sync/SyncStatusIndicator.tsx",
+      "line": 85,
+      "title": "usePrefersReducedMotion duplicates logic that likely exists elsewhere in the codebase",
+      "why_it_matters": "A reduced-motion hook is typical shared infrastructure. Inlining it here creates drift risk across future components and duplicates matchMedia boilerplate. Not blocking, but worth extracting to src/app/hooks/usePrefersReducedMotion.ts or src/lib/hooks/ for reuse.",
+      "evidence": [
+        "src/app/components/sync/SyncStatusIndicator.tsx:77-99"
+      ],
+      "suggested_fix": "Extract usePrefersReducedMotion to a shared hook file and update imports. Check if other components (e.g., animations in figma/* or overview widgets) could adopt it to avoid future duplicate matchMedia handlers."
+    },
+    {
+      "id": "F6",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.65,
+      "pre_existing": false,
+      "reviewer": "maintainability, security",
+      "file": "src/lib/sync/classifyError.ts",
+      "line": 52,
+      "title": "Regex /\\b5\\d{2}\\b/ could misclassify non-HTTP strings containing 3-digit numbers",
+      "why_it_matters": "A thrown error message like 'timed out after 500ms' or 'queue depth 503' would be misclassified as 'Server error'. Low-impact (user sees a benign user-safe bucket either way) but worth tightening if error messages from Dexie/Supabase ever surface such strings.",
+      "evidence": [
+        "src/lib/sync/classifyError.ts:52 — /\\b5\\d{2}\\b/.test(rawMessage)"
+      ],
+      "suggested_fix": "Tighten the regex to require HTTP-status context, e.g., /\\b(?:status|http|code)\\s*[:=]?\\s*5\\d{2}\\b/i, or drop the message-based 5xx heuristic entirely and rely only on the numeric status/statusCode properties."
+    }
+  ],
+  "coverage": {
+    "suppressed_count": 0,
+    "untracked_files_excluded": [],
+    "residual_risks": [
+      "Working tree has uncommitted reverts of Unit 2 (useSyncLifecycle classifyError wiring + 30s refreshPendingCount) and Unit 4 (Layout.tsx mount of SyncStatusIndicator) including test assertions. The committed HEAD is complete; the uncommitted diff would regress R3 error-message classification and R5 passive-drift refresh if committed. Caller should decide whether to discard or commit those changes deliberately.",
+      "Retry concurrency with lifecycle fullSync not guarded by a shared lock (F3)."
+    ],
+    "testing_gaps": [
+      "No test covers the aria-live transition suppression rule (silent on synced<->syncing cycles, speaks only on transitions into error/offline).",
+      "Reduced-motion test does not assert the Cloud fallback (F4).",
+      "E2E badge-count test's seeding path is broken and does not verify real DB seeding (F1)."
+    ]
+  }
+}

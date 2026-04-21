@@ -61,15 +61,17 @@ export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps
     let ignore = false
     setCounts(null)
     countUnlinkedRecords(userId)
-      .then((result) => {
+      .then(result => {
         if (!ignore) setCounts(result)
       })
-      .catch((err) => {
+      .catch(err => {
         // silent-catch-ok: counts are best-effort display data; dialog still
         // shows resolution choices even with empty counts.
         console.error('[LinkDataDialog] countUnlinkedRecords failed:', err)
       })
-    return () => { ignore = true }
+    return () => {
+      ignore = true
+    }
   }, [open, userId])
 
   async function handleLink() {
@@ -77,7 +79,7 @@ export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps
     try {
       await backfillUserId(userId)
       // start() triggers fullSync internally — uploads the newly-stamped records.
-      syncEngine.start(userId).catch((err) => {
+      syncEngine.start(userId).catch(err => {
         console.error('[LinkDataDialog] syncEngine.start failed:', err)
       })
       localStorage.setItem(`${LINKED_FLAG_PREFIX}${userId}`, 'true')
@@ -94,7 +96,7 @@ export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps
 
   async function handleStartFresh() {
     const confirmed = window.confirm(
-      'This will delete all local data on this device and download your account data from the server. Are you sure?',
+      'This will delete all local data on this device and download your account data from the server. Are you sure?'
     )
     if (!confirmed) return
 
@@ -113,7 +115,7 @@ export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps
       // Wipe upload queue and download cursors
       await clearSyncState()
       // start() triggers fullSync internally — downloads fresh server state.
-      syncEngine.start(userId).catch((err) => {
+      syncEngine.start(userId).catch(err => {
         console.error('[LinkDataDialog] syncEngine.start (fresh) failed:', err)
       })
       localStorage.setItem(`${LINKED_FLAG_PREFIX}${userId}`, 'true')
@@ -128,26 +130,29 @@ export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps
     }
   }
 
-  const totalCount = counts
-    ? Object.values(counts).reduce((sum, n) => sum + n, 0)
-    : null
+  const totalCount = counts ? Object.values(counts).reduce((sum, n) => sum + n, 0) : null
 
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={() => { /* intentional no-op: dialog is non-dismissible */ }}>
+    <DialogPrimitive.Root
+      open={open}
+      onOpenChange={() => {
+        /* intentional no-op: dialog is non-dismissible */
+      }}
+    >
       <DialogPortal>
         <DialogOverlay />
         <DialogPrimitive.Content
           role="alertdialog"
           aria-labelledby="link-dialog-title"
           aria-describedby="link-dialog-description"
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
+          onPointerDownOutside={e => e.preventDefault()}
+          onEscapeKeyDown={e => e.preventDefault()}
           className={cn(
             'bg-background fixed top-[50%] left-[50%] z-50 grid w-full max-w-sm translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-            'duration-200',
+            'duration-200'
           )}
         >
           {/* Header */}
@@ -175,15 +180,13 @@ export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps
                     </span>
                     <span className="text-foreground font-medium tabular-nums">{counts[key]}</span>
                   </div>
-                ) : null,
+                ) : null
               )}
             </div>
           )}
 
           {/* Loading skeleton for counts */}
-          {counts === null && (
-            <div className="bg-muted h-16 animate-pulse rounded-md" />
-          )}
+          {counts === null && <div className="bg-muted h-16 animate-pulse rounded-md" />}
 
           {/* Action buttons */}
           <div className="flex flex-col gap-2 sm:flex-row">

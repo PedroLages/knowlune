@@ -33,12 +33,7 @@
 
 import { create } from 'zustand'
 
-export type DownloadStatus =
-  | 'idle'
-  | 'hydrating-p3p4'
-  | 'downloading-p0p2'
-  | 'complete'
-  | 'error'
+export type DownloadStatus = 'idle' | 'hydrating-p3p4' | 'downloading-p0p2' | 'complete' | 'error'
 
 interface DownloadStatusState {
   /** Current lifecycle phase. */
@@ -60,7 +55,7 @@ interface DownloadStatusState {
   reset: () => void
 }
 
-export const useDownloadStatusStore = create<DownloadStatusState>((set) => ({
+export const useDownloadStatusStore = create<DownloadStatusState>(set => ({
   status: 'idle',
   lastError: null,
   startedAt: null,
@@ -73,11 +68,9 @@ export const useDownloadStatusStore = create<DownloadStatusState>((set) => ({
     }),
 
   startDownloadingP0P2: () =>
-    set((state) =>
+    set(state =>
       // Guard: only advance from hydrating-p3p4 to avoid clobbering terminal states.
-      state.status === 'hydrating-p3p4'
-        ? { status: 'downloading-p0p2' }
-        : state,
+      state.status === 'hydrating-p3p4' ? { status: 'downloading-p0p2' } : state
     ),
 
   completeDownloading: () =>
@@ -87,7 +80,7 @@ export const useDownloadStatusStore = create<DownloadStatusState>((set) => ({
       startedAt: null,
     }),
 
-  failDownloading: (message) =>
+  failDownloading: message =>
     set({
       status: 'error',
       lastError: message || 'Download failed',

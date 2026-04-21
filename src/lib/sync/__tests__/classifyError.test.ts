@@ -37,8 +37,6 @@ describe('classifyError', () => {
   })
 
   it('prefers auth classification when both 401 and fetch-like message present', () => {
-    expect(classifyError({ status: 401, message: 'fetch failed with 401' })).toBe(
-      'Sign-in expired'
-    )
+    expect(classifyError({ status: 401, message: 'fetch failed with 401' })).toBe('Sign-in expired')
   })
 })

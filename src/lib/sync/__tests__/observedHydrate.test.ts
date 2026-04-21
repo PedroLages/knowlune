@@ -25,7 +25,7 @@ describe('observedHydrate', () => {
   it('transitions idle → hydrating-p3p4 → downloading-p0p2 on success', async () => {
     mockHydrateP3P4.mockResolvedValue(undefined)
     const statusesSeen: string[] = []
-    const unsubscribe = useDownloadStatusStore.subscribe((s) => {
+    const unsubscribe = useDownloadStatusStore.subscribe(s => {
       statusesSeen.push(s.status)
     })
     await observedHydrate('user-1')

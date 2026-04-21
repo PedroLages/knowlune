@@ -123,7 +123,7 @@ export type ReadCredentialResult =
 
 export async function readCredentialWithStatus(
   credentialType: CredentialType,
-  credentialId: string,
+  credentialId: string
 ): Promise<ReadCredentialResult> {
   if (!supabase) return { ok: false, reason: 'unauthenticated' }
   const {
@@ -134,11 +134,12 @@ export async function readCredentialWithStatus(
   try {
     const { data, error } = await supabase.functions.invoke(
       `${FUNCTION_NAME}/read-credential${buildQuery(credentialType, credentialId)}`,
-      { method: 'GET' },
+      { method: 'GET' }
     )
     if (error) {
-      const status = (error as { status?: number; context?: { status?: number } }).status
-        ?? (error as { context?: { status?: number } }).context?.status
+      const status =
+        (error as { status?: number; context?: { status?: number } }).status ??
+        (error as { context?: { status?: number } }).context?.status
       if (status === 401 || status === 403) {
         return { ok: false, reason: 'auth-failed', message: error.message }
       }

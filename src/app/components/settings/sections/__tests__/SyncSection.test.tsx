@@ -252,9 +252,7 @@ describe('<SyncSection />', () => {
     await user.click(screen.getByTestId('sync-reset-confirm'))
     await waitFor(() => expect(mockResetLocalData).toHaveBeenCalledTimes(1))
     // Dialog should close after completion
-    await waitFor(() =>
-      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
-    )
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
   })
 
   // -------------------------------------------------------------------------
@@ -297,8 +295,6 @@ describe('<SyncSection />', () => {
     renderSection()
     const user = userEvent.setup()
     await user.click(screen.getByTestId('sync-now-button'))
-    await waitFor(() =>
-      expect(useSyncStatusStore.getState().status).toBe('error')
-    )
+    await waitFor(() => expect(useSyncStatusStore.getState().status).toBe('error'))
   })
 })

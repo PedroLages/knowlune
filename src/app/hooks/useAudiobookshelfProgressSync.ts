@@ -73,11 +73,7 @@ export function useAudiobookshelfProgressSync({
     ;(async () => {
       const apiKey = await getAbsApiKey(server.id)
       if (!apiKey) return
-      const result = await AudiobookshelfService.fetchProgress(
-        server.url,
-        apiKey,
-        book.absItemId!
-      )
+      const result = await AudiobookshelfService.fetchProgress(server.url, apiKey, book.absItemId!)
 
       if (!result.ok) {
         // Fetch failed — silently continue, do not block

@@ -80,7 +80,10 @@ export class VectorStorePersistence {
     } else if (rec) {
       // Legacy record without `id` (pre-v54 migration): direct delete only.
       // No sync queue entry — this record was never uploaded so no remote row to delete.
-      console.warn('[VectorStore] removeEmbedding: record lacks id, falling back to direct delete', { noteId })
+      console.warn(
+        '[VectorStore] removeEmbedding: record lacks id, falling back to direct delete',
+        { noteId }
+      )
       await db.embeddings.delete(noteId)
     }
     this.store.remove(noteId)

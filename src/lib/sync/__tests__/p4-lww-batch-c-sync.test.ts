@@ -60,7 +60,7 @@ describe('E96-S02 LWW batch C — quizzes', () => {
     await syncableWriteModule.syncableWrite(
       'quizzes',
       'put',
-      quiz as unknown as import('@/lib/sync/syncableWrite').SyncableRecord,
+      quiz as unknown as import('@/lib/sync/syncableWrite').SyncableRecord
     )
 
     const stored = await db.quizzes.get('quiz-c-1')
@@ -85,16 +85,12 @@ describe('E96-S02 LWW batch C — quizzes', () => {
     await syncableWriteModule.syncableWrite(
       'quizzes',
       'put',
-      quiz as unknown as import('@/lib/sync/syncableWrite').SyncableRecord,
+      quiz as unknown as import('@/lib/sync/syncableWrite').SyncableRecord
     )
-    await syncableWriteModule.syncableWrite(
-      'quizzes',
-      'put',
-      {
-        ...quiz,
-        questionFeedback: [{ questionId: 'q1', feedback: 'up', timestamp: '2026-04-19T00:00:00Z' }],
-      } as unknown as import('@/lib/sync/syncableWrite').SyncableRecord,
-    )
+    await syncableWriteModule.syncableWrite('quizzes', 'put', {
+      ...quiz,
+      questionFeedback: [{ questionId: 'q1', feedback: 'up', timestamp: '2026-04-19T00:00:00Z' }],
+    } as unknown as import('@/lib/sync/syncableWrite').SyncableRecord)
 
     const entries = await getQueueEntries('quizzes')
     expect(entries).toHaveLength(2)

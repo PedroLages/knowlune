@@ -1,0 +1,99 @@
+{
+  "runId": "20260420-e97s01-headless",
+  "mode": "headless",
+  "branch": "feature/e97-s01-sync-status-indicator",
+  "base": "e3c2a3693544dbdef6707197a15ee28bfc54157e",
+  "plan": "docs/plans/2026-04-19-021-feat-e97-s01-sync-status-indicator-header-plan.md",
+  "plan_source": "explicit",
+  "files_reviewed": [
+    "src/app/components/Layout.tsx",
+    "src/app/components/sync/SyncStatusIndicator.tsx",
+    "src/app/components/sync/__tests__/SyncStatusIndicator.test.tsx",
+    "src/app/hooks/__tests__/useSyncLifecycle.test.ts",
+    "src/app/hooks/useSyncLifecycle.ts",
+    "src/app/stores/__tests__/useSyncStatusStore.test.ts",
+    "src/app/stores/useSyncStatusStore.ts",
+    "src/lib/sync/__tests__/classifyError.test.ts",
+    "src/lib/sync/classifyError.ts",
+    "tests/e2e/story-97-01-sync-status-indicator.spec.ts",
+    "tests/support/helpers/indexeddb-seed.ts"
+  ],
+  "requirements_verification": {
+    "R1_header_icon_with_status_colors_and_a11y": "met",
+    "R2_popover_last_sync_and_pending": "met",
+    "R3_error_retry_invokes_fullSync": "met (minor: button visual disabled state not implemented; race guarded in handler only)",
+    "R4_offline_navigator_events": "met",
+    "R5_reactive_zustand_updates": "met"
+  },
+  "applied_fixes": [],
+  "findings": [
+    {
+      "id": "E97S01-R1",
+      "severity": "P2",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "file": "src/app/components/sync/SyncStatusIndicator.tsx",
+      "line": 255,
+      "reviewer": "correctness,ui-ux",
+      "confidence": 0.78,
+      "pre_existing": false,
+      "requires_verification": true,
+      "title": "Retry button lacks visible disabled state while sync is in-flight",
+      "summary": "Plan R3 says the Retry button is disabled while syncing. The in-handler race guard prevents duplicate fullSync, but the Button element has no disabled prop or aria-busy, so users can click repeatedly during a slow network call with no visual feedback.",
+      "suggested_fix": "Subscribe to status in the component and pass disabled={status === 'syncing'} plus aria-busy to the Retry Button; optionally swap label to 'Retrying...'"
+    },
+    {
+      "id": "E97S01-R2",
+      "severity": "P3",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "file": "src/app/components/sync/SyncStatusIndicator.tsx",
+      "line": 128,
+      "reviewer": "ui-ux,a11y",
+      "confidence": 0.65,
+      "pre_existing": false,
+      "requires_verification": false,
+      "title": "Live region announces errors/offline but not recovery transitions",
+      "summary": "useEffect at line 126 only pushes messages on transitions INTO error or offline. Transitioning out of error back to synced is silent. Screen reader users who heard the error will not hear confirmation that retry succeeded.",
+      "suggested_fix": "Add a message on transitions FROM error -> synced such as 'Sync recovered. All changes saved.'"
+    },
+    {
+      "id": "E97S01-R3",
+      "severity": "P3",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "file": "src/app/components/sync/__tests__/SyncStatusIndicator.test.tsx",
+      "line": 265,
+      "reviewer": "testing",
+      "confidence": 0.70,
+      "pre_existing": false,
+      "requires_verification": false,
+      "title": "Reduced-motion test asserts only absence of animate-spin, not Cloud icon swap",
+      "summary": "The reduced-motion test verifies the spinner class is absent but does not verify the Cloud icon is actually rendered in place of Loader2. A regression that replaced Loader2 with any static icon would still pass.",
+      "suggested_fix": "Assert on a stable data-icon attribute or aria-label that uniquely identifies the Cloud lucide icon, or inspect the svg's path d-attribute."
+    },
+    {
+      "id": "E97S01-R4",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "file": "src/app/hooks/useSyncLifecycle.ts",
+      "line": 172,
+      "reviewer": "maintainability",
+      "confidence": 0.60,
+      "pre_existing": true,
+      "requires_verification": false,
+      "title": "Pre-existing silent-catch ESLint warnings on fullSync .catch handlers",
+      "summary": "useSyncLifecycle has 3 error-handling/no-silent-catch warnings at lines 172, 220, 268. These predate E97-S01 but the story added classifyError() messaging in the catches - a good next step would be a toast.error notification on the initial mount fullSync failure, matching the Retry handler's behavior. Out of scope for this story."
+    }
+  ],
+  "pre_existing_issues": 1,
+  "counts": {
+    "blockers": 0,
+    "high": 0,
+    "medium": 1,
+    "low": 3,
+    "nit": 0
+  },
+  "verdict": "Ready with fixes (all findings are P2 or lower; no blockers)"
+}

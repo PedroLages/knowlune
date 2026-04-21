@@ -287,9 +287,8 @@ export async function hydrateSettingsFromSupabase(
       // E95-S04: still kick off a streak hydration — the user may have a goal
       // from a prior session in localStorage even if user_settings is empty.
       if (userId) {
-        const { useReadingGoalStore: readingGoalStoreForStreak } = await import(
-          '@/stores/useReadingGoalStore'
-        )
+        const { useReadingGoalStore: readingGoalStoreForStreak } =
+          await import('@/stores/useReadingGoalStore')
         await readingGoalStoreForStreak.getState().hydrateStreak(userId)
       }
       return
@@ -299,9 +298,8 @@ export async function hydrateSettingsFromSupabase(
     if (!s || typeof s !== 'object') {
       // E95-S04: same early-streak-hydration rationale as above.
       if (userId) {
-        const { useReadingGoalStore: readingGoalStoreForStreak } = await import(
-          '@/stores/useReadingGoalStore'
-        )
+        const { useReadingGoalStore: readingGoalStoreForStreak } =
+          await import('@/stores/useReadingGoalStore')
         await readingGoalStoreForStreak.getState().hydrateStreak(userId)
       }
       return
@@ -324,13 +322,23 @@ export async function hydrateSettingsFromSupabase(
     if (typeof s.readingTheme === 'string') {
       const valid = ['light', 'sepia', 'dark']
       if (valid.includes(s.readingTheme)) {
-        useReaderStore.getState().setTheme(s.readingTheme as import('@/stores/useReaderStore').ReaderTheme)
+        useReaderStore
+          .getState()
+          .setTheme(s.readingTheme as import('@/stores/useReaderStore').ReaderTheme)
       }
     }
-    if (typeof s.readingFontSize === 'number' && s.readingFontSize >= 80 && s.readingFontSize <= 200) {
+    if (
+      typeof s.readingFontSize === 'number' &&
+      s.readingFontSize >= 80 &&
+      s.readingFontSize <= 200
+    ) {
       useReaderStore.getState().setFontSize(s.readingFontSize)
     }
-    if (typeof s.readingLineHeight === 'number' && s.readingLineHeight >= 1.2 && s.readingLineHeight <= 2.0) {
+    if (
+      typeof s.readingLineHeight === 'number' &&
+      s.readingLineHeight >= 1.2 &&
+      s.readingLineHeight <= 2.0
+    ) {
       useReaderStore.getState().setLineHeight(s.readingLineHeight)
     }
     if (typeof s.readingRuler === 'boolean') {
@@ -353,9 +361,11 @@ export async function hydrateSettingsFromSupabase(
     if (s.defaultSleepTimer !== undefined) {
       const validTimers = new Set(['off', 15, 30, 45, 60, 'end-of-chapter'])
       if (validTimers.has(s.defaultSleepTimer as string | number)) {
-        useAudiobookPrefsStore.getState().setDefaultSleepTimer(
-          s.defaultSleepTimer as import('@/stores/useAudiobookPrefsStore').SleepTimerDefault
-        )
+        useAudiobookPrefsStore
+          .getState()
+          .setDefaultSleepTimer(
+            s.defaultSleepTimer as import('@/stores/useAudiobookPrefsStore').SleepTimerDefault
+          )
       }
     }
     if (typeof s.autoBookmarkOnStop === 'boolean') {
@@ -373,9 +383,16 @@ export async function hydrateSettingsFromSupabase(
     if (hasGoalData) {
       const existingGoal = useReadingGoalStore.getState().goal
       useReadingGoalStore.getState().saveGoal({
-        dailyType: (typeof s.dailyType === 'string' ? s.dailyType : existingGoal?.dailyType ?? 'minutes') as import('@/data/types').ReadingGoal['dailyType'],
-        dailyTarget: typeof s.dailyTarget === 'number' ? s.dailyTarget : (existingGoal?.dailyTarget ?? 30),
-        yearlyBookTarget: typeof s.yearlyBookTarget === 'number' ? s.yearlyBookTarget : (existingGoal?.yearlyBookTarget ?? 12),
+        dailyType: (typeof s.dailyType === 'string'
+          ? s.dailyType
+          : (existingGoal?.dailyType ??
+            'minutes')) as import('@/data/types').ReadingGoal['dailyType'],
+        dailyTarget:
+          typeof s.dailyTarget === 'number' ? s.dailyTarget : (existingGoal?.dailyTarget ?? 30),
+        yearlyBookTarget:
+          typeof s.yearlyBookTarget === 'number'
+            ? s.yearlyBookTarget
+            : (existingGoal?.yearlyBookTarget ?? 12),
       })
     }
 
@@ -397,10 +414,12 @@ export async function hydrateSettingsFromSupabase(
     if (typeof s.colorScheme === 'string') {
       const validSchemes = ['professional', 'vibrant', 'clean']
       if (validSchemes.includes(s.colorScheme)) {
-        useEngagementPrefsStore.getState().setPreference(
-          'colorScheme',
-          s.colorScheme as import('@/stores/useEngagementPrefsStore').ColorScheme
-        )
+        useEngagementPrefsStore
+          .getState()
+          .setPreference(
+            'colorScheme',
+            s.colorScheme as import('@/stores/useEngagementPrefsStore').ColorScheme
+          )
       }
     }
   } catch (err) {
@@ -448,7 +467,11 @@ export async function hydrateSettingsFromSupabase(
             }
           } catch (decryptErr) {
             // silent-catch-ok — key may be on a different device; skip, user can re-enter
-            console.warn('[settings] Legacy AI key migration failed for provider:', providerId, decryptErr)
+            console.warn(
+              '[settings] Legacy AI key migration failed for provider:',
+              providerId,
+              decryptErr
+            )
           }
         }
 
@@ -491,7 +514,10 @@ const NOTIFICATION_TOGGLE_FIELDS = [
  * Explicit (not auto-derived from `camelToSnake`) so the allow-list also
  * enforces R12 — unknown remote columns are silently dropped.
  */
-const NOTIFICATION_SNAKE_TO_CAMEL: Record<string, keyof import('@/data/types').NotificationPreferences> = {
+const NOTIFICATION_SNAKE_TO_CAMEL: Record<
+  string,
+  keyof import('@/data/types').NotificationPreferences
+> = {
   course_complete: 'courseComplete',
   streak_milestone: 'streakMilestone',
   import_finished: 'importFinished',
@@ -543,9 +569,8 @@ async function hydrateNotificationPreferencesFromSupabase(userId: string): Promi
   }
   if (!remote) return // R10: no remote row — let local defaults stand.
 
-  const { useNotificationPrefsStore, DEFAULTS, HHMM_RE } = await import(
-    '@/stores/useNotificationPrefsStore'
-  )
+  const { useNotificationPrefsStore, DEFAULTS, HHMM_RE } =
+    await import('@/stores/useNotificationPrefsStore')
   const localPrefs = useNotificationPrefsStore.getState().prefs
 
   // P2 guard: when the local prefs exactly match DEFAULTS, the user has never
@@ -553,9 +578,7 @@ async function hydrateNotificationPreferencesFromSupabase(userId: string): Promi
   // timestamps. Compares only the toggle + quiet-hours fields (not `id` /
   // `updatedAt`, which differ by construction).
   const isAllDefaults =
-    NOTIFICATION_TOGGLE_FIELDS.every(
-      field => localPrefs[field] === DEFAULTS[field],
-    ) &&
+    NOTIFICATION_TOGGLE_FIELDS.every(field => localPrefs[field] === DEFAULTS[field]) &&
     localPrefs.quietHoursEnabled === DEFAULTS.quietHoursEnabled &&
     localPrefs.quietHoursStart === DEFAULTS.quietHoursStart &&
     localPrefs.quietHoursEnd === DEFAULTS.quietHoursEnd

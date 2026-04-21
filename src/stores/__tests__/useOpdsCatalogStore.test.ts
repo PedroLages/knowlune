@@ -138,9 +138,7 @@ describe('updateCatalog', () => {
     expect(storeMock).not.toHaveBeenCalled()
 
     await act(async () => {
-      await useOpdsCatalogStore
-        .getState()
-        .updateCatalog(id, { name: 'Renamed again' }, 'new-pw')
+      await useOpdsCatalogStore.getState().updateCatalog(id, { name: 'Renamed again' }, 'new-pw')
     })
     expect(storeMock).toHaveBeenCalledWith('opds-catalog', id, 'new-pw')
   })

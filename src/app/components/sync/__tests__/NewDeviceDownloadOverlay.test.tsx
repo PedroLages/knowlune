@@ -6,14 +6,7 @@
  * stack.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import {
-  render,
-  screen,
-  fireEvent,
-  act,
-  cleanup,
-  waitFor,
-} from '@testing-library/react'
+import { render, screen, fireEvent, act, cleanup, waitFor } from '@testing-library/react'
 import type { DownloadProgress } from '@/app/hooks/useDownloadProgress'
 
 // Mutable progress state returned by the hook mock.
@@ -63,7 +56,9 @@ function resetProgress(overrides: Partial<DownloadProgress> = {}) {
   }
 }
 
-function resetStore(status: ReturnType<typeof useDownloadStatusStore.getState>['status'] = 'hydrating-p3p4') {
+function resetStore(
+  status: ReturnType<typeof useDownloadStatusStore.getState>['status'] = 'hydrating-p3p4'
+) {
   useDownloadStatusStore.setState({
     status,
     lastError: null,
@@ -87,11 +82,7 @@ afterEach(() => {
 describe('NewDeviceDownloadOverlay', () => {
   it('renders nothing when open=false', () => {
     const { container } = render(
-      <NewDeviceDownloadOverlay
-        open={false}
-        userId={USER}
-        onClose={vi.fn()}
-      />,
+      <NewDeviceDownloadOverlay open={false} userId={USER} onClose={vi.fn()} />
     )
     expect(container.querySelector('[data-testid="new-device-download-overlay"]')).toBeNull()
     // watcher was disabled
@@ -99,9 +90,7 @@ describe('NewDeviceDownloadOverlay', () => {
   })
 
   it('renders nothing when userId is empty', () => {
-    render(
-      <NewDeviceDownloadOverlay open userId="" onClose={vi.fn()} />,
-    )
+    render(<NewDeviceDownloadOverlay open userId="" onClose={vi.fn()} />)
     expect(screen.queryByTestId('new-device-download-overlay')).toBeNull()
   })
 
@@ -166,9 +155,7 @@ describe('NewDeviceDownloadOverlay', () => {
     fireEvent.click(screen.getByTestId('new-device-download-retry'))
 
     expect(useDownloadStatusStore.getState().status).toBe('hydrating-p3p4')
-    await waitFor(() =>
-      expect(mockObservedHydrate).toHaveBeenCalledWith(USER),
-    )
+    await waitFor(() => expect(mockObservedHydrate).toHaveBeenCalledWith(USER))
   })
 
   it('clicking Close in error phase calls onClose', () => {
@@ -211,9 +198,9 @@ describe('NewDeviceDownloadOverlay', () => {
 
     expect(screen.getByText(/\(partial counts\)/)).toBeInTheDocument()
     // Still a non-error phase
-    expect(
-      screen.getByTestId('new-device-download-overlay').getAttribute('data-phase'),
-    ).toBe('downloading-p0p2')
+    expect(screen.getByTestId('new-device-download-overlay').getAttribute('data-phase')).toBe(
+      'downloading-p0p2'
+    )
   })
 
   it('fires watchdog after 60s in an active phase', async () => {
@@ -246,5 +233,129 @@ describe('NewDeviceDownloadOverlay', () => {
     resetStore('downloading-p0p2')
     render(<NewDeviceDownloadOverlay open userId={USER} onClose={vi.fn()} />)
     expect(watcherSpy).toHaveBeenCalledWith(USER, true)
+  })
+
+  // KI-E97-S04-L01 / R7 regression guard: parent re-renders during the
+  // 250 ms success-close window must NOT cancel or reset the timer.
+  // Uses fake timers to assert timer firing is deterministic.
+  it('rerender mid-window with a fresh onClose does not reset the 250ms auto-close timer', () => {
+    vi.useFakeTimers()
+    resetStore('complete')
+    resetProgress({ processed: 10, total: 10, done: true })
+    const onClose1 = vi.fn()
+    const onClose2 = vi.fn()
+    const { rerender } = render(
+      <NewDeviceDownloadOverlay open userId={USER} onClose={onClose1} />,
+    )
+
+    // Advance less than SUCCESS_CLOSE_DELAY_MS (250 ms), then rerender with
+    // a NEW onClose identity (simulating an inline `() => {...}` from the
+    // parent re-rendering for an unrelated prop change).
+    act(() => {
+      vi.advanceTimersByTime(100)
+    })
+    rerender(<NewDeviceDownloadOverlay open userId={USER} onClose={onClose2} />)
+
+    // Advance the remaining 160 ms. If the effect had reset the timer on the
+    // onClose identity change, onClose2 would not yet have fired (we'd need
+    // another ~250 ms). With the onCloseRef latch, the original timer keeps
+    // ticking and fires at the 250 ms mark with the LATEST handler.
+    act(() => {
+      vi.advanceTimersByTime(160)
+    })
+
+    expect(onClose1).not.toHaveBeenCalled() // Latched — always calls latest.
+    expect(onClose2).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
+  })
+
+  // KI-E97-S04-L02 / R8 watchdogMs prop coverage.
+  describe('watchdogMs prop', () => {
+    it('watchdogMs={50}: watchdog fires within ~100ms without fake timers', async () => {
+      resetStore('hydrating-p3p4')
+      render(
+        <NewDeviceDownloadOverlay
+          open
+          userId={USER}
+          onClose={vi.fn()}
+          watchdogMs={50}
+        />,
+      )
+      // Small real wait — no vi.advanceTimersByTime(60_000) needed.
+      await waitFor(
+        () => expect(useDownloadStatusStore.getState().status).toBe('error'),
+        { timeout: 500 },
+      )
+      expect(useDownloadStatusStore.getState().lastError).toMatch(/Taking longer/)
+    })
+
+    // R8 regression guard: the impl MUST use `??` (nullish coalescing), not
+    // `||`. The two differ on `watchdogMs={0}`:
+    //   - `??`: `0 ?? 60_000` → 0 (fire at next tick — zero is a valid value)
+    //   - `||`: `0 || 60_000` → 60_000 (0 is falsy, coerced to default)
+    // This test pins the `??` behavior: `watchdogMs={0}` fires the watchdog
+    // on the next tick. If a future refactor switches to `||`, this test
+    // will fail (watchdog will silently use 60_000).
+    it('watchdogMs={0}: ?? preserves 0 — watchdog fires on next tick (would be silently defaulted if || were used)', () => {
+      vi.useFakeTimers()
+      resetStore('hydrating-p3p4')
+      render(
+        <NewDeviceDownloadOverlay
+          open
+          userId={USER}
+          onClose={vi.fn()}
+          watchdogMs={0}
+        />,
+      )
+
+      // Advance a single tick. With `??` the setTimeout(..., 0) fires now.
+      // With `||` the store would stay in 'hydrating-p3p4' (60_000 default).
+      act(() => {
+        vi.advanceTimersByTime(1)
+      })
+
+      expect(useDownloadStatusStore.getState().status).toBe('error')
+      expect(useDownloadStatusStore.getState().lastError).toMatch(/Taking longer/)
+      vi.useRealTimers()
+    })
+
+    it('no watchdogMs prop: default 60_000 ms path still applies', () => {
+      vi.useFakeTimers()
+      resetStore('hydrating-p3p4')
+      render(
+        <NewDeviceDownloadOverlay open userId={USER} onClose={vi.fn()} />,
+      )
+      // Advance shy of default to confirm no early fire.
+      act(() => {
+        vi.advanceTimersByTime(59_999)
+      })
+      expect(useDownloadStatusStore.getState().status).toBe('hydrating-p3p4')
+      act(() => {
+        vi.advanceTimersByTime(2)
+      })
+      expect(useDownloadStatusStore.getState().status).toBe('error')
+      vi.useRealTimers()
+    })
+  })
+
+  it('unmounting during the 250ms success window cancels the auto-close timer', () => {
+    vi.useFakeTimers()
+    resetStore('complete')
+    resetProgress({ processed: 10, total: 10, done: true })
+    const onClose = vi.fn()
+    const { unmount } = render(
+      <NewDeviceDownloadOverlay open userId={USER} onClose={onClose} />,
+    )
+
+    act(() => {
+      vi.advanceTimersByTime(100)
+    })
+    unmount()
+    act(() => {
+      vi.advanceTimersByTime(1_000)
+    })
+
+    expect(onClose).not.toHaveBeenCalled()
+    vi.useRealTimers()
   })
 })

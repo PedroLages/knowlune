@@ -17,7 +17,11 @@ import {
   Sparkles,
   Clock,
 } from 'lucide-react'
-import { SECTION_ORDER, TYPE_BADGE_LABEL, TYPE_BADGE_CLASS } from '@/app/components/figma/searchSections'
+import {
+  SECTION_ORDER,
+  TYPE_BADGE_LABEL,
+  TYPE_BADGE_CLASS,
+} from '@/app/components/figma/searchSections'
 import {
   CommandDialog,
   CommandInput,
@@ -33,12 +37,7 @@ import { parsePrefix } from '@/lib/searchPrefix'
 import { db } from '@/db/schema'
 import { useUnifiedSearchIndex } from '@/lib/useUnifiedSearchIndex'
 import type { EntityType, UnifiedSearchResult } from '@/lib/unifiedSearch'
-import {
-  recordVisit,
-  getRecentHits,
-  RECENT_LIST_KEY,
-  type RecentHit,
-} from '@/lib/searchFrecency'
+import { recordVisit, getRecentHits, RECENT_LIST_KEY, type RecentHit } from '@/lib/searchFrecency'
 import { readHintDismissed, writeHintDismissed } from '@/lib/searchHintDismiss'
 import { getMergedAuthors } from '@/lib/authors'
 import type { ImportedAuthor } from '@/data/types'
@@ -164,7 +163,11 @@ interface SearchCommandPaletteProps {
   initialScope?: EntityType | null
 }
 
-export function SearchCommandPalette({ open, onOpenChange, initialScope }: SearchCommandPaletteProps) {
+export function SearchCommandPalette({
+  open,
+  onOpenChange,
+  initialScope,
+}: SearchCommandPaletteProps) {
   const navigate = useNavigate()
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -193,9 +196,9 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
   // Continue Learning — `undefined` until the palette-open effect resolves,
   // so we can discriminate "loading" from "definitively empty" and avoid
   // flashing the welcome copy before Dexie answers.
-  const [continueLearning, setContinueLearning] = useState<
-    ContinueLearningItem[] | undefined
-  >(undefined)
+  const [continueLearning, setContinueLearning] = useState<ContinueLearningItem[] | undefined>(
+    undefined
+  )
 
   // Best Matches (typed-query state).
   const [bestMatches, setBestMatches] = useState<UnifiedSearchResult[]>([])
@@ -260,12 +263,16 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
   useEffect(() => {
     if (!open) return
     const sectionConfig = scope ? SECTION_ORDER.find(s => s.type === scope) : null
-    const text = sectionConfig ? `Scoped to ${sectionConfig.heading}` : (scope === null && scopeAnnouncement ? 'Scope cleared' : '')
+    const text = sectionConfig
+      ? `Scoped to ${sectionConfig.heading}`
+      : scope === null && scopeAnnouncement
+        ? 'Scope cleared'
+        : ''
     if (!text) return
     const timer = setTimeout(() => setScopeAnnouncement(text), 400)
     return () => clearTimeout(timer)
-  // scopeAnnouncement intentionally omitted — including it would create an
-  // infinite loop: set → effect re-fires → set again.
+    // scopeAnnouncement intentionally omitted — including it would create an
+    // infinite loop: set → effect re-fires → set again.
   }, [scope, open])
 
   /** Handle input change — parse prefix at position 0 to set scope. */
@@ -312,10 +319,7 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
             .above('')
             .reverse()
             .filter(
-              b =>
-                b.status !== 'finished' &&
-                b.status !== 'abandoned' &&
-                (b.progress ?? 0) < 100
+              b => b.status !== 'finished' && b.status !== 'abandoned' && (b.progress ?? 0) < 100
             )
             .limit(10)
             .toArray(),
@@ -325,7 +329,12 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
         // Build course-id → aggregate progress info map.
         const progressByCourse = new Map<
           string,
-          { anyStarted: boolean; maxUpdated?: string; maxCompleted?: string; completedCount: number }
+          {
+            anyStarted: boolean
+            maxUpdated?: string
+            maxCompleted?: string
+            completedCount: number
+          }
         >()
         for (const row of progressRows) {
           const entry = progressByCourse.get(row.courseId) ?? {
@@ -513,9 +522,7 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
     if (e.key !== 'Home' && e.key !== 'End') return
     const root = commandRootRef.current
     if (!root) return
-    const items = root.querySelectorAll<HTMLElement>(
-      '[cmdk-item]:not([data-disabled="true"])'
-    )
+    const items = root.querySelectorAll<HTMLElement>('[cmdk-item]:not([data-disabled="true"])')
     if (items.length === 0) return
     e.preventDefault()
     const target = e.key === 'Home' ? items[0] : items[items.length - 1]
@@ -634,8 +641,7 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
    * Records a visit, then navigates with the `__viaPalette` flag.
    */
   const handleContinueLearningSelect = (item: ContinueLearningItem) => {
-    const path =
-      item.type === 'course' ? `/courses/${item.id}` : `/library/${item.id}`
+    const path = item.type === 'course' ? `/courses/${item.id}` : `/library/${item.id}`
     void recordVisit(item.type, item.id).then(() => {
       setRecentHits(getRecentHits())
     })
@@ -683,8 +689,7 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
         case 'highlight': {
           const row = await db.bookHighlights.get(hit.id)
           if (!row) exists = false
-          else
-            path = `/library/${row.bookId}/read?sourceHighlightId=${encodeURIComponent(hit.id)}`
+          else path = `/library/${row.bookId}/read?sourceHighlightId=${encodeURIComponent(hit.id)}`
           break
         }
         case 'author': {
@@ -704,9 +709,7 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
     if (!exists || !path) {
       toast.error('Item no longer available')
       // Purge the stale entry from LS + local state.
-      const next = recentHits.filter(
-        h => !(h.type === hit.type && h.id === hit.id)
-      )
+      const next = recentHits.filter(h => !(h.type === hit.type && h.id === hit.id))
       setRecentHits(next)
       try {
         localStorage.setItem(RECENT_LIST_KEY, JSON.stringify(next))
@@ -839,7 +842,10 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
             No matches in {scopeHeading}.{' '}
             <button
               type="button"
-              onClick={() => { setScope(null); setSearchQuery('') }}
+              onClick={() => {
+                setScope(null)
+                setSearchQuery('')
+              }}
               className="underline text-brand-soft-foreground"
             >
               Clear filter
@@ -848,9 +854,7 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
           </CommandEmpty>
         )}
         {hasActiveQuery && !scope && (
-          <CommandEmpty>
-            No results found. Try different keywords or browse by tag.
-          </CommandEmpty>
+          <CommandEmpty>No results found. Try different keywords or browse by tag.</CommandEmpty>
         )}
 
         {/* Welcome copy — fresh install, no imports, no opens. */}
@@ -862,8 +866,7 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
             <Sparkles className="size-6 text-muted-foreground" aria-hidden="true" />
             <p>
               Start by importing a course or adding a book. Press{' '}
-              <kbd className="rounded bg-muted px-1 py-0.5 text-xs">Cmd+K</kbd>{' '}
-              anytime to search.
+              <kbd className="rounded bg-muted px-1 py-0.5 text-xs">Cmd+K</kbd> anytime to search.
             </p>
           </div>
         )}
@@ -1001,7 +1004,9 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
                       <span className="text-xs text-muted-foreground truncate">{r.subtitle}</span>
                     )}
                   </div>
-                  <Badge className={`ml-2 shrink-0 text-[10px] px-1.5 py-0 h-4 ${TYPE_BADGE_CLASS[r.type]}`}>
+                  <Badge
+                    className={`ml-2 shrink-0 text-[10px] px-1.5 py-0 h-4 ${TYPE_BADGE_CLASS[r.type]}`}
+                  >
                     {TYPE_BADGE_LABEL[r.type]}
                   </Badge>
                 </CommandItem>
@@ -1031,15 +1036,10 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
                   <Icon className="mr-2 size-4 shrink-0" />
                   <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                     <span className="text-sm truncate">
-                      {highlightMatches(
-                        truncateSnippet(r.displayTitle),
-                        highlightPatterns
-                      )}
+                      {highlightMatches(truncateSnippet(r.displayTitle), highlightPatterns)}
                     </span>
                     {r.subtitle && (
-                      <span className="text-xs text-muted-foreground truncate">
-                        {r.subtitle}
-                      </span>
+                      <span className="text-xs text-muted-foreground truncate">{r.subtitle}</span>
                     )}
                   </div>
                   <Badge
@@ -1054,7 +1054,8 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
         )}
 
         {/* Unified entity sections (fixed order). Hidden when query is empty or scoped. */}
-        {hasActiveQuery && !scope &&
+        {hasActiveQuery &&
+          !scope &&
           SECTION_ORDER.map(section => {
             const rows = groupedResults[section.type]
             const expanded = expandedSections.has(section.type)
@@ -1081,9 +1082,7 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
                     data-testid={`search-empty-${section.type}`}
                   >
                     <SectionIcon className="mr-2 size-4 shrink-0 opacity-50" />
-                    <span className="text-xs">
-                      {section.heading} — no matches
-                    </span>
+                    <span className="text-xs">{section.heading} — no matches</span>
                   </CommandItem>
                 </CommandGroup>
               )
@@ -1115,9 +1114,7 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
                       aria-label={`${r.displayTitle}, ${TYPE_BADGE_LABEL[r.type]}`}
                       // Screen-reader equivalent of the sighted-user dimming cue.
                       aria-description={
-                        isInBestMatches
-                          ? 'Also shown in Best Matches above'
-                          : undefined
+                        isInBestMatches ? 'Also shown in Best Matches above' : undefined
                       }
                       data-in-best-matches={isInBestMatches || undefined}
                       // D-HIGH-4: 44×44px minimum touch target.
@@ -1127,10 +1124,7 @@ export function SearchCommandPalette({ open, onOpenChange, initialScope }: Searc
                       <SectionIcon className="mr-2 size-4 shrink-0" />
                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                         <span className={titleClass}>
-                          {highlightMatches(
-                            truncateSnippet(r.displayTitle),
-                            highlightPatterns
-                          )}
+                          {highlightMatches(truncateSnippet(r.displayTitle), highlightPatterns)}
                         </span>
                         {r.subtitle && (
                           <span className="text-xs text-muted-foreground truncate">

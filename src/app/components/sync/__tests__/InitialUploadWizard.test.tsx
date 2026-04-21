@@ -52,10 +52,7 @@ vi.mock('@/app/stores/useSyncStatusStore', () => ({
 import { InitialUploadWizard } from '../InitialUploadWizard'
 import { syncEngine } from '@/lib/sync/syncEngine'
 import { toastSuccess } from '@/lib/toastHelpers'
-import {
-  wizardCompleteKey,
-  wizardDismissedKey,
-} from '@/lib/sync/shouldShowInitialUploadWizard'
+import { wizardCompleteKey, wizardDismissedKey } from '@/lib/sync/shouldShowInitialUploadWizard'
 
 const USER = 'user-97-03'
 
@@ -76,9 +73,7 @@ function resetProgress(total = 0) {
 
 function renderWizard(props?: Partial<React.ComponentProps<typeof InitialUploadWizard>>) {
   const onClose = vi.fn()
-  const utils = render(
-    <InitialUploadWizard open userId={USER} onClose={onClose} {...props} />,
-  )
+  const utils = render(<InitialUploadWizard open userId={USER} onClose={onClose} {...props} />)
   return { onClose, ...utils }
 }
 
@@ -95,16 +90,12 @@ afterEach(() => {
 
 describe('InitialUploadWizard', () => {
   it('renders nothing when open is false', () => {
-    render(
-      <InitialUploadWizard open={false} userId={USER} onClose={() => {}} />,
-    )
+    render(<InitialUploadWizard open={false} userId={USER} onClose={() => {}} />)
     expect(screen.queryByTestId('initial-upload-wizard')).toBeNull()
   })
 
   it('renders nothing when userId is empty', () => {
-    render(
-      <InitialUploadWizard open userId="" onClose={() => {}} />,
-    )
+    render(<InitialUploadWizard open userId="" onClose={() => {}} />)
     expect(screen.queryByTestId('initial-upload-wizard')).toBeNull()
   })
 
@@ -196,7 +187,7 @@ describe('InitialUploadWizard', () => {
     })
     rerender(<InitialUploadWizard open userId={USER} onClose={() => {}} />)
     await waitFor(() =>
-      expect(screen.getByTestId('initial-upload-wizard')).toHaveAttribute('data-phase', 'error'),
+      expect(screen.getByTestId('initial-upload-wizard')).toHaveAttribute('data-phase', 'error')
     )
 
     vi.mocked(syncEngine.fullSync).mockClear()

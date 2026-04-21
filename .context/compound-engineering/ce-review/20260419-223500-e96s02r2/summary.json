@@ -1,0 +1,42 @@
+{
+  "runId": "20260419-223500-e96s02r2",
+  "mode": "headless",
+  "round": 2,
+  "branch": "feature/e96-s02-wire-p3-p4-stores",
+  "base": "f7aa2e5859b87c3255c097b9fb1cfb317309eebc",
+  "plan": "docs/plans/2026-04-19-018-feat-e96-s02-wire-p3-p4-stores-plan.md",
+  "verdict": "Ready with fixes",
+  "focus_verification": {
+    "F1_monotonic_guard_challenges_currentProgress": "RESOLVED — src/stores/useChallengeStore.ts hydrateFromRemote loops per-row, compares local.currentProgress > remoteRow.currentProgress, preserves local when ahead.",
+    "F2_stale_supabase_types_imports": "RESOLVED — only doc-comment references in tableRegistry.ts; grep finds zero active imports of supabase/types.",
+    "F3_hydrateP3P4_awaited_before_syncEngine_start": "RESOLVED — useAuthLifecycle.ts awaits hydrateP3P4FromSupabase (with .catch) before syncEngine.start per ordering comment.",
+    "F4_deletePath_rollback_pattern": "RESOLVED — useLearningPathStore.deletePath captures prevPaths/prevEntries/prevActivePath snapshot pre-mutation; catch restores full snapshot.",
+    "F5_dead_var_markAllRead": "STILL PRESENT — unreadIds computed at line 159 used only for early-return; unread recomputed at line 166 (minor duplication).",
+    "F6_quiz_hydration_gap": "STILL PRESENT (intentional) — hydrateP3P4.ts explicitly skips quizzes; no useQuizStore.hydrateFromRemote exists. Documented in code comment."
+  },
+  "counts": {"blockers": 0, "high": 0, "medium": 1, "low": 1, "nit": 0},
+  "findings": [
+    {
+      "id": "F6-quiz-hydration-gap",
+      "severity": "P2",
+      "autofixClass": "manual",
+      "owner": "downstream-resolver",
+      "file": "src/lib/sync/hydrateP3P4.ts",
+      "line": 128,
+      "title": "quizzes LWW table has no hydrate path on sign-in",
+      "why": "Per plan, quizzes were wired for upload via syncableWrite (batch C) but the download/hydrate side is deferred. New device sign-in will not pull existing quizzes until a future story adds useQuizStore.hydrateFromRemote. This is a documented, intentional gap but remains a user-visible sync incompleteness.",
+      "suggestedFix": "Create follow-up story to add useQuizStore.hydrateFromRemote (bulkPut-based, no syncableWrite), then dispatch from hydrateP3P4FromSupabase. Update plan §Scope Boundaries or file known-issue."
+    },
+    {
+      "id": "F5-dead-var-markAllRead",
+      "severity": "P3",
+      "autofixClass": "safe_auto",
+      "owner": "review-fixer",
+      "file": "src/stores/useNotificationStore.ts",
+      "line": 159,
+      "title": "Duplicate unread filter in markAllRead",
+      "why": "unreadIds is computed at line 159 solely for the length-check guard; the loop body re-filters notifications at line 166 to build `unread`. Minor redundancy — one filter pass suffices.",
+      "suggestedFix": "Replace line 166 `const unread = notifications.filter(n => n.readAt === null)` by filtering once and reusing, or compute `const unread = notifications.filter(n => n.readAt === null); if (unread.length === 0) return; const unreadIds = unread.map(n => n.id)` to eliminate the duplicate scan."
+    }
+  ]
+}

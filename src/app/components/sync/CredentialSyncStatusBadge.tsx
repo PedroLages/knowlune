@@ -97,7 +97,11 @@ export function CredentialSyncStatusBadge({
     <Tooltip>
       <TooltipTrigger asChild>
         <span
-          role="img"
+          // R1-L3: role="img" only when there is no visible text label.
+          // When showLabel=true the child <span> renders `label` as visible
+          // text, so the wrapper's implicit role already carries the
+          // accessible name — emitting role="img" is redundant.
+          role={showLabel ? undefined : 'img'}
           aria-label={label}
           data-testid={testId ?? `credential-status-badge-${status}`}
           className={cn(

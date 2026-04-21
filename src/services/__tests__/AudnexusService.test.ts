@@ -24,10 +24,7 @@ const AUDNEXUS_BOOK_FULL = {
   title: 'Project Hail Mary',
   authors: [{ name: 'Andy Weir' }],
   narrators: [{ name: 'Ray Porter' }],
-  genres: [
-    { name: 'Science Fiction' },
-    { name: 'Adventure' },
-  ],
+  genres: [{ name: 'Science Fiction' }, { name: 'Adventure' }],
   image: 'https://m.media-amazon.com/images/I/audnexus-cover.jpg',
   seriesName: 'Hail Mary',
   seriesPosition: '1',
@@ -40,10 +37,8 @@ const AUDNEXUS_BOOK_FULL = {
  * Build a mock fetch that sequences through the provided responses in order.
  * Each call consumes one entry; the last entry is reused for any extra calls.
  */
-function mockFetchSequence(
-  responses: Array<{ body: unknown; status?: number } | 'network-error'>
-) {
-  const mocks = responses.map((r) => {
+function mockFetchSequence(responses: Array<{ body: unknown; status?: number } | 'network-error'>) {
+  const mocks = responses.map(r => {
     if (r === 'network-error') {
       return vi.fn().mockRejectedValue(new TypeError('Failed to fetch'))
     }

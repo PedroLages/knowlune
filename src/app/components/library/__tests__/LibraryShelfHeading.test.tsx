@@ -27,13 +27,13 @@ describe('LibraryShelfHeading', () => {
   describe('headingLevel', () => {
     it('renders <h3> by default', () => {
       render(<LibraryShelfHeading icon={StubIcon} label="Continue Listening" />)
-      expect(screen.getByRole('heading', { level: 3, name: /Continue Listening/ })).toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { level: 3, name: /Continue Listening/ })
+      ).toBeInTheDocument()
     })
 
     it('renders <h2> when headingLevel="h2"', () => {
-      render(
-        <LibraryShelfHeading icon={StubIcon} label="Audiobooks" headingLevel="h2" />,
-      )
+      render(<LibraryShelfHeading icon={StubIcon} label="Audiobooks" headingLevel="h2" />)
       expect(screen.getByRole('heading', { level: 2, name: /Audiobooks/ })).toBeInTheDocument()
     })
 
@@ -61,7 +61,7 @@ describe('LibraryShelfHeading', () => {
           label="Books"
           subtitle="Recently added"
           data-testid="my-shelf"
-        />,
+        />
       )
       const subtitle = screen.getByTestId('my-shelf-subtitle')
       expect(subtitle).toHaveTextContent('Recently added')
@@ -74,16 +74,14 @@ describe('LibraryShelfHeading', () => {
           label="Books"
           data-testid="my-shelf"
           actionSlot={<span data-testid="slot-child">slot</span>}
-        />,
+        />
       )
       const wrapper = screen.getByTestId('my-shelf-actions')
       expect(wrapper).toContainElement(screen.getByTestId('slot-child'))
     })
 
     it('omits the actions wrapper when actionSlot is not provided', () => {
-      render(
-        <LibraryShelfHeading icon={StubIcon} label="Books" data-testid="my-shelf" />,
-      )
+      render(<LibraryShelfHeading icon={StubIcon} label="Books" data-testid="my-shelf" />)
       expect(screen.queryByTestId('my-shelf-actions')).toBeNull()
     })
   })
@@ -96,7 +94,7 @@ describe('LibraryShelfHeading', () => {
           label="Books"
           subtitle="subtitle text"
           actionSlot={<span>x</span>}
-        />,
+        />
       )
       expect(screen.getByTestId('library-shelf-row-heading')).toBeInTheDocument()
       expect(screen.getByTestId('library-shelf-row-subtitle')).toBeInTheDocument()
@@ -107,7 +105,7 @@ describe('LibraryShelfHeading', () => {
   describe('className pass-through', () => {
     it('merges className onto the root wrapper', () => {
       const { container } = render(
-        <LibraryShelfHeading icon={StubIcon} label="Books" className="mb-2" />,
+        <LibraryShelfHeading icon={StubIcon} label="Books" className="mb-2" />
       )
       const root = container.firstChild as HTMLElement
       expect(root.className).toContain('mb-2')
@@ -117,7 +115,7 @@ describe('LibraryShelfHeading', () => {
       // tailwind-merge inside cn() removes conflicting margin utilities —
       // only the caller's mb-2 should remain on the root.
       const { container } = render(
-        <LibraryShelfHeading icon={StubIcon} label="Books" className="mb-2" />,
+        <LibraryShelfHeading icon={StubIcon} label="Books" className="mb-2" />
       )
       const root = container.firstChild as HTMLElement
       expect(root.className).toContain('mb-2')
@@ -125,9 +123,7 @@ describe('LibraryShelfHeading', () => {
     })
 
     it('preserves the default mb-4 when className is not provided', () => {
-      const { container } = render(
-        <LibraryShelfHeading icon={StubIcon} label="Books" />,
-      )
+      const { container } = render(<LibraryShelfHeading icon={StubIcon} label="Books" />)
       const root = container.firstChild as HTMLElement
       expect(root.className).toContain('mb-4')
     })
@@ -139,7 +135,7 @@ describe('LibraryShelfHeading', () => {
         <LibraryShelfHeading
           icon={StubIcon}
           label="A very long shelf label that should truncate on narrow viewports"
-        />,
+        />
       )
       // Inner column wrapper is the second child of the root (the flex column).
       const root = container.firstChild as HTMLElement

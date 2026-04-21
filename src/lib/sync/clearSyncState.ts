@@ -23,7 +23,7 @@ export async function clearSyncState(): Promise<void> {
   // match the optional field type in SyncMetadataEntry — Dexie's IndexedDB
   // layer treats missing and `undefined` values equivalently.
   // Intentional: local data preserved on sign-out — re-linked or cleared on next sign-in via LinkDataDialog.
-  await db.syncMetadata.toCollection().modify((row) => {
+  await db.syncMetadata.toCollection().modify(row => {
     row.lastSyncTimestamp = undefined
     row.lastUploadedKey = undefined
   })

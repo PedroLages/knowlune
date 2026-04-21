@@ -51,21 +51,14 @@ vi.mock('@/app/components/sync/LinkDataDialog', () => ({
 }))
 
 vi.mock('@/app/components/sync/NewDeviceDownloadOverlay', () => ({
-  NewDeviceDownloadOverlay: (props: {
-    open: boolean
-    userId: string
-    onClose: () => void
-  }) =>
+  NewDeviceDownloadOverlay: (props: { open: boolean; userId: string; onClose: () => void }) =>
     props.open && props.userId ? (
-      <div
-        data-testid="new-device-download-overlay-mock"
-        data-user-id={props.userId}
-      />
+      <div data-testid="new-device-download-overlay-mock" data-user-id={props.userId} />
     ) : null,
 }))
 
 // Stub out heavy dependencies not under test
-vi.mock('react-router', async (importOriginal) => {
+vi.mock('react-router', async importOriginal => {
   const actual = await importOriginal<typeof import('react-router')>()
   return { ...actual, RouterProvider: () => <div data-testid="router-stub" /> }
 })
@@ -135,16 +128,22 @@ beforeEach(() => {
     startedAt: null,
   })
 
-  vi.mocked(useAuthLifecycle).mockImplementation((opts) => {
+  vi.mocked(useAuthLifecycle).mockImplementation(opts => {
     capturedCallbacks.onUnlinkedDetected = opts?.onUnlinkedDetected
   })
 
   vi.mocked(useAuthStore).mockImplementation(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ((selector?: (s: unknown) => unknown) => {
-      const state = { user: mockAuthUser, session: null, initialized: true, sessionExpired: false, _userInitiatedSignOut: false }
+      const state = {
+        user: mockAuthUser,
+        session: null,
+        initialized: true,
+        sessionExpired: false,
+        _userInitiatedSignOut: false,
+      }
       return selector ? selector(state) : state
-    }) as unknown as typeof useAuthStore,
+    }) as unknown as typeof useAuthStore
   )
 
   vi.mocked(shouldShowDownloadOverlay).mockResolvedValue(false)
@@ -177,7 +176,7 @@ describe('App — NewDeviceDownloadOverlay composition invariants', () => {
 
     // Overlay must not mount visually while the link dialog is open, even
     // if the predicate somehow resolved true.
-    await new Promise((r) => setTimeout(r, 2_200))
+    await new Promise(r => setTimeout(r, 2_200))
     expect(screen.queryByTestId('new-device-download-overlay-mock')).toBeNull()
   })
 
@@ -187,7 +186,7 @@ describe('App — NewDeviceDownloadOverlay composition invariants', () => {
     render(<App />)
 
     await act(async () => {
-      await new Promise((r) => setTimeout(r, 50))
+      await new Promise(r => setTimeout(r, 50))
     })
 
     expect(screen.queryByTestId('new-device-download-overlay-mock')).toBeNull()
@@ -200,17 +199,15 @@ describe('App — NewDeviceDownloadOverlay composition invariants', () => {
     render(<App />)
 
     // Before 2s the overlay must not have mounted
-    await new Promise((r) => setTimeout(r, 200))
+    await new Promise(r => setTimeout(r, 200))
     expect(screen.queryByTestId('new-device-download-overlay-mock')).toBeNull()
 
     // Wait past the 2s defer
     await waitFor(
       () => {
-        expect(
-          screen.getByTestId('new-device-download-overlay-mock'),
-        ).toBeInTheDocument()
+        expect(screen.getByTestId('new-device-download-overlay-mock')).toBeInTheDocument()
       },
-      { timeout: 3_000 },
+      { timeout: 3_000 }
     )
   }, 10_000)
 
@@ -221,7 +218,7 @@ describe('App — NewDeviceDownloadOverlay composition invariants', () => {
 
     // Let the predicate resolve
     await act(async () => {
-      await new Promise((r) => setTimeout(r, 20))
+      await new Promise(r => setTimeout(r, 20))
     })
 
     // Simulate the engine completing FAST (within the 2s defer).
@@ -234,7 +231,7 @@ describe('App — NewDeviceDownloadOverlay composition invariants', () => {
     })
 
     // Wait past the 2s defer
-    await new Promise((r) => setTimeout(r, 2_100))
+    await new Promise(r => setTimeout(r, 2_100))
     expect(screen.queryByTestId('new-device-download-overlay-mock')).toBeNull()
   })
 })

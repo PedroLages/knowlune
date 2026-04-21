@@ -1,0 +1,182 @@
+{
+  "runId": "20260419-025127-e97s04-headless-90a45cd7",
+  "mode": "headless",
+  "scope": {
+    "base": "01cbeacce17c8dc75134f71fdad8e340333b26d5",
+    "branch": "feature/e97-s04-new-device-download-experience",
+    "files_changed": 19,
+    "insertions": 2984,
+    "deletions": 8
+  },
+  "intent": "E97-S04 New-device download overlay — symmetric counterpart to E97-S03 upload wizard. Adds useDownloadStatusStore (phase machine), observedHydrate wrapper, useDownloadProgress (HEAD-count snapshot + Dexie poll), useDownloadEngineWatcher (passive engine observer), shouldShowDownloadOverlay predicate, NewDeviceDownloadOverlay component, and App.tsx mount wiring with 2s deferred mount.",
+  "plan_source": "explicit",
+  "plan_path": "docs/plans/2026-04-19-025-feat-e97-s04-new-device-download-experience-plan.md",
+  "reviewers": [
+    "correctness",
+    "testing",
+    "maintainability",
+    "project-standards",
+    "kieran-typescript",
+    "adversarial",
+    "reliability"
+  ],
+  "applied_fixes": [],
+  "findings": [
+    {
+      "id": "F1",
+      "title": "Progress hook counts rows without userId as current user; predicate excludes them — inconsistent user scoping",
+      "severity": "P2",
+      "file": "src/app/hooks/useDownloadProgress.ts",
+      "line": 110,
+      "confidence": 0.82,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "reviewer": "correctness",
+      "why_it_matters": "`localCountAll` returns `true` for rows lacking a userId field (count them in), while `shouldShowDownloadOverlay.localHasData` returns `false` for the same rows (exclude them). A brand-new device that still has residual singleton rows (e.g. `notificationPreferences` with id='singleton') from a prior session would pass the emptiness gate, but those rows would then be counted toward `processed`, potentially inflating the processed total. Also inconsistent: if remote HEAD counts scope via `.eq('user_id', userId)` then processed should likewise only count rows belonging to this user.",
+      "evidence": [
+        "useDownloadProgress.ts:110 — `if (rowUserId === undefined || rowUserId === null || rowUserId === '') { return true }`",
+        "shouldShowDownloadOverlay.ts:78 — `if (rowUserId === undefined || rowUserId === null || rowUserId === '') { return false }`",
+        "Plan Unit 4a mentions singleton tables should be excluded from localHasData (F3 fix) but the progress hook does not mirror that exclusion."
+      ],
+      "suggested_fix": "Either (a) apply the same singleton-exclusion + userId-only filter in `localCountAll` as in `localHasData`, or (b) document the asymmetry with a code comment explaining why processed count is permissive (e.g., echo-loop of engine writes may land rows with null userId before backfill stamps them)."
+    },
+    {
+      "id": "F2",
+      "title": "remoteHasAnyRows assumes every synced Supabase table has a user_id column",
+      "severity": "P2",
+      "file": "src/lib/sync/shouldShowDownloadOverlay.ts",
+      "line": 119,
+      "confidence": 0.75,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "reviewer": "correctness, reliability",
+      "why_it_matters": "Both `remoteHasAnyRows` and `useDownloadProgress.headCount` call `.eq('user_id', userId)` for every entry in `tableRegistry.filter(!skipSync && !uploadOnly)`. If any synced table uses a different foreign-key column (e.g. `owner_id`, `profile_id`), the Supabase query rejects with a column-not-found error. In predicate context this falls through to the safe default (false/unknown), but in the progress hook it increments `totalsFailedCount`, and if enough tables use non-standard names, may silently tip the hook into ALL-HEAD-fail with a misleading 'check your connection' error.",
+      "evidence": [
+        "shouldShowDownloadOverlay.ts:119 — `.eq('user_id', userId)` applied uniformly",
+        "useDownloadProgress.ts:89 — same pattern",
+        "No lookup against tableRegistry's fieldMap to resolve the actual user-scoped column name per table."
+      ],
+      "suggested_fix": "Use `entry.fieldMap` to resolve the user-scoped column name per table (fall back to `user_id` if unmapped). Alternatively, add a schema-drift test that asserts every !skipSync && !uploadOnly entry exposes a user_id column in Supabase, locking the invariant."
+    },
+    {
+      "id": "F3",
+      "title": "Auto-close effect depends on inline `onClose` prop — timer resets on every parent re-render",
+      "severity": "P3",
+      "file": "src/app/components/sync/NewDeviceDownloadOverlay.tsx",
+      "line": 156,
+      "confidence": 0.70,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "reviewer": "kieran-typescript, maintainability",
+      "why_it_matters": "The 250ms success→onClose effect includes `onClose` in its dep array. App.tsx passes a fresh inline arrow `() => { setDownloadOverlayUserId(null); setDeferredOverlayReady(false); }` on every render. Any unrelated App re-render during the success window clears + re-arms the 250ms timer. With a stable store status the net effect is still a close within ~250ms, but this couples close latency to App render cadence and is a latent source of test flake under fake timers.",
+      "evidence": [
+        "NewDeviceDownloadOverlay.tsx:156 — `}, [open, storeStatus, progress.done, progress.total, progress.processed, onClose])`",
+        "App.tsx:290-293 — `onClose={() => { setDownloadOverlayUserId(null); setDeferredOverlayReady(false); }}`"
+      ],
+      "suggested_fix": "Wrap the overlay's onClose in `useCallback` on the App side, or stash onClose in a ref inside the overlay and drop it from the effect deps. Same pattern applies to `handleRetry` if it ever becomes a dependency."
+    },
+    {
+      "id": "F4",
+      "title": "Watchdog + success effects both use window.setTimeout without feature-detecting test env",
+      "severity": "P3",
+      "file": "src/app/components/sync/NewDeviceDownloadOverlay.tsx",
+      "line": 105,
+      "confidence": 0.65,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "reviewer": "testing",
+      "why_it_matters": "The component uses `window.setTimeout`/`window.clearTimeout` with the browser-typed return (`number`). In jsdom with vitest fake timers this works, but mocking cadence for the 60s watchdog in unit tests is expensive (60_000ms advance). Extracting WATCHDOG_MS to an injectable constant or an optional prop would let tests exercise the watchdog deterministically without advancing 60s of fake time.",
+      "evidence": [
+        "NewDeviceDownloadOverlay.tsx:48 — `const WATCHDOG_MS = 60_000` hard-coded module constant",
+        "Plan Unit 5 test scenarios include `60s watchdog fires from hydrating-p3p4` and from `downloading-p0p2` — each requires 60s of fake-timer advance."
+      ],
+      "suggested_fix": "Allow WATCHDOG_MS and SUCCESS_CLOSE_DELAY_MS to be overridden via an optional prop (default to the production values). Tests pass a shorter watchdog (e.g. 100ms) to exercise the transition."
+    },
+    {
+      "id": "F5",
+      "title": "Engine-watcher operates while storeStatus is 'hydrating-p3p4' — scope broader than plan specifies",
+      "severity": "P3",
+      "file": "src/app/hooks/useDownloadEngineWatcher.ts",
+      "line": 91,
+      "confidence": 0.72,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "reviewer": "correctness",
+      "why_it_matters": "Plan §Unit 4a says the watcher 'subscribes only while enabled and downloadStatus === downloading-p0p2'. The implementation also allows the callback to run while status is `hydrating-p3p4` (line 91). `tryCompleteIfQueueDrained` defensively gates on `downloading-p0p2` before calling `completeDownloading`, but the engine-error branch calls `failDownloading` while still in `hydrating-p3p4`, which would override a hydrator-in-progress with an engine-error message. If the engine transitions to `error` during Phase A (before observedHydrate resolves), the overlay jumps to error even if the hydrator is about to succeed.",
+      "evidence": [
+        "useDownloadEngineWatcher.ts:89-94 — guard allows Phase A",
+        "Line 111-120 — engine 'error' surfaces failDownloading even when active === 'hydrating-p3p4'",
+        "Plan line 487 — 'Subscribes to useSyncStatusStore only while enabled + store phase is downloading-p0p2'"
+      ],
+      "suggested_fix": "Either tighten the guard to match the plan (Phase B only) and drop the `hydrating-p3p4` allowance, or update the plan doc to reflect the actual Phase A + Phase B scope. If keeping the broader scope, add a comment explaining why engine errors during Phase A should surface before the hydrator completes."
+    },
+    {
+      "id": "F6",
+      "title": "Dev/test escape hatch `__mockHeadCounts` is a single scalar — cannot simulate per-table or partial-failure scenarios",
+      "severity": "P3",
+      "file": "src/app/hooks/useDownloadProgress.ts",
+      "line": 78,
+      "confidence": 0.78,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "reviewer": "testing",
+      "why_it_matters": "`window.__mockHeadCounts` returns the same scalar count for every table. Unit 7 plan specifies tests 3b (ALL HEAD fail) and 3c (PARTIAL HEAD fail) — neither can be exercised via this hook because a scalar cannot distinguish tables. The E2E spec (story-97-04.spec.ts) drives the overlay via store shims instead, bypassing the progress hook entirely, so the ALL-vs-PARTIAL branches are tested only in unit tests using vi.mock.",
+      "evidence": [
+        "useDownloadProgress.ts:80-82 — `const mock = (window as any).__mockHeadCounts as number | undefined; if (typeof mock === 'number') return mock;`",
+        "Plan Unit 7 §Test 3b and §Test 3c explicitly call for per-table HEAD intercepts, not available through the current shim."
+      ],
+      "suggested_fix": "Expand the shim to accept `{ [supabaseTable]: number | 'error' }` so tests can drive per-table success/failure combinations. Alternatively, add a companion `__mockHeadFailures: string[]` listing tables that should throw."
+    },
+    {
+      "id": "F7",
+      "title": "observedHydrate throws after setting error state; caller's .catch logs but store error is already set — potential duplicate error surfacing",
+      "severity": "P3",
+      "file": "src/lib/sync/observedHydrate.ts",
+      "line": 52,
+      "confidence": 0.60,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "reviewer": "reliability",
+      "why_it_matters": "`observedHydrate` calls `failDownloading(message)` and then re-throws. The caller in useAuthLifecycle catches and console.errors. On retry via `handleRetry`, the hydrator re-runs; a second failure path walks through `failDownloading` again, overwriting any intermediate state. If the retry's hydrator throws synchronously before the overlay's `startHydrating()` reset (line 163) — unlikely but possible — the store could stay in `error` while a new retry is in flight.",
+      "evidence": [
+        "observedHydrate.ts:47-53 — failDownloading + re-throw",
+        "NewDeviceDownloadOverlay.tsx:160-170 — handleRetry calls startHydrating first, then observedHydrate (ordering correct; this is defensive note only)."
+      ],
+      "suggested_fix": "No immediate action required — the retry ordering is correct. Consider adding a unit test that asserts rapid consecutive retries do not leave the store stuck in error."
+    }
+  ],
+  "residual_risks": [
+    "Plan §R2 counts derived from tableRegistry assume every !skipSync && !uploadOnly Supabase table has a user_id column — not asserted anywhere.",
+    "If the engine's initial 'synced' state precedes any user-observable 'syncing' event after sign-in (e.g., user with zero P0-P2 rows to fetch), the fast-path in useDownloadEngineWatcher is the only detection. Covered by code but fragile to future engine changes.",
+    "Auto-close effect's onClose-in-deps pattern couples close latency to App render cadence; not observable today but could flake under future App-level re-render churn."
+  ],
+  "testing_gaps": [
+    "Plan Unit 7 Tests 3b (ALL HEAD fail) and 3c (PARTIAL HEAD fail) are specified but the E2E spec uses store-driven shims only; the HEAD-count branches are covered in unit tests (useDownloadProgress.test.ts) but not in E2E.",
+    "60s watchdog transition — unit test exists but requires full fake-timer advance; consider injecting WATCHDOG_MS.",
+    "No E2E assertion that useSyncableWrite is NOT called during the overlay lifetime (echo-loop invariant). Plan Unit 2 test scenario calls this out, and the shouldShowDownloadOverlay test may cover it, but a belt-and-suspenders invariant test at the App level would reinforce it."
+  ],
+  "learnings": [
+    "E97-S03 F2 snapshot-before-async race pattern — mirrored correctly in useDownloadProgress via totalRef/snapshotTakenRef.",
+    "E96-S02 echo-loop guard (bulkPut, never syncableWrite) — observed; observedHydrate does not write to syncQueue.",
+    "Singleton-table exclusion fix (F3 in plan) applied in shouldShowDownloadOverlay.localHasData but asymmetric vs useDownloadProgress.localCountAll — see F1 finding."
+  ],
+  "agent_native_gaps": [],
+  "schema_drift": "N/A — no migration files in diff.",
+  "deployment_notes": "Client-only UI. No rollout risk. Verify __downloadStatusStore shim is tree-shaken in production (import.meta.env.PROD guard present).",
+  "verdict": "Ready with fixes",
+  "verdict_reasoning": "All requirements R1-R6 are addressed in code. No P0/P1 findings. Two P2 semantic concerns (user-scoping asymmetry F1, user_id column assumption F2) are worth addressing before enabling on heterogeneous schema but do not block this feature shipping given safe-default fallbacks. Remaining P3 findings are polish/advisory."
+}

@@ -132,17 +132,9 @@ export const useContentProgressStore = create<ContentProgressState>((set, get) =
           status,
           updatedAt: now,
         }
-        await syncableWrite(
-          'contentProgress',
-          'put',
-          itemRecord as unknown as SyncableRecord,
-        )
+        await syncableWrite('contentProgress', 'put', itemRecord as unknown as SyncableRecord)
         for (const record of cascadeRecords) {
-          await syncableWrite(
-            'contentProgress',
-            'put',
-            record as unknown as SyncableRecord,
-          )
+          await syncableWrite('contentProgress', 'put', record as unknown as SyncableRecord)
         }
       })
 

@@ -1,0 +1,90 @@
+{
+  "run_id": "20260420-e97s03-headless-bdc7a66a",
+  "mode": "headless",
+  "scope": {
+    "base": "0c12d3ec61cbe6c91b222e54ee06971f40155dcd",
+    "branch": "feature/e97-s03-initial-upload-wizard",
+    "files_changed": 11,
+    "additions": 1340
+  },
+  "plan": "docs/plans/2026-04-19-024-feat-e97-s03-initial-upload-wizard-plan.md",
+  "plan_source": "explicit",
+  "verdict": "Ready with fixes",
+  "applied_safe_auto_fixes": 0,
+  "counts": { "blockers": 0, "high": 0, "medium": 2, "low": 3, "nit": 0 },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "P2",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "file": "src/app/__tests__/App.initialUploadWizard.test.tsx",
+      "line": 1,
+      "reviewer": "testing, project-standards",
+      "confidence": 0.85,
+      "title": "Unit 4 App-level test file from plan is missing",
+      "why_it_matters": "Plan Unit 4 explicitly requires an App.tsx test asserting (a) LinkDataDialog and InitialUploadWizard never both open simultaneously and (b) sign-out preserves sync:wizard:complete:<userId> but clears sync:wizard:dismissed:<userId>. The useAuthLifecycle test covers (b) in isolation, but the ordering invariant in (a) only manifests at App.tsx composition level and has no coverage in the diff. Without it, the R1 ordering regression is detectable only by the single E2E case.",
+      "suggested_fix": "Add src/app/__tests__/App.initialUploadWizard.test.tsx covering: seeded pending queue + sign-in renders wizard (not link dialog); seeded unlinked rows + pending queue renders link dialog first, then wizard on onResolved with the two never open simultaneously; fresh DB renders neither and writes completion flag."
+    },
+    {
+      "id": "F2",
+      "severity": "P2",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "file": "src/app/components/sync/InitialUploadWizard.tsx",
+      "line": 100,
+      "reviewer": "correctness",
+      "confidence": 0.72,
+      "title": "Success transition requires progress.total > 0, stranding users when snapshot lands after fullSync completes",
+      "why_it_matters": "On entering 'uploading', useInitialUploadProgress snapshots total async (~1 tick). If syncEngine.fullSync() drains the queue and flips status='synced' before the snapshot resolves, the success effect sees total=0 and bails; the silent-close effect then closes the dialog via onClose() instead of showing the success state + completion toast. Users who had pending work get no confirmation, and the completion flag is never written by the wizard (it relies on shouldShowInitialUploadWizard short-circuit on next sign-in). Skips AC4 success-state guarantee.",
+      "suggested_fix": "Capture a 'had_work_on_open' flag when the snapshot first resolves with total>0, then gate success on (status==='synced' && progress.done && (progress.total>0 || hadWorkOnOpen)). Alternatively, treat status==='synced' during 'uploading' phase as success regardless of current total when the wizard was opened via a true shouldShowInitialUploadWizard result."
+    },
+    {
+      "id": "F3",
+      "severity": "P3",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "file": "src/app/components/sync/InitialUploadWizard.tsx",
+      "line": 154,
+      "reviewer": "correctness, reliability",
+      "confidence": 0.65,
+      "title": "Retry may hang in 'uploading' forever if fullSync rejects before status becomes 'syncing'",
+      "why_it_matters": "handleRetry sets suppressErrorUntilSyncingRef=true, flips phase to 'uploading', then fires fullSync(). If fullSync rejects synchronously (or before the engine ever sets status='syncing' — e.g., offline guard in engine), the suppress flag never clears and subsequent status='error' transitions are ignored. The UI stays stuck on the uploading spinner. Low probability but not recoverable without a manual close.",
+      "suggested_fix": "Clear suppressErrorUntilSyncingRef in the fullSync().catch() handler, or add a short timeout (e.g., 3s) after which the suppress flag auto-clears so a still-'error' status promotes back to the error phase."
+    },
+    {
+      "id": "F4",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "file": "src/app/hooks/useInitialUploadProgress.ts",
+      "line": 32,
+      "reviewer": "performance",
+      "confidence": 0.70,
+      "title": "computeUnlinkedCount runs a full table .filter() scan per table on every snapshot",
+      "why_it_matters": "The .filter(r => r.userId !== userId).count() path scans every row in every SYNCABLE_TABLE (no index on userId in most tables). For users with thousands of records, the snapshot can take hundreds of ms on low-end devices, delaying wizard interactivity and potentially racing the fullSync completion (compounds F2). Only runs once per wizard open so impact is bounded.",
+      "suggested_fix": "Reuse hasUnlinkedRecords's short-circuit pattern or cache the unlinked count from the pre-open shouldShowInitialUploadWizard call and pass it in as a prop, avoiding a second full scan."
+    },
+    {
+      "id": "F5",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "file": "tests/e2e/story-97-03.spec.ts",
+      "line": 187,
+      "reviewer": "testing",
+      "confidence": 0.90,
+      "title": "Hard wait page.waitForTimeout(500) violates test-patterns rule",
+      "why_it_matters": ".claude/rules/testing/test-patterns.md forbids waitForTimeout without strong justification. The comment 'waiting for the one-shot evaluation to resolve' is not a deterministic signal — the evaluation could take longer than 500ms on slow CI, flaking the test. ESLint test-patterns/no-hard-waits will flag this as a warning.",
+      "suggested_fix": "Replace with page.waitForFunction() that polls for either wizard visibility or localStorage completion flag presence, e.g., await expect.poll(async () => (await wizard.count()) + (await getLocalStorageKey(page, `sync:wizard:complete:${USER_ID}`) !== null ? 1 : 0)).toBeGreaterThan(0)."
+    }
+  ],
+  "residual_risks": [
+    "Race between useAuthLifecycle syncEngine.start() and App.tsx useEffect evaluation of shouldShowInitialUploadWizard — if auth flips user but sync queue is already drained by the time evaluation runs, the short-circuit writes the completion flag and no wizard appears. This is the intended 'silent no-op' path per R5 but makes behavioral assertions harder."
+  ],
+  "testing_gaps": [
+    "No App.tsx integration test asserting LinkDataDialog → InitialUploadWizard ordering (see F1).",
+    "No unit test for the 'fast-path' re-evaluation effect in App.tsx that triggers on useAuthStore.user change."
+  ]
+}

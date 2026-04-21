@@ -101,7 +101,7 @@ export const useNotificationPrefsStore = create<NotificationPrefsState>((set, ge
         await syncableWrite(
           'notificationPreferences',
           'put',
-          defaults as unknown as Record<string, unknown> & { id: string },
+          defaults as unknown as Record<string, unknown> & { id: string }
         )
         // Re-read from Dexie so the in-memory state reflects the stamped
         // `userId` + `updatedAt` fields applied by `syncableWrite`.
@@ -129,7 +129,7 @@ export const useNotificationPrefsStore = create<NotificationPrefsState>((set, ge
       await syncableWrite(
         'notificationPreferences',
         'put',
-        next as unknown as Record<string, unknown> & { id: string },
+        next as unknown as Record<string, unknown> & { id: string }
       )
       // Re-read so in-memory `updatedAt` matches the Dexie-persisted stamp.
       const stored = await db.notificationPreferences.get('singleton')
@@ -155,7 +155,7 @@ export const useNotificationPrefsStore = create<NotificationPrefsState>((set, ge
       await syncableWrite(
         'notificationPreferences',
         'put',
-        next as unknown as Record<string, unknown> & { id: string },
+        next as unknown as Record<string, unknown> & { id: string }
       )
       const stored = await db.notificationPreferences.get('singleton')
       set({ prefs: stored ?? next })

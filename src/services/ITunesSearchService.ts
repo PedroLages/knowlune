@@ -43,10 +43,13 @@ export async function searchITunes(params: {
     const results: unknown[] = data?.results ?? []
 
     return results
-      .filter((item): item is Record<string, unknown> =>
-        typeof item === 'object' && item !== null && (item as Record<string, unknown>).wrapperType === 'audiobook'
+      .filter(
+        (item): item is Record<string, unknown> =>
+          typeof item === 'object' &&
+          item !== null &&
+          (item as Record<string, unknown>).wrapperType === 'audiobook'
       )
-      .map((item) => mapResult(item))
+      .map(item => mapResult(item))
   } catch {
     // silent-catch-ok: iTunes metadata is best-effort, caller proceeds without it
     return []

@@ -1,0 +1,77 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "id": "CR-001",
+      "title": "Keyboard activation on not-started ImportedCourseCard skips status mutation",
+      "severity": "high",
+      "confidence": 0.9,
+      "category": "incorrect-state-transition",
+      "file": "src/app/components/figma/ImportedCourseCard.tsx",
+      "lines": "186-192, 244-248, 257-258",
+      "description": "handleCardKeyDown navigates directly to /courses/{id}/overview when Enter or Space is pressed on the article, with no status check. For not-started courses the previous in-body Button performed the status mutation (not-started -> active) on Enter/Space because it was an independently focusable button. After the refactor the only path that mutates status is mouse click on the centered PlayOverlay (handleStartStudying). A keyboard user who tabs to the article and presses Enter/Space lands on the overview page WITHOUT the status ever transitioning to 'active'. The PlayOverlay button is reachable by tabbing further past the article, but the natural keyboard flow (article focus -> Enter) is now broken for the start-studying behavior the plan explicitly added.",
+      "trace": "User tabs to article (tabIndex=0) -> presses Enter -> handleCardKeyDown matches e.target===e.currentTarget -> navigate() called -> status remains 'not-started'. The new Play overlay's intended behavioral addition (status mutation + navigate) is bypassed entirely.",
+      "fix": "In handleCardClick and handleCardKeyDown, when status === 'not-started' && !readOnly, call handleStatusChange('active') before navigate(), or extract a shared startOrOpenCourse(e) helper used by all three entry points (PlayOverlay click, card click, card keydown)."
+    },
+    {
+      "id": "CR-002",
+      "title": "completion-progress-bar test-id removed from ImportedCourseCard violates R7 (test-id preservation)",
+      "severity": "medium",
+      "confidence": 0.95,
+      "category": "contract-regression",
+      "file": "src/app/components/figma/ImportedCourseCard.tsx",
+      "lines": "diff lines 1075-1079 (deletion)",
+      "description": "Pre-refactor ImportedCourseCard rendered <div data-testid=\"completion-progress-bar\"><Progress .../></div> in the body for any course with completionPercent > 0. The new code drops this element entirely; the cover-edge CoverProgressBar carries no test-id. The plan's R7 commitment ('all existing test-ids preserved') is violated for ImportedCourseCard. No current unit test asserts it (the previous test file did not cover it), but any external E2E or downstream consumer relying on this selector silently loses coverage. CourseCard's progress variant retains the same test-id on its in-body labeled Progress, creating an inconsistency between the two card components.",
+      "trace": "grep for completion-progress-bar shows only one remaining occurrence (CourseCard.tsx progress variant). ImportedCourseCard no longer surfaces this selector despite still rendering progress visually.",
+      "fix": "Add data-testid=\"completion-progress-bar\" to the CoverProgressBar wrapper in ImportedCourseCard (or expose the testid prop on the shared CoverProgressBar primitive and pass it through)."
+    },
+    {
+      "id": "CR-003",
+      "title": "PlayOverlay click does not await/handle updateCourseStatus failure before navigation",
+      "severity": "low",
+      "confidence": 0.65,
+      "category": "broken-error-propagation",
+      "file": "src/app/components/figma/ImportedCourseCard.tsx",
+      "lines": "205-209, 244-248",
+      "description": "handleStartStudying calls handleStatusChange('active') (which synchronously invokes the zustand updateCourseStatus) and then immediately navigates. updateCourseStatus is fire-and-forget with no error surface in the component; if the underlying store mutation throws or the persistence layer rejects, the user is navigated to overview while the course status remains 'not-started'. The next render of the card will still show the Play overlay, producing a confusing state where the user already 'started' the course but the system shows it as not-started. Whether this is reachable depends on the store implementation (not in scope of this diff) — flagged as low confidence because the mutation may be synchronous and infallible.",
+      "trace": "Click PlayOverlay -> handleStartStudying -> stopPropagation -> handleStatusChange('active') -> updateCourseStatus(course.id, 'active') (no await, no try/catch) -> navigate(...). If updateCourseStatus throws synchronously the navigate() never runs (acceptable). If it silently fails async (e.g. Dexie write rejection), navigation succeeds but state is stale.",
+      "fix": "If the store mutation can fail async, surface it via toast and consider awaiting before navigation, or refresh the not-started detection from the store after mutation."
+    },
+    {
+      "id": "CR-004",
+      "title": "CourseCard library/overview variants drop labeled body Progress bar — textual percentage no longer shown",
+      "severity": "low",
+      "confidence": 0.9,
+      "category": "behavioral-regression",
+      "file": "src/app/components/figma/CourseCard.tsx",
+      "lines": "diff lines 353 (deletion library), 420-424 (deletion overview)",
+      "description": "Pre-refactor library variant rendered <Progress value={completionPercent} showLabel className=\"h-1.5\" /> in the body, displaying the numeric percentage (e.g. '42%'). Pre-refactor overview variant rendered the same when isInProgress. Both are removed and replaced only by the unlabeled CoverProgressBar on the cover. The ProgressRing on the cover is also unlabeled. Net effect: textual percentage is no longer surfaced on library/overview variants; users get only a thin colored bar. Plan describes the change as 'cosmetic + structural' so this may be intentional, but it is a user-visible information regression worth confirming.",
+      "trace": "Old: library body always rendered labeled Progress. New: library body has no Progress at all; only CoverProgressBar (no label) on cover. Same pattern for overview.",
+      "fix": "If intentional, accept. If not, either restore showLabel on a body Progress or surface percent text near ProgressRing on the cover."
+    },
+    {
+      "id": "CR-005",
+      "title": "PlayOverlay 'show' guard does not include status==='active'/'paused'/'completed' check on the wrapper — relies on caller",
+      "severity": "low",
+      "confidence": 0.7,
+      "category": "defensive-correctness",
+      "file": "src/app/components/figma/ImportedCourseCard.tsx",
+      "lines": "971-976 (PlayOverlay) and 957 (Camera button)",
+      "description": "Mutual exclusivity between Camera overlay and PlayOverlay relies on two independent boolean conditions: Camera renders when status !== 'not-started', PlayOverlay renders when status === 'not-started'. These are exhaustive over the union — fine for the current LearnerCourseStatus type. However if a new status value is ever added to the union (e.g. 'archived') the Camera overlay would render and the PlayOverlay would not, which may or may not be desired. Not a current bug; flagged as a future-proofing concern. TypeScript will not warn because both conditions remain valid for any new string-literal addition.",
+      "trace": "Inspect status type LearnerCourseStatus: 'not-started' | 'active' | 'paused' | 'completed'. Mutual exclusivity holds today.",
+      "fix": "Optional: switch on status to make the relationship exhaustive, or add a comment documenting the invariant."
+    }
+  ],
+  "residual_risks": [
+    "PlayOverlay relies on group-hover for visibility on pointer devices; on touch devices it uses [@media(hover:none)]:opacity-100 which forces it always-visible — the camera/info overlays use group-hover only and may be unreachable on touch. Not in scope of this refactor's intent but consistent with prior behavior.",
+    "useCourseCardPreview hook integration appears unchanged (previewHandlers spread identically onto the article); cannot fully verify dismissal-guard timing without reading the hook source.",
+    "Author Link/button uses e.stopPropagation() consistently in both components — author click should not bubble to card navigation. Verified."
+  ],
+  "testing_gaps": [
+    "No unit test asserts that pressing Enter/Space on a not-started ImportedCourseCard transitions status to 'active' before navigation. The new 'Play overlay' describe block only tests mouse click on the overlay button; the keyboard path through the article wrapper is uncovered (and currently broken — see CR-001).",
+    "No test covers the case where updateCourseStatus throws — handleStartStudying has no error handling.",
+    "No test asserts that completion-progress-bar test-id is preserved on ImportedCourseCard (it was silently dropped — see CR-002).",
+    "No test asserts mutual exclusivity between PlayOverlay and Camera overlay (only Play vs status states tested).",
+    "CompletionOverlay z-10 + Play overlay (z-20) coexistence is not explicitly tested; PlayOverlay only renders for not-started so collision is impossible by the show condition, but a test asserting CompletionOverlay does not render when status === 'not-started' would lock in the invariant."
+  ]
+}

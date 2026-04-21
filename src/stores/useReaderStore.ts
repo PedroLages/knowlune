@@ -85,8 +85,7 @@ function loadSettings(): ReaderSettings {
           : DEFAULT_SETTINGS.readingRulerEnabled,
       scrollMode:
         typeof parsed.scrollMode === 'boolean' ? parsed.scrollMode : DEFAULT_SETTINGS.scrollMode,
-      dualPage:
-        typeof parsed.dualPage === 'boolean' ? parsed.dualPage : DEFAULT_SETTINGS.dualPage,
+      dualPage: typeof parsed.dualPage === 'boolean' ? parsed.dualPage : DEFAULT_SETTINGS.dualPage,
       showPageNumbers:
         typeof parsed.showPageNumbers === 'boolean'
           ? parsed.showPageNumbers

@@ -92,7 +92,7 @@ function mapVolumeToResult(item: unknown): MetadataSearchResult | null {
   // Request the largest available image (zoom=6 = extraLarge, ~1280px); strip edge=curl.
   const coverUrl = httpsUrl?.replace(/&zoom=\d/, '&zoom=6').replace(/&edge=curl/, '')
 
-  const isbn13 = info.industryIdentifiers?.find((id) => id.type === 'ISBN_13')?.identifier
+  const isbn13 = info.industryIdentifiers?.find(id => id.type === 'ISBN_13')?.identifier
 
   return {
     provider: 'google-books',

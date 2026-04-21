@@ -1,13 +1,5 @@
 import { Link } from 'react-router'
-import {
-  Layers,
-  Brain,
-  RotateCcw,
-  TrendingDown,
-  TrendingUp,
-  Minus,
-  Clock,
-} from 'lucide-react'
+import { Layers, Brain, RotateCcw, TrendingDown, TrendingUp, Minus, Clock } from 'lucide-react'
 import type { ActionSuggestion, ActionType, ScoreTrend } from '@/lib/actionSuggestions'
 import { Card } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
@@ -97,10 +89,7 @@ export function ActionCard({ suggestion, className }: ActionCardProps) {
           {/* Header row */}
           <div className="flex items-center gap-2">
             <TypeIcon className="size-4 shrink-0 text-muted-foreground" />
-            <span
-              className="min-w-0 flex-1 truncate text-sm font-medium"
-              title={topicName}
-            >
+            <span className="min-w-0 flex-1 truncate text-sm font-medium" title={topicName}>
               {topicName}
             </span>
             <Badge className={cn('shrink-0', tier.badgeClass)}>{score}</Badge>

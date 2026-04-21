@@ -472,11 +472,7 @@ describe('ImportedCourseCard', () => {
       const user = userEvent.setup()
       render(
         <MemoryRouter>
-          <ImportedCourseCard
-            course={makeCourse({ status: 'active' })}
-            allTags={[]}
-            readOnly
-          />
+          <ImportedCourseCard course={makeCourse({ status: 'active' })} allTags={[]} readOnly />
         </MemoryRouter>
       )
 

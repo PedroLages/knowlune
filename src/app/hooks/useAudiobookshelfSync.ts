@@ -145,9 +145,7 @@ export function useAudiobookshelfSync() {
       try {
         const apiKey = await getAbsApiKey(server.id)
         if (!apiKey) {
-          console.warn(
-            '[useAudiobookshelfSync] syncCatalog: apiKey unavailable — sync skipped',
-          )
+          console.warn('[useAudiobookshelfSync] syncCatalog: apiKey unavailable — sync skipped')
           syncingServers.current.delete(server.id)
           setState(prev => ({ ...prev, isSyncing: false }))
           return

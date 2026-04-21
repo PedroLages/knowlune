@@ -22,7 +22,7 @@ export async function hasUnlinkedRecords(newUserId: string): Promise<boolean> {
   // Checking frequently-populated tables first maximises the chance of an
   // early flag-set, skipping subsequent async work.
   const P0_TABLES = ['contentProgress', 'studySessions', 'progress']
-  const remaining = SYNCABLE_TABLES.filter((t) => !P0_TABLES.includes(t))
+  const remaining = SYNCABLE_TABLES.filter(t => !P0_TABLES.includes(t))
   const orderedTables = [...P0_TABLES, ...remaining]
 
   // Shared flag: set to true as soon as any table has unlinked records.
@@ -30,7 +30,7 @@ export async function hasUnlinkedRecords(newUserId: string): Promise<boolean> {
   let found = false
 
   await Promise.all(
-    orderedTables.map(async (tableName) => {
+    orderedTables.map(async tableName => {
       // Skip remaining async work once we know the answer.
       if (found) return
       try {
@@ -38,7 +38,7 @@ export async function hasUnlinkedRecords(newUserId: string): Promise<boolean> {
           .table(tableName)
           .filter(
             (r: Record<string, unknown>) =>
-              r.userId === null || r.userId === undefined || r.userId !== newUserId,
+              r.userId === null || r.userId === undefined || r.userId !== newUserId
           )
           .count()
         if (count > 0) {
@@ -50,7 +50,7 @@ export async function hasUnlinkedRecords(newUserId: string): Promise<boolean> {
         // that creates it may not have run yet on this device.
         console.warn(`[hasUnlinkedRecords] Table "${tableName}" check failed:`, err)
       }
-    }),
+    })
   )
 
   return found

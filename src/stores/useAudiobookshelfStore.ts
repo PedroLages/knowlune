@@ -21,10 +21,7 @@ import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 import { useBookStore } from '@/stores/useBookStore'
 import { storeCredential, deleteCredential } from '@/lib/vaultCredentials'
 import { syncableWrite } from '@/lib/sync/syncableWrite'
-import {
-  getAbsApiKey,
-  invalidateAbsApiKey,
-} from '@/lib/credentials/absApiKeyResolver'
+import { getAbsApiKey, invalidateAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
 import { emitTelemetry } from '@/lib/credentials/telemetry'
 
 /** TTL for supplementary data (collections, series) — 5 minutes */
@@ -69,7 +66,7 @@ interface AudiobookshelfStoreState {
   updateServer: (
     id: string,
     updates: Partial<Omit<AudiobookshelfServer, 'id'>>,
-    apiKey?: string,
+    apiKey?: string
   ) => Promise<void>
   removeServer: (id: string) => Promise<void>
   getServerById: (id: string) => AudiobookshelfServer | undefined
@@ -113,7 +110,7 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       await syncableWrite(
         'audiobookshelfServers',
         'add',
-        server as unknown as Record<string, unknown> & { id: string },
+        server as unknown as Record<string, unknown> & { id: string }
       )
       set(state => ({ servers: [...state.servers, server] }))
     } catch (err) {
@@ -134,7 +131,7 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
   updateServer: async (
     id: string,
     updates: Partial<Omit<AudiobookshelfServer, 'id'>>,
-    apiKey?: string,
+    apiKey?: string
   ) => {
     try {
       if (apiKey && apiKey.length > 0) {
@@ -153,7 +150,7 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       await syncableWrite(
         'audiobookshelfServers',
         'put',
-        nextRecord as unknown as Record<string, unknown> & { id: string },
+        nextRecord as unknown as Record<string, unknown> & { id: string }
       )
       set(state => ({
         servers: state.servers.map(s => (s.id === id ? { ...s, ...safeUpdates } : s)),
@@ -186,11 +183,9 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       } catch {
         // silent-catch-ok: fall back to full-table filter. Rare; only affects
         // tests against strict IndexedDB polyfills.
-        absBooks = (
-          await db.books
-            .filter(b => (b as unknown as { absServerId?: string }).absServerId === id)
-            .toArray()
-        ) as Array<{ id: string }>
+        absBooks = (await db.books
+          .filter(b => (b as unknown as { absServerId?: string }).absServerId === id)
+          .toArray()) as Array<{ id: string }>
       }
       if (absBooks.length > 0) {
         await db.books.bulkDelete(absBooks.map(b => b.id))
@@ -256,7 +251,7 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
         server.url,
         apiKey,
         item.itemId,
-        item.payload,
+        item.payload
       )
 
       if (!result.ok) {
@@ -290,7 +285,7 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
         server.url,
         apiKey,
         libraryId,
-        { page, limit },
+        { page, limit }
       )
       if (!firstResult.ok) {
         // silent-catch-ok — series is supplementary, don't toast on rate-limit or transient errors
@@ -313,7 +308,7 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
           server.url,
           apiKey,
           libraryId,
-          { page, limit },
+          { page, limit }
         )
         if (!nextResult.ok) break
         allSeries.push(...nextResult.data.results)

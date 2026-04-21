@@ -69,7 +69,7 @@ export function SuggestedActionsPanel({
               'lg:flex lg:flex-col lg:overflow-visible lg:[mask-image:none]'
             )}
           >
-            {visibleSuggestions.map((suggestion) => (
+            {visibleSuggestions.map(suggestion => (
               <ActionCard
                 key={`${suggestion.canonicalName}-${suggestion.actionType}`}
                 suggestion={suggestion}
@@ -88,7 +88,7 @@ export function SuggestedActionsPanel({
             <button
               type="button"
               aria-expanded={expanded}
-              onClick={() => setExpanded((prev) => !prev)}
+              onClick={() => setExpanded(prev => !prev)}
               className="mt-3 inline-flex items-center gap-1 text-sm text-brand hover:text-brand-hover"
             >
               {expanded ? (

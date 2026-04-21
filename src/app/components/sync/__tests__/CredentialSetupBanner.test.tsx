@@ -169,6 +169,78 @@ describe('CredentialSetupBanner — dismissal (AC6)', () => {
   })
 })
 
+describe('CredentialSetupBanner — AC6 re-appear on 0→N transition (R1-M1)', () => {
+  it('missing transitions [] → [entry] → clears sessionStorage dismissal flag', () => {
+    const key = 'knowlune:credential-banner-dismissed:user-1'
+    // Pre-seed dismissal flag; hook returns missing=[] initially.
+    sessionStorage.setItem(key, 'true')
+    mockMissingCredentials.mockReturnValue({ missing: [], statusByKey: {}, loading: false })
+
+    const { rerender } = renderBanner()
+
+    // Flag still set (banner not rendered because missing=[]).
+    expect(sessionStorage.getItem(key)).toBe('true')
+    expect(screen.queryByTestId('credential-setup-banner')).not.toBeInTheDocument()
+
+    // Now mock missing transitions to non-empty and rerender.
+    mockMissingCredentials.mockReturnValue({ missing: [AI_ENTRY], statusByKey: {}, loading: false })
+    rerender(
+      <MemoryRouter>
+        <CredentialSetupBanner />
+      </MemoryRouter>
+    )
+
+    // 0 → N transition should clear the dismissal flag and surface the banner.
+    expect(sessionStorage.getItem(key)).toBeNull()
+    expect(screen.getByTestId('credential-setup-banner')).toBeInTheDocument()
+  })
+
+  it('missing stays non-empty ([entry] → [entry]) — no 0→N transition — dismissal flag untouched', () => {
+    const key = 'knowlune:credential-banner-dismissed:user-1'
+    // First render with missing=[entry] and no dismissal flag — banner visible.
+    mockMissingCredentials.mockReturnValue({ missing: [AI_ENTRY], statusByKey: {}, loading: false })
+    const { rerender } = renderBanner()
+    expect(screen.getByTestId('credential-setup-banner')).toBeInTheDocument()
+
+    // Manually set the dismissal flag (simulating an out-of-band write) and rerender with
+    // the same non-empty missing — there is no 0→N transition, so the effect must NOT clear.
+    sessionStorage.setItem(key, 'true')
+    mockMissingCredentials.mockReturnValue({ missing: [AI_ENTRY], statusByKey: {}, loading: false })
+    rerender(
+      <MemoryRouter>
+        <CredentialSetupBanner />
+      </MemoryRouter>
+    )
+
+    // No transition from 0 → N, so the clear effect must not fire.
+    expect(sessionStorage.getItem(key)).toBe('true')
+  })
+
+  it('user is absent/null — effect is a no-op and does not throw on transition', () => {
+    mockAuthUser.mockReturnValue(null)
+    mockMissingCredentials.mockReturnValue({ missing: [], statusByKey: {}, loading: false })
+
+    const { rerender } = renderBanner()
+
+    // Simulate out-of-band dismissal flag for some prior user; then trigger a 0→N transition
+    // while user is null — the effect must early-return without touching sessionStorage or throwing.
+    const orphanKey = 'knowlune:credential-banner-dismissed:stale-user'
+    sessionStorage.setItem(orphanKey, 'true')
+
+    mockMissingCredentials.mockReturnValue({ missing: [AI_ENTRY], statusByKey: {}, loading: false })
+    expect(() => {
+      rerender(
+        <MemoryRouter>
+          <CredentialSetupBanner />
+        </MemoryRouter>
+      )
+    }).not.toThrow()
+
+    // Flag for the unrelated user stays intact — effect did not attempt any clear.
+    expect(sessionStorage.getItem(orphanKey)).toBe('true')
+  })
+})
+
 describe('CredentialSetupBanner — a11y', () => {
   it('banner has role="status" and aria-live="polite"', () => {
     mockMissingCredentials.mockReturnValue({ missing: [AI_ENTRY], statusByKey: {}, loading: false })

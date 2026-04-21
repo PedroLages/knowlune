@@ -59,14 +59,11 @@ import { classifyError } from '@/lib/sync/classifyError'
  */
 async function computeTotalSyncedItems(): Promise<number> {
   try {
-    const dbAny = db as unknown as Record<
-      string,
-      { count: () => Promise<number> } | undefined
-    >
+    const dbAny = db as unknown as Record<string, { count: () => Promise<number> } | undefined>
     const counts = await Promise.all(
       tableRegistry
-        .filter((entry) => !entry.skipSync)
-        .map(async (entry) => {
+        .filter(entry => !entry.skipSync)
+        .map(async entry => {
           const table = dbAny[entry.dexieTable]
           if (!table || typeof table.count !== 'function') return 0
           try {
@@ -88,11 +85,11 @@ async function computeTotalSyncedItems(): Promise<number> {
 }
 
 export function SyncSection() {
-  const user = useAuthStore((s) => s.user)
-  const status = useSyncStatusStore((s) => s.status)
-  const lastSyncAt = useSyncStatusStore((s) => s.lastSyncAt)
-  const pendingCount = useSyncStatusStore((s) => s.pendingCount)
-  const lastError = useSyncStatusStore((s) => s.lastError)
+  const user = useAuthStore(s => s.user)
+  const status = useSyncStatusStore(s => s.status)
+  const lastSyncAt = useSyncStatusStore(s => s.lastSyncAt)
+  const pendingCount = useSyncStatusStore(s => s.pendingCount)
+  const lastError = useSyncStatusStore(s => s.lastError)
 
   // Local preference mirror — rehydrated on settingsUpdated so external writes
   // (other sections, other tabs) do not leave this toggle stale.
@@ -137,7 +134,7 @@ export function SyncSection() {
   // subscription at the cost of a short delay between commit and display.
   useEffect(() => {
     let cancelled = false
-    void computeTotalSyncedItems().then((count) => {
+    void computeTotalSyncedItems().then(count => {
       if (!cancelled) setTotalItems(count)
     })
     return () => {
@@ -217,7 +214,8 @@ export function SyncSection() {
     } finally {
       setBusy(false)
     }
-  }, [busy])
+    // user?.id is a primitive: Object.is-stable across selector re-references even if user object identity changes
+  }, [busy, user?.id])
 
   const handleConfirmReset = useCallback(async () => {
     if (isResetting) return
@@ -265,10 +263,7 @@ export function SyncSection() {
             {/* Auto-sync toggle */}
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
-                <label
-                  htmlFor="auto-sync-toggle"
-                  className="text-sm font-medium cursor-pointer"
-                >
+                <label htmlFor="auto-sync-toggle" className="text-sm font-medium cursor-pointer">
                   Auto-sync
                 </label>
                 <p className="text-xs text-muted-foreground">
@@ -292,36 +287,27 @@ export function SyncSection() {
                 {isSyncing ? (
                   <Spinner className="size-4 text-brand" aria-hidden="true" />
                 ) : (
-                  <RefreshCw
-                    className="size-4 text-muted-foreground"
-                    aria-hidden="true"
-                  />
+                  <RefreshCw className="size-4 text-muted-foreground" aria-hidden="true" />
                 )}
                 {lastSyncAt ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span
-                        className="text-muted-foreground"
-                        data-testid="sync-last-sync"
-                      >
+                      <span className="text-muted-foreground" data-testid="sync-last-sync">
                         {relativeLastSync}
                       </span>
                     </TooltipTrigger>
                     <TooltipContent>{lastSyncAt.toISOString()}</TooltipContent>
                   </Tooltip>
                 ) : (
-                  <span
-                    className="text-muted-foreground"
-                    data-testid="sync-last-sync"
-                  >
+                  <span className="text-muted-foreground" data-testid="sync-last-sync">
                     Never synced
                   </span>
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                <span data-testid="sync-total-items">{totalItems.toLocaleString()}</span>{' '}
-                items synced &middot;{' '}
-                <span data-testid="sync-pending-count">{pendingCount}</span> pending upload
+                <span data-testid="sync-total-items">{totalItems.toLocaleString()}</span> items
+                synced &middot; <span data-testid="sync-pending-count">{pendingCount}</span> pending
+                upload
               </p>
               {status === 'error' && lastError && (
                 <p
@@ -391,10 +377,7 @@ export function SyncSection() {
         </Card>
 
         {/* Danger zone — clear local data and re-sync */}
-        <Card
-          className="border-destructive/30"
-          data-testid="sync-danger-zone"
-        >
+        <Card className="border-destructive/30" data-testid="sync-danger-zone">
           <CardHeader className="border-b border-destructive/20 bg-destructive/5">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-destructive/10 p-2">
@@ -411,17 +394,15 @@ export function SyncSection() {
           <CardContent className="pt-6">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
-                <p className="text-sm font-medium text-destructive">
-                  Clear local data and re-sync
-                </p>
+                <p className="text-sm font-medium text-destructive">Clear local data and re-sync</p>
                 <p className="text-xs text-muted-foreground">
-                  Wipes every locally stored record and re-downloads everything from the cloud.
-                  Any un-synced pending writes will be lost.
+                  Wipes every locally stored record and re-downloads everything from the cloud. Any
+                  un-synced pending writes will be lost.
                 </p>
               </div>
               <AlertDialog
                 open={resetDialogOpen}
-                onOpenChange={(open) => !isResetting && setResetDialogOpen(open)}
+                onOpenChange={open => !isResetting && setResetDialogOpen(open)}
               >
                 <AlertDialogTrigger asChild>
                   <Button
@@ -438,10 +419,9 @@ export function SyncSection() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Clear local data and re-sync?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This wipes every note, bookmark, book, flashcard, and progress record
-                      stored on this device, then re-downloads the data from the cloud.
-                      Any changes that have not finished syncing will be lost. This action
-                      cannot be undone.
+                      This wipes every note, bookmark, book, flashcard, and progress record stored
+                      on this device, then re-downloads the data from the cloud. Any changes that
+                      have not finished syncing will be lost. This action cannot be undone.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   {isResetting && (
@@ -457,7 +437,7 @@ export function SyncSection() {
                   <AlertDialogFooter>
                     <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
                     <AlertDialogAction
-                      onClick={(e) => {
+                      onClick={e => {
                         e.preventDefault()
                         void handleConfirmReset()
                       }}

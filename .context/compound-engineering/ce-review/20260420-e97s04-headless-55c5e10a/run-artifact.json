@@ -1,0 +1,182 @@
+{
+  "runId": "20260420-e97s04-headless-55c5e10a",
+  "mode": "headless",
+  "scope": {
+    "base": "01cbeacce17c8dc75134f71fdad8e340333b26d5",
+    "branch": "feature/e97-s04-new-device-download-experience",
+    "files_changed": 19,
+    "insertions": 2824,
+    "deletions": 8
+  },
+  "plan": {
+    "path": "docs/plans/2026-04-19-025-feat-e97-s04-new-device-download-experience-plan.md",
+    "plan_source": "explicit"
+  },
+  "intent": "Add a new-device download overlay that surfaces progress while hydrateP3P4FromSupabase and the sync engine's first cursor pass restore data. Observes existing lifecycle signals without modifying the engine.",
+  "reviewers_dispatched": [
+    "correctness",
+    "testing",
+    "maintainability",
+    "project-standards",
+    "reliability",
+    "api-contract",
+    "agent-native-reviewer",
+    "learnings-researcher"
+  ],
+  "applied_fixes": [],
+  "findings": [
+    {
+      "id": "F1",
+      "title": "Retry does not re-snapshot HEAD counts — useDownloadProgress keyed only on [userId, enabled]",
+      "severity": "P1",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "confidence": 0.88,
+      "reviewer": "correctness",
+      "file": "src/app/components/sync/NewDeviceDownloadOverlay.tsx",
+      "line": 92,
+      "why_it_matters": "handleRetry increments retryNonce and sets the store back to hydrating-p3p4, but useDownloadProgress's effect deps are [userId, enabled] — neither changes on retry, so the hook never re-runs. The inline comment 'hook keys via closure' is incorrect. Consequence: after an ALL-HEAD-fail error, the user clicks Retry but the same error state persists because HEAD snapshotting never re-executes, and the progress hook's local error flag forces the overlay back to error via headFailedSyncedRef within one render. Retry appears to do nothing on the most-likely error path.",
+      "evidence": [
+        "NewDeviceDownloadOverlay.tsx:91-92 — `const progress = useDownloadProgress(userId, open); void retryNonce`",
+        "useDownloadProgress.ts:292 — `}, [userId, enabled])` — retryNonce not in deps",
+        "NewDeviceDownloadOverlay.tsx:118-136 — headFailedSyncedRef latches on progress.error; retry resets it only if progress.error flips false, which it never will without a fresh snapshot"
+      ],
+      "suggested_fix": "Pass retryNonce into useDownloadProgress (e.g., add a third arg or include in a key) so the effect re-runs and re-snapshots HEAD counts. Alternatively, expose a `retry()` callback from the hook that resets snapshotTakenRef + re-runs snapshotAndStart."
+    },
+    {
+      "id": "F2",
+      "title": "Engine-watcher misses first-cursor-complete when 'synced' arrives before store enters downloading-p0p2",
+      "severity": "P1",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "confidence": 0.82,
+      "reviewer": "correctness, reliability",
+      "file": "src/app/hooks/useDownloadEngineWatcher.ts",
+      "line": 49,
+      "why_it_matters": "useSyncStatusStore.subscribe fires only on changes. If the engine's first 'syncing' → 'synced' transition completes while observedHydrate is still awaiting (store phase = hydrating-p3p4), the watcher's early-return on `downloadStatus !== 'downloading-p0p2'` drops both events. When startDownloadingP0P2() runs later, the store is already at 'synced' with no pending change event. The watcher will never transition to complete, and the 60s watchdog eventually forces an error state for an already-successful restore. This is the exact inverse of the E97-S03 F2 race the plan cites as an institutional learning.",
+      "evidence": [
+        "useDownloadEngineWatcher.ts:49-64 — subscribe callback early-returns when downloadStatus is not in-phase",
+        "useDownloadEngineWatcher.ts:60 — `if (state.status === prevState.status) return` means no replay on late subscription",
+        "observedHydrate runs in useAuthLifecycle.handleSignIn which also calls syncEngine.start (directly or via LinkDataDialog) — for small accounts the engine can cycle to 'synced' before the hydrator's 9 parallel Promise.allSettled queries resolve"
+      ],
+      "suggested_fix": "On watcher mount (or whenever downloadStatus enters an active phase), read useSyncStatusStore.getState() once and apply the same decision logic to the current status — not just future transitions. Also allow advancement from 'synced' state directly when firstSyncingSeenRef was already set by a prior observed transition."
+    },
+    {
+      "id": "F3",
+      "title": "Dexie count filter treats null/undefined userId as 'current user' — cross-user false-negative on shared devices",
+      "severity": "P2",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "confidence": 0.78,
+      "reviewer": "security, correctness",
+      "file": "src/lib/sync/shouldShowDownloadOverlay.ts",
+      "line": 69,
+      "why_it_matters": "localHasData's row filter returns true when `rowUserId === undefined | null | ''`. notificationPreferences is a singleton table whose rows intentionally have no userId (dexieTable PK is literal 'singleton'). On a shared device where user A signed in previously and left a notificationPreferences row behind (sign-out doesn't clear it — only syncQueue/cursors are cleared per useAuthLifecycle:178-187), user B's R6 short-circuit fires and the overlay is suppressed even though B has no data. Users B then sees empty routes with no restoration UI.",
+      "evidence": [
+        "shouldShowDownloadOverlay.ts:65-73 — filter returns true on undefined/null/''",
+        "src/data/types.ts:540-541 — `interface NotificationPreferences { id: 'singleton' }` — no userId field",
+        "useAuthLifecycle.ts:178-187 — SIGNED_OUT clears syncQueue/cursors but not content tables"
+      ],
+      "suggested_fix": "Only count rows with a matching userId; tables lacking a userId column (notificationPreferences singleton, etc.) should be counted per tableRegistry metadata rather than via the 'absent userId = belongs to this user' heuristic. Alternatively, exclude singleton/user-scoped-by-auth tables from localHasData's emptiness probe."
+    },
+    {
+      "id": "F4",
+      "title": "useDownloadProgress re-enables logic resets snapshotTakenRef but leaves totalRef uncleared on disable",
+      "severity": "P2",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "confidence": 0.72,
+      "reviewer": "correctness",
+      "file": "src/app/hooks/useDownloadProgress.ts",
+      "line": 152,
+      "why_it_matters": "The disable branch sets totalRef.current=0 and snapshotTakenRef=false, but during the await in snapshotAndStart there is a window where `cancelled=true` can fire (`if (cancelled) return`) after totalRef has already been assigned from stale prior values. Unit tests pass, but under rapid toggle (open→close→open on a flaky overlay lifecycle) the second open could read a non-empty totalRef before snapshotAndStart overwrites it. Low-impact but easy to tighten.",
+      "evidence": [
+        "useDownloadProgress.ts:151-161 — disable resets refs",
+        "useDownloadProgress.ts:214-237 — snapshot writes totalRef then checks cancelled"
+      ],
+      "suggested_fix": "Assign totalRef, totalsFailedCountRef only after the post-allSettled cancelled check; or reset them at the top of snapshotAndStart before any await."
+    },
+    {
+      "id": "F5",
+      "title": "App.tsx does not reset useDownloadStatusStore on sign-out when SIGNED_OUT is driven via useAuthLifecycle — duplicate but incomplete guard",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "confidence": 0.65,
+      "reviewer": "maintainability, correctness",
+      "file": "src/app/App.tsx",
+      "line": 207,
+      "why_it_matters": "App.tsx:207-211 resets local overlay state when authUser becomes null, but the download store reset is owned by useAuthLifecycle.ts:170. If the auth store's user becomes null via any path that bypasses the Supabase SIGNED_OUT event (e.g., direct `useAuthStore.setState({ user: null })` from tests or future code), the overlay state is cleared but the download store lastError/status may persist. Low risk today; brittle for future callers.",
+      "evidence": [
+        "App.tsx:207-211 — resets local state only",
+        "useAuthLifecycle.ts:170 — calls `useDownloadStatusStore.getState().reset()` on SIGNED_OUT"
+      ],
+      "suggested_fix": "Also call `useDownloadStatusStore.getState().reset()` in the App.tsx authUser=null effect for defense-in-depth, or centralize reset in a single signOut helper."
+    },
+    {
+      "id": "F6",
+      "title": "E2E spec uses page.waitForTimeout(2_500) without explicit justification per test-patterns rule",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "confidence": 0.55,
+      "reviewer": "testing",
+      "file": "tests/e2e/story-97-04.spec.ts",
+      "line": 212,
+      "why_it_matters": ".claude/rules/testing/test-patterns.md prohibits waitForTimeout without justification comment. The test has a prose comment but no structured justification and this is the exact anti-pattern flagged by the test-patterns ESLint rule (warning). Burn-in may flake on slow CI.",
+      "evidence": [
+        "tests/e2e/story-97-04.spec.ts:210-214 — hard wait for 2.5s with inline comment"
+      ],
+      "suggested_fix": "Use `await expect(overlay).toHaveCount(0)` with `.toPass({ timeout: 3000 })` or subscribe to store transitions via `page.waitForFunction` instead of a hard wait."
+    },
+    {
+      "id": "F7",
+      "title": "Watchdog timer resets on any storeStatus change, causing double-armed 60s windows across phase-A → phase-B transition",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "confidence": 0.6,
+      "reviewer": "correctness",
+      "file": "src/app/components/sync/NewDeviceDownloadOverlay.tsx",
+      "line": 99,
+      "why_it_matters": "The watchdog useEffect depends on [open, storeStatus], so when hydrating-p3p4 → downloading-p0p2, the prior 60s timer is cleared and a fresh 60s begins. Effective stuck-detection window is therefore up to 120s across the full restore (60s in phase A + 60s in phase B). The plan calls for a single 60s watchdog covering both phases (Risks & Dependencies table).",
+      "evidence": [
+        "NewDeviceDownloadOverlay.tsx:99-114 — effect deps include storeStatus; timer re-armed on phase transition"
+      ],
+      "suggested_fix": "Use a single startedAt ref (from the store) as the watchdog baseline; compute remaining = WATCHDOG_MS - (now - startedAt) on each phase and setTimeout for the remainder."
+    }
+  ],
+  "requirements_completeness": {
+    "R1": "met",
+    "R2": "met",
+    "R3": "partially addressed — engine-watcher race in F2 can prevent completion detection on fast engines",
+    "R4": "met",
+    "R5": "partially addressed — Retry path on ALL-HEAD-fail does not re-snapshot (F1)",
+    "R6": "partially addressed — singleton notificationPreferences row on shared device can suppress overlay (F3)"
+  },
+  "residual_risks": [
+    "Engine-watcher race (F2) turns successful restores into watchdog errors on small accounts",
+    "Retry (F1) silently no-ops on the most likely error surface"
+  ],
+  "testing_gaps": [
+    "No test asserting retry re-snapshots HEAD counts (F1)",
+    "No test for 'engine already synced before store enters phase B' (F2) — watcher tests subscribe and drive transitions synchronously",
+    "No test for cross-user singleton leakage (F3)"
+  ],
+  "suppressed_count": 0,
+  "pre_existing_findings": []
+}

@@ -25,7 +25,9 @@ vi.mock('@/lib/sync/countUnlinkedRecords', () => ({
 }))
 
 vi.mock('@/lib/sync/backfill', () => ({
-  backfillUserId: vi.fn().mockResolvedValue({ tablesProcessed: 0, recordsStamped: 0, tablesFailed: [] }),
+  backfillUserId: vi
+    .fn()
+    .mockResolvedValue({ tablesProcessed: 0, recordsStamped: 0, tablesFailed: [] }),
   SYNCABLE_TABLES: ['notes', 'books'],
 }))
 
@@ -61,14 +63,7 @@ const USER_ID = 'user-abc'
 
 function renderDialog(props?: Partial<React.ComponentProps<typeof LinkDataDialog>>) {
   const onResolved = vi.fn()
-  render(
-    <LinkDataDialog
-      open={true}
-      userId={USER_ID}
-      onResolved={onResolved}
-      {...props}
-    />,
-  )
+  render(<LinkDataDialog open={true} userId={USER_ID} onResolved={onResolved} {...props} />)
   return { onResolved }
 }
 
@@ -108,9 +103,7 @@ describe('LinkDataDialog', () => {
     it('renders the dialog heading and description', async () => {
       renderDialog()
       expect(screen.getByText('You have local data')).toBeDefined()
-      expect(
-        screen.getByText(/We found data saved on this device/i),
-      ).toBeDefined()
+      expect(screen.getByText(/We found data saved on this device/i)).toBeDefined()
     })
 
     it('renders both action buttons', async () => {
@@ -122,7 +115,10 @@ describe('LinkDataDialog', () => {
     it('shows a loading skeleton while counts are being fetched', () => {
       // countUnlinkedRecords is async — skeleton visible before it resolves
       vi.mocked(countUnlinkedRecords).mockImplementation(
-        () => new Promise(() => { /* never resolves in this test */ }),
+        () =>
+          new Promise(() => {
+            /* never resolves in this test */
+          })
       )
       renderDialog()
       // Skeleton has animate-pulse — check it exists in DOM
@@ -188,7 +184,7 @@ describe('LinkDataDialog', () => {
       const { onResolved } = renderDialog()
       fireEvent.click(screen.getByRole('button', { name: /start fresh/i }))
       // Give any async work time to run
-      await new Promise((r) => setTimeout(r, 50))
+      await new Promise(r => setTimeout(r, 50))
       expect(onResolved).not.toHaveBeenCalled()
       expect(clearSyncState).not.toHaveBeenCalled()
     })

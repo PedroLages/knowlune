@@ -52,19 +52,67 @@ const {
   const mockDownloadStorageFilesForTable = vi.fn().mockResolvedValue(undefined)
 
   const registryEntries = [
-    { dexieTable: 'notes', supabaseTable: 'notes', conflictStrategy: 'lww', priority: 1, fieldMap: {} },
-    { dexieTable: 'studySessions', supabaseTable: 'study_sessions', conflictStrategy: 'insert-only', priority: 0, fieldMap: {}, insertOnly: true },
-    { dexieTable: 'contentProgress', supabaseTable: 'content_progress', conflictStrategy: 'monotonic', priority: 0, fieldMap: {} },
-    { dexieTable: 'progress', supabaseTable: 'video_progress', conflictStrategy: 'monotonic', priority: 0, fieldMap: {} },
-    { dexieTable: 'challenges', supabaseTable: 'challenges', conflictStrategy: 'monotonic', priority: 3, fieldMap: {} },
-    { dexieTable: 'books', supabaseTable: 'books', conflictStrategy: 'lww', priority: 2, fieldMap: {} },
-    { dexieTable: 'importedCourses', supabaseTable: 'imported_courses', conflictStrategy: 'lww', priority: 2, fieldMap: {} },
+    {
+      dexieTable: 'notes',
+      supabaseTable: 'notes',
+      conflictStrategy: 'lww',
+      priority: 1,
+      fieldMap: {},
+    },
+    {
+      dexieTable: 'studySessions',
+      supabaseTable: 'study_sessions',
+      conflictStrategy: 'insert-only',
+      priority: 0,
+      fieldMap: {},
+      insertOnly: true,
+    },
+    {
+      dexieTable: 'contentProgress',
+      supabaseTable: 'content_progress',
+      conflictStrategy: 'monotonic',
+      priority: 0,
+      fieldMap: {},
+    },
+    {
+      dexieTable: 'progress',
+      supabaseTable: 'video_progress',
+      conflictStrategy: 'monotonic',
+      priority: 0,
+      fieldMap: {},
+    },
+    {
+      dexieTable: 'challenges',
+      supabaseTable: 'challenges',
+      conflictStrategy: 'monotonic',
+      priority: 3,
+      fieldMap: {},
+    },
+    {
+      dexieTable: 'books',
+      supabaseTable: 'books',
+      conflictStrategy: 'lww',
+      priority: 2,
+      fieldMap: {},
+    },
+    {
+      dexieTable: 'importedCourses',
+      supabaseTable: 'imported_courses',
+      conflictStrategy: 'lww',
+      priority: 2,
+      fieldMap: {},
+    },
     {
       dexieTable: 'chapterMappings',
       supabaseTable: 'chapter_mappings',
       conflictStrategy: 'lww',
       priority: 2,
-      fieldMap: { epubBookId: 'epub_book_id', audioBookId: 'audio_book_id', computedAt: 'computed_at', deleted: 'deleted' },
+      fieldMap: {
+        epubBookId: 'epub_book_id',
+        audioBookId: 'audio_book_id',
+        computedAt: 'computed_at',
+        deleted: 'deleted',
+      },
       compoundPkFields: ['epubBookId', 'audioBookId'],
       upsertConflictColumns: 'epub_book_id,audio_book_id,user_id',
     },
@@ -190,7 +238,9 @@ beforeEach(() => {
   const mockGte = vi.fn().mockResolvedValue({ data: [], error: null })
   mockOrder.mockReturnValue({ gte: mockGte })
   // Make order() also thenable so _doDownload can await it without .gte()
-  Object.assign(mockOrder, { then: (_res: (v: unknown) => unknown) => Promise.resolve({ data: [], error: null }).then(_res) })
+  Object.assign(mockOrder, {
+    then: (_res: (v: unknown) => unknown) => Promise.resolve({ data: [], error: null }).then(_res),
+  })
   const mockSelect = vi.fn().mockReturnValue({ order: mockOrder })
 
   mockFrom.mockReturnValue({
@@ -203,7 +253,7 @@ beforeEach(() => {
   // Set up navigator.locks mock — lock always acquired (callback gets a truthy lock object).
   mockLockRequest.mockImplementation(
     (_name: string, _opts: object, callback: (lock: object | null) => Promise<void>) =>
-      callback({ name: 'sync-upload' }),
+      callback({ name: 'sync-upload' })
   )
   Object.defineProperty(globalThis.navigator, 'locks', {
     value: { request: mockLockRequest },
@@ -279,8 +329,7 @@ describe('navigator.locks concurrency guard', () => {
     vi.useFakeTimers()
     // Lock not available — callback receives null.
     mockLockRequest.mockImplementation(
-      (_name: string, _opts: object, callback: (lock: null) => Promise<void>) =>
-        callback(null),
+      (_name: string, _opts: object, callback: (lock: null) => Promise<void>) => callback(null)
     )
     setQueueEntries([makeEntry()])
 
@@ -297,7 +346,7 @@ describe('navigator.locks concurrency guard', () => {
     mockLockRequest.mockImplementation(
       async (_name: string, _opts: object, callback: (lock: object) => Promise<void>) => {
         await callback({ name: 'sync-upload' })
-      },
+      }
     )
 
     mockToArray.mockImplementation(async () => {
@@ -376,8 +425,18 @@ describe('queue coalescing', () => {
 
   it('uploads only the latest entry when two entries conflict', async () => {
     vi.useFakeTimers()
-    const older = makeEntry({ id: 1, recordId: 'rec-1', payload: { id: 'rec-1', v: 'old' }, createdAt: '2026-01-01T10:00:00Z' })
-    const newer = makeEntry({ id: 2, recordId: 'rec-1', payload: { id: 'rec-1', v: 'new' }, createdAt: '2026-01-01T10:01:00Z' })
+    const older = makeEntry({
+      id: 1,
+      recordId: 'rec-1',
+      payload: { id: 'rec-1', v: 'old' },
+      createdAt: '2026-01-01T10:00:00Z',
+    })
+    const newer = makeEntry({
+      id: 2,
+      recordId: 'rec-1',
+      payload: { id: 'rec-1', v: 'new' },
+      createdAt: '2026-01-01T10:01:00Z',
+    })
     setQueueEntries([older, newer])
 
     syncEngine.nudge()
@@ -385,7 +444,7 @@ describe('queue coalescing', () => {
 
     expect(mockUpsert).toHaveBeenCalledWith(
       expect.arrayContaining([expect.objectContaining({ v: 'new' })]),
-      { onConflict: 'id' },
+      { onConflict: 'id' }
     )
     // Upsert called with exactly 1 payload (not 2).
     expect(mockUpsert.mock.calls[0][0]).toHaveLength(1)
@@ -426,7 +485,7 @@ describe('queue coalescing', () => {
         id: i + 1,
         recordId: 'same-rec',
         createdAt: `2026-01-01T10:0${i}:00Z`,
-      }),
+      })
     )
     setQueueEntries(entries)
 
@@ -449,7 +508,7 @@ describe('batch splitting', () => {
   it('splits 250 entries into 3 upsert calls (100+100+50)', async () => {
     vi.useFakeTimers()
     const entries = Array.from({ length: 250 }, (_, i) =>
-      makeEntry({ id: i + 1, recordId: `rec-${i}` }),
+      makeEntry({ id: i + 1, recordId: `rec-${i}` })
     )
     setQueueEntries(entries)
 
@@ -475,10 +534,7 @@ describe('strategy routing', () => {
     syncEngine.nudge()
     await vi.advanceTimersByTimeAsync(201)
 
-    expect(mockUpsert).toHaveBeenCalledWith(
-      expect.any(Array),
-      { onConflict: 'id' },
-    )
+    expect(mockUpsert).toHaveBeenCalledWith(expect.any(Array), { onConflict: 'id' })
     expect(mockInsert).not.toHaveBeenCalled()
   })
 
@@ -521,7 +577,7 @@ describe('strategy routing', () => {
         p_status: 'in_progress',
         p_progress_pct: 0.5,
         p_updated_at: '2026-01-01T00:00:00Z',
-      }),
+      })
     )
     expect(mockUpsert).not.toHaveBeenCalled()
   })
@@ -552,7 +608,7 @@ describe('strategy routing', () => {
         p_watched_seconds: 120,
         p_duration_seconds: 300,
         p_updated_at: '2026-01-01T00:00:00Z',
-      }),
+      })
     )
   })
 
@@ -564,11 +620,10 @@ describe('strategy routing', () => {
     syncEngine.nudge()
     await vi.advanceTimersByTimeAsync(201)
 
-    expect(mockUpsert).toHaveBeenCalledWith(
-      expect.any(Array),
-      { onConflict: 'id' },
+    expect(mockUpsert).toHaveBeenCalledWith(expect.any(Array), { onConflict: 'id' })
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('No monotonic RPC for table "challenges"')
     )
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('No monotonic RPC for table "challenges"'))
     warnSpy.mockRestore()
   })
 
@@ -583,7 +638,9 @@ describe('strategy routing', () => {
     syncEngine.nudge()
     await vi.advanceTimersByTimeAsync(201)
 
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('No registry entry for table "unknownTable"'))
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('No registry entry for table "unknownTable"')
+    )
     // The known entry is still uploaded.
     expect(mockUpsert).toHaveBeenCalledTimes(1)
     errorSpy.mockRestore()
@@ -608,10 +665,9 @@ describe('strategy routing', () => {
     syncEngine.nudge()
     await vi.advanceTimersByTimeAsync(201)
 
-    expect(mockUpsert).toHaveBeenCalledWith(
-      expect.any(Array),
-      { onConflict: 'epub_book_id,audio_book_id,user_id' },
-    )
+    expect(mockUpsert).toHaveBeenCalledWith(expect.any(Array), {
+      onConflict: 'epub_book_id,audio_book_id,user_id',
+    })
   })
 
   it('still uses onConflict: id for tables without upsertConflictColumns (notes regression)', async () => {
@@ -621,10 +677,7 @@ describe('strategy routing', () => {
     syncEngine.nudge()
     await vi.advanceTimersByTimeAsync(201)
 
-    expect(mockUpsert).toHaveBeenCalledWith(
-      expect.any(Array),
-      { onConflict: 'id' },
-    )
+    expect(mockUpsert).toHaveBeenCalledWith(expect.any(Array), { onConflict: 'id' })
   })
 })
 
@@ -667,14 +720,11 @@ describe('retry with exponential back-off', () => {
     syncEngine.nudge()
     await vi.advanceTimersByTimeAsync(201)
 
-    expect(mockUpdate).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({ attempts: 1 }),
-    )
+    expect(mockUpdate).toHaveBeenCalledWith(1, expect.objectContaining({ attempts: 1 }))
     // Entry should NOT be dead-lettered.
     expect(mockUpdate).not.toHaveBeenCalledWith(
       1,
-      expect.objectContaining({ status: 'dead-letter' }),
+      expect.objectContaining({ status: 'dead-letter' })
     )
   })
 
@@ -709,7 +759,7 @@ describe('retry with exponential back-off', () => {
 
     expect(mockUpdate).toHaveBeenCalledWith(
       1,
-      expect.objectContaining({ status: 'dead-letter', attempts: 5 }),
+      expect.objectContaining({ status: 'dead-letter', attempts: 5 })
     )
   })
 
@@ -722,10 +772,7 @@ describe('retry with exponential back-off', () => {
     syncEngine.nudge()
     await vi.advanceTimersByTimeAsync(201)
 
-    expect(mockUpdate).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({ status: 'dead-letter' }),
-    )
+    expect(mockUpdate).toHaveBeenCalledWith(1, expect.objectContaining({ status: 'dead-letter' }))
     // No retry timer should have been set — only one nudge was called.
     mockToArray.mockResolvedValue([])
     await vi.advanceTimersByTimeAsync(5000)
@@ -741,10 +788,7 @@ describe('retry with exponential back-off', () => {
     syncEngine.nudge()
     await vi.advanceTimersByTimeAsync(201)
 
-    expect(mockUpdate).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({ status: 'dead-letter' }),
-    )
+    expect(mockUpdate).toHaveBeenCalledWith(1, expect.objectContaining({ status: 'dead-letter' }))
   })
 
   it('treats network errors (no status) as retry, not dead-letter', async () => {
@@ -757,13 +801,10 @@ describe('retry with exponential back-off', () => {
     syncEngine.nudge()
     await vi.advanceTimersByTimeAsync(201)
 
-    expect(mockUpdate).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({ attempts: 1 }),
-    )
+    expect(mockUpdate).toHaveBeenCalledWith(1, expect.objectContaining({ attempts: 1 }))
     expect(mockUpdate).not.toHaveBeenCalledWith(
       1,
-      expect.objectContaining({ status: 'dead-letter' }),
+      expect.objectContaining({ status: 'dead-letter' })
     )
   })
 })
@@ -816,10 +857,7 @@ describe('401 session refresh', () => {
     await vi.advanceTimersByTimeAsync(201)
 
     // Should increment attempts (retry failure routes to retry-path).
-    expect(mockUpdate).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({ attempts: 1 }),
-    )
+    expect(mockUpdate).toHaveBeenCalledWith(1, expect.objectContaining({ attempts: 1 }))
   })
 })
 
@@ -868,16 +906,18 @@ describe('delete operation upload', () => {
 
     // Delete operations are handled identically to put/add by the upload engine —
     // the payload { id: 'rec-1' } is upserted/inserted per the table's conflict strategy.
-    expect(mockUpsert).toHaveBeenCalledWith(
-      [{ id: 'rec-1' }],
-      { onConflict: 'id' },
-    )
+    expect(mockUpsert).toHaveBeenCalledWith([{ id: 'rec-1' }], { onConflict: 'id' })
     expect(mockBulkDelete).toHaveBeenCalledWith([1])
   })
 
   it('inserts delete payload for insert-only table', async () => {
     vi.useFakeTimers()
-    const entry = makeEntry({ id: 1, tableName: 'studySessions', operation: 'delete', payload: { id: 'sess-1' } })
+    const entry = makeEntry({
+      id: 1,
+      tableName: 'studySessions',
+      operation: 'delete',
+      payload: { id: 'sess-1' },
+    })
     setQueueEntries([entry])
 
     syncEngine.nudge()
@@ -926,18 +966,13 @@ describe('legacy empty-recordId backfill', () => {
   it('passes a healthy queue through unchanged (no update calls, no warnings)', async () => {
     vi.useFakeTimers()
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    setQueueEntries([
-      makeEntry({ recordId: 'rec-A' }),
-      makeEntry({ recordId: 'rec-B' }),
-    ])
+    setQueueEntries([makeEntry({ recordId: 'rec-A' }), makeEntry({ recordId: 'rec-B' })])
 
     syncEngine.nudge()
     await vi.advanceTimersByTimeAsync(201)
 
     expect(mockUpdate).not.toHaveBeenCalled()
-    expect(warnSpy).not.toHaveBeenCalledWith(
-      expect.stringContaining('Legacy queue backfill'),
-    )
+    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('Legacy queue backfill'))
     warnSpy.mockRestore()
   })
 
@@ -971,10 +1006,10 @@ describe('legacy empty-recordId backfill', () => {
     // recordId synthesized as 'c-1\u001fv-1'.
     expect(mockUpdate).toHaveBeenCalledWith(
       100,
-      expect.objectContaining({ recordId: 'c-1\u001fv-1' }),
+      expect.objectContaining({ recordId: 'c-1\u001fv-1' })
     )
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/Legacy queue backfill: 1 recordId\(s\) recovered/),
+      expect.stringMatching(/Legacy queue backfill: 1 recordId\(s\) recovered/)
     )
     warnSpy.mockRestore()
   })
@@ -1007,7 +1042,7 @@ describe('legacy empty-recordId backfill', () => {
 
     expect(mockUpdate).toHaveBeenCalledWith(
       200,
-      expect.objectContaining({ recordId: 'c-2\u001fi-2' }),
+      expect.objectContaining({ recordId: 'c-2\u001fi-2' })
     )
     warnSpy.mockRestore()
   })
@@ -1016,9 +1051,7 @@ describe('legacy empty-recordId backfill', () => {
     vi.useFakeTimers()
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    setQueueEntries([
-      makeEntry({ id: 300, tableName: 'notes', recordId: '' }),
-    ])
+    setQueueEntries([makeEntry({ id: 300, tableName: 'notes', recordId: '' })])
 
     syncEngine.nudge()
     await vi.advanceTimersByTimeAsync(201)
@@ -1028,10 +1061,10 @@ describe('legacy empty-recordId backfill', () => {
       expect.objectContaining({
         status: 'dead-letter',
         lastError: expect.stringContaining('non-compound-PK table'),
-      }),
+      })
     )
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/Legacy queue backfill: .* dead-lettered/),
+      expect.stringMatching(/Legacy queue backfill: .* dead-lettered/)
     )
     warnSpy.mockRestore()
   })
@@ -1067,7 +1100,7 @@ describe('legacy empty-recordId backfill', () => {
       expect.objectContaining({
         status: 'dead-letter',
         lastError: expect.stringContaining('payload missing compound PK fields'),
-      }),
+      })
     )
     warnSpy.mockRestore()
   })
@@ -1082,7 +1115,8 @@ describe('_doDownload — storageDownload hook (E94-S05)', () => {
     const courseRecord = {
       id: 'course-1',
       user_id: 'test-user-id',
-      thumbnail_url: 'https://abcdefgh.supabase.co/storage/v1/object/public/course-thumbnails/p.jpg',
+      thumbnail_url:
+        'https://abcdefgh.supabase.co/storage/v1/object/public/course-thumbnails/p.jpg',
       updated_at: '2024-01-01T00:00:00.000Z',
     }
 
@@ -1129,7 +1163,7 @@ describe('_doDownload — storageDownload hook (E94-S05)', () => {
 
     // downloadStorageFilesForTable should NOT have been called for 'notes'.
     const notesCalls = mockDownloadStorageFilesForTable.mock.calls.filter(
-      ([tableName]) => tableName === 'notes',
+      ([tableName]) => tableName === 'notes'
     )
     expect(notesCalls).toHaveLength(0)
   })

@@ -150,9 +150,7 @@ describe('E96-S02 LWW batch A — learningPaths + learningPathEntries', () => {
     expect(storedEntry).toBeDefined()
 
     // In-memory cache reflects them.
-    expect(
-      useLearningPathStore.getState().paths.find(p => p.id === 'remote-path-1')
-    ).toBeDefined()
+    expect(useLearningPathStore.getState().paths.find(p => p.id === 'remote-path-1')).toBeDefined()
     expect(
       useLearningPathStore.getState().entries.find(e => e.id === 'remote-entry-1')
     ).toBeDefined()
@@ -209,9 +207,7 @@ describe('E96-S02 LWW batch A — studySchedules', () => {
 
   it('updateSchedule enqueues a syncQueue put entry', async () => {
     const result = await useStudyScheduleStore.getState().addSchedule(makeScheduleInput())
-    await useStudyScheduleStore
-      .getState()
-      .updateSchedule(result!.id, { title: 'Updated' })
+    await useStudyScheduleStore.getState().updateSchedule(result!.id, { title: 'Updated' })
 
     const entries = await getQueueEntries('studySchedules')
     const put = entries.find(e => e.operation === 'put')

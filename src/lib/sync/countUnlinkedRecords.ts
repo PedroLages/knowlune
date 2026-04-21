@@ -45,16 +45,16 @@ export async function countUnlinkedRecords(newUserId: string): Promise<UnlinkedC
   const totals: UnlinkedCounts = { courses: 0, notes: 0, books: 0, flashcards: 0, other: 0 }
 
   const results = await Promise.allSettled(
-    SYNCABLE_TABLES.map(async (tableName) => {
+    SYNCABLE_TABLES.map(async tableName => {
       const count = await db
         .table(tableName)
         .filter(
           (r: Record<string, unknown>) =>
-            r.userId === null || r.userId === undefined || r.userId !== newUserId,
+            r.userId === null || r.userId === undefined || r.userId !== newUserId
         )
         .count()
       return { tableName, count }
-    }),
+    })
   )
 
   for (const result of results) {

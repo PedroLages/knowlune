@@ -224,9 +224,9 @@ export function useUnifiedSearchIndex(): UnifiedSearchHook {
   const authorToDoc = useRef<ToDocFn<ReturnType<typeof getMergedAuthors>[number]>>(row =>
     toSearchableAuthor(row)
   )
-  const authorUpdatedAt = useRef<(row: ReturnType<typeof getMergedAuthors>[number]) => string | undefined>(
-    row => row.createdAt
-  )
+  const authorUpdatedAt = useRef<
+    (row: ReturnType<typeof getMergedAuthors>[number]) => string | undefined
+  >(row => row.createdAt)
 
   const highlightToDoc = useRef<ToDocFn<BookHighlight>>(row => toSearchableHighlight(row))
   useMemo(() => {
@@ -271,10 +271,7 @@ export function useUnifiedSearchIndex(): UnifiedSearchHook {
   // sorts desc, and truncates to `limit`. Stable identity across renders
   // while `ready` doesn't change so palette memos don't thrash.
   const searchBestMatches = useCallback(
-    async (
-      query: string,
-      opts?: SearchBestMatchesOptions
-    ): Promise<UnifiedSearchResult[]> => {
+    async (query: string, opts?: SearchBestMatchesOptions): Promise<UnifiedSearchResult[]> => {
       if (!ready) return []
       const q = query.trim()
       if (!q) return []
