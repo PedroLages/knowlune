@@ -1258,21 +1258,24 @@ issues:
     story: E97-S01
     summary: "Live region silent on sync recovery (error→synced); SR users don't get confirmation retry succeeded"
     severity: low
-    status: open
+    status: scheduled
+    scheduled_for: cleanup-epic
     decision: schedule-future
 
   - id: KI-E97-S01-L02
     story: E97-S01
     summary: "Reduced-motion test asserts animate-spin absence but not Cloud icon presence; could pass with any static icon substitution"
     severity: low
-    status: open
+    status: scheduled
+    scheduled_for: cleanup-epic
     decision: schedule-future
 
   - id: KI-E97-S01-L03
     story: E97-S01
     summary: "Pre-existing silent-catch warnings in useSyncLifecycle.ts lines 172/220/268 (not introduced by E97-S01)"
     severity: low
-    status: open
+    status: scheduled
+    scheduled_for: cleanup-epic
     decision: schedule-future
 
   - id: KI-E96-S04-L02
@@ -1303,82 +1306,94 @@ issues:
     summary: "handleSyncNow useCallback missing user.id dep — future edits could silently capture stale ref"
     story: E97-S02
     severity: low
-    status: open
+    status: scheduled
+    scheduled_for: cleanup-epic
     decision: schedule-future
 
   - id: KI-E97-S02-L02
     summary: "E2E window.__syncEngine__ shims may silently no-op if not exposed — mock-injection unverified"
     story: E97-S02
     severity: low
-    status: open
+    status: scheduled
+    scheduled_for: cleanup-epic
     decision: schedule-future
 
   - id: KI-E97-S02-L03
     summary: "Sync nav entry visible when signed-out renders empty pane; consider placeholder or auth-gate"
     story: E97-S02
     severity: low
-    status: open
+    status: scheduled
+    scheduled_for: cleanup-epic
     decision: schedule-future
 
   - id: KI-E97-S02-L04
     summary: "computeTotalSyncedItems runs Promise.all count() on every lastSyncAt change (30s); debounce for large DBs"
     story: E97-S02
     severity: low
-    status: open
+    status: scheduled
+    scheduled_for: cleanup-epic
     decision: schedule-future
 
   - id: KI-E97-S03-L01
     summary: "Retry may hang in 'uploading' if fullSync rejects before status becomes 'syncing' (suppressErrorUntilSyncingRef never clears)"
     story: E97-S03
     severity: low
-    status: open
+    status: scheduled
+    scheduled_for: cleanup-epic
     decision: schedule-future
 
   - id: KI-E97-S03-L02
     summary: "computeUnlinkedCount runs full .filter() scan per table on every snapshot — may compound snapshot race on low-end devices"
     story: E97-S03
     severity: low
-    status: open
+    status: scheduled
+    scheduled_for: cleanup-epic
     decision: schedule-future
 
   - id: KI-E97-S03-L03
     summary: "E2E story-97-03.spec.ts uses page.waitForTimeout(500) — violates test-patterns/no-hard-waits; replace with waitForFunction"
     story: E97-S03
     severity: low
-    status: open
+    status: scheduled
+    scheduled_for: cleanup-epic
     decision: schedule-future
 
   - id: KI-E97-S04-L01
     summary: "Auto-close effect deps include inline onClose prop — timer resets on every parent re-render"
     story: E97-S04
     severity: low
-    status: open
+    status: scheduled
+    scheduled_for: cleanup-epic
     decision: schedule-future
 
   - id: KI-E97-S04-L02
     summary: "Watchdog WATCHDOG_MS hard-coded — expensive fake-timer advances in tests; accept as prop with default"
     story: E97-S04
     severity: low
-    status: open
+    status: scheduled
+    scheduled_for: cleanup-epic
     decision: schedule-future
 
   - id: KI-E97-S04-L03
     summary: "Engine-watcher operates during 'hydrating-p3p4' — broader than plan specifies; tighten guard to Phase B only"
     story: E97-S04
     severity: low
-    status: open
+    status: scheduled
+    scheduled_for: cleanup-epic
     decision: schedule-future
 
   - id: KI-E97-S04-L04
     summary: "__mockHeadCounts scalar shim cannot simulate per-table partial failures — expand to map for E2E coverage"
     story: E97-S04
     severity: low
-    status: open
+    status: scheduled
+    scheduled_for: cleanup-epic
     decision: schedule-future
 
   - id: KI-E97-S04-L05
     summary: "observedHydrate re-throws after failDownloading — potential duplicate error surfacing on rapid retries"
     story: E97-S04
     severity: low
-    status: open
+    status: scheduled
+    scheduled_for: cleanup-epic
     decision: schedule-future
