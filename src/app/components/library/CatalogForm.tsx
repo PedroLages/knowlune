@@ -8,7 +8,7 @@
  * @since E88-S01
  */
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { Loader2, CheckCircle2, XCircle, Eye, EyeOff, AlertTriangle } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
@@ -59,9 +59,6 @@ export function CatalogForm({
   passwordInputRef,
 }: CatalogFormProps) {
   const [showPassword, setShowPassword] = useState(false)
-  // Internal ref for the password input — used by deep-link focus when external ref is provided
-  const internalPasswordRef = useRef<HTMLInputElement>(null)
-  const resolvedPasswordRef = passwordInputRef ?? internalPasswordRef
 
   const hasAuth = username.trim() || password.trim()
   const showHttpWarning = hasAuth && url.trim() && isInsecureUrl(url.trim())
@@ -121,7 +118,7 @@ export function CatalogForm({
             <div className="relative">
               <Input
                 id="opds-password"
-                ref={resolvedPasswordRef}
+                ref={passwordInputRef}
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Password"
                 value={password}
