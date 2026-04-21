@@ -29,6 +29,7 @@ Authoritative templates for every Task-dispatched sub-agent. Loaded on-demand fr
 | 15 | **`design-review-dispatcher`** | opus | **7 (v3)** |
 | 16 | **`checkpoint-dispatcher`** | haiku | **7 (v3)** |
 | 17 | **`ce-debug-dispatcher`** | opus | **7 (v3)** |
+| 18 | **`report-generator`** | sonnet | **v4** |
 
 Sections marked with the Unit that introduced them. Earlier Units leave stubs; later Units fill them in.
 
@@ -718,6 +719,117 @@ Rules:
 - `{error}` other → halt, tracking stage `halted-at-debug`.
 
 **Why opus:** root cause analysis is deep-reasoning work. Sonnet will often fixate on the first hypothesis; opus genuinely compares alternatives.
+
+---
+
+## 18. `report-generator` (v4)
+
+**Role:** Synthesize an epic completion report from the tracking file + sprint-status + known-issues + per-story review artifacts, write it to `docs/implementation-artifacts/`, and commit it to `main`. Mechanical structured-input → structured-output work; not deep reasoning.
+
+**Model:** sonnet
+
+**Inputs:**
+- `epicId` — e.g., `E97`
+- `epicTrackingPath` — repo-relative path to `.context/compound-engineering/ce-runs/epic-E##-*.md`
+- `reportDate` — today's date `YYYY-MM-DD`
+
+**Prompt template:**
+
+```text
+You are the report-generator sub-agent for the CE orchestrator epic closeout pipeline. Your job is to synthesize a durable epic completion report, write it to `docs/implementation-artifacts/`, and commit it to `main`.
+
+Inputs:
+- epicId: <epicId>
+- epicTrackingPath: <epicTrackingPath>
+- reportDate: <reportDate>
+
+Target path: `docs/implementation-artifacts/epic-<epicId-lower>-completion-report-<reportDate>.md`
+
+Steps (execute in order, never halt on missing data — emit fallback text instead):
+
+1. **Idempotency check.** If target path already exists, return immediately:
+   `{"reportPath": "<target>", "committed": false, "commitSha": null, "skipped": true}`
+
+2. **Branch switch.** Run `git checkout main && git pull --ff-only`. If either fails (non-zero exit), set internal flag `commitOnFail: true` and continue — write the file but skip the commit at the end.
+
+3. **Read inputs** using the Read tool:
+   - Epic tracking file at `epicTrackingPath` (frontmatter + body).
+   - `docs/implementation-artifacts/sprint-status.yaml` — filter entries where `epic == <epicId>`.
+   - `docs/known-issues.yaml` if it exists — filter entries where `discovered_by` matches any story in this epic.
+   - For each story: two-level review lookup.
+     - First: glob `docs/reviews/consolidated-review-*-<storyId>*.md` (if found, read it).
+     - Fallback: if tracking file has a `reviewRunId` for the story, check `.context/compound-engineering/ce-review/<reviewRunId>/` for `review-synthesis.json` or similar.
+     - If neither: mark "review artifacts not available" for that story.
+   - **Previous epic retro lookup:** glob `docs/implementation-artifacts/epic-*-retro-*.md`, sort by mtime descending, take the first entry whose filename does NOT contain `<epicId-lower>`. If none found, mark "no prior retro found".
+
+4. **Generate the 8-section report** using this structure verbatim:
+
+   ```markdown
+   # Epic <epicId>: <epic-name-from-sprint-status> — Completion Report
+
+   **Date:** <reportDate>
+   **Epic ID:** <epicId>
+
+   ## 1. Executive Summary
+   <Epic name, goal (from sprint-status `goal` field or tracking file), outcome ("<X> of <N> stories shipped"), date range ("<first-story-startedAt> → <last-story-mergedAt>"). 2-4 sentences.>
+
+   ## 2. Stories Delivered
+   | Story ID | Name | PR URL | Review Rounds | Status |
+   |---|---|---|---|---|
+   <one row per story, including aborted ones marked "aborted">
+
+   ## 3. Review Metrics
+   <Aggregate findings by severity (BLOCKER/HIGH/MEDIUM/LOW/NIT) across all stories that have review artifacts. Compute first-pass rate (stories whose R1 exited green / total stories). If no review artifacts available for any story, write "Review artifacts not available for this epic — metrics omitted.">
+
+   ## 4. Deferred Issues
+   <List known-issues entries added during this epic, grouped by the `known-issues-triage` categorization from the tracking file (schedule-future / wont-fix / fix-now-chore). If tracking file has no triage summary, fall back to listing all matching `known-issues.yaml` entries.>
+
+   ## 5. Post-Epic Validation
+   <If `--full` closeout was run (tracking file has testarch-trace / nfr / adversarial-review artifacts): summarize results. Else: "Standard closeout — post-epic validation not run (use `--epic-closeout=full` for trace + NFR + adversarial).">
+
+   ## 6. Lessons Learned
+   <If previous epic retro found: list up to 3 action items from that retro and whether they appear addressed in this epic (heuristic: grep story titles and tracking file bodies for action-item keywords). If single-story epic: "Single-story epic — cross-story pattern analysis not applicable." If no prior retro: "Previous epic comparison: no prior retro found.">
+
+   ## 7. Suggestions for Next Epic
+   <Derive 2-5 suggestions from Section 4 (deferred issues) + Section 6 (unaddressed prior action items). One line each.>
+
+   ## 8. Build Verification
+   <Run `npm run build` from the repo root. Capture exit code and last 5 lines of output. Report "✓ Build passes on main" or "✗ Build failure — see output below" with the captured tail.>
+   ```
+
+5. **Write the file** using the Write tool at `docs/implementation-artifacts/epic-<epicId-lower>-completion-report-<reportDate>.md`.
+
+6. **Commit (unless `commitOnFail` is set):**
+   - `git add <reportPath>`
+   - `git commit -m "docs(<epicId>): add epic completion report" -m "" -m "Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"`
+   - `git push`
+   - Capture the commit SHA via `git rev-parse HEAD`.
+
+7. **Return** strict JSON:
+   `{"reportPath": "<repo-relative>", "committed": <true|false>, "commitSha": "<sha or null>", "skipped": false}`
+
+   If step 6 succeeded: `committed: true, commitSha: "<sha>"`.
+   If `commitOnFail` was set OR `git push` failed: `committed: false, commitSha: null`. The file is on disk; engineer can commit manually.
+
+Rules:
+- Never use `AskUserQuestion` — you run in autopilot.
+- Never halt on missing data. Every data source has a fallback line documented above.
+- Never overwrite an existing report file (idempotency check in step 1).
+- Never modify any file other than the report file and git metadata.
+- The commit must land on `main`. Do not commit on a feature branch.
+
+/auto-answer autopilot
+```
+
+**Coordinator consumes:** `{reportPath, committed, commitSha, skipped}`. Updates tracking file: `artifacts.reportPath = reportPath`, `closeoutStatus = report-committed` on success or `report-failed` on `committed: false`. Never halts the closeout sequence.
+
+**Failure behavior:**
+
+- `{skipped: true}` — report already exists, coordinator uses the returned path and moves on.
+- `{committed: false}` — coordinator logs a warning, sets `closeoutStatus: report-failed`, terminal banner shows `[generation failed]`. Retrospective-dispatcher still runs.
+- `{error}` — coordinator treats same as `committed: false`.
+
+**Why sonnet:** the work is mechanical synthesis with clear structured inputs and a fixed 8-section template — the same pattern as `ce-git-commit-push-pr-dispatcher`. No architectural judgment needed. Opus would be overkill; haiku would miss nuance in the "lessons learned" synthesis.
 
 ---
 
