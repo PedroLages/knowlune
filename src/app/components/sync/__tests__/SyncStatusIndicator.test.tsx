@@ -76,7 +76,7 @@ describe('<SyncStatusIndicator />', () => {
     cleanup()
   })
 
-  it('renders trigger with the synced aria-label and live region with role=status', () => {
+  it('renders trigger with the synced aria-label', () => {
     resetStore({ status: 'synced' })
     render(<SyncStatusIndicator />)
     // Button carries the accessible name via aria-label (no role override).
@@ -84,9 +84,11 @@ describe('<SyncStatusIndicator />', () => {
     expect(trigger).toBeInTheDocument()
     expect(trigger).toHaveAttribute('aria-label', expect.stringMatching(/sync status: synced/i))
     expect(trigger).toHaveAttribute('data-sync-status', 'synced')
-    // Sibling live region carries role=status (not the button).
-    const liveRegion = document.querySelector('[role="status"][aria-live="polite"]')
-    expect(liveRegion).toBeInTheDocument()
+    // No inline aria-live span — announcements route through SyncUXShell's
+    // canonical live region (useLiveRegion context). The inline span was removed
+    // as part of refactor/consolidate-aria-live-useliveregion.
+    const inlineLiveRegion = document.querySelector('[aria-live="polite"][role="status"]')
+    expect(inlineLiveRegion).toBeNull()
   })
 
   it('renders offline label and icon when status is offline', () => {

@@ -25,11 +25,22 @@ import { seedSyncQueue, seedNotes } from '../support/helpers/indexeddb-seed'
 /**
  * Drive useAuthStore.user to a fake authenticated user so the SyncSection
  * unmounts its auth gate. The shim is only available in dev/test builds.
+ *
+ * IMPORTANT: Sets `window.__suppressSyncOverlays = true` BEFORE injecting the
+ * auth user so that SyncUXShell's wizard/overlay evaluation effects see the
+ * suppress flag synchronously when the auth state change fires. Without this,
+ * InitialUploadWizard or NewDeviceDownloadOverlay may mount and block pointer
+ * events, causing the four tests below to time out.
  */
 async function setFakeAuthUser(page: Page, userId = 'e97-s02-user') {
   await page.waitForFunction(
     () => !!(window as Record<string, unknown>).__authStore
   )
+  // Set the suppress flag first — ordering is required because the wizard
+  // evaluation effect fires synchronously on the auth state change.
+  await page.evaluate(() => {
+    ;(window as Record<string, unknown>).__suppressSyncOverlays = true
+  })
   await page.evaluate((uid) => {
     const store = (window as Record<string, unknown>).__authStore as {
       setState: (partial: Record<string, unknown>) => void

@@ -37,12 +37,48 @@ import { shouldShowInitialUploadWizard } from '@/lib/sync/shouldShowInitialUploa
 import { shouldShowDownloadOverlay } from '@/lib/sync/shouldShowDownloadOverlay'
 import { useDownloadStatusStore } from '@/app/stores/useDownloadStatusStore'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { LiveRegionContext, type LiveRegionPoliteness } from '@/app/hooks/useLiveRegion'
 
 interface SyncUXShellProps {
   children: ReactNode
 }
 
 export function SyncUXShell({ children }: SyncUXShellProps) {
+  // ─── Live region refs (Unit 2: refactor/consolidate-aria-live-useliveregion) ──
+  // Two canonical spans owned by SyncUXShell; consumers call announce() instead
+  // of managing their own aria-live regions.
+  const politeRef = useRef<HTMLSpanElement>(null)
+  const assertiveRef = useRef<HTMLSpanElement>(null)
+  // Pending timer IDs — cancelled on unmount to avoid setState-after-unmount.
+  const lrTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  const announce = useCallback((message: string, politeness: LiveRegionPoliteness = 'polite') => {
+    if (!message) return
+    const spanRef = politeness === 'assertive' ? assertiveRef : politeRef
+    const span = spanRef.current
+    if (!span) return
+
+    // WAI-ARIA clear→set pattern: clear first so repeat messages are picked up.
+    span.textContent = ''
+    const setTimer = setTimeout(() => {
+      span.textContent = message
+      // Reset to empty after ≥150 ms so the region does not become stale.
+      const resetTimer = setTimeout(() => {
+        span.textContent = ''
+      }, 150)
+      lrTimersRef.current.push(resetTimer)
+    }, 10)
+    lrTimersRef.current.push(setTimer)
+  }, [])
+
+  // Cancel all pending live-region timers on unmount.
+  useEffect(() => {
+    const timers = lrTimersRef
+    return () => {
+      timers.current.forEach(id => clearTimeout(id))
+    }
+  }, [])
+
   // E92-S08: State for the non-dismissible "link your data" dialog shown on first sign-in
   // when the device has local records not yet linked to the signed-in account.
   const [linkDialogUserId, setLinkDialogUserId] = useState<string | null>(null)
@@ -67,6 +103,9 @@ export function SyncUXShell({ children }: SyncUXShellProps) {
   const authUser = useAuthStore(s => s.user)
 
   const evaluateWizard = useCallback(async (userId: string) => {
+    // __suppressSyncOverlays shim: test-only flag set before auth injection
+    // to prevent wizard/overlay mounts intercepting pointer events (story-97-02).
+    if ((window as Record<string, unknown>).__suppressSyncOverlays) return
     if (!userId) return
     if (evaluationInFlightRef.current === userId) return
     evaluationInFlightRef.current = userId
@@ -109,6 +148,8 @@ export function SyncUXShell({ children }: SyncUXShellProps) {
 
   // E97-S04: New-device download overlay gate.
   const evaluateDownloadOverlay = useCallback(async (userId: string) => {
+    // __suppressSyncOverlays shim: test-only flag to prevent overlay mounting.
+    if ((window as Record<string, unknown>).__suppressSyncOverlays) return
     if (!userId) return
     if (downloadEvaluationInFlightRef.current === userId) return
     downloadEvaluationInFlightRef.current = userId
@@ -196,6 +237,19 @@ export function SyncUXShell({ children }: SyncUXShellProps) {
     }
   }, [])
 
+  // Dev/test-only hook: expose suppress shim for E2E tests that need to inject
+  // a fake auth user without triggering wizard/overlay mounts. The flag must be
+  // set BEFORE the auth store mutation (story-97-02 beforeEach). Tree-shaken in
+  // production builds.
+  useEffect(() => {
+    if (import.meta.env.PROD) return // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(window as any).__suppressSyncOverlays = false
+    return () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (window as any).__suppressSyncOverlays
+    }
+  }, [])
+
   // E43-S04: Auth lifecycle hook — session expiry detection, token refresh, settings hydration
   // E92-S08: onUnlinkedDetected defers syncEngine.start() until dialog resolves
   useAuthLifecycle({ onUnlinkedDetected: handleUnlinkedDetected })
@@ -203,37 +257,47 @@ export function SyncUXShell({ children }: SyncUXShellProps) {
   useSyncLifecycle()
 
   return (
-    <MissingCredentialsProvider>
-      {children}
-      {/* E92-S08: Non-dismissible dialog on first sign-in with pre-existing local data */}
-      {linkDialogUserId && (
-        <LinkDataDialog
-          open={true}
-          userId={linkDialogUserId}
-          onResolved={() => handleLinkDialogResolved(linkDialogUserId)}
+    <LiveRegionContext.Provider value={{ announce }}>
+      <MissingCredentialsProvider>
+        {/* Canonical polite live region — role="status" implies aria-live="polite".
+            No redundant aria-live attribute per WAI-ARIA implicit roles spec.
+            All sync-UX announcements route through announce() rather than each
+            component owning its own aria-live span. */}
+        <span className="sr-only" role="status" ref={politeRef} />
+        {/* Canonical assertive live region — role="alert" implies aria-live="assertive"
+            and aria-atomic="true". Used for urgent announcements only. */}
+        <span className="sr-only" role="alert" ref={assertiveRef} />
+        {children}
+        {/* E92-S08: Non-dismissible dialog on first sign-in with pre-existing local data */}
+        {linkDialogUserId && (
+          <LinkDataDialog
+            open={true}
+            userId={linkDialogUserId}
+            onResolved={() => handleLinkDialogResolved(linkDialogUserId)}
+          />
+        )}
+        {/* E97-S03: Initial upload wizard — first-run backup explainer. */}
+        <InitialUploadWizard
+          open={uploadWizardUserId !== null && linkDialogUserId === null}
+          userId={uploadWizardUserId ?? ''}
+          onClose={() => setUploadWizardUserId(null)}
         />
-      )}
-      {/* E97-S03: Initial upload wizard — first-run backup explainer. */}
-      <InitialUploadWizard
-        open={uploadWizardUserId !== null && linkDialogUserId === null}
-        userId={uploadWizardUserId ?? ''}
-        onClose={() => setUploadWizardUserId(null)}
-      />
-      {/* E97-S04: New-device download overlay — first-run restore UI. */}
-      {downloadOverlayUserId && deferredOverlayReady && (
-        <NewDeviceDownloadOverlay
-          open
-          userId={downloadOverlayUserId}
-          onClose={() => {
-            setDownloadOverlayUserId(null)
-            setDeferredOverlayReady(false)
-          }}
-        />
-      )}
-      {/* E97-S05: Credential setup banner — surfaces missing per-device credentials
-           after first sync. z-index=40 renders below the S04 overlay (z-50).
-           Gated on lastSyncAt so it never flashes on new-device sign-in. */}
-      <CredentialSetupBanner />
-    </MissingCredentialsProvider>
+        {/* E97-S04: New-device download overlay — first-run restore UI. */}
+        {downloadOverlayUserId && deferredOverlayReady && (
+          <NewDeviceDownloadOverlay
+            open
+            userId={downloadOverlayUserId}
+            onClose={() => {
+              setDownloadOverlayUserId(null)
+              setDeferredOverlayReady(false)
+            }}
+          />
+        )}
+        {/* E97-S05: Credential setup banner — surfaces missing per-device credentials
+             after first sync. z-index=40 renders below the S04 overlay (z-50).
+             Gated on lastSyncAt so it never flashes on new-device sign-in. */}
+        <CredentialSetupBanner />
+      </MissingCredentialsProvider>
+    </LiveRegionContext.Provider>
   )
 }

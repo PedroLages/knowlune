@@ -242,12 +242,15 @@ describe('CredentialSetupBanner — AC6 re-appear on 0→N transition (R1-M1)', 
 })
 
 describe('CredentialSetupBanner — a11y', () => {
-  it('banner has role="status" and aria-live="polite"', () => {
+  it('banner does not carry role=status or aria-live (announcements route through useLiveRegion)', () => {
+    // The overly-broad live region on the banner root was removed as part of
+    // refactor/consolidate-aria-live-useliveregion. Announcements now route
+    // through SyncUXShell's canonical live region via useLiveRegion().
     mockMissingCredentials.mockReturnValue({ missing: [AI_ENTRY], statusByKey: {}, loading: false })
     renderBanner()
     const banner = screen.getByTestId('credential-setup-banner')
-    expect(banner).toHaveAttribute('role', 'status')
-    expect(banner).toHaveAttribute('aria-live', 'polite')
+    expect(banner).not.toHaveAttribute('role', 'status')
+    expect(banner).not.toHaveAttribute('aria-live')
   })
 
   it('dismiss button has descriptive aria-label', () => {
