@@ -1334,6 +1334,30 @@ issues:
     scheduled_for: cleanup-epic
     decision: schedule-future
 
+  - id: KI-ARIA-LIVE-L01
+    status: open
+    severity: low
+    component: SyncUXShell
+    summary: "Assertive live region span lacks data-testid='sync-live-region-assertive' — cannot be targeted in E2E tests for assertive announcement assertions"
+    introduced_in: feature/ce-2026-04-21-consolidate-aria-live-regions
+    fix: "Add data-testid='sync-live-region-assertive' to the assertive span in SyncUXShell.tsx line ~284"
+
+  - id: KI-ARIA-LIVE-L02
+    status: open
+    severity: low
+    component: SyncStatusIndicator
+    summary: "No E2E test asserts live region textContent for error→synced recovery announcement (R8 is unit-tested but not E2E-verified)"
+    introduced_in: feature/ce-2026-04-21-consolidate-aria-live-regions
+    fix: "Add E2E test polling sync-live-region-polite textContent for 'Sync recovered' after error→synced state transition"
+
+  - id: KI-ARIA-LIVE-L03
+    status: open
+    severity: low
+    component: Layout
+    summary: "Layout.tsx offline banner has redundant aria-live='polite' alongside role='status' — pre-existing, harmless but technically non-conformant"
+    introduced_in: "pre-existing (not this branch)"
+    fix: "Remove aria-live='polite' from offline banner div in Layout.tsx, leaving only role='status'"
+
   - id: KI-E97-S03-L01
     summary: "Retry may hang in 'uploading' if fullSync rejects before status becomes 'syncing' (suppressErrorUntilSyncingRef never clears)"
     story: E97-S03
