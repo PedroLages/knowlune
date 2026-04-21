@@ -1,0 +1,35 @@
+{
+  "runId": "20260421-105154-faad74a6",
+  "mode": "headless",
+  "plan": "docs/plans/2026-04-21-002-refactor-extract-sync-ux-shell-plan.md",
+  "base": "d8b0e56674b91fa31d164d7afc3180ac2774f0da",
+  "branch": "feature/refactor-sync-ux-shell",
+  "scope": {
+    "files": [
+      "docs/docker/README.md",
+      "src/app/App.tsx",
+      "src/app/components/sync/SyncUXShell.tsx"
+    ],
+    "stats": "3 files, +251 -211"
+  },
+  "verdict": "Ready to merge",
+  "appliedFixes": 0,
+  "findings": [],
+  "ac_verification": {
+    "R1_SyncUXShell_exists": "met — 239 lines, all 5 responsibilities present (4 floaters + gating SM + lifecycle hooks + MissingCredentialsProvider wrap + dev shim)",
+    "R2_App_imports_removed": "met — all 11 listed imports removed from App.tsx (grep verified zero occurrences)",
+    "R3_App_line_count": "met — App.tsx is 113 lines (≤170)",
+    "R4_E2E_unchanged": "not verified in headless (test files not in diff, presumed unchanged)",
+    "R5_force_download_overlay": "met — dev shim at SyncUXShell.tsx:187-197, same sync mount timing as before",
+    "R6_onUnlinkedDetected_contract": "met — handleUnlinkedDetected(userId) passed to useAuthLifecycle at SyncUXShell.tsx:201; signature and semantics unchanged",
+    "R7_provider_tree": "met — MissingCredentialsProvider wraps children (which includes RouterProvider + Toaster) at SyncUXShell.tsx:206-237; outer stack ErrorBoundary→ThemeProvider→MotionConfig preserved at App.tsx:97-111",
+    "R8_build_lint_typecheck": "met — tsc --noEmit clean, eslint clean on both files"
+  },
+  "structural_verification": {
+    "effect_ordering": "verified — 4 gating effects (fast-path wizard at L104, overlay gate at L130, 2s defer at L145, sign-out reset at L178) moved as verbatim contiguous block in same relative order as baseline App.tsx; dev shim at L187 follows them (same position as baseline)",
+    "callbacks_moved": "verified — evaluateWizard, handleUnlinkedDetected, handleLinkDialogResolved, evaluateDownloadOverlay all copied verbatim with identical closure semantics and dep arrays",
+    "state_refs_moved": "verified — 4 state slots + 2 refs + authUser selector identical to baseline",
+    "hook_call_order": "verified — useAuthLifecycle then useSyncLifecycle (same order as baseline App.tsx L232-234)",
+    "toaster_placement": "verified — Toaster passed through as child of SyncUXShell (App.tsx:102), so it renders inside MissingCredentialsProvider at runtime — matches plan key decision"
+  }
+}
