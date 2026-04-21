@@ -12,9 +12,11 @@ import { MemoryRouter } from 'react-router'
 const {
   mockMissingCredentials,
   mockAuthUser,
+  mockAnnounce,
 } = vi.hoisted(() => ({
   mockMissingCredentials: vi.fn().mockReturnValue({ missing: [], statusByKey: {}, loading: false }),
   mockAuthUser: vi.fn<() => { id: string } | null>(() => ({ id: 'user-1' })),
+  mockAnnounce: vi.fn(),
 }))
 
 vi.mock('@/app/hooks/useMissingCredentials', () => ({
@@ -28,7 +30,7 @@ vi.mock('@/stores/useAuthStore', () => ({
 
 vi.mock('@/app/hooks/useLiveRegion', () => ({
   LiveRegionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  useLiveRegion: () => ({ announce: vi.fn() }),
+  useLiveRegion: () => ({ announce: mockAnnounce }),
 }))
 
 import { CredentialSetupBanner } from '../CredentialSetupBanner'
@@ -56,6 +58,7 @@ beforeEach(() => {
   mockMissingCredentials.mockReturnValue({ missing: [], statusByKey: {}, loading: false })
   mockAuthUser.mockReturnValue({ id: 'user-1' })
   mockAssign.mockClear()
+  mockAnnounce.mockClear()
   // Clear sessionStorage
   try { sessionStorage.clear() } catch { /* ignore */ }
 })
@@ -243,6 +246,37 @@ describe('CredentialSetupBanner — AC6 re-appear on 0→N transition (R1-M1)', 
 
     // Flag for the unrelated user stays intact — effect did not attempt any clear.
     expect(sessionStorage.getItem(orphanKey)).toBe('true')
+  })
+})
+
+describe('CredentialSetupBanner — announce', () => {
+  it('calls announce once when banner becomes visible on mount', () => {
+    mockMissingCredentials.mockReturnValue({ missing: [AI_ENTRY], statusByKey: {}, loading: false })
+    renderBanner()
+    // Banner is visible (missing non-empty, not loading, not dismissed) → announce fires exactly once.
+    expect(mockAnnounce).toHaveBeenCalledTimes(1)
+    expect(mockAnnounce).toHaveBeenCalledWith(
+      'Credential setup required: some connections need configuration.'
+    )
+  })
+
+  it('does not re-announce on re-render if banner remains visible', () => {
+    mockMissingCredentials.mockReturnValue({ missing: [AI_ENTRY], statusByKey: {}, loading: false })
+    const { rerender } = renderBanner()
+    mockAnnounce.mockClear()
+    // Re-render with same visible state — announcedRef guards against double-firing.
+    rerender(
+      <MemoryRouter>
+        <CredentialSetupBanner />
+      </MemoryRouter>
+    )
+    expect(mockAnnounce).not.toHaveBeenCalled()
+  })
+
+  it('does not announce when banner is not visible (missing = [])', () => {
+    mockMissingCredentials.mockReturnValue({ missing: [], statusByKey: {}, loading: false })
+    renderBanner()
+    expect(mockAnnounce).not.toHaveBeenCalled()
   })
 })
 

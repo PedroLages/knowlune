@@ -64,6 +64,7 @@ describe('<SyncStatusIndicator />', () => {
     mockCount.mockReset().mockResolvedValue(0)
     mockFullSync.mockReset().mockResolvedValue(undefined)
     mockToastError.mockClear()
+    mockAnnounceDefault.mockClear()
     // Default matchMedia — reduced motion NOT set.
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
@@ -297,6 +298,28 @@ describe('<SyncStatusIndicator />', () => {
 
     // Restore default mock for subsequent tests
     vi.mocked(useLiveRegion).mockImplementation(() => ({ announce: mockAnnounceDefault }))
+  })
+
+  it('synced → syncing transition does NOT announce (normal 30s nudge is silent)', async () => {
+    resetStore({ status: 'synced' })
+    const { rerender } = render(<SyncStatusIndicator />)
+
+    // Transition from synced → syncing (periodic background sync — should be silent)
+    act(() => {
+      useSyncStatusStore.setState({ status: 'syncing' })
+    })
+    rerender(<SyncStatusIndicator />)
+
+    // Give any pending effects a chance to run
+    await waitFor(() => {
+      expect(screen.getByTestId('sync-status-indicator')).toHaveAttribute(
+        'data-sync-status',
+        'syncing'
+      )
+    })
+
+    // The default announce spy must NOT have been called for a routine synced→syncing transition.
+    expect(mockAnnounceDefault).not.toHaveBeenCalled()
   })
 
   it('uses static Cloud icon (no animate-spin) when prefers-reduced-motion is set', () => {
