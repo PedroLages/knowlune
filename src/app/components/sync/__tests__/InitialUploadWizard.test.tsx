@@ -34,6 +34,13 @@ vi.mock('@/lib/toastHelpers', () => ({
   },
 }))
 
+const mockAnnounce = vi.fn()
+
+vi.mock('@/app/hooks/useLiveRegion', () => ({
+  LiveRegionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useLiveRegion: () => ({ announce: mockAnnounce }),
+}))
+
 // Zustand store mock — supports both selector call and getState().
 const storeState = {
   status: 'synced' as 'synced' | 'syncing' | 'error' | 'offline',
@@ -80,6 +87,7 @@ function renderWizard(props?: Partial<React.ComponentProps<typeof InitialUploadW
 beforeEach(() => {
   localStorage.clear()
   vi.clearAllMocks()
+  mockAnnounce.mockClear()
   resetStore()
   resetProgress(3) // default: there is data to upload
 })
@@ -105,6 +113,8 @@ describe('InitialUploadWizard', () => {
     fireEvent.click(screen.getByTestId('initial-upload-start'))
     expect(syncEngine.fullSync).toHaveBeenCalledTimes(1)
     expect(screen.getByTestId('initial-upload-wizard')).toHaveAttribute('data-phase', 'uploading')
+    // Announce fires on uploading transition
+    expect(mockAnnounce).toHaveBeenCalledWith('Uploading your data. Please wait.')
   })
 
   it('fast-path: mounts directly in uploading when status === syncing', () => {
@@ -142,6 +152,8 @@ describe('InitialUploadWizard', () => {
 
     expect(localStorage.getItem(wizardCompleteKey(USER))).not.toBeNull()
     expect(toastSuccess.saved).toHaveBeenCalledWith('Initial upload complete')
+    // Announce fires on success transition
+    expect(mockAnnounce).toHaveBeenCalledWith('Upload complete. Your data is safely backed up.')
   })
 
   it('clears dismissal flag when writing completion flag on success', async () => {
@@ -176,6 +188,8 @@ describe('InitialUploadWizard', () => {
       expect(screen.getByTestId('initial-upload-wizard')).toHaveAttribute('data-phase', 'error')
     })
     expect(screen.getByText('Network unreachable')).toBeInTheDocument()
+    // Announce fires on error transition
+    expect(mockAnnounce).toHaveBeenCalledWith('Upload failed. Network unreachable')
   })
 
   it('Retry from error re-invokes fullSync and returns to uploading', async () => {

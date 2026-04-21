@@ -16,6 +16,7 @@
  * @since E97-S03
  */
 import { useEffect, useRef, useState } from 'react'
+import { useLiveRegion } from '@/app/hooks/useLiveRegion'
 import { CloudUpload, CheckCircle2, AlertTriangle } from 'lucide-react'
 import {
   Dialog,
@@ -61,6 +62,7 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
   const [phase, setPhase] = useState<Phase>('intro')
   const status = useSyncStatusStore(s => s.status)
   const lastError = useSyncStatusStore(s => s.lastError)
+  const { announce } = useLiveRegion()
 
   // Only poll syncQueue while we are actually in the uploading phase.
   const progress = useInitialUploadProgress(userId, open && phase === 'uploading')
@@ -94,6 +96,7 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
       suppressErrorUntilSyncingRef.current = false
     }
     if (status === 'error' && phase === 'uploading' && !suppressErrorUntilSyncingRef.current) {
+      announce(`Upload failed. ${lastError ?? 'Please try again.'}`)
       setPhase('error')
     }
     if (
@@ -113,9 +116,10 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
         console.error('[InitialUploadWizard] localStorage write failed:', err)
       }
       toastSuccess.saved('Initial upload complete')
+      announce('Upload complete. Your data is safely backed up.')
       setPhase('success')
     }
-  }, [status, phase, progress.done, progress.total, open, userId])
+  }, [status, phase, progress.done, progress.total, open, userId, announce, lastError])
 
   // Edge case (AC5 belt-and-suspenders): if mounted with total === 0, close silently.
   // Plan critic note 2: the completion flag was already written by
@@ -131,6 +135,7 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
   if (!open || !userId) return null
 
   function handleStart() {
+    announce('Uploading your data. Please wait.')
     setPhase('uploading')
     // silent-catch-ok — errors surface via useSyncStatusStore.lastError,
     // which drives the error phase transition above.
@@ -152,6 +157,7 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
 
   function handleRetry() {
     suppressErrorUntilSyncingRef.current = true
+    announce('Uploading your data. Please wait.')
     setPhase('uploading')
     // silent-catch-ok — errors surface via useSyncStatusStore.lastError.
     syncEngine.fullSync().catch(err => {
@@ -223,7 +229,7 @@ export function InitialUploadWizard({ open, userId, onClose }: InitialUploadWiza
 
             <div className="space-y-2">
               <Progress value={percent} />
-              <p className="text-muted-foreground text-sm" aria-live="polite">
+              <p className="text-muted-foreground text-sm" aria-hidden="true">
                 Uploading {progress.processed} of {progress.total}
                 {tableHint ? ` · ${tableHint}` : ''}
               </p>

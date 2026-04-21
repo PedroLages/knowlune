@@ -18,6 +18,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { useLiveRegion } from '@/app/hooks/useLiveRegion'
 import {
   KeyRound,
   Globe,
@@ -129,6 +130,7 @@ function MissingCredentialRow({ entry, onNavigate }: RowProps) {
 export function CredentialSetupBanner() {
   const user = useAuthStore(s => s.user)
   const { missing, loading } = useMissingCredentials()
+  const { announce } = useLiveRegion()
 
   const [dismissed, setDismissedState] = useState(() => {
     if (!user) return false
@@ -136,6 +138,9 @@ export function CredentialSetupBanner() {
   })
 
   const prevMissingLengthRef = useRef(missing.length)
+  // Tracks whether we've announced in the current visible session so we
+  // only fire once per appearance (not on every render).
+  const announcedRef = useRef(false)
 
   // AC6: When missing transitions from 0 → N, clear dismissal flag so banner reappears.
   useEffect(() => {
@@ -150,6 +155,19 @@ export function CredentialSetupBanner() {
 
     prevMissingLengthRef.current = currentLen
   }, [missing.length, user, dismissed])
+
+  // Announce once when the banner becomes visible. Reset the flag when the
+  // banner hides (dismissed or missing empties) so re-appearance re-announces.
+  const isVisible = !loading && missing.length > 0 && !dismissed
+  useEffect(() => {
+    if (!isVisible) {
+      announcedRef.current = false
+      return
+    }
+    if (announcedRef.current) return
+    announcedRef.current = true
+    announce('Credential setup required: some connections need configuration.')
+  }, [isVisible, announce])
 
   function handleDismiss() {
     if (!user) return
@@ -170,8 +188,6 @@ export function CredentialSetupBanner() {
 
   return (
     <div
-      role="status"
-      aria-live="polite"
       className="fixed top-4 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg px-4 pointer-events-none"
       data-testid="credential-setup-banner"
     >
