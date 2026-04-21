@@ -84,7 +84,6 @@ jobs:
           username: ${{ secrets.TITAN_SSH_USER }}
           key: ${{ secrets.TITAN_DEPLOY_SSH_KEY }}
           envs: IMAGE_TAG
-          script_stop: true
           script: |
             set -euo pipefail
             cd /mnt/cache/docker/stacks/knowlune
