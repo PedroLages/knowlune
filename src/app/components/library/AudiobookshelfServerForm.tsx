@@ -9,6 +9,7 @@
  */
 
 import { useState } from 'react'
+import type React from 'react'
 import {
   Loader2,
   CheckCircle2,
@@ -49,6 +50,8 @@ interface AudiobookshelfServerFormProps {
   onTest: () => void
   onSave: () => void
   onBack: () => void
+  /** E97-S05: Forward ref for the API key input — used by deep-link focus to focus the field */
+  apiKeyInputRef?: React.RefObject<HTMLInputElement | null>
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -69,6 +72,7 @@ export function AudiobookshelfServerForm({
   onTest,
   onSave,
   onBack,
+  apiKeyInputRef,
 }: AudiobookshelfServerFormProps) {
   const [showApiKey, setShowApiKey] = useState(false)
 
@@ -129,6 +133,7 @@ export function AudiobookshelfServerForm({
         <div className="relative">
           <Input
             id="abs-api-key"
+            ref={apiKeyInputRef}
             type={showApiKey ? 'text' : 'password'}
             placeholder={isEditMode ? '••••••••' : 'Enter API key'}
             value={apiKey}

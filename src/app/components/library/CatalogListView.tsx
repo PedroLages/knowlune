@@ -10,6 +10,8 @@ import { BookOpen, Globe, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Separator } from '@/app/components/ui/separator'
 import type { OpdsCatalog } from '@/data/types'
+import { CredentialSyncStatusBadge } from '@/app/components/sync/CredentialSyncStatusBadge'
+import type { CredentialStatus } from '@/lib/credentials/credentialStatus'
 
 interface CatalogListViewProps {
   catalogs: OpdsCatalog[]
@@ -17,6 +19,8 @@ interface CatalogListViewProps {
   onEdit: (catalog: OpdsCatalog) => void
   onDelete: (catalog: OpdsCatalog) => void
   onBrowse?: (catalog: OpdsCatalog) => void
+  /** E97-S05: Per-credential status map for vault badge rendering */
+  statusByKey?: Record<string, CredentialStatus>
 }
 
 export function CatalogListView({
@@ -25,6 +29,7 @@ export function CatalogListView({
   onEdit,
   onDelete,
   onBrowse,
+  statusByKey = {},
 }: CatalogListViewProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -44,14 +49,26 @@ export function CatalogListView({
           role="list"
           aria-label="Connected OPDS catalogs"
         >
-          {catalogs.map(catalog => (
+          {catalogs.map(catalog => {
+            const credStatus = statusByKey[`opds-catalog:${catalog.id}`]
+            return (
             <li
               key={catalog.id}
               className="flex items-center justify-between gap-3 py-3"
               data-testid={`opds-catalog-item-${catalog.id}`}
             >
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-medium text-foreground truncate">{catalog.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-foreground truncate">{catalog.name}</span>
+                  {/* E97-S05 AC4: Vault sync status badge */}
+                  {credStatus && (
+                    <CredentialSyncStatusBadge
+                      status={credStatus}
+                      showLabel={false}
+                      data-testid={`opds-credential-status-${catalog.id}`}
+                    />
+                  )}
+                </div>
                 <span className="text-xs text-muted-foreground truncate">{catalog.url}</span>
                 {catalog.lastSynced && (
                   <span className="text-xs text-muted-foreground">
@@ -97,7 +114,7 @@ export function CatalogListView({
                 </Button>
               </div>
             </li>
-          ))}
+          )})}
         </ul>
       )}
 

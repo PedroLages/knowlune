@@ -41,6 +41,9 @@ import {
   type AIProviderId,
 } from '@/lib/aiConfiguration'
 import { cn } from '@/app/components/ui/utils'
+import { useMissingCredentials } from '@/app/hooks/useMissingCredentials'
+import { CredentialSyncStatusBadge } from '@/app/components/sync/CredentialSyncStatusBadge'
+import type { CredentialStatus } from '@/lib/credentials/credentialStatus'
 
 /** Providers that use API keys (not server URLs like Ollama) — derived from AI_PROVIDERS to prevent drift */
 const API_KEY_PROVIDERS: AIProviderId[] = (Object.keys(AI_PROVIDERS) as AIProviderId[]).filter(
@@ -66,6 +69,9 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
   const [providerStatuses, setProviderStatuses] = useState<
     Partial<Record<AIProviderId, ProviderKeyStatus>>
   >({})
+
+  // E97-S05 AC3: Vault sync status per provider for badge rendering
+  const { statusByKey: credentialStatusByKey } = useMissingCredentials()
 
   // Load provider key statuses on mount and when config changes
   const refreshStatuses = useCallback(async () => {
@@ -176,6 +182,9 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
           const error = errors[providerId]
           const success = successes[providerId] ?? false
 
+          // E97-S05 AC3: Vault/local/missing status for this provider
+          const vaultStatus = credentialStatusByKey[`ai-provider:${providerId}`] as CredentialStatus | undefined
+
           return (
             <AccordionItem
               key={providerId}
@@ -209,6 +218,15 @@ export function ProviderKeyAccordion({ onConfigChanged }: ProviderKeyAccordionPr
                       {/* AC4: Show legacy indicator */}
                       {status.isLegacy && ' (legacy)'}
                     </Badge>
+                  )}
+                  {/* E97-S05 AC3: Vault sync status badge */}
+                  {vaultStatus && (
+                    <CredentialSyncStatusBadge
+                      status={vaultStatus}
+                      showLabel={false}
+                      className="ml-1"
+                      data-testid={`provider-vault-status-${providerId}`}
+                    />
                   )}
                 </span>
               </AccordionTrigger>
