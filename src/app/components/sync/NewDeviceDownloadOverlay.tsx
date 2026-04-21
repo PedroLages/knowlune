@@ -156,7 +156,6 @@ export function NewDeviceDownloadOverlay({ open, userId, onClose, watchdogMs }: 
     // onClose intentionally omitted — it is read via onCloseRef so parent
     // re-renders that hand us a fresh inline handler do not cancel or
     // reset the 250 ms timer mid-window. See KI-E97-S04-L01.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, storeStatus, progress.done, progress.total, progress.processed])
 
   if (!open || !userId) return null
