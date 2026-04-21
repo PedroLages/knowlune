@@ -64,9 +64,21 @@ export interface NewDeviceDownloadOverlayProps {
   open: boolean
   userId: string
   onClose: () => void
+  /**
+   * KI-E97-S04-L02 / R8: Override the watchdog timeout (ms). Defaults to
+   * `WATCHDOG_MS` (60_000). Exposed primarily for tests that want to
+   * exercise the watchdog path without expensive fake-timer advances.
+   *
+   * Uses nullish coalescing (`??`): only `null`/`undefined` trigger the
+   * default. `watchdogMs={0}` is a valid value (fires on the next tick) —
+   * this is intentional so callers who want immediate firing can opt in.
+   * A `||` fallback would silently coerce `0` to the default (60_000) and
+   * hide the footgun; `??` preserves caller intent.
+   */
+  watchdogMs?: number
 }
 
-export function NewDeviceDownloadOverlay({ open, userId, onClose }: NewDeviceDownloadOverlayProps) {
+export function NewDeviceDownloadOverlay({ open, userId, onClose, watchdogMs }: NewDeviceDownloadOverlayProps) {
   const storeStatus = useDownloadStatusStore(s => s.status)
   const storeError = useDownloadStatusStore(s => s.lastError)
 
@@ -94,9 +106,9 @@ export function NewDeviceDownloadOverlay({ open, userId, onClose }: NewDeviceDow
       if (latest === 'hydrating-p3p4' || latest === 'downloading-p0p2') {
         useDownloadStatusStore.getState().failDownloading('Taking longer than expected.')
       }
-    }, WATCHDOG_MS)
+    }, watchdogMs ?? WATCHDOG_MS)
     return () => window.clearTimeout(timer)
-  }, [open, storeStatus])
+  }, [open, storeStatus, watchdogMs])
 
   // Forward the all-HEAD-fail error to the store so Phase A/B observers
   // halt (there is no way to complete without a remote total).

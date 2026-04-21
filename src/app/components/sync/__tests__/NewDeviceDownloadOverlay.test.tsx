@@ -269,6 +269,75 @@ describe('NewDeviceDownloadOverlay', () => {
     vi.useRealTimers()
   })
 
+  // KI-E97-S04-L02 / R8 watchdogMs prop coverage.
+  describe('watchdogMs prop', () => {
+    it('watchdogMs={50}: watchdog fires within ~100ms without fake timers', async () => {
+      resetStore('hydrating-p3p4')
+      render(
+        <NewDeviceDownloadOverlay
+          open
+          userId={USER}
+          onClose={vi.fn()}
+          watchdogMs={50}
+        />,
+      )
+      // Small real wait — no vi.advanceTimersByTime(60_000) needed.
+      await waitFor(
+        () => expect(useDownloadStatusStore.getState().status).toBe('error'),
+        { timeout: 500 },
+      )
+      expect(useDownloadStatusStore.getState().lastError).toMatch(/Taking longer/)
+    })
+
+    // R8 regression guard: the impl MUST use `??` (nullish coalescing), not
+    // `||`. The two differ on `watchdogMs={0}`:
+    //   - `??`: `0 ?? 60_000` → 0 (fire at next tick — zero is a valid value)
+    //   - `||`: `0 || 60_000` → 60_000 (0 is falsy, coerced to default)
+    // This test pins the `??` behavior: `watchdogMs={0}` fires the watchdog
+    // on the next tick. If a future refactor switches to `||`, this test
+    // will fail (watchdog will silently use 60_000).
+    it('watchdogMs={0}: ?? preserves 0 — watchdog fires on next tick (would be silently defaulted if || were used)', () => {
+      vi.useFakeTimers()
+      resetStore('hydrating-p3p4')
+      render(
+        <NewDeviceDownloadOverlay
+          open
+          userId={USER}
+          onClose={vi.fn()}
+          watchdogMs={0}
+        />,
+      )
+
+      // Advance a single tick. With `??` the setTimeout(..., 0) fires now.
+      // With `||` the store would stay in 'hydrating-p3p4' (60_000 default).
+      act(() => {
+        vi.advanceTimersByTime(1)
+      })
+
+      expect(useDownloadStatusStore.getState().status).toBe('error')
+      expect(useDownloadStatusStore.getState().lastError).toMatch(/Taking longer/)
+      vi.useRealTimers()
+    })
+
+    it('no watchdogMs prop: default 60_000 ms path still applies', () => {
+      vi.useFakeTimers()
+      resetStore('hydrating-p3p4')
+      render(
+        <NewDeviceDownloadOverlay open userId={USER} onClose={vi.fn()} />,
+      )
+      // Advance shy of default to confirm no early fire.
+      act(() => {
+        vi.advanceTimersByTime(59_999)
+      })
+      expect(useDownloadStatusStore.getState().status).toBe('hydrating-p3p4')
+      act(() => {
+        vi.advanceTimersByTime(2)
+      })
+      expect(useDownloadStatusStore.getState().status).toBe('error')
+      vi.useRealTimers()
+    })
+  })
+
   it('unmounting during the 250ms success window cancels the auto-close timer', () => {
     vi.useFakeTimers()
     resetStore('complete')
