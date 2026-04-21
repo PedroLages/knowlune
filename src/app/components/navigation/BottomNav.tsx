@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router'
-import { MoreHorizontal } from 'lucide-react'
+import { MoreHorizontal, MessageSquarePlus } from 'lucide-react'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/app/components/ui/drawer'
 import { cn } from '@/app/components/ui/utils'
 import {
@@ -13,7 +13,11 @@ import {
 } from '@/app/config/navigation'
 import { useProgressiveDisclosure } from '@/app/hooks/useProgressiveDisclosure'
 
-export function BottomNav() {
+interface BottomNavProps {
+  onFeedbackClick?: () => void
+}
+
+export function BottomNav({ onFeedbackClick }: BottomNavProps = {}) {
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
   const { isVisible } = useProgressiveDisclosure()
@@ -145,6 +149,24 @@ export function BottomNav() {
                     </li>
                   )
                 })()}
+                {/* Feedback trigger — not a route, standalone action */}
+                <li>
+                  <button
+                    type="button"
+                    data-testid="feedback-trigger-mobile"
+                    onClick={() => {
+                      setMoreOpen(false)
+                      onFeedbackClick?.()
+                    }}
+                    className={cn(
+                      'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150 w-full',
+                      'text-foreground hover:bg-accent active:bg-accent'
+                    )}
+                  >
+                    <MessageSquarePlus className="size-5" aria-hidden="true" />
+                    <span className="text-sm font-medium">Send Feedback</span>
+                  </button>
+                </li>
               </ul>
             </div>
           </nav>

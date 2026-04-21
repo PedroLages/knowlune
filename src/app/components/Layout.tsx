@@ -12,6 +12,7 @@ import {
   LogIn,
   LogOut,
   User,
+  MessageSquarePlus,
 } from 'lucide-react'
 import { KnowluneLogo, KnowluneIcon } from './figma/KnowluneLogo'
 import { Button } from './ui/button'
@@ -31,6 +32,7 @@ import { SearchCommandPalette } from './figma/SearchCommandPalette'
 import { PaletteControllerProvider } from './figma/PaletteControllerContext'
 import type { EntityType } from '@/lib/unifiedSearch'
 import { KeyboardShortcutsDialog } from './figma/KeyboardShortcutsDialog'
+import { FeedbackModal } from './figma/FeedbackModal'
 import { BottomNav } from './navigation/BottomNav'
 import { useStudyReminders } from '@/app/hooks/useStudyReminders'
 import { useCourseReminders } from '@/app/hooks/useCourseReminders'
@@ -125,10 +127,12 @@ function SidebarContent({
   onNavigate,
   iconOnly,
   visibleGroups,
+  onFeedbackClick,
 }: {
   onNavigate?: () => void
   iconOnly?: boolean
   visibleGroups: NavigationGroup[]
+  onFeedbackClick?: () => void
 }) {
   return (
     <>
@@ -190,8 +194,38 @@ function SidebarContent({
         </div>
       </nav>
 
-      {/* Bottom section: Settings */}
+      {/* Bottom section: Feedback + Settings */}
       <div className="mt-4 pt-3 border-t border-border">
+        {/* Feedback trigger — above Settings */}
+        {iconOnly ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onFeedbackClick}
+                aria-label="Send Feedback"
+                className="flex items-center justify-center rounded-xl transition-colors duration-150 min-h-[44px] py-2.5 mx-2 w-[calc(100%-1rem)] text-muted-foreground hover:bg-accent hover:text-foreground"
+                data-testid="feedback-trigger"
+              >
+                <MessageSquarePlus className="size-5 shrink-0" aria-hidden="true" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              Send Feedback
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <button
+            type="button"
+            onClick={onFeedbackClick}
+            aria-label="Send Feedback"
+            className="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors duration-150 min-h-[44px] w-full text-muted-foreground hover:bg-accent hover:text-foreground"
+            data-testid="feedback-trigger"
+          >
+            <MessageSquarePlus className="size-5 shrink-0" aria-hidden="true" />
+            <span className="text-sm">Send Feedback</span>
+          </button>
+        )}
         <ul>
           <NavLink item={settingsItem} iconOnly={iconOnly} onNavigate={onNavigate} />
         </ul>
@@ -244,6 +278,7 @@ export function Layout() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [paletteInitialScope, setPaletteInitialScope] = useState<EntityType | null>(null)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [settings, setSettings] = useState(getSettings())
 
   // Sync settings when storage changes (e.g., updated in Settings page)
@@ -459,7 +494,11 @@ export function Layout() {
             className={`${sidebarCollapsed ? 'w-[72px] px-0 py-6' : 'w-[220px] p-6'} bg-card flex flex-col overflow-hidden transition-[width] duration-200 ease-out h-full`}
             aria-label="Sidebar"
           >
-            <SidebarContent iconOnly={sidebarCollapsed} visibleGroups={visibleGroups} />
+            <SidebarContent
+              iconOnly={sidebarCollapsed}
+              visibleGroups={visibleGroups}
+              onFeedbackClick={() => setFeedbackOpen(true)}
+            />
           </aside>
 
           {/* Edge notch toggle */}
@@ -488,6 +527,7 @@ export function Layout() {
             <SidebarContent
               onNavigate={() => setSidebarOpen(false)}
               visibleGroups={visibleGroups}
+              onFeedbackClick={() => setFeedbackOpen(true)}
             />
           </SheetContent>
         </Sheet>
@@ -702,10 +742,21 @@ export function Layout() {
       {/* Keyboard Shortcuts Dialog */}
       <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
+      {/* Feedback / Bug Report Modal (E118) */}
+      <FeedbackModal
+        open={feedbackOpen}
+        onOpenChange={setFeedbackOpen}
+        onSuccess={() => {
+          // toast fires after modal closes (plan critic: parent ownership)
+          setFeedbackOpen(false)
+          toast.success('Thanks — your feedback was sent.')
+        }}
+      />
+
       {/* Mobile Bottom Navigation - Only visible on mobile (<640px) */}
       {isMobile && (
         <div data-theater-hide>
-          <BottomNav />
+          <BottomNav onFeedbackClick={() => setFeedbackOpen(true)} />
         </div>
       )}
 
