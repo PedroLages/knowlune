@@ -183,8 +183,18 @@ test.describe('E97-S03: Initial Upload Wizard', () => {
     await setFakeAuthUser(page)
 
     const wizard = page.getByTestId('initial-upload-wizard')
-    // Wait a beat for evaluation.
-    await page.waitForTimeout(500) // silent-catch-ok — waiting for the one-shot evaluation to resolve
+    // Deterministic wait for the one-shot evaluation: either the wizard mounts
+    // (queue present → `initial-upload-wizard` in DOM) or the short-circuit
+    // path writes the completion flag. Either observable signal unblocks the
+    // branch check below — no hard-wait needed.
+    await page.waitForFunction(
+      (userId) => {
+        const el = document.querySelector('[data-testid="initial-upload-wizard"]')
+        return el !== null || localStorage.getItem(`sync:wizard:complete:${userId}`) !== null
+      },
+      USER_ID,
+      { timeout: 5000 },
+    )
     const count = await wizard.count()
     if (count > 0) {
       await page.getByTestId('initial-upload-skip').click()
