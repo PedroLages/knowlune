@@ -747,8 +747,8 @@ export function Layout() {
         open={feedbackOpen}
         onOpenChange={setFeedbackOpen}
         onSuccess={() => {
-          // toast fires after modal closes (plan critic: parent ownership)
-          setFeedbackOpen(false)
+          // Modal closes itself via onOpenChange(false) in its success effect.
+          // Parent only needs to fire the toast.
           toast.success('Thanks — your feedback was sent.')
         }}
       />

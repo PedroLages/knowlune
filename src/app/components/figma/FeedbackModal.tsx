@@ -41,6 +41,10 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
   const [copied, setCopied] = useState(false)
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
+  // Refs for roving tabIndex focus management in the radiogroup
+  const bugBtnRef = useRef<HTMLButtonElement>(null)
+  const feedbackBtnRef = useRef<HTMLButtonElement>(null)
+
   // Clear the "copied" timer on unmount to avoid state updates on unmounted component
   useEffect(() => {
     return () => {
@@ -133,11 +137,18 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
           onKeyDown={(e: React.KeyboardEvent) => {
             if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
               e.preventDefault()
-              setMode(prev => (prev === 'bug' ? 'feedback' : 'bug'))
+              if (e.key === 'ArrowRight') {
+                setMode('feedback')
+                feedbackBtnRef.current?.focus()
+              } else {
+                setMode('bug')
+                bugBtnRef.current?.focus()
+              }
             }
           }}
         >
           <button
+            ref={bugBtnRef}
             type="button"
             role="radio"
             aria-checked={mode === 'bug'}
@@ -152,6 +163,7 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
             Bug Report
           </button>
           <button
+            ref={feedbackBtnRef}
             type="button"
             role="radio"
             aria-checked={mode === 'feedback'}

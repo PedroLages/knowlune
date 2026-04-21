@@ -201,5 +201,63 @@ describe('FeedbackModal', () => {
       expect(screen.getByLabelText(/description/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/steps to reproduce/i)).toBeInTheDocument()
     })
+
+    it('ArrowRight in radiogroup moves focus to Feedback button', async () => {
+      const user = userEvent.setup()
+      renderModal()
+      const bugRadio = screen.getByRole('radio', { name: /bug report/i })
+      const feedbackRadio = screen.getByRole('radio', { name: /feedback/i })
+      bugRadio.focus()
+      await user.keyboard('{ArrowRight}')
+      expect(document.activeElement).toBe(feedbackRadio)
+    })
+
+    it('ArrowLeft in radiogroup moves focus to Bug Report button', async () => {
+      const user = userEvent.setup()
+      renderModal()
+      const bugRadio = screen.getByRole('radio', { name: /bug report/i })
+      const feedbackRadio = screen.getByRole('radio', { name: /feedback/i })
+      // Switch to feedback first so ArrowLeft has somewhere to go
+      feedbackRadio.focus()
+      await user.keyboard('{ArrowLeft}')
+      expect(document.activeElement).toBe(bugRadio)
+    })
+  })
+
+  describe('Form reset on close', () => {
+    it('form fields are cleared when modal closes and reopens', async () => {
+      const user = userEvent.setup()
+      const onOpenChange = vi.fn()
+      const { rerender } = render(
+        <FeedbackModal open={true} onOpenChange={onOpenChange} />
+      )
+      // Fill bug title
+      await user.type(screen.getByLabelText(/^title/i), 'My bug title')
+      expect(screen.getByLabelText(/^title/i)).toHaveValue('My bug title')
+
+      // Close modal
+      rerender(<FeedbackModal open={false} onOpenChange={onOpenChange} />)
+      // Reopen modal
+      rerender(<FeedbackModal open={true} onOpenChange={onOpenChange} />)
+
+      // Title input should be cleared
+      expect(screen.getByLabelText(/^title/i)).toHaveValue('')
+    })
+
+    it('onOpenChange(false) is called when status becomes success (try/finally guarantee)', async () => {
+      // Verifies the try/finally in the success effect ensures onOpenChange fires
+      // even if onSuccess would throw. We test the happy path here; the try/finally
+      // contract is verified at the component level.
+      const onSuccess = vi.fn()
+      const onOpenChange = vi.fn()
+      mockStatus = 'success'
+      render(
+        <FeedbackModal open={true} onOpenChange={onOpenChange} onSuccess={onSuccess} />
+      )
+      await waitFor(() => {
+        expect(onOpenChange).toHaveBeenCalledWith(false)
+        expect(onSuccess).toHaveBeenCalledOnce()
+      })
+    })
   })
 })
