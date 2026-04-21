@@ -3,6 +3,10 @@
 import { defineConfig, type Plugin } from 'vite';
 import path from 'path';
 import fs from 'fs';
+import { createRequire } from 'node:module';
+
+const _require = createRequire(import.meta.url);
+const pkg = _require('./package.json') as { version: string };
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -475,6 +479,9 @@ function testModeCspPlugin(): Plugin {
 }
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [
   // The React and Tailwind plugins are both required for Make, even if
   // Tailwind is not being actively used – do not remove them
