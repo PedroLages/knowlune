@@ -1203,12 +1203,12 @@ development_status:
   # Epic 97: Sync UX Polish — "Sync That Just Works"
   # Status indicator, settings panel, upload wizard, new device experience, credential UX
   # Depends on: E92 (sync engine), benefits from E93-E96 being complete
-  epic-97: backlog
-  97-1-sync-status-indicator-in-header: backlog
-  97-2-sync-settings-panel: backlog
-  97-3-initial-upload-wizard: backlog
-  97-4-new-device-download-experience: backlog
-  97-5-credential-sync-ux-for-external-services: backlog
+  epic-97: done
+  97-1-sync-status-indicator-in-header: done
+  97-2-sync-settings-panel: done
+  97-3-initial-upload-wizard: done
+  97-4-new-device-download-experience: done
+  97-5-credential-sync-ux-for-external-services: done
   epic-97-retrospective: optional
 
   # ──────────────────────────────────────────────────

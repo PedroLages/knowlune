@@ -10,6 +10,7 @@ import { Headphones, Plus } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import type { AudiobookshelfServer } from '@/data/types'
 import { AudiobookshelfServerCard } from './AudiobookshelfServerCard'
+import type { CredentialStatus } from '@/lib/credentials/credentialStatus'
 
 interface AudiobookshelfServerListViewProps {
   servers: AudiobookshelfServer[]
@@ -17,6 +18,8 @@ interface AudiobookshelfServerListViewProps {
   onEdit: (server: AudiobookshelfServer) => void
   onDelete: (server: AudiobookshelfServer) => void
   onReauthenticate: (server: AudiobookshelfServer) => void
+  /** E97-S05: Per-credential status map for vault badge rendering */
+  statusByKey?: Record<string, CredentialStatus>
 }
 
 export function AudiobookshelfServerListView({
@@ -25,6 +28,7 @@ export function AudiobookshelfServerListView({
   onEdit,
   onDelete,
   onReauthenticate,
+  statusByKey = {},
 }: AudiobookshelfServerListViewProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -51,6 +55,7 @@ export function AudiobookshelfServerListView({
               onEdit={onEdit}
               onDelete={onDelete}
               onReauthenticate={onReauthenticate}
+              credentialStatus={statusByKey[`abs-server:${server.id}`]}
             />
           ))}
         </ul>

@@ -26,6 +26,8 @@ import { useSyncLifecycle } from '@/app/hooks/useSyncLifecycle'
 import { LinkDataDialog } from '@/app/components/sync/LinkDataDialog'
 import { InitialUploadWizard } from '@/app/components/sync/InitialUploadWizard'
 import { NewDeviceDownloadOverlay } from '@/app/components/sync/NewDeviceDownloadOverlay'
+import { CredentialSetupBanner } from '@/app/components/sync/CredentialSetupBanner'
+import { MissingCredentialsProvider } from '@/app/hooks/useMissingCredentials'
 import { shouldShowInitialUploadWizard } from '@/lib/sync/shouldShowInitialUploadWizard'
 import { shouldShowDownloadOverlay } from '@/lib/sync/shouldShowDownloadOverlay'
 import { useDownloadStatusStore } from '@/app/stores/useDownloadStatusStore'
@@ -93,7 +95,7 @@ export default function App() {
   // one evaluation runs at a time for a given userId.
   const evaluationInFlightRef = useRef<string | null>(null)
   const downloadEvaluationInFlightRef = useRef<string | null>(null)
-  const authUser = useAuthStore((s) => s.user)
+  const authUser = useAuthStore(s => s.user)
 
   const evaluateWizard = useCallback(async (userId: string) => {
     if (!userId) return
@@ -124,7 +126,7 @@ export default function App() {
       setLinkDialogUserId(null)
       void evaluateWizard(userId)
     },
-    [evaluateWizard],
+    [evaluateWizard]
   )
 
   // Fast-path trigger: when the user becomes authenticated and no link dialog
@@ -189,7 +191,7 @@ export default function App() {
     const timer = window.setTimeout(() => {
       if (!fired) setDeferredOverlayReady(true)
     }, 2000)
-    const unsubscribe = useDownloadStatusStore.subscribe((s) => {
+    const unsubscribe = useDownloadStatusStore.subscribe(s => {
       if (s.status === 'complete') {
         fired = true
         window.clearTimeout(timer)
@@ -214,8 +216,7 @@ export default function App() {
   // exercise the overlay without requiring a seeded Supabase account. Tree-
   // shaken in production builds.
   useEffect(() => {
-    if (import.meta.env.PROD) return
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (import.meta.env.PROD) return // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(window as any).__forceDownloadOverlay = (userId: string | null) => {
       setDownloadOverlayUserId(userId)
       setDeferredOverlayReady(Boolean(userId))
@@ -265,6 +266,7 @@ export default function App() {
     <ErrorBoundary>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <MotionConfig reducedMotion={shouldReduceMotion ? 'always' : 'never'}>
+          <MissingCredentialsProvider>
           <RouterProvider router={router} />
           <Toaster />
           <WelcomeWizard />
@@ -293,9 +295,14 @@ export default function App() {
               }}
             />
           )}
+          {/* E97-S05: Credential setup banner — surfaces missing per-device credentials
+               after first sync. z-index=40 renders below the S04 overlay (z-50).
+               Gated on lastSyncAt so it never flashes on new-device sign-in. */}
+          <CredentialSetupBanner />
           {import.meta.env.PROD && <PWAUpdatePrompt />}
           <PWAInstallBanner />
           {process.env.NODE_ENV === 'development' && createPortal(<Agentation />, document.body)}
+          </MissingCredentialsProvider>
         </MotionConfig>
       </ThemeProvider>
     </ErrorBoundary>

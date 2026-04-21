@@ -196,6 +196,42 @@ export function Library() {
     loadAbsServers()
   }, [loadAbsServers])
 
+  // E97-S05: Listen for banner "Re-enter" button events that open settings dialogs
+  // with deep-link focus. The banner dispatches these CustomEvents; Library.tsx
+  // listens and opens the dialog + sets ?focus=<kind>:<id> for useDeepLinkFocus
+  // inside the dialog to drive credential input focus.
+  const [, setSearchParams] = useSearchParams()
+  useEffect(() => {
+    function onOpenOpdsSettings(e: Event) {
+      const { focusId } = (e as CustomEvent<{ focusId: string }>).detail
+      setCatalogsOpen(true)
+      // Set the deep-link focus param so useDeepLinkFocus inside OpdsCatalogSettings
+      // will open the edit form for this catalog and focus the password input.
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev)
+        next.set('focus', `opds:${focusId}`)
+        return next
+      }, { replace: true })
+    }
+
+    function onOpenAbsSettings(e: Event) {
+      const { focusId } = (e as CustomEvent<{ focusId: string }>).detail
+      setAbsSettingsOpen(true)
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev)
+        next.set('focus', `abs:${focusId}`)
+        return next
+      }, { replace: true })
+    }
+
+    window.addEventListener('open-opds-settings', onOpenOpdsSettings)
+    window.addEventListener('open-abs-settings', onOpenAbsSettings)
+    return () => {
+      window.removeEventListener('open-opds-settings', onOpenOpdsSettings)
+      window.removeEventListener('open-abs-settings', onOpenAbsSettings)
+    }
+  }, [setCatalogsOpen, setAbsSettingsOpen, setSearchParams])
+
   // Trigger ABS catalog sync when servers are loaded (E101-S03)
   // Background sync — does NOT block Library render
   // Track server IDs so adding a new server triggers re-sync without requiring remount
@@ -500,8 +536,7 @@ export function Library() {
       {books.length > 0 && <LibrarySourceTabs />}
 
       {/* Format tabs — hidden for ABS Series/Collections views (server-driven, not filterable) */}
-      {books.length > 0 &&
-        !(filters.source === 'audiobookshelf' && absViewMode !== 'grid') && (
+      {books.length > 0 && !(filters.source === 'audiobookshelf' && absViewMode !== 'grid') && (
         <FormatTabs />
       )}
 
@@ -687,14 +722,14 @@ export function Library() {
       {books.length > 0 &&
         filters.source !== 'audiobookshelf' &&
         (localSeriesView || activeFormatTab === 'all') && (
-        <SmartGroupedView
-          getBooksBySeries={getBooksBySeries}
-          onEdit={setEditingBook}
-          filteredBookIds={filteredBookIds}
-          formatTab={activeFormatTab}
-          viewMode={libraryView}
-        />
-      )}
+          <SmartGroupedView
+            getBooksBySeries={getBooksBySeries}
+            onEdit={setEditingBook}
+            filteredBookIds={filteredBookIds}
+            formatTab={activeFormatTab}
+            viewMode={libraryView}
+          />
+        )}
 
       {/* Grid view — specific format tabs OR ABS grid (SmartGroupedView handles local "All" tab) */}
       {books.length > 0 &&

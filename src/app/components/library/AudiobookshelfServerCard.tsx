@@ -12,12 +12,16 @@
 import { CheckCircle2, CloudOff, AlertTriangle, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import type { AudiobookshelfServer } from '@/data/types'
+import { CredentialSyncStatusBadge } from '@/app/components/sync/CredentialSyncStatusBadge'
+import type { CredentialStatus } from '@/lib/credentials/credentialStatus'
 
 interface AudiobookshelfServerCardProps {
   server: AudiobookshelfServer
   onEdit: (server: AudiobookshelfServer) => void
   onDelete: (server: AudiobookshelfServer) => void
   onReauthenticate: (server: AudiobookshelfServer) => void
+  /** E97-S05 AC4: Vault credential status for this server */
+  credentialStatus?: CredentialStatus
 }
 
 const STATUS_CONFIG = {
@@ -52,6 +56,7 @@ export function AudiobookshelfServerCard({
   onEdit,
   onDelete,
   onReauthenticate,
+  credentialStatus,
 }: AudiobookshelfServerCardProps) {
   const status = STATUS_CONFIG[server.status]
 
@@ -63,7 +68,17 @@ export function AudiobookshelfServerCard({
       {/* Header: name + actions */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col min-w-0">
-          <span className="text-sm font-bold text-foreground truncate">{server.name}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-foreground truncate">{server.name}</span>
+            {/* E97-S05 AC4: Vault credential status badge */}
+            {credentialStatus && (
+              <CredentialSyncStatusBadge
+                status={credentialStatus}
+                showLabel={false}
+                data-testid={`abs-credential-status-${server.id}`}
+              />
+            )}
+          </div>
           <span className="text-xs text-muted-foreground truncate">{server.url}</span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
