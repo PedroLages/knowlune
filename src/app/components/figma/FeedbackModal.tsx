@@ -22,21 +22,8 @@ interface FeedbackModalProps {
 }
 
 export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalProps) {
-  // Capture the focused element at the time the modal opens so we can
-  // restore focus when it closes (plan critic: use document.activeElement, not triggerRef).
-  const priorFocusRef = useRef<Element | null>(null)
-
-  useEffect(() => {
-    if (open) {
-      priorFocusRef.current = document.activeElement
-    } else {
-      // Restore focus to the element that triggered the modal
-      if (priorFocusRef.current instanceof HTMLElement) {
-        priorFocusRef.current.focus()
-      }
-      priorFocusRef.current = null
-    }
-  }, [open])
+  // Focus restoration is handled by Radix Dialog's built-in returnFocus behaviour.
+  // No manual priorFocusRef needed — the manual pattern races with Radix and is redundant.
 
   const [mode, setMode] = useState<FeedbackMode>('bug')
 
@@ -154,6 +141,7 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
             type="button"
             role="radio"
             aria-checked={mode === 'bug'}
+            tabIndex={mode === 'bug' ? 0 : -1}
             onClick={() => setMode('bug')}
             className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 ${
               mode === 'bug'
@@ -167,6 +155,7 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
             type="button"
             role="radio"
             aria-checked={mode === 'feedback'}
+            tabIndex={mode === 'feedback' ? 0 : -1}
             onClick={() => setMode('feedback')}
             className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 ${
               mode === 'feedback'

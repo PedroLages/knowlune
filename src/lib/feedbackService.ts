@@ -223,6 +223,7 @@ export function buildFallbackText(fields: FeedbackFormFields, ctx: FeedbackConte
   lines.push(`App version: ${ctx.version}`)
   lines.push(`Timestamp: ${ctx.timestamp}`)
   if (ctx.userId) lines.push(`User ID: ${ctx.userId}`)
+  // Email included in local copy only — never sent to GitHub. Remove before public launch if PII policy requires.
   if (ctx.email) lines.push(`Email: ${ctx.email}`)
   if (ctx.sentryEventId) lines.push(`Sentry event: ${ctx.sentryEventId}`)
   lines.push(`User agent: ${ctx.ua}`)
