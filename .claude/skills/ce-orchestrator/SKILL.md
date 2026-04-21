@@ -42,6 +42,7 @@ When `runMode == unattended` (i.e., `--headless`), every AskUserQuestion in the 
 | Plan deepen loop unresolved notes (round 2 exhausted) | 1.3 step 5 | Prompt | `Abort` this story | Don't ship a plan the critic couldn't sign off on |
 | Techdebt extract duplicates | 2.1.5 | Prompt | `Extract if safe` (same as `--autopilot`) | Cosmetic; safe extractions improve the codebase |
 | R3 review escalation | 2.3 | Prompt | `Halt (preserve state)` + story abort | Never ship a red tree; safe default |
+| Report generation | 0.7 closeout | N/A (no gate) | Runs automatically, no prompt | Fully automated sub-agent; never halts closeout on failure |
 
 **Rule:** any gate not in this table MUST NOT use AskUserQuestion — otherwise headless mode deadlocks. When adding a new gate, add its row here first.
 
@@ -259,9 +260,10 @@ When classifier returns `stage: epic-loop` (input matches `^E\d+$`), run all sto
    **Standard (default):**
    - `sprint-status-checker` (haiku) → verifies epic fully complete, surfaces orphaned/in-progress stories.
    - `known-issues-triage` (haiku) → lists `open` items added to `docs/known-issues.yaml` during this epic; categorizes each as `schedule-future | wont-fix | fix-now-chore` based on severity + scope. Writes summary to epic tracking file.
-   - `retrospective-dispatcher` (opus, extended thinking) → runs `bmad-retrospective` to extract patterns into `docs/engineering-patterns.md`, update memory files, and emit `docs/solutions/` entries where applicable. **Runs last** so it reviews final epic state including closeout results.
+   - `report-generator` (sonnet, v4) → synthesizes 8-section epic completion report from tracking file + sprint-status + known-issues + per-story review artifacts, writes to `docs/implementation-artifacts/epic-{N}-completion-report-{date}.md`, and commits to `main`. Coordinator passes `{epicId, epicTrackingPath, reportDate}`. Before dispatch, checks `closeoutStatus` — if `report-committed` or `complete`, skips (idempotent). After dispatch: on success, update tracking `artifacts.reportPath = returned path`, set `closeoutStatus: report-committed`. On `committed: false` or error: append `{stage: report-generator, time, message}` to `errors[]`, set `closeoutStatus: report-failed`, continue to retrospective. **Never halts.**
+   - `retrospective-dispatcher` (opus, extended thinking) → runs `bmad-retrospective` to extract patterns into `docs/engineering-patterns.md`, update memory files, and emit `docs/solutions/` entries where applicable. **Runs last** so it reviews final epic state including the committed completion report and closeout results. After successful return, coordinator sets `closeoutStatus: complete`.
 
-   **Full** (`--epic-closeout=full`) — adds before retrospective:
+   **Full** (`--epic-closeout=full`) — adds before `report-generator` (keeps report-generator and retrospective as the last two steps):
    - `testarch-trace-dispatcher` (sonnet) → requirements-to-tests traceability matrix.
    - `testarch-nfr-dispatcher` (sonnet) → non-functional requirements validation.
    - `review-adversarial-dispatcher` (opus, extended thinking) → cynical critique of epic scope + implementation.
@@ -279,6 +281,7 @@ When classifier returns `stage: epic-loop` (input matches `^E\d+$`), run all sto
    PRs merged: <list>
    Aborted/escalated: <list>
    Closeout: <standard|full|skipped>
+   Report: <reportPath or "[generation failed]" or "— (skipped)">
    Patterns extracted: <count from retrospective>
    Next epic will start warmer thanks to this run's compounding.
    ```
@@ -312,6 +315,16 @@ Do not read back the requirements content. Coordinator does not need it.
 
 - **Returns:** `{requirementsPath}` or `{error}`. On error, halt with user-visible message.
 
+**Artifact commit (v4):** immediately after the brainstorm file is confirmed written and the coordinator updates tracking `artifacts.brainstorm`, coordinator runs inline (not a sub-agent — deterministic single-file commit):
+
+```bash
+git add <requirementsPath>
+git commit -m "docs: add brainstorm artifact for <slug>"
+git push
+```
+
+Commit message uses the slug derived from the requirements filename (e.g., `keyboard-help` from `2026-04-18-keyboard-help-requirements.md`). If the commit fails (pre-push hook rejection, network error, etc.), append `{stage: phase-1.1-artifact-commit, time, message}` to tracking `errors[]` and continue — the brainstorm file is still on disk; engineer can commit manually. **Never halts the pipeline on artifact commit failure.** Tracking appends `phase-1.1-artifact-committed` to `stagesCompleted` on success.
+
 ### 1.2 Plan
 
 Dispatch `ce-plan-dispatcher` sub-agent:
@@ -337,6 +350,18 @@ Do not read back the plan content.
 ```
 
 - **Returns:** `{planPath, confidenceScore?}`.
+
+**Artifact commit (v4):** immediately after the plan file is confirmed written and the coordinator updates tracking `artifacts.plan`, coordinator runs inline:
+
+```bash
+git add <planPath>
+git commit -m "docs: add plan artifact for <slug>"
+git push
+```
+
+Same failure semantics as Phase 1.1 artifact commit — log warning to `errors[]`, continue. Never halts. Tracking appends `phase-1.2-artifact-committed` to `stagesCompleted` on success.
+
+**Skipped when plan-path was the input:** if the user invoked ce-orchestrator with an existing plan path (classifier stage `plan-approval`), both this stage and its artifact commit are skipped — the plan is already on disk and usually already committed. Coordinator does not attempt to re-commit a user-supplied plan.
 
 ### 1.3 Plan-approval gate (HARD human checkpoint)
 
@@ -644,6 +669,8 @@ Run `scripts/finalize-ce-run.sh <tracking-path> [--json]`:
 | Review R3 escalation | AskUserQuestion: Halt / Revert / Escalate-to-PR-with-banner. |
 | `/ce:work` fails mid-execution | Halt. Partial commits noted. User decides revert vs. continue. |
 | `gh` not authenticated at PR stage | Halt. Commits preserved on branch. User runs `gh auth login` and re-invokes. |
+| `report-generator` fails during closeout | Log warning to tracking `errors[]`, set `closeoutStatus: report-failed`, banner shows `[generation failed]`. Retrospective still runs. Never halts. |
+| Artifact commit (brainstorm/plan) fails | Log warning to tracking `errors[]`. Pipeline continues — artifact is on disk, engineer can commit manually. Never halts. |
 
 ## References
 
