@@ -235,3 +235,11 @@ async function writeOpdsRowAndEnqueue(operation: 'put', record: OpdsCatalog): Pr
 // Exported for the unit test — kept out of the default export to avoid
 // leaking the helper into the public API.
 export const __TEST_ONLY = { writeOpdsRowAndEnqueue }
+
+// Expose the store on window in development / test builds so E2E tests can
+// seed OPDS catalog rows without spinning up a real Supabase session. Mirrors
+// the `__authStore` / `__syncStatusStore` shim pattern. Tree-shaken in prod.
+if (typeof window !== 'undefined' && !import.meta.env.PROD) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window as any).__opdsCatalogStore = useOpdsCatalogStore
+}
