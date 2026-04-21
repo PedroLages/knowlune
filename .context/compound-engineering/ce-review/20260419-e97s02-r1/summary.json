@@ -1,0 +1,90 @@
+{
+  "runId": "20260419-e97s02-r1",
+  "mode": "headless",
+  "plan": "docs/plans/2026-04-19-023-feat-e97-s02-sync-settings-panel-plan.md",
+  "base": "8444ec8dfbb08ef1f20c91c8bd197858f85ec976",
+  "branch": "feature/e97-s02-sync-settings-panel",
+  "filesReviewed": 14,
+  "applied_safe_auto": 0,
+  "verdict": "Ready with fixes",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "P2",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "title": "Duplicate syncEngine.start() on auto-sync re-enable",
+      "file": "src/app/components/settings/sections/SyncSection.tsx",
+      "line": 185,
+      "summary": "handleToggle persists the pref (dispatch settingsUpdated) AND calls syncEngine.start(user.id); useSyncLifecycle's settingsUpdated listener then also calls start() + fullSync(). Start is idempotent (_started flag), but a duplicate fullSync is triggered only from the lifecycle path, so the direct start() call in handleToggle is redundant. Remove the explicit start/stop from handleToggle and rely on useSyncLifecycle as the single lifecycle owner.",
+      "confidence": 0.8,
+      "requires_verification": true,
+      "pre_existing": false
+    },
+    {
+      "id": "F2",
+      "severity": "P2",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "title": "handleSyncNow sets status='syncing' but syncEngine.fullSync may also manage status",
+      "file": "src/app/components/settings/sections/SyncSection.tsx",
+      "line": 207,
+      "summary": "SyncSection.handleSyncNow manually writes setStatus('syncing'), then awaits syncEngine.fullSync(), then markSyncComplete(). If fullSync internally sets status (as SyncStatusIndicator.handleRetry also does), there is a duplicated lifecycle contract across three callers. Centralize status transitions inside syncEngine.fullSync() or provide a wrapper so UI callers do not have to remember to setStatus+markSyncComplete.",
+      "confidence": 0.65,
+      "requires_verification": true,
+      "pre_existing": false
+    },
+    {
+      "id": "F3",
+      "severity": "P3",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "title": "handleSyncNow useCallback dependency list omits user",
+      "file": "src/app/components/settings/sections/SyncSection.tsx",
+      "line": 222,
+      "summary": "handleSyncNow is memoized on [busy] only. It does not reference user, which is correct today, but future edits that pass user.id into fullSync (multi-device token refresh) would silently capture a stale user ref. Non-blocking nit; consider adding a comment documenting why user is excluded.",
+      "confidence": 0.6,
+      "requires_verification": false,
+      "pre_existing": false
+    },
+    {
+      "id": "F4",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "title": "E2E test 'Sync Now shows loading state' relies on unexposed window shims",
+      "file": "tests/e2e/story-97-02-sync-settings.spec.ts",
+      "line": 236,
+      "summary": "The test references window.__syncEngine__, window.__resetLocalData__, and window.__syncStatusStore__ shims that do not appear to be exposed anywhere in the codebase (only __authStore and __syncStatusStore are set up by existing stores). The test therefore skips its mock injection entirely and falls through to real engine behavior. Either expose the missing shims in dev/test builds, or rewrite the test to drive state through the public store API.",
+      "confidence": 0.75,
+      "requires_verification": true,
+      "pre_existing": false
+    },
+    {
+      "id": "F5",
+      "severity": "P3",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "title": "Settings nav 'Sync' entry visible when signed out may confuse users",
+      "file": "src/app/components/settings/sections/SyncSection.tsx",
+      "line": 243,
+      "summary": "SyncSection returns null when signed out, but the nav pill/item for 'Sync' stays visible (per plan decision for discoverability). Clicking the nav yields an empty right pane with no explanatory state. Consider adding a minimal signed-out placeholder ('Sign in to manage cloud sync') inside SyncSection or gating the nav entry when useAuthStore.user is null.",
+      "confidence": 0.7,
+      "requires_verification": false,
+      "pre_existing": false
+    },
+    {
+      "id": "F6",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "title": "computeTotalSyncedItems re-runs on every lastSyncAt tick, even on no-op syncs",
+      "file": "src/app/components/settings/sections/SyncSection.tsx",
+      "line": 139,
+      "summary": "Effect is gated on lastSyncAt, so every markSyncComplete re-counts every non-skip table. For a user with ~20 tables and tens of thousands of rows, a Promise.all of count()s runs on every 30s nudge cycle. Consider memoizing by lastSyncAt reference equality plus debouncing, or computing counts only when the panel is visible.",
+      "confidence": 0.65,
+      "requires_verification": false,
+      "pre_existing": false
+    }
+  ]
+}
