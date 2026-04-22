@@ -285,17 +285,29 @@ describe('deleteAccount module', () => {
       expect(result.success).toBe(false)
       expect(result.error).toContain('Account deletion failed')
     })
+
+    it('returns error when body has router msg envelope (main router failure)', async () => {
+      // Main router returns { success: false, error, msg } on worker dispatch failure.
+      // F2: guard must catch data.msg even if callers previously only looked at data.error.
+      mockFunctionsInvoke.mockResolvedValue({
+        data: { msg: 'worker create timed out after 10000ms' },
+        error: null,
+      })
+      const result = await deleteAccount()
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Account deletion failed')
+    })
   })
 
   describe('cancelAccountDeletion', () => {
     it('succeeds when edge function succeeds', async () => {
-      mockFunctionsInvoke.mockResolvedValue({ error: null })
+      mockFunctionsInvoke.mockResolvedValue({ data: { success: true }, error: null })
       const result = await cancelAccountDeletion()
       expect(result.error).toBeUndefined()
     })
 
     it('returns error when edge function fails', async () => {
-      mockFunctionsInvoke.mockResolvedValue({ error: { message: 'Not found' } })
+      mockFunctionsInvoke.mockResolvedValue({ data: null, error: { message: 'Not found' } })
       const result = await cancelAccountDeletion()
       expect(result.error).toContain('cancel deletion')
     })
@@ -311,6 +323,34 @@ describe('deleteAccount module', () => {
       mockGetState.mockReturnValue({ session: null, user: null, signOut: vi.fn() } as any)
       const result = await cancelAccountDeletion()
       expect(result.error).toContain('signed in')
+    })
+
+    it('returns error when body contains data.error (boot-crash)', async () => {
+      // F3 symmetric guard — mirrors the deleteAccount body-error coverage.
+      mockFunctionsInvoke.mockResolvedValue({
+        data: { error: 'Worker failed to boot' },
+        error: null,
+      })
+      const result = await cancelAccountDeletion()
+      expect(result.error).toContain('cancel deletion')
+    })
+
+    it('returns error when body contains router msg envelope', async () => {
+      mockFunctionsInvoke.mockResolvedValue({
+        data: { msg: 'missing function name in request' },
+        error: null,
+      })
+      const result = await cancelAccountDeletion()
+      expect(result.error).toContain('cancel deletion')
+    })
+
+    it('returns error when body has success=false', async () => {
+      mockFunctionsInvoke.mockResolvedValue({
+        data: { success: false, error: 'already cancelled' },
+        error: null,
+      })
+      const result = await cancelAccountDeletion()
+      expect(result.error).toContain('cancel deletion')
     })
   })
 })

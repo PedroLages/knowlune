@@ -9,16 +9,20 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 // Env var validation — fail fast if misconfigured
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')
 if (!SUPABASE_URL) throw new Error('SUPABASE_URL is required')
 if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY is required')
+if (!SUPABASE_ANON_KEY) throw new Error('SUPABASE_ANON_KEY is required')
 
 // Service-role admin client — used for auth.admin.deleteUser (bypasses RLS)
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 })
 
+// CORS: match create-checkout pattern — restrict to APP_URL when set, fall back to localhost dev.
+// Avoids '*' which is unsafe for authenticated endpoints.
 const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('APP_URL') || 'http://localhost:5173',
   'Access-Control-Allow-Headers': 'authorization, content-type, x-client-info, apikey',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
@@ -40,11 +44,8 @@ async function authenticate(req: Request): Promise<{ userId: string } | Response
     return json({ success: false, error: 'Unauthorized' }, 401)
   }
 
-  const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')
-  if (!SUPABASE_ANON_KEY) throw new Error('SUPABASE_ANON_KEY is required')
-
   // Verify JWT using the anon client (user-scoped — validates the token)
-  const userClient = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY, {
+  const userClient = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
     global: { headers: { Authorization: authHeader } },
     auth: { autoRefreshToken: false, persistSession: false },
   })
@@ -82,7 +83,11 @@ Deno.serve(async (req: Request) => {
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId, true)
 
     if (deleteError) {
-      console.error('[delete-account] admin.deleteUser error:', deleteError)
+      // Redacted log — avoid leaking user PII into container logs.
+      console.error('[delete-account] admin.deleteUser error:', {
+        message: deleteError.message,
+        status: deleteError.status,
+      })
 
       // Idempotent: if user already has deleted_at set, the admin API returns a 422.
       // Treat this as a success — the deletion is already scheduled.
@@ -105,7 +110,9 @@ Deno.serve(async (req: Request) => {
 
     return json({ success: true, scheduledDeletionAt })
   } catch (err) {
-    console.error('[delete-account] unexpected error:', err)
+    // Redacted log — capture message/name only; stack is kept via Error.
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[delete-account] unexpected error:', message)
     return json({ success: false, error: 'Internal server error' }, 500)
   }
 })

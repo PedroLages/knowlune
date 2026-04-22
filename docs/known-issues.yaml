@@ -1433,3 +1433,46 @@ issues:
     scheduled_for: E119
     fixed_by: null
     notes: "Accepted pre-beta risk. Remove before public launch. E119 GDPR epic will address email verification enforcement."
+
+  - id: KI-BETA-002
+    type: security
+    summary: "Kong CORS '*' on /functions/v1/* and FUNCTIONS_VERIFY_JWT=false (router auth-open)"
+    file: "titan:/mnt/cache/appdata/supabase/kong/api/kong.yml (functions-v1 plugin: cors with no config)"
+    severity: low
+    discovered_by: ce-review-2026-04-22-beta-blockers
+    discovered_on: 2026-04-22
+    status: scheduled
+    scheduled_for: E119
+    fixed_by: null
+    notes: |
+      Kong's CORS plugin on /functions/v1/* uses default config, which sets
+      Access-Control-Allow-Origin: *. The main-router also runs with
+      FUNCTIONS_VERIFY_JWT=false, so the router forwards requests to each
+      worker without verifying the JWT first.
+
+      Why this is accepted as LOW (not medium/high) pre-beta:
+      - Knowlune uses bearer-token auth in localStorage, not cookies.
+        Cross-origin pages (evil.com) cannot read the token and therefore
+        cannot construct an authenticated request regardless of CORS policy.
+        CORS * is a bad smell, not an exploitable hole in this architecture.
+      - Every Edge Function re-validates the JWT internally via
+        supabase.auth.getUser() before doing any privileged work. Router
+        verification is defense-in-depth, not the primary check.
+      - The defensive fix already applied at the function layer (F5 in this
+        review — APP_URL allowlist in delete-account) is belt-and-suspenders
+        that fires the day Kong CORS is tightened.
+
+      When this must be revisited (trigger for moving to medium/high):
+      - Any migration to cookie-based auth (Supabase SSR, password-reset
+        cookies, OAuth code flow that sets a session cookie).
+      - Adding any Edge Function that performs privileged work without its
+        own auth check (e.g., webhooks that don't verify signatures).
+      - Reports of abuse, credential stuffing, or suspicious traffic.
+
+      Remediation when needed:
+      - Kong: set functions-v1 CORS plugin config.origins to
+        [APP_URL, http://localhost:5173], config.credentials=true,
+        config.headers=[Accept, Authorization, Content-Type, X-Client-Info, apikey].
+      - Compose: set FUNCTIONS_VERIFY_JWT=true; smoke-test every function
+        (public webhooks like stripe-webhook must be moved to a separate
+        no-verify route or use Kong's request-transformer).
