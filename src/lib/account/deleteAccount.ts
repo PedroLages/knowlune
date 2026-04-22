@@ -213,6 +213,16 @@ export async function deleteAccount(
       }
     }
 
+    // Guard: Edge Function boot-crash returns HTTP 200 with error in body (error field is null).
+    // data?.error is set when Deno runtime crashes before the function can return a real response.
+    if (data?.error || data?.success === false) {
+      console.error('delete-account body error:', data)
+      return {
+        success: false,
+        error: 'Account deletion failed. Please try again or contact support.',
+      }
+    }
+
     // Track progress through the steps the Edge Function completed
     if (data?.step === 'subscription_cancelled') {
       onStep?.('deleting-customer')

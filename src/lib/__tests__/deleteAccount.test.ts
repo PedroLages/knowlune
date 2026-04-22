@@ -265,6 +265,26 @@ describe('deleteAccount module', () => {
       expect(result.success).toBe(false)
       expect(result.error).toContain('connection')
     })
+
+    it('returns error when body contains error (boot-crash: error=null, data.error set)', async () => {
+      mockFunctionsInvoke.mockResolvedValue({
+        data: { error: 'Worker failed to boot', details: 'import error' },
+        error: null,
+      })
+      const result = await deleteAccount()
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Account deletion failed')
+    })
+
+    it('returns error when body success=false (application-level failure)', async () => {
+      mockFunctionsInvoke.mockResolvedValue({
+        data: { success: false, error: 'open invoice' },
+        error: null,
+      })
+      const result = await deleteAccount()
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Account deletion failed')
+    })
   })
 
   describe('cancelAccountDeletion', () => {
