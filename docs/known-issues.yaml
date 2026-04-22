@@ -1421,3 +1421,15 @@ issues:
     status: scheduled
     scheduled_for: cleanup-epic
     decision: schedule-future
+
+  - id: KI-BETA-001
+    type: security
+    summary: "MAILER_AUTOCONFIRM=true — any email can be claimed without verification"
+    file: "titan:/mnt/cache/docker/stacks/supabase/.env"
+    severity: medium
+    discovered_by: pre-beta-hardening-sprint
+    discovered_on: 2026-04-22
+    status: scheduled
+    scheduled_for: E119
+    fixed_by: null
+    notes: "Accepted pre-beta risk. Remove before public launch. E119 GDPR epic will address email verification enforcement."
