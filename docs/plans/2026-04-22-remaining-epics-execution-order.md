@@ -11,20 +11,20 @@ date: 2026-04-22
 > **Supersedes:** Wave 3+ sections of [`2026-03-28-product-roadmap.md`](2026-03-28-product-roadmap.md)
 > **Related:** [Pre-beta hardening sprint](2026-04-21-pre-beta-hardening-sprint.md) — blocks Gate 1
 
-## 🚦 Gate 0 — Daily-Driver Live ✅ + Beta Hardening Pending
+## 🚦 Gate 0 — Daily-Driver Live ✅ + Beta Hardening ✅ COMPLETE
 
-**Deployment status (verified 2026-04-21 via SSH):**
+**Deployment status (verified 2026-04-22):**
 
 - ✅ `knowlune.pedrolages.net` live (Nginx + Express bundled container, SSO proxy)
 - ✅ `supabase.pedrolages.net` live (Kong 3.9.1)
-- ✅ Kopia offsite daily snapshots include `/mnt/user/appdata/supabase/db/dumps/`
-- ❌ **Supabase dumps broken since Apr 19** — `pre-backup.sh` fail-fast on missing `postgres-shared` container
-- ❌ **Postgres untuned** — 128MB shared_buffers on 31GB host
-- ❌ **Sentry DSN not configured** — errors go nowhere
-- ❌ **Restore rehearsal not done**
-- ✅ Privacy/Terms render content + delete-account flow verified (2026-04-22)
+- ✅ Kopia offsite daily snapshots include `/mnt/user/appdata/supabase/db/dumps/` (snapshot k2b2e8aa1c32a41c6cf155163318bdb6d verified)
+- ✅ **Supabase dumps fixed** — `pre-backup.sh` fault-tolerant; fresh dump `supabase_dumpall_20260422_022853.sql`
+- ✅ **Postgres tuned** — shared_buffers=8GB, effective_cache_size=24GB, work_mem=64MB
+- ✅ **Sentry DSN configured** — EU ingest added to CSP; errors captured
+- ✅ **Restore rehearsal complete** — runbook at `docs/runbooks/supabase-restore-rehearsal.md`; all row counts matched
+- ✅ Privacy/Terms render content + delete-account flow verified (2026-04-22: user hard-deleted from auth.users)
 
-**Blocker for inviting humans:** Execute [pre-beta hardening sprint](2026-04-21-pre-beta-hardening-sprint.md) — 8 units, ~4-6h P0 work + 24h wait for dump cron verification.
+**Gate 0 COMPLETE. Invite humans.**
 
 ---
 

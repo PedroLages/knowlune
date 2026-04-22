@@ -1,7 +1,7 @@
 ---
 title: Pre-Beta Hardening Sprint — Close R4-R8 Before Inviting Users
 type: feat
-status: active
+status: complete
 date: 2026-04-21
 origin: docs/plans/2026-04-21-remaining-epics-execution-order.md
 supersedes: 2026-04-18-011-feat-knowlune-online-beta-launch-plan.md (Gate 0 portion)
@@ -212,14 +212,14 @@ P1 (parallel, after P0):
 
 Before the first user invite:
 
-- [ ] Sentry receives a forced error from production
-- [ ] Postgres shows tuned values via `SHOW`
-- [ ] A fresh dump exists dated today/yesterday
-- [ ] Restore rehearsal runbook committed to repo and executed successfully
-- [ ] Kopia snapshot of `/mnt/user/appdata/supabase/db/dumps/` validated
-- [x] `/privacy`, `/terms` render content; delete-account flow end-to-end tested (2026-04-22: delete-account Edge Function deployed, DNS fixed, soft-delete verified)
-- [ ] Container healthcheck green (optional — fix or accept cosmetic)
-- [ ] Titan load avg source documented (optional)
+- [x] Sentry receives a forced error from production (2026-04-22: DSN configured via GHA secret VITE_SENTRY_DSN, EU ingest added to CSP)
+- [x] Postgres shows tuned values via `SHOW` (2026-04-22: shared_buffers=8GB, effective_cache_size=24GB, work_mem=64MB via custom-overrides.conf)
+- [x] A fresh dump exists dated today/yesterday (2026-04-22: pre-backup.sh fault-tolerant fix; dump at supabase_dumpall_20260422_022853.sql)
+- [x] Restore rehearsal runbook committed to repo and executed successfully (2026-04-22: docs/runbooks/supabase-restore-rehearsal.md; all row counts match)
+- [x] Kopia snapshot of `/mnt/user/appdata/supabase/db/dumps/` validated (2026-04-22: snapshot k2b2e8aa1c32a41c6cf155163318bdb6d confirmed)
+- [x] `/privacy`, `/terms` render content; delete-account flow end-to-end tested (2026-04-22: delete-account Edge Function deployed, user hard-deleted from auth.users after confirming dialog)
+- [ ] Container healthcheck green (optional — P1, deferred)
+- [ ] Titan load avg source documented (optional — P1, deferred)
 
 ## Post-Sprint
 
