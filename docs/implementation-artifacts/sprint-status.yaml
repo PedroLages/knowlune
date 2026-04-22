@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-21  # E97 complete — all 5 stories shipped (PRs #381-#383, #385, #394)
+last_updated: 2026-04-22  # E119 epic created — 13 GDPR compliance stories, all ready-for-dev
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -1443,3 +1443,34 @@ development_status:
   117-2-ranking-frecency-empty-state: done  # plan: docs/plans/2026-04-18-010-feat-unified-search-ranking-empty-state-story-2-plan.md (PR #351 merged)
   117-3-prefix-filters-and-per-page-input-removal: done  # branch: feature/e117-s02-search-ranking-empty-state
   epic-117-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 118: In-App Feedback
+  # Source: docs/plans/2026-04-21-002-feat-e118-in-app-feedback-plan.md
+  # Floating feedback widget, NPS pulse survey, Supabase backend
+  # ──────────────────────────────────────────────────
+  epic-118: done
+  118-1-feedback-widget-and-backend: done  # PR #400 merged 2026-04-21
+
+  # ──────────────────────────────────────────────────
+  # Epic 119: GDPR Full Compliance (Umbrella)
+  # Source: docs/plans/2026-04-22-003-feat-e119-gdpr-full-compliance-plan.md
+  # Privacy notice, notice ack, registry-driven erasure + export, consent,
+  # retention enforcement, operator artifacts, annual review
+  # Articles: 5, 6, 7, 12, 13/14, 15, 17, 20, 28, 30, 32, 33/34
+  # ──────────────────────────────────────────────────
+  epic-119: in-progress
+  119-1-privacy-notice-source-of-truth-versioning: ready-for-dev
+  119-2-notice-acknowledgement-signup-material-change-reack: ready-for-dev
+  119-3-registry-driven-erasure-cascade: ready-for-dev
+  119-4-deletion-verification-confirmation-email: ready-for-dev
+  119-5-registry-driven-export-zip: ready-for-dev
+  119-6-large-export-async-path-signed-url: ready-for-dev
+  119-7-consent-schema-inventory: ready-for-dev
+  119-8-consent-ui-withdrawal-effects: ready-for-dev
+  119-9-ai-provider-change-re-consent: ready-for-dev
+  119-10-retention-policy-matrix: ready-for-dev
+  119-11-retention-ttl-enforcement-job: ready-for-dev
+  119-12-operator-artifacts-ropa-dpa-breach-runbook: ready-for-dev
+  119-13-annual-review-ico-checklist-beta-user-reack: ready-for-dev
+  epic-119-retrospective: optional
