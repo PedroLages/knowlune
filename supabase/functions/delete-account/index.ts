@@ -105,12 +105,13 @@ Deno.serve(async (req: Request) => {
     })
 
     if (metaError) {
-      // Non-blocking: log but continue. The soft-delete can still proceed;
-      // retention-tick will fall back to checking deleted_at.
+      // Fatal: without pending_deletion_at, retention-tick cannot find this user
+      // for hard-delete after the grace period — a GDPR erasure gap.
       console.error('[delete-account] failed to stamp pending_deletion_at:', {
         message: metaError.message,
         status: metaError.status,
       })
+      return json({ success: false, error: 'Failed to delete account. Please try again.' }, 500)
     }
 
     // Step 1b: Supabase soft-delete — sets deleted_at on auth.users.

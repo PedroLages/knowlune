@@ -218,6 +218,14 @@ export async function hardDeleteUser(
   // -------------------------------------------------------------------------
   if (stripe) {
     try {
+      // Look up Stripe customer by Supabase user UUID.
+      // ASSUMPTION: Stripe customers must be created with metadata key `supabase_uid`
+      // set to the Supabase user UUID. Verify this is set in:
+      //   - supabase/functions/create-checkout/index.ts (customer creation)
+      //   - supabase/functions/stripe-webhook/index.ts (customer lookup)
+      // If this metadata key is absent, the search returns no customers and
+      // stripeAnonymised is set to true — PII would NOT be scrubbed.
+      // [TODO: S10] Confirm metadata key with Stripe dashboard before production.
       const { data: customers } = await stripe.customers.search({
         query: `metadata['supabase_uid']:'${userId}'`,
         limit: 1,

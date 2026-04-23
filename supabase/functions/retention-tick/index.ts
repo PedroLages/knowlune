@@ -23,6 +23,10 @@ import { hardDeleteUser } from '../_shared/hardDeleteUser.ts'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY')
+// RETENTION_TICK_SECRET: shared secret for service-to-service authentication.
+// Set in the Edge Function env and also in the cron caller (pg_cron or external cron).
+// If absent, the function is open — set this in production.
+const RETENTION_TICK_SECRET = Deno.env.get('RETENTION_TICK_SECRET')
 if (!SUPABASE_URL) throw new Error('SUPABASE_URL is required')
 if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY is required')
 
@@ -45,6 +49,21 @@ Deno.serve(async (req: Request) => {
   // Accept POST or GET (cron triggers may use either)
   if (req.method !== 'POST' && req.method !== 'GET') {
     return json({ success: false, error: 'Method not allowed' }, 405)
+  }
+
+  // Service-to-service authentication via shared secret.
+  // Set RETENTION_TICK_SECRET in Edge Function env and in the cron caller.
+  // If the env var is not configured, log a warning but allow through (dev/test).
+  // In production, RETENTION_TICK_SECRET must be set — otherwise unauthenticated
+  // callers could trigger the retention tick.
+  if (RETENTION_TICK_SECRET) {
+    const callerSecret = req.headers.get('x-retention-secret')
+    if (callerSecret !== RETENTION_TICK_SECRET) {
+      console.warn('[retention-tick] rejected request: missing or invalid x-retention-secret')
+      return json({ success: false, error: 'Unauthorized' }, 401)
+    }
+  } else {
+    console.warn('[retention-tick] RETENTION_TICK_SECRET not set — endpoint is unprotected. Set in production.')
   }
 
   try {
