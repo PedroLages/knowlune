@@ -94,15 +94,21 @@ export interface ConsentOperationResult {
  * Grant consent for a purpose.
  *
  * Upserts a userConsents row with grantedAt=now, withdrawnAt=null,
- * noticeVersion=CURRENT_NOTICE_VERSION, evidence={}.
+ * noticeVersion=CURRENT_NOTICE_VERSION.
  * Idempotent: re-granting updates grantedAt and clears withdrawnAt.
  *
- * @param userId  Supabase auth user UUID
- * @param purpose One of the CONSENT_PURPOSES values
+ * The `evidence` parameter is merged with any existing evidence so that
+ * provider-specific metadata (e.g. `{ provider_id: 'openai' }`) added by
+ * E119-S09's re-consent flow is captured without overwriting unrelated fields.
+ *
+ * @param userId    Supabase auth user UUID
+ * @param purpose   One of the CONSENT_PURPOSES values
+ * @param evidence  Optional additional evidence fields to merge (E119-S09: provider_id)
  */
 export async function grantConsent(
   userId: string,
   purpose: ConsentPurpose,
+  evidence?: Record<string, unknown>,
 ): Promise<ConsentOperationResult> {
   const now = new Date().toISOString()
   try {
@@ -116,7 +122,9 @@ export async function grantConsent(
       grantedAt: now,
       withdrawnAt: null,
       noticeVersion: CURRENT_NOTICE_VERSION,
-      evidence: existing?.evidence ?? {},
+      // Merge new evidence fields over existing ones so that a provider_id
+      // re-consent call updates provider_id without losing other evidence keys.
+      evidence: { ...(existing?.evidence as Record<string, unknown> ?? {}), ...(evidence ?? {}) },
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     }
