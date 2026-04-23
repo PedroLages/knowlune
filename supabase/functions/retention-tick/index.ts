@@ -175,13 +175,9 @@ Deno.serve(async (req: Request) => {
         // AC-4: email failure must not prevent the deletion from being recorded.
         if (capturedEmail) {
           const template = deletionCompleteEmail()
-          sendEmail({ to: capturedEmail, ...template }).then((emailResult) => {
-            if (!emailResult.sent && !('skipped' in emailResult && emailResult.skipped)) {
-              console.error(`[retention-tick] receipt email failed for ${userId}:`, 'error' in emailResult ? emailResult.error : 'unknown error')
-            }
-          }).catch((err: unknown) => {
-            const message = err instanceof Error ? err.message : String(err)
-            console.error(`[retention-tick] sendEmail threw for ${userId}:`, message)
+          const _ = await sendEmail({ to: capturedEmail, ...template }).catch((err: unknown) => {
+            console.error(`[retention-tick] email send failed for ${userId}:`, err)
+            return null
           })
         }
 

@@ -181,13 +181,9 @@ Deno.serve(async (req: Request) => {
       const appUrl = Deno.env.get('APP_URL') || 'https://knowlune.pedrolages.net'
       const cancelUrl = `${appUrl}/settings`
       const template = deletionScheduledEmail(cancelUrl)
-      sendEmail({ to: userEmail, ...template }).then((result) => {
-        if (!result.sent && !('skipped' in result && result.skipped)) {
-          console.error('[delete-account] deletion-scheduled email failed:', 'error' in result ? result.error : 'unknown error')
-        }
-      }).catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : String(err)
-        console.error('[delete-account] sendEmail threw unexpectedly:', message)
+      const _ = await sendEmail({ to: userEmail, ...template }).catch((err: unknown) => {
+        console.error('[delete-account] email send failed:', err)
+        return null
       })
     }
 
