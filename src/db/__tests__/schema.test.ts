@@ -107,8 +107,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 58 (E119-S07: userConsents consent ledger)', () => {
-    expect(db.verno).toBe(58)
+  it('should be at version 59 (E119-S08: frozenReason on learnerModels)', () => {
+    expect(db.verno).toBe(59)
   })
 
   it('should have searchFrecency table with compound primary key [entityType+entityId] (v53)', () => {

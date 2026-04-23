@@ -2,6 +2,8 @@ import { generateEmbeddings } from './workers/coordinator'
 import { vectorStorePersistence } from './vector-store'
 import { stripHtml } from '@/lib/textUtils'
 import type { Note } from '@/data/types'
+import { isGranted, CONSENT_PURPOSES } from '@/lib/compliance/consentService'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 export class EmbeddingPipeline {
   /** Index a single note (call on create or update). */
@@ -9,6 +11,19 @@ export class EmbeddingPipeline {
     try {
       const text = stripHtml(note.content).trim()
       if (!text) return // Skip empty notes
+
+      // Consent guard (E119-S08): silently skip if ai_embeddings consent is not granted.
+      const userId = useAuthStore.getState().user?.id
+      if (userId) {
+        const granted = await isGranted(userId, CONSENT_PURPOSES.AI_EMBEDDINGS)
+        if (!granted) {
+          console.info('[EmbeddingPipeline] Skipping indexNote: ai_embeddings consent not granted.')
+          return
+        }
+      } else {
+        // Not signed in — no consent can exist; skip silently.
+        return
+      }
 
       const [embedding] = await generateEmbeddings([text])
       await vectorStorePersistence.saveEmbedding(note.id, Array.from(embedding))

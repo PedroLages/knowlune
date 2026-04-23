@@ -6,6 +6,7 @@ import {
   Bell,
   Plug,
   RefreshCw,
+  Lock,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -17,6 +18,7 @@ export type SettingsCategorySlug =
   | 'notifications'
   | 'integrations'
   | 'sync'
+  | 'privacy'
 
 export interface SettingsCategory {
   slug: SettingsCategorySlug
@@ -67,6 +69,12 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
     label: 'Sync',
     description: 'Cloud sync controls and data management',
     icon: RefreshCw,
+  },
+  {
+    slug: 'privacy',
+    label: 'Privacy & Consent',
+    description: 'Manage your data processing consents',
+    icon: Lock,
   },
 ]
 

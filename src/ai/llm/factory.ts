@@ -20,6 +20,9 @@ import { ProxyLLMClient } from './proxy-client'
 import { OllamaLLMClient } from './ollama-client'
 import { LLMError } from './types'
 import type { LLMMessage } from './types'
+import { ConsentError } from '@/ai/lib/ConsentError'
+import { isGranted, CONSENT_PURPOSES } from '@/lib/compliance/consentService'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 /**
  * Get LLM client for configured AI provider
@@ -49,6 +52,19 @@ export async function getLLMClient(feature?: AIFeatureId): Promise<LLMClient> {
     (window as unknown as { __mockLLMClient?: LLMClient }).__mockLLMClient
   ) {
     return (window as unknown as { __mockLLMClient: LLMClient }).__mockLLMClient
+  }
+
+  // Consent guard (E119-S08): all LLM features require ai_tutor consent.
+  // Fail-closed: no userId → consentService returns false → throw ConsentError.
+  const userId = useAuthStore.getState().user?.id
+  if (userId) {
+    const granted = await isGranted(userId, CONSENT_PURPOSES.AI_TUTOR)
+    if (!granted) {
+      throw new ConsentError(CONSENT_PURPOSES.AI_TUTOR)
+    }
+  } else {
+    // Not signed in — no consent record can exist; fail closed.
+    throw new ConsentError(CONSENT_PURPOSES.AI_TUTOR)
   }
 
   // Feature-aware resolution: determine provider and model from cascade
