@@ -19,7 +19,7 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import { readFileSync, existsSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { RETENTION_POLICY, PURPOSE_ARTEFACTS, INDEFINITE_RETENTION_ARTEFACTS } from '../retentionPolicy'
+import { RETENTION_POLICY, PURPOSE_ARTEFACTS, INDEFINITE_RETENTION_ARTEFACTS, getRetentionEntry } from '../retentionPolicy'
 import { tableRegistry } from '../../sync/tableRegistry'
 import { CONSENT_PURPOSES } from '../consentService'
 
@@ -189,6 +189,24 @@ describe('E119-S10 AC-4: retention matrix parity', () => {
       }
     }
     expect(invalid, `Entries with missing required fields: ${invalid.join(', ')}`).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Convenience helper tests
+// ---------------------------------------------------------------------------
+
+describe('getRetentionEntry helper', () => {
+  it('returns the entry for a known artefact', () => {
+    const entry = getRetentionEntry('notes')
+    expect(entry).toBeDefined()
+    expect(entry?.artefact).toBe('notes')
+    expect(entry?.lawfulBasis).toBeTruthy()
+  })
+
+  it('returns undefined for an unknown artefact', () => {
+    const entry = getRetentionEntry('nonexistent_table_xyz')
+    expect(entry).toBeUndefined()
   })
 })
 

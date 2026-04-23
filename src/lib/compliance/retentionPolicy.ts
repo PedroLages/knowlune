@@ -11,12 +11,15 @@
  * Design invariants:
  *   - Pure module: no Dexie, React, or Zustand imports.
  *   - `period: null` signals indefinite retention — requires explicit reviewer sign-off.
- *   - `purposeArtefacts` maps each CONSENT_PURPOSES value to the artefact keys it covers.
- *     Every consent purpose must appear here; the parity test enforces this.
+ *   - `PURPOSE_ARTEFACTS` maps each ConsentPurpose value to the artefact keys it covers.
+ *     Typed as Record<ConsentPurpose, string[]> for compile-time exhaustiveness when
+ *     new consent purposes are added to consentService.ts.
  *
  * IMPORTANT: Every entry here must appear as a row in `docs/compliance/retention.md`
  * (and vice versa). Add new entries in both places simultaneously.
  */
+
+import type { ConsentPurpose } from './consentService'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -520,15 +523,15 @@ export const RETENTION_POLICY: readonly RetentionEntry[] = [
 // ---------------------------------------------------------------------------
 
 /**
- * Maps each CONSENT_PURPOSES value to the artefact keys it covers.
+ * Maps each ConsentPurpose to the artefact keys it covers.
  * Used by the parity test to verify every consent purpose has at least one
  * corresponding retention entry.
  *
- * Keys must match exactly the values in CONSENT_PURPOSES from consentService.ts:
- *   'ai_tutor' | 'ai_embeddings' | 'voice_transcription' |
- *   'analytics_telemetry' | 'marketing_email'
+ * Typed as Record<ConsentPurpose, string[]> so TypeScript enforces exhaustiveness:
+ * adding a new purpose to CONSENT_PURPOSES in consentService.ts will produce a
+ * compile error here until a corresponding entry is added.
  */
-export const PURPOSE_ARTEFACTS: Record<string, string[]> = {
+export const PURPOSE_ARTEFACTS: Record<ConsentPurpose, string[]> = {
   ai_tutor: ['chat_conversations'],
   ai_embeddings: ['embeddings', 'learner_models'],
   // voice_transcription data is stored transiently during processing only —

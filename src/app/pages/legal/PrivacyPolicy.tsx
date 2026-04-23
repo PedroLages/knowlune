@@ -308,8 +308,9 @@ export function PrivacyPolicy() {
           </li>
           <li>
             <strong>Billing and invoice records</strong>: retained for up to 10 years as required by
-            applicable financial regulations. Customer personal details are anonymised at account
-            deletion; the billing record itself is retained for legal compliance.
+            applicable financial regulations (exact period subject to applicable member-state law).
+            Customer personal details are anonymised at account deletion; the billing record itself
+            is retained for legal compliance.
           </li>
           <li>
             <strong>Security breach register</strong>: 5 years in pseudonymised form, as required by
