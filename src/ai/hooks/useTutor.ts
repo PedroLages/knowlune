@@ -20,6 +20,7 @@ import { buildTutorSystemPrompt } from '@/ai/tutor/tutorPromptBuilder'
 import { buildAndFormatLearnerProfile } from '@/ai/tutor/learnerProfileBuilder'
 import { getLLMClient } from '@/ai/llm/factory'
 import { mapLLMError } from '@/ai/lib/llmErrorMapper'
+import { registerAIRequest, unregisterAIRequest } from '@/ai/lib/inFlightRegistry'
 import type { LLMMessage } from '@/ai/llm/types'
 import type { TutorContext, TutorMode, TranscriptStatus } from '@/ai/tutor/types'
 import { processUserMessage } from '@/ai/tutor/hintLadder'
@@ -173,8 +174,10 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
 
       // Abort any previous stream
       abortRef.current?.abort()
+      if (abortRef.current) unregisterAIRequest(abortRef.current)
       const abortController = new AbortController()
       abortRef.current = abortController
+      registerAIRequest(abortController)
 
       // Stage 1: Frustration detection → hint ladder escalation (Socratic mode only)
       if (store.mode === 'socratic') {
@@ -421,6 +424,8 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
           store.updateLastMessage(errorMessage)
         }
       } finally {
+        // Unregister from the in-flight registry now that the request is complete.
+        if (abortRef.current) unregisterAIRequest(abortRef.current)
         store.setGenerating(false)
       }
     },

@@ -13,6 +13,8 @@
 import { generateEmbeddings } from './workers/coordinator'
 import { db } from '@/db'
 import type { ImportedCourse, CourseEmbedding } from '@/data/types'
+import { isGranted, CONSENT_PURPOSES } from '@/lib/compliance/consentService'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 // ============================================================================
 // Source Hash (SHA-256 of metadata for change detection)
@@ -86,6 +88,21 @@ export async function computeCourseEmbedding(
  * but never throws. Missing embeddings fall back to tag-based matching.
  */
 export async function generateCourseEmbeddingAfterImport(course: ImportedCourse): Promise<void> {
+  // Consent guard (E119-S08): skip embedding if ai_embeddings consent not granted.
+  const userId = useAuthStore.getState().user?.id
+  if (userId) {
+    const granted = await isGranted(userId, CONSENT_PURPOSES.AI_EMBEDDINGS)
+    if (!granted) {
+      console.info(
+        '[CourseEmbedding] Skipping embedding for course',
+        course.id,
+        ': ai_embeddings consent not granted.',
+      )
+      return
+    }
+  } else {
+    return
+  }
   try {
     await computeCourseEmbedding(course)
   } catch (error) {

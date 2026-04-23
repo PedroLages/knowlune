@@ -7,21 +7,19 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// ─── Hoisted mock factory (avoids "before initialization" hoisting error) ─────
+// ─── Hoisted mock factory ──────────────────────────────────────────────────────
 
 const {
   mockSyncableWrite,
   mockAbortAll,
-  mockUserConsentsWhere,
+  mockUserConsentsToArray,
   mockEmbeddingsClear,
-  mockLearnerModelsWhere,
+  mockLearnerModelsToArray,
   mockLearnerModelsBulkPut,
   mockAiUsageEventsClear,
-  mockUserConsentsFirst,
-  mockLearnerModelsToArray,
 } = vi.hoisted(() => {
-  const mockUserConsentsFirst = vi.fn()
-  const mockUserConsentsEquals = vi.fn(() => ({ first: mockUserConsentsFirst }))
+  const mockUserConsentsToArray = vi.fn()
+  const mockUserConsentsEquals = vi.fn(() => ({ toArray: mockUserConsentsToArray }))
   const mockUserConsentsWhere = vi.fn(() => ({ equals: mockUserConsentsEquals }))
 
   const mockLearnerModelsToArray = vi.fn()
@@ -37,13 +35,13 @@ const {
   return {
     mockSyncableWrite,
     mockAbortAll,
-    mockUserConsentsWhere,
+    mockUserConsentsToArray,
     mockEmbeddingsClear,
     mockLearnerModelsWhere,
     mockLearnerModelsBulkPut,
     mockAiUsageEventsClear,
-    mockUserConsentsFirst,
     mockLearnerModelsToArray,
+    _mockUserConsentsWhere: mockUserConsentsWhere,
   }
 })
 
@@ -55,17 +53,38 @@ vi.mock('@/ai/lib/inFlightRegistry', () => ({
   abortAllInFlightAIRequests: mockAbortAll,
 }))
 
-vi.mock('@/db/schema', () => ({
-  db: {
-    userConsents: { where: mockUserConsentsWhere },
-    embeddings: { clear: mockEmbeddingsClear },
-    learnerModels: {
-      where: mockLearnerModelsWhere,
-      bulkPut: mockLearnerModelsBulkPut,
+vi.mock('@/db/schema', () => {
+  // Re-declare inner mocks inline (vi.hoisted values not accessible in factory)
+  const toArray = vi.fn()
+  const equals = vi.fn(() => ({ toArray }))
+  const where = vi.fn(() => ({ equals }))
+
+  const lmToArray = vi.fn()
+  const lmEquals = vi.fn(() => ({ toArray: lmToArray }))
+  const lmWhere = vi.fn(() => ({ equals: lmEquals }))
+  const lmBulkPut = vi.fn()
+
+  const embClear = vi.fn()
+  const auClear = vi.fn()
+
+  // Store refs so tests can access them
+  ;(globalThis as Record<string, unknown>).__testMocks = {
+    userConsentsToArray: toArray,
+    learnerModelsToArray: lmToArray,
+    learnerModelsBulkPut: lmBulkPut,
+    embeddingsClear: embClear,
+    aiUsageEventsClear: auClear,
+  }
+
+  return {
+    db: {
+      userConsents: { where },
+      embeddings: { clear: embClear },
+      learnerModels: { where: lmWhere, bulkPut: lmBulkPut },
+      aiUsageEvents: { clear: auClear },
     },
-    aiUsageEvents: { clear: mockAiUsageEventsClear },
-  },
-}))
+  }
+})
 
 vi.mock('@/lib/compliance/noticeVersion', () => ({
   CURRENT_NOTICE_VERSION: '2026-04-23.1',
@@ -93,14 +112,26 @@ function makeRow(purpose: string, overrides: Record<string, unknown> = {}) {
   }
 }
 
+function getMocks() {
+  return (globalThis as Record<string, unknown>).__testMocks as {
+    userConsentsToArray: ReturnType<typeof vi.fn>
+    learnerModelsToArray: ReturnType<typeof vi.fn>
+    learnerModelsBulkPut: ReturnType<typeof vi.fn>
+    embeddingsClear: ReturnType<typeof vi.fn>
+    aiUsageEventsClear: ReturnType<typeof vi.fn>
+  }
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
-  mockUserConsentsFirst.mockResolvedValue(undefined)
+  const m = getMocks()
+  m.userConsentsToArray.mockResolvedValue([])
+  m.learnerModelsToArray.mockResolvedValue([])
+  m.embeddingsClear.mockResolvedValue(undefined)
+  m.aiUsageEventsClear.mockResolvedValue(undefined)
+  m.learnerModelsBulkPut.mockResolvedValue(undefined)
   mockSyncableWrite.mockResolvedValue(undefined)
-  mockLearnerModelsToArray.mockResolvedValue([])
-  mockEmbeddingsClear.mockResolvedValue(undefined)
-  mockAiUsageEventsClear.mockResolvedValue(undefined)
-  mockLearnerModelsBulkPut.mockResolvedValue(undefined)
+  mockAbortAll.mockReturnValue(undefined)
 })
 
 // ─── grantConsent ─────────────────────────────────────────────────────────────
@@ -123,7 +154,7 @@ describe('grantConsent', () => {
 
   it('updates grantedAt and clears withdrawnAt when re-granting (idempotent)', async () => {
     const existingRow = makeRow('analytics_telemetry', { withdrawnAt: '2026-04-23T09:00:00Z' })
-    mockUserConsentsFirst.mockResolvedValue(existingRow)
+    getMocks().userConsentsToArray.mockResolvedValue([existingRow])
 
     const result = await grantConsent(USER_ID, 'analytics_telemetry')
 
@@ -150,7 +181,7 @@ describe('grantConsent', () => {
 describe('withdrawConsent', () => {
   it('returns success:true and sets withdrawnAt for ai_tutor', async () => {
     const row = makeRow('ai_tutor')
-    mockUserConsentsFirst.mockResolvedValue(row)
+    getMocks().userConsentsToArray.mockResolvedValue([row])
 
     const result = await withdrawConsent(USER_ID, 'ai_tutor')
 
@@ -162,7 +193,7 @@ describe('withdrawConsent', () => {
   })
 
   it('calls abortAllInFlightAIRequests for ai_tutor withdrawal', async () => {
-    mockUserConsentsFirst.mockResolvedValue(makeRow('ai_tutor'))
+    getMocks().userConsentsToArray.mockResolvedValue([makeRow('ai_tutor')])
 
     await withdrawConsent(USER_ID, 'ai_tutor')
 
@@ -170,7 +201,7 @@ describe('withdrawConsent', () => {
   })
 
   it('does NOT call abortAllInFlightAIRequests for other purposes', async () => {
-    mockUserConsentsFirst.mockResolvedValue(makeRow('marketing_email'))
+    getMocks().userConsentsToArray.mockResolvedValue([makeRow('marketing_email')])
 
     await withdrawConsent(USER_ID, 'marketing_email')
 
@@ -178,51 +209,54 @@ describe('withdrawConsent', () => {
   })
 
   it('deletes embeddings and freezes learner models for ai_embeddings', async () => {
-    const row = makeRow('ai_embeddings')
-    mockUserConsentsFirst.mockResolvedValue(row)
+    const m = getMocks()
+    m.userConsentsToArray.mockResolvedValue([makeRow('ai_embeddings')])
     const model = { id: 'm1', courseId: 'c1', userId: USER_ID, updatedAt: '2026-04-23T08:00:00Z' }
-    mockLearnerModelsToArray.mockResolvedValue([model])
+    m.learnerModelsToArray.mockResolvedValue([model])
 
     const result = await withdrawConsent(USER_ID, 'ai_embeddings')
 
     expect(result.success).toBe(true)
-    expect(mockEmbeddingsClear).toHaveBeenCalledOnce()
-    expect(mockLearnerModelsBulkPut).toHaveBeenCalledOnce()
-    const [frozenModels] = mockLearnerModelsBulkPut.mock.calls[0]
+    expect(m.embeddingsClear).toHaveBeenCalledOnce()
+    expect(m.learnerModelsBulkPut).toHaveBeenCalledOnce()
+    const [frozenModels] = m.learnerModelsBulkPut.mock.calls[0]
     expect(frozenModels[0].frozenReason).toBe('consent_withdrawn')
   })
 
   it('deletes analytics events for analytics_telemetry', async () => {
-    mockUserConsentsFirst.mockResolvedValue(makeRow('analytics_telemetry'))
+    const m = getMocks()
+    m.userConsentsToArray.mockResolvedValue([makeRow('analytics_telemetry')])
 
     const result = await withdrawConsent(USER_ID, 'analytics_telemetry')
 
     expect(result.success).toBe(true)
-    expect(mockAiUsageEventsClear).toHaveBeenCalledOnce()
+    expect(m.aiUsageEventsClear).toHaveBeenCalledOnce()
   })
 
   it('voice_transcription is a no-op (no queue to clear)', async () => {
-    mockUserConsentsFirst.mockResolvedValue(makeRow('voice_transcription'))
+    const m = getMocks()
+    m.userConsentsToArray.mockResolvedValue([makeRow('voice_transcription')])
 
     const result = await withdrawConsent(USER_ID, 'voice_transcription')
 
     expect(result.success).toBe(true)
-    expect(mockEmbeddingsClear).not.toHaveBeenCalled()
-    expect(mockAiUsageEventsClear).not.toHaveBeenCalled()
+    expect(m.embeddingsClear).not.toHaveBeenCalled()
+    expect(m.aiUsageEventsClear).not.toHaveBeenCalled()
   })
 
   it('marketing_email requires no extra DB operations', async () => {
-    mockUserConsentsFirst.mockResolvedValue(makeRow('marketing_email'))
+    const m = getMocks()
+    m.userConsentsToArray.mockResolvedValue([makeRow('marketing_email')])
 
     const result = await withdrawConsent(USER_ID, 'marketing_email')
 
     expect(result.success).toBe(true)
-    expect(mockEmbeddingsClear).not.toHaveBeenCalled()
+    expect(m.embeddingsClear).not.toHaveBeenCalled()
   })
 
   it('is idempotent: re-withdrawing updates withdrawnAt timestamp without error', async () => {
     const alreadyWithdrawn = makeRow('ai_tutor', { withdrawnAt: '2026-04-23T08:00:00Z' })
-    mockUserConsentsFirst.mockResolvedValue(alreadyWithdrawn)
+    getMocks().userConsentsToArray.mockResolvedValue([alreadyWithdrawn])
 
     const result = await withdrawConsent(USER_ID, 'ai_tutor')
 
@@ -232,9 +266,9 @@ describe('withdrawConsent', () => {
   })
 
   it('rolls back withdrawnAt when the effect throws', async () => {
-    const row = makeRow('ai_embeddings')
-    mockUserConsentsFirst.mockResolvedValue(row)
-    mockEmbeddingsClear.mockRejectedValueOnce(new Error('Dexie clear failed'))
+    const m = getMocks()
+    m.userConsentsToArray.mockResolvedValue([makeRow('ai_embeddings')])
+    m.embeddingsClear.mockRejectedValueOnce(new Error('Dexie clear failed'))
 
     const result = await withdrawConsent(USER_ID, 'ai_embeddings')
 
@@ -243,24 +277,22 @@ describe('withdrawConsent', () => {
     // syncableWrite called twice: once for withdraw, once for rollback
     expect(mockSyncableWrite).toHaveBeenCalledTimes(2)
     const [, , rollbackRecord] = mockSyncableWrite.mock.calls[1]
-    // Rollback restores original withdrawnAt (null in this case)
     expect(rollbackRecord.withdrawnAt).toBeNull()
   })
 
   it('returns failure when initial syncableWrite fails', async () => {
-    mockUserConsentsFirst.mockResolvedValue(makeRow('ai_tutor'))
+    getMocks().userConsentsToArray.mockResolvedValue([makeRow('ai_tutor')])
     mockSyncableWrite.mockRejectedValueOnce(new Error('DB unavailable'))
 
     const result = await withdrawConsent(USER_ID, 'ai_tutor')
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('DB unavailable')
-    // Effect should not run if the initial write fails
     expect(mockAbortAll).not.toHaveBeenCalled()
   })
 
   it('works when no existing consent row is found (creates a new row)', async () => {
-    mockUserConsentsFirst.mockResolvedValue(undefined)
+    getMocks().userConsentsToArray.mockResolvedValue([])
 
     const result = await withdrawConsent(USER_ID, 'marketing_email')
 
