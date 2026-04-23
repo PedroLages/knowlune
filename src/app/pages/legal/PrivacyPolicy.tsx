@@ -283,11 +283,47 @@ export function PrivacyPolicy() {
       <section id="data-retention" className="scroll-mt-24 space-y-4">
         <h2 className="font-display text-xl font-semibold text-foreground">7. Data Retention</h2>
         <p className="text-foreground leading-relaxed">
-          We retain your personal information for as long as your account is active or as needed to
-          provide you with our services. Locally stored data (IndexedDB) remains on your device
-          until you clear it. Cloud-stored data is deleted within 30 days of account deletion
-          request. Payment references are retained as required by applicable financial regulations
-          (typically 7 years).
+          We retain your personal information only as long as necessary for the purposes described
+          in this policy. The key retention periods are:
+        </p>
+        <ul className="list-disc pl-6 space-y-1 text-foreground leading-relaxed">
+          <li>
+            <strong>Learning content and UGC</strong> (notes, bookmarks, flashcards, highlights,
+            quiz content): retained for the life of your account plus a 30-day grace period after
+            deletion.
+          </li>
+          <li>
+            <strong>AI tutor conversations</strong>: 365 days from the last message on a rolling
+            basis. Conversations you pin are retained until you unpin or delete them.
+          </li>
+          <li>
+            <strong>AI embeddings and learner profiles</strong>: purged when the source content is
+            deleted or when you withdraw your AI processing consent.
+          </li>
+          <li>
+            <strong>Authentication and session logs</strong>: 90 days.
+          </li>
+          <li>
+            <strong>Data export archives</strong>: 7 days (matching the signed-URL download window).
+          </li>
+          <li>
+            <strong>Billing and invoice records</strong>: retained for up to 10 years as required by
+            applicable financial regulations (exact period subject to applicable member-state law).
+            Customer personal details are anonymised at account deletion; the billing record itself
+            is retained for legal compliance.
+          </li>
+          <li>
+            <strong>Security breach register</strong>: 5 years in pseudonymised form, as required by
+            GDPR Art. 33.
+          </li>
+        </ul>
+        <p className="text-foreground leading-relaxed">
+          The complete data retention matrix — covering all 39 sync tables, 4 Storage buckets, and
+          auxiliary data stores — is maintained in{' '}
+          <code className="text-sm bg-muted px-1 py-0.5 rounded">
+            docs/compliance/retention.md
+          </code>{' '}
+          in the project repository and is available on request.
         </p>
       </section>
 
