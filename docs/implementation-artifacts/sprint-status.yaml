@@ -1459,25 +1459,18 @@ development_status:
   # retention enforcement, operator artifacts, annual review
   # Articles: 5, 6, 7, 12, 13/14, 15, 17, 20, 28, 30, 32, 33/34
   # ──────────────────────────────────────────────────
-  epic-119: in-progress
-  119-1-privacy-notice-source-of-truth-versioning: ready-for-dev
-  119-2-notice-acknowledgement-signup-material-change-reack: ready-for-dev
-  119-3-registry-driven-erasure-cascade: ready-for-dev
-  119-4-deletion-verification-confirmation-email:
-    status: done
-    finishedAt: '2026-04-23'
-  119-5-registry-driven-export-zip: ready-for-dev
-  119-6-large-export-async-path-signed-url: ready-for-dev
-  119-7-consent-schema-inventory: ready-for-dev
-  119-8-consent-ui-withdrawal-effects: ready-for-dev
-  119-9-ai-provider-change-re-consent: ready-for-dev
-  119-10-retention-policy-matrix: ready-for-dev
-  119-11-retention-ttl-enforcement-job:
-    status: done
-    finishedAt: "2026-04-23"
-  119-12-operator-artifacts-ropa-dpa-breach-runbook: ready-for-dev
-  119-13-annual-review-ico-checklist-beta-user-reack:
-    status: in-progress
-    startedAt: "2026-04-23"
-    branch: feature/e119-s13-annual-review-ico
+  epic-119: done  # all 13 stories completed 2026-04-23, E119 GDPR compliance epic closed
+  119-1-privacy-notice-source-of-truth-versioning: done
+  119-2-notice-acknowledgement-signup-material-change-reack: done
+  119-3-registry-driven-erasure-cascade: done
+  119-4-deletion-verification-confirmation-email: done
+  119-5-registry-driven-export-zip: done
+  119-6-large-export-async-path-signed-url: done
+  119-7-consent-schema-inventory: done
+  119-8-consent-ui-withdrawal-effects: done
+  119-9-ai-provider-change-re-consent: done
+  119-10-retention-policy-matrix: done
+  119-11-retention-ttl-enforcement-job: done
+  119-12-operator-artifacts-ropa-dpa-breach-runbook: done
+  119-13-annual-review-ico-checklist-beta-user-reack: done
   epic-119-retrospective: optional
