@@ -47,6 +47,7 @@ export function MyDataSummary() {
       const accessToken = session?.access_token
       if (!accessToken) {
         toastError.saveFailed('Not signed in. Please sign in to export your data.')
+        setExporting(false)
         return
       }
 

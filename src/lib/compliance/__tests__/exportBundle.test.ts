@@ -19,10 +19,12 @@ const { mockFetch, mockSupabaseUrl } = vi.hoisted(() => {
 
 vi.mock('@/lib/auth/supabase', () => ({
   supabase: {
-    supabaseUrl: mockSupabaseUrl,
     auth: { getUser: vi.fn() },
   },
 }))
+
+// Mock VITE_SUPABASE_URL env var so callExportDataFunction can derive the function URL
+vi.stubEnv('VITE_SUPABASE_URL', mockSupabaseUrl)
 
 // Replace global fetch with our mock
 vi.stubGlobal('fetch', mockFetch)

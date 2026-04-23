@@ -74,13 +74,14 @@ export async function callExportDataFunction(
     throw new Error('Supabase not configured — cannot call export-data function')
   }
 
-  // Derive the Edge Function URL from the Supabase URL
-  // e.g. https://xyz.supabase.co → https://xyz.supabase.co/functions/v1/export-data
-  const supabaseUrl = (supabase as unknown as { supabaseUrl: string }).supabaseUrl
-  if (!supabaseUrl) {
-    throw new Error('Cannot determine Supabase URL for export-data function')
+  // Derive the Edge Function URL from the VITE_SUPABASE_URL env var.
+  // Evaluated lazily (inside the function) so tests can stub the env before calling.
+  const supabaseBaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
+  if (!supabaseBaseUrl) {
+    throw new Error('VITE_SUPABASE_URL not configured — cannot determine export-data endpoint URL')
   }
-  const functionUrl = `${supabaseUrl}/functions/v1/export-data`
+
+  const functionUrl = `${supabaseBaseUrl}/functions/v1/export-data`
 
   let response: Response
   try {

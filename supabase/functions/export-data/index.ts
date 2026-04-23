@@ -273,16 +273,16 @@ Deno.serve(async (req: Request) => {
       const rows = (data ?? []) as Record<string, unknown>[]
 
       // Strip vault fields and tag rows with _origin: 'server'
-      const vaultStripped = VAULT_FIELDS[table] !== undefined
+      let anyVaultFieldStripped = false
       const processedRows = rows.map(row => {
         const r = { ...row, _origin: 'server' as const }
         if (stripVaultFields(r as Record<string, unknown>, table)) {
-          // field stripped — already mutated r
+          anyVaultFieldStripped = true
         }
         return r
       })
 
-      if (vaultStripped && rows.length > 0) {
+      if (anyVaultFieldStripped) {
         tablesWithVaultStrip.push(table)
       }
 
@@ -425,7 +425,9 @@ Deno.serve(async (req: Request) => {
           }
 
           const fileBytes = new Uint8Array(await fileData.arrayBuffer())
-          const fileEntry = new ZipDeflate(path, { level: 1 }) // low compression for binary
+          // Sanitize path to prevent Zip Slip (path traversal in ZIP entry names)
+          const safePath = path.replace(/\.\.\//g, '').replace(/^\/+/, '').replace(/[<>:"\\|?*]/g, '_')
+          const fileEntry = new ZipDeflate(safePath, { level: 1 }) // low compression for binary
           zip.add(fileEntry)
           fileEntry.push(fileBytes, true)
         }
@@ -445,6 +447,9 @@ Deno.serve(async (req: Request) => {
     // silent-catch-ok — Deno Edge Function server-side; no UI toast available; error logged to console.
     zipPromise.catch(err => {
       console.error('[export-data] zip stream error:', err)
+      // Ensure the stream is properly terminated even if the Zip callback's error path didn't fire.
+      // silent-catch-ok — abort error means stream already closed, which is the desired outcome.
+      writer.abort(err).catch(() => {})
     })
 
     const dateStr = exportedAt.slice(0, 10) // YYYY-MM-DD
