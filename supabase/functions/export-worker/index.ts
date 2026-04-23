@@ -164,31 +164,14 @@ function stripVaultFields(row: Record<string, unknown>, table: string): void {
 }
 
 /**
- * Dequeue the oldest queued job using FOR UPDATE SKIP LOCKED semantics.
- * Implemented via a Postgres function to access advisory locking.
+ * Dequeue the oldest queued job.
  *
- * Falls back to a simple SELECT if the RPC is not available — this is safe
- * because concurrent workers are unlikely in the solo-operator deployment.
+ * Uses a simple SELECT ORDER BY created_at LIMIT 1. This is safe for the
+ * solo-operator deployment where concurrent worker invocations are unlikely.
+ * If concurrent safety is needed in the future, add a `dequeue_export_job`
+ * Postgres function using FOR UPDATE SKIP LOCKED and call it via RPC.
  */
 async function dequeueJob(): Promise<ExportJob | null> {
-  // Try RPC first for proper FOR UPDATE SKIP LOCKED behaviour.
-  const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc(
-    'dequeue_export_job'
-  )
-
-  if (!rpcError && rpcData) {
-    return rpcData as ExportJob
-  }
-
-  // Fallback: simple SELECT of oldest queued job.
-  // Safe for low-concurrency solo-operator deployments.
-  if (rpcError) {
-    console.warn(
-      '[export-worker] dequeue_export_job RPC not available, using fallback SELECT:',
-      rpcError.message
-    )
-  }
-
   const { data, error } = await supabaseAdmin
     .from('export_jobs')
     .select('*')

@@ -113,6 +113,34 @@ describe('callExportDataFunction', () => {
     expect('status' in result && result.status).toBe('too-large')
   })
 
+  // ── Async queued path (E119-S06) ─────────────────────────────────────────
+
+  it('returns ExportQueuedResponse when Edge Function returns HTTP 202 with status queued', async () => {
+    const requestId = '550e8400-e29b-41d4-a716-446655440000'
+    mockFetch.mockResolvedValue(
+      makeJsonResponse({ status: 'queued', eta: 'within a few minutes', request_id: requestId }, 202)
+    )
+
+    const result = await callExportDataFunction(TEST_ACCESS_TOKEN)
+
+    expect(result).toEqual({ status: 'queued', eta: 'within a few minutes', request_id: requestId })
+    expect('status' in result && result.status).toBe('queued')
+  })
+
+  it('returns ExportQueuedResponse shape has request_id and eta fields', async () => {
+    const requestId = 'abc-123'
+    mockFetch.mockResolvedValue(
+      makeJsonResponse({ status: 'queued', eta: 'within a few minutes', request_id: requestId }, 202)
+    )
+
+    const result = await callExportDataFunction(TEST_ACCESS_TOKEN)
+
+    expect('request_id' in result).toBe(true)
+    if ('request_id' in result) {
+      expect(result.request_id).toBe(requestId)
+    }
+  })
+
   // ── RLS error paths (AC-8) ────────────────────────────────────────────────
 
   it('throws with table name in message when Edge Function returns RLS error on table notes', async () => {
