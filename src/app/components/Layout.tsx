@@ -61,6 +61,14 @@ import { ImportProgressOverlay } from './figma/ImportProgressOverlay'
 import { SessionExpiredBanner } from './figma/SessionExpiredBanner'
 import { AudioMiniPlayer } from './audiobook/AudioMiniPlayer'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
+import { useNoticeAcknowledgement } from '@/hooks/useNoticeAcknowledgement'
+import { LegalUpdateBanner } from '@/app/pages/legal/LegalUpdateBanner'
+import { SoftBlockGate } from './SoftBlockGate'
+import {
+  NOTICE_DOCUMENT_ID,
+  formatNoticeEffectiveDate,
+  CURRENT_NOTICE_VERSION,
+} from '@/lib/compliance/noticeVersion'
 
 // Individual nav link — wraps in Tooltip when collapsed
 function NavLink({
@@ -444,6 +452,10 @@ export function Layout() {
   // Focus mode (E65-S03) — overlay, focus trap, and exit
   const focusMode = useFocusMode(navigate)
 
+  // Notice acknowledgement (E119-S02) — re-ack banner and soft-block gate
+  const { stale, staleDays, refetch: refetchNoticeAck } = useNoticeAcknowledgement()
+  const noticeEffectiveDate = formatNoticeEffectiveDate(CURRENT_NOTICE_VERSION)
+
   // Quality score dialog state (E11-S03)
   const [qualityDialogOpen, setQualityDialogOpen] = useState(false)
   const [qualityResult, setQualityResult] = useState<QualityScoreResult | null>(null)
@@ -716,6 +728,19 @@ export function Layout() {
           )}
           <SessionExpiredBanner isOffline={!isOnline} />
           <TrialReminderBanner />
+          {/* Notice re-acknowledgement — AC-5 (banner, 30-day grace) / AC-6 (soft-block) */}
+          {stale && staleDays <= 30 && (
+            <LegalUpdateBanner
+              mode="reack"
+              documentId={NOTICE_DOCUMENT_ID}
+              effectiveDate={noticeEffectiveDate}
+              documentName="Privacy Notice"
+              onAcknowledged={refetchNoticeAck}
+            />
+          )}
+          {stale && staleDays > 30 && (
+            <SoftBlockGate onAcknowledged={refetchNoticeAck} />
+          )}
           <PaletteControllerProvider
             value={{
               open: (scope?: EntityType) => {

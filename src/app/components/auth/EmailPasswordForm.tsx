@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router'
 import { Loader2 } from 'lucide-react'
 import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
@@ -7,6 +8,8 @@ import { useAuthStore, NETWORK_ERROR_MESSAGE } from '@/stores/useAuthStore'
 import { toastSuccess } from '@/lib/toastHelpers'
 import { supabase } from '@/lib/auth/supabase'
 import { toast } from 'sonner'
+import { writeNoticeAck } from '@/lib/compliance/noticeAck'
+import { CURRENT_NOTICE_VERSION } from '@/lib/compliance/noticeVersion'
 
 interface EmailPasswordFormProps {
   mode: 'sign-in' | 'sign-up'
@@ -18,6 +21,7 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [forgotLoading, setForgotLoading] = useState(false)
@@ -83,6 +87,16 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
       setError(result.error)
     } else {
       toastSuccess.saved(isSignUp ? 'Account created successfully' : 'Signed in successfully')
+      // Write notice acknowledgement after successful signup (AC-3).
+      // Non-blocking: ack write failure shows a toast but does NOT prevent
+      // the user from completing signup.
+      if (isSignUp && privacyAcknowledged) {
+        try {
+          await writeNoticeAck(CURRENT_NOTICE_VERSION)
+        } catch {
+          toast.error('Could not record your consent. You can acknowledge from Settings.')
+        }
+      }
       onSuccess()
     }
   }
@@ -182,12 +196,44 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
         </div>
       )}
 
+      {/* Privacy notice acknowledgement checkbox — sign-up mode only (AC-2) */}
+      {isSignUp && (
+        <div className="flex items-start gap-3 min-h-[44px] py-1">
+          <input
+            id="auth-privacy-ack"
+            type="checkbox"
+            checked={privacyAcknowledged}
+            onChange={e => setPrivacyAcknowledged(e.target.checked)}
+            disabled={loading}
+            className="mt-0.5 size-4 shrink-0 rounded border border-input accent-brand cursor-pointer"
+            aria-describedby="auth-privacy-ack-label"
+          />
+          <label
+            id="auth-privacy-ack-label"
+            htmlFor="auth-privacy-ack"
+            className="text-sm text-muted-foreground leading-snug cursor-pointer select-none"
+          >
+            I have read the{' '}
+            <Link
+              to="/legal/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"
+              onClick={e => e.stopPropagation()}
+            >
+              Privacy Notice
+            </Link>{' '}
+            <span className="text-muted-foreground/70">(v{CURRENT_NOTICE_VERSION})</span>
+          </label>
+        </div>
+      )}
+
       <Button
         type="submit"
         variant="brand"
         className="w-full min-h-[44px]"
-        disabled={loading}
-        aria-disabled={loading}
+        disabled={loading || (isSignUp && !privacyAcknowledged)}
+        aria-disabled={loading || (isSignUp && !privacyAcknowledged)}
       >
         {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
         {loading
