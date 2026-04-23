@@ -25,6 +25,7 @@ export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.r
     'scripts/**/*.js', // Node CLI scripts with shebangs — not app code
     '*.js', // Root-level Node.js/browser utility scripts — not app code
     '*.mjs', // Root-level ES module utility scripts — not app code
+    'cloudflare-workers/**', // Cloudflare Worker scripts — different runtime (not browser/Node)
   ],
 }, {
   plugins: {
