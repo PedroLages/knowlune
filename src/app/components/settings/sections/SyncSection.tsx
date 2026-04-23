@@ -41,6 +41,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/app/components/ui/alert-dialog'
+import { AuthDialog } from '@/app/components/auth/AuthDialog'
+import { useSettingsPage } from '@/app/components/settings/SettingsPageContext'
 import { useSyncStatusStore } from '@/app/stores/useSyncStatusStore'
 import { syncEngine } from '@/lib/sync/syncEngine'
 import { runFullSync } from '@/lib/sync/runFullSync'
@@ -234,9 +236,11 @@ export function SyncSection() {
     }
   }, [isResetting, user?.id])
 
-  // Auth gate — when signed out, render nothing. The nav entry is always
-  // visible for discoverability; the empty render is the graceful fallback.
-  if (!user) return null
+  // Auth gate — when signed out, render an informational card that explains
+  // what cloud sync does and offers Sign In / Sign Up CTAs wired into the
+  // existing AuthDialog via SettingsPageContext. Keeps the nav entry useful.
+  if (!user) return <SignedOutSyncCard />
+
 
   const syncNowDisabled = busy || status === 'syncing' || isOffline
   const isSyncing = busy || status === 'syncing'
@@ -455,5 +459,70 @@ export function SyncSection() {
         </Card>
       </div>
     </TooltipProvider>
+  )
+}
+
+/**
+ * Signed-out empty state for the Sync settings panel.
+ *
+ * Renders an informational card explaining what cross-device cloud sync does,
+ * with Sign In / Sign Up CTAs that open the AuthDialog via SettingsPageContext.
+ * Mirrors AccountSection's signed-out card so the two panels feel consistent.
+ */
+function SignedOutSyncCard() {
+  const { authDialogOpen, setAuthDialogOpen, authDialogMode, setAuthDialogMode } = useSettingsPage()
+
+  return (
+    <div className="space-y-6" data-testid="sync-section-signed-out">
+      <Card>
+        <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-brand-soft p-2">
+              <Cloud className="size-5 text-brand" aria-hidden="true" />
+            </div>
+            <div>
+              <h2 className="text-lg font-display">Cloud Sync</h2>
+              <p className="text-sm text-muted-foreground mt-1">Sign in to enable cross-device sync</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-6">
+          <p className="text-sm text-muted-foreground">
+            Cloud Sync keeps your notes, highlights, books, flashcards, and progress up to date
+            across every device you sign in on. Everything stays stored locally first — sync
+            just mirrors it to the cloud so a reinstall or a new device never loses your work.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="brand"
+              className="min-h-[44px]"
+              onClick={() => {
+                setAuthDialogMode('sign-up')
+                setAuthDialogOpen(true)
+              }}
+              data-testid="sync-signed-out-sign-up"
+            >
+              Sign Up
+            </Button>
+            <Button
+              variant="brand-outline"
+              className="min-h-[44px]"
+              onClick={() => {
+                setAuthDialogMode('sign-in')
+                setAuthDialogOpen(true)
+              }}
+              data-testid="sync-signed-out-sign-in"
+            >
+              Sign In
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      <AuthDialog
+        open={authDialogOpen}
+        onOpenChange={setAuthDialogOpen}
+        defaultMode={authDialogMode}
+      />
+    </div>
   )
 }
