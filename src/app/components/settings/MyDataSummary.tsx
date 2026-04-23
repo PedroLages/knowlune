@@ -8,14 +8,17 @@ import { Button } from '@/app/components/ui/button'
 import { Separator } from '@/app/components/ui/separator'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { getAccountData, type AccountData } from '@/lib/account/deleteAccount'
-import { exportAllAsJson } from '@/lib/exportService'
-import { downloadJson } from '@/lib/fileDownload'
+// exportAllAsJson is preserved in exportService.ts for non-GDPR backup use (E119-S05)
+import { downloadBlob } from '@/lib/fileDownload'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
+import { callExportDataFunction } from '@/lib/compliance/exportBundle'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 export function MyDataSummary() {
   const [data, setData] = useState<AccountData | null>(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const session = useAuthStore(s => s.session)
 
   useEffect(() => {
     let cancelled = false
@@ -41,10 +44,26 @@ export function MyDataSummary() {
     if (exporting) return
     setExporting(true)
     try {
-      const allData = await exportAllAsJson()
+      const accessToken = session?.access_token
+      if (!accessToken) {
+        toastError.saveFailed('Not signed in. Please sign in to export your data.')
+        setExporting(false)
+        return
+      }
+
+      const result = await callExportDataFunction(accessToken)
+
+      if ('status' in result) {
+        // Too-large: async export path (E119-S06) will handle this
+        toastSuccess.exported(
+          "Your data is too large for instant export — we'll email you when it's ready."
+        )
+        return
+      }
+
       const dateStr = new Date().toLocaleDateString('sv-SE')
-      downloadJson(allData, `knowlune-gdpr-export-${dateStr}.json`)
-      toastSuccess.exported('Account data (GDPR)')
+      downloadBlob(result.zipBlob, `knowlune-gdpr-export-${dateStr}.zip`)
+      toastSuccess.exported('Account data (GDPR ZIP)')
     } catch (error) {
       console.error('GDPR export error:', error)
       toastError.saveFailed('Export failed. Please try again.')
@@ -139,7 +158,7 @@ export function MyDataSummary() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">Export My Data</p>
-              <p className="text-xs text-muted-foreground">Download all your data in JSON format</p>
+              <p className="text-xs text-muted-foreground">Download all your data as a ZIP archive (GDPR Art. 15/20)</p>
             </div>
             <Button
               variant="outline"
@@ -147,7 +166,7 @@ export function MyDataSummary() {
               onClick={handleExport}
               disabled={exporting}
               className="gap-2 min-h-[44px]"
-              aria-label="Export all account data"
+              aria-label="Export all account data as ZIP"
               data-testid="gdpr-export-button"
             >
               {exporting ? (
@@ -155,7 +174,7 @@ export function MyDataSummary() {
               ) : (
                 <Download className="size-4" />
               )}
-              {exporting ? 'Exporting...' : 'Export'}
+              {exporting ? 'Exporting...' : 'Export ZIP'}
             </Button>
           </div>
         </div>

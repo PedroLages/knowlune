@@ -1,0 +1,44 @@
+{
+  "reviewer": "security",
+  "findings": [
+    {
+      "title": "EMAIL_PROVIDER_URL env var accepted without scheme validation",
+      "severity": "P3",
+      "file": "supabase/functions/_shared/sendEmail.ts",
+      "line": 22,
+      "why_it_matters": "If EMAIL_PROVIDER_URL is set to a non-HTTPS URL (e.g., http://...), credentials and user email addresses are transmitted in cleartext. Edge Function env vars are operator-controlled so exploitation requires operator compromise, making this a defense-in-depth concern.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "confidence": 0.65,
+      "suggested_fix": "Add: `if (providerUrl && !providerUrl.startsWith('https://')) { console.error('[sendEmail] EMAIL_PROVIDER_URL must use HTTPS'); return { sent: false, error: 'Provider URL must use HTTPS' } }`",
+      "evidence": [
+        "Line 22: `const providerUrl = Deno.env.get('EMAIL_PROVIDER_URL') || 'https://api.resend.com/emails'`",
+        "No scheme validation — any URL including http:// is accepted"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "pending_deletions logs email in console.error on upsert failure",
+      "severity": "P2",
+      "file": "supabase/functions/delete-account/index.ts",
+      "line": 110,
+      "why_it_matters": "The console.error log on pending_deletions upsert failure logs the Supabase error message, but does NOT log the user's email address. However, the email IS visible in the upsert payload in any request-level tracing (APM, function logs with request body). This is acceptable given the non-PII error-only logging pattern, but worth confirming.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.62,
+      "suggested_fix": null,
+      "evidence": [
+        "Line 108-112: `console.error('[delete-account] failed to insert pending_deletions row:', { message: pendingError.message })` — only logs error message, not the email"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "Email API key (EMAIL_API_KEY) is transmitted as a Bearer token in the Authorization header — standard for email providers but worth confirming the provider's API key rotation procedure is documented"
+  ],
+  "testing_gaps": [
+    "No test that the email send call does not leak PII (email address) into error logs"
+  ]
+}
