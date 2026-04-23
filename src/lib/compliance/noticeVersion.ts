@@ -12,8 +12,14 @@
 /** Canonical identifier for the privacy document (matches LegalUpdateBanner storage key). */
 export const NOTICE_DOCUMENT_ID = 'privacy' as const
 
-/** Current notice version in YYYY-MM-DD.N format. */
-export const CURRENT_NOTICE_VERSION = '2026-04-23.1' as const
+/**
+ * Current notice version in YYYY-MM-DD.N format.
+ *
+ * Bumped to 2026-05-01.1 for the Knowlune beta launch (E119-S13 AC-4).
+ * Existing users who acknowledged 2026-04-23.1 will see LegalUpdateBanner
+ * (mode="reack") on their next login.
+ */
+export const CURRENT_NOTICE_VERSION = '2026-05-01.1' as const
 
 /** Parsed representation of a notice version string. */
 export interface ParsedNoticeVersion {

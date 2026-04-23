@@ -1476,5 +1476,8 @@ development_status:
     status: done
     finishedAt: "2026-04-23"
   119-12-operator-artifacts-ropa-dpa-breach-runbook: ready-for-dev
-  119-13-annual-review-ico-checklist-beta-user-reack: ready-for-dev
+  119-13-annual-review-ico-checklist-beta-user-reack:
+    status: in-progress
+    startedAt: "2026-04-23"
+    branch: feature/e119-s13-annual-review-ico
   epic-119-retrospective: optional
