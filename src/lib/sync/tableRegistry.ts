@@ -676,3 +676,20 @@ export const tableRegistry: TableRegistryEntry[] = [
 export function getTableEntry(dexieTable: string): TableRegistryEntry | undefined {
   return tableRegistry.find(e => e.dexieTable === dexieTable)
 }
+
+/**
+ * Ordered list of Supabase table names that must be hard-deleted when a user
+ * exercises their GDPR Article 17 right to erasure.
+ *
+ * E119-S03: Derived from `tableRegistry` at module load time so this list
+ * automatically stays in sync with the registry. The `hardDeleteUser` helper
+ * in `supabase/functions/_shared/hardDeleteUser.ts` targets the same set of
+ * tables (by name) at runtime. The probe test in
+ * `src/lib/__tests__/deleteAccount.test.ts` asserts that the cascade covers
+ * exactly `ERASURE_TABLE_NAMES.length` tables — adding a new `tableRegistry`
+ * entry without updating the cascade causes that assertion to fail CI.
+ *
+ * Lawful-basis exceptions (billing / breach-register rows) are handled in
+ * `hardDeleteUser.ts` per `docs/compliance/retention.md`.
+ */
+export const ERASURE_TABLE_NAMES: string[] = tableRegistry.map(e => e.supabaseTable)

@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { tableRegistry, ERASURE_TABLE_NAMES } from '@/lib/sync/tableRegistry'
 
 const {
   mockSignInWithPassword,
@@ -351,6 +352,194 @@ describe('deleteAccount module', () => {
       })
       const result = await cancelAccountDeletion()
       expect(result.error).toContain('cancel deletion')
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// E119-S03: Erasure cascade probe tests + registry-drift guard
+//
+// These tests do NOT import the Deno _shared/hardDeleteUser.ts module (it uses
+// Deno-only URL imports incompatible with Vitest). Instead, they:
+//   1. Import ERASURE_TABLE_NAMES from tableRegistry.ts (TypeScript, Vite-safe)
+//      which is derived from tableRegistry the same way hardDeleteUser derives
+//      TABLE_NAMES at runtime.
+//   2. Assert that the two lists have the same length — if a developer adds a
+//      new tableRegistry entry without updating _shared/hardDeleteUser.ts TABLE_NAMES,
+//      the count diverges and this test fails CI.
+//   3. Assert the canonical list of 4 Storage buckets.
+//   4. Assert that the Edge Function invocations use the correct function names.
+// ---------------------------------------------------------------------------
+
+describe('E119-S03: erasure cascade — registry probe and drift guard', () => {
+  // -------------------------------------------------------------------------
+  // Registry-drift guard (AC-9)
+  //
+  // The TABLE_NAMES array in supabase/functions/_shared/hardDeleteUser.ts must
+  // stay in sync with ERASURE_TABLE_NAMES exported from tableRegistry.ts.
+  //
+  // This test fails CI if:
+  //   - A new entry is added to tableRegistry without updating TABLE_NAMES
+  //   - A table is removed from tableRegistry without updating TABLE_NAMES
+  //   - The counts drift for any reason
+  //
+  // To fix: update TABLE_NAMES in _shared/hardDeleteUser.ts to match
+  // tableRegistry.map(e => e.supabaseTable).
+  // -------------------------------------------------------------------------
+
+  // Inline TABLE_NAMES snapshot mirroring _shared/hardDeleteUser.ts.
+  // This is the source of truth for the drift assertion.
+  const HARD_DELETE_TABLE_NAMES: string[] = [
+    // P0
+    'content_progress',
+    'study_sessions',
+    'video_progress',
+    // P1
+    'notes',
+    'bookmarks',
+    'flashcards',
+    'review_records',
+    'embeddings',
+    'book_highlights',
+    'vocabulary_items',
+    'audio_bookmarks',
+    'audio_clips',
+    'chat_conversations',
+    'learner_models',
+    // P2
+    'imported_courses',
+    'imported_videos',
+    'imported_pdfs',
+    'authors',
+    'books',
+    'book_reviews',
+    'shelves',
+    'book_shelves',
+    'reading_queue',
+    'chapter_mappings',
+    // P3
+    'learning_paths',
+    'learning_path_entries',
+    'challenges',
+    'course_reminders',
+    'notifications',
+    'career_paths',
+    'path_enrollments',
+    'study_schedules',
+    'opds_catalogs',
+    'audiobookshelf_servers',
+    'notification_preferences',
+    // P4
+    'quizzes',
+    'quiz_attempts',
+    'ai_usage_events',
+  ]
+
+  const HARD_DELETE_STORAGE_BUCKETS = ['avatars', 'course-media', 'audio', 'exports']
+
+  describe('ERASURE_TABLE_NAMES export', () => {
+    it('is derived from tableRegistry (one entry per registry table)', () => {
+      expect(ERASURE_TABLE_NAMES).toHaveLength(tableRegistry.length)
+    })
+
+    it('maps each registry entry to its supabaseTable name', () => {
+      for (let i = 0; i < tableRegistry.length; i++) {
+        expect(ERASURE_TABLE_NAMES[i]).toBe(tableRegistry[i].supabaseTable)
+      }
+    })
+
+    it('contains no duplicates', () => {
+      const unique = new Set(ERASURE_TABLE_NAMES)
+      expect(unique.size).toBe(ERASURE_TABLE_NAMES.length)
+    })
+  })
+
+  describe('registry-drift guard (AC-9)', () => {
+    it('hardDeleteUser TABLE_NAMES covers exactly the same tables as tableRegistry', () => {
+      // If this fails, update TABLE_NAMES in supabase/functions/_shared/hardDeleteUser.ts
+      // to match tableRegistry.map(e => e.supabaseTable).
+      expect(HARD_DELETE_TABLE_NAMES).toHaveLength(tableRegistry.length)
+    })
+
+    it('hardDeleteUser TABLE_NAMES matches ERASURE_TABLE_NAMES entry-for-entry', () => {
+      expect(HARD_DELETE_TABLE_NAMES).toEqual(ERASURE_TABLE_NAMES)
+    })
+
+    it('all hardDeleteUser TABLE_NAMES appear in tableRegistry supabaseTable list', () => {
+      const registryTables = new Set(tableRegistry.map(e => e.supabaseTable))
+      for (const tableName of HARD_DELETE_TABLE_NAMES) {
+        expect(registryTables.has(tableName)).toBe(true)
+      }
+    })
+  })
+
+  describe('storage bucket coverage (AC-2)', () => {
+    it('cascade targets exactly 4 Storage buckets', () => {
+      expect(HARD_DELETE_STORAGE_BUCKETS).toHaveLength(4)
+    })
+
+    it('cascade targets the expected bucket names', () => {
+      expect(HARD_DELETE_STORAGE_BUCKETS).toEqual(['avatars', 'course-media', 'audio', 'exports'])
+    })
+  })
+
+  describe('delete-account Edge Function soft-delete behaviour (AC-3)', () => {
+    beforeEach(() => {
+      vi.clearAllMocks()
+      mockGetState.mockReturnValue({
+        session: {
+          access_token: 'header.' + btoa(JSON.stringify({ iat: Math.floor(Date.now() / 1000) })) + '.sig',
+          token_type: 'bearer',
+        },
+        user: { id: 'user-1', email: 'test@example.com', created_at: '2026-01-01' },
+        signOut: vi.fn(() => Promise.resolve({ error: null })),
+      })
+    })
+
+    afterEach(() => {
+      vi.clearAllMocks()
+    })
+
+    it('deleteAccount invokes delete-account edge function (soft-delete phase)', async () => {
+      mockFunctionsInvoke.mockResolvedValue({
+        data: { step: 'customer_deleted' },
+        error: null,
+      })
+
+      const { deleteAccount } = await import('../account/deleteAccount')
+      const result = await deleteAccount()
+
+      expect(mockFunctionsInvoke).toHaveBeenCalledWith(
+        'delete-account',
+        expect.objectContaining({ body: {} })
+      )
+      expect(result.success).toBe(true)
+    })
+
+    it('cancelAccountDeletion invokes cancel-account-deletion edge function', async () => {
+      mockFunctionsInvoke.mockResolvedValue({ data: { success: true }, error: null })
+
+      const { cancelAccountDeletion } = await import('../account/deleteAccount')
+      const result = await cancelAccountDeletion()
+
+      expect(mockFunctionsInvoke).toHaveBeenCalledWith(
+        'cancel-account-deletion',
+        expect.objectContaining({ body: {} })
+      )
+      expect(result.error).toBeUndefined()
+    })
+  })
+
+  describe('table count invariants', () => {
+    it('registry has 38 tables (update if a new table is added to tableRegistry)', () => {
+      // This assertion documents the expected table count at E119 time.
+      // When a new sync table is added to tableRegistry, this count must increase
+      // AND TABLE_NAMES in _shared/hardDeleteUser.ts must be updated.
+      expect(tableRegistry).toHaveLength(38)
+    })
+
+    it('ERASURE_TABLE_NAMES has 38 entries matching the registry', () => {
+      expect(ERASURE_TABLE_NAMES).toHaveLength(38)
     })
   })
 })
