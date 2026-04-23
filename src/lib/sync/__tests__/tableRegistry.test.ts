@@ -9,12 +9,12 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 // ---------------------------------------------------------------------------
-// AC2 / 3.12 — All 38 tables registered
+// AC2 / 3.12 — All 39 tables registered (38 + userConsents added in E119-S07)
 // ---------------------------------------------------------------------------
 
 describe('tableRegistry — completeness', () => {
-  it('has exactly 38 entries', () => {
-    expect(tableRegistry).toHaveLength(38)
+  it('has exactly 39 entries', () => {
+    expect(tableRegistry).toHaveLength(39)
   })
 
   it('does not include flashcard_reviews (Supabase-only table)', () => {

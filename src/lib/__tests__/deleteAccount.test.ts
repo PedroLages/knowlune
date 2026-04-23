@@ -406,6 +406,7 @@ describe('E119-S03: erasure cascade — registry probe and drift guard', () => {
     'audio_clips',
     'chat_conversations',
     'learner_models',
+    'user_consents',
     // P2
     'imported_courses',
     'imported_videos',
@@ -531,15 +532,16 @@ describe('E119-S03: erasure cascade — registry probe and drift guard', () => {
   })
 
   describe('table count invariants', () => {
-    it('registry has 38 tables (update if a new table is added to tableRegistry)', () => {
-      // This assertion documents the expected table count at E119 time.
+    it('registry has 39 tables (update if a new table is added to tableRegistry)', () => {
+      // This assertion documents the expected table count at E119-S07 time.
       // When a new sync table is added to tableRegistry, this count must increase
       // AND TABLE_NAMES in _shared/hardDeleteUser.ts must be updated.
-      expect(tableRegistry).toHaveLength(38)
+      // E119-S07 added userConsents (→ user_consents): 38 → 39.
+      expect(tableRegistry).toHaveLength(39)
     })
 
-    it('ERASURE_TABLE_NAMES has 38 entries matching the registry', () => {
-      expect(ERASURE_TABLE_NAMES).toHaveLength(38)
+    it('ERASURE_TABLE_NAMES has 39 entries matching the registry', () => {
+      expect(ERASURE_TABLE_NAMES).toHaveLength(39)
     })
   })
 })

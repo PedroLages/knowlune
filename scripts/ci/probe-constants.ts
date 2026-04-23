@@ -29,6 +29,7 @@ export const TABLE_NAMES: string[] = [
   'audio_clips',
   'chat_conversations',
   'learner_models',
+  'user_consents',
   // P2 — Imported content metadata, books, shelves
   'imported_courses',
   'imported_videos',

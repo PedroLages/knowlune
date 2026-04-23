@@ -72,7 +72,7 @@ describe('v52 sync migration — schema shape', () => {
     // Single source of truth — SYNCABLE_TABLES is the exported list in
     // src/lib/sync/backfill.ts. Mirrors (with a cross-ref comment) the
     // SYNCABLE_TABLES_V52 constant inside schema.ts's v52 upgrade callback.
-    expect(SYNCABLE_TABLES.length).toBe(38)
+    expect(SYNCABLE_TABLES.length).toBe(39)
 
     for (const tableName of SYNCABLE_TABLES) {
       const indexSrcs = tableIndexSrcs(db, tableName)
