@@ -392,15 +392,30 @@ Deno.serve(async (req: Request) => {
     const encoder = new TextEncoder()
 
     // Build ZIP asynchronously — stream to TransformStream
+    // fflate's Zip callback is synchronous — it does not await the returned Promise.
+    // Buffer chunks in a queue and drain them sequentially to avoid backpressure issues.
+    const chunkQueue: Uint8Array[] = []
+    let draining = false
+    async function drainQueue() {
+      if (draining) return
+      draining = true
+      while (chunkQueue.length > 0) {
+        const chunk = chunkQueue.shift()!
+        await writer.write(chunk)
+      }
+      draining = false
+    }
+
     const zipPromise = (async () => {
-      const zip = new Zip(async (err, chunk, final) => {
+      const zip = new Zip((err, chunk, final) => {
         if (err) {
-          await writer.abort(err)
+          writer.abort(err)
           return
         }
-        await writer.write(chunk)
+        chunkQueue.push(chunk)
+        drainQueue()
         if (final) {
-          await writer.close()
+          drainQueue().then(() => writer.close())
         }
       })
 
@@ -411,6 +426,7 @@ Deno.serve(async (req: Request) => {
       dataJsonEntry.push(dataJsonBytes, true)
 
       // --- media/<bucket>/<key> ---
+      const skippedFiles: string[] = []
       for (const bucket of STORAGE_BUCKETS) {
         const objects = storageObjects[bucket] ?? []
         for (const obj of objects) {
@@ -421,6 +437,7 @@ Deno.serve(async (req: Request) => {
 
           if (downloadError || !fileData) {
             console.warn(`[export-data] failed to download ${bucket}/${obj.key}: ${downloadError?.message}`)
+            skippedFiles.push(path)
             continue
           }
 
@@ -431,6 +448,23 @@ Deno.serve(async (req: Request) => {
           zip.add(fileEntry)
           fileEntry.push(fileBytes, true)
         }
+      }
+
+      // --- skipped-files.txt (GDPR Art 15/20: inform user of incomplete exports) ---
+      if (skippedFiles.length > 0) {
+        const skippedContent = [
+          '# Skipped Files',
+          '',
+          'The following files could not be downloaded and are missing from this export:',
+          '',
+          ...skippedFiles.map(f => `- ${f}`),
+          '',
+          'Please contact support if you need these files.',
+        ].join('\n')
+        const skippedBytes = encoder.encode(skippedContent)
+        const skippedEntry = new ZipDeflate('skipped-files.txt', { level: 6 })
+        zip.add(skippedEntry)
+        skippedEntry.push(skippedBytes, true)
       }
 
       // --- README.md ---
