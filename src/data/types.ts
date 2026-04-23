@@ -1161,6 +1161,12 @@ export interface LearnerModel {
     correctAnswers: number
     weakTopics: string[]
   }
+  /**
+   * Set to a non-null string when embedding consent has been withdrawn and the
+   * model should be frozen (E119-S08). Value: 'consent_withdrawn'.
+   * Undefined / null means the model is active.
+   */
+  frozenReason?: string
   /** ISO timestamp — when model was created */
   createdAt: string
   /** ISO timestamp — last update */

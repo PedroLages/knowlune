@@ -1655,6 +1655,12 @@ function _declareLegacyMigrations(database: Dexie): void {
     .upgrade(async _tx => {
       // No backfill. New table; populated on first consent grant/withdrawal.
     })
+
+  // v59 (E119-S08): Add optional `frozenReason` field to `learnerModels`.
+  // This field is set to 'consent_withdrawn' when the user withdraws ai_embeddings
+  // consent, freezing the model from further updates. Existing rows are unaffected
+  // (Dexie treats missing fields as undefined). No index needed — filtered via JS.
+  database.version(59).stores({})
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }
