@@ -1,10 +1,12 @@
-// E119-S03: Retention Tick Edge Function (Skeleton)
+// E119-S03 / E119-S04: Retention Tick Edge Function (Skeleton)
 // Handles: POST /functions/v1/retention-tick
 // Auth: service-to-service (no user JWT — called by scheduler/cron)
 //
 // Skeleton for E119-S11 (full retention scheduling):
 //   - Queries auth.users for accounts past the 7-day soft-delete grace period
+//   - Reads pre-scrub email from pending_deletions table (E119-S04)
 //   - Calls hardDeleteUser() to cascade-delete all application data
+//   - Sends hard-delete receipt email using captured address (E119-S04)
 //
 // [TODO: S11] Wire the cron trigger:
 //   Option A (pg_cron): SELECT cron.schedule('retention-tick', '0 3 * * *',
@@ -18,6 +20,8 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { hardDeleteUser } from '../_shared/hardDeleteUser.ts'
+import { sendEmail } from '../_shared/sendEmail.ts'
+import { deletionCompleteEmail } from '../_shared/emailTemplates.ts'
 
 // Env var validation — fail fast if misconfigured
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
@@ -134,6 +138,22 @@ Deno.serve(async (req: Request) => {
 
     for (const userId of expiredUserIds) {
       try {
+        // E119-S04: Read the pre-scrub email address before hard-deleting.
+        // The pending_deletions row captures the email at soft-delete time,
+        // before auth.users is permanently removed.
+        let capturedEmail: string | null = null
+        const { data: pendingRow } = await supabaseAdmin
+          .from('pending_deletions')
+          .select('email')
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        if (pendingRow?.email) {
+          capturedEmail = pendingRow.email
+        } else {
+          console.warn(`[retention-tick] no pending_deletions row for ${userId} — receipt email will be skipped`)
+        }
+
         const result = await hardDeleteUser(userId, supabaseAdmin, stripe)
 
         if (result.tableErrors.length > 0 || result.bucketErrors.length > 0) {
@@ -150,6 +170,27 @@ Deno.serve(async (req: Request) => {
           stripeAnonymised: result.stripeAnonymised,
           authDeleted: result.authDeleted,
         })
+
+        // E119-S04: Send the hard-delete receipt email (non-blocking).
+        // AC-4: email failure must not prevent the deletion from being recorded.
+        if (capturedEmail) {
+          const template = deletionCompleteEmail()
+          const _ = await sendEmail({ to: capturedEmail, ...template }).catch((err: unknown) => {
+            console.error(`[retention-tick] email send failed for ${userId}:`, err)
+            return null
+          })
+        }
+
+        // E119-S04: Clean up the pending_deletions row after processing.
+        // Non-fatal: if delete fails, the row lingers as an audit record.
+        const { error: cleanupError } = await supabaseAdmin
+          .from('pending_deletions')
+          .delete()
+          .eq('user_id', userId)
+
+        if (cleanupError) {
+          console.warn(`[retention-tick] failed to delete pending_deletions row for ${userId}:`, cleanupError.message)
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         console.error(`[retention-tick] failed to hard-delete ${userId}:`, message)
