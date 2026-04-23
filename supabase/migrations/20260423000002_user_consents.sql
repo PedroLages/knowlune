@@ -7,8 +7,9 @@
 -- Schema design notes:
 --   - (user_id, purpose) UNIQUE — one active consent record per user per purpose.
 --     granted_at/withdrawn_at encode the current state; the row is never deleted.
---   - withdrawn_at NULL  → consent currently granted
+--   - granted_at NOT NULL + withdrawn_at NULL  → consent currently granted
 --   - withdrawn_at NOT NULL → consent currently withdrawn
+--   - both NULL → never granted (fail-closed default)
 --   - notice_version: the privacy-notice version in force when consent was given
 --     (format YYYY-MM-DD.N per noticeVersion.ts).
 --   - evidence JSONB: provider_id (S09), IP address, user-agent — no PII.
@@ -45,7 +46,9 @@ COMMENT ON COLUMN public.user_consents.granted_at IS
   'Timestamp when consent was most recently granted. NULL means never granted (or withdrawn).';
 
 COMMENT ON COLUMN public.user_consents.withdrawn_at IS
-  'Timestamp when consent was most recently withdrawn. NULL means currently granted.';
+  'Timestamp when consent was most recently withdrawn. '
+  'NULL = currently granted (when granted_at is also NOT NULL). '
+  'Both granted_at and withdrawn_at being NULL = never granted.';
 
 COMMENT ON COLUMN public.user_consents.notice_version IS
   'Privacy notice version in force at time of grant (format YYYY-MM-DD.N).';
@@ -119,5 +122,16 @@ CREATE POLICY "no_anon_access_consents"
   TO anon
   USING (false)
   WITH CHECK (false);
+
+-- ─── updated_at trigger ───────────────────────────────────────────────────────
+
+-- Auto-advance updated_at on every UPDATE so the sync engine's LWW cursor
+-- stays accurate. Matches the pattern used by all other LWW P1 sync tables
+-- (see 20260413000002_p1_learning_content.sql for reference).
+-- The moddatetime extension is installed by p0_sync_foundation — not re-created here.
+DROP TRIGGER IF EXISTS set_updated_at ON public.user_consents;
+CREATE TRIGGER set_updated_at
+  BEFORE UPDATE ON public.user_consents
+  FOR EACH ROW EXECUTE FUNCTION extensions.moddatetime('updated_at');
 
 COMMIT;

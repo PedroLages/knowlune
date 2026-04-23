@@ -1,7 +1,7 @@
 /**
  * Dexie Migration Checkpoint — v58
  *
- * This file provides a frozen snapshot of the complete IndexedDB schema at version 52.
+ * This file provides a frozen snapshot of the complete IndexedDB schema at version 58.
  * Fresh installs skip the incremental version declarations and create the full
  * schema in a single step. Existing users at lower versions still run incremental
  * migrations through the legacy version chain in schema.ts.
@@ -31,7 +31,7 @@ export const SEARCH_FRECENCY_INDEXES = '[entityType+entityId], entityType, lastO
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
- * This is the result of applying all migrations v1–v52 on a fresh database.
+ * This is the result of applying all migrations v1–v58 on a fresh database.
  *
  * IMPORTANT: This must exactly match the schema produced by running all
  * incremental migrations. The unit test `schema-checkpoint.test.ts`

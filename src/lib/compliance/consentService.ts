@@ -59,10 +59,12 @@ const VALID_PURPOSES = new Set<string>(Object.values(CONSENT_PURPOSES))
 
 /**
  * Consent service interface — injectable for testing.
+ * Covers all three public entry points so callers can mock the full surface.
  */
 export interface IConsentService {
   isGranted(userId: string, purpose: string): Promise<boolean>
   listForUser(userId: string): Promise<UserConsent[]>
+  isGrantedForProvider(userId: string, purpose: string, providerId: string): Promise<boolean>
 }
 
 // ---------------------------------------------------------------------------
@@ -148,22 +150,29 @@ export async function isGrantedForProvider(
   purpose: string,
   providerId: string,
 ): Promise<boolean> {
-  if (!VALID_PURPOSES.has(purpose)) {
-    console.warn(
-      `[consentService] isGrantedForProvider called with unknown purpose "${purpose}". Failing closed.`,
-    )
+  // First check the base purpose consent using the canonical isGranted guard.
+  // This handles unknown-purpose, DB-error, and withdrawn cases in one place.
+  const baseConsent = await isGranted(userId, purpose)
+  if (!baseConsent) {
     return false
   }
 
+  // Base consent is granted — now verify the provider identity matches.
   try {
     const rows = await db.userConsents.where('userId').equals(userId).toArray()
     const row = rows.find(r => r.purpose === purpose)
 
-    if (!row || row.grantedAt === null || row.withdrawnAt !== null) {
+    // Defensive: isGranted succeeded, so row should exist and be granted.
+    // If somehow it's missing now (race condition), fail closed.
+    if (!row) {
+      console.warn(
+        `[consentService] isGrantedForProvider: row vanished for purpose "${purpose}" after isGranted passed.`,
+      )
       return false
     }
 
     // If no provider_id recorded in evidence, require re-consent.
+    // This covers legacy rows created before S09 was deployed.
     const grantedProvider = (row.evidence as Record<string, unknown>)?.provider_id
     if (!grantedProvider) {
       return false
@@ -182,5 +191,6 @@ export async function isGrantedForProvider(
 export const consentService: IConsentService = {
   isGranted,
   listForUser,
+  isGrantedForProvider,
 }
 export default consentService

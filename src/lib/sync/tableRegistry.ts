@@ -639,8 +639,8 @@ const userConsents: TableRegistryEntry = {
 // ---------------------------------------------------------------------------
 
 /**
- * Array of all 38 syncable tables, ordered by priority tier then by
- * registration order within each tier.
+ * Array of all 39 syncable tables, ordered by priority tier then by
+ * registration order within each tier. (E119-S07 added userConsents: 38 → 39)
  *
  * NOTE: `flashcard_reviews` is intentionally absent — it is a Supabase-only
  * INSERT-only table (no Dexie equivalent), created in E93-S01.
