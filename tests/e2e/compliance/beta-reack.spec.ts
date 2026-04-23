@@ -339,7 +339,8 @@ test.describe('Beta Re-ack — dismiss without ack (AC-7)', () => {
     // Navigate away without clicking Acknowledge
     await page.goto('/courses')
 
-    // Wait for any async POSTs
+    // waitForTimeout-ok: asserting the ABSENCE of a POST — we need a brief window
+    // to confirm no async ack write fires after navigating away without clicking Acknowledge.
     await page.waitForTimeout(500)
 
     expect(postCount).toBe(0)
