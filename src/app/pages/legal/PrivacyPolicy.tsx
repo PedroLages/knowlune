@@ -2,6 +2,7 @@ import {
   CURRENT_NOTICE_VERSION,
   NOTICE_DOCUMENT_ID,
   formatNoticeEffectiveDate,
+  parseNoticeVersion,
 } from '@/lib/compliance/noticeVersion'
 import { LegalUpdateBanner } from './LegalUpdateBanner'
 
@@ -23,6 +24,7 @@ const sections = [
 
 export function PrivacyPolicy() {
   const effectiveDate = formatNoticeEffectiveDate(CURRENT_NOTICE_VERSION)
+  const { isoDate } = parseNoticeVersion(CURRENT_NOTICE_VERSION)
 
   return (
     <article className="space-y-8">
@@ -38,7 +40,7 @@ export function PrivacyPolicy() {
           Privacy Policy
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {effectiveDate} &mdash; version {CURRENT_NOTICE_VERSION}
+          <time dateTime={isoDate}>{effectiveDate}</time> &mdash; version {CURRENT_NOTICE_VERSION}
         </p>
       </header>
 
