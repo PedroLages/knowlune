@@ -5,14 +5,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ─── Hoisted mocks ───────────────────────────────────────────────────────────
 
-const { mockIsGranted, mockGetState } = vi.hoisted(() => {
+const { mockIsGranted, mockIsGrantedForProvider, mockGetState } = vi.hoisted(() => {
   const mockIsGranted = vi.fn()
+  const mockIsGrantedForProvider = vi.fn()
   const mockGetState = vi.fn()
-  return { mockIsGranted, mockGetState }
+  return { mockIsGranted, mockIsGrantedForProvider, mockGetState }
 })
 
 vi.mock('@/lib/compliance/consentService', () => ({
   isGranted: mockIsGranted,
+  isGrantedForProvider: mockIsGrantedForProvider,
   CONSENT_PURPOSES: {
     AI_TUTOR: 'ai_tutor',
     AI_EMBEDDINGS: 'ai_embeddings',
@@ -58,6 +60,7 @@ vi.mock('@/ai/llm/ollama-client', () => ({
 
 import { getLLMClient } from '../factory'
 import { ConsentError } from '@/ai/lib/ConsentError'
+import { ProviderReconsentError } from '@/ai/lib/ProviderReconsentError'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -84,13 +87,15 @@ describe('getLLMClient consent guard', () => {
     await expect(getLLMClient()).rejects.toBeInstanceOf(ConsentError)
   })
 
-  it('returns client when ai_tutor consent is granted', async () => {
+  it('returns client when ai_tutor consent is granted and provider matches', async () => {
     mockGetState.mockReturnValue({ user: { id: 'user-1' } })
     mockIsGranted.mockResolvedValue(true)
+    mockIsGrantedForProvider.mockResolvedValue(true)
 
     const client = await getLLMClient()
     expect(client).toBeDefined()
     expect(mockIsGranted).toHaveBeenCalledWith('user-1', 'ai_tutor')
+    expect(mockIsGrantedForProvider).toHaveBeenCalledWith('user-1', 'ai_tutor', 'openai')
   })
 
   it('ConsentError has informative message containing purpose name', async () => {
@@ -100,5 +105,38 @@ describe('getLLMClient consent guard', () => {
     const err = await getLLMClient().catch(e => e)
     expect(err.message).toContain('ai_tutor')
     expect(err.message).toContain('Settings')
+  })
+
+  it('throws ProviderReconsentError when provider identity has changed', async () => {
+    mockGetState.mockReturnValue({ user: { id: 'user-1' } })
+    mockIsGranted.mockResolvedValue(true)
+    // consent evidence has openai but config resolves to anthropic
+    mockIsGrantedForProvider.mockResolvedValue(false)
+
+    const err = await getLLMClient().catch(e => e)
+    expect(err).toBeInstanceOf(ProviderReconsentError)
+    expect(err.providerId).toBe('openai') // resolveFeatureModel mock returns 'openai'
+    expect(err.purpose).toBe('ai_tutor')
+  })
+
+  it('throws ProviderReconsentError when consent row has no evidence.provider_id (legacy row)', async () => {
+    mockGetState.mockReturnValue({ user: { id: 'user-1' } })
+    mockIsGranted.mockResolvedValue(true)
+    // isGrantedForProvider returns false for legacy rows (no provider_id in evidence)
+    mockIsGrantedForProvider.mockResolvedValue(false)
+
+    await expect(getLLMClient()).rejects.toBeInstanceOf(ProviderReconsentError)
+  })
+
+  it('does NOT throw ProviderReconsentError for model version bump within same provider', async () => {
+    // GPT-4 → GPT-5 is a model bump within openai; provider_id is unchanged.
+    // isGrantedForProvider still returns true because it only checks provider identity.
+    mockGetState.mockReturnValue({ user: { id: 'user-1' } })
+    mockIsGranted.mockResolvedValue(true)
+    mockIsGrantedForProvider.mockResolvedValue(true)
+
+    const client = await getLLMClient()
+    expect(client).toBeDefined()
+    // No ProviderReconsentError thrown
   })
 })

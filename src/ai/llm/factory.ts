@@ -21,7 +21,8 @@ import { OllamaLLMClient } from './ollama-client'
 import { LLMError } from './types'
 import type { LLMMessage } from './types'
 import { ConsentError } from '@/ai/lib/ConsentError'
-import { isGranted, CONSENT_PURPOSES } from '@/lib/compliance/consentService'
+import { ProviderReconsentError } from '@/ai/lib/ProviderReconsentError'
+import { isGranted, isGrantedForProvider, CONSENT_PURPOSES } from '@/lib/compliance/consentService'
 import { useAuthStore } from '@/stores/useAuthStore'
 
 /**
@@ -71,6 +72,24 @@ export async function getLLMClient(feature?: AIFeatureId): Promise<LLMClient> {
   if (feature) {
     const resolved = resolveFeatureModel(feature)
 
+    // Allow E2E tests to override the resolved provider to simulate a provider
+    // identity change without modifying real AI config.
+    const effectiveProvider = (
+      import.meta.env.DEV &&
+      typeof window !== 'undefined' &&
+      (window as unknown as Record<string, unknown>).__testForceProvider
+    )
+      ? (window as unknown as Record<string, string>).__testForceProvider as typeof resolved.provider
+      : resolved.provider
+
+    // Provider re-consent guard (E119-S09): verify the resolved provider matches
+    // the provider_id recorded in the user's consent evidence. A provider identity
+    // change (not a model version bump) requires fresh consent.
+    const providerGranted = await isGrantedForProvider(userId, CONSENT_PURPOSES.AI_TUTOR, effectiveProvider)
+    if (!providerGranted) {
+      throw new ProviderReconsentError(CONSENT_PURPOSES.AI_TUTOR, effectiveProvider)
+    }
+
     // Ollama uses server URL, not API key — model comes from OllamaModelPicker
     if (resolved.provider === 'ollama') {
       const serverUrl = getOllamaServerUrl()
@@ -99,6 +118,21 @@ export async function getLLMClient(feature?: AIFeatureId): Promise<LLMClient> {
 
   // Legacy path: no feature specified, use global provider
   const config = getAIConfiguration()
+
+  // Allow E2E tests to override the global provider too.
+  const effectiveGlobalProvider = (
+    import.meta.env.DEV &&
+    typeof window !== 'undefined' &&
+    (window as unknown as Record<string, unknown>).__testForceProvider
+  )
+    ? (window as unknown as Record<string, string>).__testForceProvider as typeof config.provider
+    : config.provider
+
+  // Provider re-consent guard (E119-S09): verify the global provider matches consent evidence.
+  const globalProviderGranted = await isGrantedForProvider(userId, CONSENT_PURPOSES.AI_TUTOR, effectiveGlobalProvider)
+  if (!globalProviderGranted) {
+    throw new ProviderReconsentError(CONSENT_PURPOSES.AI_TUTOR, effectiveGlobalProvider)
+  }
 
   // Ollama uses server URL, not API key
   if (config.provider === 'ollama') {
