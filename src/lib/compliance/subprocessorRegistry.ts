@@ -97,6 +97,10 @@ export const SUBPROCESSOR_REGISTRY: readonly SubProcessor[] = [
     dataTransferred: ['AI query content — consent-gated only'],
     packagePatterns: ['@ai-sdk/groq'],
   },
+  // IMPORTANT: This wildcard entry must come AFTER all provider-specific @ai-sdk/* entries
+  // (Google, Groq). SUBPROCESSOR_REGISTRY.find() returns the first match, so provider-specific
+  // patterns (e.g. @ai-sdk/google) must be listed before this entry to route correctly.
+  // If you add a new @ai-sdk/<provider> entry, insert it BEFORE this Vercel entry.
   {
     name: 'Vercel AI SDK (provider-neutral)',
     role: 'Client-side AI SDK that routes to Anthropic, OpenAI, Google, Groq',
@@ -158,5 +162,5 @@ export function findSubProcessorForPackage(packageName: string): SubProcessor | 
  * and should be excluded from sub-processor checks.
  */
 export function isFirstPartyInfra(packageName: string): boolean {
-  return (FIRST_PARTY_INFRA as readonly string[]).includes(packageName)
+  return FIRST_PARTY_INFRA.includes(packageName)
 }

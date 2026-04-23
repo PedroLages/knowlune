@@ -1,0 +1,75 @@
+{
+  "run_id": "20260423-172538-19a75bf7",
+  "branch": "feature/e119-s12-operator-artifacts",
+  "base": "be7f790c9ca77f781e1b9cd0b43d6f4ccc5aaaab",
+  "verdict": "Ready with fixes",
+  "reviewers": ["correctness", "security", "testing", "maintainability", "reliability", "project-standards", "adversarial", "kieran-typescript", "learnings-researcher", "agent-native"],
+  "findings": [
+    {
+      "title": "Registry ordering creates silent routing dependency",
+      "severity": "P2",
+      "file": "src/lib/compliance/subprocessorRegistry.ts",
+      "line": 60,
+      "confidence": 0.82,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add a comment above the Vercel AI SDK entry: '// IMPORTANT: Must come after provider-specific entries. @ai-sdk/* wildcard matches any @ai-sdk/ prefix, so provider-specific patterns (e.g. @ai-sdk/google) must be listed before this entry to route correctly.'",
+      "why_it_matters": "If a developer reorders registry entries, @ai-sdk/google would match the Vercel SDK entry before Google, silently misattributing data to the wrong processor in the drift-check output. No test covers ordering.",
+      "evidence": ["SUBPROCESSOR_REGISTRY.find() returns the first match; Google entry at line 60 must precede Vercel entry at line 82 for @ai-sdk/google to route to Google"]
+    },
+    {
+      "title": "No unit tests for registry helpers or script logic",
+      "severity": "P2",
+      "file": "src/lib/compliance/subprocessorRegistry.ts",
+      "line": 140,
+      "confidence": 0.85,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add src/lib/compliance/__tests__/subprocessorRegistry.test.ts with: (1) findSubProcessorForPackage happy-path for each known package pattern, (2) ordering test verifying @ai-sdk/google → Google not Vercel, (3) isFirstPartyInfra test for @mlc-ai/web-llm, (4) verify no duplicate names in registry.",
+      "why_it_matters": "AC-7 specifies the script should exit non-zero on unlisted packages but no tests verify this invariant. The pattern-matching logic in findSubProcessorForPackage has ordering dependencies and wildcard behavior that are regression-prone.",
+      "evidence": ["No test file exists under src/lib/compliance/__tests__/ for subprocessorRegistry.ts", "SUBPROCESSOR_REGISTRY.find() ordering dependency between Google (@ai-sdk/google exact) and Vercel (@ai-sdk/* wildcard) is untested"]
+    },
+    {
+      "title": "Unnecessary cast in isFirstPartyInfra",
+      "severity": "P3",
+      "file": "src/lib/compliance/subprocessorRegistry.ts",
+      "line": 155,
+      "confidence": 0.92,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Remove the cast: `return FIRST_PARTY_INFRA.includes(packageName)`",
+      "why_it_matters": "The cast (FIRST_PARTY_INFRA as readonly string[]).includes() is redundant — FIRST_PARTY_INFRA is already typed as readonly string[]. The cast adds noise without value.",
+      "evidence": ["Line 155: `return (FIRST_PARTY_INFRA as readonly string[]).includes(packageName)` — FIRST_PARTY_INFRA is declared as `readonly string[]` at line 124"]
+    },
+    {
+      "title": "DPA URLs marked placeholder without machine-readable status",
+      "severity": "P3",
+      "file": "docs/compliance/subprocessors.md",
+      "line": 28,
+      "confidence": 0.75,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": null,
+      "why_it_matters": "Several DPA URL fields contain '[operator to verify current version date]' which is human-readable but not machine-checkable. If the annual-review checklist doesn't explicitly call these out, they may remain unverified. Advisory: ensure annual-review.md (S13) explicitly enumerates the placeholder DPA entries.",
+      "evidence": ["subprocessors.md rows for Cloudflare, Stripe, Anthropic, OpenAI, Google, Groq, Sentry, Resend all contain '[operator to verify' markers"]
+    }
+  ],
+  "residual_risks": [
+    "The drift-check script only covers npm packages. Env var references to external services (e.g. VITE_SENTRY_DSN, OPENAI_API_KEY) that indicate a service is used are not scanned. Story AC-7 mentioned env var scanning but the implementation only scans package.json.",
+    "The Vercel AI SDK entry covers all @ai-sdk/* packages with a wildcard, meaning any new @ai-sdk/<provider> addition would match Vercel (not the underlying provider) in the drift check. This could mask a new AI provider being added without a specific DPA entry."
+  ],
+  "testing_gaps": [
+    "No unit test for findSubProcessorForPackage with @ai-sdk/google → Google routing",
+    "No unit test for verify-subprocessors.ts exit code behavior",
+    "No test verifying isFirstPartyInfra(@mlc-ai/web-llm) === true"
+  ],
+  "applied_fixes": []
+}
