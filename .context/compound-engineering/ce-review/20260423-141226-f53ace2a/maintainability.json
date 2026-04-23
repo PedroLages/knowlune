@@ -1,0 +1,42 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "title": "Email templates duplicated in two locations",
+      "severity": "P2",
+      "file": "supabase/functions/_shared/emailTemplates.ts",
+      "line": 1,
+      "why_it_matters": "src/lib/compliance/emailTemplates.ts and supabase/functions/_shared/emailTemplates.ts are identical. Any content update (subject line, branding, legal text) must be made in both files — easy to miss. This is a maintenance trap.",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "confidence": 0.82,
+      "suggested_fix": "The plan explicitly chose this design to avoid Deno URL import issues. The correct long-term fix is a shared package or a build step. For now, add a prominent comment at the top of both files: '// SYNC: This file is duplicated at [other path]. Keep changes in sync.'",
+      "evidence": [
+        "src/lib/compliance/emailTemplates.ts: 216 lines identical to supabase/functions/_shared/emailTemplates.ts",
+        "Any branding change requires two PRs or careful review"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "Unsafe type casting instead of discriminated union narrowing",
+      "severity": "P3",
+      "file": "supabase/functions/delete-account/index.ts",
+      "line": 168,
+      "why_it_matters": "Pattern `(result as { skipped?: boolean }).skipped` bypasses TypeScript's type narrowing and can mask type errors if SendEmailResult union changes.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "confidence": 0.75,
+      "suggested_fix": "Use discriminated union narrowing: `if (!result.sent) { const r = result; if (!('skipped' in r && r.skipped)) { console.error(..., 'error' in r ? r.error : 'unknown') } }`",
+      "evidence": [
+        "Line 168: `!(result as { skipped?: boolean }).skipped`",
+        "Line 169: `(result as { error?: string }).error`",
+        "SendEmailResult is a discriminated union — can be narrowed safely"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [],
+  "testing_gaps": []
+}

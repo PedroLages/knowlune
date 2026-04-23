@@ -1,0 +1,46 @@
+{
+  "reviewer": "reliability",
+  "findings": [
+    {
+      "title": "Fire-and-forget sendEmail not safe in Deno edge runtime",
+      "severity": "P1",
+      "file": "supabase/functions/delete-account/index.ts",
+      "line": 164,
+      "why_it_matters": "Deno Deploy terminates function execution after the response is flushed. Non-awaited promises (fire-and-forget) are abandoned. The deletion-scheduled email will be silently dropped in production.",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "confidence": 0.85,
+      "suggested_fix": "Await sendEmail before the return statement. Email failure should be swallowed (log + continue), not propagated. This satisfies AC-4 while ensuring the email actually sends.",
+      "evidence": [
+        "sendEmail(...).then(...).catch(...) — no await, response returned before promise resolves",
+        "Deno Deploy: floating promises without EdgeRuntime.waitUntil() may not complete"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "sendEmail has no timeout — hangs indefinitely on slow provider",
+      "severity": "P2",
+      "file": "supabase/functions/_shared/sendEmail.ts",
+      "line": 42,
+      "why_it_matters": "Supabase Edge Functions have a default wall-clock timeout (typically 60s). A slow or unresponsive email provider could hold up the entire delete-account or retention-tick function until it times out, potentially causing the deletion response to fail with a 5xx. If emails were awaited (per P1 fix), this becomes more important.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "confidence": 0.72,
+      "suggested_fix": "Wrap the fetch in an AbortController with a 10-second timeout: `const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 10000); const response = await fetch(providerUrl, { ..., signal: controller.signal }); clearTimeout(timeout);`",
+      "evidence": [
+        "Line 42: `const response = await fetch(providerUrl, { ... })` — no signal/timeout",
+        "sendEmail.ts is used in both delete-account (user-facing) and retention-tick (background)"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "If email provider is consistently unavailable, pending_deletions rows will never be cleaned up (they are only deleted after a successful email attempt — actually after the send attempt, not after confirmed delivery). Rows will accumulate until S11 purge runs."
+  ],
+  "testing_gaps": [
+    "No test for sendEmail timeout/abort behavior",
+    "No test for the behavior when sendEmail is awaited and throws after the response is already in flight (only relevant if changed to await)"
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "title": "Fire-and-forget sendEmail may be abandoned by Deno runtime",
+      "severity": "P1",
+      "file": "supabase/functions/delete-account/index.ts",
+      "line": 164,
+      "why_it_matters": "Deno Edge Functions terminate after the Response is returned. A floating .then().catch() promise without waitUntil() may never execute, silently dropping the deletion-scheduled email for every user who requests deletion.",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "confidence": 0.82,
+      "suggested_fix": "Await sendEmail before returning the response, wrapping any error so it does not block: `const emailResult = await sendEmail({...}).catch(() => null)`. AC-4 only requires failure not to block deletion — awaiting is compatible with that requirement.",
+      "evidence": [
+        "Lines 164-172: `sendEmail({ to: userEmail, ...template }).then((result) => { ... }).catch(...)` — floating promise, response returned immediately after",
+        "Deno Deploy documentation: 'Background work triggered via floating promises may be silently dropped when the response is flushed'"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "Fire-and-forget sendEmail in retention-tick may be abandoned",
+      "severity": "P1",
+      "file": "supabase/functions/retention-tick/index.ts",
+      "line": 173,
+      "why_it_matters": "Same pattern as delete-account. The receipt email promise is floating and may not execute before the Deno runtime terminates the function invocation, silently dropping GDPR erasure receipts.",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "confidence": 0.82,
+      "suggested_fix": "Await sendEmail before proceeding: `const emailResult = await sendEmail({...}).catch((err) => { console.error(...); return null; })`",
+      "evidence": [
+        "Lines 173-181: `sendEmail({ to: capturedEmail, ...template }).then((emailResult) => { ... }).catch(...)` inside a for loop — floating promise",
+        "The loop continues to pending_deletions cleanup before the email resolves"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "pending_deletions cleanup races email send",
+      "severity": "P2",
+      "file": "supabase/functions/retention-tick/index.ts",
+      "line": 184,
+      "why_it_matters": "The pending_deletions row is deleted immediately after the email promise is started (not after it resolves). If the Deno pod restarts between starting and completing the email, the email address is gone. The email cannot be retried because the address no longer exists anywhere.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "confidence": 0.75,
+      "suggested_fix": "Move the pending_deletions DELETE to after the email await resolves (if emails are awaited per finding above). If fire-and-forget is intentional, document that the row deletion is best-effort and accept the risk.",
+      "evidence": [
+        "Line 173: email send starts (non-awaited)",
+        "Line 184-189: pending_deletions DELETE runs immediately after, before email promise resolves"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "probe-constants.ts has no automated parity check vs hardDeleteUser.ts",
+      "severity": "P2",
+      "file": "scripts/ci/probe-constants.ts",
+      "line": 1,
+      "why_it_matters": "There are now 3 places where TABLE_NAMES must be kept in sync: hardDeleteUser.ts, tableRegistry.ts (parity tested), and probe-constants.ts (not tested). If a table is added to hardDeleteUser.ts and not to probe-constants.ts, the CI probe silently passes while GDPR erasure is incomplete.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "confidence": 0.88,
+      "suggested_fix": "Add a Vitest test in src/lib/sync/__tests__/ that imports ERASURE_TABLE_NAMES from tableRegistry.ts and TABLE_NAMES from scripts/ci/probe-constants.ts and asserts they are identical arrays (same elements, any order).",
+      "evidence": [
+        "probe-constants.ts line 1-62: manual list of 38 table names with comment 'Keep in sync'",
+        "src/lib/sync/__tests__/tableRegistry.test.ts already asserts parity between tableRegistry and hardDeleteUser — but probe-constants is not in that assertion"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "If the user has no email (OAuth signup without email), pending_deletions row is not created and no receipt email is ever sent — documented in code but there is no ops alert",
+    "cancel link points to /settings page, not a direct cancel endpoint — user must be authenticated to cancel, which they cannot do after the soft-delete if their account is truly inaccessible"
+  ],
+  "testing_gaps": [
+    "No integration test for delete-account verifying pending_deletions row is written",
+    "No integration test for retention-tick verifying pending_deletions row is read and deleted after processing",
+    "No parity test between probe-constants.ts TABLE_NAMES and hardDeleteUser.ts TABLE_NAMES"
+  ]
+}
