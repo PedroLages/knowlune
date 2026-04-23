@@ -226,8 +226,12 @@ test.describe('Signup — privacy notice acknowledgement checkbox', () => {
 
     await page.getByRole('button', { name: /create account/i }).click()
 
-    // Wait for ack POST to be made
-    await page.waitForTimeout(500)
+    // Wait for the notice ack POST to be made
+    await page.waitForResponse(
+      resp =>
+        resp.url().includes('notice_acknowledgements') && resp.request().method() === 'POST',
+      { timeout: 5000 },
+    )
     expect(ackRequests).toContain(CURRENT_NOTICE_VERSION)
   })
 })
@@ -330,8 +334,14 @@ test.describe('Soft-block gate — stale notice > 30 days', () => {
     })
 
     await page.goto('/')
-    await page.waitForTimeout(1000)
 
+    // Wait for the ack query to resolve (GET request to notice_acknowledgements),
+    // then confirm the soft-block gate is absent.
+    await page.waitForResponse(
+      resp =>
+        resp.url().includes('notice_acknowledgements') && resp.request().method() === 'GET',
+      { timeout: 5000 },
+    )
     await expect(page.locator('[data-testid="soft-block-gate"]')).not.toBeVisible()
   })
 })

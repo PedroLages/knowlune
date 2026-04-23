@@ -28,7 +28,17 @@ export async function writeNoticeAck(version: string): Promise<void> {
     throw new Error('Supabase not configured — cannot write notice acknowledgement')
   }
 
+  // Resolve the current user's ID. auth.uid() in RLS validates ownership,
+  // but the user_id column (NOT NULL, no DEFAULT) must be supplied explicitly.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Cannot write notice acknowledgement — no authenticated user')
+  }
+
   const { error } = await supabase.from('notice_acknowledgements').insert({
+    user_id: user.id,
     document_id: NOTICE_DOCUMENT_ID,
     version,
     acknowledged_at: new Date().toISOString(),
