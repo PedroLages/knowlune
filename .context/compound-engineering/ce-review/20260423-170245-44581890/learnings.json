@@ -1,0 +1,17 @@
+{
+  "reviewer": "learnings-researcher",
+  "relevant_solutions": [
+    {
+      "file": "docs/solutions/best-practices/supabase-functions-invoke-silent-success-guard-2026-04-22.md",
+      "relevance": "HIGH — The Cloudflare Worker calls the retention-tick Edge Function via HTTP fetch. The known pattern of Supabase Edge Runtime returning HTTP 200 with error in body on boot-crash applies directly. The Worker currently does not parse the body for success:false. This is the same failure mode documented in the solution.",
+      "action": "Apply body-error guard in cloudflare-workers/retention-cron.js per the canonical guard pattern in the solution doc."
+    },
+    {
+      "file": "docs/solutions/best-practices/supabase-migration-schema-invariants-2026-04-18.md",
+      "relevance": "LOW — The new migration creates a non-synced table (no Dexie counterpart). The schema invariants (SECURITY DEFINER upserts, fieldMap, etc.) are not applicable here."
+    }
+  ],
+  "findings": [],
+  "residual_risks": [],
+  "testing_gaps": []
+}

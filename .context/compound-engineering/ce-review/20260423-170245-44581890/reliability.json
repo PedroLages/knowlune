@@ -1,0 +1,31 @@
+{
+  "reviewer": "reliability",
+  "findings": [
+    {
+      "title": "Audit batch insert failure loses all audit records silently",
+      "severity": "P2",
+      "file": "supabase/functions/retention-tick/index.ts",
+      "line": 561,
+      "why_it_matters": "If the batch insert to retention_audit_log fails (DB overload, connection issue), all 47 audit rows are lost. The function returns 200 (success) because audit insert failure is non-fatal. GDPR compliance relies on these audit records to demonstrate enforcement ran. An auditor querying the table would see no record of the run. The heartbeat check 48h later would then fire HEARTBEAT_MISS, indirectly signaling the issue, but the missed audit trail itself cannot be recovered.",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Insert audit rows incrementally (per-entry) instead of batching at the end. Move the INSERT call inside the per-entry loop. This ensures each entry's audit row is written before moving on. The trade-off is 47 DB round-trips vs 1, but for a daily job this is acceptable.",
+      "confidence": 0.82,
+      "evidence": [
+        "Line 561-568: const { error: auditError } = await supabaseAdmin.from('retention_audit_log').insert(auditRows) — batch of all 47 rows at the very end",
+        "Line 565-568: if (auditError) { console.error(...) } — non-fatal, function continues to return 200",
+        "If this fails, purgeExportsBucket and purgeChatConversations have already deleted data but no audit record exists"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "The function has no retry mechanism for the audit insert. A transient DB issue at the exact moment of the insert will permanently lose the run record.",
+    "Heartbeat check makes TWO DB queries at function start (recentCount + totalCount). If the DB is degraded, both queries may fail and the function continues with no heartbeat signal. The function will still attempt to delete data against a degraded DB."
+  ],
+  "testing_gaps": [
+    "No test verifies behavior when the audit batch insert fails",
+    "No test verifies the function still returns 200 (and not 500) when audit insert fails"
+  ]
+}
