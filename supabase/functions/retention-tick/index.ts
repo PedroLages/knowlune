@@ -546,7 +546,7 @@ Deno.serve(async (req: Request) => {
         failedEntries.push(entry.artefact)
       }
 
-      auditRows.push({
+      const auditRow: AuditRow = {
         run_id: runId,
         artefact: entry.artefact,
         rows_affected: rowsAffected,
@@ -554,21 +554,18 @@ Deno.serve(async (req: Request) => {
         completed_at: new Date().toISOString(),
         error,
         skipped,
-      })
-    }
+      }
+      auditRows.push(auditRow)
 
-    // -------------------------------------------------------------------------
-    // Step 6: Batch-insert audit rows
-    // -------------------------------------------------------------------------
-    const { error: auditError } = await supabaseAdmin
-      .from('retention_audit_log')
-      .insert(auditRows)
-
-    if (auditError) {
-      // Non-fatal — log lines above serve as secondary audit trail
-      console.error('[retention-tick] failed to insert audit rows:', auditError.message)
-    } else {
-      console.log(`[retention-tick] inserted ${auditRows.length} audit rows for run ${runId}`)
+      // Per-entry audit insert — write immediately so audit evidence is durable
+      // even if a later entry or the run itself fails.
+      const { error: auditErr } = await supabaseAdmin
+        .from('retention_audit_log')
+        .insert(auditRow)
+      if (auditErr) {
+        console.error(`[retention-tick] audit insert failed for ${entry.artefact}:`, auditErr.message)
+        // non-fatal: log but continue
+      }
     }
 
     // -------------------------------------------------------------------------
