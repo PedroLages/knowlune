@@ -145,9 +145,21 @@ export function useAudiobookshelfSync() {
       try {
         const apiKey = await getAbsApiKey(server.id)
         if (!apiKey) {
-          console.warn('[useAudiobookshelfSync] syncCatalog: apiKey unavailable — sync skipped')
+          // Credential store returned null — key was never saved, was cleared
+          // (browser storage wipe, profile switch), or OPFS failed to read.
+          // Surface this instead of silently skipping: mark server auth-failed
+          // (drives the red status dot) and prompt the user to re-enter the key.
           syncingServers.current.delete(server.id)
-          setState(prev => ({ ...prev, isSyncing: false }))
+          setState(prev => ({
+            ...prev,
+            isSyncing: false,
+            syncError: 'Audiobookshelf API key missing. Re-enter it in Settings.',
+          }))
+          await updateServer(server.id, { status: 'auth-failed' })
+          toast.error('Audiobookshelf API key missing', {
+            description: `Open Settings → Audiobookshelf → Edit "${server.name}" and re-enter your API key.`,
+            duration: 8000,
+          })
           return
         }
 
