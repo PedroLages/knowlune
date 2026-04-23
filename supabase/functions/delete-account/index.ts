@@ -1,8 +1,19 @@
-// E19-S09 / B4: Delete Account Edge Function
+// E19-S09 / B4 / E119-S03: Delete Account Edge Function
 // Handles: POST /functions/v1/delete-account
 // Auth: requires Supabase JWT
-// Action: soft-deletes the calling user's auth record (sets deleted_at, 7-day grace period)
-// No Stripe calls — keys not configured for production yet.
+//
+// Two-phase deletion:
+//   Phase 1 (immediate, this function): soft-delete
+//     - Stamps pending_deletion_at in user metadata
+//     - Sets deleted_at on auth.users (Supabase soft-delete)
+//     - Returns scheduledDeletionAt to the client
+//     - User can still log in to cancel during the 7-day grace period
+//
+//   Phase 2 (triggered by retention-tick after 7-day grace):
+//     - Calls hardDeleteUser() from _shared/hardDeleteUser.ts
+//     - Cascades across all 38 sync tables + 4 Storage buckets
+//     - Anonymises Stripe record (retains customer + invoices for tax)
+//     - Permanently removes auth.users row
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -14,7 +25,7 @@ if (!SUPABASE_URL) throw new Error('SUPABASE_URL is required')
 if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY is required')
 if (!SUPABASE_ANON_KEY) throw new Error('SUPABASE_ANON_KEY is required')
 
-// Service-role admin client — used for auth.admin.deleteUser (bypasses RLS)
+// Service-role admin client — used for auth.admin.* calls (bypasses RLS)
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 })
@@ -78,8 +89,32 @@ Deno.serve(async (req: Request) => {
     if (authResult instanceof Response) return authResult
     const { userId } = authResult
 
-    // Soft-delete: sets deleted_at on the auth.users row, does not hard-delete.
-    // shouldSoftDelete=true is the Supabase Admin API flag for soft-delete.
+    // -------------------------------------------------------------------------
+    // Phase 1: Soft-delete (immediate)
+    //
+    // Step 1a: Stamp pending_deletion_at in user metadata so:
+    //   - cancel-account-deletion can verify and clear it
+    //   - retention-tick can query for users past the grace period
+    //
+    // Must be done BEFORE auth.admin.deleteUser while the user is still reachable.
+    // -------------------------------------------------------------------------
+    const pendingDeletionAt = new Date().toISOString()
+
+    const { error: metaError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      user_metadata: { pending_deletion_at: pendingDeletionAt },
+    })
+
+    if (metaError) {
+      // Non-blocking: log but continue. The soft-delete can still proceed;
+      // retention-tick will fall back to checking deleted_at.
+      console.error('[delete-account] failed to stamp pending_deletion_at:', {
+        message: metaError.message,
+        status: metaError.status,
+      })
+    }
+
+    // Step 1b: Supabase soft-delete — sets deleted_at on auth.users.
+    // shouldSoftDelete=true: does NOT permanently remove the row.
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId, true)
 
     if (deleteError) {
@@ -107,6 +142,10 @@ Deno.serve(async (req: Request) => {
     const scheduledDeletionAt = new Date(
       Date.now() + SOFT_DELETE_GRACE_DAYS * 24 * 60 * 60 * 1000
     ).toISOString()
+
+    // Phase 2 (hard-delete) will be triggered by retention-tick after the 7-day
+    // grace period. See supabase/functions/retention-tick/index.ts and
+    // supabase/functions/_shared/hardDeleteUser.ts.
 
     return json({ success: true, scheduledDeletionAt })
   } catch (err) {
