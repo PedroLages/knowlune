@@ -106,10 +106,8 @@ export async function grantConsent(
 ): Promise<ConsentOperationResult> {
   const now = new Date().toISOString()
   try {
-    const existing = await db.userConsents
-      .where('[userId+purpose]')
-      .equals([userId, purpose])
-      .first()
+    const rows = await db.userConsents.where('userId').equals(userId).toArray()
+    const existing = rows.find(r => r.purpose === purpose)
 
     const record = {
       id: existing?.id ?? crypto.randomUUID(),
@@ -155,12 +153,10 @@ export async function withdrawConsent(
   const now = new Date().toISOString()
 
   // Step 1: Mark consent withdrawn.
-  let consentRecord: Awaited<ReturnType<typeof db.userConsents.first>> | undefined
+  let consentRecord: import('@/data/types').UserConsent | undefined
   try {
-    consentRecord = await db.userConsents
-      .where('[userId+purpose]')
-      .equals([userId, purpose])
-      .first()
+    const rows = await db.userConsents.where('userId').equals(userId).toArray()
+    consentRecord = rows.find(r => r.purpose === purpose)
 
     const record = {
       id: consentRecord?.id ?? crypto.randomUUID(),
