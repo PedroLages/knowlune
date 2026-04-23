@@ -1472,7 +1472,9 @@ development_status:
   119-8-consent-ui-withdrawal-effects: ready-for-dev
   119-9-ai-provider-change-re-consent: ready-for-dev
   119-10-retention-policy-matrix: ready-for-dev
-  119-11-retention-ttl-enforcement-job: ready-for-dev
+  119-11-retention-ttl-enforcement-job:
+    status: done
+    finishedAt: "2026-04-23"
   119-12-operator-artifacts-ropa-dpa-breach-runbook: ready-for-dev
   119-13-annual-review-ico-checklist-beta-user-reack: ready-for-dev
   epic-119-retrospective: optional
