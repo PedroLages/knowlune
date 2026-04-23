@@ -1176,3 +1176,35 @@ export interface YouTubeCourseChapter {
   endTime?: number // seconds (derived from next chapter or video duration)
   order: number // Display order within the course
 }
+
+/**
+ * User consent record — E119-S07
+ *
+ * One row per (userId, purpose) pair. Synced bidirectionally with Supabase
+ * `user_consents` table via LWW conflict resolution.
+ *
+ * State encoding:
+ *   grantedAt != null && withdrawnAt == null  → currently consented
+ *   withdrawnAt != null                        → withdrawn (regardless of grantedAt)
+ *   both null                                  → never granted
+ */
+export interface UserConsent {
+  id: string
+  /** Supabase auth user UUID */
+  userId: string
+  /** Processing purpose key (matches CONSENT_PURPOSES in consentService.ts) */
+  purpose: string
+  /** ISO timestamp of most recent consent grant; null if never granted */
+  grantedAt: string | null
+  /** ISO timestamp of most recent withdrawal; null if currently granted */
+  withdrawnAt: string | null
+  /** Privacy notice version in force at time of grant (YYYY-MM-DD.N format) */
+  noticeVersion: string
+  /** Audit metadata: provider_id, IP hash, user-agent (no raw PII) */
+  evidence: Record<string, unknown>
+  /** ISO timestamp — record creation */
+  createdAt: string
+  /** ISO timestamp — last update (LWW sync cursor) */
+  updatedAt: string
+}
+

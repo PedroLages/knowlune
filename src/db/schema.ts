@@ -43,6 +43,7 @@ import type {
   ChatConversation,
   TranscriptEmbedding,
   LearnerModel,
+  UserConsent,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA, SEARCH_FRECENCY_INDEXES } from './checkpoint'
@@ -156,6 +157,8 @@ export type ElearningDatabase = Dexie & {
   searchFrecency: Table<FrecencyRow, [string, string]>
   // v56 (E95-S04): Last-known server-computed reading streak, keyed by userId.
   readingStreakCache: EntityTable<ReadingStreakCacheRow, 'userId'>
+  // v58 (E119-S07): Per-user per-purpose consent ledger (GDPR Art. 6(1)(a)).
+  userConsents: EntityTable<UserConsent, 'id'>
 }
 
 /**
@@ -1637,6 +1640,20 @@ function _declareLegacyMigrations(database: Dexie): void {
       // No backfill. The credential clear step runs post-boot from
       // migrateCredentialsToVault() after the user authenticates — Dexie
       // upgrade callbacks cannot read auth state (see reference_dexie_4_quirks).
+    })
+
+  // v58 (E119-S07): Add `userConsents` table for GDPR consent ledger.
+  // One row per (userId, purpose) pair; synced bidirectionally with Supabase
+  // `user_consents` table via LWW conflict resolution (E119-S07 AC-7).
+  // Compound index [userId+purpose] supports the unique-per-user-purpose query
+  // used by consentService.isGranted().
+  database
+    .version(58)
+    .stores({
+      userConsents: 'id, userId, purpose, [userId+purpose], [userId+updatedAt], updatedAt',
+    })
+    .upgrade(async _tx => {
+      // No backfill. New table; populated on first consent grant/withdrawal.
     })
 } // end _declareLegacyMigrations
 

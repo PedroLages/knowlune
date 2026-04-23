@@ -612,6 +612,28 @@ const aiUsageEvents: TableRegistryEntry = {
 }
 
 // ---------------------------------------------------------------------------
+// P1 — Consent records (E119-S07)
+// ---------------------------------------------------------------------------
+
+/**
+ * `userConsents` stores per-user per-purpose consent grants and withdrawals.
+ * LWW conflict resolution: the record with the most recent updated_at wins.
+ * Compound PK is (user_id, purpose) — the sync engine uses upsertConflictColumns
+ * to target the correct unique constraint.
+ *
+ * Priority P1: consent state affects AI feature routing (fail-closed guard), so
+ * it must be available before AI calls are issued but after core progress (P0).
+ */
+const userConsents: TableRegistryEntry = {
+  dexieTable: 'userConsents',
+  supabaseTable: 'user_consents',
+  conflictStrategy: 'lww',
+  priority: 1,
+  fieldMap: {},
+  upsertConflictColumns: 'user_id, purpose',
+}
+
+// ---------------------------------------------------------------------------
 // Registry export — ordered by priority (P0 first, P4 last)
 // E92-S05 iterates this array in order for priority-based upload.
 // ---------------------------------------------------------------------------
@@ -640,6 +662,7 @@ export const tableRegistry: TableRegistryEntry[] = [
   audioClips,
   chatConversations,
   learnerModels,
+  userConsents,
   // P2
   importedCourses,
   importedVideos,

@@ -1,5 +1,5 @@
 /**
- * Dexie Migration Checkpoint — v52
+ * Dexie Migration Checkpoint — v58
  *
  * This file provides a frozen snapshot of the complete IndexedDB schema at version 52.
  * Fresh installs skip the incremental version declarations and create the full
@@ -20,7 +20,7 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 57
+export const CHECKPOINT_VERSION = 58
 
 /**
  * Shared `searchFrecency` index string. Used by both the v53 `.stores()` call
@@ -128,6 +128,8 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   searchFrecency: SEARCH_FRECENCY_INDEXES,
   // v56 (E95-S04): local cache of server-computed reading streak (local-only, per-user).
   readingStreakCache: 'userId, cachedAt',
+  // v58 (E119-S07): GDPR consent ledger — one row per (userId, purpose) pair.
+  userConsents: 'id, userId, purpose, [userId+purpose], [userId+updatedAt], updatedAt',
 }
 
 // v42 (E109-S01): vocabularyItems table added
@@ -149,3 +151,4 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
 // v56 (E95-S04): readingStreakCache table for locally-cached server streak results.
 //                Local-only (keyed by userId but per-device-cache; not synced).
 // v57 (E95-S05): Credential-off-the-row marker. No schema/index change — see schema.ts comment.
+// v58 (E119-S07): userConsents table for GDPR consent ledger (Art. 6(1)(a)).

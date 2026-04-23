@@ -98,6 +98,7 @@ describe('ElearningDB schema', () => {
       'syncMetadata',
       'syncQueue',
       'transcriptEmbeddings',
+      'userConsents',
       'videoCaptions',
       'vocabularyItems',
       'youtubeChapters',
@@ -106,8 +107,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 57 (E95-S05: credential-off-the-row marker)', () => {
-    expect(db.verno).toBe(57)
+  it('should be at version 58 (E119-S07: userConsents consent ledger)', () => {
+    expect(db.verno).toBe(58)
   })
 
   it('should have searchFrecency table with compound primary key [entityType+entityId] (v53)', () => {

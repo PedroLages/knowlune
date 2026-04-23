@@ -20,8 +20,8 @@ beforeEach(async () => {
 })
 
 describe('E95-S05 schema bump (v57)', () => {
-  it('CHECKPOINT_VERSION is 57', () => {
-    expect(CHECKPOINT_VERSION).toBe(57)
+  it('CHECKPOINT_VERSION is 57 or higher (now 58 after E119-S07)', () => {
+    expect(CHECKPOINT_VERSION).toBeGreaterThanOrEqual(57)
   })
 
   it('opens cleanly on a fresh database', async () => {
