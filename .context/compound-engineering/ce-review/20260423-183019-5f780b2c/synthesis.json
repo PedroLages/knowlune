@@ -1,0 +1,67 @@
+{
+  "runId": "20260423-183019-5f780b2c",
+  "scope": "feature/e119-s13-annual-review-ico vs d8667a188e1ee8fd7afd2744d27a46526b4817c1",
+  "intent": "E119-S13 final story: annual review checklist, ICO SME self-assessment, compliance README, CURRENT_NOTICE_VERSION bump to 2026-05-01.1, ack-rate-report CLI script, and E2E test coverage for beta re-ack and full compliance lifecycle.",
+  "verdict": "Ready to merge",
+  "appliedFixes": 0,
+  "findings": [
+    {
+      "id": "F1",
+      "title": "process.exit() inside library functions (fetchAckedUserIds, fetchAllAuthUserIds)",
+      "severity": "P3",
+      "file": "scripts/compliance/ack-rate-report.ts",
+      "line": 95,
+      "confidence": 0.75,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Throw an Error instead of process.exit(1) in utility functions; handle process.exit at the top level. Not urgent for a read-only CLI script.",
+      "why_it_matters": "Calling process.exit from utility functions makes future testing impossible and is non-idiomatic. Low risk for a manual reporting tool but sets a bad pattern.",
+      "evidence": ["Line 95: console.error + process.exit(1) inside fetchAckedUserIds", "Line 132: same pattern in fetchAllAuthUserIds"]
+    },
+    {
+      "id": "F2",
+      "title": "Hard wait (waitForTimeout 500ms) without justification comment in dismiss test",
+      "severity": "P3",
+      "file": "tests/e2e/compliance/beta-reack.spec.ts",
+      "line": 340,
+      "confidence": 0.82,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add // waitForTimeout-ok: no-POST assertion requires time for any async POSTs to fire comment. Or use page.waitForResponse with .catch(() => {}) to explicitly confirm no POST fires.",
+      "why_it_matters": "ESLint test-patterns/no-hard-waits flags this. The wait is justified but needs a comment to suppress the warning cleanly.",
+      "evidence": ["Line ~340: await page.waitForTimeout(500) without justification comment"]
+    },
+    {
+      "id": "F3",
+      "title": "Supabase storage key discovery not documented in docs/solutions/",
+      "severity": "P3",
+      "file": "tests/e2e/compliance/beta-reack.spec.ts",
+      "line": 65,
+      "confidence": 0.90,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add a docs/solutions/ entry documenting that the Supabase JS client uses sb-{hostname.split('.')[0]}-auth-token (not sb-knowlune-auth-token) as the storage key. Future test authors will hit this.",
+      "why_it_matters": "This was a significant debugging discovery (30+ min). Without documentation, the next test author will hit the same 429 loop. The commit message is ephemeral; docs/solutions/ is durable.",
+      "evidence": ["Commit: 'Supabase JS client uses sb-supabase-auth-token (hostname-based) not sb-knowlune-auth-token'", "Existing tests in notice-acknowledgement.spec.ts use the wrong key and are broken by the same bug"]
+    }
+  ],
+  "residualRisks": [
+    "fetchAllAuthUserIds has no max-page safety guard; safe for beta scale but could loop forever on large tenants",
+    "Existing notice-acknowledgement.spec.ts tests remain broken (429 errors) — pre-existing issue, not introduced by this PR"
+  ],
+  "testingGaps": [
+    "ack-rate-report.ts has no unit tests — intentionally deferred per plan (manual CLI verification)"
+  ],
+  "learnings": [
+    "Supabase JS v2 storage key = sb-{URL hostname split('.')[0]}-auth-token, not sb-{projectRef}. For supabase.pedrolages.net → sb-supabase-auth-token",
+    "Session expires_at must use far-future value (2099) when page.clock advances to 2026+",
+    "Account deletion uses JWT iat for sessionRequiresReauth; test tokens need valid iat claim",
+    "page.context().route() with regex intercepts Supabase auth; page.route() glob patterns miss some URLs"
+  ]
+}
