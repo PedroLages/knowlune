@@ -27,6 +27,7 @@ import {
   GraduationCap,
   RefreshCw,
   Cloud,
+  Lock,
   type LucideIcon,
 } from 'lucide-react'
 import type { SettingsCategorySlug } from './settingsCategories'
@@ -374,5 +375,28 @@ export const SETTINGS_SEARCH_INDEX: SettingsSearchEntry[] = [
     keywords: ['sync', 'reset', 'clear data', 'wipe', 'rehydrate', 'danger'],
     category: 'sync',
     icon: Trash2,
+  },
+
+  // Privacy & Consent
+  {
+    label: 'Privacy & Consent',
+    description: 'Manage your data processing consents (GDPR)',
+    keywords: ['consent', 'privacy', 'gdpr', 'data', 'ai', 'tutor', 'embeddings', 'analytics', 'telemetry', 'marketing', 'email', 'withdraw', 'opt-out'],
+    category: 'privacy',
+    icon: Lock,
+  },
+  {
+    label: 'AI Tutor consent',
+    description: 'Allow or block AI tutor features',
+    keywords: ['ai', 'tutor', 'consent', 'privacy', 'data'],
+    category: 'privacy',
+    icon: Lock,
+  },
+  {
+    label: 'Analytics & Telemetry consent',
+    description: 'Allow or block usage analytics',
+    keywords: ['analytics', 'telemetry', 'tracking', 'privacy', 'consent'],
+    category: 'privacy',
+    icon: Lock,
   },
 ]

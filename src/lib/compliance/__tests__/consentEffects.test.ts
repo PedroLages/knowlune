@@ -9,40 +9,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ─── Hoisted mock factory ──────────────────────────────────────────────────────
 
-const {
-  mockSyncableWrite,
-  mockAbortAll,
-  mockUserConsentsToArray,
-  mockEmbeddingsClear,
-  mockLearnerModelsToArray,
-  mockLearnerModelsBulkPut,
-  mockAiUsageEventsClear,
-} = vi.hoisted(() => {
-  const mockUserConsentsToArray = vi.fn()
-  const mockUserConsentsEquals = vi.fn(() => ({ toArray: mockUserConsentsToArray }))
-  const mockUserConsentsWhere = vi.fn(() => ({ equals: mockUserConsentsEquals }))
-
-  const mockLearnerModelsToArray = vi.fn()
-  const mockLearnerModelsEquals = vi.fn(() => ({ toArray: mockLearnerModelsToArray }))
-  const mockLearnerModelsWhere = vi.fn(() => ({ equals: mockLearnerModelsEquals }))
-  const mockLearnerModelsBulkPut = vi.fn()
-
-  const mockEmbeddingsClear = vi.fn()
-  const mockAiUsageEventsClear = vi.fn()
+const { mockSyncableWrite, mockAbortAll } = vi.hoisted(() => {
   const mockSyncableWrite = vi.fn()
   const mockAbortAll = vi.fn()
-
-  return {
-    mockSyncableWrite,
-    mockAbortAll,
-    mockUserConsentsToArray,
-    mockEmbeddingsClear,
-    mockLearnerModelsWhere,
-    mockLearnerModelsBulkPut,
-    mockAiUsageEventsClear,
-    mockLearnerModelsToArray,
-    _mockUserConsentsWhere: mockUserConsentsWhere,
-  }
+  return { mockSyncableWrite, mockAbortAll }
 })
 
 vi.mock('@/lib/sync/syncableWrite', () => ({
