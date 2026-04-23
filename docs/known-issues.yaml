@@ -1476,3 +1476,21 @@ issues:
       - Compose: set FUNCTIONS_VERIFY_JWT=true; smoke-test every function
         (public webhooks like stripe-webhook must be moved to a separate
         no-verify route or use Kong's request-transformer).
+
+- id: KI-E119-S02-001
+  type: feature
+  summary: "ip_hash column in notice_acknowledgements is always NULL — GDPR gap"
+  file: supabase/migrations/20260428000001_notice_acknowledgements.sql
+  severity: medium
+  discovered_by: E119-S02
+  discovered_on: 2026-04-23
+  status: open
+  notes: |
+    The ip_hash column is intentionally NULL in all rows until a Supabase
+    Edge Function is implemented to capture and SHA-256-hash the client IP
+    server-side. The ack row still provides version + user_id + timestamp
+    evidence for GDPR Article 7, but the IP hash is a gap.
+    
+    Remediation: Create an Edge Function that intercepts ack inserts,
+    reads request.headers['x-forwarded-for'], hashes it with pgcrypto's
+    digest(), and writes the hash. Tracked for a future E119 chore.
