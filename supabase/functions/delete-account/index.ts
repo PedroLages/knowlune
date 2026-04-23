@@ -1,11 +1,13 @@
-// E19-S09 / B4 / E119-S03: Delete Account Edge Function
+// E19-S09 / B4 / E119-S03 / E119-S04: Delete Account Edge Function
 // Handles: POST /functions/v1/delete-account
 // Auth: requires Supabase JWT
 //
 // Two-phase deletion:
 //   Phase 1 (immediate, this function): soft-delete
+//     - Captures user email in pending_deletions table (E119-S04)
 //     - Stamps pending_deletion_at in user metadata
 //     - Sets deleted_at on auth.users (Supabase soft-delete)
+//     - Sends "deletion scheduled" email with 7-day cancel link (E119-S04)
 //     - Returns scheduledDeletionAt to the client
 //     - User can still log in to cancel during the 7-day grace period
 //
@@ -14,8 +16,11 @@
 //     - Cascades across all 38 sync tables + 4 Storage buckets
 //     - Anonymises Stripe record (retains customer + invoices for tax)
 //     - Permanently removes auth.users row
+//     - Sends "data deleted" receipt email using pending_deletions address (E119-S04)
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { sendEmail } from '../_shared/sendEmail.ts'
+import { deletionScheduledEmail } from '../_shared/emailTemplates.ts'
 
 // Env var validation — fail fast if misconfigured
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
@@ -48,8 +53,8 @@ function json(body: unknown, status = 200): Response {
   })
 }
 
-/** Authenticate the request using the caller's JWT. Returns userId or an error Response. */
-async function authenticate(req: Request): Promise<{ userId: string } | Response> {
+/** Authenticate the request using the caller's JWT. Returns userId + email or an error Response. */
+async function authenticate(req: Request): Promise<{ userId: string; userEmail: string | null } | Response> {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader?.startsWith('Bearer ')) {
     return json({ success: false, error: 'Unauthorized' }, 401)
@@ -70,7 +75,7 @@ async function authenticate(req: Request): Promise<{ userId: string } | Response
     return json({ success: false, error: 'Unauthorized' }, 401)
   }
 
-  return { userId: user.id }
+  return { userId: user.id, userEmail: user.email ?? null }
 }
 
 Deno.serve(async (req: Request) => {
@@ -87,17 +92,38 @@ Deno.serve(async (req: Request) => {
   try {
     const authResult = await authenticate(req)
     if (authResult instanceof Response) return authResult
-    const { userId } = authResult
+    const { userId, userEmail } = authResult
 
     // -------------------------------------------------------------------------
     // Phase 1: Soft-delete (immediate)
     //
-    // Step 1a: Stamp pending_deletion_at in user metadata so:
+    // Step 1a: Capture user email in pending_deletions BEFORE any PII scrub.
+    // This allows retention-tick to send a deletion receipt after hard-delete,
+    // even when auth.users is no longer accessible.
+    // Non-fatal: if the insert fails, log and continue — the deletion must not
+    // be blocked. The receipt email will be skipped if the row is missing.
+    // -------------------------------------------------------------------------
+    if (userEmail) {
+      const { error: pendingError } = await supabaseAdmin
+        .from('pending_deletions')
+        .upsert({ user_id: userId, email: userEmail, requested_at: new Date().toISOString() })
+
+      if (pendingError) {
+        // Non-fatal: log and continue. Deletion still proceeds.
+        // The receipt email will not be sent if this row is missing.
+        console.error('[delete-account] failed to insert pending_deletions row:', {
+          message: pendingError.message,
+        })
+      }
+    } else {
+      console.warn('[delete-account] user has no email address — pending_deletions row not created')
+    }
+
+    // Step 1b: Stamp pending_deletion_at in user metadata so:
     //   - cancel-account-deletion can verify and clear it
     //   - retention-tick can query for users past the grace period
     //
     // Must be done BEFORE auth.admin.deleteUser while the user is still reachable.
-    // -------------------------------------------------------------------------
     const pendingDeletionAt = new Date().toISOString()
 
     const { error: metaError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
@@ -147,6 +173,23 @@ Deno.serve(async (req: Request) => {
     // Phase 2 (hard-delete) will be triggered by retention-tick after the 7-day
     // grace period. See supabase/functions/retention-tick/index.ts and
     // supabase/functions/_shared/hardDeleteUser.ts.
+
+    // Step 1c: Send deletion-scheduled notification email (non-blocking).
+    // The cancel URL directs the user to the app Settings page to cancel.
+    // AC-4: email failure must never block the deletion response.
+    if (userEmail) {
+      const appUrl = Deno.env.get('APP_URL') || 'https://knowlune.pedrolages.net'
+      const cancelUrl = `${appUrl}/settings`
+      const template = deletionScheduledEmail(cancelUrl)
+      sendEmail({ to: userEmail, ...template }).then((result) => {
+        if (!result.sent && !(result as { skipped?: boolean }).skipped) {
+          console.error('[delete-account] deletion-scheduled email failed:', (result as { error?: string }).error)
+        }
+      }).catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err)
+        console.error('[delete-account] sendEmail threw unexpectedly:', message)
+      })
+    }
 
     return json({ success: true, scheduledDeletionAt })
   } catch (err) {
