@@ -54,9 +54,10 @@ export function MyDataSummary() {
       const result = await callExportDataFunction(accessToken)
 
       if ('status' in result) {
-        // Too-large: async export path (E119-S06) will handle this
+        // Async export path (E119-S06): job queued or legacy too-large signal.
+        // In both cases the user will receive an email with a signed download link.
         toastSuccess.exported(
-          "Your data is too large for instant export — we'll email you when it's ready."
+          "We're preparing your export — you'll receive an email with a download link."
         )
         return
       }

@@ -1,4 +1,4 @@
-// E119-S04: Deletion email templates — Deno-compatible shared module
+// E119-S04 / E119-S06: Deletion + export email templates — Deno-compatible shared module
 //
 // This is the authoritative source for the Edge Functions.
 // The frontend version at src/lib/compliance/emailTemplates.ts exports the
@@ -202,6 +202,185 @@ We hope Knowlune was helpful during your time with us.
 
 ---
 This is a confirmation that your deletion request has been processed.
+Knowlune · https://knowlune.pedrolages.net`
+
+  return { subject, html, text }
+}
+
+// ── E119-S06: Export email templates ─────────────────────────────────────────
+
+/**
+ * Email sent when an async large-data export is ready for download.
+ *
+ * Provides the signed Storage URL and the expiry date. The link is valid for
+ * 7 days (matching the Storage signed URL TTL of 604800 seconds).
+ *
+ * @param downloadUrl - Supabase Storage signed URL for the ZIP archive.
+ * @param expiresAt   - ISO 8601 date-time string when the link expires (UTC).
+ */
+export function exportReadyEmail(downloadUrl: string, expiresAt: string): EmailTemplate {
+  const subject = 'Your Knowlune data export is ready'
+  const expiryDisplay = expiresAt.length >= 10 ? expiresAt.slice(0, 10) : expiresAt
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${subject}</title>
+</head>
+<body style="margin:0;padding:0;background:#f9f9f9;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+    <tr>
+      <td style="padding:40px 20px;">
+        <table role="presentation" width="600" align="center" cellspacing="0" cellpadding="0" border="0"
+               style="background:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;width:100%;">
+          <tr>
+            <td style="background:#005bc1;padding:32px 40px;">
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;">Knowlune</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="margin:0 0 16px;color:#111827;font-size:20px;font-weight:600;">
+                Your data export is ready
+              </h2>
+              <p style="margin:0 0 16px;color:#374151;font-size:16px;line-height:1.6;">
+                Your Knowlune data export has been prepared and is ready to download.
+                The archive contains all your personal data in compliance with GDPR Articles 15 and 20.
+              </p>
+              <p style="margin:0 0 24px;color:#374151;font-size:16px;line-height:1.6;">
+                <strong>This link expires on ${expiryDisplay}.</strong>
+                Download your archive before then — it will not be available after the expiry date.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td style="border-radius:6px;background:#005bc1;">
+                    <a href="${downloadUrl}"
+                       style="display:inline-block;padding:12px 24px;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;border-radius:6px;">
+                      Download your data
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:24px 0 0;color:#6b7280;font-size:14px;line-height:1.6;">
+                If the button above doesn&apos;t work, copy and paste this URL into your browser:
+              </p>
+              <p style="margin:8px 0 0;color:#6b7280;font-size:12px;line-height:1.6;word-break:break-all;">
+                ${downloadUrl}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 40px;background:#f3f4f6;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.5;">
+                This email was sent because you requested a data export from your Knowlune account.
+                Knowlune &middot; <a href="https://knowlune.pedrolages.net" style="color:#9ca3af;">knowlune.pedrolages.net</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+
+  const text = `Your Knowlune data export is ready
+====================================
+
+Your Knowlune data export has been prepared and is ready to download.
+The archive contains all your personal data in compliance with GDPR Articles 15 and 20.
+
+This link expires on ${expiryDisplay}. Download your archive before then.
+
+Download your data:
+${downloadUrl}
+
+---
+This email was sent because you requested a data export from your Knowlune account.
+Knowlune · https://knowlune.pedrolages.net`
+
+  return { subject, html, text }
+}
+
+/**
+ * Email sent when an async large-data export fails after all retry attempts.
+ *
+ * Instructs the user to contact support. No technical details are included —
+ * they are logged server-side in the export-worker function.
+ */
+export function exportFailedEmail(): EmailTemplate {
+  const subject = "We couldn't build your data export"
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${subject}</title>
+</head>
+<body style="margin:0;padding:0;background:#f9f9f9;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+    <tr>
+      <td style="padding:40px 20px;">
+        <table role="presentation" width="600" align="center" cellspacing="0" cellpadding="0" border="0"
+               style="background:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;width:100%;">
+          <tr>
+            <td style="background:#005bc1;padding:32px 40px;">
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;">Knowlune</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="margin:0 0 16px;color:#111827;font-size:20px;font-weight:600;">
+                We couldn&apos;t build your data export
+              </h2>
+              <p style="margin:0 0 16px;color:#374151;font-size:16px;line-height:1.6;">
+                We attempted to prepare your Knowlune data export but were unable to complete it.
+                We apologise for the inconvenience.
+              </p>
+              <p style="margin:0 0 24px;color:#374151;font-size:16px;line-height:1.6;">
+                Please contact support and we&apos;ll help you obtain your data as soon as possible.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td style="border-radius:6px;background:#005bc1;">
+                    <a href="mailto:privacy@pedrolages.net?subject=Data+export+failed"
+                       style="display:inline-block;padding:12px 24px;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;border-radius:6px;">
+                      Contact support
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 40px;background:#f3f4f6;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.5;">
+                This email was sent because a data export was requested for your Knowlune account.
+                Knowlune &middot; <a href="https://knowlune.pedrolages.net" style="color:#9ca3af;">knowlune.pedrolages.net</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+
+  const text = `We couldn't build your data export
+=====================================
+
+We attempted to prepare your Knowlune data export but were unable to complete it.
+We apologise for the inconvenience.
+
+Please contact support and we'll help you obtain your data as soon as possible:
+privacy@pedrolages.net
+
+---
+This email was sent because a data export was requested for your Knowlune account.
 Knowlune · https://knowlune.pedrolages.net`
 
   return { subject, html, text }
