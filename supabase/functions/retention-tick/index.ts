@@ -176,8 +176,8 @@ Deno.serve(async (req: Request) => {
         if (capturedEmail) {
           const template = deletionCompleteEmail()
           sendEmail({ to: capturedEmail, ...template }).then((emailResult) => {
-            if (!emailResult.sent && !(emailResult as { skipped?: boolean }).skipped) {
-              console.error(`[retention-tick] receipt email failed for ${userId}:`, (emailResult as { error?: string }).error)
+            if (!emailResult.sent && !('skipped' in emailResult && emailResult.skipped)) {
+              console.error(`[retention-tick] receipt email failed for ${userId}:`, 'error' in emailResult ? emailResult.error : 'unknown error')
             }
           }).catch((err: unknown) => {
             const message = err instanceof Error ? err.message : String(err)

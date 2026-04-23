@@ -612,6 +612,23 @@ describe('getTableEntry', () => {
 })
 
 // ---------------------------------------------------------------------------
+// E119-S04 — CI probe-constants parity guardrail
+//
+// probe-constants.ts is a manual Node-compatible copy of TABLE_NAMES from
+// hardDeleteUser.ts (Deno). This test asserts parity so that adding a table
+// to the registry without updating probe-constants does not silently create
+// a GDPR erasure gap in the CI probe.
+// ---------------------------------------------------------------------------
+
+describe('tableRegistry — CI probe-constants parity (E119-S04)', () => {
+  it('probe-constants TABLE_NAMES matches ERASURE_TABLE_NAMES', async () => {
+    const { TABLE_NAMES: PROBE_TABLE_NAMES } = await import('../../../../scripts/ci/probe-constants.js')
+    const { ERASURE_TABLE_NAMES } = await import('../tableRegistry')
+    expect([...PROBE_TABLE_NAMES].sort()).toEqual([...ERASURE_TABLE_NAMES].sort())
+  })
+})
+
+// ---------------------------------------------------------------------------
 // E96-S01 — P3/P4 Supabase migration coverage guardrail
 // ---------------------------------------------------------------------------
 

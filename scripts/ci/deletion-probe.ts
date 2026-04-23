@@ -66,6 +66,7 @@ const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
 // ---------------------------------------------------------------------------
 
 const offenders: string[] = []
+const errors: string[] = [] // Tables/buckets that could not be queried (schema mismatch, missing column, etc.)
 
 console.log(`\nDeletion probe for user: ${USER_ID}`)
 console.log(`Checking ${TABLE_NAMES.length} tables and ${STORAGE_BUCKETS.length} Storage buckets...\n`)
@@ -79,9 +80,11 @@ for (const table of TABLE_NAMES) {
       .eq('user_id', USER_ID)
 
     if (error) {
-      // Table may not have a user_id column or may not exist — skip silently
-      // but warn so CI runners can investigate unexpected schema changes.
+      // Table may not have a user_id column or may not exist.
+      // Track as an error (not a clean result) so a probe that errors on all
+      // tables is distinguishable from a probe where all tables are clean.
       console.warn(`  [WARN] Could not query table "${table}": ${error.message}`)
+      errors.push(`table:${table} (query error: ${error.message})`)
       continue
     }
 
@@ -107,6 +110,7 @@ for (const bucket of STORAGE_BUCKETS) {
 
     if (error) {
       console.warn(`  [WARN] Could not list bucket "${bucket}": ${error.message}`)
+      errors.push(`bucket:${bucket} (list error: ${error.message})`)
       continue
     }
 
@@ -128,8 +132,21 @@ for (const bucket of STORAGE_BUCKETS) {
 
 console.log('')
 
+if (errors.length > 0) {
+  console.warn(`\n${errors.length} table/bucket(s) could not be queried (schema drift or config issue):`)
+  for (const e of errors) {
+    console.warn(`  - ${e}`)
+  }
+  // If a majority of tables errored, the probe configuration is likely broken.
+  if (errors.length >= TABLE_NAMES.length / 2) {
+    console.error('\nERROR: More than half of all tables could not be queried. Probe may be misconfigured.')
+    console.error('Check SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and that the Supabase project is accessible.')
+    process.exit(2)
+  }
+}
+
 if (offenders.length > 0) {
-  console.error('ERASURE INCOMPLETE — data found for user after deletion:')
+  console.error('\nERASURE INCOMPLETE — data found for user after deletion:')
   for (const offender of offenders) {
     console.error(`  - ${offender}`)
   }
@@ -142,6 +159,10 @@ if (offenders.length > 0) {
   console.error('  scripts/ci/probe-constants.ts → TABLE_NAMES (this probe)')
   process.exit(1)
 } else {
-  console.log(`All tables and buckets clean for user ${USER_ID}`)
+  const queriedCount = TABLE_NAMES.length + STORAGE_BUCKETS.length - errors.length
+  console.log(`All ${queriedCount} queried tables and buckets clean for user ${USER_ID}`)
+  if (errors.length > 0) {
+    console.log(`(${errors.length} could not be queried — see warnings above)`)
+  }
   process.exit(0)
 }

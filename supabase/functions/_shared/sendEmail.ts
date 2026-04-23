@@ -49,6 +49,11 @@ export async function sendEmail(payload: SendEmailPayload): Promise<SendEmailRes
     return { sent: false, skipped: true }
   }
 
+  // 10-second timeout — prevents email provider latency from blocking the
+  // deletion response or consuming the full Edge Function wall-clock budget.
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 10_000)
+
   try {
     const response = await fetch(providerUrl, {
       method: 'POST',
@@ -63,7 +68,9 @@ export async function sendEmail(payload: SendEmailPayload): Promise<SendEmailRes
         html: payload.html,
         text: payload.text,
       }),
+      signal: controller.signal,
     })
+    clearTimeout(timeout)
 
     if (!response.ok) {
       const statusText = await response.text().catch(() => response.statusText)
@@ -75,6 +82,7 @@ export async function sendEmail(payload: SendEmailPayload): Promise<SendEmailRes
 
     return { sent: true }
   } catch (err) {
+    clearTimeout(timeout)
     const message = err instanceof Error ? err.message : String(err)
     console.error('[sendEmail] fetch failed:', message)
     return { sent: false, error: message }
