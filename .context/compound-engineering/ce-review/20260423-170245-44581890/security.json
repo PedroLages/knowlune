@@ -1,0 +1,29 @@
+{
+  "reviewer": "security",
+  "findings": [
+    {
+      "title": "Empty RETENTION_TICK_SECRET bypasses auth check",
+      "severity": "P2",
+      "file": "supabase/functions/retention-tick/index.ts",
+      "line": 365,
+      "why_it_matters": "Deno.env.get() returns an empty string '' for an env var that is set to empty. In JavaScript, '' is falsy, so the if (RETENTION_TICK_SECRET) block is skipped. Any caller can trigger the retention job (which deletes chat_conversations rows and purges storage) without authentication. This is only exploitable if someone misconfigures the env var as empty rather than not-set, but the consequence is an unauthenticated data-deletion endpoint.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "suggested_fix": "Change the guard: if (RETENTION_TICK_SECRET && RETENTION_TICK_SECRET.length > 0) or use RETENTION_TICK_SECRET?.trim(). The warning path should also fire for empty-string case.",
+      "confidence": 0.80,
+      "evidence": [
+        "Line 51: const RETENTION_TICK_SECRET = Deno.env.get('RETENTION_TICK_SECRET')",
+        "Line 365: if (RETENTION_TICK_SECRET) { — empty string is falsy, skips auth block",
+        "Deno.env.get() returns '' for empty env var: https://deno.land/api?s=Deno.env"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "GET method is accepted alongside POST. Cloudflare cron uses POST per runbook, but GET acceptance means any URL fetcher without a body (e.g., monitoring probes) could trigger the job if RETENTION_TICK_SECRET is not set. Low risk given the secret guard."
+  ],
+  "testing_gaps": [
+    "No test verifies that an empty-string RETENTION_TICK_SECRET leaves the endpoint unprotected"
+  ]
+}

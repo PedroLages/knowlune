@@ -1,0 +1,30 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "title": "Cloudflare Worker silently swallows Deno boot-crash returning HTTP 200",
+      "severity": "P2",
+      "file": "cloudflare-workers/retention-cron.js",
+      "line": 36,
+      "why_it_matters": "Known pattern from docs/solutions/best-practices/supabase-functions-invoke-silent-success-guard-2026-04-22.md: Supabase Edge Runtime returns HTTP 200 with body { error: '...', success: null } on Deno worker boot crash. The Worker only checks res.ok || res.status === 207, so a boot-crash logs as 'responded 200' — success. The cron shows green. GDPR enforcement silently did not run. The HEARTBEAT_MISS would fire 48h later, but a 48h gap in enforcement is worse than an immediate alert. This is a known failure mode for this infrastructure.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "suggested_fix": "Parse the response body as JSON and check data?.success === false or data?.error. Log at error level if body indicates failure even on 200: const data = JSON.parse(body); if (res.ok && (data?.error || data?.success === false)) { console.error('[retention-cron] boot-crash or app failure detected:', body); }",
+      "confidence": 0.88,
+      "evidence": [
+        "cloudflare-workers/retention-cron.js line 36-40: if (res.ok || res.status === 207) { console.log(...) } — no body parsing",
+        "docs/solutions/best-practices/supabase-functions-invoke-silent-success-guard-2026-04-22.md: 'Supabase edge-runtime router returns HTTP 200 in several cases where the application-level operation did not succeed'",
+        "retention-tick index.ts returns json({ success: false, error }, 500) on unexpected errors — but Deno boot crash bypasses the function entirely"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "Concurrent invocations: if the Cloudflare cron fires twice simultaneously (e.g., deployment retry), two retention-tick runs could overlap. Both would see the same rows to delete, both would attempt to delete them, and one would delete 0 rows (idempotent). The audit log would have two run_ids for the same day. This is acceptable but could confuse monitoring.",
+    "Edge Function timeout: the function iterates 47 entries sequentially, makes multiple DB queries per entry, and does the grace finaliser loop. On a day with many expired users, the function could time out. Supabase Edge Functions have a default timeout. No explicit timeout handling is present."
+  ],
+  "testing_gaps": [
+    "No test for the Cloudflare Worker body-parsing (would need Worker test environment)"
+  ]
+}

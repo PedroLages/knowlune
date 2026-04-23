@@ -1,0 +1,26 @@
+{
+  "reviewer": "deployment-verification-agent",
+  "checklist": {
+    "pre_deploy_blocking": [
+      "Apply migration 20260501000001_retention_audit_log.sql BEFORE deploying the Edge Function (Edge Function writes to this table on first run)",
+      "Set RETENTION_TICK_SECRET env var in Supabase Edge Function environment (non-empty string)",
+      "Set RETENTION_TICK_SECRET as Cloudflare Worker secret: wrangler secret put RETENTION_TICK_SECRET",
+      "Set SUPABASE_FUNCTIONS_URL as Cloudflare Worker secret: wrangler secret put SUPABASE_FUNCTIONS_URL"
+    ],
+    "verification_queries": [
+      "SELECT table_name FROM information_schema.tables WHERE table_name = 'retention_audit_log'; — expect 1 row",
+      "\\d public.retention_audit_log — verify 8 columns (id, run_id, artefact, rows_affected, started_at, completed_at, error, skipped)",
+      "SELECT indexname FROM pg_indexes WHERE tablename = 'retention_audit_log'; — expect 3 indexes (PK + 2 named)",
+      "SELECT count(*) FROM public.retention_audit_log; — expect 0 (before first run)"
+    ],
+    "rollback": "supabase/migrations/rollback/20260501000001_retention_audit_log_rollback.sql (MISSING — must be created)",
+    "monitoring_focus": [
+      "Check Cloudflare Worker logs at 03:05 UTC for [retention-cron] responded 200",
+      "Check retention_audit_log after first run: SELECT count(*) should be 47",
+      "Watch for [HEARTBEAT_MISS] in Edge Function logs if no run completes"
+    ]
+  },
+  "findings": [],
+  "residual_risks": [],
+  "testing_gaps": []
+}

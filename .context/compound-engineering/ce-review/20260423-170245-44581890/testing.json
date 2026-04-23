@@ -1,0 +1,50 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "title": "HTTP handler (200/207/401 paths) has zero test coverage",
+      "severity": "P2",
+      "file": "supabase/functions/retention-tick/__tests__/tick.test.ts",
+      "line": 8,
+      "why_it_matters": "The auth rejection (returns 401), the 200 vs 207 return code logic, and the complete invocation flow (heartbeat → grace finaliser → enforcement loop → audit insert → return) are all untested. The test file explicitly documents this as a design choice, but it means critical behavior — including GDPR enforcement running to completion — is only verifiable through the manual dry-run. A regression in the Deno.serve handler (e.g., the failedEntries logic broken) would pass all tests.",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Add integration-style tests using Deno's built-in fetch against a locally-spawned server via Deno.serve + TestServer, or use a test-mode export that wraps the handler logic. Alternatively, extract the core handler logic into a testable function separate from Deno.serve.",
+      "confidence": 0.85,
+      "evidence": [
+        "Line 8-10: 'They do NOT spin up the full Deno.serve handler (which needs a real HTTP environment)'",
+        "No test exercises the path: RETENTION_TICK_SECRET mismatch → 401",
+        "No test verifies: failedEntries.length > 0 → HTTP 207",
+        "No test verifies: all clean → HTTP 200"
+      ],
+      "pre_existing": false
+    },
+    {
+      "title": "No test for null created_at objects in exports bucket purge",
+      "severity": "P3",
+      "file": "supabase/functions/retention-tick/__tests__/tick.test.ts",
+      "line": 133,
+      "why_it_matters": "The purge logic skips objects with null created_at (documented in code comment). If Supabase Storage returns null for created_at on some objects (which can happen on older objects), they will never be purged. There is no test confirming this skip behavior is intentional and correct — a future change might accidentally delete null-created_at objects or change the skip logic.",
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "suggested_fix": "Add a test case in the purge logic tests: listResult includes an object with created_at: null → object is NOT included in pathsToRemove.",
+      "confidence": 0.72,
+      "evidence": [
+        "Line 187-189 of index.ts: const createdAt = obj.created_at ? new Date(obj.created_at) : null; if (createdAt && createdAt < cutoff)",
+        "Mock type at line 33 of tick.test.ts forces created_at to be a string, preventing null test"
+      ],
+      "pre_existing": false
+    }
+  ],
+  "residual_risks": [
+    "The grace finaliser (listUsers loop, hardDeleteUser, sendEmail, pending_deletions cleanup) has no unit tests in this file. This was pre-existing from S03 but S11 makes this loop more critical."
+  ],
+  "testing_gaps": [
+    "HTTP handler paths (200, 207, 401) not tested",
+    "Audit batch insert failure path not tested",
+    "null created_at storage object skip not tested",
+    "Grace finaliser integration path not tested"
+  ]
+}
