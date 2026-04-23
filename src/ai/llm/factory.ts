@@ -21,9 +21,8 @@ import { OllamaLLMClient } from './ollama-client'
 import { LLMError } from './types'
 import type { LLMMessage } from './types'
 import { ConsentError } from '@/ai/lib/ConsentError'
-import { isGranted } from '@/lib/compliance/consentService'
+import { isGranted, CONSENT_PURPOSES } from '@/lib/compliance/consentService'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { CONSENT_PURPOSES } from '@/lib/compliance/consentService'
 
 /**
  * Get LLM client for configured AI provider

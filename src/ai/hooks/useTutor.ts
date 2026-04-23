@@ -120,7 +120,10 @@ export function useTutor(options: UseTutorOptions): UseTutorResult {
   // Abort streaming on unmount + session boundary detection (E72-S03)
   useEffect(() => {
     return () => {
-      abortRef.current?.abort()
+      if (abortRef.current) {
+        abortRef.current.abort()
+        unregisterAIRequest(abortRef.current)
+      }
       // Session boundary: component unmount (navigation away)
       triggerSessionBoundaryUpdate()
     }
