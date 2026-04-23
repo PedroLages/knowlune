@@ -90,6 +90,24 @@ describe('useProviderReconsent', () => {
   })
 
   describe('accept path', () => {
+    it('does NOT call onRetry when grantConsent write fails', async () => {
+      vi.mocked(grantConsent).mockResolvedValueOnce({ success: false, error: 'IDB error' })
+      const onRetry = vi.fn()
+      const { result } = renderHook(() => useProviderReconsent('user-1', { onRetry }))
+
+      act(() => {
+        result.current.handleAIError(new ProviderReconsentError('ai_tutor', 'openai'))
+      })
+
+      await act(async () => {
+        await result.current.modalProps.onAccept()
+      })
+
+      // Modal closes but onRetry is suppressed to avoid an immediate re-trigger loop
+      expect(result.current.modalProps.open).toBe(false)
+      expect(onRetry).not.toHaveBeenCalled()
+    })
+
     it('calls grantConsent with correct evidence.provider_id', async () => {
       const { result } = renderHook(() => useProviderReconsent('user-1'))
 

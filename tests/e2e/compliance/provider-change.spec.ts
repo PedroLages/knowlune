@@ -55,26 +55,36 @@ async function setupAuthAndConsent(page: import('@playwright/test').Page) {
         `sb-${location.hostname.split('.')[0]}-auth-token`,
         JSON.stringify({ currentSession: session, expiresAt: 9999999999 }),
       )
-      // Seed a userConsents row with provider_id='openai'
-      // The app reads from IndexedDB via Dexie; we seed via indexedDB directly.
-      const openRequest = indexedDB.open('knowlune-db')
-      openRequest.onsuccess = () => {
-        const db = openRequest.result
-        if (!db.objectStoreNames.contains('userConsents')) return
-        const tx = db.transaction('userConsents', 'readwrite')
-        const store = tx.objectStore('userConsents')
-        store.put({
-          id: 'consent-ai-tutor-openai',
-          userId,
-          purpose: 'ai_tutor',
-          grantedAt: '2026-04-01T10:00:00.000Z',
-          withdrawnAt: null,
-          noticeVersion: '2026-04-23.1',
-          evidence: { provider_id: 'openai' },
-          createdAt: '2026-04-01T10:00:00.000Z',
-          updatedAt: '2026-04-01T10:00:00.000Z',
-        })
-      }
+      // Seed a userConsents row with provider_id='openai'.
+      // The app reads from IndexedDB via Dexie; we seed via the IDB API directly.
+      // Must return a Promise so page.evaluate awaits completion before navigating.
+      return new Promise<void>((resolve, reject) => {
+        const openRequest = indexedDB.open('knowlune-db')
+        openRequest.onerror = () => resolve() // IDB not yet initialised — skip seed
+        openRequest.onsuccess = () => {
+          const db = openRequest.result
+          if (!db.objectStoreNames.contains('userConsents')) {
+            db.close()
+            resolve()
+            return
+          }
+          const tx = db.transaction('userConsents', 'readwrite')
+          const store = tx.objectStore('userConsents')
+          store.put({
+            id: 'consent-ai-tutor-openai',
+            userId,
+            purpose: 'ai_tutor',
+            grantedAt: '2026-04-01T10:00:00.000Z',
+            withdrawnAt: null,
+            noticeVersion: '2026-04-23.1',
+            evidence: { provider_id: 'openai' },
+            createdAt: '2026-04-01T10:00:00.000Z',
+            updatedAt: '2026-04-01T10:00:00.000Z',
+          })
+          tx.oncomplete = () => { db.close(); resolve() }
+          tx.onerror = () => { db.close(); reject(tx.error) }
+        }
+      })
     },
     [MOCK_USER_ID, MOCK_SESSION] as const,
   )

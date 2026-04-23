@@ -52,6 +52,10 @@ export interface ProviderReconsentModalProps {
 export function ProviderReconsentModal({
   open,
   providerId,
+  // purpose is accepted in props for future per-purpose copy variation and
+  // for the `useProviderReconsent` hook to track which purpose to re-grant.
+  // The component currently shows provider-level information that is identical
+  // across all AI purposes, so it is intentionally unused in the JSX.
   purpose: _purpose,
   noticeUpdatePending = false,
   noticeVersion,

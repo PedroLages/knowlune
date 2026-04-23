@@ -106,8 +106,11 @@ export function useProviderReconsent(
     const result = await grantConsent(userId, pendingPurpose, { provider_id: pendingProvider })
     if (!result.success) {
       console.error('[useProviderReconsent] grantConsent failed:', result.error)
-      // Still close the modal — the user opted in; transient write failures
-      // should not force them to see the modal again immediately.
+      // Consent write failed — do NOT retry the AI call; isGrantedForProvider
+      // will still return false and immediately re-trigger the modal, creating
+      // a confusing loop. Leave the modal closed but don't fire onRetry.
+      setOpen(false)
+      return
     }
 
     // If the notice was also updated, write an acknowledgement.
