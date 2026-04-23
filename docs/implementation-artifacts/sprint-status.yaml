@@ -1462,7 +1462,9 @@ development_status:
   epic-119: in-progress
   119-1-privacy-notice-source-of-truth-versioning: ready-for-dev
   119-2-notice-acknowledgement-signup-material-change-reack: ready-for-dev
-  119-3-registry-driven-erasure-cascade: ready-for-dev
+  119-3-registry-driven-erasure-cascade:
+    status: done
+    finishedAt: "2026-04-23"
   119-4-deletion-verification-confirmation-email: ready-for-dev
   119-5-registry-driven-export-zip: ready-for-dev
   119-6-large-export-async-path-signed-url: ready-for-dev
