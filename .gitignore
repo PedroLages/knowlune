@@ -4,6 +4,9 @@ dist/
 .env
 *.local
 
+# Wrangler local state (Cloudflare Workers deployment cache)
+.wrangler/
+
 # Python bytecode
 __pycache__/
 *.py[cod]

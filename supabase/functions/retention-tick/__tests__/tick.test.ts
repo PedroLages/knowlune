@@ -197,6 +197,32 @@ Deno.test('purgeExportsBucket logic: 2 expired objects removed', async () => {
   assertEquals(pathsToRemove, ['user1/export-old.zip', 'user2/export-old.zip'])
 })
 
+Deno.test('purgeExportsBucket logic: null created_at objects are skipped (never deleted)', () => {
+  // Supabase Storage may return null created_at for some objects.
+  // These must be skipped — we cannot determine their age, so we err on the side
+  // of not deleting them. This matches the index.ts behavior:
+  //   const createdAt = obj.created_at ? new Date(obj.created_at) : null
+  //   if (createdAt && createdAt < cutoff) { pathsToRemove.push(obj.name) }
+  const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString()
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+
+  const listResult: Array<{ name: string; created_at: string | null }> = [
+    { name: 'user1/export-old.zip', created_at: eightDaysAgo },
+    { name: 'user2/export-unknown-age.zip', created_at: null },  // null → skip
+  ]
+
+  const pathsToRemove = listResult
+    .filter(obj => {
+      const createdAt = obj.created_at ? new Date(obj.created_at) : null
+      return createdAt !== null && createdAt < cutoff
+    })
+    .map(obj => obj.name)
+
+  // Only the expired object with a known age is included; null-created_at is skipped
+  assertEquals(pathsToRemove.length, 1)
+  assertEquals(pathsToRemove, ['user1/export-old.zip'])
+})
+
 Deno.test('purgeExportsBucket logic: pagination fetches all 150 expired objects', async () => {
   const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString()
 

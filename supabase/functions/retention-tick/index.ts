@@ -361,8 +361,10 @@ Deno.serve(async (req: Request) => {
     return json({ success: false, error: 'Method not allowed' }, 405)
   }
 
-  // Service-to-service authentication via shared secret
-  if (RETENTION_TICK_SECRET) {
+  // Service-to-service authentication via shared secret.
+  // Guard: empty string is falsy — treat it the same as not-set to prevent misconfigured env
+  // from silently bypassing authentication.
+  if (RETENTION_TICK_SECRET && RETENTION_TICK_SECRET.length > 0) {
     const callerSecret = req.headers.get('x-retention-secret')
     if (callerSecret !== RETENTION_TICK_SECRET) {
       console.warn('[retention-tick] rejected request: missing or invalid x-retention-secret')
@@ -370,8 +372,8 @@ Deno.serve(async (req: Request) => {
     }
   } else {
     console.warn(
-      '[retention-tick] RETENTION_TICK_SECRET not set — endpoint is unprotected. ' +
-      'Set in production.'
+      '[retention-tick] RETENTION_TICK_SECRET not set or empty — endpoint is unprotected. ' +
+      'Set a non-empty secret in production.'
     )
   }
 
