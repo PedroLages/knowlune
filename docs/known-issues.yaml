@@ -1494,3 +1494,115 @@ issues:
     Remediation: Create an Edge Function that intercepts ack inserts,
     reads request.headers['x-forwarded-for'], hashes it with pgcrypto's
     digest(), and writes the hash. Tracked for a future E119 chore.
+
+- id: KI-E119-POST-001
+  type: reliability
+  summary: "RETENTION_TICK_SECRET not set on Supabase Edge + Cloudflare Worker — retention-tick cron not yet firing in prod"
+  file: supabase/functions/retention-tick/index.ts
+  severity: medium
+  discovered_by: E119-post-epic
+  discovered_on: 2026-04-24
+  status: open
+  notes: |
+    Phase A of E119 pre-beta deployment applied all 5 migrations and created
+    Storage buckets on titan, but the shared-secret retention-tick auth flow
+    is not yet wired:
+      * Supabase Edge env var RETENTION_TICK_SECRET is unset (no daily purge).
+      * Cloudflare Worker secret RETENTION_TICK_SECRET is unset (no cron caller).
+
+    Cloudflare side is blocked on `wrangler login` failing with an
+    invalid_grant error — refresh token is stale. wrangler.toml also needs an
+    `account_id` added.
+
+    Remediation (before beta or during first week):
+      1. Supabase side: generate a 32-byte base64 secret, set in the
+         docker-compose .env on titan under supabase-edge-functions, restart
+         that container.
+      2. Cloudflare side: run `wrangler login` in an interactive terminal,
+         add account_id to wrangler.toml, run
+         `wrangler secret put RETENTION_TICK_SECRET` and
+         `wrangler secret put SUPABASE_FUNCTIONS_URL`, deploy the Worker.
+      3. Manual smoke test: until cron is live, trigger retention-tick once
+         a day via curl with the x-retention-secret header. Only affects
+         storage:exports purging and chat_conversations rolling delete;
+         neither is critical in the first week of beta.
+
+- id: KI-E119-POST-002
+  type: code
+  summary: "chat_conversations retention: code deletes pinned but policy says don't — reconciliation needed (honor pinned)"
+  file: supabase/functions/retention-tick/index.ts
+  severity: medium
+  discovered_by: E119-post-epic
+  discovered_on: 2026-04-24
+  status: scheduled
+  scheduled_for: E119-S14 (next session)
+  notes: |
+    Three artifacts disagree on chat_conversations retention:
+      * retention-tick/index.ts:28-31 — flat 365d rolling delete for ALL
+        conversations, ignoring is_pinned because the column doesn't exist.
+      * retentionPolicy.ts:170 — period: null (indefinite), with notes
+        claiming "365d rolling for non-pinned; pinned indefinite".
+      * retentionParity.test.ts:234-238 — asserts chat_conversations IS in
+        INDEFINITE_RETENTION_ARTEFACTS.
+
+    Decision (user-approved 2026-04-24): honor pinned. Silently deleting a
+    user's pinned conversation after 365d breaks trust regardless of GDPR.
+
+    Follow-up story (E119-S14) will:
+      1. Add is_pinned BOOL NOT NULL DEFAULT false migration to
+         chat_conversations (or its client-only equivalent) — confirm
+         schema location first.
+      2. Filter retention-tick SQL to WHERE is_pinned = false.
+      3. Update retentionPolicy.ts period to '365d rolling (excludes pinned)'.
+      4. Update docs/compliance/retention.md section 3 to match.
+      5. Remove the INDEFINITE_RETENTION_ARTEFACTS.toContain('chat_conversations')
+         assertion in retentionParity.test.ts.
+
+    Until this lands, retention-tick is effectively disabled anyway
+    (KI-E119-POST-001), so no user harm has occurred.
+
+- id: KI-E119-POST-003
+  type: reliability
+  summary: "Real-Supabase integration smoke test missing — lifecycle.spec.ts is fully mocked"
+  file: tests/e2e/compliance/lifecycle.spec.ts
+  severity: medium
+  discovered_by: E119-post-epic
+  discovered_on: 2026-04-24
+  status: scheduled
+  scheduled_for: E119-S15 (before beta launch)
+  notes: |
+    The crown-jewel compliance lifecycle test uses page.route() to mock every
+    Supabase endpoint and addInitScript to inject session localStorage. S13
+    discovered two brittle patterns along the way (JWT iat claim drift,
+    localStorage key hostname derivation). Neither would have been caught
+    without real auth.
+
+    Follow-up story (E119-S15) will add
+    tests/e2e/compliance/lifecycle-real-supabase.spec.ts tagged @integration:
+      * Uses a test-user helper (tests/support/helpers/titan-test-user.ts)
+        that creates a user via service-role admin API (with auto-confirm),
+        returns session, and cleans up in test.afterEach.
+      * Exercises signup → ack → grant → withdraw → export → deletion.
+      * Runs against titan when KNOWLUNE_INTEGRATION=1 is set; excluded
+        from default npm run test:e2e.
+      * Run once manually before beta with screenshot evidence.
+
+- id: KI-E119-POST-004
+  type: security
+  summary: "ip_hash Edge Function deferred to post-beta — known GDPR Art. 7 defence-in-depth gap"
+  file: supabase/migrations/20260428000001_notice_acknowledgements.sql
+  severity: low
+  discovered_by: E119-post-epic
+  discovered_on: 2026-04-24
+  status: scheduled
+  scheduled_for: post-beta
+  notes: |
+    Supersedes KI-E119-S02-001 (accepted-risk rationale now recorded here).
+    user_id + notice_version + acknowledged_at already satisfies GDPR Art. 7
+    proof-of-consent. IP hash is a defence-in-depth signal against
+    repudiation ("someone else on my network clicked it"), which is
+    near-zero risk for solo-founder closed beta.
+
+    Ship-vs-accept decision 2026-04-24: defer. Revisit after first 20 beta
+    users, or sooner if ICO audit becomes plausible. Implementation plan
+    preserved in KI-E119-S02-001.
