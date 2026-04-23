@@ -28,10 +28,24 @@ export interface ExportManifest {
   contactEmail: string
 }
 
-/** Returned when the user's data exceeds the 500 MB streaming threshold. */
+/**
+ * Returned when the user's data exceeds the 500 MB streaming threshold.
+ * The legacy shape from S05 — kept for backward compatibility.
+ */
 export interface ExportTooLargeResponse {
   status: 'too-large'
   route: 'async'
+}
+
+/**
+ * Returned (HTTP 202) when an async export job has been enqueued.
+ * The user will receive a signed URL by email when the job completes.
+ * Shape from S06 — supersedes ExportTooLargeResponse for the async path.
+ */
+export interface ExportQueuedResponse {
+  status: 'queued'
+  eta: string
+  request_id: string
 }
 
 /** Successful export response. */
@@ -40,7 +54,7 @@ export interface ExportSuccessResponse {
 }
 
 /** Union of all possible callExportDataFunction outcomes. */
-export type ExportDataResponse = ExportSuccessResponse | ExportTooLargeResponse
+export type ExportDataResponse = ExportSuccessResponse | ExportTooLargeResponse | ExportQueuedResponse
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -51,6 +65,14 @@ function isTooLarge(body: unknown): body is ExportTooLargeResponse {
     typeof body === 'object' &&
     body !== null &&
     (body as Record<string, unknown>).status === 'too-large'
+  )
+}
+
+function isQueued(body: unknown): body is ExportQueuedResponse {
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    (body as Record<string, unknown>).status === 'queued'
   )
 }
 
@@ -97,11 +119,12 @@ export async function callExportDataFunction(
     throw new Error(`Network error calling export-data function: ${message}`)
   }
 
-  // Handle too-large: the Edge Function returns 200 JSON with status:'too-large'
-  // or a non-200 JSON body
+  // Handle async path (HTTP 202) and too-large legacy response (HTTP 200 + JSON status)
   const contentType = response.headers.get('Content-Type') ?? ''
 
-  if (!response.ok || contentType.includes('application/json')) {
+  // HTTP 202 is always a JSON queued response from the async path (S06).
+  // HTTP 200 with application/json content means an error or legacy too-large signal.
+  if (response.status === 202 || !response.ok || contentType.includes('application/json')) {
     let body: unknown
     try {
       body = await response.json()
@@ -109,6 +132,12 @@ export async function callExportDataFunction(
       throw new Error(`export-data function returned ${response.status} with non-JSON body`)
     }
 
+    // S06 async queued response (HTTP 202)
+    if (isQueued(body)) {
+      return body
+    }
+
+    // Legacy S05 too-large response (HTTP 200 with status:'too-large')
     if (isTooLarge(body)) {
       return body
     }

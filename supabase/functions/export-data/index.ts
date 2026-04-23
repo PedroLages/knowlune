@@ -122,6 +122,10 @@ const VAULT_FIELDS: Record<string, string[]> = {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')
+// Shared secret used to authenticate the fire-and-forget call to export-worker.
+// If absent, the job is still enqueued but the worker is not immediately invoked
+// (S11 retention-tick or a manual retry can pick it up later).
+const EXPORT_WORKER_SECRET = Deno.env.get('EXPORT_WORKER_SECRET')
 
 if (!SUPABASE_URL) throw new Error('SUPABASE_URL is required')
 if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY is required')
@@ -192,6 +196,119 @@ function stripVaultFields(row: Record<string, unknown>, table: string): boolean 
 }
 
 // ---------------------------------------------------------------------------
+// Async export path (E119-S06)
+// ---------------------------------------------------------------------------
+
+/**
+ * Handle the async export path when estimated data size exceeds MAX_EXPORT_BYTES.
+ *
+ * Flow:
+ *   1. Check for an existing active (queued/processing) job for this user.
+ *      If found, return 202 with the existing request_id (de-duplication).
+ *   2. Insert a new job using ON CONFLICT DO NOTHING against the partial
+ *      unique index (export_jobs_active_unique). This handles the concurrent
+ *      race where two requests both pass the check before either inserts.
+ *      If insert yields nothing (conflict), re-query for the active job.
+ *   3. Fire-and-forget POST to export-worker. Job stays queued if worker
+ *      call fails — S11 cron or a user retry will pick it up later.
+ *   4. Return 202 { status: 'queued', eta, request_id }.
+ */
+async function handleAsyncExport(userId: string): Promise<Response> {
+  // Step 1: check for existing active job (de-duplication).
+  const { data: existing, error: selectError } = await supabaseAdmin
+    .from('export_jobs')
+    .select('request_id')
+    .eq('user_id', userId)
+    .in('status', ['queued', 'processing'])
+    .limit(1)
+    .maybeSingle()
+
+  if (selectError) {
+    console.error('[export-data] async path: de-dup select error:', selectError.message)
+    // Non-fatal: continue to insert and let ON CONFLICT handle it.
+  }
+
+  if (existing) {
+    console.log(
+      `[export-data] async path: active job exists for user ${userId}, ` +
+        `request_id=${existing.request_id}`
+    )
+    return json(
+      { status: 'queued', eta: 'within a few minutes', request_id: existing.request_id },
+      202
+    )
+  }
+
+  // Step 2: insert new job. ON CONFLICT handles the race condition where two
+  // concurrent requests both pass the de-duplication check.
+  // Note: Supabase JS client does not expose ON CONFLICT directly for .insert().
+  // We use .upsert() with ignoreDuplicates or raw SQL via rpc if needed.
+  // Since the partial unique index is on (user_id) WHERE status IN ('queued','processing'),
+  // we attempt a plain insert and catch the conflict gracefully.
+  const { data: newJob, error: insertError } = await supabaseAdmin
+    .from('export_jobs')
+    .insert({ user_id: userId })
+    .select('request_id')
+    .maybeSingle()
+
+  let requestId: string
+
+  if (insertError) {
+    if (insertError.code === '23505') {
+      // Unique constraint violation — another request raced us. Re-query.
+      console.log(`[export-data] async path: concurrent insert conflict for user ${userId}, re-querying`)
+      const { data: raceJob, error: raceSelectError } = await supabaseAdmin
+        .from('export_jobs')
+        .select('request_id')
+        .eq('user_id', userId)
+        .in('status', ['queued', 'processing'])
+        .limit(1)
+        .maybeSingle()
+
+      if (raceSelectError || !raceJob) {
+        console.error('[export-data] async path: race recovery select failed:', raceSelectError?.message)
+        return json({ success: false, error: 'Failed to enqueue export job' }, 500)
+      }
+
+      requestId = raceJob.request_id
+    } else {
+      console.error('[export-data] async path: insert error:', insertError.message)
+      return json({ success: false, error: 'Failed to enqueue export job' }, 500)
+    }
+  } else if (!newJob) {
+    console.error('[export-data] async path: insert returned no row')
+    return json({ success: false, error: 'Failed to enqueue export job' }, 500)
+  } else {
+    requestId = newJob.request_id
+
+    // Step 3: fire-and-forget to export-worker.
+    if (!EXPORT_WORKER_SECRET) {
+      console.warn(
+        '[export-data] EXPORT_WORKER_SECRET not set — job enqueued but export-worker ' +
+          'not triggered. Set EXPORT_WORKER_SECRET to enable automatic processing.'
+      )
+    } else {
+      const workerUrl = `${SUPABASE_URL}/functions/v1/export-worker`
+      // Intentionally not awaited — fire and forget.
+      // silent-catch-ok — worker failure is non-fatal; job stays queued for S11 retry.
+      fetch(workerUrl, {
+        method: 'POST',
+        headers: { 'X-Worker-Secret': EXPORT_WORKER_SECRET },
+      }).catch(err =>
+        console.error('[export-data] async path: worker invocation failed (non-fatal):', err)
+      )
+    }
+  }
+
+  console.log(`[export-data] async path: enqueued job request_id=${requestId} for user ${userId}`)
+
+  return json(
+    { status: 'queued', eta: 'within a few minutes', request_id: requestId },
+    202
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
 
@@ -249,7 +366,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (estimatedBytes > MAX_EXPORT_BYTES) {
-      return json({ status: 'too-large', route: 'async' })
+      return await handleAsyncExport(userId)
     }
 
     // -----------------------------------------------------------------------
