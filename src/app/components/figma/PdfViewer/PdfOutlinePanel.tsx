@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight, FileText } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
-import type { PDFDocumentProxy } from 'pdfjs-dist'
+import type { DocumentProps } from 'react-pdf'
+type PDFDocumentProxy = Parameters<NonNullable<DocumentProps['onLoadSuccess']>>[0]
 
 interface OutlineItem {
   title: string
