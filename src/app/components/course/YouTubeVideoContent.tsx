@@ -16,6 +16,10 @@ import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { YouTubePlayer } from '@/app/components/youtube/YouTubePlayer'
 import type { YouTubePlayerHandle } from '@/app/components/youtube/YouTubePlayer'
+import { YouTubeUnembeddableFallback } from '@/app/components/youtube/YouTubeUnembeddableFallback'
+import { syncableWrite } from '@/lib/sync/syncableWrite'
+import type { SyncableRecord } from '@/lib/sync/syncableWrite'
+import type { UnembeddableReason } from '@/data/types'
 import { useYouTubeTranscriptStore } from '@/stores/useYouTubeTranscriptStore'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
@@ -127,6 +131,26 @@ export function YouTubeVideoContent({
     [externalTimeUpdate]
   )
 
+  // Backfill: when the player's runtime probe reveals a legacy-imported video
+  // is non-embeddable, persist the flag so the next load skips the iframe
+  // entirely and renders the fallback directly.
+  const handleUnembeddableDetected = useCallback(
+    async (reason: UnembeddableReason) => {
+      if (!video) return
+      if (video.embeddable === false) return
+      try {
+        const updated = { ...video, embeddable: false, unembeddableReason: reason }
+        await syncableWrite('importedVideos', 'put', updated as unknown as SyncableRecord)
+        setVideo(updated)
+      } catch (err) {
+        // silent-catch-ok: backfill failure is non-blocking — fallback UI is
+        // already showing; the probe will retry on the next mount.
+        console.warn('[YouTubeVideoContent] Failed to backfill embeddable flag:', err)
+      }
+    },
+    [video]
+  )
+
   // Handle external seek requests from parent (e.g. transcript click in side panel)
   useEffect(() => {
     if (seekToTime !== undefined && playerRef.current) {
@@ -205,19 +229,32 @@ export function YouTubeVideoContent({
     )
   }
 
+  // Known non-embeddable — skip iframe entirely and render fallback directly.
+  // `embeddable === undefined` (legacy records) falls through to the player.
+  const isUnembeddable = video.embeddable === false
+
   return (
     <div className="flex flex-col h-full">
       {/* Video player */}
       <div className="flex-1 min-w-0">
-        <YouTubePlayer
-          videoId={youtubeVideoId}
-          courseId={courseId}
-          lessonId={lessonId}
-          onAutoComplete={handleAutoComplete}
-          onTimeUpdate={handleTimeUpdate}
-          onEnded={onEnded}
-          ref={playerRef}
-        />
+        {isUnembeddable ? (
+          <YouTubeUnembeddableFallback
+            videoId={youtubeVideoId}
+            reason={video.unembeddableReason}
+          />
+        ) : (
+          <YouTubePlayer
+            videoId={youtubeVideoId}
+            courseId={courseId}
+            lessonId={lessonId}
+            lessonEmbeddableState={video.embeddable}
+            onUnembeddableDetected={handleUnembeddableDetected}
+            onAutoComplete={handleAutoComplete}
+            onTimeUpdate={handleTimeUpdate}
+            onEnded={onEnded}
+            ref={playerRef}
+          />
+        )}
 
         {/* Video info below player */}
         <div className="mt-3 space-y-2">

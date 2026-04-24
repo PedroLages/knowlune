@@ -467,6 +467,59 @@ describe('saveCourse', () => {
     expect(videos[0].youtubeVideoId).toBe('v1')
   })
 
+  it('writes embeddable: true on saved video records for normal embeddable videos', async () => {
+    const meta = makeVideoMetadata('v1')
+    useYouTubeImportStore.getState().setVideosForFetch(['v1'])
+    useYouTubeImportStore.getState().updateVideoMetadata('v1', { metadata: meta, status: 'loaded' })
+    useYouTubeImportStore.getState().setChapters([])
+
+    await act(async () => {
+      await useYouTubeImportStore.getState().saveCourse({
+        name: 'Embeddable Course',
+        description: '',
+        tags: [],
+        selectedThumbnailVideoId: null,
+      })
+    })
+
+    const { db } = await import('@/db')
+    const videos = await db.importedVideos.toArray()
+    expect(videos).toHaveLength(1)
+    expect(videos[0].embeddable).toBe(true)
+    expect(videos[0].unembeddableReason).toBeUndefined()
+  })
+
+  it('writes embeddable: false + reason when saving an unembeddable link-only video', async () => {
+    const meta = {
+      ...makeVideoMetadata('v1'),
+      embeddable: false,
+      unembeddableReason: 'embedding-disabled' as const,
+    }
+    useYouTubeImportStore.getState().setVideosForFetch(['v1'])
+    useYouTubeImportStore.getState().updateVideoMetadata('v1', {
+      metadata: meta,
+      status: 'unembeddable',
+      unembeddableReason: 'embedding-disabled',
+      saveAsLinkOnly: true,
+    })
+    useYouTubeImportStore.getState().setChapters([])
+
+    await act(async () => {
+      await useYouTubeImportStore.getState().saveCourse({
+        name: 'Link-only Course',
+        description: '',
+        tags: [],
+        selectedThumbnailVideoId: null,
+      })
+    })
+
+    const { db } = await import('@/db')
+    const videos = await db.importedVideos.toArray()
+    expect(videos).toHaveLength(1)
+    expect(videos[0].embeddable).toBe(false)
+    expect(videos[0].unembeddableReason).toBe('embedding-disabled')
+  })
+
   it('uses full-playlist choice for playlistId', async () => {
     const meta = makeVideoMetadata('v1')
     useYouTubeImportStore.getState().setVideosForFetch(['v1'])
@@ -497,5 +550,93 @@ describe('saveCourse', () => {
     const { db } = await import('@/db')
     const courses = await db.importedCourses.toArray()
     expect(courses[0].youtubePlaylistId).toBe('PL999')
+  })
+})
+
+describe('applyLoadedMetadata + embeddability classification', () => {
+  const probeMock = vi.fn()
+
+  beforeEach(async () => {
+    probeMock.mockReset()
+    await Dexie.delete('ElearningDB')
+    vi.resetModules()
+    vi.doMock('@/lib/youtubeEmbeddability', () => ({
+      probeEmbeddability: probeMock,
+      clearEmbeddabilityCache: () => {},
+    }))
+    const mod = await import('@/stores/useYouTubeImportStore')
+    useYouTubeImportStore = mod.useYouTubeImportStore
+  })
+
+  it('keeps status loaded when metadata.embeddable === true (no probe)', async () => {
+    useYouTubeImportStore.getState().setVideosForFetch(['v1'])
+    const meta: YouTubeVideoCache = { ...makeVideoMetadata('v1'), embeddable: true }
+    await act(async () => {
+      await useYouTubeImportStore.getState().applyLoadedMetadata('v1', meta)
+    })
+    const video = useYouTubeImportStore.getState().videos[0]
+    expect(video.status).toBe('loaded')
+    expect(video.unembeddableReason).toBeUndefined()
+    expect(probeMock).not.toHaveBeenCalled()
+  })
+
+  it('flips status to unembeddable when Data API reports embeddable: false', async () => {
+    useYouTubeImportStore.getState().setVideosForFetch(['v1'])
+    const meta: YouTubeVideoCache = {
+      ...makeVideoMetadata('v1'),
+      embeddable: false,
+      unembeddableReason: 'embedding-disabled',
+    }
+    await act(async () => {
+      await useYouTubeImportStore.getState().applyLoadedMetadata('v1', meta)
+    })
+    const video = useYouTubeImportStore.getState().videos[0]
+    expect(video.status).toBe('unembeddable')
+    expect(video.unembeddableReason).toBe('embedding-disabled')
+    expect(probeMock).not.toHaveBeenCalled()
+  })
+
+  it('runs oEmbed probe when embeddable is undefined; flips to unembeddable on 401', async () => {
+    probeMock.mockResolvedValueOnce({ embeddable: false, reason: 'embedding-disabled' })
+    useYouTubeImportStore.getState().setVideosForFetch(['v1'])
+    const meta = makeVideoMetadata('v1') // no embeddable field
+    await act(async () => {
+      await useYouTubeImportStore.getState().applyLoadedMetadata('v1', meta)
+    })
+    expect(probeMock).toHaveBeenCalledWith('v1')
+    const video = useYouTubeImportStore.getState().videos[0]
+    expect(video.status).toBe('unembeddable')
+    expect(video.unembeddableReason).toBe('embedding-disabled')
+  })
+
+  it('keeps status loaded when probe rejects (fail-open)', async () => {
+    probeMock.mockRejectedValueOnce(new Error('network down'))
+    useYouTubeImportStore.getState().setVideosForFetch(['v1'])
+    const meta = makeVideoMetadata('v1')
+    await act(async () => {
+      await useYouTubeImportStore.getState().applyLoadedMetadata('v1', meta)
+    })
+    const video = useYouTubeImportStore.getState().videos[0]
+    expect(video.status).toBe('loaded')
+    expect(video.unembeddableReason).toBeUndefined()
+  })
+
+  it('keeps status loaded when probe returns unknown reason (fail-open)', async () => {
+    probeMock.mockResolvedValueOnce({ embeddable: false, reason: 'unknown' })
+    useYouTubeImportStore.getState().setVideosForFetch(['v1'])
+    const meta = makeVideoMetadata('v1')
+    await act(async () => {
+      await useYouTubeImportStore.getState().applyLoadedMetadata('v1', meta)
+    })
+    const video = useYouTubeImportStore.getState().videos[0]
+    expect(video.status).toBe('loaded')
+  })
+
+  it('setSaveAsLinkOnly toggles the flag only on the targeted video', async () => {
+    useYouTubeImportStore.getState().setVideosForFetch(['v1', 'v2'])
+    useYouTubeImportStore.getState().setSaveAsLinkOnly('v1', true)
+    const state = useYouTubeImportStore.getState()
+    expect(state.videos.find(v => v.videoId === 'v1')?.saveAsLinkOnly).toBe(true)
+    expect(state.videos.find(v => v.videoId === 'v2')?.saveAsLinkOnly).toBeUndefined()
   })
 })
