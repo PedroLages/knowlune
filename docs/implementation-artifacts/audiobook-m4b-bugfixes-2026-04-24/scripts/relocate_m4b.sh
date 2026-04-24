@@ -243,7 +243,7 @@ log "workspace copy: $OUT_M4B"
 # "output_path missing or not a file: None" and exits 2.
 # The workspace m4b path is stable across retag — m4b-tool `meta` mutates the
 # file in place, so OUT_M4B remains valid whether or not retag succeeds.
-set_fields "output_path=$OUT_M4B"
+set_fields "output_path=$OUT_M4B" || fail_manifest "failed to persist output_path" 2
 
 # --- Retag if not acceptable -----------------------------------------------
 

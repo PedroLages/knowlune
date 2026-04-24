@@ -182,7 +182,7 @@ kill "$TAIL_PID" 2>/dev/null || true
 wait "$TAIL_PID" 2>/dev/null || true
 
 # --- Handle result ---------------------------------------------------------
-if (( DOCKER_RC == 124 )); then
+if (( DOCKER_RC == 124 || DOCKER_RC == 143 )); then
   stderr_tail_json="$(python3 -c "import json; print(json.dumps(['timeout after ${TIMEOUT_SECONDS}s']))")"
   update_manifest state failed reason timeout stderr_tail "$stderr_tail_json" finished_at "$(now)"
   exit 1
@@ -224,6 +224,11 @@ META_ARGS=(
 [[ -n "$RETAG_TITLE"  ]] && META_ARGS+=("--name=$RETAG_TITLE" "--album=$RETAG_TITLE")
 [[ -n "$RETAG_AUTHOR" ]] && META_ARGS+=("--artist=$RETAG_AUTHOR")
 [[ -n "$RETAG_YEAR"   ]] && META_ARGS+=("--year=$RETAG_YEAR")
+if [[ -z "$RETAG_TITLE" || -z "$RETAG_AUTHOR" ]]; then
+  update_manifest state failed
+  update_manifest reason "retag aborted: no title or author available (audnex and fallback_metadata both empty)"
+  exit 1
+fi
 # Cap at 60s — meta is a tag-write, sub-second in practice. Defensive only.
 if command -v timeout >/dev/null 2>&1; then
   if ! timeout 60 "$DOCKER_BIN" "${META_ARGS[@]}" >>"$LOG" 2>"$retag_err"; then

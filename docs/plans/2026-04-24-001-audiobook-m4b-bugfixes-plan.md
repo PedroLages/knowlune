@@ -14,68 +14,94 @@ The audiobook-m4b Claude Code skill is a shell + Python pipeline that converts l
 - No changes to manifest schema (requirements AC).
 - No changes to existing test fixtures (requirements AC).
 
+**Files targeted (6 of 7 listed in requirements — see BUG-6 for why `convert_on_titan.sh` is excluded):**
+
+1. `scripts/relocate_m4b.sh` (BUG-1)
+2. `scripts/remote/run_m4b_tool.sh` (BUG-2)
+3. `scripts/verify_output.sh` (BUG-3)
+4. `scripts/sweep_quarantine.sh` (BUG-4)
+5. `scripts/convert_on_titan.sh` (BUG-5 only — not BUG-6)
+6. `scripts/publish_to_library.sh` (BUG-6)
+7. `scripts/remote/probe_folder.sh` (BUG-7)
+
 ---
 
-## BUG-1 — `relocate_m4b.sh` never writes `output_path` to manifest
+## BUG-1 — `relocate_m4b.sh` never persists `output_path` on the retag-failure path
 
 **File:** `~/.claude/skills/audiobook-m4b/scripts/relocate_m4b.sh`
 
-**Current behavior:** Line 301 already contains `set_fields "output_path=$OUT_M4B"` before the verify call. However, on the ACCEPTABLE path (no retag), the set happens at line 301 which is AFTER the verify block at line 305. Re-reading carefully: line 301 runs before line 305, so it actually *does* set output_path before verify.
+**Committed diagnosis (single root cause):**
 
-**Actual root cause (per requirements):** The chain in production uses the `relocate_m4b.sh` that was shipped to titan from `convert_on_titan.sh`. When the runner invokes publish_to_library.sh, it reads `output_path` from the manifest. On the RELOCATE path, `publish_to_library.sh` is called separately (not from the runner), and the manifest seen by publish does not contain `output_path` because the set_fields call at line 301 writes to the local MANIFEST path — but if verify fails, the early-exit skips publish, and if verify succeeds the flow exits 0 without returning to a caller that also invokes publish. We need to ensure `output_path` is persisted to the manifest **before** any exit path that could lead to publish.
+`set_fields "output_path=$OUT_M4B"` at **line 301** is the ONLY place where `output_path` gets written to the manifest. It runs AFTER the retag block (lines 241-297). The retag block can bail out via `fail_manifest "retag (m4b-tool meta) failed: …" 2` at **line 293**, which invokes `fail_manifest` (lines 102-107) — this sets `state=failed` and `error=…` but NEVER sets `output_path`. Since the manifest produced by `convert_on_titan.sh` (lines 455-486) does NOT initialize an `output_path` key at all, it stays absent; when `publish_to_library.sh` later reads it via `manifest.get("output_path")` (line 57), it returns `None` → the observed `output_path missing or not a file: None` error.
 
-**Verification of current state:** Line 301 already writes `output_path`. The reported failure "output_path missing or not a file: None" indicates that in some RELOCATE flows, this line is not reached — specifically, the `fail_manifest` calls at lines 222 (DRM) and earlier bail without writing output_path, which is correct. But the retag failure path at line 293 also bails before line 301, leaving output_path unset. That is not the bug described.
+Additionally, even on the happy path, there is a smaller risk window: if verify (line 306) fails, the script exits 1 *after* `set_fields` already wrote `output_path` — that is acceptable (state=failed is set by verify, and publish should not run). But if a human retries publish manually, `output_path` points at a workspace file that verify may have moved to `failed/`. That is out of scope for this fix (manifest already says `state=failed`; the dispatcher won't publish).
 
-**Most likely real cause:** The `set_fields "output_path=$OUT_M4B"` at line 301 runs BEFORE verify (line 305-311). If verify **fails**, the script exits 1 without clearing output_path, but verify_output.sh has already moved the output file into `failed/<jobid>/` and updated `state=failed`. A subsequent manual publish would find `output_path` pointing at a non-existent file. But per the reported symptom ("output_path missing or not a file: None"), the manifest's output_path is literally `None` (null in JSON) when publish reads it.
+**Root cause in one line:** `set_fields "output_path=…"` must run **before any exit path** that could leave the manifest in a state where a downstream consumer (publish, a retry, a human) sees no `output_path`.
 
-**Fix:** Move the `set_fields "output_path=$OUT_M4B"` call to happen **immediately after the workspace copy succeeds** (after line 235, before retag), AND ensure it is also set inside the retag-success branch. This guarantees output_path is persisted before ANY path that could trigger publish. The retag block overwrites the file in place (via m4b-tool meta), so the path stays valid.
+**Exact line edit:**
 
-**Before (lines 230-302):**
+Move `set_fields "output_path=$OUT_M4B"` from **line 301** to **immediately after line 237** (after the `log "workspace copy: $OUT_M4B"` line), and remove the existing call + its comment header at lines 299-301.
+
+**Before — lines 237-311 (verbatim):**
 ```bash
-mkdir -p "$WORKSPACE"
-OUT_M4B="$WORKSPACE/$(basename "$M4B")"
-cp -f "$M4B" "$OUT_M4B"
-if [[ -n "$SIBLING_COVER" && -f "$SIBLING_COVER" ]]; then
-  cp -f "$SIBLING_COVER" "$WORKSPACE/$(basename "$SIBLING_COVER")"
-fi
 log "workspace copy: $OUT_M4B"
 
 # --- Retag if not acceptable -----------------------------------------------
+
 if [[ "$ACCEPTABLE" != "True" ]]; then
-  # ... retag block, ~60 lines ...
+  # ... ~60 lines of retag logic that may call fail_manifest on line 293 ...
 fi
 
 # --- Update manifest with output_path --------------------------------------
+
 set_fields "output_path=$OUT_M4B"
 
 # --- Verify ---------------------------------------------------------------
+
+if [[ "${ABM4B_SKIP_VERIFY:-0}" != "1" ]]; then
+  if ! bash "$SCRIPT_DIR/verify_output.sh" "$OUT_M4B" "$MANIFEST"; then
+    echo "relocate: verify failed — see manifest" >&2
+    exit 1
+  fi
+fi
 ```
 
-**After:**
+**After — lines 237-311:**
 ```bash
-mkdir -p "$WORKSPACE"
-OUT_M4B="$WORKSPACE/$(basename "$M4B")"
-cp -f "$M4B" "$OUT_M4B"
-if [[ -n "$SIBLING_COVER" && -f "$SIBLING_COVER" ]]; then
-  cp -f "$SIBLING_COVER" "$WORKSPACE/$(basename "$SIBLING_COVER")"
-fi
 log "workspace copy: $OUT_M4B"
 
-# Persist output_path to manifest IMMEDIATELY — required by publish_to_library.sh,
-# which reads it from the manifest. Must be set before any exit path (retag, verify)
-# so the Stage 5 dispatcher sees a valid output_path even if we bail later.
+# Persist output_path IMMEDIATELY after the workspace copy succeeds — BEFORE
+# the retag block, which can bail via fail_manifest on m4b-tool error (exit 2)
+# without ever reaching the previous write site. publish_to_library.sh reads
+# output_path via manifest.get('output_path'); if the key is absent, it prints
+# "output_path missing or not a file: None" and exits 2.
+# The workspace m4b path is stable across retag — m4b-tool `meta` mutates the
+# file in place, so OUT_M4B remains valid whether or not retag succeeds.
 set_fields "output_path=$OUT_M4B"
 
 # --- Retag if not acceptable -----------------------------------------------
+
 if [[ "$ACCEPTABLE" != "True" ]]; then
-  # ... retag block unchanged ...
+  # ... retag block UNCHANGED ...
 fi
 
 # --- Verify ---------------------------------------------------------------
-# (previous set_fields line removed from here)
+# (previous set_fields + comment block at old lines 299-301 removed — already
+#  written above.)
+
+if [[ "${ABM4B_SKIP_VERIFY:-0}" != "1" ]]; then
+  if ! bash "$SCRIPT_DIR/verify_output.sh" "$OUT_M4B" "$MANIFEST"; then
+    echo "relocate: verify failed — see manifest" >&2
+    exit 1
+  fi
+fi
 ```
 
-**Diff:** Move line 301 (`set_fields "output_path=$OUT_M4B"`) to immediately after line 237 (`log "workspace copy: $OUT_M4B"`). Add a clarifying comment. Remove the now-duplicated call at line 301 and its header comment at lines 299-300.
+**Exact diff summary:**
+- **Delete** lines 299-301 (`# --- Update manifest with output_path ---…` header, blank line, and `set_fields "output_path=$OUT_M4B"`).
+- **Insert** after line 237 (after `log "workspace copy: $OUT_M4B"`): a blank line, an 8-line comment explaining why this happens early, and the moved `set_fields "output_path=$OUT_M4B"` call.
+
+No other edits in this file.
 
 ---
 
@@ -255,7 +281,21 @@ LOCAL=0
 
 **Fix:** Add `--wait-for-slot MINUTES` flag. Default 0 preserves current exit-3 behavior. When set, poll every 30s (same interval as load-wait) until `count_running < PARALLEL` or deadline expires.
 
-**Change 1 — arg parsing (lines 37-50):**
+### Deadlock analysis (critic BLOCKER 2)
+
+**Question:** Does the slot-wait loop deadlock because `count_running` already includes this job's own manifest?
+
+**Answer: No deadlock.** Line-number evidence:
+
+1. **Slot check runs at lines 212-223** — this is BEFORE any manifest is written.
+2. **First manifest write is at line 544** (`scp -q "$manifest_tmp" "$SSH_HOST:$JOB_MANIFEST_DIR/$JOBID.json"`) for the production path, or line 503 (`cp "$manifest_tmp" "$ABM4B_LOCAL_MANIFEST_DIR/$JOBID.json"`) for the test path. Both happen **~300+ lines after** the slot-wait check.
+3. **Manifest's initial state is `"state": "queued"`** (line 457 in the python manifest builder at lines 424-488), NOT `"running"`.
+4. **`count_running`** (lines 170-185) matches only files containing `"state": "running"` — so even if a manifest for this job existed at check time (it doesn't), it would be `queued` and not counted.
+5. **State transitions to `"running"`** only after the tmux-launched `run_m4b_tool.sh` picks up the manifest on titan — that is a *downstream* event, well after convert_on_titan.sh has exited.
+
+**Conclusion:** `count_running` at the moment of the slot-wait check does NOT include the current job. Polling `count_running < PARALLEL` is safe; no self-exclusion logic is needed. The loop is correct as designed.
+
+### Change 1 — arg parsing (lines 37-50)
 
 **Before:**
 ```bash
@@ -299,7 +339,7 @@ while [[ $# -gt 0 ]]; do
 done
 ```
 
-**Change 2 — slot-wait loop (replacing lines 212-223):**
+### Change 2 — slot-wait loop (replacing lines 212-223)
 
 **Before:**
 ```bash
@@ -322,6 +362,12 @@ fi
 # Slot-wait loop. Default (WAIT_FOR_SLOT_MIN=0) preserves legacy exit-3 behavior.
 # With --wait-for-slot N, poll every 30s (configurable via ABM4B_SLOT_POLL_SECONDS
 # for tests) until a slot opens or the N-minute deadline expires.
+#
+# Correctness note: count_running counts manifests with state="running" in
+# JOB_MANIFEST_DIR. This job has NOT written its manifest yet (writes happen at
+# lines ~503/544, well after this block), AND its initial state is "queued"
+# (line ~457 in the manifest builder) — not "running". So count_running never
+# includes this job; no self-exclusion filtering is required.
 slot_poll_seconds="${ABM4B_SLOT_POLL_SECONDS:-30}"
 slot_deadline=$(( $(date +%s) + WAIT_FOR_SLOT_MIN * 60 ))
 
@@ -345,48 +391,80 @@ EOF
 done
 ```
 
-**Change 3 — usage comment (lines 4-7):** Add `--wait-for-slot` to the usage block near the top of the file.
+### Change 3 — usage comment (lines 4-7)
+
+Add `--wait-for-slot` to the usage block near the top of the file.
 
 ---
 
 ## BUG-6 — Series field dict-stringification in path sanitization
 
-**Files:**
-- `~/.claude/skills/audiobook-m4b/scripts/publish_to_library.sh`
-- `~/.claude/skills/audiobook-m4b/scripts/convert_on_titan.sh`
+**File:** `~/.claude/skills/audiobook-m4b/scripts/publish_to_library.sh` (ONLY this one file)
 
-**Current state — publish_to_library.sh (lines 70-72):**
+### Scope narrowing (critic BLOCKERS 3 + 4)
+
+Requirements list both `publish_to_library.sh` and `convert_on_titan.sh` as targets for BUG-6. **Evidence-based scope reduction:**
+
+**`convert_on_titan.sh` — removed from BUG-6 scope.** Verified by reading lines 424-488 (the full manifest builder) and the rest of the file. The only `audnex` reads are:
+- Line 431: `audnex = cand.get("audnex") or {}` (pass-through assignment)
+- Line 445: `audnex.get("title")` (used for slug fallback only — never series)
+- Line 447: `audnex.get("chapters")` / `audnex.get("chapters_ms")` (booleans only)
+- Line 448: `audnex.get("cover_url")` (boolean check)
+- Line 449: `audnex.get("asin")` (string only)
+- Line 475: `"audnex": audnex or None` (pass-through stored in manifest)
+
+**`audnex.series` is never read, stringified, or used to build a path in `convert_on_titan.sh`.** The audnex payload is stored as-is into `manifest["audnex"]` and `manifest["candidate"]["audnex"]`; neither is consumed here — only `publish_to_library.sh` dereferences `audnex.series` downstream. No fix needed in `convert_on_titan.sh` for BUG-6.
+
+**`publish_to_library.sh` — already-correct isinstance check, needs a comment only.** Verified by reading lines 70-72:
+```python
+series = ""
+if audnex.get("series"):
+    series = (audnex["series"].get("name") or "").strip() if isinstance(audnex["series"], dict) else str(audnex["series"]).strip()
+```
+This already handles both the `dict` shape (`{"name": "Foo", "position": "1"}`) and the bare-string shape correctly. No behavioral edit is needed. The fix is **documentation-only**: add a one-line invariant comment so a future reader doesn't "simplify" the isinstance check into a naked `str(audnex["series"])` and regress the bug.
+
+### Exact edit — publish_to_library.sh lines 70-72
+
+**Before:**
 ```python
 series = ""
 if audnex.get("series"):
     series = (audnex["series"].get("name") or "").strip() if isinstance(audnex["series"], dict) else str(audnex["series"]).strip()
 ```
 
-**This is already correct.** Publish already handles the dict case. The bug may manifest only in convert_on_titan.sh's manifest-builder or in some other codepath.
-
-**Verification — convert_on_titan.sh (lines 424-488):** The manifest builder at line 445 uses `audnex.get("title")` for slug derivation but does not touch series. The audnex payload is stored as `manifest["audnex"]`, and `publish_to_library.sh` consumes it correctly. However, the manifest also stores `candidate.audnex` and other downstream consumers may str() it.
-
-**Fix (defensive):** Confirm `publish_to_library.sh` lines 70-72 are correct (no change needed). Search for any other str(series) call in the skill:
-
-**Additional files to check (via Grep during implementation):**
-- `scripts/*.sh`
-- `scripts/remote/*.sh`
-- `scripts/*.py` if any
-
-**Proposed minimal diff:**
-1. `publish_to_library.sh` — no change; code at lines 70-72 is already correct. Add a comment explaining the isinstance check so future readers don't regress it.
-2. `convert_on_titan.sh` — audit for any `series` stringification; add a normalization helper in the manifest builder only if we find one. Per code inspection of lines 424-488, none is present — this file does not need a change for BUG-6.
-
-**Action:** During implementation, run `grep -n 'series' scripts/**/*.sh scripts/**/*.py` to confirm no other site str()'s series. If a site is found, extract a helper:
+**After:**
 ```python
-def _series_name(a):
-    s = (a or {}).get("series")
-    if isinstance(s, dict):
-        return (s.get("name") or "").strip()
-    return str(s).strip() if s else ""
+# Invariant: audnex.series may be a dict {name, position} OR a bare string.
+# Both shapes appear in real audnex payloads — DO NOT simplify this to
+# `str(audnex["series"])`, which would yield "{'name': 'Foo', ...}" as a
+# path segment and poison the library tree. Both branches are exercised by
+# tests; keep the isinstance check.
+series = ""
+if audnex.get("series"):
+    series = (audnex["series"].get("name") or "").strip() if isinstance(audnex["series"], dict) else str(audnex["series"]).strip()
 ```
 
-**Documentation note:** Add a one-line comment above `publish_to_library.sh:70-72` making the invariant explicit: "audnex.series may be a dict {name, position} or a bare string — handle both."
+No other edit. `convert_on_titan.sh` is not touched for BUG-6.
+
+### AC update (critic BLOCKER 4 — AC-traceability)
+
+**Original requirement language:** "all 7 scripts modified".
+
+**Updated AC:** "6 of 7 scripts modified; `convert_on_titan.sh` excluded from BUG-6 scope because it does not read `audnex.series` (verified by reading lines 424-488). `convert_on_titan.sh` is still modified for BUG-5 (slot-wait), so its diff is non-empty across the epic — just not for BUG-6."
+
+**Scripts modified per bug:**
+
+| Bug   | Scripts modified                                  |
+|-------|---------------------------------------------------|
+| BUG-1 | `scripts/relocate_m4b.sh`                         |
+| BUG-2 | `scripts/remote/run_m4b_tool.sh`                  |
+| BUG-3 | `scripts/verify_output.sh`                        |
+| BUG-4 | `scripts/sweep_quarantine.sh`                     |
+| BUG-5 | `scripts/convert_on_titan.sh`                     |
+| BUG-6 | `scripts/publish_to_library.sh` (ONLY)            |
+| BUG-7 | `scripts/remote/probe_folder.sh`                  |
+
+**Total: 7 scripts modified across the epic, with BUG-6 limited to 1 file.** This matches the spirit of the original "all 7 scripts modified" AC while being precise about per-bug scope.
 
 ---
 
@@ -440,12 +518,12 @@ Expected touched test files (per bug):
 
 | Bug | Test specs most relevant |
 |-----|--------------------------|
-| BUG-1 | `tests/test_relocate_m4b.sh` (if present), manifest-shape tests |
+| BUG-1 | `tests/test_relocate_m4b.sh` (if present) — add a case that asserts `output_path` is set EVEN WHEN retag fails (manifest has state=failed AND output_path populated) |
 | BUG-2 | `tests/test_run_m4b_tool.sh` — add assertion on META_ARGS containing `--name=`, `--artist=` |
 | BUG-3 | `tests/test_verify_output.sh` — add multi-file fixture (file_count=100) with 50s diff |
 | BUG-4 | `tests/test_sweep_quarantine.sh` — invoke with unset QUARANTINE_ROOT and expect config load |
 | BUG-5 | `tests/test_convert_dispatch.sh` — add `--wait-for-slot 1` with `ABM4B_SLOT_POLL_SECONDS=1` test |
-| BUG-6 | Existing publish tests already cover series-as-dict; reconfirm green |
+| BUG-6 | Existing publish tests already cover series-as-dict; reconfirm green (comment-only change, so behavior unchanged) |
 | BUG-7 | `tests/test_probe_folder.sh` — stage a symlink and assert it appears in probe output |
 
 If a test file doesn't exist for a given bug, do **not** add one unless it's a trivial extension of an adjacent existing test (requirements AC: "No regressions to existing passing tests"). Manual verification covers gaps.
@@ -454,11 +532,21 @@ If a test file doesn't exist for a given bug, do **not** add one unless it's a t
 
 For each fix, the following smoke checks:
 
-**BUG-1:**
+**BUG-1 (happy path):**
 ```bash
 # After RELOCATE path runs, inspect the manifest:
 jq '.output_path, .state' $JOB_MANIFEST_DIR/<jobid>.json
 # Expect: "/tmp/audiobook-m4b/<jobid>/workspace/<file>.m4b" and "succeeded"
+```
+
+**BUG-1 (retag-failure path — the path that motivated the fix):**
+```bash
+# Force retag failure (e.g. pass a mocked docker that exits 1):
+ABM4B_DOCKER=/path/to/failing-mock bash relocate_m4b.sh $MANIFEST
+# Expect exit 2, and:
+jq '.output_path, .state, .error' $MANIFEST
+# output_path is populated (workspace path), state=failed, error=retag...
+# Previously: output_path was missing/None.
 ```
 
 **BUG-2:** On a titan run with no audnex match but fallback_metadata populated, post-merge m4b tags:
@@ -483,8 +571,7 @@ bash ~/.claude/skills/audiobook-m4b/scripts/sweep_quarantine.sh --dry-run --loca
 **BUG-5:**
 ```bash
 # With 1 job already running at --parallel=1:
-bash convert_on_titan.sh --candidate c.json --parallel 1 --wait-for-slot 1 \
-  ABM4B_SLOT_POLL_SECONDS=1
+ABM4B_SLOT_POLL_SECONDS=1 bash convert_on_titan.sh --candidate c.json --parallel 1 --wait-for-slot 1
 # Expect: polls, prints "[slot] ..." message, then either dispatches or exits 3 after ~60s
 ```
 
@@ -493,6 +580,7 @@ bash convert_on_titan.sh --candidate c.json --parallel 1 --wait-for-slot 1 \
 # Stage a manifest where audnex.series = {"name": "Foo", "position": "1"}
 bash publish_to_library.sh /tmp/test-manifest.json
 # Expect target path contains "/Foo/<title>/" not "/{'name': 'Foo'...}/"
+# (This already works; test confirms no regression from comment-only edit.)
 ```
 
 **BUG-7:**
@@ -523,9 +611,9 @@ Recommended sequencing (independent fixes; order chosen for risk minimization):
 
 1. **BUG-7** (probe_folder.sh): single-char diff, lowest risk, unblocks BUG-staging tests.
 2. **BUG-4** (sweep_quarantine.sh): isolated, unblocks standalone sweep testing.
-3. **BUG-6** (publish_to_library.sh): likely comment-only; confirms invariant.
+3. **BUG-6** (publish_to_library.sh): comment-only; confirms invariant is documented.
 4. **BUG-3** (verify_output.sh): embedded python edit, moderate risk; add fixture.
-5. **BUG-1** (relocate_m4b.sh): move one line, verify ordering.
+5. **BUG-1** (relocate_m4b.sh): move one `set_fields` call earlier; verify ordering via retag-failure test.
 6. **BUG-2** (run_m4b_tool.sh): extend `read_field`, add META_ARGS; re-test retag path.
 7. **BUG-5** (convert_on_titan.sh): new flag + polling loop, highest surface area.
 
@@ -544,13 +632,14 @@ No new files. No schema changes. No test-fixture changes. All edits local to the
 - `tests/` fixtures (requirements AC)
 - Manifest JSON schema (requirements AC)
 - `load_config.sh` (already exists; BUG-4 just sources it)
-- Any src/ in the Knowlune React app (the skill is orthogonal)
+- Any `src/` in the Knowlune React app (the skill is orthogonal)
+- `convert_on_titan.sh` FOR BUG-6 (see scope narrowing above — this file IS edited for BUG-5, just not for BUG-6)
 
 ---
 
 ## Risks & Open Questions
 
-1. **BUG-1 may already be partially fixed** (line 301 exists). Implementation should first reproduce the "output_path: None" failure to confirm the real root cause. If the line truly does persist output_path on both the accept and retag paths today, the fix may instead be ensuring `publish_to_library.sh` reads the right manifest (an SCP/path mismatch between relocate's local write and the titan-side copy). Plan to verify via a dry-run before editing.
+1. **BUG-1 retag-failure reproduction.** Committed root cause is that `fail_manifest` at line 293 exits before the `set_fields "output_path=…"` at line 301 runs. The fix moves that write to before retag. Verification requires simulating retag failure (mocked `ABM4B_DOCKER` that exits non-zero) and asserting the manifest has `output_path` populated AND `state=failed`. If a real-world manifest with `output_path: None` cannot be reproduced via this path, re-investigate whether a DIFFERENT call site (e.g. an older relocate_m4b.sh shipped to titan) is the one running in production — run `md5sum` on the titan-side copy versus the local copy before assuming the fix lands.
 2. **BUG-3 depends on `manifest.candidate.files`** being populated. If `probe_sources.sh` emits a different shape, we need to adjust the file-count derivation. Plan to grep the codebase during implementation to confirm.
-3. **BUG-5's polling loop** inside a shell script means the script holds the shell session for up to N minutes. Callers that pipe this into other commands should wrap with `timeout` if needed — documented in the usage comment.
-4. **BUG-6 may be a no-op edit** if no other site str()'s series. Plan is to grep first and skip the edit if the codebase is already clean.
+3. **BUG-5's polling loop** inside a shell script means the script holds the shell session for up to N minutes. Callers that pipe this into other commands should wrap with `timeout` if needed — documented in the usage comment. Deadlock risk addressed in the Deadlock Analysis subsection above (no self-exclusion needed — state is `queued`, not `running`, and manifest is not written until well after the check).
+4. **BUG-6 is documentation-only** in publish_to_library.sh; no behavioral change. `convert_on_titan.sh` is confirmed out of BUG-6 scope by reading lines 424-488 — series is never touched there.
