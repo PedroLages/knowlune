@@ -20,6 +20,7 @@ import { appEventBus } from '@/lib/eventBus'
 import { unlockSidebarItem } from '@/app/hooks/useProgressiveDisclosure'
 import { syncableWrite } from '@/lib/sync/syncableWrite'
 import type { SyncableRecord } from '@/lib/sync/syncableWrite'
+import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
 
 /**
  * Decomposes the Book.source discriminated union into flat serializable fields
@@ -60,7 +61,7 @@ interface BookStoreState {
   isLoaded: boolean
 
   loadBooks: () => Promise<void>
-  importBook: (book: Book, file?: File) => Promise<void>
+  importBook: (book: Book, file?: File) => Promise<{ error?: { code: string; modality: string } }>
   updateBookStatus: (bookId: string, status: BookStatus) => Promise<void>
   deleteBook: (bookId: string) => Promise<void>
   setSelectedBookId: (id: string | null) => void
@@ -119,6 +120,16 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
   },
 
   importBook: async (book: Book, file?: File) => {
+    // Guest cap: 1 audiobook and 1 EPUB per guest session
+    if (selectIsGuestMode(useAuthStore.getState())) {
+      const guestSessionId = sessionStorage.getItem('knowlune-guest-id')
+      const modality = book.format === 'epub' ? 'epub' : 'audiobook'
+      const existing = await db.books
+        .filter(r => r.userId === null && r.guestSessionId === guestSessionId && r.format === book.format)
+        .count()
+      if (existing >= 1) return { error: { code: 'GUEST_CAP_EXCEEDED', modality } }
+    }
+
     try {
       // Store file if provided
       if (file) {
@@ -150,6 +161,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     } catch {
       toast.error('Failed to import book')
     }
+    return {}
   },
 
   updateBookStatus: async (bookId: string, status: BookStatus) => {
