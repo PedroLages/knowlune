@@ -10,6 +10,7 @@
  * - Only analyzed content transmitted to AI providers (no PII or metadata)
  */
 
+import { useAuthStore } from '@/stores/useAuthStore'
 import { apiUrl } from './apiBaseUrl'
 import { encryptData, decryptData, type EncryptedData } from './crypto'
 import type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefaults'
@@ -162,8 +163,11 @@ export const DEFAULTS: AIConfigurationSettings = {
  */
 async function testViaModelProxy(provider: string, key: string): Promise<boolean> {
   try {
+    const accessToken = useAuthStore.getState().session?.access_token
+    const headers: Record<string, string> = { 'X-API-Key': key }
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
     const res = await fetch(apiUrl(`models/${provider}`), {
-      headers: { 'X-API-Key': key },
+      headers,
       signal: AbortSignal.timeout(10_000),
     })
     if (res.ok) return true
@@ -241,19 +245,7 @@ export const AI_PROVIDERS: Record<AIProviderId, AIProvider> = {
     id: 'openrouter',
     name: 'OpenRouter',
     validateApiKey: key => /^sk-or-v1-[A-Za-z0-9]{48,}$/.test(key),
-    testConnection: async key => {
-      // Test connection by fetching the model list (lightweight endpoint)
-      try {
-        const response = await fetch(apiUrl('models/openrouter'), {
-          headers: { 'X-API-Key': key },
-          signal: AbortSignal.timeout(10_000),
-        })
-        return response.ok
-      } catch (error) {
-        console.warn('OpenRouter connection test failed:', error)
-        return false
-      }
-    },
+    testConnection: key => testViaModelProxy('openrouter', key),
   },
   ollama: {
     id: 'ollama',
