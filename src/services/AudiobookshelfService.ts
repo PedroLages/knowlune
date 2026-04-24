@@ -28,15 +28,23 @@ const FETCH_TIMEOUT_MS = 10_000
 
 export type AbsResult<T> = { ok: true; data: T } | { ok: false; error: string; status?: number }
 
+// ─── URL Helper ─────────────────────────────────────────────────────────────
+
+/** Strip trailing slashes so path concatenation produces a single `/` join. */
+function normalizeBaseUrl(baseUrl: string): string {
+  return baseUrl.replace(/\/+$/, '')
+}
+
 // ─── Internal Helper ────────────────────────────────────────────────────────
 
 /**
  * Shared fetch wrapper for all ABS API calls.
  *
- * Routes through the Express backend proxy (`/api/abs/proxy/...`) to avoid
- * browser CORS restrictions. The real ABS server URL and API key are sent
- * via X-ABS-URL and X-ABS-Token headers — the proxy forwards them to the
- * user's ABS server and relays the response.
+ * Calls the user's ABS server directly from the browser with
+ * `Authorization: Bearer <apiKey>`. Requires the ABS server to (a) be
+ * reachable from the app's origin (HTTPS when the app is served from HTTPS)
+ * and (b) allowlist the app origin via ABS Settings → Security → Allowed
+ * Origins. See docs/solutions/integration-issues/2026-04-24-abs-browser-direct-bearer-auth.md.
  */
 async function absApiFetch<T>(
   baseUrl: string,
@@ -50,8 +58,7 @@ async function absApiFetch<T>(
   try {
     const hasBody = options?.body !== undefined
     const headers: Record<string, string> = {
-      'X-ABS-URL': baseUrl.replace(/\/+$/, ''),
-      'X-ABS-Token': apiKey,
+      Authorization: `Bearer ${apiKey}`,
       ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     }
 
@@ -65,7 +72,7 @@ async function absApiFetch<T>(
       fetchOptions.body = JSON.stringify(options!.body)
     }
 
-    const response = await fetch(`/api/abs/proxy${path}`, fetchOptions)
+    const response = await fetch(`${normalizeBaseUrl(baseUrl)}${path}`, fetchOptions)
     clearTimeout(timeoutId)
 
     if (response.status === 401) {
@@ -96,10 +103,15 @@ async function absApiFetch<T>(
     if (err instanceof SyntaxError) {
       return { ok: false, error: 'Server returned an invalid response. Check the URL.' }
     }
+    // TypeError from fetch in a browser means the request never reached the
+    // server (CORS rejection, DNS failure, connection refused, mixed content
+    // block). For HTTPS origins with well-formed URLs, CORS is the most
+    // common cause — surface actionable guidance.
     if (err instanceof TypeError) {
       return {
         ok: false,
-        error: 'Could not connect to server. Check the URL and try again.',
+        error:
+          "Could not reach your Audiobookshelf server. If the URL is correct, add this app's origin to your ABS Settings → Security → Allowed Origins.",
       }
     }
     return { ok: false, error: 'Could not connect to server. Check the URL and try again.' }
@@ -242,8 +254,11 @@ export async function createPlaybackSession(
 }
 
 /**
- * Construct a proxied streaming URL from a playback session's contentUrl.
+ * Construct a direct streaming URL from a playback session's contentUrl.
  * The contentUrl from ABS is a relative path like `/s/item/{id}/book.m4b`.
+ *
+ * `<audio>` elements can't set headers, so the API key rides along as a
+ * `?token=` query param (ABS natively supports this for stream endpoints).
  *
  * Pure function — no fetch call.
  */
@@ -253,12 +268,7 @@ export function getStreamUrlFromSession(
   contentUrl: string
 ): string {
   const path = contentUrl.startsWith('http') ? new URL(contentUrl).pathname : contentUrl
-  const params = new URLSearchParams({
-    token: apiKey,
-    _absUrl: baseUrl.replace(/\/+$/, ''),
-    _absToken: apiKey,
-  })
-  return `/api/abs/proxy${path}?${params}`
+  return `${normalizeBaseUrl(baseUrl)}${path}?token=${encodeURIComponent(apiKey)}`
 }
 
 /**
@@ -280,19 +290,22 @@ export async function closePlaybackSession(
  * Kept for backward compatibility during migration.
  */
 export function getStreamUrl(baseUrl: string, itemId: string, apiKey: string): string {
-  return `/api/abs/proxy/api/items/${encodeURIComponent(itemId)}/play?token=${encodeURIComponent(apiKey)}&_absUrl=${encodeURIComponent(baseUrl)}&_absToken=${encodeURIComponent(apiKey)}`
+  return `${normalizeBaseUrl(baseUrl)}/api/items/${encodeURIComponent(itemId)}/play?token=${encodeURIComponent(apiKey)}`
 }
 
 /**
- * Get the cover image URL for a library item via the backend proxy.
- * Routes through Express to avoid CORS.
+ * Get the direct cover image URL for a library item.
+ *
+ * `<img>` elements can't set headers, so the API key rides along as a
+ * `?token=` query param (ABS natively supports this for GET endpoints
+ * returning binary content). When apiKey is omitted, the caller is assumed
+ * to want a public/unauthenticated cover URL.
  *
  * Pure function — no fetch call.
  */
 export function getCoverUrl(baseUrl: string, itemId: string, apiKey?: string): string {
-  const params = new URLSearchParams({ _absUrl: baseUrl })
-  if (apiKey) params.set('_absToken', apiKey)
-  return `/api/abs/proxy/api/items/${encodeURIComponent(itemId)}/cover?${params}`
+  const base = `${normalizeBaseUrl(baseUrl)}/api/items/${encodeURIComponent(itemId)}/cover`
+  return apiKey ? `${base}?token=${encodeURIComponent(apiKey)}` : base
 }
 
 /**
