@@ -69,21 +69,9 @@ vi.mock('@/lib/sync/classifyError', () => ({
   classifyError: (err: unknown) => String(err),
 }))
 
-// SettingsPageContext mock — signed-out card reads auth-dialog state from it
-const mockSetAuthDialogOpen = vi.fn()
-const mockSetAuthDialogMode = vi.fn()
+// SettingsPageContext mock — SyncSection reads user from useAuthStore, not context
 vi.mock('@/app/components/settings/SettingsPageContext', () => ({
-  useSettingsPage: () => ({
-    authDialogOpen: false,
-    setAuthDialogOpen: mockSetAuthDialogOpen,
-    authDialogMode: 'sign-in' as const,
-    setAuthDialogMode: mockSetAuthDialogMode,
-  }),
-}))
-
-// AuthDialog mock — we only care that it mounts; behaviour is covered elsewhere
-vi.mock('@/app/components/auth/AuthDialog', () => ({
-  AuthDialog: () => null,
+  useSettingsPage: () => ({}),
 }))
 
 // date-fns mock — avoid relative-time drift in CI
@@ -156,8 +144,6 @@ describe('<SyncSection />', () => {
     mockStart.mockReset().mockResolvedValue(undefined)
     mockResetLocalData.mockReset().mockResolvedValue(undefined)
     mockRefreshPendingCount.mockReset().mockResolvedValue(undefined)
-    mockSetAuthDialogOpen.mockReset()
-    mockSetAuthDialogMode.mockReset()
     resetStore()
 
     // Suppress console.error noise from expected error paths
@@ -177,36 +163,14 @@ describe('<SyncSection />', () => {
   })
 
   // -------------------------------------------------------------------------
-  // 1. Renders signed-out informational card when user is null
+  // 1. Renders null when user is null (closed app — route guard prevents this)
   // -------------------------------------------------------------------------
 
-  it('renders signed-out informational card when user is null', () => {
+  it('renders nothing when user is null', () => {
     mockUser = null
-    renderSection()
-    expect(screen.getByTestId('sync-section-signed-out')).toBeInTheDocument()
-    expect(screen.getByText(/sign in to enable cross-device sync/i)).toBeInTheDocument()
-    expect(screen.getByTestId('sync-signed-out-sign-in')).toBeInTheDocument()
-    expect(screen.getByTestId('sync-signed-out-sign-up')).toBeInTheDocument()
-    // Signed-in controls must NOT render
+    const { container } = renderSection()
+    expect(container.innerHTML).toBe('')
     expect(screen.queryByTestId('sync-section')).not.toBeInTheDocument()
-  })
-
-  it('opens auth dialog in sign-in mode when Sign In is clicked (signed-out)', async () => {
-    mockUser = null
-    renderSection()
-    const user = userEvent.setup()
-    await user.click(screen.getByTestId('sync-signed-out-sign-in'))
-    expect(mockSetAuthDialogMode).toHaveBeenCalledWith('sign-in')
-    expect(mockSetAuthDialogOpen).toHaveBeenCalledWith(true)
-  })
-
-  it('opens auth dialog in sign-up mode when Sign Up is clicked (signed-out)', async () => {
-    mockUser = null
-    renderSection()
-    const user = userEvent.setup()
-    await user.click(screen.getByTestId('sync-signed-out-sign-up'))
-    expect(mockSetAuthDialogMode).toHaveBeenCalledWith('sign-up')
-    expect(mockSetAuthDialogOpen).toHaveBeenCalledWith(true)
   })
 
   // -------------------------------------------------------------------------

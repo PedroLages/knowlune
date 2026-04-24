@@ -1,11 +1,55 @@
-import React, { Suspense } from 'react'
-import { createBrowserRouter, Navigate, useParams, useLocation } from 'react-router'
+import React, { Suspense, useEffect } from 'react'
+import { createBrowserRouter, Navigate, Outlet, useNavigate, useParams, useLocation } from 'react-router'
 import { Layout } from './components/Layout'
 import { DelayedFallback } from './components/DelayedFallback'
 import { Skeleton } from './components/ui/skeleton'
 import { RouteErrorBoundary } from './components/RouteErrorBoundary'
 import { PremiumFeaturePage, PREMIUM_FEATURES } from './components/PremiumFeaturePage'
 import { MessageSquare, Sparkles, Brain, RotateCcw, Shuffle, BarChart3, Layers } from 'lucide-react'
+import { useAuthStore, selectAuthState } from '@/stores/useAuthStore'
+import { Landing } from '@/app/pages/Landing'
+
+const RETURN_TO_KEY = 'knowlune-auth-return-to'
+
+/** Detects OAuth/magic-link callbacks in the URL hash (before Supabase processes them). */
+function isOAuthInFlight(): boolean {
+  const hash = window.location.hash
+  return hash.includes('access_token') || hash.includes('code=') || hash.includes('type=recovery')
+}
+
+function SplashLoader() {
+  return (
+    <DelayedFallback>
+      <div role="status" aria-busy="true" aria-label="Loading" className="space-y-6 p-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    </DelayedFallback>
+  )
+}
+
+/**
+ * Three-state route guard: redirects anonymous users to /, shows splash while
+ * loading or during OAuth callbacks, passes through authenticated and guest users.
+ */
+function RouteGuard() {
+  const authState = useAuthStore(selectAuthState)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (authState === 'authenticated') {
+      const raw = sessionStorage.getItem(RETURN_TO_KEY)
+      sessionStorage.removeItem(RETURN_TO_KEY)
+      if (raw && raw.startsWith('/') && !raw.startsWith('//')) {
+        navigate(raw, { replace: true })
+      }
+    }
+  }, [authState, navigate])
+
+  if (authState === 'loading' || isOAuthInFlight()) return <SplashLoader />
+  if (authState === 'anonymous') return <Landing />
+  return <Outlet />
+}
 
 // Lazy-loaded page components (code-splitting)
 // Named exports need .then(m => ({ default: m.ExportName }))
@@ -63,7 +107,6 @@ const QuizResults = React.lazy(() =>
 const QuizReview = React.lazy(() =>
   import('./pages/QuizReview').then(m => ({ default: m.QuizReview }))
 )
-const Login = React.lazy(() => import('./pages/Login').then(m => ({ default: m.Login })))
 const Notifications = React.lazy(() =>
   import('./pages/Notifications').then(m => ({ default: m.Notifications }))
 )
@@ -211,14 +254,21 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  // Standalone login page — outside Layout (no sidebar/header)
+  // /login → / redirect (closed app: Landing at / handles all auth entry points)
   {
     path: 'login',
-    element: (
-      <SuspensePage>
-        <Login />
-      </SuspensePage>
-    ),
+    element: <Navigate to="/" replace />,
+  },
+  // /guest — sets sessionStorage guest flags and redirects into the app
+  {
+    path: 'guest',
+    Component: function GuestEntry() {
+      sessionStorage.setItem('knowlune-guest', 'true')
+      if (!sessionStorage.getItem('knowlune-guest-id')) {
+        sessionStorage.setItem('knowlune-guest-id', crypto.randomUUID())
+      }
+      return <Navigate to="/courses" replace />
+    },
   },
   // E84: EPUB Reader — full-viewport, outside Layout (no sidebar/header)
   {
@@ -246,10 +296,17 @@ export const router = createBrowserRouter([
   },
   {
     path: '/',
-    Component: Layout,
+    element: <RouteGuard />,
     children: [
       {
+        Component: Layout,
+        children: [
+      {
         index: true,
+        element: <Navigate to="/courses" replace />,
+      },
+      {
+        path: 'overview',
         element: (
           <SuspensePage>
             <Overview />
@@ -604,6 +661,8 @@ export const router = createBrowserRouter([
             <NotFound />
           </SuspensePage>
         ),
+      },
+        ],
       },
     ],
   },

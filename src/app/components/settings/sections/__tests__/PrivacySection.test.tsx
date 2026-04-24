@@ -114,10 +114,10 @@ afterEach(() => {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('PrivacySection — auth gate', () => {
-  it('shows signed-out card when no user', () => {
+  it('renders nothing when no user (closed app — route guard prevents access)', () => {
     mocks.setUser(null)
-    render(<PrivacySection />)
-    expect(screen.getByTestId('privacy-signed-out')).toBeTruthy()
+    const { container } = render(<PrivacySection />)
+    expect(container.innerHTML).toBe('')
   })
 })
 

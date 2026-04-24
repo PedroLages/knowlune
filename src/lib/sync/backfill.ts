@@ -41,11 +41,17 @@ export interface BackfillUserIdResult {
  * callback already does this at migration time, but new records added before
  * backfill runs may lack it too).
  *
- * @param userId  The authenticated Supabase user id. If falsy, returns without
- *                touching the database.
+ * @param userId         The authenticated Supabase user id. If falsy, returns without
+ *                       touching the database.
+ * @param guestSessionId When provided, only records from this specific guest session
+ *                       are backfilled. Prevents zombie-session orphan rows from
+ *                       being accidentally stamped with a new user's id.
  * @returns Counts describing how much work was done.
  */
-export async function backfillUserId(userId: string | null): Promise<BackfillUserIdResult> {
+export async function backfillUserId(
+  userId: string | null,
+  guestSessionId?: string | null
+): Promise<BackfillUserIdResult> {
   if (!userId) {
     return { tablesProcessed: 0, recordsStamped: 0, tablesFailed: [] }
   }
@@ -63,6 +69,10 @@ export async function backfillUserId(userId: string | null): Promise<BackfillUse
       const count = await db
         .table(tableName)
         .filter((record: Record<string, unknown>) => {
+          if (guestSessionId) {
+            // Guest session: only backfill rows from this specific session
+            return record.userId === null && record.guestSessionId === guestSessionId
+          }
           const existing = record.userId
           return existing === undefined || existing === null || existing === ''
         })

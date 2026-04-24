@@ -193,6 +193,9 @@ export interface ImportedCourse {
   youtubeThumbnailUrl?: string // Playlist/channel thumbnail URL
   youtubePublishedAt?: string // ISO 8601 — playlist publish date
   lastRefreshedAt?: string // ISO 8601 — last metadata refresh timestamp (E28-S12)
+  // Sync metadata — stamped by syncableWrite
+  userId?: string | null
+  guestSessionId?: string | null
 }
 
 export interface ImportedVideo {
@@ -797,6 +800,9 @@ export interface Book {
   sourceUrl?: string | null // remote URL for 'remote' sources; null for local/fileHandle
   // E94-S07: Storage URL for primary book file; null until first sync upload
   fileUrl?: string | null
+  // Sync metadata — stamped by syncableWrite
+  userId?: string | null
+  guestSessionId?: string | null
 }
 
 // --- Book Review Types (E113) ---

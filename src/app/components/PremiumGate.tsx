@@ -1,10 +1,9 @@
 // E19-S03: PremiumGate component
 // Renders children for premium users, or an upgrade CTA for free users.
 // Handles loading state with skeleton placeholder.
-// E19-S05: Added unauthenticated user flow — shows AuthDialog before checkout.
 
 import { type ReactNode } from 'react'
-import { Crown, Loader2, LogIn } from 'lucide-react'
+import { Crown, Loader2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { useIsPremium } from '@/lib/entitlement/isPremium'
@@ -12,8 +11,7 @@ import { useTrialStatus } from '@/app/hooks/useTrialStatus'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { startCheckout } from '@/lib/checkout'
 import { toastError } from '@/lib/toastHelpers'
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { AuthDialog } from '@/app/components/auth/AuthDialog'
+import { useState, useCallback } from 'react'
 
 interface PremiumGateProps {
   /** Content to render when user has premium access */
@@ -81,11 +79,8 @@ export interface UpgradeCTAProps {
 
 export function UpgradeCTA({ featureLabel, error = null, isStale = false }: UpgradeCTAProps) {
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
-  const [showAuthDialog, setShowAuthDialog] = useState(false)
   const user = useAuthStore(s => s.user)
   const { canStartTrial, hadTrial } = useTrialStatus()
-  // Track whether the auth dialog was opened for upgrade flow
-  const pendingCheckoutRef = useRef(false)
 
   const handleCheckout = useCallback(async () => {
     setIsCheckoutLoading(true)
@@ -108,43 +103,19 @@ export function UpgradeCTA({ featureLabel, error = null, isStale = false }: Upgr
     }
   }, [canStartTrial])
 
-  // E19-S05 AC5: When user signs in via AuthDialog, proceed to checkout automatically.
-  // Uses useEffect + subscribe to avoid race conditions with synchronous getState() reads.
-  useEffect(() => {
-    if (!pendingCheckoutRef.current) return
-    if (user) {
-      pendingCheckoutRef.current = false
-      setShowAuthDialog(false)
-      handleCheckout()
-    }
-  }, [user, handleCheckout])
-
-  // E19-S05 AC5: Unauthenticated user → show login first, then checkout
   const handleUpgrade = useCallback(() => {
-    if (!user) {
-      pendingCheckoutRef.current = true
-      setShowAuthDialog(true)
-      return
-    }
+    // unreachable in closed app — route guard ensures user is present before UpgradeCTA renders
+    if (!user) return
     handleCheckout()
   }, [user, handleCheckout])
 
-  // When auth dialog closes, clear pending checkout if user didn't sign in
-  const handleAuthDialogChange = useCallback((open: boolean) => {
-    setShowAuthDialog(open)
-    if (!open) {
-      pendingCheckoutRef.current = false
-    }
-  }, [])
-
   return (
-    <>
-      <Card
-        className="border-gold-muted/50 bg-gold-muted/10"
-        data-testid="premium-gate-cta"
-        role="region"
-        aria-label={`Upgrade required for ${featureLabel}`}
-      >
+    <Card
+      className="border-gold-muted/50 bg-gold-muted/10"
+      data-testid="premium-gate-cta"
+      role="region"
+      aria-label={`Upgrade required for ${featureLabel}`}
+    >
         <CardContent className="flex flex-col items-center gap-4 p-6 text-center">
           <div className="rounded-full bg-gold-muted p-3">
             <Crown className="size-6 text-gold" aria-hidden="true" />
@@ -167,28 +138,22 @@ export function UpgradeCTA({ featureLabel, error = null, isStale = false }: Upgr
             onClick={handleUpgrade}
             disabled={isCheckoutLoading}
             aria-label={
-              user
-                ? canStartTrial
-                  ? `Start free trial to unlock ${featureLabel}`
-                  : `Subscribe to unlock ${featureLabel}`
-                : `Sign in to upgrade to Premium and unlock ${featureLabel}`
+              canStartTrial
+                ? `Start free trial to unlock ${featureLabel}`
+                : `Subscribe to unlock ${featureLabel}`
             }
             aria-busy={isCheckoutLoading}
           >
-            {isCheckoutLoading ? (
+            {isCheckoutLoading && (
               <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
-            ) : !user ? (
-              <LogIn className="size-4" aria-hidden="true" />
-            ) : null}
+            )}
             {isCheckoutLoading
               ? 'Starting checkout...'
-              : !user
-                ? 'Sign In to Upgrade'
-                : canStartTrial
-                  ? 'Start Free Trial'
-                  : hadTrial
-                    ? 'Subscribe'
-                    : 'Upgrade to Premium'}
+              : canStartTrial
+                ? 'Start Free Trial'
+                : hadTrial
+                  ? 'Subscribe'
+                  : 'Upgrade to Premium'}
           </Button>
           {/* AC1: Trial info text when eligible */}
           {user && canStartTrial && (
@@ -226,14 +191,6 @@ export function UpgradeCTA({ featureLabel, error = null, isStale = false }: Upgr
             </a>
           </p>
         </CardContent>
-      </Card>
-
-      {/* E19-S05 AC5: Auth dialog for unauthenticated upgrade flow */}
-      <AuthDialog
-        open={showAuthDialog}
-        onOpenChange={handleAuthDialogChange}
-        defaultMode="sign-in"
-      />
-    </>
+    </Card>
   )
 }

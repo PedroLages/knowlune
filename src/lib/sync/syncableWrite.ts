@@ -148,9 +148,15 @@ export async function syncableWrite<T extends SyncableRecord>(
     await db.table(tableName).delete(record as string)
   } else {
     // For put/add, stamp the record before writing.
+    // When unauthenticated, co-stamp guestSessionId so cap checks and backfill
+    // can disambiguate rows from different anonymous sessions.
+    const guestSessionId = userId === null
+      ? (sessionStorage.getItem('knowlune-guest-id') ?? null)
+      : null
     const stampedRecord = {
       ...(record as T),
       userId,
+      ...(guestSessionId !== null ? { guestSessionId } : {}),
       updatedAt: now,
     }
     if (operation === 'put') {

@@ -224,8 +224,10 @@ export async function hydrateSettingsFromSupabase(
 
   // Only hydrate if Supabase has data AND localStorage is at defaults (or empty)
 
-  // displayName: custom metadata 'displayName' > Google 'full_name' > default "Student"
-  if (current.displayName === defaults.displayName || current.displayName === '') {
+  // displayName: custom metadata 'displayName' > Google 'full_name' > keep current
+  // Write allowed when stored value looks like a default/placeholder (empty, or any known default string).
+  const DISPLAY_NAME_DEFAULTS = new Set(['', 'Learner', 'Student'])
+  if (DISPLAY_NAME_DEFAULTS.has(current.displayName)) {
     if (typeof userMetadata.displayName === 'string' && userMetadata.displayName.length > 0) {
       updates.displayName = userMetadata.displayName
     } else if (typeof userMetadata.full_name === 'string' && userMetadata.full_name.length > 0) {
@@ -244,8 +246,8 @@ export async function hydrateSettingsFromSupabase(
   // profilePhotoUrl: custom upload (data: URL) > Google avatar (https: URL) > initials fallback
   // Only hydrate if no custom photo is set (custom photos use data: URLs)
   if (!current.profilePhotoUrl || !current.profilePhotoUrl.startsWith('data:')) {
-    // Try avatar_url first, then fall back to picture (both are Google-provided)
-    const avatarUrl = userMetadata.avatar_url ?? userMetadata.picture
+    // avatar_url (Google) > picture (Google alternate) > image_url (OIDC providers)
+    const avatarUrl = userMetadata.avatar_url ?? userMetadata.picture ?? userMetadata.image_url
     if (typeof avatarUrl === 'string' && avatarUrl.startsWith('https://')) {
       updates.profilePhotoUrl = avatarUrl
     }

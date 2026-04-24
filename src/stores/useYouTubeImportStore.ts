@@ -26,6 +26,7 @@ import { db } from '@/db'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { syncableWrite } from '@/lib/sync/syncableWrite'
 import type { SyncableRecord } from '@/lib/sync/syncableWrite'
+import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
 
 // --- Types ---
 
@@ -122,7 +123,7 @@ export interface YouTubeImportState {
     description: string
     tags: string[]
     selectedThumbnailVideoId: string | null
-  }) => Promise<{ ok: true; courseId: string } | { ok: false; error: string }>
+  }) => Promise<{ ok: true; courseId: string } | { ok: false; error: string; code?: string }>
 
   /** Reset the entire wizard state */
   reset: () => void
@@ -226,6 +227,17 @@ export const useYouTubeImportStore = create<YouTubeImportState>((set, get) => ({
   // --- Step 4: Save Course (E28-S08) ---
 
   saveCourse: async ({ name, description, tags, selectedThumbnailVideoId }) => {
+    // Guest cap: 1 course per guest session
+    if (selectIsGuestMode(useAuthStore.getState())) {
+      const guestSessionId = sessionStorage.getItem('knowlune-guest-id')
+      const existing = await db.importedCourses
+        .filter(r => r.userId === null && r.guestSessionId === guestSessionId)
+        .count()
+      if (existing >= 1) {
+        return { ok: false, error: 'GUEST_CAP_EXCEEDED', code: 'GUEST_CAP_EXCEEDED' }
+      }
+    }
+
     const state = get()
     const activeVideos = state.getActiveVideos()
     const loadedVideos = activeVideos.filter(v => v.metadata && v.status === 'loaded')

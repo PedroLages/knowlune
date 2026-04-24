@@ -22,3 +22,11 @@ export const useAbsApiKey = (serverId: string | undefined | null) => resolver.us
 
 /** Invalidate the cached value for a single server (e.g. after credential rotation). */
 export const invalidateAbsApiKey = (serverId: string) => resolver.invalidate(serverId)
+
+/**
+ * Last-known resolver outcome for a server. Used by the sync hook to decide
+ * whether a null apiKey means "sign in required" vs "re-enter key" vs
+ * "transient error".
+ */
+export const getAbsApiKeyReason = (serverId: string | undefined | null) =>
+  resolver.getLastReason(serverId)
