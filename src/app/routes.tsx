@@ -7,6 +7,7 @@ import { RouteErrorBoundary } from './components/RouteErrorBoundary'
 import { PremiumFeaturePage, PREMIUM_FEATURES } from './components/PremiumFeaturePage'
 import { MessageSquare, Sparkles, Brain, RotateCcw, Shuffle, BarChart3, Layers } from 'lucide-react'
 import { useAuthStore, selectAuthState } from '@/stores/useAuthStore'
+import { Landing } from '@/app/pages/Landing'
 
 const RETURN_TO_KEY = 'knowlune-auth-return-to'
 
@@ -46,7 +47,7 @@ function RouteGuard() {
   }, [authState, navigate])
 
   if (authState === 'loading' || isOAuthInFlight()) return <SplashLoader />
-  if (authState === 'anonymous') return <Navigate to="/" replace />
+  if (authState === 'anonymous') return <Landing />
   return <Outlet />
 }
 
@@ -261,13 +262,13 @@ export const router = createBrowserRouter([
   // /guest — sets sessionStorage guest flags and redirects into the app
   {
     path: 'guest',
-    element: (() => {
+    Component: function GuestEntry() {
       sessionStorage.setItem('knowlune-guest', 'true')
       if (!sessionStorage.getItem('knowlune-guest-id')) {
         sessionStorage.setItem('knowlune-guest-id', crypto.randomUUID())
       }
       return <Navigate to="/courses" replace />
-    })(),
+    },
   },
   // E84: EPUB Reader — full-viewport, outside Layout (no sidebar/header)
   {
@@ -302,6 +303,10 @@ export const router = createBrowserRouter([
         children: [
       {
         index: true,
+        element: <Navigate to="/courses" replace />,
+      },
+      {
+        path: 'overview',
         element: (
           <SuspensePage>
             <Overview />
