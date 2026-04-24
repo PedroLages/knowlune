@@ -123,7 +123,7 @@ export function useNoticeAcknowledgement(): NoticeAcknowledgementState {
     return () => {
       mounted = false
     }
-  }, [user?.id, fetchTrigger]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, fetchTrigger])
 
   return { ...state, refetch }
 }

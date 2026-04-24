@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-22  # E119 epic created — 13 GDPR compliance stories, all ready-for-dev
+last_updated: 2026-04-24  # E68 revised (7→3 stories, gap-fill only); E77 split into E77A (archive) + E77B (Drive course source)
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -771,18 +771,20 @@ development_status:
   epic-67-retrospective: optional
 
   # ──────────────────────────────────────────────────
-  # Epic 68: On-Device Embedding Optimization & Provider Abstraction
-  # Source: epics-on-device-embeddings.md
-  # Download progress UI, cache management, warm-up, provider abstraction
+  # Epic 68: On-Device Embedding Hardening (gap-fill only)
+  # Source: epics-on-device-embeddings.md → revised 2026-04-24
+  # Plan: docs/plans/2026-04-24-001-feat-e68-e77-embeddings-and-archive-plan.md
+  # Revised scope: ~60% already shipped organically in E9/E57/E62.
+  # Original 7 stories replaced with 3 targeted gap-fill stories.
+  # Original stories 68-4..68-7 (EmbeddingProvider abstraction, reEmbedAll,
+  #   full refactor) are DROPPED — working code stays in src/ai/workers/.
+  #   @huggingface/transformers v3 migration deferred to a post-beta epic.
+  # Depends on: E9 (AI infra — already done, code exists)
   # ──────────────────────────────────────────────────
-  epic-68: backlog  # reset 2026-03-30: story specs created but no code implemented
-  68-1-model-download-progress-ui: ready-for-dev
-  68-2-cache-api-validation-and-storage-management: ready-for-dev
-  68-3-embedding-worker-warm-up-strategy: ready-for-dev
-  68-4-embeddingprovider-abstraction-and-transformersjs-provider: ready-for-dev
-  68-5-openai-embedding-provider: ready-for-dev
-  68-6-fallback-chain-and-graceful-degradation: ready-for-dev
-  68-7-edge-case-hardening-and-cross-browser-resilience: ready-for-dev
+  epic-68: backlog
+  68-1-model-download-progress-and-warmup: backlog  # replaces 68-1 + 68-3: progress toast + idle warm-up
+  68-2-cache-api-validation-and-openai-fallback: backlog  # replaces 68-2 + 68-4 + 68-5 + 68-6: minimal EmbeddingProvider seam + OpenAI fallback
+  68-3-worker-crash-telemetry-and-safari-fallback: backlog  # replaces 68-7: structured crash payloads + module-worker fallback
   epic-68-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -894,20 +896,40 @@ development_status:
   epic-76-retrospective: optional
 
   # ──────────────────────────────────────────────────
-  # Epic 77: Google Drive Backup & Restore
-  # Source: epics-google-drive-backup.md
-  # Premium feature: backup IndexedDB to Google Drive, restore from backup
-  # Depends on: E35 (Premium Entitlement), E19 (Supabase Auth)
+  # Epic 77A: Export & Archive (disaster recovery)
+  # Source: epics-google-drive-backup.md → split + reframed 2026-04-24
+  # Plan: docs/plans/2026-04-24-001-feat-e68-e77-embeddings-and-archive-plan.md
+  # Reframed: E92-E97 Supabase sync handles multi-device; E77A covers the gap
+  #   sync can't fill — Supabase account loss, outage, user-initiated migration.
+  # Original 7 stories replaced with 4 focused stories.
+  # Auth: Supabase-brokered Google OAuth (provider_token) — no parallel GIS flow.
+  # Depends on: E19 (Supabase Auth), E35 (Premium gate for Drive destination)
   # ──────────────────────────────────────────────────
-  epic-77: backlog
-  77-1-google-oauth-connection-and-premium-gate: backlog
-  77-2-google-drive-service-layer: backlog
-  77-3-manual-backup-to-google-drive: backlog
-  77-4-import-service-with-schema-migration: backlog
-  77-5-restore-flow-with-backup-history: backlog
-  77-6-scheduled-automatic-backups: backlog
-  77-7-storage-management-and-backup-cleanup: backlog
-  epic-77-retrospective: optional
+  epic-77a: backlog
+  77a-1-local-backup-download-and-restore: backlog  # local .knowlune.json download + restore + safety backup
+  77a-2-supabase-google-oauth-drive-scope: backlog  # add drive.file scope to Supabase Google provider; token helper
+  77a-3-drive-upload-destination-and-reconnect: backlog  # optional "Send to Drive" button + reconnect flow
+  77a-4-backup-metadata-tracking-and-status: backlog  # lastBackupAt, stale warning in Settings > Data & Backup
+  epic-77a-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 77B: Google Drive as Remote Course Source
+  # Source: new — emerged from user intent 2026-04-24
+  # Plan: docs/plans/2026-04-24-001-feat-e68-e77-embeddings-and-archive-plan.md
+  # Fills the file-access gap left by E92-E97: sync restores metadata but not
+  #   actual course files (video/PDF/EPUB). Drive-sourced courses stream when
+  #   online and cache to OPFS for offline — same pattern as ABS (E101-E102).
+  # ⚠️  CRITICAL: drive.readonly scope requires Google OAuth app verification
+  #   if >100 users. Start verification on 77b-1 completion (~4-6 weeks lead).
+  # ⚠️  CORS: Drive media endpoint needs Edge Function proxy for video streaming.
+  # Depends on: E77A-S02 (token helper), E35 (Premium), E94 (sync for file refs)
+  # ──────────────────────────────────────────────────
+  epic-77b: backlog
+  77b-1-drive-auth-readonly-scope-and-folder-browser: backlog  # drive.readonly scope + Drive folder picker in import wizard (premium gated)
+  77b-2-drive-course-import-metadata-and-schema: backlog  # store Drive file refs in IndexedDB; Dexie v59 migration
+  77b-3-drive-file-streaming-and-opfs-cache: backlog  # stream from Drive + transparent OPFS cache on first play
+  77b-4-drive-source-management-ui-and-sync-validation: backlog  # source badge, reconnect flow, E94 sync round-trip test
+  epic-77b-retrospective: optional
 
   # ──────────────────────────────────────────────────
   # Epic 78: Plugin Foundation (MVP)

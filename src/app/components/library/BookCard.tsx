@@ -12,9 +12,10 @@
 
 import { memo, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { BookOpen, Cloud, Headphones, ArrowRightLeft, Clock, CheckCircle2 } from 'lucide-react'
+import { Cloud, Headphones, BookOpen, ArrowRightLeft, Clock, CheckCircle2 } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { BookStatusBadge } from './BookStatusBadge'
+import { BookCoverImage } from './BookCoverImage'
 import { FormatBadge } from './FormatBadge'
 import { StarRating } from './StarRating'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
@@ -89,21 +90,13 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
       >
         {/* Square cover */}
         <div className="relative aspect-square rounded-2xl overflow-hidden shadow-card-ambient group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_var(--shadow-brand)] transition-all duration-300">
-          {resolvedCoverUrl ? (
-            <img
-              src={resolvedCoverUrl}
-              alt={`Cover of ${book.title}`}
-              loading="lazy"
-              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
-              onError={e => {
-                e.currentTarget.style.display = 'none'
-              }}
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-muted">
-              <Headphones className="size-8 text-muted-foreground" />
-            </div>
-          )}
+          <BookCoverImage
+            src={resolvedCoverUrl}
+            title={book.title}
+            fallbackIcon={Headphones}
+            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+
           {/* Status badge */}
           <div className="absolute top-2 right-2">
             <BookStatusBadge status={book.status} />
@@ -200,21 +193,13 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
     >
       {/* Cover — portrait */}
       <div className="relative aspect-[2/3] rounded-2xl overflow-hidden shadow-card-ambient group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_var(--shadow-brand)] transition-all duration-300">
-        {resolvedCoverUrl ? (
-          <img
-            src={resolvedCoverUrl}
-            alt={`Cover of ${book.title}`}
-            loading="lazy"
-            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
-            onError={e => {
-              e.currentTarget.style.display = 'none'
-            }}
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-muted">
-            <BookOpen className="h-8 w-8 text-muted-foreground" />
-          </div>
-        )}
+        <BookCoverImage
+          src={resolvedCoverUrl}
+          title={book.title}
+          fallbackIcon={BookOpen}
+          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+
         <div className="absolute top-2 right-2">
           <BookStatusBadge status={book.status} />
         </div>

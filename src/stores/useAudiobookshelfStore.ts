@@ -92,6 +92,26 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
     try {
       const servers = await db.audiobookshelfServers.toArray()
       set({ servers, isLoaded: true })
+
+      // Hydrate Series and Collections from Dexie (v60 cache) so the tabs
+      // render instantly on cold page reload before any network fetch
+      // completes. TTL cache in `loadSeries` / `loadCollections` still gates
+      // refetches independently. Fire-and-forget: hydration failure is silent.
+      try {
+        const [cachedSeries, cachedCollections] = await Promise.all([
+          db.absSeries.toArray(),
+          db.absCollections.toArray(),
+        ])
+        if (cachedSeries.length > 0 || cachedCollections.length > 0) {
+          set({
+            series: cachedSeries,
+            collections: cachedCollections,
+          })
+        }
+      } catch (err) {
+        // silent-catch-ok — Dexie cache is an optimization; network will refill.
+        console.warn('[AudiobookshelfStore] Dexie hydration for series/collections failed:', err)
+      }
     } catch (err) {
       console.error('[AudiobookshelfStore] Failed to load servers:', err)
       toast.error('Failed to load Audiobookshelf servers.')
@@ -189,6 +209,21 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       }
       if (absBooks.length > 0) {
         await db.books.bulkDelete(absBooks.map(b => b.id))
+      }
+      // Drop cached series/collections for this server (v60 cache).
+      try {
+        const staleSeries = await db.absSeries
+          .filter(s => (s as unknown as { serverId?: string }).serverId === id)
+          .toArray()
+        const staleCollections = await db.absCollections
+          .filter(c => (c as unknown as { serverId?: string }).serverId === id)
+          .toArray()
+        if (staleSeries.length > 0) await db.absSeries.bulkDelete(staleSeries.map(s => s.id))
+        if (staleCollections.length > 0)
+          await db.absCollections.bulkDelete(staleCollections.map(c => c.id))
+      } catch (err) {
+        // silent-catch-ok — cleanup is best-effort; orphaned cache rows are harmless.
+        console.warn('[AudiobookshelfStore] Failed to drop cached series/collections:', err)
       }
       await syncableWrite('audiobookshelfServers', 'delete', id)
       set(state => ({
@@ -314,6 +349,19 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
         allSeries.push(...nextResult.data.results)
       }
 
+      // Persist to Dexie (v60) — local-only cache. Stamp serverId + libraryId
+      // so the Series tab can source-filter on reload. Fire-and-forget: a
+      // Dexie failure must not break the in-memory render.
+      try {
+        const stamped = allSeries.map(s => ({ ...s, serverId, libraryId }))
+        await db.absSeries.bulkPut(
+          stamped as unknown as import('@/data/types').AbsSeries[]
+        )
+      } catch (err) {
+        // silent-catch-ok — Dexie persistence is an optimization; network is authoritative.
+        console.warn('[AudiobookshelfStore] Failed to persist series to Dexie:', err)
+      }
+
       set({
         series: allSeries,
         seriesLoadedAt: { ...get().seriesLoadedAt, [serverId]: Date.now() },
@@ -352,6 +400,19 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
           collectionsLoadedAt: { ...get().collectionsLoadedAt, [serverId]: Date.now() },
         })
         return
+      }
+
+      // Persist to Dexie (v60) — local-only cache. Stamp serverId so the
+      // Collections tab can source-filter on reload. AbsCollection already
+      // carries its own libraryId. Fire-and-forget.
+      try {
+        const stamped = result.data.results.map(c => ({ ...c, serverId }))
+        await db.absCollections.bulkPut(
+          stamped as unknown as import('@/data/types').AbsCollection[]
+        )
+      } catch (err) {
+        // silent-catch-ok — Dexie persistence is an optimization; network is authoritative.
+        console.warn('[AudiobookshelfStore] Failed to persist collections to Dexie:', err)
       }
 
       set({

@@ -32,7 +32,13 @@ export function LibraryFilters() {
   const books = useBookStore(s => s.books)
   const getBookCountByStatus = useBookStore(s => s.getBookCountByStatus)
 
-  const counts = useMemo(() => getBookCountByStatus(), [books, getBookCountByStatus])
+  // fix/E-ABS-QA: include `filters.source` in the dep array so counts
+  // recompute when the user toggles the source tab. `getBookCountByStatus()`
+  // already reads `filters.source` internally — the memo just needs to fire.
+  const counts = useMemo(
+    () => getBookCountByStatus(),
+    [books, filters.source, getBookCountByStatus]
+  )
   const activeStatus = filters.status || 'all'
 
   // Filter sidebar state

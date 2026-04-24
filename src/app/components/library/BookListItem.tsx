@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router'
 import { ArrowRightLeft, BookOpen, Cloud, Headphones, Mic } from 'lucide-react'
 import type { Book, BookStatus } from '@/data/types'
 import { BookStatusBadge } from './BookStatusBadge'
+import { BookCoverImage } from './BookCoverImage'
 import { FormatBadge } from './FormatBadge'
 import {
   Select,
@@ -87,25 +88,12 @@ export const BookListItem = memo(function BookListItem({ book }: BookListItemPro
     >
       {/* Thumbnail */}
       <div className="size-16 flex-shrink-0 rounded-lg overflow-hidden">
-        {resolvedCoverUrl ? (
-          <img
-            src={resolvedCoverUrl}
-            alt={`Cover of ${book.title}`}
-            loading="lazy"
-            className="h-full w-full object-cover"
-            onError={e => {
-              e.currentTarget.style.display = 'none'
-            }}
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-muted rounded-lg">
-            {book.format === 'audiobook' ? (
-              <Headphones className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <BookOpen className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
-        )}
+        <BookCoverImage
+          src={resolvedCoverUrl}
+          title={book.title}
+          fallbackIcon={book.format === 'audiobook' ? Headphones : BookOpen}
+          className="h-full w-full object-cover"
+        />
       </div>
 
       {/* Title + Author */}
