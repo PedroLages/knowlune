@@ -11,19 +11,16 @@
 // Key naming: `{userId}:{credentialType}:{credentialId}`
 // Credential types: ai-provider | opds-catalog | abs-server
 //
-// Raw secrets never appear in Postgres public tables, the Dexie sync queue,
-// or browser localStorage. The Edge Function bridges the auth boundary:
-// clients send their JWT, the function uses service-role to access vault.secrets.
+// The vault schema is not exposed via PostgREST. We call public-schema
+// SECURITY DEFINER wrappers (migration: vault_credentials_public_wrappers).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// Env var validation — fail fast if misconfigured
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 if (!SUPABASE_URL) throw new Error('SUPABASE_URL is required')
 if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY is required')
 
-// Service-role client for Vault access (bypasses RLS — intentional)
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 const CORS_HEADERS = {
@@ -42,12 +39,10 @@ function json(body: unknown, status = 200): Response {
   })
 }
 
-/** Build the vault secret name (user-scoped, no additional RLS required) */
 function buildKey(userId: string, credentialType: CredentialType, credentialId: string): string {
   return `${userId}:${credentialType}:${credentialId}`
 }
 
-/** Authenticate the request — returns userId or an error Response */
 async function authenticate(req: Request): Promise<{ userId: string } | Response> {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader?.startsWith('Bearer ')) {
@@ -64,7 +59,6 @@ async function authenticate(req: Request): Promise<{ userId: string } | Response
   return { userId: user.id }
 }
 
-/** Parse and validate credentialType from body or URL params */
 function parseCredentialType(value: string | null): CredentialType | null {
   if (VALID_CREDENTIAL_TYPES.includes(value as CredentialType)) {
     return value as CredentialType
@@ -74,7 +68,6 @@ function parseCredentialType(value: string | null): CredentialType | null {
 
 // ─── Route handlers ───────────────────────────────────────────────────────────
 
-/** POST /vault/store-credential */
 async function storeCredential(
   userId: string,
   credentialType: CredentialType,
@@ -84,52 +77,41 @@ async function storeCredential(
   const name = buildKey(userId, credentialType, credentialId)
   const description = `E95-S02: ${credentialType} credential for user ${userId}`
 
-  // Check if a secret with this name already exists
-  const { data: existing, error: selectError } = await supabaseAdmin
-    .from('vault.secrets')
-    .select('id')
-    .eq('name', name)
-    .maybeSingle()
+  // Check if secret already exists
+  const { data: existingId, error: lookupError } = await supabaseAdmin.rpc(
+    'vault_get_secret_id_by_name',
+    { p_name: name }
+  )
 
-  if (selectError) {
-    console.error('[vault-credentials] store: select error:', selectError)
-    return json({ error: 'Failed to check existing credential' }, 500)
+  if (lookupError) {
+    console.error('[vault-credentials] store: lookup error:', lookupError)
+    return json({ error: 'Failed to check existing credential', details: lookupError.message }, 500)
   }
 
-  if (existing?.id) {
-    // Update existing secret
-    const { error: updateError } = await supabaseAdmin.rpc('vault_update_secret', {
-      secret: secret,
-      id: existing.id,
+  if (existingId) {
+    const { error: updateError } = await supabaseAdmin.rpc('vault_update_secret_by_name', {
+      p_name: name,
+      p_secret: secret,
     })
     if (updateError) {
-      // Fallback: try raw SQL via rpc — vault.update_secret signature
-      const { error: fallbackError } = await supabaseAdmin.rpc('vault_update_secret_by_id', {
-        p_id: existing.id,
-        p_secret: secret,
-      })
-      if (fallbackError) {
-        console.error('[vault-credentials] store: update error:', updateError, fallbackError)
-        return json({ error: 'Failed to update credential' }, 500)
-      }
+      console.error('[vault-credentials] store: update error:', updateError)
+      return json({ error: 'Failed to update credential', details: updateError.message }, 500)
     }
   } else {
-    // Create new secret
     const { error: createError } = await supabaseAdmin.rpc('vault_create_secret', {
-      secret: secret,
-      name: name,
-      description: description,
+      p_secret: secret,
+      p_name: name,
+      p_description: description,
     })
     if (createError) {
       console.error('[vault-credentials] store: create error:', createError)
-      return json({ error: 'Failed to store credential' }, 500)
+      return json({ error: 'Failed to store credential', details: createError.message }, 500)
     }
   }
 
   return json({ configured: true })
 }
 
-/** GET /vault/check-credential */
 async function checkCredential(
   userId: string,
   credentialType: CredentialType,
@@ -137,11 +119,7 @@ async function checkCredential(
 ): Promise<Response> {
   const name = buildKey(userId, credentialType, credentialId)
 
-  const { data, error } = await supabaseAdmin
-    .from('vault.secrets')
-    .select('id')
-    .eq('name', name)
-    .maybeSingle()
+  const { data, error } = await supabaseAdmin.rpc('vault_get_secret_id_by_name', { p_name: name })
 
   if (error) {
     console.error('[vault-credentials] check: error:', error)
@@ -151,7 +129,6 @@ async function checkCredential(
   return json({ configured: !!data })
 }
 
-/** GET /vault/read-credential */
 async function readCredential(
   userId: string,
   credentialType: CredentialType,
@@ -159,25 +136,20 @@ async function readCredential(
 ): Promise<Response> {
   const name = buildKey(userId, credentialType, credentialId)
 
-  const { data, error } = await supabaseAdmin
-    .from('vault.decrypted_secrets')
-    .select('decrypted_secret')
-    .eq('name', name)
-    .maybeSingle()
+  const { data, error } = await supabaseAdmin.rpc('vault_read_secret_by_name', { p_name: name })
 
   if (error) {
     console.error('[vault-credentials] read: error:', error)
-    return json({ error: 'Failed to read credential' }, 500)
+    return json({ error: 'Failed to read credential', details: error.message }, 500)
   }
 
   if (!data) {
     return json({ error: 'Credential not found' }, 404)
   }
 
-  return json({ secret: data.decrypted_secret })
+  return json({ secret: data })
 }
 
-/** DELETE /vault/delete-credential */
 async function deleteCredential(
   userId: string,
   credentialType: CredentialType,
@@ -185,11 +157,11 @@ async function deleteCredential(
 ): Promise<Response> {
   const name = buildKey(userId, credentialType, credentialId)
 
-  const { error } = await supabaseAdmin.from('vault.secrets').delete().eq('name', name)
+  const { error } = await supabaseAdmin.rpc('vault_delete_secret_by_name', { p_name: name })
 
   if (error) {
     console.error('[vault-credentials] delete: error:', error)
-    return json({ error: 'Failed to delete credential' }, 500)
+    return json({ error: 'Failed to delete credential', details: error.message }, 500)
   }
 
   return json({ deleted: true })
@@ -198,12 +170,10 @@ async function deleteCredential(
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 200, headers: CORS_HEADERS })
   }
 
-  // Authenticate all requests
   const authResult = await authenticate(req)
   if (authResult instanceof Response) return authResult
   const { userId } = authResult
@@ -211,7 +181,6 @@ Deno.serve(async (req: Request) => {
   const url = new URL(req.url)
   const pathname = url.pathname
 
-  // Route: POST /vault/store-credential
   if (req.method === 'POST' && pathname.endsWith('/store-credential')) {
     let body: Record<string, string>
     try {
@@ -237,7 +206,6 @@ Deno.serve(async (req: Request) => {
     return storeCredential(userId, credentialType, credentialId, secret)
   }
 
-  // Route: GET /vault/check-credential
   if (req.method === 'GET' && pathname.endsWith('/check-credential')) {
     const credentialType = parseCredentialType(url.searchParams.get('credentialType'))
     if (!credentialType) {
@@ -253,7 +221,6 @@ Deno.serve(async (req: Request) => {
     return checkCredential(userId, credentialType, credentialId)
   }
 
-  // Route: GET /vault/read-credential
   if (req.method === 'GET' && pathname.endsWith('/read-credential')) {
     const credentialType = parseCredentialType(url.searchParams.get('credentialType'))
     if (!credentialType) {
@@ -269,7 +236,6 @@ Deno.serve(async (req: Request) => {
     return readCredential(userId, credentialType, credentialId)
   }
 
-  // Route: DELETE /vault/delete-credential
   if (req.method === 'DELETE' && pathname.endsWith('/delete-credential')) {
     const credentialType = parseCredentialType(url.searchParams.get('credentialType'))
     if (!credentialType) {
