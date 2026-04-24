@@ -16,7 +16,7 @@ import {
   corsHeaders,
 } from '../_shared/origin-check.ts'
 
-type SupportedProvider = 'openai' | 'groq' | 'openrouter'
+type SupportedProvider = 'openai' | 'groq' | 'openrouter' | 'glm' | 'gemini'
 
 interface UpstreamConfig {
   url: string
@@ -47,6 +47,18 @@ function buildUpstream(provider: SupportedProvider, apiKey: string): UpstreamCon
           'X-Title': 'Knowlune',
         },
         timeoutMs: 15_000,
+      }
+    case 'glm':
+      return {
+        url: 'https://api.z.ai/api/paas/v4/models',
+        headers: { Authorization: `Bearer ${apiKey}` },
+        timeoutMs: 10_000,
+      }
+    case 'gemini':
+      return {
+        url: 'https://generativelanguage.googleapis.com/v1beta/models',
+        headers: { 'x-goog-api-key': apiKey },
+        timeoutMs: 10_000,
       }
   }
 }
@@ -111,7 +123,13 @@ Deno.serve(async (req) => {
   const segments = pathname.split('/').filter((s) => s.length > 0)
   const provider = segments[segments.length - 1] as SupportedProvider
 
-  if (provider !== 'openai' && provider !== 'groq' && provider !== 'openrouter') {
+  if (
+    provider !== 'openai' &&
+    provider !== 'groq' &&
+    provider !== 'openrouter' &&
+    provider !== 'glm' &&
+    provider !== 'gemini'
+  ) {
     return json({ error: 'Unsupported provider' }, 404, req, allowedOrigins)
   }
 

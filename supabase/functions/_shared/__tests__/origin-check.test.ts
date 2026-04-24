@@ -44,7 +44,7 @@ Deno.test('handlePreflight: OPTIONS with allowed origin returns 204 + CORS', () 
   assertEquals(res!.headers.get('Access-Control-Allow-Methods'), 'GET, POST, OPTIONS')
   assertEquals(
     res!.headers.get('Access-Control-Allow-Headers'),
-    'authorization, x-client-info, apikey, content-type'
+    'authorization, x-client-info, apikey, content-type, x-api-key'
   )
   assertEquals(res!.headers.get('Access-Control-Max-Age'), '86400')
 })
