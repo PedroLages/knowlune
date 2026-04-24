@@ -19,6 +19,7 @@ import {
   onProgressUpdate,
   pushProgressViaSocket,
   isInsecureUrl,
+  isMixedContentBlocked,
   type AbsSocketConnection,
 } from '@/services/AudiobookshelfService'
 
@@ -687,6 +688,26 @@ describe('AudiobookshelfService.isInsecureUrl', () => {
 
   it('returns false for invalid URLs', () => {
     expect(isInsecureUrl('not-a-url')).toBe(false)
+  })
+})
+
+// ── isMixedContentBlocked ─────────────────────────────────────────────
+
+describe('AudiobookshelfService.isMixedContentBlocked', () => {
+  it('blocks http ABS URL when app is served over https', () => {
+    expect(isMixedContentBlocked('http://192.168.1.50:13378', 'https:')).toBe(true)
+  })
+
+  it('allows https ABS URL when app is served over https', () => {
+    expect(isMixedContentBlocked('https://abs.example.com', 'https:')).toBe(false)
+  })
+
+  it('allows http ABS URL in dev (app served over http)', () => {
+    expect(isMixedContentBlocked('http://192.168.1.50:13378', 'http:')).toBe(false)
+  })
+
+  it('returns false for invalid URLs (falls through to other validation)', () => {
+    expect(isMixedContentBlocked('not a url', 'https:')).toBe(false)
   })
 })
 

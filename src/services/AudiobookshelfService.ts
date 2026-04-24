@@ -664,3 +664,21 @@ export function isInsecureUrl(url: string): boolean {
     return false
   }
 }
+
+/**
+ * Returns true if an HTTP ABS URL cannot be reached from the current app
+ * origin due to browser mixed-content rules — i.e. the app is served over
+ * HTTPS and the target is plain HTTP.
+ *
+ * `appProtocol` is injected for testability; defaults to
+ * `window.location.protocol` at call time.
+ *
+ * Dev (`http://localhost:5173`) is unaffected: `appProtocol === 'http:'`
+ * returns false for every target.
+ */
+export function isMixedContentBlocked(
+  absUrl: string,
+  appProtocol: string = typeof window !== 'undefined' ? window.location.protocol : 'http:'
+): boolean {
+  return appProtocol === 'https:' && isInsecureUrl(absUrl)
+}

@@ -24,7 +24,7 @@ import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
 import { Checkbox } from '@/app/components/ui/checkbox'
 import type { AbsLibrary } from '@/data/types'
-import { isInsecureUrl } from '@/services/AudiobookshelfService'
+import { isInsecureUrl, isMixedContentBlocked } from '@/services/AudiobookshelfService'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -76,8 +76,11 @@ export function AudiobookshelfServerForm({
 }: AudiobookshelfServerFormProps) {
   const [showApiKey, setShowApiKey] = useState(false)
 
-  const showHttpWarning = url.trim() && isInsecureUrl(url.trim())
-  const isCorsError = testResult && !testResult.ok && testResult.message.includes('CORS settings')
+  const trimmedUrl = url.trim()
+  const httpsRequired = trimmedUrl !== '' && isMixedContentBlocked(trimmedUrl)
+  const showHttpWarning = trimmedUrl !== '' && isInsecureUrl(trimmedUrl) && !httpsRequired
+  const isCorsError =
+    testResult && !testResult.ok && testResult.message.includes('Allowed Origins')
   const testPassed = testResult?.ok === true
 
   return (
@@ -115,7 +118,31 @@ export function AudiobookshelfServerForm({
         />
       </div>
 
-      {/* HTTP security warning */}
+      {/* HTTPS-required blocking error (mixed content) */}
+      {httpsRequired && (
+        <div
+          className="flex items-start gap-2 rounded-xl p-3 text-sm bg-destructive/10 text-destructive"
+          role="alert"
+          data-testid="abs-https-required"
+        >
+          <XCircle className="size-4 mt-0.5 shrink-0" aria-hidden="true" />
+          <span>
+            Your browser can't reach an <code>http://</code> server from this HTTPS app. Expose your
+            Audiobookshelf server over HTTPS and try again.{' '}
+            <a
+              href="/docs/abs-https-setup"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:no-underline"
+            >
+              Setup guide
+            </a>{' '}
+            — Tailscale Funnel is the easiest option.
+          </span>
+        </div>
+      )}
+
+      {/* HTTP security warning (dev only — HTTPS app blocks above) */}
       {showHttpWarning && (
         <div
           className="flex items-start gap-2 rounded-xl p-3 text-sm bg-warning/10 text-warning"
@@ -195,11 +222,10 @@ export function AudiobookshelfServerForm({
         <details className="text-xs text-muted-foreground mt-0" data-testid="abs-cors-troubleshoot">
           <summary className="cursor-pointer hover:text-foreground">Troubleshooting</summary>
           <p className="mt-1">
-            Your browser is blocking the cross-origin request. Ensure your reverse proxy (e.g.
-            Traefik, Nginx, Caddy) sends{' '}
-            <code className="bg-muted px-1 py-0.5 rounded">Access-Control-Allow-Origin</code>{' '}
-            headers for{' '}
-            <code className="bg-muted px-1 py-0.5 rounded">{window.location.origin}</code>.
+            In your Audiobookshelf server, go to <strong>Settings → Security → Allowed Origins</strong>{' '}
+            and add{' '}
+            <code className="bg-muted px-1 py-0.5 rounded">{window.location.origin}</code>. Requires
+            ABS v2.26 or newer.
           </p>
         </details>
       )}
@@ -233,7 +259,7 @@ export function AudiobookshelfServerForm({
           type="button"
           variant="ghost"
           onClick={onTest}
-          disabled={isTesting || !url.trim()}
+          disabled={isTesting || !trimmedUrl || httpsRequired}
           className="min-h-[44px]"
           data-testid="abs-test-btn"
         >
@@ -243,7 +269,7 @@ export function AudiobookshelfServerForm({
         <Button
           type="submit"
           variant="brand"
-          disabled={isSaving || !url.trim() || !testPassed}
+          disabled={isSaving || !trimmedUrl || httpsRequired || !testPassed}
           className="min-h-[44px] ml-auto"
           data-testid="abs-save-btn"
         >
