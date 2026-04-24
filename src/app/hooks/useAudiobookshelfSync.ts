@@ -248,7 +248,9 @@ export function useAudiobookshelfSync() {
         // Collections fetched separately with longer delay
         setTimeout(() => {
           const { loadCollections } = useAudiobookshelfStore.getState()
-          loadCollections(server.id)
+          for (const libId of server.libraryIds) {
+            loadCollections(server.id, libId)
+          }
         }, 6000)
       } catch (err) {
         console.error('[useAudiobookshelfSync] Unexpected sync error:', err)

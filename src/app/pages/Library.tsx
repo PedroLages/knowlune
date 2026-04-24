@@ -647,8 +647,8 @@ export function Library() {
               setAbsViewMode('collections')
               // Lazy-load collections on first selection
               const connectedServer = absServers.find(s => s.status === 'connected')
-              if (connectedServer) {
-                loadCollections(connectedServer.id)
+              if (connectedServer && connectedServer.libraryIds.length > 0) {
+                loadCollections(connectedServer.id, connectedServer.libraryIds[0])
               }
             }}
             className={cn(
