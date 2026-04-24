@@ -13,7 +13,7 @@ Move Knowlune's entire backend and frontend off the Unraid server (`titan`) to f
 
 ## Session Progress Log — 2026-04-24
 
-**Status:** ~90% complete. Auth + schema + storage + Edge Functions + Pages-deploy scaffolding all live. Remaining: Vault re-insert (Unit 4, depends on deployed vault-credentials function), Cloudflare Pages dashboard project creation (Unit 8 manual step), retention-tick Worker cron (Unit 9), cutover smoke (Unit 10), Unraid cleanup (Unit 11).
+**Status:** ~92% complete. Auth + schema + storage + Edge Functions + Pages deploy all live (SPA serving at `knowlune.pages.dev`). Remaining: Vault re-insert (Unit 4), retention-tick Worker secret rotation (Unit 9 — partial; URL rotated, secret rotation blocked on user), cutover smoke (Unit 10), Unraid cleanup (Unit 11).
 
 ### What's DONE
 
@@ -61,7 +61,7 @@ Move Knowlune's entire backend and frontend off the Unraid server (`titan`) to f
 ### What's LEFT
 
 - 🔜 **Unit 4 — Vault secrets**: re-insert OPDS passwords + ABS apiKeys (depends on Unit 5 vault-credentials function).
-- 🔜 **Unit 8 (manual) — Cloudflare Pages dashboard**: create the Pages project, set env vars, verify preview deploy. Runbook: [docs/deployment/cloudflare-pages-setup.md](../deployment/cloudflare-pages-setup.md).
+- ✅ **Unit 8 — Cloudflare Pages dashboard**: Pages project `knowlune` created, connected to `PedroLages/knowlune`, deploying `main` on push. Env vars set (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_BASE_URL, NODE_VERSION=20). Live at <https://knowlune.pages.dev> (200, SPA deep-link `/courses` returns 200 confirming `_redirects`). Two mid-flight fixes merged: PR #426 moved `wrangler.toml` into `cloudflare-workers/` so Pages wouldn't treat the cron config as a Pages config; PR #427 removed `public/design-tokens.source.json` (59.6 MiB, exceeded Pages' 25 MiB per-file limit — already flagged as P0 in 2026-03-26 production readiness review).
 - 🔜 **Unit 9 — retention-tick Worker**: reconfigure cron to hit Cloud Edge Function.
 - 🔜 **Unit 10 — cutover smoke**: verify on prod domain.
 - 🔜 **Unit 11 — cleanup**: shut down Unraid services.
@@ -639,7 +639,7 @@ Unit 11 (Post-cutover cleanup + 14-day rollback window)
 
 ---
 
-- [~] **Unit 8: Switch SPA env and deploy to Cloudflare Pages** — 🟡 Repo-side scaffolding shipped 2026-04-24 (`public/_redirects`, runbook at `docs/deployment/cloudflare-pages-setup.md`, deploy-titan.yml marked deprecated, `.env.example` updated, `npm run build` verifies `_redirects` lands in `dist/`). **Manual dashboard step still required**: create the Pages project, set env vars per the runbook, trigger first deploy, verify preview URL loads with Cloud Supabase backing.
+- [x] **Unit 8: Switch SPA env and deploy to Cloudflare Pages** — ✅ 2026-04-24. Repo-side scaffolding (`public/_redirects`, runbook, deprecated `deploy-titan.yml`) in PR #425. Pages project created, env vars set, deploys on `main` push. Live at <https://knowlune.pages.dev>; deep-link `/courses` returns 200 confirming `_redirects`. Two unblock PRs: #426 moved `wrangler.toml` into `cloudflare-workers/` so Pages wouldn't misread the cron config; #427 removed `public/design-tokens.source.json` (59.6 MiB — exceeded Pages' 25 MiB per-file limit; was already flagged as P0 in the 2026-03-26 production readiness review).
 
 **Goal:** Point Knowlune at Cloud Supabase; deploy the SPA to Cloudflare Pages auto-building from `main`.
 
