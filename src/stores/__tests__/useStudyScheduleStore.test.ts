@@ -323,7 +323,7 @@ describe('feed token (no supabase)', () => {
   it('getFeedUrl returns URL when token is set', () => {
     useStudyScheduleStore.setState({ feedToken: 'abc123' })
     const result = useStudyScheduleStore.getState().getFeedUrl()
-    expect(result).toContain('/api/calendar/abc123.ics')
+    expect(result).toContain('calendar/abc123.ics')
   })
 
   it('loadFeedToken is a no-op when supabase is null', async () => {

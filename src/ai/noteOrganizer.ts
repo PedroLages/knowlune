@@ -10,6 +10,7 @@
  */
 
 import { getAIConfiguration, getDecryptedApiKey, isFeatureEnabled } from '@/lib/aiConfiguration'
+import { apiUrl } from '@/lib/apiBaseUrl'
 import { stripHtml } from '@/lib/textUtils'
 import './noteOrganizer.types'
 
@@ -148,7 +149,7 @@ async function fetchOrganizationProposals(
     timeoutId = setTimeout(() => reject(new Error('AI request timed out')), timeout)
   })
 
-  const fetchPromise = fetch('/api/ai/generate', {
+  const fetchPromise = fetch(apiUrl('ai-generate'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

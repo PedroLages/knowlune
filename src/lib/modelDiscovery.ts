@@ -7,6 +7,7 @@
  * @see E90-S04 — Model Discovery for Cloud Providers
  */
 
+import { apiUrl } from './apiBaseUrl'
 import type { AIProviderId } from './modelDefaults'
 import { getStaticModels } from './modelDiscovery.static'
 
@@ -143,7 +144,7 @@ function openaiCostTier(id: string): DiscoveredModel['costTier'] {
  * Filters to chat-capable models only.
  */
 async function discoverOpenAI(apiKey: string): Promise<DiscoveredModel[]> {
-  const response = await fetch('/api/ai/models/openai', {
+  const response = await fetch(apiUrl('models/openai'), {
     headers: { 'X-API-Key': apiKey },
     signal: AbortSignal.timeout(10_000),
   })
@@ -231,7 +232,7 @@ function geminiCostTier(id: string): DiscoveredModel['costTier'] {
  * Discover Groq models via GET /openai/v1/models (proxied through Express server).
  */
 async function discoverGroq(apiKey: string): Promise<DiscoveredModel[]> {
-  const response = await fetch('/api/ai/models/groq', {
+  const response = await fetch(apiUrl('models/groq'), {
     headers: { 'X-API-Key': apiKey },
     signal: AbortSignal.timeout(10_000),
   })
@@ -306,7 +307,7 @@ function openrouterCostTier(pricing?: {
  * Limits to 50 most popular chat-capable models, grouped by source provider.
  */
 async function discoverOpenRouter(apiKey: string): Promise<DiscoveredModel[]> {
-  const response = await fetch('/api/ai/models/openrouter', {
+  const response = await fetch(apiUrl('models/openrouter'), {
     headers: { 'X-API-Key': apiKey },
     signal: AbortSignal.timeout(15_000),
   })

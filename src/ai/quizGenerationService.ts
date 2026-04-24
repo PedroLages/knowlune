@@ -23,6 +23,7 @@ import {
   isOllamaDirectConnection,
   isFeatureEnabled,
 } from '@/lib/aiConfiguration'
+import { apiUrl } from '@/lib/apiBaseUrl'
 import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 import { chunkTranscript, type TranscriptChunk } from './quizChunker'
@@ -266,7 +267,7 @@ async function callOllamaChat(
 
   try {
     const useDirectConnection = isOllamaDirectConnection()
-    const fetchUrl = useDirectConnection ? `${ollamaConfig.url}/api/chat` : '/api/ai/ollama/chat'
+    const fetchUrl = useDirectConnection ? `${ollamaConfig.url}/api/chat` : apiUrl('ai-ollama/chat')
 
     const requestBody: Record<string, unknown> = {
       model: ollamaConfig.model,

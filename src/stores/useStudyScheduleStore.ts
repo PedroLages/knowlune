@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { toast } from 'sonner'
 import { db } from '@/db'
 import type { StudySchedule, DayOfWeek } from '@/data/types'
+import { apiUrl } from '@/lib/apiBaseUrl'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { supabase } from '@/lib/auth/supabase'
 import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
@@ -310,7 +311,6 @@ export const useStudyScheduleStore = create<StudyScheduleState>((set, get) => ({
   getFeedUrl: () => {
     const { feedToken } = get()
     if (!feedToken) return null
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin
-    return `${baseUrl}/api/calendar/${feedToken}.ics`
+    return apiUrl(`calendar/${feedToken}.ics`)
   },
 }))

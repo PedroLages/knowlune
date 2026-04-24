@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/app/components/ui/select'
 import type { Book, BookGenre } from '@/data/types'
+import { apiUrl } from '@/lib/apiBaseUrl'
 import { stripHtml } from '@/lib/textUtils'
 import { Badge } from '@/app/components/ui/badge'
 import { useBookStore } from '@/stores/useBookStore'
@@ -295,7 +296,7 @@ export function BookMetadataEditor({ book, open, onOpenChange }: BookMetadataEdi
           // Google Books CDN blocks browser-direct fetch (no CORS headers) — route through proxy
           const fetchUrl =
             result.provider === 'google-books'
-              ? `/api/cover-proxy?url=${encodeURIComponent(result.coverUrl)}`
+              ? apiUrl('cover-proxy', { url: result.coverUrl })
               : result.coverUrl
           const signal = abortControllerRef.current?.signal ?? AbortSignal.timeout(15_000)
           const response = await fetch(fetchUrl, { signal })
