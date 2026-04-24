@@ -41,6 +41,7 @@ import { dedupDefaultShelves } from './defaultShelfDedup'
 import { uploadStorageFilesForTable, STORAGE_TABLES } from './storageSync'
 import { downloadStorageFilesForTable, STORAGE_DOWNLOAD_TABLES } from './storageDownload'
 import type { Note, Shelf } from '@/data/types'
+import { toast } from 'sonner'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -899,22 +900,27 @@ async function _doDownload(): Promise<void> {
   }
 
   async function processEntry(entry: (typeof tableRegistry)[number]): Promise<void> {
-    if (entry.skipSync) return
-    // upload-only tables have no download phase — embeddings are generated
-    // locally, not pulled from server. The lastSyncTimestamp cursor is never
-    // advanced for these tables (no download = no cursor update). This is
-    // correct: when a new device signs in, it will either find embeddings it
-    // uploaded itself or regenerate them locally.
-    if (entry.uploadOnly) return
-
-    // Ordering invariant: bookShelves depends on the shelvesDedupMap written
-    // during the shelves task; wait for shelves to finish before proceeding.
-    if (entry.dexieTable === 'bookShelves') {
-      await shelvesDone
-    }
-
-    await sem.acquire()
+    // Ensure shelvesResolve always fires when this is the shelves entry, even
+    // on early returns for skipSync / uploadOnly / thrown errors. Otherwise
+    // bookShelves awaits forever and Promise.all never resolves (F1 from R1).
+    const isShelves = entry.dexieTable === 'shelves'
     try {
+      if (entry.skipSync) return
+      // upload-only tables have no download phase — embeddings are generated
+      // locally, not pulled from server. The lastSyncTimestamp cursor is never
+      // advanced for these tables (no download = no cursor update). This is
+      // correct: when a new device signs in, it will either find embeddings it
+      // uploaded itself or regenerate them locally.
+      if (entry.uploadOnly) return
+
+      // Ordering invariant: bookShelves depends on the shelvesDedupMap written
+      // during the shelves task; wait for shelves to finish before proceeding.
+      if (entry.dexieTable === 'bookShelves') {
+        await shelvesDone
+      }
+
+      await sem.acquire()
+      try {
       // Read incremental cursor.
       const meta = await db.syncMetadata.get(entry.dexieTable)
       const cursor = meta?.lastSyncTimestamp ?? null
@@ -952,6 +958,11 @@ async function _doDownload(): Promise<void> {
           throttleToasted.add(entry.supabaseTable)
           console.warn(
             `[syncEngine] "${entry.supabaseTable}" exhausted 429 retries this session — skipping.`
+          )
+          // F3 from R1: surface rate-limiting to the user so they know sync
+          // is paused. Deduped via throttleToasted — once per table per session.
+          toast.warning(
+            `Sync rate-limited for ${entry.supabaseTable} — will retry on next sync`
           )
         }
         return // skip to next table
@@ -1089,12 +1100,15 @@ async function _doDownload(): Promise<void> {
           console.warn(`[syncEngine] Store refresh failed for "${entry.dexieTable}":`, err)
         )
       }
+      } finally {
+        sem.release()
+      }
     } finally {
-      sem.release()
-      // Unblock bookShelves as soon as the shelves task completes (success or
-      // error). We resolve in finally so dependent tables never deadlock even
-      // if shelves processing throws unexpectedly.
-      if (entry.dexieTable === 'shelves') {
+      // Unblock bookShelves as soon as the shelves task completes, whether via
+      // the normal flow, an early return (skipSync/uploadOnly), or a thrown
+      // error. Without this outer finally, early-return shelves entries would
+      // deadlock bookShelves's await on shelvesDone. (F1 from R1 review.)
+      if (isShelves) {
         shelvesResolve()
       }
     }

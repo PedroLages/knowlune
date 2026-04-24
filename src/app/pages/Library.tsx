@@ -38,7 +38,6 @@ import { Button } from '@/app/components/ui/button'
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/app/components/ui/tooltip'
 import { formatDistanceToNow } from 'date-fns'
@@ -417,9 +416,8 @@ export function Library() {
                   tooltipText = 'Sync library'
                 }
                 return (
-                  <TooltipProvider delayDuration={200}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -447,11 +445,10 @@ export function Library() {
                           />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent side="bottom" data-testid="abs-sync-tooltip">
-                        {tooltipText}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                    <TooltipContent side="bottom" data-testid="abs-sync-tooltip">
+                      {tooltipText}
+                    </TooltipContent>
+                  </Tooltip>
                 )
               })()}
             <Button

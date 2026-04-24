@@ -1,0 +1,120 @@
+{
+  "runId": "20260424-034928-ce-review",
+  "mode": "headless",
+  "plan": "docs/plans/2026-04-24-002-fix-abs-sync-qa-fixes-plan.md",
+  "base": "ad5c6cf3006881f48b4627f91e25321c445a3010",
+  "branch": "feature/ce-2026-04-24-abs-sync-qa-fixes",
+  "files_changed": 12,
+  "applied_fixes": 0,
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "HIGH",
+      "title": "shelvesDone deadlock risk when shelves entry is skipSync/uploadOnly",
+      "file": "src/lib/sync/syncEngine.ts",
+      "line": 978,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "confidence": 0.85,
+      "requires_verification": true,
+      "suggested_fix": "Extend the pre-check on line ~978 to also resolve `shelvesResolve()` when the `shelves` entry exists but is skipSync or uploadOnly. Alternatively, move `shelvesResolve()` into the skipSync/uploadOnly early-return path inside `processEntry` so the resolver fires regardless of whether the task actually ran.",
+      "why": "`processEntry` returns early on `skipSync` or `uploadOnly` BEFORE reaching the `finally` block where `shelvesResolve()` is called. The pre-check at line 978 only handles the case where the `shelves` entry is absent from the registry — it does NOT fire when the entry is present but flagged skipSync/uploadOnly. The `bookShelves` task then awaits `shelvesDone` forever, deadlocking the entire download since Promise.all never resolves.",
+      "evidence": [
+        "Line ~978: `if (!tableRegistry.some(e => e.dexieTable === 'shelves' && !e.skipSync && !e.uploadOnly)) shelvesResolve()` — resolves only when NO matching entry is found",
+        "processEntry early-returns at `if (entry.skipSync) return` and `if (entry.uploadOnly) return` before the try/finally",
+        "shelvesResolve is only invoked inside the finally block under `if (entry.dexieTable === 'shelves')`"
+      ]
+    },
+    {
+      "id": "F2",
+      "severity": "MEDIUM",
+      "title": "TooltipProvider instantiated per-render inside conditional IIFE",
+      "file": "src/app/pages/Library.tsx",
+      "line": 606,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "confidence": 0.7,
+      "requires_verification": false,
+      "suggested_fix": "Hoist <TooltipProvider> to a higher stable level (Layout root or Library top-level) rather than wrapping a single button. shadcn/ui guidance recommends one provider per app. The current placement recreates the provider context each render and is inconsistent with how tooltips are used elsewhere in the app.",
+      "why": "A fresh TooltipProvider wrapping only one trigger on each render inflates React tree churn and breaks the shared delay/behavior contract if multiple tooltips later land on the same page. Also, other tooltips already rendered elsewhere in the tree may lose coordination."
+    },
+    {
+      "id": "F3",
+      "severity": "MEDIUM",
+      "title": "429 toast dedup set name is misleading — no toast is emitted",
+      "file": "src/lib/sync/syncEngine.ts",
+      "line": 967,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "confidence": 0.8,
+      "requires_verification": false,
+      "suggested_fix": "Either (a) wire an actual `toast.warning()` call as the plan (R3 + Unit 5) specifies (`429 toast deduplication: toast once per table per session`), or (b) rename `throttleToasted` to `throttleLoggedSet` to match the console.warn-only behavior. Current code has the dedup set but emits only console.warn, not a user-visible toast — diverges from plan.",
+      "why": "Plan Unit 5 explicitly states: `after exhausted retries … toast fires once (not 3 times).` The implementation substitutes console.warn for the toast. Users will see no indication that their library failed to sync a table after retries."
+    },
+    {
+      "id": "F4",
+      "severity": "MEDIUM",
+      "title": "Unit 2 tests not added — test files referenced in plan are missing",
+      "file": "src/stores/useAudiobookshelfStore.ts",
+      "line": 1,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "confidence": 0.9,
+      "requires_verification": true,
+      "suggested_fix": "Add the tests specified in the plan: src/db/__tests__/schema.test.ts (v60 migration), src/stores/__tests__/useAudiobookshelfStore-sync.test.ts (Dexie persistence + hydration), src/app/pages/__tests__/Library.auth-failed.test.tsx (auth-failed guard), src/lib/sync/__tests__/syncEngine.download.test.ts (throttle + 429 backoff), src/app/components/library/__tests__/BookCoverImage.test.tsx, tooltip + empty queue tests. None of these appear in the diff.",
+      "why": "Plan lists test files for each of Units 1-9 under Files > Test. `git diff --name-only` shows no __tests__ files in the diff. Regression guard is absent; plan's verification column is unmet for most units."
+    },
+    {
+      "id": "F5",
+      "severity": "LOW",
+      "title": "handleManualSync useCallback dep missing absServers",
+      "file": "src/app/pages/Library.tsx",
+      "line": 529,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "confidence": 0.6,
+      "requires_verification": false,
+      "suggested_fix": "The callback reads server status via `useAudiobookshelfStore.getState().servers`, so the hook deps are technically fine — but if the hook-local `absServers` ever diverges from getState() during a render, the behavior is surprising. Consider reading from `absServers` (the subscribed slice) for consistency, or add a code comment explaining why getState() is used here.",
+      "why": "`getState()` bypasses the subscription so the handler always sees the latest servers, but downstream readers (tooltip logic) use the subscribed `absServers`. Minor consistency concern; not a correctness bug because the handler is fired after state settles."
+    },
+    {
+      "id": "F6",
+      "severity": "LOW",
+      "title": "review_records migration column 'note_id TEXT' lacks FK or index for orphan cleanup",
+      "file": "supabase/migrations/20260424000002_review_records.sql",
+      "line": 26,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "confidence": 0.55,
+      "requires_verification": true,
+      "suggested_fix": "Consider FK to notes(id) ON DELETE CASCADE if review_records are always scoped to an existing note; or accept orphans and document. Current schema allows dangling review_records when a note is deleted.",
+      "why": "note_id has no referential integrity. The ReviewRecord TypeScript type may treat it as a soft reference, but DB-level absence of FK risks orphaned rows contributing to unbounded growth."
+    },
+    {
+      "id": "F7",
+      "severity": "LOW",
+      "title": "AudiobookCoverGlyph re-export is unused and adds surface area",
+      "file": "src/app/components/library/BookCoverImage.tsx",
+      "line": 95,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "confidence": 0.75,
+      "requires_verification": false,
+      "suggested_fix": "Remove the `export { Headphones as AudiobookCoverGlyph }` re-export. BookCard already imports Headphones directly from lucide-react and passes it as `fallbackIcon`. The re-export is dead API surface.",
+      "why": "Diff shows BookCard still imports Headphones from lucide-react (line 17), so the re-export added for caller convenience is unused. Dead exports bloat the module API."
+    },
+    {
+      "id": "F8",
+      "severity": "NIT",
+      "title": "absViewMode local state path reference outdated after FormatTabs change",
+      "file": "src/app/pages/Library.tsx",
+      "line": 593,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "confidence": 0.5,
+      "requires_verification": false,
+      "suggested_fix": "The inline TODO says `wire format filter into series/collections grouping`. Track this as a follow-up issue so it doesn't get lost in comments.",
+      "why": "Inline TODOs tend to stay undone. Plan Unit 8 explicitly allowed a no-op for series/collections format filtering but should be tracked separately."
+    }
+  ]
+}

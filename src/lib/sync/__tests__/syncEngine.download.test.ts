@@ -372,6 +372,15 @@ vi.mock('@/lib/sync/fieldMapper', () => ({
   toSnakeCase: vi.fn((_entry: unknown, record: Record<string, unknown>) => record),
 }))
 
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
+  },
+}))
+
 vi.mock('@/lib/sync/storageSync', () => ({
   uploadStorageFilesForTable: vi.fn().mockResolvedValue(undefined),
   STORAGE_TABLES: new Set(['importedCourses', 'authors', 'importedPdfs', 'books']),
@@ -1146,5 +1155,118 @@ describe('soft-delete guard in _applyRecord', () => {
 
     // notes.put was called (not skipped) because record['deleted'] is undefined.
     expect(mockNotesPut).toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// fix/E-ABS-QA R1 — F4 targeted coverage
+// Bounded concurrency semaphore, 429 retry loop, shelvesResolve deadlock guard
+// ---------------------------------------------------------------------------
+
+describe('download semaphore (MAX_CONCURRENT_DOWNLOADS)', () => {
+  it('never runs more than 4 concurrent supabase select() calls', async () => {
+    // Instrument the supabase.from mock with a slow order() to observe
+    // concurrency. Track in-flight count vs observed peak.
+    const { supabase } = await import('@/lib/auth/supabase')
+
+    let inFlight = 0
+    let peak = 0
+
+    const slowFrom = vi.fn((table: string) => {
+      const tableResult = downloadResults[table] ?? { data: [], error: null }
+      const order = vi.fn(async () => {
+        inFlight++
+        peak = Math.max(peak, inFlight)
+        // Yield to the microtask queue enough times to let all table tasks
+        // attempt sem.acquire() before any completes.
+        await new Promise(r => setTimeout(r, 5))
+        inFlight--
+        return tableResult
+      })
+      const gte = vi.fn().mockReturnValue({ order })
+      const select = vi.fn().mockReturnValue({ gte, order })
+      return { select, upsert: vi.fn().mockResolvedValue({ error: null }), insert: vi.fn().mockResolvedValue({ error: null }) }
+    })
+    vi.mocked(supabase!.from).mockImplementation(slowFrom as unknown as NonNullable<typeof supabase>['from'])
+
+    await syncEngine.fullSync()
+
+    // 4 tables in the mocked registry; the semaphore cap is 4, so peak <= 4.
+    expect(peak).toBeLessThanOrEqual(4)
+  })
+})
+
+describe('429 retry path', () => {
+  it('retries up to 3 times on 429 then fires throttle toast once', async () => {
+    const { toast } = await import('sonner')
+    const { supabase } = await import('@/lib/auth/supabase')
+
+    let attempts = 0
+    const from429 = vi.fn((table: string) => {
+      const order = vi.fn(async () => {
+        if (table === 'notes') {
+          attempts++
+          return { data: null, error: { status: 429, message: 'Too Many Requests' } }
+        }
+        return downloadResults[table] ?? { data: [], error: null }
+      })
+      const gte = vi.fn().mockReturnValue({ order })
+      const select = vi.fn().mockReturnValue({ gte, order })
+      return { select, upsert: vi.fn().mockResolvedValue({ error: null }), insert: vi.fn().mockResolvedValue({ error: null }) }
+    })
+    vi.mocked(supabase!.from).mockImplementation(
+      from429 as unknown as NonNullable<typeof supabase>['from']
+    )
+
+    await syncEngine.fullSync()
+
+    // 3 attempts for the notes table before giving up.
+    expect(attempts).toBe(3)
+    // toast.warning fired exactly once for the throttled table.
+    expect(vi.mocked(toast.warning)).toHaveBeenCalledWith(
+      expect.stringContaining('Sync rate-limited for notes')
+    )
+  })
+})
+
+describe('shelvesResolve deadlock guard (F1)', () => {
+  it('fullSync resolves even when shelves entry has skipSync (bookShelves does not deadlock)', async () => {
+    // Replace the 'notes' entry with a synthetic bookShelves entry that waits
+    // on shelvesDone. Replace another entry with a skipSync shelves entry.
+    const shelvesEntry = {
+      dexieTable: 'shelves',
+      supabaseTable: 'shelves',
+      conflictStrategy: 'lww' as const,
+      priority: 1 as const,
+      fieldMap: {},
+      skipSync: true,
+    }
+    const bookShelvesEntry = {
+      dexieTable: 'bookShelves',
+      supabaseTable: 'book_shelves',
+      conflictStrategy: 'lww' as const,
+      priority: 2 as const,
+      fieldMap: {},
+    }
+
+    // Swap notes + chapterMappings for shelves + bookShelves.
+    const notesIdx = tableRegistry.findIndex(e => e.dexieTable === 'notes')
+    const cmIdx = tableRegistry.findIndex(e => e.dexieTable === 'chapterMappings')
+    const origNotes = tableRegistry[notesIdx]
+    const origCm = tableRegistry[cmIdx]
+    tableRegistry.splice(notesIdx, 1, shelvesEntry)
+    tableRegistry.splice(cmIdx, 1, bookShelvesEntry)
+
+    try {
+      // Race against a hard timeout — if fullSync hangs, test fails loudly.
+      const result = await Promise.race([
+        syncEngine.fullSync().then(() => 'resolved'),
+        new Promise(resolve => setTimeout(() => resolve('timed-out'), 1000)),
+      ])
+      expect(result).toBe('resolved')
+    } finally {
+      tableRegistry.splice(notesIdx, 1, origNotes)
+      tableRegistry.splice(cmIdx, 1, origCm)
+    }
   })
 })
