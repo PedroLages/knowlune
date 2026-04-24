@@ -1502,30 +1502,27 @@ issues:
   severity: medium
   discovered_by: E119-post-epic
   discovered_on: 2026-04-24
-  status: open
+  status: fixed
+  fixed_by: "2026-04-24 same-day session (commits 50a5ddfa, 445a6f39)"
   notes: |
-    Phase A of E119 pre-beta deployment applied all 5 migrations and created
-    Storage buckets on titan, but the shared-secret retention-tick auth flow
-    is not yet wired:
-      * Supabase Edge env var RETENTION_TICK_SECRET is unset (no daily purge).
-      * Cloudflare Worker secret RETENTION_TICK_SECRET is unset (no cron caller).
+    RESOLVED 2026-04-24 same-day:
+      * Supabase side: RETENTION_TICK_SECRET generated (32-byte base64),
+        added to /mnt/cache/docker/stacks/supabase/.env, forwarded to
+        supabase-edge-functions container via docker-compose env block,
+        added to WORKER_ENV_ALLOWLIST in main/index.ts (commit 50a5ddfa).
+      * Cloudflare side: wrangler login completed, both Worker secrets
+        set (RETENTION_TICK_SECRET + SUPABASE_FUNCTIONS_URL), Worker
+        deployed (version 86acb735-789a-4697-be62-949cfc86c1a0).
+      * Verified: curl with wrong/missing secret returns 401; correct
+        secret returns 207 (partial — chat_conversations fails per
+        KI-E119-POST-002). Cron runs daily 03:00 UTC.
+      * Discovered adjacent issue EXPORT_WORKER_SECRET via same
+        allowlist bug pattern — fixed at commit 445a6f39.
+      * Design footgun captured as KI-E119-POST-005.
 
-    Cloudflare side is blocked on `wrangler login` failing with an
-    invalid_grant error — refresh token is stale. wrangler.toml also needs an
-    `account_id` added.
-
-    Remediation (before beta or during first week):
-      1. Supabase side: generate a 32-byte base64 secret, set in the
-         docker-compose .env on titan under supabase-edge-functions, restart
-         that container.
-      2. Cloudflare side: run `wrangler login` in an interactive terminal,
-         add account_id to wrangler.toml, run
-         `wrangler secret put RETENTION_TICK_SECRET` and
-         `wrangler secret put SUPABASE_FUNCTIONS_URL`, deploy the Worker.
-      3. Manual smoke test: until cron is live, trigger retention-tick once
-         a day via curl with the x-retention-secret header. Only affects
-         storage:exports purging and chat_conversations rolling delete;
-         neither is critical in the first week of beta.
+    Verification query for future runs:
+      SELECT MAX(completed_at) FROM public.retention_audit_log;
+    If max timestamp advances after 03:00 UTC daily, cron chain works.
 
 - id: KI-E119-POST-002
   type: code
@@ -1606,3 +1603,58 @@ issues:
     Ship-vs-accept decision 2026-04-24: defer. Revisit after first 20 beta
     users, or sooner if ICO audit becomes plausible. Implementation plan
     preserved in KI-E119-S02-001.
+
+- id: KI-E119-POST-005
+  type: architecture
+  summary: "WORKER_ENV_ALLOWLIST in main/index.ts silently drops secrets, bypassing auth checks"
+  file: supabase/functions/main/index.ts
+  severity: medium
+  discovered_by: E119-post-epic
+  discovered_on: 2026-04-24
+  status: open
+  notes: |
+    main/index.ts filters env vars before spawning child Deno workers via
+    WORKER_ENV_ALLOWLIST. Adding a function that reads env X silently fails
+    at runtime unless X is explicitly allowlisted — Deno.env.get(X) returns
+    undefined inside the worker.
+
+    The dangerous part: auth-check code in every function uses the pattern:
+
+        if (SECRET && SECRET.length > 0) {
+          if (header !== SECRET) return 401
+        } else {
+          console.warn('not set — unprotected')
+          // falls through, endpoint is unauthenticated
+        }
+
+    When the allowlist drops the secret, the function thinks the operator
+    chose to disable auth, and silently accepts unauthenticated requests.
+
+    This exact bug bit TWICE in E119-post-epic (2026-04-24):
+      * RETENTION_TICK_SECRET — fixed at commit 50a5ddfa
+      * EXPORT_WORKER_SECRET — fixed at commit 445a6f39
+
+    Both times the secret was correctly set on the container but filtered
+    out by main/index.ts. The only way to notice was curl-verify-401 tests.
+
+    Remediation options (pick one for a future story):
+
+    Option A (minimal): fail-closed in each function. Change the pattern to:
+        const SECRET = Deno.env.get('SECRET_NAME')
+        if (!SECRET) throw new Error('SECRET_NAME is required')
+      This catches the bug at function boot (function returns 500) rather
+      than silently running without auth. Downside: breaks local dev without
+      the secret set.
+
+    Option B (better): denylist instead of allowlist in main/index.ts.
+      Forward all env vars except known-unsafe ones (KONG_*, POSTGRES_*
+      admin passwords). Less footgun but requires careful audit of what's
+      actually unsafe.
+
+    Option C (best): runtime check in main/index.ts that matches function
+      names to declared env requirements (e.g., a supabase/functions/manifest.json
+      listing each function's required env). Fail to dispatch if missing.
+      Most work, highest safety.
+
+    Suggested scope: address in E119-S16 or as part of a broader Edge
+    Function security review before beta exit.
