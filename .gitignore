@@ -36,6 +36,7 @@ coverage/
 # PWA icons (exceptions)
 !public/pwa-*.png
 !public/apple-touch-icon-*.png
+!public/splash/*.png
 
 # Lighthouse
 .lighthouseci/
