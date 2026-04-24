@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 // Mock supabase module
 const mockSignUp = vi.fn()
@@ -19,7 +19,7 @@ vi.mock('@/lib/auth/supabase', () => ({
   },
 }))
 
-import { useAuthStore, mapSupabaseError, NETWORK_ERROR_MESSAGE } from '@/stores/useAuthStore'
+import { useAuthStore, mapSupabaseError, NETWORK_ERROR_MESSAGE, selectIsGuestMode, selectAuthState } from '@/stores/useAuthStore'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -210,6 +210,54 @@ describe('signOut', () => {
     mockSignOut.mockRejectedValue(new Error('net'))
     const result = await useAuthStore.getState().signOut()
     expect(result.error).toBe(NETWORK_ERROR_MESSAGE)
+  })
+})
+
+describe('selectIsGuestMode', () => {
+  afterEach(() => {
+    sessionStorage.clear()
+  })
+
+  it('returns true when initialized, no user, and sessionStorage flag set', () => {
+    sessionStorage.setItem('knowlune-guest', 'true')
+    expect(selectIsGuestMode({ initialized: true, user: null })).toBe(true)
+  })
+
+  it('returns false when not initialized (prevents flash on reload)', () => {
+    sessionStorage.setItem('knowlune-guest', 'true')
+    expect(selectIsGuestMode({ initialized: false, user: null })).toBe(false)
+  })
+
+  it('returns false when user is present (even if sessionStorage flag exists)', () => {
+    sessionStorage.setItem('knowlune-guest', 'true')
+    expect(selectIsGuestMode({ initialized: true, user: { id: 'user-1' } as never })).toBe(false)
+  })
+
+  it('returns false when sessionStorage flag is absent', () => {
+    expect(selectIsGuestMode({ initialized: true, user: null })).toBe(false)
+  })
+})
+
+describe('selectAuthState', () => {
+  afterEach(() => {
+    sessionStorage.clear()
+  })
+
+  it('returns "loading" when not initialized', () => {
+    expect(selectAuthState({ initialized: false, user: null })).toBe('loading')
+  })
+
+  it('returns "authenticated" when user is present', () => {
+    expect(selectAuthState({ initialized: true, user: { id: 'user-1' } as never })).toBe('authenticated')
+  })
+
+  it('returns "guest" when initialized, no user, and guest flag set', () => {
+    sessionStorage.setItem('knowlune-guest', 'true')
+    expect(selectAuthState({ initialized: true, user: null })).toBe('guest')
+  })
+
+  it('returns "anonymous" when initialized, no user, and no guest flag', () => {
+    expect(selectAuthState({ initialized: true, user: null })).toBe('anonymous')
   })
 })
 

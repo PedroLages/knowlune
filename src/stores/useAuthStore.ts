@@ -151,6 +151,21 @@ export const useAuthStore = create<AuthStore>(set => ({
   },
 }))
 
+/** Guest mode is derived — not stored — to stay in sync with sessionStorage. */
+export function selectIsGuestMode(state: Pick<AuthState, 'initialized' | 'user'>): boolean {
+  return state.initialized && state.user === null && sessionStorage.getItem('knowlune-guest') === 'true'
+}
+
+export type AuthRouteState = 'loading' | 'authenticated' | 'guest' | 'anonymous'
+
+/** Derived auth state for route guards. */
+export function selectAuthState(state: Pick<AuthState, 'initialized' | 'user'>): AuthRouteState {
+  if (!state.initialized) return 'loading'
+  if (state.user !== null) return 'authenticated'
+  if (selectIsGuestMode(state)) return 'guest'
+  return 'anonymous'
+}
+
 // Expose the store on window in development / test builds so E2E tests can
 // drive auth state directly without spinning up a real Supabase session.
 // Tree-shaken in production builds (import.meta.env.PROD is false in dev/test).
