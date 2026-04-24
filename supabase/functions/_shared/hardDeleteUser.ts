@@ -87,7 +87,14 @@ export const TABLE_NAMES: string[] = [
  * Storage buckets containing user-prefixed objects.
  * Objects are stored at `{userId}/{filename}` and must all be removed.
  */
-export const STORAGE_BUCKETS: string[] = ['avatars', 'course-media', 'audio', 'exports']
+export const STORAGE_BUCKETS: string[] = [
+  'course-thumbnails',
+  'screenshots',
+  'avatars',
+  'pdfs',
+  'book-files',
+  'book-covers',
+]
 
 // ---------------------------------------------------------------------------
 // Result type
