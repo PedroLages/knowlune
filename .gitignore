@@ -37,6 +37,7 @@ coverage/
 !public/pwa-*.png
 !public/apple-touch-icon-*.png
 !public/splash/*.png
+!public/shortcuts/*.png
 
 # Lighthouse
 .lighthouseci/
