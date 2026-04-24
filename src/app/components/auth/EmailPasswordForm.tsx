@@ -14,9 +14,10 @@ import { CURRENT_NOTICE_VERSION } from '@/lib/compliance/noticeVersion'
 interface EmailPasswordFormProps {
   mode: 'sign-in' | 'sign-up'
   onSuccess: () => void
+  idPrefix?: string
 }
 
-export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
+export function EmailPasswordForm({ mode, onSuccess, idPrefix = 'auth' }: EmailPasswordFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -104,13 +105,13 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
   }
 
   const displayError = validationError || error
-  const errorId = displayError ? 'auth-form-error' : undefined
+  const errorId = displayError ? `${idPrefix}-form-error` : undefined
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" aria-busy={loading}>
       {displayError && (
         <div
-          id="auth-form-error"
+          id={`${idPrefix}-form-error`}
           role="alert"
           className="relative rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
         >
@@ -138,9 +139,9 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="auth-email">Email</Label>
+        <Label htmlFor={`${idPrefix}-email`}>Email</Label>
         <Input
-          id="auth-email"
+          id={`${idPrefix}-email`}
           type="email"
           placeholder="you@example.com"
           value={email}
@@ -155,10 +156,10 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="auth-password">Password</Label>
+        <Label htmlFor={`${idPrefix}-password`}>Password</Label>
         <div className="relative">
           <Input
-            id="auth-password"
+            id={`${idPrefix}-password`}
             type={showPassword ? 'text' : 'password'}
             placeholder="At least 8 characters"
             value={password}
@@ -169,21 +170,20 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
             autoComplete={isSignUp ? 'new-password' : 'current-password'}
             aria-invalid={displayError?.toLowerCase().includes('password') || undefined}
             aria-describedby={
-              displayError?.toLowerCase().includes('password') ? errorId : 'auth-password-hint'
+              displayError?.toLowerCase().includes('password') ? errorId : `${idPrefix}-password-hint`
             }
             className="min-h-[44px] pr-10"
           />
           <button
             type="button"
             onClick={() => setShowPassword(v => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center size-[44px] text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
-            tabIndex={-1}
           >
             {showPassword ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
           </button>
         </div>
-        <p id="auth-password-hint" className="text-xs text-muted-foreground">
+        <p id={`${idPrefix}-password-hint`} className="text-xs text-muted-foreground">
           Must be at least 8 characters
         </p>
         {!isSignUp && (
@@ -200,10 +200,10 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
 
       {isSignUp && (
         <div className="space-y-2">
-          <Label htmlFor="auth-confirm-password">Confirm Password</Label>
+          <Label htmlFor={`${idPrefix}-confirm-password`}>Confirm Password</Label>
           <div className="relative">
             <Input
-              id="auth-confirm-password"
+              id={`${idPrefix}-confirm-password`}
               type={showConfirmPassword ? 'text' : 'password'}
               placeholder="Confirm your password"
               value={confirmPassword}
@@ -218,9 +218,8 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
             <button
               type="button"
               onClick={() => setShowConfirmPassword(v => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+              className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center size-[44px] text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
               aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-              tabIndex={-1}
             >
               {showConfirmPassword ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
             </button>
@@ -232,17 +231,17 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
       {isSignUp && (
         <div className="flex items-start gap-3 min-h-[44px] py-1">
           <input
-            id="auth-privacy-ack"
+            id={`${idPrefix}-privacy-ack`}
             type="checkbox"
             checked={privacyAcknowledged}
             onChange={e => setPrivacyAcknowledged(e.target.checked)}
             disabled={loading}
             className="mt-0.5 size-4 shrink-0 rounded border border-input accent-brand cursor-pointer"
-            aria-describedby="auth-privacy-ack-label"
+            aria-describedby={`${idPrefix}-privacy-ack-label`}
           />
           <label
-            id="auth-privacy-ack-label"
-            htmlFor="auth-privacy-ack"
+            id={`${idPrefix}-privacy-ack-label`}
+            htmlFor={`${idPrefix}-privacy-ack`}
             className="text-sm text-muted-foreground leading-snug cursor-pointer select-none"
           >
             I have read the{' '}

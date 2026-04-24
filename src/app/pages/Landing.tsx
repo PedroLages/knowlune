@@ -30,7 +30,7 @@ const VALUE_BULLETS = [
   },
 ]
 
-function AuthCard() {
+function AuthCard({ idPrefix = 'auth' }: { idPrefix?: string }) {
   const navigate = useNavigate()
   const [mode, setMode] = useState<AuthMode>('sign-in')
   const [activeTab, setActiveTab] = useState('email')
@@ -118,7 +118,7 @@ function AuthCard() {
           </TabsList>
 
           <TabsContent value="email" className="mt-4">
-            <EmailPasswordForm key={resetKey} mode={mode} onSuccess={handleSuccess} />
+            <EmailPasswordForm key={resetKey} mode={mode} onSuccess={handleSuccess} idPrefix={idPrefix} />
           </TabsContent>
           <TabsContent value="magic-link" className="mt-4">
             <MagicLinkForm resetKey={resetKey} />
@@ -142,7 +142,7 @@ function AuthCard() {
             href="/privacy"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-brand-soft-foreground hover:underline"
+            className="text-brand-soft-foreground underline underline-offset-2 hover:no-underline"
           >
             Privacy Policy
           </a>{' '}
@@ -151,7 +151,7 @@ function AuthCard() {
             href="/terms"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-brand-soft-foreground hover:underline"
+            className="text-brand-soft-foreground underline underline-offset-2 hover:no-underline"
           >
             Terms of Service
           </a>
@@ -270,7 +270,7 @@ export function Landing() {
           className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:px-12"
         >
           <div className="w-full max-w-sm">
-            <AuthCard />
+            <AuthCard idPrefix="auth-desktop" />
           </div>
         </div>
       </div>
@@ -284,8 +284,8 @@ export function Landing() {
           <p className="text-xs tracking-wide text-muted-foreground">Illuminate Your Path</p>
         </div>
 
-        <div id="landing-auth">
-          <AuthCard />
+        <div>
+          <AuthCard idPrefix="auth-mobile" />
         </div>
 
         <MobileValueAccordion />

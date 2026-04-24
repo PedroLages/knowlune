@@ -51,40 +51,38 @@ export function GuestEntry() {
 
         {/* Comparison table */}
         <div className="rounded-2xl border bg-card overflow-hidden shadow-sm">
-          {/* Table header */}
-          <div className="grid grid-cols-3 border-b bg-muted/40">
-            <div className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Feature
-            </div>
-            <div className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider text-center">
-              Guest
-            </div>
-            <div className="px-4 py-3 text-xs font-medium text-brand-soft-foreground uppercase tracking-wider text-center bg-brand-soft/40">
-              Account
-            </div>
-          </div>
-
-          {/* Rows */}
-          {COMPARISON_ROWS.map(({ feature, guest, account }, i) => (
-            <div
-              key={feature}
-              className={`grid grid-cols-3 border-b last:border-b-0 ${i % 2 === 1 ? 'bg-muted/20' : ''}`}
-            >
-              <div className="px-4 py-3.5 text-sm font-medium text-foreground flex items-center">
-                {feature}
-              </div>
-              <div className="px-4 py-3.5 flex items-center justify-center text-muted-foreground">
-                <Cell value={guest} />
-              </div>
-              <div className="px-4 py-3.5 flex items-center justify-center bg-brand-soft/20">
-                <Cell value={account} />
-              </div>
-            </div>
-          ))}
+          <table className="w-full">
+            <thead>
+              <tr className="border-b bg-muted/40">
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Feature
+                </th>
+                <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Guest
+                </th>
+                <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-brand-soft-foreground uppercase tracking-wider bg-brand-soft/40">
+                  Account
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {COMPARISON_ROWS.map(({ feature, guest, account }, i) => (
+                <tr key={feature} className={`border-b last:border-b-0 ${i % 2 === 1 ? 'bg-muted/20' : ''}`}>
+                  <td className="px-4 py-3.5 text-sm font-medium text-foreground">{feature}</td>
+                  <td className="px-4 py-3.5 text-center text-muted-foreground">
+                    <Cell value={guest} />
+                  </td>
+                  <td className="px-4 py-3.5 text-center bg-brand-soft/20">
+                    <Cell value={account} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         {/* Reassurance badge */}
-        <div className="rounded-xl bg-brand-soft/50 border border-brand-soft px-4 py-3 text-sm text-brand-soft-foreground text-center">
+        <div className="rounded-xl bg-brand-soft border border-brand-soft px-4 py-3 text-sm text-brand-soft-foreground text-center">
           You can switch to a full account anytime — your progress comes with you.
         </div>
 

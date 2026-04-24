@@ -84,21 +84,7 @@ export function AuthCallback() {
   }, [authState, navigate])
 
   return (
-    <>
-      <style>{`
-        @keyframes fadeSlideUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .anim-fade-slide-up {
-          animation: fadeSlideUp 0.4s ease-out both;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .anim-fade-slide-up { animation: none; }
-        }
-      `}</style>
-
-      <div
+    <div
         className="min-h-screen flex items-center justify-center p-6 bg-background"
         role="status"
         aria-busy={!authError}
@@ -118,7 +104,7 @@ export function AuthCallback() {
                 </h1>
               </div>
 
-              <div className="w-full bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-sm text-destructive text-center">
+              <div className="w-full bg-destructive/15 border border-destructive/40 rounded-xl px-4 py-3 text-sm text-destructive text-center">
                 {authError}
               </div>
 
@@ -155,6 +141,5 @@ export function AuthCallback() {
           )}
         </div>
       </div>
-    </>
   )
 }
