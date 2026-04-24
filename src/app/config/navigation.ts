@@ -31,6 +31,8 @@ export interface NavigationItem {
   tab?: string // optional: when set, link navigates to path?tab=tab and is active only when search matches
   /** When set, item is hidden until this key is unlocked via progressive disclosure. */
   disclosureKey?: DisclosureKey
+  /** When true, item is hidden from the sidebar when the user is in guest mode. */
+  guestHidden?: boolean
 }
 
 /** Pure function to calculate whether a navigation item is active given current location. */
@@ -80,12 +82,14 @@ export const navigationGroups: NavigationGroup[] = [
         path: '/ai-learning-path',
         icon: Sparkles,
         disclosureKey: 'ai-used',
+        guestHidden: true,
       },
       {
         name: 'AI Tutor',
         path: '/tutor',
         icon: MessageSquare,
         disclosureKey: 'ai-used',
+        guestHidden: true,
       },
     ],
   },
@@ -94,7 +98,7 @@ export const navigationGroups: NavigationGroup[] = [
     items: [
       { name: 'Challenges', path: '/challenges', icon: Target, disclosureKey: 'challenge-used' },
       { name: 'Knowledge Map', path: '/knowledge-map', icon: Map },
-      { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain, disclosureKey: 'ai-used' },
+      { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain, disclosureKey: 'ai-used', guestHidden: true },
       { name: 'Retention', path: '/retention', icon: ShieldCheck, disclosureKey: 'review-used' },
       {
         name: 'Session History',

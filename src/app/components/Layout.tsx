@@ -48,7 +48,8 @@ import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 import { NotificationCenter } from './figma/NotificationCenter'
 import { SyncStatusIndicator } from './sync/SyncStatusIndicator'
 import { useCourseStore } from '@/stores/useCourseStore'
-import { useAuthStore } from '@/stores/useAuthStore'
+import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
+import { GuestBanner } from './auth/GuestBanner'
 import { toast } from 'sonner'
 import { QualityScoreDialog } from './session/QualityScoreDialog'
 import type { QualityScoreResult } from '@/lib/qualityScore'
@@ -255,7 +256,11 @@ export function Layout() {
 
   // Progressive sidebar disclosure
   const { filterGroups } = useProgressiveDisclosure()
-  const visibleGroups = filterGroups(navigationGroups)
+  const isGuest = useAuthStore(selectIsGuestMode)
+  const visibleGroups = filterGroups(navigationGroups).map(group => ({
+    ...group,
+    items: group.items.filter(item => !(isGuest && item.guestHidden)),
+  }))
 
   // Ensure courses are loaded from IndexedDB (backup for deferInit race)
   const loadCourses = useCourseStore(s => s.loadCourses)
@@ -727,6 +732,7 @@ export function Layout() {
             </div>
           )}
           <SessionExpiredBanner isOffline={!isOnline} />
+          <GuestBanner />
           <TrialReminderBanner />
           {/* Notice re-acknowledgement — AC-5 (banner, 30-day grace) / AC-6 (soft-block) */}
           {stale && staleDays <= 30 && (
