@@ -23,6 +23,7 @@ import {
   getOllamaSelectedModel,
   isOllamaDirectConnection,
 } from '@/lib/aiConfiguration'
+import { apiUrl } from '@/lib/apiBaseUrl'
 
 // --- Test Helpers ---
 
@@ -74,7 +75,7 @@ describe('generateCourseTags', () => {
     expect(fetch).toHaveBeenCalledOnce()
     // Should route through the Express proxy, not directly to Ollama
     expect(fetch).toHaveBeenCalledWith(
-      '/api/ai/ollama/chat',
+      apiUrl('ai-ollama/chat'),
       expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

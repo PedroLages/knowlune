@@ -13,7 +13,7 @@ Move Knowlune's entire backend and frontend off the Unraid server (`titan`) to f
 
 ## Session Progress Log — 2026-04-24
 
-**Status:** ~60% complete. Auth + schema + storage live on Cloud. Edge Functions + deploy still pending.
+**Status:** ~85% complete. Auth + schema + storage + Edge Functions all live on Cloud. Remaining: Vault re-insert (Unit 4, depends on deployed vault-credentials function), Cloudflare Pages deploy (Unit 8), retention-tick Worker cron (Unit 9), cutover smoke (Unit 10), Unraid cleanup (Unit 11).
 
 ### What's DONE
 
@@ -40,15 +40,24 @@ Move Knowlune's entire backend and frontend off the Unraid server (`titan`) to f
 2. **`user_settings` 406 (Not Acceptable)**: 4× calls fail with 406 because code calls `.single()` but no row exists for new users. File: the caller should use `.maybeSingle()` or upsert a default row on first sign-in. Non-critical but noisy in console.
 3. **Edge Functions CORS failures**: `/functions/v1/vault-credentials/check-credential`, `/functions/v1/vault-credentials/store-credential` → CORS preflight failed (functions don't exist on Cloud yet). Blocks AI provider key storage + ABS server credentials until Unit 5 (Edge Functions port) ships.
 
+### Unit 5 shipped — 2026-04-24
+
+- ✅ **6 new Edge Functions deployed** to prod: `ai-generate`, `ai-stream`, `ai-ollama`, `models`, `calendar`, `cover-proxy`. (Existing 9 functions — vault-credentials, delete-account, cancel-account-deletion, export-data, export-worker, retention-tick, create-checkout, stripe-webhook, main — were already on Cloud from prior sessions.)
+- ✅ **4 shared modules**: `_shared/{origin-check,entitlement,rate-limit,providers}.ts` — 35 Deno tests passing.
+- ✅ **2 new migrations**: `20260501000002_rate_limit_buckets` + `20260502000001_increment_rate_limit_fn`.
+- ✅ **Client swap**: `src/lib/apiBaseUrl.ts` + 18 prod call sites + 7 unit test files; `npm run build` passes.
+- ✅ **Edge Function secrets**: `ALLOWED_ORIGINS` set. Platform provider keys deferred (BYOK-first).
+- ✅ **Smoke tests**: CORS preflight, origin gating, auth gating, calendar 404-on-unknown-token, cover-proxy image fetch with redirect chain all verified.
+- ✅ **Bonus**: fixed 3 stale `STORAGE_BUCKETS` constants (delete-account + export paths); fixed cover-proxy redirect handling (openlibrary → archive.org CDN).
+
 ### What's LEFT
 
-- 🔜 **Unit 5 — Edge Functions port** (now blocking): Deploy `vault-credentials`, `delete-account`, `cancel-account-deletion`, `export-data`, `export-worker`, `retention-tick`, `create-checkout`, `stripe-webhook`, plus the main `/api/*` dispatcher. Vercel AI SDK chain rewrite required for Deno.
 - 🔜 **Unit 4 — Vault secrets**: re-insert OPDS passwords + ABS apiKeys (depends on Unit 5 vault-credentials function).
 - 🔜 **Unit 8 — Cloudflare Pages deploy**: switch prod env vars, redeploy.
 - 🔜 **Unit 9 — retention-tick Worker**: reconfigure cron to hit Cloud Edge Function.
 - 🔜 **Unit 10 — cutover smoke**: verify on prod domain.
 - 🔜 **Unit 11 — cleanup**: shut down Unraid services.
-- 🔜 **Fix the 3 issues above** (2 pre-existing + 1 Edge Functions dependency).
+- 🔜 **Fix the 2 pre-existing issues above** (sync engine `updated_at` mismatch + `user_settings` 406). The Edge Functions CORS issue is resolved with Unit 5 shipped.
 - 🔜 **Rotate service_role key** — was pasted in chat during this session. Dashboard → Settings → API → Reset.
 
 ### Critical files modified this session
@@ -439,7 +448,16 @@ Unit 11 (Post-cutover cleanup + 14-day rollback window)
 
 ---
 
-- [ ] **Unit 5: Port Express endpoints to Supabase Edge Functions**
+- [x] **Unit 5: Port Express endpoints to Supabase Edge Functions** — ✅ 2026-04-24 (late). 6 new Edge Functions deployed to Cloud (ai-generate, ai-stream, ai-ollama, models, calendar, cover-proxy). 4 shared modules in `supabase/functions/_shared/` (origin-check, entitlement, rate-limit, providers) with 35 Deno-native tests passing. 2 new migrations applied (`rate_limit_buckets` table + `increment_rate_limit` RPC). Client-side: `src/lib/apiBaseUrl.ts` helper introduced; 18 prod call sites + 7 unit tests swapped. `npm run build` passes. Calendar + cover-proxy deployed with `--no-verify-jwt` (public by design: calendar apps can't send Bearer tokens; cover-proxy is pre-auth). Smoke-tested: CORS preflight ✅, origin gating ✅, auth gating ✅, cover-proxy image fetch from google books + openlibrary ✅. **Pivots from the original plan:**
+  - **Rate-limit backend = Postgres, not Upstash Redis.** One less vendor; the RPC round-trip (~5-20ms) is dwarfed by the LLM call that follows. Schema in `supabase/migrations/20260501000002` + atomic upsert RPC in `20260502000001`.
+  - **`zhipu-ai-provider` (GLM) works on Deno via `npm:` prefix** — verified via dependency analysis; raw-fetch fallback not needed.
+  - **Platform AI keys NOT set as secrets.** Knowlune is BYOK-first; free-tier users with no key will get a graceful "no platform key available" error from the Edge Functions. If we later want a free-tier pool, add `ANTHROPIC_API_KEY` etc. via `supabase secrets set` without redeploying.
+  - **Three stale `STORAGE_BUCKETS` constants fixed** (hardDeleteUser.ts, export-data/index.ts, export-worker/index.ts) — all listed the old self-hosted buckets. Now match the 6 Cloud buckets.
+  - **`/api/ai/models/:provider` sub-routes included** — these 3 call sites (openai, groq, openrouter) were missing from the original Unit 5 file list.
+  - **cover-proxy redirect handling:** Deployed v2 to follow up to 3 redirects with per-hop allowlist re-validation (openlibrary → archive.org CDN chain). Added `archive.org` + `*.archive.org` to allowlist.
+  - **Vercel AI SDK v6 API nuance:** `generateText` now returns `inputTokens`/`outputTokens` (not `promptTokens`/`completionTokens`); request param is `maxOutputTokens` (not `maxTokens`). Normalized at the wire boundary.
+  - **SSE wire format preserved:** ai-stream hand-encodes `data: {"content": "..."}\n\n` rather than using `.toDataStreamResponse()` — matches what `src/ai/llm/proxy-client.ts:81-96` expects; no client changes needed.
+  - **~~Unit 5 original~~** — superseded by the above.
 
 **Goal:** Full feature parity on six endpoints: `/api/ai/generate`, `/api/ai/stream`, `/api/ai/ollama/*`, `/api/models`, `/api/calendar`, `/api/cover-proxy`. Preserve streaming, JWT auth, entitlement, rate limiting, and Ollama BYOK.
 

@@ -1,5 +1,6 @@
 import type { ImportedCourse, LearningPathCourse } from '@/data/types'
 import { getAIConfiguration, getDecryptedApiKey } from '@/lib/aiConfiguration'
+import { apiUrl } from '@/lib/apiBaseUrl'
 import './types' // Import window type declaration
 
 interface GeneratePathOptions {
@@ -98,7 +99,7 @@ IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no extra text.`
   })
 
   // Create fetch promise — uses local proxy to support all AI providers
-  const fetchPromise = fetch('/api/ai/generate', {
+  const fetchPromise = fetch(apiUrl('ai-generate'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

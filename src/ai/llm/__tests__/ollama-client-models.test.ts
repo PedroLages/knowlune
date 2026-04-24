@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { OllamaLLMClient } from '../ollama-client'
+import { apiUrl } from '@/lib/apiBaseUrl'
 
 // Mock useAuthStore to provide access_token for Authorization header
 vi.mock('@/stores/useAuthStore', () => ({
@@ -37,7 +38,7 @@ describe('OllamaLLMClient.fetchModels', () => {
     const models = await OllamaLLMClient.fetchModels('http://192.168.2.200:11434', false)
 
     expect(mockFetch).toHaveBeenCalledWith(
-      '/api/ai/ollama/tags?serverUrl=http%3A%2F%2F192.168.2.200%3A11434',
+      apiUrl('ai-ollama/tags', { serverUrl: 'http://192.168.2.200:11434' }),
       expect.objectContaining({ method: 'GET' })
     )
     expect(models).toHaveLength(2)
@@ -126,7 +127,7 @@ describe('OllamaLLMClient.fetchModels', () => {
     await OllamaLLMClient.fetchModels('http://192.168.2.200:11434/', false)
 
     expect(mockFetch).toHaveBeenCalledWith(
-      '/api/ai/ollama/tags?serverUrl=http%3A%2F%2F192.168.2.200%3A11434',
+      apiUrl('ai-ollama/tags', { serverUrl: 'http://192.168.2.200:11434' }),
       expect.anything()
     )
   })

@@ -10,6 +10,7 @@
  * - Only analyzed content transmitted to AI providers (no PII or metadata)
  */
 
+import { apiUrl } from './apiBaseUrl'
 import { encryptData, decryptData, type EncryptedData } from './crypto'
 import type { AIFeatureId, AIProviderId, FeatureModelConfig } from './modelDefaults'
 import { PROVIDER_DEFAULTS, FEATURE_DEFAULTS } from './modelDefaults'
@@ -161,7 +162,7 @@ export const DEFAULTS: AIConfigurationSettings = {
  */
 async function testViaModelProxy(provider: string, key: string): Promise<boolean> {
   try {
-    const res = await fetch(`/api/ai/models/${provider}`, {
+    const res = await fetch(apiUrl(`models/${provider}`), {
       headers: { 'X-API-Key': key },
       signal: AbortSignal.timeout(10_000),
     })
@@ -192,7 +193,7 @@ export const AI_PROVIDERS: Record<AIProviderId, AIProvider> = {
       // Anthropic has no public model listing endpoint, so we send a minimal
       // chat request through our Express proxy to verify the key works.
       try {
-        const res = await fetch('/api/ai/generate', {
+        const res = await fetch(apiUrl('ai-generate'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -243,7 +244,7 @@ export const AI_PROVIDERS: Record<AIProviderId, AIProvider> = {
     testConnection: async key => {
       // Test connection by fetching the model list (lightweight endpoint)
       try {
-        const response = await fetch('/api/ai/models/openrouter', {
+        const response = await fetch(apiUrl('models/openrouter'), {
           headers: { 'X-API-Key': key },
           signal: AbortSignal.timeout(10_000),
         })

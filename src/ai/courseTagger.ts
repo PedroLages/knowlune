@@ -15,6 +15,7 @@ import {
   getOllamaSelectedModel,
   isOllamaDirectConnection,
 } from '@/lib/aiConfiguration'
+import { apiUrl } from '@/lib/apiBaseUrl'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 
 /** Result from AI course tagging */
@@ -103,7 +104,7 @@ async function callOllamaChat(
   try {
     // Route through the Express proxy for SSRF validation, unless direct connection is enabled
     const useDirectConnection = isOllamaDirectConnection()
-    const fetchUrl = useDirectConnection ? `${ollamaConfig.url}/api/chat` : '/api/ai/ollama/chat'
+    const fetchUrl = useDirectConnection ? `${ollamaConfig.url}/api/chat` : apiUrl('ai-ollama/chat')
 
     const requestBody: Record<string, unknown> = {
       model: ollamaConfig.model,

@@ -103,7 +103,14 @@ const TABLE_NAMES: string[] = [
  * Storage buckets containing user-prefixed objects.
  * Objects are stored at `{userId}/{filename}` — same set as hardDeleteUser.ts.
  */
-const STORAGE_BUCKETS: string[] = ['avatars', 'course-media', 'audio', 'exports']
+const STORAGE_BUCKETS: string[] = [
+  'course-thumbnails',
+  'screenshots',
+  'avatars',
+  'pdfs',
+  'book-files',
+  'book-covers',
+]
 
 /**
  * Vault fields by Supabase table name.

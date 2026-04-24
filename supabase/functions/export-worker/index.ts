@@ -99,7 +99,14 @@ const TABLE_NAMES: string[] = [
 ]
 
 /** Storage buckets containing user-prefixed objects. */
-const STORAGE_BUCKETS: string[] = ['avatars', 'course-media', 'audio', 'exports']
+const STORAGE_BUCKETS: string[] = [
+  'course-thumbnails',
+  'screenshots',
+  'avatars',
+  'pdfs',
+  'book-files',
+  'book-covers',
+]
 
 /**
  * Vault fields that MUST NOT appear in the export.

@@ -12,6 +12,7 @@
  */
 
 import { getAIConfiguration, saveAIConfiguration, getOllamaSelectedModel } from './aiConfiguration'
+import { apiUrl } from './apiBaseUrl'
 
 /** Result of a connection test */
 export interface ConnectionTestResult {
@@ -48,7 +49,7 @@ export async function testOllamaConnection(
   try {
     const pingUrl = directConnection
       ? normalizedUrl
-      : `/api/ai/ollama/health?serverUrl=${encodeURIComponent(normalizedUrl)}`
+      : apiUrl('ai-ollama/health', { serverUrl: normalizedUrl })
 
     const response = await fetch(pingUrl, {
       method: 'GET',
@@ -81,7 +82,7 @@ export async function testOllamaConnection(
     try {
       const tagsUrl = directConnection
         ? `${normalizedUrl}/api/tags`
-        : `/api/ai/ollama/tags?serverUrl=${encodeURIComponent(normalizedUrl)}`
+        : apiUrl('ai-ollama/tags', { serverUrl: normalizedUrl })
 
       const tagsResponse = await fetch(tagsUrl, {
         method: 'GET',
