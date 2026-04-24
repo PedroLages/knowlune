@@ -1,4 +1,14 @@
-name: Deploy to titan
+name: Deploy to titan (DEPRECATED — rollback only)
+
+# DEPRECATED — Knowlune now deploys to Cloudflare Pages, backed by Supabase Cloud.
+# See docs/deployment/cloudflare-pages-setup.md.
+# This workflow is retained solely for the 14-day rollback window during the
+# self-hosted → Cloud migration (Unit 11 of the migration plan). Delete after
+# 2026-05-08 once the rollback window closes and Cloud is confirmed stable.
+#
+# To disable without deleting, set repo variable TITAN_DEPLOY_ENABLED=false
+# (the deploy job already gates on it). The build-and-push job still runs so
+# an image exists for emergency rollback.
 
 on:
   push:

@@ -13,7 +13,7 @@ Move Knowlune's entire backend and frontend off the Unraid server (`titan`) to f
 
 ## Session Progress Log — 2026-04-24
 
-**Status:** ~85% complete. Auth + schema + storage + Edge Functions all live on Cloud. Remaining: Vault re-insert (Unit 4, depends on deployed vault-credentials function), Cloudflare Pages deploy (Unit 8), retention-tick Worker cron (Unit 9), cutover smoke (Unit 10), Unraid cleanup (Unit 11).
+**Status:** ~90% complete. Auth + schema + storage + Edge Functions + Pages-deploy scaffolding all live. Remaining: Vault re-insert (Unit 4, depends on deployed vault-credentials function), Cloudflare Pages dashboard project creation (Unit 8 manual step), retention-tick Worker cron (Unit 9), cutover smoke (Unit 10), Unraid cleanup (Unit 11).
 
 ### What's DONE
 
@@ -50,10 +50,18 @@ Move Knowlune's entire backend and frontend off the Unraid server (`titan`) to f
 - ✅ **Smoke tests**: CORS preflight, origin gating, auth gating, calendar 404-on-unknown-token, cover-proxy image fetch with redirect chain all verified.
 - ✅ **Bonus**: fixed 3 stale `STORAGE_BUCKETS` constants (delete-account + export paths); fixed cover-proxy redirect handling (openlibrary → archive.org CDN).
 
+### Unit 8 shipped (repo-side) — 2026-04-24
+
+- ✅ **`public/_redirects`** — SPA fallback (`/* /index.html 200`); verified copied to `dist/` by `npm run build`.
+- ✅ **`docs/deployment/cloudflare-pages-setup.md`** — full runbook: dashboard setup, env var table (with Cloud project ref `chyvhrbtttpumsyuhgbu`), SPA routing, custom-domain cutover procedure, preview deploys, rollback procedure.
+- ✅ **`.github/workflows/deploy-titan.yml`** — renamed to `Deploy to titan (DEPRECATED — rollback only)` + inline comment explaining the 14-day rollback window; workflow still functional for rollback.
+- ✅ **`.env.example`** — updated `VITE_SUPABASE_URL` guidance (points readers to the new runbook), documented `VITE_API_BASE_URL` for Edge Functions.
+- 🔜 **Manual step (still needed)**: Cloudflare Pages dashboard — create project, connect repo, set env vars, trigger first deploy. See the runbook. Not doable from the repo; requires Pedro to run through the dashboard.
+
 ### What's LEFT
 
 - 🔜 **Unit 4 — Vault secrets**: re-insert OPDS passwords + ABS apiKeys (depends on Unit 5 vault-credentials function).
-- 🔜 **Unit 8 — Cloudflare Pages deploy**: switch prod env vars, redeploy.
+- 🔜 **Unit 8 (manual) — Cloudflare Pages dashboard**: create the Pages project, set env vars, verify preview deploy. Runbook: [docs/deployment/cloudflare-pages-setup.md](../deployment/cloudflare-pages-setup.md).
 - 🔜 **Unit 9 — retention-tick Worker**: reconfigure cron to hit Cloud Edge Function.
 - 🔜 **Unit 10 — cutover smoke**: verify on prod domain.
 - 🔜 **Unit 11 — cleanup**: shut down Unraid services.
@@ -631,7 +639,7 @@ Unit 11 (Post-cutover cleanup + 14-day rollback window)
 
 ---
 
-- [ ] **Unit 8: Switch SPA env and deploy to Cloudflare Pages**
+- [~] **Unit 8: Switch SPA env and deploy to Cloudflare Pages** — 🟡 Repo-side scaffolding shipped 2026-04-24 (`public/_redirects`, runbook at `docs/deployment/cloudflare-pages-setup.md`, deploy-titan.yml marked deprecated, `.env.example` updated, `npm run build` verifies `_redirects` lands in `dist/`). **Manual dashboard step still required**: create the Pages project, set env vars per the runbook, trigger first deploy, verify preview URL loads with Cloud Supabase backing.
 
 **Goal:** Point Knowlune at Cloud Supabase; deploy the SPA to Cloudflare Pages auto-building from `main`.
 
