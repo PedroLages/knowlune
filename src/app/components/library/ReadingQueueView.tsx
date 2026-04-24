@@ -133,20 +133,18 @@ export function ReadingQueueView({ books }: ReadingQueueViewProps) {
     .filter((item): item is { entry: typeof item.entry; book: Book } => item.book !== undefined)
 
   if (orderedEntries.length === 0) {
+    // fix/E-ABS-QA: compact single-line empty state (height ≤ 40 px) instead
+    // of the former hero-sized block — the reading queue is a secondary affordance
+    // and should not dominate the library viewport when unused.
     return (
       <div
-        className="flex flex-col items-center justify-center py-16 gap-4 text-center"
+        className="flex h-10 items-center gap-2 px-3 text-sm text-muted-foreground"
         data-testid="reading-queue-empty"
       >
-        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-          <ListOrdered className="size-8 text-muted-foreground" aria-hidden="true" />
-        </div>
-        <div className="space-y-1.5">
-          <p className="text-base font-semibold text-foreground">Your reading queue is empty</p>
-          <p className="text-sm text-muted-foreground max-w-xs">
-            Right-click any book and choose &ldquo;Add to Queue&rdquo; to plan your reading order.
-          </p>
-        </div>
+        <ListOrdered className="size-4 flex-shrink-0" aria-hidden="true" />
+        <span className="truncate">
+          Queue is empty — right-click a book and choose &ldquo;Add to Queue&rdquo;.
+        </span>
       </div>
     )
   }

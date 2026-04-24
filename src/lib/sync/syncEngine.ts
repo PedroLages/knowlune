@@ -56,6 +56,105 @@ const BATCH_SIZE = 100
 const DEBOUNCE_MS = 200
 
 // ---------------------------------------------------------------------------
+// Download throttle + 429 retry (fix/E-ABS-QA, 2026-04-24)
+// ---------------------------------------------------------------------------
+
+/**
+ * Maximum number of concurrent Supabase downloads in `_doDownload()`.
+ *
+ * The download loop iterates `tableRegistry` (26+ entries). Without a cap,
+ * every syncable table would fire a request in parallel on every cold load,
+ * saturating self-hosted Supabase and triggering Cloudflare 429 responses.
+ * Four is a balance between throughput and rate-limit headroom — matches the
+ * upload pipeline's batch sizing.
+ */
+export const MAX_CONCURRENT_DOWNLOADS = 4
+
+/** Retry attempts for 429 responses before giving up on a table. */
+const DOWNLOAD_429_MAX_ATTEMPTS = 3
+
+/** Base backoff in ms — doubled each attempt: 250 → 500 → 1000. */
+const DOWNLOAD_429_BASE_DELAY_MS = 250
+
+/**
+ * Tiny async semaphore — bounded-concurrency gate without the `p-limit`
+ * dependency. Each caller `acquire()`s a slot, runs its work, then `release()`s.
+ * When the pool is full, additional `acquire()` calls enqueue and resolve in
+ * FIFO order as slots free.
+ */
+function createSemaphore(max: number) {
+  let inFlight = 0
+  const waiters: Array<() => void> = []
+
+  function acquire(): Promise<void> {
+    if (inFlight < max) {
+      inFlight++
+      return Promise.resolve()
+    }
+    return new Promise<void>(resolve => {
+      waiters.push(() => {
+        inFlight++
+        resolve()
+      })
+    })
+  }
+
+  function release(): void {
+    inFlight--
+    const next = waiters.shift()
+    if (next) next()
+  }
+
+  return { acquire, release }
+}
+
+/**
+ * Detect a 429 Too Many Requests response on a Supabase error object.
+ * Supabase PostgREST wraps HTTP status on `error.code` (string) or `status`
+ * (number, depending on client version); we accept either shape plus a
+ * message fallback for resilience.
+ */
+function is429Error(err: unknown): boolean {
+  if (err === null || typeof err !== 'object') return false
+  const e = err as { status?: number; code?: string; message?: string }
+  if (e.status === 429) return true
+  if (e.code === '429' || e.code === 'PGRST429') return true
+  if (typeof e.message === 'string' && /\b429\b|too many requests|rate.?limit/i.test(e.message))
+    return true
+  return false
+}
+
+/**
+ * Run a Supabase query with exponential backoff on 429 responses.
+ * Non-429 errors return immediately (existing "log and continue" behavior).
+ */
+async function downloadWithRetry<T>(
+  queryFn: () => Promise<{ data: T | null; error: unknown }>,
+  tableLabel: string,
+  maxAttempts: number = DOWNLOAD_429_MAX_ATTEMPTS,
+  baseDelayMs: number = DOWNLOAD_429_BASE_DELAY_MS
+): Promise<{ data: T | null; error: unknown; throttled: boolean }> {
+  let lastResult: { data: T | null; error: unknown } = { data: null, error: null }
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    lastResult = await queryFn()
+    if (!lastResult.error) {
+      return { ...lastResult, throttled: false }
+    }
+    if (!is429Error(lastResult.error)) {
+      // Non-429 — defer to existing error handling in the caller.
+      return { ...lastResult, throttled: false }
+    }
+    // 429: backoff and retry.
+    const delay = baseDelayMs * Math.pow(2, attempt)
+    console.warn(
+      `[syncEngine] 429 on "${tableLabel}" (attempt ${attempt + 1}/${maxAttempts}) — retrying in ${delay}ms`
+    )
+    await new Promise(r => setTimeout(r, delay))
+  }
+  return { ...lastResult, throttled: true }
+}
+
+// ---------------------------------------------------------------------------
 // Monotonic RPC map — P0 tables with dedicated Postgres functions (E92-S01)
 // For P2+ monotonic tables that lack an RPC, the engine logs a warning and
 // falls back to a generic upsert.
@@ -779,43 +878,86 @@ async function _doDownload(): Promise<void> {
     return
   }
 
-  for (const entry of tableRegistry) {
-    if (entry.skipSync) continue
+  // fix/E-ABS-QA: bounded-parallel download — cap concurrent Supabase fetches
+  // at MAX_CONCURRENT_DOWNLOADS and retry 429 responses with exponential
+  // backoff before logging-and-continuing. Preserves the
+  // `shelves` → `bookShelves` dedup-map ordering invariant by gating the
+  // bookShelves task on a shelves-complete promise.
+  const sem = createSemaphore(MAX_CONCURRENT_DOWNLOADS)
+  const throttleToasted = new Set<string>()
+
+  // Resolved when the `shelves` task completes (used by `bookShelves` to read
+  // the dedup map written during shelves processing). Resolves even on error
+  // / skipSync so dependent tables never deadlock.
+  let shelvesResolve: () => void = () => {}
+  const shelvesDone = new Promise<void>(resolve => {
+    shelvesResolve = resolve
+  })
+  // If no `shelves` entry is in the registry, release immediately.
+  if (!tableRegistry.some(e => e.dexieTable === 'shelves' && !e.skipSync && !e.uploadOnly)) {
+    shelvesResolve()
+  }
+
+  async function processEntry(entry: (typeof tableRegistry)[number]): Promise<void> {
+    if (entry.skipSync) return
     // upload-only tables have no download phase — embeddings are generated
     // locally, not pulled from server. The lastSyncTimestamp cursor is never
     // advanced for these tables (no download = no cursor update). This is
     // correct: when a new device signs in, it will either find embeddings it
     // uploaded itself or regenerate them locally.
-    if (entry.uploadOnly) continue
+    if (entry.uploadOnly) return
 
-    // Read incremental cursor.
-    const meta = await db.syncMetadata.get(entry.dexieTable)
-    const cursor = meta?.lastSyncTimestamp ?? null
-
-    // Determine the cursor column — defaults to 'updated_at'.
-    // Tables like `audio_bookmarks` have no `updated_at` column and must use
-    // `created_at` instead. The `cursorField` registry override enables this
-    // without per-table special-casing in the engine.
-    const cursorCol = entry.cursorField ?? 'updated_at'
-
-    // Build Supabase query — chain .gte() only when cursor is present.
-    let query = supabase.from(entry.supabaseTable).select('*').order(cursorCol, { ascending: true })
-
-    if (cursor !== null) {
-      query = query.gte(cursorCol, cursor)
+    // Ordering invariant: bookShelves depends on the shelvesDedupMap written
+    // during the shelves task; wait for shelves to finish before proceeding.
+    if (entry.dexieTable === 'bookShelves') {
+      await shelvesDone
     }
 
-    const { data: rows, error } = await query
+    await sem.acquire()
+    try {
+      // Read incremental cursor.
+      const meta = await db.syncMetadata.get(entry.dexieTable)
+      const cursor = meta?.lastSyncTimestamp ?? null
 
-    if (error) {
-      console.error(
-        `[syncEngine] Download error for table "${entry.supabaseTable}":`,
-        error.message
+      // Determine the cursor column — defaults to 'updated_at'.
+      // Tables like `audio_bookmarks` have no `updated_at` column and must use
+      // `created_at` instead. The `cursorField` registry override enables this
+      // without per-table special-casing in the engine.
+      const cursorCol = entry.cursorField ?? 'updated_at'
+
+      // Run the Supabase query with 429-aware retry.
+      const { data: rows, error, throttled } = await downloadWithRetry<Record<string, unknown>[]>(
+        async () => {
+          let query = supabase!
+            .from(entry.supabaseTable)
+            .select('*')
+            .order(cursorCol, { ascending: true })
+          if (cursor !== null) {
+            query = query.gte(cursorCol, cursor)
+          }
+          const result = await query
+          return { data: result.data as Record<string, unknown>[] | null, error: result.error }
+        },
+        entry.supabaseTable
       )
-      continue // skip to next table
-    }
 
-    if (!rows || rows.length === 0) continue
+      if (error) {
+        const errMsg =
+          (error as { message?: string }).message ?? JSON.stringify(error)
+        console.error(
+          `[syncEngine] Download error for table "${entry.supabaseTable}":`,
+          errMsg
+        )
+        if (throttled && !throttleToasted.has(entry.supabaseTable)) {
+          throttleToasted.add(entry.supabaseTable)
+          console.warn(
+            `[syncEngine] "${entry.supabaseTable}" exhausted 429 retries this session — skipping.`
+          )
+        }
+        return // skip to next table
+      }
+
+      if (!rows || rows.length === 0) return
 
     // Convert once so pre-apply hooks and the apply loop share the same shape.
     const camelRecords: Record<string, unknown>[] = rows.map(r =>
@@ -940,14 +1082,26 @@ async function _doDownload(): Promise<void> {
       })
     }
 
-    // Notify registered Zustand store (if any) to reload from Dexie.
-    const refreshFn = _storeRefreshRegistry.get(entry.dexieTable)
-    if (refreshFn) {
-      await refreshFn().catch(err =>
-        console.warn(`[syncEngine] Store refresh failed for "${entry.dexieTable}":`, err)
-      )
+      // Notify registered Zustand store (if any) to reload from Dexie.
+      const refreshFn = _storeRefreshRegistry.get(entry.dexieTable)
+      if (refreshFn) {
+        await refreshFn().catch(err =>
+          console.warn(`[syncEngine] Store refresh failed for "${entry.dexieTable}":`, err)
+        )
+      }
+    } finally {
+      sem.release()
+      // Unblock bookShelves as soon as the shelves task completes (success or
+      // error). We resolve in finally so dependent tables never deadlock even
+      // if shelves processing throws unexpectedly.
+      if (entry.dexieTable === 'shelves') {
+        shelvesResolve()
+      }
     }
   }
+
+  // Launch all table tasks concurrently; the semaphore bounds in-flight work.
+  await Promise.all(tableRegistry.map(entry => processEntry(entry)))
 }
 
 // ---------------------------------------------------------------------------

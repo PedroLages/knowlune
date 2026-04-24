@@ -67,6 +67,10 @@ export const SEARCH_FRECENCY_INDEXES = '[entityType+entityId], entityType, lastO
  *                No schema/index change — the TypeScript types drop `auth.password` / `apiKey`,
  *                and the post-boot `migrateCredentialsToVault()` clears legacy values from Dexie
  *                once the user authenticates.
+ *
+ * Versions beyond this checkpoint (applied incrementally in schema.ts):
+ *   v59 (E119-S08): No schema change — optional `frozenReason` field on learnerModels.
+ *   v60 (fix E-ABS-QA): New local-only `absSeries` and `absCollections` tables.
  */
 export const CHECKPOINT_SCHEMA: Record<string, string> = {
   importedCourses: 'id, name, importedAt, status, *tags, source, userId, [userId+updatedAt]',

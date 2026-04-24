@@ -44,6 +44,8 @@ import type {
   TranscriptEmbedding,
   LearnerModel,
   UserConsent,
+  AbsSeries,
+  AbsCollection,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA, SEARCH_FRECENCY_INDEXES } from './checkpoint'
@@ -159,6 +161,9 @@ export type ElearningDatabase = Dexie & {
   readingStreakCache: EntityTable<ReadingStreakCacheRow, 'userId'>
   // v58 (E119-S07): Per-user per-purpose consent ledger (GDPR Art. 6(1)(a)).
   userConsents: EntityTable<UserConsent, 'id'>
+  // v60 (fix E-ABS-QA): Cached ABS series and collections (local-only, not synced).
+  absSeries: EntityTable<AbsSeries, 'id'>
+  absCollections: EntityTable<AbsCollection, 'id'>
 }
 
 /**
@@ -1661,6 +1666,20 @@ function _declareLegacyMigrations(database: Dexie): void {
   // consent, freezing the model from further updates. Existing rows are unaffected
   // (Dexie treats missing fields as undefined). No index needed — filtered via JS.
   database.version(59).stores({})
+
+  // v60 (fix E-ABS-QA — ABS Sync QA Fixes):
+  // Add local-only caches for ABS Series and Collections so the Series and
+  // Collections tabs in the Library survive page refresh and hydrate from
+  // Dexie before the network fetch completes.
+  //
+  // Local-only: NOT added to SYNCABLE_TABLES (no userId, not mirrored to
+  // Supabase in this batch — deferred per plan scope boundaries). The Zustand
+  // TTL cache in `useAudiobookshelfStore` continues to gate refetches; Dexie
+  // hydration happens on mount independently of the TTL.
+  database.version(60).stores({
+    absSeries: 'id, serverId, libraryId, name',
+    absCollections: 'id, serverId, libraryId, name',
+  })
 } // end _declareLegacyMigrations
 
 export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }

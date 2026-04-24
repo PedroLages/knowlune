@@ -35,6 +35,13 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/app/components/ui/tooltip'
+import { formatDistanceToNow } from 'date-fns'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
 import { SeriesCard } from '@/app/components/library/SeriesCard'
 import { CollectionsView } from '@/app/components/library/CollectionsView'
@@ -246,9 +253,30 @@ export function Library() {
     }
   }, [absServers, syncCatalog])
 
-  // Manual sync — clears TTL cache and re-triggers full catalog sync
+  // Manual sync — clears TTL cache and re-triggers full catalog sync.
+  // Guards against silently calling `syncCatalog` when any server is in
+  // `auth-failed` state: fires a destructive toast and opens the ABS
+  // settings dialog so the user can re-enter the credential. The server's
+  // `updatedAt` is NOT mutated — `syncCatalog` is the only code path that
+  // updates it, and we skip that call for auth-failed servers.
   const handleManualSync = useCallback(() => {
     const store = useAudiobookshelfStore.getState()
+
+    // If any server is auth-failed, short-circuit to the settings dialog and
+    // never issue the ABS API call. Mixed state (some connected, some
+    // auth-failed) still syncs the connected ones below.
+    const authFailedServers = store.servers.filter(s => s.status === 'auth-failed')
+    if (authFailedServers.length > 0) {
+      toast.error('Audiobookshelf authentication expired', {
+        description:
+          authFailedServers.length === 1
+            ? `Reconnect "${authFailedServers[0].name}" to resume syncing.`
+            : `Reconnect ${authFailedServers.length} servers to resume syncing.`,
+        duration: 6000,
+      })
+      setAbsSettingsOpen(true)
+    }
+
     // Clear TTL caches so series/collections re-fetch
     useAudiobookshelfStore.setState({
       seriesLoadedAt: {},
@@ -256,8 +284,10 @@ export function Library() {
     })
     // Clear synced tracking so syncCatalog runs again
     syncedServerIds.current.clear()
-    // Trigger sync for all connected servers
+    // Trigger sync ONLY for servers that are not auth-failed. Auth-failed
+    // servers are left untouched (no API call, no updatedAt change).
     for (const server of store.servers) {
+      if (server.status === 'auth-failed') continue
       syncedServerIds.current.add(server.id)
       syncCatalog(server)
     }
@@ -363,40 +393,65 @@ export function Library() {
                 const connectedServer = absServers.find(s => s.status === 'connected')
                 const isOffline = absServers.some(s => s.status === 'offline')
                 const isAuthFailed = absServers.some(s => s.status === 'auth-failed')
+                // fix/E-ABS-QA: compute tooltip copy from server state. Auth-
+                // failed takes priority over connected because the user needs
+                // to reconnect before the sync will do anything useful.
+                const lastSyncIso = connectedServer?.lastSyncedAt
+                let tooltipText: string
+                if (isAbsSyncing) {
+                  tooltipText = 'Syncing…'
+                } else if (isAuthFailed) {
+                  tooltipText = 'Auth failed — click to reconnect'
+                } else if (lastSyncIso) {
+                  try {
+                    tooltipText = `Last synced ${formatDistanceToNow(new Date(lastSyncIso), { addSuffix: true })}`
+                  } catch {
+                    // silent-catch-ok: malformed timestamp falls back to a plain label.
+                    tooltipText = 'Sync library'
+                  }
+                } else if (connectedServer) {
+                  tooltipText = 'Never synced — click to sync'
+                } else if (isOffline) {
+                  tooltipText = 'Offline — sync will retry when online'
+                } else {
+                  tooltipText = 'Sync library'
+                }
                 return (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleManualSync}
-                    disabled={isAbsSyncing}
-                    className="size-11 rounded-xl relative"
-                    aria-label="Sync Audiobookshelf library"
-                    title={
-                      isAbsSyncing
-                        ? 'Syncing...'
-                        : connectedServer
-                          ? `Connected — last synced ${connectedServer.lastSyncedAt ? new Date(connectedServer.lastSyncedAt).toLocaleTimeString() : 'never'}`
-                          : 'Sync Library'
-                    }
-                    data-testid="abs-sync-trigger"
-                  >
-                    <RefreshCw className={cn('size-5', isAbsSyncing && 'animate-spin')} />
-                    {/* Status dot */}
-                    <span
-                      className={cn(
-                        'absolute top-1 right-1 size-2.5 rounded-full border-2 border-background',
-                        isAbsSyncing
-                          ? 'bg-brand animate-pulse'
-                          : isAuthFailed
-                            ? 'bg-destructive'
-                            : isOffline
-                              ? 'bg-warning'
-                              : connectedServer
-                                ? 'bg-success'
-                                : 'bg-muted'
-                      )}
-                    />
-                  </Button>
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleManualSync}
+                          disabled={isAbsSyncing}
+                          className="size-11 rounded-xl relative"
+                          aria-label={`Sync Audiobookshelf library — ${tooltipText}`}
+                          data-testid="abs-sync-trigger"
+                        >
+                          <RefreshCw className={cn('size-5', isAbsSyncing && 'animate-spin')} />
+                          {/* Status dot */}
+                          <span
+                            className={cn(
+                              'absolute top-1 right-1 size-2.5 rounded-full border-2 border-background',
+                              isAbsSyncing
+                                ? 'bg-brand animate-pulse'
+                                : isAuthFailed
+                                  ? 'bg-destructive'
+                                  : isOffline
+                                    ? 'bg-warning'
+                                    : connectedServer
+                                      ? 'bg-success'
+                                      : 'bg-muted'
+                            )}
+                          />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" data-testid="abs-sync-tooltip">
+                        {tooltipText}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )
               })()}
             <Button
@@ -535,10 +590,13 @@ export function Library() {
       {/* Source filter tabs — only show when ABS servers configured (E101-S03) */}
       {books.length > 0 && <LibrarySourceTabs />}
 
-      {/* Format tabs — hidden for ABS Series/Collections views (server-driven, not filterable) */}
-      {books.length > 0 && !(filters.source === 'audiobookshelf' && absViewMode !== 'grid') && (
-        <FormatTabs />
-      )}
+      {/* Format tabs — always visible when books exist.
+          fix/E-ABS-QA: keep tabs visible in ABS Series/Collections views so
+          users do not experience silent filter disappearance when switching
+          view modes. Filter still applies to the underlying book set; series
+          and collections currently render from ABS without format filtering
+          (TODO: wire format filter into series/collections grouping). */}
+      {books.length > 0 && <FormatTabs />}
 
       {/* ABS view mode toggle: Grid / Series — only when ABS source is selected (E102-S02) */}
       {books.length > 0 && filters.source === 'audiobookshelf' && absServers.length > 0 && (
@@ -792,8 +850,17 @@ export function Library() {
         </div>
       )}
 
-      {/* Storage indicator — only when books exist */}
-      {books.length > 0 && <StorageIndicator bookCount={books.length} refreshKey={books.length} />}
+      {/* Storage indicator — only when books exist.
+          fix/E-ABS-QA: scope `bookCount` to the active source filter so the
+          footer matches what the user sees; show the global total as
+          secondary text when a filter is active. */}
+      {books.length > 0 && (
+        <StorageIndicator
+          bookCount={filters.source ? filteredBooks.length : books.length}
+          totalBookCount={filters.source ? books.length : undefined}
+          refreshKey={books.length}
+        />
+      )}
 
       <BookImportDialog
         open={importOpen}
