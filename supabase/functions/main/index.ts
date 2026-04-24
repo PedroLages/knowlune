@@ -29,6 +29,7 @@ const WORKER_ENV_ALLOWLIST = [
   'VAULT_ENC_KEY',
   'DENO_REGION',
   'VERIFY_JWT',
+  'RETENTION_TICK_SECRET',
 ]
 
 console.log('main function started')
