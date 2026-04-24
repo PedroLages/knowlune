@@ -17,7 +17,17 @@ import { SYNCABLE_TABLES } from './backfill'
  * @returns `true` if unlinked records exist across any syncable table,
  *          `false` otherwise (including when all tables are empty).
  */
-export async function hasUnlinkedRecords(newUserId: string): Promise<boolean> {
+/**
+ * @param newUserId      The userId being signed in.
+ * @param guestSessionId When provided, only rows from this specific guest session
+ *                       are counted as unlinked. Prevents zombie-session orphan rows
+ *                       (from prior anonymous sessions on the same device) from
+ *                       incorrectly triggering the LinkDataDialog.
+ */
+export async function hasUnlinkedRecords(
+  newUserId: string,
+  guestSessionId?: string | null
+): Promise<boolean> {
   // P0 first, then all others in SYNCABLE_TABLES order.
   // Checking frequently-populated tables first maximises the chance of an
   // early flag-set, skipping subsequent async work.
@@ -36,10 +46,13 @@ export async function hasUnlinkedRecords(newUserId: string): Promise<boolean> {
       try {
         const count = await db
           .table(tableName)
-          .filter(
-            (r: Record<string, unknown>) =>
-              r.userId === null || r.userId === undefined || r.userId !== newUserId
-          )
+          .filter((r: Record<string, unknown>) => {
+            if (guestSessionId) {
+              // Guest session: only count rows from this specific guest session
+              return r.userId === null && r.guestSessionId === guestSessionId
+            }
+            return r.userId === null || r.userId === undefined || r.userId !== newUserId
+          })
           .count()
         if (count > 0) {
           found = true

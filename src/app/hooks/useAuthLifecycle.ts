@@ -63,6 +63,9 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
     async function handleSignIn(userId: string, userMetadata: Record<string, unknown>) {
       if (ignore) return
 
+      // Read guest session id before any async work so it's stable throughout this call.
+      const guestSessionId = sessionStorage.getItem('knowlune-guest-id')
+
       await hydrateSettingsFromSupabase(userMetadata, userId)
 
       // E96-S02: fan-out hydrate for the 9 P3/P4 LWW Dexie tables. Uses
@@ -92,19 +95,20 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
       const alreadyLinked = localStorage.getItem(`${LINKED_FLAG_PREFIX}${userId}`) === 'true'
       if (alreadyLinked) {
         // silent-catch-ok — backfill is idempotent and self-healing.
-        backfillUserId(userId).catch(err => {
+        backfillUserId(userId, guestSessionId).catch(err => {
           console.error('[useAuthLifecycle] backfillUserId (fast-path) failed:', err)
         })
         syncEngine.start(userId).catch(err => {
           console.error('[useAuthLifecycle] syncEngine.start (fast-path) failed:', err)
         })
+        clearGuestFlags()
         return
       }
 
       // Check whether any local records are not yet linked to this userId.
       let unlinked = false
       try {
-        unlinked = await hasUnlinkedRecords(userId)
+        unlinked = await hasUnlinkedRecords(userId, guestSessionId)
       } catch (err) {
         // silent-catch-ok: gate is best-effort. On failure, default to showing
         // the dialog so the user can decide — safer than silently overwriting.
@@ -118,10 +122,11 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
         // Defer syncEngine.start() — the dialog handlers (Link / Start fresh)
         // will call it after the user resolves their choice.
         onUnlinkedDetected(userId)
+        // Guest flags cleared after the user resolves the dialog (in App.tsx handlers)
       } else {
         // No unlinked records (or no dialog handler): backfill + start sync now.
         // silent-catch-ok — backfill is self-healing; next sign-in retries.
-        backfillUserId(userId).catch(err => {
+        backfillUserId(userId, guestSessionId).catch(err => {
           console.error('[useAuthLifecycle] backfillUserId failed:', err)
         })
         syncEngine.start(userId).catch(err => {
@@ -129,7 +134,14 @@ export function useAuthLifecycle({ onUnlinkedDetected }: UseAuthLifecycleOptions
         })
         // Mark this device as linked so the dialog is not shown again.
         localStorage.setItem(`${LINKED_FLAG_PREFIX}${userId}`, 'true')
+        clearGuestFlags()
       }
+    }
+
+    function clearGuestFlags() {
+      sessionStorage.removeItem('knowlune-guest')
+      sessionStorage.removeItem('knowlune-guest-id')
+      sessionStorage.removeItem('knowlune-guest-banner-dismissed')
     }
 
     const {

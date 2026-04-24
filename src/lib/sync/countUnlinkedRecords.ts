@@ -38,20 +38,28 @@ function categoryFor(tableName: string): keyof UnlinkedCounts {
 }
 
 /**
- * @param newUserId  The userId being signed in. Records not belonging to this
- *                   user (or with no userId) are counted as "unlinked".
+ * @param newUserId      The userId being signed in. Records not belonging to this
+ *                       user (or with no userId) are counted as "unlinked".
+ * @param guestSessionId When provided, only rows from this specific guest session
+ *                       are counted as unlinked (same zombie-session filter as
+ *                       hasUnlinkedRecords).
  */
-export async function countUnlinkedRecords(newUserId: string): Promise<UnlinkedCounts> {
+export async function countUnlinkedRecords(
+  newUserId: string,
+  guestSessionId?: string | null
+): Promise<UnlinkedCounts> {
   const totals: UnlinkedCounts = { courses: 0, notes: 0, books: 0, flashcards: 0, other: 0 }
 
   const results = await Promise.allSettled(
     SYNCABLE_TABLES.map(async tableName => {
       const count = await db
         .table(tableName)
-        .filter(
-          (r: Record<string, unknown>) =>
-            r.userId === null || r.userId === undefined || r.userId !== newUserId
-        )
+        .filter((r: Record<string, unknown>) => {
+          if (guestSessionId) {
+            return r.userId === null && r.guestSessionId === guestSessionId
+          }
+          return r.userId === null || r.userId === undefined || r.userId !== newUserId
+        })
         .count()
       return { tableName, count }
     })

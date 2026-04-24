@@ -33,6 +33,8 @@ interface LinkDataDialogProps {
   open: boolean
   userId: string
   onResolved: () => void
+  /** Guest session id — when provided, only guest-session rows are migrated. */
+  guestSessionId?: string | null
 }
 
 interface CategoryRow {
@@ -51,16 +53,17 @@ const CATEGORY_ROWS: CategoryRow[] = [
 
 const LINKED_FLAG_PREFIX = 'sync:linked:'
 
-export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps) {
+export function LinkDataDialog({ open, userId, onResolved, guestSessionId }: LinkDataDialogProps) {
   const [loading, setLoading] = useState(false)
   const [counts, setCounts] = useState<UnlinkedCounts | null>(null)
+  const isGuestMigration = Boolean(guestSessionId)
 
   // Fetch counts when dialog opens
   useEffect(() => {
     if (!open || !userId) return
     let ignore = false
     setCounts(null)
-    countUnlinkedRecords(userId)
+    countUnlinkedRecords(userId, guestSessionId)
       .then(result => {
         if (!ignore) setCounts(result)
       })
@@ -72,12 +75,12 @@ export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps
     return () => {
       ignore = true
     }
-  }, [open, userId])
+  }, [open, userId, guestSessionId])
 
   async function handleLink() {
     setLoading(true)
     try {
-      await backfillUserId(userId)
+      await backfillUserId(userId, guestSessionId)
       // start() triggers fullSync internally — uploads the newly-stamped records.
       syncEngine.start(userId).catch(err => {
         console.error('[LinkDataDialog] syncEngine.start failed:', err)
@@ -160,11 +163,13 @@ export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps
             <div className="flex items-center gap-2">
               <Link2 className="text-brand size-5" />
               <h2 id="link-dialog-title" className="text-foreground text-lg font-semibold">
-                You have local data
+                {isGuestMigration ? 'Keep your guest progress?' : 'You have local data'}
               </h2>
             </div>
             <p id="link-dialog-description" className="text-muted-foreground text-sm">
-              We found data saved on this device. What would you like to do with it?
+              {isGuestMigration
+                ? 'You explored Knowlune as a guest. Would you like to bring your progress to your new account?'
+                : 'We found data saved on this device. What would you like to do with it?'}
             </p>
           </div>
 
@@ -200,10 +205,10 @@ export function LinkDataDialog({ open, userId, onResolved }: LinkDataDialogProps
               {loading ? (
                 <span className="flex items-center gap-2">
                   <span className="border-brand-foreground size-4 animate-spin rounded-full border-2 border-t-transparent" />
-                  Linking…
+                  {isGuestMigration ? 'Saving…' : 'Linking…'}
                 </span>
               ) : (
-                'Link to my account'
+                isGuestMigration ? 'Keep my progress' : 'Link to my account'
               )}
             </Button>
             <Button
