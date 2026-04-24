@@ -47,6 +47,12 @@ export function mapSupabaseError(message: string): string {
   if (message.includes('Token has expired') || message.includes('already used')) {
     return 'This link has expired or was already used. Please request a new one.'
   }
+  if (message.includes('rate limit') || message.includes('Too many requests')) {
+    return 'Too many attempts. Please wait a minute and try again.'
+  }
+  if (message.includes('Signups not allowed')) {
+    return 'New sign-ups are currently disabled. Please contact support.'
+  }
   if (
     message.includes('Failed to fetch') ||
     message.includes('NetworkError') ||
@@ -56,6 +62,35 @@ export function mapSupabaseError(message: string): string {
     return NETWORK_ERROR_MESSAGE
   }
   return message
+}
+
+/**
+ * Handle an exception thrown from a supabase.auth.* call. Only collapses to the
+ * generic network error message when the exception actually signals a network
+ * failure (fetch rejection, DOMException). Everything else surfaces the real
+ * message so real bugs aren't masked as "check your internet".
+ */
+function handleAuthException(err: unknown): { error: string } {
+  if (import.meta.env.DEV) {
+    console.error('[useAuthStore] supabase auth exception:', err)
+  }
+  const message = err instanceof Error ? err.message : String(err ?? 'Unknown error')
+  if (
+    message.includes('Failed to fetch') ||
+    message.includes('NetworkError') ||
+    message.includes('network request failed') ||
+    message.includes('Network request failed') ||
+    err instanceof TypeError // fetch throws TypeError on CORS / DNS failures
+  ) {
+    return { error: NETWORK_ERROR_MESSAGE }
+  }
+  return { error: mapSupabaseError(message) }
+}
+
+function logIfDev(label: string, error: { message: string } | null | undefined) {
+  if (import.meta.env.DEV && error) {
+    console.error(`[useAuthStore] ${label}:`, error)
+  }
 }
 
 export const useAuthStore = create<AuthStore>(set => ({
@@ -70,11 +105,12 @@ export const useAuthStore = create<AuthStore>(set => ({
     try {
       const { error } = await supabase.auth.signUp({ email, password })
       if (error) {
+        logIfDev('signUp', error)
         return { error: mapSupabaseError(error.message) }
       }
       return {}
-    } catch {
-      return { error: NETWORK_ERROR_MESSAGE }
+    } catch (err) {
+      return handleAuthException(err)
     }
   },
 
@@ -83,24 +119,29 @@ export const useAuthStore = create<AuthStore>(set => ({
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
+        logIfDev('signIn', error)
         return { error: mapSupabaseError(error.message) }
       }
       return {}
-    } catch {
-      return { error: NETWORK_ERROR_MESSAGE }
+    } catch (err) {
+      return handleAuthException(err)
     }
   },
 
   signInWithMagicLink: async email => {
     if (!supabase) return { error: NOT_CONFIGURED_MESSAGE }
     try {
-      const { error } = await supabase.auth.signInWithOtp({ email })
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      })
       if (error) {
+        logIfDev('signInWithMagicLink', error)
         return { error: mapSupabaseError(error.message) }
       }
       return {}
-    } catch {
-      return { error: NETWORK_ERROR_MESSAGE }
+    } catch (err) {
+      return handleAuthException(err)
     }
   },
 
@@ -109,15 +150,16 @@ export const useAuthStore = create<AuthStore>(set => ({
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin },
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
       })
       if (error) {
+        logIfDev('signInWithGoogle', error)
         return { error: mapSupabaseError(error.message) }
       }
       // OAuth redirects — no further state change needed
       return {}
-    } catch {
-      return { error: NETWORK_ERROR_MESSAGE }
+    } catch (err) {
+      return handleAuthException(err)
     }
   },
 

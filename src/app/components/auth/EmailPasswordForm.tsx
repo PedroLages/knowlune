@@ -215,7 +215,7 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
           >
             I have read the{' '}
             <Link
-              to="/legal/privacy"
+              to="/privacy"
               target="_blank"
               rel="noopener noreferrer"
               className="font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"

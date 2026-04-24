@@ -125,7 +125,7 @@ function PrivacySectionContent({ userId }: PrivacySectionContentProps) {
       <p className="px-1 text-xs text-muted-foreground">
         Your consent choices are synced across devices. For more information, see our{' '}
         <a
-          href="/legal/privacy"
+          href="/privacy"
           className="underline underline-offset-2 hover:text-foreground"
           target="_blank"
           rel="noopener noreferrer"

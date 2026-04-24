@@ -115,6 +115,9 @@ const CollectionDetail = React.lazy(() =>
   import('./pages/CollectionDetail').then(m => ({ default: m.CollectionDetail }))
 )
 const NotFound = React.lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })))
+const AuthCallback = React.lazy(() =>
+  import('./pages/AuthCallback').then(m => ({ default: m.AuthCallback }))
+)
 const LegalLayout = React.lazy(() =>
   import('./pages/legal/LegalLayout').then(m => ({ default: m.LegalLayout }))
 )
@@ -228,8 +231,11 @@ function YouTubeLessonRedirect() {
 }
 
 export const router = createBrowserRouter([
-  // Public legal pages — outside Layout (no auth required)
+  // Public legal pages — outside Layout and RouteGuard (no auth required).
+  // Explicit top-level paths avoid pathless-parent ambiguity where the route tree
+  // could match `/` first and render <Landing /> instead of the legal page.
   {
+    path: '/privacy',
     element: (
       <Suspense fallback={<PageLoader />}>
         <LegalLayout />
@@ -237,15 +243,25 @@ export const router = createBrowserRouter([
     ),
     children: [
       {
-        path: 'privacy',
+        index: true,
         element: (
           <SuspensePage>
             <PrivacyPolicy />
           </SuspensePage>
         ),
       },
+    ],
+  },
+  {
+    path: '/terms',
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <LegalLayout />
+      </Suspense>
+    ),
+    children: [
       {
-        path: 'terms',
+        index: true,
         element: (
           <SuspensePage>
             <TermsOfService />
@@ -253,6 +269,19 @@ export const router = createBrowserRouter([
         ),
       },
     ],
+  },
+  // Legacy path compatibility — older links used /legal/privacy, /legal/terms
+  { path: '/legal/privacy', element: <Navigate to="/privacy" replace /> },
+  { path: '/legal/terms', element: <Navigate to="/terms" replace /> },
+  // OAuth / magic-link return URL — outside RouteGuard so Supabase PKCE code exchange
+  // happens before the guard would redirect an anonymous user to /.
+  {
+    path: '/auth/callback',
+    element: (
+      <SuspensePage>
+        <AuthCallback />
+      </SuspensePage>
+    ),
   },
   // /login → / redirect (closed app: Landing at / handles all auth entry points)
   {

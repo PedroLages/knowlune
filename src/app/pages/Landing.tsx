@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { Mail, Link2, BookOpen, Brain, Zap, ChevronDown, ChevronUp } from 'lucide-react'
+import { Mail, Link2, BookOpen, Brain, Zap, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import { Button } from '@/app/components/ui/button'
@@ -36,6 +36,18 @@ function AuthCard() {
   const [mode, setMode] = useState<AuthMode>('sign-in')
   const [activeTab, setActiveTab] = useState('email')
   const [resetKey, setResetKey] = useState(0)
+  const [authError, setAuthError] = useState<string | null>(null)
+
+  // Surface OAuth / magic-link errors redirected from /auth/callback.
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    const err = url.searchParams.get('authError')
+    if (err) {
+      setAuthError(err)
+      url.searchParams.delete('authError')
+      window.history.replaceState(null, '', url.pathname + (url.search ? url.search : '') + url.hash)
+    }
+  }, [])
 
   function handleSuccess() {
     const returnTo = sessionStorage.getItem(RETURN_TO_KEY)
@@ -67,6 +79,24 @@ function AuthCard() {
         >
           Skip to sign-in form
         </a>
+
+        {authError && (
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
+            <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <div className="flex-1">{authError}</div>
+            <button
+              type="button"
+              onClick={() => setAuthError(null)}
+              className="text-xs underline underline-offset-2 hover:no-underline"
+              aria-label="Dismiss error"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList variant="default" className="w-full min-h-[44px]">

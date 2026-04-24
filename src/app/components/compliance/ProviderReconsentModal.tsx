@@ -114,7 +114,7 @@ export function ProviderReconsentModal({
 
               <p>
                 <a
-                  href="/legal/privacy"
+                  href="/privacy"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-brand-soft-foreground underline underline-offset-2"

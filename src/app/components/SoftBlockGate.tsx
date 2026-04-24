@@ -84,7 +84,7 @@ export function SoftBlockGate({ onAcknowledged }: SoftBlockGateProps) {
             {loading ? 'Acknowledging…' : 'Acknowledge Privacy Notice'}
           </Button>
           <Link
-            to="/legal/privacy"
+            to="/privacy"
             className="inline-flex items-center justify-center min-h-[44px] rounded-xl text-sm font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
           >
             View Privacy Notice

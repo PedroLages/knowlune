@@ -113,7 +113,7 @@ export function LegalUpdateBanner({
               {ackLoading ? 'Acknowledging…' : 'Acknowledge'}
             </Button>
             <Link
-              to="/legal/privacy"
+              to="/privacy"
               className="text-sm font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm min-h-[44px] inline-flex items-center"
             >
               View Privacy Notice
