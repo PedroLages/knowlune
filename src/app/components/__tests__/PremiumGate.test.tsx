@@ -68,19 +68,6 @@ vi.mock('@/stores/useAuthStore', () => ({
   ),
 }))
 
-// ---------------------------------------------------------------------------
-// Mock AuthDialog — renders a simple placeholder to avoid Radix internals
-// ---------------------------------------------------------------------------
-
-vi.mock('@/app/components/auth/AuthDialog', () => ({
-  AuthDialog: ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) =>
-    open ? (
-      <div data-testid="auth-dialog">
-        <button onClick={() => onOpenChange(false)}>Close Auth</button>
-      </div>
-    ) : null,
-}))
-
 import { PremiumGate } from '@/app/components/PremiumGate'
 
 // ---------------------------------------------------------------------------
@@ -263,29 +250,16 @@ describe('PremiumGate', () => {
     })
   })
 
-  // --- Unauthenticated user tests (AC5) ---
+  // --- Unauthenticated user tests ---
+  // In the closed app, unauthenticated users can't reach PremiumGate (route guard blocks them).
+  // These tests verify that handleUpgrade is a no-op when user is null (defensive safety net).
 
-  describe('unauthenticated user', () => {
+  describe('unauthenticated user (route guard normally prevents this)', () => {
     beforeEach(() => {
       mockUser = null
     })
 
-    it('shows "Sign In to Upgrade" button when not authenticated', () => {
-      mockEntitlementStatus.isPremium = false
-
-      render(
-        <PremiumGate featureLabel="AI Analysis">
-          <div>Secret Content</div>
-        </PremiumGate>
-      )
-
-      expect(screen.getByText('Sign In to Upgrade')).toBeInTheDocument()
-      expect(
-        screen.getByRole('button', { name: /Sign in to upgrade to Premium/ })
-      ).toBeInTheDocument()
-    })
-
-    it('opens AuthDialog instead of starting checkout when clicking upgrade', async () => {
+    it('clicking upgrade is a no-op when not authenticated', async () => {
       mockEntitlementStatus.isPremium = false
 
       const user = userEvent.setup()
@@ -296,10 +270,11 @@ describe('PremiumGate', () => {
         </PremiumGate>
       )
 
-      const button = screen.getByRole('button', { name: /Sign in to upgrade/ })
+      const button = screen.getByRole('button', { name: /Subscribe to unlock AI Analysis/ })
       await user.click(button)
 
-      expect(screen.getByTestId('auth-dialog')).toBeInTheDocument()
+      // Route guard prevents unauthenticated users from reaching this state.
+      // handleUpgrade returns early when !user — no checkout, no dialog.
       expect(mockStartCheckout).not.toHaveBeenCalled()
     })
   })

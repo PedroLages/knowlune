@@ -11,9 +11,6 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import { Shield } from 'lucide-react'
-import { Card, CardContent } from '@/app/components/ui/card'
-import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { ConsentToggles } from '@/app/components/settings/ConsentToggles'
 import { listForUser } from '@/lib/compliance/consentService'
@@ -26,7 +23,8 @@ import { toastSuccess, toastError } from '@/lib/toastHelpers'
 export function PrivacySection() {
   const user = useAuthStore(s => s.user)
 
-  if (!user) return <SignedOutPrivacyCard />
+  // In the closed app, this section is only reachable by signed-in users.
+  if (!user) return null
 
   return <PrivacySectionContent userId={user.id} />
 }
@@ -140,35 +138,3 @@ function PrivacySectionContent({ userId }: PrivacySectionContentProps) {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-function SignedOutPrivacyCard() {
-  return (
-    <div data-testid="privacy-signed-out">
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="flex items-center justify-center size-10 rounded-lg bg-brand-soft">
-              <Shield className="size-5 text-brand" aria-hidden="true" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold">Sign in to manage your privacy settings</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Consent preferences are tied to your account
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="brand"
-            className="min-h-[44px]"
-            onClick={() => {
-              window.location.href = '/settings?section=account'
-            }}
-          >
-            Sign in
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}

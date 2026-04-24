@@ -14,7 +14,6 @@ import { exportHighlightsAsReadwiseCsv } from '@/lib/highlightExport'
 import { exportFlashcardsAsAnki } from '@/lib/ankiExport'
 import { validateImageFile, compressAvatar, fileToDataUrl } from '@/lib/avatarUpload'
 import { resetAllData } from '@/lib/settings'
-import type { AuthMode } from '@/app/components/auth/AuthDialog'
 
 interface SettingsPageContextValue {
   // Settings state
@@ -26,10 +25,6 @@ interface SettingsPageContextValue {
   // Auth
   user: import('@supabase/supabase-js').User | null
   authSignOut: () => Promise<{ error?: string }>
-  authDialogOpen: boolean
-  setAuthDialogOpen: (open: boolean) => void
-  authDialogMode: AuthMode
-  setAuthDialogMode: (mode: AuthMode) => void
 
   // Checkout
   checkoutStatus: 'success' | 'cancel' | null
@@ -96,8 +91,6 @@ export function SettingsPageProvider({ children }: { children: React.ReactNode }
   // Auth state
   const user = useAuthStore(s => s.user)
   const authSignOut = useAuthStore(s => s.signOut)
-  const [authDialogOpen, setAuthDialogOpen] = useState(false)
-  const [authDialogMode, setAuthDialogMode] = useState<AuthMode>('sign-in')
 
   // Checkout return handling
   const [searchParams] = useSearchParams()
@@ -449,10 +442,6 @@ export function SettingsPageProvider({ children }: { children: React.ReactNode }
     updateAndPersist,
     user,
     authSignOut,
-    authDialogOpen,
-    setAuthDialogOpen,
-    authDialogMode,
-    setAuthDialogMode,
     checkoutStatus,
     theme,
     setTheme,

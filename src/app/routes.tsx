@@ -63,7 +63,6 @@ const QuizResults = React.lazy(() =>
 const QuizReview = React.lazy(() =>
   import('./pages/QuizReview').then(m => ({ default: m.QuizReview }))
 )
-const Login = React.lazy(() => import('./pages/Login').then(m => ({ default: m.Login })))
 const Notifications = React.lazy(() =>
   import('./pages/Notifications').then(m => ({ default: m.Notifications }))
 )
@@ -211,14 +210,10 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  // Standalone login page — outside Layout (no sidebar/header)
+  // /login → / redirect (closed app: Landing at / handles all auth entry points)
   {
     path: 'login',
-    element: (
-      <SuspensePage>
-        <Login />
-      </SuspensePage>
-    ),
+    element: <Navigate to="/" replace />,
   },
   // E84: EPUB Reader — full-viewport, outside Layout (no sidebar/header)
   {
