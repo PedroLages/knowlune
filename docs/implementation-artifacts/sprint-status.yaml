@@ -1496,3 +1496,13 @@ development_status:
   119-12-operator-artifacts-ropa-dpa-breach-runbook: done
   119-13-annual-review-ico-checklist-beta-user-reack: done
   epic-119-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 120: PWA Polish
+  # Source: docs/plans/2026-04-24-005-feat-e120-pwa-polish-plan.md
+  # Analysis: docs/analysis/mobile-strategy-comparison-2026-04-24.md
+  # iOS splash + viewport-fit, SW update prompt, MediaSession API (lock-screen audio),
+  # iOS install instruction card, manifest shortcuts, branded offline page, Lighthouse 100
+  # Stories to be created by /ce-orchestrator
+  # ──────────────────────────────────────────────────
+  epic-120: in-progress
