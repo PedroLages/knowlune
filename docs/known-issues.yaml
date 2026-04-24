@@ -1658,3 +1658,19 @@ issues:
 
     Suggested scope: address in E119-S16 or as part of a broader Edge
     Function security review before beta exit.
+# Added 2026-04-24 — abs-sync-qa-fixes R2 residuals
+- id: KI-abs-manual-sync-guard
+  severity: low
+  status: open
+  title: "Extract handleManualSync guard into pure helper for testability"
+  description: "Library.auth-failed.test.tsx reproduces the handler logic locally rather than importing it. Extract to src/lib/abs/manualSyncGuard.ts so both component and test share the same code path."
+  source: ce-review-R2-L1
+  created: 2026-04-24
+
+- id: KI-abs-library-prettier
+  severity: nit
+  status: open
+  title: "Indentation inconsistency in Library.tsx Tooltip block (~lines 416-450)"
+  description: "Inner <Button> and <TooltipContent> are indented one level more than their parent after Tooltip refactor. Run prettier to normalize."
+  source: ce-review-R2-N1
+  created: 2026-04-24
