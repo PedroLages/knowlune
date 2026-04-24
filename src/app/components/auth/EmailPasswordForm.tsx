@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Eye, EyeOff, X } from 'lucide-react'
 import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
 import { Button } from '@/app/components/ui/button'
@@ -25,6 +25,8 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [forgotLoading, setForgotLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const signUp = useAuthStore(s => s.signUp)
   const signIn = useAuthStore(s => s.signIn)
@@ -110,9 +112,17 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
         <div
           id="auth-form-error"
           role="alert"
-          className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
+          className="relative rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
         >
-          <p>{displayError}</p>
+          <button
+            type="button"
+            onClick={() => { setValidationError(null); setError(null) }}
+            className="absolute right-2 top-2 rounded p-0.5 hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Dismiss error"
+          >
+            <X className="size-3.5" aria-hidden="true" />
+          </button>
+          <p className="pr-6">{displayError}</p>
           {error === NETWORK_ERROR_MESSAGE && (
             <Button
               type="submit"
@@ -146,22 +156,33 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="auth-password">Password</Label>
-        <Input
-          id="auth-password"
-          type="password"
-          placeholder="At least 8 characters"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          disabled={loading}
-          required
-          minLength={8}
-          autoComplete={isSignUp ? 'new-password' : 'current-password'}
-          aria-invalid={displayError?.toLowerCase().includes('password') || undefined}
-          aria-describedby={
-            displayError?.toLowerCase().includes('password') ? errorId : 'auth-password-hint'
-          }
-          className="min-h-[44px]"
-        />
+        <div className="relative">
+          <Input
+            id="auth-password"
+            type={showPassword ? 'text' : 'password'}
+            placeholder="At least 8 characters"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            disabled={loading}
+            required
+            minLength={8}
+            autoComplete={isSignUp ? 'new-password' : 'current-password'}
+            aria-invalid={displayError?.toLowerCase().includes('password') || undefined}
+            aria-describedby={
+              displayError?.toLowerCase().includes('password') ? errorId : 'auth-password-hint'
+            }
+            className="min-h-[44px] pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(v => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            tabIndex={-1}
+          >
+            {showPassword ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
+          </button>
+        </div>
         <p id="auth-password-hint" className="text-xs text-muted-foreground">
           Must be at least 8 characters
         </p>
@@ -180,19 +201,30 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
       {isSignUp && (
         <div className="space-y-2">
           <Label htmlFor="auth-confirm-password">Confirm Password</Label>
-          <Input
-            id="auth-confirm-password"
-            type="password"
-            placeholder="Confirm your password"
-            value={confirmPassword}
-            onChange={e => setConfirmPassword(e.target.value)}
-            disabled={loading}
-            required
-            autoComplete="new-password"
-            aria-invalid={displayError?.toLowerCase().includes('match') || undefined}
-            aria-describedby={displayError?.toLowerCase().includes('match') ? errorId : undefined}
-            className="min-h-[44px]"
-          />
+          <div className="relative">
+            <Input
+              id="auth-confirm-password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="Confirm your password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              disabled={loading}
+              required
+              autoComplete="new-password"
+              aria-invalid={displayError?.toLowerCase().includes('match') || undefined}
+              aria-describedby={displayError?.toLowerCase().includes('match') ? errorId : undefined}
+              className="min-h-[44px] pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(v => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+              aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+              tabIndex={-1}
+            >
+              {showConfirmPassword ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
+            </button>
+          </div>
         </div>
       )}
 

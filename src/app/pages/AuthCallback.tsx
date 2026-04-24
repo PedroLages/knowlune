@@ -1,8 +1,10 @@
-import { useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, Link } from 'react-router'
+import { Loader2, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/auth/supabase'
 import { useAuthStore, selectAuthState } from '@/stores/useAuthStore'
-import { Skeleton } from '@/app/components/ui/skeleton'
+import { Button } from '@/app/components/ui/button'
+import { KnowluneLogo } from '@/app/components/figma/KnowluneLogo'
 
 /**
  * OAuth / magic-link return URL.
@@ -13,6 +15,11 @@ import { Skeleton } from '@/app/components/ui/skeleton'
  *   - Implicit: `#access_token=...` in the URL hash. onAuthStateChange in useAuthLifecycle
  *     picks it up; we just wait for authState to flip to 'authenticated'.
  *
+ * Error handling:
+ *   - URL has `?error` / `?error_description`: redirect to /?authError=<msg>
+ *   - URL has `?authError=`: show inline error card immediately (e.g. Supabase server errors)
+ *   - exchangeCodeForSession fails: redirect to /?authError=<msg>
+ *
  * On success -> navigate to /courses (the default post-auth landing).
  * On error   -> navigate to /?authError=<message> so Landing can surface it inline.
  */
@@ -21,6 +28,13 @@ export function AuthCallback() {
   const authState = useAuthStore(selectAuthState)
   const exchangeStarted = useRef(false)
 
+  // If the user lands here with ?authError= already set (e.g. Supabase server-side
+  // error before PKCE exchange), surface it immediately as an error card.
+  const [authError, setAuthError] = useState<string | null>(() => {
+    const url = new URL(window.location.href)
+    return url.searchParams.get('authError')
+  })
+
   useEffect(() => {
     if (exchangeStarted.current) return
     exchangeStarted.current = true
@@ -28,6 +42,9 @@ export function AuthCallback() {
     const url = new URL(window.location.href)
     const code = url.searchParams.get('code')
     const errorParam = url.searchParams.get('error_description') || url.searchParams.get('error')
+
+    // Already showing an authError card — do nothing.
+    if (authError) return
 
     if (errorParam) {
       navigate(`/?authError=${encodeURIComponent(errorParam)}`, { replace: true })
@@ -58,7 +75,7 @@ export function AuthCallback() {
     if (window.location.hash.includes('access_token')) {
       window.history.replaceState(null, '', window.location.pathname)
     }
-  }, [navigate])
+  }, [navigate, authError])
 
   useEffect(() => {
     if (authState === 'authenticated') {
@@ -67,17 +84,77 @@ export function AuthCallback() {
   }, [authState, navigate])
 
   return (
-    <div
-      role="status"
-      aria-busy="true"
-      aria-label="Completing sign in"
-      className="min-h-screen flex items-center justify-center p-6"
-    >
-      <div className="w-full max-w-sm space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-3/4" />
+    <>
+      <style>{`
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .anim-fade-slide-up {
+          animation: fadeSlideUp 0.4s ease-out both;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .anim-fade-slide-up { animation: none; }
+        }
+      `}</style>
+
+      <div
+        className="min-h-screen flex items-center justify-center p-6 bg-background"
+        role="status"
+        aria-busy={!authError}
+        aria-label={authError ? 'Sign-in failed' : 'Completing sign in'}
+      >
+        <div className="anim-fade-slide-up bg-card rounded-2xl shadow-lg p-8 flex flex-col items-center gap-6 w-full max-w-sm">
+          <KnowluneLogo className="h-7 w-auto" />
+
+          {authError ? (
+            /* ── Error state ─────────────────────────────────────── */
+            <>
+              <AlertCircle size={40} className="text-destructive" aria-hidden="true" />
+
+              <div className="flex flex-col items-center gap-1 text-center">
+                <h1 className="font-display text-2xl font-semibold text-foreground">
+                  Sign-in failed
+                </h1>
+              </div>
+
+              <div className="w-full bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-sm text-destructive text-center">
+                {authError}
+              </div>
+
+              <div className="flex flex-col gap-3 w-full">
+                <Button variant="brand" asChild className="w-full min-h-[44px]">
+                  <Link to="/">Back to sign in</Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setAuthError(null)
+                    window.location.reload()
+                  }}
+                  className="w-full min-h-[44px]"
+                >
+                  Try again
+                </Button>
+              </div>
+            </>
+          ) : (
+            /* ── Loading state ───────────────────────────────────── */
+            <>
+              <Loader2 size={40} className="animate-spin text-brand" aria-hidden="true" />
+
+              <div className="flex flex-col items-center gap-2 text-center">
+                <h1 className="font-display text-2xl font-semibold text-foreground">
+                  Signing you in…
+                </h1>
+                <p className="text-sm text-muted-foreground text-center max-w-xs">
+                  Verifying your credentials and setting up your workspace.
+                </p>
+              </div>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }

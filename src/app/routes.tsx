@@ -118,6 +118,9 @@ const NotFound = React.lazy(() => import('./pages/NotFound').then(m => ({ defaul
 const AuthCallback = React.lazy(() =>
   import('./pages/AuthCallback').then(m => ({ default: m.AuthCallback }))
 )
+const GuestEntryPage = React.lazy(() =>
+  import('./pages/GuestEntry').then(m => ({ default: m.GuestEntry }))
+)
 const LegalLayout = React.lazy(() =>
   import('./pages/legal/LegalLayout').then(m => ({ default: m.LegalLayout }))
 )
@@ -291,13 +294,22 @@ export const router = createBrowserRouter([
   // /guest — sets sessionStorage guest flags and redirects into the app
   {
     path: 'guest',
-    Component: function GuestEntry() {
+    Component: function GuestEntryRedirect() {
       sessionStorage.setItem('knowlune-guest', 'true')
       if (!sessionStorage.getItem('knowlune-guest-id')) {
         sessionStorage.setItem('knowlune-guest-id', crypto.randomUUID())
       }
       return <Navigate to="/courses" replace />
     },
+  },
+  // /try — guest vs account comparison page; landing CTA before committing to /guest
+  {
+    path: 'try',
+    element: (
+      <SuspensePage>
+        <GuestEntryPage />
+      </SuspensePage>
+    ),
   },
   // E84: EPUB Reader — full-viewport, outside Layout (no sidebar/header)
   {
