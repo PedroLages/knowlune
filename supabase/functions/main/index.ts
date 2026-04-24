@@ -30,6 +30,7 @@ const WORKER_ENV_ALLOWLIST = [
   'DENO_REGION',
   'VERIFY_JWT',
   'RETENTION_TICK_SECRET',
+  'EXPORT_WORKER_SECRET',
 ]
 
 console.log('main function started')
