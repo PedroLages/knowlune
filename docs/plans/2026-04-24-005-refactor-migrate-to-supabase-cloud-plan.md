@@ -65,6 +65,7 @@ Move Knowlune's entire backend and frontend off the Unraid server (`titan`) to f
 - 🔜 **Unit 4 — Vault secrets**: re-insert OPDS passwords + ABS apiKeys (depends on Unit 5 vault-credentials function).
 - ✅ **Unit 8 — Cloudflare Pages dashboard**: Pages project `knowlune` created, connected to `PedroLages/knowlune`, deploying `main` on push. Env vars set (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_BASE_URL, NODE_VERSION=20). Live at <https://knowlune.pages.dev> (200, SPA deep-link `/courses` returns 200 confirming `_redirects`). Two mid-flight fixes merged: PR #426 moved `wrangler.toml` into `cloudflare-workers/` so Pages wouldn't treat the cron config as a Pages config; PR #427 removed `public/design-tokens.source.json` (59.6 MiB, exceeded Pages' 25 MiB per-file limit — already flagged as P0 in 2026-03-26 production readiness review).
 - ✅ **Unit 9 — retention-tick Worker**: Worker redeployed (`knowlune-retention-cron.pedrocamposlages.workers.dev`), both secrets rotated (`RETENTION_TICK_SECRET` + `SUPABASE_FUNCTIONS_URL` on Worker; `RETENTION_TICK_SECRET` on Cloud Edge Function via `supabase secrets set`). `retention-tick` Edge Function deployed with `--no-verify-jwt` (Worker cron can't present a user JWT — same pattern as calendar/cover-proxy). Manual test fire: HTTP 200, run_id `19efa4b8-36a7-4cab-81f0-536026fbac77` wrote 47 audit rows to `retention_audit_log`. Cron `0 3 * * *` scheduled; first autonomous fire at 03:00 UTC 2026-04-25.
+- 🔜 **Unit 9.5 — deploy 7 remaining Edge Functions**: vault-credentials, delete-account, cancel-account-deletion, export-data, export-worker, create-checkout, stripe-webhook. Requires user hand for `EXPORT_WORKER_SECRET`.
 - 🔜 **Unit 10 — cutover smoke**: verify on prod domain.
 - 🔜 **Unit 11 — cleanup**: shut down Unraid services.
 - 🔜 **Fix the 2 pre-existing issues above** (sync engine `updated_at` mismatch + `user_settings` 406). The Edge Functions CORS issue is resolved with Unit 5 shipped.
@@ -722,6 +723,57 @@ Unit 11 (Post-cutover cleanup + 14-day rollback window)
 **Verification:**
 - `retention_audit_log` row appears on Cloud after manual trigger.
 - Next 03:00 UTC fire lands a second row without manual intervention.
+
+---
+
+- [ ] **Unit 9.5: Deploy remaining 7 Edge Functions to Cloud**
+
+**Goal:** Close the Edge Function deployment gap discovered in Unit 9. The 7 functions below exist in the repo but are not on Cloud. Deploy them before cutover so no features are silently broken after the DNS flip.
+
+**Requirements:** R1, R5, R8
+
+**Dependencies:** Unit 9 (Cloud project live, secrets infrastructure established)
+
+**Functions to deploy:**
+
+| Function | Flags | Feature |
+|---|---|---|
+| `vault-credentials` | (default — JWT verified) | OPDS passwords, ABS API keys |
+| `delete-account` | (default) | GDPR account deletion |
+| `cancel-account-deletion` | (default) | Undo deletion in grace period |
+| `export-data` | (default) | GDPR Art. 15 data export |
+| `export-worker` | (default) | Background export job processor |
+| `create-checkout` | (default) | Stripe checkout session |
+| `stripe-webhook` | `--no-verify-jwt` | Stripe sends no Bearer token |
+
+**Note on `main`:** The `main` function is a legacy Deno router. Check if it's still referenced by any client call sites before deploying — it may be obsolete.
+
+**Approach:**
+1. Deploy 6 functions (default JWT verification):
+   ```bash
+   for fn in vault-credentials delete-account cancel-account-deletion export-data export-worker create-checkout; do
+     npx supabase functions deploy $fn --project-ref chyvhrbtttpumsyuhgbu
+   done
+   ```
+2. Deploy `stripe-webhook` with `--no-verify-jwt` (Stripe POSTs without a Bearer token):
+   ```bash
+   npx supabase functions deploy stripe-webhook --no-verify-jwt --project-ref chyvhrbtttpumsyuhgbu
+   ```
+3. Set `EXPORT_WORKER_SECRET` on Cloud (needed for export-data → export-worker internal auth). Same pattern as `RETENTION_TICK_SECRET` — generate a new value and set via `supabase secrets set`. **This step requires user hand** (secret write).
+4. Verify `vault-credentials` is reachable: `curl -s -o /dev/null -w "%{http_code}" -X POST https://chyvhrbtttpumsyuhgbu.supabase.co/functions/v1/vault-credentials/check-credential -H "Authorization: Bearer <anon_key>"` → should return 401 (unauthorized, not 404).
+5. Check if `main` is referenced: `grep -rn "/functions/v1/main" src/` — if no hits, skip deployment.
+
+**Files:**
+- No repo changes needed — functions already exist in `supabase/functions/`.
+
+**Test scenarios:**
+- `vault-credentials` responds (401, not 404) — proves it's deployed.
+- `stripe-webhook` responds (400 "missing signature", not 404) — proves it's deployed without JWT requirement.
+- `export-data` responds (401, not 404) — proves it's deployed.
+
+**Verification:**
+- `npx supabase functions list --project-ref chyvhrbtttpumsyuhgbu` shows all 7 new functions as ACTIVE.
+- No 404s on the above spot-checks.
 
 ---
 
