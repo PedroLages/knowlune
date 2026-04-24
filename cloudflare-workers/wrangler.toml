@@ -1,20 +1,21 @@
-# Cloudflare Workers configuration for Knowlune retention cron trigger
+# Cloudflare Workers configuration for Knowlune retention cron trigger.
+#
+# Location note: this file lives in `cloudflare-workers/` (not repo root) so
+# Cloudflare Pages does not confuse it with a Pages config during SPA builds.
+# Deploy from this directory: `cd cloudflare-workers && wrangler deploy`.
 #
 # Purpose: Schedules the daily retention-tick Edge Function via Cloudflare's
 # managed cron infrastructure. The Worker is a minimal HTTP pass-through that
 # calls the Supabase Edge Function URL with the shared secret header.
 #
-# Deployment: see docs/deployment/retention-cron-setup.md
+# Deployment runbook: docs/deployment/retention-cron-setup.md
 #
-# Secret management:
-#   RETENTION_TICK_SECRET is stored as a Cloudflare Worker secret (not in this file).
-#   Set it with: wrangler secret put RETENTION_TICK_SECRET
-#
-#   SUPABASE_FUNCTIONS_URL is also a secret.
-#   Set it with: wrangler secret put SUPABASE_FUNCTIONS_URL
+# Secret management (set from this directory):
+#   wrangler secret put RETENTION_TICK_SECRET
+#   wrangler secret put SUPABASE_FUNCTIONS_URL
 
 name = "knowlune-retention-cron"
-main = "cloudflare-workers/retention-cron.js"
+main = "retention-cron.js"
 compatibility_date = "2024-01-01"
 
 [triggers]

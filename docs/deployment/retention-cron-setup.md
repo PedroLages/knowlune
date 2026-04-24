@@ -151,6 +151,10 @@ npm install -g wrangler
 # Authenticate
 wrangler login
 
+# IMPORTANT: run all wrangler commands from cloudflare-workers/
+# (the wrangler.toml lives there, not at repo root — see note in wrangler.toml).
+cd cloudflare-workers
+
 # Set secrets (never stored in wrangler.toml)
 wrangler secret put RETENTION_TICK_SECRET
 # → Paste the shared secret (also set in Supabase Edge Function env)
