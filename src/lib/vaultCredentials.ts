@@ -25,22 +25,32 @@ function buildQuery(credentialType: CredentialType, credentialId: string): strin
 }
 
 /**
- * Stores (or updates) a credential in Supabase Vault.
- *
- * - No-op if the user is not authenticated.
- * - Non-throwing: errors are logged via console.warn.
- * - After a successful store, remove the credential from localStorage / Dexie.
+ * Result of a Vault write. Mirrors `ReadCredentialResult` so callers can
+ * distinguish "user not signed in" from "network / server error" and surface
+ * actionable messaging. `reason: 'unauthenticated'` is the common case when
+ * the user tries to save ABS/OPDS credentials before signing into Supabase —
+ * the legacy `storeCredential` would silently no-op, leading to downstream
+ * "API key missing" errors at sync time with no breadcrumb at save time.
  */
-export async function storeCredential(
+export type StoreCredentialResult =
+  | { ok: true }
+  | { ok: false; reason: 'unauthenticated' | 'error'; message?: string }
+
+/**
+ * Discriminated-result variant of `storeCredential`. Prefer this at
+ * user-initiated save sites so the UI can surface an error toast when the
+ * Vault write could not proceed.
+ */
+export async function storeCredentialWithStatus(
   credentialType: CredentialType,
   credentialId: string,
   secret: string
-): Promise<void> {
-  if (!supabase) return
+): Promise<StoreCredentialResult> {
+  if (!supabase) return { ok: false, reason: 'unauthenticated' }
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return
+  if (!user) return { ok: false, reason: 'unauthenticated' }
 
   try {
     const { error } = await supabase.functions.invoke(`${FUNCTION_NAME}/store-credential`, {
@@ -49,10 +59,31 @@ export async function storeCredential(
     })
     if (error) {
       console.warn('[vaultCredentials] storeCredential failed:', error)
+      return { ok: false, reason: 'error', message: error.message }
     }
+    return { ok: true }
   } catch (err) {
     console.warn('[vaultCredentials] storeCredential error:', err)
+    return { ok: false, reason: 'error', message: err instanceof Error ? err.message : String(err) }
   }
+}
+
+/**
+ * Stores (or updates) a credential in Supabase Vault.
+ *
+ * - No-op if the user is not authenticated.
+ * - Non-throwing: errors are logged via console.warn.
+ * - After a successful store, remove the credential from localStorage / Dexie.
+ *
+ * Legacy wrapper kept for fire-and-forget call sites (e.g. the vault
+ * migration path). New call sites should prefer `storeCredentialWithStatus`.
+ */
+export async function storeCredential(
+  credentialType: CredentialType,
+  credentialId: string,
+  secret: string
+): Promise<void> {
+  await storeCredentialWithStatus(credentialType, credentialId, secret)
 }
 
 /**

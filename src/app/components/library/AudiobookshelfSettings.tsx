@@ -22,7 +22,11 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/app/components/ui/dialog'
-import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
+import {
+  useAudiobookshelfStore,
+  VaultUnauthenticatedError,
+} from '@/stores/useAudiobookshelfStore'
+import { toast } from 'sonner'
 import { testConnection, fetchLibraries } from '@/services/AudiobookshelfService'
 import { toastSuccess } from '@/lib/toastHelpers'
 import type { AudiobookshelfServer } from '@/data/types'
@@ -257,8 +261,22 @@ export function AudiobookshelfSettings({ open, onOpenChange }: AudiobookshelfSet
 
       resetForm()
       setMode('list')
-    } catch {
-      // silent-catch-ok — store already shows toast.error; stay on form so user can retry
+    } catch (err) {
+      // silent-catch-ok — store already shows a generic toast.error for non-
+      // auth failures; we only add a targeted toast when the Vault write
+      // failed because the user is not signed into Supabase (common root
+      // cause of the misleading "API key missing" sync error).
+      if (err instanceof VaultUnauthenticatedError) {
+        setTestResult({
+          ok: false,
+          message: 'Sign in to save credentials. Audiobookshelf keys are stored in your account.',
+        })
+        toast.error('Sign in required to save credentials', {
+          description:
+            'Audiobookshelf API keys are stored in your Knowlune account. Sign in (top right) and try again.',
+          duration: 8000,
+        })
+      }
     } finally {
       setIsSaving(false)
     }

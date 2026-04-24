@@ -19,7 +19,20 @@ import type { AudiobookshelfServer, AbsSeries, AbsCollection } from '@/data/type
 import { db } from '@/db/schema'
 import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 import { useBookStore } from '@/stores/useBookStore'
-import { storeCredential, deleteCredential } from '@/lib/vaultCredentials'
+import { storeCredentialWithStatus, deleteCredential } from '@/lib/vaultCredentials'
+
+/**
+ * Thrown by `addServer` / `updateServer` when the Vault write fails because
+ * the user is not signed into Supabase. Callers (the Save handler) catch
+ * this specifically to render an actionable "Sign in to save" toast without
+ * writing an orphan Dexie row.
+ */
+export class VaultUnauthenticatedError extends Error {
+  constructor(message = 'Sign in to save credentials') {
+    super(message)
+    this.name = 'VaultUnauthenticatedError'
+  }
+}
 import { syncableWrite } from '@/lib/sync/syncableWrite'
 import { getAbsApiKey, invalidateAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
 import { emitTelemetry } from '@/lib/credentials/telemetry'
@@ -120,10 +133,21 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
 
   addServer: async (server: AudiobookshelfServer, apiKey: string) => {
     // Vault-first: if the vault write fails, we must not write the metadata
-    // row (no partial state). We do not try/catch the storeCredential call
-    // because `storeCredential` is non-throwing and swallows errors — callers
-    // still get the toast via the metadata write failure path below.
-    await storeCredential('abs-server', server.id, apiKey)
+    // row (no partial state). Previously the legacy `storeCredential` was
+    // non-throwing, so an unauthenticated save silently dropped the key and
+    // the downstream sync surfaced a misleading "API key missing" toast. We
+    // now branch on the discriminated result and throw a typed error so the
+    // UI can render actionable messaging before writing Dexie.
+    const vaultResult = await storeCredentialWithStatus('abs-server', server.id, apiKey)
+    if (!vaultResult.ok) {
+      if (vaultResult.reason === 'unauthenticated') {
+        throw new VaultUnauthenticatedError()
+      }
+      toast.error('Could not save Audiobookshelf API key', {
+        description: vaultResult.message ?? 'Vault write failed. Try again.',
+      })
+      throw new Error(vaultResult.message ?? 'Vault write failed')
+    }
     // Invalidate the resolver cache so the first consumer reads the fresh key.
     invalidateAbsApiKey(server.id)
     try {
@@ -155,7 +179,13 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
   ) => {
     try {
       if (apiKey && apiKey.length > 0) {
-        await storeCredential('abs-server', id, apiKey)
+        const vaultResult = await storeCredentialWithStatus('abs-server', id, apiKey)
+        if (!vaultResult.ok) {
+          if (vaultResult.reason === 'unauthenticated') {
+            throw new VaultUnauthenticatedError()
+          }
+          throw new Error(vaultResult.message ?? 'Vault write failed')
+        }
         invalidateAbsApiKey(id)
       }
       const existing = get().servers.find(s => s.id === id)
@@ -185,7 +215,12 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
       }
     } catch (err) {
       console.error('[AudiobookshelfStore] Failed to update server:', err)
-      toast.error('Failed to update Audiobookshelf server.')
+      // VaultUnauthenticatedError is surfaced by the Save handler with a
+      // specific "Sign in to save" toast — suppress the generic one so the
+      // user does not see two toasts for the same failure.
+      if (!(err instanceof VaultUnauthenticatedError)) {
+        toast.error('Failed to update Audiobookshelf server.')
+      }
       throw err
     }
   },

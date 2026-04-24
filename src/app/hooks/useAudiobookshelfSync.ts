@@ -15,7 +15,7 @@ import type { AudiobookshelfServer, AbsLibraryItem, Book, BookChapter } from '@/
 import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 import { useBookStore } from '@/stores/useBookStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
-import { getAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
+import { getAbsApiKey, getAbsApiKeyReason } from '@/lib/credentials/absApiKeyResolver'
 
 interface SyncState {
   isSyncing: boolean
@@ -145,11 +145,29 @@ export function useAudiobookshelfSync() {
       try {
         const apiKey = await getAbsApiKey(server.id)
         if (!apiKey) {
-          // Credential store returned null — key was never saved, was cleared
-          // (browser storage wipe, profile switch), or OPFS failed to read.
-          // Surface this instead of silently skipping: mark server auth-failed
-          // (drives the red status dot) and prompt the user to re-enter the key.
+          // Credential store returned null. Disambiguate: the resolver tracks
+          // whether the lookup failed because the user is unauthenticated
+          // (Vault requires a Supabase JWT) vs. the key truly being absent
+          // or the broker returning 401/403. A single "API key missing"
+          // message for all three was the source of confused bug reports
+          // after E95-S05 — we now surface each case with actionable text.
+          const reason = getAbsApiKeyReason(server.id)
           syncingServers.current.delete(server.id)
+
+          if (reason === 'unauthenticated') {
+            setState(prev => ({
+              ...prev,
+              isSyncing: false,
+              syncError: 'Sign in to Knowlune to load your Audiobookshelf credentials.',
+            }))
+            toast.error('Sign in required', {
+              description:
+                'Audiobookshelf credentials live in your Knowlune account. Sign in (top right) to load them.',
+              duration: 8000,
+            })
+            return
+          }
+
           setState(prev => ({
             ...prev,
             isSyncing: false,
