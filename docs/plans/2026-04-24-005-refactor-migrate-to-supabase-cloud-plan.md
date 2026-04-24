@@ -13,7 +13,9 @@ Move Knowlune's entire backend and frontend off the Unraid server (`titan`) to f
 
 ## Session Progress Log — 2026-04-24
 
-**Status:** ~92% complete. Auth + schema + storage + Edge Functions + Pages deploy all live (SPA serving at `knowlune.pages.dev`). Remaining: Vault re-insert (Unit 4), retention-tick Worker secret rotation (Unit 9 — partial; URL rotated, secret rotation blocked on user), cutover smoke (Unit 10), Unraid cleanup (Unit 11).
+**Status:** ~95% complete. Auth + schema + storage + Unit 5 Edge Functions + retention-tick + Pages deploy + retention-tick cron all live. Remaining: Vault re-insert (Unit 4), cutover smoke (Unit 10), Unraid cleanup (Unit 11), plus deferred deployment of 8 other Edge Functions (see note below).
+
+**Edge Functions deployment gap discovered 2026-04-24:** The Unit 5 shipping note claimed `vault-credentials`, `delete-account`, `cancel-account-deletion`, `export-data`, `export-worker`, `create-checkout`, `stripe-webhook`, `main` were already on Cloud from "prior sessions." This turns out to be false — only the 6 new Unit 5 functions + `retention-tick` (just deployed) are on Cloud. The 8 missing functions are in the repo but not deployed. Non-blocking for baseline cutover (auth + sync + AI + cron work), but required for: vault secret storage, account deletion flows, data export, Stripe checkout/webhooks. Track as follow-up before declaring full feature parity.
 
 ### What's DONE
 
@@ -62,7 +64,7 @@ Move Knowlune's entire backend and frontend off the Unraid server (`titan`) to f
 
 - 🔜 **Unit 4 — Vault secrets**: re-insert OPDS passwords + ABS apiKeys (depends on Unit 5 vault-credentials function).
 - ✅ **Unit 8 — Cloudflare Pages dashboard**: Pages project `knowlune` created, connected to `PedroLages/knowlune`, deploying `main` on push. Env vars set (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_BASE_URL, NODE_VERSION=20). Live at <https://knowlune.pages.dev> (200, SPA deep-link `/courses` returns 200 confirming `_redirects`). Two mid-flight fixes merged: PR #426 moved `wrangler.toml` into `cloudflare-workers/` so Pages wouldn't treat the cron config as a Pages config; PR #427 removed `public/design-tokens.source.json` (59.6 MiB, exceeded Pages' 25 MiB per-file limit — already flagged as P0 in 2026-03-26 production readiness review).
-- 🔜 **Unit 9 — retention-tick Worker**: reconfigure cron to hit Cloud Edge Function.
+- ✅ **Unit 9 — retention-tick Worker**: Worker redeployed (`knowlune-retention-cron.pedrocamposlages.workers.dev`), both secrets rotated (`RETENTION_TICK_SECRET` + `SUPABASE_FUNCTIONS_URL` on Worker; `RETENTION_TICK_SECRET` on Cloud Edge Function via `supabase secrets set`). `retention-tick` Edge Function deployed with `--no-verify-jwt` (Worker cron can't present a user JWT — same pattern as calendar/cover-proxy). Manual test fire: HTTP 200, run_id `19efa4b8-36a7-4cab-81f0-536026fbac77` wrote 47 audit rows to `retention_audit_log`. Cron `0 3 * * *` scheduled; first autonomous fire at 03:00 UTC 2026-04-25.
 - 🔜 **Unit 10 — cutover smoke**: verify on prod domain.
 - 🔜 **Unit 11 — cleanup**: shut down Unraid services.
 - 🔜 **Fix the 2 pre-existing issues above** (sync engine `updated_at` mismatch + `user_settings` 406). The Edge Functions CORS issue is resolved with Unit 5 shipped.
@@ -684,7 +686,7 @@ Unit 11 (Post-cutover cleanup + 14-day rollback window)
 
 ---
 
-- [ ] **Unit 9: Reconfigure Cloudflare Worker (retention-tick cron) to point at Cloud**
+- [x] **Unit 9: Reconfigure Cloudflare Worker (retention-tick cron) to point at Cloud** — ✅ 2026-04-24. Worker redeployed at `knowlune-retention-cron.pedrocamposlages.workers.dev` (cron `0 3 * * *`). Both secrets rotated: `RETENTION_TICK_SECRET` + `SUPABASE_FUNCTIONS_URL` on the Worker, matching `RETENTION_TICK_SECRET` on the Cloud Edge Function. `retention-tick` Edge Function deployed to Cloud with `--no-verify-jwt` (Worker cron can't produce a user JWT). Manual test fire returned HTTP 200 `{"success":true}`; run_id `19efa4b8-36a7-4cab-81f0-536026fbac77` produced 47 rows in `retention_audit_log` (SQL-verified via Supabase MCP). Discovered that Unit 5's claim of 8 pre-existing Cloud functions was wrong — only the 6 new Unit 5 functions were on Cloud. `retention-tick` deployed as part of Unit 9; the remaining 7 (vault-credentials, delete-account, cancel-account-deletion, export-data, export-worker, create-checkout, stripe-webhook, main) are deferred to a follow-up unit.
 
 **Goal:** Keep the 03:00 UTC daily retention cron running against the new Cloud project.
 
