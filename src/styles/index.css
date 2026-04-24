@@ -350,6 +350,18 @@ html.reduce-motion .reduced-motion-fade {
   z-index: 60 !important;
 }
 
+/* ── Auth callback entry animation ── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.anim-fade-slide-up {
+  animation: fadeSlideUp 0.4s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade-slide-up { animation: none; }
+}
+
 /* ── Apple-style range slider (Settings font size picker) ── */
 .apple-slider {
   -webkit-appearance: none;

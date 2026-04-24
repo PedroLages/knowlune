@@ -19,6 +19,7 @@ import type {
   ImportedCourse,
   ImportedVideo,
   YouTubeCourseChapter,
+  UnembeddableReason,
 } from '@/data/types'
 import type { YouTubeUrlParseResult } from '@/lib/youtubeUrlParser'
 import type { VideoChapter } from '@/lib/youtubeRuleBasedGrouping'
@@ -27,6 +28,7 @@ import { persistWithRetry } from '@/lib/persistWithRetry'
 import { syncableWrite } from '@/lib/sync/syncableWrite'
 import type { SyncableRecord } from '@/lib/sync/syncableWrite'
 import { useAuthStore, selectIsGuestMode } from '@/stores/useAuthStore'
+import { probeEmbeddability } from '@/lib/youtubeEmbeddability'
 
 // --- Types ---
 
@@ -47,11 +49,15 @@ export interface YouTubeImportVideo {
   /** Metadata from YouTube API (null while loading) */
   metadata: YouTubeVideoCache | null
   /** Loading/error state */
-  status: 'pending' | 'loading' | 'loaded' | 'error' | 'unavailable'
+  status: 'pending' | 'loading' | 'loaded' | 'error' | 'unavailable' | 'unembeddable'
+  /** Reason the video can't be embedded (when status === 'unembeddable') */
+  unembeddableReason?: UnembeddableReason
   /** Error message if status is 'error' */
   error?: string
   /** Whether the user has removed this video from the import list */
   removed: boolean
+  /** User opted to save this unembeddable video as an external link only */
+  saveAsLinkOnly?: boolean
 }
 
 export interface YouTubeImportState {
@@ -101,6 +107,14 @@ export interface YouTubeImportState {
   setIsFetchingMetadata: (isFetching: boolean) => void
   /** Remove a video from the import list */
   removeVideo: (videoId: string) => void
+  /** Apply a successful metadata fetch and classify embeddability.
+   *  If `metadata.embeddable === false` → status flips to 'unembeddable'.
+   *  If `metadata.embeddable === undefined` → runs an oEmbed probe; a definite
+   *  negative result with a concrete reason flips status to 'unembeddable',
+   *  otherwise status stays 'loaded' (fail-open). */
+  applyLoadedMetadata: (videoId: string, metadata: YouTubeVideoCache) => Promise<void>
+  /** Toggle the per-video "save as link only" flag for an unembeddable video */
+  setSaveAsLinkOnly: (videoId: string, value: boolean) => void
 
   /** Set chapter structure (E28-S06) */
   setChapters: (chapters: VideoChapter[]) => void
@@ -204,6 +218,71 @@ export const useYouTubeImportStore = create<YouTubeImportState>((set, get) => ({
     }))
   },
 
+  applyLoadedMetadata: async (videoId, metadata) => {
+    // Case 1: Data API told us definitively the video is not embeddable.
+    if (metadata.embeddable === false) {
+      set(state => ({
+        videos: state.videos.map(v =>
+          v.videoId === videoId
+            ? {
+                ...v,
+                metadata,
+                status: 'unembeddable',
+                unembeddableReason: metadata.unembeddableReason,
+              }
+            : v
+        ),
+      }))
+      return
+    }
+
+    // Case 2: Data API confirmed embeddable — no probe needed.
+    if (metadata.embeddable === true) {
+      set(state => ({
+        videos: state.videos.map(v =>
+          v.videoId === videoId ? { ...v, metadata, status: 'loaded' } : v
+        ),
+      }))
+      return
+    }
+
+    // Case 3: Embeddable flag unknown (no API key, or older API response).
+    // Seed row as loaded immediately and probe in the background. Only flip
+    // to 'unembeddable' on a definite negative with a concrete reason —
+    // `unknown` or probe rejection stays 'loaded' (fail-open safety net lives
+    // at runtime, Unit 5).
+    set(state => ({
+      videos: state.videos.map(v =>
+        v.videoId === videoId ? { ...v, metadata, status: 'loaded' } : v
+      ),
+    }))
+
+    try {
+      const probe = await probeEmbeddability(videoId)
+      if (!probe.embeddable && probe.reason !== 'unknown') {
+        set(state => ({
+          videos: state.videos.map(v =>
+            v.videoId === videoId
+              ? {
+                  ...v,
+                  status: 'unembeddable',
+                  unembeddableReason: probe.reason,
+                }
+              : v
+          ),
+        }))
+      }
+    } catch {
+      // Fail-open — keep 'loaded'. Runtime fallback is the safety net.
+    }
+  },
+
+  setSaveAsLinkOnly: (videoId, value) => {
+    set(state => ({
+      videos: state.videos.map(v => (v.videoId === videoId ? { ...v, saveAsLinkOnly: value } : v)),
+    }))
+  },
+
   // --- Step 3: Chapter management (E28-S06) ---
 
   setChapters: chapters => set({ chapters }),
@@ -240,7 +319,14 @@ export const useYouTubeImportStore = create<YouTubeImportState>((set, get) => ({
 
     const state = get()
     const activeVideos = state.getActiveVideos()
-    const loadedVideos = activeVideos.filter(v => v.metadata && v.status === 'loaded')
+    // Include 'loaded' videos, plus 'unembeddable' videos the user opted to
+    // keep as link-only (Unit 4 will persist the `embeddable: false` flag so
+    // the lesson renders the fallback instead of attempting iframe embed).
+    const loadedVideos = activeVideos.filter(
+      v =>
+        v.metadata &&
+        (v.status === 'loaded' || (v.status === 'unembeddable' && v.saveAsLinkOnly === true))
+    )
 
     if (loadedVideos.length === 0) {
       return { ok: false, error: 'No videos available to save' }
@@ -293,21 +379,30 @@ export const useYouTubeImportStore = create<YouTubeImportState>((set, get) => ({
       }
 
       // Build ImportedVideo records
-      const videoRecords: ImportedVideo[] = loadedVideos.map((v, index) => ({
-        id: crypto.randomUUID(),
-        courseId,
-        filename: v.metadata!.title,
-        path: `youtube://${v.videoId}`,
-        duration: v.metadata!.duration,
-        format: 'mp4' as const, // YouTube serves as MP4 via IFrame API
-        order: index,
-        fileHandle: null, // YouTube videos don't use FS handles
-        youtubeVideoId: v.videoId,
-        youtubeUrl: `https://www.youtube.com/watch?v=${v.videoId}`,
-        thumbnailUrl: v.metadata!.thumbnailUrl,
-        description: v.metadata!.description,
-        chapters: v.metadata!.chapters?.length ? v.metadata!.chapters : undefined,
-      }))
+      const videoRecords: ImportedVideo[] = loadedVideos.map((v, index) => {
+        const isUnembeddable = v.status === 'unembeddable' && v.saveAsLinkOnly === true
+        return {
+          id: crypto.randomUUID(),
+          courseId,
+          filename: v.metadata!.title,
+          path: `youtube://${v.videoId}`,
+          duration: v.metadata!.duration,
+          format: 'mp4' as const, // YouTube serves as MP4 via IFrame API
+          order: index,
+          fileHandle: null, // YouTube videos don't use FS handles
+          youtubeVideoId: v.videoId,
+          youtubeUrl: `https://www.youtube.com/watch?v=${v.videoId}`,
+          thumbnailUrl: v.metadata!.thumbnailUrl,
+          description: v.metadata!.description,
+          chapters: v.metadata!.chapters?.length ? v.metadata!.chapters : undefined,
+          // Persist embeddability so the player skips the iframe attempt for
+          // known-unembeddable videos and renders the fallback directly.
+          embeddable: isUnembeddable ? false : true,
+          unembeddableReason: isUnembeddable
+            ? (v.unembeddableReason ?? v.metadata!.unembeddableReason ?? 'unknown')
+            : undefined,
+        }
+      })
 
       // Build YouTubeCourseChapter records from chapter structure
       const chapterRecords: YouTubeCourseChapter[] = []

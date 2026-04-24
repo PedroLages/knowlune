@@ -217,6 +217,15 @@ export interface ImportedVideo {
   description?: string // YouTube video description
   chapters?: Chapter[] // YouTube auto-detected chapters
   removedFromYouTube?: boolean // True if video was removed from YouTube (E28-S12)
+  /**
+   * Whether this video can be embedded in an iframe.
+   * - `true` — confirmed embeddable (Data API or oEmbed probe succeeded)
+   * - `false` — confirmed non-embeddable; lesson renders fallback UI directly (no iframe)
+   * - `undefined` — legacy record (pre-fix); treated as embeddable for backward compat
+   */
+  embeddable?: boolean
+  /** Reason this video is not embeddable (set only when `embeddable === false`) */
+  unembeddableReason?: UnembeddableReason
 }
 
 export interface ImportedPdf {
@@ -658,6 +667,18 @@ export interface CachedEntitlement {
 
 // --- YouTube Types (E28-S01) ---
 
+/**
+ * Reason a YouTube video cannot be embedded in an iframe.
+ * Surfaced at import time (via Data API status) and at runtime (via oEmbed probe).
+ */
+export type UnembeddableReason =
+  | 'embedding-disabled'
+  | 'deleted-or-private'
+  | 'private'
+  | 'deleted'
+  | 'region-restricted'
+  | 'unknown'
+
 export interface YouTubeVideoCache {
   videoId: string // PK — YouTube video ID
   title: string
@@ -670,6 +691,12 @@ export interface YouTubeVideoCache {
   chapters: Chapter[]
   fetchedAt: string // ISO 8601
   expiresAt: string // ISO 8601 — cache TTL expiry
+  /** Whether the video can be embedded in an iframe (from Data API status.embeddable) */
+  embeddable?: boolean
+  /** If not embeddable, why — used to render reason-aware fallback copy */
+  unembeddableReason?: UnembeddableReason
+  /** Raw YouTube privacyStatus (public/unlisted/private) */
+  privacyStatus?: string
 }
 
 export interface YouTubeTranscriptRecord {

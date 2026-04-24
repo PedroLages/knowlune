@@ -7,7 +7,6 @@ import { Button } from '@/app/components/ui/button'
 import { EmailPasswordForm } from '@/app/components/auth/EmailPasswordForm'
 import { MagicLinkForm } from '@/app/components/auth/MagicLinkForm'
 import { GoogleAuthButton } from '@/app/components/auth/GoogleAuthButton'
-import { GoogleIcon } from '@/app/components/auth/GoogleIcon'
 import { KnowluneLogo } from '@/app/components/figma/KnowluneLogo'
 import { RETURN_TO_KEY } from '@/app/components/figma/SessionExpiredBanner'
 
@@ -31,7 +30,7 @@ const VALUE_BULLETS = [
   },
 ]
 
-function AuthCard() {
+function AuthCard({ idPrefix = 'auth' }: { idPrefix?: string }) {
   const navigate = useNavigate()
   const [mode, setMode] = useState<AuthMode>('sign-in')
   const [activeTab, setActiveTab] = useState('email')
@@ -98,6 +97,14 @@ function AuthCard() {
           </div>
         )}
 
+        <GoogleAuthButton />
+
+        <div className="relative flex items-center gap-3">
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-xs text-muted-foreground shrink-0">or continue with email</span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList variant="default" className="w-full min-h-[44px]">
             <TabsTrigger variant="default" value="email" className="gap-1.5">
@@ -108,20 +115,13 @@ function AuthCard() {
               <Link2 className="size-4" aria-hidden="true" />
               Magic Link
             </TabsTrigger>
-            <TabsTrigger variant="default" value="google" className="gap-1.5">
-              <GoogleIcon className="size-4" />
-              Google
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="email" className="mt-4">
-            <EmailPasswordForm key={resetKey} mode={mode} onSuccess={handleSuccess} />
+            <EmailPasswordForm key={resetKey} mode={mode} onSuccess={handleSuccess} idPrefix={idPrefix} />
           </TabsContent>
           <TabsContent value="magic-link" className="mt-4">
             <MagicLinkForm resetKey={resetKey} />
-          </TabsContent>
-          <TabsContent value="google" className="mt-4">
-            <GoogleAuthButton />
           </TabsContent>
         </Tabs>
 
@@ -142,7 +142,7 @@ function AuthCard() {
             href="/privacy"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-brand-soft-foreground hover:underline"
+            className="text-brand-soft-foreground underline underline-offset-2 hover:no-underline"
           >
             Privacy Policy
           </a>{' '}
@@ -151,7 +151,7 @@ function AuthCard() {
             href="/terms"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-brand-soft-foreground hover:underline"
+            className="text-brand-soft-foreground underline underline-offset-2 hover:no-underline"
           >
             Terms of Service
           </a>
@@ -195,7 +195,7 @@ function ValueProp({ showGuestCta }: { showGuestCta?: boolean }) {
             className="w-full sm:w-auto"
             aria-label="Try without signing up — explore as a guest"
           >
-            <Link to="/guest">Try without signing up →</Link>
+            <Link to="/try">Try without signing up →</Link>
           </Button>
         </div>
       )}
@@ -270,7 +270,7 @@ export function Landing() {
           className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:px-12"
         >
           <div className="w-full max-w-sm">
-            <AuthCard />
+            <AuthCard idPrefix="auth-desktop" />
           </div>
         </div>
       </div>
@@ -284,8 +284,8 @@ export function Landing() {
           <p className="text-xs tracking-wide text-muted-foreground">Illuminate Your Path</p>
         </div>
 
-        <div id="landing-auth">
-          <AuthCard />
+        <div>
+          <AuthCard idPrefix="auth-mobile" />
         </div>
 
         <MobileValueAccordion />
@@ -297,7 +297,7 @@ export function Landing() {
             className="text-sm text-muted-foreground min-h-[44px]"
             aria-label="Try without signing up — explore as a guest"
           >
-            <Link to="/guest">Try without signing up →</Link>
+            <Link to="/try">Try without signing up →</Link>
           </Button>
         </div>
       </div>

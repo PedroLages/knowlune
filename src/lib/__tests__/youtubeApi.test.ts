@@ -275,6 +275,152 @@ More text
         expect(result.code).toBe('NO_API_KEY')
       }
     })
+
+    describe('embeddability (status part)', () => {
+      function buildResource(status: unknown) {
+        return {
+          items: [
+            {
+              id: 'abc123DEF_-',
+              snippet: {
+                title: 'T',
+                description: '',
+                channelId: 'UC',
+                channelTitle: 'C',
+                publishedAt: '2024-01-01T00:00:00Z',
+                thumbnails: { high: { url: 'https://i.ytimg.com/x.jpg' } },
+              },
+              contentDetails: { duration: 'PT1M' },
+              status,
+            },
+          ],
+          pageInfo: { totalResults: 1 },
+        }
+      }
+
+      it('happy path — status.embeddable: true populates embeddable, no reason', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+          new Response(
+            JSON.stringify(
+              buildResource({
+                embeddable: true,
+                privacyStatus: 'public',
+                uploadStatus: 'processed',
+              })
+            ),
+            { status: 200 }
+          )
+        )
+
+        const result = await getVideoMetadata('abc123DEF_-')
+        expect(result.ok).toBe(true)
+        if (result.ok) {
+          expect(result.data.embeddable).toBe(true)
+          expect(result.data.unembeddableReason).toBeUndefined()
+          expect(result.data.privacyStatus).toBe('public')
+        }
+      })
+
+      it('status.embeddable: false → embedding-disabled', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+          new Response(
+            JSON.stringify(
+              buildResource({
+                embeddable: false,
+                privacyStatus: 'public',
+                uploadStatus: 'processed',
+              })
+            ),
+            { status: 200 }
+          )
+        )
+
+        const result = await getVideoMetadata('abc123DEF_-')
+        expect(result.ok).toBe(true)
+        if (result.ok) {
+          expect(result.data.embeddable).toBe(false)
+          expect(result.data.unembeddableReason).toBe('embedding-disabled')
+        }
+      })
+
+      it('privacyStatus: private takes priority', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+          new Response(
+            JSON.stringify(
+              buildResource({
+                embeddable: false,
+                privacyStatus: 'private',
+                uploadStatus: 'processed',
+              })
+            ),
+            { status: 200 }
+          )
+        )
+
+        const result = await getVideoMetadata('abc123DEF_-')
+        expect(result.ok).toBe(true)
+        if (result.ok) {
+          expect(result.data.unembeddableReason).toBe('private')
+        }
+      })
+
+      it('uploadStatus: deleted → deleted', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+          new Response(
+            JSON.stringify(
+              buildResource({
+                embeddable: false,
+                privacyStatus: 'public',
+                uploadStatus: 'deleted',
+              })
+            ),
+            { status: 200 }
+          )
+        )
+
+        const result = await getVideoMetadata('abc123DEF_-')
+        expect(result.ok).toBe(true)
+        if (result.ok) {
+          expect(result.data.unembeddableReason).toBe('deleted')
+        }
+      })
+
+      it('regionRestriction.blocked non-empty → region-restricted', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+          new Response(
+            JSON.stringify(
+              buildResource({
+                embeddable: true,
+                privacyStatus: 'public',
+                uploadStatus: 'processed',
+                regionRestriction: { blocked: ['US'] },
+              })
+            ),
+            { status: 200 }
+          )
+        )
+
+        const result = await getVideoMetadata('abc123DEF_-')
+        expect(result.ok).toBe(true)
+        if (result.ok) {
+          expect(result.data.unembeddableReason).toBe('region-restricted')
+        }
+      })
+
+      it('forward compat — status field missing entirely leaves fields undefined, no crash', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+          new Response(JSON.stringify(buildResource(undefined)), { status: 200 })
+        )
+
+        const result = await getVideoMetadata('abc123DEF_-')
+        expect(result.ok).toBe(true)
+        if (result.ok) {
+          expect(result.data.embeddable).toBeUndefined()
+          expect(result.data.unembeddableReason).toBeUndefined()
+          expect(result.data.privacyStatus).toBeUndefined()
+        }
+      })
+    })
   })
 
   describe('getPlaylistItems', () => {
