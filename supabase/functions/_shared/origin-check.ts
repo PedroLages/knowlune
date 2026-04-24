@@ -5,7 +5,7 @@
 // (server-to-server, curl, cron) are permitted.
 
 const ALLOWED_METHODS = 'GET, POST, OPTIONS'
-const ALLOWED_HEADERS = 'authorization, x-client-info, apikey, content-type'
+const ALLOWED_HEADERS = 'authorization, x-client-info, apikey, content-type, x-api-key'
 const MAX_AGE = '86400'
 
 function normalize(origin: string): string {
