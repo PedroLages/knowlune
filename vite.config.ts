@@ -511,6 +511,9 @@ export default defineConfig({
       display: 'standalone',
       scope: '/',
       start_url: '/',
+      categories: ['education', 'productivity'],
+      dir: 'ltr',
+      lang: 'en',
       icons: [
         { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
         { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
@@ -572,6 +575,11 @@ export default defineConfig({
         {
           urlPattern: /^\/api\/ai\/.*/i,
           handler: 'NetworkOnly',
+        },
+        {
+          urlPattern: /\/api\/abs\/proxy\//,
+          handler: 'NetworkOnly',
+          options: { cacheName: 'abs-audio-streams' },
         },
       ],
     },
