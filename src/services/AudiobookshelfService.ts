@@ -380,25 +380,25 @@ export async function fetchSeriesForLibrary(
 }
 
 /**
- * Fetch all collections from the server.
- * Calls GET /api/collections.
+ * Fetch all collections for a library.
+ * Calls GET /api/libraries/{libraryId}/collections (works for all users, not just admin).
  *
  * @since E102-S03
  */
 export async function fetchCollections(
   url: string,
   apiKey: string,
+  libraryId: string,
   _options?: { page?: number; limit?: number }
 ): Promise<AbsResult<{ results: AbsCollection[]; total: number }>> {
-  // GET /api/collections returns { collections: [...] } (no pagination).
-  // We normalize to { results, total } for consistency with other paginated endpoints.
-  const result = await absApiFetch<{ collections: AbsCollection[] }>(
+  // ABS v2: /api/libraries/{id}/collections returns { results: [...], total: N }
+  const result = await absApiFetch<{ results: AbsCollection[]; total: number }>(
     url,
     apiKey,
-    '/api/collections'
+    `/api/libraries/${encodeURIComponent(libraryId)}/collections`
   )
   if (!result.ok) return result
-  const collections = result.data.collections ?? []
+  const collections = result.data.results ?? []
   return { ok: true, data: { results: collections, total: collections.length } }
 }
 

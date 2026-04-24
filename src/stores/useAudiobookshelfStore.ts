@@ -73,7 +73,7 @@ interface AudiobookshelfStoreState {
   enqueueSyncItem: (item: Omit<SyncQueueItem, 'enqueuedAt'>) => void
   flushSyncQueue: () => Promise<void>
   loadSeries: (serverId: string, libraryId: string) => Promise<void>
-  loadCollections: (serverId: string) => Promise<void>
+  loadCollections: (serverId: string, libraryId: string) => Promise<void>
 }
 
 export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get) => ({
@@ -377,7 +377,7 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
     }
   },
 
-  loadCollections: async (serverId: string) => {
+  loadCollections: async (serverId: string, libraryId: string) => {
     // TTL cache guard — skip if loaded within last 5 minutes
     const loadedAt = get().collectionsLoadedAt[serverId]
     if (loadedAt && Date.now() - loadedAt < SUPPLEMENTARY_CACHE_TTL) return
@@ -390,8 +390,7 @@ export const useAudiobookshelfStore = create<AudiobookshelfStoreState>((set, get
 
     set({ isLoadingCollections: true })
     try {
-      // GET /api/collections returns all collections in a single response (no pagination)
-      const result = await AudiobookshelfService.fetchCollections(server.url, apiKey)
+      const result = await AudiobookshelfService.fetchCollections(server.url, apiKey, libraryId)
       if (!result.ok) {
         // silent-catch-ok — collections are supplementary, don't toast on rate-limit or transient errors
         console.warn('[AudiobookshelfStore] Failed to load collections:', result.error)

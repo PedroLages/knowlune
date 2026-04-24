@@ -576,9 +576,9 @@ describe('AudiobookshelfService.updateProgress', () => {
 
 describe('AudiobookshelfService.fetchCollections', () => {
   it('returns array of collections on success', async () => {
-    // ABS GET /api/collections returns { collections: [...] }, not paginated
+    // ABS GET /api/libraries/{id}/collections returns { results: [...], total: N }
     const mockResponse = {
-      collections: [
+      results: [
         {
           id: 'c1',
           libraryId: 'lib-1',
@@ -596,10 +596,11 @@ describe('AudiobookshelfService.fetchCollections', () => {
           books: [{ id: 'b3', media: { metadata: { title: 'Sapiens' } } }],
         },
       ],
+      total: 2,
     }
     vi.stubGlobal('fetch', mockFetchJson(mockResponse))
 
-    const result = await fetchCollections(TEST_URL, TEST_API_KEY)
+    const result = await fetchCollections(TEST_URL, TEST_API_KEY, 'lib-1')
 
     expect(result.ok).toBe(true)
     if (result.ok) {
@@ -613,7 +614,7 @@ describe('AudiobookshelfService.fetchCollections', () => {
   it('returns auth error for 401 response', async () => {
     vi.stubGlobal('fetch', mockFetchStatus(401))
 
-    const result = await fetchCollections(TEST_URL, TEST_API_KEY)
+    const result = await fetchCollections(TEST_URL, TEST_API_KEY, 'lib-1')
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
@@ -624,7 +625,7 @@ describe('AudiobookshelfService.fetchCollections', () => {
   it('returns CORS error for network failure', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
 
-    const result = await fetchCollections(TEST_URL, TEST_API_KEY)
+    const result = await fetchCollections(TEST_URL, TEST_API_KEY, 'lib-1')
 
     expect(result.ok).toBe(false)
     if (!result.ok) {

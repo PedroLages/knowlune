@@ -31,13 +31,14 @@ export function LibraryFilters() {
   const setLibraryView = useBookStore(s => s.setLibraryView)
   const books = useBookStore(s => s.books)
   const getBookCountByStatus = useBookStore(s => s.getBookCountByStatus)
+  // Subscribe to source as a primitive so the memo fires on every source change
+  // even when books array reference is stable.
+  const activeSource = useBookStore(s => s.filters.source)
 
-  // fix/E-ABS-QA: include `filters.source` in the dep array so counts
-  // recompute when the user toggles the source tab. `getBookCountByStatus()`
-  // already reads `filters.source` internally — the memo just needs to fire.
   const counts = useMemo(
     () => getBookCountByStatus(),
-    [books, filters.source, getBookCountByStatus]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [books, activeSource, getBookCountByStatus]
   )
   const activeStatus = filters.status || 'all'
 
