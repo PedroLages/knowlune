@@ -1688,3 +1688,11 @@ issues:
   issue: "Temp files use PID-based names (/tmp/audiobook-m4b-sweep-err.$$) instead of mktemp. Predictable and collision-prone on shared hosts."
   discovered: 2026-04-24
   status: open
+
+- id: supabase-cloud-sync-updated-at
+  severity: medium
+  file: src/lib/sync/syncEngine.ts:507
+  issue: "Sync engine issues `?order=updated_at.asc` against 3 tables that only have `created_at`: study_sessions, quiz_attempts, ai_usage_events. Returns 400 on every sync cycle. Pre-existing (unrelated to Supabase Cloud migration — same query would fail on self-hosted). Either add updated_at columns via migration, or special-case these tables in the sync engine to order by created_at."
+  discovered: 2026-04-24
+  discovered_by: supabase-cloud-migration
+  status: open
