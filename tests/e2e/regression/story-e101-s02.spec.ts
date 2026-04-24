@@ -53,11 +53,11 @@ async function mockAbsApiSuccess(page: import('@playwright/test').Page): Promise
     const _origFetch = window.fetch
     window.fetch = async (input, init) => {
       const url = typeof input === 'string' ? input : (input as Request).url
-      if (url.startsWith(serverUrl) && url.includes('/api/ping')) {
-        return new Response(JSON.stringify({ success: true, version: '2.17.3' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        })
+      if (url.startsWith(serverUrl) && url.includes('/api/authorize')) {
+        return new Response(
+          JSON.stringify({ user: { id: 'u1' }, serverSettings: { version: '2.27.0' } }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
       }
       if (url.startsWith(serverUrl) && url.includes('/api/libraries')) {
         return new Response(
@@ -225,7 +225,7 @@ test.describe('E101-S02: Audiobookshelf Server Connection & Auth UI', () => {
 
     const result = page.getByTestId('abs-test-result')
     await expect(result).toBeVisible({ timeout: 5000 })
-    await expect(result).toContainText('CORS settings')
+    await expect(result).toContainText('Allowed Origins')
 
     // Collapsible troubleshooting section
     const troubleshoot = page.getByTestId('abs-cors-troubleshoot')
