@@ -1674,3 +1674,17 @@ issues:
   description: "Inner <Button> and <TooltipContent> are indented one level more than their parent after Tooltip refactor. Run prettier to normalize."
   source: ce-review-R2-N1
   created: 2026-04-24
+
+- id: audiobook-m4b-f4
+  severity: low
+  file: ~/.claude/skills/audiobook-m4b/scripts/remote/run_m4b_tool.sh
+  issue: "In no-timeout fallback branch, `[[ $DOCKER_RC -eq 0 ]] && DOCKER_RC=$?` captures test exit code (always 0) instead of wait's exit code. Non-124 docker failures silently reported as success in the fallback path."
+  discovered: 2026-04-24
+  status: open
+
+- id: audiobook-m4b-f6
+  severity: nit
+  file: ~/.claude/skills/audiobook-m4b/scripts/sweep_quarantine.sh
+  issue: "Temp files use PID-based names (/tmp/audiobook-m4b-sweep-err.$$) instead of mktemp. Predictable and collision-prone on shared hosts."
+  discovered: 2026-04-24
+  status: open

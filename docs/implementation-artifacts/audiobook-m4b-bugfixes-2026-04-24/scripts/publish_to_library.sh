@@ -84,7 +84,7 @@ if not author or not title:
 ILLEGAL = re.compile(r'[:/?*<>|"]')
 ALLOWED = re.compile(r"[^A-Za-z0-9 \-_.()']")
 
-def sanitize_segment(s: str, max_stem: int | None = None) -> str:
+def sanitize_segment(s, max_stem=None):
     # Replace illegal chars with " - "
     s = ILLEGAL.sub(" - ", s)
     # Drop any remaining unusual characters.
