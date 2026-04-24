@@ -26,7 +26,6 @@
     "build": "vite build",
     "build:premium": "PREMIUM_BUILD=1 vite build --config vite.config.premium.ts",
     "dev": "vite",
-    "server": "tsx server/index.ts",
     "lint": "eslint . --cache",
     "lint:async-cleanup": "node scripts/validate-async-cleanup.js",
     "test": "vitest",
@@ -40,13 +39,11 @@
     "test:e2e:ci": "npm run test:e2e 2>&1 | bash scripts/filter-test-output.sh",
     "test:e2e:ui": "playwright test --ui",
     "ci": "npm run typecheck && npm run lint && npm run format:check && npm run build && npm run test:unit",
-    "ci:docker": "docker-compose -f docker-compose.ci.yml --profile ci up --abort-on-container-exit --exit-code-from ci-full",
     "preview": "vite preview",
     "lighthouse": "lhci autorun",
     "lighthouse:collect": "lhci collect",
     "lighthouse:assert": "lhci assert",
-    "lighthouse:upload": "lhci upload",
-    "lighthouse:docker": "docker-compose -f docker-compose.test.yml --profile lighthouse up --abort-on-container-exit"
+    "lighthouse:upload": "lhci upload"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.44",

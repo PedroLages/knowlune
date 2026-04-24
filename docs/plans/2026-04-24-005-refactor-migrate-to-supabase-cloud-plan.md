@@ -65,8 +65,9 @@ Move Knowlune's entire backend and frontend off the Unraid server (`titan`) to f
 - 🔜 **Unit 4 — Vault secrets**: re-insert OPDS passwords + ABS apiKeys (depends on Unit 5 vault-credentials function).
 - ✅ **Unit 8 — Cloudflare Pages dashboard**: Pages project `knowlune` created, connected to `PedroLages/knowlune`, deploying `main` on push. Env vars set (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_BASE_URL, NODE_VERSION=20). Live at <https://knowlune.pages.dev> (200, SPA deep-link `/courses` returns 200 confirming `_redirects`). Two mid-flight fixes merged: PR #426 moved `wrangler.toml` into `cloudflare-workers/` so Pages wouldn't treat the cron config as a Pages config; PR #427 removed `public/design-tokens.source.json` (59.6 MiB, exceeded Pages' 25 MiB per-file limit — already flagged as P0 in 2026-03-26 production readiness review).
 - ✅ **Unit 9 — retention-tick Worker**: Worker redeployed (`knowlune-retention-cron.pedrocamposlages.workers.dev`), both secrets rotated (`RETENTION_TICK_SECRET` + `SUPABASE_FUNCTIONS_URL` on Worker; `RETENTION_TICK_SECRET` on Cloud Edge Function via `supabase secrets set`). `retention-tick` Edge Function deployed with `--no-verify-jwt` (Worker cron can't present a user JWT — same pattern as calendar/cover-proxy). Manual test fire: HTTP 200, run_id `19efa4b8-36a7-4cab-81f0-536026fbac77` wrote 47 audit rows to `retention_audit_log`. Cron `0 3 * * *` scheduled; first autonomous fire at 03:00 UTC 2026-04-25.
-- 🔜 **Unit 9.5 — deploy 7 remaining Edge Functions**: vault-credentials, delete-account, cancel-account-deletion, export-data, export-worker, create-checkout, stripe-webhook. Requires user hand for `EXPORT_WORKER_SECRET`.
-- 🔜 **Unit 10 — cutover smoke**: verify on prod domain.
+- ✅ **Unit 9.5 — deploy 7 remaining Edge Functions**: All 7 deployed + `EXPORT_WORKER_SECRET` set. Stripe functions need `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` set separately when ready.
+- 🟡 **Unit 10 — cutover smoke**: DNS cutover DONE, Pass 1 automated probes ALL GREEN (2026-04-24). Pass 2 (manual browser flows) partial — Flow 7 (Google OAuth) verified working end-to-end; Flow 13 (guest→signed-in) UI prompt rendered correctly; Flows 8-12 pending Pedro.
+- 🔜 **Post-cutover overnight check (2026-04-25 05:00+ CEST / 03:00 UTC)**: query `retention_audit_log` on Cloud for a new `run_id` created after 03:00 UTC, proving the retention-tick cron fires autonomously against Cloud after cutover. Command: `SELECT run_id, completed_at FROM retention_audit_log WHERE completed_at >= '2026-04-25 03:00+00' ORDER BY completed_at DESC LIMIT 5;` via Supabase MCP or Dashboard SQL editor.
 - 🔜 **Unit 11 — cleanup**: shut down Unraid services.
 - 🔜 **Fix the 2 pre-existing issues above** (sync engine `updated_at` mismatch + `user_settings` 406). The Edge Functions CORS issue is resolved with Unit 5 shipped.
 - 🔜 **Rotate service_role key** — was pasted in chat during this session. Dashboard → Settings → API → Reset.
@@ -726,7 +727,7 @@ Unit 11 (Post-cutover cleanup + 14-day rollback window)
 
 ---
 
-- [ ] **Unit 9.5: Deploy remaining 7 Edge Functions to Cloud**
+- [x] **Unit 9.5: Deploy remaining 7 Edge Functions to Cloud** — ✅ 2026-04-24. All 7 deployed: vault-credentials, delete-account, cancel-account-deletion, export-data, export-worker, create-checkout (JWT-verified); stripe-webhook (--no-verify-jwt). `EXPORT_WORKER_SECRET` set via `supabase secrets set`. Spot-checks: vault-credentials → 401, export-data → 401, stripe-webhook → 500 (expected — fail-fast on missing STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET, which are not yet configured; not blocking for cutover). All 14 functions now ACTIVE on Cloud.
 
 **Goal:** Close the Edge Function deployment gap discovered in Unit 9. The 7 functions below exist in the repo but are not on Cloud. Deploy them before cutover so no features are silently broken after the DNS flip.
 
@@ -777,7 +778,7 @@ Unit 11 (Post-cutover cleanup + 14-day rollback window)
 
 ---
 
-- [ ] **Unit 10: Cutover and smoke test**
+- [~] **Unit 10: Cutover and smoke test** — 🟡 2026-04-24. DNS cutover complete (`knowlune.pedrolages.net` CNAME → `knowlune.pages.dev`, custom domain Active+SSL in Pages dashboard). Local LAN DNS intercept resolved by adding explicit AdGuard rewrite for `knowlune.pedrolages.net → 188.114.96.0` overriding the `*.pedrolages.net → titan` wildcard (AdGuard container had to be recreated with direct `/mnt/cache/appdata` mount to work around shfs write failure on full array after freeing 8.9 GB of `audiobook-m4b/jobs/failed`). `/etc/hosts` fallback also added on Pedro's Mac. **Pass 1 (automated probes) — ALL GREEN:** SPA routes `/`, `/courses`, `/overview`, `/reports` → 200; Supabase `/auth/v1/health` → 401 (reachable, requires apikey); all 7 Edge Function CORS preflights → 200/204; auth gating `POST /functions/v1/ai-generate` no-JWT → 401; `cover-proxy` with Google Books URL → 200 + 1269 bytes PNG (redirect chain + per-hop allowlist re-validation working). **Pass 2 (manual browser flows) — partial:** Flow 7 (Google OAuth) ✅ working after service-worker cache clear — Cloud's `/auth/v1/authorize` correctly redirects to `accounts.google.com` with `redirect_uri=chyvhrbtttpumsyuhgbu.supabase.co/auth/v1/callback`. Flow 13 (guest→signed-in backfill) UI prompt displays correctly (`LinkDataDialog` with 15 local records). 2 cutover-specific known issues logged: `oauth-cached-old-supabase-url` (one-time service-worker cache; self-healing) and `link-data-dialog-start-fresh-stale-ui` (UI doesn't re-read post-clear without manual reload). Remaining flows 8-12 + 13-completion awaiting Pedro's drive.
 
 **Goal:** Flip DNS to Cloudflare Pages + Cloud Supabase, smoke-test critical flows, monitor for issues.
 
@@ -835,7 +836,7 @@ Unit 11 (Post-cutover cleanup + 14-day rollback window)
 
 ---
 
-- [ ] **Unit 11: Post-cutover cleanup and 14-day rollback window**
+- [~] **Unit 11: Post-cutover cleanup and 14-day rollback window** — 🟡 2026-04-24. Pedro opted to skip the 14-day rollback window and clean up now. Completed: #1 self-hosted Supabase stack stopped via `docker compose down` on titan (11 containers removed; network `supabase-internal` partially removed — one ingress ref still held, non-blocking); #3 encrypted vault plaintext N/A (never created, zero vault secrets on self-hosted); #4 partial — deleted `Dockerfile`, `docker-entrypoint.sh`, `.github/workflows/deploy-titan.yml`, removed `server` script + dead `ci:docker`/`lighthouse:docker` scripts from `package.json`. Full `server/` directory deletion deferred (referenced by `vite.config.ts` vitest project on line 649-656 + has active test files; needs separate PR); #5 updated 3 memory files — `project_actual_deployment_topology.md`, `reference_supabase_unraid.md` (marked historical), `project_abs_cors_proxy.md` (noted ABS proxy routes are orphaned); #6 staging project N/A (never created in Unit 7). Pending: #2 volume deletion — blocked by safety hook despite explicit user authorization; Pedro to run `docker compose down -v` manually. Follow-ups: delete `server/` + strip `express` dep + vite.config.ts cleanup in a dedicated PR; port ABS/Audible proxy routes to Edge Functions when ABS features are needed again.
 
 **Goal:** Keep rollback option warm for 14 days; then decommission self-hosted cleanly.
 

@@ -1696,3 +1696,19 @@ issues:
   discovered: 2026-04-24
   discovered_by: supabase-cloud-migration
   status: open
+
+- id: link-data-dialog-start-fresh-stale-ui
+  severity: low
+  file: src/app/components/sync/LinkDataDialog.tsx:100
+  issue: "handleStartFresh() clears Dexie tables + sync state correctly, but live UI views (useLiveQuery / Zustand snapshots) keep rendering pre-clear data until the page is reloaded. Underlying data IS cleared; only the rendered view is stale. Fix: add window.location.reload() after onResolved() in the fresh branch, or invalidate affected Zustand stores. Not a cutover blocker — user-facing workaround is a browser reload."
+  discovered: 2026-04-24
+  discovered_by: supabase-cloud-migration
+  status: open
+
+- id: oauth-cached-old-supabase-url
+  severity: low
+  file: n/a
+  issue: "Users who had the app installed while on self-hosted (supabase.pedrolages.net) may hit a cached OAuth redirect to the old URL on first post-cutover sign-in, because a service worker or asset cache pinned the prior build. Workaround: hard-refresh (Cmd+Shift+R), unregister service worker via DevTools → Application → Service Workers, or use an incognito window. One-time per browser; self-healing after cache eviction. Could pre-empt by bumping service worker version string post-cutover."
+  discovered: 2026-04-24
+  discovered_by: supabase-cloud-migration
+  status: open
