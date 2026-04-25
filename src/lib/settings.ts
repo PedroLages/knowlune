@@ -199,6 +199,9 @@ export type UserSettingsPatch = {
   skipSilence?: boolean
   defaultSleepTimer?: string | number
   autoBookmarkOnStop?: boolean
+  showRemainingTime?: boolean
+  skipBackSeconds?: number
+  skipForwardSeconds?: number
   // useReadingGoalStore (no streak fields)
   dailyType?: string
   dailyTarget?: number
@@ -387,7 +390,7 @@ export async function hydrateSettingsFromSupabase(
       }
     }
     if (s.defaultSleepTimer !== undefined) {
-      const validTimers = new Set(['off', 15, 30, 45, 60, 'end-of-chapter'])
+      const validTimers = new Set(['off', 5, 10, 15, 30, 45, 60, 'end-of-chapter'])
       if (validTimers.has(s.defaultSleepTimer as string | number)) {
         useAudiobookPrefsStore
           .getState()
@@ -401,6 +404,15 @@ export async function hydrateSettingsFromSupabase(
       if (current !== s.autoBookmarkOnStop) {
         useAudiobookPrefsStore.getState().toggleAutoBookmark()
       }
+    }
+    if (typeof s.showRemainingTime === 'boolean') {
+      useAudiobookPrefsStore.getState().setShowRemainingTime(s.showRemainingTime)
+    }
+    if (typeof s.skipBackSeconds === 'number') {
+      useAudiobookPrefsStore.getState().setSkipBackSeconds(s.skipBackSeconds)
+    }
+    if (typeof s.skipForwardSeconds === 'number') {
+      useAudiobookPrefsStore.getState().setSkipForwardSeconds(s.skipForwardSeconds)
     }
 
     // ── useReadingGoalStore (no streak fields) ──
