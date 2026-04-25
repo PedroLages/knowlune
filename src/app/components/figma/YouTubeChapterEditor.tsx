@@ -47,8 +47,6 @@ import {
   Pencil,
   Check,
   X,
-  ArrowUp,
-  ArrowDown,
   FolderOpen,
   Info,
   Settings,
@@ -74,6 +72,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
+import { MoveUpDownButtons } from '@/app/components/figma/MoveUpDownButtons'
 import { cn } from '@/app/components/ui/utils'
 import type { VideoChapter } from '@/lib/youtubeRuleBasedGrouping'
 import { generateChapterId } from '@/lib/youtubeRuleBasedGrouping'
@@ -363,6 +362,25 @@ export function YouTubeChapterEditor({
     [chapters, onChaptersChange]
   )
 
+  // E66-S01: Move a video up/down within its chapter using single-pointer buttons.
+  const moveVideoWithinChapter = useCallback(
+    (chapterId: string, videoId: string, direction: 'up' | 'down') => {
+      const chapter = chapters.find(c => c.id === chapterId)
+      if (!chapter) return
+      const idx = chapter.videoIds.indexOf(videoId)
+      if (idx === -1) return
+      const newIdx = direction === 'up' ? idx - 1 : idx + 1
+      if (newIdx < 0 || newIdx >= chapter.videoIds.length) return
+      const newVideoIds = arrayMove(chapter.videoIds, idx, newIdx)
+      onChaptersChange(
+        chapters.map(c =>
+          c.id === chapterId ? { ...c, videoIds: newVideoIds, source: 'manual' as const } : c
+        )
+      )
+    },
+    [chapters, onChaptersChange]
+  )
+
   // --- Keyboard move video between chapters ---
 
   const moveVideoToChapter = useCallback(
@@ -468,6 +486,7 @@ export function YouTubeChapterEditor({
                   onRemove={() => confirmRemoveChapter(chapter.id)}
                   onMoveChapter={dir => moveChapter(chapter.id, dir)}
                   onMoveVideo={moveVideoToChapter}
+                  onMoveVideoWithinChapter={moveVideoWithinChapter}
                 />
               ))}
             </div>
@@ -563,6 +582,7 @@ interface SortableChapterProps {
   onRemove: () => void
   onMoveChapter: (direction: 'up' | 'down') => void
   onMoveVideo: (videoId: string, targetChapterId: string) => void
+  onMoveVideoWithinChapter: (chapterId: string, videoId: string, direction: 'up' | 'down') => void
 }
 
 function SortableChapter({
@@ -582,6 +602,7 @@ function SortableChapter({
   onRemove,
   onMoveChapter,
   onMoveVideo,
+  onMoveVideoWithinChapter,
 }: SortableChapterProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `chapter:${chapter.id}`,
@@ -720,30 +741,18 @@ function SortableChapter({
           {totalDuration > 0 && ` · ${formatTotalDuration(totalDuration)}`}
         </span>
 
-        {/* Chapter actions — keyboard reorder + edit + remove */}
+        {/* Chapter actions — keyboard reorder + edit + remove (WCAG 2.5.7) */}
         <div className="flex items-center gap-0.5 shrink-0">
-          <Button
-            variant="ghost"
+          <MoveUpDownButtons
+            index={chapterIndex}
+            total={totalChapters}
+            itemLabel={chapter.title}
+            onMoveUp={() => onMoveChapter('up')}
+            onMoveDown={() => onMoveChapter('down')}
+            orientation="horizontal"
             size="sm"
-            className="size-7 p-0"
-            onClick={() => onMoveChapter('up')}
-            disabled={chapterIndex === 0}
-            aria-label={`Move ${chapter.title} up`}
-            title="Move chapter up"
-          >
-            <ArrowUp className="size-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="size-7 p-0"
-            onClick={() => onMoveChapter('down')}
-            disabled={chapterIndex === totalChapters - 1}
-            aria-label={`Move ${chapter.title} down`}
-            title="Move chapter down"
-          >
-            <ArrowDown className="size-3.5" />
-          </Button>
+            testIdPrefix={`chapter-${chapter.id}-move`}
+          />
           <Button
             variant="ghost"
             size="sm"
@@ -794,7 +803,7 @@ function SortableChapter({
               strategy={verticalListSortingStrategy}
             >
               <div className="space-y-1" role="list" aria-label={`Videos in ${chapter.title}`}>
-                {chapter.videoIds.map(videoId => {
+                {chapter.videoIds.map((videoId, videoIdx) => {
                   const video = videoMap.get(videoId)
                   if (!video) return null
                   return (
@@ -804,6 +813,9 @@ function SortableChapter({
                       chapterId={chapter.id}
                       allChapters={allChapters}
                       onMoveToChapter={onMoveVideo}
+                      index={videoIdx}
+                      total={chapter.videoIds.length}
+                      onMoveWithinChapter={onMoveVideoWithinChapter}
                     />
                   )
                 })}
@@ -823,6 +835,9 @@ interface SortableVideoRowProps {
   chapterId: string
   allChapters: VideoChapter[]
   onMoveToChapter: (videoId: string, targetChapterId: string) => void
+  index: number
+  total: number
+  onMoveWithinChapter: (chapterId: string, videoId: string, direction: 'up' | 'down') => void
 }
 
 function SortableVideoRow({
@@ -830,6 +845,9 @@ function SortableVideoRow({
   chapterId,
   allChapters,
   onMoveToChapter,
+  index,
+  total,
+  onMoveWithinChapter,
 }: SortableVideoRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `video:${video.videoId}`,
@@ -879,6 +897,18 @@ function SortableVideoRow({
           {formatDuration(video.metadata.duration)}
         </span>
       )}
+
+      {/* In-chapter Move Up/Down (WCAG 2.5.7) */}
+      <MoveUpDownButtons
+        index={index}
+        total={total}
+        itemLabel={video.metadata?.title || video.videoId}
+        onMoveUp={() => onMoveWithinChapter(chapterId, video.videoId, 'up')}
+        onMoveDown={() => onMoveWithinChapter(chapterId, video.videoId, 'down')}
+        orientation="horizontal"
+        size="sm"
+        testIdPrefix={`chapter-video-${video.videoId}-move`}
+      />
 
       {/* Move to chapter — keyboard alternative (WCAG 2.5.7) */}
       {otherChapters.length > 0 && (

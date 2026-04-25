@@ -6,7 +6,7 @@
  *
  * Story: E24-S06
  */
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -30,6 +30,7 @@ import { GripVertical, Video } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/db'
 import { persistWithRetry } from '@/lib/persistWithRetry'
+import { MoveUpDownButtons } from '@/app/components/figma/MoveUpDownButtons'
 import { cn } from '@/app/components/ui/utils'
 import type { ImportedVideo } from '@/data/types'
 
@@ -49,7 +50,25 @@ function stripExtension(filename: string): string {
 }
 
 /** Single sortable video row */
-function SortableVideoRow({ video, position }: { video: ImportedVideo; position: number }) {
+function SortableVideoRow({
+  video,
+  position,
+  index,
+  total,
+  onMoveUp,
+  onMoveDown,
+  registerMoveUpRef,
+  registerMoveDownRef,
+}: {
+  video: ImportedVideo
+  position: number
+  index: number
+  total: number
+  onMoveUp: (index: number) => void
+  onMoveDown: (index: number) => void
+  registerMoveUpRef: (id: string, el: HTMLButtonElement | null) => void
+  registerMoveDownRef: (id: string, el: HTMLButtonElement | null) => void
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: video.id,
   })
@@ -99,6 +118,18 @@ function SortableVideoRow({ video, position }: { video: ImportedVideo; position:
           {formatDuration(video.duration)}
         </span>
       )}
+
+      <MoveUpDownButtons
+        index={index}
+        total={total}
+        itemLabel={stripExtension(video.filename)}
+        onMoveUp={() => onMoveUp(index)}
+        onMoveDown={() => onMoveDown(index)}
+        size="sm"
+        upRef={el => registerMoveUpRef(video.id, el)}
+        downRef={el => registerMoveDownRef(video.id, el)}
+        testIdPrefix={`video-reorder-${video.id}-move`}
+      />
     </div>
   )
 }
@@ -141,16 +172,23 @@ export function VideoReorderList({ videos, onReorder }: VideoReorderListProps) {
     setActiveId(event.active.id as string)
   }, [])
 
-  const handleDragEnd = useCallback(
-    async (event: DragEndEvent) => {
-      const { active, over } = event
-      setActiveId(null)
+  // E66-S01: focus refs for Move Up/Down buttons (WCAG 2.5.7)
+  const moveUpRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map())
+  const moveDownRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map())
+  const registerMoveUpRef = useCallback((id: string, el: HTMLButtonElement | null) => {
+    if (el) moveUpRefs.current.set(id, el)
+    else moveUpRefs.current.delete(id)
+  }, [])
+  const registerMoveDownRef = useCallback((id: string, el: HTMLButtonElement | null) => {
+    if (el) moveDownRefs.current.set(id, el)
+    else moveDownRefs.current.delete(id)
+  }, [])
 
-      if (!over || active.id === over.id) return
-
-      const oldIndex = videos.findIndex(v => v.id === active.id)
-      const newIndex = videos.findIndex(v => v.id === over.id)
-      if (oldIndex === -1 || newIndex === -1) return
+  const reorderAndPersist = useCallback(
+    async (oldIndex: number, newIndex: number) => {
+      if (oldIndex === newIndex) return
+      if (oldIndex < 0 || newIndex < 0) return
+      if (oldIndex >= videos.length || newIndex >= videos.length) return
 
       const reordered = arrayMove(videos, oldIndex, newIndex).map((v, i) => ({
         ...v,
@@ -183,6 +221,42 @@ export function VideoReorderList({ videos, onReorder }: VideoReorderListProps) {
     [videos, onReorder]
   )
 
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event
+      setActiveId(null)
+
+      if (!over || active.id === over.id) return
+
+      const oldIndex = videos.findIndex(v => v.id === active.id)
+      const newIndex = videos.findIndex(v => v.id === over.id)
+      if (oldIndex === -1 || newIndex === -1) return
+
+      await reorderAndPersist(oldIndex, newIndex)
+    },
+    [videos, reorderAndPersist]
+  )
+
+  const handleMoveUp = useCallback(
+    (index: number) => {
+      if (index <= 0) return
+      const id = videos[index]?.id
+      void reorderAndPersist(index, index - 1)
+      if (id) requestAnimationFrame(() => moveUpRefs.current.get(id)?.focus())
+    },
+    [videos, reorderAndPersist]
+  )
+
+  const handleMoveDown = useCallback(
+    (index: number) => {
+      if (index >= videos.length - 1) return
+      const id = videos[index]?.id
+      void reorderAndPersist(index, index + 1)
+      if (id) requestAnimationFrame(() => moveDownRefs.current.get(id)?.focus())
+    },
+    [videos, reorderAndPersist]
+  )
+
   const activeVideo = activeId ? videos.find(v => v.id === activeId) : null
   const activePosition = activeVideo ? videos.indexOf(activeVideo) + 1 : 0
 
@@ -208,7 +282,17 @@ export function VideoReorderList({ videos, onReorder }: VideoReorderListProps) {
         <SortableContext items={videos.map(v => v.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-1.5">
             {videos.map((video, index) => (
-              <SortableVideoRow key={video.id} video={video} position={index + 1} />
+              <SortableVideoRow
+                key={video.id}
+                video={video}
+                position={index + 1}
+                index={index}
+                total={videos.length}
+                onMoveUp={handleMoveUp}
+                onMoveDown={handleMoveDown}
+                registerMoveUpRef={registerMoveUpRef}
+                registerMoveDownRef={registerMoveDownRef}
+              />
             ))}
           </div>
         </SortableContext>
