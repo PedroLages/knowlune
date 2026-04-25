@@ -21,6 +21,8 @@ import { YouTubeImportDialog } from '@/app/components/figma/YouTubeImportDialog'
 import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
 import { HeaderSearchButton } from '@/app/components/figma/HeaderSearchButton'
+import { ViewModeToggle } from '@/app/components/courses/ViewModeToggle'
+import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
 
 import type { LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
@@ -39,6 +41,8 @@ export function Courses() {
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
   const getAllTags = useCourseImportStore(state => state.getAllTags)
+  const courseViewMode = useEngagementPrefsStore(state => state.courseViewMode)
+  const setEngagementPref = useEngagementPrefsStore(state => state.setPreference)
 
   // Lazy-load imported courses on mount (deferred — not critical for initial app load)
   useLazyStore(loadImportedCourses)
@@ -232,6 +236,12 @@ export function Courses() {
                 <SelectItem value="momentum">Sort by Momentum</SelectItem>
               </SelectContent>
             </Select>
+            {/* E99-S01: view mode toggle. All three branches render the existing
+                grid until the list/compact renderers ship in S03/S04. */}
+            <ViewModeToggle
+              value={courseViewMode}
+              onChange={mode => setEngagementPref('courseViewMode', mode)}
+            />
           </div>
 
           {/* Imported Courses Section */}
@@ -274,7 +284,15 @@ export function Courses() {
                   />
                 )}
                 data-testid="imported-courses-grid"
-                gridClassName="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)]"
+                gridClassName={
+                  // E99-S01: branch on courseViewMode. S03 wires list, S04 wires
+                  // compact — until then all three render the existing grid.
+                  courseViewMode === 'list'
+                    ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)]'
+                    : courseViewMode === 'compact'
+                      ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)]'
+                      : 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)]'
+                }
               />
             )}
           </div>
