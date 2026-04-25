@@ -652,6 +652,99 @@ export function pushProgressViaSocket(
   connection.ws.send(`42${packet}`)
 }
 
+// ─── MediaSession API ──────────────────────────────────────────────────────
+//
+// Populates the OS lock-screen / notification media card with audiobook
+// metadata and wires hardware/software media key handlers back to the
+// AudiobookshelfService playback model.
+//
+// MediaSession is only available in secure contexts (HTTPS / localhost) and
+// is not universally supported (e.g., Safari ≤14, some older Androids).
+// A feature-detect guard wraps every call.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Track metadata consumed by setMediaSession. */
+export interface MediaTrack {
+  title: string
+  author: string
+  bookTitle: string
+  coverUrl: string
+}
+
+/** Action handlers wired to the OS media card. All are optional. */
+export interface MediaSessionHandlers {
+  play?: () => void
+  pause?: () => void
+  seekBackward?: (details: MediaSessionActionDetails) => void
+  seekForward?: (details: MediaSessionActionDetails) => void
+  previousTrack?: () => void
+  nextTrack?: () => void
+  seekTo?: (details: MediaSessionActionDetails) => void
+}
+
+/**
+ * Set OS lock-screen / notification media card metadata and register action
+ * handlers for the given track.
+ *
+ * Feature-detects navigator.mediaSession — safe to call in all environments.
+ * Call clearMediaSession() when playback stops.
+ *
+ * @since E120-S02
+ */
+export function setMediaSession(track: MediaTrack, handlers: MediaSessionHandlers = {}): void {
+  if (!('mediaSession' in navigator) || !navigator.mediaSession) return
+
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: track.title,
+    artist: track.author,
+    album: track.bookTitle,
+    artwork: /^https?:\/\//i.test(track.coverUrl)
+      ? [{ src: track.coverUrl, sizes: '512x512', type: 'image/png' }]
+      : [],
+  })
+
+  const trySet = (
+    action: MediaSessionAction,
+    handler: MediaSessionActionHandler | null
+  ) => {
+    try {
+      navigator.mediaSession!.setActionHandler(action, handler)
+    } catch {
+      // action not supported by this browser — silent-catch-ok
+    }
+  }
+
+  trySet('play', handlers.play ?? null)
+  trySet('pause', handlers.pause ?? null)
+  trySet('seekbackward', handlers.seekBackward ?? null)
+  trySet('seekforward', handlers.seekForward ?? null)
+  trySet('previoustrack', handlers.previousTrack ?? null)
+  trySet('nexttrack', handlers.nextTrack ?? null)
+  trySet('seekto', handlers.seekTo ?? null)
+}
+
+/**
+ * Clear the OS media card metadata and unregister all action handlers.
+ * Call when playback stops or the player unmounts.
+ *
+ * @since E120-S02
+ */
+export function clearMediaSession(): void {
+  if (!('mediaSession' in navigator) || !navigator.mediaSession) return
+
+  navigator.mediaSession.metadata = null
+  const actions: MediaSessionAction[] = [
+    'play', 'pause', 'seekbackward', 'seekforward', 'previoustrack', 'nexttrack', 'seekto',
+  ]
+  for (const action of actions) {
+    try {
+      navigator.mediaSession.setActionHandler(action, null)
+    } catch {
+      // action not supported by this browser — silent-catch-ok
+    }
+  }
+}
+
 /**
  * Returns true if the given URL uses HTTP (not HTTPS).
  * Used to warn users when API keys may be sent unencrypted.

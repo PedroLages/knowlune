@@ -10,11 +10,12 @@
  * - Cleans up event listener on unmount
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Button } from '@/app/components/ui/button'
-import { X } from 'lucide-react'
+import { X, Share } from 'lucide-react'
 
 const DISMISSED_KEY = 'pwa-install-dismissed'
+const IOS_DISMISSED_KEY = 'pwa-ios-install-instructions-dismissed'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<{ outcome: string }>
@@ -22,10 +23,16 @@ interface BeforeInstallPromptEvent extends Event {
 
 export function PWAInstallBanner() {
   const [showBanner, setShowBanner] = useState(false)
+  const [showIosBanner, setShowIosBanner] = useState(false)
   const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null)
 
-  const isStandalone =
-    typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches
+  const isStandalone = useMemo(
+    () =>
+      typeof window !== 'undefined' &&
+      (window.matchMedia('(display-mode: standalone)').matches ||
+        ('standalone' in navigator && (navigator as { standalone?: boolean }).standalone === true)),
+    []
+  )
 
   const handleBeforeInstallPrompt = useCallback(
     (e: Event) => {
@@ -49,6 +56,23 @@ export function PWAInstallBanner() {
     }
   }, [handleBeforeInstallPrompt])
 
+  useEffect(() => {
+    const ua = navigator.userAgent
+    // iPadOS 13+ reports as Macintosh with maxTouchPoints > 1
+    const isIosDevice =
+      /iPhone|iPad|iPod/.test(ua) ||
+      (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+    const isIosSafari =
+      isIosDevice && /Safari/.test(ua) && !/CriOS|FxiOS/.test(ua)
+
+    if (isIosSafari && !isStandalone && !localStorage.getItem(IOS_DISMISSED_KEY)) {
+      const timer = setTimeout(() => {
+        setShowIosBanner(true)
+      }, 10_000)
+      return () => clearTimeout(timer)
+    }
+  }, [isStandalone])
+
   const handleInstall = async () => {
     const prompt = deferredPromptRef.current
     if (!prompt) return
@@ -61,6 +85,32 @@ export function PWAInstallBanner() {
   const handleDismiss = () => {
     localStorage.setItem(DISMISSED_KEY, 'true')
     setShowBanner(false)
+  }
+
+  const handleIosDismiss = () => {
+    localStorage.setItem(IOS_DISMISSED_KEY, 'true')
+    setShowIosBanner(false)
+  }
+
+  if (showIosBanner) {
+    return (
+      <div
+        role="banner"
+        className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md rounded-xl border bg-card p-4 shadow-lg"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1">
+            <p className="text-sm font-medium">Install Knowlune</p>
+            <p className="text-xs text-muted-foreground">
+              Tap <Share className="inline h-3 w-3" /> then &quot;Add to Home Screen&quot;
+            </p>
+          </div>
+          <Button size="sm" variant="ghost" onClick={handleIosDismiss} aria-label="Dismiss">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   if (!showBanner) return null

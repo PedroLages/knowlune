@@ -70,6 +70,8 @@ import {
   formatNoticeEffectiveDate,
   CURRENT_NOTICE_VERSION,
 } from '@/lib/compliance/noticeVersion'
+import { PWAInstallBanner } from './PWAInstallBanner'
+import { PWAUpdatePrompt } from './PWAUpdatePrompt'
 
 // Individual nav link — wraps in Tooltip when collapsed
 function NavLink({
@@ -823,6 +825,10 @@ export function Layout() {
 
       {/* Audiobook Mini-Player — persistent bar across all pages when audiobook is active (E87-S05) */}
       <AudioMiniPlayer />
+
+      {/* PWA banners (E120) */}
+      <PWAInstallBanner />
+      <PWAUpdatePrompt />
     </div>
   )
 }

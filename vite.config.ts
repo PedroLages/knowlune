@@ -511,10 +511,33 @@ export default defineConfig({
       display: 'standalone',
       scope: '/',
       start_url: '/',
+      categories: ['education', 'productivity'],
+      dir: 'ltr',
+      lang: 'en',
       icons: [
         { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
         { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
         { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      ],
+      shortcuts: [
+        {
+          name: 'Continue Learning',
+          short_name: 'Continue',
+          url: '/library',
+          icons: [{ src: 'shortcuts/continue.png', sizes: '96x96' }]
+        },
+        {
+          name: 'New Note',
+          short_name: 'New Note',
+          url: '/notes',
+          icons: [{ src: 'shortcuts/new-note.png', sizes: '96x96' }]
+        },
+        {
+          name: 'Sync Now',
+          short_name: 'Sync',
+          url: '/settings',
+          icons: [{ src: 'shortcuts/sync.png', sizes: '96x96' }]
+        }
       ],
     },
     workbox: {
@@ -551,6 +574,10 @@ export default defineConfig({
         },
         {
           urlPattern: /^\/api\/ai\/.*/i,
+          handler: 'NetworkOnly',
+        },
+        {
+          urlPattern: /\/api\/abs\/proxy\//,
           handler: 'NetworkOnly',
         },
       ],
