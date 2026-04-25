@@ -37,6 +37,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test, expect } from '../support/fixtures'
+import { mockAudioElement } from '../support/helpers/audio-mock'
 import { seedIndexedDBStore } from '../support/helpers/seed-helpers'
 import { FIXED_DATE } from '../utils/test-time'
 
@@ -89,45 +90,12 @@ const ABS_AUDIOBOOK = {
   updatedAt: FIXED_DATE,
 }
 
-/**
- * Reuse the streaming-spec audio mock so the player mounts in headless without
- * autoplay or canplay timing issues. Inline-duplicated (not imported) to keep
- * this regression spec independently runnable.
- */
-async function mockAudioElement(page: import('@playwright/test').Page): Promise<void> {
-  await page.addInitScript(() => {
-    Object.defineProperty(HTMLMediaElement.prototype, 'play', {
-      configurable: true,
-      value: function () {
-        return Promise.resolve()
-      },
-    })
-    const originalLoad = HTMLMediaElement.prototype.load
-    HTMLMediaElement.prototype.load = function () {
-      originalLoad.call(this)
-      Promise.resolve().then(() => {
-        this.dispatchEvent(new Event('canplay'))
-      })
-    }
-    Object.defineProperty(HTMLMediaElement.prototype, 'readyState', {
-      configurable: true,
-      get() {
-        return (this as HTMLMediaElement & { _fakeSrc?: string })._fakeSrc ? 4 : 0
-      },
-    })
-    const srcDescriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'src')
-    Object.defineProperty(HTMLMediaElement.prototype, 'src', {
-      configurable: true,
-      get() {
-        return (this as HTMLMediaElement & { _fakeSrc?: string })._fakeSrc ?? ''
-      },
-      set(value: string) {
-        ;(this as HTMLMediaElement & { _fakeSrc?: string })._fakeSrc = value
-        if (srcDescriptor?.set) srcDescriptor.set.call(this, value)
-      },
-    })
-  })
-}
+
+// Other cover render sites verified during Phase 3 visual inspection:
+//   - AudioMiniPlayer.tsx: fixed 56×56 flex item — uses different layout, not affected by flex compression
+//   - Library card grid: background-image based, not an <img> element
+//   - Blurred backdrop (AudiobookRenderer.tsx:398): background-size:cover — already correct pre-fix
+// Only the main player frame uses the aspect-square flex path that this test guards.
 
 test.describe('Audiobook cover letterbox regression', () => {
   test('non-square ABS cover fills the square frame edge-to-edge', async ({ page }) => {
@@ -249,8 +217,9 @@ test.describe('Audiobook cover letterbox regression', () => {
     expect(measurements.natural.w).toBe(COVER_FIXTURE_W)
     expect(measurements.natural.h).toBe(COVER_FIXTURE_H)
 
-    // Container must be square (aspect-square applied)
-    expect(measurements.containerComputed.aspectRatio).toBe('1 / 1')
+    // Container must be square (aspect-square applied).
+    // Geometric check is the durable assertion — aspectRatio serialization
+    // varies across browsers ("1 / 1", "1", "auto").
     expect(measurements.container.width).toBeGreaterThan(0)
     expect(Math.abs(measurements.container.width - measurements.container.height)).toBeLessThan(0.5)
 
