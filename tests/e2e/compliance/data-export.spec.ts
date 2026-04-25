@@ -83,7 +83,7 @@ async function setupAuthInjection(page: import('@playwright/test').Page) {
       localStorage.setItem(`sync:wizard:complete:${userId}`, ts)
       localStorage.setItem(`sync:wizard:dismissed:${userId}`, ts)
       localStorage.setItem(`sync:linked:${userId}`, ts)
-      // Dismiss onboarding overlay (OnboardingOverlay.tsx)
+      // Legacy onboarding overlay key (OnboardingOverlay removed — key kept for safety)
       localStorage.setItem('knowlune-onboarding-v1', JSON.stringify({ completedAt: ts }))
       // Dismiss WelcomeWizard (useWelcomeWizardStore.ts)
       localStorage.setItem('knowlune-welcome-wizard-v1', JSON.stringify({ completedAt: ts }))

@@ -53,7 +53,6 @@ import { GuestBanner } from './auth/GuestBanner'
 import { toast } from 'sonner'
 import { QualityScoreDialog } from './session/QualityScoreDialog'
 import type { QualityScoreResult } from '@/lib/qualityScore'
-import { OnboardingOverlay } from './onboarding/OnboardingOverlay'
 import { useFocusMode } from '@/hooks/useFocusMode'
 import { FocusOverlay } from './figma/FocusOverlay'
 import { TrialIndicator } from './trial/TrialIndicator'
@@ -802,9 +801,6 @@ export function Layout() {
           factors={qualityResult.factors}
         />
       )}
-
-      {/* First-use onboarding overlay (E25-S07) */}
-      <OnboardingOverlay />
 
       {/* Import progress indicator (E1B-S03) — non-blocking overlay */}
       <ImportProgressOverlay />

@@ -17,7 +17,7 @@ import {
 
 const DB_NAME = 'ElearningDB'
 
-// Dismiss WelcomeWizard and OnboardingOverlay by marking both complete in localStorage
+// Dismiss WelcomeWizard by marking complete in localStorage (OnboardingOverlay removed)
 const WIZARD_DISMISSED = JSON.stringify({ completedAt: FIXED_DATE })
 const ONBOARDING_DISMISSED = JSON.stringify({ completedAt: FIXED_DATE, skipped: true })
 
@@ -137,7 +137,7 @@ test.describe("E50-S06: Today's Study Plan Widget", () => {
       }
       globalThis.Date = MockDate as unknown as DateConstructor
     }, FIXED_DATE)
-    // Dismiss WelcomeWizard + OnboardingOverlay so they don't cover widget
+    // Dismiss WelcomeWizard (OnboardingOverlay removed) so they don't cover widget
     await page.addInitScript(
       ([wizardVal, onboardingVal]: string[]) => {
         localStorage.setItem('knowlune-welcome-wizard-v1', wizardVal)
@@ -190,7 +190,7 @@ test.describe("E50-S06: Today's Study Plan Widget", () => {
       }
       globalThis.Date = MockDate as unknown as DateConstructor
     }, FIXED_DATE)
-    // Dismiss WelcomeWizard + OnboardingOverlay so Start button is clickable
+    // Dismiss WelcomeWizard (OnboardingOverlay removed) so Start button is clickable
     await page.addInitScript(
       ([wizardVal, onboardingVal]: string[]) => {
         localStorage.setItem('knowlune-welcome-wizard-v1', wizardVal)
