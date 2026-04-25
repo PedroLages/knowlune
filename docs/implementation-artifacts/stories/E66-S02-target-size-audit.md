@@ -1,7 +1,7 @@
 ---
 story_id: E66-S02
 story_name: "Target Size Audit and Fixes"
-status: draft
+status: ready-for-dev
 started:
 completed:
 reviewed: false

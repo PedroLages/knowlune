@@ -1,7 +1,7 @@
 ---
 story_id: E66-S06
 story_name: "WCAG 2.2 Compliance Report and Automated Testing"
-status: draft
+status: ready-for-dev
 started:
 completed:
 reviewed: false

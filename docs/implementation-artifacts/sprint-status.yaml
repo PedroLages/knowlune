@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-24  # E68 revised (7→3 stories, gap-fill only); E77 split into E77A (archive) + E77B (Drive course source)
+last_updated: 2026-04-25  # E64-S01..S03, E66-S01..S06 promoted to ready-for-dev; E99-S01..S05 story files created + ready-for-dev (Gate 1 prep)
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -715,9 +715,9 @@ development_status:
   # Target: LCP < 2.5s, FCP < 1.8s, initial load < 435 KB gz
   # ──────────────────────────────────────────────────
   epic-64: backlog
-  64-1-remove-ai-sdk-modulepreload-and-verify-lazy-loading-boundaries: backlog
-  64-2-conditional-seed-data-loading: backlog
-  64-3-bundle-size-baseline-and-regression-detection: backlog
+  64-1-remove-ai-sdk-modulepreload-and-verify-lazy-loading-boundaries: ready-for-dev
+  64-2-conditional-seed-data-loading: ready-for-dev
+  64-3-bundle-size-baseline-and-regression-detection: ready-for-dev
   64-4-indexeddb-compound-indexes-for-high-volume-tables: backlog
   64-5-settings-page-lazy-loaded-tab-splitting: backlog
   64-6-overview-dashboard-progressive-loading-and-data-batching: backlog
@@ -746,12 +746,12 @@ development_status:
   # Upgrade from WCAG 2.1 AA to WCAG 2.2 AA + select AAA
   # ──────────────────────────────────────────────────
   epic-66: backlog
-  66-1-dragging-movement-alternatives: backlog
-  66-2-target-size-audit-and-fixes: backlog
-  66-3-focus-not-obscured: backlog
-  66-4-authentication-and-redundant-entry-audit: backlog
-  66-5-focus-indicator-enhancement-and-compliance-audit: backlog
-  66-6-wcag-2-2-compliance-report-and-automated-testing: backlog
+  66-1-dragging-movement-alternatives: ready-for-dev
+  66-2-target-size-audit-and-fixes: ready-for-dev
+  66-3-focus-not-obscured: ready-for-dev
+  66-4-authentication-and-redundant-entry-audit: ready-for-dev
+  66-5-focus-indicator-enhancement-and-compliance-audit: ready-for-dev
+  66-6-wcag-2-2-compliance-report-and-automated-testing: ready-for-dev
   epic-66-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -1247,11 +1247,11 @@ development_status:
   # Epic 99: Course Display View Modes
   # ───────────��──────────────────────────────────────
   epic-99: backlog
-  99-1-view-mode-toggle-and-settings-infrastructure: backlog
-  99-2-grid-column-control: backlog
-  99-3-list-view: backlog
-  99-4-compact-grid-view: backlog
-  99-5-virtualized-grid-integration-and-polish: backlog
+  99-1-view-mode-toggle-and-settings-infrastructure: ready-for-dev
+  99-2-grid-column-control: ready-for-dev
+  99-3-list-view: ready-for-dev
+  99-4-compact-grid-view: ready-for-dev
+  99-5-virtualized-grid-integration-and-polish: ready-for-dev
 
   # ──────────────────────────────────────────────────
   # Epic 100: Clean Color Theme — Apple-Inspired White Aesthetic

@@ -1,7 +1,7 @@
 ---
 story_id: E66-S04
 story_name: "Authentication and Redundant Entry Audit"
-status: draft
+status: ready-for-dev
 started:
 completed:
 reviewed: false

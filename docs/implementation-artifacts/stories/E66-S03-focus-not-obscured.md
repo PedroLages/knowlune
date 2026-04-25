@@ -1,7 +1,7 @@
 ---
 story_id: E66-S03
 story_name: "Focus Not Obscured"
-status: draft
+status: ready-for-dev
 started:
 completed:
 reviewed: false

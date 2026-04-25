@@ -1,7 +1,7 @@
 ---
 story_id: E66-S01
 story_name: "Dragging Movement Alternatives"
-status: draft
+status: ready-for-dev
 started:
 completed:
 reviewed: false
