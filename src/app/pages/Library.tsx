@@ -62,6 +62,7 @@ import { YearlyGoalProgress } from '@/app/components/library/YearlyGoalProgress'
 import { useBookStore } from '@/stores/useBookStore'
 import { useOpdsCatalogStore } from '@/stores/useOpdsCatalogStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 import { useReadingGoalStore } from '@/stores/useReadingGoalStore'
 import { useShelfStore } from '@/stores/useShelfStore'
 import { useReadingQueueStore } from '@/stores/useReadingQueueStore'
@@ -107,7 +108,9 @@ export function Library() {
 
   // Audiobookshelf sync (E101-S03)
   const absServers = useAudiobookshelfStore(s => s.servers)
+  const absServersLoaded = useAudiobookshelfStore(s => s.isLoaded)
   const loadAbsServers = useAudiobookshelfStore(s => s.loadServers)
+  const authedUser = useAuthStore(s => s.user)
   const { isSyncing: isAbsSyncing, syncCatalog, loadNextPage, pagination } = useAudiobookshelfSync()
 
   // Series & Collections browsing (E102-S02, E102-S03)
@@ -578,6 +581,31 @@ export function Library() {
               </p>
             </div>
           </div>
+
+          {/* Cross-device sync hint — only shown to authed users with zero ABS
+              servers after the store has finished loading. The audiobookshelf
+              server config syncs from Supabase (P3 priority) and may take
+              30-60s on a fresh device login, so the empty state alone reads
+              as "you have nothing" when the user actually has a server
+              configured elsewhere. */}
+          {authedUser && absServersLoaded && absServers.length === 0 && (
+            <p
+              className="max-w-md text-center text-sm text-muted-foreground"
+              data-testid="abs-cross-device-sync-hint"
+            >
+              If you've connected an audiobook server on another device, it should sync
+              here in a moment. Or{' '}
+              <Button
+                variant="link"
+                onClick={() => setAbsSettingsOpen(true)}
+                className="h-auto p-0 text-sm align-baseline"
+                data-testid="abs-cross-device-sync-hint-open-settings"
+              >
+                open settings
+              </Button>{' '}
+              to add one now.
+            </p>
+          )}
         </section>
       )}
 

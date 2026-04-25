@@ -49,6 +49,9 @@ supabase/*
 !supabase/functions/
 !supabase/tests/
 !supabase/storage-setup.sql
+
+# Vault wrappers migration (already deployed, untracked per request)
+supabase/migrations/20260502000002_vault_credentials_public_wrappers.sql
 StudyGy-Dashboard/
 
 # Git worktrees
