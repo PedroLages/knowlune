@@ -265,6 +265,7 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
           position: { type: 'cfi', value: item.href },
         }))
       } catch (err) {
+        // silent-catch-ok: chapter extraction failure is non-fatal — book imports with empty chapters[]; user can re-scan from the context menu later.
         console.warn('[BookImportDialog] EPUB chapter extraction failed:', err)
       }
 
