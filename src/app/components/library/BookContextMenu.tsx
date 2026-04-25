@@ -249,11 +249,11 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="absolute top-1 right-1 z-10 rounded-md p-1.5 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation"
+              className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation"
               aria-label={`More actions for ${book.title}`}
               data-testid="book-more-actions"
             >
-              <MoreVertical className="h-4 w-4 text-muted-foreground" />
+              <MoreVertical className="h-3.5 w-3.5 text-foreground/60 drop-shadow-sm" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-48">

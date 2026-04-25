@@ -97,11 +97,7 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
             className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
 
-          {/* Status badge */}
-          <div className="absolute top-2 right-2">
-            <BookStatusBadge status={book.status} />
-          </div>
-          {/* Progress bar overlaid at bottom of cover */}
+          {/* Progress bar overlaid at bottom of cover — only overlay kept per art-first pattern */}
           <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-foreground/10">
             <div
               className="h-full bg-brand rounded-full transition-all"
@@ -113,19 +109,6 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
               <CheckCircle2 className="size-10 text-success drop-shadow-md" aria-hidden="true" />
             </div>
           )}
-          {/* Format + remote badges */}
-          <div className="absolute top-2 left-2 flex flex-col gap-1">
-            <FormatBadge format={book.format} className="backdrop-blur-sm" />
-            {book.source.type === 'remote' && (
-              <div
-                className="flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[10px] text-brand-soft-foreground backdrop-blur-sm"
-                data-testid={`remote-badge-${book.id}`}
-              >
-                <Cloud className="size-3" aria-hidden="true" />
-                Remote
-              </div>
-            )}
-          </div>
         </div>
         {/* Metadata below cover */}
         <div className="mt-3 px-1 text-center">
@@ -133,6 +116,21 @@ export const BookCard = memo(function BookCard({ book }: BookCardProps) {
             {book.title}
           </p>
           <p className="text-xs text-muted-foreground mt-1 truncate">{book.author}</p>
+          {/* Status + remote below cover — absence = unread (Plex pattern) */}
+          {(book.status !== 'unread' || book.source.type === 'remote') && (
+            <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
+              {book.status !== 'unread' && <BookStatusBadge status={book.status} />}
+              {book.source.type === 'remote' && (
+                <span
+                  className="flex items-center gap-1 text-[10px] text-muted-foreground"
+                  data-testid={`remote-badge-${book.id}`}
+                >
+                  <Cloud className="size-3" aria-hidden="true" />
+                  Remote
+                </span>
+              )}
+            </div>
+          )}
           {book.progress === 0 && isRecentlyAdded(book.createdAt) && (
             <p className="text-[10px] font-bold text-brand uppercase tracking-wider mt-0.5">NEW</p>
           )}
