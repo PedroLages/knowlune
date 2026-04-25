@@ -24,6 +24,7 @@ import { useBookStore } from '@/stores/useBookStore'
 import type { Book, BookFormat, ChapterMappingRecord } from '@/data/types'
 import {
   resolveAudioPositionFromEpub,
+  INTRA_CHAPTER_CONFIDENCE_FLOOR,
   type EpubLocations,
 } from '@/lib/chapterSwitchResolver'
 
@@ -59,7 +60,19 @@ interface UseFormatSwitchReturn {
   ) => void
 }
 
-/** Resolve the chapter-only target index from the legacy mapping shape. */
+/**
+ * Resolve the chapter-only target index from the legacy mapping shape.
+ *
+ * Invariant: `mapping.mappings` is an array whose positional index (0, 1, 2…)
+ * corresponds to the EPUB chapter index (epubChapterIndex). Each entry carries
+ * `audioChapterIndex` for the paired audio side. When the current format is EPUB,
+ * we index directly by `currentChapterIndex`. When the current format is audio,
+ * we search by `audioChapterIndex` and return the position of the match.
+ *
+ * If a future schema adds an explicit `epubChapterIndex` field to ChapterMapping,
+ * prefer field-based lookup (`m.epubChapterIndex === currentChapterIndex`) over
+ * array-position lookup to avoid off-by-one errors from sparse or reordered arrays.
+ */
 function resolveTargetChapterIndex(
   mapping: ChapterMappingRecord,
   isCurrentEpub: boolean,
@@ -169,7 +182,7 @@ export function useFormatSwitch(
             const entry = mapping.mappings.find(
               m => m.audioChapterIndex === currentChapterIndex
             )
-            if (entry && entry.confidence >= 0.7) {
+            if (entry && entry.confidence >= INTRA_CHAPTER_CONFIDENCE_FLOOR) {
               const ch = currentBook.chapters[currentChapterIndex]
               const next = currentBook.chapters[currentChapterIndex + 1]
               const start = ch && ch.position.type === 'time' ? ch.position.seconds : null

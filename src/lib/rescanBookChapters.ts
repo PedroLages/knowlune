@@ -17,7 +17,6 @@ import { extractEpubChapters } from '@/lib/epubChapterExtractor'
 import { fetchChapters } from '@/services/AudiobookshelfService'
 import { bookContentService } from '@/services/BookContentService'
 import { getAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
-import { db } from '@/db/schema'
 import { syncableWrite, type SyncableRecord } from '@/lib/sync/syncableWrite'
 
 export type RescanResult =
@@ -110,8 +109,6 @@ export async function persistBookChapters(book: Book, chapters: BookChapter[]): 
   useBookStore.setState(state => ({
     books: state.books.map(b => (b.id === book.id ? merged : b)),
   }))
-  // Sanity touch — silence unused
-  void db
 }
 
 /**

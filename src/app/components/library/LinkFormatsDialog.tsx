@@ -10,7 +10,7 @@
  * @since E104-S01
  */
 
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import {
   BookOpen,
   Headphones,
@@ -200,6 +200,15 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
     [book.linkedBookId, onOpenChange]
   )
 
+  // Clear any pending reset timer on unmount to avoid state updates on an unmounted component.
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current !== null) {
+        clearTimeout(resetTimerRef.current)
+      }
+    }
+  }, [])
+
   /** Determine which format to show as candidates. */
   const targetFormat = book.format === 'audiobook' ? 'epub' : 'audiobook'
 
@@ -341,6 +350,7 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
         try {
           await unlinkBooks(book.id, selectedBook.id)
         } catch (rollbackErr) {
+          // silent-catch-ok: rollback failure is reported via the outer toast.error below; surfacing two toasts would be noisy. The console.error here preserves diagnostics.
           console.error('[LinkFormatsDialog] rollback unlinkBooks failed:', rollbackErr)
         }
         toast.error('Failed to save chapter mapping. Please try again.')

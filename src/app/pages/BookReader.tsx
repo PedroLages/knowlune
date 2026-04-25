@@ -661,7 +661,7 @@ export function BookReader() {
       const newSearch = newParams.toString()
       navigate(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`, { replace: true })
     }
-  }, []) // Run once on mount only
+  }, []) // Run once on mount only — params captured via refs above before this effect fires
 
   // For EPUB: navigate to startChapter's TOC href (or offsetCfi / chapterPct
   // intra-chapter target) once the TOC is loaded (E103 — Story B).
@@ -736,7 +736,8 @@ export function BookReader() {
               const startPct = locs.percentageFromCfi(chapter.position.value)
               // Find the next chapter (by spine order) for end percentage.
               const sorted = [...book.chapters].sort((a, b) => a.order - b.order)
-              const nextCh = sorted[(sorted.findIndex(c => c.id === chapter.id) + 1) | 0]
+              const idx = sorted.findIndex(c => c.id === chapter.id)
+              const nextCh = idx >= 0 ? sorted[idx + 1] : undefined
               const endPct =
                 nextCh && nextCh.position.type === 'cfi'
                   ? locs.percentageFromCfi(nextCh.position.value)

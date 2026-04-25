@@ -173,7 +173,7 @@ export function AudiobookRenderer({
       onBookmarkChange?.()
       return next
     })
-  }, [])
+  }, [onBookmarkChange])
 
   // bookmarksOpen can be controlled externally (from BookReader header) or internally
   const [bookmarksOpenInternal, setBookmarksOpenInternal] = useState(false)
@@ -229,7 +229,8 @@ export function AudiobookRenderer({
             chEnd !== null
               ? Math.max(chStart, Math.min(target, Math.max(chStart, chEnd - 0.1)))
               : Math.max(chStart, target)
-          setTimeout(() => seekTo(clamped), 100)
+          const seekTimerId = setTimeout(() => seekTo(clamped), 100)
+          return () => clearTimeout(seekTimerId)
         }
       }
     }
