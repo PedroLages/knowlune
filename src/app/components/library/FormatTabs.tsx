@@ -68,18 +68,20 @@ export function FormatTabs() {
             key={tab.value}
             role="tab"
             aria-selected={isActive}
+            aria-label={`${tab.label} — ${count} book${count !== 1 ? 's' : ''}`}
             onClick={() => setFilter('format', tab.filterValue)}
             className={cn(
-              'whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors min-h-[36px] flex-shrink-0 inline-flex items-center gap-1.5',
+              'whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors min-h-[28px] flex-shrink-0 inline-flex items-center gap-1 outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1',
               isActive
                 ? 'bg-brand text-brand-foreground'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80',
+              !isActive && count === 0 && 'opacity-40'
             )}
             data-testid={`format-tab-${tab.value}`}
           >
             {Icon && <Icon className="size-3.5" aria-hidden="true" />}
             {tab.label}
-            <span className="ml-0.5 text-xs opacity-80">({count})</span>
+            <span className="ml-0.5 text-[11px]">({count})</span>
           </button>
         )
       })}

@@ -66,6 +66,7 @@ import { AudiobookshelfSettings } from '@/app/components/library/AudiobookshelfS
 import { OpdsBrowser } from '@/app/components/library/OpdsBrowser'
 import { DailyGoalRing } from '@/app/components/library/DailyGoalRing'
 import { YearlyGoalProgress } from '@/app/components/library/YearlyGoalProgress'
+import { DailyHighlightsStrip } from '@/app/components/library/DailyHighlightsStrip'
 import { useBookStore } from '@/stores/useBookStore'
 import { useOpdsCatalogStore } from '@/stores/useOpdsCatalogStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
@@ -93,6 +94,10 @@ export function Library() {
     if (state?.__viaPalette === true) return
     void recordVisit('book', libraryBookId)
   }, [libraryBookId, libraryLocation.state])
+  useEffect(() => {
+    document.title = 'Library · Knowlune'
+    return () => { document.title = 'Knowlune' }
+  }, [])
   const [importOpen, setImportOpen] = useState(false)
   const [droppedFile, setDroppedFile] = useState<File | null>(null)
   const [editingBook, setEditingBook] = useState<Book | null>(null)
@@ -609,8 +614,9 @@ export function Library() {
           {/* Two CTAs */}
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <Button
+              variant="brand"
               onClick={() => setImportOpen(true)}
-              className="min-h-[44px] bg-gradient-to-br from-brand to-brand-hover text-brand-foreground px-6"
+              className="min-h-[44px] px-6"
               data-testid="import-first-book-cta"
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -669,151 +675,11 @@ export function Library() {
         </section>
       )}
 
+      {/* Daily Highlights — cinematic highlight strip from annotated books */}
+      {books.length > 0 && <DailyHighlightsStrip />}
+
       {/* Reading Queue — always visible when books exist (E110-S03 AC-1) */}
       {books.length > 0 && <ReadingQueue />}
-
-      {/* Source filter tabs — only show when ABS servers configured (E101-S03) */}
-      {books.length > 0 && <LibrarySourceTabs />}
-
-      {/* Format tabs — always visible when books exist.
-          fix/E-ABS-QA: keep tabs visible in ABS Series/Collections views so
-          users do not experience silent filter disappearance when switching
-          view modes. Filter still applies to the underlying book set; series
-          and collections currently render from ABS without format filtering
-          (TODO: wire format filter into series/collections grouping). */}
-      {books.length > 0 && <FormatTabs />}
-
-      {/* ABS view mode toggle: Grid / Series — only when ABS source is selected (E102-S02) */}
-      {books.length > 0 && filters.source === 'audiobookshelf' && absServers.length > 0 && (
-        <div
-          className="flex gap-1 rounded-lg bg-muted p-1 w-fit"
-          role="tablist"
-          aria-label="Audiobookshelf view mode"
-          data-testid="abs-view-toggle"
-        >
-          <button
-            role="tab"
-            aria-selected={absViewMode === 'grid'}
-            onClick={() => setAbsViewMode('grid')}
-            className={cn(
-              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
-              absViewMode === 'grid'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-            data-testid="abs-view-grid"
-          >
-            <Grid3X3 className="size-3.5" aria-hidden="true" />
-            Grid
-          </button>
-          <button
-            role="tab"
-            aria-selected={absViewMode === 'series'}
-            onClick={() => {
-              setAbsViewMode('series')
-              // Lazy-load series on first selection
-              const connectedServer = absServers.find(s => s.status === 'connected')
-              if (connectedServer && connectedServer.libraryIds.length > 0) {
-                loadSeries(connectedServer.id, connectedServer.libraryIds[0])
-              }
-            }}
-            className={cn(
-              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
-              absViewMode === 'series'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-            data-testid="abs-view-series"
-          >
-            <List className="size-3.5" aria-hidden="true" />
-            Series
-          </button>
-          <button
-            role="tab"
-            aria-selected={absViewMode === 'collections'}
-            onClick={() => {
-              setAbsViewMode('collections')
-              // Lazy-load collections on first selection
-              const connectedServer = absServers.find(s => s.status === 'connected')
-              if (connectedServer && connectedServer.libraryIds.length > 0) {
-                loadCollections(connectedServer.id, connectedServer.libraryIds[0])
-              }
-            }}
-            className={cn(
-              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
-              absViewMode === 'collections'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-            data-testid="abs-view-collections"
-          >
-            <FolderOpen className="size-3.5" aria-hidden="true" />
-            Collections
-          </button>
-        </div>
-      )}
-
-      {/* Local/All series toggle (E110-S02) — when NOT in ABS source view */}
-      {books.length > 0 && filters.source !== 'audiobookshelf' && (
-        <div
-          className="flex gap-1 rounded-lg bg-muted p-1 w-fit"
-          role="tablist"
-          aria-label="Library view mode"
-          data-testid="local-view-toggle"
-        >
-          <button
-            role="tab"
-            aria-selected={!localSeriesView && libraryView === 'grid'}
-            onClick={() => {
-              setLocalSeriesView(false)
-              useBookStore.getState().setLibraryView('grid')
-            }}
-            className={cn(
-              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
-              !localSeriesView && libraryView === 'grid'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-            data-testid="local-view-grid"
-          >
-            <Grid3X3 className="size-3.5" aria-hidden="true" />
-            Grid
-          </button>
-          <button
-            role="tab"
-            aria-selected={!localSeriesView && libraryView === 'list'}
-            onClick={() => {
-              setLocalSeriesView(false)
-              useBookStore.getState().setLibraryView('list')
-            }}
-            className={cn(
-              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
-              !localSeriesView && libraryView === 'list'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-            data-testid="local-view-list"
-          >
-            <List className="size-3.5" aria-hidden="true" />
-            List
-          </button>
-          <button
-            role="tab"
-            aria-selected={localSeriesView}
-            onClick={() => setLocalSeriesView(true)}
-            className={cn(
-              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors min-h-[32px]',
-              localSeriesView
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-            data-testid="local-view-series"
-          >
-            <Layers className="size-3.5" aria-hidden="true" />
-            Series
-          </button>
-        </div>
-      )}
 
       {/* Syncing indicator (E101-S03) */}
       {isAbsSyncing && (
@@ -826,8 +692,111 @@ export function Library() {
         </div>
       )}
 
-      {/* Filters — only show when books exist */}
-      {books.length > 0 && <LibraryFilters />}
+      {/* PRIMARY row: status pills + view toggle + search + filter */}
+      {books.length > 0 && (
+        <LibraryFilters
+          viewToggle={
+            filters.source === 'audiobookshelf' && absServers.length > 0 ? (
+              <div
+                className="flex gap-0.5 rounded-lg bg-muted p-0.5 flex-shrink-0"
+                role="tablist"
+                aria-label="Audiobookshelf view mode"
+                data-testid="abs-view-toggle"
+              >
+                {(
+                  [
+                    { mode: 'grid', Icon: Grid3X3, label: 'Grid', testId: 'abs-view-grid' },
+                    { mode: 'series', Icon: List, label: 'Series', testId: 'abs-view-series' },
+                    { mode: 'collections', Icon: FolderOpen, label: 'Collections', testId: 'abs-view-collections' },
+                  ] as const
+                ).map(({ mode, Icon, label, testId }) => (
+                  <button
+                    key={mode}
+                    role="tab"
+                    aria-selected={absViewMode === mode}
+                    aria-label={label}
+                    onClick={() => {
+                      setAbsViewMode(mode)
+                      if (mode !== 'grid') {
+                        const s = absServers.find(sv => sv.status === 'connected')
+                        if (s?.libraryIds.length) {
+                          mode === 'series'
+                            ? loadSeries(s.id, s.libraryIds[0])
+                            : loadCollections(s.id, s.libraryIds[0])
+                        }
+                      }
+                    }}
+                    className={cn(
+                      'rounded-md p-1.5 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center',
+                      absViewMode === mode
+                        ? 'bg-brand text-brand-foreground'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                    data-testid={testId}
+                  >
+                    <Icon className="size-3.5" aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div
+                className="flex gap-0.5 rounded-lg bg-muted p-0.5 flex-shrink-0"
+                role="tablist"
+                aria-label="Library view mode"
+                data-testid="local-view-toggle"
+              >
+                {(
+                  [
+                    { mode: 'grid' as const, series: false, Icon: Grid3X3, label: 'Grid', testId: 'local-view-grid' },
+                    { mode: 'list' as const, series: false, Icon: List, label: 'List', testId: 'local-view-list' },
+                    { mode: 'grid' as const, series: true, Icon: Layers, label: 'Series', testId: 'local-view-series' },
+                  ]
+                ).map(({ mode, series, Icon, label, testId }) => {
+                  const isActive = series ? localSeriesView : !localSeriesView && libraryView === mode
+                  return (
+                    <button
+                      key={testId}
+                      role="tab"
+                      aria-selected={isActive}
+                      aria-label={label}
+                      onClick={() => {
+                        if (series) {
+                          setLocalSeriesView(true)
+                        } else {
+                          setLocalSeriesView(false)
+                          useBookStore.getState().setLibraryView(mode)
+                        }
+                      }}
+                      className={cn(
+                        'rounded-md p-1.5 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center',
+                        isActive
+                          ? 'bg-brand text-brand-foreground'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                      data-testid={testId}
+                    >
+                      <Icon className="size-3.5" aria-hidden="true" />
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          }
+        />
+      )}
+
+      {/* SECONDARY row: format + source — smaller pills, lower visual weight */}
+      {books.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <FormatTabs />
+          {absServers.length > 0 && (
+            <>
+              <div className="w-px h-4 bg-border self-center flex-shrink-0 mx-0.5" aria-hidden="true" />
+              <LibrarySourceTabs />
+            </>
+          )}
+        </div>
+      )}
 
       {/* Series view (E102-S02) — replaces grid when active */}
       {books.length > 0 && filters.source === 'audiobookshelf' && absViewMode === 'series' && (
