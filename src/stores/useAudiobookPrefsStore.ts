@@ -55,7 +55,7 @@ const defaults: AudiobookPrefs = {
 export const VALID_SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0]
 const VALID_SPEEDS_SET = new Set(VALID_SPEEDS)
 
-const VALID_TIMERS = new Set<SleepTimerDefault>(['off', 5, 10, 15, 30, 45, 60, 'end-of-chapter'])
+export const VALID_TIMERS = new Set<SleepTimerDefault>(['off', 5, 10, 15, 30, 45, 60, 'end-of-chapter'])
 
 /** Allowed skip-back intervals in seconds. Asymmetric (back < forward) preserved by default 15. */
 export const VALID_SKIP_BACK = [5, 10, 15, 30, 45, 60] as const
