@@ -45,6 +45,7 @@
             if (p === '/' || p === '/offline.html' || seen.has(p)) continue
             if (p.startsWith('/api/') || p.includes('.')) continue
             seen.add(p)
+            if (!p.startsWith('/') || p.startsWith('//')) continue
             routes.push(p)
             if (routes.length >= 5) break
           }

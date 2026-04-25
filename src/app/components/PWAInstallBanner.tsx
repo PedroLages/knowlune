@@ -10,7 +10,7 @@
  * - Cleans up event listener on unmount
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Button } from '@/app/components/ui/button'
 import { X, Share } from 'lucide-react'
 
@@ -26,10 +26,13 @@ export function PWAInstallBanner() {
   const [showIosBanner, setShowIosBanner] = useState(false)
   const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null)
 
-  const isStandalone =
-    typeof window !== 'undefined' &&
-    (window.matchMedia('(display-mode: standalone)').matches ||
-      ('standalone' in navigator && (navigator as { standalone?: boolean }).standalone === true))
+  const isStandalone = useMemo(
+    () =>
+      typeof window !== 'undefined' &&
+      (window.matchMedia('(display-mode: standalone)').matches ||
+        ('standalone' in navigator && (navigator as { standalone?: boolean }).standalone === true)),
+    []
+  )
 
   const handleBeforeInstallPrompt = useCallback(
     (e: Event) => {
@@ -54,10 +57,13 @@ export function PWAInstallBanner() {
   }, [handleBeforeInstallPrompt])
 
   useEffect(() => {
+    const ua = navigator.userAgent
+    // iPadOS 13+ reports as Macintosh with maxTouchPoints > 1
+    const isIosDevice =
+      /iPhone|iPad|iPod/.test(ua) ||
+      (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
     const isIosSafari =
-      /iPhone|iPad|iPod/.test(navigator.userAgent) &&
-      /Safari/.test(navigator.userAgent) &&
-      !/CriOS|FxiOS/.test(navigator.userAgent)
+      isIosDevice && /Safari/.test(ua) && !/CriOS|FxiOS/.test(ua)
 
     if (isIosSafari && !isStandalone && !localStorage.getItem(IOS_DISMISSED_KEY)) {
       const timer = setTimeout(() => {

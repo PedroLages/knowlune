@@ -13,18 +13,28 @@
  * @since E120-S02
  */
 
+import { useEffect, useRef } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { Button } from '@/app/components/ui/button'
 
 export function PWAUpdatePrompt() {
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current !== null) clearInterval(intervalRef.current)
+    }
+  }, [])
+
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(_swUrl, registration) {
       if (registration) {
+        if (intervalRef.current !== null) clearInterval(intervalRef.current)
         // Poll for SW updates every hour
-        setInterval(() => registration.update(), 60 * 60 * 1000)
+        intervalRef.current = setInterval(() => registration.update(), 60 * 60 * 1000)
       }
     },
     onRegisterError(error) {

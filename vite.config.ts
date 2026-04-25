@@ -579,7 +579,6 @@ export default defineConfig({
         {
           urlPattern: /\/api\/abs\/proxy\//,
           handler: 'NetworkOnly',
-          options: { cacheName: 'abs-audio-streams' },
         },
       ],
     },

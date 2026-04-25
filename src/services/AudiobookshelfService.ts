@@ -698,16 +698,29 @@ export function setMediaSession(track: MediaTrack, handlers: MediaSessionHandler
     title: track.title,
     artist: track.author,
     album: track.bookTitle,
-    artwork: [{ src: track.coverUrl, sizes: '512x512', type: 'image/png' }],
+    artwork: /^https?:\/\//i.test(track.coverUrl)
+      ? [{ src: track.coverUrl, sizes: '512x512', type: 'image/png' }]
+      : [],
   })
 
-  navigator.mediaSession.setActionHandler('play', handlers.play ?? null)
-  navigator.mediaSession.setActionHandler('pause', handlers.pause ?? null)
-  navigator.mediaSession.setActionHandler('seekbackward', handlers.seekBackward ?? null)
-  navigator.mediaSession.setActionHandler('seekforward', handlers.seekForward ?? null)
-  navigator.mediaSession.setActionHandler('previoustrack', handlers.previousTrack ?? null)
-  navigator.mediaSession.setActionHandler('nexttrack', handlers.nextTrack ?? null)
-  navigator.mediaSession.setActionHandler('seekto', handlers.seekTo ?? null)
+  const trySet = (
+    action: MediaSessionAction,
+    handler: MediaSessionActionHandler | null
+  ) => {
+    try {
+      navigator.mediaSession!.setActionHandler(action, handler)
+    } catch {
+      // action not supported by this browser — silent-catch-ok
+    }
+  }
+
+  trySet('play', handlers.play ?? null)
+  trySet('pause', handlers.pause ?? null)
+  trySet('seekbackward', handlers.seekBackward ?? null)
+  trySet('seekforward', handlers.seekForward ?? null)
+  trySet('previoustrack', handlers.previousTrack ?? null)
+  trySet('nexttrack', handlers.nextTrack ?? null)
+  trySet('seekto', handlers.seekTo ?? null)
 }
 
 /**
@@ -720,13 +733,16 @@ export function clearMediaSession(): void {
   if (!('mediaSession' in navigator) || !navigator.mediaSession) return
 
   navigator.mediaSession.metadata = null
-  navigator.mediaSession.setActionHandler('play', null)
-  navigator.mediaSession.setActionHandler('pause', null)
-  navigator.mediaSession.setActionHandler('seekbackward', null)
-  navigator.mediaSession.setActionHandler('seekforward', null)
-  navigator.mediaSession.setActionHandler('previoustrack', null)
-  navigator.mediaSession.setActionHandler('nexttrack', null)
-  navigator.mediaSession.setActionHandler('seekto', null)
+  const actions: MediaSessionAction[] = [
+    'play', 'pause', 'seekbackward', 'seekforward', 'previoustrack', 'nexttrack', 'seekto',
+  ]
+  for (const action of actions) {
+    try {
+      navigator.mediaSession.setActionHandler(action, null)
+    } catch {
+      // action not supported by this browser — silent-catch-ok
+    }
+  }
 }
 
 /**
