@@ -22,6 +22,8 @@ import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
 import { HeaderSearchButton } from '@/app/components/figma/HeaderSearchButton'
 import { ViewModeToggle } from '@/app/components/courses/ViewModeToggle'
+import { GridColumnControl } from '@/app/components/courses/GridColumnControl'
+import { getGridClassName } from '@/app/components/courses/gridClassName'
 import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
 
 import type { LearnerCourseStatus } from '@/data/types'
@@ -42,6 +44,7 @@ export function Courses() {
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
   const getAllTags = useCourseImportStore(state => state.getAllTags)
   const courseViewMode = useEngagementPrefsStore(state => state.courseViewMode)
+  const courseGridColumns = useEngagementPrefsStore(state => state.courseGridColumns)
   const setEngagementPref = useEngagementPrefsStore(state => state.setPreference)
 
   // Lazy-load imported courses on mount (deferred — not critical for initial app load)
@@ -242,6 +245,13 @@ export function Courses() {
               value={courseViewMode}
               onChange={mode => setEngagementPref('courseViewMode', mode)}
             />
+            {/* E99-S02: grid column control. Visible only in grid view. */}
+            {courseViewMode === 'grid' && (
+              <GridColumnControl
+                value={courseGridColumns}
+                onChange={cols => setEngagementPref('courseGridColumns', cols)}
+              />
+            )}
           </div>
 
           {/* Imported Courses Section */}
@@ -286,12 +296,13 @@ export function Courses() {
                 data-testid="imported-courses-grid"
                 gridClassName={
                   // E99-S01: branch on courseViewMode. S03 wires list, S04 wires
-                  // compact — until then all three render the existing grid.
+                  // compact — until then list/compact still use the default grid.
+                  // E99-S02: grid branch uses the resolver helper for column control.
                   courseViewMode === 'list'
                     ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)]'
                     : courseViewMode === 'compact'
                       ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)]'
-                      : 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)]'
+                      : getGridClassName(courseGridColumns)
                 }
               />
             )}

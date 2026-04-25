@@ -9,6 +9,7 @@ export type ReadingFontSize = '1x' | '1.25x' | '1.5x' | '2x'
 export type ReadingLineHeight = 1.5 | 1.75 | 2.0
 export type ReadingTheme = 'auto' | 'sepia' | 'gray' | 'dark' | 'high-contrast'
 export type CourseViewMode = 'grid' | 'list' | 'compact'
+export type CourseGridColumns = 'auto' | 2 | 3 | 4 | 5
 
 /** Maps font size labels to root font-size pixel values */
 export const FONT_SIZE_PX: Record<FontSize, number> = {
@@ -69,6 +70,12 @@ export interface AppSettings {
    * land in S03/S04. All three values render the existing grid until then.
    */
   courseViewMode?: CourseViewMode
+  /**
+   * Courses page grid column count preference (E99-S02).
+   * 'auto' uses the responsive default (1/2/3/4/5 across breakpoints);
+   * concrete values cap at lg+. Mobile (<640px) is always 1 column.
+   */
+  courseGridColumns?: CourseGridColumns
 }
 
 export const DISPLAY_DEFAULTS = {
@@ -98,6 +105,7 @@ const defaults: AppSettings = {
   readingTheme: 'auto',
   autoSyncEnabled: true,
   courseViewMode: 'grid',
+  courseGridColumns: 'auto',
 }
 
 const VALID_CONTENT_DENSITY: ContentDensity[] = ['default', 'spacious']
@@ -106,6 +114,7 @@ const VALID_READING_FONT_SIZE: ReadingFontSize[] = ['1x', '1.25x', '1.5x', '2x']
 const VALID_READING_LINE_HEIGHT: ReadingLineHeight[] = [1.5, 1.75, 2.0]
 const VALID_READING_THEME: ReadingTheme[] = ['auto', 'sepia', 'gray', 'dark', 'high-contrast']
 const VALID_COURSE_VIEW_MODE: CourseViewMode[] = ['grid', 'list', 'compact']
+const VALID_COURSE_GRID_COLUMNS: CourseGridColumns[] = ['auto', 2, 3, 4, 5]
 
 export function getSettings(): AppSettings {
   try {
@@ -133,6 +142,9 @@ export function getSettings(): AppSettings {
     }
     if (!VALID_COURSE_VIEW_MODE.includes(parsed.courseViewMode)) {
       parsed.courseViewMode = defaults.courseViewMode
+    }
+    if (!VALID_COURSE_GRID_COLUMNS.includes(parsed.courseGridColumns)) {
+      parsed.courseGridColumns = defaults.courseGridColumns
     }
     return parsed
   } catch {
@@ -196,6 +208,7 @@ export type UserSettingsPatch = {
   streaksEnabled?: boolean
   colorScheme?: string
   courseViewMode?: string
+  courseGridColumns?: string | number
 }
 
 /**
@@ -445,6 +458,19 @@ export async function hydrateSettingsFromSupabase(
           .setPreference(
             'courseViewMode',
             s.courseViewMode as import('@/stores/useEngagementPrefsStore').CourseViewMode
+          )
+      }
+    }
+    // E99-S02: hydrate courseGridColumns from Supabase JSONB
+    if (s.courseGridColumns !== undefined && s.courseGridColumns !== null) {
+      const validColumns: Array<'auto' | 2 | 3 | 4 | 5> = ['auto', 2, 3, 4, 5]
+      const candidate = s.courseGridColumns as 'auto' | 2 | 3 | 4 | 5
+      if (validColumns.includes(candidate)) {
+        useEngagementPrefsStore
+          .getState()
+          .setPreference(
+            'courseGridColumns',
+            candidate as import('@/stores/useEngagementPrefsStore').CourseGridColumns
           )
       }
     }
