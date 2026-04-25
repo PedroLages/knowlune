@@ -25,9 +25,9 @@ const tabsTriggerVariants = cva(
         default:
           'data-[state=active]:bg-card dark:data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 text-foreground dark:text-muted-foreground min-h-[44px] flex-1 gap-1.5 rounded-xl border border-transparent px-2 py-1 transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1',
         'brand-pill':
-          'gap-1.5 rounded-lg px-3 py-1.5 data-[state=active]:bg-brand data-[state=active]:text-brand-foreground transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+          'min-h-[44px] gap-1.5 rounded-lg px-3 py-1.5 data-[state=active]:bg-brand data-[state=active]:text-brand-foreground transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
         underline:
-          'flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:bg-transparent py-2.5 text-xs gap-1.5',
+          'min-h-[44px] flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:bg-transparent py-2.5 text-xs gap-1.5',
       },
     },
     defaultVariants: { variant: 'brand-pill' },

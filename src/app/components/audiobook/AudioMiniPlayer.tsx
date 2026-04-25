@@ -106,7 +106,7 @@ export function AudioMiniPlayer() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 bg-card/70 backdrop-blur-[32px] shadow-[0_-12px_40px_-5px_rgba(27,28,21,0.08)]"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-card/70 backdrop-blur-[32px] shadow-[0_-12px_40px_-5px_rgba(27,28,21,0.08)] pb-[env(safe-area-inset-bottom)]"
       data-testid="audio-mini-player"
       role="complementary"
       aria-label="Audiobook mini-player"

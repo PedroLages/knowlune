@@ -28,6 +28,7 @@ import {
   Library as LibraryIcon,
   List,
   Loader2,
+  MoreVertical,
   Plus,
   RefreshCw,
   WifiOff,
@@ -47,6 +48,12 @@ import { CollectionsView } from '@/app/components/library/CollectionsView'
 import { StorageIndicator } from '@/app/components/library/StorageIndicator'
 import { BookCard } from '@/app/components/library/BookCard'
 import { BookListItem } from '@/app/components/library/BookListItem'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/app/components/ui/dropdown-menu'
 import { BookContextMenu } from '@/app/components/library/BookContextMenu'
 import { BookMetadataEditor } from '@/app/components/library/BookMetadataEditor'
 import { LibraryFilters } from '@/app/components/library/LibraryFilters'
@@ -383,13 +390,14 @@ export function Library() {
               <Button
                 variant="brand-outline"
                 onClick={() => setBrowserOpen(true)}
-                className="min-h-[44px]"
+                className="min-h-[44px] hidden sm:inline-flex"
                 data-testid="browse-catalog-trigger"
               >
                 <Globe className="mr-2 h-4 w-4" />
                 Browse Catalog
               </Button>
             )}
+            <div className="hidden sm:contents">
             {absServers.length > 0 &&
               (() => {
                 const connectedServer = absServers.find(s => s.status === 'connected')
@@ -497,6 +505,57 @@ export function Library() {
             >
               <Target className="size-5" />
             </Button>
+            </div>
+            {/* Mobile-only overflow menu: collapses secondary icon buttons */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild className="sm:hidden">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-11 rounded-xl"
+                  aria-label="More library actions"
+                  data-testid="library-overflow-trigger"
+                >
+                  <MoreVertical className="size-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {opdsCatalogs.length > 0 && (
+                  <DropdownMenuItem onSelect={() => setBrowserOpen(true)}>
+                    <Globe className="mr-2 size-4" />
+                    Browse Catalog
+                  </DropdownMenuItem>
+                )}
+                {absServers.length > 0 && (
+                  <DropdownMenuItem
+                    onSelect={() => handleManualSync()}
+                    disabled={isAbsSyncing}
+                    data-testid="abs-sync-trigger-mobile"
+                  >
+                    <RefreshCw
+                      className={cn('mr-2 size-4', isAbsSyncing && 'animate-spin')}
+                    />
+                    {isAbsSyncing ? 'Syncing…' : 'Sync library'}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onSelect={() => setAbsSettingsOpen(true)}>
+                  <Headphones className="mr-2 size-4" />
+                  Audiobookshelf
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setCatalogsOpen(true)}>
+                  <Globe className="mr-2 size-4" />
+                  OPDS Catalogs
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setShelvesOpen(true)}>
+                  <LibraryIcon className="mr-2 size-4" />
+                  Manage Shelves
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setGoalsOpen(true)}>
+                  <Target className="mr-2 size-4" />
+                  Reading Goals
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="brand"
               onClick={() => setImportOpen(true)}
@@ -504,7 +563,8 @@ export function Library() {
               data-testid="import-book-trigger"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Import Book
+              <span className="hidden sm:inline">Import Book</span>
+              <span className="sm:hidden">Import</span>
             </Button>
           </div>
         </div>

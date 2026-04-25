@@ -721,7 +721,7 @@ export function Layout() {
         <main
           id="main-content"
           data-testid="main-scroll-container"
-          className={`flex-1 px-6 pt-6 leading-[var(--content-line-height)] ${isLessonPlayerRoute ? 'pb-6' : `overflow-auto ${hasMiniPlayer ? 'pb-36 sm:pb-20' : 'pb-20 sm:pb-6'}`}`}
+          className={`flex-1 px-6 pt-6 leading-[var(--content-line-height)] ${isLessonPlayerRoute ? 'pb-6' : `overflow-auto ${hasMiniPlayer ? 'pb-[calc(theme(spacing.36)+env(safe-area-inset-bottom))] sm:pb-20' : 'pb-[calc(theme(spacing.20)+env(safe-area-inset-bottom))] sm:pb-6'}`}`}
         >
           {!isOnline && (
             <div

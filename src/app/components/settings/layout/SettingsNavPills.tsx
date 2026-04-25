@@ -13,12 +13,12 @@ export function SettingsNavPills({
   modifiedCategories,
 }: SettingsNavPillsProps) {
   return (
-    <div
-      className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border pb-3 -mx-4 px-4 pt-1"
-      role="tablist"
-      aria-label="Settings categories"
-    >
-      <div className="flex gap-2 overflow-x-auto scrollbar-none">
+    <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border pb-3 -mx-4 px-4 pt-1">
+      <div
+        className="flex gap-2 overflow-x-auto scrollbar-none"
+        role="tablist"
+        aria-label="Settings categories"
+      >
         {SETTINGS_CATEGORIES.map(category => {
           const isActive = activeCategory === category.slug
           const isModified = modifiedCategories?.has(category.slug)
@@ -54,6 +54,10 @@ export function SettingsNavPills({
           )
         })}
       </div>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute right-0 top-1 bottom-3 w-8 bg-gradient-to-l from-background to-transparent"
+      />
     </div>
   )
 }
