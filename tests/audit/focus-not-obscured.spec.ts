@@ -34,7 +34,9 @@ type ObscuredFinding = {
 }
 
 /** Run inside the browser: returns null if focus is fine, or an obscured finding. */
-async function checkFocusObscured(page: Page): Promise<ObscuredFinding['focused'] extends infer _ ? Omit<ObscuredFinding, 'route' | 'tabIndex'> | null : never> {
+async function checkFocusObscured(
+  page: Page
+): Promise<Omit<ObscuredFinding, 'route' | 'tabIndex'> | null> {
   return await page.evaluate(() => {
     const active = document.activeElement
     if (!active || active === document.body || active === document.documentElement) {
