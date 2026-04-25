@@ -362,6 +362,28 @@ html.reduce-motion .reduced-motion-fade {
   .anim-fade-slide-up { animation: none; }
 }
 
+/* WCAG 2.4.11 — Focus Not Obscured (E66-S03)
+ * When the browser auto-scrolls a focused element into view, scroll-padding tells
+ * it to leave room for our fixed/sticky chrome so focus rings are never fully
+ * obscured by the BottomNav (mobile) or by future reading-mode toolbars. */
+
+/* Mobile: BottomNav is fixed bottom (h-14 = 56px) + safe-area inset. The 64px
+ * value includes a small breathing-room buffer above the nav. lg breakpoint
+ * (1024px) is where BottomNav stops being visible. */
+@media (max-width: 1023px) {
+  :root {
+    scroll-padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+}
+
+/* E65-S01 reading-mode integration — these rules are inert until the
+ * .reading-mode class is applied to <html>. Status bar is ~48px (top), floating
+ * toolbar is ~56px (bottom). Adjust when E65 lands. */
+html.reading-mode {
+  scroll-padding-top: 48px;
+  scroll-padding-bottom: 56px;
+}
+
 /* ── Apple-style range slider (Settings font size picker) ── */
 .apple-slider {
   -webkit-appearance: none;

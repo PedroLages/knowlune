@@ -10,14 +10,14 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps['theme']}
       className="toaster group"
-      position="bottom-right"
+      // WCAG 2.4.11 (E66-S03): top-right keeps toasts clear of fixed BottomNav
+      // on mobile so focused elements are never obscured.
+      position="top-right"
       expand={false}
       visibleToasts={3}
       richColors={true}
       closeButton={true}
       duration={4000}
-      // Offset from bottom to avoid overlapping mobile bottom navigation (57px)
-      offset={64}
       style={
         {
           '--normal-bg': 'var(--popover)',
