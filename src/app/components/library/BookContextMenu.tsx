@@ -17,6 +17,7 @@ import {
   Highlighter,
   Library,
   ListOrdered,
+  RefreshCw,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Book, BookStatus } from '@/data/types'
@@ -24,6 +25,7 @@ import { useBookStore } from '@/stores/useBookStore'
 import { useShelfStore } from '@/stores/useShelfStore'
 import { useReadingQueueStore } from '@/stores/useReadingQueueStore'
 import { LinkFormatsDialog } from './LinkFormatsDialog'
+import { rescanBookChapters } from '@/lib/rescanBookChapters'
 
 // Lazy-load AboutBookDialog to defer ~5.5KB until dialog opens
 const AboutBookDialog = lazy(() => import('./AboutBookDialog'))
@@ -120,6 +122,34 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false)
+  const [isRescanning, setIsRescanning] = useState(false)
+
+  // Re-scan supports EPUBs (TOC extraction) and ABS-synced audiobooks (per-item fetch).
+  // Local-file audiobooks have no remote source to re-query — chapters come from import metadata.
+  const canRescanChapters =
+    book.format === 'epub' ||
+    (book.format === 'audiobook' && !!book.absServerId && !!book.absItemId)
+
+  const handleRescanChapters = async () => {
+    if (isRescanning) return
+    setIsRescanning(true)
+    const dismiss = toast.loading('Re-scanning chapters…')
+    try {
+      const result = await rescanBookChapters(book)
+      toast.dismiss(dismiss)
+      if (result.ok) {
+        toast.success(`Found ${result.chapters.length} chapter${result.chapters.length === 1 ? '' : 's'}`)
+      } else {
+        toast.error(result.message)
+      }
+    } catch (err) {
+      toast.dismiss(dismiss)
+      console.error('[BookContextMenu] rescanBookChapters threw:', err)
+      toast.error('Failed to re-scan chapters. Please try again.')
+    } finally {
+      setIsRescanning(false)
+    }
+  }
 
   const handleDelete = () => {
     setConfirmDeleteOpen(true)
@@ -176,6 +206,16 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
               <ArrowRightLeft className="h-3.5 w-3.5" aria-hidden="true" />
               {book.linkedBookId ? 'Linked Format…' : 'Link Format…'}
             </ContextMenuItem>
+            {canRescanChapters && (
+              <ContextMenuItem
+                onClick={handleRescanChapters}
+                data-testid="context-menu-rescan-chapters"
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                {isRescanning ? 'Re-scanning…' : 'Re-scan Chapters'}
+              </ContextMenuItem>
+            )}
             <ContextMenuSub>
               <ContextMenuSubTrigger data-testid="context-menu-change-status">
                 Change Status
@@ -266,6 +306,16 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
               <ArrowRightLeft className="h-3.5 w-3.5" aria-hidden="true" />
               {book.linkedBookId ? 'Linked Format…' : 'Link Format…'}
             </DropdownMenuItem>
+            {canRescanChapters && (
+              <DropdownMenuItem
+                onClick={handleRescanChapters}
+                data-testid="dropdown-menu-rescan-chapters"
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                {isRescanning ? 'Re-scanning…' : 'Re-scan Chapters'}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>Change Status</DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="w-44">
