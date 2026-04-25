@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Card } from '@/app/components/ui/card'
-import { VirtualizedGrid } from '@/app/components/VirtualizedGrid'
+import { VirtualizedCoursesList } from '@/app/components/courses/VirtualizedCoursesList'
 import { Button } from '@/app/components/ui/button'
 import {
   Select,
@@ -284,48 +284,39 @@ export function Courses() {
                 No imported courses match your filters
               </div>
             ) : (
-              courseViewMode === 'list' ? (
-                <ul
-                  role="list"
-                  data-testid="imported-courses-list"
-                  className="flex flex-col gap-2"
-                >
-                  {sortedImportedCourses.map(course => (
+              <VirtualizedCoursesList
+                courses={sortedImportedCourses}
+                viewMode={courseViewMode}
+                gridClassName={getGridClassName(
+                  courseGridColumns,
+                  courseViewMode === 'compact' ? 'compact' : 'grid'
+                )}
+                data-testid={
+                  courseViewMode === 'list' ? 'imported-courses-list' : 'imported-courses-grid'
+                }
+                renderItem={course =>
+                  courseViewMode === 'list' ? (
                     <ImportedCourseListRow
-                      key={course.id}
                       course={course}
                       allTags={allTags}
                       completionPercent={importedCompletionMap.get(course.id) ?? 0}
                     />
-                  ))}
-                </ul>
-              ) : (
-                <VirtualizedGrid
-                  items={sortedImportedCourses}
-                  getItemKey={course => course.id}
-                  renderItem={course =>
-                    courseViewMode === 'compact' ? (
-                      <ImportedCourseCompactCard
-                        course={course}
-                        allTags={allTags}
-                        completionPercent={importedCompletionMap.get(course.id) ?? 0}
-                      />
-                    ) : (
-                      <ImportedCourseCard
-                        course={course}
-                        allTags={allTags}
-                        completionPercent={importedCompletionMap.get(course.id) ?? 0}
-                        momentumScore={momentumMap.get(course.id)}
-                      />
-                    )
-                  }
-                  data-testid="imported-courses-grid"
-                  gridClassName={getGridClassName(
-                    courseGridColumns,
-                    courseViewMode === 'compact' ? 'compact' : 'grid'
-                  )}
-                />
-              )
+                  ) : courseViewMode === 'compact' ? (
+                    <ImportedCourseCompactCard
+                      course={course}
+                      allTags={allTags}
+                      completionPercent={importedCompletionMap.get(course.id) ?? 0}
+                    />
+                  ) : (
+                    <ImportedCourseCard
+                      course={course}
+                      allTags={allTags}
+                      completionPercent={importedCompletionMap.get(course.id) ?? 0}
+                      momentumScore={momentumMap.get(course.id)}
+                    />
+                  )
+                }
+              />
             )}
           </div>
         </>
