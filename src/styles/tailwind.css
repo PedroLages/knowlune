@@ -1,6 +1,17 @@
 @import 'tailwindcss' source(none);
 @source '../**/*.{js,ts,jsx,tsx}';
 
+/* Defensive safelist for the audiobook cover frame.
+ * The AudiobookRenderer cover container at AudiobookRenderer.tsx relies on
+ * `aspect-square`, `object-cover`, `h-full w-full`, and the arbitrary value
+ * `rounded-[24px]` to render edge-to-edge over non-square ABS source images.
+ * If Tailwind v4's source scanner ever misses one of these (e.g. JSX moved
+ * behind a dynamic className builder), the cover silently letterboxes — a
+ * regression we observed and fixed; this safelist + tests/e2e/audiobook-cover-letterbox.spec.ts
+ * prevent it from coming back.
+ */
+@source inline("aspect-square shrink-0 object-cover h-full w-full rounded-[24px] max-w-80 overflow-hidden bg-muted");
+
 @import 'tw-animate-css';
 
 @theme {
