@@ -683,6 +683,26 @@ export default defineConfig({
     }]
   },
   build: {
+    // E64-S01: Exclude AI SDK chunks from initial modulepreload hints.
+    // The AI SDKs are dynamically imported on-demand (Notes Q&A flow), but
+    // Vite's static analysis traces transitive references and would otherwise
+    // emit <link rel="modulepreload"> tags that defeat the lazy loading.
+    // Filtering them here trims ~100 KB gzipped from the initial page load.
+    modulePreload: {
+      resolveDependencies: (_filename, deps) => {
+        const excludePatterns = [
+          'ai-anthropic',
+          'ai-sdk-core',
+          'ai-openai',
+          'ai-google',
+          'ai-groq',
+          'ai-zhipu',
+        ]
+        return deps.filter(
+          (dep) => !excludePatterns.some((pattern) => dep.includes(pattern))
+        )
+      },
+    },
     rollupOptions: {
       // Exclude WebLLM from the bundle — it's a 6MB ML runtime used only in
       // the experimental /webllm-test route. Load it from CDN at runtime instead.
