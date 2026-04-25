@@ -16,7 +16,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
-import { AlertTriangle, ArrowLeft, RefreshCw } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, Laptop, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/db'
 import { useCourseAdapter } from '@/hooks/useCourseAdapter'
@@ -266,6 +266,13 @@ export function UnifiedCourseDetail() {
 
   const storeCourse = importedCourses.find(c => c.id === courseId)
 
+  const showLocalFilesUnavailable =
+    course?.source === 'local' &&
+    typeof window !== 'undefined' &&
+    !('showDirectoryPicker' in window) &&
+    videos.length === 0 &&
+    pdfs.length === 0
+
   // Loading state
   if (adapterLoading || contentLoading) {
     return (
@@ -327,6 +334,20 @@ export function UnifiedCourseDetail() {
         ctaLessonId={ctaLessonId}
         ctaLessonTitle={ctaLessonTitle}
       />
+
+      {showLocalFilesUnavailable && (
+        <div
+          data-testid="local-files-unavailable-banner"
+          role="status"
+          className="flex items-start gap-3 rounded-xl border border-border bg-muted p-4 text-sm text-muted-foreground mb-4"
+        >
+          <Laptop className="size-5 shrink-0 mt-0.5" aria-hidden="true" />
+          <p>
+            This course&apos;s files are stored on your Mac. To play lessons, open Knowlune on
+            the device where you imported them.
+          </p>
+        </div>
+      )}
 
       {loadError && (
         <div
