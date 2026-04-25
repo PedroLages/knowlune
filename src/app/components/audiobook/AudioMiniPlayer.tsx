@@ -18,6 +18,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Play, Pause, SkipBack, SkipForward, ChevronUp, BookOpen, X } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
+import { useAudiobookPrefsStore } from '@/stores/useAudiobookPrefsStore'
 import { useBookStore } from '@/stores/useBookStore'
 import { sharedAudioRef } from '@/app/hooks/useAudioPlayer'
 import { formatAudioTime } from '@/app/hooks/useAudioPlayer'
@@ -34,6 +35,10 @@ export function AudioMiniPlayer() {
   const currentTime = useAudioPlayerStore(s => s.currentTime)
   const currentChapterIndex = useAudioPlayerStore(s => s.currentChapterIndex)
   const setIsPlaying = useAudioPlayerStore(s => s.setIsPlaying)
+
+  // Configurable skip intervals (E121-style polish — defaults 15/30)
+  const skipBackSeconds = useAudiobookPrefsStore(s => s.skipBackSeconds)
+  const skipForwardSeconds = useAudiobookPrefsStore(s => s.skipForwardSeconds)
 
   const books = useBookStore(s => s.books)
   const book = books.find(b => b.id === currentBookId) ?? null
@@ -82,14 +87,14 @@ export function AudioMiniPlayer() {
   const handleSkipBack = useCallback(() => {
     const audio = sharedAudioRef.current
     if (!audio) return
-    audio.currentTime = Math.max(0, audio.currentTime - 15)
-  }, [])
+    audio.currentTime = Math.max(0, audio.currentTime - skipBackSeconds)
+  }, [skipBackSeconds])
 
   const handleSkipForward = useCallback(() => {
     const audio = sharedAudioRef.current
     if (!audio) return
-    audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 30)
-  }, [])
+    audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + skipForwardSeconds)
+  }, [skipForwardSeconds])
 
   const handleExpand = () => {
     navigate(`/library/${currentBookId}/read`)
@@ -177,7 +182,7 @@ export function AudioMiniPlayer() {
           type="button"
           onClick={handleSkipBack}
           className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-          aria-label="Skip back 15 seconds"
+          aria-label={`Skip back ${skipBackSeconds} seconds`}
         >
           <SkipBack className="size-5" aria-hidden="true" />
         </button>
@@ -185,7 +190,7 @@ export function AudioMiniPlayer() {
           type="button"
           onClick={handleSkipForward}
           className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-          aria-label="Skip forward 30 seconds"
+          aria-label={`Skip forward ${skipForwardSeconds} seconds`}
         >
           <SkipForward className="size-5" aria-hidden="true" />
         </button>

@@ -71,7 +71,17 @@ export function SpeedControl({ bookId }: SpeedControlProps) {
                 )}
                 data-testid={`speed-option-${rate}`}
               >
-                <span>{formatSpeed(rate)}</span>
+                <span className="flex items-baseline gap-1.5">
+                  <span>{formatSpeed(rate)}</span>
+                  {rate === 1.0 && (
+                    <span
+                      className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium"
+                      data-testid="speed-default-label"
+                    >
+                      Default
+                    </span>
+                  )}
+                </span>
                 {isActive && <Check className="size-4 text-brand" aria-hidden="true" />}
               </li>
             )

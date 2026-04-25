@@ -199,6 +199,9 @@ export type UserSettingsPatch = {
   skipSilence?: boolean
   defaultSleepTimer?: string | number
   autoBookmarkOnStop?: boolean
+  showRemainingTime?: boolean
+  skipBackSeconds?: number
+  skipForwardSeconds?: number
   // useReadingGoalStore (no streak fields)
   dailyType?: string
   dailyTarget?: number
@@ -336,7 +339,7 @@ export async function hydrateSettingsFromSupabase(
     // Lazy imports — Zustand stores are singleton modules; getState() is safe outside React.
     const [
       { useReaderStore },
-      { useAudiobookPrefsStore },
+      { useAudiobookPrefsStore, VALID_TIMERS, VALID_SKIP_BACK, VALID_SKIP_FORWARD },
       { useReadingGoalStore },
       { useEngagementPrefsStore },
     ] = await Promise.all([
@@ -387,8 +390,7 @@ export async function hydrateSettingsFromSupabase(
       }
     }
     if (s.defaultSleepTimer !== undefined) {
-      const validTimers = new Set(['off', 15, 30, 45, 60, 'end-of-chapter'])
-      if (validTimers.has(s.defaultSleepTimer as string | number)) {
+      if (VALID_TIMERS.has(s.defaultSleepTimer as import('@/stores/useAudiobookPrefsStore').SleepTimerDefault)) {
         useAudiobookPrefsStore
           .getState()
           .setDefaultSleepTimer(
@@ -401,6 +403,15 @@ export async function hydrateSettingsFromSupabase(
       if (current !== s.autoBookmarkOnStop) {
         useAudiobookPrefsStore.getState().toggleAutoBookmark()
       }
+    }
+    if (typeof s.showRemainingTime === 'boolean') {
+      useAudiobookPrefsStore.getState().setShowRemainingTime(s.showRemainingTime)
+    }
+    if (typeof s.skipBackSeconds === 'number' && (VALID_SKIP_BACK as readonly number[]).includes(s.skipBackSeconds)) {
+      useAudiobookPrefsStore.getState().setSkipBackSeconds(s.skipBackSeconds)
+    }
+    if (typeof s.skipForwardSeconds === 'number' && (VALID_SKIP_FORWARD as readonly number[]).includes(s.skipForwardSeconds)) {
+      useAudiobookPrefsStore.getState().setSkipForwardSeconds(s.skipForwardSeconds)
     }
 
     // ── useReadingGoalStore (no streak fields) ──
