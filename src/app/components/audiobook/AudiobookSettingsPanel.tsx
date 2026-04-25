@@ -19,8 +19,17 @@ import { Switch } from '@/app/components/ui/switch'
 import { Label } from '@/app/components/ui/label'
 import { Separator } from '@/app/components/ui/separator'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/app/components/ui/select'
+import {
   useAudiobookPrefsStore,
   VALID_SPEEDS,
+  VALID_SKIP_BACK,
+  VALID_SKIP_FORWARD,
   type SleepTimerDefault,
 } from '@/stores/useAudiobookPrefsStore'
 
@@ -34,11 +43,13 @@ const SPEED_OPTIONS = VALID_SPEEDS
 
 const SLEEP_TIMER_OPTIONS: { value: SleepTimerDefault; label: string }[] = [
   { value: 'off', label: 'Off' },
-  { value: 15, label: '15 minutes' },
-  { value: 30, label: '30 minutes' },
-  { value: 45, label: '45 minutes' },
-  { value: 60, label: '60 minutes' },
   { value: 'end-of-chapter', label: 'End of chapter' },
+  { value: 60, label: '60 minutes' },
+  { value: 45, label: '45 minutes' },
+  { value: 30, label: '30 minutes' },
+  { value: 15, label: '15 minutes' },
+  { value: 10, label: '10 minutes' },
+  { value: 5, label: '5 minutes' },
 ]
 
 function formatSpeed(rate: number): string {
@@ -51,10 +62,14 @@ export function AudiobookSettingsPanel({ open, onOpenChange }: AudiobookSettings
     skipSilence,
     defaultSleepTimer,
     autoBookmarkOnStop,
+    skipBackSeconds,
+    skipForwardSeconds,
     setDefaultSpeed,
     toggleSkipSilence,
     setDefaultSleepTimer,
     toggleAutoBookmark,
+    setSkipBackSeconds,
+    setSkipForwardSeconds,
   } = useAudiobookPrefsStore()
 
   return (
@@ -127,6 +142,66 @@ export function AudiobookSettingsPanel({ open, onOpenChange }: AudiobookSettings
                 aria-label="Toggle skip silence"
                 data-testid="skip-silence-toggle"
               />
+            </div>
+
+            {/* Skip-back / Skip-forward intervals */}
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="skip-back-interval" className="text-sm font-medium">
+                  Skip back
+                </Label>
+                <Select
+                  value={String(skipBackSeconds)}
+                  onValueChange={value => setSkipBackSeconds(Number(value))}
+                >
+                  <SelectTrigger
+                    id="skip-back-interval"
+                    aria-label="Skip back interval"
+                    data-testid="skip-back-select"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VALID_SKIP_BACK.map(seconds => (
+                      <SelectItem
+                        key={seconds}
+                        value={String(seconds)}
+                        data-testid={`skip-back-option-${seconds}`}
+                      >
+                        {seconds} seconds
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="skip-forward-interval" className="text-sm font-medium">
+                  Skip forward
+                </Label>
+                <Select
+                  value={String(skipForwardSeconds)}
+                  onValueChange={value => setSkipForwardSeconds(Number(value))}
+                >
+                  <SelectTrigger
+                    id="skip-forward-interval"
+                    aria-label="Skip forward interval"
+                    data-testid="skip-forward-select"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VALID_SKIP_FORWARD.map(seconds => (
+                      <SelectItem
+                        key={seconds}
+                        value={String(seconds)}
+                        data-testid={`skip-forward-option-${seconds}`}
+                      >
+                        {seconds} seconds
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </section>
 

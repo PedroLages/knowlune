@@ -10,7 +10,7 @@
  * @since E87-S02
  */
 import { useEffect, useCallback, useState, useRef, useMemo } from 'react'
-import { Play, Pause, SkipBack, SkipForward, BookOpen, Settings, Scissors } from 'lucide-react'
+import { Play, Pause, SkipBack, SkipForward, BookOpen, Settings, ListVideo } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/db/schema'
 import { Button } from '@/app/components/ui/button'
@@ -89,6 +89,10 @@ export function AudiobookRenderer({
   } | null>(null)
   const setCurrentBook = useAudioPlayerStore(s => s.setCurrentBook)
   const skipSilence = useAudiobookPrefsStore(s => s.skipSilence)
+  const showRemainingTime = useAudiobookPrefsStore(s => s.showRemainingTime)
+  const setShowRemainingTime = useAudiobookPrefsStore(s => s.setShowRemainingTime)
+  const skipBackSeconds = useAudiobookPrefsStore(s => s.skipBackSeconds)
+  const skipForwardSeconds = useAudiobookPrefsStore(s => s.skipForwardSeconds)
   const silenceDetection = useSilenceDetection({ enabled: skipSilence, audioRef, isPlaying })
   const resolvedCoverUrl = useBookCoverUrl({ bookId: book.id, coverUrl: book.coverUrl })
   const { activeOption, badgeText, setTimer, cancelTimer } = useSleepTimer()
@@ -225,6 +229,15 @@ export function AudiobookRenderer({
     deliberateStopRef,
   })
 
+  // Skip handlers wrapped in useCallback so MediaSession re-registers handlers
+  // when the configured intervals change (verified via Unit 0 discovery: useMediaSession's
+  // setActionHandler effect depends on these callbacks, so a fresh identity = fresh closure).
+  const handleSkipBack = useCallback(() => skipBack(skipBackSeconds), [skipBack, skipBackSeconds])
+  const handleSkipForward = useCallback(
+    () => skipForward(skipForwardSeconds),
+    [skipForward, skipForwardSeconds]
+  )
+
   // Media Session API — OS-level lock screen / Bluetooth headset controls (E87-S05)
   useMediaSession({
     title: currentChapterTitle,
@@ -237,8 +250,8 @@ export function AudiobookRenderer({
     isPlaying,
     onPlay: play,
     onPause: pause,
-    onSkipBack: () => skipBack(15),
-    onSkipForward: () => skipForward(30),
+    onSkipBack: handleSkipBack,
+    onSkipForward: handleSkipForward,
     onPrevTrack: () => loadChapter(Math.max(0, currentChapterIndex - 1), isPlaying),
     onNextTrack: () =>
       loadChapter(Math.min(book.chapters.length - 1, currentChapterIndex + 1), isPlaying),
@@ -253,13 +266,13 @@ export function AudiobookRenderer({
     },
     {
       key: 'arrowleft',
-      description: 'Skip back 15s',
-      action: () => skipBack(15),
+      description: `Skip back ${skipBackSeconds}s`,
+      action: handleSkipBack,
     },
     {
       key: 'arrowright',
-      description: 'Skip forward 30s',
-      action: () => skipForward(30),
+      description: `Skip forward ${skipForwardSeconds}s`,
+      action: handleSkipForward,
     },
     {
       key: 'arrowup',
@@ -466,23 +479,35 @@ export function AudiobookRenderer({
             disabled={isLoading || duration === 0}
             className="w-full"
           />
-          <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
+          <div className="flex justify-between items-center text-xs text-muted-foreground tabular-nums">
             <span data-testid="current-time-display">{formatAudioTime(currentTime)}</span>
-            <span>{formatAudioTime(duration)}</span>
+            <button
+              type="button"
+              onClick={() => setShowRemainingTime(!showRemainingTime)}
+              aria-label="Toggle time display"
+              aria-pressed={showRemainingTime}
+              className="-my-2 -mr-2 flex min-h-[44px] items-center rounded-md px-3 text-xs text-muted-foreground tabular-nums hover:text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
+              data-testid="duration-display"
+            >
+              {showRemainingTime
+                ? `−${formatAudioTime(Math.max(0, duration - currentTime))}`
+                : formatAudioTime(duration)}
+            </button>
           </div>
         </div>
 
         {/* Playback Controls */}
         <div className="flex items-center gap-8">
-          {/* Skip Back 15s */}
+          {/* Skip Back */}
           <button
-            onClick={() => skipBack(15)}
+            onClick={handleSkipBack}
             disabled={isLoading}
             className="flex flex-col items-center gap-1 rounded-full p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 min-w-[48px] min-h-[48px] justify-center"
-            aria-label="Skip back 15 seconds"
+            aria-label={`Skip back ${skipBackSeconds} seconds`}
+            data-testid="skip-back-button"
           >
             <SkipBack className="size-6" aria-hidden="true" />
-            <span className="text-[10px] tabular-nums">15s</span>
+            <span className="text-[10px] tabular-nums">{skipBackSeconds}s</span>
           </button>
 
           {/* Play / Pause */}
@@ -502,15 +527,16 @@ export function AudiobookRenderer({
             )}
           </button>
 
-          {/* Skip Forward 30s */}
+          {/* Skip Forward */}
           <button
-            onClick={() => skipForward(30)}
+            onClick={handleSkipForward}
             disabled={isLoading}
             className="flex flex-col items-center gap-1 rounded-full p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 min-w-[48px] min-h-[48px] justify-center"
-            aria-label="Skip forward 30 seconds"
+            aria-label={`Skip forward ${skipForwardSeconds} seconds`}
+            data-testid="skip-forward-button"
           >
             <SkipForward className="size-6" aria-hidden="true" />
-            <span className="text-[10px] tabular-nums">30s</span>
+            <span className="text-[10px] tabular-nums">{skipForwardSeconds}s</span>
           </button>
         </div>
 
@@ -559,7 +585,7 @@ export function AudiobookRenderer({
             aria-label="Clips"
             data-testid="clips-panel-button"
           >
-            <Scissors className="size-5" aria-hidden="true" />
+            <ListVideo className="size-5" aria-hidden="true" />
           </button>
           <button
             onClick={() => setSettingsOpen(true)}
