@@ -1505,4 +1505,8 @@ development_status:
   # iOS install instruction card, manifest shortcuts, branded offline page, Lighthouse 100
   # Stories to be created by /ce-orchestrator
   # ──────────────────────────────────────────────────
-  epic-120: in-progress
+  epic-120: done
+  epic-120-s01: done  # iOS splash screens + viewport-fit=cover (PR #437)
+  epic-120-s02: done  # SW update prompt + MediaSession API (PR #437)
+  epic-120-s03: done  # iOS install banner + manifest shortcuts (PR #437)
+  epic-120-s04: done  # Branded offline page + NetworkOnly ABS streams (PR #437)
