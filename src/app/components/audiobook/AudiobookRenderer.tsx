@@ -389,8 +389,8 @@ export function AudiobookRenderer({
             backgroundImage: `url(${resolvedCoverUrl})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            filter: 'blur(80px) saturate(1.5)',
-            opacity: 0.4,
+            filter: 'blur(80px)',
+            opacity: 0.15,
             transform: 'scale(1.1)',
           }}
           aria-hidden="true"
@@ -398,12 +398,12 @@ export function AudiobookRenderer({
       )}
       <div className="relative z-10 flex flex-col items-center gap-8 p-6 max-w-lg mx-auto w-full min-h-[60vh] justify-center">
         {/* Cover Art */}
-        <div className="w-full max-w-80 aspect-square rounded-[24px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] bg-muted flex items-center justify-center">
+        <div className="w-full max-w-80 aspect-square rounded-[24px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-center justify-center bg-muted">
           {resolvedCoverUrl ? (
             <img
               src={resolvedCoverUrl}
               alt={`Cover of ${book.title}`}
-              className="h-full w-full object-contain"
+              className="h-full w-full object-cover"
               onError={e => {
                 e.currentTarget.style.display = 'none'
               }}
