@@ -37,7 +37,6 @@ export function LibraryFilters({ viewToggle }: LibraryFiltersProps = {}) {
 
   const counts = useMemo(
     () => getBookCountByStatus(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [books, activeSource, getBookCountByStatus]
   )
   const activeStatus = filters.status || 'all'
