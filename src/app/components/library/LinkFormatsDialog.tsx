@@ -10,7 +10,7 @@
  * @since E104-S01
  */
 
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import {
   BookOpen,
   Headphones,
@@ -21,11 +21,13 @@ import {
 } from 'lucide-react'
 import type { Book, ChapterMapping } from '@/data/types'
 import { useBookStore } from '@/stores/useBookStore'
+import { useChapterMappingStore } from '@/stores/useChapterMappingStore'
 import {
   computeChapterMapping,
   type EpubChapterInput,
   type AudioChapterInput,
 } from '@/lib/chapterMatcher'
+import { rescanBookChapters } from '@/lib/rescanBookChapters'
 import {
   Dialog,
   DialogContent,
@@ -53,6 +55,8 @@ interface LinkFormatsDialogProps {
   book: Book
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Optional ref to the trigger element — focus returns here after the dialog closes (WCAG 2.1 SC 3.2.2). */
+  triggerRef?: React.RefObject<HTMLButtonElement | null>
 }
 
 /** Render a small book thumbnail with title/author for the book picker. */
@@ -108,7 +112,7 @@ function BookPickerCard({
           {book.title}
         </p>
         <p className="text-xs text-muted-foreground truncate">{book.author}</p>
-        <Badge variant="secondary" className="w-fit text-[10px] mt-0.5">
+        <Badge variant="secondary" className="w-fit text-[11px] mt-0.5">
           {book.format === 'audiobook' ? 'Audiobook' : book.format.toUpperCase()}
         </Badge>
       </div>
@@ -165,7 +169,7 @@ function ConfidenceBar({ score }: { score: number }) {
   )
 }
 
-export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialogProps) {
+export function LinkFormatsDialog({ book, open, onOpenChange, triggerRef }: LinkFormatsDialogProps) {
   const books = useBookStore(s => s.books)
   const linkBooks = useBookStore(s => s.linkBooks)
   const unlinkBooks = useBookStore(s => s.unlinkBooks)
@@ -192,11 +196,28 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
           resetTimerRef.current = null
           setView('select')
         }, 300)
+        // WCAG 2.1 SC 3.2.2 — return focus to the opening trigger after dialog closes
+        const focusTarget =
+          triggerRef?.current ??
+          (document.querySelector<HTMLElement>('[data-link-formats-trigger]') ?? null)
+        if (focusTarget) {
+          // Defer until after Radix finishes its own focus restoration cycle
+          setTimeout(() => focusTarget.focus(), 0)
+        }
       }
       onOpenChange(next)
     },
-    [book.linkedBookId, onOpenChange]
+    [book.linkedBookId, onOpenChange, triggerRef]
   )
+
+  // Clear any pending reset timer on unmount to avoid state updates on an unmounted component.
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current !== null) {
+        clearTimeout(resetTimerRef.current)
+      }
+    }
+  }, [])
 
   /** Determine which format to show as candidates. */
   const targetFormat = book.format === 'audiobook' ? 'epub' : 'audiobook'
@@ -236,7 +257,7 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
   }
 
   /** Compute mappings and advance to the correct next view. */
-  const handlePairPressed = useCallback(() => {
+  const handlePairPressed = useCallback(async () => {
     // Read selectedId from state and resolve against a fresh books snapshot
     // to avoid stale closure on selectedBook derived during the previous render
     const currentSelectedId = selectedId
@@ -245,7 +266,49 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
     const freshSelected = freshBooks.find(b => b.id === currentSelectedId)
     if (!freshSelected) return
 
-    const { epubBook, audioBook } = resolveEpubAudio(book, freshSelected)
+    // eslint-disable-next-line prefer-const -- audioBook is reassigned after lazy ABS chapter fetch below
+    let { epubBook, audioBook } = resolveEpubAudio(book, freshSelected)
+
+    // A.3 — Lazy ABS chapter fetch: ABS list endpoint omits media.chapters, so
+    // synced audiobooks land with a synthesized "Chapter 1" placeholder. If the
+    // audiobook has only the placeholder and is ABS-backed, pull real chapters
+    // before matching. One HTTP call per pairing attempt; cached into the Book.
+    if (
+      audioBook.absServerId &&
+      audioBook.absItemId &&
+      audioBook.chapters.length <= 1 &&
+      audioBook.source.type === 'remote'
+    ) {
+      setSaving(true)
+      try {
+        const result = await rescanBookChapters(audioBook)
+        if (result.ok) {
+          // Use the freshly persisted version so the matcher sees real chapters.
+          audioBook = { ...audioBook, chapters: result.chapters }
+        }
+        // Non-ok results fall through to the refuse-to-link guard below.
+      } finally {
+        setSaving(false)
+      }
+    }
+
+    // A.5 — Genuine single-track refuse-to-link guard. Either side without
+    // chapters means no meaningful mapping; tell the user clearly instead of
+    // saving an empty mapping.
+    if (audioBook.chapters.length <= 1) {
+      toast.error(
+        'This audiobook has no chapter markers. Chapter-level linking is unavailable. ' +
+          'Set chapter markers in Audiobookshelf or re-encode the file with chapter metadata.'
+      )
+      return
+    }
+    if (epubBook.chapters.length === 0) {
+      toast.error(
+        'This EPUB has no table of contents. Try "Re-scan Chapters" from the book menu, ' +
+          'or use an EPUB with a populated TOC.'
+      )
+      return
+    }
 
     const computed = computeChapterMapping(toEpubInputs(epubBook), toAudioInputs(audioBook))
     setMappings(computed)
@@ -266,20 +329,47 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
     async (finalMappings?: ChapterMapping[]) => {
       if (!selectedBook) return
       setSaving(true)
+
+      // A.4 — Persist mapping alongside the link. linkBooks writes the bidirectional
+      // linkedBookId on both Book records; saveMapping writes the chapter pairs.
+      // If saveMapping fails after linkBooks succeeded, roll back the link so we
+      // never end up with linkedBookId set but no mapping (which would orphan the
+      // format-switch UI into an unrecoverable state).
+      const { saveMapping } = useChapterMappingStore.getState()
+      const { epubBook, audioBook } = resolveEpubAudio(book, selectedBook)
+      const nowIso = new Date().toISOString()
+
       try {
         await linkBooks(book.id, selectedBook.id)
-        // TODO E103-S01: persist finalMappings to ChapterMappingRecord table when that store action exists
-        // finalMappings intentionally unused until the ChapterMappingRecord store action is implemented
-        void finalMappings
-        onOpenChange(false)
       } catch (err) {
         console.error('[LinkFormatsDialog] linkBooks failed:', err)
         toast.error('Failed to link formats. Please try again.')
+        setSaving(false)
+        return
+      }
+
+      try {
+        await saveMapping(epubBook.id, audioBook.id, {
+          mappings: finalMappings ?? mappings ?? [],
+          computedAt: nowIso,
+          updatedAt: nowIso,
+        })
+        toast.success(`Linked "${epubBook.title}" and "${audioBook.title}".`)
+        onOpenChange(false)
+      } catch (err) {
+        console.error('[LinkFormatsDialog] saveMapping failed; rolling back link:', err)
+        try {
+          await unlinkBooks(book.id, selectedBook.id)
+        } catch (rollbackErr) {
+          // silent-catch-ok: rollback failure is reported via the outer toast.error below; surfacing two toasts would be noisy. The console.error here preserves diagnostics.
+          console.error('[LinkFormatsDialog] rollback unlinkBooks failed:', rollbackErr)
+        }
+        toast.error('Failed to save chapter mapping. Please try again.')
       } finally {
         setSaving(false)
       }
     },
-    [book.id, selectedBook, linkBooks, onOpenChange]
+    [book, selectedBook, linkBooks, unlinkBooks, mappings, onOpenChange]
   )
 
   /** Unlink the current pairing. */
@@ -321,7 +411,7 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-lg" aria-describedby="link-formats-desc">
+      <DialogContent className="max-w-lg" aria-describedby="link-formats-desc" aria-modal="true">
         {/* ── Already linked → show unlink option ───────────────────────────── */}
         {alreadyLinked && view !== 'select' ? (
           <>

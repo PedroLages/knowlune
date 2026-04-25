@@ -22,6 +22,7 @@ import { Progress } from '@/app/components/ui/progress'
 import { Button } from '@/app/components/ui/button'
 import { useBookStore } from '@/stores/useBookStore'
 import { extractEpubMetadata } from '@/services/EpubMetadataService'
+import { extractEpubChapters } from '@/lib/epubChapterExtractor'
 import { fetchOpenLibraryMetadata, fetchCoverImage } from '@/services/OpenLibraryService'
 import { opfsStorageService } from '@/services/OpfsStorageService'
 import type { Book, BookGenre, BookStatus } from '@/data/types'
@@ -250,6 +251,24 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
         coverUrl = coverPath === 'indexeddb' ? `opfs-cover://${bookId}` : `opfs://${coverPath}`
       }
 
+      // Extract EPUB TOC chapters for chapter-mapping (E103 — Link Formats).
+      // Failure is non-fatal: empty chapters[] still imports; user can re-scan later.
+      let extractedChapters: Book['chapters'] = []
+      try {
+        const fileBuffer = await file.arrayBuffer()
+        const tocItems = await extractEpubChapters(fileBuffer)
+        extractedChapters = tocItems.map((item, index) => ({
+          id: item.href,
+          bookId,
+          title: item.label,
+          order: index,
+          position: { type: 'cfi', value: item.href },
+        }))
+      } catch (err) {
+        // silent-catch-ok: chapter extraction failure is non-fatal — book imports with empty chapters[]; user can re-scan from the context menu later.
+        console.warn('[BookImportDialog] EPUB chapter extraction failed:', err)
+      }
+
       const book: Book = {
         id: bookId,
         title: title.trim(),
@@ -259,7 +278,7 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
         coverUrl,
         genre: genre !== 'Other' ? (genre as BookGenre) : undefined, // E108-S05: dedicated genre field
         tags: genre !== 'Other' ? [genre] : [],
-        chapters: [],
+        chapters: extractedChapters,
         source: { type: 'local', opfsPath: '' }, // importBook sets the real path
         progress: 0,
         createdAt: new Date().toISOString(),

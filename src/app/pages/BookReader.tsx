@@ -113,6 +113,7 @@ export function BookReader() {
   const readingProgress = useReaderStore(s => s.readingProgress)
   const setReadingProgress = useReaderStore(s => s.setReadingProgress)
   const setCurrentCfi = useReaderStore(s => s.setCurrentCfi)
+  const currentCfi = useReaderStore(s => s.currentCfi)
   const theme = useReaderStore(s => s.theme)
   const tocOpen = useReaderStore(s => s.tocOpen)
   const setTocOpen = useReaderStore(s => s.setTocOpen)
@@ -618,21 +619,52 @@ export function BookReader() {
   // Derived: whether there is a cached fallback available (E88-S03)
   const hasCachedFallback = remoteEpubError?.hasCachedVersion ?? false
 
-  // Read ?startChapter param for format switching (E103-S02)
+  // Read format-switch params (E103) — captured once via refs so we can strip
+  // them from the URL immediately while still applying them after the renderer mounts.
   const startChapterParam = searchParams.get('startChapter')
   const startChapterIndex = startChapterParam !== null ? parseInt(startChapterParam, 10) : null
+  const offsetCfiParamRef = useRef<string | null>(null)
+  const seekSecondsParamRef = useRef<number | null>(null)
+  const chapterPctParamRef = useRef<number | null>(null)
+  if (offsetCfiParamRef.current === null) {
+    offsetCfiParamRef.current = searchParams.get('offsetCfi')
+  }
+  if (seekSecondsParamRef.current === null) {
+    const v = searchParams.get('seekSeconds')
+    if (v !== null) {
+      const parsed = parseFloat(v)
+      if (Number.isFinite(parsed)) seekSecondsParamRef.current = parsed
+    }
+  }
+  if (chapterPctParamRef.current === null) {
+    const v = searchParams.get('chapterPct')
+    if (v !== null) {
+      const parsed = parseFloat(v)
+      if (Number.isFinite(parsed)) chapterPctParamRef.current = parsed
+    }
+  }
 
-  // Clear ?startChapter from URL after reading it (prevent stale params on refresh)
+  // Clear format-switch params from the URL after capturing them — prevents
+  // stale params on refresh.
   useEffect(() => {
-    if (startChapterParam !== null) {
+    if (
+      startChapterParam !== null ||
+      searchParams.get('offsetCfi') !== null ||
+      searchParams.get('seekSeconds') !== null ||
+      searchParams.get('chapterPct') !== null
+    ) {
       const newParams = new URLSearchParams(searchParams)
       newParams.delete('startChapter')
+      newParams.delete('offsetCfi')
+      newParams.delete('seekSeconds')
+      newParams.delete('chapterPct')
       const newSearch = newParams.toString()
       navigate(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`, { replace: true })
     }
-  }, []) // Run once on mount only
+  }, []) // Run once on mount only — params captured via refs above before this effect fires
 
-  // For EPUB: navigate to startChapter's TOC href after TOC is loaded (E103-S02)
+  // For EPUB: navigate to startChapter's TOC href (or offsetCfi / chapterPct
+  // intra-chapter target) once the TOC is loaded (E103 — Story B).
   const startChapterAppliedRef = useRef(false)
   useEffect(() => {
     if (
@@ -646,13 +678,96 @@ export function BookReader() {
 
     const idx = Math.max(0, Math.min(startChapterIndex, toc.length - 1))
     const targetHref = toc[idx]?.href
-    if (targetHref) {
-      startChapterAppliedRef.current = true
-      renditionRef.current.display(targetHref).catch(() => {
-        // silent-catch-ok: chapter navigation failure falls back to current position
-      })
+    if (!targetHref) return
+
+    startChapterAppliedRef.current = true
+    const rendition = renditionRef.current
+    const offsetCfi = offsetCfiParamRef.current
+    const chapterPct = chapterPctParamRef.current
+
+    // Helper: surface an EpubLocations interface from the rendition's epub.js Book.
+    const getLocations = () => {
+      const epubBookInternal = (
+        rendition as unknown as {
+          book?: {
+            locations?: {
+              percentageFromCfi: (cfi: string) => number
+              cfiFromPercentage: (pct: number) => string
+              total?: number
+              generate?: (n: number) => Promise<void>
+            }
+          }
+        }
+      )?.book
+      return epubBookInternal?.locations ?? null
     }
-  }, [startChapterIndex, toc, book?.format])
+
+    // Wait up to 500ms for locations.generate to complete when an intra-chapter
+    // target is present, then apply the most precise display target available.
+    // Rationale (Story B.4): hard-reload with format-switch URL params can
+    // arrive before locations are ready; we'd compute garbage CFIs otherwise.
+    let cancelled = false
+    const applyTarget = async () => {
+      try {
+        if (offsetCfi || chapterPct !== null) {
+          const locs = getLocations()
+          if (locs && (!locs.total || locs.total <= 0) && typeof locs.generate === 'function') {
+            // Race generate() against a 500ms timeout
+            await Promise.race([
+              locs.generate(1000),
+              new Promise<void>(resolve => setTimeout(resolve, 500)),
+            ])
+          }
+        }
+        if (cancelled) return
+
+        let displayTarget: string | undefined
+
+        if (offsetCfi) {
+          // Direct CFI from EPUB→Audio→… chain, or precomputed by an external switcher.
+          displayTarget = offsetCfi
+        } else if (chapterPct !== null && book) {
+          // Audio→EPUB: we receive a chapter percentage; compute the CFI inside the
+          // mapped chapter using the freshly-generated locations.
+          const locs = getLocations()
+          const chapter = book.chapters.find(ch => ch.id === targetHref)
+          if (locs && (locs.total ?? 0) > 0 && chapter && chapter.position.type === 'cfi') {
+            try {
+              const startPct = locs.percentageFromCfi(chapter.position.value)
+              // Find the next chapter (by spine order) for end percentage.
+              const sorted = [...book.chapters].sort((a, b) => a.order - b.order)
+              const idx = sorted.findIndex(c => c.id === chapter.id)
+              const nextCh = idx >= 0 ? sorted[idx + 1] : undefined
+              const endPct =
+                nextCh && nextCh.position.type === 'cfi'
+                  ? locs.percentageFromCfi(nextCh.position.value)
+                  : 1
+              if (
+                Number.isFinite(startPct) &&
+                Number.isFinite(endPct) &&
+                endPct > startPct
+              ) {
+                const target = Math.max(0, Math.min(1, startPct + chapterPct * (endPct - startPct)))
+                const cfi = locs.cfiFromPercentage(target)
+                if (cfi) displayTarget = cfi
+              }
+            } catch {
+              // silent-catch-ok: fall through to chapter-start jump below
+            }
+          }
+        }
+
+        if (!displayTarget) displayTarget = targetHref
+        await rendition.display(displayTarget)
+      } catch {
+        // silent-catch-ok: chapter navigation failure falls back to current position
+      }
+    }
+    void applyTarget()
+    return () => {
+      cancelled = true
+    }
+  }, [startChapterIndex, toc, book?.format, book])
 
   const initialCfiRef = useRef<string | null>(null)
   useEffect(() => {
@@ -721,13 +836,21 @@ export function BookReader() {
             bookmarksOpen={audiobookBookmarksOpen}
             onBookmarksClose={() => setAudiobookBookmarksOpen(false)}
             onSwitchToReading={
-              hasMapping ? (chapterIndex: number) => switchToFormat(chapterIndex) : undefined
+              hasMapping
+                ? (chapterIndex: number, currentTime: number, audioElementDuration?: number) =>
+                    switchToFormat(chapterIndex, undefined, {
+                      audioCurrentTime: currentTime,
+                      audioElementDuration,
+                    })
+                : undefined
             }
             initialChapterIndex={
               startChapterIndex !== null
                 ? Math.max(0, Math.min(startChapterIndex, book.chapters.length - 1))
                 : undefined
             }
+            initialSeekSeconds={seekSecondsParamRef.current ?? undefined}
+            initialChapterPct={chapterPctParamRef.current ?? undefined}
             onBookmarkChange={handleBookmarkChange}
           />
         </Suspense>
@@ -760,7 +883,44 @@ export function BookReader() {
                 const epubChapterIndex = currentHref
                   ? toc.findIndex(item => item.href.split('#')[0] === currentHref.split('#')[0])
                   : -1
-                switchToFormat(Math.max(0, epubChapterIndex))
+                // Pull live CFI + locations for intra-chapter math (E103 — Story B).
+                // The resolver returns null when locations aren't ready; the hook degrades
+                // to chapter-start jump in that case.
+                let liveCfi: string | undefined
+                let liveLocations: import('@/lib/chapterSwitchResolver').EpubLocations | null = null
+                try {
+                  const loc = renditionRef.current?.currentLocation()
+                  const start = (loc as { start?: { cfi?: string } } | undefined)?.start
+                  liveCfi = start?.cfi ?? currentCfi ?? undefined
+                  const epubBookInternal = (
+                    renditionRef.current as unknown as {
+                      book?: {
+                        locations?: {
+                          percentageFromCfi: (cfi: string) => number
+                          cfiFromPercentage: (pct: number) => string
+                          total?: number
+                        }
+                      }
+                    }
+                  )?.book
+                  const locs = epubBookInternal?.locations
+                  if (locs && (locs.total ?? 0) > 0) {
+                    liveLocations = {
+                      percentageFromCfi: locs.percentageFromCfi.bind(locs),
+                      cfiFromPercentage: locs.cfiFromPercentage.bind(locs),
+                    }
+                  }
+                } catch {
+                  // silent-catch-ok: rendition may not yet have a current location
+                }
+                const epubChapterHref = currentHref
+                  ? currentHref.split('#')[0]
+                  : toc[Math.max(0, epubChapterIndex)]?.href.split('#')[0]
+                switchToFormat(Math.max(0, epubChapterIndex), undefined, {
+                  epubCurrentCfi: liveCfi,
+                  epubChapterHref,
+                  epubLocations: liveLocations,
+                })
               }
             : undefined
         }
