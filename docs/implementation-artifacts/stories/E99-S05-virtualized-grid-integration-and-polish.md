@@ -1,8 +1,8 @@
 ---
 story_id: E99-S05
 story_name: "Virtualized Grid Integration and Polish"
-status: ready-for-dev
-started:
+status: in-progress
+started: 2026-04-25
 completed:
 reviewed: false
 review_started:
@@ -184,4 +184,26 @@ so that scrolling stays 60fps and initial render stays fast even at 500+ courses
 
 ## Challenges and Lessons Learned
 
-[Document FPS benchmarks, screen reader test results, any fallbacks]
+### Implementation notes
+
+- The repo already had a generic `VirtualizedGrid` (used by `Authors.tsx` too) and `@tanstack/react-virtual` installed. Decision: **wrap, don't replace** — added `VirtualizedCoursesList` as a Courses-specific facade. This avoids regressing Authors and keeps the per-page virtualization concerns local.
+- The pre-existing `VirtualizedGrid` had a column-derived bypass (`items.length <= columns * 6`), which kicked in too eagerly at narrow viewports (only 6 items at 1 column). The wrapper's fixed `VIRTUALIZATION_THRESHOLD = 30` is now authoritative for Courses; the inner column-derived bypass is harmless because it's never reached with `courses.length >= 30`.
+- ARIA: chose `aria-label="N courses"` on the container over `aria-rowcount`. VoiceOver historically ignores `aria-rowcount` outside `<table>`/`role="grid"` contexts; the label form announces reliably across screen readers.
+- Focus rescue uses a post-render effect that checks `document.activeElement === document.body || === documentElement` and pulls focus back to the container with `tabIndex={-1}`. The `preventScroll: true` option avoids accidentally scrolling the page when rescuing.
+- Skeletons in list mode use `LIST_ROW_ESTIMATE_PX = 72` matching the real `ImportedCourseListRow` height — no CLS during the render→measure→swap cycle. `Skeleton` is also passed `shimmer={!prefersReducedMotion}` so the pulse animation respects the user's motion preference.
+- `prefers-reduced-motion` is read reactively via `useSyncExternalStore` (SSR-safe).
+
+### Performance / bundle
+
+- `@tanstack/react-virtual` was already a dependency (E99-S00 / earlier S01–S04 work introduced `VirtualizedGrid`); no new bundle cost.
+- Unit tests confirm the inner spacer height matches `count * estimateSize` (e.g. `7200px` for 100 items × 72px), proving the virtualizer is active.
+- Full FPS / TTI measurement at 500 courses in real browser is left as a manual verification step; the unit + E2E tests cover the structural invariants (DOM count < total, scroll-to-bottom reveals last row, threshold bypass, ARIA, reduced-motion).
+
+### Test coverage
+
+- 10 unit tests in `src/app/components/courses/__tests__/VirtualizedCoursesList.test.tsx` covering threshold bypass (5/29/30), all view modes, ARIA, empty state, and singular/plural label.
+- 5 E2E tests in `tests/e2e/e99-s05-virtualization.spec.ts` covering 100-course virtualization, scroll-to-bottom, view-mode switching, 10-course bypass, and reduced-motion.
+
+### Pre-existing E2E failures (not regressions)
+
+- `tests/e2e/e99-s01-view-mode-toggle.spec.ts` and `tests/e2e/e99-s02-grid-columns.spec.ts` fail on the baseline branch (without S05 changes) due to a missing `knowlune-guest` init script (post-E92 auth gate). S03 and S04 already include the gate; S01/S02 should be updated in a follow-up chore. Not within S05 scope.
