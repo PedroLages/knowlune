@@ -195,17 +195,18 @@ function VirtualizedListMode<T extends { id: string }>({
   )
 
   // Reset scroll when collection length changes (filter / search / sort).
+  // @tanstack/react-virtual's scrollToOffset only supports 'auto'; smooth
+  // scroll would be filtered out anyway. This also satisfies
+  // prefers-reduced-motion (no scroll-triggered animation).
   const prevLengthRef = useRef(courses.length)
   useEffect(() => {
     if (courses.length !== prevLengthRef.current) {
-      virtualizer.scrollToOffset(0, {
-        behavior: prefersReducedMotion ? 'auto' : 'auto', // virtualizer rejects 'smooth'; keep plain
-      })
+      virtualizer.scrollToOffset(0, { behavior: 'auto' })
       prevLengthRef.current = courses.length
       // Also forget skeleton state so re-measurement happens cleanly.
       setMeasuredRows(new Set())
     }
-  }, [courses.length, virtualizer, prefersReducedMotion])
+  }, [courses.length, virtualizer])
 
   // Focus rescue: if the focused element is no longer in the container after a
   // virtual-row recycle, redirect focus to the container itself so it never
