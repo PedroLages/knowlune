@@ -750,7 +750,7 @@ development_status:
   66-2-target-size-audit-and-fixes: done
   66-3-focus-not-obscured: done
   66-4-authentication-and-redundant-entry-audit: done
-  66-5-focus-indicator-enhancement-and-compliance-audit: ready-for-dev
+  66-5-focus-indicator-enhancement-and-compliance-audit: done
   66-6-wcag-2-2-compliance-report-and-automated-testing: ready-for-dev
   epic-66-retrospective: optional
 
