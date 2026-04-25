@@ -164,6 +164,15 @@ export function SyncUXShell({ children }: SyncUXShellProps) {
     void evaluateWizard(authUser.id)
   }, [authUser, linkDialogUserId, uploadWizardUserId, evaluateWizard])
 
+  // Race-condition guard: if linkDialogUserId becomes non-null after
+  // shouldShowDownloadOverlay resolved (async network gap), clear the
+  // overlay state so the two dialogs never co-appear.
+  useEffect(() => {
+    if (!linkDialogUserId) return
+    setDownloadOverlayUserId(null)
+    setDeferredOverlayReady(false)
+  }, [linkDialogUserId])
+
   // E97-S04: New-device download overlay gate.
   const evaluateDownloadOverlay = useCallback(async (userId: string) => {
     // __suppressSyncOverlays shim: test-only flag to prevent overlay mounting.

@@ -219,6 +219,17 @@ export function NewDeviceDownloadOverlay({ open, userId, onClose, watchdogMs }: 
                 {tableHint ? ` · ${tableHint}` : ''}
                 {isPartial ? ' (partial counts)' : ''}
               </p>
+              <div className="flex justify-center pt-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground text-xs"
+                  onClick={onClose}
+                  data-testid="new-device-download-background-hydrating"
+                >
+                  Continue in background
+                </Button>
+              </div>
             </div>
           </>
         )}
@@ -246,6 +257,17 @@ export function NewDeviceDownloadOverlay({ open, userId, onClose, watchdogMs }: 
                 {tableHint ? ` · ${tableHint}` : ''}
                 {isPartial ? ' (partial counts)' : ''}
               </p>
+              <div className="flex justify-center pt-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground text-xs"
+                  onClick={onClose}
+                  data-testid="new-device-download-background-downloading"
+                >
+                  Continue in background
+                </Button>
+              </div>
             </div>
           </>
         )}
