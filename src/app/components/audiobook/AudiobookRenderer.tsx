@@ -48,10 +48,31 @@ interface AudiobookRendererProps {
   /** Controlled from BookReader header to open the bookmark panel */
   bookmarksOpen?: boolean
   onBookmarksClose?: () => void
-  /** When provided, renders a "Switch to Reading" button. Called with current chapter index. Wired by BookReader when a chapter mapping exists (E103-S02). */
-  onSwitchToReading?: (currentChapterIndex: number) => void
+  /**
+   * When provided, renders a "Switch to Reading" button. Called with the user's
+   * current chapter index, current playback time (for intra-chapter math —
+   * E103 Story B), and the audio element's effective duration so the EPUB
+   * receiver can land within the right paragraph rather than just the chapter.
+   * Wired by BookReader when a chapter mapping exists.
+   */
+  onSwitchToReading?: (
+    currentChapterIndex: number,
+    currentTime: number,
+    audioElementDuration?: number
+  ) => void
   /** Initial chapter index to load on mount (E103-S02 format switching). Defaults to 0. */
   initialChapterIndex?: number
+  /**
+   * Initial seek (in seconds) within the loaded initial chapter (E103 Story B).
+   * Applied after loadChapter; gracefully no-op when out of range.
+   */
+  initialSeekSeconds?: number
+  /**
+   * Initial chapter percentage [0..1] (E103 Story B audio-receiver path). When
+   * present, it's converted to seconds using the loaded chapter's range and
+   * applied after loadChapter. `initialSeekSeconds` takes precedence if both set.
+   */
+  initialChapterPct?: number
   /** Called when a bookmark is created or deleted — lets parent refresh bookmark state */
   onBookmarkChange?: () => void
 }
@@ -62,6 +83,8 @@ export function AudiobookRenderer({
   onBookmarksClose,
   onSwitchToReading,
   initialChapterIndex = 0,
+  initialSeekSeconds,
+  initialChapterPct,
   onBookmarkChange,
 }: AudiobookRendererProps) {
   const {
@@ -182,6 +205,33 @@ export function AudiobookRenderer({
     setCurrentBook(book.id)
     if (!alreadyActive) {
       loadChapter(initialChapterIndex, false)
+
+      // E103 — Story B: format-switch URL params land us inside the chapter.
+      // Pattern matches handleBookmarkSeek (line ~362): wait one tick for the
+      // audio element to settle after the chapter source change, then seek.
+      if (typeof initialSeekSeconds === 'number' || typeof initialChapterPct === 'number') {
+        const ch = book.chapters[initialChapterIndex]
+        const chStart = ch && ch.position.type === 'time' ? ch.position.seconds : 0
+        const next = book.chapters[initialChapterIndex + 1]
+        const chEnd =
+          next && next.position.type === 'time'
+            ? next.position.seconds
+            : (book.totalDuration ?? null)
+        let target: number | null = null
+        if (typeof initialSeekSeconds === 'number') {
+          target = initialSeekSeconds
+        } else if (typeof initialChapterPct === 'number' && chEnd !== null && chEnd > chStart) {
+          target = chStart + initialChapterPct * (chEnd - chStart)
+        }
+        if (target !== null && Number.isFinite(target)) {
+          // Clamp into the chapter range so we never jump out of bounds.
+          const clamped =
+            chEnd !== null
+              ? Math.max(chStart, Math.min(target, Math.max(chStart, chEnd - 0.1)))
+              : Math.max(chStart, target)
+          setTimeout(() => seekTo(clamped), 100)
+        }
+      }
     }
   }, [book.id]) // book.id is stable after mount; loadChapter/setCurrentBook identity stable
 
@@ -455,7 +505,13 @@ export function AudiobookRenderer({
             onClick={() => {
               // Save position before navigating away (AC2 / E103-S02)
               savePosition()
-              onSwitchToReading?.(currentChapterIndex)
+              onSwitchToReading?.(
+                currentChapterIndex,
+                currentTime,
+                audioRef.current?.duration && Number.isFinite(audioRef.current.duration)
+                  ? audioRef.current.duration
+                  : undefined
+              )
             }}
             aria-label="Switch to reading"
             title="Switch to reading"
