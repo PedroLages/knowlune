@@ -147,4 +147,61 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+### Audit Results 2026-04-25
+
+- **Knowlune-owned UI is already WCAG 2.5.8 compliant** across every audited
+  route (Overview, MyClass, Courses, Authors, Reports, Settings, LearningPaths,
+  Notes, Challenges, Login) on both desktop (1280x720) and mobile (375x667)
+  viewports. The audit at `tests/audit/target-size.spec.ts` reports zero
+  violations against `main`.
+- `TopicFilter` chips already use `min-h-[44px]`, exceeding the 24 px floor.
+  No code change needed.
+- `StatusFilter` chips already use `min-h-[44px]`. No code change needed.
+- `TagBadgeList` remove-tag X buttons render at >= 24x24 once padding is
+  accounted for; the audit confirmed they don't trip the spacing exception.
+  No code change needed.
+- `TagEditor` add-tag button uses `p-3 -m-1.5` so the click area is 32 px
+  even though the visible glyph is 12 px. Compliant.
+- Quiz option buttons in `src/app/pages/Quiz.tsx` are documented as already
+  meeting Knowlune's 44x44 standard (AC 3 baseline).
+
+### Audit Harness Lessons
+
+- The `agentation` dev-mode visual feedback toolbar (rendered via portal in
+  `src/app/App.tsx` only when `NODE_ENV === 'development'`) injects ~10
+  small interactive controls into every page during E2E runs. The audit
+  helper excludes it via `data-feedback-toolbar` / `data-annotation-popup` /
+  `data-annotation-marker` ancestor markers and a CSS-Modules class fallback
+  (`styles-module__`) so it can't mask Knowlune's own state.
+- The WCAG 2.5.8 inline-text exception applies more broadly than just
+  `<p>` ancestors. Login / Landing / PremiumGate footer copy ("By continuing
+  you agree to our Privacy Policy and Terms of Service") put `<a>` elements
+  inside `<div>` runs. The helper detects this via a "parent has surrounding
+  text + parent is rendered inline-ish" heuristic.
+- `sr-only` skip-links (e.g., "Skip to sign-in form") clip to 1x1 by design
+  and are excluded — they're invisible until focused, so WCAG 2.5.8 doesn't
+  apply.
+- Spacing-exception math: nearest-neighbor distance is the L-infinity gap
+  (min of axis-aligned x and y distances). Two rects that overlap on either
+  axis are treated as having zero clearance on that axis, which is the
+  correct behavior for chip rows.
+
+### Exclusions Documented in Audit
+
+- Hidden elements (`display:none`, `visibility:hidden`, `aria-hidden="true"`,
+  zero-rect)
+- `sr-only` / `visually-hidden` accessibility helpers
+- Inline `<a>` inside prose runs (parent has > 3 chars of surrounding text
+  and inline/block layout)
+- Native `<select>` chrome (browser-controlled UI)
+- The third-party `agentation` dev toolbar (development-only visual feedback
+  widget)
+
+### Routes Deferred
+
+- Quiz, Flashcards, CourseDetail, AuthorProfile, LearningPathDetail require
+  seeded fixture content + active session to land on. These are covered by
+  their own e2e specs; the cross-cutting audit documents them as deferred
+  until they can be deterministically seeded. Their interactive elements
+  (quiz options, flashcard buttons) follow the same components audited on
+  the public routes, so coverage gap is small.
