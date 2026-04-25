@@ -1,9 +1,9 @@
 ---
 story_id: E66-S06
 story_name: "WCAG 2.2 Compliance Report and Automated Testing"
-status: ready-for-dev
-started:
-completed:
+status: done
+started: 2026-04-25
+completed: 2026-04-25
 reviewed: false
 review_started:
 review_gates_passed: []
@@ -183,4 +183,9 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Aggregator vs duplicating per-SC specs.** Existing audits (`target-size.spec.ts`, `focus-not-obscured.spec.ts`, `focus-indicators.spec.ts`) are auto-discovered by Playwright. Re-running them inside the aggregator would double the runtime and produce noisy duplicate failures, so the aggregator covers only the SCs without dedicated specs (2.5.7, 3.3.7, 3.3.8, 3.2.6).
+- **Runtime DOM check + source sentinel hybrid for SC 2.5.7.** Pure source-grep produces false positives on `useSortable` imports. Pure runtime checks fail on routes that need seeded fixtures. The hybrid (allowlist of source files asserted to import `MoveUpDownButtons` or have a matching aria-label, plus a runtime check on `/library` reading queue) covers both regression vectors.
+- **Two intentional `useSortable` exclusions.** `ReadingQueue.tsx` (move buttons live in `ReadingQueueView.tsx` consumer) and `ClipListPanel.tsx` (drag-only, low-impact editor surface) are documented as known partial gaps in the report rather than failing the suite.
+- **ES module `__dirname`.** Audit specs run as ESM under Vite/Playwright. `__dirname` is undefined; use `fileURLToPath(import.meta.url)` for repo-root resolution. Caught on first run.
+- **Template-literal aria-labels.** Initial regex excluded backticks; `ReadingQueueView` uses `aria-label={`Move ${book.title} up in queue`}`. The regex needed to admit `{` ` `` as a leading delimiter and stop at the closing backtick/quote. Verified with Node REPL before re-running.
+- **Paste-blocking detection.** Synthetic `ClipboardEvent('paste', {...})` dispatched on the password input + reading `event.defaultPrevented` is the cleanest way to assert SC 3.3.8 — no need to integrate with the OS clipboard.
