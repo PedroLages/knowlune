@@ -568,7 +568,7 @@ export function AudiobookRenderer({
           <button
             onClick={handleSkipBack}
             disabled={isLoading}
-            className="flex flex-col items-center gap-1 rounded-full p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 min-w-[48px] min-h-[48px] justify-center"
+            className="flex flex-col items-center gap-1 rounded-full p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 min-w-[48px] min-h-[48px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             aria-label={`Skip back ${skipBackSeconds} seconds`}
             data-testid="skip-back-button"
           >
@@ -597,7 +597,7 @@ export function AudiobookRenderer({
           <button
             onClick={handleSkipForward}
             disabled={isLoading}
-            className="flex flex-col items-center gap-1 rounded-full p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 min-w-[48px] min-h-[48px] justify-center"
+            className="flex flex-col items-center gap-1 rounded-full p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 min-w-[48px] min-h-[48px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             aria-label={`Skip forward ${skipForwardSeconds} seconds`}
             data-testid="skip-forward-button"
           >
@@ -668,7 +668,7 @@ export function AudiobookRenderer({
           <div ref={bookmarkNoteContainerRef} />
           {/* Transient silence skip notification */}
           <SilenceSkipIndicator lastSkip={silenceDetection.lastSkip} />
-          <span className="sr-only" aria-live="polite">{Math.round(progressPercent)}% complete</span>
+          <span className="sr-only" aria-live="polite">{Math.round(progressPercent / 10) * 10}% complete</span>
         </div>
 
         {/* Chapter List — hidden for single-chapter audiobooks */}
