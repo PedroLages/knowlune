@@ -4,6 +4,9 @@ import { saveSettings, saveSettingsToSupabase } from '@/lib/settings'
 const STORAGE_KEY = 'levelup-engagement-prefs-v1'
 
 export type ColorScheme = 'professional' | 'vibrant' | 'clean'
+export type CourseViewMode = 'grid' | 'list' | 'compact'
+
+const VALID_COURSE_VIEW_MODES: CourseViewMode[] = ['grid', 'list', 'compact']
 
 export interface EngagementPrefs {
   /** Show achievement banners and completion celebrations */
@@ -16,6 +19,12 @@ export interface EngagementPrefs {
   animations: boolean
   /** Color scheme: professional (default) or vibrant */
   colorScheme: ColorScheme
+  /**
+   * Courses page view mode (E99-S01).
+   * Default 'grid'. List/compact renderers ship in S03/S04 — until then
+   * all three values render the existing grid container.
+   */
+  courseViewMode: CourseViewMode
 }
 
 interface EngagementPrefsStore extends EngagementPrefs {
@@ -29,6 +38,7 @@ const defaults: EngagementPrefs = {
   badges: true,
   animations: true,
   colorScheme: 'professional',
+  courseViewMode: 'grid',
 }
 
 function loadPersistedPrefs(): EngagementPrefs {
@@ -46,6 +56,9 @@ function loadPersistedPrefs(): EngagementPrefs {
         colorScheme: ['professional', 'vibrant', 'clean'].includes(parsed.colorScheme)
           ? parsed.colorScheme
           : 'professional',
+        courseViewMode: VALID_COURSE_VIEW_MODES.includes(parsed.courseViewMode)
+          ? parsed.courseViewMode
+          : 'grid',
       }
     }
   } catch {
@@ -74,6 +87,7 @@ export const useEngagementPrefsStore = create<EngagementPrefsStore>((set, get) =
       badges: state.badges,
       animations: state.animations,
       colorScheme: state.colorScheme,
+      courseViewMode: state.courseViewMode,
     }
     persistPrefs(prefs)
     // Bridge colorScheme to AppSettings so useColorScheme hook picks it up
@@ -81,7 +95,12 @@ export const useEngagementPrefsStore = create<EngagementPrefsStore>((set, get) =
       saveSettings({ colorScheme: value as ColorScheme })
       window.dispatchEvent(new Event('settingsUpdated'))
     }
-    // Supabase sync — only for the three keys in the JSONB field map.
+    // Bridge courseViewMode to AppSettings so non-React consumers can read it.
+    if (key === 'courseViewMode') {
+      saveSettings({ courseViewMode: value as CourseViewMode })
+      window.dispatchEvent(new Event('settingsUpdated'))
+    }
+    // Supabase sync — only for keys in the JSONB field map.
     // badges and animations remain localStorage-only.
     if (key === 'achievements') {
       void saveSettingsToSupabase({ achievementsEnabled: value as boolean })
@@ -89,6 +108,8 @@ export const useEngagementPrefsStore = create<EngagementPrefsStore>((set, get) =
       void saveSettingsToSupabase({ streaksEnabled: value as boolean })
     } else if (key === 'colorScheme') {
       void saveSettingsToSupabase({ colorScheme: value as ColorScheme })
+    } else if (key === 'courseViewMode') {
+      void saveSettingsToSupabase({ courseViewMode: value as CourseViewMode })
     }
   },
 
@@ -96,7 +117,10 @@ export const useEngagementPrefsStore = create<EngagementPrefsStore>((set, get) =
     set({ ...defaults })
     persistPrefs({ ...defaults })
     // Bridge reset to AppSettings
-    saveSettings({ colorScheme: defaults.colorScheme })
+    saveSettings({
+      colorScheme: defaults.colorScheme,
+      courseViewMode: defaults.courseViewMode,
+    })
     window.dispatchEvent(new Event('settingsUpdated'))
   },
 }))

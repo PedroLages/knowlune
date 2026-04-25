@@ -8,6 +8,7 @@ export type ReduceMotion = 'system' | 'on' | 'off'
 export type ReadingFontSize = '1x' | '1.25x' | '1.5x' | '2x'
 export type ReadingLineHeight = 1.5 | 1.75 | 2.0
 export type ReadingTheme = 'auto' | 'sepia' | 'gray' | 'dark' | 'high-contrast'
+export type CourseViewMode = 'grid' | 'list' | 'compact'
 
 /** Maps font size labels to root font-size pixel values */
 export const FONT_SIZE_PX: Record<FontSize, number> = {
@@ -62,6 +63,12 @@ export interface AppSettings {
    * each device controls its own sync posture).
    */
   autoSyncEnabled?: boolean
+  /**
+   * Courses page view mode preference.
+   * E99-S01: infrastructure + toggle ship in S01; the list/compact renderers
+   * land in S03/S04. All three values render the existing grid until then.
+   */
+  courseViewMode?: CourseViewMode
 }
 
 export const DISPLAY_DEFAULTS = {
@@ -90,6 +97,7 @@ const defaults: AppSettings = {
   readingLineHeight: 1.5,
   readingTheme: 'auto',
   autoSyncEnabled: true,
+  courseViewMode: 'grid',
 }
 
 const VALID_CONTENT_DENSITY: ContentDensity[] = ['default', 'spacious']
@@ -97,6 +105,7 @@ const VALID_REDUCE_MOTION: ReduceMotion[] = ['system', 'on', 'off']
 const VALID_READING_FONT_SIZE: ReadingFontSize[] = ['1x', '1.25x', '1.5x', '2x']
 const VALID_READING_LINE_HEIGHT: ReadingLineHeight[] = [1.5, 1.75, 2.0]
 const VALID_READING_THEME: ReadingTheme[] = ['auto', 'sepia', 'gray', 'dark', 'high-contrast']
+const VALID_COURSE_VIEW_MODE: CourseViewMode[] = ['grid', 'list', 'compact']
 
 export function getSettings(): AppSettings {
   try {
@@ -121,6 +130,9 @@ export function getSettings(): AppSettings {
     }
     if (!VALID_READING_THEME.includes(parsed.readingTheme)) {
       parsed.readingTheme = defaults.readingTheme
+    }
+    if (!VALID_COURSE_VIEW_MODE.includes(parsed.courseViewMode)) {
+      parsed.courseViewMode = defaults.courseViewMode
     }
     return parsed
   } catch {
@@ -183,6 +195,7 @@ export type UserSettingsPatch = {
   achievementsEnabled?: boolean
   streaksEnabled?: boolean
   colorScheme?: string
+  courseViewMode?: string
 }
 
 /**
@@ -421,6 +434,17 @@ export async function hydrateSettingsFromSupabase(
           .setPreference(
             'colorScheme',
             s.colorScheme as import('@/stores/useEngagementPrefsStore').ColorScheme
+          )
+      }
+    }
+    if (typeof s.courseViewMode === 'string') {
+      const validViewModes = ['grid', 'list', 'compact']
+      if (validViewModes.includes(s.courseViewMode)) {
+        useEngagementPrefsStore
+          .getState()
+          .setPreference(
+            'courseViewMode',
+            s.courseViewMode as import('@/stores/useEngagementPrefsStore').CourseViewMode
           )
       }
     }
