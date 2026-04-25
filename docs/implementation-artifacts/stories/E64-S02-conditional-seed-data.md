@@ -1,6 +1,6 @@
 # Story 64.2: Conditional seed data loading
 
-Status: ready-for-dev
+Status: done (obsolete — superseded by E89-S01)
 
 ## Story
 
@@ -89,8 +89,27 @@ async function initializeDatabase() {
 
 ### Agent Model Used
 
+ce-orchestrator (autopilot+headless), 2026-04-25
+
 ### Debug Log References
 
 ### Completion Notes List
 
+**Obsolete — no work required.** Investigation found:
+
+- `src/db/schema.ts:123` documents that the static `courses` table was dropped in v30 (E89-S01) — "dead regular course system removed".
+- Repo-wide grep for `seedCourses`, `seedDefaultCourses`, `seedCoursesIfEmpty`, `demoCourses`, etc. in `src/**` returns zero matches in production code (only in `tests/e2e/**` as test-data helpers, which are unrelated).
+- No `seedCourses` chunk appears in the production bundle (`dist/assets/`).
+- The `Courses-*.js` chunk in dist is the user-facing Courses page component, not seed data.
+
+The optimization this story targeted (~31 KB gz savings from conditional seed loading) was already realized when the static course system was deleted in E89-S01. There is no seed data to make conditional.
+
+**Acceptance criteria status:**
+
+- AC1: Vacuously satisfied — no seedCourses chunk exists, so it is never downloaded.
+- AC2: N/A — no fresh-install seed flow exists; courses come from user imports (YouTube, OPDS, etc.).
+- AC3: Verified — `dist/assets/` contains no `seedCourses` chunk.
+
 ### File List
+
+(no production code changes — story closed as obsolete)

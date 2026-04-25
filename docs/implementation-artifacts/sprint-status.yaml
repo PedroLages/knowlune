@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-25  # E64-S01..S03, E66-S01..S06 promoted to ready-for-dev; E99-S01..S05 story files created + ready-for-dev (Gate 1 prep)
+last_updated: 2026-04-25  # E64-S01/S03 done, S02 closed as obsolete (superseded by E89-S01); E66-S01..S06 promoted to ready-for-dev; E99-S01..S05 story files created + ready-for-dev (Gate 1 prep)
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -715,9 +715,9 @@ development_status:
   # Target: LCP < 2.5s, FCP < 1.8s, initial load < 435 KB gz
   # ──────────────────────────────────────────────────
   epic-64: backlog
-  64-1-remove-ai-sdk-modulepreload-and-verify-lazy-loading-boundaries: ready-for-dev
-  64-2-conditional-seed-data-loading: ready-for-dev
-  64-3-bundle-size-baseline-and-regression-detection: ready-for-dev
+  64-1-remove-ai-sdk-modulepreload-and-verify-lazy-loading-boundaries: done
+  64-2-conditional-seed-data-loading: done  # obsolete: superseded by E89-S01 (static courses table dropped in v30)
+  64-3-bundle-size-baseline-and-regression-detection: done
   64-4-indexeddb-compound-indexes-for-high-volume-tables: backlog
   64-5-settings-page-lazy-loaded-tab-splitting: backlog
   64-6-overview-dashboard-progressive-loading-and-data-batching: backlog
