@@ -403,7 +403,7 @@ export function AudiobookRenderer({
             <img
               src={resolvedCoverUrl}
               alt={`Cover of ${book.title}`}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain"
               onError={e => {
                 e.currentTarget.style.display = 'none'
               }}
