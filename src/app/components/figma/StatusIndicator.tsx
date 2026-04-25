@@ -70,7 +70,7 @@ export const StatusIndicator = forwardRef<
       aria-label={config.label}
       onClick={onClick}
       className={cn(
-        'flex items-center justify-center shrink-0 rounded-full min-h-11 min-w-11 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'flex items-center justify-center shrink-0 rounded-full min-h-11 min-w-11 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
         config.className
       )}
       {...rest}

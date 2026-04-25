@@ -114,7 +114,7 @@ export function LegalUpdateBanner({
             </Button>
             <Link
               to="/privacy"
-              className="text-sm font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm min-h-[44px] inline-flex items-center"
+              className="text-sm font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1 rounded-sm min-h-[44px] inline-flex items-center"
             >
               View Privacy Notice
             </Link>

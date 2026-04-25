@@ -580,7 +580,7 @@ export function BulkImportDialog({
             <button
               type="button"
               onClick={handleSingleImport}
-              className="flex items-center gap-4 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex items-center gap-4 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
               data-testid="import-single-btn"
             >
               <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0">
@@ -598,7 +598,7 @@ export function BulkImportDialog({
               type="button"
               onClick={handleSelectParentFolder}
               disabled={isLoadingFolders}
-              className="flex items-center gap-4 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              className="flex items-center gap-4 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50"
               data-testid="import-multiple-btn"
             >
               <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0">
@@ -623,7 +623,7 @@ export function BulkImportDialog({
               <button
                 type="button"
                 onClick={handleYouTubeImport}
-                className="flex items-center gap-4 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex items-center gap-4 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                 data-testid="import-youtube-btn"
               >
                 <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0">

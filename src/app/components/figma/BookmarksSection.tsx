@@ -133,7 +133,7 @@ export function BookmarksSection() {
           >
             <button
               type="button"
-              className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+              className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring rounded-lg"
               onClick={() => handleBookmarkClick(bookmark)}
             >
               <div className="shrink-0 w-14 h-9 rounded-lg bg-warning/10 flex items-center justify-center">

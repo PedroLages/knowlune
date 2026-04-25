@@ -24,7 +24,7 @@ export function ReviewCard({
           'w-full max-w-md min-h-[200px] rounded-2xl border-2 border-border',
           'bg-card p-8 text-center transition-all duration-300 cursor-pointer',
           'hover:border-brand/50 hover:shadow-md',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
         )}
         onClick={onFlip}
         aria-label={

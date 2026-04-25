@@ -52,7 +52,7 @@ export function TableOfContentsPanel({ editor, onClose }: TableOfContentsPanelPr
           className={cn(
             'block w-full text-left text-sm py-2.5 px-4 transition-colors cursor-pointer',
             'hover:bg-accent hover:text-accent-foreground',
-            'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+            'focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
             item.level === 1 && 'font-semibold',
             item.level === 2 && 'pl-8',
             item.level === 3 && 'pl-12 text-muted-foreground'

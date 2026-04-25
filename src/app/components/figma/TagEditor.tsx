@@ -49,7 +49,7 @@ export function TagEditor({ currentTags, allTags, onAddTag }: TagEditorProps) {
           data-testid="add-tag-button"
           aria-label="Add topic tag"
           onClick={e => e.stopPropagation()}
-          className="group inline-flex items-center justify-center rounded-full p-3 -m-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+          className="group inline-flex items-center justify-center rounded-full p-3 -m-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1"
         >
           <span className="flex items-center justify-center rounded-full size-5 bg-secondary text-secondary-foreground group-hover:bg-secondary/80 transition-colors">
             <Plus className="size-3" />

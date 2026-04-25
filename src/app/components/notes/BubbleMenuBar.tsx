@@ -88,7 +88,7 @@ export function BubbleMenuBar({ editor, onOpenLinkDialog, onCreateFlashcard }: B
               className={cn(
                 'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
                 'hover:bg-accent hover:text-accent-foreground',
-                'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+                'focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1'
               )}
               aria-label="Color"
             >
@@ -110,7 +110,7 @@ export function BubbleMenuBar({ editor, onOpenLinkDialog, onCreateFlashcard }: B
                   }}
                   className={cn(
                     'size-8 rounded-full border border-border transition-transform cursor-pointer',
-                    'hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring',
+                    'hover:scale-110 focus-visible:ring-2 focus-visible:ring-focus-ring',
                     color.swatch
                   )}
                   aria-label={color.label}

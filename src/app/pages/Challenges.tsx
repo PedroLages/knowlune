@@ -186,7 +186,7 @@ export function Challenges() {
 
   const sectionTriggerClass = cn(
     'flex w-full items-center gap-2 rounded-sm py-3 text-sm font-medium text-muted-foreground',
-    'transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+    'transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2'
   )
 
   return (

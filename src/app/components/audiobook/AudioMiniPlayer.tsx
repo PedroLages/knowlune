@@ -126,7 +126,7 @@ export function AudioMiniPlayer() {
         <button
           type="button"
           onClick={handleExpand}
-          className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-muted flex items-center justify-center shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-muted flex items-center justify-center shadow-md focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label="Open full player"
         >
           {resolvedCoverUrl && !coverError ? (
@@ -145,7 +145,7 @@ export function AudioMiniPlayer() {
         <button
           type="button"
           onClick={handleExpand}
-          className="flex flex-col items-start min-w-0 flex-1 text-left min-h-[44px] justify-center sm:hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none rounded"
+          className="flex flex-col items-start min-w-0 flex-1 text-left min-h-[44px] justify-center sm:hidden focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none rounded"
           aria-label="Open full player"
         >
           <span className="text-sm font-medium text-foreground truncate w-full">{book.title}</span>
@@ -162,7 +162,7 @@ export function AudioMiniPlayer() {
         <button
           type="button"
           onClick={handlePlayPause}
-          className="flex-shrink-0 flex w-12 h-12 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-hover text-brand-foreground shadow-lg transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="flex-shrink-0 flex w-12 h-12 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-hover text-brand-foreground shadow-lg transition-all focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label={isPlaying ? 'Pause' : 'Play'}
         >
           {isPlaying ? (
@@ -176,7 +176,7 @@ export function AudioMiniPlayer() {
         <button
           type="button"
           onClick={handleSkipBack}
-          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label="Skip back 15 seconds"
         >
           <SkipBack className="size-5" aria-hidden="true" />
@@ -184,7 +184,7 @@ export function AudioMiniPlayer() {
         <button
           type="button"
           onClick={handleSkipForward}
-          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label="Skip forward 30 seconds"
         >
           <SkipForward className="size-5" aria-hidden="true" />
@@ -199,7 +199,7 @@ export function AudioMiniPlayer() {
         <button
           type="button"
           onClick={handleExpand}
-          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="hidden sm:flex flex-shrink-0 size-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label="Open full player"
         >
           <ChevronUp className="size-5" aria-hidden="true" />
@@ -209,7 +209,7 @@ export function AudioMiniPlayer() {
         <button
           type="button"
           onClick={handleDismiss}
-          className="flex-shrink-0 size-11 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="flex-shrink-0 size-11 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label="Close mini player"
           data-testid="audio-mini-player-close"
         >

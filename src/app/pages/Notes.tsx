@@ -422,7 +422,7 @@ export function Notes() {
               key={tag}
               type="button"
               onClick={() => handleTagClick(tag)}
-              className="inline-flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-md"
+              className="inline-flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1 rounded-md"
             >
               <Badge
                 variant={activeTag === tag ? 'default' : 'secondary'}
@@ -543,7 +543,7 @@ export function Notes() {
           <button
             type="button"
             data-testid="back-to-note"
-            className="flex items-center gap-1.5 text-sm text-brand hover:text-brand-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            className="flex items-center gap-1.5 text-sm text-brand hover:text-brand-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring rounded"
             onClick={() => {
               setExpandedNoteId(fromNoteId)
               navigate('/notes', { replace: true })
@@ -627,7 +627,7 @@ export function Notes() {
                       <TooltipTrigger asChild>
                         <button
                           type="button"
-                          className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                           aria-label="Semantic search unavailable: no embeddings indexed yet"
                           data-testid="semantic-tooltip-trigger"
                         >
@@ -649,7 +649,7 @@ export function Notes() {
                     key={tag}
                     type="button"
                     onClick={() => handleTagClick(tag)}
-                    className="inline-flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-md"
+                    className="inline-flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1 rounded-md"
                   >
                     <Badge
                       variant={activeTag === tag ? 'default' : 'outline'}
