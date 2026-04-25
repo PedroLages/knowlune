@@ -12,6 +12,11 @@ import { seedImportedCourses } from '../support/helpers/indexeddb-seed'
 import { createImportedCourses } from '../support/fixtures/factories/imported-course-factory'
 
 async function setupCoursesPage(page: Parameters<typeof goToCourses>[0]) {
+  // Enable guest mode so the auth-gated routes render (post-E92 auth gate).
+  // Must use addInitScript so the flag is set before the auth store initializes.
+  await page.addInitScript(() => {
+    sessionStorage.setItem('knowlune-guest', 'true')
+  })
   // Need at least one imported course so VirtualizedGrid renders the grid
   // container we assert classes on (otherwise the empty-state UI is shown).
   await page.goto('/')
