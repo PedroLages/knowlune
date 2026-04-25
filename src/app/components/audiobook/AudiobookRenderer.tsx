@@ -461,10 +461,17 @@ export function AudiobookRenderer({
         />
       )}
       <div className="relative z-10 flex flex-col items-center gap-8 p-6 max-w-lg mx-auto w-full min-h-[60vh] justify-center">
-        {/* Cover Art */}
-        <div className="w-full max-w-80 aspect-square rounded-[24px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-center justify-center bg-muted">
+        {/* Cover Art — testids added to support regression test (cover-letterbox.spec.ts)
+         * that asserts img rect == container rect for non-square sources, so a
+         * future Tailwind v4 source-scan regression cannot silently reintroduce
+         * letterbox bars. Do not rename these testids without updating the spec. */}
+        <div
+          data-testid="audiobook-cover-frame"
+          className="w-full max-w-80 aspect-square shrink-0 rounded-[24px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-center justify-center bg-muted"
+        >
           {resolvedCoverUrl ? (
             <img
+              data-testid="audiobook-cover-image"
               src={resolvedCoverUrl}
               alt={`Cover of ${book.title}`}
               className="h-full w-full object-cover"
