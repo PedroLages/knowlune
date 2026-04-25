@@ -26,6 +26,7 @@ beforeEach(() => {
     animations: true,
     colorScheme: 'professional',
     courseViewMode: 'grid',
+    courseGridColumns: 'auto',
   })
 })
 
@@ -103,7 +104,69 @@ describe('resetToDefaults', () => {
     expect(mockSaveSettings).toHaveBeenCalledWith({
       colorScheme: 'professional',
       courseViewMode: 'grid',
+      courseGridColumns: 'auto',
     })
+  })
+})
+
+describe('courseGridColumns (E99-S02)', () => {
+  it('should default to "auto"', () => {
+    expect(useEngagementPrefsStore.getState().courseGridColumns).toBe('auto')
+  })
+
+  it('setPreference updates courseGridColumns and persists to localStorage', () => {
+    useEngagementPrefsStore.getState().setPreference('courseGridColumns', 3)
+    expect(useEngagementPrefsStore.getState().courseGridColumns).toBe(3)
+    const stored = JSON.parse(localStorage.getItem('levelup-engagement-prefs-v1')!)
+    expect(stored.courseGridColumns).toBe(3)
+  })
+
+  it('setPreference bridges courseGridColumns to AppSettings', () => {
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+    useEngagementPrefsStore.getState().setPreference('courseGridColumns', 5)
+    expect(mockSaveSettings).toHaveBeenCalledWith({ courseGridColumns: 5 })
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'settingsUpdated' }))
+  })
+
+  it('setPreference("courseGridColumns") calls saveSettingsToSupabase', () => {
+    useEngagementPrefsStore.getState().setPreference('courseGridColumns', 4)
+    expect(mockSaveSettingsToSupabase).toHaveBeenCalledWith({ courseGridColumns: 4 })
+  })
+
+  it('coerces invalid persisted courseGridColumns to "auto"', async () => {
+    localStorage.setItem(
+      'levelup-engagement-prefs-v1',
+      JSON.stringify({
+        achievements: true,
+        streaks: true,
+        badges: true,
+        animations: true,
+        colorScheme: 'professional',
+        courseViewMode: 'grid',
+        courseGridColumns: 7, // invalid
+      })
+    )
+    vi.resetModules()
+    const { useEngagementPrefsStore: fresh } = await import('@/stores/useEngagementPrefsStore')
+    expect(fresh.getState().courseGridColumns).toBe('auto')
+  })
+
+  it('restores a valid courseGridColumns from localStorage', async () => {
+    localStorage.setItem(
+      'levelup-engagement-prefs-v1',
+      JSON.stringify({
+        achievements: true,
+        streaks: true,
+        badges: true,
+        animations: true,
+        colorScheme: 'professional',
+        courseViewMode: 'grid',
+        courseGridColumns: 5,
+      })
+    )
+    vi.resetModules()
+    const { useEngagementPrefsStore: fresh } = await import('@/stores/useEngagementPrefsStore')
+    expect(fresh.getState().courseGridColumns).toBe(5)
   })
 })
 

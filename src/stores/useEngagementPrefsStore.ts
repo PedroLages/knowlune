@@ -5,8 +5,10 @@ const STORAGE_KEY = 'levelup-engagement-prefs-v1'
 
 export type ColorScheme = 'professional' | 'vibrant' | 'clean'
 export type CourseViewMode = 'grid' | 'list' | 'compact'
+export type CourseGridColumns = 'auto' | 2 | 3 | 4 | 5
 
 const VALID_COURSE_VIEW_MODES: CourseViewMode[] = ['grid', 'list', 'compact']
+const VALID_COURSE_GRID_COLUMNS: CourseGridColumns[] = ['auto', 2, 3, 4, 5]
 
 export interface EngagementPrefs {
   /** Show achievement banners and completion celebrations */
@@ -25,6 +27,12 @@ export interface EngagementPrefs {
    * all three values render the existing grid container.
    */
   courseViewMode: CourseViewMode
+  /**
+   * Courses grid column count (E99-S02).
+   * Default 'auto' preserves the responsive grid; concrete values cap the
+   * column count at lg+ breakpoints. Mobile (< 640px) is always 1 column.
+   */
+  courseGridColumns: CourseGridColumns
 }
 
 interface EngagementPrefsStore extends EngagementPrefs {
@@ -39,6 +47,7 @@ const defaults: EngagementPrefs = {
   animations: true,
   colorScheme: 'professional',
   courseViewMode: 'grid',
+  courseGridColumns: 'auto',
 }
 
 function loadPersistedPrefs(): EngagementPrefs {
@@ -59,6 +68,9 @@ function loadPersistedPrefs(): EngagementPrefs {
         courseViewMode: VALID_COURSE_VIEW_MODES.includes(parsed.courseViewMode)
           ? parsed.courseViewMode
           : 'grid',
+        courseGridColumns: VALID_COURSE_GRID_COLUMNS.includes(parsed.courseGridColumns)
+          ? parsed.courseGridColumns
+          : 'auto',
       }
     }
   } catch {
@@ -88,6 +100,7 @@ export const useEngagementPrefsStore = create<EngagementPrefsStore>((set, get) =
       animations: state.animations,
       colorScheme: state.colorScheme,
       courseViewMode: state.courseViewMode,
+      courseGridColumns: state.courseGridColumns,
     }
     persistPrefs(prefs)
     // Bridge colorScheme to AppSettings so useColorScheme hook picks it up
@@ -100,6 +113,11 @@ export const useEngagementPrefsStore = create<EngagementPrefsStore>((set, get) =
       saveSettings({ courseViewMode: value as CourseViewMode })
       window.dispatchEvent(new Event('settingsUpdated'))
     }
+    // Bridge courseGridColumns to AppSettings (E99-S02).
+    if (key === 'courseGridColumns') {
+      saveSettings({ courseGridColumns: value as CourseGridColumns })
+      window.dispatchEvent(new Event('settingsUpdated'))
+    }
     // Supabase sync — only for keys in the JSONB field map.
     // badges and animations remain localStorage-only.
     if (key === 'achievements') {
@@ -110,6 +128,8 @@ export const useEngagementPrefsStore = create<EngagementPrefsStore>((set, get) =
       void saveSettingsToSupabase({ colorScheme: value as ColorScheme })
     } else if (key === 'courseViewMode') {
       void saveSettingsToSupabase({ courseViewMode: value as CourseViewMode })
+    } else if (key === 'courseGridColumns') {
+      void saveSettingsToSupabase({ courseGridColumns: value as CourseGridColumns })
     }
   },
 
@@ -120,6 +140,7 @@ export const useEngagementPrefsStore = create<EngagementPrefsStore>((set, get) =
     saveSettings({
       colorScheme: defaults.colorScheme,
       courseViewMode: defaults.courseViewMode,
+      courseGridColumns: defaults.courseGridColumns,
     })
     window.dispatchEvent(new Event('settingsUpdated'))
   },
