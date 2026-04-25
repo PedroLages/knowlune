@@ -720,9 +720,11 @@ export function Library() {
                       if (mode !== 'grid') {
                         const s = absServers.find(sv => sv.status === 'connected')
                         if (s?.libraryIds.length) {
-                          mode === 'series'
-                            ? loadSeries(s.id, s.libraryIds[0])
-                            : loadCollections(s.id, s.libraryIds[0])
+                          if (mode === 'series') {
+                            loadSeries(s.id, s.libraryIds[0])
+                          } else {
+                            loadCollections(s.id, s.libraryIds[0])
+                          }
                         }
                       }
                     }}
