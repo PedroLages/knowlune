@@ -1,0 +1,60 @@
+{
+  "generatedAt": "2026-04-25T04:23:20.342Z",
+  "viteVersion": "^6.4.1",
+  "initialLoad": {
+    "jsRaw": 1708345,
+    "jsGzipped": 508870,
+    "cssRaw": 288400,
+    "cssGzipped": 42167,
+    "totalGzipped": 551037,
+    "modulePreloadCount": 9,
+    "entryScriptCount": 1
+  },
+  "totalBundle": {
+    "jsRaw": 10048656,
+    "jsGzipped": 3018655,
+    "chunkCount": 184
+  },
+  "topChunks": [
+    {
+      "name": "sql",
+      "gzipped": 450977
+    },
+    {
+      "name": "index",
+      "gzipped": 289212
+    },
+    {
+      "name": "whisper.worker",
+      "gzipped": 199092
+    },
+    {
+      "name": "pdf",
+      "gzipped": 136315
+    },
+    {
+      "name": "jspdf.es.min",
+      "gzipped": 128916
+    },
+    {
+      "name": "chart",
+      "gzipped": 128733
+    },
+    {
+      "name": "UnifiedLessonPlayer",
+      "gzipped": 115913
+    },
+    {
+      "name": "tiptap",
+      "gzipped": 111229
+    },
+    {
+      "name": "epub",
+      "gzipped": 108438
+    },
+    {
+      "name": "Settings",
+      "gzipped": 93870
+    }
+  ]
+}
