@@ -12,7 +12,7 @@ argument-hint: "[idea | docs/plans/*-plan.md | docs/brainstorms/*-requirements.m
 
 Drives a single unit of work end-to-end through the Compound Engineering pipeline with one hard human gate at **plan approval**. Terminal state: **PR created + auto-merged** (via `gh pr merge --merge --admin`). `ce:compound` runs automatically post-merge.
 
-**Status:** v4 — epic-loop runner (`/ce-orchestrator E##`) + auto-merge PR + auto-run compound. Builds on v3 (adaptive entry, tracking file, headless JSON, BMAD story-file bridge, `--autopilot`, supporting-skill integrations).
+**Status:** v5 — post-merge cleanup (checkout main + pull + commit artifacts + delete branch). Builds on v4 (epic-loop runner, auto-merge PR, auto-run compound, `--autopilot`).
 
 ## Usage
 
@@ -617,6 +617,33 @@ Return ONLY: `{"solutionPath": "<path>"}` or `{"skipped": "<reason>"}`.
 
 Set `compoundStatus: run-post-merge`, `solutionPath` tracked. On error: log warning, set `compoundStatus: skipped`, proceed to 3.2.
 
+### 3.1b Post-merge cleanup (v5)
+
+After compound returns (success or skipped), run these inline — no sub-agent needed, all deterministic:
+
+```bash
+# 1. Commit any post-merge artifacts (compound solution file, etc.)
+cd <repoRoot>
+git status --short | grep -q '^??' && git add docs/solutions/ docs/implementation-artifacts/ && \
+  git diff --cached --quiet || git commit -m "docs(compound): add CE run artifacts for <slug>"
+
+# 2. Push committed artifacts to main
+git push
+
+# 3. Switch back to main and pull
+git checkout main
+git pull
+
+# 4. Delete the merged feature branch locally
+git branch -d <branch>
+```
+
+**Rules:**
+- Step 1 only runs if untracked files exist under `docs/solutions/` or `docs/implementation-artifacts/`. Never `git add -A` — scope to known artifact dirs only.
+- Step 4 uses `-d` (safe delete — fails if branch is not fully merged). If branch was force-pushed / escalated, catch the error and warn rather than using `-D`.
+- If any step fails: log warning to tracking `errors[]`, continue. Never halts the pipeline.
+- In unattended (headless) mode: run silently with no prompts.
+
 ### 3.2 Final output
 
 Print to user based on `compoundStatus`:
@@ -671,6 +698,7 @@ Run `scripts/finalize-ce-run.sh <tracking-path> [--json]`:
 | `gh` not authenticated at PR stage | Halt. Commits preserved on branch. User runs `gh auth login` and re-invokes. |
 | `report-generator` fails during closeout | Log warning to tracking `errors[]`, set `closeoutStatus: report-failed`, banner shows `[generation failed]`. Retrospective still runs. Never halts. |
 | Artifact commit (brainstorm/plan) fails | Log warning to tracking `errors[]`. Pipeline continues — artifact is on disk, engineer can commit manually. Never halts. |
+| Post-merge cleanup (3.1b) fails | Log warning to tracking `errors[]`. Final output still prints. User is already on main if checkout succeeded. Never halts. |
 
 ## References
 
