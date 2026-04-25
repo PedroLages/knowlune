@@ -173,4 +173,40 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+### Audit findings (2026-04-25)
+
+**Outcome:** Knowlune was already substantively compliant with WCAG 2.2 SC 3.3.7 and SC 3.3.8 prior to this story. The work landed as **verification + a regression spec** rather than a behavior change.
+
+#### AC compliance table
+
+| AC | WCAG SC | Status | Evidence |
+|----|---------|--------|----------|
+| 1. Email input has `autocomplete="email"` | 3.3.7, 3.3.8 (mechanism-to-assist) | PASS | `src/app/components/auth/EmailPasswordForm.tsx:151`, `src/app/components/auth/MagicLinkForm.tsx:142` |
+| 2. Sign-in password has `autocomplete="current-password"` | 3.3.8 | PASS | `EmailPasswordForm.tsx:170` (conditional on `mode === 'sign-in'`) |
+| 3. Sign-up password has `autocomplete="new-password"` | 3.3.8 | PASS | `EmailPasswordForm.tsx:170, 213` (password + confirm) |
+| 4. No `autocomplete="off"`, no paste-blocking handlers | 3.3.8 | PASS | Grep across `src/app/components/auth/**` and `src/app/pages/Login.tsx` returns zero matches; locked by E2E spec |
+| 5. Login exposes a non-cognitive auth method | 3.3.8 (alternative method) | PASS | `Login.tsx:100-108` renders MagicLinkForm and GoogleAuthButton tabs |
+| 6. YouTube Import preserves entries across steps | 3.3.7 | PASS | `YouTubeImportDialog.tsx` stores all step state in a Zustand store (`store.currentStep`) and parent-level `useState` — step subtrees are conditionally rendered, never re-keyed |
+| 7. Welcome Wizard preserves entries across steps | 3.3.7 | PASS | `WelcomeWizard.tsx:19` hoists `step` and `selectedFontSize` to parent state; no per-step `useState` |
+| 8. Bulk Import preserves entries across steps | 3.3.7 | PASS | `BulkImportDialog.tsx:91-101` hoists all step state (`step`, `folders`, `importItems`, `scannedCourses`, etc.) to the parent dialog |
+
+#### WCAG SC compliance summary
+
+- **SC 3.3.7 Redundant Entry (Level A)** — PASS. All three multi-step dialogs preserve user-entered data across step transitions by hoisting state to parent components or Zustand stores.
+- **SC 3.3.8 Accessible Authentication, Minimum (Level AA)** — PASS. Two non-cognitive auth methods are available (Magic Link via email link, Google OAuth via federation). Password-based auth carries `autocomplete` tokens that allow password-manager autofill, satisfying the "mechanism to assist" exception.
+
+#### Regression test
+
+`tests/e2e/e66-s04-auth-redundant-entry.spec.ts` locks the autocomplete contract:
+
+- email/password autocomplete tokens in sign-in mode
+- new-password tokens in sign-up mode (password + confirm)
+- mode toggle flips password autocomplete correctly
+- Magic Link tab email input has `autocomplete="email"`
+- no `autocomplete="off"` and no `onpaste` attribute anywhere on `/login`
+
+#### Lessons
+
+- **Audit-first stories deliver value via tests, not code changes.** When the implementation already complies, the highest-leverage deliverable is a regression spec that pins the contract.
+- **Hoisted state is the cheapest path to SC 3.3.7 compliance.** Knowlune's existing pattern of owning step state in the parent dialog (or a Zustand store) made all three multi-step flows compliant by construction.
+- **`Input` primitive prop forwarding matters.** The shadcn `Input` component spreads `{...props}` (`src/app/components/ui/input.tsx:16`), which is what allows `autoComplete` to reach the underlying `<input>`. Worth re-verifying any time the primitive is touched.
