@@ -1,0 +1,137 @@
+{
+  "run_id": "20260425-132322-headless-ce-review",
+  "mode": "headless",
+  "scope": {
+    "base": "922546aeaabac827cfe9ce92155e3158da082d2e",
+    "branch": "feature/ce-2026-04-25-audiobook-player-mobile-micro-polish",
+    "files_changed": 9,
+    "lines_added": 795,
+    "lines_removed": 49
+  },
+  "plan": {
+    "path": "docs/plans/2026-04-25-010-feat-audiobook-player-mobile-micro-polish-plan.md",
+    "source": "explicit",
+    "requirements": {
+      "R1_clips_icon_disambiguation": "met",
+      "R2_remaining_time_toggle": "met",
+      "R3_configurable_skip_intervals": "met",
+      "R4_speed_default_label": "met",
+      "R5_sleep_timer_reorder_5_10_presets": "met",
+      "R6_design_tokens_a11y": "met"
+    }
+  },
+  "verdict": "Ready to merge",
+  "applied_fixes": [],
+  "findings": [
+    {
+      "id": "F1",
+      "title": "Toggle time-display button lacks explicit current-state announcement",
+      "severity": "P3",
+      "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
+      "line": 491,
+      "reviewer": "correctness, project-standards",
+      "confidence": 0.7,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "aria-label is the static string 'Toggle time display'. Screen-reader users don't hear which mode is active until they activate it. aria-pressed conveys toggle state but combining it with a descriptive label like 'Show remaining time' / 'Show total duration' improves clarity (WCAG 4.1.2 Name, Role, Value).",
+      "evidence": [
+        "AudiobookRenderer.tsx:494 aria-label=\"Toggle time display\"",
+        "aria-pressed={showRemainingTime} is present (good)"
+      ],
+      "suggested_fix": "Make aria-label dynamic: aria-label={showRemainingTime ? 'Show total duration' : 'Show remaining time'} so SR users hear the action that will happen on activation."
+    },
+    {
+      "id": "F2",
+      "title": "Skip-interval changes invalidate pause/resume callback identity unnecessarily",
+      "severity": "P3",
+      "file": "src/app/components/audiobook/AudiobookRenderer.tsx",
+      "line": 232,
+      "reviewer": "performance, maintainability",
+      "confidence": 0.6,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "handleSkipBack/handleSkipForward useCallback deps include both the underlying skip function AND the seconds value. When the user changes the interval in settings, MediaSession re-registers handlers and useKeyboardShortcuts likely re-binds. This is correct (intentional per the comment), but worth noting if MediaSession re-registration causes audible glitches on some browsers — verified safe per Unit 0 discovery comment.",
+      "evidence": [
+        "AudiobookRenderer.tsx:230-234 useCallback with [skipBack, skipBackSeconds] deps",
+        "Comment explicitly addresses this: 'verified via Unit 0 discovery'"
+      ],
+      "suggested_fix": "No change required; the comment justifies the design. Consider adding a brief regression test that toggling skip interval mid-playback does not introduce an audible gap."
+    },
+    {
+      "id": "F3",
+      "title": "VALID_TIMERS Set in settings.ts hydration duplicates store's allow-list",
+      "severity": "P3",
+      "file": "src/lib/settings.ts",
+      "line": 392,
+      "reviewer": "maintainability",
+      "confidence": 0.75,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": true,
+      "why_it_matters": "Hardcoded ['off', 5, 10, 15, 30, 45, 60, 'end-of-chapter'] in hydration mirrors VALID_TIMERS in useAudiobookPrefsStore.ts. If a future preset is added to the store but not here, Supabase->local hydration will silently drop the value. Same pre-existing pattern existed before this PR (without 5/10), so this change preserves rather than introduces the duplication, but is now larger.",
+      "evidence": [
+        "settings.ts:392 const validTimers = new Set(['off', 5, 10, 15, 30, 45, 60, 'end-of-chapter'])",
+        "useAudiobookPrefsStore.ts:55 VALID_TIMERS = new Set<SleepTimerDefault>(['off', 5, 10, 15, 30, 45, 60, 'end-of-chapter'])"
+      ],
+      "suggested_fix": "Export VALID_TIMERS (or a guard isSleepTimerDefault) from useAudiobookPrefsStore and import it in settings.ts hydration to keep allow-lists in sync. Apply the same pattern for the new VALID_SKIP_BACK/FORWARD when those gain hydration validation."
+    },
+    {
+      "id": "F4",
+      "title": "Hydration accepts unvalidated skipBackSeconds/skipForwardSeconds from Supabase",
+      "severity": "P2",
+      "file": "src/lib/settings.ts",
+      "line": 411,
+      "reviewer": "correctness, security",
+      "confidence": 0.85,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "hydrateSettingsFromSupabase calls setSkipBackSeconds/setSkipForwardSeconds with any number from Supabase. The store setter validates against VALID_SKIP_BACK_SET / VALID_SKIP_FORWARD_SET and falls back to the default, which is safe today. However, this couples external trust to internal validation: if a future refactor moves validation out of the setter, hydration becomes the attack surface. Aligning hydration with the explicit allow-list (as already done for defaultSleepTimer) hardens the contract.",
+      "evidence": [
+        "settings.ts:411 if (typeof s.skipBackSeconds === 'number') { ... setSkipBackSeconds(s.skipBackSeconds) }",
+        "settings.ts:392 defaultSleepTimer is gated by validTimers.has(...) before being applied — inconsistent treatment"
+      ],
+      "suggested_fix": "Mirror the defaultSleepTimer pattern: gate skipBackSeconds/skipForwardSeconds with VALID_SKIP_BACK / VALID_SKIP_FORWARD allow-lists in hydrateSettingsFromSupabase before calling the setter."
+    },
+    {
+      "id": "F5",
+      "title": "Loose corruption-handling test relies on setter fallback rather than load-time validation",
+      "severity": "P3",
+      "file": "src/stores/__tests__/useAudiobookPrefsStore.test.ts",
+      "line": 309,
+      "reviewer": "testing",
+      "confidence": 0.65,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "The 'falls through to defaults when persisted skip values are corrupted' test reloads the module and asserts defaults. This passes because loadPersistedPrefs validates with VALID_SKIP_*_SET. Good. But the assertion expects skipBackSeconds=15 / skipForwardSeconds=30 — these match defaults, so a regression that silently disables hydration of these fields would also pass. Consider asserting that a *valid* persisted value is restored in the same test file path (already done in the previous test) — coverage is fine, just noting the asymmetric assertion strength.",
+      "evidence": [
+        "useAudiobookPrefsStore.test.ts:309-318 corruption test asserts only the default values"
+      ],
+      "suggested_fix": "Optional: add a single assertion that valid persisted values survive a reload to the corruption test as a paired sanity check, or accept the current split coverage."
+    }
+  ],
+  "residual_risks": [
+    "Skip-interval handler identity changes when settings change. Verified safe per Unit 0 discovery, but media session re-register on mid-playback change is untested in CI.",
+    "Cross-device Supabase hydration of skipBackSeconds/skipForwardSeconds is not allow-list gated (see F4)."
+  ],
+  "testing_gaps": [
+    "No E2E covering: change skip interval -> press keyboard arrow -> verify new offset applied (deferred per plan).",
+    "No test for AudioMiniPlayer reading new skip seconds (component test missing; plan deferred to manual smoke)."
+  ],
+  "coverage": {
+    "reviewers_run": ["correctness", "testing", "maintainability", "project-standards", "security", "performance"],
+    "suppressed_below_confidence": 0,
+    "untracked_excluded": [".context/compound-engineering/ce-review/20260425-081522-236020d5/", ".context/compound-engineering/ce-review/20260425-084919-4fa30db8/"],
+    "type_check": "pass",
+    "lint": "1 pre-existing warning (component-size/max-lines on AudiobookRenderer.tsx — pre-existing, file already over threshold before this PR)",
+    "unit_tests": "34/34 pass"
+  }
+}
