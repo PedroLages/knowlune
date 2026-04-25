@@ -10,10 +10,24 @@
  */
 import { test, expect } from '../support/fixtures'
 import { goToCourses } from '../support/helpers/navigation'
+import { seedImportedCourses } from '../support/helpers/indexeddb-seed'
+import { createImportedCourses } from '../support/fixtures/factories/imported-course-factory'
+
+async function setupPage(page: Parameters<typeof goToCourses>[0]) {
+  // Enable guest mode so the auth-gated routes render (post-E92 auth gate).
+  // Must use addInitScript so the flag is set before the auth store initializes.
+  await page.addInitScript(() => {
+    sessionStorage.setItem('knowlune-guest', 'true')
+  })
+  // ViewModeToggle only renders when totalCourses > 0 — seed at least one course.
+  await page.goto('/')
+  await seedImportedCourses(page, createImportedCourses(1))
+  await goToCourses(page)
+}
 
 test.describe('E99-S01 View Mode Toggle', () => {
   test('renders three labelled options', async ({ page }) => {
-    await goToCourses(page)
+    await setupPage(page)
 
     const toggle = page.getByTestId('course-view-mode-toggle')
     await expect(toggle).toBeVisible()
@@ -27,7 +41,7 @@ test.describe('E99-S01 View Mode Toggle', () => {
   })
 
   test('persists selection across reload', async ({ page }) => {
-    await goToCourses(page)
+    await setupPage(page)
 
     await page.getByRole('radio', { name: 'List view' }).click()
     await expect(page.getByRole('radio', { name: 'List view' })).toHaveAttribute('data-state', 'on')
@@ -38,7 +52,7 @@ test.describe('E99-S01 View Mode Toggle', () => {
   })
 
   test('supports keyboard arrow navigation', async ({ page }) => {
-    await goToCourses(page)
+    await setupPage(page)
 
     const grid = page.getByRole('radio', { name: 'Grid view' })
     await grid.focus()
