@@ -60,7 +60,8 @@ function Slider({
           key={index}
           aria-label={ariaLabel}
           className={cn(
-            'border-primary bg-background ring-ring/50 block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow,opacity,width,height] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50',
+            'border-primary bg-background ring-ring/50 relative block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow,opacity,width,height] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none',
+            'before:absolute before:inset-[-14px] before:content-[""]',
             thumbClassName
           )}
         />
