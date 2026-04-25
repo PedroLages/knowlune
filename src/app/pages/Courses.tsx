@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/app/components/ui/select'
 import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
+import { ImportedCourseCompactCard } from '@/app/components/figma/ImportedCourseCompactCard'
 import { ImportedCourseListRow } from '@/app/components/figma/ImportedCourseListRow'
 import { StatusFilter } from '@/app/components/figma/StatusFilter'
 import { FolderOpen, BookOpen, Youtube } from 'lucide-react'
@@ -302,23 +303,27 @@ export function Courses() {
                 <VirtualizedGrid
                   items={sortedImportedCourses}
                   getItemKey={course => course.id}
-                  renderItem={course => (
-                    <ImportedCourseCard
-                      course={course}
-                      allTags={allTags}
-                      completionPercent={importedCompletionMap.get(course.id) ?? 0}
-                      momentumScore={momentumMap.get(course.id)}
-                    />
-                  )}
-                  data-testid="imported-courses-grid"
-                  gridClassName={
-                    // E99-S01: branch on courseViewMode. S04 wires compact —
-                    // until then compact still uses the default grid.
-                    // E99-S02: grid branch uses the resolver helper for column control.
-                    courseViewMode === 'compact'
-                      ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)]'
-                      : getGridClassName(courseGridColumns)
+                  renderItem={course =>
+                    courseViewMode === 'compact' ? (
+                      <ImportedCourseCompactCard
+                        course={course}
+                        allTags={allTags}
+                        completionPercent={importedCompletionMap.get(course.id) ?? 0}
+                      />
+                    ) : (
+                      <ImportedCourseCard
+                        course={course}
+                        allTags={allTags}
+                        completionPercent={importedCompletionMap.get(course.id) ?? 0}
+                        momentumScore={momentumMap.get(course.id)}
+                      />
+                    )
                   }
+                  data-testid="imported-courses-grid"
+                  gridClassName={getGridClassName(
+                    courseGridColumns,
+                    courseViewMode === 'compact' ? 'compact' : 'grid'
+                  )}
                 />
               )
             )}
