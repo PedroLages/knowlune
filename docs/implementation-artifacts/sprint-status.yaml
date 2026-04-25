@@ -55,7 +55,7 @@
 # - All new epics start at backlog status
 
 generated: 2026-03-15
-last_updated: 2026-04-25  # E66 complete (S06 closed via PR #447 — WCAG 2.2 compliance report + aggregator suite). E64-S01/S03 done, S02 closed as obsolete; E99-S01..S05 ready-for-dev (Gate 1 prep)
+last_updated: 2026-04-25  # E99 complete (S05 merged via PR #452 — virtualized courses list with ARIA, focus rescue, reduced-motion). All 5 stories shipped.
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -1246,12 +1246,12 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 99: Course Display View Modes
   # ───────────��──────────────────────────────────────
-  epic-99: in-progress
+  epic-99: done
   99-1-view-mode-toggle-and-settings-infrastructure: done
   99-2-grid-column-control: done
   99-3-list-view: done
   99-4-compact-grid-view: done
-  99-5-virtualized-grid-integration-and-polish: ready-for-dev
+  99-5-virtualized-grid-integration-and-polish: done
 
   # ──────────────────────────────────────────────────
   # Epic 100: Clean Color Theme — Apple-Inspired White Aesthetic
