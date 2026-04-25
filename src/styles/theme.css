@@ -120,6 +120,14 @@
   --content-gap: 1.5rem;
   --content-line-height: 1.6;
   --table-cell-padding: 0.75rem;
+
+  /* Audiobook player tokens */
+  --surface-glass: oklch(1 0 0 / 0.55);
+  --surface-glass-border: oklch(0 0 0 / 0.08);
+  --player-cover-shadow: 0 20px 50px rgb(0 0 0 / 0.18);
+  --player-fab: var(--brand);
+  --player-fab-foreground: var(--brand-foreground);
+  --player-fab-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
 }
 
 .dark {
@@ -228,6 +236,14 @@
   --heatmap-level-2: color-mix(in oklch, var(--success) 50%, transparent);
   --heatmap-level-3: color-mix(in oklch, var(--success) 70%, transparent);
   --heatmap-level-4: var(--success);
+
+  /* Audiobook player tokens (dark) */
+  --surface-glass: oklch(0.18 0.01 270 / 0.6);
+  --surface-glass-border: oklch(1 0 0 / 0.18);
+  --player-cover-shadow: 0 24px 60px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.15);
+  --player-fab: oklch(1 0 0);
+  --player-fab-foreground: oklch(0.15 0 0);
+  --player-fab-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
 }
 
 /* --------------------------------------------------------------------------

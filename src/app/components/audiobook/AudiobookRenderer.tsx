@@ -460,7 +460,7 @@ export function AudiobookRenderer({
           aria-hidden="true"
         />
       )}
-      <div className="relative z-10 flex flex-col items-center gap-8 p-6 max-w-lg mx-auto w-full min-h-[60vh] justify-center">
+      <div className="relative z-10 mx-auto flex w-full max-w-lg flex-col items-center px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))]">
         {/* Cover Art
          * shrink-0: prevents the parent flex column from collapsing the square
          * frame on short viewports — root cause of the letterbox bars.
@@ -468,7 +468,7 @@ export function AudiobookRenderer({
          * Do not rename testids without updating the spec. */}
         <div
           data-testid="audiobook-cover-frame"
-          className="w-full max-w-80 aspect-square shrink-0 rounded-[24px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-center justify-center bg-muted"
+          className="w-full max-w-80 aspect-square shrink-0 rounded-3xl overflow-hidden shadow-[var(--player-cover-shadow)] flex items-center justify-center bg-muted"
         >
           {resolvedCoverUrl ? (
             <img
@@ -486,7 +486,7 @@ export function AudiobookRenderer({
         </div>
 
         {/* Book & Chapter Title */}
-        <div className="text-center space-y-1 w-full">
+        <div className="mt-8 text-center space-y-1 w-full">
           <h1 className="text-2xl md:text-3xl font-semibold text-foreground truncate px-4">
             {book.title}
           </h1>
@@ -524,7 +524,7 @@ export function AudiobookRenderer({
             }}
             aria-label="Switch to reading"
             title="Switch to reading"
-            className="min-h-[44px] min-w-[44px]"
+            className="mt-4 min-h-[44px] min-w-[44px]"
             data-testid="switch-to-reading-button"
           >
             <BookOpen className="size-4 mr-2" aria-hidden="true" />
@@ -533,7 +533,7 @@ export function AudiobookRenderer({
         )}
 
         {/* Progress Scrubber */}
-        <div className="w-full space-y-2 px-2">
+        <div className="mt-8 w-full space-y-2 px-2">
           <Slider
             value={[currentTime]}
             min={0}
@@ -543,15 +543,16 @@ export function AudiobookRenderer({
             aria-label="Playback position"
             disabled={isLoading || duration === 0}
             className="w-full"
+            trackClassName="data-[orientation=horizontal]:h-1.5"
           />
-          <div className="flex justify-between items-center text-xs text-muted-foreground tabular-nums">
-            <span data-testid="current-time-display">{formatAudioTime(currentTime)}</span>
+          <div className="flex justify-between items-center text-sm text-foreground tabular-nums">
+            <span data-testid="current-time-display" className="font-medium">{formatAudioTime(currentTime)}</span>
             <button
               type="button"
               onClick={() => setShowRemainingTime(!showRemainingTime)}
               aria-label="Toggle time display"
               aria-pressed={showRemainingTime}
-              className="-my-2 -mr-2 flex min-h-[44px] items-center rounded-md px-3 text-xs text-muted-foreground tabular-nums hover:text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
+              className="-my-2 -mr-2 flex min-h-[44px] items-center rounded-md px-3 text-sm font-medium text-foreground tabular-nums transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none motion-reduce:transition-none"
               data-testid="duration-display"
             >
               {showRemainingTime
@@ -562,33 +563,33 @@ export function AudiobookRenderer({
         </div>
 
         {/* Playback Controls */}
-        <div className="flex items-center gap-8">
+        <div className="mt-10 flex items-center gap-8">
           {/* Skip Back */}
           <button
             onClick={handleSkipBack}
             disabled={isLoading}
-            className="flex flex-col items-center gap-1 rounded-full p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 min-w-[48px] min-h-[48px] justify-center"
+            className="flex flex-col items-center gap-1 rounded-full p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 min-w-[48px] min-h-[48px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             aria-label={`Skip back ${skipBackSeconds} seconds`}
             data-testid="skip-back-button"
           >
             <SkipBack className="size-6" aria-hidden="true" />
-            <span className="text-[10px] tabular-nums">{skipBackSeconds}s</span>
+            <span className="text-xs tabular-nums">{skipBackSeconds}s</span>
           </button>
 
           {/* Play / Pause */}
           <button
             onClick={toggle}
             disabled={isLoading}
-            className="flex size-16 items-center justify-center rounded-full bg-brand text-brand-foreground hover:bg-brand-hover transition-colors shadow-md disabled:opacity-40"
+            className="flex size-20 items-center justify-center rounded-full bg-[var(--player-fab)] text-[var(--player-fab-foreground)] shadow-[var(--player-fab-shadow)] transition-[transform,box-shadow] active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100 focus-visible:outline-hidden focus-visible:ring-4 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none motion-reduce:active:scale-100"
             aria-label={isPlaying ? 'Pause' : 'Play'}
             data-testid={isPlaying ? 'audio-playing-indicator' : undefined}
           >
             {isLoading ? (
-              <div className="size-8 animate-spin rounded-full border-2 border-brand-foreground border-t-transparent" />
+              <div className="size-10 animate-spin rounded-full border-2 border-current border-t-transparent" />
             ) : isPlaying ? (
-              <Pause className="size-8" aria-hidden="true" />
+              <Pause className="size-10" aria-hidden="true" fill="currentColor" />
             ) : (
-              <Play className="size-8 ml-1" aria-hidden="true" />
+              <Play className="size-10 ml-1" aria-hidden="true" fill="currentColor" />
             )}
           </button>
 
@@ -596,12 +597,12 @@ export function AudiobookRenderer({
           <button
             onClick={handleSkipForward}
             disabled={isLoading}
-            className="flex flex-col items-center gap-1 rounded-full p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 min-w-[48px] min-h-[48px] justify-center"
+            className="flex flex-col items-center gap-1 rounded-full p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 min-w-[48px] min-h-[48px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             aria-label={`Skip forward ${skipForwardSeconds} seconds`}
             data-testid="skip-forward-button"
           >
             <SkipForward className="size-6" aria-hidden="true" />
-            <span className="text-[10px] tabular-nums">{skipForwardSeconds}s</span>
+            <span className="text-xs tabular-nums">{skipForwardSeconds}s</span>
           </button>
         </div>
 
@@ -609,7 +610,7 @@ export function AudiobookRenderer({
         <SkipSilenceActiveIndicator isActive={skipSilence} />
 
         {/* Secondary Controls: Speed | Bookmark | Sleep Timer */}
-        <div className="flex items-center gap-2 bg-card/40 backdrop-blur-2xl rounded-full px-4 py-1.5 border border-white/20">
+        <div className="mt-8 flex items-center gap-2 rounded-full border px-4 py-1.5 backdrop-blur-2xl bg-[var(--surface-glass)] border-[var(--surface-glass-border)]">
           <SpeedControl bookId={book.id} />
           <div className="relative">
             <BookmarkButton
@@ -662,14 +663,12 @@ export function AudiobookRenderer({
           </button>
         </div>
 
-        {/* Bookmark note + progress — tighter spacing than the main gap-8 */}
-        <div className="-mt-4 flex flex-col items-center gap-3">
+        {/* Bookmark note + progress */}
+        <div className="mt-6 flex w-full flex-col items-center gap-3">
           <div ref={bookmarkNoteContainerRef} />
           {/* Transient silence skip notification */}
           <SilenceSkipIndicator lastSkip={silenceDetection.lastSkip} />
-          <p className="text-xs text-muted-foreground" aria-live="polite">
-            {Math.round(progressPercent)}% complete
-          </p>
+          <span className="sr-only" aria-live="polite">{Math.round(progressPercent / 10) * 10}% complete</span>
         </div>
 
         {/* Chapter List — hidden for single-chapter audiobooks */}
