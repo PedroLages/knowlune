@@ -8,7 +8,7 @@
  * @since E83-S04
  */
 
-import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import {
   Check,
@@ -123,6 +123,8 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false)
   const [isRescanning, setIsRescanning] = useState(false)
+  // Ref for focus-return after LinkFormatsDialog closes (WCAG 2.1 SC 3.2.2)
+  const linkFormatsTriggerRef = useRef<HTMLButtonElement | null>(null)
 
   // Re-scan supports EPUBs (TOC extraction) and ABS-synced audiobooks (per-item fetch).
   // Local-file audiobooks have no remote source to re-query — chapters come from import metadata.
@@ -201,6 +203,7 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
             <ContextMenuItem
               onClick={() => setLinkDialogOpen(true)}
               data-testid="context-menu-link-format"
+              data-link-formats-trigger
               className="flex items-center gap-2"
             >
               <ArrowRightLeft className="h-3.5 w-3.5" aria-hidden="true" />
@@ -301,6 +304,7 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
             <DropdownMenuItem
               onClick={() => setLinkDialogOpen(true)}
               data-testid="dropdown-menu-link-format"
+              data-link-formats-trigger
               className="flex items-center gap-2"
             >
               <ArrowRightLeft className="h-3.5 w-3.5" aria-hidden="true" />
@@ -384,7 +388,12 @@ export function BookContextMenu({ book, children, onEdit }: BookContextMenuProps
       </div>
 
       {/* Link Formats dialog */}
-      <LinkFormatsDialog book={book} open={linkDialogOpen} onOpenChange={setLinkDialogOpen} />
+      <LinkFormatsDialog
+        book={book}
+        open={linkDialogOpen}
+        onOpenChange={setLinkDialogOpen}
+        triggerRef={linkFormatsTriggerRef}
+      />
 
       {/* About Book dialog */}
       <Suspense fallback={null}>

@@ -55,6 +55,8 @@ interface LinkFormatsDialogProps {
   book: Book
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Optional ref to the trigger element — focus returns here after the dialog closes (WCAG 2.1 SC 3.2.2). */
+  triggerRef?: React.RefObject<HTMLButtonElement | null>
 }
 
 /** Render a small book thumbnail with title/author for the book picker. */
@@ -110,7 +112,7 @@ function BookPickerCard({
           {book.title}
         </p>
         <p className="text-xs text-muted-foreground truncate">{book.author}</p>
-        <Badge variant="secondary" className="w-fit text-[10px] mt-0.5">
+        <Badge variant="secondary" className="w-fit text-[11px] mt-0.5">
           {book.format === 'audiobook' ? 'Audiobook' : book.format.toUpperCase()}
         </Badge>
       </div>
@@ -167,7 +169,7 @@ function ConfidenceBar({ score }: { score: number }) {
   )
 }
 
-export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialogProps) {
+export function LinkFormatsDialog({ book, open, onOpenChange, triggerRef }: LinkFormatsDialogProps) {
   const books = useBookStore(s => s.books)
   const linkBooks = useBookStore(s => s.linkBooks)
   const unlinkBooks = useBookStore(s => s.unlinkBooks)
@@ -194,10 +196,18 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
           resetTimerRef.current = null
           setView('select')
         }, 300)
+        // WCAG 2.1 SC 3.2.2 — return focus to the opening trigger after dialog closes
+        const focusTarget =
+          triggerRef?.current ??
+          (document.querySelector<HTMLElement>('[data-link-formats-trigger]') ?? null)
+        if (focusTarget) {
+          // Defer until after Radix finishes its own focus restoration cycle
+          setTimeout(() => focusTarget.focus(), 0)
+        }
       }
       onOpenChange(next)
     },
-    [book.linkedBookId, onOpenChange]
+    [book.linkedBookId, onOpenChange, triggerRef]
   )
 
   // Clear any pending reset timer on unmount to avoid state updates on an unmounted component.
@@ -344,6 +354,7 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
           computedAt: nowIso,
           updatedAt: nowIso,
         })
+        toast.success(`Linked "${epubBook.title}" and "${audioBook.title}".`)
         onOpenChange(false)
       } catch (err) {
         console.error('[LinkFormatsDialog] saveMapping failed; rolling back link:', err)
@@ -400,7 +411,7 @@ export function LinkFormatsDialog({ book, open, onOpenChange }: LinkFormatsDialo
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-lg" aria-describedby="link-formats-desc">
+      <DialogContent className="max-w-lg" aria-describedby="link-formats-desc" aria-modal="true">
         {/* ── Already linked → show unlink option ───────────────────────────── */}
         {alreadyLinked && view !== 'select' ? (
           <>
