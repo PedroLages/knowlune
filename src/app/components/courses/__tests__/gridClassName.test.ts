@@ -49,4 +49,59 @@ describe('getGridClassName (E99-S02)', () => {
       'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)]'
     expect(getGridClassName('auto')).toBe(canonicalDefault)
   })
+
+  it('omitting viewMode preserves grid behavior (back-compat)', () => {
+    expect(getGridClassName('auto')).toBe(getGridClassName('auto', 'grid'))
+    expect(getGridClassName(4)).toBe(getGridClassName(4, 'grid'))
+  })
+})
+
+describe('getGridClassName — compact mode (E99-S04)', () => {
+  it('returns the dense default for "auto"', () => {
+    expect(getGridClassName('auto', 'compact')).toBe(
+      'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3'
+    )
+  })
+
+  it('scales 2 → 3 columns in compact mode', () => {
+    expect(getGridClassName(2, 'compact')).toBe(
+      'grid grid-cols-2 sm:grid-cols-3 gap-3'
+    )
+  })
+
+  it('scales 3 → 5 columns in compact mode', () => {
+    expect(getGridClassName(3, 'compact')).toBe(
+      'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3'
+    )
+  })
+
+  it('scales 4 → 6 columns in compact mode', () => {
+    expect(getGridClassName(4, 'compact')).toBe(
+      'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3'
+    )
+  })
+
+  it('scales 5 → 8 columns in compact mode', () => {
+    expect(getGridClassName(5, 'compact')).toBe(
+      'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3'
+    )
+  })
+
+  it('every compact branch enforces the mobile-2-column floor', () => {
+    const inputs = ['auto', 2, 3, 4, 5] as const
+    for (const input of inputs) {
+      const result = getGridClassName(input, 'compact')
+      expect(result).toContain('grid-cols-2')
+      expect(result).toContain('sm:grid-cols-3')
+    }
+  })
+
+  it('every compact branch uses gap-3 instead of var(--content-gap)', () => {
+    const inputs = ['auto', 2, 3, 4, 5] as const
+    for (const input of inputs) {
+      const result = getGridClassName(input, 'compact')
+      expect(result).toContain('gap-3')
+      expect(result).not.toContain('var(--content-gap)')
+    }
+  })
 })

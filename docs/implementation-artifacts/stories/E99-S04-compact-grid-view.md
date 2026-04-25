@@ -1,8 +1,8 @@
 ---
 story_id: E99-S04
 story_name: "Compact Grid View"
-status: ready-for-dev
-started:
+status: in-review
+started: 2026-04-25
 completed:
 reviewed: false
 review_started:
