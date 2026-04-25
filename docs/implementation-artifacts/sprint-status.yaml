@@ -1250,7 +1250,7 @@ development_status:
   99-1-view-mode-toggle-and-settings-infrastructure: done
   99-2-grid-column-control: done
   99-3-list-view: done
-  99-4-compact-grid-view: ready-for-dev
+  99-4-compact-grid-view: done
   99-5-virtualized-grid-integration-and-polish: ready-for-dev
 
   # ──────────────────────────────────────────────────
