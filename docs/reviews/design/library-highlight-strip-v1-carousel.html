@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Daily Highlights</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary": "#ffffff",
+                        "outline-variant": "#c6c5d5",
+                        "inverse-surface": "#32302c",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#f5f0e9",
+                        "on-surface": "#1d1c18",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed": "#000965",
+                        "tertiary-container": "#a56500",
+                        "tertiary-fixed-dim": "#ffb867",
+                        "primary-container": "#5e6ad2",
+                        "on-surface-variant": "#454652",
+                        "surface-tint": "#4854bb",
+                        "primary-fixed": "#dfe0ff",
+                        "secondary-fixed-dim": "#c0c3f2",
+                        "tertiary": "#834f00",
+                        "secondary-fixed": "#dfe0ff",
+                        "surface-dim": "#ded9d3",
+                        "surface-container": "#f2ede6",
+                        "on-error": "#ffffff",
+                        "primary-fixed-dim": "#bdc2ff",
+                        "on-background": "#1d1c18",
+                        "on-primary-fixed-variant": "#2e3aa2",
+                        "on-primary-container": "#fdfaff",
+                        "surface-container-highest": "#e6e2db",
+                        "on-secondary-fixed": "#13183d",
+                        "on-primary": "#ffffff",
+                        "surface-container-low": "#f8f3ec",
+                        "secondary-container": "#cbcefe",
+                        "outline": "#767684",
+                        "background": "#fef9f2",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#ece7e1",
+                        "on-tertiary": "#ffffff",
+                        "surface-variant": "#e6e2db",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#52577f",
+                        "secondary": "#575b84",
+                        "primary": "#4450b7",
+                        "on-tertiary-fixed-variant": "#673d00",
+                        "tertiary-fixed": "#ffddbb",
+                        "inverse-primary": "#bdc2ff",
+                        "on-secondary-fixed-variant": "#3f446b",
+                        "on-tertiary-container": "#fffaf8",
+                        "surface": "#fef9f2",
+                        "on-tertiary-fixed": "#2b1700",
+                        "surface-bright": "#fef9f2"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                        "headline": ["Space Grotesk", "sans-serif"],
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Manrope", "sans-serif"],
+                        "label": ["Manrope", "sans-serif"]
+                    },
+                    "fontSize": {}
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface font-body antialiased min-h-screen p-8 md:p-16 flex items-center justify-center">
+<section class="w-full max-w-6xl relative group">
+<!-- Header -->
+<div class="flex items-center justify-between mb-8 pl-4 pr-4 md:px-0">
+<h2 class="font-headline text-2xl md:text-3xl font-bold tracking-tight text-on-surface">Daily Highlights</h2>
+<button aria-label="Refresh highlights" class="p-2 rounded-full text-primary-container hover:bg-surface-container transition-colors focus:outline-none">
+<span class="material-symbols-outlined" data-icon="refresh">refresh</span>
+</button>
+</div>
+<!-- Carousel Container -->
+<div class="relative overflow-hidden">
+<!-- Left Chevron (Hover) -->
+<button aria-label="Previous" class="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 m-2 bg-surface-container-lowest/80 backdrop-blur-md text-on-surface rounded-full shadow-[0_8px_24px_-4px_rgba(29,28,24,0.06)] opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none hidden md:flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<!-- Right Chevron (Hover) -->
+<button aria-label="Next" class="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 m-2 bg-surface-container-lowest/80 backdrop-blur-md text-on-surface rounded-full shadow-[0_8px_24px_-4px_rgba(29,28,24,0.06)] opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none hidden md:flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+<!-- Horizontal Strip -->
+<div class="flex gap-6 overflow-x-auto snap-x snap-mandatory pb-8 pt-4 px-4 md:px-0 scrollbar-hide" style="scrollbar-width: none; -ms-overflow-style: none;">
+<!-- Card 1 -->
+<article class="flex-none w-[85vw] md:w-[600px] snap-center bg-surface-container-lowest rounded-2xl shadow-[0_8px_24px_-4px_rgba(29,28,24,0.06)] p-6 md:p-8 flex flex-col md:flex-row gap-6 relative">
+<div class="flex-shrink-0 w-10 h-16 bg-surface-container-highest rounded overflow-hidden shadow-sm self-start mt-1">
+<img alt="Book cover" class="w-full h-full object-cover" data-alt="minimalist abstract book cover design with warm terracotta and cream geometric shapes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBVswMYgjTxEP_0oH3ZkfrDCB96s4e8kfpI0_gzC3tFe4QdfaBPUecFlj4yDBcI08HcZSGLhvABh3_YanMYzTbFgEzYK2L9I7SkNbt1V8NY02negytFDKloPAQmRzLtCdC4F4n20Cw0uAu2KGri0OISg-eYVrJIg2M7P4aVmVTlbBFtEef7zoA2FMj3-OEeqh4HW3Koz6E0TSg87yE-kaxifcNWQk27UkQirgsKVC7_BN3JL4Kk3vIgraWcvZA-PrQsvzRVIw4rxrg"/>
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<blockquote class="font-headline text-lg md:text-xl italic leading-relaxed text-on-surface mb-6 relative">
+<span class="absolute -left-4 -top-2 text-primary/20 text-4xl font-serif">"</span>
+                            The act of reading is a partnership. The author builds the house, but the reader makes it a home.
+                        </blockquote>
+<div class="flex items-end justify-between mt-auto">
+<div>
+<h3 class="font-body font-semibold text-sm text-on-surface">The Architecture of Thought</h3>
+<p class="font-body text-xs text-on-surface-variant mt-1">Elias Thorne</p>
+</div>
+<span class="font-body text-xs text-outline absolute top-6 right-6 md:static">Oct 12</span>
+</div>
+</div>
+</article>
+<!-- Card 2 -->
+<article class="flex-none w-[85vw] md:w-[600px] snap-center bg-surface-container-lowest rounded-2xl shadow-[0_8px_24px_-4px_rgba(29,28,24,0.06)] p-6 md:p-8 flex flex-col md:flex-row gap-6 relative">
+<div class="flex-shrink-0 w-10 h-16 bg-surface-container-highest rounded overflow-hidden shadow-sm self-start mt-1">
+<img alt="Book cover" class="w-full h-full object-cover" data-alt="vintage leather bound book spine with gold embossed lettering" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmoDO1x1H_YFJ1ARoRO1xmX74C1xW8UH8QRrIYmMe4VCdbnZxZ8tZM8Hpwq6qsw1ziGnAHfP2e_CpSxajvZcYXBpyDVk1ayJHzSApX7itj6IQNScUdAKQRs25MTUp4kmBArJmhSCJgIzXGJruqgYoWtXdkfL06YOEuS4VSB3ERkGKL8gBEqrQ35bcYTM09-OUiOsWyc4LsHSM0oAtFwAFEPW7crP693qd5gRCG1qiaOILAEArNvhBsA3UEUJW3fM7eNR_m-alQSQc"/>
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<blockquote class="font-headline text-lg md:text-xl italic leading-relaxed text-on-surface mb-6 relative">
+<span class="absolute -left-4 -top-2 text-primary/20 text-4xl font-serif">"</span>
+                            We do not simply lose time; we spend it. And like all currency, it matters most what we buy with it.
+                        </blockquote>
+<div class="flex items-end justify-between mt-auto">
+<div>
+<h3 class="font-body font-semibold text-sm text-on-surface">Chronos &amp; Kairos</h3>
+<p class="font-body text-xs text-on-surface-variant mt-1">Dr. Amelia Vance</p>
+</div>
+<span class="font-body text-xs text-outline absolute top-6 right-6 md:static">Oct 11</span>
+</div>
+</div>
+</article>
+<!-- Card 3 -->
+<article class="flex-none w-[85vw] md:w-[600px] snap-center bg-surface-container-lowest rounded-2xl shadow-[0_8px_24px_-4px_rgba(29,28,24,0.06)] p-6 md:p-8 flex flex-col md:flex-row gap-6 relative">
+<div class="flex-shrink-0 w-10 h-16 bg-surface-container-highest rounded overflow-hidden shadow-sm self-start mt-1">
+<img alt="Book cover" class="w-full h-full object-cover" data-alt="soft watercolor washes in pale blue and indigo creating a serene abstract cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDG27MfWmlXaEl2XvLEXQhuwAMGF0oJ-silAU7-4QTKoTftclguS2UDOo2SghSwbOsRPSaGmq1ilxRFDh2bg_NqdqsgsCE08zE9L46mv0TldSTwaPGSGajGB1JQY5lmdh-vWl3sjd2dLJGHs8XqFAEoWB2sQnbrEDh3PBSVarKciCYdRsIwZzQ-2dOrP8hMz8YC3vVUtybZAahuYcGtqLC9RFd-mZZBXt2CunUY05ScrZGH8EmQqjZrRalzYK_Sw4tK7ugxE9osoj8"/>
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<blockquote class="font-headline text-lg md:text-xl italic leading-relaxed text-on-surface mb-6 relative">
+<span class="absolute -left-4 -top-2 text-primary/20 text-4xl font-serif">"</span>
+                            Silence isn't the absence of noise; it's the presence of focus.
+                        </blockquote>
+<div class="flex items-end justify-between mt-auto">
+<div>
+<h3 class="font-body font-semibold text-sm text-on-surface">The Quiet Mind</h3>
+<p class="font-body text-xs text-on-surface-variant mt-1">Julian North</p>
+</div>
+<span class="font-body text-xs text-outline absolute top-6 right-6 md:static">Oct 09</span>
+</div>
+</div>
+</article>
+<!-- Card 4 -->
+<article class="flex-none w-[85vw] md:w-[600px] snap-center bg-surface-container-lowest rounded-2xl shadow-[0_8px_24px_-4px_rgba(29,28,24,0.06)] p-6 md:p-8 flex flex-col md:flex-row gap-6 relative pr-8">
+<div class="flex-shrink-0 w-10 h-16 bg-surface-container-highest rounded overflow-hidden shadow-sm self-start mt-1">
+<img alt="Book cover" class="w-full h-full object-cover" data-alt="monochrome typography-heavy modern book cover design" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDj7u_ooUSspG7B-5YK9nrfAC2RhcfiK3Xb5XBkB4PoJxCSd-xNnUM8i020ggXSwI_mwfjEq5hhD36J06LCI_o-BZaJWGc18nd3CJ3814Sdhkt21ZiV7Aq7I42PgIHY1xUVWBJCXzzMsASFRWB6WU4U0_y48yDM1L5REZkGNhnJKosl-i-YmRgxFt-Y70udLyVW9Ej7xQMi4iHv_ojeQAEX9bLxab-3Xv-GTS_4UPyMmIKxTr6qczEsXatKa6LX8Ty8okECMWxe1A"/>
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<blockquote class="font-headline text-lg md:text-xl italic leading-relaxed text-on-surface mb-6 relative">
+<span class="absolute -left-4 -top-2 text-primary/20 text-4xl font-serif">"</span>
+                            Design is not just what it looks like and feels like. Design is how it works.
+                        </blockquote>
+<div class="flex items-end justify-between mt-auto">
+<div>
+<h3 class="font-body font-semibold text-sm text-on-surface">Systems &amp; Soul</h3>
+<p class="font-body text-xs text-on-surface-variant mt-1">S. Jobs (Adaptation)</p>
+</div>
+<span class="font-body text-xs text-outline absolute top-6 right-6 md:static">Oct 08</span>
+</div>
+</div>
+</article>
+</div>
+</div>
+</section>
+</body></html>

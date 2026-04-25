@@ -106,7 +106,7 @@ export function CredentialSyncStatusBadge({
           data-testid={testId ?? `credential-status-badge-${status}`}
           className={cn(
             'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium select-none cursor-default',
-            'focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+            'focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none',
             statusClass,
             className
           )}

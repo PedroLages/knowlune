@@ -115,7 +115,7 @@ export function Login() {
               <button
                 type="button"
                 onClick={toggleMode}
-                className="min-h-[44px] font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                className="min-h-[44px] font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 rounded-sm"
               >
                 {toggleAction}
               </button>

@@ -49,14 +49,14 @@ export function SessionExpiredBanner({ isOffline }: { isOffline: boolean }) {
       <Link
         to="/login"
         onClick={handleSignInClick}
-        className="font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+        className="font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring rounded-sm"
       >
         Sign in
       </Link>
       <button
         type="button"
         onClick={handleDismiss}
-        className="ml-2 p-1 rounded-md text-warning-foreground/70 hover:text-warning-foreground hover:bg-warning/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[44px] min-w-[44px] flex items-center justify-center"
+        className="ml-2 p-1 rounded-md text-warning-foreground/70 hover:text-warning-foreground hover:bg-warning/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring min-h-[44px] min-w-[44px] flex items-center justify-center"
         aria-label="Dismiss session expired banner"
       >
         <X className="size-4" aria-hidden="true" />

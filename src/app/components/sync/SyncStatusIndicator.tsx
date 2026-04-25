@@ -193,7 +193,7 @@ export function SyncStatusIndicator(): React.ReactElement {
           aria-label={ariaLabel}
           data-testid="sync-status-indicator"
           data-sync-status={status}
-          className="relative inline-flex items-center justify-center size-11 min-h-[44px] min-w-[44px] rounded-md hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+          className="relative inline-flex items-center justify-center size-11 min-h-[44px] min-w-[44px] rounded-md hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring cursor-pointer"
         >
           <TriggerIcon
             className={`size-5 ${config.colorClass} ${

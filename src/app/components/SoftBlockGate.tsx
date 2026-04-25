@@ -85,7 +85,7 @@ export function SoftBlockGate({ onAcknowledged }: SoftBlockGateProps) {
           </Button>
           <Link
             to="/privacy"
-            className="inline-flex items-center justify-center min-h-[44px] rounded-xl text-sm font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            className="inline-flex items-center justify-center min-h-[44px] rounded-xl text-sm font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1"
           >
             View Privacy Notice
           </Link>

@@ -137,7 +137,7 @@ export function ReminderSettings() {
                     id="reminder-time"
                     value={settings.dailyReminderTime}
                     onChange={e => update({ dailyReminderTime: e.target.value })}
-                    className="mt-1 block w-full max-w-40 h-11 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="mt-1 block w-full max-w-40 h-11 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:border-focus-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                   />
                 </div>
               )}

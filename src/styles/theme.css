@@ -41,6 +41,11 @@
   --shadow-warm: oklch(0.5 0.05 60 / 0.06);
   --shadow-gold: oklch(0.6 0.1 85 / 0.1);
   --ring: oklch(0.708 0 0);
+  /* WCAG 2.4.13 (AAA) focus indicator color.
+     Intentionally separate from --ring so we can tune focus contrast (>=3:1 vs
+     all reference backgrounds: --background, --card, --muted, --accent,
+     --brand-soft) without affecting other ring usages. */
+  --focus-ring: oklch(0.45 0.18 265);
   --chart-1: oklch(0.55 0.15 270);
   --chart-2: oklch(0.58 0.1 160);
   --chart-3: oklch(0.5 0.08 40);
@@ -140,6 +145,9 @@
   --input-background: #1e1f30;
   --switch-background: #44456a;
   --ring: oklch(0.45 0.05 270);
+  /* WCAG 2.4.13 focus indicator color (dark). Light blue picked for >=3:1
+     contrast against --background (#1a1b26) and --card (#242536). */
+  --focus-ring: oklch(0.78 0.16 265);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
 
@@ -374,6 +382,9 @@
   --input-background: #ebeef7;
   --switch-background: #acb2bf;
   --ring: #005bc1;
+  /* WCAG 2.4.13 focus indicator color (clean light). Apple blue already
+     passes >=3:1 against the cool blue-white surfaces. */
+  --focus-ring: #005bc1;
   --surface-elevated: #ffffff;
   --surface-sunken: #f2f3fa;
 
@@ -441,6 +452,9 @@
   --input-background: #1a2230;
   --switch-background: #3a4858;
   --ring: #4da3ff;
+  /* WCAG 2.4.13 focus indicator color (clean dark). Light Apple blue
+     passes >=3:1 against cool dark surfaces. */
+  --focus-ring: #4da3ff;
 
   /* Surface depth tokens */
   --brand-soft: #1a2740;
@@ -563,6 +577,7 @@ html.spacious {
   --color-input-background: var(--input-background);
   --color-switch-background: var(--switch-background);
   --color-ring: var(--ring);
+  --color-focus-ring: var(--focus-ring);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -654,11 +669,12 @@ html.spacious {
   }
 
   /**
-   * Global focus indicators for WCAG 2.1 AA+ compliance
-   * Ensures visible keyboard navigation with 3:1 contrast ratio
+   * Global focus indicators for WCAG 2.4.13 Focus Appearance (AAA)
+   * - Outline width >= 2px (perimeter requirement)
+   * - 3:1 contrast vs adjacent backgrounds (--focus-ring is tuned per theme)
    */
   *:focus-visible {
-    outline: 2px solid var(--brand);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -667,7 +683,7 @@ html.spacious {
   button:focus-visible,
   a:focus-visible,
   [role='button']:focus-visible {
-    outline: 2px solid var(--brand);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
 

@@ -118,7 +118,7 @@ export function EmailPasswordForm({ mode, onSuccess, idPrefix = 'auth' }: EmailP
           <button
             type="button"
             onClick={() => { setValidationError(null); setError(null) }}
-            className="absolute right-2 top-2 rounded p-0.5 hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="absolute right-2 top-2 rounded p-0.5 hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             aria-label="Dismiss error"
           >
             <X className="size-3.5" aria-hidden="true" />
@@ -177,7 +177,7 @@ export function EmailPasswordForm({ mode, onSuccess, idPrefix = 'auth' }: EmailP
           <button
             type="button"
             onClick={() => setShowPassword(v => !v)}
-            className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center size-[44px] text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center size-[44px] text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring rounded"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
@@ -191,7 +191,7 @@ export function EmailPasswordForm({ mode, onSuccess, idPrefix = 'auth' }: EmailP
             type="button"
             onClick={handleForgotPassword}
             disabled={forgotLoading}
-            className="min-h-[44px] text-sm font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm disabled:opacity-50"
+            className="min-h-[44px] text-sm font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 rounded-sm disabled:opacity-50"
           >
             {forgotLoading ? 'Sending...' : 'Forgot Password?'}
           </button>
@@ -218,7 +218,7 @@ export function EmailPasswordForm({ mode, onSuccess, idPrefix = 'auth' }: EmailP
             <button
               type="button"
               onClick={() => setShowConfirmPassword(v => !v)}
-              className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center size-[44px] text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+              className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center size-[44px] text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring rounded"
               aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
             >
               {showConfirmPassword ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
@@ -249,7 +249,7 @@ export function EmailPasswordForm({ mode, onSuccess, idPrefix = 'auth' }: EmailP
               to="/privacy"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"
+              className="font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1 rounded-sm"
               onClick={e => e.stopPropagation()}
             >
               Privacy Notice

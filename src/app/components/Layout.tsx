@@ -634,7 +634,7 @@ export function Layout() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="flex items-center gap-3 pl-4 border-l border-border cursor-pointer rounded-lg p-1 -m-1 min-h-[44px] transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex items-center gap-3 pl-4 border-l border-border cursor-pointer rounded-lg p-1 -m-1 min-h-[44px] transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                     aria-label="User menu"
                   >
                     <div className="relative">
