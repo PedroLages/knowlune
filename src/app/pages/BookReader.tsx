@@ -2,7 +2,8 @@
  * BookReader — full-viewport EPUB reader page.
  *
  * Route: /library/:bookId/read (registered in routes.tsx).
- * Full-screen layout — NOT nested inside the standard Layout component.
+ * Full-screen layout over the app shell — nested under Layout in routes so
+ * audiobook swipe-down can reveal Library underneath; EPUB still covers chrome via z-index.
  *
  * Responsibilities:
  * - Load book from useBookStore by :bookId URL param
@@ -938,7 +939,7 @@ export function BookReader() {
         {/* eslint-disable react-best-practices/no-inline-styles -- dynamic translateY for drag-to-dismiss */}
         <div
           className={cn(
-            'fixed left-0 right-0 top-0 z-10 isolate flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-transparent',
+            'fixed left-0 right-0 top-0 z-[100] isolate flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-transparent',
             !isAudiobookPlayerDragging && 'transition-transform duration-200 ease-out',
             isAudiobookPlayerMinimizing && 'pointer-events-none'
           )}
@@ -1036,7 +1037,7 @@ export function BookReader() {
   return (
     // Full-viewport, no Layout wrapper — reader owns the full screen
     <div
-      className="fixed inset-0 flex flex-col overflow-hidden [touch-action:pan-y]"
+      className="fixed inset-0 z-[100] flex flex-col overflow-hidden [touch-action:pan-y]"
       data-testid="book-reader"
     >
       {/* Reader Header */}
