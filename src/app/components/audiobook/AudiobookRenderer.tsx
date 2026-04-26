@@ -446,21 +446,58 @@ export function AudiobookRenderer({
 
   return (
     <>
-      {/* Blurred cover background */}
-      {resolvedCoverUrl && (
+      {/* Living cover atmosphere — blurred art + scrim + vignette (tokens: --player-atmosphere-*) */}
+      <div
+        className="fixed inset-0 z-0 overflow-hidden pointer-events-none"
+        aria-hidden="true"
+      >
+        <div className="absolute inset-0 bg-background" />
+        {resolvedCoverUrl && (
+          <>
+            <div
+              className="absolute motion-reduce:transform-none"
+              style={{
+                inset: '-12%',
+                backgroundImage: `url(${resolvedCoverUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: 'blur(72px) saturate(1.35)',
+                opacity: 'var(--player-atmosphere-blur-opacity, 0.52)',
+                transform: 'scale(1.08)',
+              }}
+            />
+            <div
+              className="absolute motion-reduce:transform-none"
+              style={{
+                inset: '-28%',
+                backgroundImage: `url(${resolvedCoverUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: 'blur(120px) saturate(1.55) brightness(1.06)',
+                opacity: 'var(--player-atmosphere-bloom-opacity, 0.38)',
+              }}
+            />
+          </>
+        )}
         <div
-          className="fixed inset-0 z-0 pointer-events-none"
-          style={{
-            backgroundImage: `url(${resolvedCoverUrl})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            filter: 'blur(80px)',
-            opacity: 0.15,
-            transform: 'scale(1.1)',
-          }}
-          aria-hidden="true"
+          className="absolute inset-0"
+          style={{ background: 'var(--player-atmosphere-scrim)' }}
         />
-      )}
+        <div
+          className="absolute inset-0"
+          style={{ background: 'var(--player-atmosphere-vignette)' }}
+        />
+        {/* CSS-only micro-grain (disabled when reduced motion) */}
+        <div
+          className="absolute inset-0 opacity-[0.035] motion-reduce:opacity-0 dark:opacity-[0.055]"
+          style={{
+            backgroundImage: [
+              'repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgb(0 0 0 / 0.06) 2px, rgb(0 0 0 / 0.06) 3px)',
+              'repeating-linear-gradient(90deg, transparent 0px, transparent 2px, rgb(0 0 0 / 0.04) 2px, rgb(0 0 0 / 0.04) 3px)',
+            ].join(','),
+          }}
+        />
+      </div>
       <div className="relative z-10 flex flex-1 min-h-0 overflow-y-auto px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-6">
         <div className="flex min-h-full w-full flex-col">
           <div className="m-auto flex w-full max-w-lg min-w-0 flex-col items-center">
@@ -471,7 +508,7 @@ export function AudiobookRenderer({
              * Do not rename testids without updating the spec. */}
             <div
               data-testid="audiobook-cover-frame"
-              className="w-full max-w-56 sm:max-w-72 lg:max-w-80 aspect-square shrink-0 rounded-3xl overflow-hidden shadow-[var(--player-cover-shadow)] flex items-center justify-center bg-muted"
+              className="flex aspect-square w-full max-w-56 shrink-0 items-center justify-center overflow-hidden rounded-3xl bg-muted [box-shadow:var(--player-cover-shadow),var(--player-cover-halo)] sm:max-w-72 lg:max-w-80"
             >
               {resolvedCoverUrl && !coverLoadFailed ? (
                 <img
@@ -533,8 +570,8 @@ export function AudiobookRenderer({
           </Button>
         )}
 
-        {/* Progress Scrubber */}
-        <div className="mt-8 w-full space-y-2 px-2">
+        {/* Progress Scrubber — glass panel for legibility over atmosphere */}
+        <div className="mt-8 w-full space-y-2 rounded-2xl border border-[var(--surface-player-panel-border)] bg-[var(--surface-player-panel)] px-3 py-3 backdrop-blur-xl sm:px-4">
           <Slider
             value={[currentTime]}
             min={0}
@@ -612,7 +649,7 @@ export function AudiobookRenderer({
         <SkipSilenceActiveIndicator isActive={skipSilence} />
 
         {/* Secondary Controls: Speed | Bookmark | Sleep Timer */}
-        <div className="mt-8 flex max-w-full items-center gap-1 rounded-full border px-2 py-1.5 backdrop-blur-2xl bg-[var(--surface-glass)] border-[var(--surface-glass-border)] sm:gap-2 sm:px-4">
+        <div className="mt-8 flex max-w-full items-center gap-1 rounded-full border border-[var(--surface-player-panel-border)] bg-[var(--surface-player-panel)] px-2 py-1.5 backdrop-blur-2xl sm:gap-2 sm:px-4">
           <SpeedControl bookId={book.id} />
           <div className="relative">
             <BookmarkButton

@@ -799,11 +799,11 @@ export function BookReader() {
   if (book?.format === 'audiobook') {
     return (
       <div
-        className="fixed inset-0 flex flex-col bg-background overflow-y-auto"
+        className="fixed inset-0 isolate flex flex-col overflow-y-auto bg-transparent"
         data-testid="audiobook-reader"
       >
-        {/* Minimal header for back navigation + bookmarks */}
-        <div className="flex items-center justify-between gap-3 px-4 py-3 bg-[var(--surface-glass)] backdrop-blur-[32px] border-b border-[var(--surface-glass-border)] sticky top-0 z-10">
+        {/* Minimal header — frosted bar; page bg comes from AudiobookRenderer atmosphere */}
+        <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-[var(--player-header-glass-border)] bg-[var(--player-header-glass)] px-4 py-3 backdrop-blur-[40px] backdrop-saturate-150">
           <Button
             variant="ghost"
             size="icon"
@@ -827,7 +827,7 @@ export function BookReader() {
         <div className="flex flex-1 min-h-0 flex-col">
           <Suspense
             fallback={
-              <div className="flex flex-1 items-center justify-center">
+              <div className="flex min-h-[40vh] flex-1 items-center justify-center bg-background">
                 <Loader2 className="size-8 animate-spin text-muted-foreground" />
               </div>
             }
