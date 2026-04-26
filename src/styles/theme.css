@@ -124,10 +124,30 @@
   /* Audiobook player tokens */
   --surface-glass: oklch(1 0 0 / 0.55);
   --surface-glass-border: oklch(0 0 0 / 0.08);
+  --surface-player-panel: oklch(1 0 0 / 0.42);
+  --surface-player-panel-border: oklch(0 0 0 / 0.06);
+  --player-header-glass: oklch(1 0 0 / 0.72);
+  --player-header-glass-border: oklch(0 0 0 / 0.1);
   --player-cover-shadow: 0 20px 50px rgb(0 0 0 / 0.18);
+  --player-cover-halo: 0 0 0 1px oklch(1 0 0 / 0.35), 0 0 80px oklch(0.55 0.12 270 / 0.12);
   --player-fab: var(--brand);
   --player-fab-foreground: var(--brand-foreground);
   --player-fab-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  /* Living cover atmosphere (AudiobookRenderer) */
+  --player-atmosphere-blur-opacity: 0.52;
+  --player-atmosphere-bloom-opacity: 0.38;
+  --player-atmosphere-scrim: linear-gradient(
+    180deg,
+    oklch(0.99 0.015 85 / 0.88) 0%,
+    oklch(0.99 0.02 90 / 0.45) 32%,
+    oklch(0.98 0.02 90 / 0.2) 52%,
+    oklch(0.96 0.025 85 / 0.72) 100%
+  );
+  --player-atmosphere-vignette: radial-gradient(
+    ellipse 115% 95% at 50% 48%,
+    transparent 38%,
+    oklch(0.35 0.04 270 / 0.14) 100%
+  );
 }
 
 .dark {
@@ -240,10 +260,29 @@
   /* Audiobook player tokens (dark) */
   --surface-glass: oklch(0.18 0.01 270 / 0.6);
   --surface-glass-border: oklch(1 0 0 / 0.18);
+  --surface-player-panel: oklch(0.16 0.02 270 / 0.55);
+  --surface-player-panel-border: oklch(1 0 0 / 0.12);
+  --player-header-glass: oklch(0.14 0.02 270 / 0.78);
+  --player-header-glass-border: oklch(1 0 0 / 0.14);
   --player-cover-shadow: 0 24px 60px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.15);
+  --player-cover-halo: 0 0 0 1px oklch(1 0 0 / 0.2), 0 0 100px oklch(0.55 0.14 270 / 0.22);
   --player-fab: oklch(1 0 0);
   --player-fab-foreground: oklch(0.15 0 0);
   --player-fab-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+  --player-atmosphere-blur-opacity: 0.58;
+  --player-atmosphere-bloom-opacity: 0.42;
+  --player-atmosphere-scrim: linear-gradient(
+    180deg,
+    oklch(0.16 0.03 270 / 0.82) 0%,
+    oklch(0.14 0.025 270 / 0.35) 42%,
+    oklch(0.12 0.03 270 / 0.25) 58%,
+    oklch(0.1 0.03 270 / 0.88) 100%
+  );
+  --player-atmosphere-vignette: radial-gradient(
+    ellipse 115% 95% at 50% 45%,
+    transparent 32%,
+    oklch(0.05 0.03 270 / 0.65) 100%
+  );
 }
 
 /* --------------------------------------------------------------------------
@@ -445,6 +484,25 @@
   /* Font override — Inter for Clean theme */
   --font-body: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
   --font-heading: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Audiobook atmosphere — cool light scrim */
+  --surface-player-panel: oklch(1 0 0 / 0.48);
+  --surface-player-panel-border: oklch(0.45 0.06 250 / 0.1);
+  --player-header-glass: oklch(0.99 0.01 250 / 0.78);
+  --player-header-glass-border: oklch(0.45 0.06 250 / 0.12);
+  --player-cover-halo: 0 0 0 1px oklch(1 0 0 / 0.5), 0 0 72px oklch(0.55 0.1 250 / 0.14);
+  --player-atmosphere-scrim: linear-gradient(
+    180deg,
+    oklch(0.99 0.01 250 / 0.9) 0%,
+    oklch(0.98 0.015 250 / 0.42) 34%,
+    oklch(0.97 0.02 250 / 0.18) 54%,
+    oklch(0.95 0.02 250 / 0.75) 100%
+  );
+  --player-atmosphere-vignette: radial-gradient(
+    ellipse 115% 95% at 50% 48%,
+    transparent 40%,
+    oklch(0.4 0.06 250 / 0.12) 100%
+  );
 }
 
 .dark.clean {
@@ -553,6 +611,25 @@
   /* Font override — Inter for Clean theme */
   --font-body: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
   --font-heading: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Audiobook atmosphere — cool dark scrim */
+  --surface-player-panel: oklch(0.15 0.03 250 / 0.58);
+  --surface-player-panel-border: oklch(0.75 0.08 250 / 0.14);
+  --player-header-glass: oklch(0.12 0.03 250 / 0.82);
+  --player-header-glass-border: oklch(0.75 0.08 250 / 0.12);
+  --player-cover-halo: 0 0 0 1px oklch(0.75 0.1 250 / 0.22), 0 0 96px oklch(0.55 0.12 250 / 0.2);
+  --player-atmosphere-scrim: linear-gradient(
+    180deg,
+    oklch(0.14 0.04 250 / 0.85) 0%,
+    oklch(0.12 0.035 250 / 0.38) 44%,
+    oklch(0.1 0.04 250 / 0.28) 58%,
+    oklch(0.08 0.04 250 / 0.9) 100%
+  );
+  --player-atmosphere-vignette: radial-gradient(
+    ellipse 115% 95% at 50% 45%,
+    transparent 34%,
+    oklch(0.04 0.04 250 / 0.68) 100%
+  );
 }
 
 /* --------------------------------------------------------------------------
