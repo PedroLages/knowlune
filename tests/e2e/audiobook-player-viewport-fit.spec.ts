@@ -123,9 +123,10 @@ test.describe('Audiobook player viewport fit', () => {
     await seedIndexedDBStore(page, DB_NAME, 'audiobookshelfServers', [
       ABS_SERVER,
     ] as unknown as Record<string, unknown>[])
-    await seedIndexedDBStore(page, DB_NAME, 'books', [
-      FIT_AUDIOBOOK,
-    ] as unknown as Record<string, unknown>[])
+    await seedIndexedDBStore(page, DB_NAME, 'books', [FIT_AUDIOBOOK] as unknown as Record<
+      string,
+      unknown
+    >[])
 
     await page.setViewportSize({ width: 1280, height: 720 })
 
@@ -135,7 +136,9 @@ test.describe('Audiobook player viewport fit', () => {
     await expect(page.getByTestId('audiobook-secondary-controls')).toBeVisible()
 
     const layout = await page.evaluate(() => {
-      const reader = document.querySelector('[data-testid="audiobook-reader"]') as HTMLElement | null
+      const reader = document.querySelector(
+        '[data-testid="audiobook-reader"]'
+      ) as HTMLElement | null
       const primary = document.querySelector(
         '[data-testid="audiobook-primary-controls"]'
       ) as HTMLElement | null
@@ -174,5 +177,83 @@ test.describe('Audiobook player viewport fit', () => {
       expect(layout.progressBottom).toBeLessThanOrEqual(layout.innerHeight + epsilon)
     }
     expect(layout.docScrollHeight).toBeLessThanOrEqual(layout.docClientHeight + epsilon)
+  })
+
+  test('dragging down from the player surface minimizes the full player', async ({ page }) => {
+    await mockAudioElement(page)
+
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'knowlune-onboarding-v1',
+        JSON.stringify({ completedAt: '2025-01-01T00:00:00.000Z', skipped: true })
+      )
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2025-01-01T00:00:00.000Z' })
+      )
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
+    })
+
+    const coverPng = readFileSync(COVER_FIXTURE)
+    await page.route('**/__test__/api/items/vfit-item-1/cover*', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: coverPng,
+      })
+    })
+
+    await page.route('**/api/items/*/play', async route => {
+      if (route.request().method() === 'POST') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 'vfit-session-1',
+            audioTracks: [
+              {
+                contentUrl: '/s/item/vfit-item-1/book.m4b',
+                duration: 3600,
+                mimeType: 'audio/mp4',
+              },
+            ],
+          }),
+        })
+      } else {
+        await route.continue()
+      }
+    })
+    await page.route('**/api/session/*/close', async route => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+    })
+    await page.route('**/s/item/**', async route => {
+      await route.fulfill({ status: 200, contentType: 'audio/mp4', body: '' })
+    })
+
+    await page.goto('/')
+    await seedIndexedDBStore(page, DB_NAME, 'audiobookshelfServers', [
+      ABS_SERVER,
+    ] as unknown as Record<string, unknown>[])
+    await seedIndexedDBStore(page, DB_NAME, 'books', [FIT_AUDIOBOOK] as unknown as Record<
+      string,
+      unknown
+    >[])
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(`/library/${FIT_AUDIOBOOK.id}/read`)
+    await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
+
+    const coverBox = await page.getByTestId('audiobook-cover-frame').boundingBox()
+    expect(coverBox).not.toBeNull()
+    if (!coverBox) return
+
+    const startX = coverBox.x + coverBox.width / 2
+    const startY = coverBox.y + coverBox.height / 2
+    await page.mouse.move(startX, startY)
+    await page.mouse.down()
+    await page.mouse.move(startX, startY + 160, { steps: 8 })
+    await page.mouse.up()
+
+    await expect(page).toHaveURL(/\/$/)
   })
 })

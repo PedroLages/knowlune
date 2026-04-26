@@ -169,14 +169,17 @@ export function AudiobookRenderer({
     [onBookmarkChange]
   )
 
-  const handleBookmarkDeleted = useCallback((bookmarkId: string) => {
-    setSessionBookmarkIds(prev => {
-      const next = new Set(prev)
-      next.delete(bookmarkId)
-      onBookmarkChange?.()
-      return next
-    })
-  }, [onBookmarkChange])
+  const handleBookmarkDeleted = useCallback(
+    (bookmarkId: string) => {
+      setSessionBookmarkIds(prev => {
+        const next = new Set(prev)
+        next.delete(bookmarkId)
+        onBookmarkChange?.()
+        return next
+      })
+    },
+    [onBookmarkChange]
+  )
 
   // bookmarksOpen can be controlled externally (from BookReader header) or internally
   const [bookmarksOpenInternal, setBookmarksOpenInternal] = useState(false)
@@ -459,7 +462,7 @@ export function AudiobookRenderer({
       <div className="relative z-10 flex h-full min-h-0 flex-1 flex-col overflow-hidden px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-[max(0.25rem,env(safe-area-inset-top))] sm:px-6">
         <div className="mx-auto flex h-full min-h-0 w-full max-w-lg min-w-0 flex-col">
           {/* Top: cover + metadata — compact so primary controls stay in view on short laptops */}
-          <div className="flex min-h-0 shrink flex-col items-center gap-3 sm:gap-4">
+          <div className="flex min-h-0 shrink touch-none flex-col items-center gap-3 sm:gap-4">
             {/* Cover Art
              * shrink-0: prevents the parent flex column from collapsing the square
              * frame on short viewports — root cause of the letterbox bars.
@@ -474,6 +477,7 @@ export function AudiobookRenderer({
                   data-testid="audiobook-cover-image"
                   src={resolvedCoverUrl}
                   alt={`Cover of ${book.title}`}
+                  draggable={false}
                   className="h-full w-full object-cover"
                   onError={() => setCoverLoadFailed(true)}
                 />
@@ -505,7 +509,7 @@ export function AudiobookRenderer({
           </div>
 
           {/* Primary controls — fixed stack height; does not scroll with chapter list */}
-          <div className="mt-3 flex w-full shrink-0 flex-col items-center gap-3 sm:mt-4 sm:gap-4">
+          <div className="mt-3 flex w-full shrink-0 touch-none flex-col items-center gap-3 sm:mt-4 sm:gap-4">
             {/* Switch to Reading — only when a chapter mapping exists (E103-S02) */}
             {onSwitchToReading && (
               <Button
@@ -570,7 +574,10 @@ export function AudiobookRenderer({
             </div>
 
             {/* Playback Controls */}
-            <div className="flex items-center gap-6 sm:gap-8" data-testid="audiobook-primary-controls">
+            <div
+              className="flex items-center gap-6 sm:gap-8"
+              data-testid="audiobook-primary-controls"
+            >
               <button
                 onClick={handleSkipBack}
                 disabled={isLoading}
@@ -594,7 +601,11 @@ export function AudiobookRenderer({
                 ) : isPlaying ? (
                   <Pause className="size-8 sm:size-10" aria-hidden="true" fill="currentColor" />
                 ) : (
-                  <Play className="ml-0.5 size-8 sm:size-10 sm:ml-1" aria-hidden="true" fill="currentColor" />
+                  <Play
+                    className="ml-0.5 size-8 sm:size-10 sm:ml-1"
+                    aria-hidden="true"
+                    fill="currentColor"
+                  />
                 )}
               </button>
 
@@ -679,6 +690,7 @@ export function AudiobookRenderer({
           <div
             className="mt-2 flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden pb-1"
             data-testid="audiobook-chapter-scroll-region"
+            data-audiobook-player-no-drag
           >
             <ChapterList
               chapters={book.chapters}

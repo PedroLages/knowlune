@@ -72,8 +72,13 @@ const POSITION_SAVE_DEBOUNCE_MS = 500
 const AUDIOBOOK_PLAYER_DISMISS_PX = 120
 /** Clamp vertical drag so the sheet cannot be yanked arbitrarily far. */
 const AUDIOBOOK_PLAYER_MAX_DRAG_PX = 560
+/** Keep the route alive just long enough for the full player to animate off-screen. */
+const AUDIOBOOK_PLAYER_MINIMIZE_ANIMATION_MS = 180
 /** Treat pointer up with less movement as a tap-to-minimize on the handle. */
 const AUDIOBOOK_PLAYER_TAP_SLOP_PX = 12
+const AUDIOBOOK_PLAYER_NO_DRAG_SELECTOR =
+  'a,button,input,select,textarea,[role="button"],[role="slider"],[data-audiobook-player-no-drag]'
+const AUDIOBOOK_PLAYER_DRAG_HANDLE_SELECTOR = '[data-audiobook-player-drag-handle]'
 
 function LoadingSkeleton({ message = 'Loading book...' }: { message?: string }) {
   return (
@@ -141,14 +146,17 @@ export function BookReader() {
   const [bookmarkVersion, setBookmarkVersion] = useState(0)
   const handleBookmarkChange = useCallback(() => setBookmarkVersion(v => v + 1), [])
 
-  // Mobile audiobook full player: drag handle + swipe-down-to-minimize (pointer capture)
+  // Mobile audiobook full player: surface swipe-down-to-minimize (pointer capture)
   const [audiobookPlayerDragY, setAudiobookPlayerDragY] = useState(0)
   const [isAudiobookPlayerDragging, setIsAudiobookPlayerDragging] = useState(false)
+  const [isAudiobookPlayerMinimizing, setIsAudiobookPlayerMinimizing] = useState(false)
   const audiobookPlayerDragStartYRef = useRef<number | null>(null)
   const audiobookPlayerPointerIdRef = useRef<number | null>(null)
   const audiobookPlayerDragYRef = useRef(0)
+  const audiobookPlayerStartedFromHandleRef = useRef(false)
+  const audiobookPlayerMinimizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const releaseAudiobookPlayerPointer = useCallback((el: HTMLButtonElement, pointerId: number) => {
+  const releaseAudiobookPlayerPointer = useCallback((el: HTMLElement, pointerId: number) => {
     try {
       if (el.hasPointerCapture(pointerId)) {
         el.releasePointerCapture(pointerId)
@@ -158,15 +166,26 @@ export function BookReader() {
     }
   }, [])
 
-  const handleAudiobookPlayerPointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return
-    e.currentTarget.setPointerCapture(e.pointerId)
-    audiobookPlayerDragStartYRef.current = e.clientY
-    audiobookPlayerPointerIdRef.current = e.pointerId
-    setIsAudiobookPlayerDragging(true)
-  }, [])
+  const handleAudiobookPlayerPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLElement>) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      if (isAudiobookPlayerMinimizing) return
 
-  const handleAudiobookPlayerPointerMove = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+      const target = e.target as HTMLElement | null
+      const startedFromHandle = Boolean(target?.closest(AUDIOBOOK_PLAYER_DRAG_HANDLE_SELECTOR))
+      const startedFromBlockedControl = Boolean(target?.closest(AUDIOBOOK_PLAYER_NO_DRAG_SELECTOR))
+      if (!startedFromHandle && startedFromBlockedControl) return
+
+      e.currentTarget.setPointerCapture(e.pointerId)
+      audiobookPlayerDragStartYRef.current = e.clientY
+      audiobookPlayerPointerIdRef.current = e.pointerId
+      audiobookPlayerStartedFromHandleRef.current = startedFromHandle
+      setIsAudiobookPlayerDragging(true)
+    },
+    [isAudiobookPlayerMinimizing]
+  )
+
+  const handleAudiobookPlayerPointerMove = useCallback((e: React.PointerEvent<HTMLElement>) => {
     if (audiobookPlayerPointerIdRef.current !== e.pointerId) return
     const startY = audiobookPlayerDragStartYRef.current
     if (startY === null) return
@@ -177,44 +196,65 @@ export function BookReader() {
   }, [])
 
   const handleAudiobookPlayerPointerEnd = useCallback(
-    (e: React.PointerEvent<HTMLButtonElement>) => {
+    (e: React.PointerEvent<HTMLElement>) => {
       if (audiobookPlayerPointerIdRef.current !== e.pointerId) return
       const el = e.currentTarget
       const startY = audiobookPlayerDragStartYRef.current
       const y = audiobookPlayerDragYRef.current
       const totalMove = startY !== null ? Math.abs(e.clientY - startY) : 0
+      const startedFromHandle = audiobookPlayerStartedFromHandleRef.current
 
       releaseAudiobookPlayerPointer(el, e.pointerId)
       audiobookPlayerDragStartYRef.current = null
       audiobookPlayerPointerIdRef.current = null
+      audiobookPlayerStartedFromHandleRef.current = false
       setIsAudiobookPlayerDragging(false)
 
       const shouldMinimize =
         y >= AUDIOBOOK_PLAYER_DISMISS_PX ||
-        (y < AUDIOBOOK_PLAYER_DISMISS_PX && totalMove < AUDIOBOOK_PLAYER_TAP_SLOP_PX)
+        (startedFromHandle &&
+          y < AUDIOBOOK_PLAYER_DISMISS_PX &&
+          totalMove < AUDIOBOOK_PLAYER_TAP_SLOP_PX)
+
+      if (shouldMinimize) {
+        const closedY = window.innerHeight + 24
+        audiobookPlayerDragYRef.current = closedY
+        setIsAudiobookPlayerMinimizing(true)
+        setAudiobookPlayerDragY(closedY)
+        audiobookPlayerMinimizeTimerRef.current = setTimeout(() => {
+          handleMinimize()
+        }, AUDIOBOOK_PLAYER_MINIMIZE_ANIMATION_MS)
+        return
+      }
 
       audiobookPlayerDragYRef.current = 0
       setAudiobookPlayerDragY(0)
-      if (shouldMinimize) {
-        handleMinimize()
-      }
     },
     [handleMinimize, releaseAudiobookPlayerPointer]
   )
 
   const handleAudiobookPlayerPointerCancel = useCallback(
-    (e: React.PointerEvent<HTMLButtonElement>) => {
+    (e: React.PointerEvent<HTMLElement>) => {
       if (audiobookPlayerPointerIdRef.current !== e.pointerId) return
       const el = e.currentTarget
       releaseAudiobookPlayerPointer(el, e.pointerId)
       audiobookPlayerDragStartYRef.current = null
       audiobookPlayerPointerIdRef.current = null
+      audiobookPlayerStartedFromHandleRef.current = false
       setIsAudiobookPlayerDragging(false)
       audiobookPlayerDragYRef.current = 0
       setAudiobookPlayerDragY(0)
     },
     [releaseAudiobookPlayerPointer]
   )
+
+  useEffect(() => {
+    return () => {
+      if (audiobookPlayerMinimizeTimerRef.current) {
+        clearTimeout(audiobookPlayerMinimizeTimerRef.current)
+      }
+    }
+  }, [])
 
   // Check if book has any bookmarks (for filled icon state)
   useEffect(() => {
@@ -325,11 +365,17 @@ export function BookReader() {
   // Reset audiobook drag chrome when leaving audiobook or switching books
   useEffect(() => {
     if (book?.format !== 'audiobook') {
+      if (audiobookPlayerMinimizeTimerRef.current) {
+        clearTimeout(audiobookPlayerMinimizeTimerRef.current)
+        audiobookPlayerMinimizeTimerRef.current = null
+      }
       audiobookPlayerDragStartYRef.current = null
       audiobookPlayerPointerIdRef.current = null
       audiobookPlayerDragYRef.current = 0
+      audiobookPlayerStartedFromHandleRef.current = false
       setAudiobookPlayerDragY(0)
       setIsAudiobookPlayerDragging(false)
+      setIsAudiobookPlayerMinimizing(false)
     }
   }, [book?.format, bookId])
 
@@ -836,11 +882,7 @@ export function BookReader() {
                 nextCh && nextCh.position.type === 'cfi'
                   ? locs.percentageFromCfi(nextCh.position.value)
                   : 1
-              if (
-                Number.isFinite(startPct) &&
-                Number.isFinite(endPct) &&
-                endPct > startPct
-              ) {
+              if (Number.isFinite(startPct) && Number.isFinite(endPct) && endPct > startPct) {
                 const target = Math.max(0, Math.min(1, startPct + chapterPct * (endPct - startPct)))
                 const cfi = locs.cfiFromPercentage(target)
                 if (cfi) displayTarget = cfi
@@ -897,7 +939,8 @@ export function BookReader() {
         <div
           className={cn(
             'fixed left-0 right-0 top-0 z-10 isolate flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-transparent',
-            !isAudiobookPlayerDragging && 'transition-transform duration-200 ease-out'
+            !isAudiobookPlayerDragging && 'transition-transform duration-200 ease-out',
+            isAudiobookPlayerMinimizing && 'pointer-events-none'
           )}
           style={
             audiobookPlayerDragY > 0
@@ -905,84 +948,85 @@ export function BookReader() {
               : undefined
           }
           data-testid="audiobook-reader"
+          onPointerDown={handleAudiobookPlayerPointerDown}
+          onPointerMove={handleAudiobookPlayerPointerMove}
+          onPointerUp={handleAudiobookPlayerPointerEnd}
+          onPointerCancel={handleAudiobookPlayerPointerCancel}
         >
-        {/* Top chrome: column-aligned with player; gradient for icon legibility (not a full-bleed frosted bar) */}
-        <div className="sticky top-0 z-20 isolate shrink-0 pt-[env(safe-area-inset-top)]">
-          <div
-            className="pointer-events-none absolute inset-x-0 top-0 h-[5.5rem] bg-gradient-to-b from-background/80 via-background/40 to-transparent dark:from-black/50 dark:via-black/22 dark:to-transparent"
-            aria-hidden
-          />
-          <div className="relative mx-auto flex min-h-[52px] w-full max-w-lg items-center justify-between gap-3 px-4 py-2 sm:py-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleMinimize}
-              className="min-h-[44px] min-w-[44px] shrink-0 text-muted-foreground hover:text-foreground drop-shadow-sm"
-              aria-label="Minimize player"
-              data-testid="audiobook-minimize-button"
-            >
-              <ChevronDown className="size-5" />
-            </Button>
-            {/* Mobile-only iOS-style grabber: drag down to minimize (pointer capture + touch-action) */}
-            <button
-              type="button"
-              className="sm:hidden absolute left-1/2 top-1/2 flex h-11 w-[4.5rem] -translate-x-1/2 -translate-y-1/2 touch-none items-center justify-center rounded-md bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              aria-label="Minimize player"
-              data-testid="audiobook-player-drag-handle"
-              onPointerDown={handleAudiobookPlayerPointerDown}
-              onPointerMove={handleAudiobookPlayerPointerMove}
-              onPointerUp={handleAudiobookPlayerPointerEnd}
-              onPointerCancel={handleAudiobookPlayerPointerCancel}
-            >
-              <span
-                className="pointer-events-none block h-1 w-10 rounded-full bg-muted-foreground/50 drop-shadow-sm"
-                aria-hidden="true"
-              />
-            </button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setAudiobookBookmarksOpen(true)}
-              className={`min-h-[44px] min-w-[44px] shrink-0 drop-shadow-sm hover:text-foreground ${audiobookBookmarksOpen || hasBookmarks ? 'text-foreground' : 'text-muted-foreground'}`}
-              aria-label="All bookmarks"
-              data-testid="audiobook-bookmarks-list-button"
-            >
-              <Library className="size-5" aria-hidden="true" />
-            </Button>
-          </div>
-        </div>
-        <div className="flex flex-1 min-h-0 flex-col">
-          <Suspense
-            fallback={
-              <div className="flex min-h-[40vh] flex-1 items-center justify-center bg-background">
-                <Loader2 className="size-8 animate-spin text-muted-foreground" />
-              </div>
-            }
-          >
-            <AudiobookRenderer
-              book={book}
-              bookmarksOpen={audiobookBookmarksOpen}
-              onBookmarksClose={() => setAudiobookBookmarksOpen(false)}
-              onSwitchToReading={
-                hasMapping
-                  ? (chapterIndex: number, currentTime: number, audioElementDuration?: number) =>
-                      switchToFormat(chapterIndex, undefined, {
-                        audioCurrentTime: currentTime,
-                        audioElementDuration,
-                      })
-                  : undefined
-              }
-              initialChapterIndex={
-                startChapterIndex !== null
-                  ? Math.max(0, Math.min(startChapterIndex, book.chapters.length - 1))
-                  : undefined
-              }
-              initialSeekSeconds={seekSecondsParamRef.current ?? undefined}
-              initialChapterPct={chapterPctParamRef.current ?? undefined}
-              onBookmarkChange={handleBookmarkChange}
+          {/* Top chrome: column-aligned with player; gradient for icon legibility (not a full-bleed frosted bar) */}
+          <div className="sticky top-0 z-20 isolate shrink-0 pt-[env(safe-area-inset-top)]">
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 h-[5.5rem] bg-gradient-to-b from-background/80 via-background/40 to-transparent dark:from-black/50 dark:via-black/22 dark:to-transparent"
+              aria-hidden
             />
-          </Suspense>
-        </div>
+            <div className="relative mx-auto flex min-h-[52px] w-full max-w-lg items-center justify-between gap-3 px-4 py-2 sm:py-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleMinimize}
+                className="min-h-[44px] min-w-[44px] shrink-0 text-muted-foreground hover:text-foreground drop-shadow-sm"
+                aria-label="Minimize player"
+                data-testid="audiobook-minimize-button"
+              >
+                <ChevronDown className="size-5" />
+              </Button>
+              {/* Mobile-only iOS-style grabber: drag down to minimize (pointer capture + touch-action) */}
+              <button
+                type="button"
+                className="sm:hidden absolute left-1/2 top-1/2 flex h-11 w-[4.5rem] -translate-x-1/2 -translate-y-1/2 touch-none items-center justify-center rounded-md bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                aria-label="Minimize player"
+                data-testid="audiobook-player-drag-handle"
+                data-audiobook-player-drag-handle
+              >
+                <span
+                  className="pointer-events-none block h-1 w-10 rounded-full bg-muted-foreground/50 drop-shadow-sm"
+                  aria-hidden="true"
+                />
+              </button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setAudiobookBookmarksOpen(true)}
+                className={`min-h-[44px] min-w-[44px] shrink-0 drop-shadow-sm hover:text-foreground ${audiobookBookmarksOpen || hasBookmarks ? 'text-foreground' : 'text-muted-foreground'}`}
+                aria-label="All bookmarks"
+                data-testid="audiobook-bookmarks-list-button"
+              >
+                <Library className="size-5" aria-hidden="true" />
+              </Button>
+            </div>
+          </div>
+          <div className="flex flex-1 min-h-0 flex-col">
+            <Suspense
+              fallback={
+                <div className="flex min-h-[40vh] flex-1 items-center justify-center bg-background">
+                  <Loader2 className="size-8 animate-spin text-muted-foreground" />
+                </div>
+              }
+            >
+              <AudiobookRenderer
+                book={book}
+                bookmarksOpen={audiobookBookmarksOpen}
+                onBookmarksClose={() => setAudiobookBookmarksOpen(false)}
+                onSwitchToReading={
+                  hasMapping
+                    ? (chapterIndex: number, currentTime: number, audioElementDuration?: number) =>
+                        switchToFormat(chapterIndex, undefined, {
+                          audioCurrentTime: currentTime,
+                          audioElementDuration,
+                        })
+                    : undefined
+                }
+                initialChapterIndex={
+                  startChapterIndex !== null
+                    ? Math.max(0, Math.min(startChapterIndex, book.chapters.length - 1))
+                    : undefined
+                }
+                initialSeekSeconds={seekSecondsParamRef.current ?? undefined}
+                initialChapterPct={chapterPctParamRef.current ?? undefined}
+                onBookmarkChange={handleBookmarkChange}
+              />
+            </Suspense>
+          </div>
         </div>
         {/* eslint-enable react-best-practices/no-inline-styles */}
       </>
