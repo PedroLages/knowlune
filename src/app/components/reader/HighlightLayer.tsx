@@ -20,7 +20,10 @@ import type { Rendition } from 'epubjs'
 import { toast } from 'sonner'
 import { useHighlightStore } from '@/stores/useHighlightStore'
 import { HighlightPopover } from '@/app/components/reader/HighlightPopover'
-import { HighlightMiniPopover } from '@/app/components/reader/HighlightMiniPopover'
+import {
+  HighlightMiniPopover,
+  type HighlightMiniPopoverAnchor,
+} from '@/app/components/reader/HighlightMiniPopover'
 import type { HighlightPosition } from '@/app/components/reader/HighlightPopover'
 import type { BookHighlight, HighlightColor } from '@/data/types'
 
@@ -81,17 +84,42 @@ function mouseEventToMainViewport(e: MouseEvent): { top: number; left: number } 
   return { top: e.clientY, left: e.clientX }
 }
 
+/**
+ * Anchor for the mini popover: prefer the tapped highlight segment rect (center + vertical span),
+ * converted to the shell viewport; fallback to the pointer in main viewport.
+ */
+function annotationClickToMainViewportAnchor(e: MouseEvent): HighlightMiniPopoverAnchor {
+  const view = e.view
+  const frame = view && view !== window ? view.frameElement : null
+  const frameRect = frame?.getBoundingClientRect()
+  const offsetTop = frameRect?.top ?? 0
+  const offsetLeft = frameRect?.left ?? 0
+
+  const t = e.target
+  if (t instanceof Element) {
+    const r = t.getBoundingClientRect()
+    return {
+      centerX: offsetLeft + r.left + r.width / 2,
+      top: offsetTop + r.top,
+      bottom: offsetTop + r.bottom,
+    }
+  }
+  const p = mouseEventToMainViewport(e)
+  return { centerX: p.left, top: p.top, bottom: p.top }
+}
+
 interface SelectionData {
   cfiRange: string
   text: string
   chapterHref: string
   textContext: { prefix: string; suffix: string }
   position: HighlightPosition
+  existingHighlightId?: string
 }
 
 interface MiniPopoverState {
   highlight: BookHighlight
-  position: { top: number; left: number }
+  anchor: HighlightMiniPopoverAnchor
 }
 
 interface HighlightLayerProps {
@@ -165,10 +193,10 @@ export function HighlightLayer({
             // Find current highlight from ref (not stale closure)
             const h = highlightsRef.current.find(x => x.id === highlight.id)
             if (!h) return
-            const pos = mouseEventToMainViewport(e)
+            setSelection(null)
             setMiniPopover({
               highlight: h,
-              position: pos,
+              anchor: annotationClickToMainViewportAnchor(e),
             })
           },
           'epub-highlight',
@@ -273,12 +301,21 @@ export function HighlightLayer({
         // silent-catch-ok: context extraction is best-effort
       }
 
+      const normalizedSelectedText = selectedText.replace(/\s+/g, ' ').trim()
+      const existingHighlight = highlightsRef.current.find(h => {
+        const sameCfi = h.cfiRange === cfiRange
+        const sameChapter = !h.chapterHref || h.chapterHref === currentHrefRef.current
+        const sameText = h.textAnchor.replace(/\s+/g, ' ').trim() === normalizedSelectedText
+        return sameCfi || (sameChapter && sameText)
+      })
+
       setSelection({
         cfiRange,
         text: selectedText,
         chapterHref: currentHrefRef.current ?? '',
         textContext: { prefix, suffix },
         position: popoverPosition,
+        existingHighlightId: existingHighlight?.id,
       })
     }
 
@@ -320,7 +357,8 @@ export function HighlightLayer({
           (e: MouseEvent) => {
             const h = highlightsRef.current.find(x => x.id === capturedId)
             if (!h) return
-            setMiniPopover({ highlight: h, position: mouseEventToMainViewport(e) })
+            setSelection(null)
+            setMiniPopover({ highlight: h, anchor: annotationClickToMainViewportAnchor(e) })
           },
           'epub-highlight',
           highlightStyles(color)
@@ -380,6 +418,23 @@ export function HighlightLayer({
     onVocabularyRequest?.(selection.text)
   }, [selection, onVocabularyRequest])
 
+  const handleSelectionHighlightDelete = useCallback(async () => {
+    if (!selection?.existingHighlightId || !rendition) return
+    const highlight = highlightsRef.current.find(h => h.id === selection.existingHighlightId)
+    if (!highlight) return
+
+    if (highlight.cfiRange) {
+      try {
+        rendition.annotations.remove(highlight.cfiRange, 'highlight')
+      } catch {
+        // silent-catch-ok: annotation removal failure is non-fatal
+      }
+    }
+
+    setSelection(null)
+    await deleteHighlight(highlight.id)
+  }, [selection, rendition, deleteHighlight])
+
   /** Update an existing highlight (color + note) — remove+re-add annotation for color change */
   const handleMiniUpdate = useCallback(
     async (updates: Partial<Pick<BookHighlight, 'color' | 'note'>>) => {
@@ -402,7 +457,8 @@ export function HighlightLayer({
             (e: MouseEvent) => {
               const h = highlightsRef.current.find(x => x.id === capturedId)
               if (!h) return
-              setMiniPopover({ highlight: h, position: mouseEventToMainViewport(e) })
+              setSelection(null)
+              setMiniPopover({ highlight: h, anchor: annotationClickToMainViewportAnchor(e) })
             },
             'epub-highlight',
             highlightStyles(newColor)
@@ -480,6 +536,15 @@ export function HighlightLayer({
           onNote={handleNote}
           onFlashcard={handleFlashcard}
           onVocabulary={onVocabularyRequest ? handleVocabulary : undefined}
+          onDeleteHighlight={
+            selection.existingHighlightId
+              ? () => {
+                  handleSelectionHighlightDelete().catch(() => {
+                    toast.error('Failed to delete highlight')
+                  })
+                }
+              : undefined
+          }
           onClose={handleClose}
         />
       )}
@@ -488,7 +553,7 @@ export function HighlightLayer({
       {miniPopover && (
         <HighlightMiniPopover
           highlight={miniPopover.highlight}
-          position={miniPopover.position}
+          anchor={miniPopover.anchor}
           onClose={() => setMiniPopover(null)}
           onUpdate={handleMiniUpdate}
           onDelete={handleMiniDelete}
@@ -500,6 +565,14 @@ export function HighlightLayer({
             // E85-S05 will handle navigation; stub for now
             setMiniPopover(null)
           }}
+          onVocabulary={
+            onVocabularyRequest
+              ? () => {
+                  setMiniPopover(null)
+                  onVocabularyRequest(miniPopover.highlight.textAnchor)
+                }
+              : undefined
+          }
         />
       )}
     </>

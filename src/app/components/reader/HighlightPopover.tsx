@@ -11,7 +11,7 @@
  */
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { X, StickyNote, Layers, BookA } from 'lucide-react'
+import { X, StickyNote, Layers, BookA, Trash2 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 
 export interface HighlightPosition {
@@ -28,6 +28,7 @@ interface HighlightPopoverProps {
   onNote: () => void
   onFlashcard: () => void
   onVocabulary?: () => void
+  onDeleteHighlight?: () => void
   onClose: () => void
 }
 
@@ -68,9 +69,11 @@ export function HighlightPopover({
   onNote,
   onFlashcard,
   onVocabulary,
+  onDeleteHighlight,
   onClose,
 }: HighlightPopoverProps) {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const toolbarRef = useRef<HTMLDivElement>(null)
   const [popoverStyle, setPopoverStyle] = useState<CSSProperties>(() =>
@@ -84,6 +87,15 @@ export function HighlightPopover({
     const h = el?.offsetHeight || DEFAULT_TOOLBAR_HEIGHT
     setPopoverStyle(clampHighlightToolbarStyle(position, w, h))
   }, [position])
+
+  const handleDeleteClick = () => {
+    if (!onDeleteHighlight) return
+    if (!confirmingDelete) {
+      setConfirmingDelete(true)
+      return
+    }
+    onDeleteHighlight()
+  }
 
   // Mobile: fixed full-width bar at bottom of screen
   if (isMobile) {
@@ -141,6 +153,20 @@ export function HighlightPopover({
             data-testid="highlight-vocabulary-button"
           >
             <BookA className="size-5" aria-hidden="true" />
+          </button>
+        )}
+
+        {onDeleteHighlight && (
+          <button
+            onClick={handleDeleteClick}
+            aria-label={confirmingDelete ? 'Confirm delete highlight' : 'Delete highlight'}
+            className={cn(
+              'size-10 flex items-center justify-center rounded-lg text-destructive hover:text-destructive hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+              confirmingDelete && 'bg-destructive/10'
+            )}
+            data-testid="highlight-delete-button"
+          >
+            <Trash2 className="size-5" aria-hidden="true" />
           </button>
         )}
 
@@ -215,6 +241,20 @@ export function HighlightPopover({
           data-testid="highlight-vocabulary-button"
         >
           <BookA className="size-4" aria-hidden="true" />
+        </button>
+      )}
+
+      {onDeleteHighlight && (
+        <button
+          onClick={handleDeleteClick}
+          aria-label={confirmingDelete ? 'Confirm delete highlight' : 'Delete highlight'}
+          className={cn(
+            'size-7 flex items-center justify-center rounded-lg text-destructive hover:text-destructive hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+            confirmingDelete && 'bg-destructive/10'
+          )}
+          data-testid="highlight-delete-button"
+        >
+          <Trash2 className="size-4" aria-hidden="true" />
         </button>
       )}
 
