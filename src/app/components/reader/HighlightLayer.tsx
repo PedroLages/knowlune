@@ -50,6 +50,27 @@ function isIosSafari(): boolean {
   return isIos && isSafari
 }
 
+/** Map iframe-local selection rects to viewport using the iframe that owns `contents`. */
+function getIframeViewportOffset(
+  rendition: Rendition,
+  contents: { window: Window }
+): { top: number; left: number } {
+  const frame = contents.window.frameElement as HTMLIFrameElement | null
+  if (frame) {
+    const r = frame.getBoundingClientRect()
+    return { top: r.top, left: r.left }
+  }
+  const list = rendition.getContents() as unknown as Array<{ window?: Window; iframe?: HTMLIFrameElement }>
+  for (const c of list) {
+    if (c.window === contents.window && c.iframe) {
+      const r = c.iframe.getBoundingClientRect()
+      return { top: r.top, left: r.left }
+    }
+  }
+  const fb = list[0]?.iframe?.getBoundingClientRect()
+  return { top: fb?.top ?? 0, left: fb?.left ?? 0 }
+}
+
 interface SelectionData {
   cfiRange: string
   text: string
@@ -91,6 +112,11 @@ export function HighlightLayer({
   useEffect(() => {
     highlightsRef.current = highlights
   }, [highlights])
+
+  const currentHrefRef = useRef(currentHref)
+  useEffect(() => {
+    currentHrefRef.current = currentHref
+  }, [currentHref])
 
   const [selection, setSelection] = useState<SelectionData | null>(null)
   const [miniPopover, setMiniPopover] = useState<MiniPopoverState | null>(null)
@@ -205,16 +231,14 @@ export function HighlightLayer({
       try {
         const range = sel.getRangeAt(0)
         const rect = range.getBoundingClientRect()
-        // Convert iframe coordinates to window coordinates
-        const iframe = (
-          rendition.getContents() as unknown as Array<{ iframe?: HTMLIFrameElement }>
-        )[0]
-        const iframeRect = iframe.iframe?.getBoundingClientRect() ?? { top: 0, left: 0 }
+        const iframeRect = getIframeViewportOffset(rendition, contents)
+        const topInViewport = iframeRect.top + rect.top
+        const leftInViewport = iframeRect.left + rect.left
         popoverPosition = {
-          top: iframeRect.top + rect.top,
-          left: iframeRect.left + rect.left,
+          top: topInViewport,
+          left: leftInViewport,
           width: rect.width,
-          below: iframeRect.top + rect.top < 60, // not enough space above header
+          below: topInViewport < 60, // not enough space above header
         }
       } catch {
         // silent-catch-ok: position estimation failure — use default position
@@ -238,7 +262,7 @@ export function HighlightLayer({
       setSelection({
         cfiRange,
         text: selectedText,
-        chapterHref: currentHref ?? '',
+        chapterHref: currentHrefRef.current ?? '',
         textContext: { prefix, suffix },
         position: popoverPosition,
       })
@@ -248,7 +272,7 @@ export function HighlightLayer({
     return () => {
       rendition.off('selected', handleSelected)
     }
-  }, [rendition, currentHref])
+  }, [rendition])
 
   /** Create highlight with the selected color */
   const handleColorSelect = useCallback(

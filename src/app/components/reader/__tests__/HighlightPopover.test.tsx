@@ -1,0 +1,35 @@
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import {
+  clampHighlightToolbarStyle,
+  HIGHLIGHT_TOOLBAR_SELECTION_GAP_PX,
+} from '../HighlightPopover'
+
+describe('clampHighlightToolbarStyle', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('clamps left when the toolbar would overflow the right edge', () => {
+    vi.stubGlobal('innerWidth', 400)
+    vi.stubGlobal('innerHeight', 800)
+    const position = { top: 200, left: 350, width: 10, below: false }
+    const style = clampHighlightToolbarStyle(position, 300, 48)
+    expect(style.left).toBe(400 - 300 - 8)
+  })
+
+  it('clamps top below the header reserve', () => {
+    vi.stubGlobal('innerWidth', 1200)
+    vi.stubGlobal('innerHeight', 800)
+    const position = { top: 10, left: 100, width: 10, below: false }
+    const style = clampHighlightToolbarStyle(position, 300, 48)
+    expect(style.top).toBeGreaterThanOrEqual(56)
+  })
+
+  it('places toolbar below the selection with a visible gap when below is true', () => {
+    vi.stubGlobal('innerWidth', 1200)
+    vi.stubGlobal('innerHeight', 800)
+    const position = { top: 300, left: 100, width: 10, below: true }
+    const style = clampHighlightToolbarStyle(position, 300, 48)
+    expect(style.top).toBe(position.top + HIGHLIGHT_TOOLBAR_SELECTION_GAP_PX)
+  })
+})

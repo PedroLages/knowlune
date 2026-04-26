@@ -55,7 +55,7 @@ export function FormatTabs() {
 
   return (
     <div
-      className="flex gap-2 overflow-x-auto pb-1 -mb-1 scrollbar-none"
+      className="flex gap-2 overflow-x-auto py-0.5 scrollbar-none"
       role="tablist"
       aria-label="Filter by format"
     >

@@ -155,7 +155,8 @@ export function HighlightListPanel({
     <Sheet open={open} onOpenChange={open => !open && onClose()}>
       <SheetContent
         side="right"
-        className="w-80 p-0 flex flex-col"
+        overlayClassName="z-[130]"
+        className="z-[130] w-80 p-0 flex flex-col"
         data-testid="highlight-list-panel"
       >
         <SheetHeader className="px-4 py-3 border-b border-border/50">
@@ -204,7 +205,7 @@ export function HighlightListPanel({
               <div>
                 <p className="text-sm font-medium text-foreground">No highlights yet</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Select text while reading to create highlights
+                  Select text in the book, then choose a color from the highlight toolbar.
                 </p>
               </div>
             </div>

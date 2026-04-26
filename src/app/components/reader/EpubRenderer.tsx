@@ -58,7 +58,7 @@ export function EpubRenderer({
   const toggleHeader = useReaderStore(s => s.toggleHeader)
   const colorScheme = useAppColorScheme()
   const renditionRef = useRef<Rendition | null>(null)
-  const containerRef = useRef<HTMLDivElement | null>(null)
+  const viewportRef = useRef<HTMLDivElement | null>(null)
 
   // Track when rendition is ready for ResizeObserver binding
   const [renditionReady, setRenditionReady] = useState(false)
@@ -129,7 +129,7 @@ export function EpubRenderer({
     const newFlow = scrollMode ? 'scrolled-doc' : 'paginated'
     rendition.flow(newFlow)
     // After flow change, resize to re-layout content
-    const container = containerRef.current
+    const container = viewportRef.current
     if (container) {
       const { width, height } = container.getBoundingClientRect()
       if (width > 0 && height > 0) {
@@ -146,7 +146,7 @@ export function EpubRenderer({
     if (!rendition) return
     const newSpread = !scrollMode && dualPage ? 'auto' : 'none'
     rendition.spread(newSpread)
-    const container = containerRef.current
+    const container = viewportRef.current
     if (container) {
       const { width, height } = container.getBoundingClientRect()
       if (width > 0 && height > 0) {
@@ -166,7 +166,7 @@ export function EpubRenderer({
 
   /** Resize epub.js rendition when container dimensions change (Bug 1 fix — AC-1, AC-2) */
   useEffect(() => {
-    const container = containerRef.current
+    const container = viewportRef.current
     if (!container || !renditionReady) return
 
     const observer = new ResizeObserver(entries => {
@@ -243,6 +243,11 @@ export function EpubRenderer({
   // Container background matching the active reader theme + app color scheme
   const chromeClasses = getReaderChromeClasses(theme, colorScheme)
   const containerBg = chromeClasses.bg
+  const readerViewportClass = scrollMode
+    ? 'max-w-[72ch]'
+    : dualPage
+      ? 'max-w-6xl'
+      : 'max-w-[44rem]'
 
   // Memoize epubOptions — depends on scrollMode for flow switching (E114-S02)
   const epubOptions = useMemo(
@@ -256,9 +261,11 @@ export function EpubRenderer({
 
   return (
     <div
-      ref={containerRef}
+      onClick={e => {
+        if (e.target === e.currentTarget) toggleHeader()
+      }}
       className={cn(
-        'relative h-full w-full px-6 pt-14 pb-20 md:px-16 lg:px-24',
+        'relative h-full w-full overflow-hidden px-6 pt-14 pb-20 sm:px-16 lg:px-24',
         containerBg,
         animationClass
       )}
@@ -266,30 +273,38 @@ export function EpubRenderer({
       onTouchStart={scrollMode ? undefined : handleTouchStart}
       onTouchEnd={scrollMode ? undefined : handleTouchEnd}
     >
-      {/* epub.js content via react-reader EpubView */}
-      <EpubView
-        url={url}
-        location={initialLocation}
-        locationChanged={onLocationChanged}
-        tocChanged={onTocLoaded}
-        getRendition={handleGetRendition}
-        epubOptions={epubOptions}
-        loadingView={
-          <div className="flex h-full items-center justify-center">
-            <div
-              className="size-8 animate-spin rounded-full border-4 border-muted border-t-brand"
-              aria-hidden="true"
-            />
-          </div>
-        }
-      />
+      <div
+        ref={viewportRef}
+        className={cn(
+          'relative mx-auto h-full w-full transition-[max-width] duration-200 motion-reduce:transition-none',
+          readerViewportClass
+        )}
+        data-testid="epub-viewport"
+      >
+        {/* epub.js content via react-reader EpubView */}
+        <EpubView
+          url={url}
+          location={initialLocation}
+          locationChanged={onLocationChanged}
+          tocChanged={onTocLoaded}
+          getRendition={handleGetRendition}
+          epubOptions={epubOptions}
+          loadingView={
+            <div className="flex h-full items-center justify-center">
+              <div
+                className="size-8 animate-spin rounded-full border-4 border-muted border-t-brand"
+                aria-hidden="true"
+              />
+            </div>
+          }
+        />
+      </div>
 
-      {/* Interaction zones — prev/next hidden in scroll mode (native scroll replaces), center toggle always present */}
+      {/* Gutter page controls avoid covering selectable EPUB text. */}
       <div className="pointer-events-none absolute inset-0 z-10">
-        {/* Left zone (prev) — 33%, paginated only */}
         {!scrollMode && (
           <div
-            className="group pointer-events-auto absolute inset-y-0 left-0 w-[33%] cursor-pointer"
+            className="group pointer-events-auto absolute inset-y-0 left-0 hidden w-12 cursor-pointer sm:block sm:w-16 lg:w-20"
             onClick={navigatePrev}
             role="button"
             tabIndex={-1}
@@ -305,20 +320,9 @@ export function EpubRenderer({
           </div>
         )}
 
-        {/* Center zone (34%) — toggle header/footer visibility, always active */}
-        <div
-          className="pointer-events-auto absolute inset-y-0 left-[33%] w-[34%] cursor-pointer"
-          onClick={toggleHeader}
-          role="button"
-          tabIndex={-1}
-          aria-label="Toggle reader controls"
-          data-reader-zone="toggle"
-        />
-
-        {/* Right zone (next) — 33%, paginated only */}
         {!scrollMode && (
           <div
-            className="group pointer-events-auto absolute inset-y-0 right-0 w-[33%] cursor-pointer"
+            className="group pointer-events-auto absolute inset-y-0 right-0 hidden w-12 cursor-pointer sm:block sm:w-16 lg:w-20"
             onClick={navigateNext}
             role="button"
             tabIndex={-1}
