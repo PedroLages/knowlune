@@ -194,8 +194,8 @@ export function CredentialSetupBanner() {
       <Alert className="pointer-events-auto shadow-lg border-warning/40 bg-card">
         <AlertTriangle className="size-4 text-warning" />
         <div className="flex flex-col gap-1 w-full">
-          <div className="flex items-center justify-between gap-2">
-            <AlertTitle className="text-sm font-semibold">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <AlertTitle className="text-sm font-semibold leading-snug line-clamp-2 min-w-0">
               Set up your connections on this device
             </AlertTitle>
             <div className="flex items-center gap-1 shrink-0">
