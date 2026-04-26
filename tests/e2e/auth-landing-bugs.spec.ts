@@ -21,6 +21,10 @@ const WELCOME_WIZARD_KEY = 'knowlune-welcome-wizard-v1'
 const WELCOME_WIZARD_DISMISSED = JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.removeItem('knowlune-guest')
+    sessionStorage.removeItem('knowlune-guest-id')
+  })
   // Suppress Welcome Wizard dialog which otherwise intercepts clicks on Landing.
   await page.addInitScript(({ key, value }) => {
     localStorage.setItem(key, value)

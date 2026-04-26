@@ -3,7 +3,7 @@
  *
  * Covers:
  * - Unauthenticated visit renders Landing (value prop + auth form)
- * - "Try without signing up" CTA navigates to /guest → app loads
+ * - "Try without signing up" CTA → /try → Continue as guest → /courses
  * - Desktop layout: value prop and auth form side-by-side (≥1024px)
  * - Mobile layout: auth form renders before accordion (≤639px)
  * - Skip-to-auth link present and accessible
@@ -47,13 +47,20 @@ async function injectFakeAuth(page: import('@playwright/test').Page) {
 // Tests
 // ---------------------------------------------------------------------------
 
-test.describe('Landing page', () => {
+test.describe('Landing page (anonymous)', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      sessionStorage.removeItem('knowlune-guest')
+      sessionStorage.removeItem('knowlune-guest-id')
+    })
+  })
+
   test('unauthenticated visit to / renders Landing with auth form', async ({ page }) => {
     await page.goto('/')
-    // Auth form tabs should be visible
+    // Auth form: email + magic link tabs; Google is a separate button above the tabs
     await expect(page.getByRole('tab', { name: /email/i })).toBeVisible()
     await expect(page.getByRole('tab', { name: /magic link/i })).toBeVisible()
-    await expect(page.getByRole('tab', { name: /google/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /continue with google/i })).toBeVisible()
   })
 
   test('Landing renders value prop headline', async ({ page }) => {
@@ -69,7 +76,9 @@ test.describe('Landing page', () => {
     await expect(guestCta).toBeVisible()
     await guestCta.click()
 
-    // After clicking /guest → app shell should load (courses page)
+    // Landing links to /try (comparison) → "Continue as guest" sets guest session → /courses
+    await expect(page).toHaveURL(/\/try$/)
+    await page.getByRole('link', { name: /continue as guest/i }).click()
     await expect(page).toHaveURL(/\/courses/)
   })
 
@@ -120,7 +129,9 @@ test.describe('Landing page', () => {
     const skipLink = page.getByRole('link', { name: 'Skip to sign-in', exact: true })
     await expect(skipLink).toBeAttached()
   })
+})
 
+test.describe('Landing page', () => {
   test('authenticated user visiting / is redirected away from Landing', async ({ page }) => {
     // Navigate to a guarded route (e.g. /courses) to load the app, inject auth,
     // then verify the app shell renders — Landing does not appear.
