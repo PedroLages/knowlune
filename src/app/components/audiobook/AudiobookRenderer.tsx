@@ -533,7 +533,7 @@ export function AudiobookRenderer({
 
             {/* Progress scrubber — media-style track + high-contrast played range */}
             <div
-              className="w-full space-y-2 rounded-2xl border border-[var(--surface-player-panel-border)] bg-[var(--surface-player-panel)] px-3 py-2.5 backdrop-blur-xl sm:px-4"
+              className="w-full space-y-2 px-3 py-2.5 sm:px-4"
               data-testid="audiobook-progress-panel"
             >
               <Slider
