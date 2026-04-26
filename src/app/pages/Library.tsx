@@ -370,7 +370,7 @@ export function Library() {
   }, [])
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6 py-6">
       {/* Header */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">

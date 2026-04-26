@@ -58,12 +58,33 @@ export function useBookCoverUrl({ bookId, coverUrl }: UseBookCoverUrlOptions): s
         return
       }
 
-      // External URL (http/https) or relative proxy path - use directly
-      if (
-        coverUrl.startsWith('http://') ||
-        coverUrl.startsWith('https://') ||
-        coverUrl.startsWith('/')
-      ) {
+      // External URL (http/https) or relative proxy path.
+      //
+      // In E2E we sometimes seed `.test` hostnames (e.g. abs-cover.test) and fulfill them via
+      // Playwright routing. Some WebKit/Chromium environments can still fail to load those
+      // URLs as <img src> resources. To keep cover rendering deterministic in dev/test,
+      // we fetch and convert to a blob URL for `.test` hosts.
+      if (coverUrl.startsWith('http://') || coverUrl.startsWith('https://')) {
+        const isTestHost = /\b\.test(?=[:/]|$)/.test(coverUrl)
+        if (isTestHost && import.meta.env.DEV) {
+          try {
+            const res = await fetch(coverUrl)
+            if (!res.ok) throw new Error('cover fetch failed')
+            const blob = await res.blob()
+            effectBlobUrl = URL.createObjectURL(blob)
+            if (!isCancelled) setResolvedUrl(effectBlobUrl)
+            return
+          } catch {
+            if (!isCancelled) setResolvedUrl(null)
+            return
+          }
+        }
+
+        if (!isCancelled) setResolvedUrl(coverUrl)
+        return
+      }
+
+      if (coverUrl.startsWith('/')) {
         if (!isCancelled) setResolvedUrl(coverUrl)
         return
       }

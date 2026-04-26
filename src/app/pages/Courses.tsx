@@ -152,8 +152,11 @@ export function Courses() {
 
   return (
     <div>
-      <div data-testid="courses-header" className="mb-6 flex items-start justify-between gap-4">
-        <div>
+      <div
+        data-testid="courses-header"
+        className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
+      >
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold mb-2">All Courses</h1>
           {totalCourses > 0 && (
             <p className="text-muted-foreground">
@@ -161,7 +164,7 @@ export function Courses() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <HeaderSearchButton scope="course" />
           {totalCourses > 0 && (
             <Button
@@ -170,8 +173,9 @@ export function Courses() {
               className="hover:scale-[1.02] hover:shadow-md rounded-xl transition-[transform,box-shadow] duration-200"
               data-testid="import-course-btn"
             >
-              <FolderOpen className="size-4 mr-2" />
-              Import Course
+              <FolderOpen className="size-4 sm:mr-2" aria-hidden="true" />
+              <span className="hidden sm:inline">Import Course</span>
+              <span className="sr-only sm:hidden">Import Course</span>
             </Button>
           )}
         </div>

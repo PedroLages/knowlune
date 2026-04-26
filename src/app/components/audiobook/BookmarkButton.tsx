@@ -187,7 +187,7 @@ export function BookmarkButton({
       <Button
         variant="ghost"
         size="sm"
-        className="min-h-[44px] min-w-[44px] px-3 text-muted-foreground hover:text-foreground"
+        className="min-h-[44px] min-w-10 px-2 text-muted-foreground hover:text-foreground sm:min-w-[44px] sm:px-3"
         onClick={handleBookmark}
         aria-label={isNearBookmark ? 'Remove bookmark' : 'Add bookmark'}
       >

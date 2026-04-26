@@ -81,7 +81,7 @@ const ABS_AUDIOBOOK = {
     auth: { bearer: 'cover-test-key' },
   },
   // Routed below to serve the 600x800 fixture
-  coverUrl: 'http://abs-cover.test:13378/api/items/cov-item-1/cover',
+  coverUrl: '/__test__/api/items/cov-item-1/cover',
   absServerId: 'abs-server-cover',
   absItemId: 'cov-item-1',
   totalDuration: 1800,
@@ -117,7 +117,7 @@ test.describe('Audiobook cover letterbox regression', () => {
 
     // 3) Route the cover URL to the committed non-square fixture
     const coverPng = readFileSync(COVER_FIXTURE)
-    await page.route('**/api/items/cov-item-1/cover*', async route => {
+    await page.route('**/__test__/api/items/cov-item-1/cover*', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'image/png',

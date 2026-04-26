@@ -101,7 +101,7 @@ export function SleepTimer({
         <Button
           variant="ghost"
           size="sm"
-          className="relative min-h-[44px] min-w-[44px] px-3 text-muted-foreground hover:text-foreground"
+          className="relative min-h-[44px] min-w-10 px-2 text-muted-foreground hover:text-foreground sm:min-w-[44px] sm:px-3"
           aria-label={activeOption ? `Sleep timer: ${badgeText ?? 'active'}` : 'Sleep timer'}
           data-testid="sleep-timer-button"
         >

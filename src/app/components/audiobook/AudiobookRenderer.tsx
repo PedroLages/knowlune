@@ -105,6 +105,7 @@ export function AudiobookRenderer({
 
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [clipsOpen, setClipsOpen] = useState(false)
+  const [coverLoadFailed, setCoverLoadFailed] = useState(false)
   /** Tracks the clip end boundary for clip-scoped playback (AC-4) */
   const [activeClipEnd, setActiveClipEnd] = useState<{
     chapterIndex: number
@@ -460,7 +461,7 @@ export function AudiobookRenderer({
           aria-hidden="true"
         />
       )}
-      <div className="relative z-10 mx-auto flex w-full max-w-lg flex-col items-center px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))]">
+      <div className="relative z-10 mx-auto flex w-full max-w-lg min-w-0 flex-col items-center px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-6">
         {/* Cover Art
          * shrink-0: prevents the parent flex column from collapsing the square
          * frame on short viewports — root cause of the letterbox bars.
@@ -468,17 +469,15 @@ export function AudiobookRenderer({
          * Do not rename testids without updating the spec. */}
         <div
           data-testid="audiobook-cover-frame"
-          className="w-full max-w-80 aspect-square shrink-0 rounded-3xl overflow-hidden shadow-[var(--player-cover-shadow)] flex items-center justify-center bg-muted"
+          className="w-full max-w-56 sm:max-w-72 lg:max-w-80 aspect-square shrink-0 rounded-3xl overflow-hidden shadow-[var(--player-cover-shadow)] flex items-center justify-center bg-muted"
         >
-          {resolvedCoverUrl ? (
+          {resolvedCoverUrl && !coverLoadFailed ? (
             <img
               data-testid="audiobook-cover-image"
               src={resolvedCoverUrl}
               alt={`Cover of ${book.title}`}
               className="h-full w-full object-cover"
-              onError={e => {
-                e.currentTarget.style.display = 'none'
-              }}
+              onError={() => setCoverLoadFailed(true)}
             />
           ) : (
             <BookOpen className="size-24 text-muted-foreground/40" aria-hidden="true" />
@@ -610,7 +609,7 @@ export function AudiobookRenderer({
         <SkipSilenceActiveIndicator isActive={skipSilence} />
 
         {/* Secondary Controls: Speed | Bookmark | Sleep Timer */}
-        <div className="mt-8 flex items-center gap-2 rounded-full border px-4 py-1.5 backdrop-blur-2xl bg-[var(--surface-glass)] border-[var(--surface-glass-border)]">
+        <div className="mt-8 flex max-w-full items-center gap-1 rounded-full border px-2 py-1.5 backdrop-blur-2xl bg-[var(--surface-glass)] border-[var(--surface-glass-border)] sm:gap-2 sm:px-4">
           <SpeedControl bookId={book.id} />
           <div className="relative">
             <BookmarkButton
@@ -647,7 +646,7 @@ export function AudiobookRenderer({
           {/* Clips panel trigger */}
           <button
             onClick={() => setClipsOpen(true)}
-            className="flex items-center justify-center rounded-full min-h-[44px] min-w-[44px] px-3 text-muted-foreground hover:text-foreground transition-colors"
+            className="flex min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded-full px-2 text-muted-foreground transition-colors hover:text-foreground sm:min-w-[44px] sm:px-3"
             aria-label="Clips"
             data-testid="clips-panel-button"
           >
@@ -655,7 +654,7 @@ export function AudiobookRenderer({
           </button>
           <button
             onClick={() => setSettingsOpen(true)}
-            className="flex items-center justify-center rounded-full min-h-[44px] min-w-[44px] px-3 text-muted-foreground hover:text-foreground transition-colors"
+            className="flex min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded-full px-2 text-muted-foreground transition-colors hover:text-foreground sm:min-w-[44px] sm:px-3"
             aria-label="Audiobook settings"
             data-testid="audiobook-settings-button"
           >

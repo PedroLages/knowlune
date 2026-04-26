@@ -455,6 +455,9 @@ export function Layout() {
     : false
   const hasMiniPlayer = !!audiobookCurrentBookId && !isAudiobookPlayerPage
 
+  /** Mobile non-lesson: scroll the column so the top header scrolls with page content */
+  const nonLessonMobileScroll = !isLessonPlayerRoute && isMobile
+
   // Focus mode (E65-S03) — overlay, focus trap, and exit
   const focusMode = useFocusMode(navigate)
 
@@ -553,7 +556,10 @@ export function Layout() {
 
       {/* Main Content */}
       <div
-        className={`flex-1 flex flex-col min-w-0 ${isLessonPlayerRoute ? 'overflow-auto' : 'overflow-hidden'}`}
+        data-testid={nonLessonMobileScroll ? 'main-scroll-container' : undefined}
+        className={`flex-1 flex flex-col min-h-0 min-w-0 ${
+          isLessonPlayerRoute ? 'overflow-auto' : nonLessonMobileScroll ? 'overflow-auto md:overflow-hidden' : 'overflow-hidden'
+        }`}
       >
         {/* Header */}
         <header
@@ -720,14 +726,20 @@ export function Layout() {
         {/* Page Content - Extra bottom padding on mobile for bottom nav */}
         <main
           id="main-content"
-          data-testid="main-scroll-container"
-          className={`flex-1 px-6 pt-6 leading-[var(--content-line-height)] ${isLessonPlayerRoute ? 'pb-6' : `overflow-auto ${hasMiniPlayer ? 'pb-[calc(theme(spacing.36)+env(safe-area-inset-bottom))] sm:pb-20' : 'pb-[calc(theme(spacing.20)+env(safe-area-inset-bottom))] sm:pb-6'}`}`}
+          data-testid={
+            isLessonPlayerRoute || !nonLessonMobileScroll ? 'main-scroll-container' : undefined
+          }
+          className={`${isLessonPlayerRoute ? 'flex-1' : 'flex-none md:flex-1 md:min-h-0'} px-4 pt-4 sm:px-6 sm:pt-6 leading-[var(--content-line-height)] overflow-x-hidden ${
+            isLessonPlayerRoute
+              ? 'pb-6'
+              : `md:overflow-auto ${hasMiniPlayer ? 'pb-[calc(theme(spacing.36)+env(safe-area-inset-bottom))] sm:pb-20' : 'pb-[calc(theme(spacing.20)+env(safe-area-inset-bottom))] sm:pb-6'}`
+          }`}
         >
           {!isOnline && (
             <div
               role="status"
               aria-live="polite"
-              className="bg-warning/10 text-warning-foreground border-b border-warning/20 px-4 py-2 text-center text-sm -mx-6 -mt-6 mb-4"
+              className="bg-warning/10 text-warning-foreground border-b border-warning/20 px-4 py-2 text-center text-sm -mx-4 -mt-4 mb-4 sm:-mx-6 sm:-mt-6"
             >
               You are offline. Some features may be limited.
             </div>

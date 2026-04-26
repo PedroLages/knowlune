@@ -27,6 +27,13 @@ export async function navigateAndWait(page: Page, path: string): Promise<void> {
         JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
       )
     }
+
+    // Most app routes are gated by RouteGuard. In E2E we run as a guest session
+    // to avoid being redirected to Landing (/).
+    sessionStorage.setItem('knowlune-guest', 'true')
+    if (!sessionStorage.getItem('knowlune-guest-id')) {
+      sessionStorage.setItem('knowlune-guest-id', crypto.randomUUID())
+    }
   })
   await page.goto(path)
   await page.waitForLoadState('load')

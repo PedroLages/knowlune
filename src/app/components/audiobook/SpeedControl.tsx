@@ -41,7 +41,7 @@ export function SpeedControl({ bookId }: SpeedControlProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="min-h-[44px] min-w-[44px] px-3 text-sm font-medium text-muted-foreground hover:text-foreground"
+          className="min-h-[44px] min-w-10 px-2 text-sm font-medium text-muted-foreground hover:text-foreground sm:min-w-[44px] sm:px-3"
           aria-label={`Playback speed: ${formatSpeed(playbackRate)}`}
           data-testid="speed-button"
         >
