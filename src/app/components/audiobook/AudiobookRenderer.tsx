@@ -545,10 +545,10 @@ export function AudiobookRenderer({
                 aria-label="Playback position"
                 aria-valuetext={playbackSliderAriaValueText}
                 disabled={isLoading || duration === 0}
-                className="w-full py-1.5"
-                trackClassName="data-[orientation=horizontal]:h-2.5 bg-foreground/15 shadow-inner dark:bg-white/12"
+                className="w-full py-2"
+                trackClassName="data-[orientation=horizontal]:h-2 bg-foreground/15 shadow-inner dark:bg-white/12"
                 rangeClassName="bg-brand data-[orientation=horizontal]:h-full rounded-full"
-                thumbClassName="size-4 border-2 border-background bg-foreground shadow-md ring-offset-background hover:ring-brand/40 focus-visible:ring-brand"
+                thumbClassName="size-6 border-2 border-background bg-foreground shadow-md ring-offset-background hover:ring-brand/40 focus-visible:ring-brand sm:size-5"
               />
               <div className="flex items-center justify-between text-sm text-foreground tabular-nums">
                 <span data-testid="current-time-display" className="font-medium">
