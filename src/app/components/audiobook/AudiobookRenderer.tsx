@@ -9,6 +9,7 @@
  * @module AudiobookRenderer
  * @since E87-S02
  */
+/* eslint-disable component-size/max-lines -- orchestrates hooks, media session, panels, and full-player layout */
 import { useEffect, useCallback, useState, useRef, useMemo } from 'react'
 import { Play, Pause, SkipBack, SkipForward, BookOpen, Settings, ListVideo } from 'lucide-react'
 import { toast } from 'sonner'
@@ -35,6 +36,7 @@ import { ClipButton } from './ClipButton'
 import { ClipListPanel } from './ClipListPanel'
 import { PostSessionBookmarkReview } from './PostSessionBookmarkReview'
 import { AudiobookSettingsPanel } from './AudiobookSettingsPanel'
+import { AudiobookPlayerAtmosphere } from './AudiobookPlayerAtmosphere'
 import { SilenceSkipIndicator } from './SilenceSkipIndicator'
 import { SkipSilenceActiveIndicator } from './SkipSilenceActiveIndicator'
 import { useAudiobookPrefsEffects } from '@/app/hooks/useAudiobookPrefsEffects'
@@ -375,6 +377,13 @@ export function AudiobookRenderer({
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
+  /** Screen-reader-friendly seek position (WAI-ARIA media seek slider pattern). */
+  const playbackSliderAriaValueText = useMemo(() => {
+    if (isLoading) return 'Loading'
+    if (duration <= 0) return `${formatAudioTime(currentTime)}, duration unknown`
+    return `${formatAudioTime(currentTime)} of ${formatAudioTime(duration)}`
+  }, [currentTime, duration, isLoading])
+
   // Chapter progress for sleep timer EOC indicator.
   // Rounded to nearest integer — fractional % changes are invisible at 208px popover width
   // but would trigger SleepTimer re-renders ~4× per second, remounting Popover content
@@ -446,61 +455,11 @@ export function AudiobookRenderer({
 
   return (
     <>
-      {/* Living cover atmosphere — blurred art + scrim + vignette (tokens: --player-atmosphere-*) */}
-      <div
-        className="fixed inset-0 z-0 overflow-hidden pointer-events-none"
-        aria-hidden="true"
-      >
-        <div className="absolute inset-0 bg-background" />
-        {resolvedCoverUrl && (
-          <>
-            <div
-              className="absolute motion-reduce:transform-none"
-              style={{
-                inset: '-12%',
-                backgroundImage: `url(${resolvedCoverUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                filter: 'blur(72px) saturate(1.35)',
-                opacity: 'var(--player-atmosphere-blur-opacity, 0.52)',
-                transform: 'scale(1.08)',
-              }}
-            />
-            <div
-              className="absolute motion-reduce:transform-none"
-              style={{
-                inset: '-28%',
-                backgroundImage: `url(${resolvedCoverUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                filter: 'blur(120px) saturate(1.55) brightness(1.06)',
-                opacity: 'var(--player-atmosphere-bloom-opacity, 0.38)',
-              }}
-            />
-          </>
-        )}
-        <div
-          className="absolute inset-0"
-          style={{ background: 'var(--player-atmosphere-scrim)' }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{ background: 'var(--player-atmosphere-vignette)' }}
-        />
-        {/* CSS-only micro-grain (disabled when reduced motion) */}
-        <div
-          className="absolute inset-0 opacity-[0.035] motion-reduce:opacity-0 dark:opacity-[0.055]"
-          style={{
-            backgroundImage: [
-              'repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgb(0 0 0 / 0.06) 2px, rgb(0 0 0 / 0.06) 3px)',
-              'repeating-linear-gradient(90deg, transparent 0px, transparent 2px, rgb(0 0 0 / 0.04) 2px, rgb(0 0 0 / 0.04) 3px)',
-            ].join(','),
-          }}
-        />
-      </div>
-      <div className="relative z-10 flex flex-1 min-h-0 overflow-y-auto px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-6">
-        <div className="flex min-h-full w-full flex-col">
-          <div className="m-auto flex w-full max-w-lg min-w-0 flex-col items-center">
+      <AudiobookPlayerAtmosphere coverUrl={resolvedCoverUrl} />
+      <div className="relative z-10 flex h-full min-h-0 flex-1 flex-col overflow-hidden px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-[max(0.25rem,env(safe-area-inset-top))] sm:px-6">
+        <div className="mx-auto flex h-full min-h-0 w-full max-w-lg min-w-0 flex-col">
+          {/* Top: cover + metadata — compact so primary controls stay in view on short laptops */}
+          <div className="flex min-h-0 shrink flex-col items-center gap-3 sm:gap-4">
             {/* Cover Art
              * shrink-0: prevents the parent flex column from collapsing the square
              * frame on short viewports — root cause of the letterbox bars.
@@ -508,7 +467,7 @@ export function AudiobookRenderer({
              * Do not rename testids without updating the spec. */}
             <div
               data-testid="audiobook-cover-frame"
-              className="flex aspect-square w-full max-w-56 shrink-0 items-center justify-center overflow-hidden rounded-3xl bg-muted [box-shadow:var(--player-cover-shadow),var(--player-cover-halo)] sm:max-w-72 lg:max-w-80"
+              className="flex aspect-square w-full max-w-[14rem] shrink-0 items-center justify-center overflow-hidden rounded-3xl bg-muted [box-shadow:var(--player-cover-shadow),var(--player-cover-halo)] sm:max-w-[16rem] lg:max-w-[18rem]"
             >
               {resolvedCoverUrl && !coverLoadFailed ? (
                 <img
@@ -524,11 +483,11 @@ export function AudiobookRenderer({
             </div>
 
             {/* Book & Chapter Title */}
-            <div className="mt-8 text-center space-y-1 w-full">
-              <h1 className="text-2xl md:text-3xl font-semibold text-foreground truncate px-4">
+            <div className="text-center space-y-1 w-full px-1">
+              <h1 className="text-xl font-semibold text-foreground truncate sm:text-2xl md:text-3xl">
                 {book.title}
               </h1>
-              <p className="text-sm text-muted-foreground truncate px-4">
+              <p className="text-sm text-muted-foreground truncate">
                 {currentChapter?.title ?? `Chapter ${currentChapterIndex + 1}`}
                 {book.chapters.length > 1 && (
                   <span className="ml-2 text-xs">
@@ -543,216 +502,221 @@ export function AudiobookRenderer({
                 </p>
               )}
             </div>
-
-        {/* Switch to Reading — only when a chapter mapping exists (E103-S02) */}
-        {onSwitchToReading && (
-          <Button
-            variant="brand-outline"
-            size="sm"
-            onClick={() => {
-              // Save position before navigating away (AC2 / E103-S02)
-              savePosition()
-              onSwitchToReading?.(
-                currentChapterIndex,
-                currentTime,
-                audioRef.current?.duration && Number.isFinite(audioRef.current.duration)
-                  ? audioRef.current.duration
-                  : undefined
-              )
-            }}
-            aria-label="Switch to reading"
-            title="Switch to reading"
-            className="mt-4 min-h-[44px] min-w-[44px]"
-            data-testid="switch-to-reading-button"
-          >
-            <BookOpen className="size-4 mr-2" aria-hidden="true" />
-            Switch to Reading
-          </Button>
-        )}
-
-        {/* Progress Scrubber — glass panel for legibility over atmosphere */}
-        <div className="mt-8 w-full space-y-2 rounded-2xl border border-[var(--surface-player-panel-border)] bg-[var(--surface-player-panel)] px-3 py-3 backdrop-blur-xl sm:px-4">
-          <Slider
-            value={[currentTime]}
-            min={0}
-            max={duration || 100}
-            step={1}
-            onValueChange={([val]) => seekTo(val)}
-            aria-label="Playback position"
-            disabled={isLoading || duration === 0}
-            className="w-full"
-            trackClassName="data-[orientation=horizontal]:h-2"
-            thumbClassName="size-6 border-2"
-          />
-          <div className="flex justify-between items-center text-sm text-foreground tabular-nums">
-            <span data-testid="current-time-display" className="font-medium">{formatAudioTime(currentTime)}</span>
-            <button
-              type="button"
-              onClick={() => setShowRemainingTime(!showRemainingTime)}
-              aria-label="Toggle time display"
-              aria-pressed={showRemainingTime}
-              className="-my-2 -mr-2 flex min-h-[44px] items-center rounded-md px-3 text-sm font-medium text-foreground tabular-nums transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none motion-reduce:transition-none"
-              data-testid="duration-display"
-            >
-              {showRemainingTime
-                ? `−${formatAudioTime(Math.max(0, duration - currentTime))}`
-                : formatAudioTime(duration)}
-            </button>
           </div>
-        </div>
 
-        {/* Playback Controls */}
-        <div className="mt-10 flex items-center gap-8">
-          {/* Skip Back */}
-          <button
-            onClick={handleSkipBack}
-            disabled={isLoading}
-            className="flex flex-col items-center gap-1 rounded-full p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 min-w-[48px] min-h-[48px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            aria-label={`Skip back ${skipBackSeconds} seconds`}
-            data-testid="skip-back-button"
-          >
-            <SkipBack className="size-6" aria-hidden="true" />
-            <span className="text-xs tabular-nums">{skipBackSeconds}s</span>
-          </button>
-
-          {/* Play / Pause */}
-          <button
-            onClick={toggle}
-            disabled={isLoading}
-            className="flex size-20 items-center justify-center rounded-full bg-[var(--player-fab)] text-[var(--player-fab-foreground)] shadow-[var(--player-fab-shadow)] transition-[transform,box-shadow] active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100 focus-visible:outline-hidden focus-visible:ring-4 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none motion-reduce:active:scale-100"
-            aria-label={isPlaying ? 'Pause' : 'Play'}
-            data-testid={isPlaying ? 'audio-playing-indicator' : undefined}
-          >
-            {isLoading ? (
-              <div className="size-10 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            ) : isPlaying ? (
-              <Pause className="size-10" aria-hidden="true" fill="currentColor" />
-            ) : (
-              <Play className="size-10 ml-1" aria-hidden="true" fill="currentColor" />
-            )}
-          </button>
-
-          {/* Skip Forward */}
-          <button
-            onClick={handleSkipForward}
-            disabled={isLoading}
-            className="flex flex-col items-center gap-1 rounded-full p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 min-w-[48px] min-h-[48px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            aria-label={`Skip forward ${skipForwardSeconds} seconds`}
-            data-testid="skip-forward-button"
-          >
-            <SkipForward className="size-6" aria-hidden="true" />
-            <span className="text-xs tabular-nums">{skipForwardSeconds}s</span>
-          </button>
-        </div>
-
-        {/* Skip silence active indicator — shown when skip silence feature is enabled */}
-        <SkipSilenceActiveIndicator isActive={skipSilence} />
-
-        {/* Secondary Controls: Speed | Bookmark | Sleep Timer */}
-        <div className="mt-8 flex max-w-full items-center gap-1 rounded-full border border-[var(--surface-player-panel-border)] bg-[var(--surface-player-panel)] px-2 py-1.5 backdrop-blur-2xl sm:gap-2 sm:px-4">
-          <SpeedControl bookId={book.id} />
-          <div className="relative">
-            <BookmarkButton
-              bookId={book.id}
-              chapterIndex={currentChapterIndex}
-              currentTime={currentTime}
-              onBookmarkCreated={handleBookmarkCreated}
-              onBookmarkDeleted={handleBookmarkDeleted}
-              noteContainerRef={bookmarkNoteContainerRef}
-            />
-            {sessionBookmarkIds.size > 0 && (
-              <span
-                className="absolute top-0 right-0 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-brand text-brand-foreground text-[10px] font-semibold px-1 pointer-events-none"
-                aria-label={`${sessionBookmarkIds.size} bookmark${sessionBookmarkIds.size !== 1 ? 's' : ''} this session`}
-                data-testid="bookmark-count-badge"
+          {/* Primary controls — fixed stack height; does not scroll with chapter list */}
+          <div className="mt-3 flex w-full shrink-0 flex-col items-center gap-3 sm:mt-4 sm:gap-4">
+            {/* Switch to Reading — only when a chapter mapping exists (E103-S02) */}
+            {onSwitchToReading && (
+              <Button
+                variant="brand-outline"
+                size="sm"
+                onClick={() => {
+                  savePosition()
+                  onSwitchToReading?.(
+                    currentChapterIndex,
+                    currentTime,
+                    audioRef.current?.duration && Number.isFinite(audioRef.current.duration)
+                      ? audioRef.current.duration
+                      : undefined
+                  )
+                }}
+                aria-label="Switch to reading"
+                title="Switch to reading"
+                className="min-h-[44px] min-w-[44px]"
+                data-testid="switch-to-reading-button"
               >
-                {sessionBookmarkIds.size}
-              </span>
+                <BookOpen className="size-4 mr-2" aria-hidden="true" />
+                Switch to Reading
+              </Button>
             )}
+
+            {/* Progress scrubber — media-style track + high-contrast played range */}
+            <div
+              className="w-full space-y-2 rounded-2xl border border-[var(--surface-player-panel-border)] bg-[var(--surface-player-panel)] px-3 py-2.5 backdrop-blur-xl sm:px-4"
+              data-testid="audiobook-progress-panel"
+            >
+              <Slider
+                value={[currentTime]}
+                min={0}
+                max={duration || 100}
+                step={1}
+                onValueChange={([val]) => seekTo(val)}
+                aria-label="Playback position"
+                aria-valuetext={playbackSliderAriaValueText}
+                disabled={isLoading || duration === 0}
+                className="w-full py-1.5"
+                trackClassName="data-[orientation=horizontal]:h-2.5 bg-foreground/15 shadow-inner dark:bg-white/12"
+                rangeClassName="bg-brand data-[orientation=horizontal]:h-full rounded-full"
+                thumbClassName="size-4 border-2 border-background bg-foreground shadow-md ring-offset-background hover:ring-brand/40 focus-visible:ring-brand"
+              />
+              <div className="flex items-center justify-between text-sm text-foreground tabular-nums">
+                <span data-testid="current-time-display" className="font-medium">
+                  {formatAudioTime(currentTime)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowRemainingTime(!showRemainingTime)}
+                  aria-label="Toggle time display"
+                  aria-pressed={showRemainingTime}
+                  className="-my-1 -mr-1 flex min-h-[44px] items-center rounded-md px-3 text-sm font-medium text-foreground tabular-nums transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none motion-reduce:transition-none"
+                  data-testid="duration-display"
+                >
+                  {showRemainingTime
+                    ? `−${formatAudioTime(Math.max(0, duration - currentTime))}`
+                    : formatAudioTime(duration)}
+                </button>
+              </div>
+            </div>
+
+            {/* Playback Controls */}
+            <div className="flex items-center gap-6 sm:gap-8" data-testid="audiobook-primary-controls">
+              <button
+                onClick={handleSkipBack}
+                disabled={isLoading}
+                className="flex min-h-[48px] min-w-[48px] flex-col items-center justify-center gap-1 rounded-full p-3 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                aria-label={`Skip back ${skipBackSeconds} seconds`}
+                data-testid="skip-back-button"
+              >
+                <SkipBack className="size-6" aria-hidden="true" />
+                <span className="text-xs tabular-nums">{skipBackSeconds}s</span>
+              </button>
+
+              <button
+                onClick={toggle}
+                disabled={isLoading}
+                className="flex size-16 items-center justify-center rounded-full bg-[var(--player-fab)] text-[var(--player-fab-foreground)] shadow-[var(--player-fab-shadow)] transition-[transform,box-shadow] active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100 focus-visible:outline-hidden focus-visible:ring-4 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none motion-reduce:active:scale-100 sm:size-20"
+                aria-label={isPlaying ? 'Pause' : 'Play'}
+                data-testid={isPlaying ? 'audio-playing-indicator' : undefined}
+              >
+                {isLoading ? (
+                  <div className="size-8 animate-spin rounded-full border-2 border-current border-t-transparent sm:size-10" />
+                ) : isPlaying ? (
+                  <Pause className="size-8 sm:size-10" aria-hidden="true" fill="currentColor" />
+                ) : (
+                  <Play className="ml-0.5 size-8 sm:size-10 sm:ml-1" aria-hidden="true" fill="currentColor" />
+                )}
+              </button>
+
+              <button
+                onClick={handleSkipForward}
+                disabled={isLoading}
+                className="flex min-h-[48px] min-w-[48px] flex-col items-center justify-center gap-1 rounded-full p-3 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                aria-label={`Skip forward ${skipForwardSeconds} seconds`}
+                data-testid="skip-forward-button"
+              >
+                <SkipForward className="size-6" aria-hidden="true" />
+                <span className="text-xs tabular-nums">{skipForwardSeconds}s</span>
+              </button>
+            </div>
+
+            <SkipSilenceActiveIndicator isActive={skipSilence} />
+
+            {/* Secondary Controls: Speed | Bookmark | Sleep Timer */}
+            <div
+              className="flex max-w-full items-center gap-1 rounded-full border border-[var(--surface-player-panel-border)] bg-[var(--surface-player-panel)] px-2 py-1.5 backdrop-blur-2xl sm:gap-2 sm:px-4"
+              data-testid="audiobook-secondary-controls"
+            >
+              <SpeedControl bookId={book.id} />
+              <div className="relative">
+                <BookmarkButton
+                  bookId={book.id}
+                  chapterIndex={currentChapterIndex}
+                  currentTime={currentTime}
+                  onBookmarkCreated={handleBookmarkCreated}
+                  onBookmarkDeleted={handleBookmarkDeleted}
+                  noteContainerRef={bookmarkNoteContainerRef}
+                />
+                {sessionBookmarkIds.size > 0 && (
+                  <span
+                    className="pointer-events-none absolute right-0 top-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold text-brand-foreground"
+                    aria-label={`${sessionBookmarkIds.size} bookmark${sessionBookmarkIds.size !== 1 ? 's' : ''} this session`}
+                    data-testid="bookmark-count-badge"
+                  >
+                    {sessionBookmarkIds.size}
+                  </span>
+                )}
+              </div>
+              <SleepTimer
+                activeOption={activeOption}
+                badgeText={badgeText}
+                onSelect={handleSleepTimerSelect}
+                chapterProgressPercent={chapterProgressPercent}
+              />
+              <ClipButton
+                bookId={book.id}
+                chapterId={currentChapter?.title ?? `chapter-${currentChapterIndex}`}
+                chapterIndex={currentChapterIndex}
+                currentTime={currentTime}
+              />
+              <button
+                onClick={() => setClipsOpen(true)}
+                className="flex min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded-full px-2 text-muted-foreground transition-colors hover:text-foreground sm:min-w-[44px] sm:px-3"
+                aria-label="Clips"
+                data-testid="clips-panel-button"
+              >
+                <ListVideo className="size-5" aria-hidden="true" />
+              </button>
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="flex min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded-full px-2 text-muted-foreground transition-colors hover:text-foreground sm:min-w-[44px] sm:px-3"
+                aria-label="Audiobook settings"
+                data-testid="audiobook-settings-button"
+              >
+                <Settings className="size-5" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="mt-1 flex w-full flex-col items-center gap-2 sm:mt-2">
+              <div ref={bookmarkNoteContainerRef} />
+              <SilenceSkipIndicator lastSkip={silenceDetection.lastSkip} />
+              <span className="sr-only" aria-live="polite">
+                {Math.round(progressPercent / 10) * 10}% complete
+              </span>
+            </div>
           </div>
-          <SleepTimer
-            activeOption={activeOption}
-            badgeText={badgeText}
-            onSelect={handleSleepTimerSelect}
-            chapterProgressPercent={chapterProgressPercent}
-          />
-          {/* Clip Button — two-phase start/end recording (E111-S01) */}
-          <ClipButton
+
+          <div
+            className="mt-2 flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden pb-1"
+            data-testid="audiobook-chapter-scroll-region"
+          >
+            <ChapterList
+              chapters={book.chapters}
+              currentChapterIndex={currentChapterIndex}
+              totalDuration={book.totalDuration}
+              onChapterSelect={index => loadChapter(index, isPlaying)}
+            />
+          </div>
+
+          <BookmarkListPanel
+            open={bookmarksOpen}
+            onClose={handleBookmarksClose}
             bookId={book.id}
-            chapterId={currentChapter?.title ?? `chapter-${currentChapterIndex}`}
-            chapterIndex={currentChapterIndex}
-            currentTime={currentTime}
+            chapters={book.chapters}
+            onSeek={handleBookmarkSeek}
+            onBookmarkDeleted={handleBookmarkDeleted}
           />
-          {/* Clips panel trigger */}
-          <button
-            onClick={() => setClipsOpen(true)}
-            className="flex min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded-full px-2 text-muted-foreground transition-colors hover:text-foreground sm:min-w-[44px] sm:px-3"
-            aria-label="Clips"
-            data-testid="clips-panel-button"
-          >
-            <ListVideo className="size-5" aria-hidden="true" />
-          </button>
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="flex min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded-full px-2 text-muted-foreground transition-colors hover:text-foreground sm:min-w-[44px] sm:px-3"
-            aria-label="Audiobook settings"
-            data-testid="audiobook-settings-button"
-          >
-            <Settings className="size-5" aria-hidden="true" />
-          </button>
-        </div>
 
-        {/* Bookmark note + progress */}
-        <div className="mt-6 flex w-full flex-col items-center gap-3">
-          <div ref={bookmarkNoteContainerRef} />
-          {/* Transient silence skip notification */}
-          <SilenceSkipIndicator lastSkip={silenceDetection.lastSkip} />
-          <span className="sr-only" aria-live="polite">{Math.round(progressPercent / 10) * 10}% complete</span>
-        </div>
+          <ClipListPanel
+            open={clipsOpen}
+            onClose={() => setClipsOpen(false)}
+            bookId={book.id}
+            chapters={book.chapters}
+            onPlayClip={handlePlayClip}
+          />
 
-        {/* Chapter List — hidden for single-chapter audiobooks */}
-        <ChapterList
-          chapters={book.chapters}
-          currentChapterIndex={currentChapterIndex}
-          totalDuration={book.totalDuration}
-          onChapterSelect={index => loadChapter(index, isPlaying)}
-        />
+          <AudiobookSettingsPanel open={settingsOpen} onOpenChange={setSettingsOpen} />
 
-        {/* Bookmark List Panel — slides in from right */}
-        <BookmarkListPanel
-          open={bookmarksOpen}
-          onClose={handleBookmarksClose}
-          bookId={book.id}
-          chapters={book.chapters}
-          onSeek={handleBookmarkSeek}
-          onBookmarkDeleted={handleBookmarkDeleted}
-        />
-
-        {/* Clip List Panel — slides in from right (E111-S01) */}
-        <ClipListPanel
-          open={clipsOpen}
-          onClose={() => setClipsOpen(false)}
-          bookId={book.id}
-          chapters={book.chapters}
-          onPlayClip={handlePlayClip}
-        />
-
-        {/* Audiobook settings panel (E108-S04) */}
-        <AudiobookSettingsPanel open={settingsOpen} onOpenChange={setSettingsOpen} />
-
-        {/* Post-session bookmark review panel (E101-S05) */}
-        <PostSessionBookmarkReview
-          open={postSessionOpen}
-          onClose={() => {
-            setPostSessionOpen(false)
-            // Reset session tracking so a new session starts clean
-            setSessionBookmarkIds(new Set())
-          }}
-          bookId={book.id}
-          chapters={book.chapters}
-          sessionBookmarkIds={sessionBookmarkIds}
-        />
-      </div>
+          <PostSessionBookmarkReview
+            open={postSessionOpen}
+            onClose={() => {
+              setPostSessionOpen(false)
+              setSessionBookmarkIds(new Set())
+            }}
+            bookId={book.id}
+            chapters={book.chapters}
+            sessionBookmarkIds={sessionBookmarkIds}
+          />
         </div>
       </div>
     </>

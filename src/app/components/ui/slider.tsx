@@ -15,11 +15,13 @@ function Slider({
   min = 0,
   max = 100,
   'aria-label': ariaLabel,
+  'aria-valuetext': ariaValueText,
   ...props
 }: React.ComponentProps<typeof SliderPrimitive.Root> & {
   trackClassName?: string
   rangeClassName?: string
   thumbClassName?: string
+  'aria-valuetext'?: string
 }) {
   const _values = React.useMemo(
     () => (Array.isArray(value) ? value : Array.isArray(defaultValue) ? defaultValue : [min, max]),
@@ -59,6 +61,7 @@ function Slider({
           data-slot="slider-thumb"
           key={index}
           aria-label={ariaLabel}
+          aria-valuetext={ariaValueText}
           className={cn(
             'border-primary bg-background ring-ring/50 relative block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow,opacity,width,height] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none',
             'before:absolute before:inset-[-14px] before:content-[""]',

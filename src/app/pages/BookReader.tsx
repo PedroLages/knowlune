@@ -896,7 +896,7 @@ export function BookReader() {
         {/* eslint-disable react-best-practices/no-inline-styles -- dynamic translateY for drag-to-dismiss */}
         <div
           className={cn(
-            'fixed inset-0 isolate flex flex-col overflow-y-auto bg-transparent',
+            'fixed left-0 right-0 top-0 z-10 isolate flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-transparent',
             !isAudiobookPlayerDragging && 'transition-transform duration-200 ease-out'
           )}
           style={
