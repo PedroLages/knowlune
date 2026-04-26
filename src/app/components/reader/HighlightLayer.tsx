@@ -144,6 +144,9 @@ export function HighlightLayer({
     for (const highlight of highlights) {
       if (!highlight.cfiRange) continue
       try {
+        // epub.js `add`/`highlight` replaces the map entry but does not detach the prior
+        // Annotation's DOM. Re-running this effect after deletes would orphan overlays.
+        rendition.annotations.remove(highlight.cfiRange, 'highlight')
         // Annotation callback fires when user taps/clicks the highlight overlay
         rendition.annotations.highlight(
           highlight.cfiRange,
@@ -299,6 +302,7 @@ export function HighlightLayer({
       // Store highlight ref for the callback closure
       const capturedId = id
       try {
+        rendition.annotations.remove(selection.cfiRange, 'highlight')
         rendition.annotations.highlight(
           selection.cfiRange,
           { highlightId: capturedId },
