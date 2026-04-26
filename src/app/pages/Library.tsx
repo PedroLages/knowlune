@@ -36,11 +36,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/app/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip'
 import { formatDistanceToNow } from 'date-fns'
 import { BookImportDialog } from '@/app/components/library/BookImportDialog'
 import { SeriesCard } from '@/app/components/library/SeriesCard'
@@ -96,7 +92,9 @@ export function Library() {
   }, [libraryBookId, libraryLocation.state])
   useEffect(() => {
     document.title = 'Library · Knowlune'
-    return () => { document.title = 'Knowlune' }
+    return () => {
+      document.title = 'Knowlune'
+    }
   }, [])
   const [importOpen, setImportOpen] = useState(false)
   const [droppedFile, setDroppedFile] = useState<File | null>(null)
@@ -228,21 +226,27 @@ export function Library() {
       setCatalogsOpen(true)
       // Set the deep-link focus param so useDeepLinkFocus inside OpdsCatalogSettings
       // will open the edit form for this catalog and focus the password input.
-      setSearchParams(prev => {
-        const next = new URLSearchParams(prev)
-        next.set('focus', `opds:${focusId}`)
-        return next
-      }, { replace: true })
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
+          next.set('focus', `opds:${focusId}`)
+          return next
+        },
+        { replace: true }
+      )
     }
 
     function onOpenAbsSettings(e: Event) {
       const { focusId } = (e as CustomEvent<{ focusId: string }>).detail
       setAbsSettingsOpen(true)
-      setSearchParams(prev => {
-        const next = new URLSearchParams(prev)
-        next.set('focus', `abs:${focusId}`)
-        return next
-      }, { replace: true })
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
+          next.set('focus', `abs:${focusId}`)
+          return next
+        },
+        { replace: true }
+      )
     }
 
     window.addEventListener('open-opds-settings', onOpenOpdsSettings)
@@ -370,7 +374,7 @@ export function Library() {
   }, [])
 
   return (
-    <div className="flex flex-col gap-6 py-6">
+    <div className="flex flex-col gap-6 py-6" data-testid="library-page">
       {/* Header */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -403,37 +407,37 @@ export function Library() {
               </Button>
             )}
             <div className="hidden sm:contents">
-            {absServers.length > 0 &&
-              (() => {
-                const connectedServer = absServers.find(s => s.status === 'connected')
-                const isOffline = absServers.some(s => s.status === 'offline')
-                const isAuthFailed = absServers.some(s => s.status === 'auth-failed')
-                // fix/E-ABS-QA: compute tooltip copy from server state. Auth-
-                // failed takes priority over connected because the user needs
-                // to reconnect before the sync will do anything useful.
-                const lastSyncIso = connectedServer?.lastSyncedAt
-                let tooltipText: string
-                if (isAbsSyncing) {
-                  tooltipText = 'Syncing…'
-                } else if (isAuthFailed) {
-                  tooltipText = 'Auth failed — click to reconnect'
-                } else if (lastSyncIso) {
-                  try {
-                    tooltipText = `Last synced ${formatDistanceToNow(new Date(lastSyncIso), { addSuffix: true })}`
-                  } catch {
-                    // silent-catch-ok: malformed timestamp falls back to a plain label.
+              {absServers.length > 0 &&
+                (() => {
+                  const connectedServer = absServers.find(s => s.status === 'connected')
+                  const isOffline = absServers.some(s => s.status === 'offline')
+                  const isAuthFailed = absServers.some(s => s.status === 'auth-failed')
+                  // fix/E-ABS-QA: compute tooltip copy from server state. Auth-
+                  // failed takes priority over connected because the user needs
+                  // to reconnect before the sync will do anything useful.
+                  const lastSyncIso = connectedServer?.lastSyncedAt
+                  let tooltipText: string
+                  if (isAbsSyncing) {
+                    tooltipText = 'Syncing…'
+                  } else if (isAuthFailed) {
+                    tooltipText = 'Auth failed — click to reconnect'
+                  } else if (lastSyncIso) {
+                    try {
+                      tooltipText = `Last synced ${formatDistanceToNow(new Date(lastSyncIso), { addSuffix: true })}`
+                    } catch {
+                      // silent-catch-ok: malformed timestamp falls back to a plain label.
+                      tooltipText = 'Sync library'
+                    }
+                  } else if (connectedServer) {
+                    tooltipText = 'Never synced — click to sync'
+                  } else if (isOffline) {
+                    tooltipText = 'Offline — sync will retry when online'
+                  } else {
                     tooltipText = 'Sync library'
                   }
-                } else if (connectedServer) {
-                  tooltipText = 'Never synced — click to sync'
-                } else if (isOffline) {
-                  tooltipText = 'Offline — sync will retry when online'
-                } else {
-                  tooltipText = 'Sync library'
-                }
-                return (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
+                  return (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -461,55 +465,55 @@ export function Library() {
                           />
                         </Button>
                       </TooltipTrigger>
-                    <TooltipContent side="bottom" data-testid="abs-sync-tooltip">
-                      {tooltipText}
-                    </TooltipContent>
-                  </Tooltip>
-                )
-              })()}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setAbsSettingsOpen(true)}
-              className="size-11 rounded-xl"
-              aria-label="Audiobookshelf settings"
-              title="Audiobookshelf"
-              data-testid="abs-settings-trigger"
-            >
-              <Headphones className="size-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setCatalogsOpen(true)}
-              className="size-11 rounded-xl"
-              aria-label="OPDS catalog settings"
-              title="OPDS Catalogs"
-              data-testid="opds-catalog-settings-trigger"
-            >
-              <Globe className="size-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShelvesOpen(true)}
-              className="size-11 rounded-xl"
-              aria-label="Manage shelves"
-              title="Manage Shelves"
-              data-testid="manage-shelves-trigger"
-            >
-              <LibraryIcon className="size-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setGoalsOpen(true)}
-              className="size-11 rounded-xl"
-              aria-label="Reading goals"
-              title="Reading Goals"
-            >
-              <Target className="size-5" />
-            </Button>
+                      <TooltipContent side="bottom" data-testid="abs-sync-tooltip">
+                        {tooltipText}
+                      </TooltipContent>
+                    </Tooltip>
+                  )
+                })()}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setAbsSettingsOpen(true)}
+                className="size-11 rounded-xl"
+                aria-label="Audiobookshelf settings"
+                title="Audiobookshelf"
+                data-testid="abs-settings-trigger"
+              >
+                <Headphones className="size-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCatalogsOpen(true)}
+                className="size-11 rounded-xl"
+                aria-label="OPDS catalog settings"
+                title="OPDS Catalogs"
+                data-testid="opds-catalog-settings-trigger"
+              >
+                <Globe className="size-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShelvesOpen(true)}
+                className="size-11 rounded-xl"
+                aria-label="Manage shelves"
+                title="Manage Shelves"
+                data-testid="manage-shelves-trigger"
+              >
+                <LibraryIcon className="size-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setGoalsOpen(true)}
+                className="size-11 rounded-xl"
+                aria-label="Reading goals"
+                title="Reading Goals"
+              >
+                <Target className="size-5" />
+              </Button>
             </div>
             {/* Mobile-only overflow menu: collapses secondary icon buttons */}
             <DropdownMenu>
@@ -537,9 +541,7 @@ export function Library() {
                     disabled={isAbsSyncing}
                     data-testid="abs-sync-trigger-mobile"
                   >
-                    <RefreshCw
-                      className={cn('mr-2 size-4', isAbsSyncing && 'animate-spin')}
-                    />
+                    <RefreshCw className={cn('mr-2 size-4', isAbsSyncing && 'animate-spin')} />
                     {isAbsSyncing ? 'Syncing…' : 'Sync library'}
                   </DropdownMenuItem>
                 )}
@@ -659,8 +661,8 @@ export function Library() {
               className="max-w-md text-center text-sm text-muted-foreground"
               data-testid="abs-cross-device-sync-hint"
             >
-              If you've connected an audiobook server on another device, it should sync
-              here in a moment. Or{' '}
+              If you've connected an audiobook server on another device, it should sync here in a
+              moment. Or{' '}
               <Button
                 variant="link"
                 onClick={() => setAbsSettingsOpen(true)}
@@ -707,7 +709,12 @@ export function Library() {
                   [
                     { mode: 'grid', Icon: Grid3X3, label: 'Grid', testId: 'abs-view-grid' },
                     { mode: 'series', Icon: List, label: 'Series', testId: 'abs-view-series' },
-                    { mode: 'collections', Icon: FolderOpen, label: 'Collections', testId: 'abs-view-collections' },
+                    {
+                      mode: 'collections',
+                      Icon: FolderOpen,
+                      label: 'Collections',
+                      testId: 'abs-view-collections',
+                    },
                   ] as const
                 ).map(({ mode, Icon, label, testId }) => (
                   <button
@@ -747,14 +754,32 @@ export function Library() {
                 aria-label="Library view mode"
                 data-testid="local-view-toggle"
               >
-                {(
-                  [
-                    { mode: 'grid' as const, series: false, Icon: Grid3X3, label: 'Grid', testId: 'local-view-grid' },
-                    { mode: 'list' as const, series: false, Icon: List, label: 'List', testId: 'local-view-list' },
-                    { mode: 'grid' as const, series: true, Icon: Layers, label: 'Series', testId: 'local-view-series' },
-                  ]
-                ).map(({ mode, series, Icon, label, testId }) => {
-                  const isActive = series ? localSeriesView : !localSeriesView && libraryView === mode
+                {[
+                  {
+                    mode: 'grid' as const,
+                    series: false,
+                    Icon: Grid3X3,
+                    label: 'Grid',
+                    testId: 'local-view-grid',
+                  },
+                  {
+                    mode: 'list' as const,
+                    series: false,
+                    Icon: List,
+                    label: 'List',
+                    testId: 'local-view-list',
+                  },
+                  {
+                    mode: 'grid' as const,
+                    series: true,
+                    Icon: Layers,
+                    label: 'Series',
+                    testId: 'local-view-series',
+                  },
+                ].map(({ mode, series, Icon, label, testId }) => {
+                  const isActive = series
+                    ? localSeriesView
+                    : !localSeriesView && libraryView === mode
                   return (
                     <button
                       key={testId}
@@ -793,7 +818,10 @@ export function Library() {
           <FormatTabs />
           {absServers.length > 0 && (
             <>
-              <div className="w-px h-4 bg-border self-center flex-shrink-0 mx-0.5" aria-hidden="true" />
+              <div
+                className="w-px h-4 bg-border self-center flex-shrink-0 mx-0.5"
+                aria-hidden="true"
+              />
               <LibrarySourceTabs />
             </>
           )}
