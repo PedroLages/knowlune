@@ -824,36 +824,38 @@ export function BookReader() {
             <Bookmark className="size-5" fill={hasBookmarks ? 'currentColor' : 'none'} />
           </Button>
         </div>
-        <Suspense
-          fallback={
-            <div className="flex h-[60vh] items-center justify-center">
-              <Loader2 className="size-8 animate-spin text-muted-foreground" />
-            </div>
-          }
-        >
-          <AudiobookRenderer
-            book={book}
-            bookmarksOpen={audiobookBookmarksOpen}
-            onBookmarksClose={() => setAudiobookBookmarksOpen(false)}
-            onSwitchToReading={
-              hasMapping
-                ? (chapterIndex: number, currentTime: number, audioElementDuration?: number) =>
-                    switchToFormat(chapterIndex, undefined, {
-                      audioCurrentTime: currentTime,
-                      audioElementDuration,
-                    })
-                : undefined
+        <div className="flex flex-1 min-h-0 flex-col">
+          <Suspense
+            fallback={
+              <div className="flex flex-1 items-center justify-center">
+                <Loader2 className="size-8 animate-spin text-muted-foreground" />
+              </div>
             }
-            initialChapterIndex={
-              startChapterIndex !== null
-                ? Math.max(0, Math.min(startChapterIndex, book.chapters.length - 1))
-                : undefined
-            }
-            initialSeekSeconds={seekSecondsParamRef.current ?? undefined}
-            initialChapterPct={chapterPctParamRef.current ?? undefined}
-            onBookmarkChange={handleBookmarkChange}
-          />
-        </Suspense>
+          >
+            <AudiobookRenderer
+              book={book}
+              bookmarksOpen={audiobookBookmarksOpen}
+              onBookmarksClose={() => setAudiobookBookmarksOpen(false)}
+              onSwitchToReading={
+                hasMapping
+                  ? (chapterIndex: number, currentTime: number, audioElementDuration?: number) =>
+                      switchToFormat(chapterIndex, undefined, {
+                        audioCurrentTime: currentTime,
+                        audioElementDuration,
+                      })
+                  : undefined
+              }
+              initialChapterIndex={
+                startChapterIndex !== null
+                  ? Math.max(0, Math.min(startChapterIndex, book.chapters.length - 1))
+                  : undefined
+              }
+              initialSeekSeconds={seekSecondsParamRef.current ?? undefined}
+              initialChapterPct={chapterPctParamRef.current ?? undefined}
+              onBookmarkChange={handleBookmarkChange}
+            />
+          </Suspense>
+        </div>
       </div>
     )
   }

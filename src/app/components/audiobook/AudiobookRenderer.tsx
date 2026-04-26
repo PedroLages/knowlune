@@ -461,49 +461,51 @@ export function AudiobookRenderer({
           aria-hidden="true"
         />
       )}
-      <div className="relative z-10 mx-auto flex w-full max-w-lg min-w-0 flex-col items-center px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-6">
-        {/* Cover Art
-         * shrink-0: prevents the parent flex column from collapsing the square
-         * frame on short viewports — root cause of the letterbox bars.
-         * testids support regression test (cover-letterbox.spec.ts).
-         * Do not rename testids without updating the spec. */}
-        <div
-          data-testid="audiobook-cover-frame"
-          className="w-full max-w-56 sm:max-w-72 lg:max-w-80 aspect-square shrink-0 rounded-3xl overflow-hidden shadow-[var(--player-cover-shadow)] flex items-center justify-center bg-muted"
-        >
-          {resolvedCoverUrl && !coverLoadFailed ? (
-            <img
-              data-testid="audiobook-cover-image"
-              src={resolvedCoverUrl}
-              alt={`Cover of ${book.title}`}
-              className="h-full w-full object-cover"
-              onError={() => setCoverLoadFailed(true)}
-            />
-          ) : (
-            <BookOpen className="size-24 text-muted-foreground/40" aria-hidden="true" />
-          )}
-        </div>
+      <div className="relative z-10 flex flex-1 min-h-0 overflow-y-auto px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-6">
+        <div className="flex min-h-full w-full flex-col">
+          <div className="m-auto flex w-full max-w-lg min-w-0 flex-col items-center">
+            {/* Cover Art
+             * shrink-0: prevents the parent flex column from collapsing the square
+             * frame on short viewports — root cause of the letterbox bars.
+             * testids support regression test (cover-letterbox.spec.ts).
+             * Do not rename testids without updating the spec. */}
+            <div
+              data-testid="audiobook-cover-frame"
+              className="w-full max-w-56 sm:max-w-72 lg:max-w-80 aspect-square shrink-0 rounded-3xl overflow-hidden shadow-[var(--player-cover-shadow)] flex items-center justify-center bg-muted"
+            >
+              {resolvedCoverUrl && !coverLoadFailed ? (
+                <img
+                  data-testid="audiobook-cover-image"
+                  src={resolvedCoverUrl}
+                  alt={`Cover of ${book.title}`}
+                  className="h-full w-full object-cover"
+                  onError={() => setCoverLoadFailed(true)}
+                />
+              ) : (
+                <BookOpen className="size-24 text-muted-foreground/40" aria-hidden="true" />
+              )}
+            </div>
 
-        {/* Book & Chapter Title */}
-        <div className="mt-8 text-center space-y-1 w-full">
-          <h1 className="text-2xl md:text-3xl font-semibold text-foreground truncate px-4">
-            {book.title}
-          </h1>
-          <p className="text-sm text-muted-foreground truncate px-4">
-            {currentChapter?.title ?? `Chapter ${currentChapterIndex + 1}`}
-            {book.chapters.length > 1 && (
-              <span className="ml-2 text-xs">
-                ({currentChapterIndex + 1}/{book.chapters.length})
-              </span>
-            )}
-          </p>
-          {book.author && <p className="text-xs text-muted-foreground">{book.author}</p>}
-          {book.narrator && (
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">
-              Narrated by {book.narrator}
-            </p>
-          )}
-        </div>
+            {/* Book & Chapter Title */}
+            <div className="mt-8 text-center space-y-1 w-full">
+              <h1 className="text-2xl md:text-3xl font-semibold text-foreground truncate px-4">
+                {book.title}
+              </h1>
+              <p className="text-sm text-muted-foreground truncate px-4">
+                {currentChapter?.title ?? `Chapter ${currentChapterIndex + 1}`}
+                {book.chapters.length > 1 && (
+                  <span className="ml-2 text-xs">
+                    ({currentChapterIndex + 1}/{book.chapters.length})
+                  </span>
+                )}
+              </p>
+              {book.author && <p className="text-xs text-muted-foreground">{book.author}</p>}
+              {book.narrator && (
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                  Narrated by {book.narrator}
+                </p>
+              )}
+            </div>
 
         {/* Switch to Reading — only when a chapter mapping exists (E103-S02) */}
         {onSwitchToReading && (
@@ -542,7 +544,8 @@ export function AudiobookRenderer({
             aria-label="Playback position"
             disabled={isLoading || duration === 0}
             className="w-full"
-            trackClassName="data-[orientation=horizontal]:h-1.5"
+            trackClassName="data-[orientation=horizontal]:h-2"
+            thumbClassName="size-6 border-2"
           />
           <div className="flex justify-between items-center text-sm text-foreground tabular-nums">
             <span data-testid="current-time-display" className="font-medium">{formatAudioTime(currentTime)}</span>
@@ -712,6 +715,8 @@ export function AudiobookRenderer({
           chapters={book.chapters}
           sessionBookmarkIds={sessionBookmarkIds}
         />
+      </div>
+        </div>
       </div>
     </>
   )
