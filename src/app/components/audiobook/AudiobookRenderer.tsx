@@ -47,7 +47,7 @@ import type { Book } from '@/data/types'
 
 interface AudiobookRendererProps {
   book: Book
-  /** Controlled from BookReader header to open the bookmark panel */
+  /** Controlled from BookReader top chrome to open the bookmark list panel */
   bookmarksOpen?: boolean
   onBookmarksClose?: () => void
   /**

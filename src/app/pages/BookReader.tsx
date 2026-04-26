@@ -26,7 +26,7 @@ import { recordVisit } from '@/lib/searchFrecency'
 import type { Rendition } from 'epubjs'
 import type { NavItem } from 'epubjs'
 import { toast } from 'sonner'
-import { Loader2, ChevronDown, Bookmark } from 'lucide-react'
+import { Loader2, ChevronDown, Library } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'
 import { useBookStore } from '@/stores/useBookStore'
@@ -906,43 +906,50 @@ export function BookReader() {
           }
           data-testid="audiobook-reader"
         >
-        {/* Minimal header — frosted bar; page bg comes from AudiobookRenderer atmosphere */}
-        <div className="sticky top-0 z-20 flex min-h-[52px] items-center justify-between gap-3 border-b border-[var(--player-header-glass-border)] bg-[var(--player-header-glass)] px-4 py-3 backdrop-blur-[40px] backdrop-saturate-150 relative">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleMinimize}
-            className="min-h-[44px] min-w-[44px] shrink-0 text-muted-foreground hover:text-foreground"
-            aria-label="Minimize player"
-            data-testid="audiobook-minimize-button"
-          >
-            <ChevronDown className="size-5" />
-          </Button>
-          {/* Mobile-only iOS-style grabber: drag down to minimize (pointer capture + touch-action) */}
-          <button
-            type="button"
-            className="sm:hidden absolute left-1/2 top-1/2 flex h-11 w-[4.5rem] -translate-x-1/2 -translate-y-1/2 touch-none items-center justify-center rounded-md bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            aria-label="Minimize player"
-            data-testid="audiobook-player-drag-handle"
-            onPointerDown={handleAudiobookPlayerPointerDown}
-            onPointerMove={handleAudiobookPlayerPointerMove}
-            onPointerUp={handleAudiobookPlayerPointerEnd}
-            onPointerCancel={handleAudiobookPlayerPointerCancel}
-          >
-            <span
-              className="pointer-events-none block h-1 w-10 rounded-full bg-muted-foreground/50"
-              aria-hidden="true"
-            />
-          </button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setAudiobookBookmarksOpen(true)}
-            className={`min-h-[44px] min-w-[44px] shrink-0 hover:text-foreground ${audiobookBookmarksOpen || hasBookmarks ? 'text-foreground' : 'text-muted-foreground'}`}
-            aria-label="View bookmarks"
-          >
-            <Bookmark className="size-5" fill={hasBookmarks ? 'currentColor' : 'none'} />
-          </Button>
+        {/* Top chrome: column-aligned with player; gradient for icon legibility (not a full-bleed frosted bar) */}
+        <div className="sticky top-0 z-20 isolate shrink-0 pt-[env(safe-area-inset-top)]">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-[5.5rem] bg-gradient-to-b from-background/80 via-background/40 to-transparent dark:from-black/50 dark:via-black/22 dark:to-transparent"
+            aria-hidden
+          />
+          <div className="relative mx-auto flex min-h-[52px] w-full max-w-lg items-center justify-between gap-3 px-4 py-2 sm:py-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleMinimize}
+              className="min-h-[44px] min-w-[44px] shrink-0 text-muted-foreground hover:text-foreground drop-shadow-sm"
+              aria-label="Minimize player"
+              data-testid="audiobook-minimize-button"
+            >
+              <ChevronDown className="size-5" />
+            </Button>
+            {/* Mobile-only iOS-style grabber: drag down to minimize (pointer capture + touch-action) */}
+            <button
+              type="button"
+              className="sm:hidden absolute left-1/2 top-1/2 flex h-11 w-[4.5rem] -translate-x-1/2 -translate-y-1/2 touch-none items-center justify-center rounded-md bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              aria-label="Minimize player"
+              data-testid="audiobook-player-drag-handle"
+              onPointerDown={handleAudiobookPlayerPointerDown}
+              onPointerMove={handleAudiobookPlayerPointerMove}
+              onPointerUp={handleAudiobookPlayerPointerEnd}
+              onPointerCancel={handleAudiobookPlayerPointerCancel}
+            >
+              <span
+                className="pointer-events-none block h-1 w-10 rounded-full bg-muted-foreground/50 drop-shadow-sm"
+                aria-hidden="true"
+              />
+            </button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setAudiobookBookmarksOpen(true)}
+              className={`min-h-[44px] min-w-[44px] shrink-0 drop-shadow-sm hover:text-foreground ${audiobookBookmarksOpen || hasBookmarks ? 'text-foreground' : 'text-muted-foreground'}`}
+              aria-label="All bookmarks"
+              data-testid="audiobook-bookmarks-list-button"
+            >
+              <Library className="size-5" aria-hidden="true" />
+            </Button>
+          </div>
         </div>
         <div className="flex flex-1 min-h-0 flex-col">
           <Suspense
