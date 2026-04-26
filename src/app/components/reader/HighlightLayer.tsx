@@ -71,6 +71,16 @@ function getIframeViewportOffset(
   return { top: fb?.top ?? 0, left: fb?.left ?? 0 }
 }
 
+/** Map mouse client coords from the EPUB iframe to the app viewport (for position:fixed UI). */
+function mouseEventToMainViewport(e: MouseEvent): { top: number; left: number } {
+  const view = e.view
+  if (view && view !== window && view.frameElement) {
+    const r = view.frameElement.getBoundingClientRect()
+    return { top: e.clientY + r.top, left: e.clientX + r.left }
+  }
+  return { top: e.clientY, left: e.clientX }
+}
+
 interface SelectionData {
   cfiRange: string
   text: string
@@ -155,9 +165,10 @@ export function HighlightLayer({
             // Find current highlight from ref (not stale closure)
             const h = highlightsRef.current.find(x => x.id === highlight.id)
             if (!h) return
+            const pos = mouseEventToMainViewport(e)
             setMiniPopover({
               highlight: h,
-              position: { top: e.clientY, left: e.clientX },
+              position: pos,
             })
           },
           'epub-highlight',
@@ -309,7 +320,7 @@ export function HighlightLayer({
           (e: MouseEvent) => {
             const h = highlightsRef.current.find(x => x.id === capturedId)
             if (!h) return
-            setMiniPopover({ highlight: h, position: { top: e.clientY, left: e.clientX } })
+            setMiniPopover({ highlight: h, position: mouseEventToMainViewport(e) })
           },
           'epub-highlight',
           highlightStyles(color)
@@ -391,7 +402,7 @@ export function HighlightLayer({
             (e: MouseEvent) => {
               const h = highlightsRef.current.find(x => x.id === capturedId)
               if (!h) return
-              setMiniPopover({ highlight: h, position: { top: e.clientY, left: e.clientX } })
+              setMiniPopover({ highlight: h, position: mouseEventToMainViewport(e) })
             },
             'epub-highlight',
             highlightStyles(newColor)

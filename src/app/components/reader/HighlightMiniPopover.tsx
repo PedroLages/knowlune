@@ -88,12 +88,23 @@ export function HighlightMiniPopover({
     }
   }
 
-  // Clamp position to viewport edges
-  const clampedLeft = Math.min(position.left, window.innerWidth - 280)
+  // Clamp to viewport (position is already in main-document coords from HighlightLayer)
+  const margin = 8
+  const headerReserve = 48
+  const approxW = 256
+  const approxH = 280
+  const maxTop = window.innerHeight - approxH - margin
+  const minTop = headerReserve
+  const clampedTop =
+    maxTop <= minTop ? minTop : Math.min(Math.max(minTop, position.top), maxTop)
+  const maxLeft = window.innerWidth - approxW - margin
+  const minLeft = margin
+  const clampedLeft =
+    maxLeft <= minLeft ? minLeft : Math.min(Math.max(minLeft, position.left), maxLeft)
 
   return (
     <div
-      style={{ top: position.top, left: Math.max(8, clampedLeft) }}
+      style={{ top: clampedTop, left: clampedLeft }}
       className="fixed z-[60] w-64 rounded-xl bg-popover border border-border shadow-lg p-3"
       data-testid="highlight-mini-popover"
     >
