@@ -304,11 +304,11 @@ export function BookImportDialog({ open, onOpenChange, initialFile }: BookImport
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        className="max-w-lg rounded-2xl"
+        className="w-[calc(100vw-2rem)] max-w-lg overflow-hidden rounded-2xl"
         aria-label="Import book"
         data-testid="book-import-dialog"
       >
-        <DialogHeader>
+        <DialogHeader className="min-w-0">
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-brand" />
             Import Book

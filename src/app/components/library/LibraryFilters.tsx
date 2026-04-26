@@ -99,13 +99,13 @@ export function LibraryFilters({ viewToggle }: LibraryFiltersProps = {}) {
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Primary row: status pills (left) + utility controls (right) */}
-      <div className="flex items-center gap-2">
-        {/* Status pills — scroll on mobile */}
-        <div className="relative flex-1 min-w-0">
-          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent z-10 sm:hidden" />
+      {/* Primary: status chips get full width on small screens; utilities sit on their own row until sm */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+        {/* Status pills — horizontal scroll; fade is non-interactive and stays behind chips */}
+        <div className="relative w-full min-w-0 sm:flex-1">
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-background to-transparent z-[1] sm:hidden" />
           <div
-            className="flex gap-1.5 overflow-x-auto scrollbar-none"
+            className="flex gap-1.5 overflow-x-auto scrollbar-none py-0.5 -mx-0.5 px-0.5"
             role="tablist"
             aria-label="Filter by reading status"
           >
@@ -136,16 +136,16 @@ export function LibraryFilters({ viewToggle }: LibraryFiltersProps = {}) {
           </div>
         </div>
 
-        {/* Utility controls — always right, never wrap */}
-        <div className="flex items-center gap-1 flex-shrink-0">
+        {/* Utility controls — own row on mobile so they never sit on top of status pills */}
+        <div className="flex w-full shrink-0 items-center justify-end gap-1 sm:w-auto">
           {/* View toggle injected by parent */}
           {viewToggle}
 
           {/* Expanding search */}
           <div
             className={cn(
-              'relative flex items-center transition-all duration-200 ease-in-out overflow-hidden',
-              searchOpen ? 'w-44 sm:w-56' : 'w-0'
+              'relative flex min-w-0 items-center transition-all duration-200 ease-in-out overflow-hidden',
+              searchOpen ? 'w-full max-w-full flex-1 sm:flex-none sm:w-56' : 'w-0'
             )}
           >
             <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none z-10" />

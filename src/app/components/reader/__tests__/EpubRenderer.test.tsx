@@ -32,6 +32,7 @@ const mockStoreState: Record<string, unknown> = {
   letterSpacing: 0,
   wordSpacing: 0,
   scrollMode: false,
+  dualPage: false,
   toggleHeader: vi.fn(),
 }
 const mockToggleHeader = mockStoreState.toggleHeader as ReturnType<typeof vi.fn>
@@ -58,6 +59,7 @@ function createMockRendition() {
     prev: vi.fn().mockResolvedValue(undefined),
     next: vi.fn().mockResolvedValue(undefined),
     flow: vi.fn(),
+    spread: vi.fn(),
     themes: {
       default: vi.fn(),
     },
@@ -113,6 +115,7 @@ describe('EpubRenderer', () => {
     mockStoreState.letterSpacing = 0
     mockStoreState.wordSpacing = 0
     mockStoreState.scrollMode = false
+    mockStoreState.dualPage = false
     mockColorScheme = 'professional'
     vi.useFakeTimers()
   })
@@ -244,6 +247,28 @@ describe('EpubRenderer', () => {
       const passedProps = mockEpubViewProps.mock.calls[0][0]
       expect(passedProps.epubOptions.allowPopups).toBe(false)
     })
+
+    it('uses a narrower centered viewport for single-page mode', () => {
+      mockStoreState.dualPage = false
+      render(<EpubRenderer {...defaultProps} />)
+
+      const viewport = screen.getByTestId('epub-viewport')
+      expect(viewport).toHaveClass('mx-auto', 'max-w-[44rem]')
+    })
+
+    it('uses a wider viewport and auto spread for two-page mode', () => {
+      mockStoreState.dualPage = true
+      render(<EpubRenderer {...defaultProps} />)
+
+      const passedProps = mockEpubViewProps.mock.calls[0][0]
+      expect(passedProps.epubOptions).toEqual(
+        expect.objectContaining({
+          spread: 'auto',
+          flow: 'paginated',
+        })
+      )
+      expect(screen.getByTestId('epub-viewport')).toHaveClass('max-w-6xl')
+    })
   })
 
   describe('Bug 4 — Interaction zone stacking (AC-5)', () => {
@@ -258,23 +283,22 @@ describe('EpubRenderer', () => {
       expect(parentContainer.className).toContain('z-10')
     })
 
-    it('gives each interaction zone pointer-events-auto', () => {
+    it('gives gutter interaction zones pointer-events-auto', () => {
       render(<EpubRenderer {...defaultProps} />)
 
       const prevZone = screen.getByLabelText('Previous page')
-      const toggleZone = screen.getByLabelText('Toggle reader controls')
       const nextZone = screen.getByLabelText('Next page')
 
       expect(prevZone.className).toContain('pointer-events-auto')
-      expect(toggleZone.className).toContain('pointer-events-auto')
       expect(nextZone.className).toContain('pointer-events-auto')
+      expect(screen.queryByLabelText('Toggle reader controls')).toBeNull()
     })
 
-    it('clicking toggle zone calls toggleHeader', () => {
+    it('clicking reader margin calls toggleHeader without adding a center overlay', () => {
       render(<EpubRenderer {...defaultProps} />)
 
-      const toggleZone = screen.getByLabelText('Toggle reader controls')
-      fireEvent.click(toggleZone)
+      const container = screen.getByTestId('epub-renderer')
+      fireEvent.click(container)
       expect(mockToggleHeader).toHaveBeenCalledTimes(1)
     })
   })
@@ -550,8 +574,8 @@ describe('EpubRenderer', () => {
       render(<EpubRenderer {...defaultProps} />)
 
       expect(screen.getByLabelText('Previous page')).toBeInTheDocument()
-      expect(screen.getByLabelText('Toggle reader controls')).toBeInTheDocument()
       expect(screen.getByLabelText('Next page')).toBeInTheDocument()
+      expect(screen.queryByLabelText('Toggle reader controls')).toBeNull()
     })
   })
 
@@ -651,11 +675,20 @@ describe('EpubRenderer', () => {
       expect(screen.getByLabelText('Next page')).toBeInTheDocument()
     })
 
-    it('center toggle zone remains visible in scroll mode (AC-5)', () => {
+    it('does not render overlay interaction zones in scroll mode (AC-5)', () => {
       mockStoreState.scrollMode = true
       render(<EpubRenderer {...defaultProps} />)
 
-      expect(screen.getByLabelText('Toggle reader controls')).toBeInTheDocument()
+      expect(screen.queryByLabelText('Toggle reader controls')).toBeNull()
+      expect(screen.queryByLabelText('Previous page')).toBeNull()
+      expect(screen.queryByLabelText('Next page')).toBeNull()
+    })
+
+    it('uses a readable continuous-scroll viewport width', () => {
+      mockStoreState.scrollMode = true
+      render(<EpubRenderer {...defaultProps} />)
+
+      expect(screen.getByTestId('epub-viewport')).toHaveClass('max-w-[72ch]')
     })
 
     it('disables onTouchStart/onTouchEnd handlers in scroll mode (AC-4)', () => {
