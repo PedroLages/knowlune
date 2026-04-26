@@ -14,6 +14,8 @@ Knowlune is a personal learning platform featuring progress tracking, study stre
 
 **Worktree E2E Warning:** Before running E2E tests in a git worktree, kill any dev server on port 5173 (`lsof -ti:5173 | xargs kill`). Playwright's `reuseExistingServer: true` will silently reuse a dev server from the main workspace, causing tests to pass against stale code.
 
+**E2E + RouteGuard:** Guarded routes (including `/library/:bookId/read`) need guest session or auth. The merged Playwright fixture [`tests/support/fixtures/local-storage-fixture.ts`](tests/support/fixtures/local-storage-fixture.ts) uses an **auto** `_knowluneE2eBrowserInit` so `sessionStorage` guest flags apply even when a test only requests `{ page }`. Specs that assert true anonymous `Landing` on `/` clear those keys in `beforeEach` (see [`tests/e2e/landing.spec.ts`](tests/e2e/landing.spec.ts)).
+
 ## Architecture
 
 ### Tech Stack
