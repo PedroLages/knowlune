@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { BookOpen, Headphones } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
+import { LIBRARY_SHELF_CARD_WIDTH_CLASS } from '@/app/components/library/shelfCardSizing'
 
 interface ContinueShelfTileProps {
   book: Book
@@ -66,11 +67,11 @@ export const ContinueShelfTile = memo(function ContinueShelfTile({ book }: Conti
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className="group w-36 sm:w-40 cursor-pointer focus-visible:outline-none"
+      className={`group ${LIBRARY_SHELF_CARD_WIDTH_CLASS} cursor-pointer focus-visible:outline-none`}
       data-testid={`continue-shelf-tile-${book.id}`}
       aria-label={`Resume ${book.title}`}
     >
-      <div className="relative aspect-square overflow-hidden rounded-xl bg-muted shadow-card-ambient">
+      <div className="relative aspect-square overflow-hidden rounded-2xl bg-muted shadow-card-ambient transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_var(--shadow-brand)]">
         {resolvedCoverUrl ? (
           <img
             src={resolvedCoverUrl}
@@ -96,11 +97,11 @@ export const ContinueShelfTile = memo(function ContinueShelfTile({ book }: Conti
         </div>
       </div>
 
-      <div className="mt-2 px-0.5 text-center">
-        <p className="line-clamp-2 text-xs font-semibold leading-tight text-foreground transition-colors group-hover:text-brand">
+      <div className="mt-3 px-1 text-center">
+        <p className="line-clamp-2 text-sm font-bold leading-tight text-foreground transition-colors group-hover:text-brand">
           {book.title}
         </p>
-        <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{getProgressMeta(book)}</p>
+        <p className="mt-1 truncate text-xs text-muted-foreground">{getProgressMeta(book)}</p>
       </div>
     </div>
   )
