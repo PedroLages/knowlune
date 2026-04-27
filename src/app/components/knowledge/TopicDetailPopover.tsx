@@ -123,16 +123,17 @@ export function TopicDetailPopover({
 
   function handleAction(action: SuggestedAction) {
     const courseId = topic.courseIds[0]
-    if (!courseId) return
 
     switch (action) {
       case 'Review Flashcards':
-        void navigate(`/courses/${courseId}/flashcards`)
+        void navigate(courseId ? `/courses/${courseId}/flashcards` : '/flashcards')
         break
       case 'Retake Quiz':
+        if (!courseId) return
         void navigate(`/courses/${courseId}/quiz`)
         break
       case 'Rewatch Lesson':
+        if (!courseId) return
         void navigate(`/courses/${courseId}`)
         break
     }

@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Knowlune - Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#0058bc",
+                        "surface-container-high": "#e8e8ed",
+                        "on-tertiary": "#ffffff",
+                        "surface-variant": "#e2e2e7",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#2d4c83",
+                        "secondary": "#405e96",
+                        "outline": "#717786",
+                        "background": "#f9f9fe",
+                        "error-container": "#ffdad6",
+                        "surface-container-highest": "#e2e2e7",
+                        "on-secondary-fixed": "#001a41",
+                        "surface-container-low": "#f3f3f8",
+                        "on-primary": "#ffffff",
+                        "secondary-container": "#a1befd",
+                        "on-tertiary-fixed": "#351000",
+                        "surface-bright": "#f9f9fe",
+                        "on-secondary-fixed-variant": "#26467d",
+                        "inverse-primary": "#adc6ff",
+                        "on-tertiary-container": "#fffbff",
+                        "surface": "#f9f9fe",
+                        "tertiary-fixed": "#ffdbcc",
+                        "on-tertiary-fixed-variant": "#7c2e00",
+                        "surface-tint": "#005bc1",
+                        "on-surface-variant": "#414755",
+                        "primary-fixed": "#d8e2ff",
+                        "tertiary-container": "#c64f00",
+                        "tertiary-fixed-dim": "#ffb595",
+                        "primary-container": "#0070eb",
+                        "on-surface": "#1a1c1f",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed": "#001a41",
+                        "on-secondary": "#ffffff",
+                        "outline-variant": "#c1c6d7",
+                        "inverse-surface": "#2e3034",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#f0f0f5",
+                        "primary-fixed-dim": "#adc6ff",
+                        "on-primary-container": "#fefcff",
+                        "on-primary-fixed-variant": "#004493",
+                        "on-background": "#1a1c1f",
+                        "on-error": "#ffffff",
+                        "surface-container": "#ededf2",
+                        "surface-dim": "#d9dade",
+                        "tertiary": "#9e3d00",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "secondary-fixed": "#d8e2ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter"],
+                        "display": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background-color: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(30px);
+            border: 0.5px solid rgba(193, 198, 215, 0.15); /* outline-variant at 15% */
+        }
+        .bg-gradient-main {
+            background: linear-gradient(135deg, #f9f9fe 0%, #f3f3f8 50%, #ededf2 100%);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-gradient-main text-on-surface min-h-screen flex text-body-lg">
+<!-- SideNavBar (Shared Component) -->
+<nav class="hidden md:flex h-screen w-64 fixed left-0 top-0 bg-slate-50/40 dark:bg-slate-950/40 backdrop-blur-2xl shadow-xl shadow-slate-900/5 bg-gradient-to-r from-slate-50/50 to-transparent flex-col p-6 pt-24 gap-4 z-40">
+<div class="mb-8 px-3">
+<h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">Knowlune</h2>
+<p class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1">The Ethereal Workspace</p>
+</div>
+<!-- Navigation Links -->
+<a class="flex items-center gap-3 text-slate-500 dark:text-slate-400 p-3 hover:bg-white/20 dark:hover:bg-white/5 hover:translate-x-1 transition-transform duration-200 cursor-pointer active:opacity-70 rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-['Inter'] uppercase tracking-widest text-[10px] font-bold">Home</span>
+</a>
+<a class="flex items-center gap-3 text-slate-500 dark:text-slate-400 p-3 hover:bg-white/20 dark:hover:bg-white/5 hover:translate-x-1 transition-transform duration-200 cursor-pointer active:opacity-70 rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="schedule">schedule</span>
+<span class="font-['Inter'] uppercase tracking-widest text-[10px] font-bold">Recent</span>
+</a>
+<a class="flex items-center gap-3 bg-white/40 dark:bg-white/10 text-blue-600 dark:text-blue-400 rounded-xl p-3 shadow-sm hover:translate-x-1 transition-transform duration-200 cursor-pointer active:opacity-70" href="#">
+<span class="material-symbols-outlined" data-icon="library_books" data-weight="fill" style="font-variation-settings: 'FILL' 1;">library_books</span>
+<span class="font-['Inter'] uppercase tracking-widest text-[10px] font-bold">Collections</span>
+</a>
+<div class="mt-auto">
+<a class="flex items-center gap-3 text-slate-500 dark:text-slate-400 p-3 hover:bg-white/20 dark:hover:bg-white/5 hover:translate-x-1 transition-transform duration-200 cursor-pointer active:opacity-70 rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-['Inter'] uppercase tracking-widest text-[10px] font-bold">Settings</span>
+</a>
+<div class="mt-4 flex items-center gap-3 p-3 glass-panel rounded-xl">
+<img alt="User profile" class="w-8 h-8 rounded-full object-cover" data-alt="Portrait of a young woman with a soft expression, well-lit studio lighting, muted natural tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBF0tcBLNjuQkL1ZV2b6wDg0Wh82pvlNrFTfyNugTdXnC_oF6rWqjQflDyHr3mmHIBrio315njeu2Pznu0vySkjM9tMeXxASMNODmDX6mD6MJDavE1zbdXfFjbegSYiL3-cuZho_0V-QSTzOEPCzqreQvdn6KkgNE3J_fxo477Uy2z-ElemgiWnkGLm1qiEl5qGh7k7c7Sj2w97jAH4TiWvurFrdGjodwusP3HKVCzGPM5IsVHkfJGIwCwiX0OITBqnyuP5qSCzQk4"/>
+<span class="text-sm font-medium">User profile</span>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-64 relative">
+<!-- TopNavBar (Shared Component) -->
+<header class="fixed top-0 w-full md:w-[calc(100%-16rem)] z-50 bg-white/60 dark:bg-slate-900/60 backdrop-blur-3xl no-border shadow-[0_0.5px_0_0_rgba(255,255,255,0.1)] flex justify-between items-center px-8 py-4 max-w-full mx-auto">
+<div class="flex items-center gap-8">
+<!-- Mobile brand logo, hidden on desktop as sidenav has it -->
+<span class="md:hidden text-2xl font-black tracking-tighter text-slate-900 dark:text-slate-50 font-['Inter']">Knowlune</span>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-blue-600 dark:text-blue-400 font-semibold border-b-2 border-blue-600 font-['Inter'] tracking-tight display-md:text-4xl body-lg:text-lg pb-1" href="#">Library</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors font-['Inter'] tracking-tight display-md:text-4xl body-lg:text-lg pb-1" href="#">Store</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors font-['Inter'] tracking-tight display-md:text-4xl body-lg:text-lg pb-1" href="#">Favorites</a>
+</nav>
+</div>
+<!-- Search Bar (Left aligned based on JSON, but usually centered or right in standard top bars. Implementing as left-aligned group) -->
+<div class="flex-1 flex justify-start ml-8 mr-4 hidden lg:flex">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-low text-on-surface border-none rounded-md py-2 pl-10 pr-4 focus:ring-1 focus:ring-primary/40 focus:outline-none shadow-[0_0_10px_rgba(173,198,255,0.1)] focus:shadow-[0_0_15px_rgba(173,198,255,0.3)] transition-all" placeholder="Search library..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary px-5 py-2 rounded-xl font-medium shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:scale-95 active:scale-90 transition-all duration-300">
+                    Import
+                </button>
+<button class="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-all duration-300 rounded-full scale-95 active:scale-90">
+<span class="material-symbols-outlined" data-icon="sync">sync</span>
+</button>
+<button class="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-all duration-300 rounded-full scale-95 active:scale-90">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+</header>
+<!-- Page Content -->
+<div class="pt-32 pb-24 px-8 max-w-7xl mx-auto">
+<!-- Header & Toggle -->
+<div class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+<div>
+<h1 class="font-display text-5xl font-extrabold tracking-tight text-on-surface mb-2">Your Library</h1>
+<p class="text-on-surface-variant">Pick up right where you left off.</p>
+</div>
+<!-- Segmented Control -->
+<div class="flex p-1 bg-surface-container-high rounded-xl w-max shadow-inner">
+<button class="px-6 py-2 rounded-lg bg-white shadow-sm text-primary font-medium transition-all text-sm">
+                        Audiobooks
+                    </button>
+<button class="px-6 py-2 rounded-lg text-on-surface-variant hover:text-on-surface font-medium transition-all text-sm">
+                        Ebooks
+                    </button>
+</div>
+</div>
+<!-- Content Area (Audiobooks Default) -->
+<div class="space-y-16">
+<!-- Section: Continue Listening -->
+<section>
+<div class="flex items-center justify-between mb-6">
+<h2 class="font-display text-2xl font-bold tracking-tight">Continue Listening</h2>
+<div class="flex gap-2">
+<button class="p-2 rounded-full glass-panel hover:bg-white/60 transition-colors text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined text-sm">arrow_back_ios_new</span>
+</button>
+<button class="p-2 rounded-full glass-panel hover:bg-white/60 transition-colors text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined text-sm">arrow_forward_ios</span>
+</button>
+</div>
+</div>
+<div class="flex gap-6 overflow-x-auto hide-scrollbar pb-4 snap-x">
+<!-- Main Card / Currently Playing -->
+<div class="flex-none w-[320px] snap-start">
+<div class="glass-panel p-4 rounded-xl flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:shadow-[0_10px_40px_-10px_rgba(0,88,188,0.15)] transition-all duration-500 h-full">
+<!-- Abstract Glow background for active item -->
+<div class="absolute -top-20 -right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl group-hover:bg-primary/30 transition-colors duration-500"></div>
+<div class="relative w-full aspect-square rounded-lg overflow-hidden shadow-md">
+<img alt="Book Cover" class="w-full h-full object-cover" data-alt="Abstract ethereal fluid art in deep blues and purples resembling deep space or a nebula" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsAsISsQB3QQIUN-huVZWY9KW-YGrHU_2BEHWTghHcFoENvUE8kcDMmsBu8SImlToe_D0WtkXQtBh9D7kuMNSr4Kg43NbDd78CKYWg0oVZbwW016sdMaEdprJQoNaveaSr97I1kBhXvCRoZTSu6AdcXj9n6T23Uaaf5MVqTV-WSGAoqJ0KB56x5vGIIrc32YEYnDvjH_c4NtFfNq4tDRHN-h09utdHQ_mgV1Cf0oanOI8nGiWGQObQGz_qp28e11HK6jaxgVtMTYA"/>
+<!-- Play Overlay -->
+<div class="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+<div class="w-12 h-12 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform duration-300">
+<span class="material-symbols-outlined text-primary" data-icon="play_arrow">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="flex-1 flex flex-col justify-end">
+<h3 class="font-semibold text-lg leading-tight line-clamp-1">The Ethereal Mind</h3>
+<p class="text-sm text-on-surface-variant mt-1">S. Clarke</p>
+<!-- Progress bar -->
+<div class="mt-4 w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[65%] rounded-full relative">
+<div class="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full shadow-sm"></div>
+</div>
+</div>
+<div class="flex justify-between text-xs text-on-surface-variant mt-2 font-medium">
+<span>4h 12m left</span>
+<span>65%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Secondary Card -->
+<div class="flex-none w-[240px] snap-start">
+<div class="bg-surface-container-low/60 backdrop-blur-md p-3 rounded-xl flex flex-col gap-3 border border-outline-variant/10 hover:bg-surface-container-low transition-colors cursor-pointer h-full">
+<div class="relative w-full aspect-square rounded-lg overflow-hidden shadow-sm">
+<img alt="Book Cover" class="w-full h-full object-cover" data-alt="Minimalist abstract geometric shapes in soft pastels and muted terracotta tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8y5sfHY1qDMixWGge4wUWY2aMP5oUnGB27u726Ox_89snHeiXF0KvlIbkt0WQZrs5hSEEWhfp5UF2xAkmCHFeXrLSzyBtqzszlTSGAYLfmV_ZBJx0KGxBWnRvQsKdKlc6EKbRPBTgWIutFWjd_o2rQjMK965UogwiJ0qpNuqMAOHnOPZC6iOepbBl9nBjjpc8rOmk9gOxhusQJMY0DZuJRn6CwzpFJVQjbtmldgaKDlUeUxy3e74UtLzD-SS2CVTAgpebWMO63tg"/>
+</div>
+<div>
+<h3 class="font-medium text-base leading-tight line-clamp-1">Design Systems</h3>
+<p class="text-xs text-on-surface-variant mt-1">A. Frost</p>
+<div class="mt-3 w-full bg-surface-container-high h-1 rounded-full overflow-hidden">
+<div class="bg-secondary h-full w-[20%] rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Secondary Card -->
+<div class="flex-none w-[240px] snap-start">
+<div class="bg-surface-container-low/60 backdrop-blur-md p-3 rounded-xl flex flex-col gap-3 border border-outline-variant/10 hover:bg-surface-container-low transition-colors cursor-pointer h-full">
+<div class="relative w-full aspect-square rounded-lg overflow-hidden shadow-sm">
+<img alt="Book Cover" class="w-full h-full object-cover" data-alt="Abstract flowing lines like topography or soundwaves in monochromatic gray and white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhUm8tvRrEp22_0WD0HOAGWIrutd9pgbdo7OfG-r4lNarhj32cHlYDH2zLi_WuvP4Aa9_fn1sdj4cUCpnrH3l255ybESGdE3UEYZub9jE2gg32loTDo4ymEIe7r1r0n1gnz1FIJTL-k6cbvF5goE2cc94RIJBTW4-Pa5AZSHSh6yyyqk_Xr7QbtK0EeWRvJXvo8xvLyuXD9eVCmQSRej1QT-vFjx0mxXvKIYfJ1n01pxOpO6BRmne5OfBJmnKRFb_NvvgtsoKt61Q"/>
+</div>
+<div>
+<h3 class="font-medium text-base leading-tight line-clamp-1">Deep Work Strategies</h3>
+<p class="text-xs text-on-surface-variant mt-1">C. Newport</p>
+<div class="mt-3 w-full bg-surface-container-high h-1 rounded-full overflow-hidden">
+<div class="bg-secondary h-full w-[85%] rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Recently Added -->
+<section>
+<div class="flex items-center justify-between mb-6">
+<h2 class="font-display text-xl font-bold tracking-tight text-on-surface-variant">Recently Added</h2>
+<div class="flex gap-2">
+<button class="p-1.5 rounded-full hover:bg-surface-container-high transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">arrow_back_ios_new</span>
+</button>
+<button class="p-1.5 rounded-full hover:bg-surface-container-high transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">arrow_forward_ios</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+<!-- Item -->
+<div class="group cursor-pointer">
+<div class="relative w-full aspect-square rounded-lg overflow-hidden shadow-sm mb-3">
+<img alt="Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Stack of old vintage hardcover books on a wooden table with soft natural window light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuANUdCVxNkLHntW5mGJJ-W9jBdqbrCjAa9uV27SJo50wljgi5i83uQibRN7jbPw0tbryhk5YnHDT0vY37I8EYdDVYr2twPTmgxKQLnN_X55u8Z5Ul35xk6fbUoaPJmtCJU2BDnaAd2k-dF9WInlSmK6t86VHI0F-N5WYYRQTi1hDqba8aFDAmHFZ4mgJsVJ-_YAGVDG_uRkPphqwVYb0HWPURfNh3UvB6CGZUXuYQCJ-Dd5mCbO9N9c9EIWH9BrtjRtpQmmhcjy2UQ"/>
+</div>
+<h4 class="font-medium text-sm line-clamp-1 group-hover:text-primary transition-colors">The Old Ways</h4>
+<p class="text-xs text-on-surface-variant mt-0.5">12h 4m</p>
+</div>
+<!-- Item -->
+<div class="group cursor-pointer">
+<div class="relative w-full aspect-square rounded-lg overflow-hidden shadow-sm mb-3">
+<img alt="Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Close up of a glowing e-reader screen in a dark room with a cup of tea nearby" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCe5g-lrTXphyDzvrUQkObKSKrwfoBsXH9dNZhdOohxMcROxjFjXK2o0j-s4dpFI2ggPu1eIW7MjS_RePVhV2U9nI6SjpEoEclryijjc_OmR4XrM-gr063RwI1moJgLF4rDNSACC986MXRDipfXmHGSUGg2a7LYy3eTBrLudFZcBvyLxCXzYTNePWjz0vGWRQ_2O38KHhNUKZAi_jK_MKUR-4nx8u8bplnTpuh6XvwoL5WulSZtP3lg72Je9RxavpSLVoEsDlHqIs0"/>
+</div>
+<h4 class="font-medium text-sm line-clamp-1 group-hover:text-primary transition-colors">Digital Minimalism</h4>
+<p class="text-xs text-on-surface-variant mt-0.5">8h 15m</p>
+</div>
+<!-- Item -->
+<div class="group cursor-pointer">
+<div class="relative w-full aspect-square rounded-lg overflow-hidden shadow-sm mb-3">
+<img alt="Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Open book laying flat with pages fanned out forming a heart shape shadow" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-7z46St7w7c4vD1RgjP9l_aof7Ysdl1cBQAotvUSZeOc8mpKnqPS8kALGASEoYXAr0UEuY1XFPCMNNojqCUrcsrmlaZ0E9U3vRU03YyBlkG3_IZy5SUqeU-0n18P7AMt8ZZ0XGeBqVxzI6J5TOPKU4gSkXJZhy_B1VUkQZln36O682k_lF09AcB6YepzNI2h2bW7XGilB6x3IBajdcCEsXcHMZIGntiNRbt68OJeWIyOftypp09_PBhD4rBJ5oj0p8eCFufBSOfw"/>
+</div>
+<h4 class="font-medium text-sm line-clamp-1 group-hover:text-primary transition-colors">Atomic Habits</h4>
+<p class="text-xs text-on-surface-variant mt-0.5">5h 30m</p>
+</div>
+<!-- Item -->
+<div class="group cursor-pointer hidden md:block">
+<div class="relative w-full aspect-square rounded-lg overflow-hidden shadow-sm mb-3">
+<img alt="Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Abstract ink drop spreading in water, mostly blue and white creating a serene pattern" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1c5yDEoVIIzUkKskI9LYg1kerBQprpRdTBoBxmvlgqDvn8mHUR7a7TSRDScVD7mTCN1RXF6r7K06D5SEUdnmTDkkELhzgQFcNBYqvbrLE9IxLbI4c3tLFJoQ_ryifY4-WaSipw7PtCd7iXwFXbIA98vdpPOvnFxFySOyCPDk1TEm6nrm88QimNl15Q0kiI7_4fO7MDMHapf1bHO7d6IWj1-XkZenRBzhU-dZy86a5YZrmZ0Jjn9YLTKsqSSSEplRgkki64U2AGQ8"/>
+</div>
+<h4 class="font-medium text-sm line-clamp-1 group-hover:text-primary transition-colors">Fluid Dynamics</h4>
+<p class="text-xs text-on-surface-variant mt-0.5">14h 0m</p>
+</div>
+<!-- Item -->
+<div class="group cursor-pointer hidden lg:block">
+<div class="relative w-full aspect-square rounded-lg overflow-hidden shadow-sm mb-3">
+<img alt="Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Minimalistic sci-fi landscape with a single bright star and a smooth dark horizon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDARdLza5iNsvwI1fimRd3_iUHt7IefR1ICKZRcuJqk669o7ViYxFnEqw9VV9GugIzIPsKb9SmYEoy0LZJ_BkD9t_e_FRw1QYbazqHwaurgGCPv7lQEvwnqD1L7EXC7imqvJZJpZTZsF9iiO_A17xko2tlybCpYeP2e7GYUjQ7ZoRaAlPaqZONc6zuLVi0TxyPpzsyV7g38RTKIVi8YDmAqndvZbOrTnj83mLWmXEuZpS6OqufHPPSRTYf-Kdhhblby0--neqI96Oc"/>
+</div>
+<h4 class="font-medium text-sm line-clamp-1 group-hover:text-primary transition-colors">The Far Horizon</h4>
+<p class="text-xs text-on-surface-variant mt-0.5">22h 10m</p>
+</div>
+</div>
+</section>
+<!-- Bento Grid Layout for Discover & Recent Series to break 'Standard List' -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Discover (Takes 2 columns) -->
+<section class="lg:col-span-2 glass-panel p-6 rounded-xl flex flex-col">
+<div class="flex items-center justify-between mb-6">
+<h2 class="font-display text-xl font-bold tracking-tight">Discover</h2>
+<button class="text-sm font-medium text-primary hover:text-primary-container transition-colors">View All</button>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-lg p-6 relative overflow-hidden group cursor-pointer border border-outline-variant/10">
+<!-- Background Image with Overlay -->
+<div class="absolute inset-0 z-0">
+<img alt="Library Background" class="w-full h-full object-cover opacity-20 group-hover:opacity-30 transition-opacity duration-500" data-alt="Grand classic library interior with tall wooden bookshelves and soft warm lighting filtering down" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNkTIZKLf7WY1ozH8wsQqjTy66n5WVrFQeDJkmwG4Ox-epMU9XFyQDOv2UR_KaGGejXvWAb2aOsDmhiHdLCXO70i9XcFYLb8fHewtBDKcEAnCAPCsk_mgnFbLMFOYv42T8BtGjrv8CNIpxCnB2J5JlNYZ0aS85qOI5tVo2r4R7bn_v1oIyD_usIwBzy9Eq6OzEFJ4X8O2NPFinM7idoNSC_MfZw8fE0vrFtU3U046TWxUWbnBNuTn_VdTqARfVHgqm2_d1w5TDWCs"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-low via-surface-container-low/80 to-transparent"></div>
+</div>
+<div class="relative z-10 flex flex-col h-full justify-end">
+<span class="bg-white/80 backdrop-blur-md text-primary text-xs font-bold uppercase tracking-wider px-2 py-1 rounded w-max mb-3">Curated Collection</span>
+<h3 class="text-2xl font-bold mb-2">Voices of the Future</h3>
+<p class="text-on-surface-variant max-w-md text-sm">Explore visionary sci-fi audiobooks narrated by award-winning voice actors, designed to transport you to new dimensions.</p>
+<div class="mt-6 flex gap-3">
+<img alt="Cover 1" class="w-12 h-12 rounded shadow-sm object-cover" data-alt="Small thumbnail of abstract flowing lines like topography" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqW_-zhCeNYZRaf7eTKYWF3yrAOmV2ytD3zda4IKz3sCKZkJHaDqZWuDfIeqdvIYgW3H_rIkXDb2-c3wlL0cLRO9nlq2I__l8aIkmrNkiFOG911kFQXFZ1-8tRi5XaRKFrFASKJUnJbprtj23INsy_sn02eWBJrc2Z-pIHO2xoq9WXeMWFA-a3qD3qdWDb0iEB4NaLkL8OVOc3_pirQ3MJE01t56h_Jeu5nCzi_4GdIdYSUyg1Pzadwe4rCH1r8FdMTSSq8fUoIds"/>
+<img alt="Cover 2" class="w-12 h-12 rounded shadow-sm object-cover" data-alt="Small thumbnail of minimalistic sci-fi landscape" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXlzmV-QQkduBSIdEWfhUDHldK4xufOHlAYRCyJ8US0CG1dTmr2VfGtTg8ow0ROaCe17c316AzwiLce4hj2NhO_kZVDruqQZfD6EdY7FaioJbOGzPfMxNnavdw6XCVtq3lc-YcwKOBXotfqB7R5yDiYDaz8BimJLFWdwqk-9lQvZWM_Xgdej3YMXeI-FJiHKvQAq4CixsWOyHbEJa02g8krAw-qGsO4ebQ-z9Oma8MIhtYzONoTw1wjqTRVTMTD3X0dpj1143Ntvo"/>
+<div class="w-12 h-12 rounded bg-surface-container-high flex items-center justify-center text-xs font-medium text-on-surface-variant">+12</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Recent Series (Takes 1 column) -->
+<section class="glass-panel p-6 rounded-xl flex flex-col">
+<div class="flex items-center justify-between mb-6">
+<h2 class="font-display text-xl font-bold tracking-tight">Recent Series</h2>
+<button class="p-1.5 rounded-full hover:bg-surface-container-high transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">arrow_forward_ios</span>
+</button>
+</div>
+<div class="flex-1 flex flex-col gap-4">
+<!-- Series List Item -->
+<div class="flex items-center gap-4 p-2 rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="relative w-14 h-14 rounded-md overflow-hidden shrink-0">
+<img alt="Series Cover" class="w-full h-full object-cover" data-alt="Stack of ancient weathered leather bound books tightly packed together" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOBKLxWenHVwSVHywM_9pasAVfGRKomAyspMa7y8JUC40duB8zOKQWNZDG9bodKpmwx91q-_ld0UM5DdIKRATCBP1RoYv_YUhG9ysG247RrxV-MPK7PMFjIfqruc2MOxpdwg8dKk65iUnHOBVxyHTYenZHFQXwdktTZgUkSiQxsjdEyJkhOVFzBOcLf6ZaiknN9eP8o_F0Jjhs-ttleFigtCuooOxghCxWLXoIGQQRa3VSSkJhbwyWtzQArkV9M5HbpxINWY5vHZ0"/>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-medium text-sm truncate">The Chronicles of Aeon</h4>
+<p class="text-xs text-on-surface-variant mt-0.5">Book 3 of 5</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-sm">more_vert</span>
+</div>
+<!-- Series List Item -->
+<div class="flex items-center gap-4 p-2 rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="relative w-14 h-14 rounded-md overflow-hidden shrink-0">
+<img alt="Series Cover" class="w-full h-full object-cover" data-alt="Modern minimalist book spine with simple sans serif typography in black and white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDk6ZmopbRe3W2yJgZDnCa1GYAofy6F3KtX-2bCNm98o1tqoJY30tr65AXcKLxyQFjbobJhzLsTV4XMf9TQS3mYjZvpXTYxgTr0OoIZm-N2qMVID8q0Xek9Ws6vuX8pYs72AdW_8YacOb1c72Exf7SfKVCXswdjUxxcqKUv4oggk160Zzx9Sv0QaUOT98rvpzOgt_0VFoUKZqJyJnRwAhxRYSnnuDAJU7gjNinYW05FYHUf11IVkqxrKUPj-Hub1yB--jQc1TV8_fY"/>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-medium text-sm truncate">Foundation Principles</h4>
+<p class="text-xs text-on-surface-variant mt-0.5">Finished</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-sm">more_vert</span>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+</body></html>
