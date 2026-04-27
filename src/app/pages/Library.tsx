@@ -14,8 +14,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, useParams, useLocation } from 'react-router'
 import { recordVisit } from '@/lib/searchFrecency'
-import { FormatTabs } from '@/app/components/library/FormatTabs'
-import { LibraryContinueShelves, LibraryDiscoveryShelves } from '@/app/components/library/LibraryShelves'
 import { SmartGroupedView } from '@/app/components/library/SmartGroupedView'
 import {
   BookOpen,
@@ -63,6 +61,9 @@ import { OpdsBrowser } from '@/app/components/library/OpdsBrowser'
 import { DailyGoalRing } from '@/app/components/library/DailyGoalRing'
 import { YearlyGoalProgress } from '@/app/components/library/YearlyGoalProgress'
 import { DailyHighlightsStrip } from '@/app/components/library/DailyHighlightsStrip'
+import { LibraryFormatModeTabs } from '@/app/components/library/LibraryFormatModeTabs'
+import { LibraryMediaHero } from '@/app/components/library/LibraryMediaHero'
+import { LibraryMediaShelfColumn } from '@/app/components/library/LibraryMediaShelfColumn'
 import { useBookStore } from '@/stores/useBookStore'
 import { useOpdsCatalogStore } from '@/stores/useOpdsCatalogStore'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
@@ -111,6 +112,7 @@ export function Library() {
   const setLocalSeriesView = useBookStore(s => s.setLocalSeriesView)
   const filters = useBookStore(s => s.filters)
   const setFilters = useBookStore(s => s.setFilters)
+  const setFilter = useBookStore(s => s.setFilter)
   const loadBooks = useBookStore(s => s.loadBooks)
 
   const opdsCatalogs = useOpdsCatalogStore(s => s.catalogs)
@@ -328,10 +330,44 @@ export function Library() {
     return 'all' as const
   }, [filters.format])
 
+  const activeModeLabel = useMemo(() => {
+    const f = filters.format
+    if (!f || f.length === 0) return 'Audiobooks' as const
+    if (f.length === 1 && f[0] === 'audiobook') return 'Audiobooks' as const
+    if (f.every(v => v === 'epub' || v === 'pdf')) return 'Ebooks' as const
+    return 'Audiobooks' as const
+  }, [filters.format])
+
+  const modeBooksForMedia = useMemo(() => {
+    const sourceFiltered =
+      filters.source && filters.source !== 'all'
+        ? books.filter(b => (filters.source === 'audiobookshelf' ? b.absServerId : !b.absServerId))
+        : books
+
+    const f = filters.format
+    // Default to audiobooks when format is unset or mixed.
+    if (!f || f.length === 0 || (f.length === 1 && f[0] === 'audiobook')) {
+      return sourceFiltered.filter(b => b.format === 'audiobook')
+    }
+    if (f.every(v => v === 'epub' || v === 'pdf')) {
+      return sourceFiltered.filter(b => b.format === 'epub' || b.format === 'pdf')
+    }
+    return sourceFiltered.filter(b => b.format === 'audiobook')
+  }, [books, filters.format, filters.source])
+
   // Load books on mount
   useEffect(() => {
     loadBooks()
   }, [loadBooks])
+
+  // Media-first default: when books exist and no format is chosen,
+  // make Audiobooks the active top-level mode.
+  useEffect(() => {
+    if (books.length === 0) return
+    if (!filters.format || filters.format.length === 0) {
+      setFilter('format', ['audiobook'])
+    }
+  }, [books.length, filters.format, setFilter])
 
   // Yearly goal celebration — fires when a book is marked finished (E86-S05)
   useEffect(() => {
@@ -579,6 +615,74 @@ export function Library() {
         <YearlyGoalProgress />
       </div>
 
+      {/* Top-level format mode tabs (media-first) */}
+      {books.length > 0 && <LibraryFormatModeTabs />}
+
+      {/* Media-first hero + shelves */}
+      {books.length > 0 && (
+        <div className="flex flex-col gap-8" data-testid="library-media-first">
+          {modeBooksForMedia.length === 0 ? (
+            <section
+              className="rounded-[28px] border border-border/50 bg-card p-6 sm:p-8 shadow-card-ambient"
+              data-testid="library-format-empty-state"
+            >
+              <div className="flex flex-col gap-2">
+                <h2 className="text-xl font-semibold tracking-tight text-foreground">
+                  No {activeModeLabel.toLowerCase()} yet.
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Your library has books in the other format. Switch modes, or add your first{' '}
+                  {activeModeLabel.toLowerCase()}.
+                </p>
+              </div>
+
+              <div className="mt-5 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setFilter(
+                      'format',
+                      activeModeLabel === 'Audiobooks' ? (['epub', 'pdf'] as string[]) : (['audiobook'] as string[])
+                    )
+                  }
+                  className="min-h-[44px]"
+                  data-testid="library-format-empty-switch"
+                >
+                  Switch to {activeModeLabel === 'Audiobooks' ? 'Ebooks' : 'Audiobooks'}
+                </Button>
+
+                <Button
+                  variant="brand"
+                  onClick={() => setImportOpen(true)}
+                  className="min-h-[44px]"
+                  data-testid="library-format-empty-import"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Import Book
+                </Button>
+
+                {activeModeLabel === 'Audiobooks' && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setAbsSettingsOpen(true)}
+                    className="min-h-[44px]"
+                    data-testid="library-format-empty-connect-abs"
+                  >
+                    <Headphones className="mr-2 h-4 w-4" />
+                    Connect Audiobookshelf
+                  </Button>
+                )}
+              </div>
+            </section>
+          ) : (
+            <>
+              <LibraryMediaHero books={modeBooksForMedia} modeLabel={activeModeLabel} />
+              <LibraryMediaShelfColumn />
+            </>
+          )}
+        </div>
+      )}
+
       {/* Empty state */}
       {books.length === 0 && (
         <section
@@ -673,14 +777,8 @@ export function Library() {
         </section>
       )}
 
-      {/* Continue shelves */}
-      {books.length > 0 && <LibraryContinueShelves />}
-
       {/* Reading Queue — always visible when books exist (E110-S03 AC-1) */}
       {books.length > 0 && <ReadingQueue />}
-
-      {/* Discovery shelves */}
-      {books.length > 0 && <LibraryDiscoveryShelves />}
 
       {/* Daily Highlights — cinematic highlight strip from annotated books */}
       {books.length > 0 && <DailyHighlightsStrip />}
@@ -814,16 +912,11 @@ export function Library() {
         />
       )}
 
-      {/* SECONDARY row: format + source — smaller pills, lower visual weight */}
+      {/* SECONDARY row: source — smaller pills, lower visual weight */}
       {books.length > 0 && (
         <div className="flex items-center gap-1.5 flex-wrap">
-          <FormatTabs />
           {absServers.length > 0 && (
             <>
-              <div
-                className="w-px h-4 bg-border self-center flex-shrink-0 mx-0.5"
-                aria-hidden="true"
-              />
               <LibrarySourceTabs />
             </>
           )}
