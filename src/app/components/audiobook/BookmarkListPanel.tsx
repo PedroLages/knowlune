@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { Button } from '@/app/components/ui/button'
+import { cn } from '@/app/components/ui/utils'
 import { db } from '@/db/schema'
 import { formatAudioTime } from '@/app/hooks/useAudioPlayer'
 import type { AudioBookmark } from '@/data/types'
@@ -83,7 +84,11 @@ export function BookmarkListPanel({
         if (!v) onClose()
       }}
     >
-      <SheetContent side="right" className="flex flex-col w-full sm:max-w-md p-0">
+      <SheetContent
+        side="right"
+        overlayClassName="z-[130]"
+        className={cn('z-[130] flex flex-col w-full sm:max-w-md p-0')}
+      >
         <SheetHeader className="px-4 pt-4 pb-2 border-b border-border/50">
           <SheetTitle>Bookmarks</SheetTitle>
         </SheetHeader>

@@ -124,7 +124,8 @@ export function PostSessionBookmarkReview({
       <Sheet open={open} onOpenChange={isOpen => !isOpen && onClose()}>
         <SheetContent
           side="bottom"
-          className="max-h-[80vh] rounded-t-2xl px-4 pb-6 pt-0 overflow-y-auto"
+          overlayClassName="z-[130]"
+          className="z-[130] max-h-[80vh] rounded-t-2xl px-4 pb-6 pt-0 overflow-y-auto"
           data-testid="post-session-review"
         >
           <SheetHeader className="py-4 border-b border-border/50 mb-4">

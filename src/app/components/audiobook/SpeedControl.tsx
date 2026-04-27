@@ -48,7 +48,7 @@ export function SpeedControl({ bookId }: SpeedControlProps) {
           {formatSpeed(playbackRate)}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-36 p-1" align="center">
+      <PopoverContent className="z-[130] w-36 p-1" align="center">
         <ul role="listbox" aria-label="Playback speed">
           {VALID_SPEEDS.map(rate => {
             const isActive = rate === playbackRate

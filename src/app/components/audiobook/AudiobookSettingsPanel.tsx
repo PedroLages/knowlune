@@ -74,7 +74,12 @@ export function AudiobookSettingsPanel({ open, onOpenChange }: AudiobookSettings
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" aria-label="Audiobook settings">
+      <SheetContent
+        side="right"
+        overlayClassName="z-[130]"
+        className="z-[130]"
+        aria-label="Audiobook settings"
+      >
         <SheetHeader>
           <SheetTitle>Audiobook Settings</SheetTitle>
           <SheetDescription>

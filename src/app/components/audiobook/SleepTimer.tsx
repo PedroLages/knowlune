@@ -116,7 +116,7 @@ export function SleepTimer({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-52 p-1" align="center">
+      <PopoverContent className="z-[130] w-52 p-1" align="center">
         {activeOption === 'end-of-chapter' && chapterProgressPercent != null && (
           <div className="px-3 pb-1.5 pt-2" data-testid="chapter-progress-bar">
             <span className="text-xs text-muted-foreground">Current chapter progress</span>
