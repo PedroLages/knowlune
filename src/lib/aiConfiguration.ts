@@ -130,6 +130,29 @@ export interface AIConfigurationSettings {
   _testApiKey?: string
 }
 
+export type NoteQAUnavailableReason =
+  | 'feature-disabled'
+  | 'missing-provider-key'
+  | 'unreadable-provider-key'
+  | 'missing-ollama-url'
+  /** Availability check threw or rejected (e.g. unexpected storage/crypto failure) */
+  | 'availability-check-failed'
+
+export type NoteQAAvailability =
+  | {
+      available: true
+      provider: AIProviderId
+      providerName: string
+      model?: string
+    }
+  | {
+      available: false
+      reason: NoteQAUnavailableReason
+      provider: AIProviderId
+      providerName: string
+      model?: string
+    }
+
 /** localStorage key for AI configuration */
 const STORAGE_KEY = 'ai-configuration'
 
@@ -690,6 +713,63 @@ export function isFeatureEnabled(feature: keyof ConsentSettings): boolean {
 export function isAIAvailable(): boolean {
   const config = getAIConfiguration()
   return config.connectionStatus === 'connected'
+}
+
+/**
+ * Checks whether Q&A from Notes can use its resolved provider.
+ *
+ * This deliberately does not widen `isAIAvailable()`: older consumers still use
+ * the legacy global connection flag, while Q&A is feature-model aware.
+ */
+export async function getNoteQAAvailability(): Promise<NoteQAAvailability> {
+  const configSnapshot = getAIConfiguration()
+  const resolved = resolveFeatureModel('noteQA')
+  const providerName = AI_PROVIDERS[resolved.provider]?.name || resolved.provider
+  const base = {
+    provider: resolved.provider,
+    providerName,
+    model: resolved.model,
+  }
+
+  if (configSnapshot.consentSettings.noteQA !== true) {
+    return {
+      ...base,
+      available: false,
+      reason: 'feature-disabled',
+    }
+  }
+
+  if (resolved.provider === 'ollama') {
+    return getOllamaServerUrl()
+      ? {
+          ...base,
+          available: true,
+        }
+      : {
+          ...base,
+          available: false,
+          reason: 'missing-ollama-url',
+        }
+  }
+
+  const hasProviderKey = !!configSnapshot.providerKeys?.[resolved.provider]
+  const hasLegacyEncrypted =
+    resolved.provider === configSnapshot.provider && !!configSnapshot.apiKeyEncrypted
+  const hasStoredKey = hasProviderKey || hasLegacyEncrypted
+  const apiKey = await getDecryptedApiKeyForProvider(resolved.provider)
+
+  if (apiKey) {
+    return {
+      ...base,
+      available: true,
+    }
+  }
+
+  return {
+    ...base,
+    available: false,
+    reason: hasStoredKey ? 'unreadable-provider-key' : 'missing-provider-key',
+  }
 }
 
 /**

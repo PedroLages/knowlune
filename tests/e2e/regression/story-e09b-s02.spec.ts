@@ -4,7 +4,8 @@
  * Tests chat interface, streaming responses, citations, and RAG integration.
  */
 
-import { test, expect, type Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
+import { test } from '../../support/fixtures'
 import { seedIndexedDBStore } from '../../support/helpers/seed-helpers'
 import { mockEmbeddingWorker } from '../../support/helpers/mock-workers'
 import { mockLLMClient } from '../../support/helpers/mock-llm-client'
@@ -108,6 +109,7 @@ async function mockAIConfigured(page: Page) {
       JSON.stringify({
         provider: 'openai',
         connectionStatus: 'connected',
+        _testApiKey: 'sk-note2eNEVERPRODUCTIONknownfakeonlykey000001',
         apiKeyEncrypted: { iv: 'mock', encryptedData: 'mock' },
         consentSettings: {
           videoSummary: true,
@@ -116,6 +118,12 @@ async function mockAIConfigured(page: Page) {
           knowledgeGaps: true,
           noteOrganization: true,
           analytics: true,
+        },
+        featureModels: {
+          noteQA: {
+            provider: 'openai',
+            model: 'gpt-4o-mini',
+          },
         },
       })
     )
@@ -160,11 +168,11 @@ test.describe('Chat Q&A Interface', () => {
     await page.goto('/notes/chat')
 
     // Should show warning banner
-    await expect(page.getByText(/AI Provider Not Configured/)).toBeVisible()
-    await expect(page.getByText(/configure an AI provider/)).toBeVisible()
+    await expect(page.getByText(/Anthropic key required/)).toBeVisible()
+    await expect(page.getByText(/Add a key for Anthropic/)).toBeVisible()
 
     // Input should be disabled
-    const input = page.getByPlaceholder(/Configure AI provider/)
+    const input = page.getByPlaceholder(/Configure Q&A/)
     await expect(input).toBeDisabled()
   })
 

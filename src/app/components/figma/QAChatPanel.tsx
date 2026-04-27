@@ -19,26 +19,24 @@ import { MessageCircle, Send, AlertCircle, BookOpen, X, Loader2 } from 'lucide-r
 import { Link } from 'react-router'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/app/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { useQAChatStore } from '@/stores/useQAChatStore'
 import { retrieveRelevantNotes, generateQAAnswer } from '@/lib/noteQA'
-import { isAIAvailable } from '@/lib/aiConfiguration'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 import { db } from '@/db'
 import { useMediaQuery } from '@/app/hooks/useMediaQuery'
+import { useNoteQAAvailability } from '@/app/hooks/useNoteQAAvailability'
+import { assertAIFeatureConsent } from '@/ai/llm/factory'
+import { formatNoteQAError } from '@/lib/noteQAErrors'
+import { getNoteQAUnavailableCopy } from '@/lib/noteQAAvailabilityCopy'
 
 export function QAChatPanel() {
   const [isOpen, setIsOpen] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const [hasNotes, setHasNotes] = useState(false)
+  const [notesLoaded, setNotesLoaded] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const {
@@ -53,18 +51,27 @@ export function QAChatPanel() {
   } = useQAChatStore()
 
   const isMobile = useMediaQuery('(max-width: 1023px)')
-  const aiAvailable = isAIAvailable()
+  const noteQAAvailability = useNoteQAAvailability()
+  const aiChecking = noteQAAvailability.status === 'checking'
+  const aiAvailable = noteQAAvailability.status === 'available'
+  const unavailableCopy = getNoteQAUnavailableCopy(
+    noteQAAvailability.status === 'unavailable' ? noteQAAvailability.availability : null
+  )
 
   // Check if user has any notes
   useEffect(() => {
     let ignore = false
     const checkNotes = async () => {
-      const count = await db.notes.count()
-      if (!ignore) {
-        setHasNotes(count > 0)
+      try {
+        const count = await db.notes.count()
+        if (!ignore) setHasNotes(count > 0)
+      } catch {
+        if (!ignore) setHasNotes(false)
+      } finally {
+        if (!ignore) setNotesLoaded(true)
       }
     }
-    checkNotes()
+    void checkNotes()
     return () => {
       ignore = true
     }
@@ -89,6 +96,9 @@ export function QAChatPanel() {
     const startTime = Date.now()
 
     try {
+      // Consent and provider re-consent must pass before note context is prepared.
+      const resolved = await assertAIFeatureConsent('noteQA')
+
       // Retrieve relevant notes
       const retrievedNotes = await retrieveRelevantNotes(query)
 
@@ -105,7 +115,7 @@ export function QAChatPanel() {
       const answerId = addAnswer('', [], retrievedNotes)
       let fullAnswer = ''
 
-      const generator = generateQAAnswer(query, retrievedNotes)
+      const generator = generateQAAnswer(query, retrievedNotes, { resolved })
 
       for await (const chunk of generator) {
         fullAnswer += chunk
@@ -119,7 +129,7 @@ export function QAChatPanel() {
         // silent-catch-ok — non-critical analytics tracking
       })
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to generate answer'
+      const errorMessage = formatNoteQAError(err)
       setError(errorMessage)
       trackAIUsage('qa', {
         status: 'error',
@@ -143,19 +153,31 @@ export function QAChatPanel() {
   // Chat content (shared between Sheet and Popover)
   const chatContent = (
     <div className="flex h-full flex-col">
-      {/* Error state - no API key */}
-      {!aiAvailable && (
+      {/* Loading state - AI settings check */}
+      {aiChecking && (
+        <div className="rounded-lg border border-muted bg-muted/40 p-4 text-sm text-muted-foreground">
+          <div className="flex items-start gap-2">
+            <Loader2 className="size-5 shrink-0 animate-spin" />
+            <div>
+              <p className="font-medium">Checking AI settings...</p>
+              <p className="mt-1">Q&A will be available once your provider settings are verified.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error state - Q&A unavailable */}
+      {!aiChecking && !aiAvailable && (
         <div className="rounded-lg border border-warning bg-warning-soft p-4 text-sm text-warning">
           <div className="flex items-start gap-2">
             <AlertCircle className="size-5 shrink-0" />
             <div>
-              <p className="font-medium">AI features unavailable</p>
+              <p className="font-medium">{unavailableCopy.title}</p>
               <p className="mt-1 text-warning/80">
-                Configure an API key in{' '}
-                <Link to="/settings" className="underline">
+                {unavailableCopy.body}{' '}
+                <Link to="/settings?section=integrations" className="underline">
                   Settings
-                </Link>{' '}
-                to use Q&A.
+                </Link>
               </p>
             </div>
           </div>
@@ -163,7 +185,7 @@ export function QAChatPanel() {
       )}
 
       {/* Error state - no notes */}
-      {aiAvailable && !hasNotes && (
+      {aiAvailable && notesLoaded && !hasNotes && (
         <div className="rounded-lg border border-info bg-info-soft p-4 text-sm text-info">
           <div className="flex items-start gap-2">
             <BookOpen className="size-5 shrink-0" />
@@ -194,7 +216,7 @@ export function QAChatPanel() {
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- ScrollArea ref type mismatch */}
       <ScrollArea className="flex-1 px-4" ref={scrollRef as any}>
         <div className="space-y-4 py-4">
-          {messages.length === 0 && aiAvailable && hasNotes && (
+          {messages.length === 0 && aiAvailable && notesLoaded && hasNotes && (
             <div className="text-center text-muted-foreground">
               <MessageCircle className="mx-auto size-12 opacity-20" />
               <p className="mt-2 text-sm">Ask a question about your notes</p>
@@ -259,13 +281,24 @@ export function QAChatPanel() {
             value={inputValue}
             onChange={e => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={aiAvailable && hasNotes ? 'Ask about your notes...' : 'No notes available'}
-            disabled={!aiAvailable || !hasNotes || isGenerating}
+            placeholder={
+              aiChecking
+                ? 'Checking AI settings...'
+                : aiAvailable && !notesLoaded
+                  ? 'Checking notes...'
+                  : aiAvailable && hasNotes
+                    ? 'Ask about your notes...'
+                    : !aiAvailable
+                      ? 'Configure Q&A in Settings'
+                      : 'No notes available'
+            }
+            disabled={aiChecking || !aiAvailable || !hasNotes || isGenerating}
+            aria-busy={aiChecking}
             className="flex-1"
           />
           <Button
             onClick={handleSendMessage}
-            disabled={!inputValue.trim() || !aiAvailable || !hasNotes || isGenerating}
+            disabled={!inputValue.trim() || aiChecking || !aiAvailable || !hasNotes || isGenerating}
             size="icon"
           >
             <Send className="size-4" />

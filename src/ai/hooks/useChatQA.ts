@@ -10,8 +10,8 @@ import type { ChatMessage } from '../rag/types'
 import { ragCoordinator } from '../rag/ragCoordinator'
 import { promptBuilder } from '../rag/promptBuilder'
 import { citationExtractor } from '../rag/citationExtractor'
-import { getLLMClient } from '../llm/factory'
-import { LLMError } from '../llm/types'
+import { assertAIFeatureConsent, getLLMClient } from '../llm/factory'
+import { formatNoteQAError } from '@/lib/noteQAErrors'
 
 interface UseChatQAResult {
   /** Conversation messages */
@@ -61,6 +61,9 @@ export function useChatQA(): UseChatQAResult {
       setMessages(prev => [...prev, userMsg])
 
       try {
+        // Consent and provider re-consent must pass before note context is prepared.
+        const resolved = await assertAIFeatureConsent('noteQA')
+
         // 2. Retrieve context via RAG
         const context = await ragCoordinator.retrieveContext(query, 5)
 
@@ -89,7 +92,7 @@ export function useChatQA(): UseChatQAResult {
         }
         setMessages(prev => [...prev, aiMsg])
 
-        const llmClient = await getLLMClient()
+        const llmClient = await getLLMClient('noteQA', { resolved })
         let fullResponse = ''
 
         for await (const chunk of llmClient.streamCompletion(llmMessages)) {
@@ -121,35 +124,7 @@ export function useChatQA(): UseChatQAResult {
           return updated
         })
       } catch (err) {
-        let errorMessage = 'Failed to process your request. Please try again.'
-
-        if (err instanceof LLMError) {
-          switch (err.code) {
-            case 'TIMEOUT':
-              errorMessage = 'Request timed out. Please try again.'
-              break
-            case 'RATE_LIMIT':
-              errorMessage = 'Rate limit exceeded. Please wait a moment before trying again.'
-              break
-            case 'AUTH_ERROR':
-              errorMessage = 'Authentication failed. Please check your AI provider settings.'
-              break
-            case 'AUTH_REQUIRED':
-              errorMessage = 'Sign in required. Please sign in to use AI features.'
-              break
-            case 'ENTITLEMENT_ERROR':
-              errorMessage = 'Premium subscription required. Please upgrade to use AI features.'
-              break
-            case 'RATE_LIMITED':
-              errorMessage = 'Server rate limit exceeded. Please wait a moment before trying again.'
-              break
-            case 'NETWORK_ERROR':
-              errorMessage = 'Network error. Check your connection and try again.'
-              break
-            default:
-              errorMessage = `AI provider error: ${err.message}`
-          }
-        }
+        const errorMessage = formatNoteQAError(err)
 
         setError(errorMessage)
 

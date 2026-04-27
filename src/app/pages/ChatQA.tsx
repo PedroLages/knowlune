@@ -7,13 +7,14 @@
 import { MessageList } from '../components/chat/MessageList'
 import { ChatInput } from '../components/chat/ChatInput'
 import { useChatQA } from '@/ai/hooks/useChatQA'
-import { isAIAvailable } from '@/lib/aiConfiguration'
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert'
-import { AlertCircle, Settings } from 'lucide-react'
+import { AlertCircle, Loader2, Settings } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { useNavigate } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
+import { useNoteQAAvailability } from '@/app/hooks/useNoteQAAvailability'
+import { getNoteQAUnavailableCopy } from '@/lib/noteQAAvailabilityCopy'
 
 /**
  * Main chat Q&A page
@@ -28,7 +29,12 @@ import { db } from '@/db'
 export function ChatQA() {
   const { messages, isGenerating, sendMessage } = useChatQA()
   const navigate = useNavigate()
-  const aiAvailable = isAIAvailable()
+  const noteQAAvailability = useNoteQAAvailability()
+  const aiChecking = noteQAAvailability.status === 'checking'
+  const aiAvailable = noteQAAvailability.status === 'available'
+  const unavailableCopy = getNoteQAUnavailableCopy(
+    noteQAAvailability.status === 'unavailable' ? noteQAAvailability.availability : null
+  )
   const noteCount = useLiveQuery(() => db.notes.count(), []) ?? 0
   const hasNotes = noteCount > 0
 
@@ -42,21 +48,33 @@ export function ChatQA() {
         </p>
       </div>
 
+      {/* AI Settings Loading Banner */}
+      {aiChecking && (
+        <div className="px-6 pt-4" aria-busy="true">
+          <Alert variant="default">
+            <Loader2 className="size-4 animate-spin" />
+            <AlertTitle>Checking AI settings...</AlertTitle>
+            <AlertDescription className="text-muted-foreground">
+              Q&A will be available once your provider settings are verified.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       {/* AI Unavailable Banner */}
-      {!aiAvailable && (
+      {!aiChecking && !aiAvailable && (
         <div className="px-6 pt-4">
           <Alert variant="default" className="border-warning bg-warning/10">
             <AlertCircle className="size-4 text-warning" />
-            <AlertTitle className="text-warning">AI Provider Not Configured</AlertTitle>
+            <AlertTitle className="text-warning">{unavailableCopy.title}</AlertTitle>
             <AlertDescription className="text-muted-foreground">
-              To use AI Q&A, please configure an AI provider in Settings. You can use manual search
-              from the Notes page in the meantime.
+              {unavailableCopy.body} You can use manual search from the Notes page in the meantime.
             </AlertDescription>
             <div className="mt-3 flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate('/settings')}
+                onClick={() => navigate('/settings?section=integrations')}
                 className="border-warning text-warning hover:bg-warning/10"
               >
                 <Settings className="size-4 mr-2" />
@@ -101,10 +119,12 @@ export function ChatQA() {
       {/* Chat Input */}
       <ChatInput
         onSend={sendMessage}
-        isGenerating={isGenerating || !aiAvailable || !hasNotes}
+        isGenerating={isGenerating || aiChecking || !aiAvailable || !hasNotes}
         placeholder={
-          !aiAvailable
-            ? 'Configure AI provider in Settings to ask questions'
+          aiChecking
+            ? 'Checking AI settings...'
+            : !aiAvailable
+            ? 'Configure Q&A in Settings to ask questions'
             : !hasNotes
               ? 'Create notes first to use Q&A'
               : 'Ask a question about your notes...'
