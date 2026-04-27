@@ -2,7 +2,7 @@
  * Tests for text utility functions
  */
 import { describe, it, expect } from 'vitest'
-import { getInitials, stripHtml } from '../textUtils'
+import { getInitials, stripHtml, sanitizeDescriptionHtml } from '../textUtils'
 
 describe('textUtils', () => {
   describe('getInitials', () => {
@@ -65,6 +65,34 @@ describe('textUtils', () => {
 
     it('should handle plain text without HTML', () => {
       expect(stripHtml('Hello world')).toBe('Hello world')
+    })
+  })
+
+  describe('sanitizeDescriptionHtml', () => {
+    it('preserves minimal inline formatting and maps b/i', () => {
+      expect(sanitizeDescriptionHtml('<p>Hello <b>World</b> and <i>you</i>.</p>')).toBe(
+        'Hello <strong>World</strong> and <em>you</em>.'
+      )
+    })
+
+    it('converts block containers into <br /> boundaries', () => {
+      expect(sanitizeDescriptionHtml('<p>One</p><p>Two</p>')).toBe('One<br /><br />Two')
+      expect(sanitizeDescriptionHtml('<div>One</div><div>Two</div>')).toBe('One<br /><br />Two')
+    })
+
+    it('removes scripts, styles, and all attributes', () => {
+      const input =
+        '<p onclick="alert(1)">Hello <img src=x onerror="alert(2)" /> <strong style="color:red">X</strong></p>' +
+        '<script>alert(3)</script><style>body{}</style>'
+      const out = sanitizeDescriptionHtml(input)
+
+      expect(out).toBe('Hello  <strong>X</strong>')
+      expect(out).not.toMatch(/onerror|onclick|script|style|img/i)
+      expect(out).not.toMatch(/style=/i)
+    })
+
+    it('escapes text content', () => {
+      expect(sanitizeDescriptionHtml('<p>1 < 2 & 3 > 2</p>')).toBe('1 &lt; 2 &amp; 3 &gt; 2')
     })
   })
 })

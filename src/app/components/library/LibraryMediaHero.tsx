@@ -5,6 +5,7 @@ import type { Book } from '@/data/types'
 import { Button } from '@/app/components/ui/button'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import { cn } from '@/app/components/ui/utils'
+import { sanitizeDescriptionHtml } from '@/lib/textUtils'
 
 function toTimestamp(value: string | undefined): number {
   if (!value) return 0
@@ -35,6 +36,10 @@ export function LibraryMediaHero({
 }) {
   const navigate = useNavigate()
   const heroBook = useMemo(() => pickHeroBook(books), [books])
+  const sanitizedDescription = useMemo(
+    () => (heroBook?.description ? sanitizeDescriptionHtml(heroBook.description) : ''),
+    [heroBook?.description]
+  )
 
   const resolvedCoverUrl = useBookCoverUrl({
     bookId: heroBook?.id ?? '',
@@ -120,7 +125,10 @@ export function LibraryMediaHero({
 
           {heroBook.description && (
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground line-clamp-3">
-              {heroBook.description}
+              <span
+                dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+                data-testid="library-media-hero-description"
+              />
             </p>
           )}
 
