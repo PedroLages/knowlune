@@ -78,19 +78,17 @@ export function useAudiobookshelfSocket({
       if (event.currentTime > localSeconds) {
         const position = { type: 'time' as const, seconds: event.currentTime }
         const totalDur = currentBook.totalDuration ?? 0
+        const p = Number.isFinite(event.progress)
+          ? Math.min(1, Math.max(0, event.progress))
+          : 0
         const progressPct =
           totalDur > 0
             ? Math.min(100, Math.round((event.currentTime / totalDur) * 100))
-            : Math.round(event.progress * 100)
-        // Same write order as catalog/player inbound (plan U3); no ABS `lastUpdate` on socket — receipt time for second write.
-        void (async () => {
-          await useBookStore
-            .getState()
-            .updateBookPosition(currentBook.id, position, progressPct, absInboundWriteOpts)
-          await useBookStore
-            .getState()
-            .updateBookLastOpenedAt(currentBook.id, new Date().toISOString())
-        })()
+            : Math.round(p * 100)
+        // Inbound socket has no ABS `lastUpdate` — single store write avoids duplicate syncableWrite churn.
+        void useBookStore
+          .getState()
+          .updateBookPosition(currentBook.id, position, progressPct, absInboundWriteOpts)
       }
     },
     [activeItemId]

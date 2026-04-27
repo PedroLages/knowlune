@@ -679,6 +679,79 @@ describe('AudiobookshelfService.fetchAllProgress', () => {
       expect(result.status).toBe(500)
     }
   })
+
+  it('returns empty array when JSON body is not a plain object', async () => {
+    vi.stubGlobal('fetch', mockFetchJson(['not', 'an', 'object']))
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data).toEqual([])
+    }
+  })
+
+  it('skips mediaProgress rows with invalid lastUpdate', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchJson({
+        mediaProgress: [
+          {
+            id: 'mp-bad',
+            libraryItemId: 'item-bad',
+            currentTime: 10,
+            duration: 100,
+            progress: 0.1,
+            isFinished: false,
+            lastUpdate: 'not-a-date',
+          },
+          {
+            id: 'mp-good',
+            libraryItemId: 'item-good',
+            currentTime: 20,
+            duration: 200,
+            progress: 0.1,
+            isFinished: false,
+            lastUpdate: 1712345678000,
+          },
+        ],
+      })
+    )
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data).toHaveLength(1)
+      expect(result.data[0].libraryItemId).toBe('item-good')
+    }
+  })
+
+  it('clamps progress to 0–1 for absurd values', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchJson({
+        mediaProgress: [
+          {
+            id: 'mp-x',
+            libraryItemId: 'item-x',
+            currentTime: 1,
+            duration: 10,
+            progress: 9.99,
+            isFinished: false,
+            lastUpdate: 1712345678000,
+          },
+        ],
+      })
+    )
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data[0].progress).toBe(1)
+    }
+  })
 })
 
 // ── updateProgress ─────────────────────────────────────────────────

@@ -349,6 +349,16 @@ export async function fetchProgress(
   return result
 }
 
+function clampNonNegativeFinite(n: number): number {
+  if (!Number.isFinite(n) || n < 0) return 0
+  return n
+}
+
+function clamp01(n: number): number {
+  if (!Number.isFinite(n)) return 0
+  return Math.min(1, Math.max(0, n))
+}
+
 /** Raw shape from GET /api/me `mediaProgress[]` (Audiobookshelf `getOldMediaProgress`) */
 function normalizeMeProgressEntry(entry: unknown): AbsProgress | null {
   if (!entry || typeof entry !== 'object') return null
@@ -363,11 +373,13 @@ function normalizeMeProgressEntry(entry: unknown): AbsProgress | null {
         : undefined
   if (!libraryItemId) return null
 
-  const currentTime =
+  const currentTimeRaw =
     typeof e.currentTime === 'number' ? e.currentTime : Number(e.currentTime) || 0
-  const duration = typeof e.duration === 'number' ? e.duration : Number(e.duration) || 0
+  const durationRaw = typeof e.duration === 'number' ? e.duration : Number(e.duration) || 0
+  const currentTime = clampNonNegativeFinite(currentTimeRaw)
+  const duration = clampNonNegativeFinite(durationRaw)
   const progressRaw = e.progress
-  const progress =
+  let progress =
     typeof progressRaw === 'number'
       ? progressRaw
       : typeof progressRaw === 'string'
@@ -375,6 +387,7 @@ function normalizeMeProgressEntry(entry: unknown): AbsProgress | null {
         : duration > 0
           ? Math.min(1, Math.max(0, currentTime / duration))
           : 0
+  progress = clamp01(progress)
   const isFinished = Boolean(e.isFinished)
   const lastUpdate =
     typeof e.lastUpdate === 'number'
@@ -382,6 +395,7 @@ function normalizeMeProgressEntry(entry: unknown): AbsProgress | null {
       : typeof e.lastUpdate === 'string'
         ? new Date(e.lastUpdate).getTime()
         : 0
+  if (!Number.isFinite(lastUpdate)) return null
   const id = typeof e.id === 'string' ? e.id : libraryItemId
 
   return {
@@ -389,7 +403,7 @@ function normalizeMeProgressEntry(entry: unknown): AbsProgress | null {
     libraryItemId,
     currentTime,
     duration,
-    progress: Number.isFinite(progress) ? progress : 0,
+    progress,
     isFinished,
     lastUpdate,
   }
@@ -416,6 +430,9 @@ export async function fetchAllProgress(
   }
 
   const body = result.data
+  if (body === null || body === undefined || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: true, data: [] }
+  }
   const rawList = body.mediaProgress
   if (!Array.isArray(rawList)) {
     return { ok: true, data: [] }

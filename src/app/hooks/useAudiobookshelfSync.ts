@@ -22,6 +22,14 @@ const VISIBILITY_PROGRESS_MIN_INTERVAL_MS = 30_000
 
 const absInboundWriteOpts = { suppressErrorToast: true } as const
 
+/** Valid ISO string for `lastOpenedAt`, or null if `ms` is not a usable instant. */
+function safeAbsLastOpenedIso(ms: number): string | null {
+  if (!Number.isFinite(ms)) return null
+  const d = new Date(ms)
+  if (!Number.isFinite(d.getTime())) return null
+  return d.toISOString()
+}
+
 /**
  * Overlay ABS user progress onto local books for one server (after catalog sync
  * or throttled tab focus). Best-effort — logs errors, never throws to callers.
@@ -60,8 +68,18 @@ export async function applyAbsProgressToBooks(
         ? Math.min(100, Math.round((absProg.currentTime / book.totalDuration) * 100))
         : Math.round((absProg.progress ?? 0) * 100)
 
-    await updateBookPosition(book.id, position, progressPct, absInboundWriteOpts)
-    await updateBookLastOpenedAt(book.id, new Date(absProg.lastUpdate).toISOString())
+    const absIso = safeAbsLastOpenedIso(absProg.lastUpdate)
+    if (!absIso) {
+      console.warn('[useAudiobookshelfSync] skip progress row: invalid lastUpdate', book.id)
+      continue
+    }
+    try {
+      await updateBookPosition(book.id, position, progressPct, absInboundWriteOpts)
+      await updateBookLastOpenedAt(book.id, absIso)
+    } catch (err) {
+      // silent-catch-ok: bulk overlay is best-effort; one bad row must not abort the rest
+      console.error('[useAudiobookshelfSync] apply progress row failed', book.id, err)
+    }
   }
 }
 
