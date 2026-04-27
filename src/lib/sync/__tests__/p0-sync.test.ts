@@ -140,6 +140,7 @@ describe('E92-S09 P0 sync wiring — progress (monotonic)', () => {
       videoId: 'pdf-1',
       currentTime: 0,
       completionPercentage: 0,
+      durationSeconds: 0,
       currentPage: 5,
     })
 
@@ -148,6 +149,7 @@ describe('E92-S09 P0 sync wiring — progress (monotonic)', () => {
       videoId: 'pdf-1',
       currentTime: 0,
       completionPercentage: 0,
+      durationSeconds: 0,
       currentPage: 12,
     })
 
@@ -162,6 +164,8 @@ describe('E92-S09 P0 sync wiring — progress (monotonic)', () => {
     expect(progressEntries[0].payload).toMatchObject({
       course_id: 'course-1',
       video_id: 'pdf-1',
+      watched_seconds: 0,
+      duration_seconds: 0,
     })
   })
 })

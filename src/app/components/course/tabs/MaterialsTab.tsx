@@ -161,6 +161,7 @@ function PdfSection({ pdf, courseId, isOpen, onToggle }: PdfSectionProps) {
                 currentTime: 0,
                 completionPercentage: 0,
               }),
+              durationSeconds: existing?.durationSeconds ?? 0,
               courseId,
               videoId: pdf.id,
               currentPage: page,

@@ -51,6 +51,8 @@ describe('ElearningDB schema', () => {
     // syncQueue, syncMetadata added in v52 (E92-S02)
     // searchFrecency added in v53 (E117-S02)
     expect(db.tables.map(t => t.name).sort()).toEqual([
+      'absCollections',
+      'absSeries',
       'aiUsageEvents',
       'audioBookmarks',
       'audioClips',
@@ -107,8 +109,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 59 (E119-S08: frozenReason on learnerModels)', () => {
-    expect(db.verno).toBe(59)
+  it('should be at version 61 (guest gate)', () => {
+    expect(db.verno).toBe(61)
   })
 
   it('should have searchFrecency table with compound primary key [entityType+entityId] (v53)', () => {

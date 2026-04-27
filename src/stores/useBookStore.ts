@@ -92,8 +92,9 @@ interface BookStoreState {
   updateBookPosition: (
     bookId: string,
     position: import('@/data/types').ContentPosition,
-    progress: number
+    progress?: number
   ) => Promise<void>
+  updateBookLastOpenedAt: (bookId: string, lastOpenedAt?: string) => Promise<void>
   updateBookPlaybackSpeed: (bookId: string, speed: number) => Promise<void>
   linkBooks: (bookIdA: string, bookIdB: string) => Promise<void>
   unlinkBooks: (bookIdA: string, bookIdB: string) => Promise<void>
@@ -348,10 +349,18 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     const now = new Date().toISOString()
     // Capture previous state for targeted rollback
     const prevBook = get().books.find(b => b.id === bookId)
+    const nextProgress = progress ?? prevBook?.progress
     // Optimistic Zustand update
     set(state => ({
       books: state.books.map(b =>
-        b.id === bookId ? { ...b, currentPosition: position, progress, lastOpenedAt: now } : b
+        b.id === bookId
+          ? {
+              ...b,
+              currentPosition: position,
+              ...(nextProgress !== undefined && { progress: nextProgress }),
+              lastOpenedAt: now,
+            }
+          : b
       ),
     }))
     try {
@@ -360,7 +369,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
         await syncableWrite('books', 'put', {
           ...current,
           currentPosition: position,
-          progress,
+          ...(nextProgress !== undefined && { progress: nextProgress }),
           lastOpenedAt: now,
         } as unknown as SyncableRecord)
       }
@@ -373,6 +382,29 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
         }))
       }
       toast.error('Failed to save reading position')
+    }
+  },
+
+  updateBookLastOpenedAt: async (bookId, lastOpenedAt) => {
+    const now = lastOpenedAt ?? new Date().toISOString()
+    const prevBook = get().books.find(b => b.id === bookId)
+
+    set(state => ({
+      books: state.books.map(b => (b.id === bookId ? { ...b, lastOpenedAt: now } : b)),
+    }))
+
+    try {
+      const current = await db.books.get(bookId)
+      if (current) {
+        await syncableWrite('books', 'put', { ...current, lastOpenedAt: now } as unknown as SyncableRecord)
+      }
+    } catch (err) {
+      console.error('[BookStore] Failed to update lastOpenedAt:', err)
+      if (prevBook) {
+        set(state => ({
+          books: state.books.map(b => (b.id === bookId ? prevBook : b)),
+        }))
+      }
     }
   },
 

@@ -451,18 +451,12 @@ export function BookReader() {
 
   // Update lastOpenedAt when reader opens (once book is found)
   useEffect(() => {
-    if (!book || !bookId) return
+    if (!bookId) return
 
-    const now = new Date().toISOString()
-    // Update in-memory state
-    useBookStore.setState(state => ({
-      books: state.books.map(b => (b.id === bookId ? { ...b, lastOpenedAt: now } : b)),
-    }))
-    // Persist to Dexie (best-effort, non-blocking)
-    // silent-catch-ok: lastOpenedAt failure is non-fatal — sorting will use previous value
-    db.books.update(bookId, { lastOpenedAt: now }).catch(err => {
-      console.error('[BookReader] Failed to update lastOpenedAt:', err)
-    })
+    useBookStore
+      .getState()
+      .updateBookLastOpenedAt(bookId)
+      .catch(err => console.error('[BookReader] Failed to update lastOpenedAt:', err))
   }, [bookId]) // Only run once on mount (bookId is stable for this page)
 
   // Resolve sourceHighlightId query param → cfiRange for back-navigation (E85-S05)
@@ -638,24 +632,10 @@ export function BookReader() {
       saveTimerRef.current = setTimeout(() => {
         const position: ContentPosition = { type: 'cfi', value: cfi }
         const progressInt = Math.round(progress * 100) // 0–100
-
-        // Update in-memory BookStore
-        useBookStore.setState(state => ({
-          books: state.books.map(b =>
-            b.id === bookId ? { ...b, currentPosition: position, progress: progressInt } : b
-          ),
-        }))
-
-        // Persist to Dexie — single update, no toast (non-disruptive during reading)
-        // silent-catch-ok: position will be re-saved on next page turn (non-fatal during reading)
-        db.books
-          .update(bookId, {
-            currentPosition: position,
-            progress: progressInt,
-          })
-          .catch(err => {
-            console.error('[BookReader] Failed to save position:', err)
-          })
+        useBookStore
+          .getState()
+          .updateBookPosition(bookId, position, progressInt)
+          .catch(err => console.error('[BookReader] Failed to save position:', err))
       }, POSITION_SAVE_DEBOUNCE_MS)
     },
     [bookId]
@@ -680,23 +660,9 @@ export function BookReader() {
           const position: ContentPosition = { type: 'cfi', value: start.cfi }
           const progressInt =
             typeof start.percentage === 'number' ? Math.round(start.percentage * 100) : undefined
-          useBookStore.setState(state => ({
-            books: state.books.map(b =>
-              b.id === bookId
-                ? {
-                    ...b,
-                    currentPosition: position,
-                    ...(progressInt !== undefined && { progress: progressInt }),
-                  }
-                : b
-            ),
-          }))
-          // silent-catch-ok: pre-navigation save failure is non-fatal (position saved on next open)
-          db.books
-            .update(bookId, {
-              currentPosition: position,
-              ...(progressInt !== undefined && { progress: progressInt }),
-            })
+          useBookStore
+            .getState()
+            .updateBookPosition(bookId, position, progressInt)
             .catch(err => console.error('[BookReader] Pre-navigation EPUB save failed:', err))
         }
       }

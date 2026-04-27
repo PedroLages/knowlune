@@ -245,7 +245,11 @@ export type CompletionStatus = 'not-started' | 'in-progress' | 'completed'
 export interface ContentProgress {
   courseId: string
   itemId: string // lesson or module ID
+  /** Canonical content type expected by Supabase content_progress.content_type */
+  contentType?: string
   status: CompletionStatus
+  /** 0-100 integer percentage expected by Supabase content_progress.progress_pct */
+  progressPct?: number
   updatedAt: string // ISO 8601
 }
 
@@ -256,6 +260,8 @@ export interface VideoProgress {
   videoId: string
   currentTime: number
   completionPercentage: number
+  /** Total duration in seconds. Used for Supabase video_progress.duration_seconds sync. */
+  durationSeconds?: number
   completedAt?: string // ISO 8601
   /** Last-viewed PDF page (1-based). Used by PdfContent to restore position. */
   currentPage?: number

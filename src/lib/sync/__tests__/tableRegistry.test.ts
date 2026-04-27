@@ -233,9 +233,9 @@ describe('tableRegistry — monotonic fields', () => {
     expect(entry?.monotonicFields).toContain('masteryLevel')
   })
 
-  it('progress.monotonicFields contains watchedSeconds', () => {
+  it('progress.monotonicFields contains currentTime', () => {
     const entry = getTableEntry('progress')
-    expect(entry?.monotonicFields).toContain('watchedSeconds')
+    expect(entry?.monotonicFields).toContain('currentTime')
   })
 
   it('books.monotonicFields contains progress', () => {
