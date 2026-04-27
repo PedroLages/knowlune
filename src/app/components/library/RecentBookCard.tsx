@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router'
 import { BookOpen, Headphones } from 'lucide-react'
 import type { Book } from '@/data/types'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
+import { LIBRARY_SHELF_CARD_WIDTH_CLASS } from '@/app/components/library/shelfCardSizing'
 
 interface RecentBookCardProps {
   book: Book
@@ -46,20 +47,20 @@ export const RecentBookCard = memo(function RecentBookCard({ book }: RecentBookC
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className="group cursor-pointer focus-visible:outline-none"
+      className={`group ${LIBRARY_SHELF_CARD_WIDTH_CLASS} cursor-pointer focus-visible:outline-none`}
       data-testid={`recent-book-card-${book.id}`}
     >
       {/* Cover — always square for uniform row height */}
-      <div className="relative aspect-square rounded-xl overflow-hidden shadow-card-ambient group-hover:-translate-y-1 group-hover:shadow-[0_8px_24px_var(--shadow-brand)] transition-all duration-300">
+      <div className="relative aspect-square rounded-2xl overflow-hidden shadow-card-ambient transition-all duration-300 transform-gpu group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_var(--shadow-brand)]">
         {resolvedCoverUrl ? (
           <img
             src={resolvedCoverUrl}
             alt={`Cover of ${book.title}`}
             loading="lazy"
-            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="h-full w-full rounded-2xl object-cover transition-transform duration-500 transform-gpu group-hover:scale-105"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-muted">
+          <div className="flex h-full w-full items-center justify-center bg-muted rounded-2xl">
             <FallbackIcon className="size-6 text-muted-foreground" />
           </div>
         )}
@@ -73,11 +74,11 @@ export const RecentBookCard = memo(function RecentBookCard({ book }: RecentBookC
       </div>
 
       {/* Title + Author only */}
-      <div className="mt-2 px-0.5 text-center">
-        <p className="text-xs font-semibold text-foreground leading-tight line-clamp-2 group-hover:text-brand transition-colors">
+      <div className="mt-3 px-1 text-center">
+        <p className="line-clamp-2 text-sm font-bold leading-tight text-foreground transition-colors group-hover:text-brand">
           {book.title}
         </p>
-        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{book.author}</p>
+        <p className="mt-1 truncate text-xs text-muted-foreground">{book.author}</p>
       </div>
     </div>
   )
