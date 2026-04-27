@@ -12,8 +12,8 @@
  * Covers Units 1–3 from
  * docs/plans/2026-04-18-001-feat-library-shelf-row-primitive-tests-plan.md
  */
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { LibraryShelfRow, type LibraryShelfRowProps } from '../LibraryShelfRow'
 
 /**
@@ -259,6 +259,52 @@ describe('LibraryShelfRow', () => {
       // Default ids must not leak when a custom prefix is used
       expect(screen.queryByTestId('library-shelf-row')).toBeNull()
       expect(screen.queryByTestId('library-shelf-row-heading')).toBeNull()
+    })
+  })
+
+  describe('desktop scroll affordances', () => {
+    it('renders left/right scroll controls and edge fades', () => {
+      renderShelf({ 'data-testid': 'continue-listening' })
+      expect(screen.getByTestId('continue-listening-scroll-left')).toBeInTheDocument()
+      expect(screen.getByTestId('continue-listening-scroll-right')).toBeInTheDocument()
+      expect(screen.getByTestId('continue-listening-fade-left')).toBeInTheDocument()
+      expect(screen.getByTestId('continue-listening-fade-right')).toBeInTheDocument()
+    })
+
+    it('disables left chevron at start and enables right when overflow exists', () => {
+      renderShelf({
+        'data-testid': 'continue-listening',
+        children: [
+          <div key="a">A</div>,
+          <div key="b">B</div>,
+          <div key="c">C</div>,
+        ],
+      })
+
+      const scroller = screen.getByTestId('continue-listening-scroller')
+      Object.defineProperty(scroller, 'scrollWidth', { value: 900, configurable: true })
+      Object.defineProperty(scroller, 'clientWidth', { value: 300, configurable: true })
+      Object.defineProperty(scroller, 'scrollLeft', { value: 0, configurable: true, writable: true })
+      fireEvent.scroll(scroller)
+
+      expect(screen.getByTestId('continue-listening-scroll-left')).toBeDisabled()
+      expect(screen.getByTestId('continue-listening-scroll-right')).not.toBeDisabled()
+    })
+
+    it('handles keyboard arrows on the scroller', () => {
+      renderShelf({ 'data-testid': 'continue-listening' })
+      const scroller = screen.getByTestId('continue-listening-scroller')
+      const scrollByMock = vi.fn()
+      Object.defineProperty(scroller, 'scrollBy', {
+        configurable: true,
+        writable: true,
+        value: scrollByMock,
+      })
+
+      fireEvent.keyDown(scroller, { key: 'ArrowRight' })
+      fireEvent.keyDown(scroller, { key: 'ArrowLeft' })
+
+      expect(scrollByMock).toHaveBeenCalledTimes(2)
     })
   })
 })
