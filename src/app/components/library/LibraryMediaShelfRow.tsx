@@ -36,6 +36,8 @@ export function LibraryMediaShelfRow({
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
 
+  const childItems = useMemo(() => Children.toArray(children).filter(Boolean), [children])
+
   const scrollerTestId = useMemo(
     () => (testId ? `${testId}-scroller` : 'library-media-shelf-row-scroller'),
     [testId]
@@ -69,11 +71,13 @@ export function LibraryMediaShelfRow({
     [scrollByViewport]
   )
 
-  if (isChildrenEmpty(children)) return null
-
-  const childItems = Children.toArray(children).filter(Boolean)
-
   useEffect(() => {
+    if (childItems.length === 0) {
+      setCanScrollLeft(false)
+      setCanScrollRight(false)
+      return
+    }
+
     updateScrollAffordances()
     const el = scrollerRef.current
     if (!el) return
@@ -86,6 +90,8 @@ export function LibraryMediaShelfRow({
       window.removeEventListener('resize', handleScroll)
     }
   }, [updateScrollAffordances, childItems.length])
+
+  if (isChildrenEmpty(children)) return null
 
   return (
     <section className="group/media-shelf" data-testid={testId ?? 'library-media-shelf-row'}>

@@ -42,7 +42,7 @@ describe('LibraryFormatModeTabs', () => {
   beforeEach(() => {
     store.books.length = 0
     store.filters = {}
-    store.setFilter.mockReset()
+    vi.mocked(store.setFilter).mockReset()
     store.books.push(
       makeBook({ id: 'a1', format: 'audiobook', absServerId: undefined }),
       makeBook({ id: 'e1', format: 'epub', absServerId: undefined }),
