@@ -799,6 +799,10 @@ export function BookReader() {
   // them from the URL immediately while still applying them after the renderer mounts.
   const startChapterParam = searchParams.get('startChapter')
   const startChapterIndex = startChapterParam !== null ? parseInt(startChapterParam, 10) : null
+  const startChapterIndexParamRef = useRef<number | null>(null)
+  if (startChapterIndexParamRef.current === null && Number.isInteger(startChapterIndex)) {
+    startChapterIndexParamRef.current = startChapterIndex
+  }
   const offsetCfiParamRef = useRef<string | null>(null)
   const seekSecondsParamRef = useRef<number | null>(null)
   const chapterPctParamRef = useRef<number | null>(null)
@@ -1054,12 +1058,17 @@ export function BookReader() {
                     : undefined
                 }
                 initialChapterIndex={
-                  startChapterIndex !== null
-                    ? Math.max(0, Math.min(startChapterIndex, book.chapters.length - 1))
+                  startChapterIndexParamRef.current !== null
+                    ? Math.max(0, Math.min(startChapterIndexParamRef.current, book.chapters.length - 1))
                     : undefined
                 }
                 initialSeekSeconds={seekSecondsParamRef.current ?? undefined}
                 initialChapterPct={chapterPctParamRef.current ?? undefined}
+                preferInitialRouteTarget={
+                  startChapterIndexParamRef.current !== null ||
+                  seekSecondsParamRef.current !== null ||
+                  chapterPctParamRef.current !== null
+                }
                 onBookmarkChange={handleBookmarkChange}
               />
             </Suspense>

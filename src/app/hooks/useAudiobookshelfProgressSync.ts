@@ -55,6 +55,9 @@ export function useAudiobookshelfProgressSync({
 }: UseAbsProgressSyncOptions) {
   const hasFetchedRef = useRef(false)
   const bookIdRef = useRef(book.id)
+  const server = useAudiobookshelfStore(state =>
+    book.absServerId ? state.getServerById(book.absServerId) : undefined
+  )
 
   // Reset fetch guard when book changes
   if (bookIdRef.current !== book.id) {
@@ -67,10 +70,9 @@ export function useAudiobookshelfProgressSync({
     // Only sync ABS remote books
     if (book.source.type !== 'remote' || !book.absServerId || !book.absItemId) return
     if (hasFetchedRef.current) return
+    // BookReader can mount before ABS server hydration. Retry once server exists.
+    if (!server) return
     hasFetchedRef.current = true
-
-    const server = useAudiobookshelfStore.getState().getServerById(book.absServerId)
-    if (!server) return // Fire-and-forget — never block book opening
     ;(async () => {
       const apiKey = await getAbsApiKey(server.id)
       if (!apiKey) return
@@ -130,7 +132,7 @@ export function useAudiobookshelfProgressSync({
         }
       }
     })()
-  }, [book.id])
+  }, [book, seekTo, server])
 
   // ─── Push-on-session-end: sync when playback pauses ───
   const pushProgress = useCallback(() => {

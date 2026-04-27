@@ -624,7 +624,18 @@ export function useAudioPlayer(book: Book | null): UseAudioPlayerReturn {
     (seconds: number) => {
       const audio = _sharedAudio
       if (!audio) return
-      audio.currentTime = Math.max(0, Math.min(seconds, localDuration))
+      const elementDuration = audio.duration
+      const hasElementDuration = Number.isFinite(elementDuration) && elementDuration > 0
+      const hasLocalDuration = Number.isFinite(localDuration) && localDuration > 0
+      const upperBound = hasElementDuration
+        ? elementDuration
+        : hasLocalDuration
+          ? localDuration
+          : null
+      // During initial remote stream bootstrap, duration can temporarily be unknown.
+      // Avoid clamping valid resume seeks to 0 while metadata is still settling.
+      audio.currentTime =
+        upperBound === null ? Math.max(0, seconds) : Math.max(0, Math.min(seconds, upperBound))
       setLocalCurrentTime(audio.currentTime)
       setCurrentTime(audio.currentTime)
     },

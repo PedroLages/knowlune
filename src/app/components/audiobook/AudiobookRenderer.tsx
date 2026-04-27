@@ -77,6 +77,8 @@ interface AudiobookRendererProps {
    * applied after loadChapter. `initialSeekSeconds` takes precedence if both set.
    */
   initialChapterPct?: number
+  /** Route supplied an explicit startup target (chapter/seek), so it should override saved resume state. */
+  preferInitialRouteTarget?: boolean
   /** Called when a bookmark is created or deleted — lets parent refresh bookmark state */
   onBookmarkChange?: () => void
 }
@@ -90,6 +92,7 @@ export function AudiobookRenderer({
   initialChapterIndex = 0,
   initialSeekSeconds,
   initialChapterPct,
+  preferInitialRouteTarget = false,
   onBookmarkChange,
 }: AudiobookRendererProps) {
   const {
@@ -287,6 +290,8 @@ export function AudiobookRenderer({
     isPlaying,
     isLoading,
     seekTo,
+    resumeFromMiniPlayer,
+    skipSessionResumeRestore: preferInitialRouteTarget,
     deliberateStopRef,
   })
 

@@ -260,6 +260,22 @@ test.describe('E101-S04: Streaming Playback', () => {
     await expect(playPauseButton).toBeVisible()
   })
 
+  test('AC4: remote audiobook resumes from saved position on open', async ({ page }) => {
+    await seedStreamingData(page)
+    await seedIndexedDBStore(page, DB_NAME, 'books', [
+      {
+        ...ABS_AUDIOBOOK,
+        progress: 28,
+        currentPosition: { type: 'time', seconds: 504 },
+        lastOpenedAt: FIXED_DATE,
+      },
+    ] as unknown as Record<string, unknown>[])
+    await page.goto(`/library/${ABS_AUDIOBOOK.id}/read`)
+
+    await expect(page.getByTestId('audiobook-reader')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('current-time-display')).toHaveText('8:24', { timeout: 10000 })
+  })
+
   test('AC7: chapter list displays ABS chapter metadata', async ({ page }) => {
     await seedStreamingData(page)
     await page.goto(`/library/${ABS_AUDIOBOOK.id}/read`)
