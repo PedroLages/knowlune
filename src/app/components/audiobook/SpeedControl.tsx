@@ -7,9 +7,13 @@
  *  - Updates `useAudioPlayerStore.playbackRate`
  *  - The useAudioPlayer hook syncs it to `audio.playbackRate` + `audio.preservesPitch`
  *
+ * Options are native `<button type="button">` rows (same pattern as `SleepTimer`)
+ * so taps register reliably on mobile WebKit inside portaled popovers.
+ *
  * @module SpeedControl
  * @since E87-S03, updated E112-S01
  */
+import { useState } from 'react'
 import { Check } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { Button } from '@/app/components/ui/button'
@@ -27,16 +31,17 @@ interface SpeedControlProps {
 }
 
 export function SpeedControl({ bookId }: SpeedControlProps) {
+  const [open, setOpen] = useState(false)
   const { playbackRate, setPlaybackRate } = useAudioPlayerStore()
 
   const handleSelect = (rate: number) => {
     setPlaybackRate(rate)
-    // Persist per-book speed — fires-and-forgets; store handles rollback on failure
     useBookStore.getState().updateBookPlaybackSpeed(bookId, rate)
+    setOpen(false)
   }
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
@@ -53,36 +58,31 @@ export function SpeedControl({ bookId }: SpeedControlProps) {
           {VALID_SPEEDS.map(rate => {
             const isActive = rate === playbackRate
             return (
-              <li
-                key={rate}
-                role="option"
-                aria-selected={isActive}
-                onClick={() => handleSelect(rate)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    handleSelect(rate)
-                  }
-                }}
-                tabIndex={0}
-                className={cn(
-                  'flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted/60',
-                  isActive ? 'text-brand font-medium' : 'text-foreground'
-                )}
-                data-testid={`speed-option-${rate}`}
-              >
-                <span className="flex items-baseline gap-1.5">
-                  <span>{formatSpeed(rate)}</span>
-                  {rate === 1.0 && (
-                    <span
-                      className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium"
-                      data-testid="speed-default-label"
-                    >
-                      Default
-                    </span>
+              <li key={rate} role="presentation" className="list-none">
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={isActive}
+                  onClick={() => handleSelect(rate)}
+                  className={cn(
+                    'flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                    isActive ? 'text-brand font-medium' : 'text-foreground'
                   )}
-                </span>
-                {isActive && <Check className="size-4 text-brand" aria-hidden="true" />}
+                  data-testid={`speed-option-${rate}`}
+                >
+                  <span className="flex items-baseline gap-1.5">
+                    <span>{formatSpeed(rate)}</span>
+                    {rate === 1.0 && (
+                      <span
+                        className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium"
+                        data-testid="speed-default-label"
+                      >
+                        Default
+                      </span>
+                    )}
+                  </span>
+                  {isActive && <Check className="size-4 text-brand" aria-hidden="true" />}
+                </button>
               </li>
             )
           })}
