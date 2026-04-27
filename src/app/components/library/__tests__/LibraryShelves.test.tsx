@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import type { Book } from '@/data/types'
-import { LibraryShelves } from '@/app/components/library/LibraryShelves'
+import {
+  LibraryContinueShelves,
+  LibraryDiscoveryShelves,
+} from '@/app/components/library/LibraryShelves'
 import { LIBRARY_SHELF_CARD_WIDTH_CLASS } from '@/app/components/library/shelfCardSizing'
 
 const { mockBooks } = vi.hoisted(() => ({
@@ -39,7 +42,7 @@ describe('LibraryShelves', () => {
       makeBook({
         id: 'audio-continue',
         format: 'audiobook',
-        status: 'listening',
+        status: 'reading',
         progress: 45,
         totalDuration: 4000,
         currentPosition: { type: 'time', seconds: 1200 },
@@ -71,10 +74,13 @@ describe('LibraryShelves', () => {
     )
   })
 
-  it('renders continue/recent shelf headings as top-level h2 sections', () => {
+  it('renders continue and discovery shelf headings as top-level h2 sections', () => {
     render(
       <MemoryRouter>
-        <LibraryShelves />
+        <>
+          <LibraryContinueShelves />
+          <LibraryDiscoveryShelves />
+        </>
       </MemoryRouter>
     )
     const h2s = screen.getAllByRole('heading', { level: 2 })
@@ -92,7 +98,10 @@ describe('LibraryShelves', () => {
   it('uses shared shelf card width for continue and recent cards', () => {
     render(
       <MemoryRouter>
-        <LibraryShelves />
+        <>
+          <LibraryContinueShelves />
+          <LibraryDiscoveryShelves />
+        </>
       </MemoryRouter>
     )
     expect(screen.getByTestId('continue-shelf-tile-audio-continue').className).toContain(
@@ -107,7 +116,10 @@ describe('LibraryShelves', () => {
     mockBooks.length = 0
     const { container } = render(
       <MemoryRouter>
-        <LibraryShelves />
+        <>
+          <LibraryContinueShelves />
+          <LibraryDiscoveryShelves />
+        </>
       </MemoryRouter>
     )
     expect(container.firstChild).toBeNull()

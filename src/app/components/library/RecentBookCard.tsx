@@ -51,13 +51,13 @@ export const RecentBookCard = memo(function RecentBookCard({ book }: RecentBookC
       data-testid={`recent-book-card-${book.id}`}
     >
       {/* Cover — always square for uniform row height */}
-      <div className="relative aspect-square rounded-2xl overflow-hidden shadow-card-ambient transition-all duration-300 transform-gpu group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_var(--shadow-brand)]">
+      <div className="relative aspect-square rounded-2xl overflow-hidden shadow-card-ambient transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_var(--shadow-brand)]">
         {resolvedCoverUrl ? (
           <img
             src={resolvedCoverUrl}
             alt={`Cover of ${book.title}`}
             loading="lazy"
-            className="h-full w-full rounded-2xl object-cover transition-transform duration-500 transform-gpu group-hover:scale-105"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-muted rounded-2xl">

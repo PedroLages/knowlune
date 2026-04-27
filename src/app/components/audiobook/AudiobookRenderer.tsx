@@ -47,6 +47,8 @@ import type { Book } from '@/data/types'
 
 interface AudiobookRendererProps {
   book: Book
+  /** True when navigating from the mini-player; avoid re-loading/seeking on mount. */
+  resumeFromMiniPlayer?: boolean
   /** Controlled from BookReader top chrome to open the bookmark list panel */
   bookmarksOpen?: boolean
   onBookmarksClose?: () => void
@@ -81,6 +83,7 @@ interface AudiobookRendererProps {
 
 export function AudiobookRenderer({
   book,
+  resumeFromMiniPlayer = false,
   bookmarksOpen: bookmarksOpenProp,
   onBookmarksClose,
   onSwitchToReading,
@@ -209,6 +212,7 @@ export function AudiobookRenderer({
   useEffect(() => {
     const alreadyActive = useAudioPlayerStore.getState().currentBookId === book.id
     setCurrentBook(book.id)
+    if (resumeFromMiniPlayer) return
     if (!alreadyActive) {
       loadChapter(initialChapterIndex, false)
 

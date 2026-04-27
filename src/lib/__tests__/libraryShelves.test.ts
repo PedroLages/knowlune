@@ -30,14 +30,14 @@ describe('libraryShelves selectors', () => {
         id: 'a-1',
         format: 'audiobook',
         progress: 40,
-        status: 'listening',
+        status: 'reading',
         lastOpenedAt: '2026-04-26T12:00:00.000Z',
       }),
       makeBook({
         id: 'a-2',
         format: 'audiobook',
         progress: 25,
-        status: 'listening',
+        status: 'reading',
         lastOpenedAt: '2026-04-27T12:00:00.000Z',
       }),
       makeBook({
@@ -79,7 +79,7 @@ describe('libraryShelves selectors', () => {
         id: 'a-1',
         format: 'audiobook',
         progress: 30,
-        status: 'listening',
+        status: 'reading',
         lastOpenedAt: '2026-04-28T10:00:00.000Z',
       }),
     ]
