@@ -4,7 +4,7 @@
  * @see useAudiobookshelfProgressSync.ts
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { useAudiobookshelfProgressSync } from '@/app/hooks/useAudiobookshelfProgressSync'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 import { useBookStore } from '@/stores/useBookStore'
@@ -94,5 +94,30 @@ describe('useAudiobookshelfProgressSync — fetch-on-open', () => {
     expect(openedSpy).toHaveBeenCalled()
     expect(seekTo).toHaveBeenCalledWith(1800)
     expect(dbUpdateSpy).not.toHaveBeenCalled()
+  })
+
+  it('retries fetch when ABS server hydrates after mount', async () => {
+    useAudiobookshelfStore.setState({ servers: [], isLoaded: false })
+    const fetchSpy = vi.spyOn(AudiobookshelfService, 'fetchProgress')
+    const seekTo = vi.fn()
+
+    renderHook(() =>
+      useAudiobookshelfProgressSync({
+        book: REMOTE_BOOK,
+        isPlaying: false,
+        currentTime: 0,
+        seekTo,
+      })
+    )
+
+    expect(fetchSpy).not.toHaveBeenCalled()
+
+    await act(async () => {
+      useAudiobookshelfStore.setState({ servers: [SERVER], isLoaded: true })
+    })
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+    })
   })
 })

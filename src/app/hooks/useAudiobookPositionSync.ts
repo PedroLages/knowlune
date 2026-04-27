@@ -22,6 +22,10 @@ interface UseAudiobookPositionSyncParams {
   isPlaying: boolean
   isLoading: boolean
   seekTo: (seconds: number) => void
+  /** True when the player is being expanded from the mini-player singleton state. */
+  resumeFromMiniPlayer?: boolean
+  /** True when route-driven chapter/seek params should win over stored resume state. */
+  skipSessionResumeRestore?: boolean
   /** Ref that the caller uses to detect deliberate stops (e.g. to gate post-session review) */
   deliberateStopRef: React.MutableRefObject<boolean>
 }
@@ -31,6 +35,8 @@ export function useAudiobookPositionSync({
   isPlaying,
   isLoading,
   seekTo,
+  resumeFromMiniPlayer = false,
+  skipSessionResumeRestore = false,
   deliberateStopRef,
 }: UseAudiobookPositionSyncParams): { savePosition: () => void } {
   /** Persist current playback position and progress to Dexie (E101-S04, E101-S06) */
@@ -103,10 +109,19 @@ export function useAudiobookPositionSync({
     if (book.source.type !== 'remote' || savedSeconds === null || savedSeconds <= 0) {
       return
     }
-    // Skip seek if this book is already active (e.g. returning from mini-player) —
-    // the singleton audio element already has the correct position
-    const alreadyActive = useAudioPlayerStore.getState().currentBookId === book.id
-    if (alreadyActive) {
+    if (skipSessionResumeRestore) {
+      sessionResumeSeekDoneRef.current = true
+      return
+    }
+    const audio = sharedAudioRef.current
+    // Skip seek when resuming from mini-player OR when this exact book already has
+    // a live singleton playback position (direct re-entry into an active session).
+    const hasLivePositionForBook =
+      useAudioPlayerStore.getState().currentBookId === book.id &&
+      !!audio &&
+      Number.isFinite(audio.currentTime) &&
+      audio.currentTime > 0
+    if (resumeFromMiniPlayer || hasLivePositionForBook) {
       sessionResumeSeekDoneRef.current = true
       return
     }
@@ -114,7 +129,7 @@ export function useAudiobookPositionSync({
       sessionResumeSeekDoneRef.current = true
       seekTo(savedSeconds)
     }
-  }, [isLoading, book.id, seekTo])
+  }, [isLoading, book.id, seekTo, resumeFromMiniPlayer, skipSessionResumeRestore])
 
   return { savePosition }
 }
