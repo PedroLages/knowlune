@@ -36,9 +36,11 @@ export function ReviewCard({
       >
         {!flipped ? (
           <div className="flex flex-col items-center gap-3">
-            <span className="text-2xl font-bold text-foreground">{item.word}</span>
+            <span className="text-2xl font-bold text-foreground break-words [overflow-wrap:anywhere]">
+              {item.word}
+            </span>
             {item.context && (
-              <p className="text-sm text-muted-foreground italic max-w-xs">
+              <p className="text-sm text-muted-foreground italic max-w-xs break-words [overflow-wrap:anywhere] line-clamp-4">
                 &ldquo;...{item.context}...&rdquo;
               </p>
             )}
@@ -46,13 +48,17 @@ export function ReviewCard({
           </div>
         ) : (
           <div className="flex flex-col items-center gap-3">
-            <span className="text-lg font-semibold text-foreground">{item.word}</span>
+            <span className="text-lg font-semibold text-foreground break-words [overflow-wrap:anywhere] line-clamp-2">
+              {item.word}
+            </span>
             <div className="h-px w-16 bg-border" />
-            <p className="text-base text-muted-foreground">
+            <p className="text-base text-muted-foreground break-words [overflow-wrap:anywhere]">
               {item.definition || 'No definition added yet'}
             </p>
             {item.note && (
-              <p className="text-sm text-muted-foreground/70 italic mt-1">{item.note}</p>
+              <p className="text-sm text-muted-foreground/70 italic mt-1 break-words [overflow-wrap:anywhere] line-clamp-6">
+                {item.note}
+              </p>
             )}
           </div>
         )}

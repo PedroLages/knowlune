@@ -13,8 +13,8 @@
  * @module Vocabulary
  * @since E109-S01
  */
-import { useEffect, useState, useCallback } from 'react'
-import { BookOpen, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
+import { BookOpen, RotateCcw, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
 import { useVocabularyStore } from '@/stores/useVocabularyStore'
 import { useBookStore } from '@/stores/useBookStore'
 import { Button } from '@/app/components/ui/button'
@@ -38,9 +38,12 @@ import { toast } from 'sonner'
 import { VocabularyCard } from '@/app/components/vocabulary/VocabularyCard'
 import { ReviewCard } from '@/app/components/vocabulary/ReviewCard'
 import { EditDialog } from '@/app/components/vocabulary/EditDialog'
+import { VocabularyDetailsDialog } from '@/app/components/vocabulary/VocabularyDetailsDialog'
+import { useIsDesktop } from '@/app/hooks/useMediaQuery'
 import type { VocabularyItem } from '@/data/types'
 
 type ViewMode = 'list' | 'review'
+type MasteryFilter = 'all' | '0' | '1' | '2' | '3'
 
 export function Vocabulary() {
   const {
@@ -62,25 +65,39 @@ export function Vocabulary() {
 
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [filterBook, setFilterBook] = useState<string>('all')
-  const [filterMastery, setFilterMastery] = useState<string>('all')
+  const [filterMastery, setFilterMastery] = useState<MasteryFilter>('all')
   const [editingItem, setEditingItem] = useState<VocabularyItem | null>(null)
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [flipped, setFlipped] = useState(false)
+  const isDesktop = useIsDesktop()
 
   useEffect(() => {
     loadAllItems()
     loadBooks()
   }, [loadAllItems, loadBooks])
 
-  const bookTitleMap = new Map(books.map(b => [b.id, b.title]))
+  const bookTitleMap = useMemo(() => new Map(books.map(b => [b.id, b.title])), [books])
 
-  const filteredItems = items.filter(item => {
-    if (filterBook !== 'all' && item.bookId !== filterBook) return false
-    if (filterMastery !== 'all' && item.masteryLevel !== Number(filterMastery)) return false
-    return true
-  })
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      if (filterBook !== 'all' && item.bookId !== filterBook) return false
+      if (filterMastery !== 'all' && item.masteryLevel !== Number(filterMastery)) return false
+      return true
+    })
+  }, [items, filterBook, filterMastery])
 
   const reviewableItems = getReviewableItems()
   const currentReviewItem = reviewableItems[reviewIndex]
+
+  useEffect(() => {
+    if (viewMode !== 'review') return
+    if (reviewableItems.length === 0 || !currentReviewItem) {
+      setViewMode('list')
+      setReviewIndex(0)
+      setFlipped(false)
+    }
+  }, [currentReviewItem, reviewableItems.length, setReviewIndex, viewMode])
 
   const masteryStats = {
     total: items.length,
@@ -88,6 +105,17 @@ export function Vocabulary() {
   }
   const masteryPercent =
     masteryStats.total > 0 ? Math.round((masteryStats.mastered / masteryStats.total) * 100) : 0
+
+  const filteredMasteryCounts = useMemo(() => {
+    const counts = { new: 0, learning: 0, familiar: 0, mastered: 0 }
+    for (const i of filteredItems) {
+      if (i.masteryLevel === 0) counts.new += 1
+      else if (i.masteryLevel === 1) counts.learning += 1
+      else if (i.masteryLevel === 2) counts.familiar += 1
+      else counts.mastered += 1
+    }
+    return counts
+  }, [filteredItems])
 
   const handleEdit = useCallback((item: VocabularyItem) => {
     setEditingItem(item)
@@ -107,6 +135,11 @@ export function Vocabulary() {
     async (id: string) => {
       const itemToDelete = useVocabularyStore.getState().items.find(i => i.id === id)
       if (!itemToDelete) return
+
+      if (editingItem?.id === id) {
+        setEditingItem(null)
+      }
+
       await deleteItem(id)
       toast('Deleted', {
         description: `"${itemToDelete.word}" removed`,
@@ -119,7 +152,31 @@ export function Vocabulary() {
         duration: 4000,
       })
     },
-    [deleteItem, addItem]
+    [deleteItem, addItem, editingItem]
+  )
+
+  useEffect(() => {
+    if (viewMode !== 'list') return
+    if (filteredItems.length === 0) {
+      setSelectedItemId(null)
+      return
+    }
+    if (!selectedItemId || !filteredItems.some(i => i.id === selectedItemId)) {
+      setSelectedItemId(filteredItems[0]?.id ?? null)
+    }
+  }, [filteredItems, selectedItemId, viewMode])
+
+  const selectedItem = useMemo(() => {
+    if (!selectedItemId) return null
+    return filteredItems.find(i => i.id === selectedItemId) ?? null
+  }, [filteredItems, selectedItemId])
+
+  const handleSelectItem = useCallback(
+    (id: string) => {
+      setSelectedItemId(id)
+      if (!isDesktop) setDetailsOpen(true)
+    },
+    [isDesktop]
   )
 
   const handleCorrect = useCallback(async () => {
@@ -289,7 +346,10 @@ export function Vocabulary() {
             </SelectContent>
           </Select>
 
-          <Select value={filterMastery} onValueChange={setFilterMastery}>
+          <Select
+            value={filterMastery}
+            onValueChange={value => setFilterMastery(value as MasteryFilter)}
+          >
             <SelectTrigger className="w-[150px]" aria-label="Filter by mastery">
               <SelectValue placeholder="All levels" />
             </SelectTrigger>
@@ -304,7 +364,7 @@ export function Vocabulary() {
         </div>
       )}
 
-      {/* Word List */}
+      {/* Content */}
       {filteredItems.length === 0 ? (
         <Empty data-testid="vocabulary-empty">
           <EmptyMedia>
@@ -319,16 +379,124 @@ export function Vocabulary() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="grid gap-3" data-testid="vocabulary-list">
-          {filteredItems.map(item => (
-            <VocabularyCard
-              key={item.id}
-              item={item}
-              bookTitle={bookTitleMap.get(item.bookId)}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          ))}
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+          <div className="grid gap-3 min-w-0" data-testid="vocabulary-list">
+            {filteredItems.map(item => (
+              <div key={item.id} data-testid="vocabulary-row" data-vocab-id={item.id}>
+                <VocabularyCard
+                  item={item}
+                  bookTitle={bookTitleMap.get(item.bookId)}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onSelect={handleSelectItem}
+                  selected={item.id === selectedItemId}
+                />
+              </div>
+            ))}
+          </div>
+
+          <aside
+            className="hidden lg:block lg:sticky lg:top-6"
+            data-testid="vocabulary-rail"
+            aria-label="Vocabulary details"
+          >
+            <div className="grid gap-3">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-foreground">Mastery</span>
+                    <span className="text-sm text-muted-foreground">
+                      {masteryStats.mastered}/{masteryStats.total} mastered
+                    </span>
+                  </div>
+                  <Progress value={masteryPercent} className="h-2" aria-label="Mastery progress" />
+                  <div className="mt-3 grid grid-cols-4 gap-2 text-xs">
+                    <div className="min-w-0">
+                      <div className="text-muted-foreground">New</div>
+                      <div className="font-medium text-foreground">{filteredMasteryCounts.new}</div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-muted-foreground">Learning</div>
+                      <div className="font-medium text-foreground">
+                        {filteredMasteryCounts.learning}
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-muted-foreground">Familiar</div>
+                      <div className="font-medium text-foreground">
+                        {filteredMasteryCounts.familiar}
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-muted-foreground">Mastered</div>
+                      <div className="font-medium text-foreground">
+                        {filteredMasteryCounts.mastered}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  {selectedItem ? (
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-2 min-w-0">
+                        <div className="min-w-0">
+                          <div className="text-xs text-muted-foreground">Selected</div>
+                          <div className="mt-1 font-semibold text-foreground break-words [overflow-wrap:anywhere]">
+                            {selectedItem.word}
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            onClick={() => handleEdit(selectedItem)}
+                            aria-label="Edit selected item"
+                          data-testid="vocabulary-rail-edit"
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-destructive hover:text-destructive"
+                            onClick={() => handleDelete(selectedItem.id)}
+                            aria-label="Delete selected item"
+                          data-testid="vocabulary-rail-delete"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {selectedItem.definition && (
+                        <div className="text-sm text-muted-foreground break-words [overflow-wrap:anywhere]">
+                          {selectedItem.definition}
+                        </div>
+                      )}
+
+                      {selectedItem.context && (
+                        <div className="text-xs text-muted-foreground/80 italic break-words [overflow-wrap:anywhere]">
+                          &ldquo;...{selectedItem.context}...&rdquo;
+                        </div>
+                      )}
+
+                      <div className="text-xs text-muted-foreground">
+                        {bookTitleMap.get(selectedItem.bookId) ?? 'Unknown book'}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">
+                      Select a word on the left to see details.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </aside>
         </div>
       )}
 
@@ -339,6 +507,21 @@ export function Vocabulary() {
           onCancel={() => setEditingItem(null)}
         />
       )}
+
+      <VocabularyDetailsDialog
+        open={detailsOpen && !isDesktop}
+        item={selectedItem}
+        bookTitle={selectedItem ? bookTitleMap.get(selectedItem.bookId) : undefined}
+        onOpenChange={setDetailsOpen}
+        onEdit={item => {
+          setDetailsOpen(false)
+          handleEdit(item)
+        }}
+        onDelete={async id => {
+          setDetailsOpen(false)
+          await handleDelete(id)
+        }}
+      />
     </div>
   )
 }
