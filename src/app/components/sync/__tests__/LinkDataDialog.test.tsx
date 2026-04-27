@@ -147,7 +147,7 @@ describe('LinkDataDialog', () => {
       const { onResolved } = renderDialog()
       fireEvent.click(screen.getByRole('button', { name: /link to my account/i }))
       await waitFor(() => expect(onResolved).toHaveBeenCalled())
-      expect(backfillUserId).toHaveBeenCalledWith(USER_ID)
+      expect(backfillUserId).toHaveBeenCalledWith(USER_ID, undefined)
     })
 
     it('starts the sync engine after backfill', async () => {

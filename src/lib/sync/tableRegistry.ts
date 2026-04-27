@@ -111,8 +111,14 @@ const contentProgress: TableRegistryEntry = {
   supabaseTable: 'content_progress',
   conflictStrategy: 'monotonic',
   priority: 0,
-  fieldMap: {},
+  fieldMap: {
+    // Dexie uses itemId; Supabase uses content_id.
+    itemId: 'content_id',
+    contentType: 'content_type',
+    progressPct: 'progress_pct',
+  },
   compoundPkFields: ['courseId', 'itemId'],
+  monotonicFields: ['progressPct'],
 }
 
 const studySessions: TableRegistryEntry = {
@@ -138,8 +144,15 @@ const progress: TableRegistryEntry = {
   supabaseTable: 'video_progress',
   conflictStrategy: 'monotonic',
   priority: 0,
-  fieldMap: {},
-  monotonicFields: ['watchedSeconds'],
+  fieldMap: {
+    // Dexie uses VideoProgress fields; Supabase uses video_progress columns.
+    // Map local canonical fields to the RPC/DB column names so uploads don't silently drop.
+    currentTime: 'watched_seconds',
+    completionPercentage: 'watched_percent',
+    durationSeconds: 'duration_seconds',
+  },
+  // Monotonic position: watched_seconds (mapped from currentTime) should only increase.
+  monotonicFields: ['currentTime'],
   compoundPkFields: ['courseId', 'videoId'],
 }
 

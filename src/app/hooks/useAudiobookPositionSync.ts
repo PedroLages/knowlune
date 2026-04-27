@@ -14,7 +14,6 @@
 import { useEffect, useCallback, useRef } from 'react'
 import { useBookStore } from '@/stores/useBookStore'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
-import { db } from '@/db/schema'
 import { sharedAudioRef } from '@/app/hooks/useAudioPlayer'
 import type { Book } from '@/data/types'
 
@@ -40,34 +39,17 @@ export function useAudiobookPositionSync({
     if (!audio || !isFinite(audio.currentTime) || audio.currentTime === 0) return
 
     const position = { type: 'time' as const, seconds: audio.currentTime }
-    const now = new Date().toISOString()
 
     // Calculate progress percentage from totalDuration (E101-S06: FR31/FR32)
     const totalDur = book.totalDuration ?? 0
     const progress =
       totalDur > 0 ? Math.min(100, Math.round((audio.currentTime / totalDur) * 100)) : undefined
 
-    // Optimistic store update
-    useBookStore.setState(state => ({
-      books: state.books.map(b =>
-        b.id === book.id
-          ? {
-              ...b,
-              currentPosition: position,
-              lastOpenedAt: now,
-              ...(progress !== undefined && { progress }),
-            }
-          : b
-      ),
-    }))
-
-    // Persist to Dexie — non-critical, never disrupt playback UX
-    type DexiePositionUpdate = Partial<Pick<Book, 'currentPosition' | 'lastOpenedAt' | 'progress'>>
-    const dexieUpdate: DexiePositionUpdate = { currentPosition: position, lastOpenedAt: now }
-    if (progress !== undefined) dexieUpdate.progress = progress
-    // silent-catch-ok: Dexie persist is non-critical, position re-saved on next pause
-    db.books
-      .update(book.id, dexieUpdate as Parameters<typeof db.books.update>[1])
+    // Route through the store write-path so it reaches the sync queue/Supabase.
+    // Progress is optional when totalDuration is unknown (we keep the existing value).
+    useBookStore
+      .getState()
+      .updateBookPosition(book.id, position, progress)
       .catch(err => console.error('[useAudiobookPositionSync] Failed to save position:', err))
   }, [book.id, book.totalDuration])
 

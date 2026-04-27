@@ -53,6 +53,18 @@ function deriveModuleStatus(
   return 'in-progress'
 }
 
+function toProgressPct(status: CompletionStatus): number {
+  switch (status) {
+    case 'completed':
+      return 100
+    case 'in-progress':
+      return 50
+    case 'not-started':
+    default:
+      return 0
+  }
+}
+
 export const useContentProgressStore = create<ContentProgressState>((set, get) => ({
   statusMap: {},
   isLoading: false,
@@ -104,7 +116,9 @@ export const useContentProgressStore = create<ContentProgressState>((set, get) =
         cascadeRecords.push({
           courseId,
           itemId: mod.id,
+          contentType: 'module',
           status: moduleStatus,
+          progressPct: toProgressPct(moduleStatus),
           updatedAt: now,
         })
       }
@@ -129,7 +143,9 @@ export const useContentProgressStore = create<ContentProgressState>((set, get) =
         const itemRecord: ContentProgress = {
           courseId,
           itemId,
+          contentType: modules.some(m => m.id === itemId) ? 'module' : 'lesson',
           status,
+          progressPct: toProgressPct(status),
           updatedAt: now,
         }
         await syncableWrite('contentProgress', 'put', itemRecord as unknown as SyncableRecord)

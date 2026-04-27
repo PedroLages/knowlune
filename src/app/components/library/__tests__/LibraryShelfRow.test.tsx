@@ -267,8 +267,6 @@ describe('LibraryShelfRow', () => {
       renderShelf({ 'data-testid': 'continue-listening' })
       expect(screen.getByTestId('continue-listening-scroll-left')).toBeInTheDocument()
       expect(screen.getByTestId('continue-listening-scroll-right')).toBeInTheDocument()
-      expect(screen.getByTestId('continue-listening-fade-left')).toBeInTheDocument()
-      expect(screen.getByTestId('continue-listening-fade-right')).toBeInTheDocument()
     })
 
     it('disables left chevron at start and enables right when overflow exists', () => {

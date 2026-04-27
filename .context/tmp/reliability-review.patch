@@ -1,0 +1,949 @@
+diff --git a/src/app/components/course/PdfContent.tsx b/src/app/components/course/PdfContent.tsx
+index bf01e44b..1f6e49b8 100644
+--- a/src/app/components/course/PdfContent.tsx
++++ b/src/app/components/course/PdfContent.tsx
+@@ -210,20 +210,21 @@ export function PdfContent({ courseId, lessonId }: PdfContentProps) {
+         db.progress
+           .where('[courseId+videoId]')
+           .equals([courseId, lessonId])
+           .first()
+           .then(async existing => {
+             await syncableWrite('progress', 'put', {
+               ...(existing ?? {
+                 currentTime: 0,
+                 completionPercentage: 0,
+               }),
++              durationSeconds: existing?.durationSeconds ?? 0,
+               courseId,
+               videoId: lessonId,
+               currentPage: page,
+             })
+           })
+           .catch(() => {
+             // silent-catch-ok — page save is non-critical
+           })
+       }, 500)
+     },
+diff --git a/src/app/components/course/tabs/MaterialsTab.tsx b/src/app/components/course/tabs/MaterialsTab.tsx
+index 23ed29f5..20f25270 100644
+--- a/src/app/components/course/tabs/MaterialsTab.tsx
++++ b/src/app/components/course/tabs/MaterialsTab.tsx
+@@ -154,20 +154,21 @@ function PdfSection({ pdf, courseId, isOpen, onToggle }: PdfSectionProps) {
+         db.progress
+           .where('[courseId+videoId]')
+           .equals([courseId, pdf.id])
+           .first()
+           .then(async existing => {
+             await syncableWrite('progress', 'put', {
+               ...(existing ?? {
+                 currentTime: 0,
+                 completionPercentage: 0,
+               }),
++              durationSeconds: existing?.durationSeconds ?? 0,
+               courseId,
+               videoId: pdf.id,
+               currentPage: page,
+             })
+           })
+           .catch(() => {
+             // silent-catch-ok — page save is non-critical
+           })
+       }, 500)
+     },
+diff --git a/src/app/components/library/__tests__/LibraryShelfRow.test.tsx b/src/app/components/library/__tests__/LibraryShelfRow.test.tsx
+index 8193fe60..489a1a5a 100644
+--- a/src/app/components/library/__tests__/LibraryShelfRow.test.tsx
++++ b/src/app/components/library/__tests__/LibraryShelfRow.test.tsx
+@@ -260,22 +260,20 @@ describe('LibraryShelfRow', () => {
+       expect(screen.queryByTestId('library-shelf-row')).toBeNull()
+       expect(screen.queryByTestId('library-shelf-row-heading')).toBeNull()
+     })
+   })
+ 
+   describe('desktop scroll affordances', () => {
+     it('renders left/right scroll controls and edge fades', () => {
+       renderShelf({ 'data-testid': 'continue-listening' })
+       expect(screen.getByTestId('continue-listening-scroll-left')).toBeInTheDocument()
+       expect(screen.getByTestId('continue-listening-scroll-right')).toBeInTheDocument()
+-      expect(screen.getByTestId('continue-listening-fade-left')).toBeInTheDocument()
+-      expect(screen.getByTestId('continue-listening-fade-right')).toBeInTheDocument()
+     })
+ 
+     it('disables left chevron at start and enables right when overflow exists', () => {
+       renderShelf({
+         'data-testid': 'continue-listening',
+         children: [
+           <div key="a">A</div>,
+           <div key="b">B</div>,
+           <div key="c">C</div>,
+         ],
+diff --git a/src/app/components/sync/__tests__/LinkDataDialog.test.tsx b/src/app/components/sync/__tests__/LinkDataDialog.test.tsx
+index f0fdbdf8..b9ef975a 100644
+--- a/src/app/components/sync/__tests__/LinkDataDialog.test.tsx
++++ b/src/app/components/sync/__tests__/LinkDataDialog.test.tsx
+@@ -140,21 +140,21 @@ describe('LinkDataDialog', () => {
+       renderDialog({ open: false })
+       expect(screen.queryByText('You have local data')).toBeNull()
+     })
+   })
+ 
+   describe('handleLink', () => {
+     it('calls backfillUserId with the correct userId', async () => {
+       const { onResolved } = renderDialog()
+       fireEvent.click(screen.getByRole('button', { name: /link to my account/i }))
+       await waitFor(() => expect(onResolved).toHaveBeenCalled())
+-      expect(backfillUserId).toHaveBeenCalledWith(USER_ID)
++      expect(backfillUserId).toHaveBeenCalledWith(USER_ID, undefined)
+     })
+ 
+     it('starts the sync engine after backfill', async () => {
+       const { onResolved } = renderDialog()
+       fireEvent.click(screen.getByRole('button', { name: /link to my account/i }))
+       await waitFor(() => expect(onResolved).toHaveBeenCalled())
+       expect(syncEngine.start).toHaveBeenCalledWith(USER_ID)
+     })
+ 
+     it('sets the localStorage linked flag', async () => {
+diff --git a/src/app/config/navigation.ts b/src/app/config/navigation.ts
+index 0909737b..8ec595cc 100644
+--- a/src/app/config/navigation.ts
++++ b/src/app/config/navigation.ts
+@@ -119,21 +119,21 @@ export const settingsItem: NavigationItem = {
+ }
+ 
+ // Flat list of all navigation items (used by mobile bottom bar and search)
+ export const navigationItems: NavigationItem[] = [
+   ...navigationGroups.flatMap(g => g.items),
+   settingsItem,
+ ]
+ 
+ // Paths for primary navigation (shown in mobile bottom bar).
+ // The bottom bar has exactly 4 slots — this list must stay at 4 entries.
+-export const primaryNavPaths = ['/', '/my-class', '/courses', '/notes']
++export const primaryNavPaths = ['/overview', '/courses', '/my-class', '/notes']
+ 
+ // Get primary navigation items (for mobile bottom bar)
+ export function getPrimaryNav(): NavigationItem[] {
+   return navigationItems.filter(item => primaryNavPaths.includes(item.path))
+ }
+ 
+ // Get overflow navigation items (shown in mobile "More" drawer)
+ export function getOverflowNav(): NavigationItem[] {
+   return navigationItems.filter(item => !primaryNavPaths.includes(item.path))
+ }
+diff --git a/src/app/hooks/useAudiobookPositionSync.ts b/src/app/hooks/useAudiobookPositionSync.ts
+index 637c44f0..33f02a01 100644
+--- a/src/app/hooks/useAudiobookPositionSync.ts
++++ b/src/app/hooks/useAudiobookPositionSync.ts
+@@ -7,21 +7,20 @@
+  *  - savePosition callback (updates store + Dexie on pause / every 5s / unmount)
+  *  - Deliberate-stop tracking (marks stop on unmount and audio 'ended' event)
+  *  - Session resume seek (remote books: seek to saved position after load)
+  *
+  * @module useAudiobookPositionSync
+  * @since E108-S04
+  */
+ import { useEffect, useCallback, useRef } from 'react'
+ import { useBookStore } from '@/stores/useBookStore'
+ import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
+-import { db } from '@/db/schema'
+ import { sharedAudioRef } from '@/app/hooks/useAudioPlayer'
+ import type { Book } from '@/data/types'
+ 
+ interface UseAudiobookPositionSyncParams {
+   book: Book
+   isPlaying: boolean
+   isLoading: boolean
+   seekTo: (seconds: number) => void
+   /** Ref that the caller uses to detect deliberate stops (e.g. to gate post-session review) */
+   deliberateStopRef: React.MutableRefObject<boolean>
+@@ -33,48 +32,31 @@ export function useAudiobookPositionSync({
+   isLoading,
+   seekTo,
+   deliberateStopRef,
+ }: UseAudiobookPositionSyncParams): { savePosition: () => void } {
+   /** Persist current playback position and progress to Dexie (E101-S04, E101-S06) */
+   const savePosition = useCallback(() => {
+     const audio = sharedAudioRef.current
+     if (!audio || !isFinite(audio.currentTime) || audio.currentTime === 0) return
+ 
+     const position = { type: 'time' as const, seconds: audio.currentTime }
+-    const now = new Date().toISOString()
+ 
+     // Calculate progress percentage from totalDuration (E101-S06: FR31/FR32)
+     const totalDur = book.totalDuration ?? 0
+     const progress =
+       totalDur > 0 ? Math.min(100, Math.round((audio.currentTime / totalDur) * 100)) : undefined
+ 
+-    // Optimistic store update
+-    useBookStore.setState(state => ({
+-      books: state.books.map(b =>
+-        b.id === book.id
+-          ? {
+-              ...b,
+-              currentPosition: position,
+-              lastOpenedAt: now,
+-              ...(progress !== undefined && { progress }),
+-            }
+-          : b
+-      ),
+-    }))
+-
+-    // Persist to Dexie — non-critical, never disrupt playback UX
+-    type DexiePositionUpdate = Partial<Pick<Book, 'currentPosition' | 'lastOpenedAt' | 'progress'>>
+-    const dexieUpdate: DexiePositionUpdate = { currentPosition: position, lastOpenedAt: now }
+-    if (progress !== undefined) dexieUpdate.progress = progress
+-    // silent-catch-ok: Dexie persist is non-critical, position re-saved on next pause
+-    db.books
+-      .update(book.id, dexieUpdate as Parameters<typeof db.books.update>[1])
++    // Route through the store write-path so it reaches the sync queue/Supabase.
++    // Progress is optional when totalDuration is unknown (we keep the existing value).
++    useBookStore
++      .getState()
++      .updateBookPosition(book.id, position, progress)
+       .catch(err => console.error('[useAudiobookPositionSync] Failed to save position:', err))
+   }, [book.id, book.totalDuration])
+ 
+   // Save position when playback pauses
+   useEffect(() => {
+     if (!isPlaying) {
+       savePosition()
+     }
+   }, [isPlaying, savePosition])
+ 
+diff --git a/src/app/pages/BookReader.tsx b/src/app/pages/BookReader.tsx
+index c501dae7..d84729be 100644
+--- a/src/app/pages/BookReader.tsx
++++ b/src/app/pages/BookReader.tsx
+@@ -444,32 +444,26 @@ export function BookReader() {
+       audiobookPlayerDragYRef.current = 0
+       audiobookPlayerStartedFromHandleRef.current = false
+       setAudiobookPlayerDragY(0)
+       setIsAudiobookPlayerDragging(false)
+       setIsAudiobookPlayerMinimizing(false)
+     }
+   }, [book?.format, bookId])
+ 
+   // Update lastOpenedAt when reader opens (once book is found)
+   useEffect(() => {
+-    if (!book || !bookId) return
+-
+-    const now = new Date().toISOString()
+-    // Update in-memory state
+-    useBookStore.setState(state => ({
+-      books: state.books.map(b => (b.id === bookId ? { ...b, lastOpenedAt: now } : b)),
+-    }))
+-    // Persist to Dexie (best-effort, non-blocking)
+-    // silent-catch-ok: lastOpenedAt failure is non-fatal — sorting will use previous value
+-    db.books.update(bookId, { lastOpenedAt: now }).catch(err => {
+-      console.error('[BookReader] Failed to update lastOpenedAt:', err)
+-    })
++    if (!bookId) return
++
++    useBookStore
++      .getState()
++      .updateBookLastOpenedAt(bookId)
++      .catch(err => console.error('[BookReader] Failed to update lastOpenedAt:', err))
+   }, [bookId]) // Only run once on mount (bookId is stable for this page)
+ 
+   // Resolve sourceHighlightId query param → cfiRange for back-navigation (E85-S05)
+   useEffect(() => {
+     const highlightId = searchParams.get('sourceHighlightId')
+     if (!highlightId) return
+ 
+     let ignore = false
+     db.bookHighlights
+       .get(highlightId)
+@@ -631,38 +625,24 @@ export function BookReader() {
+     (cfi: string, progress: number) => {
+       if (!bookId) return
+ 
+       if (saveTimerRef.current) {
+         clearTimeout(saveTimerRef.current)
+       }
+ 
+       saveTimerRef.current = setTimeout(() => {
+         const position: ContentPosition = { type: 'cfi', value: cfi }
+         const progressInt = Math.round(progress * 100) // 0–100
+-
+-        // Update in-memory BookStore
+-        useBookStore.setState(state => ({
+-          books: state.books.map(b =>
+-            b.id === bookId ? { ...b, currentPosition: position, progress: progressInt } : b
+-          ),
+-        }))
+-
+-        // Persist to Dexie — single update, no toast (non-disruptive during reading)
+-        // silent-catch-ok: position will be re-saved on next page turn (non-fatal during reading)
+-        db.books
+-          .update(bookId, {
+-            currentPosition: position,
+-            progress: progressInt,
+-          })
+-          .catch(err => {
+-            console.error('[BookReader] Failed to save position:', err)
+-          })
++        useBookStore
++          .getState()
++          .updateBookPosition(bookId, position, progressInt)
++          .catch(err => console.error('[BookReader] Failed to save position:', err))
+       }, POSITION_SAVE_DEBOUNCE_MS)
+     },
+     [bookId]
+   )
+ 
+   /**
+    * Immediately flush the current EPUB position to Dexie — used before navigating
+    * away (e.g., format switch) to ensure position is persisted before unmount.
+    * Cancels any pending debounced save first (AC4 / E103-S02).
+    */
+@@ -673,37 +653,23 @@ export function BookReader() {
+       saveTimerRef.current = null
+     }
+     try {
+       const loc = renditionRef.current.currentLocation()
+       if (loc && typeof loc === 'object' && 'start' in loc) {
+         const start = (loc as { start?: { cfi?: string; percentage?: number } }).start
+         if (start?.cfi) {
+           const position: ContentPosition = { type: 'cfi', value: start.cfi }
+           const progressInt =
+             typeof start.percentage === 'number' ? Math.round(start.percentage * 100) : undefined
+-          useBookStore.setState(state => ({
+-            books: state.books.map(b =>
+-              b.id === bookId
+-                ? {
+-                    ...b,
+-                    currentPosition: position,
+-                    ...(progressInt !== undefined && { progress: progressInt }),
+-                  }
+-                : b
+-            ),
+-          }))
+-          // silent-catch-ok: pre-navigation save failure is non-fatal (position saved on next open)
+-          db.books
+-            .update(bookId, {
+-              currentPosition: position,
+-              ...(progressInt !== undefined && { progress: progressInt }),
+-            })
++          useBookStore
++            .getState()
++            .updateBookPosition(bookId, position, progressInt)
+             .catch(err => console.error('[BookReader] Pre-navigation EPUB save failed:', err))
+         }
+       }
+     } catch {
+       // silent-catch-ok: rendition may not have location yet
+     }
+   }, [bookId])
+ 
+   /** CFI location change — update store position + progress + current chapter */
+   const handleLocationChanged = useCallback(
+diff --git a/src/data/types.ts b/src/data/types.ts
+index 6afc5d01..43ec7d51 100644
+--- a/src/data/types.ts
++++ b/src/data/types.ts
+@@ -238,31 +238,37 @@ export interface ImportedPdf {
+   fileBlob?: Blob // Server-fetched file blob (E94-S05)
+ }
+ 
+ // --- Content Completion Status (Story 4.1) ---
+ 
+ export type CompletionStatus = 'not-started' | 'in-progress' | 'completed'
+ 
+ export interface ContentProgress {
+   courseId: string
+   itemId: string // lesson or module ID
++  /** Canonical content type expected by Supabase content_progress.content_type */
++  contentType?: string
+   status: CompletionStatus
++  /** 0-100 integer percentage expected by Supabase content_progress.progress_pct */
++  progressPct?: number
+   updatedAt: string // ISO 8601
+ }
+ 
+ // --- Video Progress & Bookmarks (Story 2.1) ---
+ 
+ export interface VideoProgress {
+   courseId: string
+   videoId: string
+   currentTime: number
+   completionPercentage: number
++  /** Total duration in seconds. Used for Supabase video_progress.duration_seconds sync. */
++  durationSeconds?: number
+   completedAt?: string // ISO 8601
+   /** Last-viewed PDF page (1-based). Used by PdfContent to restore position. */
+   currentPage?: number
+   /**
+    * ISO 8601 — stamped by `syncableWrite` on every row mutation (post-v52 sync foundation).
+    * Captures "was touched" regardless of completion state; used by unified-search
+    * Continue Learning to order courses by most-recent activity.
+    */
+   updatedAt?: string
+ }
+diff --git a/src/db/__tests__/schema-checkpoint.test.ts b/src/db/__tests__/schema-checkpoint.test.ts
+index 6aa44546..d3cb17d6 100644
+--- a/src/db/__tests__/schema-checkpoint.test.ts
++++ b/src/db/__tests__/schema-checkpoint.test.ts
+@@ -21,41 +21,44 @@ function extractSchema(db: Dexie): Record<string, string> {
+   const schema: Record<string, string> = {}
+   for (const table of db.tables) {
+     const primKey = table.schema.primKey.src
+     const indexes = table.schema.indexes.map(idx => idx.src).sort()
+     schema[table.name] = [primKey, ...indexes].join(', ')
+   }
+   return schema
+ }
+ 
+ describe('Dexie migration checkpoint', () => {
+-  it('CHECKPOINT_VERSION should be 58', () => {
+-    expect(CHECKPOINT_VERSION).toBe(58)
++  it('CHECKPOINT_VERSION should be 61', () => {
++    expect(CHECKPOINT_VERSION).toBe(61)
+   })
+ 
+   it('CHECKPOINT_SCHEMA should define all expected tables', () => {
+     // courses table dropped in v30 (E89-S01)
+     // courseEmbeddings added in v35 (E52-S01)
+     // audioBookmarks added in v38 (E87-S01)
+     // opdsCatalogs added in v39 (E88-S01)
+     // audiobookshelfServers added in v40 (E101-S01)
+     // chapterMappings added in v41 (E103-S01)
+     // shelves, bookShelves added in v44 (E110-S01)
+     // series index on books added in v45 (E110-S02)
+     // readingQueue added in v46 (E110-S03)
+     // audioClips added in v47 (E111-S01)
+     // bookReviews added in v48 (E113-S01)
+     // syncQueue, syncMetadata added in v52 (E92-S02)
+     // searchFrecency added in v53 (E117-S02)
+     // readingStreakCache added in v56 (E95-S04)
+     // userConsents added in v58 (E119-S07)
++    // absSeries/absCollections added in v60 (fix E-ABS-QA)
+     const expectedTables = [
++      'absCollections',
++      'absSeries',
+       'aiUsageEvents',
+       'audioBookmarks',
+       'audioClips',
+       'audiobookshelfServers',
+       'authors',
+       'bookFiles',
+       'bookHighlights',
+       'bookReviews',
+       'bookShelves',
+       'bookmarks',
+diff --git a/src/db/__tests__/schema.test.ts b/src/db/__tests__/schema.test.ts
+index de056ea0..1fa56944 100644
+--- a/src/db/__tests__/schema.test.ts
++++ b/src/db/__tests__/schema.test.ts
+@@ -44,20 +44,22 @@ function makeVideo(overrides: Record<string, unknown> = {}) {
+   }
+ }
+ 
+ describe('ElearningDB schema', () => {
+   it('should create the database with correct tables including notes', async () => {
+     expect(db.name).toBe('ElearningDB')
+     // courses table dropped in v30 (E89-S01)
+     // syncQueue, syncMetadata added in v52 (E92-S02)
+     // searchFrecency added in v53 (E117-S02)
+     expect(db.tables.map(t => t.name).sort()).toEqual([
++      'absCollections',
++      'absSeries',
+       'aiUsageEvents',
+       'audioBookmarks',
+       'audioClips',
+       'audiobookshelfServers',
+       'authors',
+       'bookFiles',
+       'bookHighlights',
+       'bookReviews',
+       'bookShelves',
+       'bookmarks',
+@@ -100,22 +102,22 @@ describe('ElearningDB schema', () => {
+       'transcriptEmbeddings',
+       'userConsents',
+       'videoCaptions',
+       'vocabularyItems',
+       'youtubeChapters',
+       'youtubeTranscripts',
+       'youtubeVideoCache',
+     ])
+   })
+ 
+-  it('should be at version 59 (E119-S08: frozenReason on learnerModels)', () => {
+-    expect(db.verno).toBe(59)
++  it('should be at version 61 (guest gate)', () => {
++    expect(db.verno).toBe(61)
+   })
+ 
+   it('should have searchFrecency table with compound primary key [entityType+entityId] (v53)', () => {
+     const table = db.searchFrecency
+     expect(table).toBeDefined()
+     expect(table.schema.primKey.src).toBe('[entityType+entityId]')
+     const indexNames = table.schema.indexes.map(i => i.name).sort()
+     expect(indexNames).toContain('entityType')
+     expect(indexNames).toContain('lastOpenedAt')
+   })
+diff --git a/src/db/checkpoint.ts b/src/db/checkpoint.ts
+index 7b34825c..7cc8f0c7 100644
+--- a/src/db/checkpoint.ts
++++ b/src/db/checkpoint.ts
+@@ -1,44 +1,44 @@
+ /**
+- * Dexie Migration Checkpoint — v58
++ * Dexie Migration Checkpoint — v61
+  *
+  * This file provides a frozen snapshot of the complete IndexedDB schema at version 58.
+  * Fresh installs skip the incremental version declarations and create the full
+  * schema in a single step. Existing users at lower versions still run incremental
+  * migrations through the legacy version chain in schema.ts.
+  *
+  * When adding new schema versions:
+  *   1. Add the new version to schema.ts (after the checkpoint gate)
+  *   2. When you next cut a checkpoint, update CHECKPOINT_VERSION and CHECKPOINT_SCHEMA
+  *      to reflect the new latest version
+  *
+  * @see schema.ts for the full migration chain and upgrade callbacks
+  */
+ 
+ /**
+  * The version number this checkpoint represents.
+  * All versions up to (and including) this number are collapsed into
+  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
+  * for fresh installs.
+  */
+-export const CHECKPOINT_VERSION = 58
++export const CHECKPOINT_VERSION = 61
+ 
+ /**
+  * Shared `searchFrecency` index string. Used by both the v53 `.stores()` call
+  * in `schema.ts` and `CHECKPOINT_SCHEMA` below so the two declarations cannot
+  * drift by a single character.
+  */
+ export const SEARCH_FRECENCY_INDEXES = '[entityType+entityId], entityType, lastOpenedAt'
+ 
+ /**
+  * Complete schema snapshot at CHECKPOINT_VERSION.
+- * This is the result of applying all migrations v1–v58 on a fresh database.
++ * This is the result of applying all migrations v1–v61 on a fresh database.
+  *
+  * IMPORTANT: This must exactly match the schema produced by running all
+  * incremental migrations. The unit test `schema-checkpoint.test.ts`
+  * enforces this invariant.
+  *
+  * Note: `courses` table was dropped in v30 (E89-S01) — dead regular course system removed.
+  * v31 (E59-S03): flashcards and reviewRecords indexes updated for FSRS migration.
+  * v35 (E52-S01): courseEmbeddings table added for ML quiz generation.
+  * v36 (E50-S01): studySchedules table for calendar integration.
+  * v37 (E83-S01): books, bookHighlights, bookFiles tables for book library.
+@@ -62,25 +62,25 @@ export const SEARCH_FRECENCY_INDEXES = '[entityType+entityId], entityType, lastO
+  * v54 (E93-S05): embeddings.id backfill (no schema change).
+  * v55 (E94-S05): authors.photoBlob + importedPdfs.fileBlob optional fields (no index change).
+  * v56 (E95-S04): readingStreakCache table for optimistic server-streak render.
+  *                Local-only cache of the `compute_reading_streak` RPC result; not synced.
+  * v57 (E95-S05): Credential-off-the-row marker for `opdsCatalogs` / `audiobookshelfServers`.
+  *                No schema/index change — the TypeScript types drop `auth.password` / `apiKey`,
+  *                and the post-boot `migrateCredentialsToVault()` clears legacy values from Dexie
+  *                once the user authenticates.
+  *
+  * Versions beyond this checkpoint (applied incrementally in schema.ts):
+- *   v59 (E119-S08): No schema change — optional `frozenReason` field on learnerModels.
+- *   v60 (fix E-ABS-QA): New local-only `absSeries` and `absCollections` tables.
++ *   (none)
+  */
+ export const CHECKPOINT_SCHEMA: Record<string, string> = {
+-  importedCourses: 'id, name, importedAt, status, *tags, source, userId, [userId+updatedAt]',
++  importedCourses:
++    'id, name, importedAt, status, *tags, source, userId, [userId+updatedAt], guestSessionId',
+   importedVideos: 'id, courseId, filename, youtubeVideoId, userId, [userId+updatedAt]',
+   importedPdfs: 'id, courseId, filename, userId, [userId+updatedAt]',
+   progress: '[courseId+videoId], courseId, videoId, userId, [userId+updatedAt]',
+   bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt, userId, [userId+updatedAt]',
+   notes:
+     'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt, userId, [userId+updatedAt]',
+   screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+   studySessions:
+     'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime, userId, [userId+updatedAt]',
+   contentProgress: '[courseId+itemId], courseId, itemId, status, userId, [userId+updatedAt]',
+@@ -101,21 +101,21 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
+   learningPaths: 'id, createdAt, userId, [userId+updatedAt]',
+   learningPathEntries: 'id, [pathId+courseId], pathId, userId, [userId+updatedAt]',
+   youtubeVideoCache: 'videoId, expiresAt',
+   youtubeTranscripts: '[courseId+videoId], courseId, videoId, status',
+   youtubeChapters: 'id, courseId, order',
+   notifications: 'id, type, createdAt, readAt, dismissedAt, userId, [userId+updatedAt]',
+   notificationPreferences: 'id, userId, [userId+updatedAt]',
+   courseEmbeddings: 'courseId',
+   studySchedules: 'id, courseId, learningPathId, enabled, userId, [userId+updatedAt]',
+   books:
+-    'id, title, author, format, status, createdAt, lastOpenedAt, series, userId, [userId+updatedAt]',
++    'id, title, author, format, status, createdAt, lastOpenedAt, series, userId, [userId+updatedAt], guestSessionId',
+   bookHighlights:
+     'id, bookId, color, flashcardId, createdAt, lastReviewedAt, reviewRating, userId, [userId+updatedAt]',
+   bookFiles: '[bookId+filename], bookId',
+   audioBookmarks: 'id, bookId, chapterIndex, timestamp, createdAt, userId, [userId+updatedAt]',
+   opdsCatalogs: 'id, name, url, createdAt, userId, [userId+updatedAt]',
+   audiobookshelfServers: 'id, name, url, status, lastSyncedAt, userId, [userId+updatedAt]',
+   chapterMappings: '[epubBookId+audioBookId], epubBookId, audioBookId, userId, [userId+updatedAt]',
+   vocabularyItems: 'id, bookId, masteryLevel, createdAt, userId, [userId+updatedAt]',
+   shelves: 'id, name, isDefault, sortOrder, createdAt, userId, [userId+updatedAt]',
+   bookShelves: 'id, bookId, shelfId, [bookId+shelfId], addedAt, userId, [userId+updatedAt]',
+@@ -127,20 +127,23 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
+   learnerModels: 'id, courseId, userId, [userId+updatedAt]',
+   // v52 (E92-S02): sync infrastructure tables
+   syncQueue: '++id, status, [tableName+recordId], createdAt',
+   syncMetadata: 'table',
+   // v53 (E117-S02): unified-search frecency counters (local-only, no userId).
+   searchFrecency: SEARCH_FRECENCY_INDEXES,
+   // v56 (E95-S04): local cache of server-computed reading streak (local-only, per-user).
+   readingStreakCache: 'userId, cachedAt',
+   // v58 (E119-S07): GDPR consent ledger — one row per (userId, purpose) pair.
+   userConsents: 'id, userId, purpose, [userId+purpose], [userId+updatedAt], updatedAt',
++  // v60 (fix E-ABS-QA): ABS library caches (local-only; not synced).
++  absSeries: 'id, serverId, libraryId, name',
++  absCollections: 'id, serverId, libraryId, name',
+ }
+ 
+ // v42 (E109-S01): vocabularyItems table added
+ // v43 (E109-S02): (data-only migration, no schema change)
+ // v44 (E110-S01): shelves + bookShelves tables added for Smart Shelves
+ // v45 (E110-S02): series index added to books for series grouping
+ // v46 (E110-S03): readingQueue table for reading queue
+ // v47 (E111-S01): audioClips table for audio clip ranges
+ // v48 (E113-S01): bookReviews table for personal book reviews & star ratings
+ // v49 (E57-S03): chatConversations table for tutor chat persistence
+diff --git a/src/lib/sync/__tests__/p0-sync.test.ts b/src/lib/sync/__tests__/p0-sync.test.ts
+index 5986990e..54e293b9 100644
+--- a/src/lib/sync/__tests__/p0-sync.test.ts
++++ b/src/lib/sync/__tests__/p0-sync.test.ts
+@@ -133,35 +133,39 @@ describe('E92-S09 P0 sync wiring — progress (monotonic)', () => {
+   it('writes route through syncableWrite and produce put queue entries', async () => {
+     // Simulate PdfContent.handlePageChange calling syncableWrite directly
+     // via the same path the components take.
+     const { syncableWrite } = await import('@/lib/sync/syncableWrite')
+ 
+     await syncableWrite('progress', 'put', {
+       courseId: 'course-1',
+       videoId: 'pdf-1',
+       currentTime: 0,
+       completionPercentage: 0,
++      durationSeconds: 0,
+       currentPage: 5,
+     })
+ 
+     await syncableWrite('progress', 'put', {
+       courseId: 'course-1',
+       videoId: 'pdf-1',
+       currentTime: 0,
+       completionPercentage: 0,
++      durationSeconds: 0,
+       currentPage: 12,
+     })
+ 
+     const queue = await db.syncQueue.toArray()
+     const progressEntries = queue.filter(q => q.tableName === 'progress')
+     // Two put entries — the monotonic merge happens server-side in the
+     // upsert_video_progress() RPC, not client-side. S09 only guarantees
+     // the writes reach the queue; the upload engine (E92-S05) handles the
+     // monotonic merge against Supabase.
+     expect(progressEntries).toHaveLength(2)
+     expect(progressEntries[0].operation).toBe('put')
+     expect(progressEntries[0].payload).toMatchObject({
+       course_id: 'course-1',
+       video_id: 'pdf-1',
++      watched_seconds: 0,
++      duration_seconds: 0,
+     })
+   })
+ })
+diff --git a/src/lib/sync/__tests__/tableRegistry.test.ts b/src/lib/sync/__tests__/tableRegistry.test.ts
+index ad5cd2a8..10767be1 100644
+--- a/src/lib/sync/__tests__/tableRegistry.test.ts
++++ b/src/lib/sync/__tests__/tableRegistry.test.ts
+@@ -226,23 +226,23 @@ describe('tableRegistry — stripFields', () => {
+ // ---------------------------------------------------------------------------
+ // AC7 / 3.8 — Monotonic fields
+ // ---------------------------------------------------------------------------
+ 
+ describe('tableRegistry — monotonic fields', () => {
+   it('vocabularyItems.monotonicFields contains masteryLevel', () => {
+     const entry = getTableEntry('vocabularyItems')
+     expect(entry?.monotonicFields).toContain('masteryLevel')
+   })
+ 
+-  it('progress.monotonicFields contains watchedSeconds', () => {
++  it('progress.monotonicFields contains currentTime', () => {
+     const entry = getTableEntry('progress')
+-    expect(entry?.monotonicFields).toContain('watchedSeconds')
++    expect(entry?.monotonicFields).toContain('currentTime')
+   })
+ 
+   it('books.monotonicFields contains progress', () => {
+     const entry = getTableEntry('books')
+     expect(entry?.monotonicFields).toContain('progress')
+   })
+ 
+   it('challenges.monotonicFields contains currentProgress', () => {
+     const entry = getTableEntry('challenges')
+     expect(entry?.monotonicFields).toContain('currentProgress')
+diff --git a/src/lib/sync/tableRegistry.ts b/src/lib/sync/tableRegistry.ts
+index 57094020..50ec41d9 100644
+--- a/src/lib/sync/tableRegistry.ts
++++ b/src/lib/sync/tableRegistry.ts
+@@ -104,22 +104,28 @@ export interface TableRegistryEntry {
+ 
+ // ---------------------------------------------------------------------------
+ // P0 — Core progress / session data
+ // ---------------------------------------------------------------------------
+ 
+ const contentProgress: TableRegistryEntry = {
+   dexieTable: 'contentProgress',
+   supabaseTable: 'content_progress',
+   conflictStrategy: 'monotonic',
+   priority: 0,
+-  fieldMap: {},
++  fieldMap: {
++    // Dexie uses itemId; Supabase uses content_id.
++    itemId: 'content_id',
++    contentType: 'content_type',
++    progressPct: 'progress_pct',
++  },
+   compoundPkFields: ['courseId', 'itemId'],
++  monotonicFields: ['progressPct'],
+ }
+ 
+ const studySessions: TableRegistryEntry = {
+   dexieTable: 'studySessions',
+   supabaseTable: 'study_sessions',
+   conflictStrategy: 'insert-only',
+   priority: 0,
+   fieldMap: {},
+   insertOnly: true,
+ }
+@@ -131,22 +137,29 @@ const studySessions: TableRegistryEntry = {
+  * but the actual PK is compound [courseId+videoId]. Resolved in post-E93
+  * cleanup — was R1-PE-01 from E92-S02. `compoundPkFields` below is the
+  * authoritative declaration consumed by both upload (syncableWrite recordId
+  * synthesis) and download (_getLocalRecord compound-key lookup).
+  */
+ const progress: TableRegistryEntry = {
+   dexieTable: 'progress',
+   supabaseTable: 'video_progress',
+   conflictStrategy: 'monotonic',
+   priority: 0,
+-  fieldMap: {},
+-  monotonicFields: ['watchedSeconds'],
++  fieldMap: {
++    // Dexie uses VideoProgress fields; Supabase uses video_progress columns.
++    // Map local canonical fields to the RPC/DB column names so uploads don't silently drop.
++    currentTime: 'watched_seconds',
++    completionPercentage: 'watched_percent',
++    durationSeconds: 'duration_seconds',
++  },
++  // Monotonic position: watched_seconds (mapped from currentTime) should only increase.
++  monotonicFields: ['currentTime'],
+   compoundPkFields: ['courseId', 'videoId'],
+ }
+ 
+ // ---------------------------------------------------------------------------
+ // P1 — Notes, flashcards, annotations, AI learning data
+ // ---------------------------------------------------------------------------
+ 
+ /**
+  * `notes` uses conflict-copy strategy (E93-S03): when remote wins on timestamp
+  * AND content differs, the local version is preserved as a JSONB snapshot in
+diff --git a/src/stores/useBookStore.ts b/src/stores/useBookStore.ts
+index 874870e8..bff983bf 100644
+--- a/src/stores/useBookStore.ts
++++ b/src/stores/useBookStore.ts
+@@ -85,22 +85,23 @@ interface BookStoreState {
+         | 'coverUrl'
+         | 'genre'
+         | 'series'
+         | 'seriesSequence'
+       >
+     >
+   ) => Promise<void>
+   updateBookPosition: (
+     bookId: string,
+     position: import('@/data/types').ContentPosition,
+-    progress: number
++    progress?: number
+   ) => Promise<void>
++  updateBookLastOpenedAt: (bookId: string, lastOpenedAt?: string) => Promise<void>
+   updateBookPlaybackSpeed: (bookId: string, speed: number) => Promise<void>
+   linkBooks: (bookIdA: string, bookIdB: string) => Promise<void>
+   unlinkBooks: (bookIdA: string, bookIdB: string) => Promise<void>
+   upsertAbsBook: (book: Book) => Promise<void>
+   bulkUpsertAbsBooks: (books: Book[]) => Promise<{ removedCount: number }>
+   getAllTags: () => string[]
+   getAllAuthors: () => string[]
+   getBookCountByStatus: () => Record<'all' | BookStatus, number>
+   getBooksBySeries: () => { groups: LocalSeriesGroup[]; ungrouped: Book[] }
+ }
+@@ -341,48 +342,79 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
+       const books = await db.books.toArray()
+       set({ books })
+       toast.error('Failed to update book details')
+     }
+   },
+ 
+   updateBookPosition: async (bookId, position, progress) => {
+     const now = new Date().toISOString()
+     // Capture previous state for targeted rollback
+     const prevBook = get().books.find(b => b.id === bookId)
++    const nextProgress = progress ?? prevBook?.progress
+     // Optimistic Zustand update
+     set(state => ({
+       books: state.books.map(b =>
+-        b.id === bookId ? { ...b, currentPosition: position, progress, lastOpenedAt: now } : b
++        b.id === bookId
++          ? {
++              ...b,
++              currentPosition: position,
++              ...(nextProgress !== undefined && { progress: nextProgress }),
++              lastOpenedAt: now,
++            }
++          : b
+       ),
+     }))
+     try {
+       const current = await db.books.get(bookId)
+       if (current) {
+         await syncableWrite('books', 'put', {
+           ...current,
+           currentPosition: position,
+-          progress,
++          ...(nextProgress !== undefined && { progress: nextProgress }),
+           lastOpenedAt: now,
+         } as unknown as SyncableRecord)
+       }
+     } catch (err) {
+       console.error('[BookStore] Failed to update position:', err)
+       // Rollback only the affected book using captured previous state
+       if (prevBook) {
+         set(state => ({
+           books: state.books.map(b => (b.id === bookId ? prevBook : b)),
+         }))
+       }
+       toast.error('Failed to save reading position')
+     }
+   },
+ 
++  updateBookLastOpenedAt: async (bookId, lastOpenedAt) => {
++    const now = lastOpenedAt ?? new Date().toISOString()
++    const prevBook = get().books.find(b => b.id === bookId)
++
++    set(state => ({
++      books: state.books.map(b => (b.id === bookId ? { ...b, lastOpenedAt: now } : b)),
++    }))
++
++    try {
++      const current = await db.books.get(bookId)
++      if (current) {
++        await syncableWrite('books', 'put', { ...current, lastOpenedAt: now } as unknown as SyncableRecord)
++      }
++    } catch (err) {
++      console.error('[BookStore] Failed to update lastOpenedAt:', err)
++      if (prevBook) {
++        set(state => ({
++          books: state.books.map(b => (b.id === bookId ? prevBook : b)),
++        }))
++      }
++    }
++  },
++
+   updateBookPlaybackSpeed: async (bookId, speed) => {
+     if (!isFinite(speed) || speed < 0.5 || speed > 3.0) {
+       console.error('[BookStore] Invalid playback speed rejected:', speed)
+       return
+     }
+     const now = new Date().toISOString()
+     const prevBook = get().books.find(b => b.id === bookId)
+     // Optimistic update
+     set(state => ({
+       books: state.books.map(b =>
+diff --git a/src/stores/useContentProgressStore.ts b/src/stores/useContentProgressStore.ts
+index 8b995272..b15d3339 100644
+--- a/src/stores/useContentProgressStore.ts
++++ b/src/stores/useContentProgressStore.ts
+@@ -46,20 +46,32 @@ function deriveModuleStatus(
+   module: Module,
+   statusMap: Record<string, CompletionStatus>
+ ): CompletionStatus {
+   const statuses = module.lessons.map(l => statusMap[key(courseId, l.id)] ?? 'not-started')
+   if (statuses.length === 0) return 'not-started'
+   if (statuses.every(s => s === 'completed')) return 'completed'
+   if (statuses.every(s => s === 'not-started')) return 'not-started'
+   return 'in-progress'
+ }
+ 
++function toProgressPct(status: CompletionStatus): number {
++  switch (status) {
++    case 'completed':
++      return 100
++    case 'in-progress':
++      return 50
++    case 'not-started':
++    default:
++      return 0
++  }
++}
++
+ export const useContentProgressStore = create<ContentProgressState>((set, get) => ({
+   statusMap: {},
+   isLoading: false,
+   error: null,
+ 
+   loadCourseProgress: async (courseId: string) => {
+     set({ isLoading: true, error: null })
+     try {
+       const records = await db.contentProgress.where({ courseId }).toArray()
+       const { statusMap } = get()
+@@ -97,21 +109,23 @@ export const useContentProgressStore = create<ContentProgressState>((set, get) =
+ 
+     // Cascade: recompute parent module status for any module containing this item
+     const cascadeRecords: ContentProgress[] = []
+     for (const mod of modules) {
+       if (mod.lessons.some(l => l.id === itemId)) {
+         const moduleStatus = deriveModuleStatus(courseId, mod, newMap)
+         newMap[key(courseId, mod.id)] = moduleStatus
+         cascadeRecords.push({
+           courseId,
+           itemId: mod.id,
++          contentType: 'module',
+           status: moduleStatus,
++          progressPct: toProgressPct(moduleStatus),
+           updatedAt: now,
+         })
+       }
+     }
+ 
+     // Optimistic update
+     set({ statusMap: newMap, error: null })
+ 
+     // Bridge: sync with localStorage progress for progress bar consistency
+     if (status === 'completed') {
+@@ -122,21 +136,23 @@ export const useContentProgressStore = create<ContentProgressState>((set, get) =
+ 
+     try {
+       await persistWithRetry(async () => {
+         // E92-S09: syncableWrite stamps userId/updatedAt + enqueues upload.
+         // P0 table, no stripFields. Sequential loop (chosen over a Dexie
+         // transaction wrapper) because syncableWrite needs to enqueue each
+         // record; keeps the call pattern consistent with E92-S05 upload engine.
+         const itemRecord: ContentProgress = {
+           courseId,
+           itemId,
++          contentType: modules.some(m => m.id === itemId) ? 'module' : 'lesson',
+           status,
++          progressPct: toProgressPct(status),
+           updatedAt: now,
+         }
+         await syncableWrite('contentProgress', 'put', itemRecord as unknown as SyncableRecord)
+         for (const record of cascadeRecords) {
+           await syncableWrite('contentProgress', 'put', record as unknown as SyncableRecord)
+         }
+       })
+ 
+       // E60-S03 + E43-S07: Side-effect checks (notification triggers)
+       // Resolve course once and share between both checks

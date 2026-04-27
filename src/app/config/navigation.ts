@@ -126,7 +126,7 @@ export const navigationItems: NavigationItem[] = [
 
 // Paths for primary navigation (shown in mobile bottom bar).
 // The bottom bar has exactly 4 slots — this list must stay at 4 entries.
-export const primaryNavPaths = ['/', '/my-class', '/courses', '/notes']
+export const primaryNavPaths = ['/overview', '/courses', '/my-class', '/notes']
 
 // Get primary navigation items (for mobile bottom bar)
 export function getPrimaryNav(): NavigationItem[] {
