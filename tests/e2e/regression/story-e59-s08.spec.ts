@@ -207,6 +207,64 @@ test.describe('E59-S08: FSRS Scheduling E2E Validation', () => {
     await expect(dueStat).toContainText('1')
   })
 
+  test('course-scoped flashcards route renders only that course deck', async ({ page }) => {
+    const courseOne = createImportedCourse({ id: 'course-scoped-one', name: 'Scoped Course One' })
+    const courseTwo = createImportedCourse({ id: 'course-scoped-two', name: 'Scoped Course Two' })
+    const courseOneDue = createDueFlashcard({
+      id: 'fc-course-one-due',
+      courseId: courseOne.id,
+      front: 'Course one due card',
+      back: 'Due answer',
+    })
+    const courseOneFuture = createFutureFlashcard({
+      id: 'fc-course-one-future',
+      courseId: courseOne.id,
+      front: 'Course one future card',
+      back: 'Future answer',
+    })
+    const courseTwoDue = createDueFlashcard({
+      id: 'fc-course-two-due',
+      courseId: courseTwo.id,
+      front: 'Course two due card',
+      back: 'Other answer',
+    })
+
+    await seedImportedCourses(page, [courseOne, courseTwo])
+    await seedFlashcards(page, [courseOneDue, courseOneFuture, courseTwoDue])
+    await page.goto(`/courses/${courseOne.id}/flashcards`)
+    await page.waitForLoadState('load')
+
+    await expect(page.getByText('Scoped Course One deck')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('flashcard-stats-total')).toContainText('2')
+    await expect(page.getByTestId('flashcard-stats-due')).toContainText('1')
+    await expect(page.getByTestId('course-decks-section')).toBeHidden()
+  })
+
+  test('global flashcards dashboard links to course decks', async ({ page }) => {
+    const courseOne = createImportedCourse({ id: 'course-decks-one', name: 'Deck Course One' })
+    const courseTwo = createImportedCourse({ id: 'course-decks-two', name: 'Deck Course Two' })
+    await seedImportedCourses(page, [courseOne, courseTwo])
+    await seedFlashcards(page, [
+      createDueFlashcard({ id: 'fc-deck-one', courseId: courseOne.id }),
+      createFutureFlashcard({ id: 'fc-deck-two', courseId: courseTwo.id }),
+    ])
+
+    await page.goto('/flashcards')
+    await page.waitForLoadState('load')
+
+    await expect(page.getByTestId('course-decks-section')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId(`course-deck-card-${courseOne.id}`)).toContainText(
+      'Deck Course One'
+    )
+    await expect(page.getByTestId(`course-deck-card-${courseTwo.id}`)).toContainText(
+      'Deck Course Two'
+    )
+
+    await page.getByTestId(`course-deck-link-${courseOne.id}`).click()
+    await expect(page).toHaveURL(new RegExp(`/courses/${courseOne.id}/flashcards$`))
+    await expect(page.getByText('Deck Course One deck')).toBeVisible()
+  })
+
   // ── AC5: New flashcard defaults have correct FSRS state ─────────────
   test('new flashcard created via factory has state=0, stability=0, reps=0', () => {
     const card = createFlashcard()

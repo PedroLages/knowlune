@@ -7,16 +7,16 @@
  *   'url'   — fetch an image from a URL and resize
  *   'ai'    — generate an image via Google Gemini API
  *
- * All sources produce a 200×112px JPEG Blob (16:9, ~0.8 quality).
+ * All sources produce a 1280×720px JPEG Blob (16:9, ~0.8 quality).
  */
 
 import { db } from '@/db'
 import type { CourseThumbnail, ThumbnailSource } from '@/data/types'
 import { resolveFeatureModel } from './aiConfiguration'
 
-// Target dimensions: 200px wide, 16:9
-const THUMB_W = 200
-const THUMB_H = 112
+// Target dimensions: 1280×720, 16:9
+const THUMB_W = 1280
+const THUMB_H = 720
 const JPEG_QUALITY = 0.82
 
 // ---------------------------------------------------------------------------
@@ -37,6 +37,8 @@ function resizeImageToBlob(
       reject(new Error('Canvas context unavailable'))
       return
     }
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
     ctx.drawImage(source, 0, 0, width, height)
     canvas.toBlob(
       blob => {

@@ -109,6 +109,16 @@ test.describe('Flashcards Empty States', () => {
     // Instruction text should be present
     await expect(page.getByText('Select text in your notes')).toBeVisible()
   })
+
+  test('should show course-scoped empty state when a course deck has no cards', async ({
+    page,
+  }) => {
+    await navigateAndWait(page, '/courses/course-without-flashcards/flashcards')
+
+    const emptyTitle = page.getByText('No flashcards for Unknown Course yet')
+    await expect(emptyTitle).toBeVisible({ timeout: TIMEOUTS.NETWORK })
+    await expect(page.getByText('review this deck')).toBeVisible()
+  })
 })
 
 // ---------------------------------------------------------------------------

@@ -40,10 +40,11 @@ export function isCacheFresh(cached: CachedEntitlement): boolean {
  * Validates entitlement against the Supabase server.
  * Returns the entitlement record or null if free/error.
  */
-export async function validateEntitlementOnServer(
-  userId: string
-): Promise<CachedEntitlement | null> {
-  if (!supabase) return null
+export async function validateEntitlementOnServer(userId: string): Promise<{
+  entitlement: CachedEntitlement | null
+  error: string | null
+}> {
+  if (!supabase) return { entitlement: null, error: null }
 
   const { data, error } = await supabase
     .from('entitlements')
@@ -53,7 +54,9 @@ export async function validateEntitlementOnServer(
     .eq('user_id', userId)
     .single()
 
-  if (error || !data) return null
+  if (error || !data) {
+    return { entitlement: null, error: (error as { message?: string } | null)?.message ?? null }
+  }
 
   const entitlement: CachedEntitlement = {
     userId: data.user_id,
@@ -67,7 +70,21 @@ export async function validateEntitlementOnServer(
     cachedAt: new Date().toISOString(),
   }
 
-  return entitlement
+  return { entitlement, error: null }
+}
+
+function formatEntitlementValidationError(raw: string | null): string | null {
+  if (!raw) return null
+  const msg = raw.toLowerCase()
+  // Common symptom when frontend expects a column that doesn't exist (schema drift).
+  if (msg.includes('column') && msg.includes('does not exist')) {
+    return 'Unable to verify your subscription due to a server configuration issue. Please try again shortly.'
+  }
+  // RLS/policy/permission misconfiguration.
+  if (msg.includes('permission denied') || msg.includes('violates row-level security')) {
+    return 'Unable to verify your subscription due to a permissions issue. Please try again shortly.'
+  }
+  return 'Unable to verify your subscription right now. Please try again shortly.'
 }
 
 /**
@@ -164,7 +181,17 @@ export function useIsPremium(): EntitlementStatus {
 
       // Step 2: Try server validation (AC1 online, AC4 auto-revalidate)
       try {
-        const serverResult = await validateEntitlementOnServer(user.id)
+        const { entitlement: serverResult, error: serverError } = await validateEntitlementOnServer(
+          user.id
+        )
+
+        if (serverError) {
+          // Surface validation failures instead of silently gating as free.
+          console.error('[useIsPremium] Server entitlement validation failed:', serverError)
+          if (!cached) {
+            setError(formatEntitlementValidationError(serverError))
+          }
+        }
 
         if (serverResult) {
           if (serverResult.tier === 'free') {
@@ -188,7 +215,8 @@ export function useIsPremium(): EntitlementStatus {
           // No server result and no cache — user is free tier
           setTier('free')
           setIsStale(false)
-          setError(null)
+          // If serverError exists, we already set a user-facing message above.
+          if (!serverError) setError(null)
         }
         // If serverResult is null but we have fresh cache, keep using cache (AC7)
       } catch {

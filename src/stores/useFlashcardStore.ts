@@ -31,14 +31,22 @@ interface FlashcardState {
   deleteFlashcard: (id: string) => Promise<void>
 
   // Review
-  getDueFlashcards: (now?: Date) => Flashcard[]
-  startReviewSession: (now?: Date) => void
+  getDueFlashcards: (now?: Date, courseId?: string) => Flashcard[]
+  startReviewSession: (now?: Date, courseId?: string) => void
   rateFlashcard: (rating: ReviewRating, now?: Date) => Promise<void>
-  getSessionSummary: () => FlashcardSessionSummary
+  getSessionSummary: (courseId?: string) => FlashcardSessionSummary
   resetReviewSession: () => void
 
   // Stats
-  getStats: (now?: Date) => { total: number; dueToday: number; nextReviewDate: string | null }
+  getStats: (
+    now?: Date,
+    courseId?: string
+  ) => { total: number; dueToday: number; nextReviewDate: string | null }
+}
+
+function filterByCourse(flashcards: Flashcard[], courseId?: string): Flashcard[] {
+  if (courseId === undefined) return flashcards
+  return flashcards.filter(card => card.courseId === courseId)
 }
 
 export const useFlashcardStore = create<FlashcardState>((set, get) => ({
@@ -119,9 +127,9 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
     }
   },
 
-  getDueFlashcards: (now: Date = new Date()) => {
+  getDueFlashcards: (now: Date = new Date(), courseId?: string) => {
     const { flashcards } = get()
-    return flashcards
+    return filterByCourse(flashcards, courseId)
       .filter(card => isDue(card, now))
       .sort((a, b) => {
         // Cards with no last_review (never reviewed) go first (retention = 0)
@@ -131,8 +139,8 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
       })
   },
 
-  startReviewSession: (now: Date = new Date()) => {
-    const queue = get().getDueFlashcards(now)
+  startReviewSession: (now: Date = new Date(), courseId?: string) => {
+    const queue = get().getDueFlashcards(now, courseId)
     set({
       reviewQueue: queue,
       reviewIndex: 0,
@@ -219,7 +227,7 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
     }
   },
 
-  getSessionSummary: (): FlashcardSessionSummary => {
+  getSessionSummary: (courseId?: string): FlashcardSessionSummary => {
     const { sessionRatings, flashcards } = get()
     const ratings = { again: 0, hard: 0, good: 0, easy: 0 }
     for (const r of sessionRatings) {
@@ -227,7 +235,7 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
     }
 
     // Find the next due date across all cards that have been reviewed
-    const reviewed = flashcards.filter(c => c.last_review)
+    const reviewed = filterByCourse(flashcards, courseId).filter(c => c.last_review)
     const sorted = [...reviewed].sort(
       (a, b) => new Date(a.due).getTime() - new Date(b.due).getTime()
     )
@@ -249,12 +257,13 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
     })
   },
 
-  getStats: (now: Date = new Date()) => {
+  getStats: (now: Date = new Date(), courseId?: string) => {
     const { flashcards } = get()
-    const dueFlashcards = get().getDueFlashcards(now)
+    const scopedFlashcards = filterByCourse(flashcards, courseId)
+    const dueFlashcards = get().getDueFlashcards(now, courseId)
 
     // Find next future review date (cards not yet due)
-    const withReview = flashcards.filter(c => c.last_review)
+    const withReview = scopedFlashcards.filter(c => c.last_review)
     const sorted = [...withReview].sort(
       (a, b) => new Date(a.due).getTime() - new Date(b.due).getTime()
     )
@@ -262,7 +271,7 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
     const nextReviewDate = nextFuture?.due ?? null
 
     return {
-      total: flashcards.length,
+      total: scopedFlashcards.length,
       dueToday: dueFlashcards.length,
       nextReviewDate,
     }

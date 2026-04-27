@@ -225,6 +225,15 @@ function ImportedLessonRedirect() {
   return <Navigate to={`/courses/${courseId}/lessons/${lessonId}${search}${hash}`} replace />
 }
 
+function CourseFlashcardsRoute() {
+  const { courseId } = useParams<{ courseId: string }>()
+  return (
+    <PremiumFeaturePage {...PREMIUM_FEATURES.flashcards} icon={Layers}>
+      <Flashcards courseId={courseId} />
+    </PremiumFeaturePage>
+  )
+}
+
 // TODO: Remove redirect after Epic E91+ — old youtube-courses paths
 /** Redirects /youtube-courses/:courseId → /courses/:courseId */
 function YouTubeCourseRedirect() {
@@ -422,6 +431,14 @@ export const router = createBrowserRouter([
             element: (
               <SuspensePage>
                 <CourseOverview />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: 'courses/:courseId/flashcards',
+            element: (
+              <SuspensePage>
+                <CourseFlashcardsRoute />
               </SuspensePage>
             ),
           },
