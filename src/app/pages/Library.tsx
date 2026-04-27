@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, useParams, useLocation } from 'react-router'
 import { recordVisit } from '@/lib/searchFrecency'
 import { FormatTabs } from '@/app/components/library/FormatTabs'
-import { LibraryShelves } from '@/app/components/library/LibraryShelves'
+import { LibraryContinueShelves, LibraryDiscoveryShelves } from '@/app/components/library/LibraryShelves'
 import { SmartGroupedView } from '@/app/components/library/SmartGroupedView'
 import {
   BookOpen,
@@ -673,14 +673,17 @@ export function Library() {
         </section>
       )}
 
-      {/* Daily Highlights — cinematic highlight strip from annotated books */}
-      {books.length > 0 && <DailyHighlightsStrip />}
-
-      {/* Continue + recently added/finished shelves */}
-      {books.length > 0 && <LibraryShelves />}
+      {/* Continue shelves */}
+      {books.length > 0 && <LibraryContinueShelves />}
 
       {/* Reading Queue — always visible when books exist (E110-S03 AC-1) */}
       {books.length > 0 && <ReadingQueue />}
+
+      {/* Discovery shelves */}
+      {books.length > 0 && <LibraryDiscoveryShelves />}
+
+      {/* Daily Highlights — cinematic highlight strip from annotated books */}
+      {books.length > 0 && <DailyHighlightsStrip />}
 
       {/* Syncing indicator (E101-S03) */}
       {isAbsSyncing && (

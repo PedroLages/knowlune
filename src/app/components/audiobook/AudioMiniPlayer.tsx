@@ -20,7 +20,7 @@ import { useNavigate, useLocation } from 'react-router'
 import { useAudioPlayerStore } from '@/stores/useAudioPlayerStore'
 import { useAudiobookPrefsStore } from '@/stores/useAudiobookPrefsStore'
 import { useBookStore } from '@/stores/useBookStore'
-import { sharedAudioRef } from '@/app/hooks/useAudioPlayer'
+import { cleanupActiveAbsPlaybackSession, sharedAudioRef } from '@/app/hooks/useAudioPlayer'
 import { formatAudioTime } from '@/app/hooks/useAudioPlayer'
 import { useBookCoverUrl } from '@/app/hooks/useBookCoverUrl'
 import { SpeedControl } from './SpeedControl'
@@ -97,7 +97,7 @@ export function AudioMiniPlayer() {
   }, [skipForwardSeconds])
 
   const handleExpand = () => {
-    navigate(`/library/${currentBookId}/read`)
+    navigate(`/library/${currentBookId}/read`, { state: { __fromMiniPlayer: true } })
   }
 
   const handleDismiss = useCallback(() => {
@@ -106,6 +106,7 @@ export function AudioMiniPlayer() {
       audio.pause()
       audio.currentTime = 0
     }
+    cleanupActiveAbsPlaybackSession()
     useAudioPlayerStore.getState().reset()
   }, [])
 

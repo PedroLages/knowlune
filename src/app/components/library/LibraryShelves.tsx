@@ -16,17 +16,15 @@ const CONTINUE_READING_HEADING_ID = 'shelf-continue-reading-heading'
 const RECENTLY_ADDED_HEADING_ID = 'shelf-recently-added-heading'
 const RECENTLY_FINISHED_HEADING_ID = 'shelf-recently-finished-heading'
 
-export function LibraryShelves() {
+export function LibraryContinueShelves() {
   const books = useBookStore(s => s.books)
   const continueListening = useMemo(() => getContinueListeningShelf(books), [books])
   const continueReading = useMemo(() => getContinueReadingShelf(books), [books])
-  const recentlyAdded = useMemo(() => getRecentlyAddedShelf(books), [books])
-  const recentlyFinished = useMemo(() => getRecentlyFinishedShelf(books), [books])
 
   if (books.length === 0) return null
 
   return (
-    <div className="space-y-8" data-testid="library-shelves">
+    <div className="space-y-8" data-testid="library-continue-shelves">
       <LibraryShelfRow
         icon={Headphones}
         label="Continue Listening"
@@ -54,7 +52,19 @@ export function LibraryShelves() {
           <ContinueShelfTile key={book.id} book={book} />
         ))}
       </LibraryShelfRow>
+    </div>
+  )
+}
 
+export function LibraryDiscoveryShelves() {
+  const books = useBookStore(s => s.books)
+  const recentlyAdded = useMemo(() => getRecentlyAddedShelf(books), [books])
+  const recentlyFinished = useMemo(() => getRecentlyFinishedShelf(books), [books])
+
+  if (books.length === 0) return null
+
+  return (
+    <div className="space-y-8" data-testid="library-discovery-shelves">
       <LibraryShelfRow
         icon={Clock3}
         label="Recently Added"
@@ -80,7 +90,6 @@ export function LibraryShelves() {
           <RecentBookCard key={book.id} book={book} />
         ))}
       </LibraryShelfRow>
-
     </div>
   )
 }

@@ -101,6 +101,7 @@ export function BookReader() {
   const { bookId } = useParams<{ bookId: string }>()
   const navigate = useNavigate()
   const location = useLocation()
+  const resumeFromMiniPlayer = Boolean((location.state as { __fromMiniPlayer?: boolean } | null)?.__fromMiniPlayer)
 
   // R19: capture deep-links to the reader (e.g. /library/:bookId/read) that
   // bypass the Library landing. Skipped for palette-initiated navigations.
@@ -1074,6 +1075,7 @@ export function BookReader() {
             >
               <AudiobookRenderer
                 book={book}
+                resumeFromMiniPlayer={resumeFromMiniPlayer}
                 bookmarksOpen={audiobookBookmarksOpen}
                 onBookmarksClose={() => setAudiobookBookmarksOpen(false)}
                 onSwitchToReading={
