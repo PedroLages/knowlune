@@ -82,10 +82,15 @@ export function useAudiobookshelfSocket({
           totalDur > 0
             ? Math.min(100, Math.round((event.currentTime / totalDur) * 100))
             : Math.round(event.progress * 100)
-        // Socket payload has no ABS `lastUpdate`; `updateBookPosition` stamps `lastOpenedAt` to client time (one syncableWrite).
-        void useBookStore
-          .getState()
-          .updateBookPosition(currentBook.id, position, progressPct, absInboundWriteOpts)
+        // Same write order as catalog/player inbound (plan U3); no ABS `lastUpdate` on socket — receipt time for second write.
+        void (async () => {
+          await useBookStore
+            .getState()
+            .updateBookPosition(currentBook.id, position, progressPct, absInboundWriteOpts)
+          await useBookStore
+            .getState()
+            .updateBookLastOpenedAt(currentBook.id, new Date().toISOString())
+        })()
       }
     },
     [activeItemId]

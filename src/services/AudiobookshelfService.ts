@@ -407,7 +407,13 @@ export async function fetchAllProgress(
   apiKey: string
 ): Promise<AbsResult<AbsProgress[]>> {
   const result = await absApiFetch<Record<string, unknown>>(url, apiKey, '/api/me')
-  if (!result.ok) return result
+  if (!result.ok) {
+    // Treat missing /api/me like empty progress — catalog overlay stays best-effort (plan R5)
+    if (result.status === 404) {
+      return { ok: true, data: [] }
+    }
+    return result
+  }
 
   const body = result.data
   const rawList = body.mediaProgress

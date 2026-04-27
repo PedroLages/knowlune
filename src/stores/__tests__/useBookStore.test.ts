@@ -506,6 +506,47 @@ describe('bulkUpsertAbsBooks', () => {
 
     expect(useBookStore.getState().books).toHaveLength(0)
   })
+
+  it('preserves local progress when catalog mapper sends progress 0 for same abs key', async () => {
+    const existing = makeBook({
+      id: 'bulk-merge-1',
+      title: 'Local title',
+      format: 'audiobook',
+      status: 'reading',
+      progress: 42,
+      currentPosition: { type: 'time', seconds: 1200 },
+      lastOpenedAt: '2026-02-01T00:00:00.000Z',
+      absServerId: 'srv-1',
+      absItemId: 'cat-merge-1',
+      source: { type: 'remote', url: 'http://abs' },
+      totalDuration: 3600,
+    })
+
+    await act(async () => {
+      await useBookStore.getState().importBook(existing as never)
+    })
+
+    const fromCatalog = makeBook({
+      id: 'new-row-id',
+      title: 'From ABS list',
+      format: 'audiobook',
+      progress: 0,
+      currentPosition: { type: 'time', seconds: 0 },
+      absServerId: 'srv-1',
+      absItemId: 'cat-merge-1',
+      source: { type: 'remote', url: 'http://abs' },
+      totalDuration: 3600,
+    })
+
+    await act(async () => {
+      await useBookStore.getState().bulkUpsertAbsBooks([fromCatalog as never])
+    })
+
+    const b = useBookStore.getState().books.find(x => x.absItemId === 'cat-merge-1')
+    expect(b?.id).toBe('bulk-merge-1')
+    expect(b?.progress).toBe(42)
+    expect(b?.currentPosition).toEqual({ type: 'time', seconds: 1200 })
+  })
 })
 
 describe('getFilteredBooks — source filter', () => {

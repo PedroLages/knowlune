@@ -124,4 +124,16 @@ describe('applyAbsProgressToBooks', () => {
 
     expect(posSpy).not.toHaveBeenCalled()
   })
+
+  it('skips books when progress map has no entry for absItemId', async () => {
+    useBookStore.setState({
+      books: [makeAbsBook({ absItemId: 'abs-item-not-in-api' })],
+      isLoaded: true,
+    })
+    const posSpy = vi.spyOn(useBookStore.getState(), 'updateBookPosition').mockResolvedValue()
+
+    await applyAbsProgressToBooks(SERVER, 'api-key')
+
+    expect(posSpy).not.toHaveBeenCalled()
+  })
 })

@@ -657,6 +657,28 @@ describe('AudiobookshelfService.fetchAllProgress', () => {
       expect(result.status).toBe(401)
     }
   })
+
+  it('returns empty array for 404 (best-effort, same spirit as per-item progress)', async () => {
+    vi.stubGlobal('fetch', mockFetchStatus(404))
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data).toEqual([])
+    }
+  })
+
+  it('propagates 500 from absApiFetch', async () => {
+    vi.stubGlobal('fetch', mockFetchStatus(500))
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.status).toBe(500)
+    }
+  })
 })
 
 // ── updateProgress ─────────────────────────────────────────────────
