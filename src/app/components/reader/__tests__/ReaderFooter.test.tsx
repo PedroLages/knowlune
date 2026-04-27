@@ -17,24 +17,24 @@ vi.mock('../readerThemeConfig', async () => {
 
 const defaultProps = {
   progress: 0.5,
-  theme: 'light' as ReaderTheme,
+  theme: 'white' as ReaderTheme,
   visible: true,
 }
 
 describe('ReaderFooter', () => {
   describe('Theme application', () => {
-    it('applies light/professional overlay and text classes', () => {
-      render(<ReaderFooter {...defaultProps} theme="light" />)
+    it('applies white page tone overlay and text classes', () => {
+      render(<ReaderFooter {...defaultProps} theme="white" />)
 
       const footer = screen.getByTestId('reader-footer')
-      expect(footer).toHaveClass('bg-[#faf5ee]/60', 'text-[#1c1d2b]')
+      expect(footer).toHaveClass('bg-[#ffffff]/60', 'text-[#1c1d2b]')
     })
 
-    it('applies dark theme classes', () => {
+    it('applies dark page tone classes', () => {
       render(<ReaderFooter {...defaultProps} theme="dark" />)
 
       const footer = screen.getByTestId('reader-footer')
-      expect(footer).toHaveClass('bg-[#1a1b26]/60', 'text-[#e8e9f0]')
+      expect(footer).toHaveClass('bg-[#383a56]/60', 'text-[#f7f7fb]')
     })
 
     it('applies sepia theme classes', () => {

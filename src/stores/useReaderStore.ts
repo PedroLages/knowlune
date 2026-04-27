@@ -10,10 +10,27 @@
 import { create } from 'zustand'
 import { saveSettingsToSupabase } from '@/lib/settings'
 
-export type ReaderTheme = 'light' | 'sepia' | 'dark'
-export type ReaderFontFamily = 'default' | 'serif' | 'sans' | 'mono'
+export type ReaderTheme = 'white' | 'sepia' | 'gray' | 'dark' | 'black'
+export type ReaderFontFamily =
+  | 'default'
+  | 'literata'
+  | 'inter'
+  | 'atkinson'
+  | 'serif'
+  | 'sans'
+  | 'mono'
 
 const STORAGE_KEY = 'knowlune-reader-settings-v1'
+const VALID_READER_THEMES: ReaderTheme[] = ['white', 'sepia', 'gray', 'dark', 'black']
+
+/** Maps reader Page Tone → `readingTheme` values stored in Supabase / AppSettings. */
+const READER_THEME_TO_CLOUD_READING_THEME: Record<ReaderTheme, string> = {
+  white: 'auto',
+  sepia: 'sepia',
+  gray: 'gray',
+  dark: 'dark',
+  black: 'high-contrast',
+}
 
 interface ReaderSettings {
   theme: ReaderTheme
@@ -43,22 +60,36 @@ const DEFAULT_SETTINGS: ReaderSettings = {
   showProgressBar: true,
 }
 
+export function normalizeReaderTheme(raw: unknown): ReaderTheme {
+  if (raw === 'light' || raw === 'auto') return 'white'
+  if (raw === 'high-contrast') return 'black'
+  return VALID_READER_THEMES.includes(raw as ReaderTheme)
+    ? (raw as ReaderTheme)
+    : DEFAULT_SETTINGS.theme
+}
+
 function loadSettings(): ReaderSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return DEFAULT_SETTINGS
     const parsed = JSON.parse(raw) as Partial<ReaderSettings>
     return {
-      theme: (['light', 'sepia', 'dark'] as ReaderTheme[]).includes(parsed.theme as ReaderTheme)
-        ? (parsed.theme as ReaderTheme)
-        : DEFAULT_SETTINGS.theme,
+      theme: normalizeReaderTheme(parsed.theme),
       fontSize:
         typeof parsed.fontSize === 'number' && parsed.fontSize >= 80 && parsed.fontSize <= 200
           ? parsed.fontSize
           : DEFAULT_SETTINGS.fontSize,
-      fontFamily: (['default', 'serif', 'sans', 'mono'] as ReaderFontFamily[]).includes(
-        parsed.fontFamily as ReaderFontFamily
-      )
+      fontFamily: (
+        [
+          'default',
+          'literata',
+          'inter',
+          'atkinson',
+          'serif',
+          'sans',
+          'mono',
+        ] as ReaderFontFamily[]
+      ).includes(parsed.fontFamily as ReaderFontFamily)
         ? (parsed.fontFamily as ReaderFontFamily)
         : DEFAULT_SETTINGS.fontFamily,
       lineHeight:
@@ -181,7 +212,9 @@ export const useReaderStore = create<ReaderStoreState>((set, get) => {
       const s = get()
       saveSettings({ ...getSettingsFromState(s), theme })
       set({ theme })
-      void saveSettingsToSupabase({ readingTheme: theme })
+      void saveSettingsToSupabase({
+        readingTheme: READER_THEME_TO_CLOUD_READING_THEME[theme],
+      })
     },
 
     setFontSize: size => {

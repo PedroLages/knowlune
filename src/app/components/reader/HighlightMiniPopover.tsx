@@ -32,6 +32,7 @@ const COLORS: { id: HighlightColor; bg: string; label: string }[] = [
 interface HighlightMiniPopoverProps {
   highlight: BookHighlight
   anchor: HighlightMiniPopoverAnchor
+  initialMode?: 'view' | 'edit' | 'confirm-delete'
   onClose: () => void
   onUpdate: (updates: Partial<Pick<BookHighlight, 'color' | 'note'>>) => Promise<void>
   onDelete: () => Promise<void>
@@ -57,6 +58,7 @@ function useReaderSheetLayout() {
 export function HighlightMiniPopover({
   highlight,
   anchor,
+  initialMode = 'view',
   onClose,
   onUpdate,
   onDelete,
@@ -64,7 +66,7 @@ export function HighlightMiniPopover({
   onViewFlashcard,
   onVocabulary,
 }: HighlightMiniPopoverProps) {
-  const [mode, setMode] = useState<'view' | 'edit' | 'confirm-delete'>('view')
+  const [mode, setMode] = useState<'view' | 'edit' | 'confirm-delete'>(initialMode)
   const [currentColor, setCurrentColor] = useState<HighlightColor>(highlight.color)
   const [editColor, setEditColor] = useState<HighlightColor>(highlight.color)
   const [editNote, setEditNote] = useState(highlight.note ?? '')
@@ -78,11 +80,11 @@ export function HighlightMiniPopover({
   )
 
   useEffect(() => {
-    setMode('view')
+    setMode(initialMode)
     setCurrentColor(highlight.color)
     setEditColor(highlight.color)
     setEditNote(highlight.note ?? '')
-  }, [highlight.id])
+  }, [highlight.id, initialMode])
 
   useEffect(() => {
     if (mode === 'edit') {
@@ -172,7 +174,7 @@ export function HighlightMiniPopover({
           aria-pressed={currentColor === c.id}
           data-testid={`mini-popover-color-${c.id}`}
           className={cn(
-            'size-7 rounded-full border-2 transition-transform',
+            'size-7 rounded-full border-2 transition-transform cursor-pointer',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
             'disabled:cursor-not-allowed disabled:opacity-60',
             c.bg,
@@ -189,7 +191,7 @@ export function HighlightMiniPopover({
         variant="ghost"
         size="icon"
         onClick={onViewFlashcard}
-        className="size-10 sm:size-8 text-brand shrink-0"
+        className="size-10 sm:size-8 text-brand shrink-0 cursor-pointer"
         aria-label="View linked flashcard"
         data-testid="mini-popover-view-flashcard"
       >
@@ -200,7 +202,7 @@ export function HighlightMiniPopover({
         variant="ghost"
         size="icon"
         onClick={onCreateFlashcard}
-        className="size-10 sm:size-8 text-muted-foreground shrink-0"
+        className="size-10 sm:size-8 text-muted-foreground shrink-0 cursor-pointer"
         aria-label="Create flashcard from highlight"
         data-testid="mini-popover-create-flashcard"
       >
@@ -216,7 +218,7 @@ export function HighlightMiniPopover({
         variant="ghost"
         size="icon"
         onClick={() => setMode('edit')}
-        className="size-10 sm:size-8 text-muted-foreground shrink-0"
+        className="size-10 sm:size-8 text-muted-foreground shrink-0 cursor-pointer"
         aria-label={highlight.note ? 'Edit note' : 'Add note'}
         data-testid="mini-popover-edit"
       >
@@ -228,7 +230,7 @@ export function HighlightMiniPopover({
           variant="ghost"
           size="icon"
           onClick={onVocabulary}
-          className="size-10 sm:size-8 text-muted-foreground shrink-0"
+          className="size-10 sm:size-8 text-muted-foreground shrink-0 cursor-pointer"
           aria-label="Add to vocabulary"
           data-testid="mini-popover-vocabulary"
         >
@@ -240,7 +242,7 @@ export function HighlightMiniPopover({
         variant="ghost"
         size="icon"
         onClick={() => setMode('confirm-delete')}
-        className="size-10 sm:size-8 text-destructive hover:text-destructive shrink-0"
+        className="size-10 sm:size-8 text-destructive hover:text-destructive shrink-0 cursor-pointer"
         aria-label="Delete highlight"
         data-testid="mini-popover-delete"
       >
@@ -250,7 +252,7 @@ export function HighlightMiniPopover({
         variant="ghost"
         size="icon"
         onClick={onClose}
-        className="size-10 sm:size-8 text-muted-foreground shrink-0"
+        className="size-10 sm:size-8 text-muted-foreground shrink-0 cursor-pointer"
         aria-label="Close highlight actions"
         data-testid="mini-popover-close"
       >
@@ -278,7 +280,7 @@ export function HighlightMiniPopover({
           variant="ghost"
           size="sm"
           onClick={() => setMode('edit')}
-          className="h-9 px-2 text-xs gap-1"
+          className="h-9 px-2 text-xs gap-1 cursor-pointer"
           aria-label="Edit highlight"
           data-testid="mini-popover-edit"
         >
@@ -289,7 +291,7 @@ export function HighlightMiniPopover({
           variant="ghost"
           size="sm"
           onClick={() => setMode('confirm-delete')}
-          className="h-9 px-2 text-xs gap-1 text-destructive hover:text-destructive"
+          className="h-9 px-2 text-xs gap-1 text-destructive hover:text-destructive cursor-pointer"
           aria-label="Delete highlight"
           data-testid="mini-popover-delete"
         >
@@ -303,7 +305,7 @@ export function HighlightMiniPopover({
             variant="ghost"
             size="icon"
             onClick={onVocabulary}
-            className="size-9 text-muted-foreground shrink-0"
+            className="size-9 text-muted-foreground shrink-0 cursor-pointer"
             aria-label="Add to vocabulary"
             data-testid="mini-popover-vocabulary"
           >

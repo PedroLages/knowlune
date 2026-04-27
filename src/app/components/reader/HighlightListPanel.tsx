@@ -10,7 +10,13 @@
 import { useState } from 'react'
 import { StickyNote, Layers, Highlighter, Download } from 'lucide-react'
 import type { Rendition } from 'epubjs'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { cn } from '@/app/components/ui/utils'
@@ -115,6 +121,7 @@ interface HighlightListPanelProps {
   onClose: () => void
   rendition: Rendition | null
   onFlashcardRequest?: (text: string, highlightId?: string) => void
+  onLinkedFlashcardRequest?: (highlight: BookHighlight) => void
   /** Current book ID for per-book export scoping */
   bookId?: string
   /** Current book title for export dialog label */
@@ -126,6 +133,7 @@ export function HighlightListPanel({
   onClose,
   rendition,
   onFlashcardRequest,
+  onLinkedFlashcardRequest,
   bookId,
   bookTitle,
 }: HighlightListPanelProps) {
@@ -148,6 +156,10 @@ export function HighlightListPanel({
 
   const handleFlashcard = (highlight: BookHighlight) => {
     onClose()
+    if (highlight.flashcardId) {
+      onLinkedFlashcardRequest?.(highlight)
+      return
+    }
     onFlashcardRequest?.(highlight.textAnchor, highlight.id)
   }
 
@@ -164,6 +176,9 @@ export function HighlightListPanel({
             <SheetTitle className="text-base font-semibold">
               Highlights ({highlights.length})
             </SheetTitle>
+            <SheetDescription className="sr-only">
+              Browse, navigate, and create or view flashcards from this book's highlights.
+            </SheetDescription>
             {highlights.length > 0 && (
               <Button
                 variant="ghost"

@@ -23,9 +23,19 @@ export interface TtsBoundaryEvent {
 
 export interface TtsOptions {
   rate?: number // 0.5–2.0, default 1.0
+  voiceURI?: string | null
   onBoundary?: (event: TtsBoundaryEvent, chunkOffset: number) => void
   onEnd?: () => void
-  onChunkStart?: (chunkIndex: number, totalChunks: number) => void
+  /** `charOffsetInSpokenText` is the start index of this chunk within the string passed to `speak()`. */
+  onChunkStart?: (chunkIndex: number, totalChunks: number, charOffsetInSpokenText: number) => void
+}
+
+export interface TtsVoice {
+  voiceURI: string
+  name: string
+  lang: string
+  localService: boolean
+  default: boolean
 }
 
 // Sentence boundary regex — splits on ., !, ? followed by whitespace or end
@@ -75,6 +85,19 @@ class TtsService {
     return typeof window !== 'undefined' && 'speechSynthesis' in window
   }
 
+  /** Returns browser/OS voices exposed by the Web Speech API. */
+  getVoices(): TtsVoice[] {
+    if (!this.isTtsAvailable()) return []
+
+    return window.speechSynthesis.getVoices().map(voice => ({
+      voiceURI: voice.voiceURI,
+      name: voice.name,
+      lang: voice.lang,
+      localService: voice.localService,
+      default: voice.default,
+    }))
+  }
+
   /** Start speaking the given text with the provided options */
   speak(text: string, options: TtsOptions = {}): void {
     if (!this.isTtsAvailable()) return
@@ -110,7 +133,14 @@ class TtsService {
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.rate = this.options.rate ?? 1.0
 
-    this.options.onChunkStart?.(index, this.chunks.length)
+    if (this.options.voiceURI) {
+      const selectedVoice = window.speechSynthesis
+        .getVoices()
+        .find(voice => voice.voiceURI === this.options.voiceURI)
+      if (selectedVoice) utterance.voice = selectedVoice
+    }
+
+    this.options.onChunkStart?.(index, this.chunks.length, this.chunkOffsets[index] ?? 0)
 
     utterance.onboundary = (event: SpeechSynthesisEvent) => {
       if (event.name === 'word') {

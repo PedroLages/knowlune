@@ -21,8 +21,8 @@ import { useReaderStore } from '@/stores/useReaderStore'
 import {
   getReaderThemeColors,
   getReaderChromeClasses,
-  useAppColorScheme,
 } from './readerThemeConfig'
+import { getReaderFontEpubStack } from './readerFontOptions'
 
 /** Minimum horizontal swipe distance to trigger page turn */
 const SWIPE_THRESHOLD_PX = 50
@@ -56,7 +56,6 @@ export function EpubRenderer({
   const scrollMode = useReaderStore(s => s.scrollMode)
   const dualPage = useReaderStore(s => s.dualPage)
   const toggleHeader = useReaderStore(s => s.toggleHeader)
-  const colorScheme = useAppColorScheme()
   const renditionRef = useRef<Rendition | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
 
@@ -75,21 +74,14 @@ export function EpubRenderer({
   /** Apply current theme + font settings to epub.js rendition */
   const applyTheme = useCallback(
     (rendition: Rendition) => {
-      const themeColors = getReaderThemeColors(theme, colorScheme)
-      const fontFamilyMap: Record<string, string> = {
-        default: 'inherit',
-        serif: 'Georgia, "Times New Roman", serif',
-        sans: 'system-ui, -apple-system, sans-serif',
-        mono: '"Courier New", Courier, monospace',
-      }
-
+      const themeColors = getReaderThemeColors(theme)
       // Apply theme via rendition.themes.default() which accepts a CSS rules object
       const bodyStyles: Record<string, string> = {
         background: themeColors.background,
         color: themeColors.foreground,
         'font-size': `${fontSize}%`,
         'line-height': String(lineHeight),
-        'font-family': fontFamilyMap[fontFamily] ?? 'inherit',
+        'font-family': getReaderFontEpubStack(fontFamily),
       }
 
       // Set spacing explicitly: use 'normal' when zero to reset any stale epub.js
@@ -101,7 +93,7 @@ export function EpubRenderer({
         body: bodyStyles,
       })
     },
-    [theme, colorScheme, fontSize, fontFamily, lineHeight, letterSpacing, wordSpacing]
+    [theme, fontSize, fontFamily, lineHeight, letterSpacing, wordSpacing]
   )
 
   /** Store rendition ref and apply initial theme */
@@ -240,8 +232,8 @@ export function EpubRenderer({
         ? 'motion-safe:animate-[slide-right_200ms_ease-out]'
         : ''
 
-  // Container background matching the active reader theme + app color scheme
-  const chromeClasses = getReaderChromeClasses(theme, colorScheme)
+  // Container background matching the active reader Page Tone
+  const chromeClasses = getReaderChromeClasses(theme)
   const containerBg = chromeClasses.bg
   const readerViewportClass = scrollMode
     ? 'max-w-[72ch]'

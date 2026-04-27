@@ -3,52 +3,51 @@
  *
  * Renders as a Sheet from the bottom (mobile-first, works on all screen sizes).
  * Contains:
- * - Theme selector: Light / Sepia / Dark radio pill cards
+ * - Page tone: White / Sepia / Gray / Dark / Black swatches
  * - Font size: Slider (80–200%, step 10) with A- / A+ buttons
- * - Font family: Select (System / Serif / Sans / Mono)
+ * - Font family: Select with live type preview and short descriptions
  * - Line height: Select (Compact / Normal / Relaxed / Spacious)
  *
+ * App-wide color scheme (Professional / Vibrant / Clean) is configured in global Settings only.
  * All settings are immediately applied to the EPUB rendition via useReaderStore.
  * State is persisted to localStorage automatically by the store.
  *
  * @module ReaderSettingsPanel
  */
 import { useState, useEffect } from 'react'
-import { Sun, Moon, BookOpen } from 'lucide-react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import { Slider } from '@/app/components/ui/slider'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/app/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select'
 import { Switch } from '@/app/components/ui/switch'
 import { Label } from '@/app/components/ui/label'
 import { cn } from '@/app/components/ui/utils'
 import { useReaderStore } from '@/stores/useReaderStore'
-import type { ReaderTheme, ReaderFontFamily } from '@/stores/useReaderStore'
-import { getReaderChromeClasses, useAppColorScheme } from './readerThemeConfig'
+import type { ReaderFontFamily, ReaderTheme } from '@/stores/useReaderStore'
+import { getReaderFontOption, READER_FONT_OPTIONS } from './readerFontOptions'
 
 interface ReaderSettingsPanelProps {
   open: boolean
   onClose: () => void
 }
 
-// Theme metadata (icons/labels) — colors resolved dynamically from shared config
-const THEME_META: { id: ReaderTheme; label: string; icon: React.ReactNode }[] = [
-  { id: 'light', label: 'Light', icon: <Sun className="size-3.5" aria-hidden="true" /> },
-  { id: 'sepia', label: 'Sepia', icon: <BookOpen className="size-3.5" aria-hidden="true" /> },
-  { id: 'dark', label: 'Dark', icon: <Moon className="size-3.5" aria-hidden="true" /> },
-]
-
-const FONT_FAMILIES: { value: ReaderFontFamily; label: string }[] = [
-  { value: 'default', label: 'System' },
-  { value: 'serif', label: 'Serif (Georgia)' },
-  { value: 'sans', label: 'Sans (Inter)' },
-  { value: 'mono', label: 'Mono (Courier)' },
+const PAGE_TONES: {
+  id: ReaderTheme
+  label: string
+  bg: string
+  border: string
+}[] = [
+  { id: 'white', label: 'White', bg: 'bg-[#ffffff]', border: 'border-[#d4d4d4]' },
+  { id: 'sepia', label: 'Sepia', bg: 'bg-[#f4ecd8]', border: 'border-[#e0d5b8]' },
+  { id: 'gray', label: 'Gray', bg: 'bg-[#e5e5e5]', border: 'border-[#cccccc]' },
+  { id: 'dark', label: 'Dark', bg: 'bg-[#383a56]', border: 'border-[#4e5070]' },
+  { id: 'black', label: 'Black', bg: 'bg-[#000000]', border: 'border-[#000000]' },
 ]
 
 const LINE_HEIGHTS: { value: number; label: string }[] = [
@@ -73,7 +72,6 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  const colorScheme = useAppColorScheme()
   const theme = useReaderStore(s => s.theme)
   const setTheme = useReaderStore(s => s.setTheme)
   const fontSize = useReaderStore(s => s.fontSize)
@@ -98,6 +96,8 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
   const showProgressBar = useReaderStore(s => s.showProgressBar)
   const setShowProgressBar = useReaderStore(s => s.setShowProgressBar)
 
+  const selectedFontOption = getReaderFontOption(fontFamily) ?? READER_FONT_OPTIONS[0]
+
   const handleDecrease = () => {
     setFontSize(fontSize - FONT_SIZE_STEP)
   }
@@ -119,38 +119,46 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
       >
         <SheetHeader className="py-4 border-b border-border/50 mb-4">
           <SheetTitle className="text-base font-semibold text-center">Reading Settings</SheetTitle>
+          <SheetDescription className="sr-only">
+            Adjust reader colors, typography, spacing, and page display preferences.
+          </SheetDescription>
         </SheetHeader>
 
-        {/* Theme Selector */}
+        {/* Page Tone Selector */}
         <section aria-labelledby="theme-label" className="mb-6">
           <p
             id="theme-label"
             className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3"
           >
-            Theme
+            Page Tone
           </p>
-          <div role="radiogroup" aria-label="Reading theme" className="grid grid-cols-3 gap-2">
-            {THEME_META.map(t => {
-              const classes = getReaderChromeClasses(t.id, colorScheme)
+          <div role="radiogroup" aria-label="Reading theme" className="flex flex-wrap gap-5">
+            {PAGE_TONES.map(t => {
+              const isSelected = theme === t.id
               return (
                 <button
                   key={t.id}
+                  type="button"
                   role="radio"
-                  aria-checked={theme === t.id}
+                  aria-checked={isSelected}
                   onClick={() => setTheme(t.id)}
                   data-testid={`theme-${t.id}`}
                   className={cn(
-                    'flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 transition-all',
+                    'group flex cursor-pointer flex-col items-center gap-2',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
-                    classes.bg,
-                    classes.text,
-                    theme === t.id
-                      ? 'border-brand shadow-sm'
-                      : 'border-border/30 hover:border-border'
                   )}
                 >
-                  {t.icon}
-                  <span className="text-xs font-medium">{t.label}</span>
+                  <span
+                    className={cn(
+                      'size-14 rounded-full border-2 transition-all',
+                      t.bg,
+                      isSelected
+                        ? 'border-brand ring-2 ring-brand/10'
+                        : `${t.border} group-hover:border-brand/50`
+                    )}
+                    aria-hidden="true"
+                  />
+                  <span className="text-xs font-medium text-muted-foreground">{t.label}</span>
                 </button>
               )
             })}
@@ -204,26 +212,52 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
           </div>
         </section>
 
-        {/* Font Family */}
+        {/* Font family — Select with preview + description; stacks match EPUB via readerFontOptions */}
         <section aria-labelledby="font-family-label" className="mb-6">
           <p
             id="font-family-label"
             className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3"
           >
-            Font Family
+            Font family
           </p>
-          <Select value={fontFamily} onValueChange={val => setFontFamily(val as ReaderFontFamily)}>
+          <Select
+            value={fontFamily}
+            onValueChange={val => setFontFamily(val as ReaderFontFamily)}
+          >
             <SelectTrigger
-              className="w-full"
-              aria-label="Font family"
+              className="h-11 w-full min-w-0 cursor-pointer rounded-xl *:data-[slot=select-value]:sr-only"
+              aria-labelledby="font-family-label"
               data-testid="font-family-select"
             >
-              <SelectValue />
+              <span
+                className="min-w-0 flex-1 truncate text-left text-sm font-medium"
+                style={{ fontFamily: selectedFontOption.previewFontFamily }}
+                aria-hidden
+              >
+                {selectedFontOption.label}
+              </span>
+              <SelectValue placeholder="Choose a font" />
             </SelectTrigger>
-            <SelectContent>
-              {FONT_FAMILIES.map(f => (
-                <SelectItem key={f.value} value={f.value}>
-                  {f.label}
+            <SelectContent className="z-[200]">
+              {READER_FONT_OPTIONS.map(opt => (
+                <SelectItem
+                  key={opt.value}
+                  value={opt.value}
+                  textValue={opt.label}
+                  className="cursor-pointer items-start py-2"
+                  data-testid={`font-family-option-${opt.value}`}
+                >
+                  <span className="flex w-full min-w-0 max-w-[min(100%,20rem)] flex-col gap-0.5 pr-1 text-left">
+                    <span
+                      className="truncate text-sm font-medium leading-tight"
+                      style={{ fontFamily: opt.previewFontFamily }}
+                    >
+                      {opt.label}
+                    </span>
+                    <span className="line-clamp-2 text-left text-xs text-muted-foreground">
+                      {opt.description}
+                    </span>
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -240,7 +274,7 @@ export function ReaderSettingsPanel({ open, onClose }: ReaderSettingsPanelProps)
           </p>
           <Select value={String(lineHeight)} onValueChange={val => setLineHeight(Number(val))}>
             <SelectTrigger
-              className="w-full"
+              className="h-11 w-full cursor-pointer rounded-xl"
               aria-label="Line height"
               data-testid="line-height-select"
             >

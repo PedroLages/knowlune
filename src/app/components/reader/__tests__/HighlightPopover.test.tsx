@@ -85,4 +85,45 @@ describe('HighlightPopover delete action', () => {
     await user.click(screen.getByTestId('highlight-delete-button'))
     expect(onDeleteHighlight).toHaveBeenCalledTimes(1)
   })
+
+  it('right-side action icons are clickable and show pointer cursor styling', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal('innerWidth', 1200)
+    vi.stubGlobal('innerHeight', 800)
+    const onNote = vi.fn()
+    const onFlashcard = vi.fn()
+    const onVocabulary = vi.fn()
+    const onClose = vi.fn()
+
+    render(
+      <HighlightPopover
+        position={{ top: 200, left: 100, width: 200 }}
+        onColorSelect={vi.fn()}
+        onNote={onNote}
+        onFlashcard={onFlashcard}
+        onVocabulary={onVocabulary}
+        onClose={onClose}
+      />
+    )
+
+    const note = screen.getByTestId('highlight-note-button')
+    const flashcard = screen.getByTestId('highlight-flashcard-button')
+    const vocabulary = screen.getByTestId('highlight-vocabulary-button')
+    const close = screen.getByTestId('highlight-close-button')
+
+    expect(note).toHaveClass('cursor-pointer')
+    expect(flashcard).toHaveClass('cursor-pointer')
+    expect(vocabulary).toHaveClass('cursor-pointer')
+    expect(close).toHaveClass('cursor-pointer')
+
+    await user.click(note)
+    await user.click(flashcard)
+    await user.click(vocabulary)
+    await user.click(close)
+
+    expect(onNote).toHaveBeenCalledTimes(1)
+    expect(onFlashcard).toHaveBeenCalledTimes(1)
+    expect(onVocabulary).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
 })

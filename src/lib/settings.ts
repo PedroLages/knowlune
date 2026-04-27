@@ -137,7 +137,11 @@ export function getSettings(): AppSettings {
     if (!VALID_READING_LINE_HEIGHT.includes(parsed.readingLineHeight)) {
       parsed.readingLineHeight = defaults.readingLineHeight
     }
-    if (!VALID_READING_THEME.includes(parsed.readingTheme)) {
+    if (parsed.readingTheme === 'white') {
+      parsed.readingTheme = 'auto'
+    } else if (parsed.readingTheme === 'black') {
+      parsed.readingTheme = 'high-contrast'
+    } else if (!VALID_READING_THEME.includes(parsed.readingTheme)) {
       parsed.readingTheme = defaults.readingTheme
     }
     if (!VALID_COURSE_VIEW_MODE.includes(parsed.courseViewMode)) {
@@ -338,7 +342,7 @@ export async function hydrateSettingsFromSupabase(
 
     // Lazy imports — Zustand stores are singleton modules; getState() is safe outside React.
     const [
-      { useReaderStore },
+      { useReaderStore, normalizeReaderTheme },
       { useAudiobookPrefsStore, VALID_TIMERS, VALID_SKIP_BACK, VALID_SKIP_FORWARD },
       { useReadingGoalStore },
       { useEngagementPrefsStore },
@@ -351,12 +355,7 @@ export async function hydrateSettingsFromSupabase(
 
     // ── useReaderStore ──
     if (typeof s.readingTheme === 'string') {
-      const valid = ['light', 'sepia', 'dark']
-      if (valid.includes(s.readingTheme)) {
-        useReaderStore
-          .getState()
-          .setTheme(s.readingTheme as import('@/stores/useReaderStore').ReaderTheme)
-      }
+      useReaderStore.getState().setTheme(normalizeReaderTheme(s.readingTheme))
     }
     if (
       typeof s.readingFontSize === 'number' &&

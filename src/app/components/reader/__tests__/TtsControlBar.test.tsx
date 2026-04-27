@@ -20,26 +20,38 @@ const defaultProps = {
   currentChunk: 1,
   totalChunks: 10,
   rate: 1,
-  theme: 'light' as ReaderTheme,
+  voiceURI: null,
+  voices: [
+    {
+      voiceURI: 'voice-alex',
+      name: 'Alex',
+      lang: 'en-US',
+      localService: true,
+      default: true,
+    },
+  ],
+  theme: 'white' as ReaderTheme,
   onPlayPause: vi.fn(),
   onStop: vi.fn(),
   onRateChange: vi.fn(),
+  onVoiceChange: vi.fn(),
 }
 
 describe('TtsControlBar', () => {
   describe('Theme application', () => {
-    it('applies light/professional bar and text classes', () => {
-      render(<TtsControlBar {...defaultProps} theme="light" />)
+    it('uses bottom chrome stacking and white page tone bar classes', () => {
+      render(<TtsControlBar {...defaultProps} theme="white" />)
 
       const bar = screen.getByTestId('tts-control-bar')
-      expect(bar).toHaveClass('bg-[#faf5ee]/98', 'text-[#1c1d2b]')
+      expect(bar).toHaveClass('bottom-0', 'z-[120]')
+      expect(bar).toHaveClass('bg-[#ffffff]/98', 'text-[#1c1d2b]')
     })
 
-    it('applies dark theme classes', () => {
+    it('applies dark page tone classes', () => {
       render(<TtsControlBar {...defaultProps} theme="dark" />)
 
       const bar = screen.getByTestId('tts-control-bar')
-      expect(bar).toHaveClass('bg-[#1a1b26]/98', 'text-[#e8e9f0]')
+      expect(bar).toHaveClass('bg-[#383a56]/98', 'text-[#f7f7fb]')
     })
 
     it('applies sepia theme classes', () => {
@@ -48,5 +60,36 @@ describe('TtsControlBar', () => {
       const bar = screen.getByTestId('tts-control-bar')
       expect(bar).toHaveClass('bg-[#f4ecd8]/98', 'text-[#2d241e]')
     })
+
+    it('applies gray and black page tone classes', () => {
+      const { rerender } = render(<TtsControlBar {...defaultProps} theme="gray" />)
+      expect(screen.getByTestId('tts-control-bar')).toHaveClass(
+        'bg-[#e5e5e5]/98',
+        'text-[#1f2937]'
+      )
+
+      rerender(<TtsControlBar {...defaultProps} theme="black" />)
+      expect(screen.getByTestId('tts-control-bar')).toHaveClass(
+        'bg-[#000000]/98',
+        'text-[#f8fafc]'
+      )
+    })
+  })
+
+  it('shows the browser voice selector with pointer affordance', () => {
+    render(<TtsControlBar {...defaultProps} />)
+
+    const voice = screen.getByTestId('tts-voice-select')
+    expect(voice).toBeInTheDocument()
+    expect(voice).toHaveClass('cursor-pointer')
+    expect(screen.getByLabelText('Reading voice')).toHaveTextContent('System voice')
+
+    expect(screen.getByTestId('tts-speed-select')).toHaveClass('cursor-pointer')
+  })
+
+  it('shows the selected voice name when a voice is chosen', () => {
+    render(<TtsControlBar {...defaultProps} voiceURI="voice-alex" />)
+
+    expect(screen.getByLabelText('Reading voice')).toHaveTextContent('Alex')
   })
 })

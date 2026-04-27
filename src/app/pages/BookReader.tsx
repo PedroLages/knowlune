@@ -44,6 +44,8 @@ import { HighlightLayer } from '@/app/components/reader/HighlightLayer'
 import { useVocabularyStore } from '@/stores/useVocabularyStore'
 import { HighlightListPanel } from '@/app/components/reader/HighlightListPanel'
 import { ClozeFlashcardCreator } from '@/app/components/reader/ClozeFlashcardCreator'
+import { LinkedFlashcardPanel } from '@/app/components/reader/LinkedFlashcardPanel'
+import { loadLinkedFlashcard } from '@/app/components/reader/linkedFlashcardLookup'
 import { useTts } from '@/app/hooks/useTts'
 import { useReadingSession } from '@/app/hooks/useReadingSession'
 import { useFormatSwitch } from '@/app/hooks/useFormatSwitch'
@@ -52,7 +54,7 @@ import { useReadingGoalStore } from '@/stores/useReadingGoalStore'
 import { getTimeReadToday } from '@/services/ReadingStatsService'
 import { getPagesReadToday } from '@/app/hooks/usePagesReadToday'
 import { db } from '@/db/schema'
-import type { ContentPosition } from '@/data/types'
+import type { BookHighlight, ContentPosition, Flashcard } from '@/data/types'
 
 // Lazy-loaded audiobook renderer — keeps audiobook code out of the initial bundle (NFR20)
 const AudiobookRenderer = lazy(() =>
@@ -279,6 +281,13 @@ export function BookReader() {
   const [clozeText, setClozeText] = useState('')
   const [clozeHighlightId, setClozeHighlightId] = useState<string | undefined>(undefined)
   const [clozeOpen, setClozeOpen] = useState(false)
+  const [linkedFlashcardOpen, setLinkedFlashcardOpen] = useState(false)
+  const [linkedFlashcard, setLinkedFlashcard] = useState<Flashcard | null>(null)
+  const [linkedFlashcardLoading, setLinkedFlashcardLoading] = useState(false)
+  const [linkedFlashcardError, setLinkedFlashcardError] = useState(false)
+  const [linkedFlashcardSourceHighlight, setLinkedFlashcardSourceHighlight] =
+    useState<BookHighlight | null>(null)
+  const linkedFlashcardRequestIdRef = useRef(0)
   const [retryKey, setRetryKey] = useState(0)
   // Remote EPUB cache fallback (E88-S03) — stored as RemoteEpubError for derived state
   const [remoteEpubError, setRemoteEpubError] = useState<RemoteEpubError | null>(null)
@@ -293,6 +302,61 @@ export function BookReader() {
   const renditionRef = useRef<Rendition | null>(null)
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleLinkedFlashcardRequest = useCallback((highlight: BookHighlight) => {
+    linkedFlashcardRequestIdRef.current += 1
+    const requestId = linkedFlashcardRequestIdRef.current
+    setLinkedFlashcardOpen(true)
+    setLinkedFlashcard(null)
+    setLinkedFlashcardError(false)
+    setLinkedFlashcardSourceHighlight(highlight)
+
+    if (!highlight.flashcardId) {
+      setLinkedFlashcardLoading(false)
+      return
+    }
+
+    setLinkedFlashcardLoading(true)
+    loadLinkedFlashcard(highlight, id => db.flashcards.get(id))
+      .then(card => {
+        if (linkedFlashcardRequestIdRef.current !== requestId) return
+        setLinkedFlashcard(card)
+      })
+      .catch(() => {
+        if (linkedFlashcardRequestIdRef.current !== requestId) return
+        setLinkedFlashcard(null)
+        setLinkedFlashcardError(true)
+        toast.error('Failed to load linked flashcard')
+      })
+      .finally(() => {
+        if (linkedFlashcardRequestIdRef.current !== requestId) return
+        setLinkedFlashcardLoading(false)
+      })
+  }, [])
+
+  const handleLinkedFlashcardClose = useCallback(() => {
+    linkedFlashcardRequestIdRef.current += 1
+    setLinkedFlashcardOpen(false)
+    setLinkedFlashcardLoading(false)
+    setLinkedFlashcardError(false)
+  }, [])
+
+  const handleLinkedFlashcardRetry = useCallback(() => {
+    if (!linkedFlashcardSourceHighlight) return
+    handleLinkedFlashcardRequest(linkedFlashcardSourceHighlight)
+  }, [handleLinkedFlashcardRequest, linkedFlashcardSourceHighlight])
+
+  useEffect(() => {
+    linkedFlashcardRequestIdRef.current += 1
+    setLinkedFlashcardOpen(false)
+    setLinkedFlashcard(null)
+    setLinkedFlashcardLoading(false)
+    setLinkedFlashcardError(false)
+    setLinkedFlashcardSourceHighlight(null)
+    return () => {
+      linkedFlashcardRequestIdRef.current += 1
+    }
+  }, [bookId])
 
   // Timeout effect for TOC loading — fallback to empty state after 5 seconds
   useEffect(() => {
@@ -340,13 +404,17 @@ export function BookReader() {
     isTtsPlaying,
     isTtsPaused,
     ttsRate,
+    ttsVoiceURI,
+    ttsVoices,
     ttsCurrentChunk,
     ttsTotalChunks,
     startTts,
     stopTts,
     setTtsRate,
+    setTtsVoiceURI,
     toggleTts,
   } = useTts(renditionRef)
+  const isTtsActive = isTtsPlaying || isTtsPaused
 
   // Load books if not yet loaded
   useEffect(() => {
@@ -1158,14 +1226,16 @@ export function BookReader() {
         )}
       </main>
 
-      {/* Reader Footer */}
-      <ReaderFooter
-        progress={readingProgress}
-        theme={theme}
-        visible={headerVisible}
-        currentPage={currentPage}
-        totalPages={totalPages}
-      />
+      {/* Reader Footer — hidden while TTS control bar is bottom chrome */}
+      {!isTtsActive && (
+        <ReaderFooter
+          progress={readingProgress}
+          theme={theme}
+          visible={headerVisible}
+          currentPage={currentPage}
+          totalPages={totalPages}
+        />
+      )}
 
       {/* Table of Contents panel (E84-S02) */}
       <TableOfContents
@@ -1192,6 +1262,7 @@ export function BookReader() {
         }}
         bookId={bookId}
         bookTitle={book?.title}
+        onLinkedFlashcardRequest={handleLinkedFlashcardRequest}
       />
 
       {/* Highlight layer (E85-S01) — text selection events + highlight overlays */}
@@ -1206,6 +1277,7 @@ export function BookReader() {
             setClozeHighlightId(highlightId)
             setClozeOpen(true)
           }}
+          onLinkedFlashcardRequest={handleLinkedFlashcardRequest}
           onVocabularyRequest={text => {
             if (!bookId) return
             const now = new Date().toISOString()
@@ -1222,6 +1294,15 @@ export function BookReader() {
         />
       )}
 
+      <LinkedFlashcardPanel
+        open={linkedFlashcardOpen}
+        flashcard={linkedFlashcard}
+        isLoading={linkedFlashcardLoading}
+        isError={linkedFlashcardError}
+        onRetry={handleLinkedFlashcardRetry}
+        onClose={handleLinkedFlashcardClose}
+      />
+
       {/* Cloze flashcard creator (E85-S04) */}
       {bookId && (
         <ClozeFlashcardCreator
@@ -1234,16 +1315,19 @@ export function BookReader() {
       )}
 
       {/* TTS Read-Aloud control bar (E84-S05) — shown when TTS is active */}
-      {(isTtsPlaying || isTtsPaused) && (
+      {isTtsActive && (
         <TtsControlBar
           isPlaying={isTtsPlaying}
           currentChunk={ttsCurrentChunk}
           totalChunks={ttsTotalChunks}
           rate={ttsRate}
+          voiceURI={ttsVoiceURI}
+          voices={ttsVoices}
           theme={theme}
           onPlayPause={toggleTts}
           onStop={stopTts}
           onRateChange={setTtsRate}
+          onVoiceChange={setTtsVoiceURI}
         />
       )}
     </div>

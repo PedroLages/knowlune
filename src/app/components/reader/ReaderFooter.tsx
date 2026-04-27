@@ -11,7 +11,7 @@ import { BookOpenText } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import type { ReaderTheme } from '@/stores/useReaderStore'
 import { useReaderStore } from '@/stores/useReaderStore'
-import { getReaderChromeClasses, useAppColorScheme } from './readerThemeConfig'
+import { getReaderChromeClasses } from './readerThemeConfig'
 
 interface ReaderFooterProps {
   /** Progress 0–1 */
@@ -31,8 +31,7 @@ export function ReaderFooter({
   currentPage,
   totalPages,
 }: ReaderFooterProps) {
-  const colorScheme = useAppColorScheme()
-  const chrome = getReaderChromeClasses(theme, colorScheme)
+  const chrome = getReaderChromeClasses(theme)
   const progressPercent = Math.round(progress * 100)
   const showPageIndicator = currentPage != null && totalPages != null && totalPages > 0
   const showPageNumbers = useReaderStore(s => s.showPageNumbers)

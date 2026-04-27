@@ -15,6 +15,11 @@ const baseHighlight: BookHighlight = {
   updatedAt: '2025-01-01T00:00:00.000Z',
 }
 
+const linkedHighlight: BookHighlight = {
+  ...baseHighlight,
+  flashcardId: 'card-1',
+}
+
 describe('clampMiniPopoverPosition', () => {
   const vw = 400
   const vh = 600
@@ -178,5 +183,71 @@ describe('HighlightMiniPopover (integrated toolbar)', () => {
 
     await user.click(screen.getByTestId('mini-popover-confirm-delete'))
     expect(onDelete).toHaveBeenCalledTimes(1)
+  })
+
+  it('can open directly in edit mode for note actions', () => {
+    render(
+      <HighlightMiniPopover
+        highlight={baseHighlight}
+        anchor={{ centerX: 200, top: 200, bottom: 220 }}
+        initialMode="edit"
+        onClose={vi.fn()}
+        onUpdate={vi.fn().mockResolvedValue(undefined)}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+        onCreateFlashcard={vi.fn()}
+        onViewFlashcard={vi.fn()}
+      />
+    )
+
+    expect(screen.getByTestId('mini-popover-note-input')).toBeInTheDocument()
+  })
+
+  it('uses the stack icon to view a linked flashcard when one exists', async () => {
+    const user = userEvent.setup()
+    const onViewFlashcard = vi.fn()
+    const onCreateFlashcard = vi.fn()
+    render(
+      <HighlightMiniPopover
+        highlight={linkedHighlight}
+        anchor={{ centerX: 200, top: 200, bottom: 220 }}
+        onClose={vi.fn()}
+        onUpdate={vi.fn().mockResolvedValue(undefined)}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+        onCreateFlashcard={onCreateFlashcard}
+        onViewFlashcard={onViewFlashcard}
+      />
+    )
+
+    await user.click(screen.getByTestId('mini-popover-view-flashcard'))
+
+    expect(onViewFlashcard).toHaveBeenCalledTimes(1)
+    expect(onCreateFlashcard).not.toHaveBeenCalled()
+    expect(screen.getByLabelText('View linked flashcard')).toBeInTheDocument()
+  })
+
+  it('uses the stack icon to create a flashcard when no link exists', async () => {
+    const user = userEvent.setup()
+    const onViewFlashcard = vi.fn()
+    const onCreateFlashcard = vi.fn()
+    render(
+      <HighlightMiniPopover
+        highlight={baseHighlight}
+        anchor={{ centerX: 200, top: 200, bottom: 220 }}
+        onClose={vi.fn()}
+        onUpdate={vi.fn().mockResolvedValue(undefined)}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+        onCreateFlashcard={onCreateFlashcard}
+        onViewFlashcard={onViewFlashcard}
+      />
+    )
+
+    const createButton = screen.getByTestId('mini-popover-create-flashcard')
+    expect(createButton).toHaveClass('cursor-pointer')
+    expect(screen.getByLabelText('Create flashcard from highlight')).toBeInTheDocument()
+
+    await user.click(createButton)
+
+    expect(onCreateFlashcard).toHaveBeenCalledTimes(1)
+    expect(onViewFlashcard).not.toHaveBeenCalled()
   })
 })

@@ -117,7 +117,7 @@ export function HighlightPopover({
             onClick={() => onColorSelect(color.id)}
             aria-label={color.label}
             className={cn(
-              'size-10 rounded-full border-2 border-white/20 shadow-sm',
+              'size-10 rounded-full border-2 border-white/20 shadow-sm cursor-pointer',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
               color.bg
             )}
@@ -130,7 +130,7 @@ export function HighlightPopover({
         <button
           onClick={onNote}
           aria-label="Add note"
-          className="size-10 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="size-10 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand cursor-pointer"
           data-testid="highlight-note-button"
         >
           <StickyNote className="size-5" aria-hidden="true" />
@@ -139,7 +139,7 @@ export function HighlightPopover({
         <button
           onClick={onFlashcard}
           aria-label="Create flashcard"
-          className="size-10 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="size-10 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand cursor-pointer"
           data-testid="highlight-flashcard-button"
         >
           <Layers className="size-5" aria-hidden="true" />
@@ -149,7 +149,7 @@ export function HighlightPopover({
           <button
             onClick={onVocabulary}
             aria-label="Add to vocabulary"
-            className="size-10 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="size-10 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand cursor-pointer"
             data-testid="highlight-vocabulary-button"
           >
             <BookA className="size-5" aria-hidden="true" />
@@ -161,7 +161,7 @@ export function HighlightPopover({
             onClick={handleDeleteClick}
             aria-label={confirmingDelete ? 'Confirm delete highlight' : 'Delete highlight'}
             className={cn(
-              'size-10 flex items-center justify-center rounded-lg text-destructive hover:text-destructive hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+              'size-10 flex items-center justify-center rounded-lg text-destructive hover:text-destructive hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand cursor-pointer',
               confirmingDelete && 'bg-destructive/10'
             )}
             data-testid="highlight-delete-button"
@@ -173,7 +173,7 @@ export function HighlightPopover({
         <button
           onClick={onClose}
           aria-label="Close highlight actions"
-          className="size-10 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="size-10 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand cursor-pointer"
           data-testid="highlight-close-button"
         >
           <X className="size-4" aria-hidden="true" />
@@ -204,7 +204,7 @@ export function HighlightPopover({
           onClick={() => onColorSelect(color.id)}
           aria-label={color.label}
           className={cn(
-            'size-7 rounded-full border-2 border-white/20 shadow-sm',
+            'size-7 rounded-full border-2 border-white/20 shadow-sm cursor-pointer',
             'hover:scale-110 active:scale-95 transition-transform',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
             color.bg
@@ -218,7 +218,7 @@ export function HighlightPopover({
       <button
         onClick={onNote}
         aria-label="Add note"
-        className="size-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="size-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand cursor-pointer"
         data-testid="highlight-note-button"
       >
         <StickyNote className="size-4" aria-hidden="true" />
@@ -227,7 +227,7 @@ export function HighlightPopover({
       <button
         onClick={onFlashcard}
         aria-label="Create flashcard"
-        className="size-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="size-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand cursor-pointer"
         data-testid="highlight-flashcard-button"
       >
         <Layers className="size-4" aria-hidden="true" />
@@ -237,7 +237,7 @@ export function HighlightPopover({
         <button
           onClick={onVocabulary}
           aria-label="Add to vocabulary"
-          className="size-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="size-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand cursor-pointer"
           data-testid="highlight-vocabulary-button"
         >
           <BookA className="size-4" aria-hidden="true" />
@@ -249,7 +249,7 @@ export function HighlightPopover({
           onClick={handleDeleteClick}
           aria-label={confirmingDelete ? 'Confirm delete highlight' : 'Delete highlight'}
           className={cn(
-            'size-7 flex items-center justify-center rounded-lg text-destructive hover:text-destructive hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+            'size-7 flex items-center justify-center rounded-lg text-destructive hover:text-destructive hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand cursor-pointer',
             confirmingDelete && 'bg-destructive/10'
           )}
           data-testid="highlight-delete-button"
@@ -261,7 +261,7 @@ export function HighlightPopover({
       <button
         onClick={onClose}
         aria-label="Close highlight actions"
-        className="size-6 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="size-6 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand cursor-pointer"
         data-testid="highlight-close-button"
       >
         <X className="size-3.5" aria-hidden="true" />

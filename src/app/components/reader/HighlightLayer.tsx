@@ -19,7 +19,10 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import type { Rendition } from 'epubjs'
 import { toast } from 'sonner'
 import { useHighlightStore } from '@/stores/useHighlightStore'
-import { HighlightPopover } from '@/app/components/reader/HighlightPopover'
+import {
+  HighlightPopover,
+  HIGHLIGHT_TOOLBAR_SELECTION_GAP_PX,
+} from '@/app/components/reader/HighlightPopover'
 import {
   HighlightMiniPopover,
   type HighlightMiniPopoverAnchor,
@@ -120,6 +123,7 @@ interface SelectionData {
 interface MiniPopoverState {
   highlight: BookHighlight
   anchor: HighlightMiniPopoverAnchor
+  initialMode?: 'view' | 'edit' | 'confirm-delete'
 }
 
 interface HighlightLayerProps {
@@ -127,6 +131,7 @@ interface HighlightLayerProps {
   bookId: string
   currentHref?: string
   onFlashcardRequest?: (text: string, highlightId?: string) => void
+  onLinkedFlashcardRequest?: (highlight: BookHighlight) => void
   onVocabularyRequest?: (text: string, context?: string) => void
   /** If set, briefly pulse this highlight after restore (E85-S05 back-navigation) */
   focusHighlightId?: string
@@ -137,6 +142,7 @@ export function HighlightLayer({
   bookId,
   currentHref,
   onFlashcardRequest,
+  onLinkedFlashcardRequest,
   onVocabularyRequest,
   focusHighlightId,
 }: HighlightLayerProps) {
@@ -159,6 +165,15 @@ export function HighlightLayer({
   const [selection, setSelection] = useState<SelectionData | null>(null)
   const [miniPopover, setMiniPopover] = useState<MiniPopoverState | null>(null)
   const [showIosBanner, setShowIosBanner] = useState(false)
+
+  const selectionToMiniAnchor = useCallback((position: HighlightPosition): HighlightMiniPopoverAnchor => {
+    const top = position.below ? position.top + HIGHLIGHT_TOOLBAR_SELECTION_GAP_PX : position.top
+    return {
+      centerX: position.left + position.width / 2,
+      top,
+      bottom: top,
+    }
+  }, [])
 
   // Load highlights for this book when rendition is ready
   useEffect(() => {
@@ -397,19 +412,91 @@ export function HighlightLayer({
   )
 
   const handleNote = useCallback(() => {
-    // Save highlight with yellow default, then open note (E85-S02)
-    if (selection) {
-      // silent-catch-ok: note initiation failure falls back gracefully
-      handleColorSelect('yellow').catch(() => {
+    if (!selection || !rendition) return
+
+    const clearIframeSelection = () => {
+      try {
+        const contents = rendition.getContents() as unknown as Array<{ window?: Window }>
+        for (const content of contents) {
+          content.window?.getSelection()?.removeAllRanges()
+        }
+      } catch {
         /* silent-catch-ok */
-      })
+      }
     }
-  }, [selection, handleColorSelect])
+
+    const existingHighlight = selection.existingHighlightId
+      ? highlightsRef.current.find(h => h.id === selection.existingHighlightId)
+      : undefined
+    if (existingHighlight) {
+      clearIframeSelection()
+      setSelection(null)
+      setMiniPopover({
+        highlight: existingHighlight,
+        anchor: selectionToMiniAnchor(selection.position),
+        initialMode: 'edit',
+      })
+      return
+    }
+
+    const id = crypto.randomUUID()
+    const now = new Date().toISOString()
+    const highlight: BookHighlight = {
+      id,
+      bookId,
+      cfiRange: selection.cfiRange,
+      textAnchor: selection.text,
+      textContext: selection.textContext,
+      chapterHref: selection.chapterHref,
+      color: 'yellow',
+      position: { type: 'cfi', value: selection.cfiRange },
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    try {
+      rendition.annotations.remove(selection.cfiRange, 'highlight')
+      rendition.annotations.highlight(
+        selection.cfiRange,
+        { highlightId: id },
+        (e: MouseEvent) => {
+          const h = highlightsRef.current.find(x => x.id === id)
+          if (!h) return
+          setSelection(null)
+          setMiniPopover({ highlight: h, anchor: annotationClickToMainViewportAnchor(e) })
+        },
+        'epub-highlight',
+        highlightStyles('yellow')
+      )
+    } catch {
+      // silent-catch-ok: annotation failure is non-fatal
+    }
+
+    clearIframeSelection()
+    setSelection(null)
+
+    createHighlight(highlight)
+      .then(() => {
+        setMiniPopover({
+          highlight,
+          anchor: selectionToMiniAnchor(selection.position),
+          initialMode: 'edit',
+        })
+      })
+      .catch(() => {
+        try {
+          rendition.annotations.remove(selection.cfiRange, 'highlight')
+        } catch {
+          /* silent-catch-ok */
+        }
+        toast.error('Failed to save highlight')
+      })
+  }, [selection, rendition, bookId, createHighlight, selectionToMiniAnchor])
 
   const handleFlashcard = useCallback(() => {
     if (!selection) return
     setSelection(null)
-    onFlashcardRequest?.(selection.text)
+    onFlashcardRequest?.(selection.text, selection.existingHighlightId)
   }, [selection, onFlashcardRequest])
 
   const handleVocabulary = useCallback(() => {
@@ -554,6 +641,7 @@ export function HighlightLayer({
         <HighlightMiniPopover
           highlight={miniPopover.highlight}
           anchor={miniPopover.anchor}
+          initialMode={miniPopover.initialMode}
           onClose={() => setMiniPopover(null)}
           onUpdate={handleMiniUpdate}
           onDelete={handleMiniDelete}
@@ -562,8 +650,8 @@ export function HighlightLayer({
             onFlashcardRequest?.(miniPopover.highlight.textAnchor, miniPopover.highlight.id)
           }}
           onViewFlashcard={() => {
-            // E85-S05 will handle navigation; stub for now
             setMiniPopover(null)
+            onLinkedFlashcardRequest?.(miniPopover.highlight)
           }}
           onVocabulary={
             onVocabularyRequest

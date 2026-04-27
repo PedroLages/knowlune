@@ -25,7 +25,7 @@ vi.mock('react-reader', () => ({
 
 // Mutable store state — allows individual tests to override theme/settings
 const mockStoreState: Record<string, unknown> = {
-  theme: 'light',
+  theme: 'white',
   fontSize: 100,
   fontFamily: 'default',
   lineHeight: 1.6,
@@ -40,17 +40,6 @@ const mockToggleHeader = mockStoreState.toggleHeader as ReturnType<typeof vi.fn>
 vi.mock('@/stores/useReaderStore', () => ({
   useReaderStore: (selector: (s: Record<string, unknown>) => unknown) => selector(mockStoreState),
 }))
-
-// Mock useAppColorScheme — default to 'professional', tests can override via mockColorScheme
-let mockColorScheme = 'professional'
-vi.mock('../readerThemeConfig', async () => {
-  const actual =
-    await vi.importActual<typeof import('../readerThemeConfig')>('../readerThemeConfig')
-  return {
-    ...actual,
-    useAppColorScheme: () => mockColorScheme,
-  }
-})
 
 // Mock Rendition
 function createMockRendition() {
@@ -108,7 +97,7 @@ describe('EpubRenderer', () => {
     mockEpubViewProps.mockClear()
     mockToggleHeader.mockClear()
     // Reset store to defaults
-    mockStoreState.theme = 'light'
+    mockStoreState.theme = 'white'
     mockStoreState.fontSize = 100
     mockStoreState.fontFamily = 'default'
     mockStoreState.lineHeight = 1.6
@@ -116,7 +105,6 @@ describe('EpubRenderer', () => {
     mockStoreState.wordSpacing = 0
     mockStoreState.scrollMode = false
     mockStoreState.dualPage = false
-    mockColorScheme = 'professional'
     vi.useFakeTimers()
   })
 
@@ -199,10 +187,10 @@ describe('EpubRenderer', () => {
   })
 
   describe('Bug 2 — Container background matches theme (AC-3)', () => {
-    it('applies light theme background to container (professional)', () => {
+    it('applies white theme background to container', () => {
       render(<EpubRenderer {...defaultProps} />)
       const container = screen.getByTestId('epub-renderer')
-      expect(container.className).toContain('bg-[#faf5ee]')
+      expect(container.className).toContain('bg-[#ffffff]')
     })
 
     it('applies sepia theme background to container', () => {
@@ -216,14 +204,21 @@ describe('EpubRenderer', () => {
       mockStoreState.theme = 'dark'
       render(<EpubRenderer {...defaultProps} />)
       const container = screen.getByTestId('epub-renderer')
-      expect(container.className).toContain('bg-[#1a1b26]')
+      expect(container.className).toContain('bg-[#383a56]')
     })
 
-    it('applies clean color scheme light background to container', () => {
-      mockColorScheme = 'clean'
+    it('applies gray theme background to container', () => {
+      mockStoreState.theme = 'gray'
       render(<EpubRenderer {...defaultProps} />)
       const container = screen.getByTestId('epub-renderer')
-      expect(container.className).toContain('bg-[#f9f9fe]')
+      expect(container.className).toContain('bg-[#e5e5e5]')
+    })
+
+    it('applies black theme background to container', () => {
+      mockStoreState.theme = 'black'
+      render(<EpubRenderer {...defaultProps} />)
+      const container = screen.getByTestId('epub-renderer')
+      expect(container.className).toContain('bg-[#000000]')
     })
   })
 
@@ -315,10 +310,27 @@ describe('EpubRenderer', () => {
 
       expect(mockRendition.themes.default).toHaveBeenCalledWith({
         body: expect.objectContaining({
-          background: '#faf5ee',
+          background: '#ffffff',
           color: '#1c1d2b',
           'font-size': '100%',
           'line-height': '1.6',
+        }),
+      })
+    })
+
+    it('applies the Atkinson Hyperlegible reader font', () => {
+      mockStoreState.fontFamily = 'atkinson'
+      render(<EpubRenderer {...defaultProps} />)
+
+      const mockRendition = createMockRendition()
+      const epubViewCall = mockEpubViewProps.mock.calls[0][0]
+      act(() => {
+        epubViewCall.getRendition(mockRendition)
+      })
+
+      expect(mockRendition.themes.default).toHaveBeenCalledWith({
+        body: expect.objectContaining({
+          'font-family': "'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif",
         }),
       })
     })
@@ -363,14 +375,14 @@ describe('EpubRenderer', () => {
 
       expect(mockRendition.themes.default).toHaveBeenCalledWith({
         body: expect.objectContaining({
-          background: '#1a1b26',
-          color: '#e8e9f0',
+          background: '#383a56',
+          color: '#f7f7fb',
         }),
       })
     })
 
-    it('applies clean color scheme colors for light theme', () => {
-      mockColorScheme = 'clean'
+    it('applies gray theme colors to the EPUB iframe', () => {
+      mockStoreState.theme = 'gray'
       render(<EpubRenderer {...defaultProps} />)
 
       const mockRendition = createMockRendition()
@@ -381,15 +393,15 @@ describe('EpubRenderer', () => {
 
       expect(mockRendition.themes.default).toHaveBeenCalledWith({
         body: expect.objectContaining({
-          background: '#f9f9fe',
-          color: '#2c333d',
+          background: '#e5e5e5',
+          color: '#1f2937',
         }),
       })
     })
 
-    it('re-applies theme when color scheme changes mid-render', () => {
-      mockColorScheme = 'professional'
-      const { rerender } = render(<EpubRenderer {...defaultProps} />)
+    it('applies black theme colors to the EPUB iframe', () => {
+      mockStoreState.theme = 'black'
+      render(<EpubRenderer {...defaultProps} />)
 
       const mockRendition = createMockRendition()
       const epubViewCall = mockEpubViewProps.mock.calls[0][0]
@@ -397,24 +409,10 @@ describe('EpubRenderer', () => {
         epubViewCall.getRendition(mockRendition)
       })
 
-      // Confirm initial professional colors
       expect(mockRendition.themes.default).toHaveBeenCalledWith({
         body: expect.objectContaining({
-          background: '#faf5ee',
-          color: '#1c1d2b',
-        }),
-      })
-
-      mockRendition.themes.default.mockClear()
-
-      // Switch color scheme to clean mid-render
-      mockColorScheme = 'clean'
-      rerender(<EpubRenderer {...defaultProps} />)
-
-      expect(mockRendition.themes.default).toHaveBeenCalledWith({
-        body: expect.objectContaining({
-          background: '#f9f9fe',
-          color: '#2c333d',
+          background: '#000000',
+          color: '#f8fafc',
         }),
       })
     })

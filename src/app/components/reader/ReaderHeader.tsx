@@ -19,7 +19,7 @@ import {
 } from '@/app/components/ui/dropdown-menu'
 import { cn } from '@/app/components/ui/utils'
 import type { ReaderTheme } from '@/stores/useReaderStore'
-import { getReaderChromeClasses, useAppColorScheme } from './readerThemeConfig'
+import { getReaderChromeClasses } from './readerThemeConfig'
 
 interface ReaderHeaderProps {
   title: string
@@ -50,8 +50,7 @@ export function ReaderHeader({
   readingProgress,
 }: ReaderHeaderProps) {
   const navigate = useNavigate()
-  const colorScheme = useAppColorScheme()
-  const chrome = getReaderChromeClasses(theme, colorScheme)
+  const chrome = getReaderChromeClasses(theme)
 
   // Chapter display: use chapter name when available, fall back to progress percentage
   // Treat empty string as unavailable (should show progress percentage instead)
