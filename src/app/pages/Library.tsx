@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, useParams, useLocation } from 'react-router'
 import { recordVisit } from '@/lib/searchFrecency'
 import { FormatTabs } from '@/app/components/library/FormatTabs'
-// LibraryShelves is available at '@/app/components/library/LibraryShelves' — mount once real shelf data is wired
+import { LibraryShelves } from '@/app/components/library/LibraryShelves'
 import { SmartGroupedView } from '@/app/components/library/SmartGroupedView'
 import {
   BookOpen,
@@ -579,10 +579,6 @@ export function Library() {
         <YearlyGoalProgress />
       </div>
 
-      {/* E116-S03: LibraryShelves component is ready; not mounted here until real data
-          is wired (real shelf items from useShelfStore). Import and mount once data
-          integration is complete. */}
-
       {/* Empty state */}
       {books.length === 0 && (
         <section
@@ -679,6 +675,9 @@ export function Library() {
 
       {/* Daily Highlights — cinematic highlight strip from annotated books */}
       {books.length > 0 && <DailyHighlightsStrip />}
+
+      {/* Continue + recently added/finished shelves */}
+      {books.length > 0 && <LibraryShelves />}
 
       {/* Reading Queue — always visible when books exist (E110-S03 AC-1) */}
       {books.length > 0 && <ReadingQueue />}
