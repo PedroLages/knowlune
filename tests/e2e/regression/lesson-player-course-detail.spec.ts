@@ -8,6 +8,7 @@
 import { test, expect } from '../../support/fixtures'
 import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
 import { goToCourses, navigateAndWait } from '../../support/helpers/navigation'
+import { seedIndexedDBStore } from '../../support/helpers/seed-helpers'
 import type { Page } from '@playwright/test'
 
 // ---------------------------------------------------------------------------
@@ -111,6 +112,35 @@ async function goToImportedCourseDetail(page: Page, courseId: string): Promise<v
   await navigateAndWait(page, `/courses/${courseId}`)
 }
 
+async function configureGeminiNoteQA(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const { saveAIConfiguration, saveProviderApiKey } = await import('/src/lib/aiConfiguration.ts')
+
+    await saveProviderApiKey(
+      'gemini',
+      'AIzanotPRODUCTIONneverE2Eonly_knownfakekey000000000000000000'
+    )
+    await saveAIConfiguration({
+      provider: 'openai',
+      connectionStatus: 'unconfigured',
+      consentSettings: {
+        videoSummary: true,
+        noteQA: true,
+        learningPath: true,
+        knowledgeGaps: true,
+        noteOrganization: true,
+        analytics: true,
+      },
+      featureModels: {
+        noteQA: {
+          provider: 'gemini',
+          model: 'gemini-3-flash-preview',
+        },
+      },
+    })
+  })
+}
+
 // ===========================================================================
 // AC-4: Course Detail Page - Navigation
 // ===========================================================================
@@ -190,6 +220,31 @@ test.describe('AC-4: Course Detail Page - Navigation', () => {
 
     // THEN: Navigated to lesson player
     await page.waitForURL(/\/courses\/course-react-101\/lessons\/video-intro/)
+  })
+
+  test('Ask AI is available when noteQA uses a configured Gemini key despite legacy global status', async ({
+    page,
+    indexedDB,
+  }) => {
+    await seedCourseAndReload(page, indexedDB)
+    await seedIndexedDBStore(page, DB_NAME, 'notes', [
+      {
+        id: 'note-gemini-qa',
+        courseId: 'course-react-101',
+        videoId: 'video-intro',
+        content: 'React hooks let components use state and effects.',
+        createdAt: '2026-04-27T00:00:00.000Z',
+        updatedAt: '2026-04-27T00:00:00.000Z',
+        tags: ['react'],
+      },
+    ])
+    await configureGeminiNoteQA(page)
+
+    await navigateAndWait(page, '/courses/course-react-101/lessons/video-intro')
+    await page.getByTitle('Ask AI about your notes').click()
+
+    await expect(page.getByText('AI features unavailable')).toHaveCount(0)
+    await expect(page.getByPlaceholder('Ask about your notes...')).toBeEnabled()
   })
 
   test('should display back to courses link', async ({ page, indexedDB }) => {

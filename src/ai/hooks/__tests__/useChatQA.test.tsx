@@ -4,10 +4,12 @@ import { useChatQA } from '../useChatQA'
 import { RAGCoordinator } from '@/ai/rag/ragCoordinator'
 import { PromptBuilder } from '@/ai/rag/promptBuilder'
 import { CitationExtractor } from '@/ai/rag/citationExtractor'
-import { getLLMClient } from '@/ai/llm/factory'
+import { assertAIFeatureConsent, getLLMClient } from '@/ai/llm/factory'
 import { LLMError } from '@/ai/llm/types'
 import type { LLMClient } from '@/ai/llm/client'
 import type { RetrievedContext } from '@/ai/rag/types'
+import { ConsentError } from '@/ai/lib/ConsentError'
+import { CONSENT_PURPOSES } from '@/lib/compliance/consentService'
 
 // Mock dependencies
 vi.mock('@/ai/rag/ragCoordinator')
@@ -77,6 +79,10 @@ describe('useChatQA', () => {
     vi.mocked(PromptBuilder.prototype.buildMessages).mockImplementation(mockBuildMessages as any)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(CitationExtractor.prototype.extract).mockImplementation(mockExtract as any)
+    vi.mocked(assertAIFeatureConsent).mockResolvedValue({
+      provider: 'openai',
+      model: 'gpt-4o-mini',
+    })
     vi.mocked(getLLMClient).mockResolvedValue({
       streamCompletion: mockStreamCompletion,
       getProviderId: () => 'openai',
@@ -100,6 +106,23 @@ describe('useChatQA', () => {
         expect(result.current.messages[1].role).toBe('assistant')
         expect(result.current.messages[1].content).toBe('React hooks are useful')
       })
+      expect(getLLMClient).toHaveBeenCalledWith('noteQA', {
+        resolved: { provider: 'openai', model: 'gpt-4o-mini' },
+      })
+    })
+
+    it('checks AI consent before retrieving note context', async () => {
+      vi.mocked(assertAIFeatureConsent).mockRejectedValue(new ConsentError(CONSENT_PURPOSES.AI_TUTOR))
+
+      const { result } = renderHook(() => useChatQA())
+
+      await result.current.sendMessage('What are React hooks?')
+
+      await waitFor(() => {
+        expect(result.current.error).toContain('AI Q&A requires your consent')
+      })
+      expect(mockRetrieveContext).not.toHaveBeenCalled()
+      expect(getLLMClient).not.toHaveBeenCalled()
     })
 
     it('should do nothing if already generating', async () => {

@@ -327,7 +327,7 @@ describe('noteQA', () => {
       const gen = generateQAAnswer('question', notes)
       await collectGenerator(gen)
 
-      expect(withModelFallback).toHaveBeenCalledWith('noteQA', expect.any(Array))
+      expect(withModelFallback).toHaveBeenCalledWith('noteQA', expect.any(Array), undefined)
     })
 
     it('should include note content in messages passed to streamCompletion', async () => {

@@ -15,6 +15,7 @@ import {
   saveAIConfiguration,
   isFeatureEnabled,
   isAIAvailable,
+  getNoteQAAvailability,
   isBudgetMode,
   filterFreeModels,
   resolveFeatureModel,
@@ -30,7 +31,8 @@ import type { DiscoveredModel } from '@/lib/modelDiscovery'
 // Mock crypto module
 vi.mock('@/lib/crypto', () => ({
   encryptData: vi.fn(async (data: string) => `encrypted:${data}`),
-  decryptData: vi.fn(async (encrypted: string) => {
+  decryptData: vi.fn(async (ivOrEncrypted: string, encryptedData?: string) => {
+    const encrypted = encryptedData ?? ivOrEncrypted
     if (encrypted.startsWith('encrypted:')) {
       return encrypted.replace('encrypted:', '')
     }
@@ -266,6 +268,190 @@ describe('aiConfiguration.ts', () => {
       localStorage.removeItem('ai-configuration')
 
       expect(isAIAvailable()).toBe(false)
+    })
+  })
+
+  describe('getNoteQAAvailability', () => {
+    it('returns available for a readable Gemini noteQA override even when global status is unconfigured', async () => {
+      const config: AIConfigurationSettings = {
+        ...DEFAULTS,
+        provider: 'openai',
+        connectionStatus: 'unconfigured',
+        providerKeys: {
+          gemini: {
+            iv: 'mock-iv',
+            encryptedData: 'encrypted:AIza-test-key',
+          },
+        },
+        featureModels: {
+          noteQA: {
+            provider: 'gemini',
+            model: 'gemini-3-flash-preview',
+          },
+        },
+      }
+      localStorage.setItem('ai-configuration', JSON.stringify(config))
+
+      await expect(getNoteQAAvailability()).resolves.toMatchObject({
+        available: true,
+        provider: 'gemini',
+        providerName: 'Google Gemini',
+        model: 'gemini-3-flash-preview',
+      })
+    })
+
+    it('returns feature-disabled when Q&A from Notes is disabled', async () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          consentSettings: {
+            ...DEFAULTS.consentSettings,
+            noteQA: false,
+          },
+          featureModels: {
+            noteQA: {
+              provider: 'gemini',
+              model: 'gemini-3-flash-preview',
+            },
+          },
+        })
+      )
+
+      await expect(getNoteQAAvailability()).resolves.toMatchObject({
+        available: false,
+        reason: 'feature-disabled',
+        provider: 'gemini',
+      })
+    })
+
+    it('returns missing-provider-key when the resolved provider has no key', async () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            gemini: {
+              iv: 'mock-iv',
+              encryptedData: 'encrypted:AIza-test-key',
+            },
+          },
+          featureModels: {
+            noteQA: {
+              provider: 'anthropic',
+              model: 'claude-haiku-4-5',
+            },
+          },
+        })
+      )
+
+      await expect(getNoteQAAvailability()).resolves.toMatchObject({
+        available: false,
+        reason: 'missing-provider-key',
+        provider: 'anthropic',
+      })
+    })
+
+    it('returns unreadable-provider-key when the resolved provider key cannot be decrypted', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          providerKeys: {
+            gemini: {
+              iv: 'mock-iv',
+              encryptedData: 'corrupted-data',
+            },
+          },
+          featureModels: {
+            noteQA: {
+              provider: 'gemini',
+              model: 'gemini-3-flash-preview',
+            },
+          },
+        })
+      )
+
+      await expect(getNoteQAAvailability()).resolves.toMatchObject({
+        available: false,
+        reason: 'unreadable-provider-key',
+        provider: 'gemini',
+      })
+      warnSpy.mockRestore()
+    })
+
+    it('returns available for an Ollama noteQA override with a configured server URL', async () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          provider: 'ollama',
+          ollamaSettings: {
+            serverUrl: 'http://localhost:11434',
+            directConnection: false,
+          },
+          featureModels: {
+            noteQA: {
+              provider: 'ollama',
+              model: 'llama3.2:latest',
+            },
+          },
+        })
+      )
+
+      await expect(getNoteQAAvailability()).resolves.toMatchObject({
+        available: true,
+        provider: 'ollama',
+      })
+    })
+
+    it('returns missing-ollama-url when noteQA resolves to Ollama but global provider is not Ollama', async () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          provider: 'openai',
+          featureModels: {
+            noteQA: {
+              provider: 'ollama',
+              model: 'llama3.2:latest',
+            },
+          },
+        })
+      )
+
+      await expect(getNoteQAAvailability()).resolves.toMatchObject({
+        available: false,
+        reason: 'missing-ollama-url',
+        provider: 'ollama',
+      })
+    })
+
+    it('treats legacy global encrypted key as stored when resolved provider matches global', async () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          provider: 'gemini',
+          connectionStatus: 'unconfigured',
+          apiKeyEncrypted: {
+            iv: 'mock-iv',
+            encryptedData: 'encrypted:AIza-legacy-only',
+          },
+          featureModels: {
+            noteQA: {
+              provider: 'gemini',
+              model: 'gemini-3-flash-preview',
+            },
+          },
+        })
+      )
+
+      await expect(getNoteQAAvailability()).resolves.toMatchObject({
+        available: true,
+        provider: 'gemini',
+      })
     })
   })
 

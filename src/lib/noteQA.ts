@@ -19,6 +19,13 @@ import { db } from '@/db'
 import type { Note } from '@/data/types'
 import { withModelFallback } from '@/ai/llm/factory'
 import type { LLMMessage } from '@/ai/llm/types'
+import type { FeatureModelConfig } from '@/lib/aiConfiguration'
+
+export type GenerateQAAnswerOptions = {
+  signal?: AbortSignal
+  /** Same resolved model as pre-RAG consent so streaming uses one provider snapshot. */
+  resolved?: FeatureModelConfig
+}
 
 /**
  * Retrieved note with similarity score
@@ -92,9 +99,7 @@ export async function retrieveRelevantNotes(query: string): Promise<RetrievedNot
  *
  * @param query - User's question
  * @param retrievedNotes - Notes retrieved from semantic search
- * @param provider - AI provider ID
- * @param apiKey - Decrypted API key for provider
- * @param signal - Optional AbortSignal for cancellation
+ * @param options - Optional `signal` for abort handling and `resolved` model snapshot (post-consent)
  * @yields Text chunks as they are generated
  *
  * @throws Error if API call fails or stream is interrupted
@@ -102,7 +107,7 @@ export async function retrieveRelevantNotes(query: string): Promise<RetrievedNot
 export async function* generateQAAnswer(
   query: string,
   retrievedNotes: RetrievedNote[],
-  signal?: AbortSignal
+  options?: GenerateQAAnswerOptions
 ): AsyncGenerator<string, void, undefined> {
   if (retrievedNotes.length === 0) {
     yield 'No relevant notes found for your question.'
@@ -143,12 +148,12 @@ Provide a concise answer citing specific notes.`
 
   try {
     // Use feature-aware LLM client with automatic model fallback (AC8)
-    for await (const chunk of withModelFallback('noteQA', messages)) {
+    for await (const chunk of withModelFallback('noteQA', messages, options?.resolved)) {
       yield chunk
     }
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      if (signal?.aborted) throw error
+      if (options?.signal?.aborted) throw error
       throw new Error('Answer generation timed out.')
     }
     throw error

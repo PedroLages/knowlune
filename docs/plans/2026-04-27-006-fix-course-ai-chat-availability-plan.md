@@ -129,7 +129,7 @@ flowchart TD
 
 ## Implementation Units
 
-- [ ] U1. **Add noteQA availability resolution**
+- [x] U1. **Add noteQA availability resolution**
 
 **Goal:** Create a single availability path for Q&A from Notes that checks `consentSettings.noteQA` and the resolved provider credential instead of relying on global `connectionStatus`.
 
@@ -174,7 +174,7 @@ flowchart TD
 
 ---
 
-- [ ] U2. **Wire Q&A surfaces to noteQA availability**
+- [x] U2. **Wire Q&A surfaces to noteQA availability**
 
 **Goal:** Update the course reader Ask AI panel and standalone Chat Q&A page to use the shared `noteQA` availability result.
 
@@ -216,7 +216,7 @@ flowchart TD
 
 ---
 
-- [ ] U3. **Align Q&A send paths and focused errors**
+- [x] U3. **Align Q&A send paths and focused errors**
 
 **Goal:** Ensure both Q&A entry points send through the resolved `noteQA` provider and show focused errors for configuration states exposed by this fix.
 
@@ -257,7 +257,7 @@ flowchart TD
 
 ---
 
-- [ ] U4. **Add regression coverage for the Courses reader flow**
+- [x] U4. **Add regression coverage for the Courses reader flow**
 
 **Goal:** Protect the screenshot-reported state with E2E coverage that mounts the real course reader Ask AI UI under a seeded Gemini `noteQA` configuration.
 
