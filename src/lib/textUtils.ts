@@ -125,11 +125,12 @@ export function sanitizeDescriptionHtml(html: string): string {
     const isBreakLike = breakLike.has(tag)
 
     if (isBreakLike) pushBreak({ doubleIfAlready: true })
-    if (isAllowedInline && normalizedTag !== 'br') parts.push(`<${normalizedTag}>`)
+    // `br` is handled above; here `normalizedTag` is only strong/em when allowed
+    if (isAllowedInline) parts.push(`<${normalizedTag}>`)
 
     for (const child of Array.from(el.childNodes)) walk(child)
 
-    if (isAllowedInline && normalizedTag !== 'br') parts.push(`</${normalizedTag}>`)
+    if (isAllowedInline) parts.push(`</${normalizedTag}>`)
     if (isBreakLike) pushBreak()
   }
 
