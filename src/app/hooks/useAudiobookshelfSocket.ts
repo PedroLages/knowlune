@@ -16,8 +16,9 @@ import type { AudiobookshelfServer, Book } from '@/data/types'
 import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 import type { AbsSocketConnection } from '@/services/AudiobookshelfService'
 import { useBookStore } from '@/stores/useBookStore'
-import { db } from '@/db/schema'
 import { useAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
+
+const absInboundWriteOpts = { suppressErrorToast: true } as const
 
 interface UseAudiobookshelfSocketOptions {
   /** ABS server to connect to (null if book is not from ABS) */
@@ -73,7 +74,7 @@ export function useAudiobookshelfSocket({
       const localSeconds =
         currentBook.currentPosition?.type === 'time' ? currentBook.currentPosition.seconds : 0
 
-      // LWW: adopt if incoming position is ahead
+      // LWW: adopt if incoming position is ahead (same gate as pre-store socket path)
       if (event.currentTime > localSeconds) {
         const position = { type: 'time' as const, seconds: event.currentTime }
         const totalDur = currentBook.totalDuration ?? 0
@@ -81,27 +82,10 @@ export function useAudiobookshelfSocket({
           totalDur > 0
             ? Math.min(100, Math.round((event.currentTime / totalDur) * 100))
             : Math.round(event.progress * 100)
-        const now = new Date().toISOString()
-
-        // Optimistic store update
-        useBookStore.setState(state => ({
-          books: state.books.map(b =>
-            b.id === currentBook.id
-              ? { ...b, currentPosition: position, progress: progressPct, lastOpenedAt: now }
-              : b
-          ),
-        }))
-
-        // silent-catch-ok: Dexie persist is non-critical — socket will re-deliver
-        db.books
-          .update(currentBook.id, {
-            currentPosition: position,
-            progress: progressPct,
-            lastOpenedAt: now,
-          } as Parameters<typeof db.books.update>[1])
-          .catch(err =>
-            console.error('[useAudiobookshelfSocket] Failed to persist socket position:', err)
-          )
+        // Socket payload has no ABS `lastUpdate`; `updateBookPosition` stamps `lastOpenedAt` to client time (one syncableWrite).
+        void useBookStore
+          .getState()
+          .updateBookPosition(currentBook.id, position, progressPct, absInboundWriteOpts)
       }
     },
     [activeItemId]

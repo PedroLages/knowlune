@@ -92,7 +92,8 @@ interface BookStoreState {
   updateBookPosition: (
     bookId: string,
     position: import('@/data/types').ContentPosition,
-    progress?: number
+    progress?: number,
+    options?: { suppressErrorToast?: boolean }
   ) => Promise<void>
   updateBookLastOpenedAt: (bookId: string, lastOpenedAt?: string) => Promise<void>
   updateBookPlaybackSpeed: (bookId: string, speed: number) => Promise<void>
@@ -345,7 +346,7 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
     }
   },
 
-  updateBookPosition: async (bookId, position, progress) => {
+  updateBookPosition: async (bookId, position, progress, options) => {
     const now = new Date().toISOString()
     // Capture previous state for targeted rollback
     const prevBook = get().books.find(b => b.id === bookId)
@@ -381,7 +382,9 @@ export const useBookStore = create<BookStoreState>((set, get) => ({
           books: state.books.map(b => (b.id === bookId ? prevBook : b)),
         }))
       }
-      toast.error('Failed to save reading position')
+      if (!options?.suppressErrorToast) {
+        toast.error('Failed to save reading position')
+      }
     }
   },
 

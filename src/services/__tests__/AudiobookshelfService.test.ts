@@ -12,6 +12,7 @@ import {
   getCoverUrl,
   searchLibrary,
   fetchProgress,
+  fetchAllProgress,
   updateProgress,
   fetchCollections,
   fetchSeriesForLibrary,
@@ -561,6 +562,99 @@ describe('AudiobookshelfService.fetchProgress', () => {
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.error).toBe('Connection timed out. Check the URL and try again.')
+    }
+  })
+})
+
+// ── fetchAllProgress ───────────────────────────────────────────────
+
+describe('AudiobookshelfService.fetchAllProgress', () => {
+  it('parses mediaProgress entries from GET /api/me', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchJson({
+        id: 'user-1',
+        mediaProgress: [
+          {
+            id: 'mp-1',
+            libraryItemId: 'item-a',
+            currentTime: 120,
+            duration: 3600,
+            progress: 0.033,
+            isFinished: false,
+            lastUpdate: 1712345678000,
+          },
+        ],
+      })
+    )
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data).toHaveLength(1)
+      expect(result.data[0].libraryItemId).toBe('item-a')
+      expect(result.data[0].currentTime).toBe(120)
+      expect(result.data[0].lastUpdate).toBe(1712345678000)
+    }
+  })
+
+  it('returns empty array when mediaProgress is missing', async () => {
+    vi.stubGlobal('fetch', mockFetchJson({ id: 'user-1', username: 'u' }))
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data).toEqual([])
+    }
+  })
+
+  it('skips podcast episode progress rows', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchJson({
+        mediaProgress: [
+          {
+            id: 'mp-pod',
+            libraryItemId: 'pod-item',
+            episodeId: 'ep-1',
+            currentTime: 60,
+            duration: 600,
+            progress: 0.1,
+            isFinished: false,
+            lastUpdate: 1712345678000,
+          },
+          {
+            id: 'mp-book',
+            libraryItemId: 'book-item',
+            currentTime: 30,
+            duration: 3000,
+            progress: 0.01,
+            isFinished: false,
+            lastUpdate: 1712345678001,
+          },
+        ],
+      })
+    )
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data).toHaveLength(1)
+      expect(result.data[0].libraryItemId).toBe('book-item')
+    }
+  })
+
+  it('propagates 401 from absApiFetch', async () => {
+    vi.stubGlobal('fetch', mockFetchStatus(401))
+
+    const result = await fetchAllProgress(TEST_URL, TEST_API_KEY)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.status).toBe(401)
     }
   })
 })

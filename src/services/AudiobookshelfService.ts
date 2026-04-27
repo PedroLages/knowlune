@@ -349,6 +349,80 @@ export async function fetchProgress(
   return result
 }
 
+/** Raw shape from GET /api/me `mediaProgress[]` (Audiobookshelf `getOldMediaProgress`) */
+function normalizeMeProgressEntry(entry: unknown): AbsProgress | null {
+  if (!entry || typeof entry !== 'object') return null
+  const e = entry as Record<string, unknown>
+  // Podcast episode progress — skip (Knowlune ABS catalog maps books only)
+  if (e.episodeId) return null
+  const libraryItemId =
+    typeof e.libraryItemId === 'string'
+      ? e.libraryItemId
+      : typeof e.libraryItemId === 'number'
+        ? String(e.libraryItemId)
+        : undefined
+  if (!libraryItemId) return null
+
+  const currentTime =
+    typeof e.currentTime === 'number' ? e.currentTime : Number(e.currentTime) || 0
+  const duration = typeof e.duration === 'number' ? e.duration : Number(e.duration) || 0
+  const progressRaw = e.progress
+  const progress =
+    typeof progressRaw === 'number'
+      ? progressRaw
+      : typeof progressRaw === 'string'
+        ? Number(progressRaw)
+        : duration > 0
+          ? Math.min(1, Math.max(0, currentTime / duration))
+          : 0
+  const isFinished = Boolean(e.isFinished)
+  const lastUpdate =
+    typeof e.lastUpdate === 'number'
+      ? e.lastUpdate
+      : typeof e.lastUpdate === 'string'
+        ? new Date(e.lastUpdate).getTime()
+        : 0
+  const id = typeof e.id === 'string' ? e.id : libraryItemId
+
+  return {
+    id,
+    libraryItemId,
+    currentTime,
+    duration,
+    progress: Number.isFinite(progress) ? progress : 0,
+    isFinished,
+    lastUpdate,
+  }
+}
+
+/**
+ * Fetch all media progress entries for the authenticated user.
+ * Calls GET /api/me and parses `mediaProgress` (Audiobookshelf browser JSON).
+ * On missing/empty arrays returns `{ ok: true, data: [] }` — never treats as fatal.
+ *
+ * @since CE 2026-04-27 — ABS inbound progress sync
+ */
+export async function fetchAllProgress(
+  url: string,
+  apiKey: string
+): Promise<AbsResult<AbsProgress[]>> {
+  const result = await absApiFetch<Record<string, unknown>>(url, apiKey, '/api/me')
+  if (!result.ok) return result
+
+  const body = result.data
+  const rawList = body.mediaProgress
+  if (!Array.isArray(rawList)) {
+    return { ok: true, data: [] }
+  }
+
+  const out: AbsProgress[] = []
+  for (const entry of rawList) {
+    const normalized = normalizeMeProgressEntry(entry)
+    if (normalized) out.push(normalized)
+  }
+  return { ok: true, data: out }
+}
+
 /**
  * Update user's listening progress for an item.
  * Calls PATCH /api/me/progress/{itemId}.

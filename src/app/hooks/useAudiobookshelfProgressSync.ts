@@ -19,8 +19,9 @@ import type { Book } from '@/data/types'
 import * as AudiobookshelfService from '@/services/AudiobookshelfService'
 import { useAudiobookshelfStore } from '@/stores/useAudiobookshelfStore'
 import { useBookStore } from '@/stores/useBookStore'
-import { db } from '@/db/schema'
 import { getAbsApiKey } from '@/lib/credentials/absApiKeyResolver'
+
+const absInboundWriteOpts = { suppressErrorToast: true } as const
 
 interface UseAbsProgressSyncOptions {
   book: Book
@@ -102,33 +103,19 @@ export function useAudiobookshelfProgressSync({
       const resolution = resolveConflict(absProgress.lastUpdate, book.lastOpenedAt, localSeconds)
 
       if (resolution === 'use-abs') {
-        // ABS is ahead — update local book and seek audio
+        // ABS is ahead — persist via store + syncableWrite, then seek audio
         const position = { type: 'time' as const, seconds: absProgress.currentTime }
         const progressPct =
           book.totalDuration && book.totalDuration > 0
             ? Math.min(100, Math.round((absProgress.currentTime / book.totalDuration) * 100))
             : Math.round(absProgress.progress * 100)
-        const now = new Date().toISOString()
+        const absLastOpened = new Date(absProgress.lastUpdate).toISOString()
 
-        // Optimistic store update
-        useBookStore.setState(state => ({
-          books: state.books.map(b =>
-            b.id === book.id
-              ? { ...b, currentPosition: position, progress: progressPct, lastOpenedAt: now }
-              : b
-          ),
-        }))
+        await useBookStore
+          .getState()
+          .updateBookPosition(book.id, position, progressPct, absInboundWriteOpts)
+        await useBookStore.getState().updateBookLastOpenedAt(book.id, absLastOpened)
 
-        // silent-catch-ok: Dexie persist is non-critical, ABS is source of truth
-        db.books
-          .update(book.id, {
-            currentPosition: position,
-            progress: progressPct,
-            lastOpenedAt: now,
-          } as Parameters<typeof db.books.update>[1])
-          .catch(err => console.error('[useAbsProgressSync] Failed to persist ABS position:', err))
-
-        // Seek audio to ABS position
         seekTo(absProgress.currentTime)
       } else {
         // Local is ahead — push to ABS (fire-and-forget)
