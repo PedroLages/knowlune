@@ -18,7 +18,7 @@
  *   <ProviderReconsentModal {...modalProps} />
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { ProviderReconsentError } from '@/ai/lib/ProviderReconsentError'
 import { grantConsent } from '@/lib/compliance/consentEffects'
 import { writeNoticeAck } from '@/lib/compliance/noticeAck'
@@ -27,7 +27,10 @@ import { listForUser } from '@/lib/compliance/consentService'
 import type { ConsentPurpose } from '@/lib/compliance/consentService'
 import type { ProviderReconsentModalProps } from '@/app/components/compliance/ProviderReconsentModal'
 
-type ModalControlProps = Omit<ProviderReconsentModalProps, 'onAccept' | 'onDecline'> & {
+export type ProviderReconsentModalControlProps = Omit<
+  ProviderReconsentModalProps,
+  'onAccept' | 'onDecline'
+> & {
   onAccept: () => Promise<void>
   onDecline: () => void
 }
@@ -48,7 +51,7 @@ export interface UseProviderReconsentResult {
   /**
    * Props to spread onto <ProviderReconsentModal />.
    */
-  modalProps: ModalControlProps
+  modalProps: ProviderReconsentModalControlProps
   /**
    * Callback to invoke after a successful accept to re-attempt the AI call.
    * Set by the calling component via the `onRetry` option.
@@ -65,6 +68,11 @@ export function useProviderReconsent(
   userId: string | undefined,
   options: UseProviderReconsentOptions = {},
 ): UseProviderReconsentResult {
+  const onRetryRef = useRef(options.onRetry)
+  useEffect(() => {
+    onRetryRef.current = options.onRetry
+  }, [options.onRetry])
+
   const [open, setOpen] = useState(false)
   const [pendingProvider, setPendingProvider] = useState<string>('')
   const [pendingPurpose, setPendingPurpose] = useState<ConsentPurpose>('ai_tutor')
@@ -126,8 +134,8 @@ export function useProviderReconsent(
     setDeclinedProvider(null)
 
     // Retry the original AI call now that consent is recorded.
-    options.onRetry?.()
-  }, [userId, pendingPurpose, pendingProvider, noticeUpdatePending, options])
+    onRetryRef.current?.()
+  }, [userId, pendingPurpose, pendingProvider, noticeUpdatePending])
 
   const handleDecline = useCallback(() => {
     setOpen(false)

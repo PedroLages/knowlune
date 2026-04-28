@@ -15,6 +15,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { useNoteQAAvailability } from '@/app/hooks/useNoteQAAvailability'
 import { getNoteQAUnavailableCopy } from '@/lib/noteQAAvailabilityCopy'
+import { ProviderReconsentModal } from '@/app/components/compliance/ProviderReconsentModal'
+import { AIConsentDeclinedBanner } from '@/app/components/compliance/AIConsentDeclinedBanner'
 
 /**
  * Main chat Q&A page
@@ -27,7 +29,13 @@ import { getNoteQAUnavailableCopy } from '@/lib/noteQAAvailabilityCopy'
  * - Citation navigation to notes
  */
 export function ChatQA() {
-  const { messages, isGenerating, sendMessage } = useChatQA()
+  const {
+    messages,
+    isGenerating,
+    sendMessage,
+    providerReconsentModalProps,
+    declinedProvider,
+  } = useChatQA()
   const navigate = useNavigate()
   const noteQAAvailability = useNoteQAAvailability()
   const aiChecking = noteQAAvailability.status === 'checking'
@@ -58,6 +66,12 @@ export function ChatQA() {
               Q&A will be available once your provider settings are verified.
             </AlertDescription>
           </Alert>
+        </div>
+      )}
+
+      {declinedProvider && (
+        <div className="px-6 pt-4">
+          <AIConsentDeclinedBanner providerId={declinedProvider} />
         </div>
       )}
 
@@ -130,6 +144,8 @@ export function ChatQA() {
               : 'Ask a question about your notes...'
         }
       />
+
+      <ProviderReconsentModal {...providerReconsentModalProps} />
     </div>
   )
 }

@@ -27,8 +27,11 @@ describe('formatNoteQAError', () => {
   })
 
   it('formats provider re-consent', () => {
-    expect(
-      formatNoteQAError(new ProviderReconsentError(CONSENT_PURPOSES.AI_TUTOR, 'anthropic'))
-    ).toContain('anthropic')
+    const msg = formatNoteQAError(
+      new ProviderReconsentError(CONSENT_PURPOSES.AI_TUTOR, 'anthropic'),
+    )
+    expect(msg).toContain('anthropic')
+    expect(msg).toMatch(/dialog/i)
+    expect(msg).toMatch(/settings.*privacy.*consent/i)
   })
 })

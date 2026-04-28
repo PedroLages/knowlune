@@ -43,6 +43,16 @@ describe('ChatQA', () => {
       sendMessage: vi.fn(),
       clearMessages: vi.fn(),
       error: null,
+      providerReconsentModalProps: {
+        open: false,
+        providerId: '',
+        purpose: 'ai_tutor',
+        noticeUpdatePending: false,
+        noticeVersion: undefined,
+        onAccept: vi.fn().mockResolvedValue(undefined),
+        onDecline: vi.fn(),
+      },
+      declinedProvider: null,
     })
     vi.mocked(useLiveQuery).mockReturnValue(1)
     vi.mocked(useNoteQAAvailability).mockReturnValue({
