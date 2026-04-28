@@ -87,6 +87,8 @@ interface KnowledgeMapState {
   error: string | null
   /** Timestamp of last computation */
   lastComputedAt: string | null
+  /** Most recent engagement timestamp across ALL session types (incl. book/audio) */
+  globalLastEngagement: string | null
 
   /** Compute/recompute all knowledge scores */
   computeScores: (now?: Date) => Promise<void>
@@ -120,6 +122,7 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
   isLoading: false,
   error: null,
   lastComputedAt: null,
+  globalLastEngagement: null,
 
   computeScores: async (now?: Date) => {
     const currentTime = now ?? new Date()
@@ -267,6 +270,29 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
         }
       }
 
+      // Global engagement: most recent session timestamp regardless of courseId.
+      // Includes book/audiobook sessions (courseId: '') that are invisible to per-topic recency.
+      let globalLastEngagement: string | null = null
+      for (const session of allSessions) {
+        const ts = session.endTime ?? session.startTime
+        if (!globalLastEngagement || ts > globalLastEngagement) {
+          globalLastEngagement = ts
+        }
+      }
+      if (!globalLastEngagement) {
+        // Fall back to quiz and flashcard timestamps if no sessions exist
+        for (const attempt of allAttempts) {
+          if (!globalLastEngagement || attempt.completedAt > globalLastEngagement) {
+            globalLastEngagement = attempt.completedAt
+          }
+        }
+        for (const card of allFlashcards) {
+          if (card.last_review && (!globalLastEngagement || card.last_review > globalLastEngagement)) {
+            globalLastEngagement = card.last_review
+          }
+        }
+      }
+
       // ── Step 4: Score each topic ───────────────────────────────
       const scoredTopics: ScoredTopic[] = resolvedTopics.map(topic => {
         // Quiz score for this topic
@@ -410,12 +436,14 @@ export const useKnowledgeMapStore = create<KnowledgeMapState>((set, get) => ({
         suggestions,
         isLoading: false,
         lastComputedAt: currentTime.toISOString(),
+        globalLastEngagement,
       })
     } catch (error) {
       console.error('[KnowledgeMapStore] Failed to compute scores:', error)
       set({
         isLoading: false,
         error: error instanceof Error ? error.message : 'Failed to compute knowledge scores',
+        globalLastEngagement: null,
       })
     }
   },

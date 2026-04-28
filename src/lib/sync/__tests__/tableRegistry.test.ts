@@ -294,6 +294,107 @@ describe('tableRegistry — audioBookmarks append-only (E93-S07)', () => {
 })
 
 // ---------------------------------------------------------------------------
+// feat/bridge-books — studySessions append-only with field mappings
+// ---------------------------------------------------------------------------
+
+describe('tableRegistry — studySessions append-only (bridge-books)', () => {
+  it('studySessions has conflictStrategy: insert-only', () => {
+    expect(getTableEntry('studySessions')?.conflictStrategy).toBe('insert-only')
+  })
+
+  it('studySessions has insertOnly: true', () => {
+    expect(getTableEntry('studySessions')?.insertOnly).toBe(true)
+  })
+
+  it('studySessions has cursorField: created_at', () => {
+    expect(getTableEntry('studySessions')?.cursorField).toBe('created_at')
+  })
+
+  it('studySessions.stripFields contains updatedAt', () => {
+    expect(getTableEntry('studySessions')?.stripFields).toContain('updatedAt')
+  })
+
+  it('studySessions.stripFields contains all 9 Dexie-only fields', () => {
+    const stripFields = getTableEntry('studySessions')?.stripFields
+    expect(stripFields).toContain('courseId')
+    expect(stripFields).toContain('contentItemId')
+    expect(stripFields).toContain('endTime')
+    expect(stripFields).toContain('videosWatched')
+    expect(stripFields).toContain('lastActivity')
+    expect(stripFields).toContain('sessionType')
+    expect(stripFields).toContain('qualityScore')
+    expect(stripFields).toContain('qualityFactors')
+    expect(stripFields).toContain('updatedAt')
+  })
+
+  it('studySessions toSnakeCase converts startTime to started_at', () => {
+    const entry = getTableEntry('studySessions')!
+    const sample = {
+      id: 'ss-1',
+      courseId: 'course-1',
+      startTime: '2026-04-28T10:00:00Z',
+      endTime: '2026-04-28T10:30:00Z',
+      duration: 1800,
+      idleTime: 60,
+      interactionCount: 120,
+      breakCount: 2,
+      sessionType: 'mixed',
+      qualityScore: 85,
+      qualityFactors: { focus: 90 },
+      videosWatched: [],
+      contentItemId: 'lesson-1',
+      lastActivity: '2026-04-28T10:30:00Z',
+      updatedAt: '2026-04-28T10:30:00Z',
+      createdAt: '2026-04-28T10:00:00Z',
+      userId: 'user-1',
+    }
+    const snaked = toSnakeCase(entry, sample)
+
+    // Explicit fieldMap mappings
+    expect(snaked).toHaveProperty('started_at', '2026-04-28T10:00:00Z')
+    expect(snaked).not.toHaveProperty('startTime')
+
+    expect(snaked).toHaveProperty('duration_seconds', 1800)
+    expect(snaked).not.toHaveProperty('duration')
+
+    expect(snaked).toHaveProperty('idle_seconds', 60)
+    expect(snaked).not.toHaveProperty('idleTime')
+
+    expect(snaked).toHaveProperty('breaks', 2)
+    expect(snaked).not.toHaveProperty('breakCount')
+
+    // Auto camelCase→snake_case
+    expect(snaked).toHaveProperty('interaction_count', 120)
+    expect(snaked).not.toHaveProperty('interactionCount')
+
+    // Pass-through fields
+    expect(snaked).toHaveProperty('id', 'ss-1')
+    expect(snaked).toHaveProperty('user_id', 'user-1')
+    expect(snaked).toHaveProperty('created_at', '2026-04-28T10:00:00Z')
+
+    // Stripped fields (Dexie-only + updatedAt)
+    expect(snaked).not.toHaveProperty('courseId')
+    expect(snaked).not.toHaveProperty('course_id')
+    expect(snaked).not.toHaveProperty('contentItemId')
+    expect(snaked).not.toHaveProperty('content_item_id')
+    expect(snaked).not.toHaveProperty('endTime')
+    expect(snaked).not.toHaveProperty('end_time')
+    expect(snaked).not.toHaveProperty('videosWatched')
+    expect(snaked).not.toHaveProperty('videos_watched')
+    expect(snaked).not.toHaveProperty('lastActivity')
+    expect(snaked).not.toHaveProperty('last_activity')
+    expect(snaked).not.toHaveProperty('sessionType')
+    expect(snaked).not.toHaveProperty('session_type')
+    expect(snaked).not.toHaveProperty('qualityScore')
+    expect(snaked).not.toHaveProperty('quality_score')
+    expect(snaked).not.toHaveProperty('qualityFactors')
+    expect(snaked).not.toHaveProperty('quality_factors')
+    expect(snaked).not.toHaveProperty('updatedAt')
+    expect(snaked).not.toHaveProperty('updated_at')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // AC10 / 3.13 — skipSync field exists on interface (TypeScript assignability)
 // ---------------------------------------------------------------------------
 

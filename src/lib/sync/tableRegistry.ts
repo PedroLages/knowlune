@@ -126,8 +126,25 @@ const studySessions: TableRegistryEntry = {
   supabaseTable: 'study_sessions',
   conflictStrategy: 'insert-only',
   priority: 0,
-  fieldMap: {},
+  fieldMap: {
+    startTime: 'started_at',
+    duration: 'duration_seconds',
+    idleTime: 'idle_seconds',
+    breakCount: 'breaks',
+  },
   insertOnly: true,
+  cursorField: 'created_at',
+  stripFields: [
+    'courseId',
+    'contentItemId',
+    'endTime',
+    'videosWatched',
+    'lastActivity',
+    'sessionType',
+    'qualityScore',
+    'qualityFactors',
+    'updatedAt',
+  ],
 }
 
 /**
