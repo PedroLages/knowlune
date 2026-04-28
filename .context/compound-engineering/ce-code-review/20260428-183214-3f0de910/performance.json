@@ -1,0 +1,30 @@
+{
+  "reviewer": "performance",
+  "findings": [],
+  "residual_risks": [
+    {
+      "id": "PERF-R1",
+      "description": "retrieveRelevantNotesByText loads all notes via db.notes.toArray() before filtering deleted ones. For a personal single-user IndexedDB store, realistic note counts (hundreds to ~2,000) make this a negligible full-scan. If the platform ever shifts to multi-user or server-side storage with large note corpora, a filtered index query (e.g. Dexie .where('deleted').equals(false)) would eliminate the in-memory filter step. Not actionable at current scale.",
+      "severity": "P3",
+      "confidence": 25,
+      "pre_existing": false,
+      "autofix_class": "advisory",
+      "owner": "advisory"
+    },
+    {
+      "id": "PERF-R2",
+      "description": "query.toLowerCase() is evaluated inside the .map() callback once per note, producing N redundant short-string allocations for a value that is constant across the iteration. Hoisting it before the map is a correct micro-optimisation but immaterial for the expected note count on a cold fallback path.",
+      "severity": "P3",
+      "confidence": 25,
+      "pre_existing": false,
+      "autofix_class": "advisory",
+      "owner": "advisory"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "description": "No test exercises retrieveRelevantNotesByText at scale (e.g. 500+ notes) to confirm the full-scan latency stays acceptable. A smoke benchmark seeded with a large IndexedDB fixture would surface any regression if the function is later promoted off the fallback path.",
+      "severity": "P3"
+    }
+  ]
+}

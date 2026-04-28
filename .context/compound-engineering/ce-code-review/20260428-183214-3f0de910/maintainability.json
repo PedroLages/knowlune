@@ -1,0 +1,54 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "id": "M001",
+      "severity": "P3",
+      "title": "phraseBoost literal 0.25 is an undocumented magic number",
+      "description": "The constant 0.25 added to similarity on a verbatim phrase match has no explanation. The scoring formula blends a token-coverage ratio (0–1.0) with an ad-hoc additive boost whose origin is opaque. A future maintainer cannot tell whether this was empirically tuned or guessed. It also silently allows similarity > 1.0 (perfect token match + phrase boost = 1.25), which could surprise callers that assume a normalised score.",
+      "location": "src/lib/noteQA.ts:120-124 – retrieveRelevantNotesByText",
+      "evidence": [
+        "const phraseBoost = queryTerms.length > 1 && searchableText.toLowerCase().includes(query.toLowerCase()) ? 0.25 : 0",
+        "const similarity = matchedTerms.length / queryTerms.length + phraseBoost"
+      ],
+      "autofix_class": "advisory",
+      "owner": "human",
+      "confidence": 75,
+      "pre_existing": false,
+      "suggested_fix": "Extract to a named module-level constant: `const PHRASE_MATCH_BOOST = 0.25 // additive bonus for verbatim phrase hit`. Add a comment if the value was empirically calibrated."
+    },
+    {
+      "id": "M002",
+      "severity": "P3",
+      "title": "Top-K limit 5 is silently duplicated across both retrieval paths",
+      "description": "The semantic path hardcodes 5 in `vectorStore.search(Array.from(queryEmbedding), 5)` (line 79, pre-existing) and the new text-search fallback re-hardcodes the same limit via `limit = 5` (line 103). Both represent the concept of max retrieved notes but will drift independently if either is changed. The fallback's default parameter also hides the coupling from the call site.",
+      "location": "src/lib/noteQA.ts:79 (pre-existing semantic path), 103 (new fallback default)",
+      "evidence": [
+        "const searchResults = vectorStore.search(Array.from(queryEmbedding), 5)",
+        "async function retrieveRelevantNotesByText(query: string, limit = 5): Promise<RetrievedNote[]>"
+      ],
+      "autofix_class": "advisory",
+      "owner": "human",
+      "confidence": 75,
+      "pre_existing": false,
+      "suggested_fix": "Declare `const MAX_RETRIEVED_NOTES = 5` at module scope and replace both literals. Pass it explicitly at the fallback call site: `return retrieveRelevantNotesByText(cleanQuery, MAX_RETRIEVED_NOTES)`."
+    },
+    {
+      "id": "M003",
+      "severity": "P3",
+      "title": "`tokenize` is a generic text utility living in a domain module",
+      "description": "`tokenize` (lowercase alphanumeric token extraction from a string) has zero dependency on notes, embeddings, or RAG semantics. `textUtils.ts` is already imported in this file and houses analogous generic helpers (`stripHtml`, `getInitials`). Keeping `tokenize` in `noteQA.ts` makes it invisible to future search-adjacent callers and risks independent reimplementation elsewhere.",
+      "location": "src/lib/noteQA.ts:132-134 – tokenize",
+      "evidence": [
+        "function tokenize(value: string): string[] { return value.toLowerCase().match(/[a-z0-9]+/g) ?? [] }"
+      ],
+      "autofix_class": "advisory",
+      "owner": "human",
+      "confidence": 50,
+      "pre_existing": false,
+      "suggested_fix": "Move to `src/lib/textUtils.ts` and export it. Import here alongside the existing `stripHtml` import. Zero behaviour change."
+    }
+  ],
+  "residual_risks": [],
+  "testing_gaps": []
+}
