@@ -1,0 +1,133 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "id": "testing-001",
+      "title": "Fallback similarity assertion too weak: accepts any Number including 0",
+      "severity": "P2",
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "confidence": 75,
+      "pre_existing": false,
+      "scope": "primary",
+      "description": "The fallback test asserts `similarity: expect.any(Number)` which passes for 0, negative values, or NaN. The production code filters `similarity > 0` at line 127; if that filter were accidentally removed, this assertion would not catch notes with similarity 0 sneaking through (the length check on `note-1` provides partial guard, but `note-2` has similarity 0 and would inflate the count). More critically, the test gives no signal on whether the computed similarity value is actually meaningful (e.g., 1.0 for full match vs 0.5 for partial). A bug that divides by zero or returns a fixed constant would not be caught.",
+      "evidence": [
+        "src/lib/__tests__/noteQA.test.ts:256-259 — `similarity: expect.any(Number)` accepts 0, negative, or NaN",
+        "src/lib/noteQA.ts:127 — `.filter(retrieved => retrieved.similarity > 0)` is the guard the assertion should verify",
+        "Trace: query='react hooks', content='React hooks help with state and effects.' → queryTerms=['react','hooks'], both match → similarity = 2/2 + phraseBoost(0.25) = 1.25; assertion does not verify 1.25"
+      ],
+      "suggested_fix": "Replace `similarity: expect.any(Number)` with `expect(result[0].similarity).toBeGreaterThan(0)` as a minimum; ideally assert the exact computed value: for 'react hooks' against 'React hooks help with state and effects.', similarity = 1.0 (term ratio) + 0.25 (phraseBoost) = 1.25."
+    },
+    {
+      "id": "testing-002",
+      "title": "No test for db.notes.toArray() throwing during text fallback",
+      "severity": "P2",
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "confidence": 75,
+      "pre_existing": false,
+      "scope": "primary",
+      "description": "The new `retrieveRelevantNotesByText` function calls `db.notes.toArray()` at line 107 without a try-catch. The call sits inside a `return` from within the embedding catch block (noteQA.ts:61). If `db.notes.toArray()` rejects, the error propagates directly out of `retrieveRelevantNotes` as an unhandled rejection. Callers expect the function to only throw for empty query; a database failure during fallback is a distinct, realistic error mode with no test coverage.",
+      "evidence": [
+        "src/lib/noteQA.ts:59-62 — catch block calls `return retrieveRelevantNotesByText(cleanQuery)` with no wrapping try-catch",
+        "src/lib/noteQA.ts:107 — `const notes = await db.notes.toArray()` can reject",
+        "src/lib/__tests__/noteQA.test.ts — no test sets `mockNotesToArray.mockRejectedValue(...)`"
+      ],
+      "suggested_fix": "Add a test:\n```ts\nit('propagates db error when notes.toArray() throws during fallback', async () => {\n  mockGenerateEmbeddings.mockRejectedValue(new Error('AI unavailable'))\n  mockNotesToArray.mockRejectedValue(new Error('IndexedDB quota exceeded'))\n  await expect(retrieveRelevantNotes('react')).rejects.toThrow('IndexedDB quota exceeded')\n})\n```\nAlternatively, decide whether to swallow the DB error and return `[]`, and test that contract instead."
+    },
+    {
+      "id": "testing-003",
+      "title": "phraseBoost = 0 branch (no phrase match) is not tested with observable similarity",
+      "severity": "P2",
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "confidence": 75,
+      "pre_existing": false,
+      "scope": "primary",
+      "description": "The phraseBoost ternary at noteQA.ts:120-123 has two branches: boost 0.25 when `queryTerms.length > 1 && text.includes(phrase)`, or 0 otherwise. The existing fallback test uses 'react hooks' against content 'React hooks help with state and effects.' which triggers the boost branch (similarity = 1.25). The 'hi' test does trigger the single-term no-boost branch, but the result is empty so the similarity value is never observed. No test verifies a multi-term query where terms match individually but the phrase is absent (e.g., 'react effects' in 'React helps you understand effects') — that case should produce similarity = 1.0 not 1.25, and a bug in the phraseBoost computation would not be caught.",
+      "evidence": [
+        "src/lib/noteQA.ts:120-123 — phraseBoost conditional: applied only when length > 1 AND phrase present in text",
+        "src/lib/__tests__/noteQA.test.ts:246-260 — 'react hooks' test: phraseBoost = 0.25 is exercised but similarity value not asserted",
+        "src/lib/__tests__/noteQA.test.ts:262-271 — 'hi' test: no-boost path (length=1), but result is empty so similarity unobservable"
+      ],
+      "suggested_fix": "Add a test for a multi-word query where terms match but phrase does not:\n```ts\nit('computes similarity without phraseBoost when query terms match but phrase is absent', async () => {\n  mockGenerateEmbeddings.mockRejectedValue(new Error('AI unavailable'))\n  mockNotesToArray.mockResolvedValue([\n    makeNote({ id: 'note-1', content: 'React helps you understand side effects.' }),\n  ])\n  const result = await retrieveRelevantNotes('react effects')\n  expect(result).toHaveLength(1)\n  // 'react effects' as a phrase is NOT in the text, so no phraseBoost; 2/2 term ratio = 1.0\n  expect(result[0].similarity).toBeCloseTo(1.0)\n})\n```"
+    },
+    {
+      "id": "testing-004",
+      "title": "No test verifies that courseId, videoId, or tags are included in fallback searchable text",
+      "severity": "P2",
+      "autofix_class": "manual",
+      "owner": "review-fixer",
+      "confidence": 75,
+      "pre_existing": false,
+      "scope": "primary",
+      "description": "The `retrieveRelevantNotesByText` function builds searchable text from four fields: content, courseId, videoId, and tags (noteQA.ts:112-117). Both new tests query against note content only ('react hooks', 'hi'). If the courseId/videoId/tags concatenation was silently removed or broken, all existing tests would still pass. The tag/metadata field logic is new code with zero test coverage verifying it contributes to matching.",
+      "evidence": [
+        "src/lib/noteQA.ts:112-117 — searchableText joins content, courseId, videoId, and tags",
+        "src/lib/__tests__/noteQA.test.ts:246-260 — only tests content match ('react hooks' vs content field)",
+        "src/lib/__tests__/noteQA.test.ts:262-271 — only tests content non-match"
+      ],
+      "suggested_fix": "Add targeted tests:\n```ts\nit('matches fallback search against note tags', async () => {\n  mockGenerateEmbeddings.mockRejectedValue(new Error('AI unavailable'))\n  mockNotesToArray.mockResolvedValue([\n    makeNote({ id: 'note-1', content: 'Unrelated prose.', tags: ['typescript', 'generics'] }),\n  ])\n  const result = await retrieveRelevantNotes('typescript')\n  expect(result).toHaveLength(1)\n  expect(result[0].note.id).toBe('note-1')\n})\n\nit('matches fallback search against courseId', async () => {\n  mockGenerateEmbeddings.mockRejectedValue(new Error('AI unavailable'))\n  mockNotesToArray.mockResolvedValue([\n    makeNote({ id: 'note-1', content: 'Unrelated.', courseId: 'advanced-react' }),\n  ])\n  const result = await retrieveRelevantNotes('advanced react')\n  expect(result.some(r => r.note.id === 'note-1')).toBe(true)\n})\n```"
+    },
+    {
+      "id": "testing-005",
+      "title": "Empty notes array during text fallback is untested",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "review-fixer",
+      "confidence": 50,
+      "pre_existing": false,
+      "scope": "primary",
+      "description": "When `db.notes.toArray()` returns an empty array during the fallback path, `retrieveRelevantNotesByText` returns `[]` via the chain of filter/map/slice on an empty array. This is a trivial path but there is no test verifying the fallback gracefully returns empty when the notes database is empty — which is a realistic new-user scenario.",
+      "evidence": [
+        "src/lib/noteQA.ts:107-129 — no early-return guard for empty notes; relies on array pipeline producing []",
+        "src/lib/__tests__/noteQA.test.ts — no test sets `mockNotesToArray.mockResolvedValue([])` with embedding failure"
+      ],
+      "suggested_fix": "Add:\n```ts\nit('returns empty array from fallback when notes database is empty', async () => {\n  mockGenerateEmbeddings.mockRejectedValue(new Error('AI unavailable'))\n  mockNotesToArray.mockResolvedValue([])\n  const result = await retrieveRelevantNotes('react')\n  expect(result).toEqual([])\n})\n```"
+    },
+    {
+      "id": "testing-006",
+      "title": "vi.clearAllMocks() does not reset mockResolvedValue implementations — stale fallback mock risk",
+      "severity": "P3",
+      "autofix_class": "advisory",
+      "owner": "human",
+      "confidence": 50,
+      "pre_existing": false,
+      "scope": "primary",
+      "description": "The `beforeEach` hook calls `vi.clearAllMocks()`, which resets call counts and recorded results but does NOT reset mock implementations set via `mockResolvedValue` / `mockReturnValue`. After the 'falls back to local text search' test sets `mockNotesToArray.mockResolvedValue([note-1, note-2])`, that implementation persists into subsequent tests. Tests that reach the fallback path without explicitly setting `mockNotesToArray` (e.g., a future test) will silently receive stale data. In the current diff this causes no observable failure because all happy-path tests set `mockGenerateEmbeddings.mockResolvedValue(...)` (preventing fallback) and both new fallback tests set their own `mockNotesToArray` value. However, the pattern is a latent trap as more fallback tests are added.",
+      "evidence": [
+        "src/lib/__tests__/noteQA.test.ts:121-123 — `vi.clearAllMocks()` in beforeEach; does not reset implementations",
+        "Vitest docs: clearAllMocks() ≡ mockFn.mockClear() — resets calls/instances/results only; mockResolvedValue implementation survives",
+        "src/lib/__tests__/noteQA.test.ts:248 and 264 — both new tests set mockNotesToArray before use (currently safe)"
+      ],
+      "suggested_fix": "Consider replacing `vi.clearAllMocks()` with `vi.resetAllMocks()` in the `beforeEach` hook. `resetAllMocks()` also resets implementations (equivalent to `mockFn.mockReset()`), eliminating stale-implementation leakage. Verify existing tests still pass — they should, since each test that needs a mock already sets it explicitly."
+    }
+  ],
+  "residual_risks": [
+    {
+      "description": "The text fallback is only reachable when the embedding worker fails; integration tests against a real embedding worker would be needed to verify the handoff is seamless end-to-end.",
+      "mitigation": "Manual QA or E2E test simulating worker failure in a browser context."
+    },
+    {
+      "description": "tokenize() strips all non-alphanumeric characters; queries with hyphens, apostrophes, or special characters (e.g., 'it\\'s', 'semi-colon') may tokenize unexpectedly. No test covers these edge cases.",
+      "mitigation": "Add unit tests for tokenize() directly if it grows in complexity."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "gap-001",
+      "description": "phraseBoost ternary — no-boost branch (multi-word query, no phrase match) has no test with observable similarity value",
+      "confidence": 75
+    },
+    {
+      "id": "gap-002",
+      "description": "retrieveRelevantNotesByText — tags, courseId, videoId fields in searchable text have zero test coverage",
+      "confidence": 75
+    },
+    {
+      "id": "gap-003",
+      "description": "Secondary failure: db.notes.toArray() rejection during fallback — no test covers error propagation",
+      "confidence": 75
+    }
+  ]
+}

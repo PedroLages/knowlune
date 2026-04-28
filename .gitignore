@@ -94,3 +94,4 @@ library-snapshot.yml
 # Compound Engineering local config (machine-specific)
 .compound-engineering/
 .worktrees
+.claude/settings.local.json

@@ -20,6 +20,7 @@ import type { Note } from '@/data/types'
 import { withModelFallback } from '@/ai/llm/factory'
 import type { LLMMessage } from '@/ai/llm/types'
 import type { FeatureModelConfig } from '@/lib/aiConfiguration'
+import { stripHtml } from '@/lib/textUtils'
 
 export type GenerateQAAnswerOptions = {
   signal?: AbortSignal
@@ -41,16 +42,32 @@ export interface RetrievedNote {
  * @param query - User's question
  * @returns Array of notes with similarity scores (top 5, similarity > 0.5)
  *
- * @throws Error if embedding generation fails or database access fails
+ * @throws Error if the query is empty or database access fails
  */
 export async function retrieveRelevantNotes(query: string): Promise<RetrievedNote[]> {
-  if (!query || query.trim().length === 0) {
+  const cleanQuery = query.trim()
+  if (!cleanQuery) {
     throw new Error('Query cannot be empty')
   }
 
   // Step 1: Generate query embedding (dynamically imported to avoid bundling AI infra)
   const { generateEmbeddings } = await import('@/ai/workers/coordinator')
-  const [queryEmbedding] = await generateEmbeddings([query.trim()])
+  let queryEmbedding: Float32Array
+  try {
+    const embeddingPromise = generateEmbeddings([cleanQuery])
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new DOMException('Embedding generation timed out', 'TimeoutError')), 5_000),
+    )
+    const embeddings = await Promise.race([embeddingPromise, timeoutPromise])
+    if (embeddings.length === 0) {
+      throw new Error('generateEmbeddings returned an empty result')
+    }
+    queryEmbedding = embeddings[0]
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
+    console.warn('[noteQA] Semantic retrieval failed; falling back to text search:', error)
+    return retrieveRelevantNotesByText(cleanQuery)
+  }
 
   // Step 2: Load all note embeddings from IndexedDB
   const allEmbeddings = await db.embeddings.toArray()
@@ -89,6 +106,39 @@ export async function retrieveRelevantNotes(query: string): Promise<RetrievedNot
   }
 
   return retrievedNotes
+}
+
+async function retrieveRelevantNotesByText(query: string, limit = 5): Promise<RetrievedNote[]> {
+  const queryTerms = tokenize(query)
+  if (queryTerms.length === 0) return []
+
+  const notes = await db.notes.toArray()
+
+  return notes
+    .filter(note => !note.deleted)
+    .map(note => {
+      const searchableText = [
+        stripHtml(note.content),
+        note.courseId,
+        note.videoId,
+        ...(note.tags ?? []),
+      ].join(' ')
+      const tokens = new Set(tokenize(searchableText))
+      const matchedTerms = queryTerms.filter(term => tokens.has(term))
+      const phraseBoost =
+        queryTerms.length > 1 && searchableText.toLowerCase().includes(query.toLowerCase())
+          ? 0.25
+          : 0
+      const similarity = matchedTerms.length / queryTerms.length + phraseBoost
+      return { note, similarity }
+    })
+    .filter(retrieved => retrieved.similarity > 0)
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, limit)
+}
+
+function tokenize(value: string): string[] {
+  return value.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []
 }
 
 /**
