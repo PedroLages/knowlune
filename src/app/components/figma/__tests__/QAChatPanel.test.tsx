@@ -3,6 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router'
 import { QAChatPanel } from '../QAChatPanel'
 import { useNoteQAAvailability } from '@/app/hooks/useNoteQAAvailability'
+import { assertAIFeatureConsent } from '@/ai/llm/factory'
+import { retrieveRelevantNotes, generateQAAnswer } from '@/lib/noteQA'
+import { ProviderReconsentError } from '@/ai/lib/ProviderReconsentError'
+import { CONSENT_PURPOSES } from '@/lib/compliance/consentService'
+import { useQAChatStore } from '@/stores/useQAChatStore'
+import { grantConsent } from '@/lib/compliance/consentEffects'
 
 const mockCount = vi.hoisted(() => vi.fn())
 
@@ -14,18 +20,32 @@ vi.mock('@/app/hooks/useMediaQuery', () => ({
   useMediaQuery: () => false,
 }))
 
-vi.mock('@/stores/useQAChatStore', () => ({
-  useQAChatStore: () => ({
-    messages: [],
-    isGenerating: false,
-    error: null,
-    addQuestion: vi.fn(),
-    addAnswer: vi.fn(),
-    updateAnswer: vi.fn(),
-    setGenerating: vi.fn(),
-    setError: vi.fn(),
-  }),
+vi.mock('@/stores/useAuthStore', () => ({
+  useAuthStore: (selector: (s: { user?: { id: string } }) => unknown) =>
+    selector({ user: { id: 'user-1' } }),
 }))
+
+vi.mock('@/lib/compliance/consentEffects', () => ({
+  grantConsent: vi.fn().mockResolvedValue({ success: true }),
+}))
+
+vi.mock('@/lib/compliance/noticeAck', () => ({
+  writeNoticeAck: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('@/lib/compliance/noticeVersion', () => ({
+  CURRENT_NOTICE_VERSION: '2026-04-23.1',
+}))
+
+vi.mock('@/lib/compliance/consentService', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/compliance/consentService')>(
+    '@/lib/compliance/consentService',
+  )
+  return {
+    ...actual,
+    listForUser: vi.fn().mockResolvedValue([]),
+  }
+})
 
 vi.mock('@/lib/noteQA', () => ({
   retrieveRelevantNotes: vi.fn(),
@@ -33,10 +53,7 @@ vi.mock('@/lib/noteQA', () => ({
 }))
 
 vi.mock('@/ai/llm/factory', () => ({
-  assertAIFeatureConsent: vi.fn().mockResolvedValue({
-    provider: 'gemini',
-    model: 'gemini-3-flash-preview',
-  }),
+  assertAIFeatureConsent: vi.fn(),
 }))
 
 vi.mock('@/lib/aiEventTracking', () => ({
@@ -64,6 +81,12 @@ describe('QAChatPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockCount.mockResolvedValue(1)
+    useQAChatStore.getState().clearHistory()
+    vi.mocked(grantConsent).mockResolvedValue({ success: true })
+    vi.mocked(assertAIFeatureConsent).mockResolvedValue({
+      provider: 'gemini',
+      model: 'gemini-3-flash-preview',
+    })
     vi.mocked(useNoteQAAvailability).mockReturnValue({
       status: 'available',
       availability: {
@@ -125,5 +148,60 @@ describe('QAChatPanel', () => {
       expect(screen.getByText('No notes yet')).toBeInTheDocument()
     })
     expect(screen.getByPlaceholderText('No notes available')).toBeDisabled()
+  })
+
+  it('shows provider re-consent modal when provider consent is stale, then grants evidence on Accept', async () => {
+    vi.mocked(assertAIFeatureConsent)
+      .mockRejectedValueOnce(new ProviderReconsentError(CONSENT_PURPOSES.AI_TUTOR, 'gemini'))
+      .mockResolvedValue({
+        provider: 'gemini',
+        model: 'gemini-3-flash-preview',
+      })
+
+    vi.mocked(retrieveRelevantNotes).mockResolvedValue([
+      {
+        note: {
+          id: 'n1',
+          courseId: 'course-1',
+          videoId: 'video-1',
+          content: '# Test',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          tags: [],
+          timestamp: 0,
+        },
+        similarity: 0.9,
+      },
+    ])
+    vi.mocked(generateQAAnswer).mockImplementation(async function* () {
+      yield 'Done.'
+    })
+
+    renderPanel()
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Ask about your notes...')).not.toBeDisabled()
+    })
+
+    const input = screen.getByPlaceholderText('Ask about your notes...')
+    fireEvent.change(input, { target: { value: 'Test question?' } })
+    const sendBtn = input.parentElement?.querySelector('button')
+    expect(sendBtn).toBeTruthy()
+    fireEvent.click(sendBtn!)
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(screen.getByText('AI Provider Update — New Consent Required')).toBeInTheDocument()
+    })
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /accept — allow data to be sent/i }),
+    )
+
+    await waitFor(() => {
+      expect(grantConsent).toHaveBeenCalledWith('user-1', CONSENT_PURPOSES.AI_TUTOR, {
+        provider_id: 'gemini',
+      })
+    })
   })
 })

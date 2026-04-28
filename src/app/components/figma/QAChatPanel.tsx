@@ -14,7 +14,7 @@
  * @see docs/implementation-artifacts/9b-2-qa-from-notes-with-vercel-ai-sdk.md
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { MessageCircle, Send, AlertCircle, BookOpen, X, Loader2 } from 'lucide-react'
 import { Link } from 'react-router'
 import { Button } from '@/app/components/ui/button'
@@ -31,6 +31,10 @@ import { useNoteQAAvailability } from '@/app/hooks/useNoteQAAvailability'
 import { assertAIFeatureConsent } from '@/ai/llm/factory'
 import { formatNoteQAError } from '@/lib/noteQAErrors'
 import { getNoteQAUnavailableCopy } from '@/lib/noteQAAvailabilityCopy'
+import { useAuthStore } from '@/stores/useAuthStore'
+import { useProviderReconsent } from '@/ai/hooks/useProviderReconsent'
+import { ProviderReconsentModal } from '@/app/components/compliance/ProviderReconsentModal'
+import { AIConsentDeclinedBanner } from '@/app/components/compliance/AIConsentDeclinedBanner'
 
 export function QAChatPanel() {
   const [isOpen, setIsOpen] = useState(false)
@@ -51,6 +55,18 @@ export function QAChatPanel() {
   } = useQAChatStore()
 
   const isMobile = useMediaQuery('(max-width: 1023px)')
+  const userId = useAuthStore(s => s.user?.id)
+  const lastQueryRef = useRef('')
+  const retryPipelineRef = useRef<() => Promise<void>>(async () => {})
+
+  const reconsentOptions = useMemo(
+    () => ({
+      onRetry: () => void retryPipelineRef.current(),
+    }),
+    []
+  )
+  const { handleAIError, declinedProvider, modalProps } = useProviderReconsent(userId, reconsentOptions)
+
   const noteQAAvailability = useNoteQAAvailability()
   const aiChecking = noteQAAvailability.status === 'checking'
   const aiAvailable = noteQAAvailability.status === 'available'
@@ -84,22 +100,10 @@ export function QAChatPanel() {
     }
   }, [messages])
 
-  const handleSendMessage = async () => {
-    const query = inputValue.trim()
-    if (!query || isGenerating) return
-
-    setInputValue('')
-    setError(null)
-    addQuestion(query)
-    setGenerating(true)
-
-    const startTime = Date.now()
-
-    try {
-      // Consent and provider re-consent must pass before note context is prepared.
+  const runQAPipeline = useCallback(
+    async (query: string, startTime: number) => {
       const resolved = await assertAIFeatureConsent('noteQA')
 
-      // Retrieve relevant notes
       const retrievedNotes = await retrieveRelevantNotes(query)
 
       if (retrievedNotes.length === 0) {
@@ -111,7 +115,6 @@ export function QAChatPanel() {
         return
       }
 
-      // Generate streaming answer using feature-aware LLM client
       const answerId = addAnswer('', [], retrievedNotes)
       let fullAnswer = ''
 
@@ -128,7 +131,54 @@ export function QAChatPanel() {
       }).catch(() => {
         // silent-catch-ok — non-critical analytics tracking
       })
+    },
+    [addAnswer, updateAnswer]
+  )
+
+  retryPipelineRef.current = async () => {
+    const query = lastQueryRef.current
+    if (!query) return
+    setGenerating(true)
+    setError(null)
+    const startTime = Date.now()
+    try {
+      await runQAPipeline(query, startTime)
     } catch (err) {
+      if (handleAIError(err)) {
+        return
+      }
+      const errorMessage = formatNoteQAError(err)
+      setError(errorMessage)
+      trackAIUsage('qa', {
+        status: 'error',
+        durationMs: Date.now() - startTime,
+        metadata: { error: errorMessage },
+      }).catch(() => {
+        // silent-catch-ok — non-critical analytics tracking
+      })
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const handleSendMessage = async () => {
+    const query = inputValue.trim()
+    if (!query || isGenerating) return
+
+    lastQueryRef.current = query
+    setInputValue('')
+    setError(null)
+    addQuestion(query)
+    setGenerating(true)
+
+    const startTime = Date.now()
+
+    try {
+      await runQAPipeline(query, startTime)
+    } catch (err) {
+      if (handleAIError(err)) {
+        return
+      }
       const errorMessage = formatNoteQAError(err)
       setError(errorMessage)
       trackAIUsage('qa', {
@@ -196,6 +246,12 @@ export function QAChatPanel() {
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {declinedProvider && (
+        <div className="mb-2">
+          <AIConsentDeclinedBanner providerId={declinedProvider} />
         </div>
       )}
 
@@ -318,36 +374,35 @@ export function QAChatPanel() {
     </Button>
   )
 
-  // Render mobile version (Sheet)
-  if (isMobile) {
-    return (
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger asChild>{triggerButton}</SheetTrigger>
-        <SheetContent side="bottom" className="h-[90vh]">
-          <SheetHeader className="mb-4">
-            <SheetTitle>Ask AI</SheetTitle>
-          </SheetHeader>
-          {chatContent}
-        </SheetContent>
-      </Sheet>
-    )
-  }
-
-  // Render desktop version (Popover)
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
-      <PopoverContent className="h-[600px] w-[400px] p-0" align="end">
-        <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b px-4 py-3">
-            <h3 className="font-semibold">Ask AI</h3>
-            <Button variant="ghost" size="icon" className="size-6" onClick={() => setIsOpen(false)}>
-              <X className="size-4" />
-            </Button>
-          </div>
-          {chatContent}
-        </div>
-      </PopoverContent>
-    </Popover>
+    <>
+      {isMobile ? (
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetTrigger asChild>{triggerButton}</SheetTrigger>
+          <SheetContent side="bottom" className="h-[90vh]">
+            <SheetHeader className="mb-4">
+              <SheetTitle>Ask AI</SheetTitle>
+            </SheetHeader>
+            {chatContent}
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+          <PopoverContent className="h-[600px] w-[400px] p-0" align="end">
+            <div className="flex h-full flex-col">
+              <div className="flex items-center justify-between border-b px-4 py-3">
+                <h3 className="font-semibold">Ask AI</h3>
+                <Button variant="ghost" size="icon" className="size-6" onClick={() => setIsOpen(false)}>
+                  <X className="size-4" />
+                </Button>
+              </div>
+              {chatContent}
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
+      <ProviderReconsentModal {...modalProps} />
+    </>
   )
 }

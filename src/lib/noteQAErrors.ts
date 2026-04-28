@@ -4,7 +4,8 @@ import { LLMError } from '@/ai/llm/types'
 
 export function formatNoteQAError(error: unknown): string {
   if (error instanceof ProviderReconsentError) {
-    return `Review and accept ${error.providerId} in Privacy & Consent before using Q&A.`
+    // Aligned with ProviderReconsentModal + AIConsentDeclinedBanner: dialog first, Settings fallback (E119-S09).
+    return `The current AI provider (${error.providerId}) needs your confirmation for Q&A. Use the dialog if it opens, or go to Settings → Privacy & Consent.`
   }
 
   if (error instanceof ConsentError) {
