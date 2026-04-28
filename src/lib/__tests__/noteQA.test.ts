@@ -21,10 +21,14 @@ vi.mock('@/ai/workers/coordinator', () => ({
 
 const mockEmbeddingsToArray = vi.fn()
 const mockNotesGet = vi.fn()
+const mockNotesToArray = vi.fn()
 vi.mock('@/db', () => ({
   db: {
     embeddings: { toArray: () => mockEmbeddingsToArray() },
-    notes: { get: (id: string) => mockNotesGet(id) },
+    notes: {
+      get: (id: string) => mockNotesGet(id),
+      toArray: () => mockNotesToArray(),
+    },
   },
 }))
 
@@ -237,6 +241,33 @@ describe('noteQA', () => {
 
       await retrieveRelevantNotes('  what is React?  ')
       expect(mockGenerateEmbeddings).toHaveBeenCalledWith(['what is React?'])
+    })
+
+    it('falls back to local text search when query embedding generation fails', async () => {
+      mockGenerateEmbeddings.mockRejectedValue(new Error('Unable to load AI model'))
+      mockNotesToArray.mockResolvedValue([
+        makeNote({ id: 'note-1', content: 'React hooks help with state and effects.' }),
+        makeNote({ id: 'note-2', content: 'Spaced repetition planning notes.' }),
+      ])
+
+      const result = await retrieveRelevantNotes('react hooks')
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toMatchObject({
+        note: expect.objectContaining({ id: 'note-1' }),
+        similarity: expect.any(Number),
+      })
+    })
+
+    it('does not treat short greeting substrings as local text matches during fallback', async () => {
+      mockGenerateEmbeddings.mockRejectedValue(new Error('Unable to load AI model'))
+      mockNotesToArray.mockResolvedValue([
+        makeNote({ id: 'note-1', content: 'This note contains useful context.' }),
+      ])
+
+      const result = await retrieveRelevantNotes('hi')
+
+      expect(result).toEqual([])
     })
 
     it('should skip deleted notes', async () => {
