@@ -257,6 +257,7 @@ describe('noteQA', () => {
         note: expect.objectContaining({ id: 'note-1' }),
         similarity: expect.any(Number),
       })
+      expect(result[0].similarity).toBeGreaterThan(0)
     })
 
     it('does not treat short greeting substrings as local text matches during fallback', async () => {
@@ -268,6 +269,42 @@ describe('noteQA', () => {
       const result = await retrieveRelevantNotes('hi')
 
       expect(result).toEqual([])
+    })
+
+    it('propagates db.notes.toArray() rejection during text fallback', async () => {
+      mockGenerateEmbeddings.mockRejectedValue(new Error('Unable to load AI model'))
+      mockNotesToArray.mockRejectedValue(new Error('IndexedDB unavailable'))
+
+      await expect(retrieveRelevantNotes('react hooks')).rejects.toThrow('IndexedDB unavailable')
+    })
+
+    it('returns partial match without phraseBoost when multi-word query has no phrase match', async () => {
+      mockGenerateEmbeddings.mockRejectedValue(new Error('Unable to load AI model'))
+      mockNotesToArray.mockResolvedValue([
+        makeNote({ id: 'note-1', content: 'React is a library. Hooks are functions.' }),
+      ])
+
+      const result = await retrieveRelevantNotes('react hooks')
+
+      expect(result).toHaveLength(1)
+      expect(result[0].similarity).toBeLessThanOrEqual(1.0)
+      expect(result[0].similarity).toBeGreaterThan(0)
+    })
+
+    it('matches notes via tags and courseId in text fallback', async () => {
+      mockGenerateEmbeddings.mockRejectedValue(new Error('Unable to load AI model'))
+      mockNotesToArray.mockResolvedValue([
+        makeNote({ id: 'note-1', content: 'General content.', tags: ['typescript', 'generics'] }),
+        makeNote({ id: 'note-2', content: 'General content.', courseId: 'typescript-fundamentals' }),
+        makeNote({ id: 'note-3', content: 'Unrelated content.', tags: ['python'] }),
+      ])
+
+      const result = await retrieveRelevantNotes('typescript')
+
+      const ids = result.map(r => r.note.id)
+      expect(ids).toContain('note-1')
+      expect(ids).toContain('note-2')
+      expect(ids).not.toContain('note-3')
     })
 
     it('should skip deleted notes', async () => {

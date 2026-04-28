@@ -54,9 +54,17 @@ export async function retrieveRelevantNotes(query: string): Promise<RetrievedNot
   const { generateEmbeddings } = await import('@/ai/workers/coordinator')
   let queryEmbedding: Float32Array
   try {
-    const embeddings = await generateEmbeddings([cleanQuery])
+    const embeddingPromise = generateEmbeddings([cleanQuery])
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new DOMException('Embedding generation timed out', 'TimeoutError')), 5_000),
+    )
+    const embeddings = await Promise.race([embeddingPromise, timeoutPromise])
+    if (embeddings.length === 0) {
+      throw new Error('generateEmbeddings returned an empty result')
+    }
     queryEmbedding = embeddings[0]
   } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
     console.warn('[noteQA] Semantic retrieval failed; falling back to text search:', error)
     return retrieveRelevantNotesByText(cleanQuery)
   }
@@ -130,7 +138,7 @@ async function retrieveRelevantNotesByText(query: string, limit = 5): Promise<Re
 }
 
 function tokenize(value: string): string[] {
-  return value.toLowerCase().match(/[a-z0-9]+/g) ?? []
+  return value.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []
 }
 
 /**
